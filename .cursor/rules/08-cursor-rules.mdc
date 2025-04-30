@@ -1,0 +1,62 @@
+---
+description: Cursor Rules Location
+globs: *.mdc
+alwaysApply: true
+---
+# Cursor Rules Location
+
+Rules for placing and organizing Cursor rule files in the repository.
+
+Keep rules minimal and only expand when needed.
+
+Rules should be minimal. Only add complexity when needed.
+
+1. Start simple and direct
+2. Add examples only for complex patterns
+3. Expand rules only when previous versions are forgotten
+
+ALWAYS add valid frontmatter to a rule `.mdc` file. Such as:
+```mdc
+---
+description: Cursor rule about typescript
+globs: *.ts
+alwaysApply: true
+---
+# Testing Standards
+
+...
+```
+Frontmatter Rules:
+- `description`: REQUIRED. String. A simple one-sentence description that is useful for the LLM to know when the rule is relevant.
+- `globs`: String. file globs with which this rule will run. Optional.
+- `alwaysApply`: REQUIRED. Boolean. Determines whether a file will run with every prompt message. If set to false, and there is a glob, then it will only be sent with the glob. If set to false with a description, then it can be specifically requested by the LLM when appropriate.
+
+When creating Cursor rules:
+
+1. Always place rule files in PROJECT_ROOT/.cursor/rules/:
+```
+.cursor/rules/
+├── your-rule-name.mdc
+├── another-rule.mdc
+└── ...
+```
+
+2. Follow the naming convention:
+  - Use kebab-case for filenames
+  - Always use .mdc extension
+  - Make names descriptive of the rule's purpose
+
+3. Directory structure:
+```
+PROJECT_ROOT/
+├── .cursor/
+│   └── rules/
+│       ├── your-rule-name.mdc
+│       └── ...
+└── ...
+```
+
+4. Never place rule files:
+  - In the project root
+  - In subdirectories outside .cursor/rules
+  - In any other location

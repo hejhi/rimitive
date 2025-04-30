@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Security, Performance, Accessibility
+
+- Validate and sanitize **all** external inputs.
+- Adhere to **OWASP Top 10** and language-specific secure-coding guides.
+- Aim for **O(1) or O(log n)** complexity on critical paths; measure, don't guess.
+- UI code must comply with **WCAG 2.2 AA**.

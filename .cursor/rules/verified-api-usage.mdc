@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Verified API Usage
+
+- **Never guess** import paths or function signatures — consult official documentation, type definitions, source, or ask the user.
+- Isolate unstable or external APIs behind **well-typed, unit-tested adapters**.

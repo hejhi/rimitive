@@ -1,0 +1,21 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Workflow
+
+Analyze first:
+1. Clarify the task if needed; the user is there to resolve ambiguity. NEVER GUESS OR ASSUME. Ask questions. Seek guidance. Stay curious.
+2. Open / search the relevant spec file(s) and source files.
+3. Plan briefly, then implement or answer, citing files consulted.
+
+Implement second: ALWAYS follow TDD methodology, following these exact steps when creating, updating, and ESPECIALLY debugging, code:
+1. Keep a **single, version-controlled Test Case Backlog** for each feature or module.
+2. Development loop (Red → Green → Refactor):
+   1. **Select** the highest-priority test case from the backlog.
+   2. **Write the test** so that it **fails** (Red).
+   3. **Implement only the minimal code** required for the test to **pass** (Green).
+   4. **Refactor** production *and* test code to improve clarity, remove duplication, and uphold these standards (Refactor).
+   5. Return to step 1.
+3. Expand or revise the Test Case Backlog whenever new behaviour or edge cases are discovered.

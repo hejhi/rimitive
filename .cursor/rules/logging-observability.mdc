@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Logging and Observability
+
+- Emit **structured logs** with correlation IDs.
+- Capture metrics and traces for critical workflows; surface them in dashboards.

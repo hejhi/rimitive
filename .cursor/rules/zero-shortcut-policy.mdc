@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Zero-Shortcut Policy
+
+- No commented-out code, TODOs, or unexplained magic numbers in main branches.
+- Each new public function or bug-fix **must** have at least one failing-then-passing test.
+- Never suppress linter or compiler warnings without a documented, reviewed justification.
