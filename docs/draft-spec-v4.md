@@ -54,17 +54,21 @@ export const createArboreal = (options = {}) => {
   }));
 
   // 2️⃣  Create API for this instance
-  const { api: treeAPI, hooks: treeHooks } = createAPI((set, get) => ({
-    // Getters (read functions)
-    isOpen: (id) => treeStore.getState().open.has(id),
-    children: (id) =>
-      Object.values(treeStore.getState().nodes).filter((n) => n.parent === id),
+  const { api: treeAPI, hooks: treeHooks } = createAPI(
+    { treeStore },
+    (set, get) => ({
+      // Getters (read functions)
+      isOpen: (id) => get().open.has(id),
+      children: (id) =>
+        Object.values(get().nodes).filter((n) => n.parent === id),
 
-    // Mutations (write functions)
-    toggleNode: (id: ID) => {
-      treeStore.getState()._toggleNode(id);
-    },
-  }));
+      // Mutations (write functions)
+      toggleNode: (id: ID) => {
+        // Access the store through the enhanced get function
+        get().treeStore.getState()._toggleNode(id);
+      },
+    }),
+  );
 
   // 3️⃣  Create Props for this instance
   const treeProps = createProps("tree", {}, () => ({
@@ -91,119 +95,6 @@ export const createArboreal = (options = {}) => {
     },
   });
 };
-
-// Helper to create a unified API with hooks
-function createAPI(dependencies, factory) {
-  // Get the raw API object from the factory
-  const rawApi = factory(dependencies);
-
-  // Create a reactive Zustand store for actual state only
-  // (Not storing functions in state)
-  const apiStore = create(() => {
-    // Extract non-function properties for state
-    const stateProps = {};
-    for (const key of Object.keys(rawApi)) {
-      if (typeof rawApi[key] !== "function") {
-        stateProps[key] = rawApi[key];
-      }
-    }
-    return stateProps;
-  });
-
-  // Set up hooks system
-  const hookSystem = {
-    before: {},
-    after: {},
-  };
-
-  // Attach functions directly to the store object (not in state)
-  for (const key of Object.keys(rawApi)) {
-    if (typeof rawApi[key] === "function") {
-      const originalFn = rawApi[key];
-
-      // Create hook arrays for this function
-      hookSystem.before[key] = [];
-      hookSystem.after[key] = [];
-
-      // Attach enhanced function directly to store object
-      apiStore[key] = (...args) => {
-        // Run before hooks
-        for (const hook of hookSystem.before[key]) {
-          const result = hook(...args);
-          if (result === false) return; // Cancel if a hook returns false
-        }
-
-        // Run the original function
-        const result = originalFn(...args);
-
-        // Run after hooks
-        for (const hook of hookSystem.after[key]) {
-          hook(result, ...args);
-        }
-
-        return result;
-      };
-    }
-  }
-
-  // Auto-generate hook-friendly selectors for React
-  apiStore.use = {};
-  for (const key of Object.keys(rawApi)) {
-    if (typeof rawApi[key] === "function") {
-      // For functions, just return the function from the store object
-      apiStore.use[key] = () => apiStore[key];
-    } else {
-      // For state values, create a selector
-      apiStore.use[key] = (params) =>
-        useStore(
-          apiStore,
-          (state) => state[key],
-        );
-    }
-  }
-
-  // Return both the API store and a separate hooks manager
-  return {
-    api: apiStore,
-    hooks: {
-      before: (fnName, hook) => {
-        if (hookSystem.before[fnName]) {
-          hookSystem.before[fnName].push(hook);
-        }
-        return apiStore; // For chaining
-      },
-      after: (fnName, hook) => {
-        if (hookSystem.after[fnName]) {
-          hookSystem.after[fnName].push(hook);
-        }
-        return apiStore; // For chaining
-      },
-    },
-  };
-}
-
-// Helper to create props with a merged get access
-function createProps(namespace, dependencies, factory) {
-  // Create a merged get function that provides access to all dependencies
-  const createGet = () => {
-    const mergedStore = {};
-
-    // Merge all API stores into a single accessor
-    for (const [key, store] of Object.entries(dependencies)) {
-      if (store && typeof store.getState === "function") {
-        Object.assign(mergedStore, store.getState());
-      }
-    }
-
-    return () => mergedStore;
-  };
-
-  // Create the props store with the factory
-  return create((set) => {
-    // Return a function that produces props when called with params
-    return (params) => factory(createGet(), params);
-  });
-}
 ```
 
 ### Composing a **Selection** lattice
@@ -228,18 +119,18 @@ export const createSelectionPlugin = () => {
     }));
 
     // API for selection
-    const { api: selectionAPI, hooks: selectionHooks } = createAPI((
-      set,
-      get,
-    ) => ({
-      // Getters
-      isSelected: (id) => selectStore.getState().selected.has(id),
+    const { api: selectionAPI, hooks: selectionHooks } = createAPI(
+      { selectStore },
+      (set, get) => ({
+        // Getters
+        isSelected: (id) => get().selectStore.getState().selected.has(id),
 
-      // Mutations
-      selectNode: (id: ID, multi = false) => {
-        selectStore.getState()._selectNode(id, multi);
-      },
-    }));
+        // Mutations
+        selectNode: (id: ID, multi = false) => {
+          get().selectStore.getState()._selectNode(id, multi);
+        },
+      }),
+    );
 
     // Props for selection
     const selectionTreeItemProps = createProps(
@@ -311,29 +202,29 @@ export const createDragAndDropPlugin = () => {
     const hasSelection = typeof baseLattice.api.isSelected === "function";
 
     // Create API for drag and drop
-    const { api: dragAndDropAPI, hooks: dragAndDropHooks } = createAPI((
-      set,
-      get,
-    ) => ({
-      // Getters
-      isDragging: (id) => dragStore.getState().draggingId === id,
-      canDrop: (id) => {/* ... */},
+    const { api: dragAndDropAPI, hooks: dragAndDropHooks } = createAPI(
+      { dragStore, baseLattice },
+      (set, get) => ({
+        // Getters
+        isDragging: (id) => get().dragStore.getState().draggingId === id,
+        canDrop: (id) => {/* ... */},
 
-      // Mutations
-      dragStart: (id) => {
-        dragStore.getState()._setDragging(id);
-      },
+        // Mutations
+        dragStart: (id) => {
+          get().dragStore.getState()._setDragging(id);
+        },
 
-      drop: (targetId) => {
-        const draggingId = dragStore.getState().draggingId;
-        if (draggingId && targetId) {
-          // Implement drop logic
-          dragStore.getState()._clearDragging();
-          return { success: true, from: draggingId, to: targetId };
-        }
-        return { success: false };
-      },
-    }));
+        drop: (targetId) => {
+          const draggingId = get().dragStore.getState().draggingId;
+          if (draggingId && targetId) {
+            // Implement drop logic
+            get().dragStore.getState()._clearDragging();
+            return { success: true, from: draggingId, to: targetId };
+          }
+          return { success: false };
+        },
+      }),
+    );
 
     // Create props for drag and drop
     const dragItemProps = createProps(
@@ -513,21 +404,21 @@ The Props system in Lattice is a key innovation that bridges state management
 and UI rendering in a reactive, composable way.
 
 ```
-┌─────────────────┐     ┌───────────────────┐     ┌────────────────────┐
-│                 │     │                   │     │                    │
-│  Private Slices │────▶│  API (getters &   │────▶│  Props (reactive   │
-│  (state stores) │     │    mutations)     │     │   UI attributes)   │
-│                 │     │                   │     │                    │
-└─────────────────┘     └───────────────────┘     └─────────┬──────────┘
-                                                            │
-                                                            │
-                                                            ▼
-                                               ┌──────────────────────────┐
-                                               │                          │
-                                               │ React/Vue/etc Components │
-                                               │ (spread props on els)    │
-                                               │                          │
-                                               └──────────────────────────┘
+┌────────────────┐     ┌───────────────────┐     ┌────────────────────┐
+│                │     │                   │     │                    │
+│ Private Slices │────▶│  API (getters &   │────▶│  Props (reactive   │
+│ (state stores) │     │    mutations)     │     │   UI attributes)   │
+│                │     │                   │     │                    │
+└────────────────┘     └───────────────────┘     └─────────┬──────────┘   
+                                                           │              
+                                                           │              
+                                                           ▼              
+                                              ┌──────────────────────────┐
+                                              │                          │
+                                              │ React/Vue/etc Components │
+                                              │  (spread props on els)   │
+                                              │                          │
+                                              └──────────────────────────┘
 ```
 
 ### How Props Work
@@ -586,79 +477,6 @@ function Button({ lattice, id }) {
    supports attribute spreading
 
 ### Implementation Details
-
-```tsx
-function createProps(partName, dependencies, factory) {
-  // Create a Zustand store that returns a function
-  return create((set, get) => {
-    // Return a function that takes parameters and returns props
-    return (params) => {
-      // Call the factory with the getter and parameters
-      const propsObject = factory(get, params);
-
-      // Return the props object to be spread
-      return propsObject;
-    };
-  });
-}
-
-// When composing lattices, props with the same name get merged
-function createLattice(namespace, dependencies, factory) {
-  const { api, props = {}, init } = factory(dependencies);
-
-  // Store for the composed lattice
-  const result = {
-    api,
-    props,
-    // Method to compose with other lattices
-    use: (plugin) => {
-      // Get the plugin factory with this lattice as a dependency
-      const pluginInstance = plugin({ [namespace]: result, ...dependencies });
-
-      // Merge APIs - implementation detail omitted for brevity
-
-      // Merge props by UI part name
-      for (
-        const [partName, propStore] of Object.entries(
-          pluginInstance.props || {},
-        )
-      ) {
-        if (!result.props[partName]) {
-          // If the part doesn't exist in the result, just add it
-          result.props[partName] = propStore;
-        } else {
-          // If the part exists, create a composed store that merges props
-          const baseProps = result.props[partName];
-          result.props[partName] = create((set, get) => {
-            return (params) => {
-              // Get both prop objects
-              const basePropsObj = baseProps.getState()(params);
-              const pluginPropsObj = propStore.getState()(params);
-
-              // Return merged props - plugin props take precedence for conflicts
-              return { ...basePropsObj, ...pluginPropsObj };
-            };
-          });
-        }
-      }
-
-      // Initialize the plugin
-      if (pluginInstance.init) {
-        pluginInstance.init();
-      }
-
-      return result;
-    },
-  };
-
-  // Initialize the lattice
-  if (init) {
-    init();
-  }
-
-  return result;
-}
-```
 
 This pattern ensures that:
 

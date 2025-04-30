@@ -90,14 +90,17 @@ export function createAPI<
     const stateProps = {} as ApiStateType;
 
     // Extract non-function properties for state
-    for (const key of Object.keys(rawApi) as Array<keyof TApi>) {
-      if (typeof rawApi[key] !== 'function') {
-        // We need to check if this key is assignable to the state type
-        // Type-safe assignment using keyof ApiStateType
+    // Replace unsafe cast with a more type-safe approach
+    Object.keys(rawApi).forEach((key) => {
+      // Check if key is valid for TApi and is not a function
+      if (key in rawApi && typeof rawApi[key as keyof TApi] !== 'function') {
+        // We know this is a state property key, not a method key
         const stateKey = key as keyof ApiStateType;
-        stateProps[stateKey] = rawApi[key] as ApiStateType[keyof ApiStateType];
+        stateProps[stateKey] = rawApi[
+          key as keyof TApi
+        ] as ApiStateType[keyof ApiStateType];
       }
-    }
+    });
 
     return stateProps;
   });
@@ -135,18 +138,21 @@ export function createAPI<
   }
 
   // Attach functions directly to the API object
-  for (const key of Object.keys(rawApi) as Array<keyof TApi>) {
-    if (typeof rawApi[key] === 'function') {
-      const originalFn = rawApi[key] as MethodDefinition;
+  Object.keys(rawApi).forEach((key) => {
+    // Check if key is valid for TApi and is a function
+    if (key in rawApi && typeof rawApi[key as keyof TApi] === 'function') {
+      const originalFn = rawApi[key as keyof TApi] as MethodDefinition;
 
       // Create hook arrays for this function
-      hookSystem.before[key as string] = [];
-      hookSystem.after[key as string] = [];
+      hookSystem.before[key] = [];
+      hookSystem.after[key] = [];
 
       // Attach enhanced function directly to API object
-      (enhancedApi[key] as unknown) = ((...args: MethodParams) => {
+      (enhancedApi[key as keyof TApi] as unknown) = ((
+        ...args: MethodParams
+      ) => {
         // Run before hooks
-        const beforeHooks = hookSystem.before[key as string] || [];
+        const beforeHooks = hookSystem.before[key] || [];
         for (const hook of beforeHooks) {
           const result = hook(...args);
           if (result === false) return undefined; // Cancel if a hook returns false
@@ -156,7 +162,7 @@ export function createAPI<
         const result = originalFn(...args);
 
         // Run after hooks
-        const afterHooks = hookSystem.after[key as string] || [];
+        const afterHooks = hookSystem.after[key] || [];
         for (const hook of afterHooks) {
           hook(result, ...args);
         }
@@ -164,23 +170,27 @@ export function createAPI<
         return result;
       }) as TApi[keyof TApi];
     }
-  }
+  });
 
   // Auto-generate hook-friendly selectors for React
-  for (const key of Object.keys(rawApi) as Array<keyof TApi>) {
-    if (typeof rawApi[key] === 'function') {
-      // For functions, return the enhanced function from the API
-      (enhancedApi.use[key as string] as unknown) = () => enhancedApi[key];
-    } else {
-      // For state values, create a selector function
-      (enhancedApi.use[key as string] as unknown) = () =>
-        // Use type-safe selector to extract this property from state
-        apiStore((state) => {
-          // The key is known to be in the state because we built it that way
-          return state[key as unknown as keyof ApiStateType];
-        });
+  Object.keys(rawApi).forEach((key) => {
+    // Check if key is valid for TApi
+    if (key in rawApi) {
+      if (typeof rawApi[key as keyof TApi] === 'function') {
+        // For functions, return the enhanced function from the API
+        (enhancedApi.use[key] as unknown) = () =>
+          enhancedApi[key as keyof TApi];
+      } else {
+        // For state values, create a selector function
+        (enhancedApi.use[key] as unknown) = () =>
+          // Use type-safe selector to extract this property from state
+          apiStore((state) => {
+            // The key is known to be in the state because we built it that way
+            return state[key as keyof ApiStateType];
+          });
+      }
     }
-  }
+  });
 
   // Create type-safe hooks manager
   const hooks: HookSystem = {
