@@ -7,13 +7,13 @@ React‑first DX with framework‑agnostic core.
 
 ## 1 Glossary (revised)
 
-| Term        | Meaning                                                                                      |
-| ----------- | -------------------------------------------------------------------------------------------- |
-| **Slice**   | Private Zustand store created with `create`.                                                 |
-| **API**     | Unified public interface with getters (selectors) and setters (mutations).                   |
-| **Props**   | Reactive Zustand store that returns ready-to-spread UI attributes including ARIA properties. |
-| **Hooks**   | System to intercept mutations for cross-cutting concerns (`before`/`after`).                 |
-| **Lattice** | Bundle of APIs, props with namespaces. Lattices can compose other lattices.                  |
+| Term        | Meaning                                                                      |
+| ----------- | ---------------------------------------------------------------------------- |
+| **Slice**   | Private Zustand store created with `create`.                                 |
+| **API**     | Unified public interface with getters (selectors) and setters (mutations).   |
+| **Props**   | Reactive Zustand store that returns ready-to-spread UI attributes.           |
+| **Hooks**   | System to intercept mutations for cross-cutting concerns (`before`/`after`). |
+| **Lattice** | Bundle of APIs, props with namespaces. Lattices can compose other lattices.  |
 
 ---
 
@@ -35,66 +35,157 @@ Mutation + Hooks ──▶ Slice mutation ──▶ API & Props update ──▶
 
 ## 3 Factory Helpers (Zustand‑style)
 
+### Core Middleware: `withStoreSync`
+
 ```ts
-// 1️⃣  Create a tree lattice instance directly
-export const createArboreal = (options = {}) => {
-  // Create private slices (scoped to this instance)
-  const treeStore = create((set, get) => ({
-    nodes: {} as Record<ID, Node>,
-    open: new Set<ID>(),
+// Middleware for syncing multiple Zustand stores
+export function withStoreSync<
+  S extends Record<string, StoreApi<any>>,
+  T extends object,
+>(
+  stores: S,
+  selector: (
+    storesState: { [K in keyof S]: ReturnType<S[K]["getState"]> },
+  ) => T,
+) {
+  return <U>(config: StateCreator<U>) => (set, get, api) => {
+    // Subscribe to all stores
+    const unsubscribers = Object.entries(stores).map(([storeKey, store]) =>
+      store.subscribe(() => {
+        // When any store updates, recompute and set the synced props
+        const selected = selector(
+          Object.fromEntries(
+            Object.entries(stores).map(([k, s]) => [k, s.getState()]),
+          ) as any,
+        );
+        set(selected);
+      })
+    );
 
-    // Internal state mutation
-    _toggleNode: (id: ID) => {
-      set((state) => {
-        const nextOpen = new Set(state.open);
-        state.open.has(id) ? nextOpen.delete(id) : nextOpen.add(id);
-        return { ...state, open: nextOpen };
-      });
-    },
-  }));
+    // Initialize synced props
+    const initialSelected = selector(
+      Object.fromEntries(
+        Object.entries(stores).map(([k, s]) => [k, s.getState()]),
+      ) as any,
+    );
 
-  // 2️⃣  Create API for this instance
-  const { api: treeAPI, hooks: treeHooks } = createAPI(
-    { treeStore },
-    (set, get) => ({
-      // Getters (read functions)
-      isOpen: (id) => get().open.has(id),
-      children: (id) =>
-        Object.values(get().nodes).filter((n) => n.parent === id),
+    return {
+      ...initialSelected,
+      ...config(set, get, api),
+    };
+  };
+}
+```
 
-      // Mutations (write functions)
-      toggleNode: (id: ID) => {
-        // Access the store through the enhanced get function
-        get().treeStore.getState()._toggleNode(id);
+### Core Middleware: `withLattice`
+
+```ts
+// Middleware for merging with a base lattice
+export function withLattice(baseLattice) {
+  return (config) => {
+    const { api = {}, hooks = {}, props = {}, ...rest } = config;
+
+    return {
+      api: {
+        ...baseLattice.api,
+        ...api,
       },
-    }),
-  );
+      hooks: {
+        ...baseLattice.hooks,
+        ...hooks,
+      },
+      props: Object.entries(props).reduce((acc, [key, value]) => {
+        if (baseLattice.props[key]) {
+          acc[key] = mergeProps([baseLattice.props[key], value]);
+        } else {
+          acc[key] = value;
+        }
+        return acc;
+      }, { ...baseLattice.props }),
+      use: baseLattice.use,
+      ...rest,
+    };
+  };
+}
+```
 
-  // 3️⃣  Create Props for this instance
-  const treeProps = createProps("tree", {}, () => ({
-    // Returns a Zustand store with DOM/ARIA properties
-    role: "tree",
-    tabIndex: 0,
-  }));
+### Core Utility: `createAPI`
 
-  const treeItemProps = createProps("treeItem", { treeAPI }, (get, { id }) => ({
-    // Returns a Zustand store with DOM/ARIA properties
-    role: "treeitem",
-    "aria-expanded": get().isOpen(id), // Get from the merged API store
-  }));
+```ts
+// Create the API layer with hook system
+export function createAPI<T extends object>(
+  config: StateCreator<T>,
+) {
+  // Create API store - users can optionally wrap config with withStoreSync
+  const apiStore = create(config);
 
-  // 4️⃣  Package as lattice
-  return createLattice("arboreal", {
-    api: treeAPI,
-    hooks: treeHooks,
-    props: { tree: treeProps, treeItem: treeItemProps },
+  // Create hooks system
+  const hooks = createHooks(apiStore.getState());
 
-    // Add a simple plugin system
-    use: function (plugin) {
-      return plugin(this);
-    },
+  // Add hooks to the store
+  apiStore.setState({
+    ...apiStore.getState(),
+    _hooks: hooks,
   });
-};
+
+  // Return a clean API + hooks interface
+  return {
+    api: apiStore,
+    hooks: {
+      before: (method, callback) =>
+        apiStore.getState()._hooks.before(method, callback),
+      after: (method, callback) =>
+        apiStore.getState()._hooks.after(method, callback),
+    },
+  };
+}
+```
+
+### Core Utility: `createProps`
+
+```ts
+// Create a props factory that returns ready-to-spread UI attributes
+export function createProps(
+  partName: string,
+  dependencies = {},
+  config?: StateCreator<any>,
+) {
+  // Case 1: createProps(partName, config) - Simple case
+  if (typeof dependencies === "function") {
+    return create(dependencies);
+  }
+
+  // Case 2: Check if dependencies is already middleware (e.g., withStoreSync)
+  if (typeof dependencies === "function" && typeof config === "function") {
+    return create(dependencies(config));
+  }
+
+  // Case 3: dependencies is an object of store dependencies - apply withStoreSync
+  if (Object.keys(dependencies).length > 0 && config) {
+    return create(withStoreSync(dependencies, () => ({}))(config));
+  }
+
+  // Case 4: Just plain config
+  return create(config || (() => ({})));
+}
+```
+
+### Core Utility: `createLattice`
+
+```ts
+// Create a lattice with the given name and configuration
+export function createLattice(name, config = {}) {
+  // Default empty values
+  const { api = {}, hooks = {}, props = {}, use = (fn) => fn(this) } = config;
+
+  return {
+    name,
+    api,
+    hooks,
+    props,
+    use,
+  };
+}
 ```
 
 ### Composing a **Selection** lattice
@@ -120,25 +211,34 @@ export const createSelectionPlugin = () => {
 
     // API for selection
     const { api: selectionAPI, hooks: selectionHooks } = createAPI(
-      { selectStore },
-      (set, get) => ({
+      withStoreSync(
+        { selectStore },
+        ({ selectStore }) => ({
+          // Sync the selected set from the selection store
+          selected: selectStore.selected,
+        }),
+      )((set, get) => ({
         // Getters
-        isSelected: (id) => get().selectStore.getState().selected.has(id),
+        isSelected: (id) => get().selected.has(id),
 
         // Mutations
         selectNode: (id: ID, multi = false) => {
-          get().selectStore.getState()._selectNode(id, multi);
+          // Direct access to the store
+          selectStore.getState()._selectNode(id, multi);
         },
-      }),
+      })),
     );
 
     // Props for selection
     const selectionTreeItemProps = createProps(
       "treeItem",
-      { selectionAPI },
-      (get, { id }) => ({
-        // Reactively subscribes to the selection state
-        "aria-selected": get().isSelected(id),
+      { selectionAPI }, // Simply pass the dependency
+      (set, get) => ({
+        // Returns a factory function for props
+        get: ({ id }) => ({
+          // Reactively subscribes to the selection state
+          "aria-selected": selectionAPI.getState().isSelected(id),
+        }),
       }),
     );
 
@@ -147,32 +247,17 @@ export const createSelectionPlugin = () => {
       selectStore.getState()._selectNode(id, false);
     });
 
-    // Create an enhanced lattice by merging with the base
-    return createLattice("selection", {
-      // Merge APIs
-      api: {
-        ...baseLattice.api,
-        ...selectionAPI,
-      },
-
-      // Merge hooks
-      hooks: {
-        ...baseLattice.hooks,
-        ...selectionHooks,
-      },
-
-      // Merge props
-      props: {
-        ...baseLattice.props,
-        treeItem: mergeProps([
-          baseLattice.props.treeItem,
-          selectionTreeItemProps,
-        ]),
-      },
-
-      // Preserve plugin system
-      use: baseLattice.use,
-    });
+    // Create an enhanced lattice with much less boilerplate
+    return createLattice(
+      "selection",
+      withLattice(baseLattice)({
+        api: selectionAPI,
+        hooks: selectionHooks,
+        props: {
+          treeItem: selectionTreeItemProps,
+        },
+      }),
+    );
   };
 };
 ```
@@ -199,44 +284,60 @@ export const createDragAndDropPlugin = () => {
     }));
 
     // Get the selection API if it exists in the base lattice
-    const hasSelection = typeof baseLattice.api.isSelected === "function";
+    const hasSelection =
+      typeof baseLattice.api.getState().isSelected === "function";
 
     // Create API for drag and drop
     const { api: dragAndDropAPI, hooks: dragAndDropHooks } = createAPI(
-      { dragStore, baseLattice },
-      (set, get) => ({
+      withStoreSync(
+        { dragStore, baseLattice: baseLattice.api },
+        ({ dragStore }) => ({
+          // Sync dragging state from drag store
+          draggingId: dragStore.draggingId,
+          dropTargets: dragStore.dropTargets,
+        }),
+      )((set, get) => ({
         // Getters
-        isDragging: (id) => get().dragStore.getState().draggingId === id,
+        isDragging: (id) => get().draggingId === id,
         canDrop: (id) => {/* ... */},
 
         // Mutations
         dragStart: (id) => {
-          get().dragStore.getState()._setDragging(id);
+          dragStore.getState()._setDragging(id);
         },
 
         drop: (targetId) => {
-          const draggingId = get().dragStore.getState().draggingId;
+          const draggingId = get().draggingId;
           if (draggingId && targetId) {
             // Implement drop logic
-            get().dragStore.getState()._clearDragging();
+            dragStore.getState()._clearDragging();
             return { success: true, from: draggingId, to: targetId };
           }
           return { success: false };
         },
-      }),
+      })),
     );
 
     // Create props for drag and drop
     const dragItemProps = createProps(
       "treeItem",
-      { dragAndDropAPI, baseLattice },
-      (get, { id }) => ({
-        draggable: true,
-        "aria-grabbed": get().isDragging(id),
-        "data-draggable": hasSelection ? get().isSelected?.(id) : true,
-        onDragStart: () => get().dragStart(id),
-        onDrop: () => {/* ... */},
-      }),
+      withStoreSync(
+        { dragAndDropAPI, baseLattice: baseLattice.api },
+        () => ({
+          // Sync nothing, just establish subscription
+        }),
+      )((set, get) => ({
+        // Returns a factory function for props
+        get: ({ id }) => ({
+          draggable: true,
+          "aria-grabbed": dragAndDropAPI.getState().isDragging(id),
+          "data-draggable": hasSelection
+            ? baseLattice.api.getState().isSelected?.(id)
+            : true,
+          onDragStart: () => dragAndDropAPI.getState().dragStart(id),
+          onDrop: () => {/* ... */},
+        }),
+      })),
     );
 
     // Add after-drop hook
@@ -291,22 +392,28 @@ const enhancedTreeA = treeA.use(selectionPlugin).use(dragAndDropPlugin);
 // Apply only selection to second tree instance
 const enhancedTreeB = treeB.use(selectionPlugin);
 
-// Access API via hooks in React components
+// Access API via useStore in React components
 function TreeNodeA({ id }) {
   // All APIs are accessible directly from the enhanced lattice
-  const isOpen = enhancedTreeA.api.use.isOpen(id);
-  const isSelected = enhancedTreeA.api.use.isSelected(id);
-  const isDragging = enhancedTreeA.api.use.isDragging(id);
+  const isOpen = useStore(enhancedTreeA.api, (state) => state.isOpen(id));
+  const isSelected = useStore(
+    enhancedTreeA.api,
+    (state) => state.isSelected(id),
+  );
+  const isDragging = useStore(
+    enhancedTreeA.api,
+    (state) => state.isDragging(id),
+  );
 
   // Get mutation functions
-  const toggleNode = enhancedTreeA.api.use.toggleNode();
-  const selectNode = enhancedTreeA.api.use.selectNode();
-  const dragStart = enhancedTreeA.api.use.dragStart();
+  const toggleNode = useStore(enhancedTreeA.api, (state) => state.toggleNode);
+  const selectNode = useStore(enhancedTreeA.api, (state) => state.selectNode);
+  const dragStart = useStore(enhancedTreeA.api, (state) => state.dragStart);
 
-  // Use props
+  // Use props - call the get function with parameters
   const props = useStore(
     enhancedTreeA.props.treeItem,
-    (props) => props({ id }),
+    (propsStore) => propsStore.get({ id }),
   );
 
   // Return JSX...
@@ -322,8 +429,8 @@ enhancedTreeB.hooks.before("toggleNode", (id) => {
 });
 
 // Updating TreeA doesn't affect TreeB
-enhancedTreeA.api.toggleNode("node-1"); // Only logs for Tree A
-enhancedTreeB.api.toggleNode("node-2"); // Only logs for Tree B
+enhancedTreeA.api.getState().toggleNode("node-1"); // Only logs for Tree A
+enhancedTreeB.api.getState().toggleNode("node-2"); // Only logs for Tree B
 ```
 
 The system ensures each lattice instance has:
@@ -332,6 +439,7 @@ The system ensures each lattice instance has:
 - Isolated API instances
 - Scoped hook registrations
 - Properly composed dependencies
+- Optional store synchronization through the `withStoreSync` middleware
 
 This approach scales to multiple independent instances on the same page while
 maintaining proper state isolation and enabling cross-cutting concerns specific
@@ -342,15 +450,18 @@ to each instance.
 ```tsx
 function TreeNode({ tree, id }: { tree: ArborealInstance; id: ID }) {
   // Each component can work with a specific tree instance
-  const props = useStore(tree.props.treeItem, (props) => props({ id }));
+  const props = useStore(
+    tree.props.treeItem,
+    (propsStore) => propsStore.get({ id }),
+  );
 
   // Subscribe to specific API values for this instance
-  const isOpen = tree.api.use.isOpen(id);
-  const isSelected = tree.api.use.isSelected(id);
+  const isOpen = useStore(tree.api, (state) => state.isOpen(id));
+  const isSelected = useStore(tree.api, (state) => state.isSelected?.(id));
 
   // Get mutation functions for this instance
-  const toggleNode = tree.api.use.toggleNode();
-  const selectNode = tree.api.use.selectNode();
+  const toggleNode = useStore(tree.api, (state) => state.toggleNode);
+  const selectNode = useStore(tree.api, (state) => state.selectNode);
 
   return (
     <li
@@ -362,7 +473,7 @@ function TreeNode({ tree, id }: { tree: ArborealInstance; id: ID }) {
       onClick={() => {
         // Execute mutations on this specific instance
         toggleNode(id);
-        selectNode(id, false);
+        selectNode?.(id, false);
       }}
     >
       {isOpen ? "📂" : "📁"} Node {id}
@@ -425,11 +536,9 @@ and UI rendering in a reactive, composable way.
 
 1. **Reactive Zustand Stores** - Each props object is a Zustand store that
    returns ready-to-spread UI attributes
-2. **Automatic ARIA Inclusion** - Props include semantic and accessibility
-   attributes derived from component state
-3. **Component-Oriented** - Props are namespaced by UI part (e.g., `tree`,
+2. **Component-Oriented** - Props are namespaced by UI part (e.g., `tree`,
    `treeItem`) for targeted application
-4. **Composition via Merge** - When plugins are added, their props are
+3. **Composition via Merge** - When plugins are added, their props are
    automatically merged with the base props
 
 ### Consuming Props
@@ -438,24 +547,45 @@ and UI rendering in a reactive, composable way.
 // Creating props for a component part
 const buttonProps = createProps(
   "button", // UI part name
-  { someAPI }, // Dependencies
-  (get, { id }) => ({
-    // Returns a function that produces props when called with parameters
-    role: "button",
-    "aria-pressed": get(someAPI).isPressed(id),
-    tabIndex: 0,
-    onClick: () => get(someAPI).toggle(id),
+  { someAPI }, // Pass dependencies directly
+  (set, get) => ({
+    // Returns a factory function for props
+    get: ({ id }) => ({
+      role: "button",
+      "aria-pressed": someAPI.getState().isPressed(id),
+      tabIndex: 0,
+      onClick: () => someAPI.getState().toggle(id),
+    }),
+  }),
+);
+
+// Or using explicit middleware
+const buttonProps = createProps(
+  "button",
+  withStoreSync(
+    { someAPI },
+    ({ someAPI }) => ({
+      pressed: someAPI.pressed,
+    }),
+  ),
+  (set, get) => ({
+    get: ({ id }) => ({
+      role: "button",
+      "aria-pressed": get().pressed,
+      tabIndex: 0,
+      onClick: () => someAPI.getState().toggle(id),
+    }),
   }),
 );
 
 // In a React component:
 function Button({ lattice, id }) {
   // 1. Call useStore to subscribe to the props store
-  // 2. The selector calls the props function with the given parameters
+  // 2. The selector calls the props factory function with the given parameters
   // 3. Returns a ready-to-spread object with all DOM/ARIA attributes
   const props = useStore(
     lattice.props.button,
-    (propsFactory) => propsFactory({ id }),
+    (propsStore) => propsStore.get({ id }),
   );
 
   // Simply spread the props onto your element
@@ -463,18 +593,20 @@ function Button({ lattice, id }) {
 }
 ```
 
-### Advantages over Manual Prop Construction
+### Advantages of this approach
 
 1. **Reactive to State Changes** - Props automatically update when underlying
    state changes
 2. **Granular Re-renders** - Component only re-renders when the specific props
    it needs change
-3. **Accessibility Built-in** - ARIA attributes are automatically included and
-   kept in sync with state
-4. **Composition Without Conflicts** - Props from multiple plugins merge
+3. **Composition Without Conflicts** - Props from multiple plugins merge
    correctly without overrides
-5. **Framework Agnostic** - Core props system works with any UI framework that
+4. **Framework Agnostic** - Core props system works with any UI framework that
    supports attribute spreading
+5. **Optional Store Sync** - The `withStoreSync` middleware can be used when
+   needed
+6. **Flexible Architecture** - Follows Zustand patterns for middleware
+   composition
 
 ### Implementation Details
 
@@ -486,30 +618,25 @@ This pattern ensures that:
 4. State changes trigger minimal re-renders
 5. When plugins are added, their props are correctly merged with the base props
 6. Conflicts are resolved deterministically (plugin props take precedence)
+7. Store dependencies are managed explicitly with the withStoreSync middleware
 
 The result is a system where:
 
 - Plugins can extend or override props for specific UI parts
 - Components receive a single props object with all necessary attributes
-- Accessibility props like ARIA attributes are automatically included
 - Updates to any underlying state trigger precise re-renders
-
-## 9 Accessibility Strategy
-
-1. **Props carry semantics** → host adapters just spread them on elements.
-2. **Shared keyboard map** plugin enforces WCAG navigation patterns.
-3. **Playwright + axe** contract tests run for each lattice combo.
+- Developers have full control over store dependencies and synchronization
 
 ---
 
-## 10 Rationale — Why Lattice, not "just hooks"
+## 9 Rationale — Why Lattice, not "just hooks"
 
-| When plain hooks shine                         | Where they crack                                                                                       | How Lattice closes the gap                                                                            |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Small, single‑purpose widget (e.g. accordion). | Complex components like **Tree View** that mix selection, drag‑and‑drop, type‑ahead, virtualisation.   | Composable lattices encapsulate each behaviour through layered Zustand stores; props merge safely.    |
-| One framework, one team.                       | **Cross‑framework** design‑system (React + Vue + Native).                                              | Core is JSX‑free; stores are framework-agnostic; adapters are thin wrappers.                          |
-| WCAG handled by Radix/Headless UI façade.      | Custom ARIA choreography across multiple behaviours (aria‑grabbed + aria‑selected + roving tab index). | Props are reactive Zustand stores, merged per UI part; shared keyboard plugin enforces WCAG patterns. |
-| Logic local to component.                      | Several products need to hot‑swap features (e.g. no DnD on mobile).                                    | Feature lattices can be added/removed at instantiation, with granular reactivity throughout stores.   |
+| When plain hooks shine                         | Where they crack                                                                                       | How Lattice closes the gap                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| Small, single‑purpose widget (e.g. accordion). | Complex components like **Tree View** that mix selection, drag‑and‑drop, type‑ahead, virtualisation.   | Composable lattices encapsulate each behaviour through layered Zustand stores; props merge safely.  |
+| One framework, one team.                       | **Cross‑framework** design‑system (React + Vue + Native).                                              | Core is JSX‑free; stores are framework-agnostic; adapters are thin wrappers.                        |
+| WCAG handled by Radix/Headless UI façade.      | Custom ARIA choreography across multiple behaviours (aria‑grabbed + aria‑selected + roving tab index). | Props are reactive Zustand stores, merged per UI part                                               |
+| Logic local to component.                      | Several products need to hot‑swap features (e.g. no DnD on mobile).                                    | Feature lattices can be added/removed at instantiation, with granular reactivity throughout stores. |
 
 ### Unique value propositions
 
@@ -531,6 +658,85 @@ The result is a system where:
 
 ---
 
-## 11 Open Questions
+## 10 Open Questions
 
 - Hot‑reload boundary: HMR should reuse slices—explore `
+
+```ts
+// 1️⃣  Create a tree lattice instance directly
+export const createArboreal = (options = {}) => {
+  // Create private slices (scoped to this instance)
+  const treeStore = create((set, get) => ({
+    nodes: {} as Record<ID, Node>,
+    open: new Set<ID>(),
+
+    // Internal state mutation
+    _toggleNode: (id: ID) => {
+      set((state) => {
+        const nextOpen = new Set(state.open);
+        state.open.has(id) ? nextOpen.delete(id) : nextOpen.add(id);
+        return { ...state, open: nextOpen };
+      });
+    },
+  }));
+
+  // 2️⃣  Create API for this instance with store sync
+  const { api: treeAPI, hooks: treeHooks } = createAPI(
+    withStoreSync(
+      { treeStore },
+      ({ treeStore }) => ({
+        // Sync properties from treeStore that we need
+        nodes: treeStore.nodes,
+        open: treeStore.open,
+      }),
+    )((set, get) => ({
+      // Getters (read functions)
+      isOpen: (id) => get().open.has(id),
+      children: (id) =>
+        Object.values(get().nodes).filter((n) => n.parent === id),
+
+      // Mutations (write functions)
+      toggleNode: (id: ID) => {
+        // Access the store directly
+        treeStore.getState()._toggleNode(id);
+      },
+    })),
+  );
+
+  // 3️⃣  Create Props for this instance
+  const treeProps = createProps(
+    "tree",
+    (set, get) => ({
+      // Returns a factory function for DOM/ARIA properties
+      get: () => ({
+        role: "tree",
+        tabIndex: 0,
+      }),
+    }),
+  );
+
+  const treeItemProps = createProps(
+    "treeItem",
+    { treeAPI }, // Simplified dependency syntax
+    (set, get) => ({
+      // Returns a factory function for DOM/ARIA properties
+      get: ({ id }) => ({
+        role: "treeitem",
+        "aria-expanded": treeAPI.getState().isOpen(id),
+      }),
+    }),
+  );
+
+  // 4️⃣  Package as lattice
+  return createLattice("arboreal", {
+    api: treeAPI,
+    hooks: treeHooks,
+    props: { tree: treeProps, treeItem: treeItemProps },
+
+    // Add a simple plugin system
+    use: function (plugin) {
+      return plugin(this);
+    },
+  });
+};
+```
