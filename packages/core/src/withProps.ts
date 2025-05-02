@@ -1,21 +1,10 @@
-import { PropsConfig, PropsStore, PropsState } from './createProps';
+import {
+  PropsState,
+  PropsStore,
+  LatticeWithProps,
+  PropsConfigCreator,
+} from './types';
 import { StoreApi } from 'zustand';
-
-/**
- * Type for a lattice with props
- */
-interface LatticeWithProps {
-  props: Record<string, PropsStore<any>>;
-}
-
-/**
- * Type for the config function in withProps
- */
-type PropsConfigCreator<P> = (
-  set: StoreApi<any>['setState'],
-  get: StoreApi<any>['getState'],
-  baseProps: PropsState<P>
-) => PropsConfig<P>;
 
 /**
  * Middleware for composing props from a base lattice

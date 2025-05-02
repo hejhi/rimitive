@@ -15,6 +15,8 @@ export type StateCreator<T> = (
  */
 export type GetState<T> = () => T;
 
+// ---- Hooks System Types ----
+
 /**
  * Interface for the hooks system
  */
@@ -39,6 +41,11 @@ export interface HooksSystem extends HooksInterface {
 }
 
 /**
+ * Base state for API store with hooks system
+ */
+export type BaseState = { _hooks: HooksSystem };
+
+/**
  * Store with hooks system
  */
 export type StoreWithHooks<T> = T & { _hooks: HooksSystem };
@@ -50,6 +57,88 @@ export interface CreateAPIResult<T> {
   api: StoreApi<StoreWithHooks<T>>;
   hooks: HooksInterface;
 }
+
+// ---- Props System Types ----
+
+/**
+ * Interface for a props configuration
+ */
+export interface PropsConfig<P = unknown> {
+  get: (params: P) => Record<string, unknown>;
+}
+
+/**
+ * Interface for a props store state
+ */
+export interface PropsState<P = unknown> {
+  partName: string;
+  get: (params: P) => Record<string, unknown>;
+}
+
+/**
+ * Type for a props store with partName metadata
+ */
+export type PropsStore<P = unknown> = StoreApi<PropsState<P>> & {
+  partName: string;
+};
+
+/**
+ * Type for the config function in withProps
+ */
+export type PropsConfigCreator<P> = (
+  set: StoreApi<PropsState<P>>['setState'],
+  get: StoreApi<PropsState<P>>['getState'],
+  baseProps: PropsState<P>
+) => PropsConfig<P>;
+
+// ---- Lattice Types ----
+
+/**
+ * Type for a lattice with props
+ */
+export interface LatticeWithProps {
+  props: Record<string, PropsStore>;
+}
+
+/**
+ * Base API interface for lattice
+ */
+export interface LatticeAPI {
+  getState: () => Record<string, unknown>;
+  setState?: (state: Record<string, unknown>) => void;
+}
+
+/**
+ * Base hooks interface for lattice
+ */
+export interface LatticeHooks extends HooksInterface {
+  [key: string]: unknown;
+}
+
+/**
+ * Lattice configuration object interface
+ */
+export interface LatticeConfig {
+  api?: LatticeAPI;
+  hooks?: LatticeHooks;
+  props?: Record<string, PropsStore>;
+  use?: (plugin: (lattice: Lattice) => Lattice) => Lattice;
+  [key: string]: unknown;
+}
+
+/**
+ * Lattice object interface
+ */
+export interface Lattice {
+  name: string;
+  api: LatticeAPI;
+  hooks: LatticeHooks;
+  props: Record<string, PropsStore>;
+  use: (plugin: (lattice: Lattice) => Lattice) => Lattice;
+  [key: string]: unknown;
+}
+
+// ---- Store Sync Types ----
 
 /**
  * Type for a selector function when syncing multiple stores

@@ -6,6 +6,13 @@ interface ButtonParams {
   label?: string;
 }
 
+interface ButtonProps extends Record<string, unknown> {
+  role: string;
+  'aria-label': string;
+  tabIndex: number;
+  onClick: () => void;
+}
+
 // Type for the source store state and methods
 interface SourceState {
   isSelected: boolean;
@@ -30,7 +37,7 @@ describe('createProps', () => {
   it('should create a props store with partName metadata', () => {
     // Create props store with partName and config
     const buttonProps = createProps<ButtonParams>('button', () => ({
-      get: (params: ButtonParams) => ({
+      get: (params: ButtonParams): Record<string, unknown> => ({
         role: 'button',
         'aria-label': params.label || 'Button',
         tabIndex: 0,
@@ -55,7 +62,7 @@ describe('createProps', () => {
 
     // Call get to retrieve props
     const params = { label: 'Submit' };
-    const props = state.get(params);
+    const props = state.get(params) as ButtonProps;
 
     // Check props include all attributes defined in config
     expect(props).toEqual({
@@ -102,33 +109,43 @@ describe('createProps', () => {
       enable: () => set({ isDisabled: false }),
     }));
 
-    // Create props that depend on the source store state
-    const checkboxProps = createProps('checkbox', (set) => {
-      // Setup subscription to source store
-      sourceStore.subscribe(() => {
-        // Trigger an update when the source store changes
-        set({});
-      });
+    interface CheckboxProps extends Record<string, unknown> {
+      role: string;
+      'aria-checked': boolean;
+      'aria-disabled': boolean;
+      onClick: () => void;
+    }
 
-      return {
-        get: () => ({
-          role: 'checkbox',
-          'aria-checked': sourceStore.getState().isSelected,
-          'aria-disabled': sourceStore.getState().isDisabled,
-          onClick: () => {
-            const state = sourceStore.getState();
-            if (state.isSelected) {
-              state.deselect();
-            } else {
-              state.select();
-            }
-          },
-        }),
-      };
-    });
+    // Create props that depend on the source store state
+    const checkboxProps = createProps<Record<string, never>>(
+      'checkbox',
+      (set) => {
+        // Setup subscription to source store
+        sourceStore.subscribe(() => {
+          // Trigger an update when the source store changes
+          set({});
+        });
+
+        return {
+          get: (): Record<string, unknown> => ({
+            role: 'checkbox',
+            'aria-checked': sourceStore.getState().isSelected,
+            'aria-disabled': sourceStore.getState().isDisabled,
+            onClick: () => {
+              const state = sourceStore.getState();
+              if (state.isSelected) {
+                state.deselect();
+              } else {
+                state.select();
+              }
+            },
+          }),
+        };
+      }
+    );
 
     // Initial state
-    const initialProps = checkboxProps.getState().get({});
+    const initialProps = checkboxProps.getState().get({}) as CheckboxProps;
     expect(initialProps['aria-checked']).toBe(false);
     expect(initialProps['aria-disabled']).toBe(false);
 
@@ -136,7 +153,7 @@ describe('createProps', () => {
     sourceStore.getState().select();
 
     // The props should have reactively updated
-    const updatedProps = checkboxProps.getState().get({});
+    const updatedProps = checkboxProps.getState().get({}) as CheckboxProps;
     expect(updatedProps['aria-checked']).toBe(true);
     expect(updatedProps['aria-disabled']).toBe(false);
 
@@ -144,13 +161,13 @@ describe('createProps', () => {
     sourceStore.getState().disable();
 
     // The props should update again
-    const finalProps = checkboxProps.getState().get({});
+    const finalProps = checkboxProps.getState().get({}) as CheckboxProps;
     expect(finalProps['aria-checked']).toBe(true);
     expect(finalProps['aria-disabled']).toBe(true);
 
     // Test that the onClick handler correctly toggles the state
     finalProps.onClick();
-    const afterClickProps = checkboxProps.getState().get({});
+    const afterClickProps = checkboxProps.getState().get({}) as CheckboxProps;
     expect(afterClickProps['aria-checked']).toBe(false);
     expect(afterClickProps['aria-disabled']).toBe(true);
   });
@@ -159,7 +176,7 @@ describe('createProps', () => {
     // Create a spy to track the parameters passed to the get method
     const getSpy = vi.fn().mockImplementation((params: AdvancedParams) => {
       // Build props based on the provided parameters
-      const result: Record<string, any> = {
+      const result: Record<string, unknown> = {
         id: params.id,
         role: 'button',
         className: params.className || '',

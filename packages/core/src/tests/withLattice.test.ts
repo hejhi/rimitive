@@ -1,24 +1,37 @@
 import { describe, it, expect, vi } from 'vitest';
 import { withLattice, mergeProps, createProps } from '../index';
+import { Lattice, LatticeAPI, LatticeHooks } from '../types';
 
 describe('withLattice', () => {
   it('should merge API objects from base lattice and config', () => {
+    interface BaseState extends Record<string, unknown> {
+      baseMethod: () => string;
+      sharedMethod: () => string;
+    }
+
+    interface ConfigState extends Record<string, unknown> {
+      configMethod: () => string;
+      sharedMethod: () => string;
+    }
+
     // Create a mock base lattice
-    const baseLattice = {
+    const baseLattice: Lattice = {
+      name: 'base',
       api: {
-        getState: () => ({
-          baseMethod: () => 'base',
-          sharedMethod: () => 'base-shared',
-        }),
-      },
+        getState: () =>
+          ({
+            baseMethod: () => 'base',
+            sharedMethod: () => 'base-shared',
+          }) as BaseState,
+      } as unknown as LatticeAPI,
       hooks: {
         before: vi.fn(),
         after: vi.fn(),
-      },
+      } as LatticeHooks,
       props: {
-        button: {
+        button: createProps('button', () => ({
           get: () => ({ base: true }),
-        },
+        })),
       },
       use: vi.fn(),
     };
@@ -26,11 +39,12 @@ describe('withLattice', () => {
     // Create a config to merge with the base
     const config = {
       api: {
-        getState: () => ({
-          configMethod: () => 'config',
-          sharedMethod: () => 'config-shared',
-        }),
-      },
+        getState: () =>
+          ({
+            configMethod: () => 'config',
+            sharedMethod: () => 'config-shared',
+          }) as ConfigState,
+      } as unknown as LatticeAPI,
     };
 
     // Apply the withLattice middleware
@@ -39,19 +53,21 @@ describe('withLattice', () => {
 
     // Verify that the API objects are properly merged
     expect(result.api).toBeDefined();
-    expect(result.api.getState().baseMethod()).toBe('base');
-    expect(result.api.getState().configMethod()).toBe('config');
-    expect(result.api.getState().sharedMethod()).toBe('config-shared'); // Config overrides base
+    const state = result.api.getState() as unknown as BaseState & ConfigState;
+    expect(state.baseMethod()).toBe('base');
+    expect(state.configMethod()).toBe('config');
+    expect(state.sharedMethod()).toBe('config-shared'); // Config overrides base
   });
 
   it('should merge hooks from base lattice and config', () => {
     // Create a mock base lattice with hooks
-    const baseLattice = {
-      api: { getState: () => ({}) },
+    const baseLattice: Lattice = {
+      name: 'base',
+      api: { getState: () => ({}) } as LatticeAPI,
       hooks: {
         before: vi.fn(),
         after: vi.fn(),
-      },
+      } as LatticeHooks,
       props: {},
       use: vi.fn(),
     };
@@ -61,7 +77,7 @@ describe('withLattice', () => {
       hooks: {
         before: vi.fn(),
         after: vi.fn(),
-      },
+      } as LatticeHooks,
     };
 
     // Apply the withLattice middleware
@@ -76,16 +92,23 @@ describe('withLattice', () => {
 
   it('should merge props objects with special merge logic', () => {
     // Define props objects
-    const baseProps = { get: () => ({ base: true }) };
-    const configProps = { get: () => ({ config: true }) };
+    const baseProps = createProps('button', () => ({
+      get: () => ({ base: true }),
+    }));
+    const configProps = createProps('button', () => ({
+      get: () => ({ config: true }),
+    }));
 
     // Create a mock base lattice with props
-    const baseLattice = {
-      api: { getState: () => ({}) },
-      hooks: {},
+    const baseLattice: Lattice = {
+      name: 'base',
+      api: { getState: () => ({}) } as LatticeAPI,
+      hooks: {} as LatticeHooks,
       props: {
         button: baseProps,
-        input: { get: () => ({ baseInput: true }) },
+        input: createProps('input', () => ({
+          get: () => ({ baseInput: true }),
+        })),
       },
       use: vi.fn(),
     };
@@ -94,7 +117,9 @@ describe('withLattice', () => {
     const config = {
       props: {
         button: configProps,
-        select: { get: () => ({ select: true }) },
+        select: createProps('select', () => ({
+          get: () => ({ select: true }),
+        })),
       },
     };
 
@@ -107,16 +132,19 @@ describe('withLattice', () => {
 
     // Since we're using the actual mergeProps function, the result should be what mergeProps returns
     // when applied to the base and config props
-    expect(result.props.button).toEqual(mergeProps([baseProps, configProps]));
+    expect(result.props.button).toEqual(
+      mergeProps(baseProps, configProps).button
+    );
     expect(result.props.input).toEqual(baseLattice.props.input);
     expect(result.props.select).toEqual(config.props.select);
   });
 
   it('should preserve the use method from base lattice', () => {
     // Create a mock base lattice with a use method
-    const baseLattice = {
-      api: { getState: () => ({}) },
-      hooks: {},
+    const baseLattice: Lattice = {
+      name: 'base',
+      api: { getState: () => ({}) } as LatticeAPI,
+      hooks: {} as LatticeHooks,
       props: {},
       use: vi.fn(),
     };
@@ -151,9 +179,10 @@ describe('withLattice', () => {
     }));
 
     // Create a mock base lattice with props stores
-    const baseLattice = {
-      api: { getState: () => ({}) },
-      hooks: {},
+    const baseLattice: Lattice = {
+      name: 'base',
+      api: { getState: () => ({}) } as LatticeAPI,
+      hooks: {} as LatticeHooks,
       props: mergeProps(baseButtonProps, baseInputProps),
       use: vi.fn(),
     };
@@ -185,8 +214,12 @@ describe('withLattice', () => {
     expect(result.props.select).toBe(configSelectProps);
 
     // Verify that we can access the props correctly
-    expect(result.props.button.getState().get().configAttr).toBe(true);
-    expect(result.props.input.getState().get().baseInputAttr).toBe(true);
-    expect(result.props.select.getState().get().configSelectAttr).toBe(true);
+    const buttonProps = result.props.button?.getState().get({});
+    const inputProps = result.props.input?.getState().get({});
+    const selectProps = result.props.select?.getState().get({});
+
+    expect(buttonProps?.configAttr).toBe(true);
+    expect(inputProps?.baseInputAttr).toBe(true);
+    expect(selectProps?.configSelectAttr).toBe(true);
   });
 });

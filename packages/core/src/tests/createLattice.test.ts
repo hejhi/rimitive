@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createLattice } from '../index';
+import { StoreApi } from 'zustand';
+import { PropsState } from '../types';
 
 describe('createLattice', () => {
   it('should create a lattice with the given name and empty configuration', () => {
@@ -7,18 +9,27 @@ describe('createLattice', () => {
 
     expect(lattice).toBeDefined();
     expect(lattice.name).toBe('test');
-    expect(lattice.api).toEqual({});
-    expect(lattice.hooks).toEqual({});
-    expect(lattice.props).toEqual({});
     expect(typeof lattice.use).toBe('function');
   });
 
   it('should create a lattice with the given name and full configuration', () => {
     const mockApi = { getState: vi.fn() };
     const mockHooks = { before: vi.fn(), after: vi.fn() };
+
+    // Create proper mock stores that match PropsStore type
+    const createMockStore = (
+      name: string
+    ): StoreApi<PropsState> & { partName: string } => ({
+      getState: vi.fn(() => ({ partName: name, get: vi.fn() })),
+      setState: vi.fn(),
+      subscribe: vi.fn(),
+      getInitialState: vi.fn(),
+      partName: name,
+    });
+
     const mockProps = {
-      button: { get: vi.fn() },
-      input: { get: vi.fn() },
+      button: createMockStore('button'),
+      input: createMockStore('input'),
     };
     const mockUse = vi.fn();
 

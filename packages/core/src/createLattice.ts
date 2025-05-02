@@ -1,25 +1,4 @@
-/**
- * Lattice configuration object interface
- */
-export interface LatticeConfig {
-  api?: any;
-  hooks?: any;
-  props?: Record<string, any>;
-  use?: (plugin: (lattice: any) => any) => any;
-  [key: string]: any;
-}
-
-/**
- * Lattice object interface
- */
-export interface Lattice {
-  name: string;
-  api: any;
-  hooks: any;
-  props: Record<string, any>;
-  use: (plugin: (lattice: Lattice) => Lattice) => Lattice;
-  [key: string]: any;
-}
+import { LatticeConfig, Lattice, LatticeAPI } from './types';
 
 /**
  * Create a lattice with the given name and configuration
@@ -33,8 +12,14 @@ export function createLattice(
 ): Lattice {
   // Extract configuration with defaults
   const {
-    api = {},
-    hooks = {},
+    api = {
+      getState: () => ({}),
+      setState: () => {},
+    } as LatticeAPI,
+    hooks = {
+      before: () => {},
+      after: () => {},
+    },
     props = {},
     use = function (
       this: Lattice,

@@ -4,7 +4,7 @@ import {
   StateCreator,
   CreateAPIResult,
   StoreWithHooks,
-  HooksSystem,
+  BaseState,
 } from './types';
 import { createHooks } from './createHooks';
 
@@ -23,7 +23,6 @@ export function createAPI<T>(config: StateCreator<T>): CreateAPIResult<T> {
   const hooks = createHooks();
 
   // Create a base state with hooks system
-  type BaseState = { _hooks: HooksSystem };
   const baseState: BaseState = { _hooks: hooks };
 
   // Create the enhanced config with combined state

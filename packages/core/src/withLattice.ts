@@ -1,4 +1,5 @@
 import { mergeProps } from './mergeProps';
+import { Lattice, LatticeConfig, LatticeAPI } from './types';
 
 /**
  * Middleware for merging with a base lattice
@@ -6,9 +7,9 @@ import { mergeProps } from './mergeProps';
  * This middleware takes a base lattice and merges it with a provided configuration.
  * It combines the API objects, hooks, and props from both the base and the config.
  */
-export function withLattice(baseLattice: any) {
-  return (config: any = {}) => {
-    const { api = {}, hooks = {}, props = {}, ...rest } = config;
+export function withLattice(baseLattice: Lattice) {
+  return (config: LatticeConfig = {}) => {
+    const { api = {} as LatticeAPI, hooks = {}, props = {}, ...rest } = config;
 
     // Process the API objects
     const combinedApi = {
@@ -16,7 +17,7 @@ export function withLattice(baseLattice: any) {
         ...baseLattice.api.getState(),
         ...(api.getState?.() || {}),
       }),
-    };
+    } as LatticeAPI;
 
     // Process the hooks
     const combinedHooks = {
@@ -47,9 +48,9 @@ export function withLattice(baseLattice: any) {
     } else {
       // Legacy approach: merge by explicit keys
       combinedProps = Object.entries(props).reduce(
-        (acc: any, [key, value]) => {
+        (acc: Record<string, unknown>, [key, value]) => {
           if (baseLattice.props[key]) {
-            acc[key] = mergeProps([baseLattice.props[key], value]);
+            acc[key] = mergeProps(baseLattice.props[key], value);
           } else {
             acc[key] = value;
           }
@@ -66,6 +67,6 @@ export function withLattice(baseLattice: any) {
       props: combinedProps,
       use: baseLattice.use,
       ...rest,
-    };
+    } as Lattice;
   };
 }

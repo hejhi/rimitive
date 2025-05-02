@@ -1,25 +1,26 @@
 import { describe, it, expect, vi } from 'vitest';
 import { create } from 'zustand';
 import { mergeProps } from '../mergeProps';
+import { PropsState, PropsStore } from '../types';
 
 describe('mergeProps', () => {
   // Test the enhanced functionality: organizing props stores by partName
   it('should organize props stores by their partName metadata', () => {
     // Create mock props stores with partName metadata
-    const buttonProps = create(() => ({
+    const buttonProps = create<PropsState>(() => ({
       partName: 'button',
       get: () => ({ role: 'button' }),
-    }));
+    })) as unknown as PropsStore;
 
-    const menuProps = create(() => ({
+    const menuProps = create<PropsState>(() => ({
       partName: 'menu',
       get: () => ({ role: 'menu' }),
-    }));
+    })) as unknown as PropsStore;
 
-    const listProps = create(() => ({
+    const listProps = create<PropsState>(() => ({
       partName: 'list',
       get: () => ({ role: 'list' }),
-    }));
+    })) as unknown as PropsStore;
 
     // Test organizing stores - pass as individual arguments
     const result = mergeProps(buttonProps, menuProps, listProps);
@@ -38,21 +39,24 @@ describe('mergeProps', () => {
   // Test last store wins for the same partName (no merging)
   it('should use the last store when multiple stores have the same partName', () => {
     // Create two button stores with the same partName but different properties
-    const buttonProps1 = create(() => ({
+    const buttonProps1 = create<PropsState>(() => ({
       partName: 'button',
       get: () => ({ role: 'button', variant: 'primary' }),
-    }));
+    })) as unknown as PropsStore;
 
-    const buttonProps2 = create(() => ({
+    const buttonProps2 = create<PropsState>(() => ({
       partName: 'button',
-      get: () => ({ disabled: true, 'aria-label': 'Action button' }),
-    }));
+      get: () => ({
+        disabled: true,
+        'aria-label': 'Action button',
+      }),
+    })) as unknown as PropsStore;
 
     // Also create a menu store with a different partName
-    const menuProps = create(() => ({
+    const menuProps = create<PropsState>(() => ({
       partName: 'menu',
       get: () => ({ role: 'menu' }),
-    }));
+    })) as unknown as PropsStore;
 
     // Merge all stores directly - last store with same partName should win
     const result = mergeProps(buttonProps1, buttonProps2, menuProps);
@@ -64,7 +68,7 @@ describe('mergeProps', () => {
     });
 
     // Verify the button attributes reflect the second store, not a merge
-    const buttonAttributes = result.button.getState().get();
+    const buttonAttributes = result.button?.getState().get({});
 
     // Should contain properties ONLY from the second button store
     expect(buttonAttributes).toEqual({
@@ -73,16 +77,16 @@ describe('mergeProps', () => {
     });
 
     // Should NOT contain properties from the first button store
-    expect(buttonAttributes.variant).toBeUndefined();
-    expect(buttonAttributes.role).toBeUndefined();
+    expect(buttonAttributes?.variant).toBeUndefined();
+    expect(buttonAttributes?.role).toBeUndefined();
   });
 
   // Test warning and error for props store missing partName
   it('should warn and throw error when a props store is missing partName metadata', () => {
     // Create a mock props store without partName metadata
-    const propsWithoutPartName = create(() => ({
+    const propsWithoutPartName = create<Partial<PropsState>>(() => ({
       get: () => ({ role: 'unknown' }),
-    }));
+    })) as unknown as PropsStore;
 
     // Mock console.warn
     const originalWarn = console.warn;

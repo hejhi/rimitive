@@ -1,26 +1,5 @@
 import { create, StoreApi } from 'zustand';
-
-/**
- * Type for props configuration
- */
-export interface PropsConfig<P = any> {
-  get: (params: P) => Record<string, any>;
-}
-
-/**
- * Type for a props store state
- */
-export interface PropsState<P = any> {
-  partName: string;
-  get: (params: P) => Record<string, any>;
-}
-
-/**
- * Type for a props store with partName metadata
- */
-export type PropsStore<P = any> = StoreApi<PropsState<P>> & {
-  partName: string;
-};
+import { PropsConfig, PropsState, PropsStore } from './types';
 
 /**
  * Creates a props store with the given partName and config
@@ -29,12 +8,12 @@ export type PropsStore<P = any> = StoreApi<PropsState<P>> & {
  * @param config - A function that returns the props config with get method
  * @returns A Zustand store with the props and partName metadata
  */
-export function createProps<P = any>(
+export function createProps<P = unknown>(
   partName: string,
   config: (
-    set: StoreApi<any>['setState'],
-    get: StoreApi<any>['getState'],
-    api: StoreApi<any>
+    set: StoreApi<PropsState<P>>['setState'],
+    get: StoreApi<PropsState<P>>['getState'],
+    api: StoreApi<PropsState<P>>
   ) => PropsConfig<P>
 ): PropsStore<P> {
   // Create the store with the config, ensuring partName is included in the state
@@ -50,7 +29,9 @@ export function createProps<P = any>(
   });
 
   // Add partName to the store object itself for access without getState
-  const storeWithPartName = store as unknown as PropsStore<P>;
+  const storeWithPartName = store as unknown as StoreApi<PropsState<P>> & {
+    partName: string;
+  };
   storeWithPartName.partName = partName;
 
   return storeWithPartName;

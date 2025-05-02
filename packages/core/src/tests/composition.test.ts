@@ -2,10 +2,17 @@
  * Tests for lattice composition following the spec
  */
 import { describe, expect, it } from 'vitest';
-import { createLattice, Lattice } from '../createLattice';
+import { createLattice } from '../createLattice';
 import { createAPI } from '../createAPI';
 import { create } from 'zustand';
 import { withLattice } from '../withLattice';
+import {
+  Lattice,
+  LatticeAPI,
+  LatticeHooks,
+  PropsStore,
+  PropsState,
+} from '../types';
 
 describe('Lattice Composition', () => {
   it('should allow enhancing a lattice with another lattice', () => {
@@ -16,7 +23,7 @@ describe('Lattice Composition', () => {
     }));
 
     const baseLattice = createLattice('base', {
-      api: baseAPI,
+      api: baseAPI as unknown as LatticeAPI,
     });
 
     // Create a counter feature enhancer (following spec pattern)
@@ -38,19 +45,20 @@ describe('Lattice Composition', () => {
           }));
 
         // Create counter props
-        const counterProps = create(() => ({
+        const counterProps = create<PropsState<unknown>>(() => ({
+          partName: 'counter',
           get: () => ({
             'aria-label': 'Counter',
             'data-count': (counterAPI.getState() as CounterState).count,
           }),
-        }));
+        })) as unknown as PropsStore<unknown>;
 
         // Return enhanced lattice (following spec pattern)
         return createLattice(
           'counter',
           withLattice(baseLattice)({
-            api: counterAPI,
-            hooks: counterHooks,
+            api: counterAPI as unknown as LatticeAPI,
+            hooks: counterHooks as unknown as LatticeHooks,
             props: {
               counter: counterProps,
             },
@@ -83,7 +91,7 @@ describe('Lattice Composition', () => {
     }));
 
     const baseLattice = createLattice('base', {
-      api: baseAPI,
+      api: baseAPI as unknown as LatticeAPI,
     });
 
     // Create counter feature
@@ -103,7 +111,7 @@ describe('Lattice Composition', () => {
         return createLattice(
           'counter',
           withLattice(baseLattice)({
-            api: counterAPI,
+            api: counterAPI as unknown as LatticeAPI,
           })
         );
       };
@@ -128,7 +136,7 @@ describe('Lattice Composition', () => {
         return createLattice(
           'logger',
           withLattice(baseLattice)({
-            api: loggerAPI,
+            api: loggerAPI as unknown as LatticeAPI,
           })
         );
       };

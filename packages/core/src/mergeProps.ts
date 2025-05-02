@@ -1,13 +1,15 @@
+import { PropsStore } from './types';
+
 /**
  * Given props stores, creates an object keyed by their partNames
  *
- * @param {...any} items - Zustand stores with partName
- * @returns {object} Props lookup keyed by partName
+ * @param {...PropsStore} items - Zustand stores with partName
+ * @returns {Record<string, PropsStore>} Props lookup keyed by partName
  */
-export function mergeProps(...items: any[]): Record<string, any> {
+export function mergeProps(...items: PropsStore[]): Record<string, PropsStore> {
   if (!items || !items.length) return {};
 
-  const result: Record<string, any> = {};
+  const result: Record<string, PropsStore> = {};
 
   // For each store, use its partName as the key
   for (const store of items) {
