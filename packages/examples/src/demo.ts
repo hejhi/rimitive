@@ -4,8 +4,8 @@ import {
   NodeID,
   TreeNode,
 } from './baseTree';
-import { createSelectionFeature } from './selectionFeature';
-import { createDragAndDropFeature } from './dragAndDropFeature';
+import { createSelection } from './selection';
+import { createDragAndDrop } from './dragAndDrop';
 
 /**
  * Interactive demo showing how to use the Lattice framework to create a tree with
@@ -111,12 +111,12 @@ const baseLattice = createTreeLattice();
 const testData = createTestTreeData();
 baseLattice.api.getState().setNodes(testData);
 
-// Create factories for our features
-const selectionFeature = createSelectionFeature();
-const dragAndDropFeature = createDragAndDropFeature();
+// Create factories for our composable lattices
+const selection = createSelection();
+const dragAndDrop = createDragAndDrop();
 
-// Create our tree with both features and proper typing
-const tree = baseLattice.use(selectionFeature).use(dragAndDropFeature);
+// Create our tree with both composable lattices and proper typing
+const tree = baseLattice.use(selection).use(dragAndDrop);
 
 // Add status updates via hooks
 tree.hooks.after('selectNode', (_: any, id: string) => {

@@ -1,14 +1,14 @@
 /**
- * Example of using the LatticeEnhancer type for better type safety
+ * Example of using the LatticeComposer type for better type safety
  */
 import { describe, expect, it } from 'vitest';
 import { createLattice } from '../createLattice';
 import { createAPI } from '../createAPI';
 import { withLattice } from '../withLattice';
-import { LatticeEnhancer } from '../types';
+import { LatticeComposer } from '../types';
 
-describe('Typed Lattice Enhancers', () => {
-  it('should support strongly typed feature enhancers', () => {
+describe('Typed Lattice Composers', () => {
+  it('should support strongly typed lattice composition', () => {
     // Base lattice with user state
     interface UserState {
       username: string;
@@ -22,14 +22,17 @@ describe('Typed Lattice Enhancers', () => {
 
     const userLattice = createLattice<UserState>('user', { api: userAPI });
 
-    // Theme feature enhancer
+    // Theme composable lattice
     interface ThemeState {
       isDarkMode: boolean;
       toggleTheme: () => void;
     }
 
-    // Use the LatticeEnhancer type for better type safety
-    const createThemeFeature = (): LatticeEnhancer<UserState, ThemeState> => {
+    // Use the LatticeComposer type for better type safety
+    const createThemeComposable = (): LatticeComposer<
+      UserState,
+      ThemeState
+    > => {
       return (baseLattice) => {
         const { api: themeAPI } = createAPI<ThemeState>((set) => ({
           isDarkMode: false,
@@ -47,15 +50,15 @@ describe('Typed Lattice Enhancers', () => {
       };
     };
 
-    // Auth feature enhancer that builds on user and theme
+    // Auth composable lattice that builds on user and theme
     interface AuthState {
       isLoggedIn: boolean;
       login: (password: string) => boolean;
       logout: () => void;
     }
 
-    // Use LatticeEnhancer with the combined state from user and theme
-    const createAuthFeature = (): LatticeEnhancer<
+    // Use LatticeComposer with the combined state from user and theme
+    const createAuthComposable = (): LatticeComposer<
       UserState & ThemeState,
       AuthState
     > => {
@@ -83,14 +86,16 @@ describe('Typed Lattice Enhancers', () => {
       };
     };
 
-    // Apply the enhancers in sequence with full type safety
-    const themeFeature = createThemeFeature();
-    const authFeature = createAuthFeature();
+    // Apply the composable lattices in sequence with full type safety
+    const themeComposable = createThemeComposable();
+    const authComposable = createAuthComposable();
 
-    const enhancedLattice = userLattice.use(themeFeature).use(authFeature);
+    const composedLattice = userLattice
+      .use(themeComposable)
+      .use(authComposable);
 
     // TypeScript now knows the combined type is UserState & ThemeState & AuthState
-    const state = enhancedLattice.api.getState();
+    const state = composedLattice.api.getState();
 
     // All properties and methods are strongly typed
     expect(state).toHaveProperty('username');

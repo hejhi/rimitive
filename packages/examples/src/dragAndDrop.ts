@@ -6,7 +6,7 @@ import {
   withStoreSync,
   withProps,
   withLattice,
-  LatticeEnhancer,
+  LatticeComposer,
 } from '../../core/src';
 
 import { NodeID, TreeAPI } from './baseTree';
@@ -41,10 +41,10 @@ export interface DragDropAPI {
   processDrop: (targetId: NodeID) => DropResult;
 }
 
-// Create a drag-and-drop extension
+// Create a drag-and-drop composable lattice
 export const createDragAndDrop = <
   T extends Partial<TreeAPI>,
->(): LatticeEnhancer<T, DragDropAPI> => {
+>(): LatticeComposer<T, DragDropAPI> => {
   return (baseLattice) => {
     // Private slice for drag-and-drop state
     const dragDropStore = create<DragDropState>(() => ({

@@ -5,12 +5,13 @@
  * complex, composable UI components with a headless approach.
  */
 
-// Base tree implementation
+// Base components
 export * from './baseTree';
 
-// Features
-export * from './selectionFeature';
-export * from './dragAndDropFeature';
+// Composable lattices
+export * from './selection';
+export * from './dragAndDrop';
 
-// Demo - run with `pnpm demo` from examples directory
+// Demo utilities
 export * from './demo';
+export * from './main';

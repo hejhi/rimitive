@@ -57,15 +57,15 @@ describe('createLattice', () => {
     expect(lattice.props.input).toBe(inputProps);
     expect(lattice.use).toBe(baseLattice.use);
 
-    // Create a realistic enhancer using proper patterns
+    // Create a realistic composable lattice using proper patterns
     interface ThemeState {
       theme: string;
       toggleTheme: () => void;
     }
 
-    const createThemeEnhancer = () => {
+    const createThemeComposable = () => {
       return (baseLattice: Lattice<TestState>) => {
-        // Create new API for the theme feature
+        // Create new API for the theme functionality
         const { api: themeAPI } = createAPI<ThemeState>((set) => ({
           theme: 'light',
           toggleTheme: () =>
@@ -84,14 +84,14 @@ describe('createLattice', () => {
       };
     };
 
-    // Get the enhancer function
-    const themeEnhancer = createThemeEnhancer();
+    // Get the composable function
+    const themeComposable = createThemeComposable();
 
-    // Use the enhancer
-    lattice.use(themeEnhancer);
+    // Use the composable
+    lattice.use(themeComposable);
 
-    // Verify the spy was called with the enhancer
-    expect(useSpy).toHaveBeenCalledWith(themeEnhancer);
+    // Verify the spy was called with the composable
+    expect(useSpy).toHaveBeenCalledWith(themeComposable);
   });
 
   it('should provide a default use function if not provided', () => {
@@ -111,14 +111,14 @@ describe('createLattice', () => {
     // Create a spy on the real use method
     const useSpy = vi.spyOn(lattice, 'use');
 
-    // Create a realistic logger enhancer
+    // Create a realistic logger composable
     interface LoggerState {
       logs: string[];
       log: (message: string) => void;
       clearLogs: () => void;
     }
 
-    const createLoggerEnhancer = () => {
+    const createLoggerComposable = () => {
       return (baseLattice: Lattice<SimpleState>) => {
         // Create new API for logging
         const { api: loggerAPI } = createAPI<LoggerState>((set) => ({
@@ -140,25 +140,132 @@ describe('createLattice', () => {
       };
     };
 
-    // Get the enhancer function
-    const loggerEnhancer = createLoggerEnhancer();
+    // Get the composable function
+    const loggerComposable = createLoggerComposable();
 
-    // Use the enhancer with the spied method
-    const enhancedLattice = lattice.use(loggerEnhancer);
+    // Use the composable with the spied method
+    const composedLattice = lattice.use(loggerComposable);
 
-    // Verify the method was called with the enhancer
-    expect(useSpy).toHaveBeenCalledWith(loggerEnhancer);
+    // Verify the method was called with the composable
+    expect(useSpy).toHaveBeenCalledWith(loggerComposable);
 
-    // Verify the enhancement was applied correctly
-    expect(enhancedLattice.name).toBe('logger');
+    // Verify the composition was applied correctly
+    expect(composedLattice.name).toBe('logger');
 
     // Test the combined API
-    const state = enhancedLattice.api.getState();
+    const state = composedLattice.api.getState();
     expect(state).toHaveProperty('value');
     expect(state).toHaveProperty('setValue');
     expect(state).toHaveProperty('logs');
     expect(state).toHaveProperty('log');
     expect(state).toHaveProperty('clearLogs');
     expect(state.logs).toEqual([]);
+  });
+
+  it('should have a functional use method for composition', () => {
+    const lattice = createLattice('test');
+    const useSpy = vi.spyOn(lattice, 'use');
+
+    // Mock function to use as a parameter
+    const composableLattice = (lattice: any) => {
+      expect(lattice).toBeDefined(); // Verify lattice is passed
+      return lattice; // Return unchanged for this test
+    };
+
+    // Call the use method
+    lattice.use(composableLattice);
+
+    // Verify the method was called with the provided function
+    expect(useSpy).toHaveBeenCalledWith(composableLattice);
+  });
+
+  it('should pass the calling lattice as this to the use method', () => {
+    const lattice = createLattice('test');
+
+    // Create a realistic composable using proper patterns
+    interface ThemeState {
+      isDarkMode: boolean;
+      toggleTheme: () => void;
+    }
+
+    const createThemeComposable = () => {
+      // Create new API for the theme functionality
+      const { api: themeAPI } = createAPI<ThemeState>((set) => ({
+        isDarkMode: false,
+        toggleTheme: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+      }));
+
+      // Return a function that takes a base lattice and returns a composed one
+      return (baseLattice: any) => {
+        return createLattice(
+          'theme',
+          withLattice(baseLattice)({
+            api: themeAPI,
+          })
+        );
+      };
+    };
+
+    // Spy on the use method
+    const useSpy = vi.spyOn(lattice, 'use');
+
+    // Get the composable function
+    const themeComposable = createThemeComposable();
+
+    // Use the composable
+    lattice.use(themeComposable);
+
+    // Verify the spy was called with the composable
+    expect(useSpy).toHaveBeenCalledWith(themeComposable);
+  });
+
+  it('should return the result of the composable function', () => {
+    // Create a base lattice with a minimal API
+    const { api: baseAPI } = createAPI(() => ({}));
+    const lattice = createLattice('test', { api: baseAPI });
+
+    // Create a realistic logger composable
+    interface LoggerState {
+      logs: string[];
+      log: (message: string) => void;
+      clear: () => void;
+    }
+
+    const createLoggerComposable = () => {
+      const { api: loggerAPI } = createAPI<LoggerState>((set) => ({
+        logs: [] as string[],
+        log: (message: string) =>
+          set((state) => ({ logs: [...state.logs, message] })),
+        clear: () => set({ logs: [] }),
+      }));
+
+      return (baseLattice: any) => {
+        return createLattice(
+          'logger',
+          withLattice(baseLattice)({
+            api: loggerAPI,
+          })
+        );
+      };
+    };
+
+    // Spy on the use method
+    const useSpy = vi.spyOn(lattice, 'use');
+
+    // Get the composable function
+    const loggerComposable = createLoggerComposable();
+
+    // Use the composable with the spied method
+    const composedLattice = lattice.use(loggerComposable);
+
+    // Verify the method was called with the composable
+    expect(useSpy).toHaveBeenCalledWith(loggerComposable);
+
+    // Check the result is what we expect
+    expect(composedLattice).toBeDefined();
+    expect(composedLattice.name).toBe('logger');
+    expect(composedLattice.api.getState()).toHaveProperty('logs');
+    expect(composedLattice.api.getState()).toHaveProperty('log');
+    expect(composedLattice.api.getState()).toHaveProperty('clear');
   });
 });

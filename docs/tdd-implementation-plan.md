@@ -135,42 +135,42 @@ draft specification.
 
 ## 2. Lattice Composition
 
-### Feature Composition
+### Composition Fundamentals
 
-- ✅ Test creation of feature enhancers
+- ✅ Test creation of composable lattices
   - Implemented in: `/packages/core/src/tests/composition.test.ts`
-  - Verifies: feature enhancers follow the pattern in the spec
-- ✅ Test applying enhancers to base lattice
+  - Verifies: composable lattices follow the pattern in the spec
+- ✅ Test applying one lattice to another (composition)
   - Implemented in: `/packages/core/src/tests/composition.test.ts`
-  - Verifies: enhancers properly modify the base lattice
+  - Verifies: lattices properly compose with the base lattice
 - ⏳ Test selection state management (add/remove/query selected items)
 - ⏳ Test multi-selection with modifier flag
-- ⏳ Test reactivity of feature state
-- ✅ Test integration with multiple features
+- ⏳ Test reactivity of composed lattice state
+- ✅ Test integration with multiple composed lattices
   - Implemented in: `/packages/core/src/tests/composition.test.ts`
-  - Verifies: multiple features can be composed together
+  - Verifies: multiple lattices can be composed together
 
-### Complex Feature Examples
+### Complex Composition Examples
 
-- ⏳ Test creation of drag and drop feature
+- ⏳ Test creation of drag and drop lattice
 - ⏳ Test applying drag and drop to base lattice
 - ⏳ Test drag state management (drag start, in-progress, end)
 - ⏳ Test drop target validation
 - ⏳ Test actual drop operation success/failure
 - ⏳ Test integration of selection with drag and drop
-- ⏳ Test hook registration for feature events
+- ⏳ Test hook registration for composition events
 
 ### Composition Patterns
 
-- ✅ Test chaining multiple feature enhancements (.use().use())
+- ✅ Test chaining multiple lattice compositions (.use().use())
   - Implemented in: `/packages/core/src/tests/composition.test.ts`
-  - Verifies: multiple features can be chained
-- ✅ Test order dependency of features
+  - Verifies: multiple lattices can be chained
+- ✅ Test order dependency of composition
   - Implemented in: `/packages/core/src/tests/composition.test.ts`
   - Verifies: the order of composition affects the result
 - ⏳ Test isolation between different lattice instances
-- ⏳ Test cross-communication between features via hooks
-- ⏳ Test error handling during feature application
+- ⏳ Test cross-communication between composed lattices via hooks
+- ⏳ Test error handling during lattice composition
 
 ## 3. 🦕 Props System [LEGACY: SEE SECTION 8]
 
@@ -192,7 +192,7 @@ draft specification.
 - ✅ Test props function parameters (id, context, etc.)
   - Implemented in: `/packages/core/src/tests/createProps.test.ts`
   - Verifies: get method properly uses parameters to construct props
-- ✅ Test merging of props from multiple composed features
+- ✅ Test merging of props from multiple composed lattices
   - Implemented in: `/packages/core/src/tests/createProps.test.ts`
   - Verifies: props from multiple sources can be merged correctly
 - ⏳ Test resolution of conflicting props (precedence rules)
@@ -202,7 +202,7 @@ draft specification.
 
 - ⏳ Test creating multiple independent instances
 - ⏳ Test state isolation between instances
-- ⏳ Test applying different features to different instances
+- ⏳ Test applying different lattices to different instances
 - ⏳ Test instance-specific hook registrations
 - ⏳ Test that modifying one instance doesn't affect others
 - ⏳ Test memory usage with many instances
@@ -246,10 +246,10 @@ draft specification.
 
 ## 6. Integration Tests
 
-- ⏳ Test full lattice creation with multiple composed features
+- ⏳ Test full lattice creation with multiple composed lattices
 - ⏳ Test React component consumption (useStore pattern)
 - ⏳ Test framework-agnostic pattern with adapters
-- ⏳ Test realistic tree view example with selection and DnD
+- ⏳ Test realistic tree view example with selection and drag-and-drop
 - ⏳ Test that props structure facilitates WCAG accessibility compliance when
   used correctly
 - ⏳ Test performance with complex real-world scenarios
@@ -336,9 +336,9 @@ draft specification.
   - Validate props inheritance through lattice composition chain
 
 - ⏳ Test real-world usage patterns
-  - Test selection feature using new props system
-  - Verify drag-and-drop feature with props composition
-  - Validate proper ARIA attribute management across composed features
+  - Test selection lattice using new props system
+  - Verify drag-and-drop lattice with props composition
+  - Validate proper ARIA attribute management across composed lattices
 
 ## Progress Summary
 
@@ -404,10 +404,10 @@ draft specification.
   - Created a clean, declarative interface for registering hooks
 - Implemented lattice composition in
   `/packages/core/src/tests/composition.test.ts`
-  - Demonstrated feature pattern as described in spec
-  - Verified chaining multiple features through the use() method
-  - Tested order dependency of feature application
-  - Ensured base functionality is preserved when features are applied
+  - Demonstrated composition pattern as described in spec
+  - Verified chaining multiple lattices through the use() method
+  - Tested order dependency of lattice composition
+  - Ensured base functionality is preserved when lattices are composed
 - Tests for the createProps utility:
   - Added tests for store dependencies and reactive prop updates
   - Clarified that ARIA attributes must be explicitly added by developers
@@ -437,7 +437,7 @@ draft specification.
 
 ### Pending ⏳
 
-1. **Complex Feature Examples**
+1. **Complex Composition Examples**
    - Drag and drop implementation
    - Integration of selection with drag and drop
 
@@ -457,10 +457,10 @@ draft specification.
 
 ### Next Steps
 
-1. Implement real-world feature examples:
-   - Create a selection feature example with the new props system
-   - Implement a drag-and-drop feature demonstrating composition
-   - Demonstrate cross-feature communication via hooks
+1. Implement real-world composition examples:
+   - Create a selection lattice example with the new props system
+   - Implement a drag-and-drop lattice demonstrating composition
+   - Demonstrate cross-lattice communication via hooks
 
 2. Develop instance-based architecture tests:
    - Test creation of multiple independent instances

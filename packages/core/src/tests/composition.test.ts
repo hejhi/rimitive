@@ -9,7 +9,7 @@ import { createProps } from '../createProps';
 import { Lattice } from '../types';
 
 describe('Lattice Composition', () => {
-  it('should allow enhancing a lattice with another lattice', () => {
+  it('should allow composing a lattice with another lattice', () => {
     // Create a base lattice
     interface BaseState {
       value: number;
@@ -23,15 +23,15 @@ describe('Lattice Composition', () => {
 
     const baseLattice = createLattice<BaseState>('base', { api: baseAPI });
 
-    // Create a counter feature enhancer (following spec pattern)
+    // Create a counter composable lattice (following spec pattern)
     interface CounterState {
       count: number;
       increment: () => void;
       decrement: () => void;
     }
 
-    const createCounterFeature = () => {
-      // Return a function that takes a base lattice and returns an enhanced lattice
+    const createCounter = () => {
+      // Return a function that takes a base lattice and returns a composed lattice
       return (baseLattice: Lattice<BaseState>) => {
         const { api: counterAPI, hooks: counterHooks } =
           createAPI<CounterState>((set) => ({
@@ -48,7 +48,7 @@ describe('Lattice Composition', () => {
           }),
         }));
 
-        // Return enhanced lattice (following spec pattern)
+        // Return composed lattice (following spec pattern)
         return createLattice<BaseState & CounterState>(
           'counter',
           withLattice(baseLattice)({
@@ -62,12 +62,12 @@ describe('Lattice Composition', () => {
       };
     };
 
-    // Create and apply the counter feature
-    const counterFeature = createCounterFeature();
-    const composedLattice = baseLattice.use(counterFeature);
+    // Create and apply the counter composable
+    const counterComposable = createCounter();
+    const composedLattice = baseLattice.use(counterComposable);
 
-    // Check if the enhancement was properly applied
-    expect(composedLattice.name).toBe('counter'); // Per spec, name comes from the enhancer
+    // Check if the composition was properly applied
+    expect(composedLattice.name).toBe('counter'); // Per spec, name comes from the composable
 
     // Get API state to check for counter methods
     const apiState = composedLattice.api.getState();
@@ -80,7 +80,7 @@ describe('Lattice Composition', () => {
     expect(apiState).toHaveProperty('setValue');
   });
 
-  it('should allow chaining multiple lattice enhancements', () => {
+  it('should allow chaining multiple lattice compositions', () => {
     // Create base lattice
     interface BaseState {
       initialized: boolean;
@@ -94,13 +94,13 @@ describe('Lattice Composition', () => {
       api: baseAPI,
     });
 
-    // Create counter feature
+    // Create counter composable
     interface CounterState {
       count: number;
       increment: () => void;
     }
 
-    const createCounterFeature = () => (baseLattice: Lattice<BaseState>) => {
+    const createCounter = () => (baseLattice: Lattice<BaseState>) => {
       const { api: counterAPI } = createAPI<CounterState>((set) => ({
         count: 0,
         increment: () => set((state) => ({ count: state.count + 1 })),
@@ -114,13 +114,13 @@ describe('Lattice Composition', () => {
       );
     };
 
-    // Create logger feature
+    // Create logger composable
     interface LoggerState {
       logs: string[];
       log: (message: string) => void;
     }
 
-    const createLoggerFeature =
+    const createLogger =
       () => (baseLattice: Lattice<BaseState & CounterState>) => {
         const { api: loggerAPI } = createAPI<LoggerState>((set) => ({
           logs: [] as string[],
@@ -138,17 +138,19 @@ describe('Lattice Composition', () => {
         );
       };
 
-    // Apply features in sequence
-    const counterFeature = createCounterFeature();
-    const loggerFeature = createLoggerFeature();
+    // Apply composables in sequence
+    const counterComposable = createCounter();
+    const loggerComposable = createLogger();
     // Type inference works properly with our changes
-    const enhancedLattice = baseLattice.use(counterFeature).use(loggerFeature);
+    const composedLattice = baseLattice
+      .use(counterComposable)
+      .use(loggerComposable);
 
-    // Check that the name is from the last applied feature
-    expect(enhancedLattice.name).toBe('logger');
+    // Check that the name is from the last applied composable
+    expect(composedLattice.name).toBe('logger');
 
     // Check that all APIs are accessible
-    const apiState = enhancedLattice.api.getState();
+    const apiState = composedLattice.api.getState();
     expect(apiState).toHaveProperty('increment');
     expect(apiState).toHaveProperty('log');
     expect(apiState).toHaveProperty('initialized');

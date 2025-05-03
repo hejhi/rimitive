@@ -6,7 +6,7 @@ import {
   withStoreSync,
   withProps,
   withLattice,
-  LatticeEnhancer,
+  LatticeComposer,
 } from '../../core/src';
 
 import { NodeID, TreeAPI } from './baseTree';
@@ -17,7 +17,7 @@ interface SelectionState {
 }
 
 // Define selection API interface
-export interface SelectionAPI {
+interface SelectionAPI {
   selected: Set<NodeID>;
   isSelected(id: NodeID): boolean;
   selectNode(id: NodeID, multi?: boolean): void;
@@ -25,15 +25,15 @@ export interface SelectionAPI {
   deselectAll(): void;
 }
 
-// Create a selection extension for the tree lattice
-export const createSelection = <T extends Partial<TreeAPI>>(): LatticeEnhancer<
+// Create a selection composable for the tree lattice
+export const createSelection = <T extends Partial<TreeAPI>>(): LatticeComposer<
   T,
   SelectionAPI
 > => {
-  // Return a lattice extension function
+  // Return a lattice composer function
   return (baseLattice) => {
     // Create a private selection store
-    const selectionStore = create<SelectionState>(() => ({
+    const selectionStore = create<SelectionState>((_set) => ({
       selected: new Set<NodeID>(),
     }));
 
@@ -75,7 +75,7 @@ export const createSelection = <T extends Partial<TreeAPI>>(): LatticeEnhancer<
         }))
       );
 
-    // Create enhanced tree item props with selection
+    // Create composed tree item props with selection
     const selectionTreeItemProps = createProps(
       'treeItem',
       withProps(baseLattice)((_get, _set, api) => ({
@@ -103,7 +103,7 @@ export const createSelection = <T extends Partial<TreeAPI>>(): LatticeEnhancer<
       // We could add pre-expansion logic here if needed
     });
 
-    // Create the enhanced lattice
+    // Create the composed lattice
     return createLattice(
       'selection',
       withLattice(baseLattice)({

@@ -436,8 +436,8 @@ requires explicit implementation in the `createAPI` function.
 
 ### Implementation Details
 
-The direct API access pattern is implemented in `createAPI` by returning an
-enhanced store that proxies method calls directly to the state:
+The direct API access pattern is implemented in `createAPI` by returning a
+composed store that proxies method calls directly to the state:
 
 ```ts
 export function createAPI<T>(stateCreator) {

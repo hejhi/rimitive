@@ -210,16 +210,16 @@ export interface Lattice<T> {
 export type LatticeConfig<T> = Partial<Omit<Lattice<T>, 'name'>>;
 
 /**
- * Helper type for creating lattice enhancers with proper typing
+ * Helper type for creating lattice composers with proper typing
  *
  * @example
- * const createCounterFeature = (): LatticeEnhancer<BaseState, CounterState> => {
+ * const createCounter = (): LatticeComposer<BaseState, CounterState> => {
  *   return (baseLattice) => {
  *     // Implementation...
  *   };
  * };
  */
-export type LatticeEnhancer<Base, Enhanced> = <T extends Base>(
+export type LatticeComposer<Base, Enhanced> = <T extends Base>(
   baseLattice: Lattice<T>
 ) => Lattice<T & Enhanced>;
 
