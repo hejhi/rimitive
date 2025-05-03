@@ -1,58 +1,82 @@
-import {
-  PropsState,
-  PropsStore,
-  LatticeWithProps,
-  PropsConfigCreator,
-} from './types';
-import { StoreApi } from 'zustand';
+import { WithPropsMW, PropsFn } from './types';
 
 /**
- * Middleware for composing props from a base lattice
+ * A Zustand-style middleware that enhances a props store with base props functionality
  *
- * This middleware allows props stores to access and compose with props
- * from the same part in a base lattice.
- *
- * @param baseLattice - The base lattice to compose props from
- * @returns A function that takes a props config and returns a new config with composed props
+ * @param baseLattice - The lattice containing the base props
+ * @returns A function that takes a state creator and returns an enhanced state creator
  */
-export function withProps<L extends LatticeWithProps>(baseLattice: L) {
-  return function <P>(config: PropsConfigCreator<P>) {
-    // This middleware will be used in createProps with partName as the first parameter
-    return (set: StoreApi<any>['setState'], get: StoreApi<any>['getState']) => {
-      // At this point, we don't have access to the partName directly
-      // It will be passed to createProps and added to the state later
+export const withProps: WithPropsMW = (baseLattice) => {
+  // Return an enhanced state creator function
+  return function enhanceStateCreator<P, R>(fn: any): PropsFn<P, R> {
+    return (set, get, api) => {
+      // Create getBaseProps function for accessing base props
+      const getBaseProps = (params?: P): R => {
+        const state = get();
+        const partName = state.partName;
+        const baseStore = baseLattice.props[partName];
 
-      // Create a simple implementation for the initial call
-      const deferredConfig = config(set, get, {
-        partName: '',
-        get: () => ({}),
-      } as PropsState<P>);
+        // Return empty object if no base store exists
+        if (!baseStore) return {} as R;
 
-      // Replace the get method with our wrapped version
-      return {
-        get: (params: P) => {
-          // Now we can access the state which has been initialized with partName
-          const state = get() as PropsState<P>;
-          const partName = state.partName;
+        try {
+          const baseState = baseStore.getState();
+          const baseGet = baseState.get;
 
-          // Find the base props store with the matching partName
-          const basePropsStore = baseLattice.props[partName] as
-            | PropsStore<P>
-            | undefined;
-
-          if (basePropsStore) {
-            // Get the state of the base props store, which has the get method
-            const basePropsState = basePropsStore.getState();
-
-            // Re-run the config function with the correct baseProps
-            const updatedConfig = config(set, get, basePropsState);
-            return updatedConfig.get(params);
+          // Handle different function signatures
+          if (baseGet.length === 0) {
+            return (baseGet as () => R)();
+          } else if (params !== undefined) {
+            return (baseGet as (params: P) => R)(params);
+          } else {
+            return (baseGet as (params: P) => R)({} as P);
           }
+        } catch (error) {
+          console.warn(`Error getting base props for ${partName}:`, error);
+          return {} as R;
+        }
+      };
 
-          // Fall back to the original behavior if no base props found
-          return deferredConfig.get(params);
-        },
+      // Get user's state with enhanced store
+      const userState = fn(set, get, { ...api, getBaseProps });
+      const originalGet = userState.get;
+
+      // Check if user is already manually handling base props
+      const userGetSourceCode = originalGet.toString();
+      const hasPotentialBasePropsUsage =
+        userGetSourceCode.includes('getBaseProps') ||
+        userGetSourceCode.includes('baseProps');
+
+      // User is already manually handling base props integration
+      if (hasPotentialBasePropsUsage) return userState;
+
+      // Otherwise, automatically integrate with base props
+      const integratedGet =
+        // For parameterless get functions
+        originalGet.length === 0
+          ? () => {
+              try {
+                const baseProps = getBaseProps();
+                const originalProps = (originalGet as () => R)();
+                return { ...baseProps, ...originalProps };
+              } catch (error) {
+                return (originalGet as () => R)();
+              }
+            }
+          : (params: P) => {
+              try {
+                const baseProps = getBaseProps(params);
+                const originalProps = (originalGet as (params: P) => R)(params);
+                return { ...baseProps, ...originalProps };
+              } catch (error) {
+                return (originalGet as (params: P) => R)(params);
+              }
+            };
+
+      return {
+        ...userState,
+        get: integratedGet,
       };
     };
   };
-}
+};

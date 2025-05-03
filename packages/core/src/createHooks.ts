@@ -72,7 +72,7 @@ export function createHooks(): HooksSystem {
      * @param args Arguments to pass to the hooks
      * @returns The potentially modified first argument
      */
-    executeBefore: (method: string, ...args: any[]) => {
+    executeBefore: (method: string, ...args: unknown[]) => {
       if (!beforeHooks[method]) {
         return args.length > 0 ? args[0] : undefined;
       }
@@ -107,7 +107,7 @@ export function createHooks(): HooksSystem {
      * @param args Original arguments passed to the method
      * @returns The potentially modified result
      */
-    executeAfter: (method: string, result: any, ...args: any[]) => {
+    executeAfter: (method: string, result: unknown, ...args: unknown[]) => {
       if (!afterHooks[method]) {
         return result;
       }

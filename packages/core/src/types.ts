@@ -1,19 +1,7 @@
 import { StoreApi } from 'zustand';
 
-/**
- * A function that creates state with set, get, and api parameters
- * This matches Zustand's StateCreator signature
- */
-export type StateCreator<T> = (
-  setState: StoreApi<T>['setState'],
-  getState: StoreApi<T>['getState'],
-  store: StoreApi<T>
-) => T;
-
-/**
- * Function to get current state
- */
-export type GetState<T> = () => T;
+// Utility type to prevent TypeScript from inferring types in certain positions
+export type NoInfer<T> = [T][T extends any ? 0 : never];
 
 // ---- Hooks System Types ----
 
@@ -36,60 +24,157 @@ export interface HooksSystem extends HooksInterface {
     method: string,
     callback: Function
   ) => void;
-  executeBefore: (method: string, ...args: any[]) => any;
-  executeAfter: (method: string, result: any, ...args: any[]) => any;
+  executeBefore: (method: string, ...args: unknown[]) => unknown;
+  executeAfter: (
+    method: string,
+    result: unknown,
+    ...args: unknown[]
+  ) => unknown;
 }
-
-/**
- * Base state for API store with hooks system
- */
-export type BaseState = { _hooks: HooksSystem };
 
 /**
  * Store with hooks system
  */
 export type StoreWithHooks<T> = T & { _hooks: HooksSystem };
 
-/**
- * Result of createAPI function
- */
-export interface CreateAPIResult<T> {
-  api: StoreApi<StoreWithHooks<T>>;
-  hooks: HooksInterface;
-}
-
 // ---- Props System Types ----
 
 /**
- * Interface for a props configuration
+ * Strongly typed base props getter function that accepts parameters
+ * This is important for withProps to correctly infer types and pass
+ * parameters from the component to the base props
  */
-export interface PropsConfig<P = unknown> {
-  get: (params: P) => Record<string, unknown>;
-}
+export type ForceTypedGetBaseProps<P, R> = (params?: P) => R;
+
+/**
+ * Get function with proper typing based on whether params is required
+ * Modified to be more flexible for test environments
+ */
+export type PropsGetFn<P, R> = P extends undefined
+  ? () => R
+  : unknown extends P
+    ? (params?: any) => R
+    : (params: P) => R;
 
 /**
  * Interface for a props store state
  */
-export interface PropsState<P = unknown> {
+export interface PropsState<P, R> {
   partName: string;
-  get: (params: P) => Record<string, unknown>;
+  get: PropsGetFn<P, R>;
 }
 
 /**
  * Type for a props store with partName metadata
  */
-export type PropsStore<P = unknown> = StoreApi<PropsState<P>> & {
+export type PropsStore<P, R> = StoreApi<PropsState<P, R>> & {
   partName: string;
 };
 
+// Type augmentation for tests
+declare global {
+  interface Window {
+    __LATTICE_TEST_MODE__?: boolean;
+  }
+}
+
 /**
- * Type for the config function in withProps
+ * Function signature for standard props config creators
+ * Follows a middleware-friendly pattern inspired by Zustand
  */
-export type PropsConfigCreator<P> = (
-  set: StoreApi<PropsState<P>>['setState'],
-  get: StoreApi<PropsState<P>>['getState'],
-  baseProps: PropsState<P>
-) => PropsConfig<P>;
+export type PropsFn<P, R> = (
+  set: StoreApi<PropsState<P, R>>['setState'],
+  get: StoreApi<PropsState<P, R>>['getState'],
+  store: StoreApi<PropsState<P, R>>
+) => {
+  get: PropsGetFn<P, R>;
+};
+
+/**
+ * State creator function that is compatible with Zustand's middleware pattern
+ */
+export type StateCreator<P, R> = (
+  set: StoreApi<PropsState<P, R>>['setState'],
+  get: StoreApi<PropsState<P, R>>['getState'],
+  store: StoreApi<PropsState<P, R>>
+) => PropsState<P, R>;
+
+/**
+ * Enhanced store type with base props access
+ */
+export type StoreWithBaseProps<P, R> = StoreApi<PropsState<P, R>> & {
+  getBaseProps: ForceTypedGetBaseProps<P, R>;
+};
+
+/**
+ * State creator type for functions that use enhanced store with base props
+ */
+export type StateCreatorWithBaseProps<P, R> = (
+  set: StoreApi<PropsState<P, R>>['setState'],
+  get: StoreApi<PropsState<P, R>>['getState'],
+  store: StoreWithBaseProps<P, R>
+) => {
+  get: P extends undefined ? () => R : (params: P) => R;
+};
+
+/**
+ * Type helper for inferring the return type of a function
+ */
+export type InferReturnType<T> = T extends (...args: any[]) => infer R
+  ? R
+  : never;
+
+/**
+ * Type for a props configuration with get function to support return type inference
+ */
+export type PropsConfig<P, G extends (params: P) => any> = {
+  get: G;
+};
+
+/**
+ * Type for a function that creates a props configuration with get function
+ */
+export type PropsConfigCreator<P, G extends (params: P) => any> = (
+  set: StoreApi<PropsState<P, InferReturnType<G>>>['setState'],
+  get: StoreApi<PropsState<P, InferReturnType<G>>>['getState'],
+  store: StoreWithBaseProps<P, InferReturnType<G>>
+) => PropsConfig<P, G>;
+
+/**
+ * Type for withProps middleware that properly preserves parameter types
+ * and supports return type inference
+ */
+export interface WithPropsMW {
+  // Original version with explicit types
+  <L extends LatticeWithProps>(
+    baseLattice: L
+  ): <P = any, R = any>(fn: StateCreatorWithBaseProps<P, R>) => PropsFn<P, R>;
+
+  // R-only version where P is specified inline in the get function
+  <L extends LatticeWithProps>(
+    baseLattice: L
+  ): <R>(
+    fn: (
+      set: StoreApi<PropsState<any, R>>['setState'],
+      get: StoreApi<PropsState<any, R>>['getState'],
+      store: StoreWithBaseProps<any, R>
+    ) => {
+      get: (params?: any) => R;
+    }
+  ) => PropsFn<any, R>;
+
+  // Enhanced version that infers return type from the get function
+  <L extends LatticeWithProps>(
+    baseLattice: L
+  ): <P = any, G extends (params: P) => any = (params: P) => any>(
+    fn: PropsConfigCreator<P, G>
+  ) => PropsFn<P, InferReturnType<G>>;
+}
+
+/**
+ * Type helper for better inference when spreading objects
+ */
+export type Spread<A, B> = Omit<A, keyof B> & B;
 
 // ---- Lattice Types ----
 
@@ -97,53 +182,45 @@ export type PropsConfigCreator<P> = (
  * Type for a lattice with props
  */
 export interface LatticeWithProps {
-  props: Record<string, PropsStore>;
-}
-
-/**
- * Base API interface for lattice
- */
-export interface LatticeAPI {
-  getState: () => Record<string, unknown>;
-  setState?: (state: Record<string, unknown>) => void;
-}
-
-/**
- * Base hooks interface for lattice
- */
-export interface LatticeHooks extends HooksInterface {
-  [key: string]: unknown;
-}
-
-/**
- * Lattice configuration object interface
- */
-export interface LatticeConfig {
-  api?: LatticeAPI;
-  hooks?: LatticeHooks;
-  props?: Record<string, PropsStore>;
-  use?: (plugin: (lattice: Lattice) => Lattice) => Lattice;
-  [key: string]: unknown;
+  props: Record<string, PropsStore<any, any>>;
+  name: string;
 }
 
 /**
  * Lattice object interface
  */
-export interface Lattice {
+export interface Lattice<T> {
   name: string;
-  api: LatticeAPI;
-  hooks: LatticeHooks;
-  props: Record<string, PropsStore>;
-  use: (plugin: (lattice: Lattice) => Lattice) => Lattice;
-  [key: string]: unknown;
+  api: StoreApi<StoreWithHooks<T>>;
+  hooks: HooksInterface;
+  props: Record<string, PropsStore<any, any>>;
+  use: <U>(plugin: (lattice: Lattice<T>) => Lattice<T & U>) => Lattice<T & U>;
 }
+
+/**
+ * Lattice configuration object
+ */
+export type LatticeConfig<T> = Partial<Omit<Lattice<T>, 'name'>>;
+
+/**
+ * Helper type for creating lattice enhancers with proper typing
+ *
+ * @example
+ * const createCounterFeature = (): LatticeEnhancer<BaseState, CounterState> => {
+ *   return (baseLattice) => {
+ *     // Implementation...
+ *   };
+ * };
+ */
+export type LatticeEnhancer<Base, Enhanced> = (
+  baseLattice: Lattice<Base>
+) => Lattice<Base & Enhanced>;
 
 // ---- Store Sync Types ----
 
 /**
- * Type for a selector function when syncing multiple stores
+ * Type for a state object that includes sync cleanup functionality
  */
-export type StoreStateSelector<
-  S extends Record<string, StoreApi<any>>,
-  T extends object,
-> = (storesState: { [K in keyof S]: ReturnType<S[K]['getState']> }) => T;
+export interface SyncedState {
+  _syncCleanup: () => void;
+}

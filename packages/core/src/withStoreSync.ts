@@ -1,5 +1,10 @@
 import { StoreApi } from 'zustand';
-import { StateCreator, StoreStateSelector } from './types';
+import { SyncedState } from './types';
+
+type StoreState<T> = T extends StoreApi<infer S> ? S : never;
+type StoresState<T extends Record<string, StoreApi<any>>> = {
+  [K in keyof T]: StoreState<T[K]>;
+};
 
 /**
  * Middleware for syncing multiple Zustand stores
@@ -9,54 +14,56 @@ import { StateCreator, StoreStateSelector } from './types';
  * which is then set on the target store.
  */
 export function withStoreSync<
-  S extends Record<string, StoreApi<any>>,
-  T extends object,
-  U extends object,
->(stores: S, selector: StoreStateSelector<S, T>) {
-  return (config: StateCreator<U>) =>
-    (
-      set: StoreApi<U>['setState'],
-      get: StoreApi<U>['getState'],
-      api: StoreApi<U>
-    ) => {
+  TStores extends Record<string, StoreApi<any>>,
+  TSelector extends (state: StoresState<TStores>) => any = (
+    state: StoresState<TStores>
+  ) => any,
+>(stores: TStores, selector: TSelector) {
+  return <TState extends object>(
+    config: (
+      set: StoreApi<TState & ReturnType<TSelector>>['setState'],
+      get: () => TState & ReturnType<TSelector>,
+      api: StoreApi<TState & ReturnType<TSelector>>
+    ) => TState
+  ) => {
+    return (
+      set: StoreApi<TState>['setState'],
+      get: StoreApi<TState>['getState'],
+      api: StoreApi<TState>
+    ): TState & ReturnType<TSelector> & SyncedState => {
       // Subscribe to all stores
-      const unsubscribers = Object.entries(stores).map(([_storeKey, store]) =>
+      const unsubscribers = Object.entries(stores).map(([_, store]) =>
         store.subscribe(() => {
-          // When any store updates, recompute and set the synced props
-          const selected = selector(
-            Object.fromEntries(
-              Object.entries(stores).map(([k, s]) => [k, s.getState()])
-            ) as any
-          );
-          set(selected as Partial<U>);
+          const storesState = Object.fromEntries(
+            Object.entries(stores).map(([k, s]) => [k, s.getState()])
+          ) as StoresState<TStores>;
+
+          const selected = selector(storesState);
+          set(selected as Partial<TState>);
         })
       );
 
       // Initialize synced props
-      const initialSelected = selector(
-        Object.fromEntries(
-          Object.entries(stores).map(([k, s]) => [k, s.getState()])
-        ) as any
+      const initialStoresState = Object.fromEntries(
+        Object.entries(stores).map(([k, s]) => [k, s.getState()])
+      ) as StoresState<TStores>;
+
+      const initialSelected = selector(initialStoresState);
+      const state = config(
+        set as StoreApi<TState & ReturnType<TSelector>>['setState'],
+        get as () => TState & ReturnType<TSelector>,
+        api as StoreApi<TState & ReturnType<TSelector>>
       );
 
-      const state = config(set, get, api);
-
-      // We need to unsubscribe from all stores when the component unmounts
-      // or when the store is no longer needed
-      // In a real implementation, this might be handled by the consuming code
       const cleanup = () => {
         unsubscribers.forEach((unsubscribe) => unsubscribe());
       };
 
-      // In a real application, you'd need to call cleanup when appropriate
-      // This is simplified for the example
-      // api.cleanup = cleanup; // Not part of StoreApi, would need custom handling
-
       return {
-        ...(initialSelected as object),
+        ...initialSelected,
         ...state,
-        // Add a cleanup method that consuming code can call
         _syncCleanup: cleanup,
-      };
+      } as TState & ReturnType<TSelector> & SyncedState;
     };
+  };
 }

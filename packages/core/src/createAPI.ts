@@ -1,11 +1,7 @@
-import { create, StoreApi } from 'zustand';
+import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
-import {
-  StateCreator,
-  CreateAPIResult,
-  StoreWithHooks,
-  BaseState,
-} from './types';
+import { StateCreator, StoreApi } from 'zustand/vanilla';
+import { StoreWithHooks, HooksSystem } from './types';
 import { createHooks } from './createHooks';
 
 /**
@@ -18,62 +14,61 @@ import { createHooks } from './createHooks';
  * @param config The state creator function that defines the API
  * @returns An object containing the API store and hooks interface
  */
-export function createAPI<T>(config: StateCreator<T>): CreateAPIResult<T> {
-  // Create a hooks system
-  const hooks = createHooks();
-
-  // Create a base state with hooks system
-  const baseState: BaseState = { _hooks: hooks };
-
+export function createAPI<T>(config: StateCreator<T, [], [], T>) {
   // Create the enhanced config with combined state
-  const enhancedConfig = (setState: any, getState: any, store: any) => {
+  const enhancedConfig = (
+    setState: StoreApi<T & { _hooks: HooksSystem }>['setState'],
+    getState: StoreApi<T & { _hooks: HooksSystem }>['getState'],
+    store: StoreApi<T & { _hooks: HooksSystem }>
+  ) => {
     // Get the original state from the user config
-    const originalState = config(setState, getState, store);
+    const originalState = config(setState, getState, store) as Record<
+      string,
+      unknown
+    >;
 
     // Use combine middleware to create the final state creator
-    return combine(baseState, (_set, get) => {
+    return combine({ _hooks: createHooks() }, (_set, get) => {
       // Process each property/method from the original state
       const processed: Record<string, unknown> = {};
 
-      Object.entries(originalState as Record<string, unknown>).forEach(
-        ([key, value]) => {
-          if (
-            typeof value === 'function' &&
-            !key.startsWith('get') &&
-            !key.startsWith('set')
-          ) {
-            // Wrap method with before/after hooks
-            processed[key] = (...args: unknown[]) => {
-              // Get hooks from current state
-              const currentHooks = get()._hooks;
+      for (const [key, value] of Object.entries(originalState)) {
+        if (
+          typeof value === 'function' &&
+          !key.startsWith('get') &&
+          !key.startsWith('set')
+        ) {
+          // Wrap method with before/after hooks
+          processed[key] = (...args: unknown[]) => {
+            // Get hooks from current state
+            const currentHooks = get()._hooks;
 
-              // Execute before hooks with original arguments
-              const modifiedArgs = currentHooks.executeBefore(key, ...args);
+            // Execute before hooks with original arguments
+            const modifiedArgs = currentHooks.executeBefore(key, ...args);
 
-              // Call the original method with possibly modified arguments
-              const result = value(
-                modifiedArgs !== undefined ? modifiedArgs : args[0],
-                ...args.slice(1)
-              );
+            // Call the original method with possibly modified arguments
+            const result: Function = value(
+              modifiedArgs !== undefined ? modifiedArgs : args[0],
+              ...args.slice(1)
+            );
 
-              // Execute after hooks with result and original arguments
-              return currentHooks.executeAfter(key, result, ...args);
-            };
-          } else {
-            // For non-method properties, just assign them
-            processed[key] = value;
-          }
+            // Execute after hooks with result and original arguments
+            return currentHooks.executeAfter(key, result, ...args);
+          };
+        } else {
+          // For non-method properties, just assign them
+          processed[key] = value;
         }
-      );
+      }
 
       return processed;
     })(setState, getState, store);
   };
 
-  // Create API store with proper type cast
-  const apiStore = create(enhancedConfig) as unknown as StoreApi<
-    StoreWithHooks<T>
-  >;
+  // Create API store
+  const apiStore = create(
+    enhancedConfig as StateCreator<StoreWithHooks<T>, [], [], StoreWithHooks<T>>
+  );
 
   // Return the API store and hooks interface
   return {

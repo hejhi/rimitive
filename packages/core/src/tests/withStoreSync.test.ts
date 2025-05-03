@@ -1,17 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { create, StoreApi } from 'zustand';
+import { create } from 'zustand';
 import { withStoreSync } from '../index';
-import { StoreStateSelector } from '../types';
-
-// Define types for our test stores
-type SourceState = { value: string };
-type SyncedState = { syncedValue: string };
-type BaseTargetState = SyncedState;
-type TargetState = BaseTargetState & { _syncCleanup: () => void };
-
-type TestStores = {
-  sourceStore: StoreApi<SourceState>;
-};
+import { SyncedState as SyncedStateWithCleanup } from '../types';
 
 describe('withStoreSync middleware', () => {
   it('should synchronize state from source stores to target store', () => {
@@ -37,7 +27,6 @@ describe('withStoreSync middleware', () => {
         })
       )(() => ({
         extraState: 'initial',
-        // Add any other state or methods needed
       }))
     );
 
@@ -61,22 +50,18 @@ describe('withStoreSync middleware', () => {
   it('should properly handle source store changes and cleanup', () => {
     // Create source store with a mock unsubscribe function
     const unsubscribe = vi.fn();
-    const sourceStore = create<SourceState>(() => ({ value: 'initial' }));
+    const sourceStore = create(() => ({ value: 'initial' }));
     vi.spyOn(sourceStore, 'subscribe').mockReturnValue(unsubscribe);
 
-    // Define selector
-    const selector: StoreStateSelector<TestStores, SyncedState> = ({
-      sourceStore,
-    }) => ({
-      syncedValue: sourceStore.value,
-    });
+    type State = {
+      syncedValue: string;
+    } & SyncedStateWithCleanup;
 
     // Create target store with withStoreSync middleware
-    const targetStore = create<TargetState>(
-      withStoreSync<TestStores, SyncedState, BaseTargetState>(
-        { sourceStore },
-        selector
-      )(() => ({
+    const targetStore = create<State>(
+      withStoreSync({ sourceStore }, ({ sourceStore }) => ({
+        syncedValue: sourceStore.value,
+      }))(() => ({
         syncedValue: sourceStore.getState().value,
       }))
     );

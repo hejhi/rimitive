@@ -1,26 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
-import { create } from 'zustand';
 import { mergeProps } from '../mergeProps';
-import { PropsState, PropsStore } from '../types';
+import { createProps } from '../createProps';
 
 describe('mergeProps', () => {
   // Test the enhanced functionality: organizing props stores by partName
   it('should organize props stores by their partName metadata', () => {
     // Create mock props stores with partName metadata
-    const buttonProps = create<PropsState>(() => ({
-      partName: 'button',
+    const buttonProps = createProps('button', () => ({
       get: () => ({ role: 'button' }),
-    })) as unknown as PropsStore;
+    }));
 
-    const menuProps = create<PropsState>(() => ({
-      partName: 'menu',
+    const menuProps = createProps('menu', () => ({
       get: () => ({ role: 'menu' }),
-    })) as unknown as PropsStore;
+    }));
 
-    const listProps = create<PropsState>(() => ({
-      partName: 'list',
+    const listProps = createProps('list', () => ({
       get: () => ({ role: 'list' }),
-    })) as unknown as PropsStore;
+    }));
 
     // Test organizing stores - pass as individual arguments
     const result = mergeProps(buttonProps, menuProps, listProps);
@@ -39,24 +35,21 @@ describe('mergeProps', () => {
   // Test last store wins for the same partName (no merging)
   it('should use the last store when multiple stores have the same partName', () => {
     // Create two button stores with the same partName but different properties
-    const buttonProps1 = create<PropsState>(() => ({
-      partName: 'button',
+    const buttonProps1 = createProps('button', () => ({
       get: () => ({ role: 'button', variant: 'primary' }),
-    })) as unknown as PropsStore;
+    }));
 
-    const buttonProps2 = create<PropsState>(() => ({
-      partName: 'button',
+    const buttonProps2 = createProps('button', () => ({
       get: () => ({
         disabled: true,
         'aria-label': 'Action button',
       }),
-    })) as unknown as PropsStore;
+    }));
 
     // Also create a menu store with a different partName
-    const menuProps = create<PropsState>(() => ({
-      partName: 'menu',
+    const menuProps = createProps('menu', () => ({
       get: () => ({ role: 'menu' }),
-    })) as unknown as PropsStore;
+    }));
 
     // Merge all stores directly - last store with same partName should win
     const result = mergeProps(buttonProps1, buttonProps2, menuProps);
@@ -84,9 +77,9 @@ describe('mergeProps', () => {
   // Test warning and error for props store missing partName
   it('should warn and throw error when a props store is missing partName metadata', () => {
     // Create a mock props store without partName metadata
-    const propsWithoutPartName = create<Partial<PropsState>>(() => ({
+    const propsWithoutPartName = createProps('', () => ({
       get: () => ({ role: 'unknown' }),
-    })) as unknown as PropsStore;
+    }));
 
     // Mock console.warn
     const originalWarn = console.warn;
@@ -104,5 +97,65 @@ describe('mergeProps', () => {
 
     // Restore console.warn
     console.warn = originalWarn;
+  });
+
+  it('should merge props stores by partName', () => {
+    // Create two button stores with the same partName but different properties
+    const buttonProps1 = createProps('button', () => ({
+      get: () => ({ role: 'button', variant: 'primary' }),
+    }));
+
+    const buttonProps2 = createProps('button', () => ({
+      get: () => ({
+        disabled: true,
+        'aria-label': 'Action button',
+      }),
+    }));
+
+    // Also create a menu store with a different partName
+    const menuProps = createProps('menu', () => ({
+      get: () => ({ role: 'menu' }),
+    }));
+
+    // Merge the props stores
+    const result = mergeProps(buttonProps1, buttonProps2, menuProps);
+
+    // Should have two entries - one for button and one for menu
+    expect(Object.keys(result)).toHaveLength(2);
+    expect(result).toHaveProperty('button');
+    expect(result).toHaveProperty('menu');
+
+    // The button entry should be the last button store provided
+    const buttonStore = result.button;
+    expect(buttonStore).toBeDefined();
+    if (buttonStore) {
+      expect(buttonStore.getState().get({})).toEqual({
+        disabled: true,
+        'aria-label': 'Action button',
+      });
+    }
+
+    // The menu entry should be the menu store
+    const menuStore = result.menu;
+    expect(menuStore).toBeDefined();
+    if (menuStore) {
+      expect(menuStore.getState().get({})).toEqual({ role: 'menu' });
+    }
+  });
+
+  it('should handle empty input', () => {
+    const result = mergeProps();
+    expect(result).toEqual({});
+  });
+
+  it('should throw error if store is missing partName', () => {
+    // Create a store without partName
+    const invalidStore = createProps('', () => ({
+      get: () => ({}),
+    }));
+
+    expect(() => mergeProps(invalidStore)).toThrow(
+      'Props store missing partName metadata'
+    );
   });
 });

@@ -2,33 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { createProps } from '../createProps';
 import { withProps } from '../withProps';
 import { createLattice } from '../createLattice';
-import { PropsState, Lattice, PropsStore, PropsConfig } from '../types';
-
-// Define interfaces for our props structures
-interface BaseStyle {
-  display: string;
-  padding: string;
-  margin: string;
-  backgroundColor: string;
-  borderLeft?: string;
-}
-
-interface BaseData {
-  testId: string;
-  level: number;
-  selected?: boolean;
-}
-
-interface BaseTreeItemProps extends Record<string, unknown> {
-  role: string;
-  tabIndex: number;
-  style: BaseStyle;
-  data: BaseData;
-  'aria-level': number;
-  'aria-selected'?: boolean;
-  onClick: (e: MouseEvent) => void;
-  onKeyDown: (e: { key: string }) => void;
-}
 
 // Define the param types for better type safety
 interface TreeItemParams {
@@ -37,101 +10,130 @@ interface TreeItemParams {
   isSelected?: boolean;
 }
 
+// Define the return type for the tree item props
+interface TreeItemProps {
+  role: string;
+  tabIndex: number;
+  style: {
+    display: string;
+    padding: string;
+    margin: string;
+    backgroundColor: string;
+    borderLeft?: string;
+  };
+  data: {
+    testId: string;
+    level: number;
+    selected?: boolean;
+  };
+  'aria-level': number;
+  'aria-selected'?: boolean;
+  onClick: (e: MouseEvent) => void;
+  onKeyDown: (e: { key: string }) => void;
+}
+
 describe('withProps middleware', () => {
   it('should provide access to base props for manual merging', () => {
-    // Create base props for the tree item
-    const baseTreeItemProps = createProps<TreeItemParams>(
+    // Create base props for the tree item with proper type inference
+    const baseTreeItemProps = createProps<TreeItemParams, TreeItemProps>(
       'treeItem',
-      (_set, _get) =>
-        ({
-          get: (params): Record<string, unknown> => ({
-            role: 'treeitem',
-            tabIndex: 0,
-            style: {
-              display: 'flex',
-              padding: '4px',
-              margin: '2px 0',
-              backgroundColor: 'transparent',
-            },
-            data: {
-              testId: `tree-item-${params.id}`,
-              level: params.level || 0,
-            },
-            'aria-level': params.level || 1,
-            onClick: () => console.log('base click'),
-            onKeyDown: (e: { key: string }) => {
-              if (e.key === 'Enter') {
-                console.log('base Enter pressed');
-              }
-            },
-          }),
-        }) as PropsConfig<TreeItemParams>
+      (_set, _get) => ({
+        get: (params) => ({
+          role: 'treeitem',
+          tabIndex: 0,
+          style: {
+            display: 'flex',
+            padding: '4px',
+            margin: '2px 0',
+            backgroundColor: 'transparent',
+          },
+          data: {
+            testId: `tree-item-${params?.id || 'unknown'}`,
+            level: params?.level || 0,
+          },
+          'aria-level': params?.level || 1,
+          onClick: () => console.log('base click'),
+          onKeyDown: (e: { key: string }) => {
+            if (e.key === 'Enter') {
+              console.log('base Enter pressed');
+            }
+          },
+        }),
+      })
     );
 
     // Create a base lattice using the createLattice function
-    const baseLattice = createLattice('baseTree', {
+    const baseLattice = createLattice<TreeItemParams>('baseTree', {
       props: {
-        treeItem: baseTreeItemProps as unknown as PropsStore<unknown>,
+        treeItem: baseTreeItemProps,
       },
-    }) as Lattice & { props: { treeItem: PropsStore<TreeItemParams> } };
+    });
 
     // Create new props using withProps middleware and manually merge needed props
-    const enhancedProps = createProps<TreeItemParams>(
+    const enhancedProps = createProps<TreeItemParams, TreeItemProps>(
       'treeItem',
-      withProps(baseLattice as Lattice)(
-        (_set, _get, baseProps: PropsState<TreeItemParams>) =>
-          ({
-            get: (params): Record<string, unknown> => {
-              // Get the base props explicitly and type it
-              const basePropValues = baseProps.get(params) as BaseTreeItemProps;
+      withProps(baseLattice)((_set, _get, store) => ({
+        get: (inputParams: TreeItemParams) => {
+          if (!inputParams) {
+            throw new Error('TreeItemParams is required');
+          }
 
-              return {
-                // Inherit props we want to keep from the base
-                role: basePropValues.role,
-                'aria-level': basePropValues['aria-level'],
+          // Get base props using the getBaseProps helper with same params
+          // Pass the same params here to ensure consistency
+          const basePropValues = store.getBaseProps(
+            inputParams
+          ) as TreeItemProps;
 
-                // Override some existing attributes
-                tabIndex: params.isSelected ? 0 : -1,
+          return {
+            // Inherit props we want to keep from the base
+            role: basePropValues.role,
+            'aria-level': basePropValues['aria-level'],
 
-                // Manually merge nested style object
-                style: {
-                  ...basePropValues.style,
-                  backgroundColor: params.isSelected
-                    ? 'lightblue'
-                    : 'transparent',
-                  borderLeft: '2px solid blue',
-                },
+            // Override some existing attributes
+            tabIndex: inputParams.isSelected ? 0 : -1,
 
-                // Manually merge nested data object
-                data: {
-                  ...basePropValues.data,
-                  selected: params.isSelected,
-                },
-
-                // Add a new attribute
-                'aria-selected': params.isSelected,
-
-                // Override event handler but call the base handler
-                onClick: (e: MouseEvent) => {
-                  console.log('enhanced click');
-                  // Explicitly call base onClick
-                  basePropValues.onClick(e);
-                },
-
-                // Keep the onKeyDown handler from base
-                onKeyDown: basePropValues.onKeyDown,
-              };
+            // Manually merge nested style object
+            style: {
+              ...basePropValues.style,
+              backgroundColor: inputParams.isSelected
+                ? 'lightblue'
+                : 'transparent',
+              borderLeft: '2px solid blue',
             },
-          }) as PropsConfig<TreeItemParams>
-      )
+
+            // Manually merge nested data object
+            data: {
+              ...basePropValues.data,
+              selected: inputParams.isSelected,
+            },
+
+            // Add a new attribute
+            'aria-selected': inputParams.isSelected,
+
+            // Override event handler but call the base handler
+            onClick: (e: MouseEvent) => {
+              console.log('enhanced click');
+              // Explicitly call base onClick
+              basePropValues.onClick(e);
+            },
+
+            // Keep the onKeyDown handler from base
+            onKeyDown: basePropValues.onKeyDown,
+          };
+        },
+      }))
     );
 
     // Get props from both stores for the same params
-    const params: TreeItemParams = { id: 'item-1', level: 2, isSelected: true };
+    const params: TreeItemParams = {
+      id: 'item-1',
+      level: 2,
+      isSelected: true,
+    } as const;
     baseLattice.props.treeItem?.getState().get(params);
     const enhancedTreeItemProps = enhancedProps
       .getState()
-      .get(params) as BaseTreeItemProps;
+      .get(params) as TreeItemProps;
 
     // Test manually merged styles
     expect(enhancedTreeItemProps.style).toEqual({

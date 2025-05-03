@@ -1,146 +1,150 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createAPI } from '../index';
-import { create } from 'zustand';
 import { withStoreSync } from '../index';
 
 describe('createAPI', () => {
-  it('should create an API store with basic config', () => {
-    // Define a simple config for the API store
-    const config = (set: Function, get: Function) => ({
-      count: 0,
-      increment: () =>
-        set((state: { count: number }) => ({ count: state.count + 1 })),
-      getCount: () => get().count,
-    });
+  it('should create an API store with proper state management', () => {
+    interface TodoState {
+      todos: string[];
+      addTodo: (todo: string) => void;
+      removeTodo: (index: number) => void;
+      getTodos: () => string[];
+    }
 
-    // Create API using the config
-    const { api, hooks } = createAPI(config);
+    const { api, hooks } = createAPI<TodoState>((set, get) => ({
+      todos: [],
+      addTodo: (todo) => set((state) => ({ todos: [...state.todos, todo] })),
+      removeTodo: (index) =>
+        set((state) => ({
+          todos: state.todos.filter((_, i) => i !== index),
+        })),
+      getTodos: () => get().todos,
+    }));
 
-    // Verify the API store has the correct structure
-    expect(api).toBeDefined();
-    expect(typeof api.getState).toBe('function');
-    expect(typeof api.setState).toBe('function');
-    expect(typeof api.subscribe).toBe('function');
+    // Test initial state
+    expect(api.getState().todos).toEqual([]);
 
-    // Verify the API contains the state and methods from the config
-    let state = api.getState();
-    expect(state.count).toBe(0);
-    expect(typeof state.increment).toBe('function');
-    expect(typeof state.getCount).toBe('function');
+    // Test adding todos
+    api.getState().addTodo('Learn TypeScript');
+    api.getState().addTodo('Write tests');
+    expect(api.getState().todos).toEqual(['Learn TypeScript', 'Write tests']);
 
-    // Test API functionality
-    state.increment();
+    // Test getting todos
+    expect(api.getState().getTodos()).toEqual([
+      'Learn TypeScript',
+      'Write tests',
+    ]);
 
-    // Get the latest state from the store after increment
-    state = api.getState();
-    expect(state.count).toBe(1);
-    expect(state.getCount()).toBe(1);
+    // Test removing todo
+    api.getState().removeTodo(0);
+    expect(api.getState().todos).toEqual(['Write tests']);
 
-    // Verify the hooks interface
+    // Verify hooks interface
     expect(hooks).toBeDefined();
     expect(typeof hooks.before).toBe('function');
     expect(typeof hooks.after).toBe('function');
   });
 
-  it('should execute hooks when API methods are called', () => {
-    // Define a config with testable methods
-    const config = (set: Function, _get: Function) => ({
-      value: 'initial',
-      updateValue: (newValue: string) => set({ value: newValue }),
-      processValue: (input: string) => `processed:${input}`,
-    });
+  it('should execute hooks with proper argument and return value handling', () => {
+    interface MathState {
+      calculate: (a: number, b: number) => number;
+      formatResult: (result: number) => string;
+    }
 
-    // Create API
-    const { api, hooks } = createAPI(config);
-
-    // Create spy functions for before and after hooks
-    const beforeSpy = vi.fn();
-    const afterSpy = vi.fn();
-
-    // Register hooks
-    hooks.before('processValue', beforeSpy);
-    hooks.after('processValue', afterSpy);
-
-    // Call the method that should trigger hooks
-    const result = api.getState().processValue('test');
-
-    // Verify hooks were called with correct arguments
-    expect(beforeSpy).toHaveBeenCalledWith('test');
-    expect(afterSpy).toHaveBeenCalledWith('processed:test', 'test');
-    expect(result).toBe('processed:test');
-  });
-
-  it('should allow hooks to modify arguments and return values', () => {
-    // Define a config with testable methods
-    const config = (_set: Function, _get: Function) => ({
-      multiply: (a: number, b: number) => a * b,
-    });
-
-    // Create API
-    const { api, hooks } = createAPI(config);
-
-    // Create hooks that modify inputs and outputs
-    hooks.before('multiply', (a: number, _b: number) => a + 1); // Modify first argument
-    hooks.after('multiply', (result: number) => result * 2); // Double the result
-
-    // Call the method
-    const result = api.getState().multiply(2, 3);
-
-    // With modified inputs (3 * 3) and doubled output, should be 18
-    expect(result).toBe(18);
-  });
-
-  it('should properly integrate with withStoreSync middleware', () => {
-    // Create a source store
-    const sourceStore = create(() => ({
-      count: 0,
-      name: 'test',
-      increment: () =>
-        sourceStore.setState((state) => ({ count: state.count + 1 })),
-      updateName: (name: string) => sourceStore.setState({ name }),
+    const { api, hooks } = createAPI<MathState>((_set, _get) => ({
+      calculate: (a, b) => a + b,
+      formatResult: (result) => `Result: ${result}`,
     }));
 
-    // Create an additional source store to test multiple store synchronization
-    const configStore = create(() => ({
+    // Test before hook modifying first argument
+    hooks.before('calculate', (a: number, _b: number) => a * 2);
+
+    // Test after hook modifying return value
+    hooks.after('calculate', (result: number) => result * 2);
+
+    // Test format hook
+    hooks.before('formatResult', (result: number) => result + 1);
+
+    const result = api.getState().calculate(2, 3);
+    // (2 * 2 + 3) * 2 = 14
+    expect(result).toBe(14);
+
+    const formatted = api.getState().formatResult(10);
+    // Result: 11 (10 + 1 from before hook)
+    expect(formatted).toBe('Result: 11');
+  });
+
+  it('should properly integrate with withStoreSync for complex state management', () => {
+    // User store
+    interface UserState {
+      name: string;
+      email: string;
+      setName: (name: string) => void;
+      setEmail: (email: string) => void;
+    }
+
+    // Settings store
+    interface SettingsState {
+      theme: 'light' | 'dark';
+      language: string;
+      setTheme: (theme: 'light' | 'dark') => void;
+      setLanguage: (lang: string) => void;
+    }
+
+    // Create source stores
+    const userStore = createAPI<UserState>((set) => ({
+      name: 'John',
+      email: 'john@example.com',
+      setName: (name) => set({ name }),
+      setEmail: (email) => set({ email }),
+    }));
+
+    const settingsStore = createAPI<SettingsState>((set) => ({
       theme: 'light',
       language: 'en',
-      setTheme: (theme: string) => configStore.setState({ theme }),
-      setLanguage: (lang: string) => configStore.setState({ language: lang }),
+      setTheme: (theme) => set({ theme }),
+      setLanguage: (lang) => set({ language: lang }),
     }));
 
-    // Create API with withStoreSync middleware and multiple source stores
-    // Use type any to bypass complex middleware typing issues
-    // This is acceptable in a test where we care about runtime behavior more than type safety
-    const { api } = createAPI(
-      withStoreSync(
-        { sourceStore, configStore },
-        ({ sourceStore, configStore }) => ({
-          syncedCount: sourceStore.count,
-          syncedName: sourceStore.name,
-          syncedTheme: configStore.theme,
-          syncedLanguage: configStore.language,
-        })
-      )((_set: any, get: any) => ({
-        getFormattedCount: () => `Count: ${get().syncedCount}`,
-        getFullName: (suffix: string) => `${get().syncedName} ${suffix}`,
-        getThemedName: () => `${get().syncedName} (${get().syncedTheme})`,
-        incrementSource: () => sourceStore.getState().increment(),
-        changeTheme: (theme: string) => configStore.getState().setTheme(theme),
+    const stores = {
+      user: userStore.api,
+      settings: settingsStore.api,
+    } as const;
+
+    // Target store that combines and processes data from source stores
+    interface TargetState {
+      getFormattedUser: () => string;
+      getThemedEmail: () => string;
+      updateUserTheme: (theme: 'light' | 'dark') => void;
+    }
+
+    const { api } = createAPI<TargetState>(
+      withStoreSync(stores, (state) => ({
+        syncedName: state.user.name,
+        syncedEmail: state.user.email,
+        syncedTheme: state.settings.theme,
+      }))((_set, get) => ({
+        getFormattedUser: () => `${get().syncedName} (${get().syncedEmail})`,
+        getThemedEmail: () => `${get().syncedEmail} [${get().syncedTheme}]`,
+        updateUserTheme: (theme) =>
+          settingsStore.api.getState().setTheme(theme),
       }))
     );
 
-    // Initial state check
-    expect(api.getState()).toHaveProperty('syncedCount', 0);
-    expect(api.getState()).toHaveProperty('syncedName', 'test');
-    expect(api.getState()).toHaveProperty('syncedTheme', 'light');
-    expect(api.getState()).toHaveProperty('syncedLanguage', 'en');
+    // Test initial synced state
+    expect(api.getState().getFormattedUser()).toBe('John (john@example.com)');
+    expect(api.getState().getThemedEmail()).toBe('john@example.com [light]');
 
-    // Update source stores
-    sourceStore.getState().increment();
-    sourceStore.getState().updateName('newTest');
+    // Test state updates propagation
+    userStore.api.getState().setName('Jane');
+    userStore.api.getState().setEmail('jane@example.com');
+    settingsStore.api.getState().setTheme('dark');
 
-    // Verify API updates when source stores change
-    expect(api.getState()).toHaveProperty('syncedCount', 1);
-    expect(api.getState()).toHaveProperty('syncedName', 'newTest');
+    expect(api.getState().getFormattedUser()).toBe('Jane (jane@example.com)');
+    expect(api.getState().getThemedEmail()).toBe('jane@example.com [dark]');
+
+    // Test method that updates source store
+    api.getState().updateUserTheme('light');
+    expect(api.getState().getThemedEmail()).toBe('jane@example.com [light]');
   });
 });
