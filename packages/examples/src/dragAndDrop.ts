@@ -262,7 +262,7 @@ export const createDragAndDrop = <
   treeWithDnd.api.setNodes(createTestTreeData());
   
   // Custom drag end handler
-  treeWithDnd.hooks.after('processDrop', (result) => {
+  treeWithDnd.hooks.after("processDrop", (result) => {
     console.log('Drop completed:', result);
     
     if (result.success && result.source && result.target) {

@@ -1,6 +1,12 @@
 import { vi, describe, it, expect, afterEach } from 'vitest';
 import { createHooks } from '../createHooks';
 
+// Define a test API type for the hooks
+interface TestAPI {
+  testMethod: (arg1: string, arg2: string) => void;
+  anotherMethod: () => void;
+}
+
 describe('createHooks', () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -8,7 +14,7 @@ describe('createHooks', () => {
 
   // Test basic creation and structure of the hooks system
   it('should create a hooks system with before and after methods', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
 
     expect(hooks).toBeDefined();
     expect(typeof hooks.before).toBe('function');
@@ -19,7 +25,7 @@ describe('createHooks', () => {
 
   // Test registration of before hooks
   it('should register before hooks for a method', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const callback = vi.fn();
 
     hooks.before('testMethod', callback);
@@ -29,7 +35,7 @@ describe('createHooks', () => {
 
   // Test registration of after hooks
   it('should register after hooks for a method', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const callback = vi.fn();
 
     hooks.after('testMethod', callback);
@@ -39,7 +45,7 @@ describe('createHooks', () => {
 
   // Test registration order preservation
   it('should register multiple hooks for the same method in order', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const callback1 = vi.fn();
     const callback2 = vi.fn();
 
@@ -56,7 +62,7 @@ describe('createHooks', () => {
 
   // Test hook removal functionality
   it('should allow removing registered hooks', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const callback = vi.fn();
 
     hooks.before('testMethod', callback);
@@ -67,7 +73,7 @@ describe('createHooks', () => {
 
   // Test execution order and argument passing for before hooks
   it('should execute before hooks in registration order with correct arguments', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const callback1 = vi.fn();
     const callback2 = vi.fn();
     const args = ['arg1', 'arg2'];
@@ -84,7 +90,7 @@ describe('createHooks', () => {
 
   // Test execution order and argument passing for after hooks
   it('should execute after hooks in registration order with correct arguments', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const callback1 = vi.fn();
     const callback2 = vi.fn();
     const result = { success: true };
@@ -102,7 +108,7 @@ describe('createHooks', () => {
 
   // Test argument modification by before hooks
   it('should allow before hooks to modify arguments', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const modifyArg = vi.fn((arg) => arg + '_modified');
 
     hooks.before('testMethod', modifyArg);
@@ -115,7 +121,7 @@ describe('createHooks', () => {
 
   // Test result modification by after hooks
   it('should allow after hooks to modify return value', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const modifyResult = vi.fn((result) => ({ ...result, modified: true }));
 
     hooks.after('testMethod', modifyResult);
@@ -128,7 +134,7 @@ describe('createHooks', () => {
 
   // Test error handling in before hooks
   it('should handle errors in before hooks', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const errorCallback = vi.fn(() => {
       throw new Error('Hook error');
     });
@@ -143,7 +149,7 @@ describe('createHooks', () => {
 
   // Test error handling in after hooks
   it('should handle errors in after hooks', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
     const errorCallback = vi.fn(() => {
       throw new Error('Hook error');
     });
@@ -160,7 +166,7 @@ describe('createHooks', () => {
 
   // Test for graceful handling of unregistered methods
   it('should not fail when executing hooks for unregistered methods', () => {
-    const hooks = createHooks();
+    const hooks = createHooks<TestAPI>();
 
     expect(() => hooks.executeBefore('nonExistentMethod')).not.toThrow();
     expect(() => hooks.executeAfter('nonExistentMethod', {})).not.toThrow();

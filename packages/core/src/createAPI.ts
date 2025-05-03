@@ -1,7 +1,12 @@
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
 import { StateCreator, StoreApi } from 'zustand/vanilla';
-import { StoreWithHooks, HooksSystem, DirectAccessAPI } from './types';
+import {
+  StoreWithHooks,
+  HooksSystem,
+  DirectAccessAPI,
+  HooksInterface,
+} from './types';
 import { createHooks } from './createHooks';
 
 /**
@@ -28,7 +33,7 @@ export function createAPI<T>(config: StateCreator<T, [], [], T>) {
     >;
 
     // Use combine middleware to create the final state creator
-    return combine({ _hooks: createHooks() }, (_set, get) => {
+    return combine({ _hooks: createHooks<T>() }, (_set, get) => {
       // Process each property/method from the original state
       const processed: Record<string, unknown> = {};
 
@@ -89,10 +94,10 @@ export function createAPI<T>(config: StateCreator<T, [], [], T>) {
   return {
     api: apiStore as DirectAccessAPI<T>,
     hooks: {
-      before: (method: string, callback: Function) =>
+      before: <K extends keyof T>(method: K, callback: Function) =>
         apiStore.getState()._hooks.before(method, callback),
-      after: (method: string, callback: Function) =>
+      after: <K extends keyof T>(method: K, callback: Function) =>
         apiStore.getState()._hooks.after(method, callback),
-    },
+    } as HooksInterface<T>,
   };
 }

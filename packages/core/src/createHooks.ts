@@ -13,7 +13,7 @@ import { HooksSystem } from './types';
  *
  * @returns A complete hooks system implementation with before/after registration and execution methods
  */
-export function createHooks(): HooksSystem {
+export function createHooks<T = any>(): HooksSystem<T> {
   const beforeHooks: Record<string, Function[]> = {};
   const afterHooks: Record<string, Function[]> = {};
 
@@ -24,11 +24,12 @@ export function createHooks(): HooksSystem {
      * @param method The name of the method to hook into
      * @param callback The function to call before the method executes
      */
-    before: (method: string, callback: Function) => {
-      if (!beforeHooks[method]) {
-        beforeHooks[method] = [];
+    before: <K extends keyof T>(method: K, callback: Function) => {
+      const methodName = String(method);
+      if (!beforeHooks[methodName]) {
+        beforeHooks[methodName] = [];
       }
-      beforeHooks[method].push(callback);
+      beforeHooks[methodName].push(callback);
     },
 
     /**
@@ -37,11 +38,12 @@ export function createHooks(): HooksSystem {
      * @param method The name of the method to hook into
      * @param callback The function to call after the method executes
      */
-    after: (method: string, callback: Function) => {
-      if (!afterHooks[method]) {
-        afterHooks[method] = [];
+    after: <K extends keyof T>(method: K, callback: Function) => {
+      const methodName = String(method);
+      if (!afterHooks[methodName]) {
+        afterHooks[methodName] = [];
       }
-      afterHooks[method].push(callback);
+      afterHooks[methodName].push(callback);
     },
 
     /**
@@ -51,12 +53,17 @@ export function createHooks(): HooksSystem {
      * @param method The method name the hook was registered for
      * @param callback The callback function to remove
      */
-    remove: (type: 'before' | 'after', method: string, callback: Function) => {
+    remove: <K extends keyof T>(
+      type: 'before' | 'after',
+      method: K,
+      callback: Function
+    ) => {
+      const methodName = String(method);
       const hooksCollection = type === 'before' ? beforeHooks : afterHooks;
-      if (hooksCollection[method]) {
-        const index = hooksCollection[method].indexOf(callback);
+      if (hooksCollection[methodName]) {
+        const index = hooksCollection[methodName].indexOf(callback);
         if (index !== -1) {
-          hooksCollection[method].splice(index, 1);
+          hooksCollection[methodName].splice(index, 1);
         }
       }
     },

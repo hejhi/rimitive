@@ -8,20 +8,20 @@ export type NoInfer<T> = [T][T extends any ? 0 : never];
 /**
  * Interface for the hooks system
  */
-export interface HooksInterface {
-  before: (method: string, callback: Function) => void;
-  after: (method: string, callback: Function) => void;
+export interface HooksInterface<T = any> {
+  before: <K extends keyof T>(method: K, callback: Function) => void;
+  after: <K extends keyof T>(method: K, callback: Function) => void;
 }
 
 /**
  * The hooks system for intercepting API method calls
  */
-export interface HooksSystem extends HooksInterface {
+export interface HooksSystem<T = any> extends HooksInterface<T> {
   _beforeHooks: Record<string, Function[]>;
   _afterHooks: Record<string, Function[]>;
-  remove: (
+  remove: <K extends keyof T>(
     type: 'before' | 'after',
-    method: string,
+    method: K,
     callback: Function
   ) => void;
   executeBefore: (method: string, ...args: unknown[]) => unknown;
@@ -35,7 +35,7 @@ export interface HooksSystem extends HooksInterface {
 /**
  * Store with hooks system
  */
-export type StoreWithHooks<T> = T & { _hooks: HooksSystem };
+export type StoreWithHooks<T> = T & { _hooks: HooksSystem<T> };
 
 /**
  * composed API type that combines the Zustand store API with direct method access
@@ -199,7 +199,7 @@ export interface LatticeWithProps {
 export interface Lattice<T> {
   name: string;
   api: DirectAccessAPI<T>;
-  hooks: HooksInterface;
+  hooks: HooksInterface<T>;
   props: Record<string, PropsStore<any, any>>;
   use: <U>(compose: (lattice: Lattice<T>) => Lattice<T & U>) => Lattice<T & U>;
 }
