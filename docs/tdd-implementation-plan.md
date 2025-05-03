@@ -21,8 +21,8 @@ draft specification.
 - ✅ Test with multiple source stores to verify proper synchronization
   - Implemented in: `/packages/core/src/tests/withStoreSync.test.ts`
   - Verifies: handling multiple store dependencies simultaneously
-- Test with complex selector functions to verify data transformation
-- Test performance with many rapid store updates
+- ⏳ Test with complex selector functions to verify data transformation
+- ⏳ Test performance with many rapid store updates
 - ✅ Implement main withStoreSync middleware
   - Implemented in: `/packages/core/src/withStoreSync.ts` and
     `/packages/core/src/index.ts`
@@ -49,7 +49,7 @@ draft specification.
 - ✅ Test with empty config objects to verify defaults
   - Implemented in: `/packages/core/src/tests/withLattice.test.ts`
   - Verifies: default values are applied when properties are missing
-- Test merging complex nested structures
+- ⏳ Test merging complex nested structures
 
 ### `createAPI` Utility
 
@@ -110,10 +110,10 @@ draft specification.
     - Preserves partName in all cases for reference
     - Handles both simple and complex dependency patterns
     - Integrates with withStoreSync for store dependency cases
-- Test with dependencies as middleware function (e.g., withStoreSync)
-- Test with store dependencies object (withStoreSync case)
-- Test with empty config to verify defaults
-- Test reactivity of returned props to store changes
+- ✅ Test with dependencies as middleware function (e.g., withStoreSync)
+- ✅ Test with store dependencies object (withStoreSync case)
+- ✅ Test with empty config to verify defaults
+- ✅ Test reactivity of returned props to store changes
 
 ### `createLattice` Utility
 
@@ -143,22 +143,22 @@ draft specification.
 - ✅ Test applying enhancers to base lattice
   - Implemented in: `/packages/core/src/tests/composition.test.ts`
   - Verifies: enhancers properly modify the base lattice
-- Test selection state management (add/remove/query selected items)
-- Test multi-selection with modifier flag
-- Test reactivity of feature state
+- ⏳ Test selection state management (add/remove/query selected items)
+- ⏳ Test multi-selection with modifier flag
+- ⏳ Test reactivity of feature state
 - ✅ Test integration with multiple features
   - Implemented in: `/packages/core/src/tests/composition.test.ts`
   - Verifies: multiple features can be composed together
 
 ### Complex Feature Examples
 
-- Test creation of drag and drop feature
-- Test applying drag and drop to base lattice
-- Test drag state management (drag start, in-progress, end)
-- Test drop target validation
-- Test actual drop operation success/failure
-- Test integration of selection with drag and drop
-- Test hook registration for feature events
+- ⏳ Test creation of drag and drop feature
+- ⏳ Test applying drag and drop to base lattice
+- ⏳ Test drag state management (drag start, in-progress, end)
+- ⏳ Test drop target validation
+- ⏳ Test actual drop operation success/failure
+- ⏳ Test integration of selection with drag and drop
+- ⏳ Test hook registration for feature events
 
 ### Composition Patterns
 
@@ -168,9 +168,9 @@ draft specification.
 - ✅ Test order dependency of features
   - Implemented in: `/packages/core/src/tests/composition.test.ts`
   - Verifies: the order of composition affects the result
-- Test isolation between different lattice instances
-- Test cross-communication between features via hooks
-- Test error handling during feature application
+- ⏳ Test isolation between different lattice instances
+- ⏳ Test cross-communication between features via hooks
+- ⏳ Test error handling during feature application
 
 ## 3. 🦕 Props System [LEGACY: SEE SECTION 8]
 
@@ -195,17 +195,17 @@ draft specification.
 - ✅ Test merging of props from multiple composed features
   - Implemented in: `/packages/core/src/tests/createProps.test.ts`
   - Verifies: props from multiple sources can be merged correctly
-- Test resolution of conflicting props (precedence rules)
-- Test performance with deeply nested props objects
+- ⏳ Test resolution of conflicting props (precedence rules)
+- ⏳ Test performance with deeply nested props objects
 
 ## 4. Instance-based Architecture
 
-- Test creating multiple independent instances
-- Test state isolation between instances
-- Test applying different features to different instances
-- Test instance-specific hook registrations
-- Test that modifying one instance doesn't affect others
-- Test memory usage with many instances
+- ⏳ Test creating multiple independent instances
+- ⏳ Test state isolation between instances
+- ⏳ Test applying different features to different instances
+- ⏳ Test instance-specific hook registrations
+- ⏳ Test that modifying one instance doesn't affect others
+- ⏳ Test memory usage with many instances
 
 ## 5. Hooks System
 
@@ -246,21 +246,21 @@ draft specification.
 
 ## 6. Integration Tests
 
-- Test full lattice creation with multiple composed features
-- Test React component consumption (useStore pattern)
-- Test framework-agnostic pattern with adapters
-- Test realistic tree view example with selection and DnD
-- Test that props structure facilitates WCAG accessibility compliance when used
-  correctly
-- Test performance with complex real-world scenarios
+- ⏳ Test full lattice creation with multiple composed features
+- ⏳ Test React component consumption (useStore pattern)
+- ⏳ Test framework-agnostic pattern with adapters
+- ⏳ Test realistic tree view example with selection and DnD
+- ⏳ Test that props structure facilitates WCAG accessibility compliance when
+  used correctly
+- ⏳ Test performance with complex real-world scenarios
 
 ## 7. Edge Cases and Reliability
 
-- Test with invalid inputs to all core functions
-- Test with empty/null/undefined values where appropriate
-- Test circular dependencies between stores
-- Test rapid state changes and race conditions
-- Test memory leaks from lingering subscriptions
+- ⏳ Test with invalid inputs to all core functions
+- ⏳ Test with empty/null/undefined values where appropriate
+- ⏳ Test circular dependencies between stores
+- ⏳ Test rapid state changes and race conditions
+- ⏳ Test memory leaks from lingering subscriptions
 
 ## 8. Props Architecture
 
@@ -330,19 +330,19 @@ draft specification.
 
 ### Integration Tests
 
-- Test composition through lattice architecture
+- ⏳ Test composition through lattice architecture
   - Verify proper integration with withLattice middleware
   - Test full lattice creation with composed props
   - Validate props inheritance through lattice composition chain
 
-- Test real-world usage patterns
+- ⏳ Test real-world usage patterns
   - Test selection feature using new props system
   - Verify drag-and-drop feature with props composition
   - Validate proper ARIA attribute management across composed features
 
 ## Progress Summary
 
-### Completed
+### Completed ✅
 
 - Created basic project structure with TypeScript, Vitest, and Zustand
 - Set up TDD workflow with test-setup.ts
@@ -435,28 +435,49 @@ draft specification.
   - Ensured data flow is predictable during composition
   - Handled edge cases like missing props in base lattice
 
+### Pending ⏳
+
+1. **Complex Feature Examples**
+   - Drag and drop implementation
+   - Integration of selection with drag and drop
+
+2. **Instance-based Architecture Tests**
+   - State isolation between instances
+   - Instance-specific hook registrations
+
+3. **Integration Tests**
+   - React component consumption patterns
+   - Framework-agnostic adapters
+   - WCAG accessibility compliance testing
+
+4. **Edge Cases and Reliability**
+   - Invalid input handling
+   - Circular dependencies
+   - Memory leak detection
+
 ### Next Steps
 
-1. ✅ Implement and test withStoreSync middleware
-2. ✅ Modularize the codebase and improve type organization
-3. ✅ Implement createProps utility and test basic functionality
-4. ✅ Implement mergeProps utility and tests
-5. ✅ Implement withLattice middleware and tests
-6. ✅ Implement createLattice core function and tests
-7. ✅ Upagrade hooks system with execution and removal capabilities
-8. ✅ Implement lattice composition pattern
-9. Implement the props architecture:
-   - ✅ Upgrade `mergeProps` for props store organization with variadic
-     arguments
-   - ✅ Implement `createProps` to store partName as metadata
-   - ✅ Create and implement the `withProps` middleware
-   - ✅ Test props reactivity and factory function behavior
-   - ✅ Update `withLattice` to use the new props utilities
-     - Enhanced to detect new props system automatically
-     - Maintains backward compatibility with legacy key-based props
-     - Uses partName metadata to merge props when available
-10. Create practical feature examples using the new pattern:
-    - Refactor the selection feature to use `withProps`
-    - Test merging of props from multiple features
-    - Create test cases for realistic usage scenarios
-11. Test integration with React components using the pattern
+1. Implement real-world feature examples:
+   - Create a selection feature example with the new props system
+   - Implement a drag-and-drop feature demonstrating composition
+   - Demonstrate cross-feature communication via hooks
+
+2. Develop instance-based architecture tests:
+   - Test creation of multiple independent instances
+   - Verify state isolation between instances
+   - Test instance-specific hook registrations
+
+3. Create React integration examples:
+   - Demonstrate useStore pattern with Lattice APIs
+   - Show prop spreading with the new props system
+   - Create test components using WCAG-AA best practices
+
+4. Add edge case handling and reliability tests:
+   - Test with invalid inputs to core functions
+   - Verify cleanup of lingering subscriptions
+   - Test performance with complex real-world scenarios
+
+5. Documentation updates:
+   - Create comprehensive API reference
+   - Document best practices for accessibility
+   - Provide examples of real-world component implementations

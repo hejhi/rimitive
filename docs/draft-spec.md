@@ -410,9 +410,121 @@ The result is a system where:
 - Developers have full control over store dependencies and synchronization
 - Code is less redundant by leveraging store metadata
 
+## 7 Direct API Access Pattern
+
+A core principle of Lattice is to provide ergonomic, direct access to API
+methods without requiring verbose chaining patterns. The examples in the spec
+demonstrate this pattern, but it's important to explicitly document it.
+
+### The Pattern
+
+API methods should be accessible directly from the API object, without requiring
+`.getState()`:
+
+```ts
+// ✅ Direct API access (preferred)
+selectionAPI.selectNode(id, multi);
+selectionAPI.isSelected(id);
+
+// ❌ Verbose chaining (avoid)
+selectionAPI.getState().selectNode(id, multi);
+selectionAPI.getState().isSelected(id);
+```
+
+This pattern is consistently used throughout the examples in sections 3-5, but
+requires explicit implementation in the `createAPI` function.
+
+### Implementation Details
+
+The direct API access pattern is implemented in `createAPI` by returning an
+enhanced store that proxies method calls directly to the state:
+
+```ts
+export function createAPI<T>(stateCreator) {
+  const store = create(stateCreator);
+
+  // Create hooks system for interception
+  const hooks = createHooksSystem();
+
+  // Add hooks system to the store state
+  store.setState((state) => ({
+    ...state,
+    _hooks: hooks,
+  }));
+
+  // Proxy for direct method access
+  const enhancedStore = new Proxy(store, {
+    get(target, prop) {
+      // Original store properties take precedence
+      if (prop in target) {
+        return target[prop];
+      }
+
+      // For methods that exist in the state, provide direct access
+      const state = target.getState();
+      if (typeof state[prop] === "function") {
+        return (...args) => {
+          // Execute before hooks
+          hooks.executeBefore(prop, ...args);
+
+          // Call the actual method
+          const result = state[prop](...args);
+
+          // Execute after hooks and return the result
+          return hooks.executeAfter(prop, result, ...args);
+        };
+      }
+
+      // For other properties, provide direct access to state
+      if (prop in state && prop !== "_hooks") {
+        return state[prop];
+      }
+
+      return target[prop];
+    },
+  });
+
+  return { api: enhancedStore, hooks };
+}
+```
+
+### Usage in Lattice Composition
+
+When creating a lattice, the direct API access should be preserved through
+composition:
+
+```ts
+// Create the enhanced lattice
+return createLattice(
+  "selection",
+  withLattice(baseLattice)({
+    api: selectionAPI, // This API must support direct method access
+    hooks: selectionHooks,
+    props: {
+      treeItem: selectionTreeItemProps,
+    },
+  }),
+);
+```
+
+### Benefits
+
+This pattern provides significant ergonomic improvements:
+
+1. **Reduced Verbosity** - Methods are called directly without chaining through
+   `.getState()`
+2. **Cleaner Codebase** - Less boilerplate and more readable code
+3. **Consistent Mental Model** - API is treated as a stateful object with
+   methods
+4. **Improved DX** - Better developer experience when interacting with the API
+
+Direct API access is particularly valuable in frequently accessed methods and
+when composing complex behaviors. It also makes testing and debugging easier
+with a more straightforward calling pattern.
+
 ---
 
-## 7 Rationale — Why Lattice, not "just hooks"
+## 8 Rationale — Why Lattice, not "just hooks"
 
 | When plain hooks shine                         | Where they crack                                                                                       | How Lattice closes the gap                                                                          |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |

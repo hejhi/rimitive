@@ -212,9 +212,9 @@ export type LatticeConfig<T> = Partial<Omit<Lattice<T>, 'name'>>;
  *   };
  * };
  */
-export type LatticeEnhancer<Base, Enhanced> = (
-  baseLattice: Lattice<Base>
-) => Lattice<Base & Enhanced>;
+export type LatticeEnhancer<Base, Enhanced> = <T extends Base>(
+  baseLattice: Lattice<T>
+) => Lattice<T & Enhanced>;
 
 // ---- Store Sync Types ----
 
