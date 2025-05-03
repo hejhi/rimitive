@@ -453,7 +453,7 @@ export function createAPI<T>(stateCreator) {
   }));
 
   // Proxy for direct method access
-  const enhancedStore = new Proxy(store, {
+  const composedStore = new Proxy(store, {
     get(target, prop) {
       // Original store properties take precedence
       if (prop in target) {
@@ -484,7 +484,7 @@ export function createAPI<T>(stateCreator) {
     },
   });
 
-  return { api: enhancedStore, hooks };
+  return { api: composedStore, hooks };
 }
 ```
 
@@ -494,7 +494,7 @@ When creating a lattice, the direct API access should be preserved through
 composition:
 
 ```ts
-// Create the enhanced lattice
+// Create the composed lattice
 return createLattice(
   "selection",
   withLattice(baseLattice)({
@@ -526,12 +526,12 @@ with a more straightforward calling pattern.
 
 ## 8 Rationale — Why Lattice, not "just hooks"
 
-| When plain hooks shine                         | Where they crack                                                                                       | How Lattice closes the gap                                                                          |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| Small, single‑purpose widget (e.g. accordion). | Complex components like **Tree View** that mix selection, drag‑and‑drop, type‑ahead, virtualisation.   | Composable lattices encapsulate each behaviour through layered Zustand stores; props merge safely.  |
-| One framework, one team.                       | **Cross‑framework** design‑system (React + Vue + Native).                                              | Core is JSX‑free; stores are framework-agnostic; adapters are thin wrappers.                        |
-| WCAG handled by Radix/Headless UI façade.      | Custom ARIA choreography across multiple behaviours (aria‑grabbed + aria‑selected + roving tab index). | Props are reactive Zustand stores, merged per UI part                                               |
-| Logic local to component.                      | Several products need to hot‑swap features (e.g. no DnD on mobile).                                    | Feature lattices can be added/removed at instantiation, with granular reactivity throughout stores. |
+| When plain hooks shine                         | Where they crack                                                                                       | How Lattice closes the gap                                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Small, single‑purpose widget (e.g. accordion). | Complex components like **Tree View** that mix selection, drag‑and‑drop, type‑ahead, virtualisation.   | Composable lattices encapsulate each behaviour through layered Zustand stores; props merge safely. |
+| One framework, one team.                       | **Cross‑framework** design‑system (React + Vue + Native).                                              | Core is JSX‑free; stores are framework-agnostic; adapters are thin wrappers.                       |
+| WCAG handled by Radix/Headless UI façade.      | Custom ARIA choreography across multiple behaviours (aria‑grabbed + aria‑selected + roving tab index). | Props are reactive Zustand stores, merged per UI part                                              |
+| Logic local to component.                      | Several products need to hot‑swap features (e.g. no DnD on mobile).                                    | Features can be added/removed at instantiation, with granular reactivity throughout stores.        |
 
 ### Unique value propositions
 

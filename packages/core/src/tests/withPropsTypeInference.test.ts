@@ -63,16 +63,16 @@ describe('Type inference with createProps and withProps', () => {
     });
 
     // Direct usage with explicit type parameters - the traditional way
-    const explicitEnhancedProps = createProps<ButtonProps>(
+    const explicitcomposedProps = createProps<ButtonProps>(
       'button',
       withProps(baseLattice)((_set, _get, store) => ({
         get: () => {
           const baseProps = store.getBaseProps();
           return {
             ...baseProps,
-            className: `${baseProps.className} enhanced`,
+            className: `${baseProps.className} composed`,
             onClick: () => {
-              console.log('Enhanced click');
+              console.log('composed click');
               baseProps.onClick();
             },
           };
@@ -81,11 +81,11 @@ describe('Type inference with createProps and withProps', () => {
     );
 
     // This should be correctly typed
-    const enhancedProps = explicitEnhancedProps
+    const composedProps = explicitcomposedProps
       .getState()
-      .get({ id: 'enhanced-btn' });
-    expect(enhancedProps.role).toBe('button');
-    expect(enhancedProps.className).toContain('enhanced');
+      .get({ id: 'composed-btn' });
+    expect(composedProps.role).toBe('button');
+    expect(composedProps.className).toContain('composed');
   });
 
   it('should correctly infer types with the recommended pattern', () => {
@@ -109,7 +109,7 @@ describe('Type inference with createProps and withProps', () => {
     });
 
     // Use withProps with the recommended pattern - return type at createProps level
-    const enhancedProps = createProps<ButtonProps>(
+    const composedProps = createProps<ButtonProps>(
       'button',
       withProps(baseLattice)((_set, _get, store) => ({
         get: (params: ButtonParams) => {
@@ -117,9 +117,9 @@ describe('Type inference with createProps and withProps', () => {
           return {
             ...baseProps,
             id: params.id,
-            className: `${baseProps.className} enhanced`,
+            className: `${baseProps.className} composed`,
             onClick: () => {
-              console.log('Enhanced click');
+              console.log('composed click');
               baseProps.onClick();
             },
           };
@@ -128,8 +128,8 @@ describe('Type inference with createProps and withProps', () => {
     );
 
     // This should be correctly typed
-    const props = enhancedProps.getState().get({ id: 'enhanced-btn' });
+    const props = composedProps.getState().get({ id: 'composed-btn' });
     expect(props.role).toBe('button');
-    expect(props.className).toContain('enhanced');
+    expect(props.className).toContain('composed');
   });
 });

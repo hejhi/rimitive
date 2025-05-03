@@ -70,7 +70,7 @@ describe('withProps middleware', () => {
     });
 
     // Create new props using withProps middleware and manually merge needed props
-    const enhancedProps = createProps<TreeItemParams, TreeItemProps>(
+    const composedProps = createProps<TreeItemParams, TreeItemProps>(
       'treeItem',
       withProps(baseLattice)((_set, _get, store) => ({
         get: (inputParams: TreeItemParams) => {
@@ -112,7 +112,7 @@ describe('withProps middleware', () => {
 
             // Override event handler but call the base handler
             onClick: (e: MouseEvent) => {
-              console.log('enhanced click');
+              console.log('composed click');
               // Explicitly call base onClick
               basePropValues.onClick(e);
             },
@@ -131,12 +131,12 @@ describe('withProps middleware', () => {
       isSelected: true,
     } as const;
     baseLattice.props.treeItem?.getState().get(params);
-    const enhancedTreeItemProps = enhancedProps
+    const composedTreeItemProps = composedProps
       .getState()
       .get(params) as TreeItemProps;
 
     // Test manually merged styles
-    expect(enhancedTreeItemProps.style).toEqual({
+    expect(composedTreeItemProps.style).toEqual({
       display: 'flex', // From base
       padding: '4px', // From base
       margin: '2px 0', // From base
@@ -145,27 +145,27 @@ describe('withProps middleware', () => {
     });
 
     // Test manually merged data object
-    expect(enhancedTreeItemProps.data).toEqual({
+    expect(composedTreeItemProps.data).toEqual({
       testId: 'tree-item-item-1', // From base
       level: 2, // From base
       selected: true, // Added
     });
 
     // Test overridden primitives
-    expect(enhancedTreeItemProps.tabIndex).toBe(0);
-    expect(enhancedTreeItemProps['aria-selected']).toBe(true);
+    expect(composedTreeItemProps.tabIndex).toBe(0);
+    expect(composedTreeItemProps['aria-selected']).toBe(true);
 
     // Explicitly inherited attributes from base
-    expect(enhancedTreeItemProps.role).toBe('treeitem');
-    expect(enhancedTreeItemProps['aria-level']).toBe(2);
+    expect(composedTreeItemProps.role).toBe('treeitem');
+    expect(composedTreeItemProps['aria-level']).toBe(2);
 
-    // Event handlers should be composition functions that call both enhanced and base
+    // Event handlers should be composition functions that call both composed and base
     const mockEvent = { type: 'click' } as MouseEvent;
     const consoleSpy = vi.spyOn(console, 'log');
-    enhancedTreeItemProps.onClick(mockEvent);
+    composedTreeItemProps.onClick(mockEvent);
 
-    // Should call both enhanced and base click handlers
-    expect(consoleSpy).toHaveBeenCalledWith('enhanced click');
+    // Should call both composed and base click handlers
+    expect(consoleSpy).toHaveBeenCalledWith('composed click');
     expect(consoleSpy).toHaveBeenCalledWith('base click');
 
     consoleSpy.mockRestore();

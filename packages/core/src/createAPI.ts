@@ -15,8 +15,8 @@ import { createHooks } from './createHooks';
  * @returns An object containing the API store and hooks interface
  */
 export function createAPI<T>(config: StateCreator<T, [], [], T>) {
-  // Create the enhanced config with combined state
-  const enhancedConfig = (
+  // Create the composed config with combined state
+  const composedConfig = (
     setState: StoreApi<T & { _hooks: HooksSystem }>['setState'],
     getState: StoreApi<T & { _hooks: HooksSystem }>['getState'],
     store: StoreApi<T & { _hooks: HooksSystem }>
@@ -67,7 +67,7 @@ export function createAPI<T>(config: StateCreator<T, [], [], T>) {
 
   // Create API store
   const apiStore = create(
-    enhancedConfig as StateCreator<StoreWithHooks<T>, [], [], StoreWithHooks<T>>
+    composedConfig as StateCreator<StoreWithHooks<T>, [], [], StoreWithHooks<T>>
   );
 
   // Add direct method access to the store

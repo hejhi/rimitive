@@ -421,8 +421,8 @@ draft specification.
   - Implemented automatic organization by partName for props stores
   - Applied last-wins strategy for multiple stores with the same partName
   - Implemented warning and error for props stores missing partName metadata
-  - Added test coverage for all enhancements
-- Enhanced `createProps` implementation for the new props system:
+  - Added test coverage for all compositions
+- composed `createProps` implementation for the new props system:
   - Rewritten implementation with first-class support for partName metadata
   - Designed with TypeScript generics for type-safe props access
   - Created comprehensive test suite for the core props functionality

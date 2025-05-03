@@ -38,7 +38,7 @@ export interface HooksSystem extends HooksInterface {
 export type StoreWithHooks<T> = T & { _hooks: HooksSystem };
 
 /**
- * Enhanced API type that combines the Zustand store API with direct method access
+ * composed API type that combines the Zustand store API with direct method access
  * This type allows accessing methods and properties directly from the API object
  * without having to call .getState() first.
  */
@@ -107,14 +107,14 @@ export type StateCreator<P, R> = (
 ) => PropsState<P, R>;
 
 /**
- * Enhanced store type with base props access
+ * composed store type with base props access
  */
 export type StoreWithBaseProps<P, R> = StoreApi<PropsState<P, R>> & {
   getBaseProps: ForceTypedGetBaseProps<P, R>;
 };
 
 /**
- * State creator type for functions that use enhanced store with base props
+ * State creator type for functions that use composed store with base props
  */
 export type StateCreatorWithBaseProps<P, R> = (
   set: StoreApi<PropsState<P, R>>['setState'],
@@ -170,7 +170,7 @@ export interface WithPropsMW {
     }
   ) => PropsFn<any, R>;
 
-  // Enhanced version that infers return type from the get function
+  // composed version that infers return type from the get function
   <L extends LatticeWithProps>(
     baseLattice: L
   ): <P = any, G extends (params: P) => any = (params: P) => any>(
@@ -219,9 +219,9 @@ export type LatticeConfig<T> = Partial<Omit<Lattice<T>, 'name'>>;
  *   };
  * };
  */
-export type LatticeComposer<Base, Enhanced> = <T extends Base>(
+export type LatticeComposer<Base, composed> = <T extends Base>(
   baseLattice: Lattice<T>
-) => Lattice<T & Enhanced>;
+) => Lattice<T & composed>;
 
 // ---- Store Sync Types ----
 

@@ -3,7 +3,7 @@ import { mergeProps } from '../mergeProps';
 import { createProps } from '../createProps';
 
 describe('mergeProps', () => {
-  // Test the enhanced functionality: organizing props stores by partName
+  // Test the composed functionality: organizing props stores by partName
   it('should organize props stores by their partName metadata', () => {
     // Create mock props stores with partName metadata
     const buttonProps = createProps('button', () => ({

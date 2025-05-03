@@ -238,7 +238,7 @@ export const createDragAndDrop = <
       }))
     );
 
-    // Create the enhanced lattice
+    // Create the composed lattice
     return createLattice(
       'dragAndDrop',
       withLattice(baseLattice)({

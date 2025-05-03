@@ -1,14 +1,14 @@
 import { WithPropsMW, PropsFn } from './types';
 
 /**
- * A Zustand-style middleware that enhances a props store with base props functionality
+ * A Zustand-style middleware that composes a props store with base props functionality
  *
  * @param baseLattice - The lattice containing the base props
- * @returns A function that takes a state creator and returns an enhanced state creator
+ * @returns A function that takes a state creator and returns an composed state creator
  */
 export const withProps: WithPropsMW = (baseLattice) => {
-  // Return an enhanced state creator function
-  return function enhanceStateCreator<P, R>(fn: any): PropsFn<P, R> {
+  // Return an composed state creator function
+  return function composeStateCreator<P, R>(fn: any): PropsFn<P, R> {
     return (set, get, api) => {
       // Create getBaseProps function for accessing base props
       const getBaseProps = (params?: P): R => {
@@ -37,7 +37,7 @@ export const withProps: WithPropsMW = (baseLattice) => {
         }
       };
 
-      // Get user's state with enhanced store
+      // Get user's state with composed store
       const userState = fn(set, get, { ...api, getBaseProps });
       const originalGet = userState.get;
 
