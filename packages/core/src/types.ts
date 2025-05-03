@@ -201,7 +201,7 @@ export interface Lattice<T> {
   api: DirectAccessAPI<T>;
   hooks: HooksInterface;
   props: Record<string, PropsStore<any, any>>;
-  use: <U>(plugin: (lattice: Lattice<T>) => Lattice<T & U>) => Lattice<T & U>;
+  use: <U>(compose: (lattice: Lattice<T>) => Lattice<T & U>) => Lattice<T & U>;
 }
 
 /**

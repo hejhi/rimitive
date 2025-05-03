@@ -20,9 +20,9 @@ export function createLattice<T>(
     props = {},
     use = function <U>(
       this: Lattice<T>,
-      plugin: (lattice: Lattice<T>) => Lattice<T & U>
+      compose: (lattice: Lattice<T>) => Lattice<T & U>
     ): Lattice<T & U> {
-      return plugin(this);
+      return compose(this);
     },
     ...rest
   } = config;

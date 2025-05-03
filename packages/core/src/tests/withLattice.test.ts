@@ -169,12 +169,12 @@ describe('withLattice', () => {
     // Then add the custom use method
     const baseLattice = createLattice<BaseState>('base', {
       api: baseAPI,
-      // Use a more Zustand-like approach for plugin middleware
+      // Use a more Zustand-like approach for composed middleware
       use: <U>(
-        plugin: (lattice: Lattice<BaseState>) => Lattice<BaseState & U>
+        compose: (lattice: Lattice<BaseState>) => Lattice<BaseState & U>
       ): Lattice<BaseState & U> => {
         useSpy();
-        return plugin(tempLattice);
+        return compose(tempLattice);
       },
     });
 
@@ -185,11 +185,11 @@ describe('withLattice', () => {
     // Create a composed lattice
     const composedLattice = createLattice('composed', result);
 
-    // Create a simple plugin that just returns its input lattice
-    const plugin = <T>(lattice: Lattice<T>): Lattice<T> => lattice;
+    // Create a simple lattice composer that just returns its input lattice
+    const lattice = <T>(lattice: Lattice<T>): Lattice<T> => lattice;
 
     // Use any to bypass the type issue in the test
-    (composedLattice.use as any)(plugin);
+    composedLattice.use(lattice);
 
     // Verify the spy was called
     expect(useSpy).toHaveBeenCalled();
