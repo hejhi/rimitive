@@ -19,8 +19,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsup",
-    "dev": "tsup --watch",
+    "build": "tsc --emitDeclarationOnly && tsup",
+    "dev": "tsc --emitDeclarationOnly --watch & tsup --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

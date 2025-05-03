@@ -17,7 +17,7 @@ interface SelectionState {
 }
 
 // Define selection API interface
-interface SelectionAPI {
+export interface SelectionAPI {
   selected: Set<NodeID>;
   isSelected(id: NodeID): boolean;
   selectNode(id: NodeID, multi?: boolean): void;
@@ -25,14 +25,15 @@ interface SelectionAPI {
   deselectAll(): void;
 }
 
-// Create a selection enhancer for the tree lattice
-export const createSelectionFeature = <
-  T extends Partial<TreeAPI>,
->(): LatticeEnhancer<T, SelectionAPI> => {
-  // Return a lattice enhancer function
+// Create a selection extension for the tree lattice
+export const createSelection = <T extends Partial<TreeAPI>>(): LatticeEnhancer<
+  T,
+  SelectionAPI
+> => {
+  // Return a lattice extension function
   return (baseLattice) => {
     // Create a private selection store
-    const selectionStore = create<SelectionState>((_set) => ({
+    const selectionStore = create<SelectionState>(() => ({
       selected: new Set<NodeID>(),
     }));
 
@@ -119,7 +120,7 @@ export const createSelectionFeature = <
 // Example usage:
 /* 
   // Create a tree with selection
-  const treeWithSelection = createTreeLattice().use(createSelectionFeature());
+  const treeWithSelection = createTreeLattice().use(createSelection());
   
   // Set test data
   treeWithSelection.api.setNodes(createTestTreeData());

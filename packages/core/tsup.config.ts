@@ -3,10 +3,10 @@ import { defineConfig } from 'tsup';
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
-  dts: true,
+  dts: false, // Disabled - we're using tsc for declarations
   splitting: false,
   sourcemap: true,
-  clean: true,
+  clean: false, // Don't clean, as we want to keep the declaration files
   treeshake: true,
   external: [],
 });

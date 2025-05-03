@@ -9,6 +9,10 @@
     "composite": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/tests/**/*"
   ]
 }

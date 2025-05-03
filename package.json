@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "build": "lerna run build",
-    "dev": "lerna run dev",
+    "dev": "lerna run dev --parallel",
     "clean": "lerna run clean",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",

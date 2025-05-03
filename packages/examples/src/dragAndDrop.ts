@@ -19,7 +19,7 @@ interface DragDropState {
 }
 
 // Define drop result type
-interface DropResult {
+export interface DropResult {
   success: boolean;
   source?: NodeID;
   target?: NodeID;
@@ -27,7 +27,7 @@ interface DropResult {
 }
 
 // Define drag-and-drop API
-interface DragDropAPI {
+export interface DragDropAPI {
   draggingId: NodeID | null;
   dragOverId: NodeID | null;
   validDropTargets: Set<NodeID>;
@@ -41,8 +41,8 @@ interface DragDropAPI {
   processDrop: (targetId: NodeID) => DropResult;
 }
 
-// Create a drag-and-drop feature
-export const createDragAndDropFeature = <
+// Create a drag-and-drop extension
+export const createDragAndDrop = <
   T extends Partial<TreeAPI>,
 >(): LatticeEnhancer<T, DragDropAPI> => {
   return (baseLattice) => {
@@ -256,7 +256,7 @@ export const createDragAndDropFeature = <
 // Example usage:
 /*
   // Create a tree with drag and drop
-  const treeWithDnd = createTreeLattice().use(createDragAndDropFeature());
+  const treeWithDnd = createTreeLattice().use(createDragAndDrop());
   
   // Set test data
   treeWithDnd.api.setNodes(createTestTreeData());
