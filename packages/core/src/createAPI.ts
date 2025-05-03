@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { combine } from 'zustand/middleware';
 import { StateCreator, StoreApi } from 'zustand/vanilla';
-import { StoreWithHooks, HooksSystem } from './types';
+import { StoreWithHooks, HooksSystem, DirectAccessAPI } from './types';
 import { createHooks } from './createHooks';
 
 /**
@@ -9,7 +9,7 @@ import { createHooks } from './createHooks';
  *
  * This function creates a Zustand store with the provided configuration,
  * adds a hooks system for intercepting method calls, and returns a clean
- * API and hooks interface.
+ * API and hooks interface with direct method access.
  *
  * @param config The state creator function that defines the API
  * @returns An object containing the API store and hooks interface
@@ -70,9 +70,24 @@ export function createAPI<T>(config: StateCreator<T, [], [], T>) {
     enhancedConfig as StateCreator<StoreWithHooks<T>, [], [], StoreWithHooks<T>>
   );
 
-  // Return the API store and hooks interface
+  // Add direct method access to the store
+  const state = apiStore.getState();
+  for (const key in state) {
+    if (
+      typeof state[key as keyof typeof state] === 'function' &&
+      key !== '_hooks'
+    ) {
+      // Skip if the key already exists on the store
+      if (!(key in apiStore)) {
+        (apiStore as any)[key] = (...args: any[]) =>
+          (state[key as keyof typeof state] as Function)(...args);
+      }
+    }
+  }
+
+  // Return the API store and hooks interface with the appropriate type
   return {
-    api: apiStore,
+    api: apiStore as DirectAccessAPI<T>,
     hooks: {
       before: (method: string, callback: Function) =>
         apiStore.getState()._hooks.before(method, callback),

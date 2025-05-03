@@ -74,6 +74,52 @@ describe('createAPI', () => {
     expect(formatted).toBe('Result: 11');
   });
 
+  it('should provide direct API access without calling getState()', () => {
+    interface CounterState {
+      count: number;
+      increment: (amount: number) => number;
+      decrement: (amount: number) => number;
+      reset: () => void;
+    }
+
+    // Create API with state and methods
+    const { api, hooks } = createAPI<CounterState>((set, get) => ({
+      count: 0,
+      increment: (amount: number) => {
+        set((state) => ({ count: state.count + amount }));
+        return get().count;
+      },
+      decrement: (amount: number) => {
+        set((state) => ({ count: state.count - amount }));
+        return get().count;
+      },
+      reset: () => set({ count: 0 }),
+    }));
+
+    // Direct access to methods (without getState)
+    expect(typeof api.increment).toBe('function');
+    expect(typeof api.decrement).toBe('function');
+    expect(typeof api.reset).toBe('function');
+
+    // Test using direct API access
+    expect(api.increment(5)).toBe(5);
+    expect(api.increment(3)).toBe(8);
+    expect(api.decrement(2)).toBe(6);
+    api.reset();
+    expect(api.getState().count).toBe(0);
+
+    // Test hooks with direct API access
+    let hookExecuted = false;
+    hooks.before('increment', (amount: number) => {
+      hookExecuted = true;
+      return amount * 2; // Double the increment amount
+    });
+
+    api.increment(5);
+    expect(hookExecuted).toBe(true);
+    expect(api.getState().count).toBe(10); // 5 * 2 = 10
+  });
+
   it('should properly integrate with withStoreSync for complex state management', () => {
     // User store
     interface UserState {

@@ -1,5 +1,11 @@
 import { mergeProps } from './mergeProps';
-import { Lattice, LatticeConfig, PropsStore, StoreWithHooks } from './types';
+import {
+  Lattice,
+  LatticeConfig,
+  PropsStore,
+  StoreWithHooks,
+  DirectAccessAPI,
+} from './types';
 import { StoreApi } from 'zustand';
 
 /**
@@ -13,7 +19,7 @@ export function withLattice<T>(baseLattice: Lattice<T>) {
     const { api, hooks = {}, props = {}, ...rest } = config;
 
     // Process the API objects to preserve the StoreApi interface
-    const combinedApi = {
+    const combinedApiStore = {
       getState: () => {
         const baseState = baseLattice.api.getState();
         const configState = api?.getState?.() || {};
@@ -53,6 +59,9 @@ export function withLattice<T>(baseLattice: Lattice<T>) {
         return baseLattice.api.getInitialState();
       },
     } as StoreApi<StoreWithHooks<T & U>>;
+
+    // Cast to DirectAccessAPI for proper typings with direct method access
+    const combinedApi = combinedApiStore;
 
     // Process the hooks
     const combinedHooks = {
@@ -111,7 +120,7 @@ export function withLattice<T>(baseLattice: Lattice<T>) {
 
     // Return the merged lattice config
     return {
-      api: combinedApi,
+      api: combinedApi as DirectAccessAPI<T & U>,
       hooks: combinedHooks,
       props: combinedProps,
       use: baseLattice.use as any,

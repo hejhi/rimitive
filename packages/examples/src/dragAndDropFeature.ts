@@ -141,7 +141,7 @@ export const createDragAndDropFeature = <
         get: () => ({
           onDragEnd: () => {
             // Clean up drag state when drag ends without drop
-            dragDropAPI.getState().endDrag();
+            dragDropAPI.endDrag();
           },
         }),
       }))
@@ -153,11 +153,9 @@ export const createDragAndDropFeature = <
       withProps(baseLattice)((_get, _set, _api) => ({
         get: (params: { id: NodeID }) => {
           const id = params.id;
-          const isDragging = dragDropAPI.getState().isDragging(id);
-          const isValidDropTarget = dragDropAPI
-            .getState()
-            .isValidDropTarget(id);
-          const isDraggedOver = dragDropAPI.getState().isDraggedOver(id);
+          const isDragging = dragDropAPI.isDragging(id);
+          const isValidDropTarget = dragDropAPI.isValidDropTarget(id);
+          const isDraggedOver = dragDropAPI.isDraggedOver(id);
 
           return {
             draggable: true,
@@ -173,7 +171,7 @@ export const createDragAndDropFeature = <
               }
 
               // Update drag state
-              dragDropAPI.getState().startDrag(id);
+              dragDropAPI.startDrag(id);
 
               // Compute valid drop targets based on tree structure
               // For simplicity, we'll allow dropping on any node except itself
@@ -181,7 +179,7 @@ export const createDragAndDropFeature = <
               const treeAPI = baseLattice.api.getState();
               const allNodes = treeAPI.nodes ? Object.keys(treeAPI.nodes) : [];
               const validTargets = allNodes.filter((nodeId) => nodeId !== id);
-              dragDropAPI.getState().updateValidDropTargets(validTargets);
+              dragDropAPI.updateValidDropTargets(validTargets);
             },
 
             onDragOver: (e: DragEvent) => {
@@ -191,7 +189,7 @@ export const createDragAndDropFeature = <
                 e.stopPropagation();
 
                 // Update drag over state
-                dragDropAPI.getState().setDragOver(id);
+                dragDropAPI.setDragOver(id);
 
                 // Set drop effect
                 if (e.dataTransfer) {
@@ -203,7 +201,7 @@ export const createDragAndDropFeature = <
             onDragLeave: () => {
               // Clear drag over state if this node was being dragged over
               if (isDraggedOver) {
-                dragDropAPI.getState().setDragOver(null);
+                dragDropAPI.setDragOver(null);
               }
             },
 
@@ -212,7 +210,7 @@ export const createDragAndDropFeature = <
               e.stopPropagation();
 
               // Process the drop
-              const result = dragDropAPI.getState().processDrop(id);
+              const result = dragDropAPI.processDrop(id);
 
               // If drop was successful, update the tree
               if (result.success && result.source && result.target) {
@@ -261,7 +259,7 @@ export const createDragAndDropFeature = <
   const treeWithDnd = createTreeLattice().use(createDragAndDropFeature());
   
   // Set test data
-  treeWithDnd.api.getState().setNodes(createTestTreeData());
+  treeWithDnd.api.setNodes(createTestTreeData());
   
   // Custom drag end handler
   treeWithDnd.hooks.after('processDrop', (result) => {

@@ -1,4 +1,4 @@
-import { StoreApi } from 'zustand';
+import { StoreApi, UseBoundStore } from 'zustand';
 
 // Utility type to prevent TypeScript from inferring types in certain positions
 export type NoInfer<T> = [T][T extends any ? 0 : never];
@@ -36,6 +36,13 @@ export interface HooksSystem extends HooksInterface {
  * Store with hooks system
  */
 export type StoreWithHooks<T> = T & { _hooks: HooksSystem };
+
+/**
+ * Enhanced API type that combines the Zustand store API with direct method access
+ * This type allows accessing methods and properties directly from the API object
+ * without having to call .getState() first.
+ */
+export type DirectAccessAPI<T> = UseBoundStore<StoreApi<StoreWithHooks<T>>> & T;
 
 // ---- Props System Types ----
 
@@ -191,7 +198,7 @@ export interface LatticeWithProps {
  */
 export interface Lattice<T> {
   name: string;
-  api: StoreApi<StoreWithHooks<T>>;
+  api: DirectAccessAPI<T>;
   hooks: HooksInterface;
   props: Record<string, PropsStore<any, any>>;
   use: <U>(plugin: (lattice: Lattice<T>) => Lattice<T & U>) => Lattice<T & U>;

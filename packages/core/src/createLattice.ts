@@ -1,5 +1,4 @@
-import { LatticeConfig, Lattice, StoreWithHooks, PropsStore } from './types';
-import { StoreApi } from 'zustand';
+import { LatticeConfig, Lattice } from './types';
 
 /**
  * Create a lattice with the given name and configuration
@@ -31,9 +30,9 @@ export function createLattice<T>(
   // Return the lattice object with proper casting to ensure type safety
   const lattice: Lattice<T> = {
     name,
-    api: api as StoreApi<StoreWithHooks<T>>,
+    api: api!,
     hooks,
-    props: props as Record<string, PropsStore<any, any>>,
+    props,
     use,
     ...rest,
   };
