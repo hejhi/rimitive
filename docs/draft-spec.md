@@ -49,7 +49,7 @@ export const createFeature = () => {
 
     // Create API with hooks system
     const { api, hooks } = createAPI(
-      withStoreSync({ featureStore }, ({ featureStore }) => ({
+      withStoreSubscribe({ featureStore }, ({ featureStore }) => ({
         // Sync properties from private store
       }))((_set, get) => ({
         // Getters and mutations

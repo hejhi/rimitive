@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { create } from 'zustand';
-import { withStoreSync } from '../index';
+import { withStoreSubscribe } from '../index';
 import { SyncedState as SyncedStateWithCleanup } from '../types';
 
-describe('withStoreSync middleware', () => {
+describe('withStoreSubscribe middleware', () => {
   it('should synchronize state from source stores to target store', () => {
     // Create source stores
     const counterStore = create(() => ({
@@ -17,9 +17,9 @@ describe('withStoreSync middleware', () => {
       setName: (name: string) => userStore.setState({ name }),
     }));
 
-    // Create target store with withStoreSync middleware
+    // Create target store with withStoreSubscribe middleware
     const targetStore = create(
-      withStoreSync(
+      withStoreSubscribe(
         { counterStore, userStore },
         ({ counterStore, userStore }) => ({
           syncedCount: counterStore.count,
@@ -57,9 +57,9 @@ describe('withStoreSync middleware', () => {
       syncedValue: string;
     } & SyncedStateWithCleanup;
 
-    // Create target store with withStoreSync middleware
+    // Create target store with withStoreSubscribe middleware
     const targetStore = create<State>(
-      withStoreSync({ sourceStore }, ({ sourceStore }) => ({
+      withStoreSubscribe({ sourceStore }, ({ sourceStore }) => ({
         syncedValue: sourceStore.value,
       }))(() => ({
         syncedValue: sourceStore.getState().value,

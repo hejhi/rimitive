@@ -3,7 +3,7 @@ import {
   createAPI,
   createProps,
   createLattice,
-  withStoreSync,
+  withStoreSubscribe,
   withProps,
   withLattice,
   LatticeComposer,
@@ -55,7 +55,7 @@ export const createDragAndDrop = <
 
     // Create the drag-and-drop API
     const { api: dragDropAPI, hooks: dragDropHooks } = createAPI<DragDropAPI>(
-      withStoreSync({ dragDropStore }, ({ dragDropStore }) => ({
+      withStoreSubscribe({ dragDropStore }, ({ dragDropStore }) => ({
         draggingId: dragDropStore.draggingId,
         dragOverId: dragDropStore.dragOverId,
         validDropTargets: dragDropStore.validDropTargets,

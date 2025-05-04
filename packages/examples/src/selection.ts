@@ -3,7 +3,7 @@ import {
   createAPI,
   createProps,
   createLattice,
-  withStoreSync,
+  withStoreSubscribe,
   withProps,
   withLattice,
   LatticeComposer,
@@ -40,7 +40,7 @@ export const createSelection = <T extends Partial<TreeAPI>>(): LatticeComposer<
     // Create the selection API
     const { api: selectionAPI, hooks: selectionHooks } =
       createAPI<SelectionAPI>(
-        withStoreSync({ selectionStore }, ({ selectionStore }) => ({
+        withStoreSubscribe({ selectionStore }, ({ selectionStore }) => ({
           // Sync selected nodes from selection store
           selected: selectionStore.selected,
         }))((_set, get) => ({

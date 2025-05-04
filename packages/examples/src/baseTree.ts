@@ -3,7 +3,7 @@ import {
   createAPI,
   createProps,
   createLattice,
-  withStoreSync,
+  withStoreSubscribe,
   Lattice as LatticeType,
 } from '../../core/src';
 
@@ -36,7 +36,7 @@ export interface TreeAPI {
 // Export the Lattice type for extensions
 export type Lattice<T = any> = LatticeType<T>;
 
-// Type for withStoreSync state
+// Type for withStoreSubscribe state
 interface StoresState {
   treeStore: {
     nodes: Record<NodeID, TreeNode>;
@@ -54,14 +54,14 @@ export const createTreeLattice = () => {
 
   // Create the API with store synchronization
   const { api, hooks } = createAPI<TreeAPI>(
-    withStoreSync({ treeStore }, (state) => ({
+    withStoreSubscribe({ treeStore }, (state) => ({
       // Sync these values from the tree store
       nodes: state.treeStore.nodes,
       expanded: state.treeStore.expanded,
     }))((_set, get) => ({
       // Pass through synced properties
-      nodes: {} as Record<NodeID, TreeNode>, // Will be provided by withStoreSync
-      expanded: new Set<NodeID>(), // Will be provided by withStoreSync
+      nodes: {} as Record<NodeID, TreeNode>, // Will be provided by withStoreSubscribe
+      expanded: new Set<NodeID>(), // Will be provided by withStoreSubscribe
 
       // Getters
       getNode: (id: NodeID) => get().nodes[id],

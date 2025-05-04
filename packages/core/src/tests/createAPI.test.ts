@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createAPI } from '../index';
-import { withStoreSync } from '../index';
+import { withStoreSubscribe } from '../index';
 
 describe('createAPI', () => {
   it('should create an API store with proper state management', () => {
@@ -120,7 +120,7 @@ describe('createAPI', () => {
     expect(api.getState().count).toBe(10); // 5 * 2 = 10
   });
 
-  it('should properly integrate with withStoreSync for complex state management', () => {
+  it('should properly integrate with withStoreSubscribe for complex state management', () => {
     // User store
     interface UserState {
       name: string;
@@ -165,7 +165,7 @@ describe('createAPI', () => {
     }
 
     const { api } = createAPI<TargetState>(
-      withStoreSync(stores, (state) => ({
+      withStoreSubscribe(stores, (state) => ({
         syncedName: state.user.name,
         syncedEmail: state.user.email,
         syncedTheme: state.settings.theme,

@@ -6,7 +6,7 @@
  */
 
 // Re-export all core functionality
-export { withStoreSync } from './withStoreSync';
+export { withStoreSubscribe } from './withStoreSubscribe';
 export { createAPI } from './createAPI';
 export { createHooks } from './createHooks';
 export { createProps } from './createProps';

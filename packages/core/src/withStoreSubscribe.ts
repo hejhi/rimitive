@@ -13,7 +13,7 @@ type StoresState<T extends Record<string, StoreApi<any>>> = {
  * When any source store updates, the selector function is called to compute the derived state
  * which is then set on the target store.
  */
-export function withStoreSync<
+export function withStoreSubscribe<
   TStores extends Record<string, StoreApi<any>>,
   TSelector extends (state: StoresState<TStores>) => any = (
     state: StoresState<TStores>
