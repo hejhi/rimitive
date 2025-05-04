@@ -29,10 +29,11 @@ interface AdvancedParams {
 describe('createProps', () => {
   it('should create a props store with partName metadata', () => {
     // Create props store with partName and config
-    const buttonProps = createProps('button', () => ({
-      get: (params?: ButtonParams) => ({
+    const buttonProps = createProps(() => ({
+      partName: 'button',
+      get: (params: ButtonParams) => ({
         role: 'button',
-        'aria-label': params?.label || 'Button',
+        'aria-label': params.label || 'Button',
         tabIndex: 0,
         onClick: () => console.log('clicked'),
       }),
@@ -74,11 +75,13 @@ describe('createProps', () => {
 
   it('should store props with proper partName in both the store and state', () => {
     // Create props for multiple UI parts
-    const menuProps = createProps('menu', () => ({
+    const menuProps = createProps(() => ({
+      partName: 'menu',
       get: () => ({ role: 'menu' }),
     }));
 
-    const listProps = createProps('list', () => ({
+    const listProps = createProps(() => ({
+      partName: 'list',
       get: () => ({ role: 'list' }),
     }));
 
@@ -103,8 +106,9 @@ describe('createProps', () => {
     }));
 
     // Create props that depend on the source store state
-    const checkboxProps = createProps('checkbox', () => {
+    const checkboxProps = createProps(() => {
       return {
+        partName: 'checkbox',
         get: () => ({
           role: 'checkbox',
           'aria-checked': sourceStore.getState().isSelected,
@@ -184,7 +188,8 @@ describe('createProps', () => {
     });
 
     // Create props with the spy
-    const advancedProps = createProps('button', () => ({
+    const advancedProps = createProps(() => ({
+      partName: 'button',
       get: getSpy,
     }));
 

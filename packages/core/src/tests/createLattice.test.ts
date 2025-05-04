@@ -24,11 +24,13 @@ describe('createLattice', () => {
     }));
 
     // Create actual props
-    const buttonProps = createProps('button', () => ({
+    const buttonProps = createProps(() => ({
+      partName: 'button',
       get: () => ({ 'aria-label': 'Test Button' }),
     }));
 
-    const inputProps = createProps('input', () => ({
+    const inputProps = createProps(() => ({
+      partName: 'input',
       get: () => ({ 'aria-label': 'Test Input' }),
     }));
 

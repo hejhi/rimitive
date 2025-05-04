@@ -89,11 +89,8 @@ declare global {
  * Function signature for standard props config creators
  * Follows a middleware-friendly pattern inspired by Zustand
  */
-export type PropsFn<P, R> = (
-  set: StoreApi<PropsState<P, R>>['setState'],
-  get: StoreApi<PropsState<P, R>>['getState'],
-  store: StoreApi<PropsState<P, R>>
-) => {
+export type PropsFn<P, R> = () => {
+  partName: string;
   get: PropsGetFn<P, R>;
 };
 
@@ -135,17 +132,17 @@ export type InferReturnType<T> = T extends (...args: any[]) => infer R
  * Type for a props configuration with get function to support return type inference
  */
 export type PropsConfig<P, G extends (params: P) => any> = {
+  partName: string;
   get: G;
 };
 
 /**
  * Type for a function that creates a props configuration with get function
  */
-export type PropsConfigCreator<P, G extends (params: P) => any> = (
-  set: StoreApi<PropsState<P, InferReturnType<G>>>['setState'],
-  get: StoreApi<PropsState<P, InferReturnType<G>>>['getState'],
-  store: StoreWithBaseProps<P, InferReturnType<G>>
-) => PropsConfig<P, G>;
+export type PropsConfigCreator<
+  P,
+  G extends (params: P) => any,
+> = () => PropsConfig<P, G>;
 
 /**
  * Type for withProps middleware that properly preserves parameter types
@@ -153,29 +150,40 @@ export type PropsConfigCreator<P, G extends (params: P) => any> = (
  */
 export interface WithPropsMW {
   // Original version with explicit types
-  <L extends LatticeWithProps>(
-    baseLattice: L
-  ): <P = any, R = any>(fn: StateCreatorWithBaseProps<P, R>) => PropsFn<P, R>;
+  <L extends LatticeWithProps, P = any, R = any>(
+    baseLattice: L,
+    partName: string
+  ): <F extends () => { partName: string; get: (params?: P) => R }>(
+    fn: F
+  ) => () => {
+    partName: string;
+    get: P extends undefined ? () => R : (params: P) => R;
+  };
 
   // R-only version where P is specified inline in the get function
-  <L extends LatticeWithProps>(
-    baseLattice: L
-  ): <R>(
-    fn: (
-      set: StoreApi<PropsState<any, R>>['setState'],
-      get: StoreApi<PropsState<any, R>>['getState'],
-      store: StoreWithBaseProps<any, R>
-    ) => {
-      get: (params?: any) => R;
-    }
-  ) => PropsFn<any, R>;
+  <L extends LatticeWithProps, R = any>(
+    baseLattice: L,
+    partName: string
+  ): <F extends () => { partName: string; get: (params?: any) => R }>(
+    fn: F
+  ) => () => {
+    partName: string;
+    get: (params?: any) => R;
+  };
 
-  // composed version that infers return type from the get function
-  <L extends LatticeWithProps>(
-    baseLattice: L
-  ): <P = any, G extends (params: P) => any = (params: P) => any>(
-    fn: PropsConfigCreator<P, G>
-  ) => PropsFn<P, InferReturnType<G>>;
+  // Composed version that infers return type from the get function
+  <L extends LatticeWithProps, P = any>(
+    baseLattice: L,
+    partName: string
+  ): <
+    F extends () => { partName: string; get: G },
+    G extends (params: P) => any = (params: P) => any,
+  >(
+    fn: F
+  ) => () => {
+    partName: string;
+    get: G;
+  };
 }
 
 /**

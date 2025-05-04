@@ -25,7 +25,8 @@ describe('withLattice', () => {
     const baseLattice = createLattice<BaseState>('base', {
       api: baseAPI,
       props: {
-        button: createProps('button', () => ({
+        button: createProps(() => ({
+          partName: 'button',
           get: () => ({ base: true }),
         })),
       },
@@ -96,10 +97,12 @@ describe('withLattice', () => {
 
   it('should merge props objects with special merge logic', () => {
     // Define props objects
-    const baseProps = createProps('button', () => ({
+    const baseProps = createProps(() => ({
+      partName: 'button',
       get: () => ({ base: true }),
     }));
-    const configProps = createProps('button', () => ({
+    const configProps = createProps(() => ({
+      partName: 'button',
       get: () => ({ config: true }),
     }));
 
@@ -116,7 +119,8 @@ describe('withLattice', () => {
       api: baseAPI,
       props: {
         button: baseProps,
-        input: createProps('input', () => ({
+        input: createProps(() => ({
+          partName: 'input',
           get: () => ({ baseInput: true }),
         })),
       },
@@ -127,7 +131,8 @@ describe('withLattice', () => {
     const result = middleware({
       props: {
         button: configProps,
-        select: createProps('select', () => ({
+        select: createProps(() => ({
+          partName: 'select',
           get: () => ({ select: true }),
         })),
       },
@@ -197,19 +202,23 @@ describe('withLattice', () => {
 
   it('should correctly handle props stores with partName metadata', () => {
     // Create actual props stores with partName metadata using createProps
-    const baseButtonProps = createProps('button', () => ({
+    const baseButtonProps = createProps(() => ({
+      partName: 'button',
       get: () => ({ role: 'button', baseAttr: true }),
     }));
 
-    const baseInputProps = createProps('input', () => ({
+    const baseInputProps = createProps(() => ({
+      partName: 'input',
       get: () => ({ role: 'textbox', baseInputAttr: true }),
     }));
 
-    const configButtonProps = createProps('button', () => ({
+    const configButtonProps = createProps(() => ({
+      partName: 'button',
       get: () => ({ type: 'submit', configAttr: true }),
     }));
 
-    const configSelectProps = createProps('select', () => ({
+    const configSelectProps = createProps(() => ({
+      partName: 'select',
       get: () => ({ role: 'listbox', configSelectAttr: true }),
     }));
 

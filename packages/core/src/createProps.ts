@@ -1,31 +1,26 @@
 import { create } from 'zustand';
-import {
-  PropsState,
-  PropsStore,
-  PropsFn,
-  PropsGetFn,
-  InferReturnType,
-} from './types';
+import { PropsState, PropsStore, PropsGetFn, InferReturnType } from './types';
 
 // Type inference helper for test files
 const TEST_MODE = typeof window !== 'undefined' && window.__LATTICE_TEST_MODE__;
 
 /**
- * Creates a props store with the given partName and config
+ * Creates a props store with the given config
  *
- * @param partName - The UI part name for the props
- * @param config - A function that returns the props config with get method
+ * @param config - A function that returns the props config with partName and get method
  * @returns A Zustand store with the props and partName metadata
  *
  * @example
  * // With explicit type parameters at createProps level - the traditional way
- * const buttonProps = createProps<ButtonParams, ButtonProps>('button', (set, get, store) => ({
+ * const buttonProps = createProps<ButtonParams, ButtonProps>(() => ({
+ *   partName: 'button',
  *   get: (params) => ({ ... })
  * }));
  *
  * @example
  * // With explicit return type at createProps and inline parameter type - the recommended way
- * const buttonProps = createProps<ButtonProps>('button', (_set, _get) => ({
+ * const buttonProps = createProps<ButtonProps>(() => ({
+ *   partName: 'button',
  *   get: (params: ButtonParams) => ({
  *     // Return type is specified at the createProps level
  *     role: 'button',
@@ -36,7 +31,8 @@ const TEST_MODE = typeof window !== 'undefined' && window.__LATTICE_TEST_MODE__;
  *
  * @example
  * // With automatic return type inference - the most concise way
- * const buttonProps = createProps('button', (_set, _get) => ({
+ * const buttonProps = createProps(() => ({
+ *   partName: 'button',
  *   get: (params: ButtonParams) => ({
  *     // Return type is inferred from this object!
  *     role: 'button',
@@ -47,62 +43,50 @@ const TEST_MODE = typeof window !== 'undefined' && window.__LATTICE_TEST_MODE__;
  */
 // Overload 1: Classic explicit type parameters
 export function createProps<P, R>(
-  partName: string,
-  config: PropsFn<P, R>
+  config: () => {
+    partName: string;
+    get: PropsGetFn<P, R>;
+  }
 ): PropsStore<P, R>;
 
 // Overload 2: Specify return type at createProps level, params inline in get
 export function createProps<R>(
-  partName: string,
-  config: (
-    set: any,
-    get: any,
-    api: any
-  ) => {
+  config: () => {
+    partName: string;
     get: (params?: any) => R; // More flexible parameter handling
   }
 ): PropsStore<any, R>;
 
 // Overload 3: Infer return type from get function
 export function createProps<P, G extends (params: P) => any>(
-  partName: string,
-  config:
-    | {
-        get: G;
-      }
-    | ((set: any, get: any, api: any) => { get: G })
+  config: () => {
+    partName: string;
+    get: G;
+  }
 ): PropsStore<P, InferReturnType<G>>;
 
 // Implementation
 export function createProps<P, R>(
-  partName: string,
-  config: PropsFn<P, R> | { get: PropsGetFn<P, R> }
+  config: () => {
+    partName: string;
+    get: PropsGetFn<P, R>;
+  }
 ): PropsStore<P, R> {
   // Initialize test mode if needed
   if (typeof window !== 'undefined') {
     window.__LATTICE_TEST_MODE__ = TEST_MODE || true;
   }
 
-  // Handle plain object config directly
-  let configFn: PropsFn<P, R>;
-  if (typeof config === 'function') {
-    configFn = config;
-  } else {
-    // Convert object config to function config
-    configFn = (_set, _get, _api) => ({
-      get: config.get,
-    });
-  }
+  // Get the partName and get function from the config
+  const configResult = config();
+  const partName = configResult.partName;
+  const getFunction = configResult.get;
 
   // Create the store with the config, ensuring partName is included in the state
-  const store = create<PropsState<P, R>>((set, get, api) => {
-    // Initialize the state with the user config
-    const initialState = configFn(set, get, api);
-    const originalGet = initialState.get;
-
+  const store = create<PropsState<P, R>>((_set, _get, _api) => {
     // Create a safer get function that always provides expected parameters
     const safeGet: PropsGetFn<P, R> = ((params: P) => {
-      if (typeof originalGet !== 'function') {
+      if (typeof getFunction !== 'function') {
         return {} as R;
       }
 
@@ -111,20 +95,19 @@ export function createProps<P, R>(
 
       // For truly parameterless functions (not just .length === 0, but actual type signature)
       if (
-        originalGet.length === 0 &&
+        getFunction.length === 0 &&
         // Additional check to identify real parameterless functions (stringified)
-        originalGet.toString().indexOf('()') === 0
+        getFunction.toString().indexOf('()') === 0
       ) {
-        return (originalGet as () => R)();
+        return (getFunction as () => R)();
       }
 
       // For all other functions, including spies, pass parameters
-      return (originalGet as (params: P) => R)(safeParams);
+      return (getFunction as (params: P) => R)(safeParams);
     }) as PropsGetFn<P, R>;
 
     // Return state with partName and user config
     return {
-      ...initialState,
       get: safeGet,
       partName,
     };

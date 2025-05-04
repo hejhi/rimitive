@@ -6,15 +6,18 @@ describe('mergeProps', () => {
   // Test the composed functionality: organizing props stores by partName
   it('should organize props stores by their partName metadata', () => {
     // Create mock props stores with partName metadata
-    const buttonProps = createProps('button', () => ({
+    const buttonProps = createProps(() => ({
+      partName: 'button',
       get: () => ({ role: 'button' }),
     }));
 
-    const menuProps = createProps('menu', () => ({
+    const menuProps = createProps(() => ({
+      partName: 'menu',
       get: () => ({ role: 'menu' }),
     }));
 
-    const listProps = createProps('list', () => ({
+    const listProps = createProps(() => ({
+      partName: 'list',
       get: () => ({ role: 'list' }),
     }));
 
@@ -35,11 +38,13 @@ describe('mergeProps', () => {
   // Test last store wins for the same partName (no merging)
   it('should use the last store when multiple stores have the same partName', () => {
     // Create two button stores with the same partName but different properties
-    const buttonProps1 = createProps('button', () => ({
+    const buttonProps1 = createProps(() => ({
+      partName: 'button',
       get: () => ({ role: 'button', variant: 'primary' }),
     }));
 
-    const buttonProps2 = createProps('button', () => ({
+    const buttonProps2 = createProps(() => ({
+      partName: 'button',
       get: () => ({
         disabled: true,
         'aria-label': 'Action button',
@@ -47,7 +52,8 @@ describe('mergeProps', () => {
     }));
 
     // Also create a menu store with a different partName
-    const menuProps = createProps('menu', () => ({
+    const menuProps = createProps(() => ({
+      partName: 'menu',
       get: () => ({ role: 'menu' }),
     }));
 
@@ -77,7 +83,8 @@ describe('mergeProps', () => {
   // Test warning and error for props store missing partName
   it('should warn and throw error when a props store is missing partName metadata', () => {
     // Create a mock props store without partName metadata
-    const propsWithoutPartName = createProps('', () => ({
+    const propsWithoutPartName = createProps(() => ({
+      partName: '',
       get: () => ({ role: 'unknown' }),
     }));
 
@@ -101,11 +108,13 @@ describe('mergeProps', () => {
 
   it('should merge props stores by partName', () => {
     // Create two button stores with the same partName but different properties
-    const buttonProps1 = createProps('button', () => ({
+    const buttonProps1 = createProps(() => ({
+      partName: 'button',
       get: () => ({ role: 'button', variant: 'primary' }),
     }));
 
-    const buttonProps2 = createProps('button', () => ({
+    const buttonProps2 = createProps(() => ({
+      partName: 'button',
       get: () => ({
         disabled: true,
         'aria-label': 'Action button',
@@ -113,7 +122,8 @@ describe('mergeProps', () => {
     }));
 
     // Also create a menu store with a different partName
-    const menuProps = createProps('menu', () => ({
+    const menuProps = createProps(() => ({
+      partName: 'menu',
       get: () => ({ role: 'menu' }),
     }));
 
@@ -150,7 +160,8 @@ describe('mergeProps', () => {
 
   it('should throw error if store is missing partName', () => {
     // Create a store without partName
-    const invalidStore = createProps('', () => ({
+    const invalidStore = createProps(() => ({
+      partName: '',
       get: () => ({}),
     }));
 
