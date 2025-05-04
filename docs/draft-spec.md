@@ -58,8 +58,8 @@ export const createFeature = () => {
 
     // Create props for UI elements
     const featureProps = createProps(
-      "uiPart",
-      withProps(baseLattice)((_set, _get) => ({
+      withProps(baseLattice, "uiPart")((_set, _get, store) => ({
+        partName: "uiPart",
         get: (params) => ({
           // DOM and ARIA attributes
         }),
@@ -173,28 +173,26 @@ The Props system in Lattice bridges state management and UI rendering:
 
 ```tsx
 // Basic props creation with direct config
-const buttonProps = createProps(
-  "button", // UI part name
-  (_set, _get) => ({
-    get: (params) => ({
-      role: "button",
-      "aria-label": params.label,
-      tabIndex: 0,
-      // Other attributes based on state
-    }),
+const buttonProps = createProps(() => ({
+  partName: "button",
+  get: (params) => ({
+    role: "button",
+    "aria-label": params.label,
+    tabIndex: 0,
+    // Other attributes based on state
   }),
-);
+}));
 
 // Using withProps to compose with base lattice
 const treeItemProps = createProps(
-  "treeItem",
-  withProps(baseLattice)((_set, _get, baseProps) => ({
+  withProps(baseLattice, "treeItem")((_set, _get, store) => ({
+    partName: "treeItem",
     get: (params) => ({
       // Extend or override base props
       "aria-selected": selectionAPI.isSelected(params.id),
       onClick: (e) => {
         // Can call base handler if needed
-        baseProps.get(params).onClick?.(e);
+        store.getBaseProps(params).onClick?.(e);
         // Add additional behavior
       },
     }),
