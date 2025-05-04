@@ -44,7 +44,7 @@ describe('Lattice Composition', () => {
         const counterProps = createProps('counter', () => ({
           get: () => ({
             'aria-label': 'Counter',
-            'data-count': (counterAPI.getState() as CounterState).count,
+            'data-count': counterAPI.getState().count,
           }),
         }));
 

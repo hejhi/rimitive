@@ -80,9 +80,7 @@ describe('withProps middleware', () => {
 
           // Get base props using the getBaseProps helper with same params
           // Pass the same params here to ensure consistency
-          const basePropValues = store.getBaseProps(
-            inputParams
-          ) as TreeItemProps;
+          const basePropValues = store.getBaseProps(inputParams);
 
           return {
             // Inherit props we want to keep from the base
@@ -131,9 +129,7 @@ describe('withProps middleware', () => {
       isSelected: true,
     } as const;
     baseLattice.props.treeItem?.getState().get(params);
-    const composedTreeItemProps = composedProps
-      .getState()
-      .get(params) as TreeItemProps;
+    const composedTreeItemProps = composedProps.getState().get(params);
 
     // Test manually merged styles
     expect(composedTreeItemProps.style).toEqual({

@@ -6,14 +6,6 @@ interface ButtonParams {
   label?: string;
 }
 
-// Type for button props return value
-interface ButtonProps {
-  role: string;
-  'aria-label': string;
-  tabIndex: number;
-  onClick: () => void;
-}
-
 // Type for the source store state and methods
 interface SourceState {
   isSelected: boolean;
@@ -22,14 +14,6 @@ interface SourceState {
   deselect: () => void;
   disable: () => void;
   enable: () => void;
-}
-
-// Type for checkbox props return value
-interface CheckboxProps {
-  role: string;
-  'aria-checked': boolean;
-  'aria-disabled': boolean;
-  onClick: () => void;
 }
 
 // Advanced params interface with multiple optional parameters
@@ -42,29 +26,17 @@ interface AdvancedParams {
   testId?: string;
 }
 
-// Advanced props return type
-interface AdvancedButtonProps {
-  id: string;
-  role: string;
-  className: string;
-  'aria-disabled'?: boolean;
-  'data-testid'?: string;
-}
-
 describe('createProps', () => {
   it('should create a props store with partName metadata', () => {
     // Create props store with partName and config
-    const buttonProps = createProps<ButtonParams, ButtonProps>(
-      'button',
-      () => ({
-        get: (params?: ButtonParams) => ({
-          role: 'button',
-          'aria-label': params?.label || 'Button',
-          tabIndex: 0,
-          onClick: () => console.log('clicked'),
-        }),
-      })
-    );
+    const buttonProps = createProps('button', () => ({
+      get: (params?: ButtonParams) => ({
+        role: 'button',
+        'aria-label': params?.label || 'Button',
+        tabIndex: 0,
+        onClick: () => console.log('clicked'),
+      }),
+    }));
 
     // Verify the store structure includes partName metadata
     expect(buttonProps.partName).toBe('button');
@@ -131,13 +103,7 @@ describe('createProps', () => {
     }));
 
     // Create props that depend on the source store state
-    const checkboxProps = createProps<{}, CheckboxProps>('checkbox', (set) => {
-      // Setup subscription to source store
-      sourceStore.subscribe(() => {
-        // Trigger an update when the source store changes
-        set({});
-      });
-
+    const checkboxProps = createProps('checkbox', () => {
       return {
         get: () => ({
           role: 'checkbox',
@@ -218,12 +184,9 @@ describe('createProps', () => {
     });
 
     // Create props with the spy
-    const advancedProps = createProps<AdvancedParams, AdvancedButtonProps>(
-      'button',
-      () => ({
-        get: getSpy,
-      })
-    );
+    const advancedProps = createProps('button', () => ({
+      get: getSpy,
+    }));
 
     // Test with minimal required parameters
     const minimalProps = advancedProps.getState().get({ id: 'btn-1' });
