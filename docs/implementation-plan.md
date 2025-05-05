@@ -62,16 +62,16 @@ Implement the Actions layer and basic composition patterns.
 
 | ID  | Task Description                       | Unit Test Case                                    | Status |
 | --- | -------------------------------------- | ------------------------------------------------- | ------ |
-| 2.1 | Implement basic actions object pattern | Test actions correctly call model methods         | ⬜     |
-| 2.2 | Add support for action parameters      | Test parameter passing through actions to model   | ⬜     |
-| 2.3 | Implement action composition           | Test composition of actions from multiple sources | ⬜     |
-| 2.4 | Add event handling in actions          | Test action methods handling DOM events           | ⬜     |
-| 2.5 | Implement error handling in actions    | Test error handling and recovery in action chain  | ⬜     |
+| 2.1 | Implement basic actions object pattern | Test actions correctly call model methods         | ✅     |
+| 2.2 | Add support for action parameters      | Test parameter passing through actions to model   | ✅     |
+| 2.3 | Implement action composition           | Test composition of actions from multiple sources | ✅     |
+| 2.4 | Add event handling in actions          | Test action methods handling DOM events           | ✅     |
+| 2.5 | Implement error handling in actions    | Test error handling and recovery in action chain  | ✅     |
 
 ### Integration Tests
 
-- Create a todo list with actions for adding/toggling todos
-- Build a filtering system with state-based and action-based filtering
+- Create a todo list with actions for adding/toggling todos ✅
+- Build a filtering system with state-based and action-based filtering ✅
 
 ## Iteration 3: View System
 
