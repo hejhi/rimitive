@@ -17,6 +17,3 @@ console.log = function (...args) {
         .join(' ') + '\n';
   }
 };
-
-// Import the demo to run it
-import './demo';

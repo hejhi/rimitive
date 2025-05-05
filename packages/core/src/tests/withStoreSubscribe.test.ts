@@ -1,83 +1,48 @@
 import { describe, it, expect, vi } from 'vitest';
 import { create } from 'zustand';
-import { withStoreSubscribe } from '../index';
-import { SyncedState as SyncedStateWithCleanup } from '../types';
+import { withStoreSubscribe } from '../state';
 
-describe('withStoreSubscribe middleware', () => {
-  it('should synchronize state from source stores to target store', () => {
-    // Create source stores
-    const counterStore = create(() => ({
-      count: 0,
-      increment: () =>
-        counterStore.setState((state) => ({ count: state.count + 1 })),
-    }));
+describe('withStoreSubscribe utility', () => {
+  it('correctly subscribes to a Zustand store and selects state', () => {
+    // Create a test store
+    const testStore = create(() => ({ count: 0, name: 'test' }));
 
-    const userStore = create(() => ({
-      name: 'John',
-      setName: (name: string) => userStore.setState({ name }),
-    }));
+    // Create a state selector
+    const selector = (state: { count: number; name: string }) => ({
+      count: state.count,
+      name: state.name,
+    });
 
-    // Create target store with withStoreSubscribe middleware
-    const targetStore = create(
-      withStoreSubscribe(
-        { counterStore, userStore },
-        ({ counterStore, userStore }) => ({
-          syncedCount: counterStore.count,
-          syncedName: userStore.name,
-        })
-      )(() => ({
-        extraState: 'initial',
-      }))
-    );
+    // Use withStoreSubscribe to subscribe to the store with the selector
+    const subscriber = withStoreSubscribe(testStore, selector);
 
-    // Verify initial state synchronization
-    const initialState = targetStore.getState();
-    expect(initialState).toHaveProperty('syncedCount', 0);
-    expect(initialState).toHaveProperty('syncedName', 'John');
-    expect(initialState).toHaveProperty('extraState', 'initial');
+    // Initial state check
+    expect(subscriber.getState()).toEqual({ count: 0, name: 'test' });
 
-    // Update source store and verify target store updates
-    counterStore.getState().increment();
-    const stateAfterIncrement = targetStore.getState();
-    expect(stateAfterIncrement).toHaveProperty('syncedCount', 1);
+    // Update the store state
+    testStore.setState({ count: 5, name: 'updated' });
 
-    // Update another source store
-    userStore.setState({ name: 'Alice' });
-    const stateAfterNameChange = targetStore.getState();
-    expect(stateAfterNameChange).toHaveProperty('syncedName', 'Alice');
-  });
+    // Check that subscriber state is updated
+    expect(subscriber.getState()).toEqual({ count: 5, name: 'updated' });
 
-  it('should properly handle source store changes and cleanup', () => {
-    // Create source store with a mock unsubscribe function
-    const unsubscribe = vi.fn();
-    const sourceStore = create(() => ({ value: 'initial' }));
-    vi.spyOn(sourceStore, 'subscribe').mockReturnValue(unsubscribe);
+    // Test subscription mechanism
+    const mockSubscriber = vi.fn();
+    const unsubscribe = subscriber.subscribe(mockSubscriber);
 
-    type State = {
-      syncedValue: string;
-    } & SyncedStateWithCleanup;
+    // Trigger state change
+    testStore.setState({ count: 10, name: 'test again' });
 
-    // Create target store with withStoreSubscribe middleware
-    const targetStore = create<State>(
-      withStoreSubscribe({ sourceStore }, ({ sourceStore }) => ({
-        syncedValue: sourceStore.value,
-      }))(() => ({
-        syncedValue: sourceStore.getState().value,
-      }))
-    );
+    // Check that subscriber was called with the selected state
+    expect(mockSubscriber).toHaveBeenCalledWith({
+      count: 10,
+      name: 'test again',
+    });
 
-    // Verify subscribe was called on the source store
-    expect(sourceStore.subscribe).toHaveBeenCalled();
+    // Test unsubscribe functionality
+    unsubscribe();
+    testStore.setState({ count: 15, name: 'final' });
 
-    // Get the cleanup function
-    const cleanup = targetStore.getState()._syncCleanup;
-    expect(typeof cleanup).toBe('function');
-
-    // Call cleanup and verify unsubscribe was called
-    cleanup();
-    expect(unsubscribe).toHaveBeenCalled();
-
-    // Verify unsubscribe is called exactly once per source store
-    expect(unsubscribe).toHaveBeenCalledTimes(1);
+    // Should still only have been called once
+    expect(mockSubscriber).toHaveBeenCalledTimes(1);
   });
 });
