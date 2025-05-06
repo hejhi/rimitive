@@ -1,22 +1,15 @@
-// Generic types for state selection and subscribing
-export type Selector<TState, TSelectedState> = (
-  state: TState
-) => TSelectedState;
+/**
+ * Common types used throughout the Lattice library
+ */
 
-// Type for a subscriber object that can be subscribed to
-export interface Subscriber<TSelectedState> {
-  subscribe: (callback: (state: TSelectedState) => void) => () => void;
-  getState: () => TSelectedState;
-}
+import { type StateCreator, type StoreApi, type UseBoundStore } from 'zustand';
 
-// Model factory types
-export type ModelFactory<TSelectedState, TModel> = (
-  set: (state: Partial<TSelectedState>) => void,
-  get: () => TSelectedState,
-  selectedState: TSelectedState
-) => TModel;
+/**
+ * A type representing a Zustand store created by the Lattice library
+ */
+export type Store<T extends object> = UseBoundStore<StoreApi<T>>;
 
-// Type for the result of createModel
-export interface ModelResult<TModel> {
-  model: TModel;
-}
+/**
+ * A type representing a state creator function for Zustand stores
+ */
+export type StoreInitializer<T extends object> = StateCreator<T, [], []>;

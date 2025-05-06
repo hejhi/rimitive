@@ -18,9 +18,12 @@ foundation.
   concerns
 - **Unified Model**: Getters and mutations in a single Model object with
   auto-generated hooks
-- **Hooks System**: Clean interception points for cross-cutting concerns
-- **Layered Zustand Stores**: States → Model → View, with precise reactivity
-- **Lattice Composition**: Behaviors cooperate via hooks—no fragile ref hacks
+- **Factory Composition**: Factories create reusable patterns that are only
+  instantiated when needed
+- **Contract Preservation**: Compositions extend but never break existing
+  contracts
+- **Lattice Composition**: Behaviors cooperate via public APIs—no model exposure
+  or internal coupling
 - **Zustand Foundation**: Familiar DX, dev‑tools time‑travel, no custom state
   engine
 - **Instance-based Architecture**: Multiple independent instances with proper
@@ -28,12 +31,12 @@ foundation.
 
 ### When to Use Lattice vs. Plain Hooks
 
-| When plain hooks shine                         | Where they crack                                                                                       | How Lattice closes the gap                                                                         |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| Small, single‑purpose widget (e.g. accordion). | Complex components like **Tree View** that mix selection, drag‑and‑drop, type‑ahead, virtualisation.   | Composable lattices encapsulate each behaviour through layered Zustand stores; views merge safely. |
-| One framework, one team.                       | **Cross‑framework** design‑system (React + Vue + Native).                                              | Core is JSX‑free; stores are framework-agnostic; adapters are thin wrappers.                       |
-| WCAG handled by Radix/Headless UI façade.      | Custom ARIA choreography across multiple behaviours (aria‑grabbed + aria‑selected + roving tab index). | Views are reactive Zustand stores, merged per UI part                                              |
-| Logic local to component.                      | Several products need to hot‑swap features (e.g. no DnD on mobile).                                    | Features can be added/removed at instantiation, with granular reactivity throughout stores.        |
+| When plain hooks shine                         | Where they crack                                                                                       | How Lattice closes the gap                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| Small, single‑purpose widget (e.g. accordion). | Complex components like **Tree View** that mix selection, drag‑and‑drop, type‑ahead, virtualisation.   | Composable lattices encapsulate each behaviour through model composition; views merge safely. |
+| One framework, one team.                       | **Cross‑framework** design‑system (React + Vue + Native).                                              | Core is JSX‑free; models are framework-agnostic; adapters are thin wrappers.                  |
+| WCAG handled by Radix/Headless UI façade.      | Custom ARIA choreography across multiple behaviours (aria‑grabbed + aria‑selected + roving tab index). | Views are reactive composites, merged per UI part                                             |
+| Logic local to component.                      | Several products need to hot‑swap features (e.g. no DnD on mobile).                                    | Features can be added/removed at instantiation, with granular reactivity throughout models.   |
 
 > TL;DR — Hooks remain perfect for simple widgets, but once you need **WCAG‑AA,
 > composability, portability, and proper state isolation**, Lattice provides the
@@ -45,134 +48,302 @@ foundation.
 
 ### Glossary
 
-| Term        | Meaning                                                                       |
-| ----------- | ----------------------------------------------------------------------------- |
-| **State**   | Private Zustand store created with `create`.                                  |
-| **Actions** | Pure intent functions that trigger state changes through the Model.           |
-| **Model**   | Unified public interface with getters (selectors) and setters (mutations).    |
-| **View**    | Reactive Zustand store that returns ready-to-spread UI attributes.            |
-| **Hooks**   | System to intercept mutations for cross-cutting concerns (`before`/`after`).  |
-| **Lattice** | Bundle of Models, views with namespaces. Lattices can compose other lattices. |
+| Terminology | Meaning                                                                                                           |
+| ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| **Model**   | Primary unit of composition containing state and business logic with methods to implement domain operations.      |
+| **Actions** | Pure intent functions that represent user operations without implementation details.                              |
+| **State**   | Public selectors that provide read access to the model.                                                           |
+| **View**    | Reactive state representations of components that transform state and actions into ready-to-spread UI attributes. |
+
+Together, these make up a composable `lattice`.
 
 ### Mental Model & Flow
 
 ```
-                   ┌──────────── Reactive Zustand Stores ───────────┐
-                   ▼                  ▼                    ▼
-View event ──▶ Actions ──▶ Hooks ──▶ Model ──▶ State mutation ──▶ UI re‑render
+                   ┌───────── Reactive Models ─────────┐
+                   ▼                  ▼                ▼
+View event ──▶ Actions ──▶ Model Mutation ──▶ State/View update ──▶ UI re‑render
 ```
 
 - One‑way data‑flow following SAM (State-Action-Model) pattern
-- Actions represent pure intent, triggering state changes through the Model
-- Model contains business logic and mediates between Actions and State
-- Reactive composition: User events → Actions → Model → State → View → UI
-  elements
-- Each layer is a Zustand store, enabling precise subscriptions and memoization
-- Hooks provide interception points for cross-cutting concerns
+- Actions represent pure intent (WHAT), triggering state changes through the
+  Model
+- Model contains business logic and state (HOW) and is the primary unit of
+  composition
+- Reactive flow: User events → Actions → Model → State → View → UI elements
+- Lattice exposes only actions, views, and state (via selectors) for composition
+
+### Public vs Internal APIs
+
+```
+       Consumable Public API
+
+    ┌───────────┐    ┌───────────┐
+    │           │    │           │
+┌──▶│   State   │───▶│   View    │
+│   │           │    │           │
+│   └───────────┘    └───────────┘
+│         │                │
+--------------------------------------
+│         │    Internal    │
+│         ▼                │
+│   ┌───────────┐          │
+│   │           │          │
+│   │  Actions  │◀─────────┘
+│   │           │
+│   └───────────┘
+│         │
+│         ▼
+│   ┌───────────┐
+│   │           │
+└───│   Model   │
+    │           │
+    └───────────┘
+```
+
+- Only the derived State and View(s) are available via the Public API
+- Composing lattices together allows _composition_ of every part
+- Models are the source-of-truth, combining state and behavior
+
+### Factory-Based Composition
+
+Lattice uses a factory-based composition model:
+
+1. Factory functions create reusable patterns, not actual instances
+2. These patterns define behavior but don't allocate storage until needed
+3. Actual stores are only created when a lattice is instantiated
+4. This allows for:
+   - Efficient composition without premature store creation
+   - Type-safe contract enforcement across compositions
+   - Clean separation between composition logic and implementation details
+   - Lazy loading of enhanced lattice compositions:
+
+```ts
+// Core lattice with minimal functionality
+const createCoreLattice = () => {
+  const model = createModel()(({ set, get }) => ({
+    count: 0,
+    increment: () => set((state) => ({ count: state.count + 1 })),
+  }));
+
+  const actions = createActions()(({ mutate }) => ({
+    increment: mutate(model, "increment"),
+  }));
+
+  const state = createState()(({ derive }) => ({
+    count: derive(model, "count"),
+  }));
+
+  return createLattice("core", { model, actions, state });
+};
+
+// Usage: Create core lattice immediately
+const coreLattice = createCoreLattice();
+
+// Then later, dynamically import an enhancement
+// In enhancementModule.js:
+export const enhanceWithFeature = (baseLattice) => {
+  const model = createModel(baseLattice, ({ model, select }) => ({
+    increment: select(model, "increment"),
+  }))(({ set, get }) => ({
+    // Add new functionality
+    incrementTwice: () => {
+      get().increment();
+      get().increment();
+    },
+  }));
+
+  const actions = createActions(baseLattice, ({ actions, select }) => ({
+    increment: select(actions, "increment"),
+  }))(({ mutate }) => ({
+    incrementTwice: mutate(model, "incrementTwice"),
+  }));
+
+  return createLattice(
+    "enhanced",
+    withLattice(baseLattice)({
+      model,
+      actions,
+    }),
+  );
+};
+
+// Dynamically load the enhancement when needed:
+import("./enhancementModule.js").then((module) => {
+  const enhancedLattice = module.enhanceWithFeature(coreLattice);
+  // Start using enhanced lattice
+});
+```
 
 ---
 
 ## 3. Building Blocks
 
-### State - Private Zustand Stores
+### Model - Primary Unit of Composition
 
-Private state stores form the foundation of the Lattice architecture. They are
-created using Zustand's `create` function and encapsulate the raw state data.
+Models are the fundamental building blocks in Lattice, encapsulating both state
+and behavior. They provide a clean API for state access and mutations without
+exposing implementation details.
 
 ```ts
-// Create private state store
-const countState = create(() => ({ count: 0 }));
+// Create a standalone model factory with state and methods
+const counterModel = createModel()(({ set, get }) => ({
+  // Internal state
+  count: 0,
 
-// State can be updated directly or through the Model
-countState.setState((state) => ({ count: state.count + 1 }));
+  // State mutations
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  decrement: () => set((state) => ({ count: state.count - 1 })),
+
+  // State selectors
+  getCount: () => get().count,
+}));
+
+// Model is a factory until used in a lattice
 ```
 
-### Model - Business Logic Layer
+### Model Composition
 
-The Model provides a unified public interface with getters (selectors) and
-setters (mutations). It subscribes to one or more state stores and exposes
-methods to interact with the state.
+Models can be composed together using the double-function IIFE pattern,
+separating composition from implementation.
 
 ```ts
-// Create Model with subscription to private store
-const { model } = createModel(
-  withStoreSubscribe(countState, (state) => ({
-    count: state.count,
-  })),
-)((set, get, selectedState) => ({
-  getCount: () => selectedState.count,
-  increment: () => countState.setState((state) => ({ count: state.count + 1 })),
+// Create independent model factories
+const counterModel = createModel()(({ set, get }) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  getCount: () => get().count,
+}));
+
+const labelModel = createModel()(({ set, get }) => ({
+  label: "Counter",
+  setLabel: (label) => set({ label }),
+  getLabel: () => get().label,
+}));
+
+// Create standalone model (no composition)
+const standaloneModel = createModel()(({ set, get }) => ({
+  // Implementation without composition
 }));
 ```
 
 ### Actions - Pure Intent Functions
 
-Actions are pure intent functions that trigger state changes through the Model.
-They represent what should happen, not how it should happen.
+Actions are pure intent functions that represent WHAT should happen, not HOW it
+should happen. They are the primary entry points for state mutations and are
+exposed in the public API. The double-function pattern separates composition
+from implementation.
 
 ```ts
-// Define Actions as pure intent functions
-const actions = {
-  increment: () => model.increment(),
-};
+// Define Actions using createActions with double-function pattern - standalone
+const actions = createActions()(({ mutate }) => ({
+  // Actions directly reference model methods
+  increment: mutate(model, "increment"),
+  doubleIncrement: mutate(model, "incrementTwice"),
+}));
 
-// Using an action
-actions.increment();
+// Composing with a lattice
+const enhancedActions = createActions(baseLattice, ({ actions, select }) => ({
+  // Select from the actions part of the lattice
+  increment: select(actions, "increment"),
+}))(({ mutate }) => ({
+  // Add new actions
+  incrementTwice: mutate(model, "incrementTwice"),
+}));
+
+// Composing with another actions factory
+const combinedActions = createActions(baseActions, ({ actions, select }) => ({
+  // Select from another actions factory
+  increment: select(actions, "increment"),
+}))(({ mutate }) => ({
+  // Add new actions
+  incrementThenReset: mutate(model, "incrementThenReset"),
+}));
+
+// Using an action directly (once the lattice is instantiated)
+// actions.increment();
+```
+
+### State - Public Selectors
+
+Public state selectors provide read access to the model state. They follow the
+double-function pattern and can derive from model properties.
+
+```ts
+// Define public state selectors with double-function pattern - standalone
+const state = createState()(({ get, derive }) => ({
+  // State can derive from model properties
+  count: derive(model, "count"),
+  countPlusOne: derive(model, "count", (count) => count + 1),
+  isPositive: () => get().count > 0,
+}));
+
+// Composing with a lattice
+const enhancedState = createState(baseLattice, ({ state, select }) => ({
+  // Select from the state part of the lattice
+  count: select(state, "count"),
+}))(({ get, derive }) => ({
+  // Add new derived state
+  doubled: derive(state, "count", (count) => count * 2),
+}));
+
+// Composing with another state factory
+const combinedState = createState(baseState, ({ state, select }) => ({
+  // Select from another state factory
+  count: select(state, "count"),
+}))(({ get, derive }) => ({
+  // Add new derived state
+  isNegative: () => get().count < 0,
+}));
+
+// Using a state selector (once the lattice is instantiated)
+// const count = state.count;
+// const isPositive = state.isPositive();
 ```
 
 ### View - Reactive UI Attributes
 
-Views are reactive Zustand stores that transform Model state into
-ready-to-spread UI attributes. They provide a declarative mapping from Model
-methods to UI properties.
+Views are reactive components that transform state and actions into
+ready-to-spread UI attributes. They follow the double-function pattern and serve
+as pure mappings from state and actions to UI properties. Views are parallel to
+actions - they are pure selectors without functions or side effects.
 
 ```ts
-// Create views that connect UI events to Actions
-const countView = createView(
-  "count",
-  composeFrom(
-    // Select from Model for state-derived attributes
-    {
-      source: model,
-      select: {
-        "data-count": "getCount",
-      },
-    },
-    // Select from Actions for event handlers
-    {
-      source: actions,
-      select: {
-        onClick: "increment",
-      },
-    },
-  ),
-);
-```
+// Create views with double-function pattern - standalone
+const counterView = createView()(({ derive }) => ({
+  // Views are pure mappings from state/actions to UI attributes
+  "data-count": derive(state, "count"),
+  "aria-live": "polite",
+}));
 
-### Hooks - Cross-cutting Concerns
+// Composing with a lattice
+const enhancedView = createView(baseLattice, ({ view, select }) => ({
+  // Select from the view part of the lattice
+  "data-count": select(view.counter, "data-count"),
+}))(({ derive, dispatch }) => ({
+  // Add new properties as pure mappings
+  "aria-label": "Enhanced counter",
+}));
 
-Hooks provide a system to intercept Model method calls for cross-cutting
-concerns. They can modify arguments, transform results, or prevent execution.
+// Composing with another view factory
+const combinedView = createView(baseView, ({ view, select }) => ({
+  // Select from another view factory
+  "aria-live": select(view, "aria-live"),
+}))(({ derive, dispatch }) => ({
+  // Add new properties as pure value
+  "data-enhanced": true,
+}));
 
-```ts
-// Create hooks by composing from Model sources
-const { hooks } = createHooks(
-  composeFrom({
-    source: model,
-    select: {
-      increment: {
-        before: (args) => {
-          console.log("Before increment");
-          return { args };
-        },
-        after: (result, args) => {
-          console.log("After increment");
-          return { result };
-        },
-      },
-    },
-  }),
-);
+// For parameterized views, the parameters are passed to derive
+const itemView = createView()(({ derive, dispatch }) => ({
+  // derive handles param passing when the view is used
+  "aria-selected": derive(state, "isSelected"),
+  "data-highlighted": derive(state, "isHighlighted"),
+  onClick: dispatch(actions, "selectItem"),
+}));
+
+// Usage (once lattice is instantiated):
+// const itemProps = lattice.view.item.get({ id: "item-1" });
 ```
 
 ---
@@ -181,605 +352,763 @@ const { hooks } = createHooks(
 
 ### Simple Component Example
 
-A basic counter component implementation using Lattice:
+A basic counter component implementation using Lattice with the new
+double-function pattern:
 
 ```ts
 // Create a counter lattice
 const createCounter = () => {
-  // Create private state store
-  const countState = create(() => ({ count: 0 }));
+  // Create counter model factory with state and behavior
+  const model = createModel()(({ set, get }) => ({
+    // State
+    count: 0,
 
-  // Create Model with subscription to private store
-  const { model } = createModel(
-    withStoreSubscribe(countState, (state) => ({
-      count: state.count,
-    })),
-  )((set, get, selectedState) => ({
-    getCount: () => selectedState.count,
-    increment: () =>
-      countState.setState((state) => ({ count: state.count + 1 })),
-    decrement: () =>
-      countState.setState((state) => ({ count: state.count - 1 })),
+    // Behaviors
+    increment: () => set((state) => ({ count: state.count + 1 })),
+    decrement: () => set((state) => ({ count: state.count - 1 })),
+    incrementTwice: () => {
+      get().increment();
+      get().increment();
+    },
+
+    // Selectors
+    getCount: () => get().count,
   }));
 
-  // Define Actions as pure intent functions
-  const actions = {
-    increment: () => model.increment(),
-    decrement: () => model.decrement(),
-    handleButtonClick: (actionType) =>
-      actionType === "increment" ? actions.increment() : actions.decrement(),
-  };
+  // Define Actions factory - standalone
+  const actions = createActions()(({ mutate }) => ({
+    // Actions directly reference model methods
+    increment: mutate(model, "increment"),
+    decrement: mutate(model, "decrement"),
+    incrementTwice: mutate(model, "incrementTwice"),
+  }));
 
-  // Create views that connect UI events to Actions
-  const counterView = createView(
-    "counter",
-    composeFrom(
-      // Select from Model for state-derived attributes
-      {
-        source: model,
-        select: {
-          "data-count": "getCount",
-          "aria-live": "polite",
-        },
-      },
-    ),
-  );
+  // Define public state factory - standalone
+  const state = createState()(({ get, derive }) => ({
+    // Derive state from model
+    count: derive(model, "getCount"),
+    // Derived state properties
+    countSquared: derive(model, "count", (count) => count * count),
+  }));
 
-  const buttonView = createView(
-    "button",
-    composeFrom(
-      // Select from Actions for event handlers
-      {
-        source: actions,
-        select: {
-          onClick: "handleButtonClick", // Maps to actions.handleButtonClick(params.action)
-        },
-      },
-    ),
-  );
+  // Create views factory - standalone
+  const counterView = createView()(({ derive }) => ({
+    // Generate UI attributes as pure mappings
+    "data-count": derive(state, "count"),
+    "aria-live": "polite",
+  }));
 
-  // Return composed lattice
+  const incrementButtonView = createView()(({ derive, dispatch }) => ({
+    // Map UI event to action using dispatch
+    onClick: dispatch(actions, "increment"),
+  }));
+
+  const decrementButtonView = createView()(({ derive, dispatch }) => ({
+    // Map UI event to action using dispatch
+    onClick: dispatch(actions, "decrement"),
+  }));
+
+  // Return composed lattice - the actual stores are created here
   return createLattice(
     "counter",
     {
-      model,
+      // Public API exposed for composition
       actions,
-      view: mergeViews(counterView, buttonView),
+      view: mergeViews(counterView, incrementButtonView, decrementButtonView),
+      state,
+      model,
     },
   );
 };
-
-// Usage in a React component:
-function Counter() {
-  const counter = createCounter();
-
-  const counterProps = useStore(
-    counter.view.counter,
-    (viewStore) => viewStore.get(),
-  );
-
-  const incrementProps = useStore(
-    counter.view.button,
-    (viewStore) => viewStore.get({ action: "increment" }),
-  );
-
-  const decrementProps = useStore(
-    counter.view.button,
-    (viewStore) => viewStore.get({ action: "decrement" }),
-  );
-
-  return (
-    <div {...counterProps}>
-      <button {...decrementProps}>-</button>
-      <span>{counter.model.getCount()}</span>
-      <button {...incrementProps}>+</button>
-    </div>
-  );
-}
 ```
 
 ### Medium Complexity Example
 
-A todo list with filtering capabilities:
+A todo list with filtering capabilities using the double-function pattern:
 
 ```ts
 // Create a todo list lattice
 const createTodoList = () => {
-  // Create private state store
-  const todoState = create(() => ({
+  // Create the model factory
+  const model = createModel()(({ set, get }) => ({
+    // State
     todos: [],
     filter: "all",
-  }));
+    label: "Todo List",
 
-  // Create Model with subscription to private store
-  const { model } = createModel(
-    withStoreSubscribe(todoState, (state) => ({
-      todos: state.todos,
-      filter: state.filter,
-    })),
-  )((set, get, selectedState) => ({
-    getTodos: () => selectedState.todos,
-    getFilteredTodos: () => {
-      const filter = selectedState.filter;
-      const todos = selectedState.todos;
-
-      if (filter === "all") return todos;
-      if (filter === "completed") return todos.filter((todo) => todo.completed);
-      if (filter === "active") return todos.filter((todo) => !todo.completed);
-      return todos;
-    },
-    getFilter: () => selectedState.filter,
-    isTodoCompleted: (id) => {
-      const todo = selectedState.todos.find((t) => t.id === id);
-      return todo ? todo.completed : false;
-    },
-    addTodo: (text) => {
-      todoState.setState((state) => ({
+    // Behaviors
+    addTodo: (text) =>
+      set((state) => ({
         todos: [...state.todos, { id: Date.now(), text, completed: false }],
-      }));
-    },
-    toggleTodo: (id) => {
-      todoState.setState((state) => ({
+      })),
+
+    toggleTodo: (id) =>
+      set((state) => ({
         todos: state.todos.map((todo) =>
           todo.id === id ? { ...todo, completed: !todo.completed } : todo
         ),
-      }));
+      })),
+
+    setFilter: (filter) => set({ filter }),
+
+    // Composite behaviors
+    addAndFilterActive: (text) => {
+      get().addTodo(text);
+      get().setFilter("active");
     },
-    setFilter: (filter) => {
-      todoState.setState({ filter });
+
+    // Internal selectors
+    _getTodos: () => get().todos,
+    _getFilter: () => get().filter,
+
+    // Computed properties
+    getFilteredTodos: () => {
+      const todos = get().todos;
+      const filter = get().filter;
+
+      if (filter === "all") return todos;
+      if (filter === "completed") {
+        return todos.filter((todo) => todo.completed);
+      }
+      if (filter === "active") return todos.filter((todo) => !todo.completed);
+      return todos;
+    },
+
+    getFilteredTodosCount: () => get().getFilteredTodos().length,
+
+    isTodoCompleted: (id) => {
+      const todo = get().todos.find((t) => t.id === id);
+      return todo ? todo.completed : false;
     },
   }));
 
-  // Define Actions as pure intent functions
-  const actions = {
-    addTodo: (text) => model.addTodo(text),
-    toggleTodo: (id) => model.toggleTodo(id),
-    setFilter: (filter) => model.setFilter(filter),
-  };
+  // Define Actions factory - standalone
+  const actions = createActions()(({ mutate }) => ({
+    // Actions directly reference model methods
+    addTodo: mutate(model, "addTodo"),
+    toggleTodo: mutate(model, "toggleTodo"),
+    setFilter: mutate(model, "setFilter"),
+    addAndFilterActive: mutate(model, "addAndFilterActive"),
+  }));
 
-  // Create views
-  const todoListView = createView(
-    "todoList",
-    composeFrom({
-      source: model,
-      select: {
-        "aria-label": () => "Todo List",
-        "data-count": () => model.getFilteredTodos().length,
-      },
-    }),
-  );
+  // Define public state factory - standalone
+  const state = createState()(({ get, derive }) => ({
+    // Derived properties
+    todos: derive(model, "_getTodos"),
+    filter: derive(model, "_getFilter"),
+    filteredTodos: derive(model, "getFilteredTodos"),
+    filteredTodosCount: derive(model, "getFilteredTodosCount"),
+    listLabel: "Todo List",
+    isTodoCompleted: derive(model, "isTodoCompleted"),
+  }));
 
-  const todoItemView = createView(
-    "todoItem",
-    composeFrom(
-      {
-        source: model,
-        select: {
-          "aria-checked": "isTodoCompleted", // Maps to model.isTodoCompleted(params.id)
-        },
-      },
-      {
-        source: actions,
-        select: {
-          onClick: "toggleTodo",
-        },
-      },
-    ),
-  );
+  // Create views factory - standalone
+  const todoListView = createView()(({ derive }) => ({
+    // Generate UI attributes as pure mappings
+    "aria-label": derive(state, "listLabel"),
+    "data-count": derive(state, "filteredTodosCount"),
+  }));
+
+  const todoItemView = createView()(({ derive, dispatch }) => ({
+    // Generate UI attributes as pure mappings
+    "aria-checked": derive(state, "isTodoCompleted"),
+    // Connect to action with dispatch
+    onClick: dispatch(actions, "toggleTodo"),
+  }));
 
   // Return composed lattice
   return createLattice(
     "todoList",
     {
-      model,
+      // Public API exposed for composition
       actions,
       view: mergeViews(todoListView, todoItemView),
+      state,
+      model,
     },
   );
 };
 ```
 
-### Complex Component Example
+### Complex Component Example - Composition
 
-The basic pattern for creating a complex lattice:
+Creating a complex component through factory composition:
 
 ```ts
+// Create independent model factories for specific concerns
+const selectionModelFactory = createModel()(({ set, get }) => ({
+  // State
+  selected: [],
+
+  // Behaviors
+  selectItem: (id, isMulti = false) =>
+    set((state) => ({
+      selected: isMulti ? [...state.selected, id] : [id],
+    })),
+
+  deselectItem: (id) =>
+    set((state) => ({
+      selected: state.selected.filter((itemId) => itemId !== id),
+    })),
+
+  clearSelection: () => set({ selected: [] }),
+
+  // Selectors
+  isSelected: (id) => get().selected.includes(id),
+  getSelected: () => get().selected,
+}));
+
+const itemsModelFactory = createModel()(({ set, get }) => ({
+  // State
+  items: [],
+
+  // Behaviors
+  setItems: (items) => set({ items }),
+  addItem: (item) =>
+    set((state) => ({
+      items: [...state.items, item],
+    })),
+  removeItem: (id) =>
+    set((state) => ({
+      items: state.items.filter((item) => item.id !== id),
+    })),
+
+  // Selectors
+  getItems: () => get().items,
+  getItem: (id) => get().items.find((item) => item.id === id),
+}));
+
 // Factory function that returns a lattice composer
 export const createFeature = () => {
   // Returns a function that takes a base lattice and returns an enhanced lattice
   return (baseLattice) => {
-    // Create private state store
-    const featureState = create(() => ({
-      count: 0,
-      active: false,
-      items: [],
-    }));
+    // Create composite model factory by combining other factories
+    const model = createModel()(({ set, get, derive }) => ({
+      // State
+      highlighted: null,
 
-    // Create derived store with subscription to private store
-    const derivedStore = create(
-      withStoreSubscribe(featureState, (featureStateObj) => ({
-        // Select properties to subscribe to
-        count: featureStateObj.count,
-        active: featureStateObj.active,
-      })),
-    )((set, get, selectedState) => ({
-      // Use subscribed values plus add new state/methods
-      derivedCount: selectedState.count * 2,
-      isActive: selectedState.active,
-      toggle: () =>
-        featureState.setState((state) => ({ active: !state.active })),
-    }));
+      // Derive from the composed factories
+      selected: derive(selectionModelFactory, "selected"),
+      items: derive(itemsModelFactory, "items"),
 
-    // Define Actions - pure intent functions
-    const actions = {
-      increment: () => model.increment(),
-      toggleActive: () => model.toggleActive(),
-      addItem: (item) => model.addItem(item),
-    };
-
-    // Create Model with hooks system, with explicit subscription chain
-    const { model, hooks } = createModel(
-      // Compose subscriptions with explicit chain
-      withStoreSubscribe(featureState, (featureStateObj) => ({
-        // Subscribe to feature store
-        items: featureStateObj.items,
-      })),
-    )(
-      withStoreSubscribe(derivedStore, (derivedState) => ({
-        // Subscribe to derived store
-        isActive: derivedState.isActive,
-        derivedCount: derivedState.derivedCount,
-      })),
-    )((set, get, featureSelectedState, derivedSelectedState) => ({
-      // Final Model with access to subscribed values from both sources
-      getCount: () => derivedSelectedState.derivedCount,
-      isActive: () => derivedSelectedState.isActive,
-      getItems: () => featureSelectedState.items,
-
-      // Methods that mutate private stores
-      increment: () => {
-        const currentCount = featureState.getState().count;
-        featureState.setState({ count: currentCount + 1 });
+      // Behaviors that use the derived state
+      selectItem: (id, isMulti = false) => {
+        selectionModelFactory.selectItem(id, isMulti);
       },
 
-      toggleActive: () => derivedStore.getState().toggle(),
+      isSelected: derive(selectionModelFactory, "isSelected"),
+      getItems: derive(itemsModelFactory, "getItems"),
 
-      addItem: (item) => {
-        featureState.setState((state) => ({
-          items: [...state.items, item],
+      // Composite behaviors
+      getItemsWithSelection: () => {
+        return get().items.map((item) => ({
+          ...item,
+          selected: get().isSelected(item.id),
         }));
       },
+
+      selectAndHighlight: (id) => {
+        // Call methods
+        get().selectItem(id);
+        // Update internal state
+        set({ highlighted: id });
+      },
+
+      isHighlighted: (id) => get().highlighted === id,
     }));
 
-    // Create views for UI elements with subscription to Model
-    const featureView = createView(
-      withView(baseLattice, "uiPart")(
-        withStoreSubscribe(model, (modelState) => ({
-          // Subscribe to Model store
-          isActive: modelState.isActive(),
-          count: modelState.getCount(),
-        })),
-      )((set, get, store, selectedState) => ({
-        partName: "uiPart",
-        get: (params) => ({
-          // DOM and ARIA attributes derived from Model state
-          "aria-checked": selectedState.isActive,
-          "data-count": selectedState.count,
-          // Connect UI events to Actions
-          onClick: () => actions.toggleActive(),
-          // Extend base views when needed
-          ...store.getBaseView(params),
-        }),
-      })),
-    );
+    // Define Actions factory - using compose with baseLattice
+    const actions = createActions(baseLattice, ({ actions, select }) => ({
+      // Select from base lattice actions if needed
+    }))(({ mutate }) => ({
+      // Define new actions
+      selectItem: mutate(model, "selectItem"),
+      selectAndHighlight: mutate(model, "selectAndHighlight"),
+    }));
 
-    // Hook into base lattice if needed
-    baseLattice.hooks.before("someMethod", () => {
-      // Interception logic
-    });
+    // Define public state factory - using compose with baseLattice
+    const state = createState(baseLattice, ({ state, select }) => ({
+      // Select from base lattice state if needed
+    }))(({ get, derive }) => ({
+      // Add new derived state
+      itemsWithSelection: derive(model, "getItemsWithSelection"),
+      isSelected: derive(model, "isSelected"),
+      isHighlighted: derive(model, "isHighlighted"),
+    }));
 
-    // Return composed lattice
+    // Create views factory - using compose with baseLattice
+    const itemView = createView(baseLattice, ({ view, select }) => ({
+      // Select from base lattice view if needed
+      role: select(view.item, "role"),
+    }))(({ derive, dispatch }) => ({
+      // Generate UI attributes as pure mappings
+      "aria-selected": derive(state, "isSelected"),
+      "data-highlighted": derive(state, "isHighlighted"),
+      onClick: dispatch(actions, "selectAndHighlight"),
+    }));
+
+    // Return enhanced lattice, actual stores are created here
     return createLattice(
       "featureName",
       withLattice(baseLattice)({
-        model,
+        // Public API exposed for composition
         actions,
-        hooks,
-        view: mergeViews(featureView),
+        view: mergeViews(itemView),
+        state,
+        model,
       }),
     );
   };
 };
 ```
 
----
-
 ## 5. Composition Patterns
 
-### Store Subscription Patterns
+### Standalone Creation Pattern
 
-#### Pattern 1: Single Store Subscription
-
-Simple direct subscription from a store with Actions:
+Creating standalone factories:
 
 ```ts
-// Create private store
-const countState = create(() => ({ count: 0 }));
-
-// Create Model with subscription to private store
-const { model } = createModel(
-  withStoreSubscribe(countState, (state) => ({
-    count: state.count,
-  })),
-)((set, get, selectedState) => ({
-  getCount: () => selectedState.count,
-  increment: () => countState.setState((state) => ({ count: state.count + 1 })),
+// Standalone model factory (no composition)
+const model = createModel()(({ set, get }) => ({
+  // Implementation without composition
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  getCount: () => get().count,
 }));
 
-// Define Actions as pure intent functions
-const actions = {
-  increment: () => model.increment(),
+// Standalone state factory (no composition)
+const state = createState()(({ get }) => ({
+  // Implementation without composition
+  value: 10,
+  getValue: () => get().value,
+}));
+
+// Standalone view factory (no composition)
+const view = createView()(({ get }) => ({
+  // Implementation without composition
+  className: "my-component",
+  ariaLabel: "Example component",
+}));
+```
+
+### Full Lattice Composition Pattern
+
+Composing entire lattices together:
+
+```ts
+// Create base lattice
+const createBaseLattice = () => {
+  // Implementation details...
+  return createLattice("base", { model, state, view, actions });
 };
-```
 
-#### Pattern 2: Explicit Subscription Chain
-
-Subscribe to multiple stores with explicit chaining:
-
-```ts
-// Multiple source stores
-const userState = create(() => ({ name: "Guest", loggedIn: false }));
-const itemsState = create(() => ({ items: [] }));
-
-// Model with explicit subscription chain
-const { model } = createModel(
-  // First subscription
-  withStoreSubscribe(userState, (userStateObj) => ({
-    userName: userStateObj.name,
-    isLoggedIn: userStateObj.loggedIn,
-  })),
-)(
-  // Second subscription
-  withStoreSubscribe(itemsState, (itemsStateObj) => ({
-    items: itemsStateObj.items,
-  })),
-)((set, get, userSelectedState, itemSelectedState) => ({
-  // Methods using multiple stores with clear source origin
-  canAddItems: () => userSelectedState.isLoggedIn,
-  getUserItems: () => ({
-    user: userSelectedState.userName,
-    items: itemSelectedState.items,
-  }),
-}));
-```
-
-#### Pattern 3: Layered Subscriptions
-
-Build dependency chains with explicit subscriptions:
-
-```ts
-// Base store
-const dataState = create(() => ({ value: 10 }));
-
-// First derivative with subscription to base
-const multiplierStore = create(
-  withStoreSubscribe(dataState, (state) => ({
-    baseValue: state.value,
-  })),
-)((set, get, selectedState) => ({
-  multiplier: 2,
-  result: selectedState.baseValue * get().multiplier,
-  setMultiplier: (m) =>
-    set((state) => ({
-      multiplier: m,
-      result: selectedState.baseValue * m,
-    })),
-}));
-
-// Second derivative with subscription to first derivative only
-const formatterStore = create(
-  withStoreSubscribe(multiplierStore, (state) => ({
-    value: state.result,
-  })),
-)((set, get, selectedState) => ({
-  formatted: `Value: ${selectedState.value}`,
-  // Updates when multiplierStore updates
-}));
-```
-
-### Feature Composition
-
-#### Pattern 4: Declarative View Composition
-
-Views serve as a declarative transformation layer connecting UI events to
-Actions:
-
-```tsx
-return (baseLattice) => {
-  // Create or enhance Model first
-  const { model } = createModel(
-    withStoreSubscribe(baseLattice.model, (baseModel) => ({
-      baseSelected: baseModel.getSelected(),
-      baseItems: baseModel.getItems(),
-    })),
-  )((set, get, selectedState) => ({
-    // Model methods that return data only, never UI views
-    getHighlightedItems: () =>
-      selectedState.baseItems.filter((item) =>
-        selectedState.baseSelected.includes(item.id)
-      ),
-
-    isHighlighted: (id) => {
-      const highlighted = get().getHighlightedItems();
-      return highlighted.includes(id);
-    },
-
-    // State mutation methods
-    highlightItem: (id) => {
-      // Implementation
-    },
+// Create enhancement feature using full lattice composition
+const createEnhancedLattice = (baseLattice) => {
+  // Compose state fully (without modifying contract)
+  const state = createState(baseLattice)((get, derive) => ({
+    // Can add new properties but can't override existing ones
+    newProperty: "value",
+    derivedProperty: derive(
+      baseLattice.state,
+      "someProperty",
+      (prop) => `Modified: ${prop}`,
+    ),
   }));
 
-  // Define Actions as pure intent functions
-  const actions = {
-    highlight: (id) => model.highlightItem(id),
-  };
-
-  // Declarative view composition
-  const view = createView(
-    // Base view to extend
-    baseLattice.view.listItem,
-    // Compose from Model sources
-    composeFrom(
-      // Select from base view
-      {
-        source: baseLattice.view.listItem,
-        select: {
-          // Pass through unchanged
-          role: true,
-          tabIndex: true,
-          // Core behaviors
-          onKeyDown: true,
-        },
-      },
-      // Select from Model
-      {
-        source: model,
-        select: {
-          // Map Model methods to attributes
-          "data-highlighted": "isHighlighted",
-        },
-      },
-      // Connect UI events to Actions
-      {
-        source: actions,
-        select: {
-          // Map Actions to event handlers
-          onClick: "highlight", // Will call actions.highlight(params.id)
-        },
-      },
-    ),
-  );
+  // Compose model fully
+  const model = createModel(baseLattice)((set, get) => ({
+    // Can add new properties but can't override existing ones
+    newMethod: () => console.log("New method called"),
+  }));
 
   // Return enhanced lattice
   return createLattice(
-    "featureName",
+    "enhanced",
     withLattice(baseLattice)({
-      model,
-      actions,
-      view: mergeViews(view),
+      state,
+      _internal: { model },
     }),
   );
 };
 ```
 
-This creates a clear separation of concerns following the SAM pattern:
+### Selective Composition Pattern
 
-```
-┌─────────────────┐
-│                 │     1. User interactions trigger actions
-│     Actions     │
-│                 │
-└─────┬───────────┘
-      │
-      │ (pure intent)
-      │
-      ▼
-┌─────────────────┐
-│                 │     2. Business logic & state manipulation
-│     Model       │
-│                 │
-└─────┬───────────┘
-      │
-      │ (data only)
-      │
-      ▼
-┌─────────────────┐
-│                 │     3. Transform data to UI attributes
-│    View         │
-│                 │
-└─────┬───────────┘
-      │
-      │ (UI attributes)
-      │
-      ▼
-┌─────────────────┐
-│                 │     4. Render UI elements
-│  Components     │
-│                 │
-└─────────────────┘
-```
-
----
-
-## 6. Usage Patterns
-
-### Instance Creation and Management
-
-Creating and using lattice instances:
+Cherry-picking specific properties for composition:
 
 ```ts
-// Create feature lattices
-const selection = createSelection();
-const dragAndDrop = createDragAndDrop();
+// Create specific state properties
+const state = createState(baseLattice, ({ state, select }) => ({
+  // Only select specific properties
+  count: select(state, "count"),
+  isActive: select(state, "isActive"),
+  // Map existing property to new name
+  renamedProperty: select(state, "originalName"),
+}))((get, derive) => ({
+  // Now implement with selected properties
+  doubleCount: derive(state, "count", (count) => count * 2),
+}));
 
-// Compose multiple features into a tree instance
-const treeA = createTree().use(selection).use(dragAndDrop);
-
-// Create independent instances with different features
-const treeB = createTree().use(selection); // Selection only
-
-// In a React component:
-function TreeNode({ id }) {
-  // Access state through selectors
-  const isSelected = useStore(
-    treeA.model,
-    (state) => state.isSelected(id),
-  );
-
-  // Access actions directly
-  const { selectNode } = useStore(
-    treeA.actions,
-    (actions) => actions,
-  );
-
-  // Get ready-to-spread view
-  const view = useStore(
-    treeA.view.treeItem,
-    (viewStore) => viewStore.get({ id }),
-  );
-
-  return (
-    <div {...view}>
-      {/* You can also use actions directly in event handlers */}
-      <button onClick={() => selectNode(id)}>Select</button>
-    </div>
-  );
-}
-
-// Add instance-specific hooks
-treeA.hooks.after("selectNode", (id) => {
-  console.log(`Selected node ${id} in treeA`);
-});
-
-// Direct Action dispatch pattern
-treeA.actions.selectNode("node-1");
+// Compose with filtering
+const model = createModel(baseModel, (model, select) =>
+  filterMap(
+    model,
+    (key) => key !== "privateMethod" && { [key]: select(model, key) },
+  ))((set, get) => ({
+    // Implementation with filtered properties
+  }));
 ```
 
-Each instance maintains isolated state with proper store synchronization.
+### Contract Preservation Pattern
+
+Ensuring contract preservation across compositions:
+
+```ts
+// Base model defines a contract
+const baseModel = createModel()((set, get) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  getCount: () => get().count,
+}));
+
+// Enhanced model must preserve the contract
+const enhancedModel = createModel(baseModel)((set, get) => ({
+  // These methods MUST be present with compatible signatures
+  // to preserve the base contract
+  count: get().count, // Preserved
+  increment: get().increment, // Preserved
+  getCount: get().getCount, // Preserved
+
+  // New methods can be added safely
+  decrement: () => set((state) => ({ count: state.count - 1 })),
+}));
+
+// This would cause a type error - breaking the contract
+const invalidModel = createModel(baseModel)((set, get) => ({
+  // Type error: missing required property 'increment'
+  count: get().count,
+  getCount: get().getCount,
+  // Type error: incompatible signature
+  // increment: (amount) => set(state => ({ count: state.count + amount })),
+}));
+```
+
+## 6. The Derive System
+
+The `derive` function allows for creating reactive subscriptions between models,
+states, and views:
+
+```ts
+// Model as source of truth (no derive)
+const model = createModel()(({ set, get }) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+}));
+
+// State derives from model in the SECOND function
+const state = createState()(({ get, derive }) => ({
+  // Derive count from model
+  count: derive(model, "count"),
+
+  // Derive with transformation
+  doubled: derive(model, "count", (count) => count * 2),
+
+  // Derive from multiple properties
+  status: derive(model, "count", (count) => count > 0 ? "positive" : "zero"),
+}));
+
+// Views derive from state in the SECOND function
+const view = createView()(({ derive, dispatch }) => ({
+  // Derive attribute from state
+  "data-count": derive(state, "count"),
+
+  // Derive with transformation
+  className: derive(
+    state,
+    "status",
+    (status) => `counter counter--${status}`,
+  ),
+
+  // Connect to action with dispatch
+  onClick: dispatch(actions, "increment"),
+}));
+
+// COMPOSITION is different from deriving and happens in the FIRST function
+const composedState = createState(baseLattice, ({ state, select }) => ({
+  // This is COMPOSITION: selecting from a lattice's state
+  count: select(state, "count"),
+  status: select(state, "status"),
+}))(({ get, derive }) => ({
+  // This is DERIVING: creating reactive subscriptions
+  formattedCount: derive(model, "count", (count) => `Count: ${count}`),
+}));
+
+// Another example of proper composition
+const composedView = createView(otherView, ({ view, select }) => ({
+  // This is COMPOSITION: selecting from another view
+  className: select(view, "className"),
+  "aria-live": select(view, "aria-live"),
+}))(({ derive, dispatch }) => ({
+  // This is DERIVING: creating reactive subscriptions
+  "data-value": derive(state, "count"),
+  // Connect to action with dispatch
+  onClick: dispatch(actions, "increment"),
+}));
+```
+
+### Composition vs. Deriving
+
+It's important to understand the difference between composition and deriving:
+
+1. **Composition** happens in the first function of the IIFE pattern:
+
+```ts
+createState(sourceToCompose, ({ state, select }) => ({
+  // Select properties from the source to compose with
+  property: select(state, "property"),
+}));
+```
+
+2. **Deriving** happens in the second function of the IIFE pattern:
+   ```ts
+   createState(...)(({ get, derive, dispatch }) => ({
+     // Create reactive subscriptions
+     property: derive(model, "property")
+   }))
+   ```
+
+Let's look at a correct full example:
+
+```ts
+// Creating state that composes from a lattice
+const enhancedState = createState(baseLattice, ({ state, select }) => ({
+  // COMPOSITION: Select from the state part of the lattice
+  count: select(state, "count"),
+  status: select(state, "status"),
+}))(({ get, derive }) => ({
+  // DERIVING: Create reactive subscriptions
+  doubled: derive(model, "count", (count) => count * 2),
+  formattedStatus: derive(state, "status", (status) => `Status: ${status}`),
+}));
+
+// Creating model that composes from a lattice
+const enhancedModel = createModel(baseLattice, ({ model, select }) => ({
+  // COMPOSITION: Select from the model part of the lattice
+  increment: select(model, "increment"),
+  getCount: select(model, "getCount"),
+}))(({ set, get, derive }) => ({
+  // Implementation with composed properties
+  // Add new properties or behaviors
+  incrementTwice: () => {
+    get().increment();
+    get().increment();
+  },
+}));
+
+// Creating view that composes from a lattice
+const enhancedView = createView(baseLattice, ({ view, select }) => ({
+  // COMPOSITION: Select from the view part of the lattice
+  "aria-live": select(view.counter, "aria-live"),
+}))(({ derive, dispatch }) => ({
+  // DERIVING: Create reactive subscriptions
+  "data-count": derive(state, "count"),
+  "aria-label": "Enhanced counter",
+  // Connect to action with dispatch
+  onClick: dispatch(actions, "increment"),
+}));
+```
+
+## 7. Advanced Topics
+
+### Action System
+
+Actions are pure intent functions that delegate directly to model methods
+without containing their own implementation logic:
+
+```ts
+// Model defines all behavior including composite operations
+const model = createModel()(({ set, get }) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  reset: () => set({ count: 0 }),
+
+  // Composite behaviors belong in the model
+  incrementTwice: () => {
+    get().increment();
+    get().increment();
+  },
+
+  resetAndIncrement: () => {
+    get().reset();
+    get().increment();
+  },
+}));
+
+// Actions are pure delegates to model methods
+const actions = createActions()(({ mutate }) => ({
+  // Each action directly references a model method
+  increment: mutate(model, "increment"),
+  reset: mutate(model, "reset"),
+  incrementTwice: mutate(model, "incrementTwice"),
+  resetAndIncrement: mutate(model, "resetAndIncrement"),
+}));
+
+// Composing actions from other actions
+const enhancedActions = createActions(baseActions, ({ actions, select }) => ({
+  // Select from base actions
+  increment: select(actions, "increment"),
+  reset: select(actions, "reset"),
+}))(({ mutate }) => ({
+  // Add new actions that reference model methods
+  incrementThrice: mutate(model, "incrementThrice"),
+}));
+```
+
+The key principle is that actions should only contain references to model
+methods, not function implementations. This ensures a clean separation of
+concerns:
+
+- **Model**: Contains all business logic and state (HOW)
+- **Actions**: Pure intent functions representing WHAT should happen
+- **State**: Read-only selectors derived from model
+- **Views**: Pure mappings to UI properties
+
+This architecture maintains a clean one-way flow and proper separation of
+concerns.
+
+### Asynchronous Operations Pattern
+
+Asynchronous operations follow the same SAM pattern, with state changes flowing
+unidirectionally through the system:
+
+```ts
+// Model contains all async logic and loading/error states
+const model = createModel()(({ set, get }) => ({
+  // State for async operations
+  users: [],
+  loading: false,
+  error: null,
+
+  // Async operation
+  fetchUsers: async () => {
+    // Set loading state
+    set({ loading: true, error: null });
+
+    try {
+      // Perform async operation
+      const response = await fetch("https://api.example.com/users");
+      const users = await response.json();
+
+      // Update state with results
+      set({ users, loading: false });
+    } catch (error) {
+      // Handle errors
+      set({ error: error.message, loading: false });
+    }
+  },
+
+  // Selective fetch with parameters
+  fetchUserById: async (id) => {
+    set((state) => ({
+      loading: true,
+      error: null,
+      // Mark specific user as loading
+      users: state.users.map((user) =>
+        user.id === id ? { ...user, isLoading: true } : user
+      ),
+    }));
+
+    try {
+      const response = await fetch(`https://api.example.com/users/${id}`);
+      const userData = await response.json();
+
+      set((state) => ({
+        loading: false,
+        // Update specific user
+        users: state.users.map((user) =>
+          user.id === id ? { ...userData, isLoading: false } : user
+        ),
+      }));
+    } catch (error) {
+      set((state) => ({
+        error: error.message,
+        loading: false,
+        // Clear loading state on error
+        users: state.users.map((user) =>
+          user.id === id
+            ? { ...user, isLoading: false, error: error.message }
+            : user
+        ),
+      }));
+    }
+  },
+}));
+
+// Actions trigger async operations but don't return promises
+const actions = createActions()(({ mutate }) => ({
+  // Actions reference model methods
+  fetchUsers: mutate(model, "fetchUsers"),
+  fetchUserById: mutate(model, "fetchUserById"),
+}));
+
+// State exposes loading/error states reactively
+const state = createState()(({ derive }) => ({
+  users: derive(model, "users"),
+  isLoading: derive(model, "loading"),
+  error: derive(model, "error"),
+
+  // Derived states
+  hasUsers: derive(model, "users", (users) => users.length > 0),
+  hasError: derive(model, "error", (error) => error !== null),
+}));
+
+// Views reflect loading and error states
+const userListView = createView()(({ derive }) => ({
+  "aria-busy": derive(state, "isLoading"),
+  "aria-live": "polite",
+  "data-has-error": derive(state, "hasError"),
+  "data-error-message": derive(state, "error"),
+}));
+
+// Usage:
+// 1. Trigger async action
+// actions.fetchUsers();
+//
+// 2. React to state changes
+// const isLoading = state.isLoading;
+// const error = state.error;
+// const users = state.users;
+//
+// 3. Use view props
+// const userListProps = view.userList.get();
+// <div {...userListProps}>
+//   {isLoading && <Spinner />}
+//   {error && <ErrorMessage message={error} />}
+//   {!isLoading && !error && users.map(user => <UserItem key={user.id} user={user} />)}
+// </div>
+```
+
+This pattern maintains the SAM architecture's unidirectional data flow while
+handling async operations:
+
+1. Actions trigger intent without returning values
+2. Models contain all async logic and state management
+3. State reactively exposes loading/error conditions
+4. Views transform these states into UI attributes
+5. Components react to state changes
 
 ### Direct Action Dispatch
 
-Lattice provides direct access to Actions without requiring getters:
+Lattice provides direct access to Actions for state mutation:
 
 ```ts
 // ✅ Direct Action dispatch (preferred)
 selectionActions.selectNode(id, multi);
 dragActions.startDrag(id);
 
-// Actions delegate to Model methods
-// ✅ Direct Model access also available when needed
-selectionModel.isSelected(id); // Read-only selector
+// ✅ State selectors provide read access
+const isSelected = selectionState.isSelected(id);
 ```
 
 This pattern:
@@ -788,396 +1117,3 @@ This pattern:
 - Creates cleaner, more traceable code
 - Follows the SAM pattern
 - Improves testability and debugging
-
-### Error Handling
-
-```ts
-// Create Model with error handling
-const { model } = createModel(
-  withStoreSubscribe(todoState, (state) => ({
-    todos: state.todos,
-  })),
-)((set, get, selectedState) => ({
-  getTodo: (id) => {
-    const todo = selectedState.todos.find((t) => t.id === id);
-    if (!todo) {
-      throw new Error(`Todo with id ${id} not found`);
-    }
-    return todo;
-  },
-
-  // Safe version with error handling
-  getTodoSafe: (id) => {
-    try {
-      return {
-        data: get().getTodo(id),
-        error: null,
-      };
-    } catch (error) {
-      return {
-        data: null,
-        error: error.message,
-      };
-    }
-  },
-
-  // Using Result pattern
-  updateTodo: (id, updates) => {
-    try {
-      const todo = get().getTodo(id);
-      todoState.setState((state) => ({
-        todos: state.todos.map((t) => t.id === id ? { ...t, ...updates } : t),
-      }));
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        error: error.message,
-      };
-    }
-  },
-}));
-```
-
----
-
-## 7. Advanced Topics
-
-### Action System
-
-The Action system in Lattice implements the SAM pattern's approach to state
-management:
-
-```
-┌────────────────┐     ┌───────────────────┐     ┌────────────────────┐
-│                │     │                   │     │                    │
-│    Actions     │────▶│  Model (business  │────▶│  State (private    │
-│ (pure intent)  │     │    logic)         │     │    stores)         │
-│                │     │                   │     │                    │
-└────────┬───────┘     └───────────────────┘     └────────────────────┘   
-         ▲                                                 │              
-         │                                                 │              
-         │                                                 ▼              
-┌────────┴───────┐                               ┌─────────────────────┐
-│                │                               │                     │
-│ View (UI       │◀──────────────────────────────│ Updated State       │
-│ attributes)    │                               │ (reactive)          │
-│                │                               │                     │
-└────────────────┘                               └─────────────────────┘
-```
-
-#### Creating and Using Actions
-
-```tsx
-// Define Actions as plain object of functions
-const treeActions = {
-  selectNode: (id, multi = false) => treeModel.selectNode(id, multi),
-  expandNode: (id) => treeModel.expandNode(id),
-  collapseNode: (id) => treeModel.collapseNode(id),
-  moveNode: (id, targetId) => treeModel.moveNode(id, targetId),
-};
-
-// Create views that connect UI events to Actions
-const treeItemView = createView(
-  "treeItem",
-  composeFrom(
-    // Select from Model for state-derived attributes
-    {
-      source: treeModel,
-      select: {
-        "aria-selected": "isSelected",
-        "aria-expanded": "isExpanded",
-      },
-    },
-    // Select from Actions for event handlers
-    {
-      source: treeActions,
-      select: {
-        onClick: "selectNode", // Maps to treeActions.selectNode(params.id, event)
-        onDoubleClick: "expandNode", // Maps to treeActions.expandNode(params.id)
-      },
-    },
-  ),
-);
-
-// In a component:
-function TreeItem({ lattice, id }) {
-  const view = useStore(
-    lattice.view.treeItem,
-    (viewStore) => viewStore.get({ id }),
-  );
-
-  // Can also access actions directly if needed
-  const { moveNode } = useStore(
-    lattice.actions,
-    (actions) => actions,
-  );
-
-  return <div {...view}>Item Content</div>;
-}
-```
-
-### View System
-
-The View system in Lattice bridges state management and UI rendering:
-
-```
-┌────────────────┐     ┌───────────────────┐     ┌────────────────────┐
-│                │     │                   │     │                    │
-│ Private States │────▶│  Model (getters & │────▶│  View (reactive    │
-│ (state stores) │     │    mutations)     │     │   UI attributes)   │
-│                │     │                   │     │                    │
-└────────────────┘     └───────────────────┘     └─────────┬──────────┘   
-                                                           │              
-                                                           │              
-                                                           ▼              
-                                              ┌──────────────────────────┐
-                                              │                          │
-                                              │ React/Vue/etc Components │
-                                              │  (spread view on els)    │
-                                              │                          │
-                                              └──────────────────────────┘
-```
-
-#### Creating and Using Views
-
-```tsx
-// Create views by composing from Model and Actions
-const treeItemView = createView(
-  // First argument: Base view or string namespace
-  "treeItem",
-  // Middleware for composing from stores
-  composeFrom(
-    // Select from Model for state-derived attributes
-    {
-      source: model,
-      select: {
-        "aria-selected": "isSelected", // Maps to model.isSelected(params.id)
-        "aria-expanded": "isExpanded", // Maps to model.isExpanded(params.id)
-        "aria-disabled": "isDisabled", // Maps to model.isDisabled(params.id)
-      },
-    },
-    // Select from Actions for event handlers
-    {
-      source: actions,
-      select: {
-        onClick: "select", // Maps to actions.select(params.id, event)
-        onKeyDown: "handleKeyDown", // Maps to actions.handleKeyDown(params.id, event)
-      },
-    },
-  ),
-);
-
-// Using withView to compose with base lattice
-const enhancedTreeItemView = createView(
-  // First argument defines the base view to extend
-  baseLattice.view.treeItem,
-  // Compose from multiple sources
-  composeFrom(
-    // Select from base view
-    {
-      source: baseLattice.view.treeItem,
-      select: {
-        // Pass through these properties unchanged
-        tabIndex: true,
-        role: true,
-        // Remap property names
-        "onClick": "onBaseClick",
-      },
-    },
-    // Select from Model
-    {
-      source: model,
-      select: {
-        // Additional attributes
-        "data-highlighted": "isHighlighted",
-        onFocus: "handleFocus",
-      },
-    },
-  ),
-);
-
-// In a component:
-function TreeItem({ lattice, id }) {
-  const view = useStore(
-    lattice.view.treeItem,
-    (viewStore) => viewStore.get({ id }),
-  );
-
-  return <div {...view}>Item Content</div>;
-}
-```
-
-### Hooks System
-
-The hooks system enables interception and modification of Model method calls
-using a declarative pattern that mirrors the View system:
-
-```ts
-// Create hooks by composing from multiple Model sources
-const { hooks } = createHooks(
-  composeFrom(
-    // Select from Model
-    {
-      source: model,
-      select: {
-        // Define hooks for Model methods
-        selectNode: {
-          // Before hook - runs before method execution
-          before: (args) => {
-            const [id, multi] = args;
-            console.log(`About to select ${id}`);
-            // Return modified arguments or false to prevent execution
-            return { args: [id, true] }; // Force multi-select
-          },
-          // After hook - runs after method execution
-          after: (result, args) => {
-            const [id] = args;
-            console.log(`Selected ${id}`);
-            // Return modified result or false to prevent further hooks
-            return { result };
-          },
-        },
-        // Another method to hook into
-        expandNode: {
-          before: (args) => {
-            // Logic here
-            return { args };
-          },
-        },
-      },
-    },
-    // Hook into methods from another source
-    {
-      source: dragAndDropModel,
-      select: {
-        startDrag: {
-          before: (args) => {
-            // Logic for drag start
-            return { args };
-          },
-        },
-      },
-    },
-  ),
-);
-
-// Composing hooks in a lattice
-const composedLattice = createLattice(
-  "selection",
-  withLattice(baseLattice)({
-    model,
-    view: mergeViews(view),
-    hooks: mergeHooks(hooks),
-  }),
-);
-```
-
-### Framework Adapters
-
-```tsx
-// React adapter for Lattice
-function useLatticeView(lattice, viewName, params = {}) {
-  return useStore(
-    lattice.view[viewName],
-    (viewStore) => viewStore.get(params),
-  );
-}
-
-function useLatticeModel(lattice, selector) {
-  return useStore(lattice.model, selector);
-}
-
-function useLatticeActions(lattice) {
-  return useStore(lattice.actions, (actions) => actions);
-}
-
-// React component using the adapter
-function TreeItem({ lattice, id }) {
-  const view = useLatticeView(lattice, "treeItem", { id });
-  // Use model methods directly instead of inline logic
-  const isSelected = useLatticeModel(lattice, (state) => state.isSelected(id));
-  const { selectNode } = useLatticeActions(lattice);
-
-  // Move formatting logic to model or component logic
-  const selectionIndicator = useLatticeModel(
-    lattice,
-    (state) => state.getSelectionIndicator(id),
-  );
-
-  return (
-    <div {...view}>
-      {selectionIndicator} Item {id}
-    </div>
-  );
-}
-
-// Vue adapter would look similar but use Vue's reactivity system
-```
-
----
-
-## 8. API Reference
-
-### createLattice
-
-```ts
-function createLattice(
-  name: string,
-  options: {
-    model: ZustandStore;
-    actions: Record<string, Function>;
-    hooks?: HooksObject;
-    view?: ViewObject;
-  },
-): Lattice;
-```
-
-### createModel
-
-```ts
-function createModel(
-  ...subscriptions: Array<(set, get, ...selectedState) => ModelDefinition>
-): { model: ZustandStore; hooks: HooksObject };
-```
-
-### createView
-
-```ts
-function createView(
-  base: string | ZustandStore,
-  composer: ViewComposer,
-): ViewObject;
-```
-
-### withStoreSubscribe
-
-```ts
-function withStoreSubscribe<T, S>(
-  store: ZustandStore<T>,
-  selector: (state: T) => S,
-): (next: (set, get, selectedState: S) => any) => any;
-```
-
-### composeFrom
-
-```ts
-function composeFrom(
-  ...sources: Array<{
-    source: ZustandStore | Record<string, Function>;
-    select: Record<string, string | boolean | Function>;
-  }>
-): ViewComposer;
-```
-
-### mergeViews
-
-```ts
-function mergeViews(...views: ViewObject[]): ViewObject;
-```
-
-### mergeHooks
-
-```ts
-function mergeHooks(...hooks: HooksObject[]): HooksObject;
-```

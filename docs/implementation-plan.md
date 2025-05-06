@@ -1,183 +1,241 @@
-# Lattice Implementation Plan
+# Implementation Plan for Lattice
 
-This document outlines the TDD-based implementation plan for the Lattice
-framework. Each iteration is broken down into atomic tasks with corresponding
-test cases. Reference the [spec](./draft-spec.md) to resolve ANY ambiguity, and
-keep the test cases and iterations aligned to it EXACTLY. The sources-of-truth
-chain are as follows:
+## TDD Methodology Instructions
 
-`spec -> test cases -> implementations`
+Before beginning any implementation task, follow these strict Test-Driven
+Development (TDD) principles:
 
-Follow a STRICT TDD methodology, creating test cases from the tasks before
-starting ANY implementations.
+1. **Read First**: Always review the relevant sections of the
+   [spec](./draft-spec.md) before starting on any task, and the
+   [`package.json`](../package.json) to understand the available commands.
 
-There are two packages in the repo:
+2. **Red-Green-Refactor Cycle**:
+   - **RED**: Pick a task and write a failing test that defines the expected
+     behavior.
+   - **GREEN**: Write the minimal implementation to make the test pass
+   - **REFACTOR**: Clean up the code while keeping tests passing
+   - **STOP**: Update the implementation plan with your progress and provide the
+     user with a prompt they can provide to another LLM with a summary of what
+     you did and instructions for the LLM on next steps, in the form of a
+     concise but thorough markdown-free paragraphs, with any relevant file
+     references.
 
-- [`core`](../packages/core): contains all the code
-- [`examples`](../packages/examples): contains various examples (starting with
-  vanilla)
+3. **Test Organization**:
+   - Place tests in the [tests](../packages/core/src/tests/) directory
+   - Name test files matching their implementation counterparts with the pattern
+     `*.test.ts`
+   - Use descriptive test names that explain the behavior being tested
 
-This is a monorepo with `pnpm` and `lerna`. Important commands:
+4. **Testing Principles**:
+   - Test behavior, not implementation details
+   - Ensure proper type checking is tested
+   - Test both success and error cases
+   - Maintain test isolation
 
-- `pnpm test`: run tests
-- `pnpm typecheck`: run type checking
+5. **Implementation Guidelines**:
+   - Focus on making the current test pass
+   - Avoid implementing features not covered by tests
+   - Follow TypeScript best practices
+   - Maintain clean separation of concerns
 
-## Rules: !IMPORTANT!
+Keep your code:
 
-- Before beginning any iteration, ALWAYS analyze the spec thoroughly and
-  cross-reference the tasks to it to make sure everything is aligned. If you
-  find deltas, STOP and flag it to the user.
-- When beginning an iteration, begin by writing ALL the tests from the tasks,
-  ensuring that they FAIL for the RIGHT reasons. STOP after you write all the
-  tests for an iteration. All tests go in the
-  [tests](../packages/core/src/tests) directory.
-- Run tests FREQUENTLY, and never move onto a new implementation if tests are
-  failing, unless the user asks you to.
+- atomic and modular
+- flat
+- declarative
+- functional
+- easy to reason about
 
-## Iteration 1: Core Foundation - State & Model
+Rules:
 
-Build the foundation for state management and model creation.
+- DO NOT OVERFIT TESTS TO IMPLEMENTATION OR VICE VERSA.
+- DO NOT USE `any` AS A TYPE, AND STRICTLY AVOID TYPE CASTING WHEREVER POSSIBLE.
+- LEVERAGE ZUSTAND TYPES AND TYPESCRIPT GENERICS AND INFERENCE WHEREVER
+  POSSIBLE.
 
-### Tasks
+## Iteration 1: Core Model Foundation
 
-| ID  | Task Description                       | Unit Test Case                                                         | Status |
-| --- | -------------------------------------- | ---------------------------------------------------------------------- | ------ |
-| 1.1 | Implement `withStoreSubscribe` utility | Test that it correctly subscribes to a Zustand store and selects state | ✅     |
-| 1.2 | Implement `createModel` core function  | Test that it creates a model with getters                              | ✅     |
-| 1.3 | Add mutation methods to model          | Test that mutations correctly update state                             | ✅     |
-| 1.4 | Implement subscription chaining        | Test multiple store subscriptions work correctly                       | ✅     |
-| 1.5 | Add state selection                    | Test that selected state is passed to model methods                    | ✅     |
+- [x] **Task 1.1: Project Setup**
+  - Create basic package structure
+  - Configure TypeScript, ESLint, and test framework (Vitest)
+  - Implement basic build pipeline
 
-### Integration Tests
+- [x] **Task 1.2: Zustand Integration** (ref: Section 1. Introduction)
+  - Create wrapper for Zustand store creation
+  - Ensure proper type inference
 
-- Create a simple counter model with state and verify reactivity ✅
-- Combine multiple state stores with dependent values and verify correct updates
-  ✅
+- [x] **Task 1.3: Basic Model Factory** (ref: Section 3. Building Blocks -
+      Model)
+  - Implement `createModel` function with double-function pattern
+  - Test basic state creation and access
+  - Verify type inference for model properties
 
-## Iteration 2: Actions & Basic Composition
+- [x] **Task 1.4: Model State Mutations** (ref: Section 3. Building Blocks -
+      Model)
+  - Test state mutation methods
+  - Implement state setter functionality
+  - Verify proper state updates
 
-Implement the Actions layer and basic composition patterns.
+- [x] **Task 1.5: Model State Selectors** (ref: Section 3. Building Blocks -
+      Model)
+  - Test state selector methods
+  - Implement getter functionality
+  - Verify proper state selection
 
-### Tasks
+- [x] **Task 1.6: Model Type Safety** (ref: Section 3. Building Blocks - Model)
+  - Test type safety for model creation
+  - Ensure proper TypeScript inference
+  - Verify proper compile-time errors for invalid models
 
-| ID  | Task Description                       | Unit Test Case                                    | Status |
-| --- | -------------------------------------- | ------------------------------------------------- | ------ |
-| 2.1 | Implement basic actions object pattern | Test actions correctly call model methods         | ✅     |
-| 2.2 | Add support for action parameters      | Test parameter passing through actions to model   | ✅     |
-| 2.3 | Implement action composition           | Test composition of actions from multiple sources | ✅     |
-| 2.4 | Add event handling in actions          | Test action methods handling DOM events           | ✅     |
-| 2.5 | Implement error handling in actions    | Test error handling and recovery in action chain  | ✅     |
+## Iteration 2: Composition System
 
-### Integration Tests
+- [ ] **Task 2.1: Model Composition** (ref: Section 3. Building Blocks - Model
+      Composition)
+  - Implement basic model composition
+  - Test composing two independent models
+  - Verify state and method access across composition
 
-- Create a todo list with actions for adding/toggling todos ✅
-- Build a filtering system with state-based and action-based filtering ✅
+- [ ] **Task 2.2: Selective Composition** (ref: Section 5. Composition Patterns)
+  - Implement selective property composition
+  - Test cherry-picking specific properties
+  - Verify only selected properties are accessible
 
-## Iteration 3: View System
+- [ ] **Task 2.3: Contract Preservation** (ref: Section 5. Composition Patterns)
+  - Implement contract checking for compositions
+  - Test enforcement of base model contracts
+  - Verify proper TypeScript errors for contract violations
 
-Implement the reactive View layer for UI attributes.
+- [ ] **Task 2.4: Factory Creation Pattern** (ref: Section 5. Composition
+      Patterns)
+  - Test factory creation without premature instantiation
+  - Verify proper type preservation
+  - Ensure factories are only evaluated when used
 
-### Tasks
+## Iteration 3: Actions System
 
-| ID  | Task Description                | Unit Test Case                                | Status |
-| --- | ------------------------------- | --------------------------------------------- | ------ |
-| 3.1 | Implement `createView` function | Test creating a basic view with namespace     | ⬜     |
-| 3.2 | Implement `composeFrom` utility | Test composing view from model selectors      | ⬜     |
-| 3.3 | Add action mapping in views     | Test mapping action methods to event handlers | ⬜     |
-| 3.4 | Implement `mergeViews` utility  | Test merging multiple views together          | ⬜     |
-| 3.5 | Add parameter passing in views  | Test view methods receiving parameters        | ⬜     |
+- [ ] **Task 3.1: Basic Actions Factory** (ref: Section 3. Building Blocks -
+      Actions)
+  - Implement `createActions` function with double-function pattern
+  - Test basic action creation with `mutate`
+  - Verify proper type inference
 
-### Integration Tests
+- [ ] **Task 3.2: Action Composition** (ref: Section 3. Building Blocks -
+      Actions)
+  - Implement action composition from other actions
+  - Test selecting actions from base actions
+  - Verify proper delegation to model methods
 
-- Create a counter UI with increment/decrement views
-- Build a todo list with item views and list container views
+- [ ] **Task 3.3: Action Dispatch** (ref: Section 7. Advanced Topics - Direct
+      Action Dispatch)
+  - Test action dispatch to model methods
+  - Verify proper parameter passing
+  - Ensure one-way data flow
 
-## Iteration 4: Hooks System
+## Iteration 4: State and Derived Values
 
-Implement the Hooks system for cross-cutting concerns.
+- [ ] **Task 4.1: Basic State Factory** (ref: Section 3. Building Blocks -
+      State)
+  - Implement `createState` function with double-function pattern
+  - Test basic state selection
+  - Verify proper type inference
 
-### Tasks
+- [ ] **Task 4.2: State Derivation** (ref: Section 6. The Derive System)
+  - Implement `derive` function for creating reactive subscriptions
+  - Test deriving state from model properties
+  - Verify reactive updates to derived state
 
-| ID  | Task Description                     | Unit Test Case                              | Status |
-| --- | ------------------------------------ | ------------------------------------------- | ------ |
-| 4.1 | Implement `createHooks` function     | Test creating basic before/after hooks      | ⬜     |
-| 4.2 | Add argument transformation in hooks | Test transforming arguments in before hooks | ⬜     |
-| 4.3 | Add result transformation in hooks   | Test transforming results in after hooks    | ⬜     |
-| 4.4 | Implement hook cancellation          | Test preventing method execution with hooks | ⬜     |
-| 4.5 | Implement `mergeHooks` utility       | Test merging multiple hook objects          | ⬜     |
+- [ ] **Task 4.3: State Composition** (ref: Section 6. The Derive System)
+  - Implement state composition from other states
+  - Test selecting state from base states
+  - Verify proper type preservation
 
-### Integration Tests
+- [ ] **Task 4.4: State Transformation** (ref: Section 6. The Derive System)
+  - Test transformation functions in derive
+  - Verify proper reactivity with transformations
+  - Ensure type safety for transformations
 
-- Add logging hooks to a counter model
-- Implement validation hooks for a form model
+## Iteration 5: Views System
 
-## Iteration 5: Lattice Composition
+- [ ] **Task 5.1: Basic View Factory** (ref: Section 3. Building Blocks - View)
+  - Implement `createView` function with double-function pattern
+  - Test basic view attributes
+  - Verify proper type inference
 
-Implement the Lattice composition layer.
+- [ ] **Task 5.2: View Derivation** (ref: Section 3. Building Blocks - View)
+  - Implement view derivation from state
+  - Test deriving view properties from state
+  - Verify reactive updates to view attributes
 
-### Tasks
+- [ ] **Task 5.3: View Action Binding** (ref: Section 3. Building Blocks - View)
+  - Implement `dispatch` function for binding actions
+  - Test event handler creation
+  - Verify proper action dispatch
 
-| ID  | Task Description                           | Unit Test Case                               | Status |
-| --- | ------------------------------------------ | -------------------------------------------- | ------ |
-| 5.1 | Implement `createLattice` function         | Test creating a simple lattice               | ⬜     |
-| 5.2 | Add lattice composition with `withLattice` | Test extending a base lattice                | ⬜     |
-| 5.3 | Implement lattice hooks integration        | Test hooks working across composed lattices  | ⬜     |
-| 5.4 | Add view composition in lattices           | Test view composition with multiple lattices | ⬜     |
-| 5.5 | Implement lattice instance isolation       | Test multiple instances with separate state  | ⬜     |
+- [ ] **Task 5.4: View Composition** (ref: Section 3. Building Blocks - View)
+  - Implement view composition from other views
+  - Test selecting view attributes
+  - Verify proper merging of view attributes
 
-### Integration Tests
+- [ ] **Task 5.5: View Merging** (ref: Section 3. Building Blocks - View)
+  - Implement `mergeViews` function
+  - Test merging multiple views
+  - Verify proper attribute precedence
 
-- Create a tree component by composing selection and expansion lattices
-- Build a data grid with sorting, filtering, and pagination lattices
+## Iteration 6: Complete Lattice
 
-## Iteration 6: Framework Integration
+- [ ] **Task 6.1: Lattice Creation** (ref: Section 4. Progressive Examples)
+  - Implement `createLattice` function
+  - Test creating a complete lattice with model, actions, state, and view
+  - Verify proper instance creation
 
-Implement adapters for React and potentially other frameworks.
+- [ ] **Task 6.2: Lattice Composition** (ref: Section 5. Composition Patterns)
+  - Implement `withLattice` helper for composing lattices
+  - Test composing a lattice from a base lattice
+  - Verify proper extension of the base contract
 
-### Tasks
+- [ ] **Task 6.3: Simple Counter Example** (ref: Section 4. Progressive
+      Examples)
+  - Implement complete counter example
+  - Test all counter interactions
+  - Verify proper operation of the full lattice
 
-| ID  | Task Description                              | Unit Test Case                                  | Status |
-| --- | --------------------------------------------- | ----------------------------------------------- | ------ |
-| 6.1 | Implement React hooks for model access        | Test React components using model state         | ⬜     |
-| 6.2 | Add React hooks for view binding              | Test spreading view props on React elements     | ⬜     |
-| 6.3 | Implement React actions binding               | Test components triggering actions              | ⬜     |
-| 6.4 | Add memoization and performance optimizations | Test that components only re-render when needed | ⬜     |
-| 6.5 | Create helper hooks for common patterns       | Test simplified usage patterns                  | ⬜     |
+## Iteration 7: Advanced Features
 
-### Integration Tests
+- [ ] **Task 7.1: Async Operations** (ref: Section 7. Advanced Topics -
+      Asynchronous Operations)
+  - Implement async operation pattern
+  - Test loading and error states
+  - Verify proper state transitions during async operations
 
-- Create a fully functional React todo app with Lattice
-- Build a complex tree view component with drag and drop
+- [ ] **Task 7.2: Complex Composition Example** (ref: Section 4. Progressive
+      Examples)
+  - Implement complex composition example
+  - Test selective feature composition
+  - Verify proper operation of composed lattices
 
-## Development Workflow
+- [ ] **Task 7.3: Lazy Loading** (ref: Section 2. Factory-Based Composition)
+  - Implement dynamic importing of lattice enhancements
+  - Test lazy-loaded feature composition
+  - Verify proper operation after dynamic loading
 
-1. For each iteration:
-   - Create a new conversation with the LLM
-   - Have the LLM implement tests for all tasks in the iteration
-   - Implement code to make tests pass, one task at a time
-   - Update status in this document as tasks are completed
+- [ ] **Task 7.4: Framework Adapters** (ref: Section 1. Introduction)
+  - Implement React adapter with hooks
+  - Test React component integration
+  - (Optional) Implement Vue adapter
 
-2. For each task:
-   - Write the test first (TDD)
-   - Implement the minimal code to make the test pass
-   - Refactor while keeping tests green
-   - Move to the next task
+## Iteration 8: Documentation and Examples
 
-3. If a conversation reaches context limits:
-   - Update this document with progress
-   - Create a new conversation to continue
+- [ ] **Task 8.1: API Documentation**
+  - Create comprehensive API docs
+  - Include type definitions
+  - Document common patterns
 
-## Status Legend
+- [ ] **Task 8.2: Usage Examples**
+  - Create example applications
+  - Document practical use cases
+  - Provide comparison with plain hooks
 
-- ⬜ Not Started
-- 🟡 In Progress
-- ✅ Completed
-- ❌ Blocked
-
-## Dependencies
-
-- Iteration 2 depends on Iteration 1
-- Iteration 3 depends on Iterations 1 and 2
-- Iteration 4 depends on Iterations 1 and 2
-- Iteration 5 depends on Iterations 1-4
-- Iteration 6 depends on Iterations 1-5
+- [ ] **Task 8.3: Performance Optimization**
+  - Add memoization where appropriate
+  - Test performance characteristics
+  - Document performance considerations
