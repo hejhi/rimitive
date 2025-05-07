@@ -1,6 +1,14 @@
 // --- Lattice Core Types: Two-Phase Contract Enforcement ---
 // See: docs/draft-spec.md (Composition and Extension Function Pattern)
 
+import {
+  ACTIONS_FACTORY_TYPE,
+  LATTICE_TYPE,
+  MODEL_FACTORY_TYPE,
+  STATE_FACTORY_TYPE,
+  VIEW_FACTORY_TYPE,
+} from './constants';
+
 /**
  * The function signature for the extension phase of a two-phase factory.
  * Accepts any arguments and returns the final contract/API surface.
@@ -31,68 +39,110 @@ export type TwoPhaseFactory<
   ...args: CompositionArgs
 ) => TwoPhaseEnforcementProxy<ExtensionArgs, Result>;
 
-// --- Example: Model Factory Types ---
-// These are illustrative; actual model/state/actions/view contracts are defined elsewhere.
+// --- Contract Types (result of extension phase) ---
+export interface ModelContract {
+  [key: string]: unknown;
+}
 
-// export type ModelFactory = TwoPhaseFactory<
-//   [/* composition args */],
-//   [/* extension args */],
-//   /* result type */
-// >;
+export interface StateContract {
+  [key: string]: unknown;
+}
+
+export interface ActionsContract {
+  [key: string]: (...args: unknown[]) => unknown;
+}
+
+export interface ViewContract {
+  [key: string]: unknown;
+}
+
+// --- Extension Phase Helper Types ---
+export interface ModelExtensionHelpers {
+  get: () => Record<string, unknown>;
+  set: (state: Record<string, unknown>) => void;
+}
+
+export interface StateExtensionHelpers {
+  get: () => Record<string, unknown>;
+  derive: <T>(
+    source: any,
+    property: string,
+    transformer?: (value: T) => unknown
+  ) => T;
+}
+
+export interface ActionsExtensionHelpers {
+  mutate: (source: any, property: string) => (...args: unknown[]) => unknown;
+}
+
+export interface ViewExtensionHelpers {
+  derive: <T>(
+    source: any,
+    property: string,
+    transformer?: (value: T) => unknown
+  ) => T;
+  dispatch: (source: any, property: string) => (...args: unknown[]) => unknown;
+}
+
+// --- Composition Phase Helper Types ---
+export interface ModelCompositionHelpers {
+  model: Record<string, unknown>;
+  select: <T>(obj: Record<string, unknown>, key: string) => T;
+}
+
+export interface StateCompositionHelpers {
+  state: Record<string, unknown>;
+  select: <T>(obj: Record<string, unknown>, key: string) => T;
+}
+
+export interface ActionsCompositionHelpers {
+  actions: Record<string, (...args: unknown[]) => unknown>;
+  select: <T>(obj: Record<string, unknown>, key: string) => T;
+}
+
+export interface ViewCompositionHelpers {
+  view: Record<string, unknown>;
+  select: <T>(obj: Record<string, unknown>, key: string) => T;
+}
 
 // --- Factory and Lattice Type Tags ---
-
-/** Unique symbol to tag model factories at runtime and type level */
-export const MODEL_FACTORY_TYPE: unique symbol = Symbol.for(
-  'Lattice.ModelFactory'
-);
-
-/** Unique symbol to tag lattice objects at runtime and type level */
-export const LATTICE_TYPE: unique symbol = Symbol.for('Lattice.Lattice');
 
 /**
  * Type for a ModelFactory, tagged for type-level and runtime detection.
  * This is the factory function itself, NOT the proxy returned by calling it.
  */
 export type ModelFactory = ((
-  dependency?: ModelDependency
-) => TwoPhaseEnforcementProxy<unknown[], never>) & {
+  dependency?: ModelDependency,
+  callback?: (arg: ModelCompositionHelpers) => Record<string, unknown>
+) => TwoPhaseEnforcementProxy<[ModelExtensionHelpers], ModelContract>) & {
   [MODEL_FACTORY_TYPE]: true;
 };
 
 /**
  * Type for a Lattice, tagged for type-level and runtime detection.
  */
-export type Lattice = { [LATTICE_TYPE]: true };
+export type Lattice = {
+  [LATTICE_TYPE]: true;
+  model: ModelContract;
+  state: StateContract;
+  actions: ActionsContract;
+  view: ViewContract;
+};
 
 /**
- * Utility type: dependency for createModel must be a Lattice or ModelFactory.
- * The proxy returned by calling a factory is NOT a valid dependency.
+ * Utility type: dependency for createModel must be a Lattice or ModelContract (result of extension phase).
+ * The factory function itself and the proxy returned by calling a factory are NOT valid dependencies.
  */
-export type ModelDependency = Lattice | ModelFactory;
-
-/** Unique symbol to tag state factories at runtime and type level */
-export const STATE_FACTORY_TYPE: unique symbol = Symbol.for(
-  'Lattice.StateFactory'
-);
-
-/** Unique symbol to tag actions factories at runtime and type level */
-export const ACTIONS_FACTORY_TYPE: unique symbol = Symbol.for(
-  'Lattice.ActionsFactory'
-);
-
-/** Unique symbol to tag view factories at runtime and type level */
-export const VIEW_FACTORY_TYPE: unique symbol = Symbol.for(
-  'Lattice.ViewFactory'
-);
+export type ModelDependency = Lattice | ModelContract;
 
 /**
  * Type for a StateFactory, tagged for type-level and runtime detection.
  * This is the factory function itself, NOT the proxy returned by calling it.
  */
 export type StateFactory = ((
-  dependency?: StateDependency
-) => TwoPhaseEnforcementProxy<unknown[], never>) & {
+  dependency?: StateDependency,
+  callback?: (arg: StateCompositionHelpers) => Record<string, unknown>
+) => TwoPhaseEnforcementProxy<[StateExtensionHelpers], StateContract>) & {
   [STATE_FACTORY_TYPE]: true;
 };
 
@@ -101,8 +151,9 @@ export type StateFactory = ((
  * This is the factory function itself, NOT the proxy returned by calling it.
  */
 export type ActionsFactory = ((
-  dependency?: ActionsDependency
-) => TwoPhaseEnforcementProxy<unknown[], never>) & {
+  dependency?: ActionsDependency,
+  callback?: (arg: ActionsCompositionHelpers) => Record<string, unknown>
+) => TwoPhaseEnforcementProxy<[ActionsExtensionHelpers], ActionsContract>) & {
   [ACTIONS_FACTORY_TYPE]: true;
 };
 
@@ -111,62 +162,23 @@ export type ActionsFactory = ((
  * This is the factory function itself, NOT the proxy returned by calling it.
  */
 export type ViewFactory = ((
-  dependency?: ViewDependency
-) => TwoPhaseEnforcementProxy<unknown[], never>) & {
+  dependency?: ViewDependency,
+  callback?: (arg: ViewCompositionHelpers) => Record<string, unknown>
+) => TwoPhaseEnforcementProxy<[ViewExtensionHelpers], ViewContract>) & {
   [VIEW_FACTORY_TYPE]: true;
 };
 
 /**
- * Utility type: dependency for createState must be a Lattice or StateFactory.
+ * Utility type: dependency for createState must be a Lattice or StateContract (result of extension phase).
  */
-export type StateDependency = Lattice | StateFactory;
+export type StateDependency = Lattice | StateContract;
 
 /**
- * Utility type: dependency for createActions must be a Lattice or ActionsFactory.
+ * Utility type: dependency for createActions must be a Lattice or ActionsContract (result of extension phase).
  */
-export type ActionsDependency = Lattice | ActionsFactory;
+export type ActionsDependency = Lattice | ActionsContract;
 
 /**
- * Utility type: dependency for createView must be a Lattice or ViewFactory.
+ * Utility type: dependency for createView must be a Lattice or ViewContract (result of extension phase).
  */
-export type ViewDependency = Lattice | ViewFactory;
-
-// --- Runtime Guards ---
-export function isModelFactory(obj: unknown): obj is ModelFactory {
-  return Boolean(
-    obj &&
-      typeof obj === 'function' &&
-      (obj as any)[MODEL_FACTORY_TYPE] === true
-  );
-}
-
-export function isLattice(obj: unknown): obj is Lattice {
-  return Boolean(
-    obj && typeof obj === 'object' && (obj as any)[LATTICE_TYPE] === true
-  );
-}
-
-export function isStateFactory(obj: unknown): obj is StateFactory {
-  return Boolean(
-    obj &&
-      typeof obj === 'function' &&
-      (obj as any)[STATE_FACTORY_TYPE] === true
-  );
-}
-
-export function isActionsFactory(obj: unknown): obj is ActionsFactory {
-  return Boolean(
-    obj &&
-      typeof obj === 'function' &&
-      (obj as any)[ACTIONS_FACTORY_TYPE] === true
-  );
-}
-
-export function isViewFactory(obj: unknown): obj is ViewFactory {
-  return Boolean(
-    obj && typeof obj === 'function' && (obj as any)[VIEW_FACTORY_TYPE] === true
-  );
-}
-
-// --- Utility Types ---
-// Add more as the contract surface is refined.
+export type ViewDependency = Lattice | ViewContract;

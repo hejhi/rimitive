@@ -1,6 +1,13 @@
 // Lattice State Factory: Two-phase contract enforcement
 // See: docs/draft-spec.md (Composition and Extension Function Pattern)
-import { TwoPhaseFactory, StateDependency, StateFactory } from './types';
+import {
+  TwoPhaseFactory,
+  StateDependency,
+  StateFactory,
+  StateExtensionHelpers,
+  StateCompositionHelpers,
+  StateContract,
+} from './types';
 import { createTwoPhaseEnforcementProxy } from './twoPhaseEnforcement';
 import {
   validateDependency,
@@ -17,44 +24,24 @@ import { STATE_FACTORY_TYPE } from './constants';
 const _createState: TwoPhaseFactory<
   [
     dependency?: StateDependency,
-    callback?: (arg: {
-      state: any;
-      select: (obj: any, key: string) => any;
-    }) => any,
+    callback?: (arg: StateCompositionHelpers) => Record<string, unknown>,
   ],
-  [
-    {
-      get: () => any;
-      derive: (
-        source: any,
-        property: string,
-        transformer?: (value: any) => any
-      ) => any;
-    },
-  ],
-  any
+  [StateExtensionHelpers],
+  StateContract
 > = (
-  dependency?: StateDependency, // Accept contract instance or lattice only
-  callback?: (arg: {
-    state: any;
-    select: (obj: any, key: string) => any;
-  }) => any
+  dependency?: StateDependency,
+  callback?: (arg: StateCompositionHelpers) => Record<string, unknown>
 ) => {
   // Runtime contract enforcement for dependency
   validateDependency(dependency);
 
   // Extension phase implementation
-  function extensionPhase(args: {
-    get: () => any;
-    derive: (
-      source: any,
-      property: string,
-      transformer?: (value: any) => any
-    ) => any;
-  }) {
-    const { get } = args ?? {};
+  function extensionPhase(helpers: StateExtensionHelpers): StateContract {
+    const { get } = helpers;
+    // Destructure derive but don't use it to suppress warnings
 
-    let contract: any;
+    let contract: Record<string, unknown> = {};
+
     if (callback && dependency) {
       // Extract the dependency contract using our utility
       const stateArg = extractContract(dependency, FactoryType.STATE);
@@ -62,17 +49,12 @@ const _createState: TwoPhaseFactory<
       // Pass the extracted contract to the callback for composition
       contract = callback({
         state: stateArg,
-        select: (obj: any, key: string) =>
-          obj && typeof obj === 'object' ? obj[key] : undefined,
+        select: <T>(obj: Record<string, unknown>, key: string): T =>
+          obj && typeof obj === 'object' ? (obj[key] as T) : (undefined as T),
       });
     } else if (dependency) {
       // No composition callback, just pass the dependency contract through
       contract = extractContract(dependency, FactoryType.STATE);
-    } else if (typeof get === 'function') {
-      // No dependency or composition, just using the extension phase directly
-      contract = {};
-    } else {
-      contract = {};
     }
 
     // Extension phase - ensure we enhance with what the extension phase returns
@@ -82,7 +64,7 @@ const _createState: TwoPhaseFactory<
     return brandContract({
       ...contract,
       ...extensionContract,
-    });
+    }) as StateContract;
   }
 
   return createTwoPhaseEnforcementProxy(extensionPhase, 'createState');

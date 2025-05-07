@@ -1,3 +1,17 @@
+- Refined type system for all factory functions (model, state, actions, view)
+- Added proper interfaces for extension phase helpers:
+  - `ModelExtensionHelpers`, `StateExtensionHelpers`, etc.
+  - `ModelCompositionHelpers`, `StateCompositionHelpers`, etc.
+- Updated test mocks to correctly implement the extension phase interfaces
+- Fixed proper contract types for each factory's return value
+- Ensured all factory functions properly handle their typed arguments
+- All tests now pass and there are no TypeScript errors
+
+- Implemented the core two-phase factory pattern as described in the spec
+- Created utilities for contract validation and enforcement
+- Added runtime checks to ensure the proper usage of each factory
+- Set up basic tests for the composition phase enforcement
+
 - feat(core/state): Implement proper two-phase pattern and contract handling for
   createState factory. Added support for the callback composition pattern,
   contract extraction, and proper type safety. Removed temporary workarounds

@@ -41,3 +41,5 @@ pnpm-debug.log*
 *.sw? 
 *storybook.log
 public/
+
+**/.claude/settings.local.json
