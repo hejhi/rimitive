@@ -1,33 +1,154 @@
 # Lattice
 
-A **headless component framework** built on Zustand. React‑first DX with
-framework‑agnostic core.
+A **headless component framework** built on Zustand. Lattice lattices are both
+the declarative contract and the actual API for your component—defining,
+composing, and enforcing the API surface at both the type and runtime level. Its
+core compositional mechanism is a two-phase (composition/extension) function
+pattern, enabling contract preservation, extensibility, and best-in-class
+developer experience. React‑first DX with a framework‑agnostic core.
+
+---
+
+## Lattice: Declarative Contract and API
+
+A **lattice** is both the declarative contract and the actual API for your
+component. When you define or compose a lattice, you are specifying (at the type
+level) and constructing (at runtime) the API surface that consumers will use.
+The lattice is not just a blueprint—it is the API itself.
+
+- **Composing or narrowing** any part (e.g., model, state) changes the contract
+  and the API surface.
+- **Omitting a callback** passes through the dependency's contract/API
+  unchanged.
+- **Providing a callback** allows you to select, rename, or filter the API
+  surface, and the resulting lattice exposes only what you specify.
+- **Lattice creation enforces contract consistency**: All parts (model, state,
+  actions, view) must agree on the contract/API, or you get a type error.
+
+---
+
+## Composition and Extension Function Pattern
+
+Lattice's core compositional mechanism is a two-phase function pattern, used for
+models, actions, state, and views. While this often appears as a "double
+factory," the essential concept is two **separate phases**: one for composition
+and one for extension. This separation enables clean contract preservation,
+extensibility, and a clear distinction between what is composed and what is
+extended.
+
+### Anatomy and Terminology
+
+Each use of this pattern consists of two distinct phases:
+
+- **Composition Phase (composition function, outer)**: Responsible for composing
+  and establishing the contract and API surface. The composition function
+  selects and maps properties or behaviors from other sources (lattices,
+  factories, etc.), determining what is available for further extension.
+
+  The composition function takes two arguments:
+  - a **compatible dependency** as the first argument—either:
+    - a lattice, or
+    - a factory of the same type (e.g., for `createState`, a lattice or a state
+      factory).
+  - an **optional callback function** as the second argument. This callback
+    receives a selectors object (e.g., `{ state, select }`), which provides
+    access to select properties from the compatible dependency for composition.
+    The purpose of this callback is to allow you to select, map, or rename
+    properties from the compatible dependency, and to define the contract and
+    API surface for what will be available to the extension phase. If you do not
+    provide the callback, the contract from the dependency is used as-is, with
+    no additional selection, mapping, or renaming.
+
+  If a lattice is provided, the function will extract the relevant type to be
+  provided in the callback (for example, with `createState`, if a lattice is
+  passed, it extracts the base state from the lattice for use in the callback).
+- **Extension Phase (extension function, inner)**: Responsible for extending,
+  deriving, or enhancing the contract and API surface established in the
+  composition phase. The extension function uses the composed sources from the
+  composition phase to add new properties, derive new values, or otherwise
+  augment the API.
+
+**This pattern is sometimes called the "double-function" or "IIFE" pattern, but
+in Lattice, these are two distinct phases, each with a clear responsibility.**
+
+#### Example
+
+```ts
+const enhancedState = createState(baseLattice, ({ state, select }) => ({
+  count: select(state, "count"),
+  status: select(state, "status"),
+}))(({ get, derive }) => ({
+  doubled: derive(model, "count", (count) => count * 2),
+  formattedStatus: derive(state, "status", (status) => `Status: ${status}`),
+}));
+```
+
+- **Composition Function**: Composes `count` and `status` from the base lattice.
+- **Extension Function**: Implements `doubled` and `formattedStatus` as new
+  derived properties.
+
+#### Summary Table
+
+| Phase       | Function             | Role/Responsibility (first arg: compatible dependency) | Receives                                                           | Example Parameter Object         |
+| ----------- | -------------------- | ------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------- |
+| 1st (outer) | Composition Function | Composition, selection, contract setup                 | compatible dependency (lattice or factory of same type), selectors | `{ state, select }`              |
+| 2nd (inner) | Extension Function   | Extension, derivation, enhancement of contract/API     | helpers, composed state                                            | `{ get, set, derive, dispatch }` |
+
+### Rationale
+
+- **Separation of Concerns**: The composition phase handles composition and
+  contract, the extension phase handles logic, derivation, and augmentation.
+- **Extensibility**: Compose from multiple sources without leaking
+  implementation details.
+- **Type Safety**: The contract is enforced at the composition phase, while the
+  extension phase can safely build on it. Lattice creation enforces that all
+  parts (model, state, actions, view) are consistent and compatible, or a type
+  error will occur.
+
+This pattern is core to Lattice's composability, contract preservation, and
+best-in-class developer experience.
 
 ---
 
 ## 1. Introduction
 
-Lattice is a headless component framework that provides a structured approach to
-building complex, composable UI components with clean separation of concerns. It
-implements the SAM (State-Action-Model) pattern using Zustand stores as its
-foundation.
+Lattice is a headless component framework that redefines composability and
+contract safety for UI architecture. In Lattice, a **lattice** is both the
+declarative contract and the actual API for your component—defining, composing,
+and enforcing the API surface at both the type and runtime level. This ensures
+that every composition or extension of a lattice is type-safe,
+contract-preserving, and explicit.
+
+Lattice's core compositional mechanism is a two-phase (composition/extension)
+function pattern, used for models, actions, state, and views. The first phase
+(composition) selects, maps, or narrows the contract/API surface from
+dependencies; the second phase (extension) derives, augments, or enhances the
+contract. This pattern guarantees that all parts of a lattice (model, state,
+actions, view) remain consistent and extensible, while preserving the original
+contract.
+
+Lattice implements the SAM (State-Action-Model) pattern on top of Zustand,
+providing a familiar, React-first developer experience with a framework-agnostic
+core.
 
 ### Core Value Propositions
 
-- **SAM Architecture**: Actions → Model → State → View, with clean separation of
-  concerns
+- **Declarative Contract-as-API**: Every lattice is both the contract and the
+  API, enforced at type and runtime.
+- **Two-Phase Composition/Extension**: Clean separation between contract
+  composition and extension, ensuring contract preservation and extensibility.
+- **Type-Safe Composability**: All compositions are type-checked; contract
+  violations are surfaced as type errors.
+- **SAM Architecture**: Actions → Model → State → View, with strict separation
+  of concerns.
 - **Unified Model**: Getters and mutations in a single Model object with
-  auto-generated hooks
-- **Factory Composition**: Factories create reusable patterns that are only
-  instantiated when needed
-- **Contract Preservation**: Compositions extend but never break existing
-  contracts
-- **Lattice Composition**: Behaviors cooperate via public APIs—no model exposure
-  or internal coupling
-- **Zustand Foundation**: Familiar DX, dev‑tools time‑travel, no custom state
-  engine
-- **Instance-based Architecture**: Multiple independent instances with proper
-  state isolation
+  auto-generated hooks.
+- **Factory Pattern**: Factories define reusable patterns, only instantiating
+  stores when needed.
+- **Instance Isolation**: Multiple independent instances with proper state
+  isolation.
+- **Zustand Foundation**: Familiar DX, dev-tools time-travel, no custom state
+  engine.
 
 ### When to Use Lattice vs. Plain Hooks
 
@@ -48,30 +169,34 @@ foundation.
 
 ### Glossary
 
-| Terminology | Meaning                                                                                                           |
-| ----------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Model**   | Primary unit of composition containing state and business logic with methods to implement domain operations.      |
-| **Actions** | Pure intent functions that represent user operations without implementation details.                              |
-| **State**   | Public selectors that provide read access to the model.                                                           |
-| **View**    | Reactive state representations of components that transform state and actions into ready-to-spread UI attributes. |
+| Terminology | Meaning                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Model**   | The primary unit of composition, containing state and business logic. Defines the contract for state and mutations. |
+| **Actions** | Pure intent functions representing user operations (WHAT), delegating to model methods (HOW).                       |
+| **State**   | Public selectors providing read access to the model, forming part of the contract/API surface.                      |
+| **View**    | Pure, reactive representations that transform state and actions into ready-to-spread UI attributes.                 |
 
-Together, these make up a composable `lattice`.
+> Together, these make up a composable **lattice**—the declarative contract and
+> the actual API for your component.
 
 ### Mental Model & Flow
 
 ```
-                   ┌───────── Reactive Models ─────────┐
-                   ▼                  ▼                ▼
+                   ┌───────── Contract/Reactive Models ─────────┐
+                   ▼                  ▼                        ▼
 View event ──▶ Actions ──▶ Model Mutation ──▶ State/View update ──▶ UI re‑render
 ```
 
-- One‑way data‑flow following SAM (State-Action-Model) pattern
-- Actions represent pure intent (WHAT), triggering state changes through the
-  Model
-- Model contains business logic and state (HOW) and is the primary unit of
-  composition
-- Reactive flow: User events → Actions → Model → State → View → UI elements
-- Lattice exposes only actions, views, and state (via selectors) for composition
+- **One-way data flow**: Follows the SAM (State-Action-Model) pattern.
+- **Actions**: Pure intent (WHAT), triggering state changes via the model.
+- **Model**: Contains business logic and state (HOW); the contract
+  source-of-truth.
+- **State**: Read-only selectors, forming the public API surface.
+- **View**: Pure, reactive mappings from state/actions to UI attributes.
+- **Lattice**: Exposes models, actions, state, and views for composition, while
+  only exposing state and views for consuming.
+- **Contract Enforcement**: Every composition or extension is type-checked;
+  contract violations are surfaced as type errors.
 
 ### Public vs Internal APIs
 
@@ -101,22 +226,33 @@ View event ──▶ Actions ──▶ Model Mutation ──▶ State/View updat
     └───────────┘
 ```
 
-- Only the derived State and View(s) are available via the Public API
-- Composing lattices together allows _composition_ of every part
-- Models are the source-of-truth, combining state and behavior
+- Only the derived State and View(s) are available via the Public API for
+  consumption (e.g., by UI components).
+- Models and actions are available for composition—when building new lattices or
+  extensions—but are not exposed to consumers directly.
+- Composing lattices together allows _composition_ of every part, but always
+  through explicit contract selection and extension.
+- Models are the source-of-truth, combining state and behavior, but are never
+  exposed directly to consumers.
+- The contract is preserved and enforced at every composition boundary.
 
-### Factory-Based Composition
+### Factory-Based Composition and the Two-Phase Pattern
 
-Lattice uses a factory-based composition model:
+Lattice uses a factory-based composition model, built around a two-phase
+(composition/extension) function pattern:
 
-1. Factory functions create reusable patterns, not actual instances
-2. These patterns define behavior but don't allocate storage until needed
-3. Actual stores are only created when a lattice is instantiated
-4. This allows for:
-   - Efficient composition without premature store creation
-   - Type-safe contract enforcement across compositions
-   - Clean separation between composition logic and implementation details
-   - Lazy loading of enhanced lattice compositions:
+1. **Composition Phase**: Factory functions (e.g., `createModel`, `createState`)
+   take a compatible dependency (lattice or factory) and an optional callback to
+   select, map, or rename properties—establishing the contract/API surface for
+   extension.
+2. **Extension Phase**: The returned function extends or derives new properties,
+   augmenting the contract/API surface established in the composition phase.
+3. Actual stores are only created when a lattice is instantiated, ensuring
+   efficient composition and contract enforcement.
+4. This enables:
+   - Type-safe contract enforcement across all compositions
+   - Clean separation between contract composition and logic extension
+   - Lazy, efficient instantiation of enhanced lattices
 
 ```ts
 // Core lattice with minimal functionality
@@ -179,11 +315,12 @@ import("./enhancementModule.js").then((module) => {
 
 ## 3. Building Blocks
 
-### Model - Primary Unit of Composition
+### Model – Primary Unit of Composition
 
 Models are the fundamental building blocks in Lattice, encapsulating both state
-and behavior. They provide a clean API for state access and mutations without
-exposing implementation details.
+and business logic. They define the contract for state and mutations, and are
+available for composition when building new lattices or extensions. Models are
+**not** exposed to consumers—only to composers.
 
 ```ts
 // Create a standalone model factory with state and methods
@@ -198,153 +335,99 @@ const counterModel = createModel()(({ set, get }) => ({
   // State selectors
   getCount: () => get().count,
 }));
-
 // Model is a factory until used in a lattice
 ```
 
-### Model Composition
+#### Model Composition (Two-Phase Pattern)
 
-Models can be composed together using the double-function IIFE pattern,
-separating composition from implementation.
+Models are composed using the two-phase (composition/extension) pattern:
+
+- **Composition phase**: Select, map, or rename properties from dependencies
+  (lattice or model factory) to establish the contract surface.
+- **Extension phase**: Extend or derive new properties, augmenting the
+  contract/API surface.
 
 ```ts
-// Create independent model factories
-const counterModel = createModel()(({ set, get }) => ({
-  count: 0,
-  increment: () => set((state) => ({ count: state.count + 1 })),
-  getCount: () => get().count,
-}));
-
-const labelModel = createModel()(({ set, get }) => ({
-  label: "Counter",
-  setLabel: (label) => set({ label }),
-  getLabel: () => get().label,
-}));
-
-// Create standalone model (no composition)
-const standaloneModel = createModel()(({ set, get }) => ({
-  // Implementation without composition
+const enhancedModel = createModel(baseModel, ({ model, select }) => ({
+  increment: select(model, "increment"),
+}))(({ set, get }) => ({
+  incrementTwice: () => {
+    get().increment();
+    get().increment();
+  },
 }));
 ```
 
-### Actions - Pure Intent Functions
+### Actions – Pure Intent Functions
 
-Actions are pure intent functions that represent WHAT should happen, not HOW it
-should happen. They are the primary entry points for state mutations and are
-exposed in the public API. The double-function pattern separates composition
-from implementation.
+Actions are pure intent functions representing WHAT should happen, delegating to
+model methods (HOW). Actions are available for composition, but are **not**
+exposed to consumers—only to composers. They follow the two-phase pattern for
+contract preservation and extension.
 
 ```ts
-// Define Actions using createActions with double-function pattern - standalone
 const actions = createActions()(({ mutate }) => ({
-  // Actions directly reference model methods
   increment: mutate(model, "increment"),
   doubleIncrement: mutate(model, "incrementTwice"),
 }));
 
-// Composing with a lattice
 const enhancedActions = createActions(baseLattice, ({ actions, select }) => ({
-  // Select from the actions part of the lattice
   increment: select(actions, "increment"),
 }))(({ mutate }) => ({
-  // Add new actions
   incrementTwice: mutate(model, "incrementTwice"),
 }));
-
-// Composing with another actions factory
-const combinedActions = createActions(baseActions, ({ actions, select }) => ({
-  // Select from another actions factory
-  increment: select(actions, "increment"),
-}))(({ mutate }) => ({
-  // Add new actions
-  incrementThenReset: mutate(model, "incrementThenReset"),
-}));
-
-// Using an action directly (once the lattice is instantiated)
-// actions.increment();
 ```
 
-### State - Public Selectors
+### State – Public Selectors
 
-Public state selectors provide read access to the model state. They follow the
-double-function pattern and can derive from model properties.
+State selectors provide read access to the model and form part of the public API
+surface. State is available for both composition and consumption. State
+factories use the two-phase pattern for contract selection and extension.
 
 ```ts
-// Define public state selectors with double-function pattern - standalone
 const state = createState()(({ get, derive }) => ({
-  // State can derive from model properties
   count: derive(model, "count"),
   countPlusOne: derive(model, "count", (count) => count + 1),
   isPositive: () => get().count > 0,
 }));
 
-// Composing with a lattice
 const enhancedState = createState(baseLattice, ({ state, select }) => ({
-  // Select from the state part of the lattice
   count: select(state, "count"),
 }))(({ get, derive }) => ({
-  // Add new derived state
   doubled: derive(state, "count", (count) => count * 2),
 }));
-
-// Composing with another state factory
-const combinedState = createState(baseState, ({ state, select }) => ({
-  // Select from another state factory
-  count: select(state, "count"),
-}))(({ get, derive }) => ({
-  // Add new derived state
-  isNegative: () => get().count < 0,
-}));
-
-// Using a state selector (once the lattice is instantiated)
-// const count = state.count;
-// const isPositive = state.isPositive();
 ```
 
-### View - Reactive UI Attributes
+### View – Reactive UI Attributes
 
-Views are reactive components that transform state and actions into
-ready-to-spread UI attributes. They follow the double-function pattern and serve
-as pure mappings from state and actions to UI properties. Views are parallel to
-actions - they are pure selectors without functions or side effects.
+Views are pure, reactive representations that transform state and actions into
+ready-to-spread UI attributes. Views are available for both composition and
+consumption. They follow the two-phase pattern for contract selection and
+extension.
 
 ```ts
-// Create views with double-function pattern - standalone
 const counterView = createView()(({ derive }) => ({
-  // Views are pure mappings from state/actions to UI attributes
   "data-count": derive(state, "count"),
   "aria-live": "polite",
 }));
 
-// Composing with a lattice
 const enhancedView = createView(baseLattice, ({ view, select }) => ({
-  // Select from the view part of the lattice
   "data-count": select(view.counter, "data-count"),
 }))(({ derive, dispatch }) => ({
-  // Add new properties as pure mappings
   "aria-label": "Enhanced counter",
 }));
-
-// Composing with another view factory
-const combinedView = createView(baseView, ({ view, select }) => ({
-  // Select from another view factory
-  "aria-live": select(view, "aria-live"),
-}))(({ derive, dispatch }) => ({
-  // Add new properties as pure value
-  "data-enhanced": true,
-}));
-
-// For parameterized views, the parameters are passed to derive
-const itemView = createView()(({ derive, dispatch }) => ({
-  // derive handles param passing when the view is used
-  "aria-selected": derive(state, "isSelected"),
-  "data-highlighted": derive(state, "isHighlighted"),
-  onClick: dispatch(actions, "selectItem"),
-}));
-
-// Usage (once lattice is instantiated):
-// const itemProps = lattice.view.item.get({ id: "item-1" });
 ```
+
+> **Summary:**
+>
+> - **Models and actions**: Available for composition only (not exposed to
+>   consumers).
+> - **State and views**: Available for both composition and consumption (public
+>   API surface).
+> - All building blocks use the two-phase (composition/extension) pattern for
+>   contract preservation and extensibility.
+> - Contract enforcement applies at every boundary—type errors surface on
+>   contract violations.
 
 ---
 
@@ -352,13 +435,13 @@ const itemView = createView()(({ derive, dispatch }) => ({
 
 ### Simple Component Example
 
-A basic counter component implementation using Lattice with the new
-double-function pattern:
+A basic counter component implementation using Lattice with the two-phase
+(composition/extension) pattern and contract-as-API:
 
 ```ts
 // Create a counter lattice
 const createCounter = () => {
-  // Create counter model factory with state and behavior
+  // Create counter model factory with state and behavior (composition only)
   const model = createModel()(({ set, get }) => ({
     // State
     count: 0,
@@ -375,48 +458,43 @@ const createCounter = () => {
     getCount: () => get().count,
   }));
 
-  // Define Actions factory - standalone
+  // Define Actions factory (composition only)
   const actions = createActions()(({ mutate }) => ({
-    // Actions directly reference model methods
     increment: mutate(model, "increment"),
     decrement: mutate(model, "decrement"),
     incrementTwice: mutate(model, "incrementTwice"),
   }));
 
-  // Define public state factory - standalone
+  // Define public state factory (composition + consumption)
   const state = createState()(({ get, derive }) => ({
-    // Derive state from model
     count: derive(model, "getCount"),
-    // Derived state properties
     countSquared: derive(model, "count", (count) => count * count),
   }));
 
-  // Create views factory - standalone
+  // Create views factory (composition + consumption)
   const counterView = createView()(({ derive }) => ({
-    // Generate UI attributes as pure mappings
     "data-count": derive(state, "count"),
     "aria-live": "polite",
   }));
 
   const incrementButtonView = createView()(({ derive, dispatch }) => ({
-    // Map UI event to action using dispatch
     onClick: dispatch(actions, "increment"),
   }));
 
   const decrementButtonView = createView()(({ derive, dispatch }) => ({
-    // Map UI event to action using dispatch
     onClick: dispatch(actions, "decrement"),
   }));
 
-  // Return composed lattice - the actual stores are created here
+  // Return composed lattice
   return createLattice(
     "counter",
     {
-      // Public API exposed for composition
-      actions,
-      view: mergeViews(counterView, incrementButtonView, decrementButtonView),
-      state,
+      // For composition: model, actions
       model,
+      actions,
+      // Public API: state, view
+      state,
+      view: mergeViews(counterView, incrementButtonView, decrementButtonView),
     },
   );
 };
@@ -424,76 +502,58 @@ const createCounter = () => {
 
 ### Medium Complexity Example
 
-A todo list with filtering capabilities using the double-function pattern:
+A todo list with filtering capabilities using the two-phase pattern and
+contract-as-API:
 
 ```ts
-// Create a todo list lattice
 const createTodoList = () => {
-  // Create the model factory
+  // Model (composition only)
   const model = createModel()(({ set, get }) => ({
-    // State
     todos: [],
     filter: "all",
     label: "Todo List",
-
-    // Behaviors
     addTodo: (text) =>
       set((state) => ({
         todos: [...state.todos, { id: Date.now(), text, completed: false }],
       })),
-
     toggleTodo: (id) =>
       set((state) => ({
         todos: state.todos.map((todo) =>
           todo.id === id ? { ...todo, completed: !todo.completed } : todo
         ),
       })),
-
     setFilter: (filter) => set({ filter }),
-
-    // Composite behaviors
     addAndFilterActive: (text) => {
       get().addTodo(text);
       get().setFilter("active");
     },
-
-    // Internal selectors
     _getTodos: () => get().todos,
     _getFilter: () => get().filter,
-
-    // Computed properties
     getFilteredTodos: () => {
       const todos = get().todos;
       const filter = get().filter;
-
       if (filter === "all") return todos;
-      if (filter === "completed") {
-        return todos.filter((todo) => todo.completed);
-      }
+      if (filter === "completed") return todos.filter((todo) => todo.completed);
       if (filter === "active") return todos.filter((todo) => !todo.completed);
       return todos;
     },
-
     getFilteredTodosCount: () => get().getFilteredTodos().length,
-
     isTodoCompleted: (id) => {
       const todo = get().todos.find((t) => t.id === id);
       return todo ? todo.completed : false;
     },
   }));
 
-  // Define Actions factory - standalone
+  // Actions (composition only)
   const actions = createActions()(({ mutate }) => ({
-    // Actions directly reference model methods
     addTodo: mutate(model, "addTodo"),
     toggleTodo: mutate(model, "toggleTodo"),
     setFilter: mutate(model, "setFilter"),
     addAndFilterActive: mutate(model, "addAndFilterActive"),
   }));
 
-  // Define public state factory - standalone
+  // State (composition + consumption)
   const state = createState()(({ get, derive }) => ({
-    // Derived properties
     todos: derive(model, "_getTodos"),
     filter: derive(model, "_getFilter"),
     filteredTodos: derive(model, "getFilteredTodos"),
@@ -502,17 +562,14 @@ const createTodoList = () => {
     isTodoCompleted: derive(model, "isTodoCompleted"),
   }));
 
-  // Create views factory - standalone
+  // Views (composition + consumption)
   const todoListView = createView()(({ derive }) => ({
-    // Generate UI attributes as pure mappings
     "aria-label": derive(state, "listLabel"),
     "data-count": derive(state, "filteredTodosCount"),
   }));
 
   const todoItemView = createView()(({ derive, dispatch }) => ({
-    // Generate UI attributes as pure mappings
     "aria-checked": derive(state, "isTodoCompleted"),
-    // Connect to action with dispatch
     onClick: dispatch(actions, "toggleTodo"),
   }));
 
@@ -520,49 +577,41 @@ const createTodoList = () => {
   return createLattice(
     "todoList",
     {
-      // Public API exposed for composition
-      actions,
-      view: mergeViews(todoListView, todoItemView),
-      state,
+      // For composition: model, actions
       model,
+      actions,
+      // Public API: state, view
+      state,
+      view: mergeViews(todoListView, todoItemView),
     },
   );
 };
 ```
 
-### Complex Component Example - Composition
+### Complex Component Example – Composition
 
-Creating a complex component through factory composition:
+Creating a complex component through factory composition, with contract
+enforcement and public API distinction:
 
 ```ts
-// Create independent model factories for specific concerns
+// Create independent model factories for specific concerns (composition only)
 const selectionModelFactory = createModel()(({ set, get }) => ({
-  // State
   selected: [],
-
-  // Behaviors
   selectItem: (id, isMulti = false) =>
     set((state) => ({
       selected: isMulti ? [...state.selected, id] : [id],
     })),
-
   deselectItem: (id) =>
     set((state) => ({
       selected: state.selected.filter((itemId) => itemId !== id),
     })),
-
   clearSelection: () => set({ selected: [] }),
-
-  // Selectors
   isSelected: (id) => get().selected.includes(id),
   getSelected: () => get().selected,
 }));
 
 const itemsModelFactory = createModel()(({ set, get }) => ({
-  // State
   items: [],
-
-  // Behaviors
   setItems: (items) => set({ items }),
   addItem: (item) =>
     set((state) => ({
@@ -572,95 +621,81 @@ const itemsModelFactory = createModel()(({ set, get }) => ({
     set((state) => ({
       items: state.items.filter((item) => item.id !== id),
     })),
-
-  // Selectors
   getItems: () => get().items,
   getItem: (id) => get().items.find((item) => item.id === id),
 }));
 
 // Factory function that returns a lattice composer
 export const createFeature = () => {
-  // Returns a function that takes a base lattice and returns an enhanced lattice
   return (baseLattice) => {
-    // Create composite model factory by combining other factories
+    // Composite model (composition only)
     const model = createModel()(({ set, get, derive }) => ({
-      // State
       highlighted: null,
-
-      // Derive from the composed factories
       selected: derive(selectionModelFactory, "selected"),
       items: derive(itemsModelFactory, "items"),
-
-      // Behaviors that use the derived state
       selectItem: (id, isMulti = false) => {
         selectionModelFactory.selectItem(id, isMulti);
       },
-
       isSelected: derive(selectionModelFactory, "isSelected"),
       getItems: derive(itemsModelFactory, "getItems"),
-
-      // Composite behaviors
       getItemsWithSelection: () => {
         return get().items.map((item) => ({
           ...item,
           selected: get().isSelected(item.id),
         }));
       },
-
       selectAndHighlight: (id) => {
-        // Call methods
         get().selectItem(id);
-        // Update internal state
         set({ highlighted: id });
       },
-
       isHighlighted: (id) => get().highlighted === id,
     }));
 
-    // Define Actions factory - using compose with baseLattice
+    // Actions (composition only)
     const actions = createActions(baseLattice, ({ actions, select }) => ({
       // Select from base lattice actions if needed
     }))(({ mutate }) => ({
-      // Define new actions
       selectItem: mutate(model, "selectItem"),
       selectAndHighlight: mutate(model, "selectAndHighlight"),
     }));
 
-    // Define public state factory - using compose with baseLattice
+    // State (composition + consumption)
     const state = createState(baseLattice, ({ state, select }) => ({
       // Select from base lattice state if needed
     }))(({ get, derive }) => ({
-      // Add new derived state
       itemsWithSelection: derive(model, "getItemsWithSelection"),
       isSelected: derive(model, "isSelected"),
       isHighlighted: derive(model, "isHighlighted"),
     }));
 
-    // Create views factory - using compose with baseLattice
+    // Views (composition + consumption)
     const itemView = createView(baseLattice, ({ view, select }) => ({
-      // Select from base lattice view if needed
       role: select(view.item, "role"),
     }))(({ derive, dispatch }) => ({
-      // Generate UI attributes as pure mappings
       "aria-selected": derive(state, "isSelected"),
       "data-highlighted": derive(state, "isHighlighted"),
       onClick: dispatch(actions, "selectAndHighlight"),
     }));
 
-    // Return enhanced lattice, actual stores are created here
+    // Return enhanced lattice
     return createLattice(
       "featureName",
       withLattice(baseLattice)({
-        // Public API exposed for composition
-        actions,
-        view: mergeViews(itemView),
-        state,
+        // For composition: model, actions
         model,
+        actions,
+        // Public API: state, view
+        state,
+        view: mergeViews(itemView),
       }),
     );
   };
 };
 ```
+
+// All further examples and patterns should follow this distinction: models and
+actions are for composition only, state and views are for both composition and
+consumption, and contract enforcement applies at every boundary.
 
 ## 5. Composition Patterns
 
@@ -751,7 +786,7 @@ const state = createState(baseLattice, ({ state, select }) => ({
 }));
 
 // Compose with filtering
-const model = createModel(baseModel, (model, select) =>
+const model = createModel(baseModel, ({ model, select }) =>
   filterMap(
     model,
     (key) => key !== "privateMethod" && { [key]: select(model, key) },
@@ -766,14 +801,14 @@ Ensuring contract preservation across compositions:
 
 ```ts
 // Base model defines a contract
-const baseModel = createModel()((set, get) => ({
+const baseModel = createModel()(({ set, get }) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
   getCount: () => get().count,
 }));
 
 // Enhanced model must preserve the contract
-const enhancedModel = createModel(baseModel)((set, get) => ({
+const enhancedModel = createModel(baseModel)(({ set, get }) => ({
   // These methods MUST be present with compatible signatures
   // to preserve the base contract
   count: get().count, // Preserved
@@ -785,7 +820,7 @@ const enhancedModel = createModel(baseModel)((set, get) => ({
 }));
 
 // This would cause a type error - breaking the contract
-const invalidModel = createModel(baseModel)((set, get) => ({
+const invalidModel = createModel(baseModel)(({ set, get }) => ({
   // Type error: missing required property 'increment'
   count: get().count,
   getCount: get().getCount,

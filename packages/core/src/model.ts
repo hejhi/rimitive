@@ -1,52 +1,47 @@
-import { createStore } from './store';
-import { StoreApi } from 'zustand';
+// Lattice Model Factory: Two-phase contract enforcement
+// See: docs/draft-spec.md (Composition and Extension Function Pattern)
+import {
+  TwoPhaseFactory,
+  isModelFactory,
+  isLattice,
+  MODEL_FACTORY_TYPE,
+  ModelDependency,
+  ModelFactory,
+} from './types';
+import { createTwoPhaseEnforcementProxy } from './twoPhaseEnforcement';
 
-/**
- * Type representing the model initializer context provided to model factories
- */
-export type ModelContext<T extends object> = {
-  set: StoreApi<T>['setState'];
-  get: () => T;
+export function notImplementedExtensionPhase(..._args: unknown[]): never {
+  throw new Error('Not implemented: extension phase logic goes here');
+}
+
+// The actual factory function, branded as a ModelFactory
+const _createModel: TwoPhaseFactory<
+  [dependency?: ModelDependency],
+  unknown[],
+  never
+> = (dependency?: ModelDependency) => {
+  // Runtime contract enforcement for dependency
+  if (
+    dependency !== undefined &&
+    !isLattice(dependency) &&
+    !isModelFactory(dependency)
+  ) {
+    throw new Error(
+      'Lattice: The first argument to createModel must be a lattice or model factory.'
+    );
+  }
+  function extensionPhase(..._extensionArgs: unknown[]): never {
+    return notImplementedExtensionPhase(..._extensionArgs);
+  }
+  return createTwoPhaseEnforcementProxy(extensionPhase, 'createModel');
 };
 
-/**
- * Type representing a model initializer function
- */
-export type ModelInitializer<T extends object> = (
-  context: ModelContext<T>
-) => T;
+// Attach the model factory type tag for runtime detection (brand the factory, not the proxy)
+Object.defineProperty(_createModel, MODEL_FACTORY_TYPE, {
+  value: true,
+  enumerable: false,
+  configurable: false,
+  writable: false,
+});
 
-/**
- * Type representing a model factory function that creates instances of a model
- */
-export type ModelFactory<T extends object> = () => StoreApi<T>;
-
-/**
- * Creates a model factory with the double-function pattern.
- * This is the core building block for Lattice components.
- *
- * @returns A function that accepts a model initializer and returns a model factory
- */
-export function createModel() {
-  return <T extends object>(
-    initializer: ModelInitializer<T>
-  ): ModelFactory<T> => {
-    // Return a factory function that creates a new model instance when called
-    return () => {
-      // Create and return the store directly
-      const store = createStore<T>((set, get) => {
-        // Prepare the model context with the set and get functions
-        const context: ModelContext<T> = {
-          set,
-          get,
-        };
-
-        // Initialize the model with the provided initializer
-        return initializer(context);
-      });
-
-      // Return the store directly
-      return store;
-    };
-  };
-}
+export const createModel = _createModel as ModelFactory;
