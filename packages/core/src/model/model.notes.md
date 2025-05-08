@@ -5,7 +5,7 @@
 I'm trying to create a model composition system where:
 
 1. Models are defined once but instantiated many times
-2. Models can compose other models
+2. Models can compose other models with createModel.with()
 3. Properties can reference each other across model boundaries
 4. Property references are preserved through composition layers
 5. All of this happens before any actual Zustand store is created
@@ -192,81 +192,78 @@ This approach respects the blueprint nature of our system while acknowledging
 that there's a point where blueprint definition needs to be complete before
 derivation can occur.
 
-## Correct Composition Pattern: Fluent Composition with .with()
+## Exploring the .with() Pattern
 
-The current implementation in `compose.ts` has some issues with property
-references and composition. A more intuitive approach would use a fluent API
-with a `.with()` method:
+As I think about model composition, the `.with()` pattern seems to offer several
+compelling advantages:
 
-```typescript
-// Base model
-const counterModel = createModel(() => ({
-   count: 10,
-}));
+1. It provides an **intuitive API** that clearly communicates model enhancement
+   with additional properties and behaviors
 
-// Extensions express what they're adding to the model
-const withStats = counterModel.with(({ get }) => ({
-   doubleCount: () => get().count * 2,
-}));
+2. It enables **progressive composition** where each step builds on the previous
+   one in a clear, readable chain
 
-const withLogger = withStats.with(({ get }) => ({
-   logCount: () => console.log(`Current count: ${get().count}`),
-}));
+3. It makes **explicit dependencies** visible, as each extension directly
+   references its base model
 
-// Create the finalized model
-const appModel = withLogger.create();
-```
+4. It **reduces boilerplate** by eliminating the need to repeat `createModel` or
+   use separate composition functions
 
-### Advantages of the .with() Pattern
-
-1. **Intuitive API**: The `.with()` method clearly communicates that we're
-   enhancing a model with additional properties and behaviors
-
-2. **Progressive Composition**: Each step builds on the previous one in a clear,
-   readable chain
-
-3. **Explicit Dependencies**: Each extension directly references its base model
-
-4. **Reduced Boilerplate**: No need to repeat `createModel` or use a separate
-   composition function
-
-5. **Natural Reading Order**: The code reads naturally from left to right as
+5. It creates a **natural reading order** where code reads from left to right as
    "base model with feature A with feature B"
 
-6. **Clear Composition Boundaries**: The relationship between models is explicit
-   at each step
+6. It establishes **clear composition boundaries** with explicit relationships
+   between models at each step
 
-7. **Predictable Types**: Each composition step preserves and extends the type
-   information
+7. It maintains **predictable types** by preserving and extending type
+   information through each composition step
 
-### Implementation Considerations
+This approach fits well with the blueprint composition concept I've been
+exploring. Rather than a two-phase approach, it provides a clean, chainable way
+to build up model functionality.
 
-For this pattern, we would need to:
+### Implementation Considerations for .with()
+
+To implement this pattern effectively, I would need to:
 
 1. Make `createModel()` return an object with a `.with()` method
 2. Ensure each `.with()` call returns another object with the same interface
-3. Add a `.create()` method to finalize the model
+3. Add a `.create()` method that finalizes the model
 
-This approach ensures that the `get()` function always has the correct context
-for accessing properties across model boundaries, while providing a
-developer-friendly API.
+This would create a clear workflow:
 
-## Implications for Create Method
+```
+createModel() → .with() → .with() → ... → .create()
+```
 
-With this fluent composition pattern, our `create()` method becomes even more
-important. It would:
+The `.with()` approach ensures that the `get()` function always has the correct
+context for accessing properties across model boundaries, while providing a
+developer-friendly API that makes composition intent explicit.
+
+## Implications for Model Finalization
+
+With this fluent composition pattern, the `.create()` method becomes even more
+essential as the boundary between composition and usage. It would:
 
 1. Signal that a model's composition chain is complete
 2. Return a finalized model that can't be further composed
-3. Be the entry point for deriving states, views, and actions
+3. Serve as the entry point for deriving states, views, and actions
 
-### Benefits of Finalization
+This creates a many-to-one relationship where multiple composed models
+ultimately contribute to a single unified Zustand store, with each model adding
+its slice to the final state.
+
+### Benefits of the Finalization Step
 
 1. **Type Safety**: The type system can enforce that only finalized models are
    used where complete models are expected
 2. **Clear Boundaries**: Developers have a clear signal for when composition is
    complete
-3. **Validation**: The finalization step could include validation to catch
-   composition errors early
+3. **Validation Opportunity**: The finalization step could include validation to
+   catch composition errors early
 4. **Future Extensibility**: Could add optimizations or additional features
    during finalization
+
+This finalization concept completes the mental model by establishing distinct
+phases of model lifecycle: composition, finalization, derivation, and
+instantiation.
