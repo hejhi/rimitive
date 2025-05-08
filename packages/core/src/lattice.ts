@@ -5,7 +5,7 @@ import {
   ActionsContract,
   ViewContract,
 } from './types';
-import { isContract } from './utils';
+import { isContract, validateContractReferences } from './utils';
 
 interface LatticeParts {
   model: ModelContract;
@@ -37,8 +37,13 @@ export function createLattice(name: string, parts: LatticeParts) {
     );
   }
 
-  // TODO: Add proper contract consistency enforcement in the future
-  // For now, we just ensure all parts are valid branded contracts
+  // Validate contract compatibility between components
+  validateContractReferences(
+    parts.model,
+    parts.state,
+    parts.actions,
+    parts.view
+  );
 
   // Create a lattice object with the LATTICE_TYPE brand
   const lattice = {

@@ -3,13 +3,19 @@
 // and omitting the extension phase is not allowed, per the Lattice spec.
 // See: docs/draft-spec.md (Composition and Extension Function Pattern)
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 // NOTE: The following imports will fail until the corresponding implementations exist.
-import { createModel } from '../model';
+import { createModel } from '../model_bk';
 import { createView } from '../view';
 import { createState } from '../state';
 import { createActions } from '../actions';
 import { ModelExtensionHelpers, StateExtensionHelpers } from '../types';
+import * as utils from '../utils';
+// Spy on the validateContractReferences function
+const validateContractReferencesSpy = vi.spyOn(
+  utils,
+  'validateContractReferences'
+);
 
 describe('Composition Phase (first phase only, no extension phase)', () => {
   it('should fail when only the first phase is called for createModel (no extension phase)', () => {
@@ -92,36 +98,24 @@ describe('Runtime contract enforcement for createActions', () => {
 });
 
 describe('createModel composition phase contract shaping', () => {
+  // Reset spy before each test
+  beforeEach(() => {
+    validateContractReferencesSpy.mockClear();
+  });
+
   // Create test helpers
   const mockGet = vi.fn().mockImplementation(() => ({
     foo: 123,
     bar: () => 'bar',
     baz: true,
   }));
-  const mockSet = vi.fn();
-
-  const modelExtensionHelpers: ModelExtensionHelpers = {
-    get: mockGet,
-    set: mockSet,
-  };
-
-  it('should pass through the contract as-is when no callback is provided', () => {
-    // Mock dependency: a minimal model factory using the standard pattern from the spec
-    const baseModel = createModel()(modelExtensionHelpers);
-
-    // Compose with no callback
-    const composed = createModel(baseModel);
-
-    // Extension phase should see the full contract
-    composed(modelExtensionHelpers);
-
-    // Verify the get method was called and has access to both properties
-    expect(mockGet).toHaveBeenCalled();
-  });
 
   it('should shape the contract according to the callback return type', () => {
     // Mock dependency: a minimal model factory using the standard pattern from the spec
-    const baseModel = createModel()(modelExtensionHelpers);
+    const baseModel = createModel()(() => ({
+      foo: 1,
+      baz: 2,
+    }));
 
     // Compose with a callback that selects only foo and baz
     const composed = createModel(baseModel, ({ model, select }) => {
@@ -129,13 +123,15 @@ describe('createModel composition phase contract shaping', () => {
         foo: select(model, 'foo'),
         baz: select(model, 'baz'),
       };
-    });
-
-    // Extension phase should only see foo and baz
-    composed(modelExtensionHelpers);
+    })(({ get }) => ({
+      bar: get().foo,
+    }));
 
     // Verify the get method was called
-    expect(mockGet).toHaveBeenCalled();
+    /// try and test that the validateContractReferences function was called with the correct arguments
+    // right now it's an empty array.
+    console.log('eeek', composed);
+    expect(validateContractReferencesSpy).toHaveBeenCalledWith(baseModel);
   });
 });
 

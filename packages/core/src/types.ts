@@ -10,6 +10,20 @@ import {
 } from './constants';
 
 /**
+ * DerivedValue interface for tracking derivation metadata.
+ * Represents a value derived from another source with metadata for dependency tracking.
+ */
+export type DerivedValue<T> = T & {
+  __id?: string;
+  source?: any;
+  path?: string;
+  transformer?: (value: any) => unknown;
+  value?: T;
+  valueOf?: () => T;
+  toString?: () => string;
+};
+
+/**
  * The function signature for the extension phase of a two-phase factory.
  * Accepts any arguments and returns the final contract/API surface.
  * This is intentionally generic, as the contract is established by the composition phase.
@@ -22,10 +36,10 @@ export type ExtensionPhaseFn<Args extends unknown[], Result> = (
  * The proxy returned by the composition phase, which must be called as a function (the extension phase).
  * Any other usage (property access, etc.) is illegal and will throw at runtime.
  */
-export type TwoPhaseEnforcementProxy<Args extends unknown[], Result> = {
+export type TwoPhaseEnforcementProxy<Args extends unknown[], Result> = (props: {
   (...args: Args): Result;
   // Any property access is illegal and will throw at runtime (enforced by Proxy)
-};
+}) => any;
 
 /**
  * The factory signature for all Lattice two-phase factories (model, state, actions, view).
@@ -62,8 +76,28 @@ export interface ModelExtensionHelpers {
   set: (state: Record<string, unknown>) => void;
 }
 
+/**
+ * StateExtensionHelpers interface provides methods for building the state contract.
+ * The 'derive' method now supports reactive updates during runtime through subscription.
+ */
 export interface StateExtensionHelpers {
+  /**
+   * Gets the current state values.
+   */
   get: () => Record<string, unknown>;
+
+  /**
+   * Derives a value from a source, tracking dependencies for validation
+   * and enabling reactivity through subscription.
+   *
+   * During runtime (after zustand store creation), the derived values can
+   * subscribe to their sources, allowing for reactive updates when those sources change.
+   *
+   * @param source The source object to derive from
+   * @param property The property name to derive
+   * @param transformer Optional transformation function to apply to the derived value
+   * @returns A derived value that can participate in the reactivity system
+   */
   derive: <T>(
     source: any,
     property: string,
@@ -75,12 +109,36 @@ export interface ActionsExtensionHelpers {
   mutate: (source: any, property: string) => (...args: unknown[]) => unknown;
 }
 
+/**
+ * ViewExtensionHelpers interface provides methods for building the view contract.
+ * The 'derive' method now supports reactive updates during runtime through subscription.
+ */
 export interface ViewExtensionHelpers {
+  /**
+   * Derives a value from a source for a view, tracking dependencies for validation
+   * and enabling reactivity through subscription.
+   *
+   * During runtime, view components can subscribe to derived state values,
+   * allowing for reactive updates when those values change.
+   *
+   * @param source The source object to derive from
+   * @param property The property name to derive
+   * @param transformer Optional transformation function to apply to the derived value
+   * @returns A derived value that can participate in the reactivity system
+   */
   derive: <T>(
     source: any,
     property: string,
     transformer?: (value: T) => unknown
   ) => T;
+
+  /**
+   * Creates a dispatch function that will call an action when invoked.
+   *
+   * @param source The source actions contract
+   * @param property The action name to dispatch to
+   * @returns A function that when called will invoke the specified action
+   */
   dispatch: (source: any, property: string) => (...args: unknown[]) => unknown;
 }
 

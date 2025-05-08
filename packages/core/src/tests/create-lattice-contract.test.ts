@@ -1,63 +1,26 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createLattice } from '../lattice';
-import { createModel } from '../model';
+import { createModel } from '../model_bk';
 import { createState } from '../state';
 import { createActions } from '../actions';
 import { createView } from '../view';
-import {
-  ModelExtensionHelpers,
-  StateExtensionHelpers,
-  ActionsExtensionHelpers,
-  ViewExtensionHelpers,
-} from '../types';
 
 describe('createLattice contract enforcement', () => {
-  // Mock get/set/derive functions for extension helpers
-  const mockGet = vi.fn().mockReturnValue({
-    count: 42,
-    status: 'active',
-  });
-
-  const mockSet = vi.fn();
-  const mockDerive = vi.fn();
-  const mockDispatch = vi.fn();
-  const mockMutate = vi.fn();
-
-  // Create mocked extension helper objects
-  const modelHelpers: ModelExtensionHelpers = {
-    get: mockGet,
-    set: mockSet,
-  };
-
-  const stateHelpers: StateExtensionHelpers = {
-    get: mockGet,
-    derive: mockDerive,
-  };
-
-  const actionsHelpers: ActionsExtensionHelpers = {
-    mutate: mockMutate,
-  };
-
-  const viewHelpers: ViewExtensionHelpers = {
-    derive: mockDerive,
-    dispatch: mockDispatch,
-  };
-
   it('should throw and be a type error if model is not a branded contract', () => {
     expect(() =>
       createLattice('test', {
         model: 123 as any,
-        state: createState()(stateHelpers),
-        actions: createActions()(actionsHelpers),
-        view: createView()(viewHelpers),
+        state: createState()(() => ({})),
+        actions: createActions()(() => ({})),
+        view: createView()(() => ({})),
       })
     ).toThrow();
     expect(() =>
       createLattice('test', {
         model: {} as any,
-        state: createState()(stateHelpers),
-        actions: createActions()(actionsHelpers),
-        view: createView()(viewHelpers),
+        state: createState()(() => ({})),
+        actions: createActions()(() => ({})),
+        view: createView()(() => ({})),
       })
     ).toThrow();
   });
@@ -65,18 +28,18 @@ describe('createLattice contract enforcement', () => {
   it('should throw and be a type error if state is not a branded contract', () => {
     expect(() =>
       createLattice('test', {
-        model: createModel()(modelHelpers),
+        model: createModel()(() => ({})),
         state: 123 as any,
-        actions: createActions()(actionsHelpers),
-        view: createView()(viewHelpers),
+        actions: createActions()(() => ({})),
+        view: createView()(() => ({})),
       })
     ).toThrow();
     expect(() =>
       createLattice('test', {
-        model: createModel()(modelHelpers),
+        model: createModel()(() => ({})),
         state: {} as any,
-        actions: createActions()(actionsHelpers),
-        view: createView()(viewHelpers),
+        actions: createActions()(() => ({})),
+        view: createView()(() => ({})),
       })
     ).toThrow();
   });
@@ -84,18 +47,18 @@ describe('createLattice contract enforcement', () => {
   it('should throw and be a type error if actions is not a branded contract', () => {
     expect(() =>
       createLattice('test', {
-        model: createModel()(modelHelpers),
-        state: createState()(stateHelpers),
+        model: createModel()(() => ({})),
+        state: createState()(() => ({})),
         actions: 123 as any,
-        view: createView()(viewHelpers),
+        view: createView()(() => ({})),
       })
     ).toThrow();
     expect(() =>
       createLattice('test', {
-        model: createModel()(modelHelpers),
-        state: createState()(stateHelpers),
+        model: createModel()(() => ({})),
+        state: createState()(() => ({})),
         actions: {} as any,
-        view: createView()(viewHelpers),
+        view: createView()(() => ({})),
       })
     ).toThrow();
   });
@@ -103,17 +66,17 @@ describe('createLattice contract enforcement', () => {
   it('should throw and be a type error if view is not a branded contract', () => {
     expect(() =>
       createLattice('test', {
-        model: createModel()(modelHelpers),
-        state: createState()(stateHelpers),
-        actions: createActions()(actionsHelpers),
+        model: createModel()(() => ({})),
+        state: createState()(() => ({})),
+        actions: createActions()(() => ({})),
         view: 123 as any,
       })
     ).toThrow();
     expect(() =>
       createLattice('test', {
-        model: createModel()(modelHelpers),
-        state: createState()(stateHelpers),
-        actions: createActions()(actionsHelpers),
+        model: createModel()(() => ({})),
+        state: createState()(() => ({})),
+        actions: createActions()(() => ({})),
         view: {} as any,
       })
     ).toThrow();
@@ -124,10 +87,10 @@ describe('createLattice contract enforcement', () => {
 
   it('should succeed if all parts are valid, branded contracts', () => {
     // Create contracts
-    const model = createModel()(modelHelpers);
-    const state = createState()(stateHelpers);
-    const actions = createActions()(actionsHelpers);
-    const view = createView()(viewHelpers);
+    const model = createModel()(() => ({}));
+    const state = createState()(() => ({}));
+    const actions = createActions()(() => ({}));
+    const view = createView()(() => ({}));
 
     expect(() =>
       createLattice('test', {
@@ -141,23 +104,23 @@ describe('createLattice contract enforcement', () => {
 
   it('should correctly use derived contracts with composition', () => {
     // Create a model with a specific contract
-    const baseModel = createModel()(modelHelpers);
+    const baseModel = createModel()(() => ({}));
 
     // Create a state that uses the same contract shape
-    const baseState = createState()(stateHelpers);
+    const baseState = createState()(() => ({}));
 
     // Create a composite state that uses a callback to shape the contract
     const compositeState = createState(baseState, ({ state, select }) => ({
       count: select(state, 'count'),
       status: select(state, 'status'),
-    }))(stateHelpers);
+    }))(() => ({}));
 
     expect(() =>
       createLattice('test', {
         model: baseModel,
         state: compositeState,
-        actions: createActions()(actionsHelpers),
-        view: createView()(viewHelpers),
+        actions: createActions()(() => ({})),
+        view: createView()(() => ({})),
       })
     ).not.toThrow();
   });
