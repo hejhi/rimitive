@@ -50,11 +50,6 @@ references.
 
 ## Key Questions
 
-### Enforcing Composition Constraints
-
-- How do we detect and prevent multiple compositions of the same model?
-- What's the right error message to display when these constraints are violated?
-
 ### Property Reference Preservation
 
 - If model B extends model A, and uses `get().foo` where `foo` is from model A,
@@ -72,12 +67,6 @@ The type system should:
 1. Preserve type information across model boundaries
 2. Allow `get()` to access properties from all composed models
 3. Infer the complete type without requiring explicit annotations
-4. Generate appropriate errors for constraint violations at compile-time when
-   possible
-
-When model C composes model B which composed model A, model C's type system
-should understand it has access to properties from all three models through the
-unified Zustand store, while still enforcing our composition constraints.
 
 ### Types
 
@@ -119,31 +108,15 @@ The difference is:
 ## Test Cases to Consider
 
 1. **Valid composition** - Model B composes Model A
-2. **Invalid multiple composition** - Model B and Model C both try to compose
-   Model A
-3. **Invalid transitive composition** - Model C tries to compose Model B which
-   composes Model A
-4. **Cross-boundary references** - Model properties that reference properties
+2. **Cross-boundary references** - Model properties that reference properties
    from other models
-5. **Error handling** - Clear error messages when composition constraints are
-   violated
 
 ## Implementation Challenges
 
-- **Constraint enforcement** - Ensuring each model is composed at most once
-- **Error messages** - Providing clear, actionable error messages when
-  constraints are violated
 - **Type preservation** - Maintaining type safety across composition boundaries
 - **Debugging experience** - Making the system transparent and debuggable
 
 ## Initial Mental Model
 
-I'm starting to think of models as building blocks that can be assembled in a
-strict, linear sequence. Each model can contribute to a Zustand store, but with
-clear rules about how they can be combined.
-
-The composition system doesn't create a complex graph of dependencies, but
-rather a simple pipeline where each building block is used exactly once.
-
-This approach may be more restrictive than other solutions, but it leads to a
-more predictable and understandable system.
+I'm starting to think of models as building blocks that can be composed together
+declaratively. Each model can be composed into a single Zustand store.
