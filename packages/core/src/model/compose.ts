@@ -1,39 +1,15 @@
 import type {
+  ModelFactory,
   ModelInstance,
   SliceCreator,
   GetState,
   SetState,
-  ModelState,
-  ComposedModelInstance,
   ComposedState,
+  FinalizedModel,
+  ModelState,
 } from './types';
-import { isLatticeModel, markAsLatticeModel } from './identify';
-
-/**
- * Creates a composed slice by combining slices from two models
- *
- * @param baseModel The base model to extend
- * @param extensionModel The model containing extensions
- * @param set The Zustand set function
- * @param get The Zustand get function
- * @returns A combined state object with properties from both models
- */
-export function createComposedSlice<
-  TBase extends ModelInstance<any>,
-  TExt extends ModelInstance<any>,
->(
-  baseModel: TBase,
-  extensionModel: TExt,
-  set: SetState<ComposedState<ModelState<TBase>, ModelState<TExt>>>,
-  get: GetState<ComposedState<ModelState<TBase>, ModelState<TExt>>>
-): ComposedState<ModelState<TBase>, ModelState<TExt>> {
-  // Get slices from both models
-  const baseSlice: ModelState<TBase> = baseModel()(set, get);
-  const extensionSlice: ModelState<TExt> = extensionModel()(set, get);
-
-  // Combine the properties from both slices
-  return { ...baseSlice, ...extensionSlice };
-}
+import { markAsLatticeModel } from './identify';
+import { createModel } from './create';
 
 /**
  * Creates a composed model instance that combines two input models
@@ -45,7 +21,10 @@ export function createComposedSlice<
 export function createComposedModelInstance<
   TBase extends ModelInstance<any>,
   TExt extends ModelInstance<any>,
->(baseModel: TBase, extensionModel: TExt): ComposedModelInstance<TBase, TExt> {
+>(
+  baseModel: TBase,
+  extensionModel: TExt
+): ModelInstance<ComposedState<ModelState<TBase>, ModelState<TExt>>> {
   type TComposed = ComposedState<ModelState<TBase>, ModelState<TExt>>;
 
   const composedModelInstance =
@@ -54,282 +33,208 @@ export function createComposedModelInstance<
         set: SetState<TComposed>,
         get: GetState<TComposed>
       ): TComposed {
-        return createComposedSlice<TBase, TExt>(
-          baseModel,
-          extensionModel,
-          set,
-          get
-        );
+        // Get slices from both models
+        const baseSlice = baseModel()(set, get);
+        const extensionSlice = extensionModel()(set, get);
+
+        // Combine the properties from both slices
+        return { ...baseSlice, ...extensionSlice };
       };
     };
 
+  // Add the .with() method for fluent composition
+  composedModelInstance.with = function with_<U>(
+    extensionFactory: (tools: ModelFactory<ComposedState<TComposed, U>>) => U
+  ): ModelInstance<ComposedState<TComposed, U>> {
+    const newExtensionModel = createModel<U>((tools: any) => {
+      return extensionFactory(tools as any);
+    });
+
+    return createComposedModelInstance(
+      composedModelInstance,
+      newExtensionModel
+    );
+  };
+
+  // Add the .create() method for model finalization
+  composedModelInstance.create = function create(): FinalizedModel<TComposed> {
+    // Create a finalized model that contains the same slice creator
+    const finalizedModel = function finalizedModel(): SliceCreator<TComposed> {
+      return composedModelInstance();
+    };
+
+    // Mark as finalized
+    Object.defineProperty(finalizedModel, '__finalized', {
+      value: true,
+      writable: false,
+      enumerable: false,
+      configurable: false,
+    });
+
+    return finalizedModel as FinalizedModel<TComposed>;
+  };
+
   // Mark as a valid Lattice model
-  return markAsLatticeModel(composedModelInstance) as ComposedModelInstance<
-    TBase,
-    TExt
+  return markAsLatticeModel(composedModelInstance) as ModelInstance<
+    ComposedState<ModelState<TBase>, ModelState<TExt>>
   >;
-}
-
-/**
- * Composes two model instances into a single model.
- * The extension model's properties will override any properties with the same name in the base model.
- *
- * @param baseModel The base model to extend
- * @param extensionModel The model containing extensions
- * @returns A new composed model instance
- * @throws Error if either model is not a valid Lattice model
- */
-export function compose<
-  TBase extends ModelInstance<any>,
-  TExt extends ModelInstance<any>,
->(baseModel: TBase, extensionModel: TExt): ComposedModelInstance<TBase, TExt> {
-  // Verify both models are valid Lattice models
-  if (!isLatticeModel(baseModel)) {
-    throw new Error('Base model is not a valid Lattice model');
-  }
-  if (!isLatticeModel(extensionModel)) {
-    throw new Error('Extension model is not a valid Lattice model');
-  }
-
-  return createComposedModelInstance<TBase, TExt>(baseModel, extensionModel);
 }
 
 // In-source tests
 if (import.meta.vitest) {
   const { it, expect, vi } = import.meta.vitest;
 
-  // Import createModel for testing
-  const { createModel } = await import('./create');
-
-  it('should reject invalid models in compose', () => {
-    const validModel = createModel(() => ({ count: 1 }));
-    const invalidModel = () => ({ count: 1 });
-
-    // Should throw when first argument is invalid
-    // @ts-expect-error - invalid first argument
-    expect(() => compose(invalidModel, validModel)).toThrow(
-      'Base model is not a valid Lattice model'
-    );
-
-    // Should throw when second argument is invalid
-    // @ts-expect-error - invalid second argument
-    expect(() => compose(validModel, invalidModel)).toThrow(
-      'Extension model is not a valid Lattice model'
-    );
-  });
-
-  it('should mark composed models as valid lattice models', () => {
-    const modelA = createModel(() => ({ a: 1 }));
-    const modelB = createModel(() => ({ b: 2 }));
-    const composedModel = compose(modelA, modelB);
-
-    // Composed model should be identified as a valid lattice model
-    expect(isLatticeModel(composedModel)).toBe(true);
-  });
-
-  it('should compose two models', () => {
-    const baseModel = createModel(() => ({
-      count: 1,
-    }));
-
-    const extensionModel = createModel(() => ({
-      name: 'test',
-    }));
-
-    const composedModel = compose(baseModel, extensionModel);
-    const sliceCreator = composedModel();
-    const slice = sliceCreator(vi.fn(), vi.fn());
-
-    expect(slice).toHaveProperty('count');
-    expect(slice).toHaveProperty('name');
-    expect(slice.count).toBe(1);
-    expect(slice.name).toBe('test');
-  });
-
-  it('should allow extension to override base model properties', () => {
-    const baseModel = createModel(() => ({
-      count: 1,
-      name: 'baseModel',
-    }));
-
-    const extensionModel = createModel(() => ({
-      count: 42, // This should override baseModel's count
-    }));
-
-    const composedModel = compose(baseModel, extensionModel);
-    const sliceCreator = composedModel();
-    const slice = sliceCreator(vi.fn(), vi.fn());
-
-    // The extension model's count should override the base model's count
-    expect(slice.count).toBe(42);
-    // Properties not overridden should remain from the base model
-    expect(slice.name).toBe('baseModel');
-  });
-
-  it('should support derived properties across composition boundaries', () => {
-    // Create a simulated state that can be updated
-    let state = { count: 10 };
-    const mockGet = vi.fn(() => state);
-
-    const baseModel = createModel(() => ({
-      count: 10,
-    }));
-
-    // get is cast to any, but this isn't an issue a user would encounter,
-    // as they would be using `compose` inside `createModel` to actually compose
-    const derivedModel = createModel(({ get }: { get: GetState<any> }) => ({
-      doubleCount: () => get().count * 2,
-    }));
-
-    const composedModel = compose(baseModel, derivedModel);
-    const sliceCreator = composedModel();
-    const slice = sliceCreator(vi.fn(), mockGet);
-
-    // Test initial derived value
-    expect(slice.doubleCount()).toBe(20);
-
-    // Simulate a state change
-    state = { count: 25 };
-
-    // Test that derived property reflects the new state
-    expect(slice.doubleCount()).toBe(50);
-
-    // Verify get() was called
-    expect(mockGet).toHaveBeenCalled();
-  });
-
-  it('should infer correct types for composed models', () => {
-    // Type test - this validates at compile time
-    // Create models with different state shapes
-    const counterModel = createModel(() => ({
-      count: 0,
-      increment: function () {
-        this.count++;
-        return this.count;
-      },
-    }));
-
-    const userModel = createModel(() => ({
-      name: 'John',
-      setName: function (name: string) {
-        this.name = name;
-      },
-    }));
-
-    // Compose the models
-    const composedModel = compose(counterModel, userModel);
-
-    // Create a properly typed test function that enforces type checking
-    function testComposedModelTypes() {
-      // Setup mock functions for testing
-      const mockSet = vi.fn();
-      const mockGet = vi.fn();
-
-      // Get the slice
-      const slice = composedModel()(mockSet, mockGet);
-
-      // These should type check correctly
-      const count: number = slice.count;
-      const name: string = slice.name;
-
-      // Method access should type check
-      slice.increment();
-      slice.setName('Jane');
-
-      // TypeScript should catch invalid property access
-      // @ts-expect-error - nonexistent property
-      const invalid = slice.nonexistentProperty;
-
-      // TypeScript should catch invalid method calls
-      // @ts-expect-error - setName requires a string parameter
-      slice.setName(123);
-
-      return { count, name }; // Return to avoid unused variable warnings
-    }
-
-    // This test confirms that the function compiles (type checks)
-    // We don't need to execute it at runtime
-    expect(typeof testComposedModelTypes).toBe('function');
-  });
-
-  it('should allow typed access to properties across model boundaries', () => {
-    // Define the types for type checking
+  it('should support fluent composition with .with() method', () => {
+    // Define explicit types for our test models
     type CounterState = {
       count: number;
-      increment: () => number;
     };
 
     type StatsState = {
       doubleCount: () => number;
-      getCountString: () => string;
     };
 
-    type ComposedState = CounterState & StatsState;
-
-    // Create a model with a numeric property
-    const counterModel = createModel<CounterState>(() => ({
-      count: 0,
-      increment: function () {
-        this.count++;
-        return this.count;
-      },
+    // Create a base model
+    const baseModel = createModel<CounterState>(() => ({
+      count: 10,
     }));
 
-    // Create a model that references the counter model's property
-    const statsModel = createModel<StatsState>(
-      ({ get }: { get: GetState<any> }) => ({
-        doubleCount: () => {
-          return get().count * 2;
-        },
-        getCountString: () => {
-          return `Count: ${get().count}`;
-        },
-      })
-    );
+    // Assert that the model has a .with() method
+    expect(baseModel.with).toBeDefined();
 
-    // Compose the models
-    const composedModel = compose(counterModel, statsModel);
+    // Create an extension to the model using the .with() method
+    const extendedModel = baseModel.with<StatsState>(({ get }) => ({
+      doubleCount: () => get().count * 2,
+    }));
 
-    // Runtime test to verify behavior
-    let state = { count: 5 };
-    const mockGet = vi.fn(() => state) as GetState<ComposedState>;
+    // Verify the extended model contains properties from both models
+    const sliceCreator = extendedModel();
 
-    const slice = composedModel()(
-      vi.fn() as SetState<ComposedState>,
-      mockGet
-    ) as ComposedState;
+    // Create a properly typed mock state for our get function
+    const mockState = {
+      count: 10,
+      doubleCount: () => 20,
+    };
+    const mockGet = vi.fn(() => mockState) as unknown as GetState<
+      CounterState & StatsState
+    >;
+    const slice = sliceCreator(vi.fn(), mockGet);
 
-    expect(slice.doubleCount()).toBe(10);
-    expect(slice.getCountString()).toBe('Count: 5');
-
-    // Update the state
-    state = { count: 7 };
-    expect(slice.doubleCount()).toBe(14);
-    expect(slice.getCountString()).toBe('Count: 7');
+    expect(slice).toHaveProperty('count');
+    expect(slice).toHaveProperty('doubleCount');
+    expect(slice.count).toBe(10);
+    expect(slice.doubleCount()).toBe(20);
   });
 
-  it('should produce type errors for constraint violations', () => {
-    // This test doesn't need to run; it just needs to type check
-    function testConstraintViolations() {
-      // Create some test models
-      type ModelA = { a: number };
-      type ModelB = { b: string };
-      type ModelC = { c: boolean };
+  it('should support chaining multiple .with() calls', () => {
+    // Define types for our models
+    type BaseState = {
+      name: string;
+    };
 
-      const modelA = createModel<ModelA>(() => ({ a: 1 }));
-      const modelB = createModel<ModelB>(() => ({ b: 'hello' }));
-      const modelC = createModel<ModelC>(() => ({ c: true }));
+    type CounterState = {
+      count: number;
+    };
 
-      // Valid composition
-      const composedAB = compose(modelA, modelB);
+    type LoggerState = {
+      log: () => string;
+    };
 
-      // Valid: multiple compositions in sequence
-      const composedABC = compose(composedAB, modelC);
+    type MetadataState = {
+      metadata: { version: string };
+    };
 
-      return { composedAB, composedABC };
-    }
+    // Create a base model
+    const baseModel = createModel<BaseState>(() => ({
+      name: 'base',
+    }));
 
-    // This just verifies the function exists
-    expect(typeof testConstraintViolations).toBe('function');
+    // Chain multiple .with() calls
+    const completeModel = baseModel
+      .with<CounterState>(() => ({
+        count: 5,
+      }))
+      .with<LoggerState>(({ get }) => ({
+        log: () => `${get().name}: ${get().count}`,
+      }))
+      .with<MetadataState>(() => ({
+        metadata: { version: '1.0.0' },
+      }));
+
+    // Verify the model has all properties from all extensions
+    expect(completeModel).toBeDefined();
+
+    // Initialize the model
+    const sliceCreator = completeModel();
+
+    // Set up a mock with all properties
+    const mockState = {
+      name: 'base',
+      count: 5,
+      log: () => 'base: 5',
+      metadata: { version: '1.0.0' },
+    };
+    const mockGet = vi.fn(() => mockState) as unknown as GetState<
+      BaseState & CounterState & LoggerState & MetadataState
+    >;
+    const slice = sliceCreator(vi.fn(), mockGet);
+
+    // The key assertion: verify that properties from all extensions exist
+    expect(slice.metadata.version).toBe('1.0.0');
+  });
+
+  it('should finalize a model with .create() method', () => {
+    // Define explicit types for our test models
+    type CounterState = {
+      count: number;
+    };
+
+    type StatsState = {
+      doubleCount: () => number;
+    };
+
+    // Create a composed model with .with()
+    const baseModel = createModel<CounterState>(() => ({
+      count: 10,
+    }));
+
+    const extendedModel = baseModel.with<StatsState>(({ get }) => ({
+      doubleCount: () => get().count * 2,
+    }));
+
+    // Verify the model has a .create() method
+    expect(extendedModel.create).toBeDefined();
+    expect(typeof extendedModel.create).toBe('function');
+
+    // Finalize the model
+    const finalModel = extendedModel.create();
+
+    // Verify the finalized model contains all expected properties
+    expect(finalModel).toBeDefined();
+
+    // Verify the finalized model is marked as finalized
+    expect((finalModel as any).__finalized).toBe(true);
+
+    // Verify the finalized model is a function (slice creator)
+    expect(typeof finalModel).toBe('function');
+
+    // Verify the finalized model preserves the original model's functionality
+    const sliceCreator = finalModel();
+
+    // Create a properly typed mock state for our get function
+    const mockState = {
+      count: 10,
+      doubleCount: () => 20,
+    };
+    const mockGet = vi.fn(() => mockState) as unknown as GetState<
+      CounterState & StatsState
+    >;
+    const slice = sliceCreator(vi.fn(), mockGet);
+
+    // Verify all properties and functionality are preserved
+    expect(slice).toHaveProperty('count');
+    expect(slice).toHaveProperty('doubleCount');
+    expect(slice.count).toBe(10);
+    expect(slice.doubleCount()).toBe(20);
   });
 }

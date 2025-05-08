@@ -120,3 +120,153 @@ The difference is:
 
 I'm starting to think of models as building blocks that can be composed together
 declaratively. Each model can be composed into a single Zustand store.
+
+## Model Finalization: The Missing Piece
+
+While thinking through model composition, I realized there's an important step
+missing between model composition and using models with states, views, and
+actions.
+
+The key insight: States, views, and actions all need to operate on a fully
+resolved, complete model. They depend on the runtime Zustand store that will be
+created from a model, not on the intermediate composition steps.
+
+### The Problem
+
+- During composition, we're creating "blueprints" for models
+- States, views, and actions need a finalized model blueprint to derive from
+- We need a clear boundary between the composition phase and the derivation
+  phase
+
+### Proposed Solution: Finalization Step
+
+Introduce a finalization model method, called `model.create()`, that:
+
+1. Is a method on any model created with `createModel`
+2. Performs any final validations or optimizations
+3. Returns a "finalized" model that can be used with `createLattice` and for
+   deriving states/views/actions
+
+This creates a clear sequence:
+
+```
+Model Composition → Model Finalization → Derivation/Store Creation
+```
+
+### Extending to States and Views
+
+Since states and views are similar in nature to models (they're also blueprint
+creators), we likely need the same finalization concept for them. We could have:
+
+- `createLatticeModel(model)`
+- `createLatticeState(state)`
+- `createLatticeView(view)`
+
+Or potentially a generic function like `finalize(blueprint, type)` that handles
+all types.
+
+### Benefits of Finalization
+
+1. **Type Safety**: The type system can enforce that only finalized models are
+   used where complete models are expected
+2. **Clear Boundaries**: Developers have a clear signal for when composition is
+   complete
+3. **Validation**: The finalization step could include validation to catch
+   composition errors early
+4. **Future Extensibility**: Could add optimizations or additional features
+   during finalization
+
+### Mental Model
+
+In our mental model, we now have clear phases:
+
+1. **Composition Phase**: Models, states, and views are composed using
+   `createModel`, `extendModel`, etc.
+2. **Finalization Phase**: Blueprints are finalized, creating a boundary between
+   composition and use
+3. **Derivation Phase**: States, views, and actions derive from finalized
+   blueprints
+4. **Instantiation Phase**: `createLattice` creates the actual Zustand store
+
+This approach respects the blueprint nature of our system while acknowledging
+that there's a point where blueprint definition needs to be complete before
+derivation can occur.
+
+## Correct Composition Pattern: Fluent Composition with .with()
+
+The current implementation in `compose.ts` has some issues with property
+references and composition. A more intuitive approach would use a fluent API
+with a `.with()` method:
+
+```typescript
+// Base model
+const counterModel = createModel(() => ({
+   count: 10,
+}));
+
+// Extensions express what they're adding to the model
+const withStats = counterModel.with(({ get }) => ({
+   doubleCount: () => get().count * 2,
+}));
+
+const withLogger = withStats.with(({ get }) => ({
+   logCount: () => console.log(`Current count: ${get().count}`),
+}));
+
+// Create the finalized model
+const appModel = withLogger.create();
+```
+
+### Advantages of the .with() Pattern
+
+1. **Intuitive API**: The `.with()` method clearly communicates that we're
+   enhancing a model with additional properties and behaviors
+
+2. **Progressive Composition**: Each step builds on the previous one in a clear,
+   readable chain
+
+3. **Explicit Dependencies**: Each extension directly references its base model
+
+4. **Reduced Boilerplate**: No need to repeat `createModel` or use a separate
+   composition function
+
+5. **Natural Reading Order**: The code reads naturally from left to right as
+   "base model with feature A with feature B"
+
+6. **Clear Composition Boundaries**: The relationship between models is explicit
+   at each step
+
+7. **Predictable Types**: Each composition step preserves and extends the type
+   information
+
+### Implementation Considerations
+
+For this pattern, we would need to:
+
+1. Make `createModel()` return an object with a `.with()` method
+2. Ensure each `.with()` call returns another object with the same interface
+3. Add a `.create()` method to finalize the model
+
+This approach ensures that the `get()` function always has the correct context
+for accessing properties across model boundaries, while providing a
+developer-friendly API.
+
+## Implications for Create Method
+
+With this fluent composition pattern, our `create()` method becomes even more
+important. It would:
+
+1. Signal that a model's composition chain is complete
+2. Return a finalized model that can't be further composed
+3. Be the entry point for deriving states, views, and actions
+
+### Benefits of Finalization
+
+1. **Type Safety**: The type system can enforce that only finalized models are
+   used where complete models are expected
+2. **Clear Boundaries**: Developers have a clear signal for when composition is
+   complete
+3. **Validation**: The finalization step could include validation to catch
+   composition errors early
+4. **Future Extensibility**: Could add optimizations or additional features
+   during finalization

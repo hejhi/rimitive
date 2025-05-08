@@ -28,6 +28,19 @@ export type ModelFactory<T> = {
 export type ModelInstance<T> = {
   (): SliceCreator<T>;
   __composition?: unknown;
+  with<U>(
+    factory: (tools: ModelFactory<ComposedState<T, U>>) => U
+  ): ModelInstance<ComposedState<T, U>>;
+  create(): FinalizedModel<T>;
+};
+
+/**
+ * Type for a finalized model, which can no longer be composed but is ready for use
+ * This type represents the end of the composition phase
+ */
+export type FinalizedModel<T> = {
+  (): SliceCreator<T>;
+  __finalized: true;
 };
 
 /**

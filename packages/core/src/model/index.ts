@@ -9,11 +9,16 @@ export * from './types';
 export * from './create';
 
 /**
- * Re-export functions from the compose module
- */
-export * from './compose';
-
-/**
  * Re-export functions from the identify module
  */
 export * from './identify';
+
+/**
+ * Re-export functions from the validation module
+ */
+export * from './validation';
+
+/**
+ * Re-export functions from the compose module
+ */
+export * from './compose';
