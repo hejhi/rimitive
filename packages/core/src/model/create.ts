@@ -96,16 +96,24 @@ if (import.meta.vitest) {
     }) as SetState<any>;
     const mockGet = vi.fn(() => state) as GetState<any>;
 
-    const model = createModel(({ get, set }: ModelFactory) => ({
-      count: 1,
-      increment: function () {
-        set((state: any) => ({ count: state.count + 1 }));
-        return get().count;
-      },
-    }));
+    // Define a type for our model state
+    type CounterState = {
+      count: number;
+      increment: () => number;
+    };
+
+    const model = createModel<CounterState>(
+      ({ get, set }: ModelFactory<CounterState>) => ({
+        count: 1,
+        increment: function () {
+          set((state: CounterState) => ({ count: state.count + 1 }));
+          return get().count;
+        },
+      })
+    );
 
     const sliceCreator = model();
-    const slice = sliceCreator(mockSet, mockGet) as any;
+    const slice = sliceCreator(mockSet, mockGet) as CounterState;
 
     // Call the method and capture its return value
     const result = slice.increment();
@@ -125,13 +133,24 @@ if (import.meta.vitest) {
     let state = { count: 1 };
     const mockGet = vi.fn(() => state) as GetState<any>;
 
-    const model = createModel(({ get }: { get: GetState<any> }) => ({
-      count: 1,
-      doubleCount: () => (get() as any).count * 2,
-    }));
+    // Define a type for our model state
+    type CounterState = {
+      count: number;
+      doubleCount: () => number;
+    };
+
+    const model = createModel<CounterState>(
+      ({ get }: ModelFactory<CounterState>) => ({
+        count: 1,
+        doubleCount: () => get().count * 2,
+      })
+    );
 
     const sliceCreator = model();
-    const slice = sliceCreator(vi.fn() as SetState<any>, mockGet) as any;
+    const slice = sliceCreator(
+      vi.fn() as SetState<CounterState>,
+      mockGet
+    ) as CounterState;
 
     // Test initial derived value
     expect(slice.doubleCount()).toBe(2);

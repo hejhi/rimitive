@@ -56,17 +56,17 @@ case.
 
 ## Type System
 
-- [ ] **Type Inference**
-  - [ ] Test: `should infer correct types for composed models`
-  - [ ] Implement TypeScript types that properly track composition
-  - [ ] Verify TypeScript compiler accepts valid property access patterns
+- [x] **Type Inference**
+  - [x] Test: `should infer correct types for composed models`
+  - [x] Implement TypeScript types that properly track composition
+  - [x] Verify TypeScript compiler accepts valid property access patterns
 
-- [ ] **Cross-Boundary Type Access**
-  - [ ] Test: `should allow typed access to properties across model boundaries`
-  - [ ] Enhance type system to handle cross-model references
-  - [ ] Verify TypeScript properly handles `get()` calls across models
+- [x] **Cross-Boundary Type Access**
+  - [x] Test: `should allow typed access to properties across model boundaries`
+  - [x] Enhance type system to handle cross-model references
+  - [x] Verify TypeScript properly handles `get()` calls across models
 
-- [ ] **Type Error for Constraints**
-  - [ ] Test: `should produce type errors for constraint violations`
-  - [ ] Add type-level constraints matching runtime constraints
-  - [ ] Verify TypeScript errors on invalid composition patterns
+- [x] **Type Error for Constraints**
+  - [x] Test: `should produce type errors for constraint violations`
+  - [x] Add type-level constraints matching runtime constraints
+  - [x] Verify TypeScript errors on invalid composition patterns

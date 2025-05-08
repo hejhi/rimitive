@@ -10,8 +10,10 @@ export const LATTICE_MODEL_MARKER = Symbol('LATTICE_MODEL');
  *
  * @param value The value to mark as a Lattice model
  */
-export function markAsLatticeModel<T extends Function>(value: T): T {
-  (value as any)[LATTICE_MODEL_MARKER] = true;
+export function markAsLatticeModel<
+  T extends ModelInstance<any> & { [LATTICE_MODEL_MARKER]?: boolean },
+>(value: T): T & ModelInstance<any> {
+  value[LATTICE_MODEL_MARKER] = true;
   return value;
 }
 
@@ -21,9 +23,11 @@ export function markAsLatticeModel<T extends Function>(value: T): T {
  * @param value The value to check
  * @returns Whether the value is a valid Lattice model
  */
-export function isLatticeModel(value: any): value is ModelInstance<any> {
+export function isLatticeModel(value: unknown): value is ModelInstance<any> {
   return (
-    typeof value === 'function' && (value as any)[LATTICE_MODEL_MARKER] === true
+    typeof value === 'function' &&
+    LATTICE_MODEL_MARKER in value &&
+    value[LATTICE_MODEL_MARKER] === true
   );
 }
 
@@ -41,7 +45,7 @@ if (import.meta.vitest) {
       expect(isLatticeModel(unmarkedFunction)).toBe(false);
 
       // Mark it manually using the symbol
-      (unmarkedFunction as any)[LATTICE_MODEL_MARKER] = true;
+      unmarkedFunction[LATTICE_MODEL_MARKER] = true;
 
       // Should now be identified as a Lattice model
       expect(isLatticeModel(unmarkedFunction)).toBe(true);
@@ -56,8 +60,10 @@ if (import.meta.vitest) {
       expect(isLatticeModel('string')).toBe(false);
 
       // Even with the marker, non-functions should not be valid
-      const obj = {};
-      (obj as any)[LATTICE_MODEL_MARKER] = true;
+      const obj = {
+        [LATTICE_MODEL_MARKER]: true,
+      };
+
       expect(isLatticeModel(obj)).toBe(false);
     });
 
@@ -73,13 +79,16 @@ if (import.meta.vitest) {
 
       // Before marking
       expect(isLatticeModel(regularFunction)).toBe(false);
-      expect((regularFunction as any)[LATTICE_MODEL_MARKER]).toBeUndefined();
+
+      // @ts-expect-error - marker is not defined on the function
+      expect(regularFunction[LATTICE_MODEL_MARKER]).toBeUndefined();
 
       // After marking
+      // @ts-expect-error - this is not an actual model instance
       const markedFunction = markAsLatticeModel(regularFunction);
 
       // Should be marked with the correct symbol
-      expect((markedFunction as any)[LATTICE_MODEL_MARKER]).toBe(true);
+      expect(markedFunction[LATTICE_MODEL_MARKER]).toBe(true);
 
       // Should pass the isLatticeModel check
       expect(isLatticeModel(markedFunction)).toBe(true);
@@ -92,6 +101,7 @@ if (import.meta.vitest) {
       // Marking the same function twice should have no additional effect
       const fn = () => ({ data: 'test' });
 
+      // @ts-expect-error - this is not an actual model instance
       const marked1 = markAsLatticeModel(fn);
       const marked2 = markAsLatticeModel(marked1);
 
