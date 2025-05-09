@@ -68,7 +68,7 @@ if (import.meta.vitest) {
     const mockGet = vi.fn(() => mockState) as unknown as GetState<
       CounterState & StatsState
     >;
-    const slice = sliceCreator(vi.fn(), mockGet);
+    const slice = sliceCreator({ get: mockGet, set: vi.fn() });
 
     expect(slice).toHaveProperty('count');
     expect(slice).toHaveProperty('doubleCount');
@@ -127,7 +127,7 @@ if (import.meta.vitest) {
     const mockGet = vi.fn(() => mockState) as unknown as GetState<
       BaseState & CounterState & LoggerState & MetadataState
     >;
-    const slice = sliceCreator(vi.fn(), mockGet);
+    const slice = sliceCreator({ get: mockGet, set: vi.fn() });
 
     // The key assertion: verify that properties from all extensions exist
     expect(slice.metadata.version).toBe('1.0.0');
@@ -179,7 +179,7 @@ if (import.meta.vitest) {
     const mockGet = vi.fn(() => mockState) as unknown as GetState<
       CounterState & StatsState
     >;
-    const slice = sliceCreator(vi.fn(), mockGet);
+    const slice = sliceCreator({ get: mockGet, set: vi.fn() });
 
     // Verify all properties and functionality are preserved
     expect(slice).toHaveProperty('count');

@@ -14,16 +14,49 @@ export type GetState<T> = StoreApi<T>['getState'];
 export type SetState<T> = StoreApi<T>['setState'];
 
 /**
- * Type for a factory function used by both models and states
+ * Type for a model method reference mutator (for actions)
+ */
+export type MutateFunction = <M, K extends keyof M>(
+  model: M,
+  key: K
+) => M[K] extends (...args: infer A) => infer R ? (...args: A) => R : never;
+
+/**
+ * Type for a derive function (for states)
+ */
+export type DeriveFunction = <M, K extends keyof M, R = M[K]>(
+  model: M,
+  key: K,
+  transform?: (value: M[K]) => R
+) => R;
+
+/**
+ * Type for a dispatch function (for views)
+ */
+export type DispatchFunction = <A, K extends keyof A>(
+  actions: A, 
+  key: K
+) => A[K];
+
+/**
+ * Type for a factory function with flexible tool options
  */
 export type Factory<T> = {
-  get: GetState<T>;
-  set: SetState<T>;
+  get?: GetState<T>;
+  set?: SetState<T>;
+  mutate?: MutateFunction;
+  derive?: DeriveFunction;
+  dispatch?: DispatchFunction;
 };
 
 /**
- * Type for an instance (model or state), which is a function that returns a slice creator
- * T represents the slice of state this instance contributes
+ * Type for a slice creator function that will be called with appropriate parameters
+ */
+export type SliceCreator<T> = (options: Factory<T>) => T;
+
+/**
+ * Type for an instance (model, state, actions or view)
+ * T represents the slice this instance contributes
  */
 export type Instance<T, F = unknown> = {
   (): SliceCreator<T>;
@@ -36,17 +69,11 @@ export type Instance<T, F = unknown> = {
 
 /**
  * Type for a finalized instance, which can no longer be composed but is ready for use
- * This type represents the end of the composition phase
  */
 export type Finalized<T> = {
   (): SliceCreator<T>;
   __finalized: true;
 };
-
-/**
- * Type for a slice creator function that Zustand will call
- */
-export type SliceCreator<T> = (set: SetState<T>, get: GetState<T>) => T;
 
 /**
  * Utility type to extract the state type from an Instance
@@ -67,6 +94,47 @@ export type ComposedInstance<
   U extends Instance<any>,
   F = unknown,
 > = Instance<ComposedState<InstanceState<T>, InstanceState<U>>, F>;
+
+/**
+ * Branded types for different factory types
+ */
+export interface ModelFactoryBrand {
+  readonly __modelFactoryBrand: unique symbol;
+}
+
+export interface StateFactoryBrand {
+  readonly __stateFactoryBrand: unique symbol;
+}
+
+export interface ActionsFactoryBrand {
+  readonly __actionsFactoryBrand: unique symbol;
+}
+
+export interface ViewFactoryBrand {
+  readonly __viewFactoryBrand: unique symbol;
+}
+
+/**
+ * Branded factory types with specific required properties
+ */
+export type ModelFactory<T> = Factory<T> & {
+  get: GetState<T>;
+  set: SetState<T>;
+} & ModelFactoryBrand;
+
+export type StateFactory<T> = Factory<T> & {
+  get: GetState<T>;
+  derive: DeriveFunction;
+} & StateFactoryBrand;
+
+export type ActionsFactory<T> = Factory<T> & {
+  mutate: MutateFunction;
+} & ActionsFactoryBrand;
+
+export type ViewFactory<T> = Factory<T> & {
+  derive: DeriveFunction;
+  dispatch: DispatchFunction;
+} & ViewFactoryBrand;
 
 // In-source tests
 if (import.meta.vitest) {
@@ -96,5 +164,27 @@ if (import.meta.vitest) {
 
     expect(hasWithMethod).toBe(true);
     expect(hasCreateMethod).toBe(true);
+  });
+
+  it('should verify factory type specializations', () => {
+    // Test ModelFactory has get and set
+    type HasGetSet = ModelFactory<any> extends { get: any; set: any } ? true : false;
+    const modelHasGetSet: HasGetSet = true;
+    expect(modelHasGetSet).toBe(true);
+
+    // Test StateFactory has get and derive
+    type HasGetDerive = StateFactory<any> extends { get: any; derive: any } ? true : false;
+    const stateHasGetDerive: HasGetDerive = true;
+    expect(stateHasGetDerive).toBe(true);
+
+    // Test ActionsFactory has mutate
+    type HasMutate = ActionsFactory<any> extends { mutate: any } ? true : false;
+    const actionsHasMutate: HasMutate = true;
+    expect(actionsHasMutate).toBe(true);
+
+    // Test ViewFactory has derive and dispatch
+    type HasDeriveDispatch = ViewFactory<any> extends { derive: any; dispatch: any } ? true : false;
+    const viewHasDeriveDispatch: HasDeriveDispatch = true;
+    expect(viewHasDeriveDispatch).toBe(true);
   });
 }

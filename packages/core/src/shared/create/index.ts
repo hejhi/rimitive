@@ -2,8 +2,6 @@ import type {
   Factory,
   Instance,
   SliceCreator,
-  GetState,
-  SetState,
   Finalized,
 } from '../types';
 import { finalizeInstance } from '../validation';
@@ -13,16 +11,24 @@ import { createComposedInstance } from '../compose';
  * Creates a slice creator function based on the provided factory
  *
  * @param factory A function that produces a state object with optional methods and derived properties
- * @param set The Zustand set function for updating state
- * @param get The Zustand get function for accessing current state
+ * @param options Object containing tools for the factory (get, set, mutate, derive, etc.)
  * @returns A state object with properties, methods, and derived values
  */
 export function createSliceCreator<T>(
   factory: (tools: Factory<T>) => T,
-  set: SetState<T>,
-  get: GetState<T>
+  options: Factory<T>
 ): T {
-  return factory({ get, set });
+  // Ensure options object is well-formed before passing to factory
+  // This avoids issues when testing different factories with different required tools
+  const safeOptions = {
+    get: options.get,
+    set: options.set,
+    mutate: options.mutate,
+    derive: options.derive,
+    dispatch: options.dispatch
+  };
+
+  return factory(safeOptions);
 }
 
 /**
@@ -40,8 +46,8 @@ export function createInstance<T, F>(
   createEntityFn: <U>(factory: (tools: Factory<U>) => U) => Instance<U, F>
 ): Instance<T, F> {
   const instance = function instance(): SliceCreator<T> {
-    return function sliceCreator(set: SetState<T>, get: GetState<T>) {
-      return createSliceCreator<T>(factory, set, get);
+    return function sliceCreator(options: Factory<T>) {
+      return createSliceCreator<T>(factory, options);
     };
   };
 
@@ -79,6 +85,37 @@ export function createInstance<T, F>(
 if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
+  describe('createSliceCreator', () => {
+    it('should support flexible factory options', () => {
+      // Test with get/set tools (for models)
+      const modelFactory = vi.fn(({ get, set }) => ({
+        count: 1,
+        increment: () => set((state: any) => ({ count: state.count + 1 })),
+        getCount: () => get().count,
+      }));
+      
+      const mockGet = vi.fn(() => ({ count: 1 }));
+      const mockSet = vi.fn();
+      
+      const modelSlice = createSliceCreator(modelFactory, { get: mockGet, set: mockSet });
+      expect(modelFactory).toHaveBeenCalledWith({ get: mockGet, set: mockSet });
+      expect(modelSlice).toHaveProperty('count');
+      expect(modelSlice).toHaveProperty('increment');
+      
+      // Test with mutate tool (for actions)
+      const mockMutate = vi.fn();
+      const actionsFactory = vi.fn(({ mutate }) => ({
+        increment: mutate({} as any, 'increment'),
+        reset: mutate({} as any, 'reset'),
+      }));
+      
+      const actionsSlice = createSliceCreator(actionsFactory, { mutate: mockMutate });
+      expect(actionsFactory).toHaveBeenCalledWith({ mutate: mockMutate });
+      expect(actionsSlice).toHaveProperty('increment');
+      expect(actionsSlice).toHaveProperty('reset');
+    });
+  });
+
   describe('createInstance', () => {
     // Create test doubles for dependencies
     const testMarkerFn = <T>(value: T): T => value;
@@ -87,8 +124,8 @@ if (import.meta.vitest) {
       factory: (tools: Factory<T>) => T
     ): Instance<T, unknown> => {
       const instance = function instance(): SliceCreator<T> {
-        return function sliceCreator(set: SetState<T>, get: GetState<T>) {
-          return factory({ get, set });
+        return function sliceCreator(options: Factory<T>) {
+          return createSliceCreator(factory, options);
         };
       };
 
@@ -117,11 +154,11 @@ if (import.meta.vitest) {
 
       // The slice creator should be a function
       const sliceCreator = instance();
-      const mockSet = vi.fn() as SetState<any>;
-      const mockGet = vi.fn() as GetState<any>;
+      const mockGet = vi.fn();
+      const mockSet = vi.fn();
 
       // Call the slice creator
-      const slice = sliceCreator(mockSet, mockGet);
+      const slice = sliceCreator({ get: mockGet, set: mockSet });
 
       // Check that the factory is called with the correct parameters
       expect(factorySpy).toHaveBeenCalledWith({ get: mockGet, set: mockSet });
@@ -139,8 +176,8 @@ if (import.meta.vitest) {
         } else {
           state = { ...state, ...updater };
         }
-      }) as SetState<any>;
-      const mockGet = vi.fn(() => state) as GetState<any>;
+      });
+      const mockGet = vi.fn(() => state);
 
       // Define a type for our state
       type CounterState = {
@@ -162,7 +199,7 @@ if (import.meta.vitest) {
       );
 
       const sliceCreator = instance();
-      const slice = sliceCreator(mockSet, mockGet) as CounterState;
+      const slice = sliceCreator({ get: mockGet, set: mockSet }) as CounterState;
 
       // Call the method and capture its return value
       const result = slice.increment();
@@ -177,21 +214,30 @@ if (import.meta.vitest) {
       expect(result).toBe(2);
     });
 
-    it('should support derived properties using get()', () => {
-      // Create a simulated state that can be updated
-      let state = { count: 1 };
-      const mockGet = vi.fn(() => state) as GetState<any>;
-
-      // Define a type for our state
-      type CounterState = {
-        count: number;
-        doubleCount: () => number;
+    it('should support actions with mutate', () => {
+      // Create mock models with the methods we need
+      const mockModel = {
+        increment: vi.fn(),
+        reset: vi.fn()
       };
 
-      const instance = createInstance<CounterState, unknown>(
-        ({ get }) => ({
-          count: 1,
-          doubleCount: () => get().count * 2,
+      // Define a real mutate function
+      const realMutate = <M, K extends keyof M>(model: M, key: K) => {
+        return ((...args: any[]) => {
+          return (model[key] as any)(...args);
+        }) as any;
+      };
+
+      // Define a type for our actions
+      type CounterActions = {
+        increment: () => void;
+        reset: () => void;
+      };
+
+      const instance = createInstance<CounterActions, unknown>(
+        ({ mutate }) => ({
+          increment: mutate(mockModel, 'increment'),
+          reset: mutate(mockModel, 'reset'),
         }),
         testMarkerFn,
         'test',
@@ -199,22 +245,21 @@ if (import.meta.vitest) {
       );
 
       const sliceCreator = instance();
-      const slice = sliceCreator(
-        vi.fn() as SetState<CounterState>,
-        mockGet
-      ) as CounterState;
+      const actions = sliceCreator({ mutate: realMutate }) as CounterActions;
 
-      // Test initial derived value
-      expect(slice.doubleCount()).toBe(2);
+      // Verify actions contains the expected methods
+      expect(actions).toHaveProperty('increment');
+      expect(actions).toHaveProperty('reset');
+      expect(typeof actions.increment).toBe('function');
+      expect(typeof actions.reset).toBe('function');
 
-      // Simulate a state change
-      state = { count: 5 };
+      // Call the actions
+      actions.increment();
+      actions.reset();
 
-      // Test that derived property reflects the new state
-      expect(slice.doubleCount()).toBe(10);
-
-      // Verify get() was called
-      expect(mockGet).toHaveBeenCalled();
+      // Verify the model methods were called
+      expect(mockModel.increment).toHaveBeenCalled();
+      expect(mockModel.reset).toHaveBeenCalled();
     });
   });
 }

@@ -100,10 +100,13 @@ if (import.meta.vitest) {
     const mockGet = vi.fn() as GetState<any>;
 
     // Call the slice creator
-    const slice = sliceCreator(mockSet, mockGet);
+    const slice = sliceCreator({ get: mockGet, set: mockSet });
 
     // Check that the factory is called with the correct parameters
-    expect(factorySpy).toHaveBeenCalledWith({ get: mockGet, set: mockSet });
+    expect(factorySpy).toHaveBeenCalledWith(expect.objectContaining({
+      get: mockGet,
+      set: mockSet
+    }));
 
     // Also verify the slice contains the expected primitive value
     expect(slice).toEqual({ count: 1 });
@@ -136,7 +139,7 @@ if (import.meta.vitest) {
     }));
 
     const sliceCreator = state();
-    const slice = sliceCreator(mockSet, mockGet) as CounterState;
+    const slice = sliceCreator({ get: mockGet, set: mockSet }) as CounterState;
 
     // Call the method and capture its return value
     const result = slice.increment();
@@ -168,10 +171,10 @@ if (import.meta.vitest) {
     }));
 
     const sliceCreator = state();
-    const slice = sliceCreator(
-      vi.fn() as SetState<CounterState>,
-      mockGet
-    ) as CounterState;
+    const slice = sliceCreator({
+      get: mockGet,
+      set: vi.fn() as SetState<CounterState>
+    }) as CounterState;
 
     // Test initial derived value
     expect(slice.doubleCount()).toBe(2);
