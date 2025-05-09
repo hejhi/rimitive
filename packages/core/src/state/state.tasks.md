@@ -9,180 +9,109 @@ case.
 > composable blueprints that will later be used by Zustand to create actual
 > reactive state. No Zustand store is created during the composition phase.
 
-## Refactoring for Shared Composition Logic
+## State-Specific Implementation Deltas
 
-- [ ] **Extract Common Blueprint Composition Patterns**
+Based on the comparison between the current implementation (copied from model)
+and the design in state.notes.md, the following tasks need to be addressed:
+
+- [ ] **Add derive() Helper**
   - [ ] Test:
-        `should extract common patterns that can be reused by model and state blueprints`
-  - [ ] Refactor model implementation to extract composition, with(), and
-        create() patterns
-  - [ ] Create shared utilities that can be used by both model and state
-        blueprint systems
-  - [ ] Verify original model tests still pass with refactored implementation
+        `should add derive() helper to StateFactory tools for finalized model references`
+  - [ ] Design the derive() API for referencing finalized model properties
+  - [ ] Implement derive() helper that accepts only finalized models
+  - [ ] Add proper type constraints for derive() to ensure type safety
 
-## Core State Blueprint Functionality
+- [ ] **Update Method Signatures**
+  - [ ] Test: `should restrict derive() to only accept finalized models`
+  - [ ] Update StateFactory type to include derive() that accepts FinalizedModel
+  - [ ] Add runtime validation to enforce that only finalized models can be used
+        with derive()
+  - [ ] Ensure TypeScript enforces this constraint at compile time
+
+- [ ] **Implement Model-Only Derivation**
+  - [ ] Test:
+        `should reject derivation from non-finalized models and state objects`
+  - [ ] Add validation to check that derive() sources are finalized models
+  - [ ] Implement helpful error messages for invalid derivation attempts
+  - [ ] Create test cases that verify invalid derivations are caught
+
+- [ ] **Add State-Model Integration Test**
+  - [ ] Test: `should properly derive values from multiple finalized models`
+  - [ ] Create test cases with multiple finalized models as sources
+  - [ ] Verify state can correctly reference properties from different model
+        sources
+  - [ ] Test that property changes in models are reflected in derived state
+        values
+
+- [ ] **Document State-Specific Usage Patterns**
+  - [ ] Create examples of proper state blueprint usage patterns
+  - [ ] Document the difference between state and model composition patterns
+  - [ ] Provide clear examples of how to use derive() with finalized models
+  - [ ] Update docstrings to emphasize state-specific constraints and patterns
+
+## Current Implementation Tasks (Copied from Model)
+
+These tasks represent the existing functionality that was copied from the model
+system:
 
 - [ ] **Basic State Blueprint Creation**
-  - [ ] Test:
+  - [x] Test:
         `should create a basic state blueprint referencing a finalized model blueprint`
-  - [ ] Implement `createState` to return a composable state blueprint
-  - [ ] Verify state blueprint contains expected property definitions
+  - [x] Implement `createState` to return a composable state blueprint
+  - [x] Verify state blueprint contains expected property definitions
 
-- [ ] **State Derivation Definitions**
-  - [ ] Test:
-        `should define derivation patterns using derive() with finalized model blueprints`
-  - [ ] Implement the `derive` helper for defining transformations of model
-        values
-  - [ ] Verify derivation definitions correctly specify their source and
-        transformation
+- [ ] **State Property Methods**
+  - [x] Test: `should support methods in state state`
+  - [x] Add support for method definitions in state factory
+  - [x] Ensure methods retain access to state via `get()`
 
-- [ ] **Direct Model Reference Definitions**
-  - [ ] Test: `should support defining references to model properties via get()`
-  - [ ] Enable state property definitions to reference model property
-        definitions via get()
-  - [ ] Verify state blueprint correctly defines references to model properties
+- [ ] **Direct State References**
+  - [x] Test: `should support derived properties using get()`
+  - [x] Implement ability for properties to reference other properties via
+        `get()`
+  - [x] Verify reactivity when source properties change
 
 ## State Blueprint Composition
 
 - [ ] **Basic Blueprint Composition**
-  - [ ] Test: `should compose two state blueprints`
-  - [ ] Implement the `.with()` functionality for state blueprint composition
-  - [ ] Verify composed state blueprint contains properties from both blueprints
+  - [x] Test: `should compose two state blueprints`
+  - [x] Implement the `.with()` functionality for state blueprint composition
+  - [x] Verify composed state blueprint contains properties from both blueprints
 
 - [ ] **Property Definition Override**
-  - [ ] Test:
+  - [x] Test:
         `should allow extension blueprint to override base state property definitions`
-  - [ ] Ensure property definitions from extension take precedence over base
+  - [x] Ensure property definitions from extension take precedence over base
         blueprint
-  - [ ] Verify correct property definitions are used when names overlap
+  - [x] Verify correct property definitions are used when names overlap
 
 - [ ] **Composed Blueprint Reference Definitions**
-  - [ ] Test:
+  - [x] Test:
         `should define access to base state properties via get() in extensions`
-  - [ ] Ensure property definitions can reference other property definitions via
+  - [x] Ensure property definitions can reference other property definitions via
         get()
-  - [ ] Verify composed property definitions correctly reference other property
+  - [x] Verify composed property definitions correctly reference other property
         definitions
 
-## Model Blueprint References
+## Type System Improvements for State
 
-- [ ] **Finalized Model-Only Derivation**
+- [ ] **Improve Finalized Model Type Constraints**
   - [ ] Test:
-        `should only define derivations from finalized model blueprints, not other states`
-  - [ ] Restrict the derive function to only accept finalized model blueprints
-  - [ ] Verify derive() cannot be used with raw state blueprints
+        `should enforce at type level that derive() only accepts finalized models`
+  - [ ] Update the TypeScript types to better constrain derive() parameters
+  - [ ] Ensure TypeScript errors on attempts to use non-finalized models
 
-- [ ] **Multiple Model Blueprint References**
+- [ ] **Cross-Model-State Type Safety**
   - [ ] Test:
-        `should reference properties from multiple finalized model blueprints`
-  - [ ] Enable state to define derivations from multiple finalized model
-        blueprints
-  - [ ] Verify state blueprint can correctly reference properties from different
-        model blueprints
+        `should maintain type safety when deriving from multiple model sources`
+  - [ ] Enhance type definitions for multi-model integration
+  - [ ] Verify TypeScript correctly infers combined types
 
-## Composition Constraints
+## End-to-End Example Development
 
-- [ ] **State Blueprint Identification**
-  - [ ] Test: `should identify valid lattice state blueprints`
-  - [ ] Add markers to identify lattice state blueprints (reuse from model if
-        possible)
-  - [ ] Verify composition only accepts valid lattice state blueprints
-
-## Error Handling
-
-- [ ] **Invalid State Blueprint Error**
-  - [ ] Test: `should throw clear error when composing with non-state blueprint`
-  - [ ] Implement validation for state blueprint arguments
-  - [ ] Verify descriptive error message is thrown
-
-- [ ] **Invalid Model Blueprint Error**
-  - [ ] Test:
-        `should throw clear error when deriving from non-finalized model blueprint`
-  - [ ] Implement validation for model blueprint arguments in derive()
-  - [ ] Verify descriptive error message is thrown
-
-## Type System
-
-- [ ] **Type Inference for Blueprints**
-  - [ ] Test: `should infer correct types for state blueprint properties`
-  - [ ] Implement TypeScript types that properly track state blueprint
-        properties
-  - [ ] Verify TypeScript compiler accepts valid property access patterns in
-        blueprints
-
-- [ ] **Composition Type Tracking**
-  - [ ] Test: `should track types through blueprint composition chain`
-  - [ ] Enhance type system to handle state blueprint composition
-  - [ ] Verify TypeScript properly tracks composed state blueprint types
-
-- [ ] **Finalized Model Type Constraints**
-  - [ ] Test:
-        `should enforce that derive() only accepts finalized model blueprints`
-  - [ ] Add type-level constraints for the derive function
-  - [ ] Verify TypeScript errors when attempting to derive from non-finalized
-        model blueprints
-
-## Fluent Composition with .with()
-
-- [ ] **Basic Fluent Blueprint Composition**
-  - [ ] Test:
-        `should support fluent composition with .with() method for blueprints`
-  - [ ] Implement `.with()` method on state blueprint instances (reuse model
-        pattern if possible)
-  - [ ] Verify state blueprints can be composed using the fluent syntax
-
-- [ ] **Chainable Blueprint Composition**
-  - [ ] Test: `should support chaining multiple .with() calls for blueprints`
-  - [ ] Ensure `.with()` returns a state blueprint instance that also has a
-        `.with()` method
-  - [ ] Verify chained composition produces a state blueprint with all
-        properties
-
-## State Blueprint Finalization with .create()
-
-- [ ] **Basic State Blueprint Finalization**
-  - [ ] Test: `should finalize a state blueprint with .create() method`
-  - [ ] Implement `.create()` method on state blueprint instances (reuse model
-        pattern if possible)
-  - [ ] Verify finalized state blueprints contain all expected property
-        definitions
-
-- [ ] **Finalized State Blueprint Type Safety**
-  - [ ] Test: `should return a distinct finalized state blueprint type`
-  - [ ] Create a dedicated type for finalized state blueprints
-  - [ ] Ensure finalized state blueprints have appropriate type constraints
-  - [ ] Verify type system distinguishes between composed and finalized state
-        blueprints
-
-- [ ] **Composition Prevention After Blueprint Finalization**
-  - [ ] Test: `should prevent further composition after blueprint finalization`
-  - [ ] Ensure finalized state blueprints cannot be further composed
-  - [ ] Verify attempts to compose a finalized state blueprint result in type
-        errors or runtime errors
-
-## Integration with Model Blueprints
-
-- [ ] **Model Blueprint Integration**
-  - [ ] Test: `should integrate with finalized model blueprints`
-  - [ ] Enable state blueprints to properly reference finalized model blueprints
-  - [ ] Verify state blueprint correctly defines derivations from model
-        blueprint properties
-
-## Preparation for Zustand Integration
-
-- [ ] **Blueprint to Zustand Preparation**
-  - [ ] Test: `should prepare state blueprint for eventual Zustand integration`
-  - [ ] Design the interface between state blueprints and the future Zustand
-        store
-  - [ ] Ensure state blueprints can be converted to Zustand selectors when store
-        is created (future task)
-  - [ ] Document the boundary between blueprint composition and runtime
-        instantiation
-
-## End-to-End Blueprint Architecture
-
-- [ ] **End-to-End Blueprint Integration**
-  - [ ] Test:
-        `should assemble a complete blueprint system with model, state, and view blueprints`
-  - [ ] Create tests that combine all blueprint components
-  - [ ] Verify end-to-end blueprint architecture maintains correct references
+- [ ] **Create Complete State Usage Example**
+  - [ ] Develop an end-to-end example showing state deriving from finalized
+        models
+  - [ ] Include multiple composition layers and model sources
+  - [ ] Document best practices for working with state and models
+  - [ ] Add as an example in the documentation

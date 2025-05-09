@@ -1,9 +1,14 @@
 import type { ModelInstance } from './types';
+import {
+  createMarker,
+  markAsLatticeObject,
+  isLatticeObject,
+} from '../shared/identify';
 
 /**
  * A symbol used to mark valid Lattice models
  */
-export const LATTICE_MODEL_MARKER = Symbol('LATTICE_MODEL');
+export const LATTICE_MODEL_MARKER = createMarker('LATTICE_MODEL');
 
 /**
  * Marks a value as a valid Lattice model
@@ -11,10 +16,9 @@ export const LATTICE_MODEL_MARKER = Symbol('LATTICE_MODEL');
  * @param value The value to mark as a Lattice model
  */
 export function markAsLatticeModel<
-  T extends ModelInstance<any> & { [LATTICE_MODEL_MARKER]?: boolean },
+  T extends ModelInstance<any> & Record<symbol, boolean>,
 >(value: T): T & ModelInstance<any> {
-  value[LATTICE_MODEL_MARKER] = true;
-  return value;
+  return markAsLatticeObject(value, LATTICE_MODEL_MARKER);
 }
 
 /**
@@ -24,11 +28,7 @@ export function markAsLatticeModel<
  * @returns Whether the value is a valid Lattice model
  */
 export function isLatticeModel(value: unknown): value is ModelInstance<any> {
-  return (
-    typeof value === 'function' &&
-    LATTICE_MODEL_MARKER in value &&
-    value[LATTICE_MODEL_MARKER] === true
-  );
+  return isLatticeObject(value, LATTICE_MODEL_MARKER);
 }
 
 // In-source tests
@@ -45,7 +45,7 @@ if (import.meta.vitest) {
       expect(isLatticeModel(unmarkedFunction)).toBe(false);
 
       // Mark it manually using the symbol
-      unmarkedFunction[LATTICE_MODEL_MARKER] = true;
+      (unmarkedFunction as any)[LATTICE_MODEL_MARKER] = true;
 
       // Should now be identified as a Lattice model
       expect(isLatticeModel(unmarkedFunction)).toBe(true);

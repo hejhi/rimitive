@@ -1,15 +1,11 @@
 import type {
-  ModelFactory,
   ModelInstance,
-  SliceCreator,
   GetState,
-  SetState,
   ComposedState,
-  FinalizedModel,
   ModelState,
 } from './types';
-import { markAsLatticeModel } from './identify';
-import { createModel } from './create';
+import { createModel, modelMarker } from './create';
+import { createComposedInstance } from '../shared/compose';
 
 /**
  * Creates a composed model instance that combines two input models
@@ -25,59 +21,12 @@ export function createComposedModelInstance<
   baseModel: TBase,
   extensionModel: TExt
 ): ModelInstance<ComposedState<ModelState<TBase>, ModelState<TExt>>> {
-  type TComposed = ComposedState<ModelState<TBase>, ModelState<TExt>>;
-
-  const composedModelInstance =
-    function composedModelInstance(): SliceCreator<TComposed> {
-      return function composedSliceCreator(
-        set: SetState<TComposed>,
-        get: GetState<TComposed>
-      ): TComposed {
-        // Get slices from both models
-        const baseSlice = baseModel()(set, get);
-        const extensionSlice = extensionModel()(set, get);
-
-        // Combine the properties from both slices
-        return { ...baseSlice, ...extensionSlice };
-      };
-    };
-
-  // Add the .with() method for fluent composition
-  composedModelInstance.with = function with_<U>(
-    extensionFactory: (tools: ModelFactory<ComposedState<TComposed, U>>) => U
-  ): ModelInstance<ComposedState<TComposed, U>> {
-    const newExtensionModel = createModel<U>((tools: any) => {
-      return extensionFactory(tools as any);
-    });
-
-    return createComposedModelInstance(
-      composedModelInstance,
-      newExtensionModel
-    );
-  };
-
-  // Add the .create() method for model finalization
-  composedModelInstance.create = function create(): FinalizedModel<TComposed> {
-    // Create a finalized model that contains the same slice creator
-    const finalizedModel = function finalizedModel(): SliceCreator<TComposed> {
-      return composedModelInstance();
-    };
-
-    // Mark as finalized
-    Object.defineProperty(finalizedModel, '__finalized', {
-      value: true,
-      writable: false,
-      enumerable: false,
-      configurable: false,
-    });
-
-    return finalizedModel as FinalizedModel<TComposed>;
-  };
-
-  // Mark as a valid Lattice model
-  return markAsLatticeModel(composedModelInstance) as ModelInstance<
-    ComposedState<ModelState<TBase>, ModelState<TExt>>
-  >;
+  return createComposedInstance(
+    baseModel,
+    extensionModel,
+    createModel,
+    modelMarker
+  );
 }
 
 // In-source tests

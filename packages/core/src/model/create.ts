@@ -1,14 +1,9 @@
-import type {
-  ModelFactory,
-  ModelInstance,
-  SliceCreator,
-  GetState,
-  SetState,
-  FinalizedModel,
-} from './types';
+import type { ModelFactory, ModelInstance, GetState, SetState } from './types';
 import { markAsLatticeModel } from './identify';
-import { validateModel } from './validation';
-import { createComposedModelInstance } from './compose';
+import {
+  createInstance,
+  createSliceCreator as sharedCreateSliceCreator,
+} from '../shared/create';
 
 /**
  * Creates a slice creator function based on the provided factory
@@ -23,7 +18,17 @@ export function createSliceCreator<T>(
   set: SetState<T>,
   get: GetState<T>
 ): T {
-  return factory({ get, set });
+  return sharedCreateSliceCreator(factory, set, get);
+}
+
+/**
+ * Marker function for model instances
+ *
+ * @param instance The instance to mark
+ * @returns The marked instance
+ */
+export function modelMarker<V>(instance: V): V {
+  return markAsLatticeModel(instance as any) as unknown as V;
 }
 
 /**
@@ -35,56 +40,7 @@ export function createSliceCreator<T>(
 export function createModelInstance<T>(
   factory: (tools: ModelFactory<T>) => T
 ): ModelInstance<T> {
-  const modelInstance = function modelInstance(): SliceCreator<T> {
-    return function sliceCreator(set: SetState<T>, get: GetState<T>) {
-      return createSliceCreator<T>(factory, set, get);
-    };
-  };
-
-  // Add the .with() method for fluent composition
-  modelInstance.with = function with_<U>(
-    extensionFactory: (tools: ModelFactory<any>) => U
-  ): ModelInstance<any> {
-    // Create a new model from the extension factory
-    const extensionModel = createModel<U>((tools) => {
-      // We need to explicitly annotate tools with any here because of TypeScript's limitations
-      // with modeling the cross-model property access
-      return extensionFactory(tools as any);
-    });
-
-    // Compose the current model with the extension model
-    return createComposedModelInstance(modelInstance, extensionModel);
-  };
-
-  // Add the .create() method for model finalization
-  modelInstance.create = function create(): FinalizedModel<T> {
-    // Validate model for circular references before finalizing
-    validateModel(modelInstance);
-
-    // Create a finalized model that contains the same slice creator
-    const finalizedModel = function finalizedModel(): SliceCreator<T> {
-      return modelInstance();
-    };
-
-    // Mark as finalized
-    Object.defineProperty(finalizedModel, '__finalized', {
-      value: true,
-      writable: false,
-      enumerable: false,
-      configurable: false,
-    });
-
-    // Add a .with() method that throws when called to provide a clear error message
-    // This ensures runtime safety in addition to compile-time safety
-    (finalizedModel as any).with = function withAfterFinalization() {
-      throw new Error('Cannot compose a finalized model');
-    };
-
-    return finalizedModel as FinalizedModel<T>;
-  };
-
-  // Mark this as a valid Lattice model
-  return markAsLatticeModel(modelInstance);
+  return createInstance<T, unknown>(factory, modelMarker, 'model', createModel);
 }
 
 /**
