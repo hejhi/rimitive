@@ -1,6 +1,13 @@
 import type { Instance } from '../types';
 
 /**
+ * Branding types for Lattice objects
+ */
+export type Branded<T, BrandName extends string> = T & {
+  readonly __brand: BrandName;
+};
+
+/**
  * Generic function to create a marker for Lattice objects
  *
  * @param markerName The name of the marker to create
@@ -17,12 +24,12 @@ export function createMarker(markerName: string): symbol {
  * @param marker The marker symbol to use
  * @returns The marked value
  */
-export function markAsLatticeObject<
-  T extends Instance<any> & Record<symbol, boolean>,
-  M extends symbol,
->(value: T, marker: M): T & Instance<any> {
-  (value as any)[marker] = true;
-  return value;
+export function markAsLatticeObject<T, M extends symbol>(
+  value: T,
+  marker: M
+): T & Record<M, boolean> {
+  (value as Record<M, boolean>)[marker] = true;
+  return value as T & Record<M, boolean>;
 }
 
 /**
@@ -39,7 +46,7 @@ export function isLatticeObject(
   return (
     typeof value === 'function' &&
     Object.prototype.hasOwnProperty.call(value, marker) &&
-    (value as any)[marker] === true
+    value[marker as keyof typeof value] === true
   );
 }
 

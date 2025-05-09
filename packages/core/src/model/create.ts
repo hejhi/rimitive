@@ -28,7 +28,7 @@ export function createSliceCreator<T>(
  * @returns The marked instance
  */
 export function modelMarker<V>(instance: V): V {
-  return markAsLatticeModel(instance as any) as unknown as V;
+  return markAsLatticeModel(instance);
 }
 
 /**

@@ -22,3 +22,8 @@ export * from './validation';
  * Re-export functions from the compose module
  */
 export * from './compose';
+
+/**
+ * Re-export shared types and utilities
+ */
+export * from './instance';

@@ -83,9 +83,18 @@ export function validateInstance<T>(
 }
 
 /**
+ * Type for a finalized instance with an erroring .with() method
+ */
+type InstanceWithErroringWith<T> = {
+  (): SliceCreator<T>;
+  with: () => never; // Type 'never' ensures this function never returns normally
+  __finalized?: boolean;
+};
+
+/**
  * Creates a finalized instance from an instance after validation
  *
- * @param instance The instance to finalize
+ * @param instance The instance to validate
  * @param entityName The name of the entity (model, state, etc.) for error messages
  * @returns A finalized instance that cannot be further composed
  */
@@ -99,7 +108,7 @@ export function finalizeInstance<T>(
   // Create the finalized instance
   const finalizedInstance = function finalizedInstance(): SliceCreator<T> {
     return instance();
-  };
+  } as InstanceWithErroringWith<T>;
 
   // Mark as finalized
   Object.defineProperty(finalizedInstance, '__finalized', {
@@ -111,7 +120,7 @@ export function finalizeInstance<T>(
 
   // Add a .with() method that throws when called to provide a clear error message
   // This ensures runtime safety in addition to compile-time safety
-  (finalizedInstance as any).with = function withAfterFinalization() {
+  finalizedInstance.with = function withAfterFinalization(): never {
     throw new Error(`Cannot compose a finalized ${entityName}`);
   };
 

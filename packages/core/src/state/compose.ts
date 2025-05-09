@@ -6,6 +6,7 @@ import type {
 } from './types';
 import { createState, stateMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
+import { isFinalized } from '../shared/instance';
 
 /**
  * Creates a composed state instance that combines two input states
@@ -162,7 +163,7 @@ if (import.meta.vitest) {
     expect(finalState).toBeDefined();
 
     // Verify the finalized state is marked as finalized
-    expect((finalState as any).__finalized).toBe(true);
+    expect(isFinalized(finalState)).toBe(true);
 
     // Verify the finalized state is a function (slice creator)
     expect(typeof finalState).toBe('function');

@@ -3,7 +3,13 @@ import {
   createMarker,
   markAsLatticeObject,
   isLatticeObject,
+  Branded,
 } from '../shared/identify';
+
+/**
+ * Branded type for Lattice models
+ */
+export type LatticeModel<T> = Branded<T, 'LatticeModel'>;
 
 /**
  * A symbol used to mark valid Lattice models
@@ -15,9 +21,9 @@ export const LATTICE_MODEL_MARKER = createMarker('LATTICE_MODEL');
  *
  * @param value The value to mark as a Lattice model
  */
-export function markAsLatticeModel<
-  T extends ModelInstance<any> & Record<symbol, boolean>,
->(value: T): T & ModelInstance<any> {
+export function markAsLatticeModel<T>(
+  value: T
+): T & Record<typeof LATTICE_MODEL_MARKER, boolean> {
   return markAsLatticeObject(value, LATTICE_MODEL_MARKER);
 }
 
@@ -45,7 +51,13 @@ if (import.meta.vitest) {
       expect(isLatticeModel(unmarkedFunction)).toBe(false);
 
       // Mark it manually using the symbol
-      (unmarkedFunction as any)[LATTICE_MODEL_MARKER] = true;
+      // We need to use unknown first since functions don't naturally have index signatures
+      (
+        unmarkedFunction as unknown as Record<
+          typeof LATTICE_MODEL_MARKER,
+          boolean
+        >
+      )[LATTICE_MODEL_MARKER] = true;
 
       // Should now be identified as a Lattice model
       expect(isLatticeModel(unmarkedFunction)).toBe(true);
@@ -80,11 +92,15 @@ if (import.meta.vitest) {
       // Before marking
       expect(isLatticeModel(regularFunction)).toBe(false);
 
-      // @ts-expect-error - marker is not defined on the function
-      expect(regularFunction[LATTICE_MODEL_MARKER]).toBeUndefined();
+      // Check that the marker is not defined yet
+      expect(
+        Object.prototype.hasOwnProperty.call(
+          regularFunction,
+          LATTICE_MODEL_MARKER
+        )
+      ).toBe(false);
 
       // After marking
-      // @ts-expect-error - this is not an actual model instance
       const markedFunction = markAsLatticeModel(regularFunction);
 
       // Should be marked with the correct symbol
@@ -101,7 +117,6 @@ if (import.meta.vitest) {
       // Marking the same function twice should have no additional effect
       const fn = () => ({ data: 'test' });
 
-      // @ts-expect-error - this is not an actual model instance
       const marked1 = markAsLatticeModel(fn);
       const marked2 = markAsLatticeModel(marked1);
 

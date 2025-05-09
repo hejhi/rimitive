@@ -1,3 +1,4 @@
+import { isFinalized } from '../instance';
 import type {
   Factory,
   Instance,
@@ -50,7 +51,7 @@ export function createComposedInstance<
     extensionFactory: (tools: Factory<ComposedState<TComposed, U>>) => U
   ): Instance<ComposedState<TComposed, U>, F> {
     const newExtensionInstance = createEntityFn<U>((tools: any) => {
-      return extensionFactory(tools as any);
+      return extensionFactory(tools);
     });
 
     return createComposedInstance(
@@ -213,7 +214,7 @@ if (import.meta.vitest) {
       expect(finalInstance).toBeDefined();
 
       // Verify the finalized instance is marked as finalized
-      expect((finalInstance as any).__finalized).toBe(true);
+      expect(isFinalized(finalInstance)).toBe(true);
 
       // Verify the finalized instance is a function (slice creator)
       expect(typeof finalInstance).toBe('function');

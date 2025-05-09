@@ -6,6 +6,7 @@ import type {
 } from './types';
 import { createModel, modelMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
+import { isFinalized } from '../shared/instance';
 
 /**
  * Creates a composed model instance that combines two input models
@@ -162,7 +163,7 @@ if (import.meta.vitest) {
     expect(finalModel).toBeDefined();
 
     // Verify the finalized model is marked as finalized
-    expect((finalModel as any).__finalized).toBe(true);
+    expect(isFinalized(finalModel)).toBe(true);
 
     // Verify the finalized model is a function (slice creator)
     expect(typeof finalModel).toBe('function');

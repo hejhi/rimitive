@@ -53,7 +53,7 @@ export function createInstance<T, F>(
     const extensionInstance = createEntityFn<U>((tools) => {
       // We need to explicitly annotate tools with any here because of TypeScript's limitations
       // with modeling the cross-instance property access
-      return extensionFactory(tools as any);
+      return extensionFactory(tools);
     });
 
     // Compose the current instance with the extension instance

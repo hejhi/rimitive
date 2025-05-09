@@ -3,7 +3,13 @@ import {
   createMarker,
   markAsLatticeObject,
   isLatticeObject,
+  Branded,
 } from '../shared/identify';
+
+/**
+ * Branded type for Lattice states
+ */
+export type LatticeState<T> = Branded<T, 'LatticeState'>;
 
 /**
  * A symbol used to mark valid Lattice states
@@ -15,9 +21,9 @@ export const LATTICE_STATE_MARKER = createMarker('LATTICE_STATE');
  *
  * @param value The value to mark as a Lattice state
  */
-export function markAsLatticeState<
-  T extends StateInstance<any> & Record<symbol, boolean>,
->(value: T): T & StateInstance<any> {
+export function markAsLatticeState<T>(
+  value: T
+): T & Record<typeof LATTICE_STATE_MARKER, boolean> {
   return markAsLatticeObject(value, LATTICE_STATE_MARKER);
 }
 
@@ -45,7 +51,12 @@ if (import.meta.vitest) {
       expect(isLatticeState(unmarkedFunction)).toBe(false);
 
       // Mark it manually using the symbol
-      (unmarkedFunction as any)[LATTICE_STATE_MARKER] = true;
+      (
+        unmarkedFunction as unknown as Record<
+          typeof LATTICE_STATE_MARKER,
+          boolean
+        >
+      )[LATTICE_STATE_MARKER] = true;
 
       // Should now be identified as a Lattice state
       expect(isLatticeState(unmarkedFunction)).toBe(true);
@@ -80,11 +91,15 @@ if (import.meta.vitest) {
       // Before marking
       expect(isLatticeState(regularFunction)).toBe(false);
 
-      // @ts-expect-error - marker is not defined on the function
-      expect(regularFunction[LATTICE_STATE_MARKER]).toBeUndefined();
+      // Check that the marker is not defined yet
+      expect(
+        Object.prototype.hasOwnProperty.call(
+          regularFunction,
+          LATTICE_STATE_MARKER
+        )
+      ).toBe(false);
 
       // After marking
-      // @ts-expect-error - this is not an actual state instance
       const markedFunction = markAsLatticeState(regularFunction);
 
       // Should be marked with the correct symbol
@@ -101,7 +116,6 @@ if (import.meta.vitest) {
       // Marking the same function twice should have no additional effect
       const fn = () => ({ data: 'test' });
 
-      // @ts-expect-error - this is not an actual state instance
       const marked1 = markAsLatticeState(fn);
       const marked2 = markAsLatticeState(marked1);
 
