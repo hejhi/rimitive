@@ -3,9 +3,9 @@
 A **headless component framework** built on Zustand. Lattice lattices are both
 the declarative contract and the actual API for your component—defining,
 composing, and enforcing the API surface at both the type and runtime level. Its
-core compositional mechanism is a two-phase (composition/extension) function
-pattern, enabling contract preservation, extensibility, and best-in-class
-developer experience. React‑first DX with a framework‑agnostic core.
+core compositional mechanism is a fluent composition pattern with `.with()` and
+`.create()` methods, enabling contract preservation, extensibility, and
+best-in-class developer experience. React‑first DX with a framework‑agnostic core.
 
 ---
 
@@ -27,83 +27,77 @@ The lattice is not just a blueprint—it is the API itself.
 
 ---
 
-## Composition and Extension Function Pattern
+## Fluent Composition Pattern
 
-Lattice's core compositional mechanism is a two-phase function pattern, used for
-models, actions, state, and views. While this often appears as a "double
-factory," the essential concept is two **separate phases**: one for composition
-and one for extension. This separation enables clean contract preservation,
-extensibility, and a clear distinction between what is composed and what is
-extended.
+Lattice's core compositional mechanism is a fluent composition pattern, used for
+models, states, actions, and views. This pattern is built around the chainable
+`.with()` method for composition and the `.create()` method for finalization.
+This separation enables clean contract preservation, extensibility, and a clear
+distinction between composition and finalization phases.
 
 ### Anatomy and Terminology
 
-Each use of this pattern consists of two distinct phases:
+The fluent composition pattern consists of three distinct phases:
 
-- **Composition Phase (composition function, outer)**: Responsible for composing
-  and establishing the contract and API surface. The composition function
-  selects and maps properties or behaviors from other sources (lattices,
-  factories, etc.), determining what is available for further extension.
+- **Creation Phase**: Factory functions like `createModel()` and `createState()` create
+  base model instances that serve as the starting point for composition. These base models
+  define the initial state and behavior.
 
-  The composition function takes two arguments:
-  - a **compatible dependency** as the first argument—either:
-    - a lattice, or
-    - a factory of the same type (e.g., for `createState`, a lattice or a state
-      factory).
-  - an **optional callback function** as the second argument. This callback
-    receives a selectors object (e.g., `{ state, select }`), which provides
-    access to select properties from the compatible dependency for composition.
-    The purpose of this callback is to allow you to select, map, or rename
-    properties from the compatible dependency, and to define the contract and
-    API surface for what will be available to the extension phase. If you do not
-    provide the callback, the contract from the dependency is used as-is, with
-    no additional selection, mapping, or renaming.
+  ```typescript
+  // Base model creation
+  const counterModel = createModel(() => ({
+     count: 10,
+  }));
+  ```
 
-  If a lattice is provided, the function will extract the relevant type to be
-  provided in the callback (for example, with `createState`, if a lattice is
-  passed, it extracts the base state from the lattice for use in the callback).
-- **Extension Phase (extension function, inner)**: Responsible for extending,
-  deriving, or enhancing the contract and API surface established in the
-  composition phase. The extension function uses the composed sources from the
-  composition phase to add new properties, derive new values, or otherwise
-  augment the API.
+- **Composition Phase**: The `.with()` method extends the model by adding new properties
+  or behaviors. This method takes a callback function that receives helpers (like `get()`)
+  for accessing the model's state, and returns an object with the new properties to add.
+  The `.with()` method can be chained multiple times to progressively enhance the model.
 
-**This pattern is sometimes called the "double-function" or "IIFE" pattern, but
-in Lattice, these are two distinct phases, each with a clear responsibility.**
+  ```typescript
+  // Extensions express what they're adding to the model
+  const withStats = counterModel.with(({ get }) => ({
+     doubleCount: () => get().count * 2,
+  }));
 
-#### Example
+  const withLogger = withStats.with(({ get }) => ({
+     logCount: () => console.log(`Current count: ${get().count}`),
+  }));
+  ```
 
-```ts
-const enhancedState = createState(baseLattice, ({ state, select }) => ({
-  count: select(state, "count"),
-  status: select(state, "status"),
-}))(({ get, derive }) => ({
-  doubled: derive(model, "count", (count) => count * 2),
-  formattedStatus: derive(state, "status", (status) => `Status: ${status}`),
-}));
-```
+- **Finalization Phase**: The `.create()` method marks the end of the composition phase
+  for a specific lattice, preventing further changes within that lattice definition.
+  Even after finalization, the model can still be used in compositions for other lattices.
 
-- **Composition Function**: Composes `count` and `status` from the base lattice.
-- **Extension Function**: Implements `doubled` and `formattedStatus` as new
-  derived properties.
+  ```typescript
+  // Create the finalized model
+  const appModel = withLogger.create();
+  ```
+
+This pattern provides a clear, chainable API that makes the composition intent explicit
+and improves code readability while preserving type safety.
 
 #### Summary Table
 
-| Phase       | Function             | Role/Responsibility (first arg: compatible dependency) | Receives                                                           | Example Parameter Object         |
-| ----------- | -------------------- | ------------------------------------------------------ | ------------------------------------------------------------------ | -------------------------------- |
-| 1st (outer) | Composition Function | Composition, selection, contract setup                 | compatible dependency (lattice or factory of same type), selectors | `{ state, select }`              |
-| 2nd (inner) | Extension Function   | Extension, derivation, enhancement of contract/API     | helpers, composed state                                            | `{ get, set, derive, dispatch }` |
+| Phase       | Method/Function      | Role/Responsibility                                    | Example                                                             |
+| ----------- | -------------------- | ------------------------------------------------------ | ------------------------------------------------------------------ |
+| Creation    | `createModel()`      | Create base model instance                             | `const counterModel = createModel(() => ({ count: 0 }))`            |
+| Composition | `.with()`            | Add new properties, extend functionality               | `const enhanced = counterModel.with(({ get }) => ({ doubled: () => get().count * 2 }))` |
+| Finalization| `.create()`          | Finalize for a specific lattice                        | `const final = enhanced.create()`                                   |
 
 ### Rationale
 
-- **Separation of Concerns**: The composition phase handles composition and
-  contract, the extension phase handles logic, derivation, and augmentation.
-- **Extensibility**: Compose from multiple sources without leaking
-  implementation details.
-- **Type Safety**: The contract is enforced at the composition phase, while the
-  extension phase can safely build on it. Lattice creation enforces that all
-  parts (model, state, actions, view) are consistent and compatible, or a type
-  error will occur.
+- **Fluent Composition**: Chainable, expressive API for model composition that
+  makes composition intent explicit and improves code readability.
+- **Clear Phase Boundaries**: Distinct creation, composition, and finalization
+  phases enable clean separation of concerns and prevent unintended modifications.
+- **Type Safety**: Type information is preserved across all composition phases,
+  ensuring comprehensive TypeScript support throughout the model hierarchy.
+- **Reference Preservation**: Property references work across model boundaries,
+  allowing models to access properties defined in other models.
+- **Compositional Approach**: Models are composable units for Zustand stores that
+  can be combined through the chainable API before finalization.
 
 This pattern is core to Lattice's composability, contract preservation, and
 best-in-class developer experience.
@@ -119,13 +113,12 @@ and enforcing the API surface at both the type and runtime level. This ensures
 that every composition or extension of a lattice is type-safe,
 contract-preserving, and explicit.
 
-Lattice's core compositional mechanism is a two-phase (composition/extension)
-function pattern, used for models, actions, state, and views. The first phase
-(composition) selects, maps, or narrows the contract/API surface from
-dependencies; the second phase (extension) derives, augments, or enhances the
-contract. This pattern guarantees that all parts of a lattice (model, state,
-actions, view) remain consistent and extensible, while preserving the original
-contract.
+Lattice's core compositional mechanism is a fluent composition pattern,
+with `.with()` for composition and `.create()` for finalization. This pattern
+is used for models, states, actions, and views to provide a chainable,
+expressive API for building component features. This approach guarantees that
+all parts of a lattice (model, state, actions, view) remain consistent and
+extensible, while preserving the original contract and type safety throughout.
 
 Lattice implements the SAM (State-Action-Model) pattern on top of Zustand,
 providing a familiar, React-first developer experience with a framework-agnostic
@@ -135,8 +128,8 @@ core.
 
 - **Declarative Contract-as-API**: Every lattice is both the contract and the
   API, enforced at type and runtime.
-- **Two-Phase Composition/Extension**: Clean separation between contract
-  composition and extension, ensuring contract preservation and extensibility.
+- **Fluent Composition Pattern**: Chainable API with `.with()` and `.create()` methods
+  for clear, expressive composition and finalization.
 - **Type-Safe Composability**: All compositions are type-checked; contract
   violations are surfaced as type errors.
 - **SAM Architecture**: Actions → Model → State → View, with strict separation
@@ -236,41 +229,49 @@ View event ──▶ Actions ──▶ Model Mutation ──▶ State/View updat
   exposed directly to consumers.
 - The contract is preserved and enforced at every composition boundary.
 
-### Factory-Based Composition and the Two-Phase Pattern
+### Factory-Based Composition with Fluent API
 
-Lattice uses a factory-based composition model, built around a two-phase
-(composition/extension) function pattern:
+Lattice uses a factory-based composition model, built around a fluent composition
+pattern with chainable methods:
 
 1. **Composition Phase**: Factory functions (e.g., `createModel`, `createState`)
-   take a compatible dependency (lattice or factory) and an optional callback to
-   select, map, or rename properties—establishing the contract/API surface for
-   extension.
-2. **Extension Phase**: The returned function extends or derives new properties,
-   augmenting the contract/API surface established in the composition phase.
-3. Actual stores are only created when a lattice is instantiated, ensuring
-   efficient composition and contract enforcement.
-4. This enables:
+   create base models that can be extended with the `.with()` method, which
+   adds new properties or behaviors to the model.
+2. **Finalization Phase**: The `.create()` method finalizes a specific model
+   composition, preventing further changes within a specific lattice definition.
+3. **Instantiation Phase**: The actual Zustand stores are only created when the
+   lattice itself is instantiated for use. Even after calling `.create()`, the
+   finalized models can still be used in composition for other lattices.
+4. This separation enables:
    - Type-safe contract enforcement across all compositions
    - Clean separation between contract composition and logic extension
    - Lazy, efficient instantiation of enhanced lattices
 
-```ts
+```typescript
 // Core lattice with minimal functionality
 const createCoreLattice = () => {
-  const model = createModel()(({ set, get }) => ({
+  // Create model with the fluent API
+  const model = createModel(({ set, get }) => ({
     count: 0,
     increment: () => set((state) => ({ count: state.count + 1 })),
   }));
 
-  const actions = createActions()(({ mutate }) => ({
+  // Create actions
+  const actions = createActions(({ mutate }) => ({
     increment: mutate(model, "increment"),
   }));
 
-  const state = createState()(({ derive }) => ({
+  // Create state
+  const state = createState(({ derive }) => ({
     count: derive(model, "count"),
   }));
 
-  return createLattice("core", { model, actions, state });
+  // Return lattice with finalized components
+  return createLattice("core", {
+    model: model.create(),
+    actions: actions.create(),
+    state: state.create()
+  });
 };
 
 // Usage: Create core lattice immediately
@@ -279,9 +280,8 @@ const coreLattice = createCoreLattice();
 // Then later, dynamically import an enhancement
 // In enhancementModule.js:
 export const enhanceWithFeature = (baseLattice) => {
-  const model = createModel(baseLattice, ({ model, select }) => ({
-    increment: select(model, "increment"),
-  }))(({ set, get }) => ({
+  // Enhance the model by accessing it from the base lattice
+  const model = baseLattice.model.with(({ get }) => ({
     // Add new functionality
     incrementTwice: () => {
       get().increment();
@@ -289,17 +289,21 @@ export const enhanceWithFeature = (baseLattice) => {
     },
   }));
 
-  const actions = createActions(baseLattice, ({ actions, select }) => ({
-    increment: select(actions, "increment"),
-  }))(({ mutate }) => ({
-    incrementTwice: mutate(model, "incrementTwice"),
+  // First finalize the model
+  const finalModel = model.create();
+
+  // Enhance the actions with reference to the finalized model
+  const actions = baseLattice.actions.with(({ mutate }) => ({
+    // mutate references the finalized model
+    incrementTwice: mutate(finalModel, "incrementTwice"),
   }));
 
+  // Return a new lattice that composes with the base lattice
   return createLattice(
     "enhanced",
     withLattice(baseLattice)({
-      model,
-      actions,
+      model: finalModel,
+      actions: actions.create(),
     }),
   );
 };
@@ -322,9 +326,9 @@ and business logic. They define the contract for state and mutations, and are
 available for composition when building new lattices or extensions. Models are
 **not** exposed to consumers—only to composers.
 
-```ts
-// Create a standalone model factory with state and methods
-const counterModel = createModel()(({ set, get }) => ({
+```typescript
+// Create a standalone model with state and methods
+const counterModel = createModel(() => ({
   // Internal state
   count: 0,
 
@@ -335,87 +339,133 @@ const counterModel = createModel()(({ set, get }) => ({
   // State selectors
   getCount: () => get().count,
 }));
-// Model is a factory until used in a lattice
+// Model is a factory until finalized with .create()
 ```
 
-#### Model Composition (Two-Phase Pattern)
+#### Model Composition (Fluent Pattern)
 
-Models are composed using the two-phase (composition/extension) pattern:
+Models are composed using the fluent composition pattern:
 
-- **Composition phase**: Select, map, or rename properties from dependencies
-  (lattice or model factory) to establish the contract surface.
-- **Extension phase**: Extend or derive new properties, augmenting the
-  contract/API surface.
+- **Base model**: Created with `createModel()`
+- **Composition**: Extended with `.with()` to add new properties or behaviors
+- **Finalization**: Completed with `.create()` to prevent further changes
 
-```ts
-const enhancedModel = createModel(baseModel, ({ model, select }) => ({
-  increment: select(model, "increment"),
-}))(({ set, get }) => ({
+```typescript
+// Base model
+const counterModel = createModel(() => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+}));
+
+// Add new behavior with .with()
+const enhancedModel = counterModel.with(({ get }) => ({
   incrementTwice: () => {
     get().increment();
     get().increment();
   },
 }));
+
+// Finalize the model
+const finalModel = enhancedModel.create();
 ```
 
 ### Actions – Pure Intent Functions
 
 Actions are pure intent functions representing WHAT should happen, delegating to
 model methods (HOW). Actions are available for composition, but are **not**
-exposed to consumers—only to composers. They follow the two-phase pattern for
-contract preservation and extension.
+exposed to consumers—only to composers. They follow the fluent composition pattern
+for contract preservation and extension.
 
-```ts
-const actions = createActions()(({ mutate }) => ({
+```typescript
+const actions = createActions(() => ({
   increment: mutate(model, "increment"),
   doubleIncrement: mutate(model, "incrementTwice"),
 }));
 
-const enhancedActions = createActions(baseLattice, ({ actions, select }) => ({
-  increment: select(actions, "increment"),
-}))(({ mutate }) => ({
-  incrementTwice: mutate(model, "incrementTwice"),
+const enhancedActions = actions.with(({ mutate }) => ({
+  incrementThrice: mutate(model, "incrementThrice"),
 }));
+
+// Finalize the actions
+const finalActions = enhancedActions.create();
 ```
 
 ### State – Public Selectors
 
 State selectors provide read access to the model and form part of the public API
 surface. State is available for both composition and consumption. State
-factories use the two-phase pattern for contract selection and extension.
+factories use the fluent composition pattern for contract selection and extension.
 
-```ts
-const state = createState()(({ get, derive }) => ({
+```typescript
+// Base state
+const state = createState(() => ({
   count: derive(model, "count"),
   countPlusOne: derive(model, "count", (count) => count + 1),
   isPositive: () => get().count > 0,
 }));
 
-const enhancedState = createState(baseLattice, ({ state, select }) => ({
-  count: select(state, "count"),
-}))(({ get, derive }) => ({
-  doubled: derive(state, "count", (count) => count * 2),
+// Enhanced state with additional properties
+const enhancedState = state.with(({ get, derive }) => ({
+  doubled: derive(model, "count", (count) => count * 2),
+  formatted: () => `Count: ${get().count}`,
 }));
+
+// Finalize the state
+const finalState = enhancedState.create();
 ```
 
 ### View – Reactive UI Attributes
 
 Views are pure, reactive representations that transform state and actions into
 ready-to-spread UI attributes. Views are available for both composition and
-consumption. They follow the two-phase pattern for contract selection and
-extension.
+consumption. They follow the fluent composition pattern for contract selection and
+extension, and are typically namespaced within lattices.
 
-```ts
-const counterView = createView()(({ derive }) => ({
-  "data-count": derive(state, "count"),
-  "aria-live": "polite",
-}));
+```typescript
+// Inside a lattice definition
+const createMyLattice = () => {
+  // Base view
+  const counterView = createView(({ derive }) => ({
+    "data-count": derive(state, "count"),
+    "aria-live": "polite",
+  }));
 
-const enhancedView = createView(baseLattice, ({ view, select }) => ({
-  "data-count": select(view.counter, "data-count"),
-}))(({ derive, dispatch }) => ({
-  "aria-label": "Enhanced counter",
-}));
+  // Button view
+  const buttonView = createView(({ dispatch }) => ({
+    onClick: dispatch(actions, "increment"),
+  }));
+
+  // Return lattice with namespaced views
+  return createLattice("counter", {
+    model: model.create(),
+    actions: actions.create(),
+    state: state.create(),
+    view: {
+      counter: counterView.create(),
+      button: buttonView.create()
+    }
+  });
+};
+
+// When composing with another lattice
+const createEnhancedLattice = (baseLattice) => {
+  // Access and compose with a namespaced view
+  const enhancedCounterView = baseLattice.view.counter.with(({ derive }) => ({
+    "aria-label": "Enhanced counter",
+    "data-description": derive(state, "formatted")
+  }));
+
+  // Composition preserves the namespaces
+  return createLattice("enhanced", {
+    // Inherit from base lattice
+    ...withLattice(baseLattice)({
+      // Provide the enhanced view with the same namespace
+      view: {
+        counter: enhancedCounterView.create()
+      }
+    })
+  });
+};
 ```
 
 > **Summary:**
@@ -424,8 +474,9 @@ const enhancedView = createView(baseLattice, ({ view, select }) => ({
 >   consumers).
 > - **State and views**: Available for both composition and consumption (public
 >   API surface).
-> - All building blocks use the two-phase (composition/extension) pattern for
->   contract preservation and extensibility.
+> - All building blocks use the fluent composition pattern with `.with()` and `.create()`
+>   for contract preservation and extensibility.
+> - Views are typically namespaced within lattices, allowing for organized component composition.
 > - Contract enforcement applies at every boundary—type errors surface on
 >   contract violations.
 
@@ -435,14 +486,14 @@ const enhancedView = createView(baseLattice, ({ view, select }) => ({
 
 ### Simple Component Example
 
-A basic counter component implementation using Lattice with the two-phase
-(composition/extension) pattern and contract-as-API:
+A basic counter component implementation using Lattice with the fluent composition
+pattern and contract-as-API:
 
-```ts
+```typescript
 // Create a counter lattice
 const createCounter = () => {
-  // Create counter model factory with state and behavior (composition only)
-  const model = createModel()(({ set, get }) => ({
+  // Create counter model with state and behavior
+  const model = createModel(({ set, get }) => ({
     // State
     count: 0,
 
@@ -458,43 +509,55 @@ const createCounter = () => {
     getCount: () => get().count,
   }));
 
-  // Define Actions factory (composition only)
-  const actions = createActions()(({ mutate }) => ({
-    increment: mutate(model, "increment"),
-    decrement: mutate(model, "decrement"),
-    incrementTwice: mutate(model, "incrementTwice"),
+  // Finalize the model
+  const finalModel = model.create();
+
+  // Define Actions
+  const actions = createActions(({ mutate }) => ({
+    increment: mutate(finalModel, "increment"),
+    decrement: mutate(finalModel, "decrement"),
+    incrementTwice: mutate(finalModel, "incrementTwice"),
   }));
 
-  // Define public state factory (composition + consumption)
-  const state = createState()(({ get, derive }) => ({
-    count: derive(model, "getCount"),
-    countSquared: derive(model, "count", (count) => count * count),
+  // Finalize the actions
+  const finalActions = actions.create();
+
+  // Define public state
+  const state = createState(({ derive }) => ({
+    count: derive(finalModel, "getCount"),
+    countSquared: derive(finalModel, "count", (count) => count * count),
   }));
 
-  // Create views factory (composition + consumption)
-  const counterView = createView()(({ derive }) => ({
-    "data-count": derive(state, "count"),
+  // Finalize the state
+  const finalState = state.create();
+
+  // Create counter view
+  const counterView = createView(({ derive }) => ({
+    "data-count": derive(finalState, "count"),
     "aria-live": "polite",
   }));
 
-  const incrementButtonView = createView()(({ derive, dispatch }) => ({
-    onClick: dispatch(actions, "increment"),
+  // Create button views
+  const incrementButtonView = createView(({ dispatch }) => ({
+    onClick: dispatch(finalActions, "increment"),
   }));
 
-  const decrementButtonView = createView()(({ derive, dispatch }) => ({
-    onClick: dispatch(actions, "decrement"),
+  const decrementButtonView = createView(({ dispatch }) => ({
+    onClick: dispatch(finalActions, "decrement"),
   }));
 
-  // Return composed lattice
+  // Return composed lattice with namespaced views
   return createLattice(
     "counter",
     {
-      // For composition: model, actions
-      model,
-      actions,
-      // Public API: state, view
-      state,
-      view: mergeViews(counterView, incrementButtonView, decrementButtonView),
+      model: finalModel,
+      actions: finalActions,
+      state: finalState,
+      view: {
+        counter: counterView.create(),
+        incrementButton: incrementButtonView.create(),
+        decrementButton: decrementButtonView.create()
+      }
     },
   );
 };
@@ -502,13 +565,13 @@ const createCounter = () => {
 
 ### Medium Complexity Example
 
-A todo list with filtering capabilities using the two-phase pattern and
+A todo list with filtering capabilities using the fluent composition pattern and
 contract-as-API:
 
-```ts
+```typescript
 const createTodoList = () => {
-  // Model (composition only)
-  const model = createModel()(({ set, get }) => ({
+  // Model with state and behavior
+  const model = createModel(({ set, get }) => ({
     todos: [],
     filter: "all",
     label: "Todo List",
@@ -544,45 +607,55 @@ const createTodoList = () => {
     },
   }));
 
-  // Actions (composition only)
-  const actions = createActions()(({ mutate }) => ({
-    addTodo: mutate(model, "addTodo"),
-    toggleTodo: mutate(model, "toggleTodo"),
-    setFilter: mutate(model, "setFilter"),
-    addAndFilterActive: mutate(model, "addAndFilterActive"),
+  // Finalize the model
+  const finalModel = model.create();
+
+  // Actions delegating to model methods
+  const actions = createActions(({ mutate }) => ({
+    addTodo: mutate(finalModel, "addTodo"),
+    toggleTodo: mutate(finalModel, "toggleTodo"),
+    setFilter: mutate(finalModel, "setFilter"),
+    addAndFilterActive: mutate(finalModel, "addAndFilterActive"),
   }));
 
-  // State (composition + consumption)
-  const state = createState()(({ get, derive }) => ({
-    todos: derive(model, "_getTodos"),
-    filter: derive(model, "_getFilter"),
-    filteredTodos: derive(model, "getFilteredTodos"),
-    filteredTodosCount: derive(model, "getFilteredTodosCount"),
+  // Finalize the actions
+  const finalActions = actions.create();
+
+  // Public state with selectors
+  const state = createState(({ derive }) => ({
+    todos: derive(finalModel, "_getTodos"),
+    filter: derive(finalModel, "_getFilter"),
+    filteredTodos: derive(finalModel, "getFilteredTodos"),
+    filteredTodosCount: derive(finalModel, "getFilteredTodosCount"),
     listLabel: "Todo List",
-    isTodoCompleted: derive(model, "isTodoCompleted"),
+    isTodoCompleted: derive(finalModel, "isTodoCompleted"),
   }));
 
-  // Views (composition + consumption)
-  const todoListView = createView()(({ derive }) => ({
-    "aria-label": derive(state, "listLabel"),
-    "data-count": derive(state, "filteredTodosCount"),
+  // Finalize the state
+  const finalState = state.create();
+
+  // Views for UI components
+  const todoListView = createView(({ derive }) => ({
+    "aria-label": derive(finalState, "listLabel"),
+    "data-count": derive(finalState, "filteredTodosCount"),
   }));
 
-  const todoItemView = createView()(({ derive, dispatch }) => ({
-    "aria-checked": derive(state, "isTodoCompleted"),
-    onClick: dispatch(actions, "toggleTodo"),
+  const todoItemView = createView(({ derive, dispatch }) => ({
+    "aria-checked": derive(finalState, "isTodoCompleted"),
+    onClick: dispatch(finalActions, "toggleTodo"),
   }));
 
-  // Return composed lattice
+  // Return lattice with namespaced views
   return createLattice(
     "todoList",
     {
-      // For composition: model, actions
-      model,
-      actions,
-      // Public API: state, view
-      state,
-      view: mergeViews(todoListView, todoItemView),
+      model: finalModel,
+      actions: finalActions,
+      state: finalState,
+      view: {
+        list: todoListView.create(),
+        item: todoItemView.create()
+      }
     },
   );
 };
@@ -593,57 +666,38 @@ const createTodoList = () => {
 Creating a complex component through factory composition, with contract
 enforcement and public API distinction:
 
-```ts
-// Create independent model factories for specific concerns (composition only)
-const selectionModelFactory = createModel()(({ set, get }) => ({
-  selected: [],
-  selectItem: (id, isMulti = false) =>
-    set((state) => ({
-      selected: isMulti ? [...state.selected, id] : [id],
-    })),
-  deselectItem: (id) =>
-    set((state) => ({
-      selected: state.selected.filter((itemId) => itemId !== id),
-    })),
-  clearSelection: () => set({ selected: [] }),
-  isSelected: (id) => get().selected.includes(id),
-  getSelected: () => get().selected,
-}));
-
-const itemsModelFactory = createModel()(({ set, get }) => ({
-  items: [],
-  setItems: (items) => set({ items }),
-  addItem: (item) =>
-    set((state) => ({
-      items: [...state.items, item],
-    })),
-  removeItem: (id) =>
-    set((state) => ({
-      items: state.items.filter((item) => item.id !== id),
-    })),
-  getItems: () => get().items,
-  getItem: (id) => get().items.find((item) => item.id === id),
-}));
-
-// Factory function that returns a lattice composer
+```typescript
+// Factory function that creates an enhanced lattice from a base lattice
 export const createFeature = () => {
   return (baseLattice) => {
-    // Composite model (composition only)
-    const model = createModel()(({ set, get, derive }) => ({
+    // Create an enhanced model by adding selection and items functionality
+    const enhancedModel = baseLattice.model.with(({ get, set }) => ({
+      // Selection-related state and behavior
+      selected: [],
       highlighted: null,
-      selected: derive(selectionModelFactory, "selected"),
-      items: derive(itemsModelFactory, "items"),
-      selectItem: (id, isMulti = false) => {
-        selectionModelFactory.selectItem(id, isMulti);
-      },
-      isSelected: derive(selectionModelFactory, "isSelected"),
-      getItems: derive(itemsModelFactory, "getItems"),
+
+      // Selection methods
+      selectItem: (id, isMulti = false) =>
+        set((state) => ({
+          selected: isMulti ? [...state.selected, id] : [id],
+        })),
+      deselectItem: (id) =>
+        set((state) => ({
+          selected: state.selected.filter((itemId) => itemId !== id),
+        })),
+      clearSelection: () => set({ selected: [] }),
+      isSelected: (id) => get().selected.includes(id),
+      getSelected: () => get().selected,
+
+      // Item-related methods that would build upon the base model
       getItemsWithSelection: () => {
         return get().items.map((item) => ({
           ...item,
           selected: get().isSelected(item.id),
         }));
       },
+
+      // Combined behaviors
       selectAndHighlight: (id) => {
         get().selectItem(id);
         set({ highlighted: id });
@@ -651,42 +705,50 @@ export const createFeature = () => {
       isHighlighted: (id) => get().highlighted === id,
     }));
 
-    // Actions (composition only)
-    const actions = createActions(baseLattice, ({ actions, select }) => ({
-      // Select from base lattice actions if needed
-    }))(({ mutate }) => ({
-      selectItem: mutate(model, "selectItem"),
-      selectAndHighlight: mutate(model, "selectAndHighlight"),
+    // Finalize the enhanced model
+    const finalModel = enhancedModel.create();
+
+    // Create enhanced actions
+    const enhancedActions = baseLattice.actions.with(({ mutate }) => ({
+      // Add new actions referencing the enhanced model methods
+      selectItem: mutate(finalModel, "selectItem"),
+      selectAndHighlight: mutate(finalModel, "selectAndHighlight"),
+      clearSelection: mutate(finalModel, "clearSelection"),
     }));
 
-    // State (composition + consumption)
-    const state = createState(baseLattice, ({ state, select }) => ({
-      // Select from base lattice state if needed
-    }))(({ get, derive }) => ({
-      itemsWithSelection: derive(model, "getItemsWithSelection"),
-      isSelected: derive(model, "isSelected"),
-      isHighlighted: derive(model, "isHighlighted"),
+    // Finalize the actions
+    const finalActions = enhancedActions.create();
+
+    // Create enhanced state
+    const enhancedState = baseLattice.state.with(({ derive }) => ({
+      // Add new state properties derived from the enhanced model
+      selected: derive(finalModel, "getSelected"),
+      itemsWithSelection: derive(finalModel, "getItemsWithSelection"),
+      isSelected: derive(finalModel, "isSelected"),
+      isHighlighted: derive(finalModel, "isHighlighted"),
     }));
 
-    // Views (composition + consumption)
-    const itemView = createView(baseLattice, ({ view, select }) => ({
-      role: select(view.item, "role"),
-    }))(({ derive, dispatch }) => ({
-      "aria-selected": derive(state, "isSelected"),
-      "data-highlighted": derive(state, "isHighlighted"),
-      onClick: dispatch(actions, "selectAndHighlight"),
+    // Finalize the state
+    const finalState = enhancedState.create();
+
+    // Create enhanced view for items
+    const enhancedItemView = baseLattice.view.item.with(({ derive, dispatch }) => ({
+      // Add selection-related attributes
+      "aria-selected": derive(finalState, "isSelected"),
+      "data-highlighted": derive(finalState, "isHighlighted"),
+      onClick: dispatch(finalActions, "selectAndHighlight"),
     }));
 
-    // Return enhanced lattice
+    // Return enhanced lattice with a single cohesive model
     return createLattice(
       "featureName",
       withLattice(baseLattice)({
-        // For composition: model, actions
-        model,
-        actions,
-        // Public API: state, view
-        state,
-        view: mergeViews(itemView),
+        model: finalModel,
+        actions: finalActions,
+        state: finalState,
+        view: {
+          item: enhancedItemView.create()
+        }
       }),
     );
   };
@@ -731,38 +793,64 @@ const view = createView()(({ get }) => ({
 
 Composing entire lattices together:
 
-```ts
+```typescript
 // Create base lattice
 const createBaseLattice = () => {
-  // Implementation details...
-  return createLattice("base", { model, state, view, actions });
-};
-
-// Create enhancement feature using full lattice composition
-const createEnhancedLattice = (baseLattice) => {
-  // Compose state fully (without modifying contract)
-  const state = createState(baseLattice)((get, derive) => ({
-    // Can add new properties but can't override existing ones
-    newProperty: "value",
-    derivedProperty: derive(
-      baseLattice.state,
-      "someProperty",
-      (prop) => `Modified: ${prop}`,
-    ),
+  // Create model, state and actions with the fluent API
+  const model = createModel(({ set, get }) => ({
+    count: 0,
+    increment: () => set((state) => ({ count: state.count + 1 })),
   }));
 
-  // Compose model fully
-  const model = createModel(baseLattice)((set, get) => ({
-    // Can add new properties but can't override existing ones
+  const actions = createActions(({ mutate }) => ({
+    increment: mutate(model.create(), "increment"),
+  }));
+
+  const state = createState(({ derive }) => ({
+    count: derive(model.create(), "count"),
+  }));
+
+  // Return lattice with finalized components
+  return createLattice("base", {
+    model: model.create(),
+    actions: actions.create(),
+    state: state.create(),
+    view: {
+      counter: createView(({ derive }) => ({
+        "data-count": derive(state.create(), "count"),
+      })).create()
+    }
+  });
+};
+
+// Create enhancement feature using fluent composition
+const createEnhancedLattice = (baseLattice) => {
+  // Enhance state with new properties
+  const enhancedState = baseLattice.state.with(({ derive }) => ({
+    // Add new properties
+    newProperty: "value",
+    // Derive from base state
+    derivedProperty: derive(baseLattice.state, "count",
+      (count) => `Count: ${count}`),
+  }));
+
+  // Enhance model with new methods
+  const enhancedModel = baseLattice.model.with(({ get, set }) => ({
+    // Add new methods
     newMethod: () => console.log("New method called"),
+    // Can also override existing methods
+    increment: () => {
+      console.log("Enhanced increment called");
+      set((state) => ({ count: state.count + 1 }));
+    }
   }));
 
   // Return enhanced lattice
   return createLattice(
     "enhanced",
     withLattice(baseLattice)({
-      state,
-      _internal: { model },
+      model: enhancedModel.create(),
+      state: enhancedState.create(),
     }),
   );
 };
@@ -770,63 +858,84 @@ const createEnhancedLattice = (baseLattice) => {
 
 ### Selective Composition Pattern
 
-Cherry-picking specific properties for composition:
+Cherry-picking specific properties with the proposed `.select()` method:
 
-```ts
-// Create specific state properties
-const state = createState(baseLattice, ({ state, select }) => ({
-  // Only select specific properties
-  count: select(state, "count"),
-  isActive: select(state, "isActive"),
-  // Map existing property to new name
-  renamedProperty: select(state, "originalName"),
-}))((get, derive) => ({
-  // Now implement with selected properties
-  doubleCount: derive(state, "count", (count) => count * 2),
+```typescript
+// Base model with multiple properties
+const baseModel = createModel(({ set, get }) => ({
+  count: 0,
+  name: "default",
+  privateData: "sensitive",
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  reset: () => set({ count: 0 }),
+  getName: () => get().name,
 }));
 
-// Compose with filtering
-const model = createModel(baseModel, ({ model, select }) =>
-  filterMap(
-    model,
-    (key) => key !== "privateMethod" && { [key]: select(model, key) },
-  ))((set, get) => ({
-    // Implementation with filtered properties
-  }));
+// Use select to cherry-pick and rename properties
+const enhancedModel = baseModel
+  .select(({ count, name, increment }) => ({
+    // Keep these properties
+    count,
+    // Rename property
+    title: name,
+    // Keep this method
+    increment,
+    // privateData is omitted by not including it
+  }))
+  .with(({ get, set }) => ({
+    // Add new properties working with the selected subset
+    doubleCount: () => get().count * 2,
+    displayTitle: () => `Title: ${get().title}`,
+  }))
+  .create();
+
+// When used, only the selected properties plus new ones are available
+// enhancedModel.count         // Available
+// enhancedModel.title         // Available (renamed from 'name')
+// enhancedModel.doubleCount() // Available (new method)
+// enhancedModel.privateData   // Not available (was omitted)
+// enhancedModel.reset()       // Not available (was omitted)
 ```
+
+This pattern gives fine-grained control over which properties to include, exclude, or rename, allowing for precise contract refinement while maintaining the fluent API style.
 
 ### Contract Preservation Pattern
 
 Ensuring contract preservation across compositions:
 
-```ts
+```typescript
 // Base model defines a contract
-const baseModel = createModel()(({ set, get }) => ({
+const baseModel = createModel(({ set, get }) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
   getCount: () => get().count,
 }));
 
-// Enhanced model must preserve the contract
-const enhancedModel = createModel(baseModel)(({ set, get }) => ({
-  // These methods MUST be present with compatible signatures
-  // to preserve the base contract
-  count: get().count, // Preserved
-  increment: get().increment, // Preserved
-  getCount: get().getCount, // Preserved
+// Enhanced model extends the contract with the fluent API
+const enhancedModel = baseModel.with(({ get, set }) => ({
+  // Can override existing methods with new implementations
+  increment: () => {
+    // Enhanced implementation
+    set((state) => ({ count: state.count + 2 })); // Increments by 2 instead
+  },
 
-  // New methods can be added safely
+  // Can access original methods via get()
+  resetAndIncrement: () => {
+    set({ count: 0 }); // Reset
+    get().increment(); // Use the overridden increment
+  },
+
+  // Can add new methods
   decrement: () => set((state) => ({ count: state.count - 1 })),
 }));
 
-// This would cause a type error - breaking the contract
-const invalidModel = createModel(baseModel)(({ set, get }) => ({
-  // Type error: missing required property 'increment'
-  count: get().count,
-  getCount: get().getCount,
-  // Type error: incompatible signature
-  // increment: (amount) => set(state => ({ count: state.count + amount })),
-}));
+// Finalize the enhanced model
+const finalModel = enhancedModel.create();
+
+// Composition is type-safe, ensuring API compatibility
+// Attempting to break the contract would cause type errors
+// For example, changing the signature of increment to take parameters
+// when consumers expect no parameters would be caught by TypeScript
 ```
 
 ## 6. The Derive System
@@ -834,28 +943,33 @@ const invalidModel = createModel(baseModel)(({ set, get }) => ({
 The `derive` function allows for creating reactive subscriptions between models,
 states, and views:
 
-```ts
-// Model as source of truth (no derive)
-const model = createModel()(({ set, get }) => ({
+```typescript
+// Create and finalize the model
+const model = createModel(({ set, get }) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
-}));
+})).create();
 
-// State derives from model in the SECOND function
-const state = createState()(({ get, derive }) => ({
-  // Derive count from model
+// Create and finalize the actions
+const actions = createActions(({ mutate }) => ({
+  increment: mutate(model, "increment"),
+})).create();
+
+// State derives from finalized model
+const state = createState(({ derive }) => ({
+  // Derive count from finalized model
   count: derive(model, "count"),
 
   // Derive with transformation
   doubled: derive(model, "count", (count) => count * 2),
 
-  // Derive from multiple properties
+  // Derive from model properties with transformation
   status: derive(model, "count", (count) => count > 0 ? "positive" : "zero"),
-}));
+})).create();
 
-// Views derive from state in the SECOND function
-const view = createView()(({ derive, dispatch }) => ({
-  // Derive attribute from state
+// Views derive from finalized state and actions
+const view = createView(({ derive, dispatch }) => ({
+  // Derive attribute from finalized state
   "data-count": derive(state, "count"),
 
   // Derive with transformation
@@ -865,9 +979,9 @@ const view = createView()(({ derive, dispatch }) => ({
     (status) => `counter counter--${status}`,
   ),
 
-  // Connect to action with dispatch
+  // Connect to finalized action with dispatch
   onClick: dispatch(actions, "increment"),
-}));
+})).create();
 
 // COMPOSITION is different from deriving and happens in the FIRST function
 const composedState = createState(baseLattice, ({ state, select }) => ({
@@ -896,62 +1010,77 @@ const composedView = createView(otherView, ({ view, select }) => ({
 
 It's important to understand the difference between composition and deriving:
 
-1. **Composition** happens in the first function of the IIFE pattern:
+1. **Composition** happens with the `.with()` method to extend an existing component:
 
-```ts
-createState(sourceToCompose, ({ state, select }) => ({
-  // Select properties from the source to compose with
-  property: select(state, "property"),
+```typescript
+// Composing by extending an existing state
+const enhancedState = baseState.with(({ get }) => ({
+  // Add new properties
+  doubledCount: () => get().count * 2,
 }));
 ```
 
-2. **Deriving** happens in the second function of the IIFE pattern:
-   ```ts
-   createState(...)(({ get, derive, dispatch }) => ({
-     // Create reactive subscriptions
-     property: derive(model, "property")
-   }))
+2. **Deriving** happens when creating reactive subscriptions to finalized models/states:
+   ```typescript
+   // First finalize the model
+   const finalModel = model.create();
+
+   // Then derive properties from finalized model
+   const state = createState(({ derive }) => ({
+     // Create reactive subscription to finalized model property
+     count: derive(finalModel, "count"),
+     formattedCount: derive(finalModel, "count", (count) => `Count: ${count}`)
+   }));
    ```
 
-Let's look at a correct full example:
+Let's look at a correct full example using the fluent API:
 
-```ts
-// Creating state that composes from a lattice
-const enhancedState = createState(baseLattice, ({ state, select }) => ({
-  // COMPOSITION: Select from the state part of the lattice
-  count: select(state, "count"),
-  status: select(state, "status"),
-}))(({ get, derive }) => ({
-  // DERIVING: Create reactive subscriptions
-  doubled: derive(model, "count", (count) => count * 2),
-  formattedStatus: derive(state, "status", (status) => `Status: ${status}`),
-}));
+```typescript
+// Creating an enhanced lattice from a base lattice
+const createEnhancedLattice = (baseLattice) => {
+  // Accessing the base lattice's model
+  const enhancedModel = baseLattice.model.with(({ get }) => ({
+    // Add new properties or behaviors
+    incrementTwice: () => {
+      get().increment();
+      get().increment();
+    },
+  }));
 
-// Creating model that composes from a lattice
-const enhancedModel = createModel(baseLattice, ({ model, select }) => ({
-  // COMPOSITION: Select from the model part of the lattice
-  increment: select(model, "increment"),
-  getCount: select(model, "getCount"),
-}))(({ set, get, derive }) => ({
-  // Implementation with composed properties
-  // Add new properties or behaviors
-  incrementTwice: () => {
-    get().increment();
-    get().increment();
-  },
-}));
+  // Finalize the model
+  const finalModel = enhancedModel.create();
 
-// Creating view that composes from a lattice
-const enhancedView = createView(baseLattice, ({ view, select }) => ({
-  // COMPOSITION: Select from the view part of the lattice
-  "aria-live": select(view.counter, "aria-live"),
-}))(({ derive, dispatch }) => ({
-  // DERIVING: Create reactive subscriptions
-  "data-count": derive(state, "count"),
-  "aria-label": "Enhanced counter",
-  // Connect to action with dispatch
-  onClick: dispatch(actions, "increment"),
-}));
+  // Enhance the state
+  const enhancedState = baseLattice.state.with(({ get, derive }) => ({
+    // Derive from finalized model
+    doubled: derive(finalModel, "count", (count) => count * 2),
+    formattedStatus: () => `Status: ${get().status}`,
+  }));
+
+  // Finalize the state
+  const finalState = enhancedState.create();
+
+  // Enhance the actions
+  const enhancedActions = baseLattice.actions.with(({ mutate }) => ({
+    // Connect to the finalized model
+    incrementTwice: mutate(finalModel, "incrementTwice"),
+  }));
+
+  // Create the enhanced lattice with namespaced views
+  return createLattice("enhanced", {
+    model: finalModel,
+    state: finalState,
+    actions: enhancedActions.create(),
+    // Views are namespaced at the lattice level
+    view: {
+      // Enhance the counter view from the base lattice
+      counter: baseLattice.view.counter.with(({ derive }) => ({
+        "aria-label": "Enhanced counter",
+        "data-count": derive(finalState, "doubled"),
+      })).create()
+    }
+  });
+};
 ```
 
 ## 7. Advanced Topics
@@ -961,9 +1090,9 @@ const enhancedView = createView(baseLattice, ({ view, select }) => ({
 Actions are pure intent functions that delegate directly to model methods
 without containing their own implementation logic:
 
-```ts
+```typescript
 // Model defines all behavior including composite operations
-const model = createModel()(({ set, get }) => ({
+const model = createModel(({ set, get }) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
   reset: () => set({ count: 0 }),
@@ -980,24 +1109,26 @@ const model = createModel()(({ set, get }) => ({
   },
 }));
 
+// Finalize the model
+const finalModel = model.create();
+
 // Actions are pure delegates to model methods
-const actions = createActions()(({ mutate }) => ({
-  // Each action directly references a model method
-  increment: mutate(model, "increment"),
-  reset: mutate(model, "reset"),
-  incrementTwice: mutate(model, "incrementTwice"),
-  resetAndIncrement: mutate(model, "resetAndIncrement"),
+const actions = createActions(({ mutate }) => ({
+  // Each action directly references a finalized model method
+  increment: mutate(finalModel, "increment"),
+  reset: mutate(finalModel, "reset"),
+  incrementTwice: mutate(finalModel, "incrementTwice"),
+  resetAndIncrement: mutate(finalModel, "resetAndIncrement"),
 }));
 
-// Composing actions from other actions
-const enhancedActions = createActions(baseActions, ({ actions, select }) => ({
-  // Select from base actions
-  increment: select(actions, "increment"),
-  reset: select(actions, "reset"),
-}))(({ mutate }) => ({
-  // Add new actions that reference model methods
-  incrementThrice: mutate(model, "incrementThrice"),
+// Enhance actions by composing with the base actions
+const enhancedActions = actions.with(({ mutate }) => ({
+  // Add new actions that reference finalized model methods
+  incrementThrice: mutate(finalModel, "incrementThrice"),
 }));
+
+// Finalize the enhanced actions
+const finalActions = enhancedActions.create();
 ```
 
 The key principle is that actions should only contain references to model
