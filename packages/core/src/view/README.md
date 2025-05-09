@@ -1,38 +1,38 @@
-# State System
+# View System
 
 ## Overview
 
-The State System is a core component of Lattice that provides a structured way
-to define public projections of application state. Built as a complementary
-layer to the Model System, it enables creating read-only views of model data
+The View System is a core component of Lattice that provides a structured way to
+define UI prop projections for components. Built as a complementary layer to the
+State System, it enables creating ready-to-spread UI props and event handlers
 using the same powerful fluent composition pattern, emphasizing modularity, type
 safety, and developer experience.
 
 ## Purpose
 
-The State System serves several key purposes in Lattice:
+The View System serves several key purposes in Lattice:
 
-1. **Public API Definition** - Define read-only projections of internal model
-   state
-2. **Fluent Composition** - Combine multiple state projections using a chainable
+1. **UI Integration** - Create ready-to-spread props for UI components
+2. **Fluent Composition** - Combine multiple view projections using a chainable
    API
-3. **Model Derivation** - Reference and transform data from finalized models
-4. **Type Safety** - Provide comprehensive TypeScript type support throughout
-   the state hierarchy
-5. **Encapsulation** - Separate internal mutable state from public read-only
-   interfaces
+3. **State Derivation** - Reference and transform data from finalized states
+4. **Action Dispatching** - Connect UI events to actions through a clean
+   interface
+5. **Type Safety** - Provide comprehensive TypeScript type support throughout
+   the view hierarchy
+6. **Accessibility Support** - Enable proper management of ARIA props
 
 ## Architecture
 
-The State System is designed around the same "fluent composition" pattern as
-models - states are composable units that can be combined through a chainable
-API before finalization. This architecture has several key components:
+The View System is designed around the same "fluent composition" pattern as
+models and states - views are composable units that can be combined through a
+chainable API before finalization. This architecture has several key components:
 
 ```
 ┌────────────────────────┐              ┌───────────────────────┐
 │                        │              │                       │
-│      State Factory     │──creates────▶│    State Instance     │──┐
-│  (Public Definition)   │              │   (State Projection)  │  │
+│      View Factory      │──creates────▶│     View Instance     │──┐
+│   (Prop Definition)    │              │   (UI Prop Props)     │  │
 │                        │              │                       │  │
 └────────────────────────┘              └───────────────────────┘  │
                                                                    │.with()
@@ -40,147 +40,184 @@ API before finalization. This architecture has several key components:
                                                                    ▼
 ┌────────────────────────┐              ┌───────────────────────┐
 │                        │              │                       │
-│    Public Interface    │◀──creates────│   Finalized State     │◀─────.create()
-│   (Runtime Access)     │              │  (Final Projection)   │
+│    Component Props     │◀──creates────│    Finalized View     │◀─────.create()
+│   (Ready to Spread)    │              │   (Final Props)       │
 │                        │              │                       │
 └────────────────────────┘              └───────────────────────┘
 ```
 
 ### Key Components
 
-1. **State Factory** - Functions that define the shape and behavior of public
-   state projections
-2. **State Instance** - A composable state projection created by a state factory
+1. **View Factory** - Functions that define the shape and behavior of UI prop
+   projections
+2. **View Instance** - A composable view projection created by a view factory
    with `.with()` method
-3. **Fluent State Composition** - The process of combining states using the
+3. **Fluent View Composition** - The process of combining views using the
    chainable `.with()` API
-4. **State Finalization** - Converting a composed state into its final form
-   using `.create()`
-5. **Model Derivation** - Accessing finalized model properties through a
-   `derive()` helper (planned feature)
+4. **View Finalization** - Converting a composed view into its final form using
+   `.create()`
+5. **State Derivation** - Accessing finalized state properties through a
+   `derive()` helper
+6. **Action Dispatching** - Connecting UI events to actions through a
+   `dispatch()` helper
 
 ### Composition and Finalization
 
-The State System follows the same workflow as the Model System:
+The View System follows the same workflow as the Model and State Systems:
 
-1. Create base states using `createState()`
-2. Compose states using the fluent `.with()` method
+1. Create base views using `createView()`
+2. Compose views using the fluent `.with()` method
 3. Finalize the composition with `.create()`
-4. Use the finalized state in the application
+4. Use the finalized view in UI components
 
 ```typescript
-// Base state
-const counterState = createState(() => ({
-  count: 10,
-  isPositive: () => true,
+// Base view
+const counterView = createView(({ derive, dispatch }) => ({
+   "data-count": derive(finalizedState, "count"),
+   "aria-live": "polite",
+   onClick: dispatch(actions, "increment"),
 }));
 
-// Extensions express what they're adding to the state
-const withStats = counterState.with(({ get }) => ({
-  doubleCount: () => get().count * 2,
+// Extensions express what they're adding to the view
+const withAccessibility = counterView.with(({ derive }) => ({
+   "aria-label": derive(
+      finalizedState,
+      "count",
+      (count) => `Count is ${count}`,
+   ),
+   role: "button",
 }));
 
-const withFormatting = withStats.with(({ get }) => ({
-  formattedCount: () => `Current count: ${get().count}`,
+const withStyling = withAccessibility.with(({ derive }) => ({
+   className: derive(
+      finalizedState,
+      "count",
+      (count) => count > 0 ? "counter positive" : "counter zero",
+   ),
 }));
 
-// Create the finalized state
-const appState = withFormatting.create();
+// Create the finalized view
+const appView = withStyling.create();
 ```
 
-### States and Models Relationship
+### Views, States, and Actions Relationship
 
-A critical aspect of this architecture is the relationship between states and
-models:
+A critical aspect of this architecture is the relationship between views,
+states, and actions:
 
 ```
 ┌───────────────┐           ┌───────────────┐
-│   Model A     │─────┐     │   Model B     │
-│ (Internal)    │     │     │ (Internal)    │
+│    State A    │─────┐     │    State B    │
+│  (Read-only)  │     │     │  (Read-only)  │
 └───────────────┘     │     └───────────────┘
        │              │            │
        └──────────────┼────────────┘
                       │
-  ┌──────────────────────────────────┐      
-  │          Unified Store           │      
-  └──────────────────────────────────┘      
-                 ▲
-                 │
-        ┌────────┴────────┐
-        │                 │
-┌───────────────┐  ┌───────────────┐
-│   State A     │  │   State B     │
-│  (Public)     │  │  (Public)     │
-└───────────────┘  └───────────────┘
+  ┌──────────────────────────────────┐      ┌───────────────┐
+  │         Unified Store            │      │   Actions     │
+  └──────────────────────────────────┘      │  (Behavior)   │
+                 ▲                          └───────────────┘
+                 │                                  │
+        ┌────────┴────────┐                         │
+        │                 │                         │
+┌───────────────┐  ┌───────────────┐                │
+│    View A     │  │    View B     │                │
+│  (UI Props)   │  │  (UI Props)   │                │
+└───────────────┘  └───────────────┘                │
+        │                 │                         │
+        └────────────────┬─────────────────────────┘
+                         │
+                         ▼
+              ┌───────────────────┐
+              │  UI Components    │
+              │ (React, Vue, etc) │
+              └───────────────────┘
 ```
 
-While models define internal mutable state, states provide read-only projections
-for public consumption.
+While states provide read-only data access and actions define behaviors, views
+transform this into UI-ready props that components can directly spread into
+their JSX/template.
 
 ## Key Features
 
 ### Fluent Composition API
 
-The `.with()` method provides a clear, chainable API for state composition that:
+The `.with()` method provides a clear, chainable API for view composition that:
 
 - Makes composition intent explicit
 - Improves code readability
 - Preserves type information throughout the chain
 
-### State Finalization
+### View Finalization
 
 The `.create()` method marks the end of the composition phase by:
 
-- Validating the state for correctness
+- Validating the view for correctness
 - Preventing further composition
-- Creating a distinct finalized state type
+- Creating a distinct finalized view type
 
-### Property Reference Preservation
+### State Derivation
 
-The system preserves property references across state boundaries through
-Zustand's `get()` function, allowing states to access properties defined in
-other states.
+The `derive()` helper function allows views to reference and transform
+properties from finalized states, creating UI props that dynamically reflect
+application state:
 
-### Model Derivation (Planned)
+```typescript
+const view = createView(({ derive }) => ({
+   "data-count": derive(state, "count"),
+   className: derive(
+      state,
+      "isActive",
+      (isActive) => isActive ? "active" : "inactive",
+   ),
+}));
+```
 
-A `derive()` helper function will allow states to reference and transform
-properties from finalized models, creating a clear relationship between internal
-models and public state.
+### Action Dispatching
+
+The `dispatch()` helper connects UI events to actions:
+
+```typescript
+const view = createView(({ dispatch }) => ({
+   onClick: dispatch(actions, "increment"),
+   onKeyDown: (e) => {
+      if (e.key === "Enter") dispatch(actions, "increment")();
+   },
+}));
+```
 
 ### Type System
 
 The type system ensures:
 
-- Type information is preserved across state boundaries
-- Properties from all composed states are accessible via `get()`
+- Type information is preserved across view boundaries
+- Event handlers are correctly typed for their actions
 - Complete types are inferred without explicit annotations
 
 ### Compositional Approach
 
-Like the model system, the state system doesn't directly create reactive state -
-it creates composable state projections that serve as public interfaces. This
-separation allows for:
+Like the model and state systems, the view system doesn't directly create UI
+components - it creates composable UI prop projections that serve as
+ready-to-spread props. This separation allows for:
 
-- Clear public/private boundaries
-- Preserved property references
+- Clean separation between logic and presentation
+- Reusable UI prop collections
 - Flexible composition patterns
 
 ## Module Structure
 
-- **create.ts** - Functions for creating and composing state instances
-- **identify.ts** - Utilities for identifying valid Lattice states
+- **create.ts** - Functions for creating and composing view instances
+- **identify.ts** - Utilities for identifying valid Lattice views
 - **types.ts** - TypeScript type definitions
 - **index.ts** - Public API exports
 
 ## Design Principles
 
-1. **Public Interface Separation** - States provide a clear public API for
-   models
-2. **Read-Only by Default** - States expose read-only projections of internal
-   state
-3. **Fluent Composition** - Chainable, expressive API for combining states
+1. **UI Integration** - Views provide ready-to-spread props for UI components
+2. **Event Handling** - Clean pattern for connecting UI events to actions
+3. **Fluent Composition** - Chainable, expressive API for combining views
 4. **Clear Phase Boundaries** - Distinct composition and finalization phases
 5. **Type Safety First** - Comprehensive TypeScript support for developer
    experience
-6. **Reference Preservation** - Property references work across state boundaries
-7. **Model Derivation** - States can derive values from finalized models
+6. **Accessibility Support** - ARIA props can be properly managed
+7. **State Derivation** - Views can derive UI props from finalized states

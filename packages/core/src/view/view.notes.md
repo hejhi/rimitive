@@ -1,251 +1,260 @@
-# Thinking Through State Composition
+# Thinking Through View Composition
 
 ## The Problem Space
 
-Following the successful implementation of model composition, we now need to
-create a state composition system where:
+Following the successful implementation of state composition, we now need to
+create a view composition system where:
 
-1. States are defined once but instantiated many times
-2. States can compose other states with the `.with()` method
-3. States can reference properties from finalized models (after `create()` is
+1. Views are defined once but instantiated many times
+2. Views can compose other views with the `.with()` method
+3. Views can derive properties from finalized states (after `create()` is
    called)
-4. Property references are preserved through composition layers
-5. States provide a public, read-only API surface for models
-6. All of this happens before any actual Zustand store is created
+4. Views can dispatch actions through proper channels
+5. Property references are preserved through composition layers
+6. Views provide a public, UI-ready API surface for rendering components
+7. All of this happens before any actual UI rendering
 
-Like models, state composition follows the blueprint approach - we're not
-creating reactive systems directly, but blueprints for extracting and deriving
-state from Zustand stores.
+Like models and states, view composition follows the blueprint approach - we're
+not creating UI components directly, but blueprints for transforming state and
+actions into ready-to-spread UI props.
 
-## Key Insight: States as Model Projections
+## Key Insight: Views as UI Prop Projections
 
-States are essentially projections or views of models that:
+Views are essentially projections of states and actions that:
 
-1. Extract specific properties from finalized models
-2. Create derived values from model properties
-3. Expose a read-only public API for model data
-4. Transform internal model state into consumable public values
+1. Transform state values into UI props
+2. Connect UI events to actions
+3. Provide ready-to-spread props for UI components
+4. Map internal state to consumable UI properties
 
-While models contain both state and behavior, states expose only the read-only
-aspects needed by consumers. States function as the authorized public interface
-to the underlying model.
+While states contain read-only data, views expose UI-ready props needed by
+components. Views function as the bridge between state/actions and the actual UI
+components.
 
-## State Composition vs Model Composition
+## View Composition vs State Composition
 
-State composition differs from model composition in several key ways:
+View composition differs from state composition in several key ways:
 
-1. **Projection vs Extension** - Models extend behavior, states project
-   selective views
-2. **Read-only vs Mutable** - States expose read-only data, models contain
-   mutable state
-3. **Public vs Internal** - States are public-facing, models are
-   composition-only
-4. **Derivation Source** - States can only derive from finalized models, not
-   other states
-5. **Composition** - States compose with other states but don't derive from them
+1. **UI Props vs Data** - States expose data, views expose UI props
+2. **Event Handlers vs Read-Only** - Views include event handlers, states are
+   read-only
+3. **Component-Facing vs Logic-Facing** - Views are component-facing, states are
+   logic-facing
+4. **Action Dispatching** - Views can dispatch actions, states cannot
+5. **Composition** - Views compose with other views, creating merged UI prop
+   sets
 
-However, state composition shares the same fundamental API pattern as model
-composition:
+However, view composition shares the same fundamental API pattern as state and
+model composition:
 
-1. `createState()` creates a composable state blueprint
-2. `.with()` allows fluent composition of states
-3. `.create()` finalizes states for use with Zustand
+1. `createView()` creates a composable view blueprint
+2. `.with()` allows fluent composition of views
+3. `.create()` finalizes views for use with UI components
 
-## State References and Derivation
+## View References and Derivation
 
-A critical aspect of state composition is the ability to reference and derive
-values:
+A critical aspect of view composition is the ability to reference state and
+derive UI props:
 
-### Direct References from Models
+### Derived Values from States
 
-States can directly reference finalized model properties:
+Views can create derived UI props from finalized state properties:
 
 ```typescript
-const finalizedModel = baseModel.create();
+const finalizedState = baseState.create();
 
-const baseState = createState(({ get }) => ({
-   count: () => get().count, // Direct reference to model.count
+const baseView = createView(({ derive }) => ({
+   "data-count": derive(finalizedState, "count"),
+   "aria-busy": false,
 }));
 ```
 
-### Derived Values from Models
+### Action Dispatching
 
-States can create derived values from finalized model properties:
+Views can connect UI events to actions:
 
 ```typescript
-const finalizedModel = baseModel.create();
-
-const baseState = createState(({ get, derive }) => ({
-   doubleCount: derive(finalizedModel, "count", (count) => count * 2),
+const baseView = createView(({ dispatch }) => ({
+   onClick: dispatch(actions, "increment"),
+   onKeyDown: (e) => {
+      if (e.key === "Enter") dispatch(actions, "increment")();
+   },
 }));
 ```
 
-### Composition of States
+### Composition of Views
 
-When composing states, we combine their APIs but don't directly derive from
-them:
+When composing views, we combine their UI props:
 
 ```typescript
-// First state derives from model
-const countState = createState(({ get, derive }) => ({
-   count: derive(finalizedModel, "count"),
-   isPositive: () => get().count > 0,
+// First view derives from state
+const counterView = createView(({ derive }) => ({
+   "data-count": derive(finalizedState, "count"),
+   "aria-live": "polite",
 }));
 
-// Second state composes with first state but derives only from model
-const statsState = countState.with(({ get, derive }) => ({
-   // Derives from model, not from countState
-   doubleCount: derive(finalizedModel, "count", (count) => count * 2),
+// Second view composes with first view
+const enhancedCounterView = counterView.with(({ derive, dispatch }) => ({
+   // New props
+   className: derive(
+      finalizedState,
+      "count",
+      (count) => count > 0 ? "counter positive" : "counter zero",
+   ),
 
-   // Can access composed state properties via get()
-   description: () =>
-      `Count is ${get().count} (${
-         get().isPositive() ? "positive" : "zero or negative"
-      })`,
+   // Event handlers
+   onClick: dispatch(actions, "increment"),
 }));
 ```
 
-## Type System for States
+## Type System for Views
 
-The type system for states should:
+The type system for views should:
 
-1. Infer types from referenced finalized models
-2. Track derived value types
+1. Infer types from referenced finalized states
+2. Track UI prop types (strings, numbers, event handlers)
 3. Preserve type information through composition
 4. Ensure type safety when accessing properties
 
-Similar to models, the composition of states should maintain type information
+Similar to states, the composition of views should maintain type information
 throughout the chain.
 
-## The Fluent Composition Pattern for States
+## The Fluent Composition Pattern for Views
 
-For states, the fluent composition pattern looks like:
+For views, the fluent composition pattern looks like:
 
 ```typescript
-// Finalized model
-const finalizedModel = baseModel.create();
+// Finalized state
+const finalizedState = baseState.create();
 
-// Base state
-const baseState = createState(({ get, derive }) => ({
-   count: derive(finalizedModel, "count"),
-   isPositive: () => get().count > 0,
+// Base view
+const baseView = createView(({ derive, dispatch }) => ({
+   "data-count": derive(finalizedState, "count"),
+   "aria-live": "polite",
+   onClick: dispatch(actions, "increment"),
 }));
 
-// Extended state using .with()
-const enhancedState = baseState.with(({ get, derive }) => ({
-   // Derives from model, not from baseState
-   doubleCount: derive(finalizedModel, "count", (count) => count * 2),
+// Extended view using .with()
+const enhancedView = baseView.with(({ derive, dispatch }) => ({
+   // Add or override UI props
+   className: derive(
+      finalizedState,
+      "count",
+      (count) => count > 0 ? "counter positive" : "counter zero",
+   ),
 
-   // Can access composed state via get()
-   status: () => get().isPositive() ? "active" : "inactive",
+   // Add new event handlers
+   onKeyDown: (e) => {
+      if (e.key === "Enter") dispatch(actions, "increment")();
+   },
 }));
 
 // Finalize for use
-const finalState = enhancedState.create();
+const finalView = enhancedView.create();
 ```
 
-This pattern provides a clear, readable way to build up state functionality
-while maintaining type safety.
+This pattern provides a clear, readable way to build up view functionality while
+maintaining type safety.
 
-## State Finalization
+## View Finalization
 
-Similar to models, states need a finalization step with `.create()` that:
+Similar to states, views need a finalization step with `.create()` that:
 
-1. Validates the state composition
+1. Validates the view composition
 2. Prevents further composition
-3. Creates a distinct finalized state type
-4. Prepares the state for use with Zustand
+3. Creates a distinct finalized view type
+4. Prepares the view for use with UI components
 
 The finalization step marks the boundary between composition and usage, ensuring
-that only complete states are used in the application.
+that only complete views are used in the application.
 
 ## Implementation Considerations
 
-### State Factory Function
+### View Factory Function
 
-The `createState` function should:
+The `createView` function should:
 
-1. Accept a factory function that receives tools for state creation
-2. Return a composable state with `.with()` method
-3. Provide tools like `get` and `derive` for accessing model data
+1. Accept a factory function that receives tools for view creation
+2. Return a composable view with `.with()` method
+3. Provide tools like `derive` and `dispatch` for accessing state and actions
 
 ```typescript
-function createState<T>(
-   factory: (tools: StateFactory<T>) => T,
-): StateInstance<T> {
+function createView<T>(
+   factory: (tools: ViewFactory<T>) => T,
+): ViewInstance<T> {
    // Implementation details...
 }
 ```
 
-### State Composition Context
+### View Composition Context
 
-During composition, states need access to:
+During composition, views need access to:
 
-1. The `get` function to reference properties
-2. A `derive` helper to create derived values from finalized models
+1. A `derive` helper to create derived props from finalized states
+2. A `dispatch` helper to connect events to actions
 
 ```typescript
-interface StateFactory<T> {
-   get: GetState<any>;
-   derive: <M extends FinalizedModel<any>, K extends keyof ModelState<M>, R>(
-      model: M,
+interface ViewFactory<T> {
+   derive: <S extends FinalizedState<any>, K extends keyof S, R>(
+      state: S,
       key: K,
-      transform?: (value: ModelState<M>[K]) => R,
+      transform?: (value: S[K]) => R,
    ) => R;
+   dispatch: <A extends Actions<any>, K extends keyof A>(
+      actions: A,
+      key: K,
+   ) => (...args: Parameters<A[K]>) => void;
 }
 ```
 
 ### Derivation Constraints
 
-The state system has important constraints on derivation:
+The view system has important constraints on derivation:
 
-1. **Model-only derivation**: `derive` can only access finalized models (after
+1. **State-only derivation**: `derive` can only access finalized states (after
    `create()` is called)
-2. **No cross-state derivation**: States cannot derive from other states
-   directly
-3. **Composition for state reuse**: Other states can only be accessed by
-   composing them using `.with()`
-4. **Access through get()**: Composed state properties are accessed via the
-   `get()` function
+2. **Action-only dispatching**: `dispatch` can only reference finalized actions
+3. **Composition for view reuse**: Other views can only be accessed by composing
+   them using `.with()`
 
-### Common Derivation Patterns
+### Common View Patterns
 
-The state system should support these derivation patterns:
+The view system should support these patterns:
 
-1. **Simple property projections**: Direct access to model properties
-2. **Transformations**: Converting model values to different formats
-3. **Combinations**: Deriving values from multiple model properties
-4. **Conditional derivations**: Values that depend on conditions
-5. **Access to composed state**: Referencing previously composed state through
-   `get()`
+1. **Prop derivation**: Mapping state values to UI props
+2. **Event handling**: Connecting UI events to actions
+3. **Conditional props**: Props that depend on state conditions
+4. **Accessibility props**: ARIA props for accessibility
+5. **Merged views**: Combining multiple views for a complete UI surface
 
-## Benefits of the State Composition Approach
+## Benefits of the View Composition Approach
 
-1. **Clear Public API** - States explicitly define the public interface to
-   models
-2. **Separation of Concerns** - Read-only state is separated from mutable model
-   logic
-3. **Encapsulation** - Internal model implementation details remain hidden
-4. **Derivation** - Complex derived values can be computed from models
-5. **Composability** - States can be composed and reused across components
+1. **Component Integration** - Views provide ready-to-spread props for UI
+   components
+2. **Separation of Concerns** - UI props are separated from state logic
+3. **Accessibility** - ARIA props can be properly managed and derived
+4. **Event Handling** - Clean pattern for connecting events to actions
+5. **Composability** - Views can be composed and reused across components
 
 ## Relationship with Other System Components
 
-States form a critical link in the overall architecture:
+Views form the final link in the overall architecture:
 
 ```
-Models (internal) → States (public) → Views (UI mapping)
+Models (internal) → States (public data) → Views (UI mapping)
+                  → Actions (behavior) ────┘
 ```
 
-While models contain all behavior and internal state, states expose the public
-read interface that views and components use to render UI.
+While models contain all behavior and internal state, and states expose the
+public read interface, views transform this data into consumable UI props that
+components can directly spread into their JSX.
 
 ## Conclusion
 
-The state composition system allows for fluent, type-safe composition of state
-projections from finalized models. By following the same pattern as model
-composition but with model-only derivation constraints, it maintains consistency
-in the API while addressing the specific needs of public state exposure.
+The view composition system allows for fluent, type-safe composition of UI prop
+projections from finalized states and actions. By following the same pattern as
+model and state composition, it maintains consistency in the API while
+addressing the specific needs of UI integration.
 
-Like models, states are blueprints that are composed before Zustand
-instantiation, enabling a flexible, reusable approach to state management.
+Like models and states, views are blueprints that are composed before UI
+rendering, enabling a flexible, reusable approach to UI prop management.
