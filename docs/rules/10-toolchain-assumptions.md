@@ -1,0 +1,6 @@
+### Modern Toolchain Assumptions
+
+- Default to the **latest stable language, framework, and library versions**.
+- Enable the **strictest compiler, linter, and type-checker settings**.
+- Auto-format on commit (Prettier, Black, gofmt, etc.).
+- Use **CI pipelines** to enforce all checks before merge.

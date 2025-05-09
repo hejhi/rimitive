@@ -1,0 +1,5 @@
+### Docs Appendix
+
+The docs are the source-of-truth and MUST remain updated at all times, and
+consulted frequently or to resolve ambiguity. They are located in the `docs`
+directory.
