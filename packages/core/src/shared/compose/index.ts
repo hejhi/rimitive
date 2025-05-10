@@ -154,11 +154,9 @@ if (import.meta.vitest) {
       expect(baseInstance.with).toBeDefined();
 
       // Create an extension to the instance using the .with() method
-      const extendedInstance = baseInstance.with(
-        ({ get }) => ({
-          doubleCount: () => (get ? get().count * 2 : 0),
-        })
-      );
+      const extendedInstance = baseInstance.with(({ get }) => ({
+        doubleCount: () => (get ? get().count * 2 : 0),
+      })) as Instance<CounterState & StatsState, unknown>;
 
       // Verify the extended instance contains properties from both instances
       const sliceCreator = extendedInstance();
@@ -169,7 +167,8 @@ if (import.meta.vitest) {
         doubleCount: () => 20,
       };
       const mockGet = vi.fn(() => mockState);
-      const slice = sliceCreator({ get: mockGet });
+      const mockSet = vi.fn();
+      const slice = sliceCreator({ get: mockGet, set: mockSet });
 
       expect(slice).toHaveProperty('count');
       expect(slice).toHaveProperty('doubleCount');
@@ -192,11 +191,9 @@ if (import.meta.vitest) {
         count: 10,
       }));
 
-      const extendedInstance = baseInstance.with(
-        ({ get }) => ({
-          doubleCount: () => (get ? get().count * 2 : 0),
-        })
-      );
+      const extendedInstance = baseInstance.with(({ get }) => ({
+        doubleCount: () => (get ? get().count * 2 : 0),
+      })) as Instance<CounterState & StatsState, unknown>;
 
       // Verify the instance has a .create() method
       expect(extendedInstance.create).toBeDefined();
@@ -223,7 +220,8 @@ if (import.meta.vitest) {
         doubleCount: () => 20,
       };
       const mockGet = vi.fn(() => mockState);
-      const slice = sliceCreator({ get: mockGet });
+      const mockSet = vi.fn();
+      const slice = sliceCreator({ get: mockGet, set: mockSet });
 
       // Verify all properties and functionality are preserved
       expect(slice).toHaveProperty('count');
@@ -231,18 +229,22 @@ if (import.meta.vitest) {
       expect(slice.count).toBe(10);
       expect(typeof slice.doubleCount).toBe('function');
     });
-    
+
     it('should support different factory types', () => {
       // Test with a model-like instance (get/set)
-      const modelInstance = createTestEntity<{ count: number }>(({ get, set }) => ({
-        count: get ? get().count : 10,
-      }));
-      
+      const modelInstance = createTestEntity<{ count: number }>(
+        ({ get, set: _ }) => ({
+          count: get ? get().count : 10,
+        })
+      );
+
       // Test with an actions-like instance (mutate)
-      const actionsInstance = createTestEntity<{ increment: () => void }>(({ mutate }) => ({
-        increment: () => {},
-      }));
-      
+      const actionsInstance = createTestEntity<{ increment: () => void }>(
+        ({ mutate: _ }) => ({
+          increment: () => {},
+        })
+      );
+
       // Compose them together
       const composedInstance = createComposedInstance(
         modelInstance,
@@ -250,19 +252,19 @@ if (import.meta.vitest) {
         createTestEntity,
         (x) => x
       );
-      
+
       // Should be able to provide any combination of factory tools
       const sliceCreator = composedInstance();
       const mockGet = vi.fn(() => ({ count: 5 }));
       const mockSet = vi.fn();
       const mockMutate = vi.fn();
-      
-      const slice = sliceCreator({ 
-        get: mockGet, 
-        set: mockSet, 
-        mutate: mockMutate 
+
+      const slice = sliceCreator({
+        get: mockGet as any,
+        set: mockSet as any,
+        mutate: mockMutate as any,
       });
-      
+
       // Should have properties from both source instances
       expect(slice).toHaveProperty('count');
       expect(slice).toHaveProperty('increment');

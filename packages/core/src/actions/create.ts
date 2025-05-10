@@ -9,30 +9,33 @@ import {
  * Creates a slice creator function based on the provided factory
  *
  * @param factory A function that produces an actions object with methods
- * @param options Object containing tools for the factory (primarily mutate)
+ * @param _ Unused options parameter, maintained for API consistency
  * @returns An actions object with methods
  */
 export function createSliceCreator<T>(
   factory: (tools: ActionsFactory<T>) => T,
   options: Factory<T>
 ): T {
-  // Create a basic mutate function
-  const mutateFn: Mutate<T> = <M, K extends keyof M>(model: M, key: K) => {
-    // Return a function that calls the corresponding method on the model
-    return ((...args: any[]) => {
-      // In a real implementation, this would call the model's method
-      // For testing, we just return a function that forwards arguments
-      return (model[key] as any)(...args);
-    }) as any;
-  };
+  // Create a basic mutate function if one isn't provided
+  const mutateFn: Mutate =
+    options.mutate ||
+    (<M, K extends keyof M>(model: M, key: K) => {
+      // Return a function that calls the corresponding method on the model
+      return ((...args: any[]) => {
+        // In a real implementation, this would call the model's method
+        // For testing, we just return a function that forwards arguments
+        return (model[key] as any)(...args);
+      }) as any;
+    });
 
-  // Create actions tools
+  // Create actions tools with proper branding
   const tools: ActionsFactory<T> = {
     mutate: mutateFn,
-  };
+    __actionsFactoryBrand: Symbol('actions'),
+  } as ActionsFactory<T>;
 
   // Pass to shared createSliceCreator
-  return sharedCreateSliceCreator(factory, tools);
+  return sharedCreateSliceCreator(factory as (tools: Factory<T>) => T, tools);
 }
 
 /**
@@ -54,12 +57,19 @@ export function actionsMarker<V>(instance: V): V {
 export function createActionInstance<T>(
   factory: (tools: ActionsFactory<T>) => T
 ): ActionInstance<T> {
+  // Convert the factory to accept the shared Factory type
+  const factoryAdapter = (tools: Factory<T>): T => {
+    // Cast the tools to ActionsFactory to ensure type safety
+    const actionTools = tools as unknown as ActionsFactory<T>;
+    return factory(actionTools);
+  };
+
   return createInstance<T, unknown>(
-    factory,
+    factoryAdapter,
     actionsMarker,
     'actions',
     createAction
-  );
+  ) as ActionInstance<T>;
 }
 
 /**
@@ -104,9 +114,9 @@ if (import.meta.vitest) {
     };
 
     // Create a spy factory to check it receives the mutate parameter
-    const factorySpy = vi.fn(({ mutate }) => ({
-      increment: mutate(mockModel, 'increment'),
-      reset: mutate(mockModel, 'reset'),
+    const factorySpy = vi.fn((tools: { mutate: any }) => ({
+      increment: tools.mutate(mockModel, 'increment'),
+      reset: tools.mutate(mockModel, 'reset'),
     }));
 
     const actions = createAction(factorySpy);
@@ -128,15 +138,19 @@ if (import.meta.vitest) {
     const slice = sliceCreator({ mutate: realMutate });
 
     // Check that the factory is called with a mutate function
-    expect(factorySpy).toHaveBeenCalledWith({
-      mutate: expect.any(Function),
-    });
+    expect(factorySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutate: expect.any(Function),
+      })
+    );
 
     // Verify the returned actions contain the expected methods
     expect(slice).toHaveProperty('increment');
     expect(slice).toHaveProperty('reset');
-    expect(typeof slice.increment).toBe('function');
-    expect(typeof slice.reset).toBe('function');
+    // Type assertion to avoid the 'unknown' type warning
+    const typedSlice = slice as { increment: Function; reset: Function };
+    expect(typeof typedSlice.increment).toBe('function');
+    expect(typeof typedSlice.reset).toBe('function');
   });
 
   it('should support methods in action state', () => {
@@ -198,7 +212,7 @@ if (import.meta.vitest) {
 
     // Extend with additional actions
     const extendedActions = baseActions.with(({ mutate }) => ({
-      reset: mutate(mockModelExtension, 'reset'),
+      reset: mutate!(mockModelExtension, 'reset'),
     }));
 
     // Call the composed actions
@@ -207,12 +221,18 @@ if (import.meta.vitest) {
     // Verify the composed actions have all methods
     expect(actionsMethods).toHaveProperty('increment');
     expect(actionsMethods).toHaveProperty('reset');
-    expect(typeof actionsMethods.increment).toBe('function');
-    expect(typeof actionsMethods.reset).toBe('function');
+
+    // Type assertion to avoid the 'unknown' type warning
+    const typedMethods = actionsMethods as {
+      increment: Function;
+      reset: Function;
+    };
+    expect(typeof typedMethods.increment).toBe('function');
+    expect(typeof typedMethods.reset).toBe('function');
 
     // Call the methods to verify they work
-    actionsMethods.increment();
-    actionsMethods.reset();
+    typedMethods.increment();
+    typedMethods.reset();
 
     // Verify the model methods were called
     expect(mockModelBase.increment).toHaveBeenCalled();

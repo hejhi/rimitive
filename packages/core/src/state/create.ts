@@ -1,4 +1,5 @@
 import type { StateFactory, StateInstance, GetState, SetState } from './types';
+import type { Factory } from '../shared/types';
 import { markAsLatticeState } from './identify';
 import {
   createInstance,
@@ -19,16 +20,28 @@ export function stateMarker<V>(instance: V): V {
  * Creates a slice creator function based on the provided factory
  *
  * @param factory A function that produces a state object with optional methods and derived properties
- * @param set The Zustand set function for updating state
- * @param get The Zustand get function for accessing current state
+ * @param options Object containing get and set functions
  * @returns A state object with properties, methods, and derived values
  */
 export function createSliceCreator<T>(
   factory: (tools: StateFactory<T>) => T,
-  set: SetState<T>,
-  get: GetState<T>
+  options: Factory<T>
 ): T {
-  return sharedCreateSliceCreator(factory, set, get);
+  // Check if get is provided, which is required for state
+  if (!options.get) {
+    throw new Error('State factory requires a get function');
+  }
+
+  // Create state tools with proper branding
+  const tools: StateFactory<T> = {
+    get: options.get,
+    set: options.set,
+    derive: options.derive || ((model: any, key: any) => model[key]), // Simple derive implementation
+    __stateFactoryBrand: Symbol('state'),
+  } as StateFactory<T>;
+
+  // Pass to shared createSliceCreator
+  return sharedCreateSliceCreator(factory as (tools: Factory<T>) => T, tools);
 }
 
 /**
@@ -40,7 +53,19 @@ export function createSliceCreator<T>(
 export function createStateInstance<T>(
   factory: (tools: StateFactory<T>) => T
 ): StateInstance<T> {
-  return createInstance<T, unknown>(factory, stateMarker, 'state', createState);
+  // Convert the factory to accept the shared Factory type
+  const factoryAdapter = (tools: Factory<T>): T => {
+    // Cast the tools to StateFactory to ensure type safety
+    const stateTools = tools as unknown as StateFactory<T>;
+    return factory(stateTools);
+  };
+
+  return createInstance<T, unknown>(
+    factoryAdapter,
+    stateMarker,
+    'state',
+    createState
+  ) as StateInstance<T>;
 }
 
 /**
@@ -103,10 +128,12 @@ if (import.meta.vitest) {
     const slice = sliceCreator({ get: mockGet, set: mockSet });
 
     // Check that the factory is called with the correct parameters
-    expect(factorySpy).toHaveBeenCalledWith(expect.objectContaining({
-      get: mockGet,
-      set: mockSet
-    }));
+    expect(factorySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        get: mockGet,
+        set: mockSet,
+      })
+    );
 
     // Also verify the slice contains the expected primitive value
     expect(slice).toEqual({ count: 1 });
@@ -133,8 +160,8 @@ if (import.meta.vitest) {
     const state = createState<CounterState>(({ get, set }) => ({
       count: 1,
       increment: () => {
-        set((state: CounterState) => ({ count: state.count + 1 }));
-        return get().count;
+        set!((state: CounterState) => ({ count: state.count + 1 }));
+        return get!().count;
       },
     }));
 
@@ -173,7 +200,7 @@ if (import.meta.vitest) {
     const sliceCreator = state();
     const slice = sliceCreator({
       get: mockGet,
-      set: vi.fn() as SetState<CounterState>
+      set: vi.fn() as SetState<CounterState>,
     }) as CounterState;
 
     // Test initial derived value

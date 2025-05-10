@@ -1,5 +1,9 @@
 import type { ActionInstance, FinalizedAction } from './types';
-import { validateInstance, finalizeInstance } from '../shared/validation';
+import {
+  validateInstance,
+  finalizeInstance,
+  ValidationOptions,
+} from '../shared/validation';
 
 /**
  * Validates a action instance for problems like circular references
@@ -8,7 +12,10 @@ import { validateInstance, finalizeInstance } from '../shared/validation';
  * @param actionInstance The action instance to validate
  * @throws Error if validation fails
  */
-export function validateAction<T>(actionInstance: ActionInstance<T>): void {
+export function validateAction<T>(
+  actionInstance: ActionInstance<T>,
+  _options?: ValidationOptions
+): void {
   validateInstance(actionInstance, 'action');
 }
 
@@ -19,7 +26,8 @@ export function validateAction<T>(actionInstance: ActionInstance<T>): void {
  * @returns A finalized action that cannot be further composed
  */
 export function finalizeAction<T>(
-  actionInstance: ActionInstance<T>
+  actionInstance: ActionInstance<T>,
+  _options?: ValidationOptions
 ): FinalizedAction<T> {
   return finalizeInstance(actionInstance, 'action') as FinalizedAction<T>;
 }
@@ -43,7 +51,7 @@ if (import.meta.vitest) {
 
     it('should pass validation for valid actions', () => {
       // Create a action-like object without circular references
-      const mockActionInstance = () => (options: any) => ({
+      const mockActionInstance = () => (_: any) => ({
         increment: () => {},
         reset: () => {},
       });
@@ -56,7 +64,7 @@ if (import.meta.vitest) {
   describe('finalizeAction', () => {
     it('should prevent further composition after finalization', () => {
       // Create a mock action instance
-      const mockActionInstance = () => (options: any) => ({ increment: () => {} });
+      const mockActionInstance = () => (_: any) => ({ increment: () => {} });
       mockActionInstance.with = () => ({}) as any;
       mockActionInstance.create = () => ({}) as any;
 

@@ -7,6 +7,7 @@ import type {
 import { createModel, modelMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
+import { Instance } from '../shared';
 
 /**
  * Creates a composed model instance that combines two input models
@@ -22,9 +23,10 @@ export function createComposedModelInstance<
   baseModel: TBase,
   extensionModel: TExt
 ): ModelInstance<ComposedState<ModelState<TBase>, ModelState<TExt>>> {
+  // Cast the shared composed instance to the specific ModelInstance type
   return createComposedInstance(
-    baseModel,
-    extensionModel,
+    baseModel as unknown as Instance<any, unknown>,
+    extensionModel as unknown as Instance<any, unknown>,
     createModel,
     modelMarker
   );
@@ -54,7 +56,7 @@ if (import.meta.vitest) {
 
     // Create an extension to the model using the .with() method
     const extendedModel = baseModel.with<StatsState>(({ get }) => ({
-      doubleCount: () => get().count * 2,
+      doubleCount: () => get!().count * 2,
     }));
 
     // Verify the extended model contains properties from both models
@@ -105,7 +107,7 @@ if (import.meta.vitest) {
         count: 5,
       }))
       .with<LoggerState>(({ get }) => ({
-        log: () => `${get().name}: ${get().count}`,
+        log: () => `${get!().name}: ${get!().count}`,
       }))
       .with<MetadataState>(() => ({
         metadata: { version: '1.0.0' },
@@ -149,7 +151,7 @@ if (import.meta.vitest) {
     }));
 
     const extendedModel = baseModel.with<StatsState>(({ get }) => ({
-      doubleCount: () => get().count * 2,
+      doubleCount: () => get!().count * 2,
     }));
 
     // Verify the model has a .create() method

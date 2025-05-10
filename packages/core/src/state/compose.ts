@@ -7,6 +7,7 @@ import type {
 import { createState, stateMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
+import { Instance } from '../shared';
 
 /**
  * Creates a composed state instance that combines two input states
@@ -22,12 +23,13 @@ export function createComposedStateInstance<
   baseState: TBase,
   extensionState: TExt
 ): StateInstance<ComposedState<StateState<TBase>, StateState<TExt>>> {
+  // Cast the shared composed instance to the specific StateInstance type
   return createComposedInstance(
-    baseState,
-    extensionState,
+    baseState as unknown as Instance<any, unknown>,
+    extensionState as unknown as Instance<any, unknown>,
     createState,
     stateMarker
-  );
+  ) as StateInstance<ComposedState<StateState<TBase>, StateState<TExt>>>;
 }
 
 // In-source tests
@@ -54,7 +56,7 @@ if (import.meta.vitest) {
 
     // Create an extension to the state using the .with() method
     const extendedState = baseState.with<StatsState>(({ get }) => ({
-      doubleCount: () => get().count * 2,
+      doubleCount: () => get!().count * 2,
     }));
 
     // Verify the extended state contains properties from both states
@@ -105,7 +107,7 @@ if (import.meta.vitest) {
         count: 5,
       }))
       .with<LoggerState>(({ get }) => ({
-        log: () => `${get().name}: ${get().count}`,
+        log: () => `${get!().name}: ${get!().count}`,
       }))
       .with<MetadataState>(() => ({
         metadata: { version: '1.0.0' },
@@ -149,7 +151,7 @@ if (import.meta.vitest) {
     }));
 
     const extendedState = baseState.with<StatsState>(({ get }) => ({
-      doubleCount: () => get().count * 2,
+      doubleCount: () => get!().count * 2,
     }));
 
     // Verify the state has a .create() method

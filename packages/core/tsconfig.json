@@ -6,12 +6,12 @@
     "declaration": true,
     "declarationMap": true,
     "noImplicitAny": true,
-    "composite": true
+    "composite": true,
+    "types": [
+      "vitest/importMeta"
+    ]
   },
   "include": [
     "src/**/*.ts"
   ],
-  "types": [
-    "vitest/importMeta"
-  ]
 }

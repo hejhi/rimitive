@@ -1,6 +1,21 @@
 import type { Instance, Finalized, SliceCreator } from '../types';
 
 /**
+ * Options for validation operations
+ */
+export interface ValidationOptions {
+  /**
+   * Whether to perform deep validation (default: true)
+   */
+  deep?: boolean;
+
+  /**
+   * Custom properties to skip during validation
+   */
+  skipProperties?: string[];
+}
+
+/**
  * Validates an instance for problems like circular references
  * that could cause runtime issues
  *
@@ -10,7 +25,8 @@ import type { Instance, Finalized, SliceCreator } from '../types';
  */
 export function validateInstance<T>(
   instance: Instance<T>,
-  entityName: string
+  entityName: string,
+  _?: ValidationOptions
 ): void {
   // Create a mock get function for validation
   const visited = new Set<Function>();
@@ -72,11 +88,11 @@ export function validateInstance<T>(
   const validationSet = () => {};
   const validationGet = () => ({});
 
-  // Get the instance state by calling the factory
-  const instanceState = sliceCreator(
-    validationSet as any,
-    validationGet as any
-  );
+  // Get the instance state by calling the factory with Factory interface
+  const instanceState = sliceCreator({
+    get: validationGet as any,
+    set: validationSet as any,
+  });
 
   // Detect circular references in the instance state
   detectCircular(instanceState);
@@ -100,10 +116,11 @@ type InstanceWithErroringWith<T> = {
  */
 export function finalizeInstance<T>(
   instance: Instance<T>,
-  entityName: string
+  entityName: string,
+  options?: ValidationOptions
 ): Finalized<T> {
   // Validate the instance before finalizing
-  validateInstance(instance, entityName);
+  validateInstance(instance, entityName, options);
 
   // Create the finalized instance
   const finalizedInstance = function finalizedInstance(): SliceCreator<T> {

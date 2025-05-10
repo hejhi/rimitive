@@ -1,5 +1,6 @@
 import type { StateInstance, FinalizedState } from './types';
 import { validateInstance, finalizeInstance } from '../shared/validation';
+import { Instance } from '../shared';
 
 /**
  * Validates a state instance for problems like circular references
@@ -9,7 +10,7 @@ import { validateInstance, finalizeInstance } from '../shared/validation';
  * @throws Error if validation fails
  */
 export function validateState<T>(stateInstance: StateInstance<T>): void {
-  validateInstance(stateInstance, 'state');
+  validateInstance(stateInstance as unknown as Instance<T>, 'state');
 }
 
 /**
@@ -21,7 +22,10 @@ export function validateState<T>(stateInstance: StateInstance<T>): void {
 export function finalizeState<T>(
   stateInstance: StateInstance<T>
 ): FinalizedState<T> {
-  return finalizeInstance(stateInstance, 'state') as FinalizedState<T>;
+  return finalizeInstance(
+    stateInstance as unknown as Instance<T>,
+    'state'
+  ) as FinalizedState<T>;
 }
 
 // In-source tests

@@ -1,17 +1,18 @@
 /**
  * Re-export shared types
  */
-import type { 
+import type {
   Factory as GenericFactory,
   ActionsFactory as SharedActionsFactory,
-  SliceCreator,
   MutateFunction,
+  Instance as SharedInstance,
+  Finalized as SharedFinalized,
 } from '../shared/types';
 
 /**
  * Export the MutateFunction for actions
  */
-export type Mutate<T> = MutateFunction;
+export type Mutate = MutateFunction;
 
 /**
  * Re-export the Factory type
@@ -27,23 +28,13 @@ export type ActionsFactory<T> = SharedActionsFactory<T>;
  * Type for an action instance, which is a function that returns a slice creator
  * T represents the set of actions this instance contributes
  */
-export type ActionInstance<T> = {
-  (): SliceCreator<T>;
-  __composition?: unknown;
-  with<U>(
-    factory: (tools: ActionsFactory<ComposedState<T, U>>) => U
-  ): ActionInstance<ComposedState<T, U>>;
-  create(): FinalizedAction<T>;
-};
+export type ActionInstance<T> = SharedInstance<T, 'actions'>;
 
 /**
  * Type for a finalized action, which can no longer be composed but is ready for use
  * This type represents the end of the composition phase
  */
-export type FinalizedAction<T> = {
-  (): SliceCreator<T>;
-  __finalized: true;
-};
+export type FinalizedAction<T> = SharedFinalized<T>;
 
 /**
  * Utility type to extract the state type from a ActionInstance

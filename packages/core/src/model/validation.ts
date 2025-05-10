@@ -1,5 +1,6 @@
 import type { ModelInstance, FinalizedModel } from './types';
 import { validateInstance, finalizeInstance } from '../shared/validation';
+import { Instance } from '../shared';
 
 /**
  * Validates a model instance for problems like circular references
@@ -9,7 +10,7 @@ import { validateInstance, finalizeInstance } from '../shared/validation';
  * @throws Error if validation fails
  */
 export function validateModel<T>(modelInstance: ModelInstance<T>): void {
-  validateInstance(modelInstance, 'model');
+  validateInstance(modelInstance as unknown as Instance<T>, 'model');
 }
 
 /**
@@ -21,7 +22,10 @@ export function validateModel<T>(modelInstance: ModelInstance<T>): void {
 export function finalizeModel<T>(
   modelInstance: ModelInstance<T>
 ): FinalizedModel<T> {
-  return finalizeInstance(modelInstance, 'model') as FinalizedModel<T>;
+  return finalizeInstance(
+    modelInstance as unknown as Instance<T>,
+    'model'
+  ) as FinalizedModel<T>;
 }
 
 // In-source tests

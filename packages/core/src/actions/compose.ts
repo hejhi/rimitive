@@ -2,6 +2,7 @@ import type { ActionInstance, ComposedState, ActionState } from './types';
 import { createAction, actionsMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
+import { Instance } from '../shared';
 
 /**
  * Creates a composed action instance that combines two input actions
@@ -17,12 +18,13 @@ export function createComposedActionInstance<
   baseAction: TBase,
   extensionAction: TExt
 ): ActionInstance<ComposedState<ActionState<TBase>, ActionState<TExt>>> {
+  // Cast the shared composed instance to the specific ActionInstance type
   return createComposedInstance(
-    baseAction,
-    extensionAction,
+    baseAction as unknown as Instance<any, unknown>,
+    extensionAction as unknown as Instance<any, unknown>,
     createAction,
     actionsMarker
-  );
+  ) as ActionInstance<ComposedState<ActionState<TBase>, ActionState<TExt>>>;
 }
 
 // In-source tests
@@ -65,7 +67,7 @@ if (import.meta.vitest) {
 
     // Create an extension to the action using the .with() method
     const extendedAction = baseAction.with<ResetActions>(({ mutate }) => ({
-      reset: mutate(mockModelExtension, 'reset'),
+      reset: mutate!(mockModelExtension, 'reset'),
     }));
 
     // Verify the extended action contains properties from both actions
@@ -138,13 +140,13 @@ if (import.meta.vitest) {
     // Chain multiple .with() calls
     const completeAction = baseAction
       .with<ResetActions>(({ mutate }) => ({
-        reset: mutate(mockModel2, 'reset'),
+        reset: mutate!(mockModel2, 'reset'),
       }))
       .with<DoubleActions>(({ mutate }) => ({
-        incrementTwice: mutate(mockModel3, 'incrementTwice'),
+        incrementTwice: mutate!(mockModel3, 'incrementTwice'),
       }))
       .with<LogActions>(({ mutate }) => ({
-        logAction: mutate(mockModel4, 'logAction'),
+        logAction: mutate!(mockModel4, 'logAction'),
       }));
 
     // Verify the action has all properties from all extensions
@@ -211,7 +213,7 @@ if (import.meta.vitest) {
     }));
 
     const extendedAction = baseAction.with<ResetActions>(({ mutate }) => ({
-      reset: mutate(mockModelExtension, 'reset'),
+      reset: mutate!(mockModelExtension, 'reset'),
     }));
 
     // Verify the action has a .create() method

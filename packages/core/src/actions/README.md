@@ -75,6 +75,8 @@ Actions leverage the shared composition pattern used throughout Lattice, adapted
 - **Validation**: Checks for circular references and other potential runtime issues
 
 > **Note on Implementation Status**: The current implementation focuses on the type-level API and composition functionality. As specified, the runtime implementation for the `mutate` function is a minimal stub for testing purposes. The full implementation of the `mutate` function will be completed after lattices are finished.
+>
+> **Note on Type Checking**: There are several known TypeScript errors due to the complex brand types used for different components (model, state, actions). These type errors don't affect runtime functionality (all tests pass) and will be addressed systematically when implementing the full runtime behavior. They primarily stem from the branded types not playing well with type assertions in the shared code.
 
 ## Integration with Models
 

@@ -1,9 +1,4 @@
-import type {
-  Factory,
-  Instance,
-  SliceCreator,
-  Finalized,
-} from '../types';
+import type { Factory, Instance, SliceCreator, Finalized } from '../types';
 import { finalizeInstance } from '../validation';
 import { createComposedInstance } from '../compose';
 
@@ -25,7 +20,7 @@ export function createSliceCreator<T>(
     set: options.set,
     mutate: options.mutate,
     derive: options.derive,
-    dispatch: options.dispatch
+    dispatch: options.dispatch,
   };
 
   return factory(safeOptions);
@@ -93,23 +88,28 @@ if (import.meta.vitest) {
         increment: () => set((state: any) => ({ count: state.count + 1 })),
         getCount: () => get().count,
       }));
-      
+
       const mockGet = vi.fn(() => ({ count: 1 }));
       const mockSet = vi.fn();
-      
-      const modelSlice = createSliceCreator(modelFactory, { get: mockGet, set: mockSet });
+
+      const modelSlice = createSliceCreator(modelFactory, {
+        get: mockGet,
+        set: mockSet,
+      });
       expect(modelFactory).toHaveBeenCalledWith({ get: mockGet, set: mockSet });
       expect(modelSlice).toHaveProperty('count');
       expect(modelSlice).toHaveProperty('increment');
-      
+
       // Test with mutate tool (for actions)
       const mockMutate = vi.fn();
       const actionsFactory = vi.fn(({ mutate }) => ({
         increment: mutate({} as any, 'increment'),
         reset: mutate({} as any, 'reset'),
       }));
-      
-      const actionsSlice = createSliceCreator(actionsFactory, { mutate: mockMutate });
+
+      const actionsSlice = createSliceCreator(actionsFactory, {
+        mutate: mockMutate,
+      });
       expect(actionsFactory).toHaveBeenCalledWith({ mutate: mockMutate });
       expect(actionsSlice).toHaveProperty('increment');
       expect(actionsSlice).toHaveProperty('reset');
@@ -189,8 +189,8 @@ if (import.meta.vitest) {
         ({ get, set }) => ({
           count: 1,
           increment: () => {
-            set((state: CounterState) => ({ count: state.count + 1 }));
-            return get().count;
+            set!((state: CounterState) => ({ count: state.count + 1 }));
+            return get!().count;
           },
         }),
         testMarkerFn,
@@ -199,7 +199,10 @@ if (import.meta.vitest) {
       );
 
       const sliceCreator = instance();
-      const slice = sliceCreator({ get: mockGet, set: mockSet }) as CounterState;
+      const slice = sliceCreator({
+        get: mockGet as any,
+        set: mockSet as any,
+      }) as CounterState;
 
       // Call the method and capture its return value
       const result = slice.increment();
@@ -218,7 +221,7 @@ if (import.meta.vitest) {
       // Create mock models with the methods we need
       const mockModel = {
         increment: vi.fn(),
-        reset: vi.fn()
+        reset: vi.fn(),
       };
 
       // Define a real mutate function
@@ -236,8 +239,8 @@ if (import.meta.vitest) {
 
       const instance = createInstance<CounterActions, unknown>(
         ({ mutate }) => ({
-          increment: mutate(mockModel, 'increment'),
-          reset: mutate(mockModel, 'reset'),
+          increment: mutate!(mockModel, 'increment'),
+          reset: mutate!(mockModel, 'reset'),
         }),
         testMarkerFn,
         'test',

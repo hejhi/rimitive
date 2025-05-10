@@ -14,39 +14,46 @@ export type GetState<T> = StoreApi<T>['getState'];
 export type SetState<T> = StoreApi<T>['setState'];
 
 /**
+ * Import shared factory type
+ */
+import type { StateFactory as SharedStateFactory } from '../shared/types';
+
+/**
  * Type for the state factory function
  */
-export type StateFactory<T> = {
-  get: GetState<T>;
-  set: SetState<T>;
-};
+export type StateFactory<T> = SharedStateFactory<T>;
+
+/**
+ * Import Instance type from shared/types
+ */
+import type { Instance as SharedInstance } from '../shared/types';
 
 /**
  * Type for a state instance, which is a function that returns a slice creator
  * T represents the slice of state this state contributes
  */
-export type StateInstance<T> = {
-  (): SliceCreator<T>;
-  __composition?: unknown;
-  with<U>(
-    factory: (tools: StateFactory<ComposedState<T, U>>) => U
-  ): StateInstance<ComposedState<T, U>>;
-  create(): FinalizedState<T>;
-};
+export type StateInstance<T> = SharedInstance<T, 'state'>;
+
+/**
+ * Import Finalized type from shared/types
+ */
+import type { Finalized as SharedFinalized } from '../shared/types';
 
 /**
  * Type for a finalized state, which can no longer be composed but is ready for use
  * This type represents the end of the composition phase
  */
-export type FinalizedState<T> = {
-  (): SliceCreator<T>;
-  __finalized: true;
-};
+export type FinalizedState<T> = SharedFinalized<T>;
 
 /**
- * Type for a slice creator function that Zustand will call
+ * Import SliceCreator from shared/types
  */
-export type SliceCreator<T> = (set: SetState<T>, get: GetState<T>) => T;
+import type { SliceCreator as SharedSliceCreator } from '../shared/types';
+
+/**
+ * Type for a slice creator function that will be called with factory tools
+ */
+export type SliceCreator<T> = SharedSliceCreator<T>;
 
 /**
  * Utility type to extract the state type from a StateInstance
