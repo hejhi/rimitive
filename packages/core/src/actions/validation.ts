@@ -1,9 +1,6 @@
-import type { ActionInstance, FinalizedAction } from './types';
-import {
-  validateInstance,
-  finalizeInstance,
-  ValidationOptions,
-} from '../shared/validation';
+import type { ActionInstance } from './types';
+import { validateInstance, finalizeInstance } from '../shared/validation';
+import { Finalized } from '../shared';
 
 /**
  * Validates a action instance for problems like circular references
@@ -12,10 +9,7 @@ import {
  * @param actionInstance The action instance to validate
  * @throws Error if validation fails
  */
-export function validateAction<T>(
-  actionInstance: ActionInstance<T>,
-  _options?: ValidationOptions
-): void {
+export function validateAction<T>(actionInstance: ActionInstance<T>): void {
   validateInstance(actionInstance, 'action');
 }
 
@@ -26,10 +20,9 @@ export function validateAction<T>(
  * @returns A finalized action that cannot be further composed
  */
 export function finalizeAction<T>(
-  actionInstance: ActionInstance<T>,
-  _options?: ValidationOptions
-): FinalizedAction<T> {
-  return finalizeInstance(actionInstance, 'action') as FinalizedAction<T>;
+  actionInstance: ActionInstance<T>
+): Finalized<T> {
+  return finalizeInstance(actionInstance, 'action');
 }
 
 // In-source tests

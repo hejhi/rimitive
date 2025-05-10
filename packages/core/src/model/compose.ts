@@ -1,13 +1,8 @@
-import type {
-  ModelInstance,
-  GetState,
-  ComposedState,
-  ModelState,
-} from './types';
+import type { ModelInstance } from './types';
 import { createModel, modelMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
-import { Instance } from '../shared';
+import { GetState } from '../shared';
 
 /**
  * Creates a composed model instance that combines two input models
@@ -19,14 +14,11 @@ import { Instance } from '../shared';
 export function createComposedModelInstance<
   TBase extends ModelInstance<any>,
   TExt extends ModelInstance<any>,
->(
-  baseModel: TBase,
-  extensionModel: TExt
-): ModelInstance<ComposedState<ModelState<TBase>, ModelState<TExt>>> {
+>(baseModel: TBase, extensionModel: TExt) {
   // Cast the shared composed instance to the specific ModelInstance type
   return createComposedInstance(
-    baseModel as unknown as Instance<any, unknown>,
-    extensionModel as unknown as Instance<any, unknown>,
+    baseModel,
+    extensionModel,
     createModel,
     modelMarker
   );
@@ -67,9 +59,7 @@ if (import.meta.vitest) {
       count: 10,
       doubleCount: () => 20,
     };
-    const mockGet = vi.fn(() => mockState) as unknown as GetState<
-      CounterState & StatsState
-    >;
+    const mockGet: GetState<CounterState & StatsState> = vi.fn(() => mockState);
     const slice = sliceCreator({ get: mockGet, set: vi.fn() });
 
     expect(slice).toHaveProperty('count');

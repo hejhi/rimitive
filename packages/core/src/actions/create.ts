@@ -1,9 +1,10 @@
-import type { ActionsFactory, ActionInstance, Factory, Mutate } from './types';
+import type { ActionInstance } from './types';
 import { markAsLatticeAction } from './identify';
 import {
   createInstance,
   createSliceCreator as sharedCreateSliceCreator,
 } from '../shared/create';
+import { ActionsFactory, RuntimeTools } from '../shared';
 
 /**
  * Creates a slice creator function based on the provided factory
@@ -14,28 +15,19 @@ import {
  */
 export function createSliceCreator<T>(
   factory: (tools: ActionsFactory<T>) => T,
-  options: Factory<T>
+  options: RuntimeTools<T>
 ): T {
-  // Create a basic mutate function if one isn't provided
-  const mutateFn: Mutate =
-    options.mutate ||
-    (<M, K extends keyof M>(model: M, key: K) => {
-      // Return a function that calls the corresponding method on the model
-      return ((...args: any[]) => {
-        // In a real implementation, this would call the model's method
-        // For testing, we just return a function that forwards arguments
-        return (model[key] as any)(...args);
-      }) as any;
-    });
-
   // Create actions tools with proper branding
-  const tools: ActionsFactory<T> = {
-    mutate: mutateFn,
+  const tools = {
+    mutate: options.mutate!,
     __actionsFactoryBrand: Symbol('actions'),
-  } as ActionsFactory<T>;
+  };
 
   // Pass to shared createSliceCreator
-  return sharedCreateSliceCreator(factory as (tools: Factory<T>) => T, tools);
+  return sharedCreateSliceCreator(
+    factory as (tools: RuntimeTools<T>) => T,
+    tools
+  );
 }
 
 /**
@@ -58,7 +50,7 @@ export function createActionInstance<T>(
   factory: (tools: ActionsFactory<T>) => T
 ): ActionInstance<T> {
   // Convert the factory to accept the shared Factory type
-  const factoryAdapter = (tools: Factory<T>): T => {
+  const factoryAdapter = (tools: RuntimeTools<T>): T => {
     // Cast the tools to ActionsFactory to ensure type safety
     const actionTools = tools as unknown as ActionsFactory<T>;
     return factory(actionTools);
@@ -69,7 +61,7 @@ export function createActionInstance<T>(
     actionsMarker,
     'actions',
     createAction
-  ) as ActionInstance<T>;
+  );
 }
 
 /**

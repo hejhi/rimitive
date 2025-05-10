@@ -1,5 +1,10 @@
-import type { StateFactory, StateInstance, GetState, SetState } from './types';
-import type { Factory } from '../shared/types';
+import type { StateInstance } from './types';
+import type {
+  RuntimeTools,
+  GetState,
+  SetState,
+  StateFactory,
+} from '../shared/types';
 import { markAsLatticeState } from './identify';
 import {
   createInstance,
@@ -25,7 +30,7 @@ export function stateMarker<V>(instance: V): V {
  */
 export function createSliceCreator<T>(
   factory: (tools: StateFactory<T>) => T,
-  options: Factory<T>
+  options: RuntimeTools<T>
 ): T {
   // Check if get is provided, which is required for state
   if (!options.get) {
@@ -41,7 +46,10 @@ export function createSliceCreator<T>(
   } as StateFactory<T>;
 
   // Pass to shared createSliceCreator
-  return sharedCreateSliceCreator(factory as (tools: Factory<T>) => T, tools);
+  return sharedCreateSliceCreator(
+    factory as (tools: RuntimeTools<T>) => T,
+    tools
+  );
 }
 
 /**
@@ -54,7 +62,7 @@ export function createStateInstance<T>(
   factory: (tools: StateFactory<T>) => T
 ): StateInstance<T> {
   // Convert the factory to accept the shared Factory type
-  const factoryAdapter = (tools: Factory<T>): T => {
+  const factoryAdapter = (tools: RuntimeTools<T>): T => {
     // Cast the tools to StateFactory to ensure type safety
     const stateTools = tools as unknown as StateFactory<T>;
     return factory(stateTools);

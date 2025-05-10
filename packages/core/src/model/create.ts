@@ -1,5 +1,10 @@
-import type { ModelFactory, ModelInstance, GetState, SetState } from './types';
-import type { Factory } from '../shared/types';
+import type { ModelInstance } from './types';
+import type {
+  RuntimeTools,
+  GetState,
+  SetState,
+  ModelFactory,
+} from '../shared/types';
 import { markAsLatticeModel } from './identify';
 import {
   createInstance,
@@ -15,7 +20,7 @@ import {
  */
 export function createSliceCreator<T>(
   factory: (tools: ModelFactory<T>) => T,
-  options: Factory<T>
+  options: RuntimeTools<T>
 ): T {
   // Check if required properties exist
   if (!options.get || !options.set) {
@@ -23,14 +28,17 @@ export function createSliceCreator<T>(
   }
 
   // Create model tools with proper branding
-  const tools: ModelFactory<T> = {
+  const tools = {
     get: options.get,
     set: options.set,
-    __modelFactoryBrand: Symbol('model')
-  } as ModelFactory<T>;
+    __modelFactoryBrand: Symbol('model'),
+  };
 
   // Pass to shared createSliceCreator
-  return sharedCreateSliceCreator(factory as (tools: Factory<T>) => T, tools);
+  return sharedCreateSliceCreator(
+    factory as (tools: RuntimeTools<T>) => T,
+    tools
+  );
 }
 
 /**
@@ -53,7 +61,7 @@ export function createModelInstance<T>(
   factory: (tools: ModelFactory<T>) => T
 ): ModelInstance<T> {
   // Convert the factory to accept the shared Factory type
-  const factoryAdapter = (tools: Factory<T>): T => {
+  const factoryAdapter = (tools: RuntimeTools<T>): T => {
     // Cast the tools to ModelFactory to ensure type safety
     const modelTools = tools as unknown as ModelFactory<T>;
     return factory(modelTools);
@@ -141,14 +149,16 @@ if (import.meta.vitest) {
   it('should support methods in model state', () => {
     // Create a simulated state that tracks changes
     let state = { count: 1 };
-    const mockSet = vi.fn((updater: ((state: any) => any) | any) => {
-      if (typeof updater === 'function') {
-        state = { ...state, ...updater(state) };
-      } else {
-        state = { ...state, ...updater };
+    const mockSet: SetState<any> = vi.fn(
+      (updater: ((state: any) => any) | any) => {
+        if (typeof updater === 'function') {
+          state = { ...state, ...updater(state) };
+        } else {
+          state = { ...state, ...updater };
+        }
       }
-    }) as SetState<any>;
-    const mockGet = vi.fn(() => state) as GetState<any>;
+    );
+    const mockGet: GetState<any> = vi.fn(() => state);
 
     // Define a type for our model state
     type CounterState = {
@@ -159,13 +169,13 @@ if (import.meta.vitest) {
     const model = createModel<CounterState>(({ get, set }) => ({
       count: 1,
       increment: () => {
-        set((state: CounterState) => ({ count: state.count + 1 }));
+        set((state) => ({ count: state.count + 1 }));
         return get().count;
       },
     }));
 
     const sliceCreator = model();
-    const slice = sliceCreator({ get: mockGet, set: mockSet }) as CounterState;
+    const slice = sliceCreator({ get: mockGet, set: mockSet });
 
     // Call the method and capture its return value
     const result = slice.increment();
@@ -183,7 +193,7 @@ if (import.meta.vitest) {
   it('should support derived properties using get()', () => {
     // Create a simulated state that can be updated
     let state = { count: 1 };
-    const mockGet = vi.fn(() => state) as GetState<any>;
+    const mockGet: GetState<any> = vi.fn(() => state);
 
     // Define a type for our model state
     type CounterState = {
@@ -199,8 +209,8 @@ if (import.meta.vitest) {
     const sliceCreator = model();
     const slice = sliceCreator({
       get: mockGet,
-      set: vi.fn() as SetState<CounterState>,
-    }) as CounterState;
+      set: vi.fn(),
+    });
 
     // Test initial derived value
     expect(slice.doubleCount()).toBe(2);

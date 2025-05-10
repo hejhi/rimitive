@@ -1,21 +1,6 @@
 import type { Instance, Finalized, SliceCreator } from '../types';
 
 /**
- * Options for validation operations
- */
-export interface ValidationOptions {
-  /**
-   * Whether to perform deep validation (default: true)
-   */
-  deep?: boolean;
-
-  /**
-   * Custom properties to skip during validation
-   */
-  skipProperties?: string[];
-}
-
-/**
  * Validates an instance for problems like circular references
  * that could cause runtime issues
  *
@@ -25,8 +10,7 @@ export interface ValidationOptions {
  */
 export function validateInstance<T>(
   instance: Instance<T>,
-  entityName: string,
-  _?: ValidationOptions
+  entityName: string
 ): void {
   // Create a mock get function for validation
   const visited = new Set<Function>();
@@ -116,11 +100,10 @@ type InstanceWithErroringWith<T> = {
  */
 export function finalizeInstance<T>(
   instance: Instance<T>,
-  entityName: string,
-  options?: ValidationOptions
+  entityName: string
 ): Finalized<T> {
   // Validate the instance before finalizing
-  validateInstance(instance, entityName, options);
+  validateInstance(instance, entityName);
 
   // Create the finalized instance
   const finalizedInstance = function finalizedInstance(): SliceCreator<T> {

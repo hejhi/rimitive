@@ -1,13 +1,8 @@
-import type {
-  StateInstance,
-  GetState,
-  ComposedState,
-  StateState,
-} from './types';
+import type { StateInstance } from './types';
 import { createState, stateMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
-import { Instance } from '../shared';
+import { GetState, Instance } from '../shared';
 
 /**
  * Creates a composed state instance that combines two input states
@@ -19,17 +14,14 @@ import { Instance } from '../shared';
 export function createComposedStateInstance<
   TBase extends StateInstance<any>,
   TExt extends StateInstance<any>,
->(
-  baseState: TBase,
-  extensionState: TExt
-): StateInstance<ComposedState<StateState<TBase>, StateState<TExt>>> {
+>(baseState: TBase, extensionState: TExt) {
   // Cast the shared composed instance to the specific StateInstance type
   return createComposedInstance(
     baseState as unknown as Instance<any, unknown>,
     extensionState as unknown as Instance<any, unknown>,
     createState,
     stateMarker
-  ) as StateInstance<ComposedState<StateState<TBase>, StateState<TExt>>>;
+  );
 }
 
 // In-source tests

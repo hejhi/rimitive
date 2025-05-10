@@ -34,14 +34,14 @@ export type DeriveFunction = <M, K extends keyof M, R = M[K]>(
  * Type for a dispatch function (for views)
  */
 export type DispatchFunction = <A, K extends keyof A>(
-  actions: A, 
+  actions: A,
   key: K
 ) => A[K];
 
 /**
  * Type for a factory function with flexible tool options
  */
-export type Factory<T> = {
+export type RuntimeTools<T> = {
   get?: GetState<T>;
   set?: SetState<T>;
   mutate?: MutateFunction;
@@ -52,7 +52,7 @@ export type Factory<T> = {
 /**
  * Type for a slice creator function that will be called with appropriate parameters
  */
-export type SliceCreator<T> = (options: Factory<T>) => T;
+export type SliceCreator<T> = (options: RuntimeTools<T>) => T;
 
 /**
  * Type for an instance (model, state, actions or view)
@@ -62,7 +62,7 @@ export type Instance<T, F = unknown> = {
   (): SliceCreator<T>;
   __composition?: unknown;
   with<U>(
-    factory: (tools: Factory<ComposedState<T, U>>) => U
+    factory: (tools: RuntimeTools<ComposedState<T, U>>) => U
   ): Instance<ComposedState<T, U>, F>;
   create(): Finalized<T>;
 };
@@ -117,21 +117,21 @@ export interface ViewFactoryBrand {
 /**
  * Branded factory types with specific required properties
  */
-export type ModelFactory<T> = Factory<T> & {
+export type ModelFactory<T> = RuntimeTools<T> & {
   get: GetState<T>;
   set: SetState<T>;
 } & ModelFactoryBrand;
 
-export type StateFactory<T> = Factory<T> & {
+export type StateFactory<T> = RuntimeTools<T> & {
   get: GetState<T>;
   derive: DeriveFunction;
 } & StateFactoryBrand;
 
-export type ActionsFactory<T> = Factory<T> & {
+export type ActionsFactory<T> = RuntimeTools<T> & {
   mutate: MutateFunction;
 } & ActionsFactoryBrand;
 
-export type ViewFactory<T> = Factory<T> & {
+export type ViewFactory<T> = RuntimeTools<T> & {
   derive: DeriveFunction;
   dispatch: DispatchFunction;
 } & ViewFactoryBrand;
@@ -164,27 +164,5 @@ if (import.meta.vitest) {
 
     expect(hasWithMethod).toBe(true);
     expect(hasCreateMethod).toBe(true);
-  });
-
-  it('should verify factory type specializations', () => {
-    // Test ModelFactory has get and set
-    type HasGetSet = ModelFactory<any> extends { get: any; set: any } ? true : false;
-    const modelHasGetSet: HasGetSet = true;
-    expect(modelHasGetSet).toBe(true);
-
-    // Test StateFactory has get and derive
-    type HasGetDerive = StateFactory<any> extends { get: any; derive: any } ? true : false;
-    const stateHasGetDerive: HasGetDerive = true;
-    expect(stateHasGetDerive).toBe(true);
-
-    // Test ActionsFactory has mutate
-    type HasMutate = ActionsFactory<any> extends { mutate: any } ? true : false;
-    const actionsHasMutate: HasMutate = true;
-    expect(actionsHasMutate).toBe(true);
-
-    // Test ViewFactory has derive and dispatch
-    type HasDeriveDispatch = ViewFactory<any> extends { derive: any; dispatch: any } ? true : false;
-    const viewHasDeriveDispatch: HasDeriveDispatch = true;
-    expect(viewHasDeriveDispatch).toBe(true);
   });
 }

@@ -1,4 +1,11 @@
-import type { Factory, Instance, SliceCreator, Finalized } from '../types';
+import type {
+  RuntimeTools,
+  Instance,
+  SliceCreator,
+  Finalized,
+  GetState,
+  SetState,
+} from '../types';
 import { finalizeInstance } from '../validation';
 import { createComposedInstance } from '../compose';
 
@@ -10,8 +17,8 @@ import { createComposedInstance } from '../compose';
  * @returns A state object with properties, methods, and derived values
  */
 export function createSliceCreator<T>(
-  factory: (tools: Factory<T>) => T,
-  options: Factory<T>
+  factory: (tools: RuntimeTools<T>) => T,
+  options: RuntimeTools<T>
 ): T {
   // Ensure options object is well-formed before passing to factory
   // This avoids issues when testing different factories with different required tools
@@ -35,20 +42,20 @@ export function createSliceCreator<T>(
  * @returns An instance function that can be composed with other instances
  */
 export function createInstance<T, F>(
-  factory: (tools: Factory<T>) => T,
+  factory: (tools: RuntimeTools<T>) => T,
   markerFn: <V>(instance: V) => V,
   entityName: string,
-  createEntityFn: <U>(factory: (tools: Factory<U>) => U) => Instance<U, F>
+  createEntityFn: <U>(factory: (tools: RuntimeTools<U>) => U) => Instance<U, F>
 ): Instance<T, F> {
   const instance = function instance(): SliceCreator<T> {
-    return function sliceCreator(options: Factory<T>) {
+    return function sliceCreator(options: RuntimeTools<T>) {
       return createSliceCreator<T>(factory, options);
     };
   };
 
   // Add the .with() method for fluent composition
   instance.with = function with_<U>(
-    extensionFactory: (tools: Factory<any>) => U
+    extensionFactory: (tools: RuntimeTools<any>) => U
   ): Instance<any, F> {
     // Create a new instance from the extension factory
     const extensionInstance = createEntityFn<U>((tools) => {
@@ -121,10 +128,10 @@ if (import.meta.vitest) {
     const testMarkerFn = <T>(value: T): T => value;
 
     const testCreateEntityFn = <T>(
-      factory: (tools: Factory<T>) => T
+      factory: (tools: RuntimeTools<T>) => T
     ): Instance<T, unknown> => {
       const instance = function instance(): SliceCreator<T> {
-        return function sliceCreator(options: Factory<T>) {
+        return function sliceCreator(options: RuntimeTools<T>) {
           return createSliceCreator(factory, options);
         };
       };
@@ -133,7 +140,7 @@ if (import.meta.vitest) {
       instance.with = () => ({}) as any;
       instance.create = () => ({}) as any;
 
-      return instance as Instance<T, unknown>;
+      return instance;
     };
 
     it('should create a basic instance with primitive values', () => {
@@ -154,8 +161,8 @@ if (import.meta.vitest) {
 
       // The slice creator should be a function
       const sliceCreator = instance();
-      const mockGet = vi.fn();
-      const mockSet = vi.fn();
+      const mockGet: GetState<any> = vi.fn();
+      const mockSet: SetState<any> = vi.fn();
 
       // Call the slice creator
       const slice = sliceCreator({ get: mockGet, set: mockSet });
@@ -170,14 +177,16 @@ if (import.meta.vitest) {
     it('should support methods in state', () => {
       // Create a simulated state that tracks changes
       let state = { count: 1 };
-      const mockSet = vi.fn((updater: ((state: any) => any) | any) => {
-        if (typeof updater === 'function') {
-          state = { ...state, ...updater(state) };
-        } else {
-          state = { ...state, ...updater };
+      const mockSet: SetState<any> = vi.fn(
+        (updater: ((state: any) => any) | any) => {
+          if (typeof updater === 'function') {
+            state = { ...state, ...updater(state) };
+          } else {
+            state = { ...state, ...updater };
+          }
         }
-      });
-      const mockGet = vi.fn(() => state);
+      );
+      const mockGet: GetState<any> = vi.fn(() => state);
 
       // Define a type for our state
       type CounterState = {
@@ -189,7 +198,7 @@ if (import.meta.vitest) {
         ({ get, set }) => ({
           count: 1,
           increment: () => {
-            set!((state: CounterState) => ({ count: state.count + 1 }));
+            set!((state) => ({ count: state.count + 1 }));
             return get!().count;
           },
         }),
@@ -200,9 +209,9 @@ if (import.meta.vitest) {
 
       const sliceCreator = instance();
       const slice = sliceCreator({
-        get: mockGet as any,
-        set: mockSet as any,
-      }) as CounterState;
+        get: mockGet,
+        set: mockSet,
+      });
 
       // Call the method and capture its return value
       const result = slice.increment();
@@ -248,7 +257,7 @@ if (import.meta.vitest) {
       );
 
       const sliceCreator = instance();
-      const actions = sliceCreator({ mutate: realMutate }) as CounterActions;
+      const actions = sliceCreator({ mutate: realMutate });
 
       // Verify actions contains the expected methods
       expect(actions).toHaveProperty('increment');

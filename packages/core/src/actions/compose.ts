@@ -1,8 +1,7 @@
-import type { ActionInstance, ComposedState, ActionState } from './types';
+import type { ActionInstance } from './types';
 import { createAction, actionsMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
-import { Instance } from '../shared';
 
 /**
  * Creates a composed action instance that combines two input actions
@@ -14,17 +13,14 @@ import { Instance } from '../shared';
 export function createComposedActionInstance<
   TBase extends ActionInstance<any>,
   TExt extends ActionInstance<any>,
->(
-  baseAction: TBase,
-  extensionAction: TExt
-): ActionInstance<ComposedState<ActionState<TBase>, ActionState<TExt>>> {
+>(baseAction: TBase, extensionAction: TExt) {
   // Cast the shared composed instance to the specific ActionInstance type
   return createComposedInstance(
-    baseAction as unknown as Instance<any, unknown>,
-    extensionAction as unknown as Instance<any, unknown>,
+    baseAction,
+    extensionAction,
     createAction,
     actionsMarker
-  ) as ActionInstance<ComposedState<ActionState<TBase>, ActionState<TExt>>>;
+  );
 }
 
 // In-source tests

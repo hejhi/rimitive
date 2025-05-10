@@ -1,11 +1,13 @@
 import { isFinalized } from '../instance';
 import type {
-  Factory,
+  RuntimeTools,
   Instance,
   SliceCreator,
   ComposedState,
   Finalized,
   InstanceState,
+  GetState,
+  SetState,
 } from '../types';
 
 /**
@@ -24,7 +26,7 @@ export function createComposedInstance<
 >(
   baseInstance: TBase,
   extensionInstance: TExt,
-  createEntityFn: <U>(factory: (tools: Factory<U>) => U) => Instance<U, F>,
+  createEntityFn: <U>(factory: (tools: RuntimeTools<U>) => U) => Instance<U, F>,
   markerFn: <T>(instance: T) => T
 ): Instance<ComposedState<InstanceState<TBase>, InstanceState<TExt>>, F> {
   type TComposed = ComposedState<InstanceState<TBase>, InstanceState<TExt>>;
@@ -32,7 +34,7 @@ export function createComposedInstance<
   const composedInstance =
     function composedInstance(): SliceCreator<TComposed> {
       return function composedSliceCreator(
-        options: Factory<TComposed>
+        options: RuntimeTools<TComposed>
       ): TComposed {
         // Get slices from both instances
         const baseSlice = baseInstance()(options);
@@ -45,10 +47,12 @@ export function createComposedInstance<
 
   // Add the .with() method for fluent composition
   composedInstance.with = function with_<U>(
-    extensionFactory: (tools: Factory<ComposedState<TComposed, U>>) => U
+    extensionRuntimeTools: (
+      tools: RuntimeTools<ComposedState<TComposed, U>>
+    ) => U
   ): Instance<ComposedState<TComposed, U>, F> {
     const newExtensionInstance = createEntityFn<U>((tools: any) => {
-      return extensionFactory(tools);
+      return extensionRuntimeTools(tools);
     });
 
     return createComposedInstance(
@@ -92,24 +96,24 @@ if (import.meta.vitest) {
   describe('createComposedInstance', () => {
     // Mock functions for testing purposes
     type TestCreateEntityFn = <T>(
-      factory: (tools: Factory<T>) => T
+      factory: (tools: RuntimeTools<T>) => T
     ) => Instance<T, unknown>;
     type TestMarkerFn = <T>(instance: T) => T;
 
     // Create a simple instance factory for testing
     const createTestEntity: TestCreateEntityFn = <T>(
-      factory: (tools: Factory<T>) => T
+      factory: (tools: RuntimeTools<T>) => T
     ): Instance<T, unknown> => {
       const instance = function instance(): SliceCreator<T> {
-        return function sliceCreator(options: Factory<T>) {
+        return function sliceCreator(options: RuntimeTools<T>) {
           return factory(options);
         };
       };
 
       instance.with = function with_<U>(
-        extensionFactory: (tools: Factory<any>) => U
+        extensionRuntimeTools: (tools: RuntimeTools<any>) => U
       ): Instance<ComposedState<T, U>, unknown> {
-        const extension = createTestEntity(extensionFactory);
+        const extension = createTestEntity(extensionRuntimeTools);
         const markerFn: TestMarkerFn = <V>(x: V) => x;
         return createComposedInstance(
           instance as Instance<T, unknown>,
@@ -255,14 +259,14 @@ if (import.meta.vitest) {
 
       // Should be able to provide any combination of factory tools
       const sliceCreator = composedInstance();
-      const mockGet = vi.fn(() => ({ count: 5 }));
-      const mockSet = vi.fn();
+      const mockGet: GetState<any> = vi.fn(() => ({ count: 5 }));
+      const mockSet: SetState<any> = vi.fn();
       const mockMutate = vi.fn();
 
       const slice = sliceCreator({
-        get: mockGet as any,
-        set: mockSet as any,
-        mutate: mockMutate as any,
+        get: mockGet,
+        set: mockSet,
+        mutate: mockMutate,
       });
 
       // Should have properties from both source instances
