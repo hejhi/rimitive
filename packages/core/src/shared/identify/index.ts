@@ -1,15 +1,3 @@
-import type {
-  BaseInstance,
-  ModelFactory,
-  StateFactory,
-  ActionsFactory,
-  ViewFactory,
-  ModelInstance,
-  StateInstance,
-  ActionInstance,
-  ViewInstance,
-  SymbolBranded,
-} from '../types';
 import {
   MODEL_FACTORY_BRAND,
   STATE_FACTORY_BRAND,
@@ -27,7 +15,7 @@ import {
  * @param markerName The name of the marker to create
  * @returns A symbol that can be used to mark objects
  */
-export function createMarker(markerName: string): symbol {
+export function createMarker(markerName: string) {
   return Symbol(markerName);
 }
 
@@ -38,12 +26,9 @@ export function createMarker(markerName: string): symbol {
  * @param marker The marker symbol to use
  * @returns The marked value
  */
-export function markAsLatticeObject<T, M extends symbol>(
-  value: T,
-  marker: M
-): T & Record<M, boolean> {
-  (value as Record<M, boolean>)[marker] = true;
-  return value as T & Record<M, boolean>;
+export function markAsLatticeObject(value, marker) {
+  value[marker] = true;
+  return value;
 }
 
 /**
@@ -53,14 +38,11 @@ export function markAsLatticeObject<T, M extends symbol>(
  * @param marker The marker symbol to check for
  * @returns Whether the value is a valid Lattice object
  */
-export function isLatticeObject(
-  value: unknown,
-  marker: symbol
-): value is BaseInstance<any> {
+export function isLatticeObject(value, marker) {
   return (
     typeof value === 'function' &&
     Object.prototype.hasOwnProperty.call(value, marker) &&
-    value[marker as keyof typeof value] === true
+    value[marker] === true
   );
 }
 
@@ -70,12 +52,12 @@ export function isLatticeObject(
  * @param value The value to check
  * @returns Whether the value is a ModelFactory
  */
-export function isModelFactory<T>(value: unknown): value is ModelFactory<T> {
+export function isModelFactory(value) {
   return (
     value !== null &&
     typeof value === 'object' &&
     Object.prototype.hasOwnProperty.call(value, MODEL_FACTORY_BRAND) &&
-    value[MODEL_FACTORY_BRAND as keyof typeof value] === true
+    value[MODEL_FACTORY_BRAND] === true
   );
 }
 
@@ -85,12 +67,12 @@ export function isModelFactory<T>(value: unknown): value is ModelFactory<T> {
  * @param value The value to check
  * @returns Whether the value is a StateFactory
  */
-export function isStateFactory<T>(value: unknown): value is StateFactory<T> {
+export function isStateFactory(value) {
   return (
     value !== null &&
     typeof value === 'object' &&
     Object.prototype.hasOwnProperty.call(value, STATE_FACTORY_BRAND) &&
-    value[STATE_FACTORY_BRAND as keyof typeof value] === true
+    value[STATE_FACTORY_BRAND] === true
   );
 }
 
@@ -100,14 +82,12 @@ export function isStateFactory<T>(value: unknown): value is StateFactory<T> {
  * @param value The value to check
  * @returns Whether the value is an ActionsFactory
  */
-export function isActionsFactory<T>(
-  value: unknown
-): value is ActionsFactory<T> {
+export function isActionsFactory(value) {
   return (
     value !== null &&
     typeof value === 'object' &&
     Object.prototype.hasOwnProperty.call(value, ACTIONS_FACTORY_BRAND) &&
-    value[ACTIONS_FACTORY_BRAND as keyof typeof value] === true
+    value[ACTIONS_FACTORY_BRAND] === true
   );
 }
 
@@ -117,12 +97,12 @@ export function isActionsFactory<T>(
  * @param value The value to check
  * @returns Whether the value is a ViewFactory
  */
-export function isViewFactory<T>(value: unknown): value is ViewFactory<T> {
+export function isViewFactory(value) {
   return (
     value !== null &&
     typeof value === 'object' &&
     Object.prototype.hasOwnProperty.call(value, VIEW_FACTORY_BRAND) &&
-    value[VIEW_FACTORY_BRAND as keyof typeof value] === true
+    value[VIEW_FACTORY_BRAND] === true
   );
 }
 
@@ -132,7 +112,7 @@ export function isViewFactory<T>(value: unknown): value is ViewFactory<T> {
  * @param value The value to check
  * @returns Whether the value is a model instance
  */
-export function isModelInstance(value: unknown): value is ModelInstance<any> {
+export function isModelInstance(value) {
   return isLatticeObject(value, MODEL_INSTANCE_BRAND);
 }
 
@@ -142,7 +122,7 @@ export function isModelInstance(value: unknown): value is ModelInstance<any> {
  * @param value The value to check
  * @returns Whether the value is a state instance
  */
-export function isStateInstance(value: unknown): value is StateInstance<any> {
+export function isStateInstance(value) {
   return isLatticeObject(value, STATE_INSTANCE_BRAND);
 }
 
@@ -152,7 +132,7 @@ export function isStateInstance(value: unknown): value is StateInstance<any> {
  * @param value The value to check
  * @returns Whether the value is an action instance
  */
-export function isActionInstance(value: unknown): value is ActionInstance<any> {
+export function isActionInstance(value) {
   return isLatticeObject(value, ACTIONS_INSTANCE_BRAND);
 }
 
@@ -162,7 +142,7 @@ export function isActionInstance(value: unknown): value is ActionInstance<any> {
  * @param value The value to check
  * @returns Whether the value is a view instance
  */
-export function isViewInstance(value: unknown): value is ViewInstance<any> {
+export function isViewInstance(value) {
   return isLatticeObject(value, VIEW_INSTANCE_BRAND);
 }
 
@@ -173,11 +153,8 @@ export function isViewInstance(value: unknown): value is ViewInstance<any> {
  * @param symbol The symbol to use for branding
  * @returns The branded value
  */
-export function brandWithSymbol<T, S extends symbol>(
-  value: T,
-  symbol: S
-): SymbolBranded<T, S> {
-  return markAsLatticeObject(value, symbol) as SymbolBranded<T, S>;
+export function brandWithSymbol(value, symbol) {
+  return markAsLatticeObject(value, symbol);
 }
 
 // In-source tests
@@ -207,7 +184,7 @@ if (import.meta.vitest) {
       expect(isLatticeObject(unmarkedFunction, TEST_MARKER)).toBe(false);
 
       // Mark it manually using the symbol
-      (unmarkedFunction as any)[TEST_MARKER] = true;
+      unmarkedFunction[TEST_MARKER] = true;
 
       // Should now be identified as a Lattice object
       expect(isLatticeObject(unmarkedFunction, TEST_MARKER)).toBe(true);
@@ -239,13 +216,10 @@ if (import.meta.vitest) {
       expect(isLatticeObject(regularFunction, TEST_MARKER)).toBe(false);
 
       // After marking
-      const markedFunction = markAsLatticeObject(
-        regularFunction as any,
-        TEST_MARKER
-      );
+      const markedFunction = markAsLatticeObject(regularFunction, TEST_MARKER);
 
       // Should be marked with the correct symbol
-      expect((markedFunction as any)[TEST_MARKER]).toBe(true);
+      expect(markedFunction[TEST_MARKER]).toBe(true);
 
       // Should pass the isLatticeObject check
       expect(isLatticeObject(markedFunction, TEST_MARKER)).toBe(true);
@@ -260,7 +234,7 @@ if (import.meta.vitest) {
       // Marking the same function twice should have no additional effect
       const fn = () => ({ data: 'test' });
 
-      const marked1 = markAsLatticeObject(fn as any, TEST_MARKER);
+      const marked1 = markAsLatticeObject(fn, TEST_MARKER);
       const marked2 = markAsLatticeObject(marked1, TEST_MARKER);
 
       expect(marked1).toBe(fn);
@@ -271,10 +245,13 @@ if (import.meta.vitest) {
 
     describe('Factory type guards', () => {
       it('should correctly identify a ModelFactory', () => {
-        const mockModelFactory = brandWithSymbol({
-          get: () => ({}),
-          set: () => {},
-        }, MODEL_FACTORY_BRAND);
+        const mockModelFactory = brandWithSymbol(
+          {
+            get: () => ({}),
+            set: () => {},
+          },
+          MODEL_FACTORY_BRAND
+        );
 
         expect(isModelFactory(mockModelFactory)).toBe(true);
         expect(isModelFactory({})).toBe(false);
@@ -282,10 +259,13 @@ if (import.meta.vitest) {
       });
 
       it('should correctly identify a StateFactory', () => {
-        const mockStateFactory = brandWithSymbol({
-          get: () => ({}),
-          derive: () => {},
-        }, STATE_FACTORY_BRAND);
+        const mockStateFactory = brandWithSymbol(
+          {
+            get: () => ({}),
+            derive: () => {},
+          },
+          STATE_FACTORY_BRAND
+        );
 
         expect(isStateFactory(mockStateFactory)).toBe(true);
         expect(isStateFactory({})).toBe(false);
@@ -293,9 +273,12 @@ if (import.meta.vitest) {
       });
 
       it('should correctly identify an ActionsFactory', () => {
-        const mockActionsFactory = brandWithSymbol({
-          mutate: () => () => {},
-        }, ACTIONS_FACTORY_BRAND);
+        const mockActionsFactory = brandWithSymbol(
+          {
+            mutate: () => () => {},
+          },
+          ACTIONS_FACTORY_BRAND
+        );
 
         expect(isActionsFactory(mockActionsFactory)).toBe(true);
         expect(isActionsFactory({})).toBe(false);
@@ -303,10 +286,13 @@ if (import.meta.vitest) {
       });
 
       it('should correctly identify a ViewFactory', () => {
-        const mockViewFactory = brandWithSymbol({
-          derive: () => {},
-          dispatch: () => {},
-        }, VIEW_FACTORY_BRAND);
+        const mockViewFactory = brandWithSymbol(
+          {
+            derive: () => {},
+            dispatch: () => {},
+          },
+          VIEW_FACTORY_BRAND
+        );
 
         expect(isViewFactory(mockViewFactory)).toBe(true);
         expect(isViewFactory({})).toBe(false);

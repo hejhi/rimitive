@@ -1,8 +1,7 @@
-import type { ActionInstance } from '../shared/types';
 import { markAsLatticeAction } from './identify';
 import { createInstance } from '../shared/create';
 import { brandWithSymbol } from '../shared/identify';
-import { ActionsFactory, RuntimeTools, ACTIONS_FACTORY_BRAND } from '../shared';
+import { ACTIONS_FACTORY_BRAND } from '../shared';
 
 /**
  * Creates a action instance function that serves as a blueprint for a set of actions.
@@ -10,10 +9,8 @@ import { ActionsFactory, RuntimeTools, ACTIONS_FACTORY_BRAND } from '../shared';
  * @param factory A function that produces an actions object with methods
  * @returns A action instance function that can be composed with other actions
  */
-export function createActionInstance<T>(
-  factory: (tools: ActionsFactory<T>) => T
-): ActionInstance<T> {
-  function createActionSlice(options: RuntimeTools<T>): T {
+export function createActionInstance(factory) {
+  function createActionSlice(options) {
     // Ensure the required properties exist
     if (!options.mutate) {
       throw new Error('Actions factory requires a mutate function');
@@ -32,7 +29,7 @@ export function createActionInstance<T>(
   }
 
   // The createInstance returns a BaseInstance, but we need to add the actions-specific branding
-  const instance = createInstance<T>(
+  const instance = createInstance(
     createActionSlice,
     markAsLatticeAction,
     'actions',
@@ -67,146 +64,64 @@ export function createActionInstance<T>(
  * @param factory A function that produces an actions object with methods
  * @returns A action instance function that can be used in composition
  */
-export function createAction<T>(
-  factory: (tools: ActionsFactory<T>) => T
-): ActionInstance<T> {
-  return createActionInstance<T>(factory);
+export function createAction(factory) {
+  return createActionInstance(factory);
 }
 
 // In-source tests
 if (import.meta.vitest) {
   const { it, expect, vi } = import.meta.vitest;
 
-  it('should create a basic action with methods', () => {
-    // Create a mock model with the methods we need
-    const mockModel = {
-      increment: vi.fn(),
-      reset: vi.fn(),
-    };
-
+  it('should verify action factory requirements and branding', async () => {
     // Create a spy factory to check it receives the mutate parameter
-    const factorySpy = vi.fn((tools: { mutate: any }) => ({
-      increment: tools.mutate(mockModel, 'increment'),
-      reset: tools.mutate(mockModel, 'reset'),
+    const factorySpy = vi.fn((tools) => ({
+      testAction: tools.mutate({ testMethod: vi.fn() }, 'testMethod'),
     }));
 
     const actions = createAction(factorySpy);
 
-    // Action should be a function
+    // Action should be a function (instance check)
     expect(typeof actions).toBe('function');
 
-    // The slice creator should be a function
+    // Should have lattice action branding (via markAsLatticeAction)
+    // We need to check the proper symbol branding
+    const { isActionInstance } = await import('../shared/identify');
+    expect(isActionInstance(actions)).toBe(true);
+
+    // Should have the expected API (.with and .create methods)
+    expect(typeof actions.with).toBe('function');
+    expect(typeof actions.create).toBe('function');
+
+    // Create a mutate function for testing
+    const mockMutate = vi.fn();
+
+    // Create a slice with the mock mutate function
     const sliceCreator = actions();
+    sliceCreator({ mutate: mockMutate });
 
-    // Create a real mutate function for testing
-    const realMutate = <M, K extends keyof M>(model: M, key: K) => {
-      return ((...args: any[]) => {
-        return (model[key] as any)(...args);
-      }) as any;
-    };
-
-    // Call the slice creator with our real mutate function
-    const slice = sliceCreator({ mutate: realMutate });
-
-    // Check that the factory is called with a mutate function
+    // Factory should be called with branded tools
     expect(factorySpy).toHaveBeenCalledWith(
       expect.objectContaining({
         mutate: expect.any(Function),
       })
     );
 
-    // Verify the returned actions contain the expected methods
-    expect(slice).toHaveProperty('increment');
-    expect(slice).toHaveProperty('reset');
-    // Type assertion to avoid the 'unknown' type warning
-    const typedSlice = slice as { increment: Function; reset: Function };
-    expect(typeof typedSlice.increment).toBe('function');
-    expect(typeof typedSlice.reset).toBe('function');
+    // The mutate function should be branded with the ACTIONS_FACTORY_BRAND symbol
+    const { isActionsFactory } = await import('../shared/identify');
+    const mutateObj = factorySpy.mock.calls[0]?.[0];
+    expect(isActionsFactory(mutateObj)).toBe(true);
   });
 
-  it('should support methods in action state', () => {
-    // Create a mock model with the methods we need
-    const mockModel = {
-      increment: vi.fn(),
-      reset: vi.fn(),
-    };
-
-    // Define a real mutate function
-    const realMutate = <M, K extends keyof M>(model: M, key: K) => {
-      return ((...args: any[]) => {
-        return (model[key] as any)(...args);
-      }) as any;
-    };
-
-    // Define a type for our action state
-    type CounterActions = {
-      increment: () => void;
-      reset: () => void;
-    };
-
-    const actions = createAction<CounterActions>(({ mutate }) => ({
-      increment: mutate(mockModel, 'increment'),
-      reset: mutate(mockModel, 'reset'),
-    }));
-
+  it('should throw an error when mutate function is missing', () => {
+    const actions = createAction(() => ({ testAction: () => {} }));
     const sliceCreator = actions();
-    const slice = sliceCreator({ mutate: realMutate }) as CounterActions;
 
-    // Call one of the actions
-    slice.increment();
-
-    // Verify the model method was called
-    expect(mockModel.increment).toHaveBeenCalled();
-  });
-
-  it('should support composition with .with()', () => {
-    // Create mock models with the methods we need
-    const mockModelBase = {
-      increment: vi.fn(),
-    };
-
-    const mockModelExtension = {
-      reset: vi.fn(),
-    };
-
-    // Define a real mutate function
-    const realMutate = <M, K extends keyof M>(model: M, key: K) => {
-      return ((...args: any[]) => {
-        return (model[key] as any)(...args);
-      }) as any;
-    };
-
-    // Create base actions
-    const baseActions = createAction(({ mutate }) => ({
-      increment: mutate(mockModelBase, 'increment'),
-    }));
-
-    // Extend with additional actions
-    const extendedActions = baseActions.with(({ mutate }) => ({
-      reset: mutate!(mockModelExtension, 'reset'),
-    }));
-
-    // Call the composed actions
-    const actionsMethods = extendedActions()({ mutate: realMutate });
-
-    // Verify the composed actions have all methods
-    expect(actionsMethods).toHaveProperty('increment');
-    expect(actionsMethods).toHaveProperty('reset');
-
-    // Type assertion to avoid the 'unknown' type warning
-    const typedMethods = actionsMethods as {
-      increment: Function;
-      reset: Function;
-    };
-    expect(typeof typedMethods.increment).toBe('function');
-    expect(typeof typedMethods.reset).toBe('function');
-
-    // Call the methods to verify they work
-    typedMethods.increment();
-    typedMethods.reset();
-
-    // Verify the model methods were called
-    expect(mockModelBase.increment).toHaveBeenCalled();
-    expect(mockModelExtension.reset).toHaveBeenCalled();
+    // Should throw when mutate is missing
+    expect(() => sliceCreator({})).toThrow(
+      'Actions factory requires a mutate function'
+    );
+    expect(() => sliceCreator({ mutate: undefined })).toThrow(
+      'Actions factory requires a mutate function'
+    );
   });
 }

@@ -1,5 +1,3 @@
-import type { Finalized } from '../types';
-
 /**
  * Type guard to check if an object is a finalized instance
  * Uses a safe pattern to check for non-enumerable properties
@@ -7,7 +5,7 @@ import type { Finalized } from '../types';
  * @param instance The object to check
  * @returns True if the object is finalized, false otherwise
  */
-export function isFinalized<T>(instance: unknown): instance is Finalized<T> {
+export function isFinalized(instance) {
   // We know the instance is a function, so check specifically for that
   if (typeof instance !== 'function') {
     return false;
@@ -25,7 +23,7 @@ export function isFinalized<T>(instance: unknown): instance is Finalized<T> {
  * @param flagName The name of the flag property to check
  * @returns True if the flag exists and is truthy, false otherwise
  */
-export function hasInstanceFlag(instance: unknown, flagName: string): boolean {
+export function hasInstanceFlag(instance, flagName) {
   if (
     !instance ||
     (typeof instance !== 'object' && typeof instance !== 'function')
@@ -34,9 +32,7 @@ export function hasInstanceFlag(instance: unknown, flagName: string): boolean {
   }
 
   // Check if the property exists directly on the object (even if non-enumerable)
-  return (
-    flagName in instance && Boolean(instance[flagName as keyof typeof instance])
-  );
+  return flagName in instance && Boolean(instance[flagName]);
 }
 
 // In-source tests

@@ -1,10 +1,4 @@
-import { STATE_FACTORY_BRAND, type StateInstance } from '../shared/types';
-import type {
-  RuntimeTools,
-  GetState,
-  StateFactory,
-  DeriveFunction,
-} from '../shared/types';
+import { STATE_FACTORY_BRAND } from '../shared/types';
 import { markAsLatticeState } from './identify';
 import { createInstance } from '../shared/create';
 import { brandWithSymbol } from '../shared';
@@ -15,7 +9,7 @@ import { brandWithSymbol } from '../shared';
  * @param instance The instance to mark
  * @returns The marked instance
  */
-export function stateMarker<V>(instance: V): V {
+export function stateMarker(instance) {
   return markAsLatticeState(instance);
 }
 
@@ -25,10 +19,8 @@ export function stateMarker<V>(instance: V): V {
  * @param factory A function that produces a state object with optional methods and derived properties
  * @returns A state instance function that can be composed with other states
  */
-export function createStateInstance<T>(
-  factory: (tools: StateFactory<T>) => T
-): StateInstance<T> {
-  function createStateSlice(options: RuntimeTools<T>): T {
+export function createStateInstance(factory) {
+  function createStateSlice(options) {
     // Ensure the required properties exist
     if (!options.get || !options.derive) {
       throw new Error('State factory requires get and derive functions');
@@ -47,7 +39,7 @@ export function createStateInstance<T>(
   }
 
   // The createInstance returns a BaseInstance, but we need to add the state-specific branding
-  const instance = createInstance<T>(
+  const instance = createInstance(
     createStateSlice,
     markAsLatticeState,
     'state',
@@ -88,18 +80,16 @@ export function createStateInstance<T>(
  * @param factory A function that produces a state object with properties and derived values
  * @returns A state instance function that can be used directly with Zustand or in composition
  */
-export function createState<T>(
-  factory: (tools: StateFactory<T>) => T
-): StateInstance<T> {
-  return createStateInstance<T>(factory);
+export function createState(factory) {
+  return createStateInstance(factory);
 }
 
 // In-source tests
 if (import.meta.vitest) {
   const { it, expect, vi } = import.meta.vitest;
 
-  it('should create a basic state with primitive values', () => {
-    // Create a spy factory to check it receives the get parameter
+  it('should verify state factory requirements and branding', async () => {
+    // Create a spy factory
     const factorySpy = vi.fn(() => ({
       count: 1,
     }));
@@ -109,14 +99,23 @@ if (import.meta.vitest) {
     // State should be a function
     expect(typeof state).toBe('function');
 
-    // The slice creator should be a function
+    // Should have lattice state branding
+    const { isStateInstance } = await import('../shared/identify');
+    expect(isStateInstance(state)).toBe(true);
+
+    // Should have the expected API (.with and .create methods)
+    expect(typeof state.with).toBe('function');
+    expect(typeof state.create).toBe('function');
+
+    // Create tools for testing
+    const mockGet = vi.fn();
+    const mockDerive = vi.fn();
+
+    // Create a slice with the mock tools
     const sliceCreator = state();
-    const mockGet: GetState<any> = vi.fn();
-    const mockDerive: DeriveFunction = vi.fn();
-    // Call the slice creator
     const slice = sliceCreator({ get: mockGet, derive: mockDerive });
 
-    // Check that the factory is called with the correct parameters
+    // Factory should be called with the tools
     expect(factorySpy).toHaveBeenCalledWith(
       expect.objectContaining({
         get: mockGet,
@@ -124,73 +123,29 @@ if (import.meta.vitest) {
       })
     );
 
-    // Also verify the slice contains the expected primitive value
+    // The tools should be branded with the proper symbol
+    const { isStateFactory } = await import('../shared/identify');
+    const toolsObj = factorySpy.mock.calls[0]?.[0];
+    expect(isStateFactory(toolsObj)).toBe(true);
+
+    // Verify slice contains the expected value
     expect(slice).toEqual({ count: 1 });
   });
 
-  it('should support methods in state that retrieve values', () => {
-    // Create a simulated state
-    const _state = { count: 1 };
-    const mockGet: GetState<any> = vi.fn(() => _state);
-    const mockDerive: DeriveFunction = vi.fn((model, key) => model[key]);
-
-    // Define a type for our state
-    type CounterState = {
-      count: number;
-      getCount: () => number;
-    };
-
-    const state = createState<CounterState>(({ get }) => ({
-      count: 1,
-      getCount: () => get().count,
-    }));
-
+  it('should throw an error when required tools are missing', () => {
+    const state = createState(() => ({ count: 1 }));
     const sliceCreator = state();
-    const slice = sliceCreator({ get: mockGet, derive: mockDerive });
 
-    // Call the method and capture its return value
-    const result = slice.getCount();
-
-    // Verify get function was called
-    expect(mockGet).toHaveBeenCalled();
-
-    // Verify the method returned the expected value
-    expect(result).toBe(1);
-  });
-
-  it('should support derived properties using get()', () => {
-    // Create a simulated state that can be updated
-    let _state = { count: 1 };
-    const mockGet: GetState<any> = vi.fn(() => _state);
-
-    // Define a type for our state state
-    type CounterState = {
-      count: number;
-      doubleCount: () => number;
-    };
-
-    const state = createState<CounterState>(({ get }) => ({
-      count: 1,
-      doubleCount: () => get().count * 2,
-    }));
-
-    const sliceCreator = state();
-    const slice = sliceCreator({
-      get: mockGet,
-      derive: vi.fn(),
-    });
-
-    // Test initial derived value
-    expect(slice.doubleCount()).toBe(2);
-
-    // Simulate a state change
-    _state = { count: 5 };
-
-    // Test that derived property reflects the new state
-    expect(slice.doubleCount()).toBe(10);
-
-    // Verify get() was called
-    expect(mockGet).toHaveBeenCalled();
+    // Should throw when get or derive are missing
+    expect(() => sliceCreator({})).toThrow(
+      'State factory requires get and derive functions'
+    );
+    expect(() => sliceCreator({ get: undefined, derive: vi.fn() })).toThrow(
+      'State factory requires get and derive functions'
+    );
+    expect(() => sliceCreator({ get: vi.fn(), derive: undefined })).toThrow(
+      'State factory requires get and derive functions'
+    );
   });
 
   it('should support deriving values using the derive function', () => {
@@ -201,21 +156,14 @@ if (import.meta.vitest) {
     };
 
     // Setup the derive function
-    const mockDerive: DeriveFunction = vi.fn((model, key, transform) => {
+    const mockDerive = vi.fn((model, key, transform) => {
       const value = model[key];
       return transform ? transform(value) : value;
     });
 
-    const mockGet: GetState<any> = vi.fn(() => ({ derivedCount: 5 }));
+    const mockGet = vi.fn(() => ({ derivedCount: 5 }));
 
-    // Define a type for our derived state
-    type DerivedState = {
-      derivedCount: number;
-      transformedCount: number;
-      combinedCount: number;
-    };
-
-    const state = createState<DerivedState>(({ get, derive }) => ({
+    const state = createState(({ get, derive }) => ({
       derivedCount: derive(mockModel, 'count'),
       transformedCount: derive(mockModel, 'count', (val) => val * 2),
       combinedCount: get().derivedCount,

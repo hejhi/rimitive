@@ -1,5 +1,3 @@
-import type { BaseInstance, Finalized, SliceFactory } from '../types';
-
 /**
  * Validates an instance for problems like circular references
  * that could cause runtime issues
@@ -8,12 +6,9 @@ import type { BaseInstance, Finalized, SliceFactory } from '../types';
  * @param entityName The name of the entity (model, state, etc.) for error messages
  * @throws Error if validation fails
  */
-export function validateInstance<T>(
-  instance: BaseInstance<T>,
-  entityName: string
-): void {
+export function validateInstance(instance, entityName) {
   // Create a mock get function for validation
-  const visited = new Set<Function>();
+  const visited = new Set();
 
   /**
    * Recursively detects circular references in object properties
@@ -21,7 +16,7 @@ export function validateInstance<T>(
    * @param obj The object to check for circular references
    * @param path The path to the current property for error reporting
    */
-  const detectCircular = (obj: any, path: string[] = []): void => {
+  const detectCircular = (obj, path = []) => {
     if (obj && typeof obj === 'object') {
       // Check each property/method
       Object.entries(obj).forEach(([key, value]) => {
@@ -74,22 +69,13 @@ export function validateInstance<T>(
 
   // Get the instance state by calling the factory with Factory interface
   const instanceState = sliceCreator({
-    get: validationGet as any,
-    set: validationSet as any,
+    get: validationGet,
+    set: validationSet,
   });
 
   // Detect circular references in the instance state
   detectCircular(instanceState);
 }
-
-/**
- * Type for a finalized instance with an erroring .with() method
- */
-type InstanceWithErroringWith<T> = {
-  (): SliceFactory<T>;
-  with: () => never; // Type 'never' ensures this function never returns normally
-  __finalized?: boolean;
-};
 
 /**
  * Creates a finalized instance from an instance after validation
@@ -98,17 +84,14 @@ type InstanceWithErroringWith<T> = {
  * @param entityName The name of the entity (model, state, etc.) for error messages
  * @returns A finalized instance that cannot be further composed
  */
-export function finalizeInstance<T>(
-  instance: BaseInstance<T>,
-  entityName: string
-): Finalized<T> {
+export function finalizeInstance(instance, entityName) {
   // Validate the instance before finalizing
   validateInstance(instance, entityName);
 
   // Create the finalized instance
-  const finalizedInstance = function finalizedInstance(): SliceFactory<T> {
+  const finalizedInstance = function finalizedInstance() {
     return instance();
-  } as InstanceWithErroringWith<T>;
+  };
 
   // Mark as finalized
   Object.defineProperty(finalizedInstance, '__finalized', {
@@ -120,11 +103,11 @@ export function finalizeInstance<T>(
 
   // Add a .with() method that throws when called to provide a clear error message
   // This ensures runtime safety in addition to compile-time safety
-  finalizedInstance.with = function withAfterFinalization(): never {
+  finalizedInstance.with = function withAfterFinalization() {
     throw new Error(`Cannot compose a finalized ${entityName}`);
   };
 
-  return finalizedInstance as Finalized<T>;
+  return finalizedInstance;
 }
 
 // In-source tests
@@ -134,44 +117,44 @@ if (import.meta.vitest) {
   describe('validateInstance', () => {
     it('should detect circular references in instances', () => {
       // Create an instance-like object with a circular reference
-      const mockInstance = () => (_: any, __: any) => ({
-        getCircularRef: ({ get }: { get: () => any }) => get().getCircularRef,
+      const mockInstance = () => () => ({
+        getCircularRef: ({ get }) => get().getCircularRef,
       });
 
       // Should throw when validating
-      expect(() => validateInstance(mockInstance as any, 'test')).toThrow(
+      expect(() => validateInstance(mockInstance, 'test')).toThrow(
         /circular reference/i
       );
     });
 
     it('should pass validation for valid instances', () => {
       // Create an instance-like object without circular references
-      const mockInstance = () => (_: any, __: any) => ({
+      const mockInstance = () => () => ({
         count: 42,
         getValue: () => 42,
       });
 
       // Should not throw
-      expect(() => validateInstance(mockInstance as any, 'test')).not.toThrow();
+      expect(() => validateInstance(mockInstance, 'test')).not.toThrow();
     });
   });
 
   describe('finalizeInstance', () => {
     it('should prevent further composition after finalization', () => {
       // Create a mock instance
-      const mockInstance = () => (_: any, __: any) => ({ count: 42 });
-      mockInstance.with = () => ({}) as any;
-      mockInstance.create = () => ({}) as any;
+      const mockInstance = () => () => ({ count: 42 });
+      mockInstance.with = () => ({});
+      mockInstance.create = () => ({});
 
       // Finalize the instance
-      const finalizedInstance = finalizeInstance(mockInstance as any, 'test');
+      const finalizedInstance = finalizeInstance(mockInstance, 'test');
 
       // Verify it's marked as finalized
-      expect((finalizedInstance as any).__finalized).toBe(true);
+      expect(finalizedInstance['__finalized']).toBe(true);
 
       // Attempt to compose the finalized instance - this should throw an error
       expect(() => {
-        (finalizedInstance as any).with(() => ({ name: 'test' }));
+        finalizedInstance.with();
       }).toThrow('Cannot compose a finalized test');
     });
   });

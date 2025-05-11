@@ -1,12 +1,3 @@
-import type {
-  RuntimeTools,
-  BaseInstance,
-  SliceFactory,
-  Finalized,
-  GetState,
-  SetState,
-  ComposedState,
-} from '../types';
 import { finalizeInstance } from '../validation';
 import { createComposedInstance } from '../compose';
 
@@ -18,28 +9,20 @@ import { createComposedInstance } from '../compose';
  * @param entityName Name of the entity (model, state, etc.) for error messages
  * @returns An instance function that can be composed with other instances
  */
-export function createInstance<T, F = RuntimeTools<T>>(
-  factory: (tools: F) => T,
-  markerFn: <V>(instance: V) => V,
-  entityName: string,
-  createEntityFn: <U, E = RuntimeTools<U>>(
-    factory: (tools: E) => U
-  ) => BaseInstance<U>
-): BaseInstance<T> {
-  const instance = (): SliceFactory<T> => (options: RuntimeTools<T>) =>
-    factory(options as F);
+export function createInstance(factory, markerFn, entityName, createEntityFn) {
+  const instance = () => (options) => factory(options);
 
   // Add the .with() method for fluent composition
-  instance.with = <U, E = F>(
+  instance.with = (
     // Using a more flexible type signature that works with various factory types
-    extensionFactory: (tools: E) => U
-  ): BaseInstance<ComposedState<T, U>> => {
+    extensionFactory
+  ) => {
     // Create a new instance directly from the extension factory
     // This simplifies the code by removing the unnecessary wrapper function
     // Compose the current instance with the extension instance
     return createComposedInstance(
       instance,
-      createEntityFn<U, E>(extensionFactory),
+      createEntityFn(extensionFactory),
       createEntityFn,
       markerFn
     );
@@ -47,7 +30,7 @@ export function createInstance<T, F = RuntimeTools<T>>(
 
   // Add the .create() method for instance finalization
   // Validate instance for circular references before finalizing
-  instance.create = (): Finalized<T> => finalizeInstance(instance, entityName);
+  instance.create = () => finalizeInstance(instance, entityName);
 
   // Mark this as a valid Lattice instance
   return markerFn(instance);
@@ -59,17 +42,14 @@ if (import.meta.vitest) {
 
   describe('createInstance', () => {
     // Create test doubles for dependencies
-    const testMarkerFn = <T>(value: T): T => value;
+    const testMarkerFn = (value) => value;
 
-    const testCreateEntityFn = <T, F = RuntimeTools<T>>(
-      factory: (tools: F) => T
-    ): BaseInstance<T> => {
-      const instance = (): SliceFactory<T> => (options: RuntimeTools<T>) =>
-        factory(options as F);
+    const testCreateEntityFn = (factory) => {
+      const instance = () => (options) => factory(options);
 
       // Minimal implementation to satisfy type requirements
-      instance.with = () => ({}) as any;
-      instance.create = () => ({}) as any;
+      instance.with = () => ({});
+      instance.create = () => ({});
 
       return instance;
     };
@@ -92,8 +72,8 @@ if (import.meta.vitest) {
 
       // The slice creator should be a function
       const sliceCreator = instance();
-      const mockGet: GetState<any> = vi.fn();
-      const mockSet: SetState<any> = vi.fn();
+      const mockGet = vi.fn();
+      const mockSet = vi.fn();
 
       // Call the slice creator
       const slice = sliceCreator({ get: mockGet, set: mockSet });
@@ -108,29 +88,20 @@ if (import.meta.vitest) {
     it('should support methods in state', () => {
       // Create a simulated state that tracks changes
       let state = { count: 1 };
-      const mockSet: SetState<any> = vi.fn(
-        (updater: ((state: any) => any) | any) => {
-          if (typeof updater === 'function') {
-            state = { ...state, ...updater(state) };
-          } else {
-            state = { ...state, ...updater };
-          }
+      const mockSet = vi.fn((updater) => {
+        if (typeof updater === 'function') {
+          state = { ...state, ...updater(state) };
+        } else {
+          state = { ...state, ...updater };
         }
-      );
-      const mockGet: GetState<any> = vi.fn(() => state);
-
-      // Define a type for our state
-      type CounterState = {
-        count: number;
-        increment: () => number;
-      };
-
-      const instance = createInstance<CounterState>(
+      });
+      const mockGet = vi.fn(() => state);
+      const instance = createInstance(
         ({ get, set }) => ({
           count: 1,
           increment: () => {
-            set!((state) => ({ count: state.count + 1 }));
-            return get!().count;
+            set((state) => ({ count: state.count + 1 }));
+            return get().count;
           },
         }),
         testMarkerFn,
@@ -165,22 +136,16 @@ if (import.meta.vitest) {
       };
 
       // Define a real mutate function
-      const realMutate = <M, K extends keyof M>(model: M, key: K) => {
-        return ((...args: any[]) => {
-          return (model[key] as any)(...args);
-        }) as any;
+      const realMutate = (model, key) => {
+        return (...args) => {
+          return model[key](...args);
+        };
       };
 
-      // Define a type for our actions
-      type CounterActions = {
-        increment: () => void;
-        reset: () => void;
-      };
-
-      const instance = createInstance<CounterActions>(
+      const instance = createInstance(
         ({ mutate }) => ({
-          increment: mutate!(mockModel, 'increment'),
-          reset: mutate!(mockModel, 'reset'),
+          increment: mutate(mockModel, 'increment'),
+          reset: mutate(mockModel, 'reset'),
         }),
         testMarkerFn,
         'test',
