@@ -1,55 +1,14 @@
-import type { ModelInstance } from './types';
+import type { ModelInstance } from '../shared/types';
 import type {
   RuntimeTools,
   GetState,
   SetState,
   ModelFactory,
 } from '../shared/types';
+import { MODEL_FACTORY_BRAND } from '../shared/types';
+import { createInstance } from '../shared/create';
+import { brandWithSymbol } from '../shared/identify';
 import { markAsLatticeModel } from './identify';
-import {
-  createInstance,
-  createSliceCreator as sharedCreateSliceCreator,
-} from '../shared/create';
-
-/**
- * Creates a slice creator function based on the provided factory
- *
- * @param factory A function that produces a state object with optional methods and derived properties
- * @param options Object containing get and set functions
- * @returns A state object with properties, methods, and derived values
- */
-export function createSliceCreator<T>(
-  factory: (tools: ModelFactory<T>) => T,
-  options: RuntimeTools<T>
-): T {
-  // Check if required properties exist
-  if (!options.get || !options.set) {
-    throw new Error('Model factory requires get and set functions');
-  }
-
-  // Create model tools with proper branding
-  const tools = {
-    get: options.get,
-    set: options.set,
-    __modelFactoryBrand: Symbol('model'),
-  };
-
-  // Pass to shared createSliceCreator
-  return sharedCreateSliceCreator(
-    factory as (tools: RuntimeTools<T>) => T,
-    tools
-  );
-}
-
-/**
- * Marker function for model instances
- *
- * @param instance The instance to mark
- * @returns The marked instance
- */
-export function modelMarker<V>(instance: V): V {
-  return markAsLatticeModel(instance);
-}
 
 /**
  * Creates a model instance function that serves as a blueprint for a Zustand store slice.
@@ -60,19 +19,34 @@ export function modelMarker<V>(instance: V): V {
 export function createModelInstance<T>(
   factory: (tools: ModelFactory<T>) => T
 ): ModelInstance<T> {
-  // Convert the factory to accept the shared Factory type
-  const factoryAdapter = (tools: RuntimeTools<T>): T => {
-    // Cast the tools to ModelFactory to ensure type safety
-    const modelTools = tools as unknown as ModelFactory<T>;
-    return factory(modelTools);
-  };
+  function createModelSlice(options: RuntimeTools<T>): T {
+    // Ensure the required properties exist
+    if (!options.get || !options.set) {
+      throw new Error('Model factory requires get and set functions');
+    }
 
-  return createInstance<T, unknown>(
-    factoryAdapter,
-    modelMarker,
+    // Call the factory with properly typed tools
+    return factory(
+      brandWithSymbol(
+        {
+          get: options.get,
+          set: options.set,
+        },
+        MODEL_FACTORY_BRAND
+      )
+    );
+  }
+
+  // The createInstance returns a BaseInstance, but we need to add the model-specific branding
+  const instance = createInstance<T>(
+    createModelSlice,
+    markAsLatticeModel,
     'model',
     createModel
-  ) as ModelInstance<T>;
+  );
+
+  // Apply model-specific branding to make it a ModelInstance
+  return markAsLatticeModel(instance);
 }
 
 /**

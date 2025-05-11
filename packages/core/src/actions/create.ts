@@ -1,44 +1,8 @@
-import type { ActionInstance } from './types';
+import type { ActionInstance } from '../shared/types';
 import { markAsLatticeAction } from './identify';
-import {
-  createInstance,
-  createSliceCreator as sharedCreateSliceCreator,
-} from '../shared/create';
-import { ActionsFactory, RuntimeTools } from '../shared';
-
-/**
- * Creates a slice creator function based on the provided factory
- *
- * @param factory A function that produces an actions object with methods
- * @param _ Unused options parameter, maintained for API consistency
- * @returns An actions object with methods
- */
-export function createSliceCreator<T>(
-  factory: (tools: ActionsFactory<T>) => T,
-  options: RuntimeTools<T>
-): T {
-  // Create actions tools with proper branding
-  const tools = {
-    mutate: options.mutate!,
-    __actionsFactoryBrand: Symbol('actions'),
-  };
-
-  // Pass to shared createSliceCreator
-  return sharedCreateSliceCreator(
-    factory as (tools: RuntimeTools<T>) => T,
-    tools
-  );
-}
-
-/**
- * Marker function for action instances
- *
- * @param instance The instance to mark
- * @returns The marked instance
- */
-export function actionsMarker<V>(instance: V): V {
-  return markAsLatticeAction(instance);
-}
+import { createInstance } from '../shared/create';
+import { brandWithSymbol } from '../shared/identify';
+import { ActionsFactory, RuntimeTools, ACTIONS_FACTORY_BRAND } from '../shared';
 
 /**
  * Creates a action instance function that serves as a blueprint for a set of actions.
@@ -49,19 +13,34 @@ export function actionsMarker<V>(instance: V): V {
 export function createActionInstance<T>(
   factory: (tools: ActionsFactory<T>) => T
 ): ActionInstance<T> {
-  // Convert the factory to accept the shared Factory type
-  const factoryAdapter = (tools: RuntimeTools<T>): T => {
-    // Cast the tools to ActionsFactory to ensure type safety
-    const actionTools = tools as unknown as ActionsFactory<T>;
-    return factory(actionTools);
-  };
+  function createActionSlice(options: RuntimeTools<T>): T {
+    // Ensure the required properties exist
+    if (!options.mutate) {
+      throw new Error('Actions factory requires a mutate function');
+    }
 
-  return createInstance<T, unknown>(
-    factoryAdapter,
-    actionsMarker,
+    // Brand the tools with the appropriate brand symbol
+    const brandedTools = brandWithSymbol(
+      {
+        mutate: options.mutate,
+      },
+      ACTIONS_FACTORY_BRAND
+    );
+
+    // Call the factory with properly typed tools
+    return factory(brandedTools);
+  }
+
+  // The createInstance returns a BaseInstance, but we need to add the actions-specific branding
+  const instance = createInstance<T>(
+    createActionSlice,
+    markAsLatticeAction,
     'actions',
     createAction
   );
+
+  // Apply actions-specific branding to make it an ActionInstance
+  return markAsLatticeAction(instance);
 }
 
 /**

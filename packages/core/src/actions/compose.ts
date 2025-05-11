@@ -1,5 +1,6 @@
-import type { ActionInstance } from './types';
-import { createAction, actionsMarker } from './create';
+import type { ActionInstance } from '../shared/types';
+import { createAction } from './create';
+import { markAsLatticeAction } from './identify';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
 
@@ -19,7 +20,7 @@ export function createComposedActionInstance<
     baseAction,
     extensionAction,
     createAction,
-    actionsMarker
+    markAsLatticeAction
   );
 }
 

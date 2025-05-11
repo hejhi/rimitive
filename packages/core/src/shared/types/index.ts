@@ -39,31 +39,43 @@ export type DispatchFunction = <A, K extends keyof A>(
 ) => A[K];
 
 /**
- * Type for a factory function with flexible tool options
+ * Complete set of all runtime tools available in the system
  */
-export type RuntimeTools<T> = {
-  get?: GetState<T>;
-  set?: SetState<T>;
-  mutate?: MutateFunction;
-  derive?: DeriveFunction;
-  dispatch?: DispatchFunction;
+export type AllRuntimeTools<T> = {
+  get: GetState<T>;
+  set: SetState<T>;
+  mutate: MutateFunction;
+  derive: DeriveFunction;
+  dispatch: DispatchFunction;
 };
 
 /**
- * Type for a slice creator function that will be called with appropriate parameters
+ * Type for a factory function with flexible tool options
+ * Accepts any of the domain-specific factory types
  */
-export type SliceCreator<T> = (options: RuntimeTools<T>) => T;
+export type RuntimeTools<T> =
+  | ModelFactory<T>
+  | StateFactory<T>
+  | ActionsFactory<T>
+  | ViewFactory<T>;
 
 /**
- * Type for an instance (model, state, actions or view)
- * T represents the slice this instance contributes
+ * Type for a slice creator function that will be called with appropriate parameters.
+ * Creates a zustand slice creator that will be turned into a zustand store.
  */
-export type Instance<T, F = unknown> = {
-  (): SliceCreator<T>;
+export type SliceFactory<T> = (options: RuntimeTools<T>) => T;
+
+/**
+ * Type for a base instance (model, state, actions or view)
+ * T represents the slice this instance contributes
+ * F represents the factory tools type (ModelFactory, StateFactory, etc.)
+ */
+export type BaseInstance<T, F = RuntimeTools<T>> = {
+  (): SliceFactory<T>;
   __composition?: unknown;
-  with<U>(
-    factory: (tools: RuntimeTools<ComposedState<T, U>>) => U
-  ): Instance<ComposedState<T, U>, F>;
+  with<U, E = F>(
+    factory: (tools: E) => U
+  ): BaseInstance<ComposedState<T, U>, E>;
   create(): Finalized<T>;
 };
 
@@ -71,15 +83,15 @@ export type Instance<T, F = unknown> = {
  * Type for a finalized instance, which can no longer be composed but is ready for use
  */
 export type Finalized<T> = {
-  (): SliceCreator<T>;
+  (): SliceFactory<T>;
   __finalized: true;
 };
 
 /**
- * Utility type to extract the state type from an Instance
+ * Utility type to extract the state type from a BaseInstance
  */
-export type InstanceState<T extends Instance<any>> =
-  T extends Instance<infer S> ? S : never;
+export type InstanceState<T extends BaseInstance<any>> =
+  T extends BaseInstance<infer S> ? S : never;
 
 /**
  * Utility type for composing two state types
@@ -87,54 +99,79 @@ export type InstanceState<T extends Instance<any>> =
 export type ComposedState<T, U> = T & U;
 
 /**
- * Utility type for a composed instance
+ * Brand symbols for runtime type identification
  */
-export type ComposedInstance<
-  T extends Instance<any>,
-  U extends Instance<any>,
-  F = unknown,
-> = Instance<ComposedState<InstanceState<T>, InstanceState<U>>, F>;
+// Factory brand symbols
+export const MODEL_FACTORY_BRAND = Symbol('model-factory');
+export const STATE_FACTORY_BRAND = Symbol('state-factory');
+export const ACTIONS_FACTORY_BRAND = Symbol('actions-factory');
+export const VIEW_FACTORY_BRAND = Symbol('view-factory');
+
+// Instance brand symbols
+export const MODEL_INSTANCE_BRAND = Symbol('model-instance');
+export const STATE_INSTANCE_BRAND = Symbol('state-instance');
+export const ACTIONS_INSTANCE_BRAND = Symbol('actions-instance');
+export const VIEW_INSTANCE_BRAND = Symbol('view-instance');
 
 /**
- * Branded types for different factory types
+ * Symbol-based branded type helpers for TypeScript type safety
+ * These types enforce that objects have the corresponding brand symbol property
+ * This provides a unified approach that works for both runtime checks and compile-time type safety
  */
-export interface ModelFactoryBrand {
-  readonly __modelFactoryBrand: unique symbol;
-}
+// Instance branding type utility
+export type SymbolBranded<T, S extends symbol> = T & Record<S, true>;
 
-export interface StateFactoryBrand {
-  readonly __stateFactoryBrand: unique symbol;
-}
+// Instance branded types
+export type ModelBranded<T> = SymbolBranded<T, typeof MODEL_INSTANCE_BRAND>;
+export type StateBranded<T> = SymbolBranded<T, typeof STATE_INSTANCE_BRAND>;
+export type ActionsBranded<T> = SymbolBranded<T, typeof ACTIONS_INSTANCE_BRAND>;
+export type ViewBranded<T> = SymbolBranded<T, typeof VIEW_INSTANCE_BRAND>;
 
-export interface ActionsFactoryBrand {
-  readonly __actionsFactoryBrand: unique symbol;
-}
+/**
+ * Specific instance types that use symbol branding
+ */
+export type ModelInstance<T> = ModelBranded<BaseInstance<T, ModelFactory<T>>>;
+export type StateInstance<T> = StateBranded<BaseInstance<T, StateFactory<T>>>;
+export type ActionInstance<T> = ActionsBranded<
+  BaseInstance<T, ActionsFactory<T>>
+>;
+export type ViewInstance<T> = ViewBranded<BaseInstance<T, ViewFactory<T>>>;
 
-export interface ViewFactoryBrand {
-  readonly __viewFactoryBrand: unique symbol;
-}
+/**
+ * Factory branded types using the same symbol-based approach as instances
+ */
+export type ModelFactoryBranded<T> = SymbolBranded<
+  T,
+  typeof MODEL_FACTORY_BRAND
+>;
+export type StateFactoryBranded<T> = SymbolBranded<
+  T,
+  typeof STATE_FACTORY_BRAND
+>;
+export type ActionsFactoryBranded<T> = SymbolBranded<
+  T,
+  typeof ACTIONS_FACTORY_BRAND
+>;
+export type ViewFactoryBranded<T> = SymbolBranded<T, typeof VIEW_FACTORY_BRAND>;
 
 /**
  * Branded factory types with specific required properties
  */
-export type ModelFactory<T> = RuntimeTools<T> & {
-  get: GetState<T>;
-  set: SetState<T>;
-} & ModelFactoryBrand;
+export type ModelFactory<T> = ModelFactoryBranded<
+  Pick<AllRuntimeTools<T>, 'get' | 'set'>
+>;
 
-export type StateFactory<T> = RuntimeTools<T> & {
-  get: GetState<T>;
-  derive: DeriveFunction;
-} & StateFactoryBrand;
+export type StateFactory<T> = StateFactoryBranded<
+  Pick<AllRuntimeTools<T>, 'get' | 'derive'>
+>;
 
-export type ActionsFactory<T> = RuntimeTools<T> & {
-  mutate: MutateFunction;
-} & ActionsFactoryBrand;
+export type ActionsFactory<T> = ActionsFactoryBranded<
+  Pick<AllRuntimeTools<T>, 'mutate'>
+>;
 
-export type ViewFactory<T> = RuntimeTools<T> & {
-  derive: DeriveFunction;
-  dispatch: DispatchFunction;
-} & ViewFactoryBrand;
+export type ViewFactory<T> = ViewFactoryBranded<
+  Pick<AllRuntimeTools<T>, 'derive' | 'dispatch'>
+>;
 
 // In-source tests
 if (import.meta.vitest) {
@@ -147,7 +184,7 @@ if (import.meta.vitest) {
       increment: () => void;
     };
 
-    type TestInstance = Instance<TestState>;
+    type TestInstance = BaseInstance<TestState>;
 
     // The type should be a function
     const isFunction: TestInstance extends Function ? true : false = true;

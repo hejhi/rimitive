@@ -1,8 +1,7 @@
-import type { StateInstance } from './types';
+import type { StateInstance } from '../shared/types';
 import { createState, stateMarker } from './create';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
-import { GetState, Instance } from '../shared';
 
 /**
  * Creates a composed state instance that combines two input states
@@ -17,8 +16,8 @@ export function createComposedStateInstance<
 >(baseState: TBase, extensionState: TExt) {
   // Cast the shared composed instance to the specific StateInstance type
   return createComposedInstance(
-    baseState as unknown as Instance<any, unknown>,
-    extensionState as unknown as Instance<any, unknown>,
+    baseState,
+    extensionState,
     createState,
     stateMarker
   );
@@ -48,7 +47,7 @@ if (import.meta.vitest) {
 
     // Create an extension to the state using the .with() method
     const extendedState = baseState.with<StatsState>(({ get }) => ({
-      doubleCount: () => get!().count * 2,
+      doubleCount: () => get().count * 2,
     }));
 
     // Verify the extended state contains properties from both states
@@ -59,10 +58,9 @@ if (import.meta.vitest) {
       count: 10,
       doubleCount: () => 20,
     };
-    const mockGet = vi.fn(() => mockState) as unknown as GetState<
-      CounterState & StatsState
-    >;
-    const slice = sliceCreator({ get: mockGet, set: vi.fn() });
+    const mockGet = vi.fn(() => mockState);
+    const mockDerive = vi.fn();
+    const slice = sliceCreator({ get: mockGet, derive: mockDerive });
 
     expect(slice).toHaveProperty('count');
     expect(slice).toHaveProperty('doubleCount');
@@ -99,7 +97,7 @@ if (import.meta.vitest) {
         count: 5,
       }))
       .with<LoggerState>(({ get }) => ({
-        log: () => `${get!().name}: ${get!().count}`,
+        log: () => `${get().name}: ${get().count}`,
       }))
       .with<MetadataState>(() => ({
         metadata: { version: '1.0.0' },
@@ -118,10 +116,9 @@ if (import.meta.vitest) {
       log: () => 'base: 5',
       metadata: { version: '1.0.0' },
     };
-    const mockGet = vi.fn(() => mockState) as unknown as GetState<
-      BaseState & CounterState & LoggerState & MetadataState
-    >;
-    const slice = sliceCreator({ get: mockGet, set: vi.fn() });
+    const mockGet = vi.fn(() => mockState);
+    const mockDerive = vi.fn();
+    const slice = sliceCreator({ get: mockGet, derive: mockDerive });
 
     // The key assertion: verify that properties from all extensions exist
     expect(slice.metadata.version).toBe('1.0.0');
@@ -143,7 +140,7 @@ if (import.meta.vitest) {
     }));
 
     const extendedState = baseState.with<StatsState>(({ get }) => ({
-      doubleCount: () => get!().count * 2,
+      doubleCount: () => get().count * 2,
     }));
 
     // Verify the state has a .create() method
@@ -170,10 +167,9 @@ if (import.meta.vitest) {
       count: 10,
       doubleCount: () => 20,
     };
-    const mockGet = vi.fn(() => mockState) as unknown as GetState<
-      CounterState & StatsState
-    >;
-    const slice = sliceCreator({ get: mockGet, set: vi.fn() });
+    const mockGet = vi.fn(() => mockState);
+    const mockDerive = vi.fn();
+    const slice = sliceCreator({ get: mockGet, derive: mockDerive });
 
     // Verify all properties and functionality are preserved
     expect(slice).toHaveProperty('count');

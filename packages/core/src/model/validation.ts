@@ -1,4 +1,4 @@
-import type { ModelInstance } from './types';
+import type { ModelInstance } from '../shared/types';
 import { validateInstance, finalizeInstance } from '../shared/validation';
 import { Finalized } from '../shared';
 

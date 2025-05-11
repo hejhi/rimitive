@@ -1,8 +1,8 @@
 import { isFinalized } from '../instance';
 import type {
   RuntimeTools,
-  Instance,
-  SliceCreator,
+  BaseInstance,
+  SliceFactory,
   ComposedState,
   Finalized,
   InstanceState,
@@ -20,20 +20,21 @@ import type {
  * @returns An instance representing the composed entity
  */
 export function createComposedInstance<
-  TBase extends Instance<any, F>,
-  TExt extends Instance<any, F>,
-  F,
+  TBase extends BaseInstance<any>,
+  TExt extends BaseInstance<any>,
 >(
   baseInstance: TBase,
   extensionInstance: TExt,
-  createEntityFn: <U>(factory: (tools: RuntimeTools<U>) => U) => Instance<U, F>,
+  createEntityFn: <U>(
+    factory: (tools: RuntimeTools<U>) => U
+  ) => BaseInstance<U>,
   markerFn: <T>(instance: T) => T
-): Instance<ComposedState<InstanceState<TBase>, InstanceState<TExt>>, F> {
+): BaseInstance<ComposedState<InstanceState<TBase>, InstanceState<TExt>>> {
   type TComposed = ComposedState<InstanceState<TBase>, InstanceState<TExt>>;
 
   const composedInstance =
-    function composedInstance(): SliceCreator<TComposed> {
-      return function composedSliceCreator(
+    function composedInstance(): SliceFactory<TComposed> {
+      return function composedSliceFactory(
         options: RuntimeTools<TComposed>
       ): TComposed {
         // Get slices from both instances
@@ -46,18 +47,14 @@ export function createComposedInstance<
     };
 
   // Add the .with() method for fluent composition
-  composedInstance.with = function with_<U>(
+  composedInstance.with = function with_<U extends InstanceState<TBase>>(
     extensionRuntimeTools: (
       tools: RuntimeTools<ComposedState<TComposed, U>>
     ) => U
-  ): Instance<ComposedState<TComposed, U>, F> {
-    const newExtensionInstance = createEntityFn<U>((tools: any) => {
-      return extensionRuntimeTools(tools);
-    });
-
+  ): BaseInstance<ComposedState<TComposed, U>> {
     return createComposedInstance(
       composedInstance,
-      newExtensionInstance,
+      createEntityFn(extensionRuntimeTools),
       createEntityFn,
       markerFn
     );
@@ -66,10 +63,7 @@ export function createComposedInstance<
   // Add the .create() method for instance finalization
   composedInstance.create = function create(): Finalized<TComposed> {
     // Create a finalized instance that contains the same slice creator
-    const finalizedInstance =
-      function finalizedInstance(): SliceCreator<TComposed> {
-        return composedInstance();
-      };
+    const finalizedInstance = () => composedInstance();
 
     // Mark as finalized
     Object.defineProperty(finalizedInstance, '__finalized', {
@@ -83,9 +77,8 @@ export function createComposedInstance<
   };
 
   // Mark as a valid Lattice instance
-  return markerFn(composedInstance) as Instance<
-    ComposedState<InstanceState<TBase>, InstanceState<TExt>>,
-    F
+  return markerFn(composedInstance) as BaseInstance<
+    ComposedState<InstanceState<TBase>, InstanceState<TExt>>
   >;
 }
 
@@ -97,46 +90,41 @@ if (import.meta.vitest) {
     // Mock functions for testing purposes
     type TestCreateEntityFn = <T>(
       factory: (tools: RuntimeTools<T>) => T
-    ) => Instance<T, unknown>;
-    type TestMarkerFn = <T>(instance: T) => T;
+    ) => BaseInstance<T>;
 
     // Create a simple instance factory for testing
     const createTestEntity: TestCreateEntityFn = <T>(
-      factory: (tools: RuntimeTools<T>) => T
-    ): Instance<T, unknown> => {
-      const instance = function instance(): SliceCreator<T> {
-        return function sliceCreator(options: RuntimeTools<T>) {
-          return factory(options);
-        };
-      };
+      factory: SliceFactory<T>
+    ): BaseInstance<T> => {
+      function instance() {
+        return (options: RuntimeTools<T>) => factory(options);
+      }
 
-      instance.with = function with_<U>(
+      instance.with = <U>(
         extensionRuntimeTools: (tools: RuntimeTools<any>) => U
-      ): Instance<ComposedState<T, U>, unknown> {
+      ): BaseInstance<ComposedState<T, U>> => {
         const extension = createTestEntity(extensionRuntimeTools);
-        const markerFn: TestMarkerFn = <V>(x: V) => x;
         return createComposedInstance(
-          instance as Instance<T, unknown>,
+          instance,
           extension,
           createTestEntity,
-          markerFn
+          (x) => x
         );
       };
 
-      instance.create = function create(): Finalized<T> {
-        const finalizedInstance =
-          function finalizedInstance(): SliceCreator<T> {
-            return instance();
-          };
+      instance.create = (): Finalized<T> => {
+        const finalizedInstance = () => instance();
         Object.defineProperty(finalizedInstance, '__finalized', {
           value: true,
           enumerable: false,
+          writable: false,
           configurable: false,
         });
+
         return finalizedInstance as Finalized<T>;
       };
 
-      return instance as Instance<T, unknown>;
+      return instance as BaseInstance<T>;
     };
 
     it('should support fluent composition with .with() method', () => {
@@ -160,7 +148,7 @@ if (import.meta.vitest) {
       // Create an extension to the instance using the .with() method
       const extendedInstance = baseInstance.with(({ get }) => ({
         doubleCount: () => (get ? get().count * 2 : 0),
-      })) as Instance<CounterState & StatsState, unknown>;
+      })) as BaseInstance<CounterState & StatsState>;
 
       // Verify the extended instance contains properties from both instances
       const sliceCreator = extendedInstance();
@@ -197,7 +185,7 @@ if (import.meta.vitest) {
 
       const extendedInstance = baseInstance.with(({ get }) => ({
         doubleCount: () => (get ? get().count * 2 : 0),
-      })) as Instance<CounterState & StatsState, unknown>;
+      })) as BaseInstance<CounterState & StatsState>;
 
       // Verify the instance has a .create() method
       expect(extendedInstance.create).toBeDefined();

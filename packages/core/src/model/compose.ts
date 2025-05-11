@@ -1,8 +1,9 @@
-import type { ModelInstance } from './types';
-import { createModel, modelMarker } from './create';
+import type { ModelInstance } from '../shared/types';
+import { createModel } from './create';
+import { markAsLatticeModel } from './identify';
 import { createComposedInstance } from '../shared/compose';
 import { isFinalized } from '../shared/instance';
-import { GetState } from '../shared';
+import { GetState } from '../shared/types';
 
 /**
  * Creates a composed model instance that combines two input models
@@ -20,7 +21,7 @@ export function createComposedModelInstance<
     baseModel,
     extensionModel,
     createModel,
-    modelMarker
+    markAsLatticeModel
   );
 }
 

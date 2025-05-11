@@ -1,4 +1,4 @@
-import type { Instance, Finalized, SliceCreator } from '../types';
+import type { BaseInstance, Finalized, SliceFactory } from '../types';
 
 /**
  * Validates an instance for problems like circular references
@@ -9,7 +9,7 @@ import type { Instance, Finalized, SliceCreator } from '../types';
  * @throws Error if validation fails
  */
 export function validateInstance<T>(
-  instance: Instance<T>,
+  instance: BaseInstance<T>,
   entityName: string
 ): void {
   // Create a mock get function for validation
@@ -86,7 +86,7 @@ export function validateInstance<T>(
  * Type for a finalized instance with an erroring .with() method
  */
 type InstanceWithErroringWith<T> = {
-  (): SliceCreator<T>;
+  (): SliceFactory<T>;
   with: () => never; // Type 'never' ensures this function never returns normally
   __finalized?: boolean;
 };
@@ -99,14 +99,14 @@ type InstanceWithErroringWith<T> = {
  * @returns A finalized instance that cannot be further composed
  */
 export function finalizeInstance<T>(
-  instance: Instance<T>,
+  instance: BaseInstance<T>,
   entityName: string
 ): Finalized<T> {
   // Validate the instance before finalizing
   validateInstance(instance, entityName);
 
   // Create the finalized instance
-  const finalizedInstance = function finalizedInstance(): SliceCreator<T> {
+  const finalizedInstance = function finalizedInstance(): SliceFactory<T> {
     return instance();
   } as InstanceWithErroringWith<T>;
 

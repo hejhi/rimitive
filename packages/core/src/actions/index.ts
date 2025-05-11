@@ -1,7 +1,4 @@
-/**
- * Re-export types from the types module
- */
-export * from './types';
+// No types exported from this module - use shared/types directly
 
 /**
  * Re-export functions from the create module

@@ -1,4 +1,4 @@
-import type { StateInstance } from './types';
+import type { StateInstance } from '../shared/types';
 import { validateInstance, finalizeInstance } from '../shared/validation';
 import { Finalized } from '../shared';
 
