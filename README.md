@@ -16,7 +16,7 @@ A **headless component framework** built on Zustand. Lattice lattices are both t
 ## Core Value Propositions
 
 - **Declarative Contract-as-API**: Every lattice is both the contract and the API, enforced at type and runtime.
-- **Fluent Composition Pattern**: Chainable API with `.with()` and `.create()` methods for clear, expressive composition and finalization.
+- **Fluent Composition Pattern**: Chainable API with `.with()` method for clear, expressive composition.
 - **Type-Safe Composability**: All compositions are type-checked; contract violations are surfaced as type errors.
 - **SAM Architecture**: Actions → Model → State → View, with strict separation of concerns.
 - **Unified Model**: Getters and mutations in a single Model object with auto-generated hooks.
@@ -72,6 +72,26 @@ graph TD
 - **Models** are the source-of-truth, combining state and behavior, but are never exposed directly to consumers.
 - The contract is preserved and enforced at every composition boundary.
 
+## Composition System
+
+Lattice's composition system provides a fluent API for extending components with type safety:
+
+```typescript
+const enhancedModel = compose(baseModel).with<{ doubled: () => number }>(
+  ({ get }) => ({
+    doubled: () => get().count * 2,
+  })
+);
+
+// Prepare for use
+const finalModel = prepare(enhancedModel);
+```
+
+This fluent API ensures:
+- Full type inference between base and extension
+- Runtime validation of composition contracts
+- Proper typing of factory tools (get, set, derive, etc.)
+
 ## Glossary
 
 | Terminology | Meaning |
@@ -83,7 +103,7 @@ graph TD
 
 > Together, these make up a composable **lattice**—the declarative contract and the actual API for your component.
 
-## Fluent Composition Pattern
+## The Composition Pattern
 
 ```mermaid
 graph LR
@@ -99,27 +119,27 @@ graph LR
     end
     
     subgraph "Finalization Phase"
-        C[.create]
+        P[prepare]
     end
     
     classDef phase fill:#bbf,stroke:#333,stroke-width:2px;
     class CP,CoP,FP phase;
 ```
 
-Lattice's core compositional mechanism is a fluent composition pattern, used for models, states, actions, and views. This pattern consists of three distinct phases:
+Lattice's core compositional mechanism consists of three distinct phases:
 
-1. **Creation Phase**: Factory functions like `createModel()` and `createState()` create base model instances that serve as the starting point for composition.
+1. **Creation Phase**: Factory functions like `createModel()` and `createState()` create base component instances that serve as the starting point for composition.
 
-2. **Composition Phase**: The `.with()` method extends the model by adding new properties or behaviors, receiving helpers (like `get()`) for accessing the model's state. Can be chained multiple times to progressively enhance the model.
+2. **Composition Phase**: The `.with()` method extends components by adding new properties or behaviors, with access to helper functions like `get()` for accessing the component's state.
 
-3. **Finalization Phase**: The `.create()` method marks the end of the composition phase for a specific lattice, preventing further changes within that lattice definition.
+3. **Finalization Phase**: The `prepare()` function finalizes components for use, preventing further changes to that component definition.
 
 ## Factory-Based Composition
 
 Lattice uses a factory-based composition model with these phases:
 
-1. **Composition Phase**: Factory functions create base models that can be extended with the `.with()` method
-2. **Finalization Phase**: The `.create()` method finalizes a specific model composition
+1. **Composition Phase**: Factory functions create base models that can be extended 
+2. **Finalization Phase**: The `prepare()` function finalizes a specific model composition
 3. **Instantiation Phase**: The actual Zustand stores are only created when the lattice itself is instantiated for use
 
 This separation enables:
@@ -167,6 +187,15 @@ It's important to understand the difference between composition and deriving:
 1. **Composition** happens with the `.with()` method to extend an existing component
 2. **Deriving** happens when creating reactive subscriptions to finalized models/states
 
+## Type Safety & Branding
+
+Lattice uses a sophisticated type system to ensure type safety:
+
+- **Branded Types**: Components are branded with symbols for runtime identification
+- **Type Guards**: Functions like `isModelInstance()` provide runtime type checking
+- **Generic Inference**: Types flow through the composition chain with proper inference
+- **Function Overloading**: The composition API handles different component types correctly
+
 ## Lattice Composition Example
 
 Here's a concise example of composing lattices together:
@@ -180,23 +209,26 @@ const createCoreLattice = () => {
     privateData: "sensitive",
     increment: () => set((state) => ({ count: state.count + 1 })),
     reset: () => set({ count: 0 }),
-  })).create();
+  }));
+  
+  // Prepare model for use
+  const preparedModel = prepare(model);
 
   // Create and return lattice
   return createLattice("core", {
-    model,
-    actions: createActions(({ mutate }) => ({
-      increment: mutate(model, "increment"),
-      reset: mutate(model, "reset"),
-    })).create(),
-    state: createState(({ derive }) => ({
-      count: derive(model, "count"),
+    model: preparedModel,
+    actions: prepare(createActions(({ mutate }) => ({
+      increment: mutate(preparedModel, "increment"),
+      reset: mutate(preparedModel, "reset"),
+    }))),
+    state: prepare(createState(({ derive }) => ({
+      count: derive(preparedModel, "count"),
       // Note: privateData is not exposed in state
-    })).create(),
+    }))),
     view: {
-      counter: createView(({ derive }) => ({
-        "data-count": derive(model, "count"),
-      })).create()
+      counter: prepare(createView(({ derive }) => ({
+        "data-count": derive(preparedModel, "count"),
+      })))
     }
   });
 };
@@ -204,14 +236,14 @@ const createCoreLattice = () => {
 // Create an enhanced lattice by composing with the base lattice
 const createEnhancedLattice = (baseLattice) => {
   // Use .select() to cherry-pick specific properties while composing
-  const selectedModel = baseLattice.model
+  const selectedModel = compose(baseLattice.model
     .select(({ count, increment }) => ({
       // Keep these properties
       count,
       // Rename increment to avoid collisions
       basicIncrement: increment,
       // privateData and reset are omitted by not including them
-    }))
+    })))
     .with(({ get, set }) => ({
       // Add new functionality using the selected subset
       incrementTwice: () => {
@@ -220,21 +252,24 @@ const createEnhancedLattice = (baseLattice) => {
       },
       // Add new state
       doubledCount: () => get().count * 2,
-    })).create();
+    }));
+  
+  // Prepare the composed model
+  const preparedModel = prepare(selectedModel);
 
   // Return a new lattice that composes with the base lattice
   return createLattice(
     "enhanced",
     withLattice(baseLattice)({
-      model: selectedModel,
-      actions: createActions(({ mutate }) => ({
+      model: preparedModel,
+      actions: prepare(createActions(({ mutate }) => ({
         // Add new action that references the enhanced model
-        incrementTwice: mutate(selectedModel, "incrementTwice"),
-      })).create(),
-      state: createState(({ derive }) => ({
+        incrementTwice: mutate(preparedModel, "incrementTwice"),
+      }))),
+      state: prepare(createState(({ derive }) => ({
         // Expose new derived state
-        doubledCount: derive(selectedModel, "doubledCount"),
-      })).create(),
+        doubledCount: derive(preparedModel, "doubledCount"),
+      }))),
     }),
   );
 };
@@ -249,7 +284,7 @@ This example demonstrates:
 - Using the `.select()` method to cherry-pick and rename specific properties during composition
 - Composing a new lattice that extends the base lattice while maintaining contract control
 - Preserving the contract while adding new functionality
-- The fluent composition pattern with `.with()` and `.create()`
+- Using the fluent composition pattern with `.with()` and finalizing with `prepare()`
 
 With `.select()`, you can:
 - Include only the properties you need from the base model
