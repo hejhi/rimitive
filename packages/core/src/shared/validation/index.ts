@@ -101,12 +101,6 @@ export function finalizeInstance(instance, entityName) {
     configurable: false,
   });
 
-  // Add a .with() method that throws when called to provide a clear error message
-  // This ensures runtime safety in addition to compile-time safety
-  finalizedInstance.with = function withAfterFinalization() {
-    throw new Error(`Cannot compose a finalized ${entityName}`);
-  };
-
   return finalizedInstance;
 }
 
@@ -140,22 +134,26 @@ if (import.meta.vitest) {
   });
 
   describe('finalizeInstance', () => {
-    it('should prevent further composition after finalization', () => {
+    it('should finalize an instance', () => {
       // Create a mock instance
       const mockInstance = () => () => ({ count: 42 });
-      mockInstance.with = () => ({});
-      mockInstance.create = () => ({});
-
+      
+      // In previous API, instances had with and create methods
+      // Now we just need a basic function for testing
+      
       // Finalize the instance
       const finalizedInstance = finalizeInstance(mockInstance, 'test');
 
       // Verify it's marked as finalized
       expect(finalizedInstance['__finalized']).toBe(true);
-
-      // Attempt to compose the finalized instance - this should throw an error
-      expect(() => {
-        finalizedInstance.with();
-      }).toThrow('Cannot compose a finalized test');
+      
+      // The finalized instance should still work as a factory
+      expect(typeof finalizedInstance).toBe('function');
+      
+      // It should call through to the original instance
+      const factory = finalizedInstance();
+      const result = factory({});
+      expect(result).toEqual({ count: 42 });
     });
   });
 }

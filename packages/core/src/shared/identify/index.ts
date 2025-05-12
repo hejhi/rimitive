@@ -7,6 +7,11 @@ import {
   STATE_INSTANCE_BRAND,
   ACTIONS_INSTANCE_BRAND,
   VIEW_INSTANCE_BRAND,
+  Branded,
+  ModelInstance,
+  StateInstance,
+  ActionsInstance,
+  ViewInstance,
 } from '../types';
 
 /**
@@ -15,7 +20,7 @@ import {
  * @param markerName The name of the marker to create
  * @returns A symbol that can be used to mark objects
  */
-export function createMarker(markerName: string) {
+export function createMarker(markerName: string): symbol {
   return Symbol(markerName);
 }
 
@@ -26,9 +31,19 @@ export function createMarker(markerName: string) {
  * @param marker The marker symbol to use
  * @returns The marked value
  */
-export function markAsLatticeObject(value, marker) {
-  value[marker] = true;
-  return value;
+export function markAsLatticeObject<T, M extends symbol>(
+  value: T,
+  marker: M
+): Branded<T, M> {
+  // We need a single type assertion here to add the symbol property
+  Object.defineProperty(value, marker, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+
+  return value as Branded<T, M>;
 }
 
 /**
@@ -38,11 +53,14 @@ export function markAsLatticeObject(value, marker) {
  * @param marker The marker symbol to check for
  * @returns Whether the value is a valid Lattice object
  */
-export function isLatticeObject(value, marker) {
+export function isLatticeObject<M extends symbol>(
+  value: unknown,
+  marker: M
+): boolean {
   return (
     typeof value === 'function' &&
     Object.prototype.hasOwnProperty.call(value, marker) &&
-    value[marker] === true
+    Boolean(Reflect.get(value, marker))
   );
 }
 
@@ -52,12 +70,12 @@ export function isLatticeObject(value, marker) {
  * @param value The value to check
  * @returns Whether the value is a ModelFactory
  */
-export function isModelFactory(value) {
+export function isModelFactory(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
     Object.prototype.hasOwnProperty.call(value, MODEL_FACTORY_BRAND) &&
-    value[MODEL_FACTORY_BRAND] === true
+    Boolean(Reflect.get(value, MODEL_FACTORY_BRAND))
   );
 }
 
@@ -67,12 +85,12 @@ export function isModelFactory(value) {
  * @param value The value to check
  * @returns Whether the value is a StateFactory
  */
-export function isStateFactory(value) {
+export function isStateFactory(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
     Object.prototype.hasOwnProperty.call(value, STATE_FACTORY_BRAND) &&
-    value[STATE_FACTORY_BRAND] === true
+    Boolean(Reflect.get(value, STATE_FACTORY_BRAND))
   );
 }
 
@@ -82,12 +100,12 @@ export function isStateFactory(value) {
  * @param value The value to check
  * @returns Whether the value is an ActionsFactory
  */
-export function isActionsFactory(value) {
+export function isActionsFactory(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
     Object.prototype.hasOwnProperty.call(value, ACTIONS_FACTORY_BRAND) &&
-    value[ACTIONS_FACTORY_BRAND] === true
+    Boolean(Reflect.get(value, ACTIONS_FACTORY_BRAND))
   );
 }
 
@@ -97,12 +115,12 @@ export function isActionsFactory(value) {
  * @param value The value to check
  * @returns Whether the value is a ViewFactory
  */
-export function isViewFactory(value) {
+export function isViewFactory(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
     Object.prototype.hasOwnProperty.call(value, VIEW_FACTORY_BRAND) &&
-    value[VIEW_FACTORY_BRAND] === true
+    Boolean(Reflect.get(value, VIEW_FACTORY_BRAND))
   );
 }
 
@@ -112,7 +130,9 @@ export function isViewFactory(value) {
  * @param value The value to check
  * @returns Whether the value is a model instance
  */
-export function isModelInstance(value) {
+export function isModelInstance<T = unknown>(
+  value: unknown
+): value is ModelInstance<T> {
   return isLatticeObject(value, MODEL_INSTANCE_BRAND);
 }
 
@@ -122,7 +142,9 @@ export function isModelInstance(value) {
  * @param value The value to check
  * @returns Whether the value is a state instance
  */
-export function isStateInstance(value) {
+export function isStateInstance<T = unknown>(
+  value: unknown
+): value is StateInstance<T> {
   return isLatticeObject(value, STATE_INSTANCE_BRAND);
 }
 
@@ -132,7 +154,9 @@ export function isStateInstance(value) {
  * @param value The value to check
  * @returns Whether the value is an action instance
  */
-export function isActionInstance(value) {
+export function isActionInstance<T = unknown>(
+  value: unknown
+): value is ActionsInstance<T> {
   return isLatticeObject(value, ACTIONS_INSTANCE_BRAND);
 }
 
@@ -142,7 +166,9 @@ export function isActionInstance(value) {
  * @param value The value to check
  * @returns Whether the value is a view instance
  */
-export function isViewInstance(value) {
+export function isViewInstance<T = unknown>(
+  value: unknown
+): value is ViewInstance<T> {
   return isLatticeObject(value, VIEW_INSTANCE_BRAND);
 }
 
@@ -153,7 +179,10 @@ export function isViewInstance(value) {
  * @param symbol The symbol to use for branding
  * @returns The branded value
  */
-export function brandWithSymbol(value, symbol) {
+export function brandWithSymbol<T, M extends symbol>(
+  value: T,
+  symbol: M
+): Branded<T, M> {
   return markAsLatticeObject(value, symbol);
 }
 
@@ -184,7 +213,7 @@ if (import.meta.vitest) {
       expect(isLatticeObject(unmarkedFunction, TEST_MARKER)).toBe(false);
 
       // Mark it manually using the symbol
-      unmarkedFunction[TEST_MARKER] = true;
+      brandWithSymbol(unmarkedFunction, TEST_MARKER);
 
       // Should now be identified as a Lattice object
       expect(isLatticeObject(unmarkedFunction, TEST_MARKER)).toBe(true);
@@ -201,9 +230,8 @@ if (import.meta.vitest) {
       expect(isLatticeObject('string', TEST_MARKER)).toBe(false);
 
       // Even with the marker, non-functions should not be valid
-      const obj = {
-        [TEST_MARKER]: true,
-      };
+      const obj = {} as Record<symbol, boolean>;
+      obj[TEST_MARKER] = true;
 
       expect(isLatticeObject(obj, TEST_MARKER)).toBe(false);
     });
@@ -219,7 +247,7 @@ if (import.meta.vitest) {
       const markedFunction = markAsLatticeObject(regularFunction, TEST_MARKER);
 
       // Should be marked with the correct symbol
-      expect(markedFunction[TEST_MARKER]).toBe(true);
+      expect(Reflect.get(markedFunction, TEST_MARKER)).toBe(true);
 
       // Should pass the isLatticeObject check
       expect(isLatticeObject(markedFunction, TEST_MARKER)).toBe(true);
