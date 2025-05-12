@@ -3,6 +3,30 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with
 code in this repository.
 
+## Architecture Overview
+
+Lattice is a headless component framework built on Zustand that implements a SAM (State-Action-Model) pattern with a fluent composition API. Key architectural principles:
+
+1. **Composition Pattern**: Three-phase pattern: 
+   - Creation Phase: `createModel()`, `createState()`, etc.
+   - Composition Phase: `compose(base).with()` for extension
+   - Finalization Phase: `prepare()` for finalizing components
+
+2. **Building Blocks**:
+   - **Model**: Primary unit encapsulating state and business logic
+   - **Actions**: Pure intent functions delegating to model methods
+   - **State**: Public selectors providing read access
+   - **View**: Reactive UI attributes mapped from state/actions
+
+3. **Type System**:
+   - Branded types for runtime identification
+   - Type guards ensuring contract enforcement
+   - Generic inference for composition chains
+
+4. **Public/Internal API Boundaries**:
+   - Internal: Models and Actions (HOW)
+   - Public: State and Views (WHAT)
+
 ## References
 
 These are your core principles and values:
@@ -21,6 +45,15 @@ These are your core principles and values:
 
 The comprehensive, source-of-truth spec is located in `docs/spec.md`. It MUST
 always remain up-to-date, and all implementation and tests must align to it.
+
+## Key Design Patterns
+
+1. **Fluent Composition**: `compose(base).with(extensions)` pattern for chaining compositions
+2. **Factory Pattern**: Two-level factory pattern (factory returning factory function)
+3. **Branding Pattern**: Symbol-based type branding for runtime type checks
+4. **SAM Pattern**: One-way data flow (View Event → Actions → Model → State → UI)
+5. **Derive Pattern**: Reactive subscriptions between models, states, and views
+6. **Component Namespacing**: Organized UI component composition
 
 ## Build/Test/Lint Commands
 
@@ -54,3 +87,9 @@ always remain up-to-date, and all implementation and tests must align to it.
 
 - We use Lerna (which uses nx under the hood) and pnpm workspaces to manage our
   monorepo.
+- Key directories:
+  - `packages/core/src/model`: Model creation and composition
+  - `packages/core/src/actions`: Action creation and delegation
+  - `packages/core/src/state`: State selectors and derivation
+  - `packages/core/src/view`: View representation and UI attributes
+  - `packages/core/src/shared`: Common utilities, types, and composition
