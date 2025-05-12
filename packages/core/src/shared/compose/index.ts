@@ -18,4 +18,3 @@ export { compose } from './fluent';
 
 // Existing exports
 export { use } from './use';
-export { instantiate, isFinalized } from './instantiate';

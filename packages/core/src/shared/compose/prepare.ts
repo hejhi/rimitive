@@ -85,7 +85,7 @@ if (import.meta.vitest) {
       const prepared = prepare(baseModel);
       expect(typeof prepared).toBe('function');
       expect(isPrepared(prepared)).toBe(true);
-      expect((prepared as any)[PREPARED_BRAND]).toBe(true);
+      expect(prepared[PREPARED_BRAND]).toBe(true);
     });
 
     it('should prepare a state instance', () => {
@@ -96,7 +96,7 @@ if (import.meta.vitest) {
       const prepared = prepare(baseState);
       expect(typeof prepared).toBe('function');
       expect(isPrepared(prepared)).toBe(true);
-      expect((prepared as any)[PREPARED_BRAND]).toBe(true);
+      expect(prepared[PREPARED_BRAND]).toBe(true);
     });
 
     it('should prepare an actions instance', () => {
@@ -106,7 +106,7 @@ if (import.meta.vitest) {
       const prepared = prepare(baseActions);
       expect(typeof prepared).toBe('function');
       expect(isPrepared(prepared)).toBe(true);
-      expect((prepared as any)[PREPARED_BRAND]).toBe(true);
+      expect(prepared[PREPARED_BRAND]).toBe(true);
     });
 
     it('should prepare a view instance', () => {
@@ -117,7 +117,7 @@ if (import.meta.vitest) {
       const prepared = prepare(baseView);
       expect(typeof prepared).toBe('function');
       expect(isPrepared(prepared)).toBe(true);
-      expect((prepared as any)[PREPARED_BRAND]).toBe(true);
+      expect(prepared[PREPARED_BRAND]).toBe(true);
     });
 
     it('should throw for non-function entities', () => {
