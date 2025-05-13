@@ -445,7 +445,7 @@ const createMyLattice = () => {
   }));
 
   // Return lattice with namespaced views
-  return createLattice("counter", {
+  return createLattice({
     model: prepare(model),
     actions: prepare(actions),
     state: prepare(state),
@@ -467,7 +467,7 @@ const createEnhancedLattice = (baseLattice) => {
   }));
 
   // Composition preserves the namespaces
-  return createLattice("enhanced", {
+  return createLattice({
     // Inherit from base lattice
     ...withLattice(baseLattice)({
       // Provide the enhanced view with the same namespace
@@ -477,6 +477,27 @@ const createEnhancedLattice = (baseLattice) => {
     }),
   });
 };
+```
+
+```ts
+function enhanceLattice(baseLattice) {
+  // ...user-composition logic
+
+  return createLattice({
+    // pass in a composed model
+    model: prepare(composedModel),
+    // pass-through by passing the lattice, and we take care of the pass-through under the hood
+    state: baseLattice,
+    view: {
+      composedView: prepare(composedView),
+      passThroughView: prepare(use(baseLattice, "passThroughView")),
+      // a way to spread views
+      ...spreadViews(baseLattice),
+    },
+    // pass-through
+    actions: baseLattice,
+  });
+}
 ```
 
 > **Summary:**
