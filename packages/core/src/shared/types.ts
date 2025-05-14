@@ -15,6 +15,9 @@ export const STATE_INSTANCE_BRAND = Symbol('state-instance');
 export const ACTIONS_INSTANCE_BRAND = Symbol('actions-instance');
 export const VIEW_INSTANCE_BRAND = Symbol('view-instance');
 
+// Lattice brand symbol
+export const LATTICE_BRAND = Symbol('lattice');
+
 /**
  * Type utility for creating branded types
  */
@@ -145,7 +148,12 @@ export type BaseInstance<T> =
   | ViewInstance<T>;
 
 /**
- * Lattice component types
+ * Lattice component types - internal interface
+ * 
+ * This uses a closure-based design for proper encapsulation:
+ * - No direct property access
+ * - Access via accessor methods for internal use
+ * - Components can be properly isolated and hidden
  */
 export interface LatticeLike<
   TModel = unknown,
@@ -153,24 +161,35 @@ export interface LatticeLike<
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > {
-  readonly model: ModelInstance<TModel>;
-  readonly state: StateInstance<TState>;
-  readonly actions: ActionsInstance<TActions>;
-  readonly view: {
-    readonly [K in keyof TViews]: ViewInstance<TViews[K]>;
-  };
+  // Internal accessor methods (not exposed publicly)
+  readonly getModel: () => ModelInstance<TModel>;
+  readonly getState: () => StateInstance<TState>;
+  readonly getActions: () => ActionsInstance<TActions>;
+  
+  // View accessors with name-based retrieval
+  readonly getView: <K extends keyof TViews>(viewName: K) => ViewInstance<TViews[K]>;
+  readonly getAllViews: () => { readonly [K in keyof TViews]: ViewInstance<TViews[K]> };
 }
 
 /**
- * Partial lattice for testing purposes
- * Allows individual components to be optional
+ * Branded Lattice type
+ * Adds the brand symbol to the LatticeLike interface for runtime type checking
  */
-export interface PartialLattice {
-  readonly model?: unknown;
-  readonly state?: unknown;
-  readonly actions?: unknown;
-  readonly view?: Record<string, unknown>;
-}
+export type Lattice<
+  TModel = unknown,
+  TState = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>,
+> = Branded<
+  LatticeLike<TModel, TState, TActions, TViews>,
+  typeof LATTICE_BRAND
+>;
+
+/**
+ * Partial lattice for testing purposes
+ * Allows individual accessor methods to be optional
+ */
+export type PartialLattice = Partial<Omit<LatticeLike, typeof LATTICE_BRAND>>;
 
 // Add the PREPARED_BRAND symbol
 export const PREPARED_BRAND: unique symbol = Symbol('PREPARED_BRAND');

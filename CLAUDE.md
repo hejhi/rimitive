@@ -1,95 +1,67 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with
-code in this repository.
+**CRITICAL**: This file provides critical operational instructions that MUST be
+followed without exception when working with this codebase.
 
-## Architecture Overview
+**These are not suggestions or guidelines: they are STRICT requirements**
 
-Lattice is a headless component framework built on Zustand that implements a SAM (State-Action-Model) pattern with a fluent composition API. Key architectural principles:
+## Thinking
 
-1. **Composition Pattern**: Three-phase pattern: 
-   - Creation Phase: `createModel()`, `createState()`, etc.
-   - Composition Phase: `compose(base).with()` for extension
-   - Finalization Phase: `prepare()` for finalizing components
+- **Use CHAIN-OF-DRAFT thinking instead of CHAIN-OF-THOUGHT**: Think
+  STEP-BY-STEP, but ONLY keep a minimum draft for each thinking step (5 WORDS at most)
+- **DELEGATE**: You are the LEAD ENGINEER, and your agents are your engineering team—to be successful, you MUST:
+  - ALWAYS plan ahead and have a clear path forward
+  - Delegate to agents for execution with CLEAR instructions
+  - ALWAYS review agent code before returning to the user: if the code does not STRICTLY align to the spec, or violates ANY of the below, clarify your instructions to the agent and try again
 
-2. **Building Blocks**:
-   - **Model**: Primary unit encapsulating state and business logic
-   - **Actions**: Pure intent functions delegating to model methods
-   - **State**: Public selectors providing read access
-   - **View**: Reactive UI attributes mapped from state/actions
+## Testing Requirements
 
-3. **Type System**:
-   - Branded types for runtime identification
-   - Type guards ensuring contract enforcement
-   - Generic inference for composition chains
+### TDD Principles
 
-4. **Public/Internal API Boundaries**:
-   - Internal: Models and Actions (HOW)
-   - Public: State and Views (WHAT)
+- **TDD Source of Truth: [spec](docs/spec.md) -> tests/types -> implementations**: tests MUST guarantee implementations are built-to-spec; EVERY test MUST verify that the contract/spec is being strictly followed by the implementation
+- **Integration tests > unit tests** for core system behavior
+- **Tests should change rarely but fail when the implementation breaks the contract**
 
-## References
+### Mocking Rules
 
-These are your core principles and values:
+- **NO MOCKS UNLESS ABSOLUTELY NECESSARY**: ALWAYS test implementation, NEVER mocks. Tests MUST verify actual behavior.
+- **"Mock at the boundaries"**: only mock external dependencies, not internal components
 
-- @docs/rules/01-core-principles.md
-- @docs/rules/02-guiding-maxims.md
-- @docs/rules/03-workflow.md
-- @docs/rules/04-specs.md
-- @docs/rules/05-coding-principles.md
-- @docs/rules/06-commit-rules.md
-- @docs/rules/07-ci-quality-gates.md
-- @docs/rules/08-docs-and-naming.md
-- @docs/rules/09-composition-first.md
-- @docs/rules/10-toolchain-assumptions.md
-- @README.md
+### In-Source Testing Requirements
 
-The comprehensive, source-of-truth spec is located in `docs/spec.md`. It MUST
-always remain up-to-date, and all implementation and tests must align to it.
+- Use vitest in-source testing with `import.meta.vitest`
+- Follow **strict TDD**: write test → make it fail → make it pass → refactor
+- Keep tests focused on verifying **spec compliance**
+- When writing tests for future implementations, use `it.todo()`
+- Tests must be PRAGMATIC and focus on REAL SCENARIOS
+- Use proper async/await when using test-only inline imports in test blocks
 
-## Key Design Patterns
+## Code Quality
 
-1. **Fluent Composition**: `compose(base).with(extensions)` pattern for chaining compositions
-2. **Factory Pattern**: Two-level factory pattern (factory returning factory function)
-3. **Branding Pattern**: Symbol-based type branding for runtime type checks
-4. **SAM Pattern**: One-way data flow (View Event → Actions → Model → State → UI)
-5. **Derive Pattern**: Reactive subscriptions between models, states, and views
-6. **Component Namespacing**: Organized UI component composition
+- Modular: Keep functions small and single-purpose
+- Declarative: Write pure functions, minimize side-effects
+- Semantic: Naming is crucial, be precise and accurate
+- Simplicity: Complexity is the enemy, prioritize readability
 
-## Build/Test/Lint Commands
+## Commands
 
-- Build: `pnpm build` - Builds all packages (uses Lerna)
-- Dev: `pnpm dev` - Runs development mode (uses Lerna). CAUTION: WILL HANG THE
-  CHAT. The user always has it running, so not necessary for you to run.
-- Lint: `pnpm lint` - Runs ESLint on TypeScript files
-- Format: `pnpm format` - Runs Prettier
-- Type check: `pnpm typecheck` - Runs TypeScript type checking (uses Lerna)
-- Test: `pnpm test` - Runs all tests (uses Lerna)
-- Run for specific package: `npx lerna run <task> --scope=<package-name>`
-- Run for affected packages: `npx lerna run <task> --since=origin/main`
-- Single test: `pnpm test -- path/to/test/file`
-- Test files created for integration only; otherwise, uses vitest in-source
-  test.
-- Focus test: Use `.only` or `.skip` (e.g. `it.only()`, `describe.skip()`)
-
-## Code Style Guidelines
-
-- Follow STRICT TDD: write test, make it fail, make it pass, refactor
-- TDD debugging: reproduce by making a test fail, make it pass, refactor
-- Use functional over stateful code patterns
-- React: Use functional components with hooks
-- In-source testing with vitest
-- TypeScript: Strict type checking
-- Naming: kebab-case for packages, camelCase for hooks (with `use` prefix)
-- Formatting: 2 spaces, 80 char line length, single quotes
-- Use ESModules (import/export)
+@package.json
 
 ## Project Structure
 
-- We use Lerna (which uses nx under the hood) and pnpm workspaces to manage our
-  monorepo.
-- Key directories:
+- Core directories:
   - `packages/core/src/model`: Model creation and composition
   - `packages/core/src/actions`: Action creation and delegation
   - `packages/core/src/state`: State selectors and derivation
   - `packages/core/src/view`: View representation and UI attributes
   - `packages/core/src/shared`: Common utilities, types, and composition
+
+## Source of Truth
+
+The comprehensive specification is in `docs/spec.md`. It MUST always remain the reference point for all implementation and tests.
+
+## Project Overview
+
+Below is the `README.md`, which should be kept in-sync with the spec at all times. Discrepencies should IMMEDIATELY be flagged to the user.
+
+@README.md

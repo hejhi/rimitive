@@ -955,7 +955,7 @@ type ModelInstance<T> = Branded<
 export function isModelInstance<T = unknown>(
   value: unknown,
 ): value is ModelInstance<T> {
-  return isLatticeObject(value, MODEL_INSTANCE_BRAND);
+  return isBranded(value, MODEL_INSTANCE_BRAND);
 }
 
 // Example of composition with type inference

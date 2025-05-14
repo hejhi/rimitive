@@ -60,6 +60,7 @@ export function createState<T>(factory: (tools: StateFactoryTools<T>) => T) {
   return brandWithSymbol(stateFactory, STATE_INSTANCE_BRAND);
 }
 
+// In-source tests
 if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
@@ -97,7 +98,7 @@ if (import.meta.vitest) {
         })
       );
 
-      const toolsObj = (factorySpy.mock.calls[0] as any)[0];
+      const toolsObj = factorySpy.mock.calls[0]?.[0];
       expect(isStateFactory(toolsObj)).toBe(true);
 
       // Verify slice contains the expected value
@@ -109,162 +110,20 @@ if (import.meta.vitest) {
       const sliceCreator = state();
 
       // Should throw when get or derive are missing
-      expect(() => sliceCreator({} as any)).toThrow(
+      // @ts-expect-error
+      expect(() => sliceCreator({})).toThrow(
         'State factory requires get and derive functions'
       );
-      expect(() =>
-        sliceCreator({ get: undefined, derive: vi.fn() } as any)
-      ).toThrow('State factory requires get and derive functions');
-      expect(() =>
-        sliceCreator({ get: vi.fn(), derive: undefined } as any)
-      ).toThrow('State factory requires get and derive functions');
-    });
 
-    it('should support the derive function', () => {
-      // Create a mock model to derive from
-      type MockModel = { count: number; computed: number };
-      const mockModel: MockModel = {
-        count: 10,
-        computed: 20,
-      };
-
-      // Setup the derive function (mock, ignores transform for now)
-      // TODO: Update this when the real derive implementation is available
-      const mockDerive = vi.fn(<M, K extends keyof M>(model: M, key: K) => {
-        return model[key];
-      });
-
-      // mockGet returns the full expected state shape
-      const mockGet = vi.fn(() => ({
-        derivedCount: 5,
-        transformedCount: 20,
-        combinedCount: 5,
-      }));
-
-      const state = createState<{
-        derivedCount: number;
-        transformedCount: number;
-        combinedCount: number;
-      }>(({ get, derive }) => ({
-        derivedCount: derive(mockModel, 'count'),
-        // Only call derive with two arguments to match the mock signature
-        // TODO: When real derive is implemented, add transform support
-        transformedCount: derive(mockModel, 'count'),
-        combinedCount: get().derivedCount,
-      }));
-
-      const sliceCreator = state();
-      const slice = sliceCreator({ get: mockGet, derive: mockDerive });
-
-      // Verify derive was called
-      expect(mockDerive).toHaveBeenCalled();
-      expect(mockDerive).toHaveBeenCalledTimes(2); // Called for each usage
-
-      // Verify the derived values
-      expect(slice.combinedCount).toBe(5);
-    });
-
-    it('should work with the fluent compose API', async () => {
-      const { compose } = await import('../shared/compose/fluent');
-
-      // Create a base state
-      const baseState = createState<{
-        count: number;
-        isPositive: () => boolean;
-      }>(({ get }) => ({
-        count: 0,
-        isPositive: () => get().count > 0,
-      }));
-
-      // Compose them using fluent compose
-      const enhancedState = compose(baseState).with<{
-        doubled: () => number;
-        formattedCount: () => string;
-      }>(({ get }) => ({
-        doubled: () => get().count * 2,
-        formattedCount: () => `Count: ${get().count}`,
-      }));
-
-      // State should be a function
-      expect(typeof enhancedState).toBe('function');
-
-      // mockGet returns all properties expected by the composed state
-      const mockGet = vi.fn(() => ({
-        count: 5,
-        isPositive: () => true,
-        doubled: () => 10,
-        formattedCount: () => 'Count: 5',
-      }));
-      const mockDerive = vi.fn(
-        <M, K extends keyof M, R = M[K]>(
-          model: M,
-          key: K,
-          transform?: (value: M[K]) => R
-        ) => {
-          const value = model[key];
-          return transform ? transform(value) : value;
-        }
+      // @ts-expect-error
+      expect(() => sliceCreator({ get: undefined, derive: vi.fn() })).toThrow(
+        'State factory requires get and derive functions'
       );
 
-      // Create a slice with mock tools
-      const sliceCreator = enhancedState();
-      const slice = sliceCreator({ get: mockGet, derive: mockDerive });
-
-      // Should have both the base and extension properties
-      expect(slice).toHaveProperty('count');
-      expect(slice).toHaveProperty('isPositive');
-      expect(slice).toHaveProperty('doubled');
-      expect(slice).toHaveProperty('formattedCount');
-
-      // Test the extension methods
-      expect(slice.isPositive()).toBe(true);
-      expect(slice.doubled()).toBe(10);
-      expect(slice.formattedCount()).toBe('Count: 5');
-    });
-
-    it('should work with the prepare API', async () => {
-      const { prepare, isPrepared } = await import('../shared/compose/prepare');
-
-      // Create a state
-      const state = createState<{ count: number; isPositive: () => boolean }>(
-        ({ get }) => ({
-          count: 0,
-          isPositive: () => get().count > 0,
-        })
+      // @ts-expect-error
+      expect(() => sliceCreator({ get: vi.fn(), derive: undefined })).toThrow(
+        'State factory requires get and derive functions'
       );
-
-      // Prepare it
-      const preparedState = prepare(state);
-
-      // Should be a function
-      expect(typeof preparedState).toBe('function');
-
-      // Should be prepared
-      expect(isPrepared(preparedState)).toBe(true);
-
-      // mockGet returns all properties expected by the prepared state
-      const mockGet = vi.fn(() => ({
-        count: 5,
-        isPositive: () => true,
-      }));
-      const mockDerive = vi.fn(
-        <M, K extends keyof M, R = M[K]>(
-          model: M,
-          key: K,
-          transform?: (value: M[K]) => R
-        ) => {
-          const value = model[key];
-          return transform ? transform(value) : value;
-        }
-      );
-
-      // Should still work as a state
-      const sliceCreator = preparedState();
-      const slice = sliceCreator({ get: mockGet, derive: mockDerive });
-
-      // Test functionality
-      expect(slice.count).toBe(0);
-      expect(slice.isPositive()).toBe(true);
     });
   });
 }

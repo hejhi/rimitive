@@ -32,8 +32,10 @@ export type InferExtension<F> = F extends (tools: any) => infer R ? R : never;
 
 /**
  * A unified composition function for all Lattice entities.
- * This replaces the fluent .with() method with a functional approach.
+ * This is an internal implementation detail and should not be used directly.
+ * Use the compose().with() fluent API instead.
  *
+ * @internal
  * @param base The base component to extend (model, state, actions, or view)
  * @param extension A function that receives appropriate tools and returns extensions
  * @returns A new composed component combining the base and extensions
@@ -165,10 +167,7 @@ if (import.meta.vitest) {
       () => ({ count: 1 }),
       MODEL_INSTANCE_BRAND
     );
-    const brandedModel = brandWithSymbol(
-      () => baseModel,
-      MODEL_INSTANCE_BRAND
-    );
+    const brandedModel = brandWithSymbol(() => baseModel, MODEL_INSTANCE_BRAND);
 
     // Compose them
     const composed = composeWith(brandedModel, ({ get }) => ({

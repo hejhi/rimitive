@@ -10,7 +10,7 @@ import { brandWithSymbol } from '../shared/identify';
  * Creates a model factory.
  *
  * This is the primary API for creating models in Lattice. Use it to define your
- * model's state, actions, and derived values. For composition, use the composeWith function.
+ * model's state, actions, and derived values.
  *
  * @example
  * ```typescript
@@ -23,18 +23,12 @@ import { brandWithSymbol } from '../shared/identify';
  *   doubleCount: () => get().count * 2
  * }));
  *
- * // With composition
- * const enhancedModel = composeWith(counterModel, ({ get, set }) => ({
- *   triple: () => set(state => ({ count: state.count * 3 })),
- *   isPositive: () => get().count > 0
- * }));
- *
  * // Finalize for use
  * const finalModel = instantiate(enhancedModel);
  * ```
  *
  * @param factory A function that produces a state object with optional methods and derived properties
- * @returns A model instance function that can be used with composeWith and instantiate
+ * @returns A model instance function that can be composed
  */
 export function createModel<T>(factory: ModelFactory<T>) {
   // Create a factory function that returns a slice creator
@@ -72,7 +66,7 @@ if (import.meta.vitest) {
 
     it('should verify model factory requirements and branding', () => {
       // Create a spy factory
-      const factorySpy = vi.fn(() => ({
+      const factorySpy = vi.fn((_: ModelFactoryTools<{ count: number }>) => ({
         count: 1,
       }));
 
@@ -99,7 +93,7 @@ if (import.meta.vitest) {
         })
       );
 
-      const toolsObj = (factorySpy.mock.calls[0] as any)[0];
+      const toolsObj = factorySpy.mock.calls[0]?.[0];
       expect(isModelFactory(toolsObj)).toBe(true);
 
       // Verify slice contains the expected value

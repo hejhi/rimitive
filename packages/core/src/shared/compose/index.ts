@@ -1,20 +1,10 @@
 /**
  * Export composition utilities for Lattice.
- * The functional composition API provides a cleaner, more type-friendly alternative
- * to the fluent API with .with() and .create() methods.
+ * Provides the fluent API for composition with .with() method.
  */
 
-// Core composition function
-export { composeWith, InferExtension } from './core';
-
-// Type-specific helpers
-export { composeModel, composeModelTools } from './model';
-export { composeState } from './state';
-export { composeActions } from './actions';
-export { composeView } from './view';
-
-// Fluent API (recommended)
+// Fluent API (the only public API for composition)
 export { compose } from './fluent';
 
-// Existing exports
-export { use } from './use';
+// Internal type helper needed for compose implementation
+export { InferExtension } from './core';

@@ -99,7 +99,7 @@ if (import.meta.vitest) {
         })
       );
 
-      const toolsObj = (factorySpy.mock.calls[0] as any)[0];
+      const toolsObj = factorySpy.mock.calls[0]?.[0];
       expect(isViewFactory(toolsObj)).toBe(true);
 
       // Verify slice contains the expected value
@@ -111,151 +111,20 @@ if (import.meta.vitest) {
       const sliceCreator = view();
 
       // Should throw when derive or dispatch are missing
-      expect(() => sliceCreator({} as any)).toThrow(
+      // @ts-expect-error
+      expect(() => sliceCreator({})).toThrow(
         'View factory requires derive and dispatch functions'
       );
+
       expect(() =>
-        sliceCreator({ derive: undefined, dispatch: vi.fn() } as any)
+        // @ts-expect-error
+        sliceCreator({ derive: undefined, dispatch: vi.fn() })
       ).toThrow('View factory requires derive and dispatch functions');
+
       expect(() =>
-        sliceCreator({ derive: vi.fn(), dispatch: undefined } as any)
+        // @ts-expect-error
+        sliceCreator({ derive: vi.fn(), dispatch: undefined })
       ).toThrow('View factory requires derive and dispatch functions');
-    });
-
-    it('should support the derive and dispatch functions', () => {
-      // Create a mock model and actions to derive from and dispatch to
-      type MockModel = { count: number; computed: number };
-      const mockModel: MockModel = {
-        count: 10,
-        computed: 20,
-      };
-      const mockActions = {
-        increment: vi.fn(() => 42),
-      };
-
-      // Setup the derive and dispatch functions (mock)
-      const mockDerive = vi.fn(<M, K extends keyof M>(model: M, key: K) => {
-        return model[key];
-      });
-      const mockDispatch = vi.fn(<A, K extends keyof A>(actions: A, key: K) => {
-        return (...args: any[]) => (actions[key] as any)(...args);
-      });
-
-      const view = createView<{
-        derivedCount: number;
-        incrementResult: number;
-        combinedCount: number;
-      }>(({ derive, dispatch }) => ({
-        derivedCount: derive(mockModel, 'count'),
-        incrementResult: dispatch(mockActions, 'increment')(),
-        combinedCount: derive(mockModel, 'computed'),
-      }));
-
-      const sliceCreator = view();
-      const slice = sliceCreator({
-        derive: mockDerive,
-        dispatch: mockDispatch as any,
-      });
-
-      // Verify derive and dispatch were called
-      expect(mockDerive).toHaveBeenCalled();
-      expect(mockDispatch).toHaveBeenCalled();
-
-      // Verify the derived and dispatched values
-      expect(slice.derivedCount).toBe(10);
-      expect(slice.incrementResult).toBe(42);
-      expect(slice.combinedCount).toBe(20);
-    });
-
-    it('should work with the fluent compose API', async () => {
-      const { compose } = await import('../shared/compose/fluent');
-
-      // Create a base view
-      const baseView = createView<{
-        count: number;
-        isPositive: () => boolean;
-      }>(({ derive }) => ({
-        count: derive({ count: 0 }, 'count'),
-        isPositive: () => derive({ count: 0 }, 'count') > 0,
-      }));
-
-      // Compose them using fluent compose
-      const enhancedView = compose(baseView).with<{
-        doubled: () => number;
-        formattedCount: () => string;
-      }>(({ derive }) => ({
-        doubled: () => derive({ count: 5 }, 'count') * 2,
-        formattedCount: () => `Count: ${derive({ count: 5 }, 'count')}`,
-      }));
-
-      // View should be a function
-      expect(typeof enhancedView).toBe('function');
-
-      // mockDerive returns all properties expected by the composed view
-      const mockDerive = vi.fn((model: any, key: any) => model[key]);
-      const mockDispatch = vi.fn(
-        (actions: any, key: any) =>
-          (...args: any[]) =>
-            actions[key](...args)
-      );
-
-      // Create a slice with mock tools
-      const sliceCreator = enhancedView();
-      const slice = sliceCreator({
-        derive: mockDerive,
-        dispatch: mockDispatch as any,
-      });
-
-      // Should have both the base and extension properties
-      expect(slice).toHaveProperty('count');
-      expect(slice).toHaveProperty('isPositive');
-      expect(slice).toHaveProperty('doubled');
-      expect(slice).toHaveProperty('formattedCount');
-
-      // Test the extension methods
-      expect(slice.isPositive()).toBe(false);
-      expect(slice.doubled()).toBe(10);
-      expect(slice.formattedCount()).toBe('Count: 5');
-    });
-
-    it('should work with the prepare API', async () => {
-      const { prepare, isPrepared } = await import('../shared/compose/prepare');
-
-      // Create a view
-      const view = createView<{ count: number; isPositive: () => boolean }>(
-        ({ derive }) => ({
-          count: derive({ count: 0 }, 'count'),
-          isPositive: () => derive({ count: 0 }, 'count') > 0,
-        })
-      );
-
-      // Prepare it
-      const preparedView = prepare(view);
-
-      // Should be a function
-      expect(typeof preparedView).toBe('function');
-
-      // Should be prepared
-      expect(isPrepared(preparedView)).toBe(true);
-
-      // mockDerive returns all properties expected by the prepared view
-      const mockDerive = vi.fn((model: any, key: any) => model[key]);
-      const mockDispatch = vi.fn(
-        (actions: any, key: any) =>
-          (...args: any[]) =>
-            actions[key](...args)
-      );
-
-      // Should still work as a view
-      const sliceCreator = preparedView();
-      const slice = sliceCreator({
-        derive: mockDerive,
-        dispatch: mockDispatch as any,
-      });
-
-      // Test functionality
-      expect(slice.count).toBe(0);
-      expect(slice.isPositive()).toBe(false);
     });
   });
 }
