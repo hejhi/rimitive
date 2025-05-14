@@ -8,6 +8,7 @@ export const MODEL_FACTORY_BRAND = Symbol('model-factory');
 export const STATE_FACTORY_BRAND = Symbol('state-factory');
 export const ACTIONS_FACTORY_BRAND = Symbol('actions-factory');
 export const VIEW_FACTORY_BRAND = Symbol('view-factory');
+export const MUTATION_BRAND = Symbol('mutation-brand');
 
 // Instance brand symbols
 export const MODEL_INSTANCE_BRAND = Symbol('model-instance');
@@ -53,11 +54,35 @@ export interface StateFactoryTools<T> {
   derive: <M, K extends keyof M>(model: M, key: K) => M[K];
 }
 
+/**
+ * Branded mutation type using symbol
+ */
+export type Mutation<T extends (...args: any[]) => any> = Branded<T, typeof MUTATION_BRAND>;
+
+/**
+ * Helper type to extract the actual model type from a model instance
+ */
+export type ExtractModelType<M> = 
+  M extends ModelInstance<infer T> ? T :
+  M extends (() => any) ? ReturnType<M> :
+  M;
+
+/**
+ * Type for mutated model object with methods converted to mutations
+ */
+export type MutatedModel<M> = {
+  [K in keyof ExtractModelType<M> & string]: 
+    ExtractModelType<M>[K] extends (...args: infer P) => infer R 
+      ? Mutation<(...args: P) => R> 
+      : never;
+};
+
+/**
+ * Factory tools for creating actions
+ */
 export interface ActionsFactoryTools {
-  mutate: <M, K extends keyof M>(
-    model: M,
-    methodName: K
-  ) => M[K] extends (...args: infer P) => infer R ? (...args: P) => R : never;
+  // Enhanced mutate function for both ModelInstance and regular objects
+  mutate: <M>(model: M) => MutatedModel<M>;
 }
 
 export interface ViewFactoryTools {
@@ -79,7 +104,9 @@ export type BaseFactoryTools<T> =
  */
 export type Model<T> = (tools: ModelFactoryTools<T>) => T;
 export type State<T> = (tools: StateFactoryTools<T>) => T;
-export type Actions<T> = (tools: ActionsFactoryTools) => T;
+export type Actions<T> = (tools: ActionsFactoryTools) => {
+  [K in keyof T]: T[K] extends Mutation<any> ? T[K] : never;
+};
 export type View<T> = (tools: ViewFactoryTools) => T;
 
 // Union of all factory shape types
@@ -110,7 +137,9 @@ export type BrandedViewFactoryTools = Branded<
  */
 export type ModelFactory<T> = (tools: BrandedModelFactoryTools<T>) => T;
 export type StateFactory<T> = (tools: BrandedStateFactoryTools<T>) => T;
-export type ActionsFactory<T> = (tools: BrandedActionsFactoryTools) => T;
+export type ActionsFactory<T> = (tools: BrandedActionsFactoryTools) => {
+  [K in keyof T]: T[K] extends Mutation<any> ? T[K] : never;
+};
 export type ViewFactory<T> = (tools: BrandedViewFactoryTools) => T;
 
 // Union of all factory types

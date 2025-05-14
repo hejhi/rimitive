@@ -265,7 +265,7 @@ const createCoreLattice = () => {
 
   // Create actions
   const actions = createActions(({ mutate }) => ({
-    increment: mutate(model, "increment"),
+    increment: mutate(model).increment,
   }));
 
   // Create state
@@ -302,7 +302,7 @@ export const enhanceWithFeature = (baseLattice) => {
   // Enhance the actions with reference to the finalized model
   const actions = compose(baseLattice.actions).with(({ mutate }) => ({
     // mutate references the finalized model
-    incrementTwice: mutate(finalModel, "incrementTwice"),
+    incrementTwice: mutate(finalModel).incrementTwice,
   }));
 
   // Return a new lattice that composes with the base lattice
@@ -386,12 +386,12 @@ pattern for contract preservation and extension.
 
 ```typescript
 const actions = createActions(({ mutate }) => ({
-  increment: mutate(model, "increment"),
-  doubleIncrement: mutate(model, "incrementTwice"),
+  increment: mutate(model).increment,
+  doubleIncrement: mutate(model).incrementTwice,
 }));
 
 const enhancedActions = compose(actions).with(({ mutate }) => ({
-  incrementThrice: mutate(model, "incrementThrice"),
+  incrementThrice: mutate(model).incrementThrice,
 }));
 
 // Finalize the actions
@@ -547,9 +547,9 @@ const createCounter = () => {
 
   // Define Actions
   const actions = createActions(({ mutate }) => ({
-    increment: mutate(finalModel, "increment"),
-    decrement: mutate(finalModel, "decrement"),
-    incrementTwice: mutate(finalModel, "incrementTwice"),
+    increment: mutate(finalModel).increment,
+    decrement: mutate(finalModel).decrement,
+    incrementTwice: mutate(finalModel).incrementTwice,
   }));
 
   // Finalize the actions
@@ -645,10 +645,10 @@ const createTodoList = () => {
 
   // Actions delegating to model methods
   const actions = createActions(({ mutate }) => ({
-    addTodo: mutate(finalModel, "addTodo"),
-    toggleTodo: mutate(finalModel, "toggleTodo"),
-    setFilter: mutate(finalModel, "setFilter"),
-    addAndFilterActive: mutate(finalModel, "addAndFilterActive"),
+    addTodo: mutate(finalModel).addTodo,
+    toggleTodo: mutate(finalModel).toggleTodo,
+    setFilter: mutate(finalModel).setFilter,
+    addAndFilterActive: mutate(finalModel).addAndFilterActive,
   }));
 
   // Finalize the actions
@@ -744,9 +744,9 @@ export const createFeature = () => {
     // Create enhanced actions
     const enhancedActions = compose(baseLattice.actions).with(({ mutate }) => ({
       // Add new actions referencing the enhanced model methods
-      selectItem: mutate(finalModel, "selectItem"),
-      selectAndHighlight: mutate(finalModel, "selectAndHighlight"),
-      clearSelection: mutate(finalModel, "clearSelection"),
+      selectItem: mutate(finalModel).selectItem,
+      selectAndHighlight: mutate(finalModel).selectAndHighlight,
+      clearSelection: mutate(finalModel).clearSelection,
     }));
 
     // Finalize the actions
@@ -805,7 +805,7 @@ const finalModel = prepare(model);
 
 // Create and finalize the actions
 const actions = createActions(({ mutate }) => ({
-  increment: mutate(finalModel, "increment"),
+  increment: mutate(finalModel).increment,
 }));
 const finalActions = prepare(actions);
 
@@ -903,7 +903,7 @@ const createEnhancedLattice = (baseLattice) => {
   // Enhance the actions
   const enhancedActions = compose(baseLattice.actions).with(({ mutate }) => ({
     // Connect to the finalized model
-    incrementTwice: mutate(finalModel, "incrementTwice"),
+    incrementTwice: mutate(finalModel).incrementTwice,
   }));
 
   // Create the enhanced lattice with namespaced views
@@ -999,16 +999,16 @@ const finalModel = prepare(model);
 // Actions are pure delegates to model methods
 const actions = createActions(({ mutate }) => ({
   // Each action directly references a finalized model method
-  increment: mutate(finalModel, "increment"),
-  reset: mutate(finalModel, "reset"),
-  incrementTwice: mutate(finalModel, "incrementTwice"),
-  resetAndIncrement: mutate(finalModel, "resetAndIncrement"),
+  increment: mutate(finalModel).increment,
+  reset: mutate(finalModel).reset,
+  incrementTwice: mutate(finalModel).incrementTwice,
+  resetAndIncrement: mutate(finalModel).resetAndIncrement,
 }));
 
 // Enhance actions by composing with the base actions
 const enhancedActions = compose(actions).with(({ mutate }) => ({
   // Add new actions that reference finalized model methods
-  incrementThrice: mutate(finalModel, "incrementThrice"),
+  incrementThrice: mutate(finalModel).incrementThrice,
 }));
 
 // Finalize the enhanced actions
@@ -1098,8 +1098,8 @@ const model = createModel(({ set, get }) => ({
 // Actions trigger async operations but don't return promises
 const actions = createActions(({ mutate }) => ({
   // Actions reference model methods
-  fetchUsers: mutate(model, "fetchUsers"),
-  fetchUserById: mutate(model, "fetchUserById"),
+  fetchUsers: mutate(model).fetchUsers,
+  fetchUserById: mutate(model).fetchUserById,
 }));
 
 // State exposes loading/error states reactively

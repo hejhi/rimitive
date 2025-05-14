@@ -218,8 +218,8 @@ const createCoreLattice = () => {
   return createLattice("core", {
     model: preparedModel,
     actions: prepare(createActions(({ mutate }) => ({
-      increment: mutate(preparedModel, "increment"),
-      reset: mutate(preparedModel, "reset"),
+      increment: mutate(preparedModel).increment,
+      reset: mutate(preparedModel).reset,
     }))),
     state: prepare(createState(({ derive }) => ({
       count: derive(preparedModel, "count"),
@@ -264,7 +264,7 @@ const createEnhancedLattice = (baseLattice) => {
       model: preparedModel,
       actions: prepare(createActions(({ mutate }) => ({
         // Add new action that references the enhanced model
-        incrementTwice: mutate(preparedModel, "incrementTwice"),
+        incrementTwice: mutate(preparedModel).incrementTwice,
       }))),
       state: prepare(createState(({ derive }) => ({
         // Expose new derived state

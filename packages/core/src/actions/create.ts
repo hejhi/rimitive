@@ -3,7 +3,6 @@ import {
   ACTIONS_INSTANCE_BRAND,
   ActionsFactory,
   ActionsFactoryTools,
-  ModelFactoryTools,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 import { createModel } from '../model';
@@ -18,9 +17,9 @@ import { createModel } from '../model';
  * ```typescript
  * // Basic usage
  * const counterActions = createAction(({ mutate }) => ({
- *   increment: mutate(counterModel, "increment"),
- *   decrement: mutate(counterModel, "decrement"),
- *   reset: mutate(counterModel, "reset")
+ *   increment: mutate(counterModel).increment,
+ *   decrement: mutate(counterModel).decrement,
+ *   reset: mutate(counterModel).reset
  * }));
  *
  * // Finalize for use
@@ -59,15 +58,20 @@ if (import.meta.vitest) {
   const { it, expect, vi } = import.meta.vitest;
 
   it('should verify action factory requirements and branding', async () => {
-    // Create a spy factory to check it receives the mutate parameter
-    const model = createModel(
-      (_: ModelFactoryTools<{ testMethod: () => void }>) => ({
-        testMethod: () => {},
-      })
-    );
+    // Create a real model for testing
+    const model = createModel<{
+      count: number;
+      testMethod: () => void;
+    }>(({ set, get }) => ({
+      count: 0,
+      testMethod: () => {
+        set({ count: get().count + 1 });
+      },
+    }));
 
+    // Create a spy factory to check it receives the mutate parameter
     const factorySpy = vi.fn(({ mutate }: ActionsFactoryTools) => ({
-      testAction: mutate(model, 'testMethod'),
+      testAction: mutate(model).testMethod,
     }));
 
     const actions = createActions(factorySpy);
@@ -82,8 +86,12 @@ if (import.meta.vitest) {
 
     expect(isActionInstance(actions)).toBe(true);
 
-    // Create a mutate function for testing
-    const mockMutate = vi.fn();
+    // TODO: Replace this simplified mock with actual implementation
+    // that properly implements the dot-notation API and mutation branding
+    const mockMutate = vi.fn().mockImplementation(() => ({
+      // Mock a testMethod property that returns a branded function
+      testMethod: vi.fn()
+    }));
 
     // Create a slice with the mock mutate function
     const sliceCreator = actions();

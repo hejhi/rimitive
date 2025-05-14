@@ -99,9 +99,12 @@ if (import.meta.vitest) {
         ACTIONS_INSTANCE_BRAND
       );
 
+      // Create a mock model with a dec method for testing
+      const mockModel = { dec: () => {} };
+      
       const enhanced = compose(baseActions).with<{ dec: () => void }>(
         ({ mutate }) => ({
-          dec: () => mutate(undefined as any, undefined as any),
+          dec: mutate(mockModel).dec,
         })
       );
 
