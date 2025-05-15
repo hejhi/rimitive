@@ -1,14 +1,14 @@
 # Lattice
 
-A **headless component framework** built on Zustand. Lattice lattices are both the declarative contract and the actual API for your component—defining, composing, and enforcing the API surface at both the type and runtime level. Its core compositional mechanism is a fluent composition pattern with `.with()` method, enabling contract preservation, extensibility, and best-in-class developer experience. React‑first DX with a framework‑agnostic core.
+A **headless component framework** built on Zustand. Lattice components are both the declarative contract and the actual API for your component—defining, composing, and enforcing the API surface at both the type and runtime level. Its core compositional mechanism is a fluent composition pattern with `.with()` method, enabling contract preservation, extensibility, and best-in-class developer experience. React‑first DX with a framework‑agnostic core.
 
 ## Core Concepts
 
-### What is a Lattice?
+### What is a Lattice component?
 
-A **lattice** is both the declarative contract and the actual API for your component:
+A **lattice component** is both the declarative contract and the actual API for your component:
 
-- **API Surface**: When you define a lattice, you specify the API consumers will use
+- **API Surface**: When you define a component, you specify the API consumers will use
 - **Contract Enforcement**: Composing any part changes the contract at both type and runtime levels
 - **Predictable Variations**: Providing callbacks allows you to select, filter, or extend the API surface
 
@@ -17,36 +17,39 @@ A **lattice** is both the declarative contract and the actual API for your compo
 ```
                    ┌───────── Contract/Reactive Models ─────────┐
                    ▼                  ▼                        ▼
-View event ──▶ Actions ──▶ Model Mutation ──▶ State/View update ──▶ UI re‑render
+View event ──▶ Actions ──▶ Model Mutation ──▶ Selectors/View update ──▶ UI re‑render
 ```
 
 | Component | Purpose                                                           | Accessibility                      |
 |-----------|-------------------------------------------------------------------|------------------------------------|
 | **Model** | Contains state and business logic (HOW)                           | Internal (composition only)        |
 | **Actions** | Pure intent functions representing operations (WHAT)            | Internal (composition only)        |
-| **State** | Public selectors providing read access to the model               | Public (composition & consumption) |
-| **View**  | Reactive representations transforming state into UI attributes    | Public (composition & consumption) |
+| **Selectors** | Public read-only values and functions derived from the model  | Public (composition & consumption) |
+| **View**  | Reactive representations transforming selectors into UI attributes | Public (composition & consumption) |
 
-### Fluent Composition Pattern
+### Composition Pattern
 
-Lattice uses a two-phase fluent composition pattern:
+Components uses a factory pattern:
 
-1. **Creation Phase**: Factory functions create base components
+1. **Creation**: Factory functions create base components
    ```typescript
-   const counterModel = createModel(({ set, get }) => ({
+   const counterModel = createModel((set, get) => ({
      count: 0,
      increment: () => set((state) => ({ count: state.count + 1 })),
    }));
    ```
 
-2. **Composition Phase**: The `.with()` method adds new properties or behaviors
+2. **Composition**: The `.with()` method adds new properties or behaviors
    ```typescript
-   const enhancedModel = compose(counterModel).with(({ get }) => ({
-     incrementTwice: () => {
-       get().increment();
-       get().increment();
-     },
-   }));
+   const enhancedModel = createModel(
+    compose(counterModel).with((set, get, slice) => ({
+      ...slice,
+      incrementTwice: () => {
+        get().increment();
+        get().increment();
+      },
+    }))
+  )
    ```
 
 ## Building Blocks
@@ -57,19 +60,22 @@ Models encapsulate state and business logic, defining the contract for state and
 
 ```typescript
 // Create a model with state and methods
-const counterModel = createModel(({ set, get }) => ({
+const counterModel = createModel((set, get) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
   decrement: () => set((state) => ({ count: state.count - 1 })),
 }));
 
-// Compose to add new behavior
-const enhancedModel = compose(counterModel).with(({ get }) => ({
-  incrementTwice: () => {
-    get().increment();
-    get().increment();
-  },
-}));
+// progressively compose in new behavior
+const enhancedModel = createModel(
+  compose(counterModel).with((set, get, slice) => ({
+    ...slice,
+    incrementTwice: () => {
+      get().increment();
+      get().increment();
+    },
+  }))
+);
 ```
 
 ### Actions – Pure Intent Functions
@@ -78,49 +84,124 @@ Actions represent WHAT should happen, delegating to model methods (HOW).
 
 ```typescript
 // Create actions that delegate to model methods
-const actions = createActions(({ mutate }) => ({
-  increment: mutate(model).increment,
-  incrementTwice: mutate(model).incrementTwice,
+const actions = createActions(model, (getModel) => ({
+  increment: getModel().increment,
+  incrementTwice: getModel().incrementTwice,
 }));
 ```
 
-### State – Public Selectors
+### Selectors – Derived Read API
 
-State selectors provide read access to the model and form part of the public API surface.
+Selectors provide read-only access to the model through direct properties and computed values. They form the public read API surface.
 
 ```typescript
-// Create state selectors
-const state = createState(model).select(({ get }) => ({
-  count: get().count,
-  isPositive: get().count > 0,
+// Create selectors for the model
+const selectors = createSelectors(model, (getModel) => ({
+  // Direct property access
+  count: getModel().count,
+  // Computed value
+  isPositive: getModel().count > 0,
+  // Function that computes a value based on runtime input
+  getFilteredItems: (filter) => getModel().items.filter(item => 
+    item.name.includes(filter)
+  ),
 }));
 
-// Compose to add computed properties
-const enhancedState = compose(state).with(({ get }) => ({
-  doubled: get().count * 2,
-  formatted: `Count: ${get().count}`,
-}));
+// Compose to add more derived values
+const enhancedSelectors = createSelectors(
+  model,
+  compose(selectors).with((getModel, slice) => ({
+    ...slice,
+    doubled: getModel().count * 2,
+    formatted: `Count: ${getModel().count}`,
+  }))
+);
 ```
+
+### Type Safety During Composition
+
+Lattice ensures type safety when composing components with different underlying models. TypeScript will automatically catch incompatible or missing properties:
+
+```typescript
+// Model A has count: number, title: string
+const modelA = createModel(() => ({ 
+  count: 0, 
+  title: "Counter A"
+}));
+
+const selectorsA = createSelectors(modelA, (getModel) => ({
+  count: getModel().count,
+  title: getModel().title,
+}));
+
+// Model B has count: number, but no title property
+const modelB = createModel(() => ({ 
+  count: 0 
+  // No title property
+}));
+
+// This would cause a TypeScript error - title property doesn't exist on modelB
+const selectorsB = createSelectors(
+  modelB,
+  compose(selectorsA).with((getModel, slice) => ({
+    ...slice,  // Error: Property 'title' is accessed but doesn't exist on modelB
+    doubled: getModel().count * 2,
+  }))
+);
+
+// Correct approach - manually select compatible properties
+const selectorsB = createSelectors(
+  modelB,
+  compose(selectorsA).with((getModel, slice) => ({
+    count: slice.count,  // Only include properties that exist in both
+    doubled: getModel().count * 2,
+  }))
+);
+```
+
+Similarly, TypeScript will catch type incompatibilities:
+
+```typescript
+// Model A has count as number
+const modelA = createModel(() => ({ count: 0 }));
+const selectorsA = createSelectors(modelA, getModel => ({
+  count: getModel().count, // number
+}));
+
+// Model B has count as string
+const modelB = createModel(() => ({ count: "zero" }));
+
+// This would cause a TypeScript error - incompatible types
+const selectorsB = createSelectors(
+  modelB,
+  compose(selectorsA).with((getModel, slice) => ({
+    ...slice,  // Error: Type 'number' is not assignable to type 'string'
+    formatted: `Count: ${getModel().count}`,
+  }))
+);
+```
+
+This type safety helps prevent runtime errors and ensures that compositions are valid.
 
 ### View – Reactive UI Attributes
 
-Views transform state into UI attributes and provide interaction logic.
+Views transform selectors into UI attributes and provide interaction logic. They **only** access selectors and actions, not the model directly.
 
 ```typescript
 // Create a view with UI attributes and interaction handlers
-const counterView = createView(state, actions).select(({ get }, actions) => ({
-  "data-count": get().count,
+const counterView = createView(selectors, actions, (getSelectors, getActions) => ({
+  "data-count": getSelectors().count,
   "aria-live": "polite",
-  onClick: actions.increment,
+  onClick: getActions().increment,
 }));
 
 // Complex interaction logic is also supported
-const advancedView = createView(state, actions).select(({ get }, actions) => ({
+const advancedView = createView(selectors, actions, (getSelectors, getActions) => ({
   onClick: (props) => {
     if (props.shiftKey) {
-      actions.incrementTwice();
+      getActions().incrementTwice();
     } else {
-      actions.increment();
+      getActions().increment();
     }
   },
 }));
@@ -132,46 +213,46 @@ const advancedView = createView(state, actions).select(({ get }, actions) => ({
 // Create a base lattice
 const createCounterLattice = () => {
   // Define model with state and behavior
-  const model = createModel(({ set, get }) => ({ count: 0 }));
+  const model = createModel((set, get) => ({ count: 0 }));
 
   // compose a base model to augment it
-  const enhancedModel = compose(model).with(({ set, get }) => ({
+  const enhancedModel = createModel(compose(model).with((set, get, slice) => ({
+    ...slice,
     // `count` is accessible in getters and setters, as is countMultiplied
     countMultiplied: get().count * 2,
     increment: () => set((state) => ({ count: state.count + 1 })),
     decrement: () => set((state) => ({ count: state.count - 1 })),
-  }));
+  })))
 
   // Define actions that delegate to enhancedModel
-  // MUST provide a Mutation; no other functions are allowed
-  const actions = createActions(({ mutate }) => ({
-    increment: mutate(enhancedModel).increment,
-    decrement: mutate(enhancedModel).decrement,
+  const actions = createActions(enhancedModel, (getModel) => ({
+    increment: getModel().increment,
+    decrement: getModel().decrement,
   }));
 
-  // Define state that exposes model properties
-  const state = createState(enhancedModel).select(({ get }) => ({
-    count: get().count,
-    isPositive: get().count > 0,
+  // Define selectors that expose model properties
+  const selectors = createSelectors(enhancedModel, (getModel) => ({
+    count: getModel().count,
+    isPositive: getModel().count > 0,
   }));
 
   // Define views for UI
-  const counterView = createView(state).select(({ get }) => ({
-    "data-count": get().count,
+  const counterView = createView(selectors, null, (getSelectors) => ({
+    "data-count": getSelectors().count,
     "aria-live": "polite",
   }));
 
-  const buttonView = createView(null, actions).select((null, actions) => ({
-    onClick: actions.increment(),
+  const buttonView = createView(null, actions, (null, getActions) => ({
+    onClick: getActions().increment,
   }));
 
-  // Return the lattice
-  return createLattice({
-    // if the user had provided a state/view/action that referenced a different model,
+  // Return the lattice component
+  return createComponent({
+    // if the user had provided a selectors/view/action that referenced a different model,
     // there would be a type error
     model: enhancedModel,
     actions, 
-    state,
+    selectors,
     view: {
       counter: counterView,
       button: buttonView,
@@ -179,117 +260,85 @@ const createCounterLattice = () => {
   });
 };
 
-// Create an enhanced lattice from the base lattice
-const createEnhancedLattice = (baseLattice) => {
+// Create an enhanced component from the base component
+const createEnhancedComponent = (baseComponent) => {
   // Enhance the model with new functionality
-  const model = compose(baseLattice.getModel()).with(({ get }) => ({
+  const model = createModel(compose(baseComponent).with((set, get, slice) => ({
+    ...slice,
     incrementTwice: () => {
       get().increment();
       get().increment();
     },
     reset: () => get().set({ count: 0 }),
-  }));
+  })));
 
-  // Add new actions for new model methods
-  const actions = compose(baseLattice.getActions()).with(({ mutate }) => ({
-    incrementTwice: mutate(model).incrementTwice,
-    reset: mutate(model).reset,
-  }));
+  const actions = createActions(
+    model,
+    compose(baseComponent).with((getModel, slice) => ({
+      // cherry-pick properties from slice
+      ...slice,
+      incrementTwice: getModel().incrementTwice,
+      reset: getModel().reset,
+    }))
+  );
 
-  // Add new state properties
-  const state = compose(baseLattice.getState()).with(({ get }) => ({
-    doubled: get().count * 2,
-    isEven: get().count % 2 === 0,
-  }));
+  const selectors = createSelectors(
+    model, 
+    compose(baseComponent).with((getModel, slice) => ({
+      ...slice,
+      doubled: getModel().count * 2,
+      isEven: getModel().count % 2 === 0,
+    }))
+  );
 
-  // Enhance views (the namespace is a _required argument_ for getView())
-  // the user can get all views to use as a spread with baseLattice.getViews(),
-  // but that can't be passed to `compose`.
-  const enhancedCounter = compose(baseLattice.getView('counter')).with(({ get }) => ({
-    "data-doubled": get().doubled,
-    "data-even": get().isEven,
-  }));
+  // both selectors and actions are optional
+  const view = createView(
+    selectors,
+    null,
+    compose(baseComponent.getView('counter')).with((getSelectors, _, slice) => ({
+        ...slice,
+        "data-doubled": getSelectors().doubled,
+        "data-even": getSelectors().isEven,
+      }),
+    )
+  );
 
-  // Create new views
-  const resetButton = createView(null, actions).select((null, actions) => ({
-    onClick: actions.reset(),
-  }));
+  const resetButton = createView(null, actions, (_, getActions) => ({
+    onClick: getActions().reset
+  }))
 
-  // Return the enhanced lattice
-  return createLattice({
+  return createComponent({
     model,
     actions,
-    state,
+    selectors,
     view: {
-      ...baseLattice.getViews(),  // Keep original views
-      counter: enhancedCounter,   // Override with enhanced view
-      resetButton,                // Add new view
+      ...baseComponent.getViews(),  // Keep original views
+      counter: view,                // Override with enhanced view
+      resetButton,                  // Add new view
     },
   });
 };
-```
-
-### Async Operations
-
-Asynchronous operations follow the SAM pattern, with unidirectional flow:
-
-```typescript
-// Model contains all async logic and loading states
-const model = createModel(({ set }) => ({
-  users: [],
-  loading: false,
-  error: null,
-  
-  fetchUsers: async () => {
-    set({ loading: true, error: null });
-    try {
-      const response = await fetch("/api/users");
-      const users = await response.json();
-      set({ users, loading: false });
-    } catch (error) {
-      set({ error: error.message, loading: false });
-    }
-  },
-}));
-
-// Actions trigger async operations
-const actions = createActions(({ mutate }) => ({
-  fetchUsers: mutate(model).fetchUsers,
-}));
-
-// State exposes loading states reactively
-const state = createState(model).select(({ get }) => ({
-  users: get().users,
-  isLoading: get().loading,
-  error: get().error,
-}));
-
-// View reflects loading and error states
-const view = createView(state).select(({ get }) => ({
-  "aria-busy": get().isLoading,
-  "data-has-error": get().error !== null,
-}));
 ```
 
 ## Implementation Notes
 
 ### Slices-Based Architecture
 
-Internally, Lattice uses a slices pattern to implement its compositional model while maintaining Zustand's performance benefits, creating a single zustand store:
+Internally, Lattice components use a slices pattern to implement its compositional model while maintaining Zustand's performance benefits, creating a single zustand store:
 
 ```typescript
 // Internal representation - all parts become slices of a single store
-export const createLatticeStore = (config) => create((...a) => ({
-  model: config.getModel(...a), // Model slice with prefixed properties
-  state: config.getState(...a), // State slice with computed properties
-  views: config.getViews(...a), // View slices for UI attributes
-  actions: config.getActions(...a), // Actions slice for methods
+export const createComponentStore = (config) => create((...a) => ({
+  model: config.getModel(...a),      // Model slice with internal state and methods
+  selectors: config.getSelectors(...a), // Selectors with computed values
+  views: config.getViews(...a),      // View slices for UI attributes
+  actions: config.getActions(...a),  // Actions slice for intent methods
 }))
 ```
 
 ### Key Implementation Details
 
-1. **Property Prefixing**: Each slice's properties are prefixed in the actual store (e.g., `model_count`, `state_isPositive`) to prevent collisions
+1. **Property Prefixing**: Each slice's properties are prefixed in the actual store (e.g., `model.count`, `selectors.isPositive`) to prevent collisions
 
 2. **Selector Generation**: We'll adapt Zustand's auto-generated selectors pattern for both React and vanilla JS environments. Pseudocode example:
   ```typescript
@@ -299,16 +348,16 @@ export const createLatticeStore = (config) => create((...a) => ({
 
   type StoreShape = {
     model: unknown;
-    state: Record<string, unknown>;
+    selectors: Record<string, unknown>;
     views: Record<string, object>;
     actions: Record<string, (...args: any[]) => void>;
   };
 
-  export function createSelectors<T extends StoreShape>(store: UseStore<T>) {
+  export function createStoreSelectors<T extends StoreShape>(store: UseStore<T>) {
     return {
-      // State selectors (primitive values)
-      state: (key: keyof T['state']) => 
-        useStore(store, (s) => s.state[key]),
+      // Selectors (primitive values)
+      selector: (key: keyof T['selectors']) => 
+        useStore(store, (s) => s.selectors[key]),
         
       // View namespace selectors (objects with shallow compare)
       view: <K extends keyof T['views']>(namespace: K) =>
@@ -324,16 +373,16 @@ export const createLatticeStore = (config) => create((...a) => ({
   import { createStore } from 'zustand/vanilla';
 
   type Model = { count: number; theme: 'light' | 'dark' };
-  type State = { count: number; isEven: boolean };
+  type Selectors = { count: number; isEven: boolean };
   type Views = { label: object; button: object };
   type Actions = { increment: () => void; toggleTheme: () => void };
 
-  const store = createStore<Model & State & Views & Actions>((set, get) => ({
+  const store = createStore<Model & Selectors & Views & Actions>((set, get) => ({
     // Model (private)
     model: { count: 0, theme: 'light' },
     
-    // State (computed)
-    get state() {
+    // Selectors (computed)
+    get selectors() {
       return {
         count: get().model.count,
         isEven: get().model.count % 2 === 0
@@ -344,7 +393,7 @@ export const createLatticeStore = (config) => create((...a) => ({
     get views() {
       return {
         label: {
-          'aria-label': `Count: ${get().state.count}`,
+          'aria-label': `Count: ${get().selectors.count}`,
           'data-theme': get().model.theme
         },
         button: {
@@ -370,12 +419,12 @@ export const createLatticeStore = (config) => create((...a) => ({
     }
   }));
 
-  export const { state, view, action } = createSelectors(store);
+  export const { selector, view, action } = createStoreSelectors(store);
 
   // example in React adaptor
   function Counter() {
-    const count = state('count');
-    const isEven = state('isEven');
+    const count = selector('count');
+    const isEven = selector('isEven');
     const labelProps = view('label');
     const buttonProps = view('button');
     const increment = action('increment');
@@ -391,16 +440,40 @@ export const createLatticeStore = (config) => create((...a) => ({
     );
   }
   ```
-  - state() selectors use strict equality (primitives)
-  - view() selectors use shallow comparison (objects)
-  - action() selectors return stable function references
+  - selector() uses strict equality (primitives)
+  - view() uses shallow comparison (objects)
+  - action() returns stable function references
 
-3. **Subscription Support**: The architecture enables targeted subscriptions to specific slices:
+3. **Type-Safe Composition**: The implementation leverages TypeScript's type inference system:
    ```typescript
-   // Subscribe only to relevant state changes
-   lattice.state.subscribe(
-     state => console.log('State changed:', state),
-     state => [state.count] // Dependencies array
+   // Implementation of compose() with strong typing
+   function compose<BaseType>(base: BaseType) {
+     return {
+       // User only needs to specify return type, model type is inferred
+       with<ReturnType, ModelType = InferModelType<BaseType>>(
+         cb: (getModel: () => ModelType, slice: BaseType) => ReturnType
+       ): ReturnType {
+         // Implementation details...
+       }
+     };
+   }
+   
+   // Type inference for models used in selectors
+   type InferModelType<T> = T extends { __MODEL_TYPE__: infer M } ? M : never;
+   ```
+   
+   The type system automatically:
+   - Infers model types from selectors
+   - Prevents incompatible property access
+   - Flags type mismatches during composition
+   - Requires explicit handling for missing properties
+
+4. **Subscription Support**: The architecture enables targeted subscriptions to specific slices:
+   ```typescript
+   // Subscribe only to relevant selector changes
+   component.selectors.subscribe(
+     selectors => console.log('Selectors changed:', selectors),
+     selectors => [selectors.count] // Dependencies array
    )
    ```
 

@@ -82,9 +82,6 @@ const enhancedModel = compose(baseModel).with<{ doubled: () => number }>(
     doubled: () => get().count * 2,
   })
 );
-
-// Prepare for use
-const finalModel = prepare(enhancedModel);
 ```
 
 This fluent API ensures:
@@ -108,7 +105,6 @@ This fluent API ensures:
 ```mermaid
 graph LR
     CP[Creation Phase] --> CoP[Composition Phase]
-    CoP --> FP[Finalization Phase]
     
     subgraph "Creation Phase"
         CM[createModel]
@@ -118,28 +114,22 @@ graph LR
         W[.with]
     end
     
-    subgraph "Finalization Phase"
-        P[prepare]
-    end
-    
     classDef phase fill:#bbf,stroke:#333,stroke-width:2px;
-    class CP,CoP,FP phase;
+    class CP,CoP phase;
 ```
 
-Lattice's core compositional mechanism consists of three distinct phases:
+Lattice's core compositional mechanism consists of two distinct phases:
 
 1. **Creation Phase**: Factory functions like `createModel()` and `createState()` create base component instances that serve as the starting point for composition.
 
 2. **Composition Phase**: The `.with()` method extends components by adding new properties or behaviors, with access to helper functions like `get()` for accessing the component's state.
 
-3. **Finalization Phase**: The `prepare()` function finalizes components for use, preventing further changes to that component definition.
-
 ## Factory-Based Composition
 
 Lattice uses a factory-based composition model with these phases:
 
-1. **Composition Phase**: Factory functions create base models that can be extended 
-2. **Finalization Phase**: The `prepare()` function finalizes a specific model composition
+1. **Creation Phase**: Factory functions create base models, states, actions, and views
+2. **Composition Phase**: Components are extended with new properties and behaviors using `.with()`
 3. **Instantiation Phase**: The actual Zustand stores are only created when the lattice itself is instantiated for use
 
 This separation enables:
