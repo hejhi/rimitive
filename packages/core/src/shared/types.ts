@@ -1,4 +1,4 @@
-import type { StoreApi } from 'zustand';
+import type { StoreApi } from 'zustand/vanilla';
 
 /**
  * Brand symbols for runtime type identification
@@ -41,40 +41,42 @@ export type FunctionKeys<T> = {
 }[keyof T] &
   keyof T;
 
-/**
- * Base tools types
- */
-export interface ModelFactoryTools<T> {
+export interface StoreFactoryTools<T> {
   get: GetState<T>;
   set: SetState<T>;
 }
 
-export interface StateFactoryTools<T> {
+export interface SelectFactoryTools<T> {
   get: GetState<T>;
-  derive: <M, K extends keyof M>(model: M, key: K) => M[K];
 }
 
 /**
  * Branded mutation type using symbol
  */
-export type Mutation<T extends (...args: any[]) => any> = Branded<T, typeof MUTATION_BRAND>;
+export type Mutation<T extends (...args: any[]) => any> = Branded<
+  T,
+  typeof MUTATION_BRAND
+>;
 
 /**
  * Helper type to extract the actual model type from a model instance
  */
-export type ExtractModelType<M> = 
-  M extends ModelInstance<infer T> ? T :
-  M extends (() => any) ? ReturnType<M> :
-  M;
+export type ExtractModelType<M> =
+  M extends ModelInstance<infer T>
+    ? T
+    : M extends () => any
+      ? ReturnType<M>
+      : M;
 
 /**
  * Type for mutated model object with methods converted to mutations
  */
 export type MutatedModel<M> = {
-  [K in keyof ExtractModelType<M> & string]: 
-    ExtractModelType<M>[K] extends (...args: infer P) => infer R 
-      ? Mutation<(...args: P) => R> 
-      : never;
+  [K in keyof ExtractModelType<M> & string]: ExtractModelType<M>[K] extends (
+    ...args: infer P
+  ) => infer R
+    ? Mutation<(...args: P) => R>
+    : never;
 };
 
 /**
@@ -85,29 +87,20 @@ export interface ActionsFactoryTools {
   mutate: <M>(model: M) => MutatedModel<M>;
 }
 
-export interface ViewFactoryTools {
-  derive: <M, K extends keyof M>(model: M, key: K) => M[K];
-  dispatch: <A, K extends keyof A>(
-    actions: A,
-    actionName: K
-  ) => A[K] extends (...args: infer P) => infer R ? (...args: P) => R : never;
-}
-
 export type BaseFactoryTools<T> =
-  | ModelFactoryTools<T>
-  | StateFactoryTools<T>
-  | ActionsFactoryTools
-  | ViewFactoryTools;
+  | StoreFactoryTools<T>
+  | SelectFactoryTools<T>
+  | ActionsFactoryTools;
 
 /**
  * Factory shape function types
  */
-export type Model<T> = (tools: ModelFactoryTools<T>) => T;
-export type State<T> = (tools: StateFactoryTools<T>) => T;
+export type Model<T> = (tools: StoreFactoryTools<T>) => T;
+export type State<T> = (tools: SelectFactoryTools<T>) => T;
+export type View<T> = (tools: SelectFactoryTools<T>) => T;
 export type Actions<T> = (tools: ActionsFactoryTools) => {
   [K in keyof T]: T[K] extends Mutation<any> ? T[K] : never;
 };
-export type View<T> = (tools: ViewFactoryTools) => T;
 
 // Union of all factory shape types
 export type BaseFactoryShape<T> = Model<T> | State<T> | Actions<T> | View<T>;
@@ -116,19 +109,19 @@ export type BaseFactoryShape<T> = Model<T> | State<T> | Actions<T> | View<T>;
  * Branded tools types
  */
 export type BrandedModelFactoryTools<T> = Branded<
-  ModelFactoryTools<T>,
+  StoreFactoryTools<T>,
   typeof MODEL_FACTORY_BRAND
 >;
 export type BrandedStateFactoryTools<T> = Branded<
-  StateFactoryTools<T>,
+  SelectFactoryTools<T>,
   typeof STATE_FACTORY_BRAND
 >;
 export type BrandedActionsFactoryTools = Branded<
   ActionsFactoryTools,
   typeof ACTIONS_FACTORY_BRAND
 >;
-export type BrandedViewFactoryTools = Branded<
-  ViewFactoryTools,
+export type BrandedViewFactoryTools<T> = Branded<
+  SelectFactoryTools<T>,
   typeof VIEW_FACTORY_BRAND
 >;
 
@@ -140,7 +133,7 @@ export type StateFactory<T> = (tools: BrandedStateFactoryTools<T>) => T;
 export type ActionsFactory<T> = (tools: BrandedActionsFactoryTools) => {
   [K in keyof T]: T[K] extends Mutation<any> ? T[K] : never;
 };
-export type ViewFactory<T> = (tools: BrandedViewFactoryTools) => T;
+export type ViewFactory<T> = (tools: BrandedViewFactoryTools<T>) => T;
 
 // Union of all factory types
 export type BaseFactory<T> =
@@ -153,11 +146,11 @@ export type BaseFactory<T> =
  * Instance types
  */
 export type ModelInstance<T> = Branded<
-  () => (options: ModelFactoryTools<T>) => T,
+  () => (options: StoreFactoryTools<T>) => T,
   typeof MODEL_INSTANCE_BRAND
 >;
 export type StateInstance<T> = Branded<
-  () => (options: StateFactoryTools<T>) => T,
+  () => (options: SelectFactoryTools<T>) => T,
   typeof STATE_INSTANCE_BRAND
 >;
 export type ActionsInstance<T> = Branded<
@@ -165,7 +158,7 @@ export type ActionsInstance<T> = Branded<
   typeof ACTIONS_INSTANCE_BRAND
 >;
 export type ViewInstance<T> = Branded<
-  () => (options: ViewFactoryTools) => T,
+  () => (options: SelectFactoryTools<T>) => T,
   typeof VIEW_INSTANCE_BRAND
 >;
 
@@ -178,7 +171,7 @@ export type BaseInstance<T> =
 
 /**
  * Lattice component types - internal interface
- * 
+ *
  * This uses a closure-based design for proper encapsulation:
  * - No direct property access
  * - Access via accessor methods for internal use
@@ -194,10 +187,14 @@ export interface LatticeLike<
   readonly getModel: () => ModelInstance<TModel>;
   readonly getState: () => StateInstance<TState>;
   readonly getActions: () => ActionsInstance<TActions>;
-  
+
   // View accessors with name-based retrieval
-  readonly getView: <K extends keyof TViews>(viewName: K) => ViewInstance<TViews[K]>;
-  readonly getAllViews: () => { readonly [K in keyof TViews]: ViewInstance<TViews[K]> };
+  readonly getView: <K extends keyof TViews>(
+    viewName: K
+  ) => ViewInstance<TViews[K]>;
+  readonly getAllViews: () => {
+    readonly [K in keyof TViews]: ViewInstance<TViews[K]>;
+  };
 }
 
 /**
@@ -219,19 +216,3 @@ export type Lattice<
  * Allows individual accessor methods to be optional
  */
 export type PartialLattice = Partial<Omit<LatticeLike, typeof LATTICE_BRAND>>;
-
-// Add the PREPARED_BRAND symbol
-export const PREPARED_BRAND: unique symbol = Symbol('PREPARED_BRAND');
-
-export type PreparedModelInstance<T> = ModelInstance<T> & {
-  [PREPARED_BRAND]: true;
-};
-export type PreparedStateInstance<T> = StateInstance<T> & {
-  [PREPARED_BRAND]: true;
-};
-export type PreparedActionsInstance<T> = ActionsInstance<T> & {
-  [PREPARED_BRAND]: true;
-};
-export type PreparedViewInstance<T> = ViewInstance<T> & {
-  [PREPARED_BRAND]: true;
-};

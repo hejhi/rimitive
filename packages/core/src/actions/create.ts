@@ -16,14 +16,16 @@ import { createModel } from '../model';
  * @example
  * ```typescript
  * // Basic usage
- * const counterActions = createAction(({ mutate }) => ({
+ * const counterActions = createActions(({ mutate }) => ({
  *   increment: mutate(counterModel).increment,
  *   decrement: mutate(counterModel).decrement,
  *   reset: mutate(counterModel).reset
  * }));
  *
- * // Finalize for use
- * const finalActions = instantiate(enhancedActions);
+ * // With composition
+ * const enhancedActions = compose(counterActions).with(({ mutate }) => ({
+ *   incrementTwice: mutate(enhancedModel).incrementTwice
+ * }));
  * ```
  *
  * @param factory A function that produces an actions object with methods

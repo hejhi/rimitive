@@ -11,10 +11,8 @@ import {
   StateInstance,
   ActionsInstance,
   ViewInstance,
-  ModelFactoryTools,
-  StateFactoryTools,
   ActionsFactoryTools,
-  ViewFactoryTools,
+  StoreFactoryTools,
   MODEL_INSTANCE_BRAND,
   MODEL_FACTORY_BRAND,
   STATE_FACTORY_BRAND,
@@ -44,13 +42,13 @@ export type InferExtension<F> = F extends (tools: any) => infer R ? R : never;
 // Model
 export function composeWith<
   B,
-  F extends (tools: ModelFactoryTools<any>) => any,
+  F extends (tools: StoreFactoryTools<any>) => any,
 >(base: ModelInstance<B>, extension: F): ModelInstance<B & InferExtension<F>>;
 
 // State
 export function composeWith<
   B,
-  F extends (tools: StateFactoryTools<any>) => any,
+  F extends (tools: StoreFactoryTools<any>) => any,
 >(base: StateInstance<B>, extension: F): StateInstance<B & InferExtension<F>>;
 
 // Actions
@@ -60,10 +58,10 @@ export function composeWith<B, F extends (tools: ActionsFactoryTools) => any>(
 ): ActionsInstance<B & InferExtension<F>>;
 
 // View
-export function composeWith<B, F extends (tools: ViewFactoryTools) => any>(
-  base: ViewInstance<B>,
-  extension: F
-): ViewInstance<B & InferExtension<F>>;
+export function composeWith<
+  B,
+  F extends (tools: StoreFactoryTools<B & InferExtension<F>>) => any,
+>(base: ViewInstance<B>, extension: F): ViewInstance<B & InferExtension<F>>;
 
 // Implementation using function overloading pattern
 // B: Base type
@@ -90,12 +88,12 @@ export function composeWith(base: any, shape: any): any {
   if (isStateInstance(base)) {
     return brandWithSymbol(
       () => (options: any) => {
-        if (!options.get || !options.derive) {
-          throw new Error('State factory requires get and derive functions');
+        if (!options.get) {
+          throw new Error('State factory requires a get function');
         }
         const baseSlice = base()(options);
         const tools = brandWithSymbol(
-          { get: options.get, derive: options.derive },
+          { get: options.get },
           STATE_FACTORY_BRAND
         );
         const extensionSlice = shape(tools);
@@ -124,12 +122,9 @@ export function composeWith(base: any, shape: any): any {
   if (isViewInstance(base)) {
     return brandWithSymbol(
       () => (options: any) => {
-        if (!options.derive) {
-          throw new Error('View factory requires derive function');
-        }
         const baseSlice = base()(options);
         const tools = brandWithSymbol(
-          { dispatch: options.dispatch, derive: options.derive },
+          { dispatch: options.dispatch },
           VIEW_FACTORY_BRAND
         );
         const extensionSlice = shape(tools);

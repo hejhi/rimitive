@@ -1,7 +1,7 @@
 import {
   STATE_FACTORY_BRAND,
   STATE_INSTANCE_BRAND,
-  StateFactoryTools,
+  SelectFactoryTools,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
@@ -9,15 +9,14 @@ import { brandWithSymbol } from '../shared/identify';
  * Creates a state factory.
  *
  * This is the primary API for creating states in Lattice. Use it to define your
- * state's properties and derived values. For composition, use the fluent compose API.
+ * state's properties. For composition, use the fluent compose API.
  *
  * @example
  * ```typescript
  * // Basic usage
- * const counterState = createState(({ get, derive }) => ({
+ * const counterState = createState(({ get }) => ({
  *   count: 0,
  *   doubleCount: () => get().count * 2,
- *   modelData: derive(counterModel, 'data'),
  *   formattedCount: () => `Count: ${get().count}`
  * }));
  *
@@ -27,32 +26,23 @@ import { brandWithSymbol } from '../shared/identify';
  *     isPositive: () => get().count > 0,
  *   })
  * );
- *
- * // Prepare for use
- * const preparedState = prepare(enhancedState);
  * ```
  *
- * @param factory A function that produces a state object with properties and derived values
- * @returns A state instance function that can be used with compose and prepare
+ * @param factory A function that produces a state object with properties and values
+ * @returns A state instance function that can be used with compose
  */
-export function createState<T>(factory: (tools: StateFactoryTools<T>) => T) {
+export function createState<T>(factory: (tools: SelectFactoryTools<T>) => T) {
   // Create a factory function that returns a slice creator
   const stateFactory = function stateFactory() {
-    return (options: StateFactoryTools<T>) => {
+    return (options: SelectFactoryTools<T>) => {
       // Ensure the required properties exist
-      if (!options.get || !options.derive) {
-        throw new Error('State factory requires get and derive functions');
+      if (!options.get) {
+        throw new Error('State factory requires a get function');
       }
 
       // Call the factory with the tools
       return factory(
-        brandWithSymbol(
-          {
-            get: options.get,
-            derive: options.derive,
-          },
-          STATE_FACTORY_BRAND
-        )
+        brandWithSymbol({ get: options.get }, STATE_FACTORY_BRAND)
       );
     };
   };
@@ -69,32 +59,30 @@ if (import.meta.vitest) {
       '../shared/identify'
     );
 
-    it('should verify state factory requirements and branding', () => {
+    it('should verify view factory requirements and branding', () => {
       // Create a spy factory
-      const factorySpy = vi.fn((_: StateFactoryTools<{ count: number }>) => ({
+      const factorySpy = vi.fn((_: SelectFactoryTools<{ count: number }>) => ({
         count: 1,
       }));
 
       const state = createState(factorySpy);
 
-      // State should be a function
+      // View should be a function
       expect(typeof state).toBe('function');
 
       expect(isStateInstance(state)).toBe(true);
 
       // Create tools for testing
       const mockGet = vi.fn();
-      const mockDerive = vi.fn();
 
       // Create a slice with the mock tools
       const sliceCreator = state();
-      const slice = sliceCreator({ get: mockGet, derive: mockDerive });
+      const slice = sliceCreator({ get: mockGet });
 
       // Factory should be called with the tools
       expect(factorySpy).toHaveBeenCalledWith(
         expect.objectContaining({
           get: mockGet,
-          derive: mockDerive,
         })
       );
 
@@ -109,20 +97,10 @@ if (import.meta.vitest) {
       const state = createState(() => ({ count: 1 }));
       const sliceCreator = state();
 
-      // Should throw when get or derive are missing
+      // Should throw when get or set are missing
       // @ts-expect-error
       expect(() => sliceCreator({})).toThrow(
-        'State factory requires get and derive functions'
-      );
-
-      // @ts-expect-error
-      expect(() => sliceCreator({ get: undefined, derive: vi.fn() })).toThrow(
-        'State factory requires get and derive functions'
-      );
-
-      // @ts-expect-error
-      expect(() => sliceCreator({ get: vi.fn(), derive: undefined })).toThrow(
-        'State factory requires get and derive functions'
+        'State factory requires a get function'
       );
     });
   });

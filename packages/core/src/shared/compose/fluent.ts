@@ -3,10 +3,8 @@ import {
   StateInstance,
   ActionsInstance,
   ViewInstance,
-  ModelFactoryTools,
-  StateFactoryTools,
+  StoreFactoryTools,
   ActionsFactoryTools,
-  ViewFactoryTools,
   MODEL_INSTANCE_BRAND,
   STATE_INSTANCE_BRAND,
   ACTIONS_INSTANCE_BRAND,
@@ -30,13 +28,13 @@ import { composeWith } from './core';
 // Model
 export function compose<B>(base: ModelInstance<B>): {
   with<Ext>(
-    cb: (tools: ModelFactoryTools<B & Ext>) => Ext
+    cb: (tools: StoreFactoryTools<B & Ext>) => Ext
   ): ModelInstance<B & Ext>;
 };
 // State
 export function compose<B>(base: StateInstance<B>): {
   with<Ext>(
-    cb: (tools: StateFactoryTools<B & Ext>) => Ext
+    cb: (tools: StoreFactoryTools<B & Ext>) => Ext
   ): StateInstance<B & Ext>;
 };
 // Actions
@@ -45,7 +43,9 @@ export function compose<B>(base: ActionsInstance<B>): {
 };
 // View
 export function compose<B>(base: ViewInstance<B>): {
-  with<Ext>(cb: (tools: ViewFactoryTools) => Ext): ViewInstance<B & Ext>;
+  with<Ext>(
+    cb: (tools: StoreFactoryTools<B & Ext>) => Ext
+  ): ViewInstance<B & Ext>;
 };
 // Implementation
 export function compose(base: any): { with: (cb: any) => any } {
@@ -101,7 +101,7 @@ if (import.meta.vitest) {
 
       // Create a mock model with a dec method for testing
       const mockModel = { dec: () => {} };
-      
+
       const enhanced = compose(baseActions).with<{ dec: () => void }>(
         ({ mutate }) => ({
           dec: mutate(mockModel).dec,
@@ -118,11 +118,9 @@ if (import.meta.vitest) {
         VIEW_INSTANCE_BRAND
       );
 
-      const enhanced = compose(baseView).with<{ bar: number }>(
-        ({ derive }) => ({
-          bar: derive(() => 42, undefined as never),
-        })
-      );
+      const enhanced = compose(baseView).with<{ bar: number }>(({}) => ({
+        bar: 2,
+      }));
 
       expect(typeof enhanced).toBe('function');
       expect(enhanced[VIEW_INSTANCE_BRAND]).toBe(true);

@@ -131,7 +131,6 @@ if (import.meta.vitest) {
       const mockStateFactory = brandWithSymbol(
         {
           get: () => ({}),
-          derive: () => {},
         },
         STATE_FACTORY_BRAND
       );
@@ -157,7 +156,6 @@ if (import.meta.vitest) {
     it('should correctly identify a ViewFactory', () => {
       const mockViewFactory = brandWithSymbol(
         {
-          derive: () => {},
           dispatch: () => {},
         },
         VIEW_FACTORY_BRAND

@@ -2,7 +2,7 @@ import {
   MODEL_FACTORY_BRAND,
   MODEL_INSTANCE_BRAND,
   ModelFactory,
-  ModelFactoryTools,
+  StoreFactoryTools,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
@@ -23,8 +23,13 @@ import { brandWithSymbol } from '../shared/identify';
  *   doubleCount: () => get().count * 2
  * }));
  *
- * // Finalize for use
- * const finalModel = instantiate(enhancedModel);
+ * // With composition
+ * const enhancedModel = compose(counterModel).with(({ get }) => ({
+ *   incrementTwice: () => {
+ *     get().increment();
+ *     get().increment();
+ *   }
+ * }));
  * ```
  *
  * @param factory A function that produces a state object with optional methods and derived properties
@@ -33,7 +38,7 @@ import { brandWithSymbol } from '../shared/identify';
 export function createModel<T>(factory: ModelFactory<T>) {
   // Create a factory function that returns a slice creator
   const modelFactory = function modelFactory() {
-    return (options: ModelFactoryTools<T>) => {
+    return (options: StoreFactoryTools<T>) => {
       // Ensure the required properties exist
       if (!options.get || !options.set) {
         throw new Error('Model factory requires get and set functions');
@@ -66,7 +71,7 @@ if (import.meta.vitest) {
 
     it('should verify model factory requirements and branding', () => {
       // Create a spy factory
-      const factorySpy = vi.fn((_: ModelFactoryTools<{ count: number }>) => ({
+      const factorySpy = vi.fn((_: StoreFactoryTools<{ count: number }>) => ({
         count: 1,
       }));
 
