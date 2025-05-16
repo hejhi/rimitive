@@ -1,7 +1,4 @@
-import {
-  SELECTORS_INSTANCE_BRAND,
-  SelectFactoryTools,
-} from '../shared/types';
+import { SELECTORS_INSTANCE_BRAND, SelectFactoryTools } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
 /**
@@ -23,8 +20,7 @@ import { brandWithSymbol } from '../shared/identify';
  * // With composition
  * const enhancedSelectors = createSelectors(
  *   model,
- *   compose(counterSelectors).with((getModel, slice) => ({
- *     ...slice,
+ *   compose(counterSelectors).with((getModel) => ({
  *     tripleCount: getModel().count * 3,
  *   }))
  * );
@@ -59,9 +55,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createSelectors', async () => {
-    const { isSelectorsInstance } = await import(
-      '../shared/identify'
-    );
+    const { isSelectorsInstance } = await import('../shared/identify');
 
     it('should verify selectors factory requirements and branding', () => {
       // Create mock model
@@ -105,7 +99,9 @@ if (import.meta.vitest) {
     });
 
     it('should throw an error when required tools are missing', () => {
-      const selectors = createSelectors({ model: {} }, () => ({ value: 'test' }));
+      const selectors = createSelectors({ model: {} }, () => ({
+        value: 'test',
+      }));
       const sliceCreator = selectors();
 
       // Should throw when get is missing
@@ -117,19 +113,22 @@ if (import.meta.vitest) {
 
     it('should support filtering properties with slice parameter', () => {
       const mockModel = { count: 10, name: 'counter' };
-      
+
       // Base selectors with all properties
       const baseSelectors = {
         count: mockModel.count,
         doubled: mockModel.count * 2,
         name: mockModel.name,
       };
-      
+
       // Cherry-pick only some properties
-      const enhancedSelectors = createSelectors({ model: mockModel }, ({ model }) => ({
-        name: baseSelectors.name, // Only keep name
-        tripled: model().count * 3, // Add new property
-      }));
+      const enhancedSelectors = createSelectors(
+        { model: mockModel },
+        ({ model }) => ({
+          name: baseSelectors.name, // Only keep name
+          tripled: model().count * 3, // Add new property
+        })
+      );
 
       const sliceCreator = enhancedSelectors();
       const slice = sliceCreator({ get: vi.fn() });

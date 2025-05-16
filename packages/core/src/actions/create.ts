@@ -23,8 +23,7 @@ import { createModel } from '../model';
  * }));
  *
  * // With composition
- * const enhancedActions = compose(counterActions).with((slice, { model }) => ({
- *   ...slice,
+ * const enhancedActions = compose(counterActions).with(({ model }) => ({
  *   incrementTwice: model().incrementTwice
  * }));
  * ```

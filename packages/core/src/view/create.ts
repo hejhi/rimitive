@@ -28,8 +28,7 @@ import { brandWithSymbol } from '../shared/identify';
  * }));
  *
  * // With composition
- * const enhancedView = compose(counterView).with((slice, { selectors }) => ({
- *   ...slice,
+ * const enhancedView = compose(counterView).with(({ selectors }) => ({
  *   "data-doubled": selectors().doubled,
  *   "data-even": selectors().isEven,
  * }));

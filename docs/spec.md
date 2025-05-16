@@ -87,8 +87,7 @@ Components uses a factory pattern:
 2. **Composition**: The `.with()` method adds new properties or behaviors
    ```typescript
    const enhancedModel = createModel(
-    compose(counterModel).with((slice, { set, get }) => ({
-      ...slice,
+    compose(counterModel).with(({ set, get }) => ({
       incrementTwice: () => {
         get().increment();
         get().increment();
@@ -113,8 +112,7 @@ const counterModel = createModel(({ set, get }) => ({
 
 // progressively compose in new behavior
 const enhancedModel = createModel(
-  compose(counterModel).with((slice, { set, get }) => ({
-    ...slice,
+  compose(counterModel).with(({ set, get }) => ({
     incrementTwice: () => {
       get().increment();
       get().increment();
@@ -155,8 +153,7 @@ const selectors = createSelectors({ model }, ({ model }) => ({
 // Compose to add more derived values
 const enhancedSelectors = createSelectors(
   { model },
-  compose(selectors).with((slice, { model }) => ({
-    ...slice,
+  compose(selectors).with(({ model }) => ({
     doubled: model().count * 2,
     formatted: `Count: ${model().count}`,
   }))
@@ -202,8 +199,7 @@ const modelB = createModel(({ set, get }) => ({
 // This would cause a TypeScript error - title property doesn't exist on modelB
 const selectorsB = createSelectors(
   { model: modelB },
-  compose(selectorsA).with((slice, { model }) => ({
-    ...slice,  // Error: Property 'title' is accessed but doesn't exist on modelB
+  compose(selectorsA).with(({ model }) => ({
     doubled: model().count * 2,
   }))
 );
@@ -211,8 +207,7 @@ const selectorsB = createSelectors(
 // Correct approach - manually select compatible properties
 const selectorsB = createSelectors(
   { model: modelB },
-  compose(selectorsA).with((slice, { model }) => ({
-    count: slice.count,  // Only include properties that exist in both
+  compose(selectorsA).with(({ model }) => ({
     doubled: model().count * 2,
   }))
 );
@@ -233,8 +228,7 @@ const modelB = createModel(({ set, get }) => ({ count: "zero" }));
 // This would cause a TypeScript error - incompatible types
 const selectorsB = createSelectors(
   { model: modelB },
-  compose(selectorsA).with((slice, { model }) => ({
-    ...slice,  // Error: Type 'number' is not assignable to type 'string'
+  compose(selectorsA).with(({ model }) => ({
     formatted: `Count: ${model().count}`,
   }))
 );
@@ -315,12 +309,15 @@ const counterComponent = createComponent(() => {
 });
 
 // Enhanced component using composition - follows the same self-contained pattern
+// When composing, dependency information can't be lost or retyped, as we compose everything and carry it
+// through. Properties/methods can be overridden, but must fit the original type. The exception is the view,
+// which has no dependencies, and is purely computed from state. The user can merge in any of the views
+// they wish, including filtering composed views.
 const enhancedComponent = createComponent(
-  compose(counterComponent).with((slice) => {
+  withComponent(counterComponent, ({ model, view, actions, selectors }) => {
     // Enhance the model with new functionality
-    const model = createModel(
-      compose(slice.model).with((modelSlice, { get, set }) => ({
-        ...modelSlice,
+    const _model = createModel(
+      compose(model).with(({ get, set }) => ({
         incrementTwice: () => {
           get().increment();
           get().increment();
@@ -330,20 +327,18 @@ const enhancedComponent = createComponent(
     );
 
     // Create actions that reference the enhanced model
-    const actions = createActions(
+    const _actions = createActions(
       { model },
-      compose(slice.actions).with((actionsSlice, { model }) => ({
-        ...actionsSlice,
+      compose(actions).with(({ model }) => ({
         incrementTwice: model().incrementTwice,
         reset: model().reset
       }))
     );
 
     // Create selectors that reference the enhanced model
-    const selectors = createSelectors(
+    const _selectors = createSelectors(
       { model },
-      compose(slice.selectors).with((selectorsSlice, { model }) => ({
-        ...selectorsSlice,
+      compose(selectors).with(({ model }) => ({
         doubled: model().count * 2,
         isEven: model().count % 2 === 0
       }))
@@ -352,8 +347,7 @@ const enhancedComponent = createComponent(
     // Create enhanced counter view
     const counterView = createView(
       { selectors },
-      compose(slice.view.counter).with((viewSlice, { selectors }) => ({
-        ...viewSlice,
+      compose(view.counter).with(({ selectors }) => ({
         "data-doubled": selectors().doubled,
         "data-even": selectors().isEven
       }))
@@ -369,11 +363,11 @@ const enhancedComponent = createComponent(
 
     // Return the enhanced component configuration
     return {
-      model,
-      actions,
-      selectors,
+      model: _model,
+      actions: _actions,
+      selectors: _selectors,
       view: {
-        ...slice.view,               // Keep original views
+        ...view,               // Keep original views
         counter: counterView,        // Override counter view
         resetButton: resetButtonView // Add new view
       }
@@ -506,31 +500,7 @@ export const createComponentStore = (config) => create((...a) => ({
   - view() uses shallow comparison (objects)
   - action() returns stable function references
 
-3. **Type-Safe Composition**: The implementation leverages TypeScript's type inference system:
-   ```typescript
-   // Implementation of compose() with strong typing
-   function compose<BaseType>(base: BaseType) {
-     return {
-       // User only needs to specify return type, model type is inferred
-       with<ReturnType, ModelType = InferModelType<BaseType>>(
-         cb: (getModel: () => ModelType, slice: BaseType) => ReturnType
-       ): ReturnType {
-         // Implementation details...
-       }
-     };
-   }
-   
-   // Type inference for models used in selectors
-   type InferModelType<T> = T extends { __MODEL_TYPE__: infer M } ? M : never;
-   ```
-   
-   The type system automatically:
-   - Infers model types from selectors
-   - Prevents incompatible property access
-   - Flags type mismatches during composition
-   - Requires explicit handling for missing properties
-
-4. **Subscription Support**: The architecture enables targeted subscriptions to specific slices:
+3. **Subscription Support**: The architecture enables targeted subscriptions to specific slices:
    ```typescript
    // Subscribe only to relevant selector changes
    component.selectors.subscribe(

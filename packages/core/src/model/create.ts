@@ -23,10 +23,9 @@ import { brandWithSymbol } from '../shared/identify';
  *   doubleCount: () => get().count * 2
  * }));
  *
- * // With composition and slice parameter
+ * // With composition
  * const enhancedModel = createModel(
  *   compose(counterModel).with((tools) => ({
- *     ...tools.slice, // Include all properties from base model
  *     incrementTwice: () => {
  *       tools.get().increment();
  *       tools.get().increment();
@@ -37,8 +36,6 @@ import { brandWithSymbol } from '../shared/identify';
  * // With selective property inclusion
  * const filteredModel = createModel(
  *   compose(counterModel).with((tools) => ({
- *     count: tools.slice.count, // Only include count property
- *     doubleCount: tools.slice.doubleCount,
  *     // increment, decrement, and reset are omitted
  *     tripleCount: () => tools.get().count * 3, // Add a new property
  *   }))
@@ -58,10 +55,13 @@ export function createModel<T>(factory: ModelFactory<T>) {
       }
 
       // Create a branded tools object for the factory
-      const tools = brandWithSymbol({
-        set: options.set,
-        get: options.get
-      }, MODEL_FACTORY_BRAND);
+      const tools = brandWithSymbol(
+        {
+          set: options.set,
+          get: options.get,
+        },
+        MODEL_FACTORY_BRAND
+      );
 
       // Call the factory with object parameters to match the spec
       return factory(tools);
