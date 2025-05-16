@@ -69,7 +69,7 @@ if (import.meta.vitest) {
     const { isActionInstance, isActionsFactory } = await import(
       '../shared/identify'
     );
-    
+
     it('should verify action factory requirements and branding', () => {
       // Create a real model for testing
       const model = createModel<{
@@ -81,101 +81,50 @@ if (import.meta.vitest) {
           set({ count: get().count + 1 });
         },
       }));
-  
+
       // Create a spy factory to check it receives the model parameter
       const factorySpy = vi.fn(({ model }) => ({
         testAction: model().testMethod,
       }));
-  
+
       const actions = createActions({ model }, factorySpy);
-  
+
       // Actions should be a function
       expect(typeof actions).toBe('function');
-  
+
       expect(isActionInstance(actions)).toBe(true);
-  
+
       // Create mock mutation function
       const mockMutate = vi.fn().mockImplementation(() => ({
-        testMethod: vi.fn()
+        testMethod: vi.fn(),
       }));
-  
+
       // Create a slice with the mock mutate function
       const sliceCreator = actions();
       sliceCreator({ mutate: mockMutate });
-  
+
       // Factory should be called with object parameters
       expect(factorySpy).toHaveBeenCalledWith(
         expect.objectContaining({
           model: expect.any(Function),
         })
       );
-  
+
       // The tools should be branded with the proper symbol
       const toolsObj = factorySpy.mock.calls[0]?.[0];
       expect(isActionsFactory(toolsObj)).toBe(true);
     });
-  
+
     it('should throw an error when mutate function is missing', () => {
-      const actions = createActions({ model: {} }, () => ({ 
-        testAction: () => {} 
+      const actions = createActions({ model: {} }, () => ({
+        testAction: () => {},
       }));
       const sliceCreator = actions();
-  
+
       // Should throw when mutate is missing
       expect(() => sliceCreator({ mutate: undefined as any })).toThrow(
         'Actions factory requires a mutate function'
       );
-    });
-
-    it('should support cherry-picking properties with slice-first pattern', async () => {
-      // Create a mock model with multiple methods
-      const mockModel = {
-        increment: vi.fn(),
-        decrement: vi.fn(),
-        reset: vi.fn(),
-        internalMethod: vi.fn()
-      };
-      
-      // Base actions with all methods exposed
-      const baseActions = createActions({ model: mockModel }, ({ model }) => ({
-        increment: model().increment,
-        decrement: model().decrement,
-        reset: model().reset
-      }));
-      
-      // Get the compose function to test composition
-      const { compose } = await import('../shared/compose/fluent');
-      
-      // Compose with cherry-picking - only include some methods
-      const enhancedActions = compose(baseActions).with<
-        { doubleIncrement: () => void },
-        typeof mockModel
-      >(
-        (slice, { model }) => ({
-          // Only include increment from the base actions
-          increment: slice.increment,
-          // Add a new method
-          doubleIncrement: () => {
-            model().increment();
-            model().increment();
-          }
-        })
-      );
-      
-      expect(isActionInstance(enhancedActions)).toBe(true);
-      
-      // Create mock mutation function for the enhanced actions
-      const mockMutate = vi.fn().mockImplementation(() => mockModel);
-      
-      // Create a slice with the mock mutate function
-      const sliceCreator = enhancedActions();
-      const actionObj = sliceCreator({ mutate: mockMutate });
-      
-      // Should contain only the selected methods plus new ones
-      expect(actionObj).toHaveProperty('increment');
-      expect(actionObj).toHaveProperty('doubleIncrement');
-      expect(actionObj).not.toHaveProperty('decrement');
-      expect(actionObj).not.toHaveProperty('reset');
     });
   });
 }

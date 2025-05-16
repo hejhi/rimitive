@@ -39,36 +39,28 @@ import {
   ModelCompositionTools,
   SelectorsCompositionTools,
   ActionsCompositionTools,
-  ViewCompositionTools
+  ViewCompositionTools,
 } from '../types';
 
-// Model - uses slice-first pattern with tools object
-export function composeWith<
-  B,
-  E,
->(base: ModelInstance<B>, extension: (slice: B, tools: ModelCompositionTools<B, E>) => E): ModelInstance<B & E>;
+export function composeWith<B, E>(
+  base: ModelInstance<B>,
+  extension: (tools: ModelCompositionTools<B, E>) => E
+): ModelInstance<B & E>;
 
-// Selectors - uses slice-first pattern with tools object
-export function composeWith<
-  B,
-  E,
-  TModel,
->(base: SelectorsInstance<B>, extension: (slice: B, tools: SelectorsCompositionTools<TModel>) => E): SelectorsInstance<B & E>;
+export function composeWith<B, E, TModel>(
+  base: SelectorsInstance<B>,
+  extension: (tools: SelectorsCompositionTools<TModel>) => E
+): SelectorsInstance<B & E>;
 
-// Actions - uses slice-first pattern with tools object
-export function composeWith<
-  B,
-  E,
-  TModel,
->(base: ActionsInstance<B>, extension: (slice: B, tools: ActionsCompositionTools<TModel>) => E): ActionsInstance<B & E>;
+export function composeWith<B, E, TModel>(
+  base: ActionsInstance<B>,
+  extension: (tools: ActionsCompositionTools<TModel>) => E
+): ActionsInstance<B & E>;
 
-// View - uses slice-first pattern with tools object
-export function composeWith<
-  B,
-  E,
-  TSelectors,
-  TActions,
->(base: ViewInstance<B>, extension: (slice: B, tools: ViewCompositionTools<TSelectors, TActions>) => E): ViewInstance<B & E>;
+export function composeWith<B, E, TSelectors, TActions>(
+  base: ViewInstance<B>,
+  extension: (tools: ViewCompositionTools<TSelectors, TActions>) => E
+): ViewInstance<B & E>;
 
 // Implementation using function overloading pattern
 // B: Base type
@@ -82,13 +74,11 @@ export function composeWith(base: any, shape: any): any {
           throw new Error('Model factory requires get and set functions');
         }
         const baseSlice = base()(options);
-        // Create tools object with get and set for the slice-first pattern
         const tools = {
           get: options.get,
-          set: options.set 
+          set: options.set,
         };
-        // Call with slice-first pattern and tools object
-        const extensionSlice = shape(baseSlice, tools);
+        const extensionSlice = shape(tools);
         return { ...(baseSlice as object), ...(extensionSlice as object) };
       },
       MODEL_INSTANCE_BRAND
@@ -101,12 +91,10 @@ export function composeWith(base: any, shape: any): any {
           throw new Error('Selectors factory requires a get function');
         }
         const baseSlice = base()(options);
-        // Create tools object with model for the slice-first pattern
         const tools = {
-          model: options.get
+          model: options.get,
         };
-        // Call with slice-first pattern and tools object
-        const extensionSlice = shape(baseSlice, tools);
+        const extensionSlice = shape(tools);
         return { ...(baseSlice as object), ...(extensionSlice as object) };
       },
       SELECTORS_INSTANCE_BRAND
@@ -119,14 +107,11 @@ export function composeWith(base: any, shape: any): any {
           throw new Error('Actions factory requires mutate function');
         }
         const baseSlice = base()(options);
-        // Create tools object with model for the slice-first pattern
         const tools = {
-          model: options.mutate
+          model: options.mutate,
         };
-        // Call with slice-first pattern and tools object
-        // For cherry-picking, we return only what is in the extension
-        const extensionSlice = shape(baseSlice, tools);
-        return extensionSlice;
+        const extensionSlice = shape(tools);
+        return { ...(baseSlice as object), ...(extensionSlice as object) };
       },
       ACTIONS_INSTANCE_BRAND
     );
@@ -135,13 +120,11 @@ export function composeWith(base: any, shape: any): any {
     return brandWithSymbol(
       () => (options: any) => {
         const baseSlice = base()(options);
-        // Create tools object with selectors and actions for the slice-first pattern
         const tools = {
           selectors: options.getSelectors || (() => ({})),
-          actions: options.getActions || (() => ({}))
+          actions: options.getActions || (() => ({})),
         };
-        // Call with slice-first pattern and tools object
-        const extensionSlice = shape(baseSlice, tools);
+        const extensionSlice = shape(tools);
         return { ...(baseSlice as object), ...(extensionSlice as object) };
       },
       VIEW_INSTANCE_BRAND
@@ -180,15 +163,11 @@ if (import.meta.vitest) {
     });
     const brandedModel = brandWithSymbol(mockModelFn, MODEL_INSTANCE_BRAND);
 
-    // Compose them with slice and tools object (slice-first pattern)
-    const composed = composeWith<
-      BaseModel, 
-      { doubleCount: () => number }
-    >(
+    // Compose them with slice and tools object
+    const composed = composeWith<BaseModel, { doubleCount: () => number }>(
       brandedModel,
-      (slice, tools) => ({
-        ...slice,
-        doubleCount: () => tools.get().count * 2,
+      ({ get }) => ({
+        doubleCount: () => get().count * 2,
       })
     );
 

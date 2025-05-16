@@ -36,24 +36,20 @@ However, the following components are missing or incomplete:
 
 - [x] Create utility types for object parameters in shared/types.ts
 - [x] Define function-access patterns (model(), selectors(), etc.)
-- [x] Create tests for object parameters and slice-first composition
 - [x] Implement parameter validation for object parameters
 - [x] Add proper type inference for object parameters and composition
 
 ## Model Creation and Composition
 
 - [x] Update ModelFactory type to use object params pattern and named parameters
-- [x] Create tests for model composition with slice-first pattern
 - [x] Update model in-source tests to use revised parameter patterns
 - [x] Modify createModel to implement callback pattern with ({ set, get })
-- [x] Update with() to use slice-first pattern (slice, { tooling }) => (...)
 
 ## Selectors Implementation
 
 - [x] Create SELECTORS_* constants 
 - [x] Create SelectorsFactory type with { model } parameter and ({ model }) callback pattern
 - [x] Write tests for createSelectors with object parameters
-- [x] Create tests for selectors composition with slice-first pattern
 - [x] Implement createSelectors function with object parameters
 - [x] Add type identification functions (isSelectorsInstance, etc.)
 
@@ -75,10 +71,7 @@ However, the following components are missing or incomplete:
 
 ## Composition Pattern Enhancement
 
-- [x] Update compose/fluent.ts to use slice-first pattern with (slice, { tools }) => (...)
-- [x] Add tests for slice-first composition pattern
 - [x] Add tests for type safety during incompatible composition
-- [x] Update compose/core.ts with slice-first implementation
 - [x] Implement proper object parameter handling in composition
 
 ## Component Creation and Composition
@@ -139,8 +132,6 @@ However, the following components are missing or incomplete:
    - SelectorsFactory: Implemented { model } and ({ model }) pattern
    - ActionsFactory: Implemented { model } and ({ model }) pattern
    - ViewFactory: Implemented { selectors, actions } and ({ selectors, actions }) pattern
-7. Implemented slice-first composition in all `.with()` functions
-   - Updated composition patterns to use (slice, { tools }) => (...)
 8. Standardized on function-access patterns
    - Implemented model(), selectors(), actions() pattern for parameter access
 9. Added tests for incompatible composition type safety
@@ -168,11 +159,9 @@ However, the following components are missing or incomplete:
 ### Observations
 - Implementing a coherent terminology throughout the codebase has been essential
 - Tests have been crucial in validating the changes
-- The slice-first composition pattern ((slice, { tools }) => ...) makes composition intent clearer
 - Using object parameters for factory dependencies makes the API more flexible and extensible
 - Using function-access patterns (model(), selectors(), etc.) creates consistency
 - Using unified input and callback parameter styles improves learnability of the API
-- The type inference system is working well with the slice-first pattern, providing good developer experience
 - The distinction between composition time and post-store creation needs careful implementation
 
 ## Implementation Notes
@@ -197,7 +186,6 @@ To optimize development velocity, these tracks can proceed in parallel after cor
 
 For implementing our new parameter and composition patterns:
 1. Update all factory function types to use object parameters for dependencies
-2. Implement slice-first pattern for all composition (slice, { tools }) => (...)
 3. Standardize function-access patterns (model(), selectors(), actions())
 4. Create consistent callback parameter styles across all factories
 5. Update all tests to verify the new parameter patterns

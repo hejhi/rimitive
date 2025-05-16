@@ -27,31 +27,27 @@ import { composeWith } from './core';
  *
  * This is the recommended public API for Lattice composition.
  */
-// Model - uses slice-first pattern with tools object
 export function compose<B>(base: ModelInstance<B>): {
   with<Ext>(
-    cb: (slice: B, tools: ModelCompositionTools<B, Ext>) => Ext
+    cb: (tools: ModelCompositionTools<B, Ext>) => Ext
   ): ModelInstance<B & Ext>;
 };
 
-// Selectors - uses slice-first pattern with tools object
 export function compose<B>(base: SelectorsInstance<B>): {
   with<Ext, TModel>(
-    cb: (slice: B, tools: SelectorsCompositionTools<TModel>) => Ext
+    cb: (tools: SelectorsCompositionTools<TModel>) => Ext
   ): SelectorsInstance<B & Ext>;
 };
 
-// Actions - uses slice-first pattern with tools object
 export function compose<B>(base: ActionsInstance<B>): {
   with<Ext, TModel>(
-    cb: (slice: B, tools: ActionsCompositionTools<TModel>) => Ext
+    cb: (tools: ActionsCompositionTools<TModel>) => Ext
   ): ActionsInstance<B & Ext>;
 };
 
-// View - uses slice-first pattern with tools object
 export function compose<B>(base: ViewInstance<B>): {
   with<Ext, TSelectors, TActions>(
-    cb: (slice: B, tools: ViewCompositionTools<TSelectors, TActions>) => Ext
+    cb: (tools: ViewCompositionTools<TSelectors, TActions>) => Ext
   ): ViewInstance<B & Ext>;
 };
 // Implementation
@@ -75,27 +71,7 @@ if (import.meta.vitest) {
       }));
 
       const enhanced = compose(baseModel).with<{ doubled: () => number }>(
-        (slice, tools) => ({
-          ...slice,
-          doubled: () => tools.get().count * 2,
-        })
-      );
-
-      expect(typeof enhanced).toBe('function');
-      expect(enhanced[MODEL_INSTANCE_BRAND]).toBe(true);
-    });
-
-    it('should support cherry-picking properties from slice in models', () => {
-      const baseModel = createModel(() => ({
-        count: 1,
-        privateData: 'sensitive',
-      }));
-
-      // Should allow cherry-picking specific properties
-      const enhanced = compose(baseModel).with<{ doubled: () => number }>(
-        (slice, tools) => ({
-          // Only include count, omit privateData
-          count: slice.count,
+        (tools) => ({
           doubled: () => tools.get().count * 2,
         })
       );
@@ -110,12 +86,13 @@ if (import.meta.vitest) {
         SELECTORS_INSTANCE_BRAND
       );
 
+      const mockModelGetter = { count: 1 };
+
       const enhanced = compose(baseSelectors).with<
         { bar: number },
-        { foo: string }
-      >((slice) => ({
-        ...slice,
-        bar: slice.foo.length,
+        typeof mockModelGetter
+      >((tool) => ({
+        bar: tool.model().count,
       }));
 
       expect(typeof enhanced).toBe('function');
@@ -129,13 +106,12 @@ if (import.meta.vitest) {
       );
 
       // Mock model with a dec method
-      const mockModel = { dec: () => {} };
+      const mockModelGetter = { dec: () => {} };
 
       const enhanced = compose(baseActions).with<
         { dec: () => void },
-        typeof mockModel
-      >((slice, tools) => ({
-        ...slice,
+        typeof mockModelGetter
+      >((tools) => ({
         dec: tools.model().dec,
       }));
 
@@ -153,8 +129,7 @@ if (import.meta.vitest) {
         { bar: number },
         unknown,
         unknown
-      >((slice) => ({
-        ...slice,
+      >(() => ({
         bar: 2,
       }));
 

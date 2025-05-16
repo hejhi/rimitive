@@ -252,11 +252,6 @@ if (import.meta.vitest) {
       }).toThrow();
     });
 
-    // Note: Full view composition tests will be added when the component
-    // infrastructure is implemented. For now we're testing function-access patterns
-    // and object parameters, which are the focus of this PR.
-    it.todo('should support slice-first pattern in composition');
-
     // Note: Full view composition tests with cherry-picking will be added when the component
     // infrastructure is implemented. For now we're testing function-access patterns
     // and object parameters, which are the focus of this PR.

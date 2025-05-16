@@ -34,52 +34,77 @@ describe('Factory Parameter Types', () => {
     }>();
 
     // SelectorsFactoryCallback should be a function returning selectors
-    expectTypeOf<SelectorsFactoryCallback<{ value: number }, { count: number }>>().toMatchTypeOf<
+    expectTypeOf<
+      SelectorsFactoryCallback<{ value: number }, { count: number }>
+    >().toMatchTypeOf<
       (params: SelectorsFactoryParams<{ count: number }>) => { value: number }
     >();
   });
 
   it('should define correct parameter types for ActionsFactory', () => {
     // ActionsFactoryParams should have model accessor
-    expectTypeOf<ActionsFactoryParams<{ count: number; increment: () => void }>>().toMatchTypeOf<{
+    expectTypeOf<
+      ActionsFactoryParams<{ count: number; increment: () => void }>
+    >().toMatchTypeOf<{
       model: () => { count: number; increment: () => void };
     }>();
 
     // ActionsFactoryCallback should be a function returning actions
-    expectTypeOf<ActionsFactoryCallback<{ increment: () => void }, { count: number; increment: () => void }>>().toMatchTypeOf<
-      (params: ActionsFactoryParams<{ count: number; increment: () => void }>) => { increment: () => void }
+    expectTypeOf<
+      ActionsFactoryCallback<
+        { increment: () => void },
+        { count: number; increment: () => void }
+      >
+    >().toMatchTypeOf<
+      (
+        params: ActionsFactoryParams<{ count: number; increment: () => void }>
+      ) => { increment: () => void }
     >();
   });
 
   it('should define correct parameter types for ViewFactory', () => {
     // ViewFactoryParams should have selectors and actions accessors
-    expectTypeOf<ViewFactoryParams<{ count: number }, { increment: () => void }>>().toMatchTypeOf<{
+    expectTypeOf<
+      ViewFactoryParams<{ count: number }, { increment: () => void }>
+    >().toMatchTypeOf<{
       selectors: () => { count: number };
       actions: () => { increment: () => void };
     }>();
 
     // ViewFactoryCallback should be a function returning a view
-    expectTypeOf<ViewFactoryCallback<{ "data-count": number }, { count: number }, { increment: () => void }>>().toMatchTypeOf<
-      (params: ViewFactoryParams<{ count: number }, { increment: () => void }>) => { "data-count": number }
+    expectTypeOf<
+      ViewFactoryCallback<
+        { 'data-count': number },
+        { count: number },
+        { increment: () => void }
+      >
+    >().toMatchTypeOf<
+      (
+        params: ViewFactoryParams<{ count: number }, { increment: () => void }>
+      ) => { 'data-count': number }
     >();
   });
 
-  it('should define correct types for slice-first composition', () => {
+  it('should define correct types for composition', () => {
     // SliceCompositionTools should have get, set and other tools based on component type
-    expectTypeOf<SliceCompositionTools<{ count: number }, 'model'>>().toMatchTypeOf<{
+    expectTypeOf<SliceCompositionTools<{ count: number }, 'model'>>().toExtend<{
       get: () => { count: number };
       set: (state: any) => void;
     }>();
 
-    expectTypeOf<SliceCompositionTools<{ count: number }, 'selectors'>>().toMatchTypeOf<{
+    expectTypeOf<
+      SliceCompositionTools<{ count: number }, 'selectors'>
+    >().toExtend<{
       model: () => any;
     }>();
 
-    expectTypeOf<SliceCompositionTools<{ count: number }, 'actions'>>().toMatchTypeOf<{
+    expectTypeOf<
+      SliceCompositionTools<{ count: number }, 'actions'>
+    >().toExtend<{
       model: () => any;
     }>();
 
-    expectTypeOf<SliceCompositionTools<{ count: number }, 'view'>>().toMatchTypeOf<{
+    expectTypeOf<SliceCompositionTools<{ count: number }, 'view'>>().toExtend<{
       selectors: () => any;
       actions: () => any;
     }>();
