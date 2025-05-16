@@ -23,13 +23,26 @@ import { brandWithSymbol } from '../shared/identify';
  *   doubleCount: () => get().count * 2
  * }));
  *
- * // With composition
- * const enhancedModel = compose(counterModel).with(({ get }) => ({
- *   incrementTwice: () => {
- *     get().increment();
- *     get().increment();
- *   }
- * }));
+ * // With composition and slice parameter
+ * const enhancedModel = createModel(
+ *   compose(counterModel).with((tools) => ({
+ *     ...tools.slice, // Include all properties from base model
+ *     incrementTwice: () => {
+ *       tools.get().increment();
+ *       tools.get().increment();
+ *     }
+ *   }))
+ * );
+ *
+ * // With selective property inclusion
+ * const filteredModel = createModel(
+ *   compose(counterModel).with((tools) => ({
+ *     count: tools.slice.count, // Only include count property
+ *     doubleCount: tools.slice.doubleCount,
+ *     // increment, decrement, and reset are omitted
+ *     tripleCount: () => tools.get().count * 3, // Add a new property
+ *   }))
+ * );
  * ```
  *
  * @param factory A function that produces a state object with optional methods and derived properties
@@ -44,16 +57,14 @@ export function createModel<T>(factory: ModelFactory<T>) {
         throw new Error('Model factory requires get and set functions');
       }
 
-      // Call the factory with the tools
-      return factory(
-        brandWithSymbol(
-          {
-            get: options.get,
-            set: options.set,
-          },
-          MODEL_FACTORY_BRAND
-        )
-      );
+      // Create a branded tools object for the factory
+      const tools = brandWithSymbol({
+        set: options.set,
+        get: options.get
+      }, MODEL_FACTORY_BRAND);
+
+      // Call the factory with object parameters to match the spec
+      return factory(tools);
     };
   };
 
@@ -70,8 +81,8 @@ if (import.meta.vitest) {
     );
 
     it('should verify model factory requirements and branding', () => {
-      // Create a spy factory
-      const factorySpy = vi.fn((_: StoreFactoryTools<{ count: number }>) => ({
+      // Create a spy factory with object parameters
+      const factorySpy = vi.fn((_tools) => ({
         count: 1,
       }));
 
@@ -90,14 +101,15 @@ if (import.meta.vitest) {
       const sliceCreator = model();
       const slice = sliceCreator({ get: mockGet, set: mockSet });
 
-      // Factory should be called with the tools
+      // Factory should be called with object parameters
       expect(factorySpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          get: mockGet,
           set: mockSet,
+          get: mockGet,
         })
       );
 
+      // The tools should be branded with the proper symbol
       const toolsObj = factorySpy.mock.calls[0]?.[0];
       expect(isModelFactory(toolsObj)).toBe(true);
 

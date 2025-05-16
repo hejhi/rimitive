@@ -1,6 +1,6 @@
 import {
   MODEL_FACTORY_BRAND,
-  STATE_FACTORY_BRAND,
+  SELECTORS_FACTORY_BRAND,
   ACTIONS_FACTORY_BRAND,
   VIEW_FACTORY_BRAND,
   LATTICE_BRAND,
@@ -24,17 +24,17 @@ export function isModelFactory(value: unknown): boolean {
 }
 
 /**
- * Type guard to check if an object is a StateFactory
+ * Type guard to check if an object is a SelectorsFactory
  *
  * @param value The value to check
- * @returns Whether the value is a StateFactory
+ * @returns Whether the value is a SelectorsFactory
  */
-export function isStateFactory(value: unknown): boolean {
+export function isSelectorsFactory(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
-    Object.prototype.hasOwnProperty.call(value, STATE_FACTORY_BRAND) &&
-    Boolean(Reflect.get(value, STATE_FACTORY_BRAND))
+    Object.prototype.hasOwnProperty.call(value, SELECTORS_FACTORY_BRAND) &&
+    Boolean(Reflect.get(value, SELECTORS_FACTORY_BRAND))
   );
 }
 
@@ -127,17 +127,17 @@ if (import.meta.vitest) {
       expect(isModelFactory({ [Symbol('wrong')]: true })).toBe(false);
     });
 
-    it('should correctly identify a StateFactory', () => {
-      const mockStateFactory = brandWithSymbol(
+    it('should correctly identify a SelectorsFactory', () => {
+      const mockSelectorsFactory = brandWithSymbol(
         {
           get: () => ({}),
         },
-        STATE_FACTORY_BRAND
+        SELECTORS_FACTORY_BRAND
       );
 
-      expect(isStateFactory(mockStateFactory)).toBe(true);
-      expect(isStateFactory({})).toBe(false);
-      expect(isStateFactory({ [Symbol('wrong')]: true })).toBe(false);
+      expect(isSelectorsFactory(mockSelectorsFactory)).toBe(true);
+      expect(isSelectorsFactory({})).toBe(false);
+      expect(isSelectorsFactory({ [Symbol('wrong')]: true })).toBe(false);
     });
 
     it('should correctly identify an ActionsFactory', () => {

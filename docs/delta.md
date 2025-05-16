@@ -1,34 +1,67 @@
 # Delta Analysis - Lattice Framework Implementation
 
 ## Initial Observations
-Starting my analysis of the spec.md document versus the current codebase implementation. I'll document differences and required changes as I discover them.
+
+This analysis identifies the differences between the current codebase implementation and the updated specification in spec.md. The changes required are significant but focus on structural improvements and API clarity.
+
+## Current Implementation Status
+
+The current implementation includes:
+- Core factory functions (`createModel`, `createState`, `createActions`, `createView`)
+- Type branding system for runtime identification
+- Basic composition with fluent API
+- In-source testing
+
+Key missing components:
+- No implementation of `createLattice`/`createComponent`
+- No top-level index.ts for exports
+- No Zustand store integration
+- No slices-based architecture
 
 ## Terminology Changes
 
-The most significant change evident in the spec.md is the terminology shift from "State" to "Selectors". The current implementation uses:
-- `createState` in the codebase
-- STATE_FACTORY_BRAND and STATE_INSTANCE_BRAND for type branding
-- Various type definitions referencing "State"
+The most significant terminology shift is from "State" to "Selectors":
 
-However, the spec now refers to:
-- `createSelectors` as the function name
-- "Selectors" consistently throughout the documentation
+**Current**:
+- `createState` function
+- STATE_FACTORY_BRAND and STATE_INSTANCE_BRAND symbols
+- Type definitions referencing "State"
 
-This represents a fundamental terminology change that will require updates throughout the codebase. This shift appears to be for greater semantic clarity - "selectors" better describes the read-only access to model state.
+**Spec**:
+- `createSelectors` function
+- Consistent use of "Selectors" throughout documentation
+
+This shift provides greater semantic clarity as "selectors" better describes the read-only access to model state.
 
 ## API Parameter Changes
 
 ### Model Composition
-The current implementation of `createModel` appears to use a factory pattern with `(set, get)` parameters:
+
+**Current**:
 ```typescript
+// Create base model
 const counterModel = createModel((set, get) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
 }));
+
+// Composition
+compose(baseModel).with<Ext>(
+  ({ get, set }) => ({
+    doubled: () => get().count * 2,
+  })
+);
 ```
 
-The new spec shows a modified approach with:
+**Spec**:
 ```typescript
+// Create base model
+const counterModel = createModel((set, get) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+}));
+
+// Composition
 const enhancedModel = createModel(
   compose(counterModel).with((set, get, slice) => ({
     ...slice,
@@ -37,20 +70,24 @@ const enhancedModel = createModel(
       get().increment();
     },
   }))
-)
+);
 ```
 
-The key difference is the addition of a `slice` parameter that provides access to the base component being extended.
+Key differences:
+1. Addition of a `slice` parameter that provides access to the base component
+2. Explicit spread (`...slice`) to include base properties
+3. Creates a new factory with the composed result
 
 ### Actions Composition
-The current implementation:
+
+**Current**:
 ```typescript
 const actions = createActions(({ mutate }) => ({
-  // References model methods
+  increment: mutate(counterModel).increment,
 }));
 ```
 
-The new spec shows:
+**Spec**:
 ```typescript
 const actions = createActions(model, (getModel) => ({
   increment: getModel().increment,
@@ -61,10 +98,11 @@ const actions = createActions(model, (getModel) => ({
 Key differences:
 1. The model is now passed as a first parameter
 2. A `getModel` function is provided instead of `mutate`
-3. The approach directly accesses model methods through `getModel()` rather than using `mutate(model).method`
+3. Direct access to model methods through `getModel()` rather than `mutate(model).method`
 
 ### Selectors (formerly State) Composition
-Current implementation:
+
+**Current**:
 ```typescript
 const counterState = createState(({ get }) => ({
   count: 0,
@@ -72,11 +110,14 @@ const counterState = createState(({ get }) => ({
 }));
 ```
 
-New spec:
+**Spec**:
 ```typescript
 const selectors = createSelectors(model, (getModel) => ({
+  // Direct property access
   count: getModel().count,
+  // Computed value
   isPositive: getModel().count > 0,
+  // Function computing a value based on runtime input
   getFilteredItems: (filter) => getModel().items.filter(item => 
     item.name.includes(filter)
   ),
@@ -87,17 +128,18 @@ Key differences:
 1. `createState` is renamed to `createSelectors`
 2. The model is passed as a first parameter
 3. A `getModel` function is provided instead of `get`
-4. Selectors directly access model properties, creating a clear separation
+4. Selectors directly access model properties
 
 ### View Creation and Composition
-Current implementation:
+
+**Current**:
 ```typescript
-const view = createView(factorySpy);
-// ...
-const slice = sliceCreator({ get: mockGet });
+const view = createView(({ get }) => ({
+  "data-count": get().count
+}));
 ```
 
-New spec:
+**Spec**:
 ```typescript
 const counterView = createView(selectors, actions, (getSelectors, getActions) => ({
   "data-count": getSelectors().count,
@@ -111,21 +153,15 @@ Key differences:
 2. Factory receives both `getSelectors` and `getActions` functions
 3. View only accesses selectors and actions, not the model directly
 4. Either parameter can be null if not needed
-5. Direct, explicit access to selectors and actions for better encapsulation
 
-### Component Creation and Composition
-Current implementation uses `createLattice`:
-```typescript
-// Based on type definition
-export declare function createLattice<T>(name: string, config?: LatticeConfig<T>): Lattice<T>;
-```
+### Component Creation
 
-New spec uses `createComponent`:
+**Current**:
+No direct implementation found for `createLattice` in the current codebase.
+
+**Spec**:
 ```typescript
-// Return the lattice component
 return createComponent({
-  // if the user had provided a selectors/view/action that referenced a different model,
-  // there would be a type error
   model: enhancedModel,
   actions, 
   selectors,
@@ -137,17 +173,16 @@ return createComponent({
 ```
 
 Key differences:
-1. `createLattice` is renamed to `createComponent` for conceptual clarity
-2. Configuration is passed as a single object parameter
-3. Type checking ensures all parts (selectors, actions, views) reference the same model
+1. New `createComponent` function (replaces conceptual `createLattice`)
+2. Configuration passed as a single object parameter
+3. Type checking ensures all parts reference the same model
 4. View is explicitly namespaced into categories (counter, button, etc.)
-5. Component composition preserves namespaces through the object structure
 
 ## The `slice` Parameter and Cherry-Picking
 
-A significant change in the fluent composition API is the addition of the `slice` parameter to the composition callback:
+A central change in the fluent composition API is the addition of the `slice` parameter:
 
-Current implementation:
+**Current**:
 ```typescript
 // For models
 compose(baseModel).with<Ext>(
@@ -155,12 +190,9 @@ compose(baseModel).with<Ext>(
     doubled: () => get().count * 2,
   })
 );
-
-// For views, actions, state
-// Similar patterns without a slice parameter
 ```
 
-New spec:
+**Spec**:
 ```typescript
 compose(counterModel).with((set, get, slice) => ({
   ...slice, // Spread all properties from the base
@@ -178,21 +210,15 @@ compose(selectorsA).with((getModel, slice) => ({
 ```
 
 Key differences:
-1. Addition of the `slice` parameter that provides direct access to the base component's properties
-2. Users must explicitly spread `...slice` to include all properties or cherry-pick specific ones
-3. This enables more fine-grained control over which properties to include from the base component
-4. Helps address type incompatibilities by allowing selective inclusion of compatible properties
-5. More intuitive pattern for property selection without requiring complex utilities
+1. Addition of the `slice` parameter with access to the base component's properties
+2. Users must explicitly spread `...slice` to include all properties 
+3. Cherry-picking specific properties is possible
+4. More intuitive pattern for property selection
 
-This is a crucial change for enhancing the developer experience with clear, explicit property inclusion and type safety during composition.
+## Component Enhancement Pattern
 
-## Component Enhancement vs. Creation Pattern
+The spec introduces a clear pattern for enhancing existing components:
 
-Another key distinction is how enhanced components are created:
-
-Current implementation appears to use a similar pattern for both creation and enhancement.
-
-New spec separates these concerns:
 ```typescript
 // Create a base component
 const createCounterLattice = () => {
@@ -205,27 +231,28 @@ const createEnhancedComponent = (baseComponent) => {
   // Enhance by composing with the base component
   const model = createModel(compose(baseComponent).with(/* ... */));
   
-  // Component composition with withLattice
-  return createComponent(
-    withLattice(baseComponent)({
-      model,
-      actions,
-      selectors,
-      // ...
-    }),
-  );
+  // Use withComponent for component composition
+  return createComponent({
+    model,
+    actions,
+    selectors,
+    view: {
+      ...baseComponent.getViews(),  // Keep original views
+      counter: view,                // Override with enhanced view
+      resetButton,                  // Add new view
+    },
+  });
 };
 ```
 
-Key differences:
-1. Introduction of `withLattice` helper to compose whole components
-2. Pattern clearly separates creation (from scratch) vs. enhancement (from base)
-3. Ability to reference the base component wholesale, not just individual parts
-4. Maintains all API contracts and type safety during whole-component composition
+Key aspects:
+1. Clear separation between creation and enhancement
+2. Ability to reference the base component wholesale
+3. Adding, keeping, or overriding views as needed
 
 ## Type Safety and Contract Enforcement
 
-The spec places strong emphasis on type safety and contract enforcement during composition:
+The spec places strong emphasis on type safety during composition:
 
 ```typescript
 // This would cause a TypeScript error - title property doesn't exist on modelB
@@ -247,46 +274,15 @@ const selectorsB = createSelectors(
 );
 ```
 
-This focus on type safety involves:
-
-1. Early detection of property access errors during composition
-2. Clear type errors when properties don't exist on the model
-3. Explicit property selection to handle type incompatibilities
+This focus includes:
+1. Early detection of property access errors
+2. Clear type errors when properties don't exist
+3. Explicit property selection for handling type incompatibilities
 4. Runtime validation matching TypeScript's static checks
 
-The implementation needs to ensure this level of type checking throughout the composition system.
+## Zustand Store Implementation
 
-## Implementation Strategy for Composition
-
-The spec provides details on the implementation approach:
-
-```typescript
-// Implementation of compose() with strong typing
-function compose<BaseType>(base: BaseType) {
-  return {
-    // User only needs to specify return type, model type is inferred
-    with<ReturnType, ModelType = InferModelType<BaseType>>(
-      cb: (getModel: () => ModelType, slice: BaseType) => ReturnType
-    ): ReturnType {
-      // Implementation details...
-    }
-  };
-}
-
-// Type inference for models used in selectors
-type InferModelType<T> = T extends { __MODEL_TYPE__: infer M } ? M : never;
-```
-
-This represents a significant change from the current implementation, which uses a different parameter approach. The new implementation should:
-
-1. Infer model types automatically from selectors
-2. Provide correct typing for the `slice` parameter
-3. Allow extension return types to be specified or inferred
-4. Properly type all composition scenarios
-
-## Zustand Integration and Slices Pattern
-
-The spec outlines a specific implementation approach using a slices pattern with Zustand:
+The spec outlines a slices-based pattern for Zustand integration:
 
 ```typescript
 // Internal representation - all parts become slices of a single store
@@ -298,116 +294,61 @@ export const createComponentStore = (config) => create((...a) => ({
 }))
 ```
 
-Key implementation details include:
-
-1. **Property Prefixing**: Each slice's properties are prefixed to prevent collisions
-2. **Selector Generation**: Adapting Zustand's auto-generated selectors pattern
-3. **Subscription Support**: Enabling targeted subscriptions to specific slices
-
-This approach represents a significant refinement of the architecture, with each part of the component having a dedicated slice within a single store, while maintaining proper encapsulation and access control between different parts.
+Key implementation details:
+1. Property prefixing to prevent collisions
+2. Adapter for Zustand's auto-generated selectors pattern
+3. Subscription support for targeted updates
+4. Separation of concerns while maintaining reactivity
 
 ## Breaking Changes Summary
 
-Based on the analysis so far, here are the major breaking changes that will need to be implemented:
+Based on analysis, here are the major changes needed:
 
 1. **Terminology Changes**:
-   - `state` -> `selectors` throughout the codebase
-   - `createState` -> `createSelectors`
-   - STATE_* symbols -> SELECTORS_* symbols
+   - `state` → `selectors` throughout the codebase
+   - `createState` → `createSelectors`
+   - STATE_* symbols → SELECTORS_* symbols
    - All related type definitions
 
 2. **API Parameter Changes**:
-   - Model creation unchanged but composition adds `slice` parameter
+   - Model composition adds `slice` parameter
    - Actions creation adds model as first parameter, changes `mutate` to `getModel()`
-   - State/Selectors creation adds model as first parameter, changes `get` to `getModel()`
+   - Selectors creation adds model as first parameter, changes `get` to `getModel()`
    - View creation adds selectors & actions as parameters, provides `getSelectors`, `getActions`
 
 3. **Component Creation**:
-   - `createLattice` -> `createComponent`
-   - New `withLattice` helper for component composition
-   - Configuration object structure changes
+   - Add new `createComponent` function
+   - Create `withComponent` helper for component composition
+   - Define component configuration structure
 
 4. **Composition Pattern**:
    - Addition of `slice` parameter to all composition callbacks
-   - Property spreading must be explicit with `...slice`
-   - Cherry-picking via direct property access from slice
+   - Explicit property spreading with `...slice`
+   - Cherry-picking via direct property access
 
-## Implementation Plan
+5. **Store Implementation**:
+   - Create entire slice-based store implementation
+   - Implement property prefixing
+   - Add subscription support
+   - Create React hooks integration
 
-Given the extensive changes required, here's a proposed implementation plan:
+## Technical Challenges
 
-1. **Core Type System Overhaul**:
-   - Rename STATE_* constants to SELECTORS_*
-   - Update type definitions in `shared/types.ts`
-   - Create new type helpers for model inference
+Some implementation aspects that may be particularly challenging:
 
-2. **Factory Function Updates**:
-   - Update `createModel` to support slice parameter in composition
-   - Replace `createState` with `createSelectors` function
-   - Update `createActions` to accept model parameter and use getModel
-   - Update `createView` to accept selectors/actions parameters
-
-3. **Composition Pattern Enhancements**:
-   - Update `compose/fluent.ts` to add slice parameter
-   - Modify `compose/core.ts` implementation to properly pass slices
-   - Add type-checking logic for incompatible components
-
-4. **Component Creation**:
-   - Create new `createComponent` function
-   - Create `withLattice` helper for component composition
-   - Port existing `createLattice` functionality to new approach
-
-5. **Zustand Integration**:
-   - Update slice-based store creation
-   - Implement property prefixing to prevent collisions
-   - Add subscription support for targeted observability
-
-6. **Tests and Validation**:
-   - Update in-source tests for all components
-   - Add comprehensive tests for composition edge cases
-   - Validate type safety across the system
-
-## Migration Strategy
-
-Given the significant API changes, a migration strategy will be essential:
-
-1. **Version Management**:
-   - Consider releasing a major version bump (1.0.0 → 2.0.0)
-   - Ensure breaking changes are clearly documented
-
-2. **Parallel Support**:
-   - Potentially support both APIs in a transition period
-   - Add deprecation warnings for old APIs
-
-3. **Migration Guide**:
-   - Create step-by-step migration examples for users
-   - Provide codemods if possible to automate some migrations
-
-4. **Update Documentation**:
-   - Ensure README.md and other docs reflect new patterns
-   - Add code examples with the updated API
-
-## Potential Challenges
-
-Some aspects of the implementation may be particularly challenging:
-
-1. **Type Inference Edge Cases**: Getting proper TypeScript inference for nested compositions
-2. **Backward Compatibility**: Some patterns may be difficult to maintain during transition
-3. **Runtime Type Checking**: Ensuring runtime checks match TypeScript's static analysis
-4. **Performance Optimization**: Maintaining Zustand's performance advantages with the new structure
+1. **Type Inference**: Getting accurate type inference for nested compositions with slice parameters
+2. **Runtime Type Checking**: Ensuring runtime checks match TypeScript's static analysis
+3. **Selective Property Access**: Implementing cherry-picking with proper type checking
+4. **Store Integration**: Creating efficient reactive bindings with proper property isolation
 
 ## Final Assessment
 
-The changes outlined in the updated spec represent a significant but worthwhile evolution of the Lattice framework. The key improvements include:
+The changes outlined in the updated spec represent a significant evolution of the Lattice framework, with improvements to:
 
-1. **More Intuitive Terminology**: Changing from "State" to "Selectors" better reflects the actual purpose of these components as read-only derivations from the model.
+1. **API Clarity**: More intuitive terminology and parameter structure
+2. **Composition Pattern**: The addition of the `slice` parameter and explicit property handling
+3. **Type Safety**: Strengthened contract enforcement and type checking
+4. **Mental Model**: Clearer separation between model, selectors, actions, and views
+5. **Store Integration**: More efficient reactive updates with better encapsulation
 
-2. **Better Composition Pattern**: The addition of the `slice` parameter and explicit property handling makes composition more intuitive and less error-prone.
-
-3. **Clearer Separation of Concerns**: The updated architecture creates a more explicit boundary between the internal model and the public API surface.
-
-4. **Enhanced Type Safety**: The focus on contract enforcement and type checking provides better developer experience and catches errors earlier.
-
-5. **Improved Mental Model**: The revised component structure with namespaced views and selectors creates a more coherent mental model for component composition.
-
-While these changes will require significant refactoring, they address fundamental design issues and will result in a more robust, easier-to-use API that better fulfills the promise of "composable, contract-enforcing components."
+The most impactful changes are the introduction of the slice parameter, the shift from State to Selectors, and the explicit component creation and composition pattern. While implementation will require significant effort, these changes address fundamental design issues and will result in a more robust, easier-to-use API.

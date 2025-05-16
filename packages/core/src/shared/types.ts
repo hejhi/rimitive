@@ -5,16 +5,18 @@ import type { StoreApi } from 'zustand/vanilla';
  */
 // Factory brand symbols
 export const MODEL_FACTORY_BRAND = Symbol('model-factory');
-export const STATE_FACTORY_BRAND = Symbol('state-factory');
+export const SELECTORS_FACTORY_BRAND = Symbol('selectors-factory');
 export const ACTIONS_FACTORY_BRAND = Symbol('actions-factory');
 export const VIEW_FACTORY_BRAND = Symbol('view-factory');
 export const MUTATION_BRAND = Symbol('mutation-brand');
+export const COMPONENT_FACTORY_BRAND = Symbol('component-factory');
 
 // Instance brand symbols
 export const MODEL_INSTANCE_BRAND = Symbol('model-instance');
-export const STATE_INSTANCE_BRAND = Symbol('state-instance');
+export const SELECTORS_INSTANCE_BRAND = Symbol('selectors-instance');
 export const ACTIONS_INSTANCE_BRAND = Symbol('actions-instance');
 export const VIEW_INSTANCE_BRAND = Symbol('view-instance');
+export const COMPONENT_INSTANCE_BRAND = Symbol('component-instance');
 
 // Lattice brand symbol
 export const LATTICE_BRAND = Symbol('lattice');
@@ -69,6 +71,12 @@ export type ExtractModelType<M> =
       : M;
 
 /**
+ * Helper type to infer the underlying model type from a component
+ * This is used in the composition pattern to automatically infer the model type
+ */
+export type InferModelType<T> = T extends { __MODEL_TYPE__: infer M } ? M : never;
+
+/**
  * Type for mutated model object with methods converted to mutations
  */
 export type MutatedModel<M> = {
@@ -93,17 +101,119 @@ export type BaseFactoryTools<T> =
   | ActionsFactoryTools;
 
 /**
- * Factory shape function types
+ * New object-parameter based factory parameter types
  */
-export type Model<T> = (tools: StoreFactoryTools<T>) => T;
-export type State<T> = (tools: SelectFactoryTools<T>) => T;
-export type View<T> = (tools: SelectFactoryTools<T>) => T;
-export type Actions<T> = (tools: ActionsFactoryTools) => {
+
+/**
+ * Model factory parameters and callback types
+ */
+export interface ModelFactoryParams<T> {
+  set: SetState<T>;
+  get: GetState<T>;
+}
+
+export type ModelFactoryCallback<T> = (params: ModelFactoryParams<T>) => T;
+
+/**
+ * Selectors factory parameters and callback types
+ */
+export interface SelectorsFactoryParams<TModel> {
+  model: () => TModel;
+}
+
+export type SelectorsFactoryCallback<T, TModel> = (params: SelectorsFactoryParams<TModel>) => T;
+
+/**
+ * Actions factory parameters and callback types
+ */
+export interface ActionsFactoryParams<TModel> {
+  model: () => TModel;
+}
+
+export type ActionsFactoryCallback<T, TModel> = (params: ActionsFactoryParams<TModel>) => T;
+
+/**
+ * View factory parameters and callback types
+ */
+export interface ViewFactoryParams<TSelectors, TActions> {
+  selectors: () => TSelectors;
+  actions: () => TActions;
+}
+
+export type ViewFactoryCallback<T, TSelectors, TActions> = (
+  params: ViewFactoryParams<TSelectors, TActions>
+) => T;
+
+/**
+ * Composition types with slice-first pattern
+ */
+export type ComponentType = 'model' | 'selectors' | 'actions' | 'view';
+
+// Tools interfaces for slice-first pattern in composition
+export interface ModelCompositionTools<B, E> {
+  set: SetState<B & E>;
+  get: GetState<B & E>;
+}
+
+export interface SelectorsCompositionTools<TModel> {
+  model: () => TModel;
+}
+
+export interface ActionsCompositionTools<TModel> {
+  model: () => TModel;
+}
+
+export interface ViewCompositionTools<TSelectors, TActions> {
+  selectors: () => TSelectors;
+  actions: () => TActions;
+}
+
+export type SliceCompositionTools<T, C extends ComponentType> =
+  C extends 'model' ? ModelFactoryParams<T> :
+  C extends 'selectors' ? SelectorsFactoryParams<any> :
+  C extends 'actions' ? ActionsFactoryParams<any> :
+  C extends 'view' ? ViewFactoryParams<any, any> :
+  never;
+
+export type SliceCompositionCallback<Slice, Ext, C extends ComponentType> = 
+  (slice: Slice, tools: SliceCompositionTools<Slice & Ext, C>) => Ext;
+
+/**
+ * Legacy factory shape function types
+ * 
+ * Note: These types use positional parameters and are being phased out in favor
+ * of the object parameter pattern above.
+ */
+export type Model<T> = (
+  set: SetState<T>,
+  get: GetState<T>
+) => T;
+
+export type Selectors<T, TModel> = (
+  getModel: GetState<TModel>
+) => T;
+
+export type Actions<T, TModel> = (
+  getModel: GetState<TModel>
+) => {
   [K in keyof T]: T[K] extends Mutation<any> ? T[K] : never;
 };
 
-// Union of all factory shape types
-export type BaseFactoryShape<T> = Model<T> | State<T> | Actions<T> | View<T>;
+export type View<T, TSelectors, TActions> = (
+  getSelectors: GetState<TSelectors>,
+  getActions: GetState<TActions>
+) => T;
+
+/**
+ * Updated factory function types with object parameters
+ */
+export type ModelFactory<T> = ModelFactoryCallback<T>;
+
+export type SelectorsFactory<T, TModel> = SelectorsFactoryCallback<T, TModel>;
+
+export type ActionsFactory<T, TModel> = ActionsFactoryCallback<T, TModel>;
+
+export type ViewFactory<T, TSelectors, TActions> = ViewFactoryCallback<T, TSelectors, TActions>;
 
 /**
  * Branded tools types
@@ -112,9 +222,9 @@ export type BrandedModelFactoryTools<T> = Branded<
   StoreFactoryTools<T>,
   typeof MODEL_FACTORY_BRAND
 >;
-export type BrandedStateFactoryTools<T> = Branded<
+export type BrandedSelectorsFactoryTools<T> = Branded<
   SelectFactoryTools<T>,
-  typeof STATE_FACTORY_BRAND
+  typeof SELECTORS_FACTORY_BRAND
 >;
 export type BrandedActionsFactoryTools = Branded<
   ActionsFactoryTools,
@@ -126,32 +236,15 @@ export type BrandedViewFactoryTools<T> = Branded<
 >;
 
 /**
- * Factory function types
- */
-export type ModelFactory<T> = (tools: BrandedModelFactoryTools<T>) => T;
-export type StateFactory<T> = (tools: BrandedStateFactoryTools<T>) => T;
-export type ActionsFactory<T> = (tools: BrandedActionsFactoryTools) => {
-  [K in keyof T]: T[K] extends Mutation<any> ? T[K] : never;
-};
-export type ViewFactory<T> = (tools: BrandedViewFactoryTools<T>) => T;
-
-// Union of all factory types
-export type BaseFactory<T> =
-  | ModelFactory<T>
-  | StateFactory<T>
-  | ActionsFactory<T>
-  | ViewFactory<T>;
-
-/**
  * Instance types
  */
 export type ModelInstance<T> = Branded<
   () => (options: StoreFactoryTools<T>) => T,
   typeof MODEL_INSTANCE_BRAND
 >;
-export type StateInstance<T> = Branded<
+export type SelectorsInstance<T> = Branded<
   () => (options: SelectFactoryTools<T>) => T,
-  typeof STATE_INSTANCE_BRAND
+  typeof SELECTORS_INSTANCE_BRAND
 >;
 export type ActionsInstance<T> = Branded<
   () => (options: ActionsFactoryTools) => T,
@@ -165,7 +258,7 @@ export type ViewInstance<T> = Branded<
 // Union of all instance types
 export type BaseInstance<T> =
   | ModelInstance<T>
-  | StateInstance<T>
+  | SelectorsInstance<T>
   | ActionsInstance<T>
   | ViewInstance<T>;
 
@@ -179,13 +272,13 @@ export type BaseInstance<T> =
  */
 export interface LatticeLike<
   TModel = unknown,
-  TState = unknown,
+  TSelectors = unknown,
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > {
   // Internal accessor methods (not exposed publicly)
   readonly getModel: () => ModelInstance<TModel>;
-  readonly getState: () => StateInstance<TState>;
+  readonly getSelectors: () => SelectorsInstance<TSelectors>;
   readonly getActions: () => ActionsInstance<TActions>;
 
   // View accessors with name-based retrieval
@@ -203,11 +296,11 @@ export interface LatticeLike<
  */
 export type Lattice<
   TModel = unknown,
-  TState = unknown,
+  TSelectors = unknown,
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > = Branded<
-  LatticeLike<TModel, TState, TActions, TViews>,
+  LatticeLike<TModel, TSelectors, TActions, TViews>,
   typeof LATTICE_BRAND
 >;
 
@@ -216,3 +309,136 @@ export type Lattice<
  * Allows individual accessor methods to be optional
  */
 export type PartialLattice = Partial<Omit<LatticeLike, typeof LATTICE_BRAND>>;
+
+/**
+ * Component types
+ */
+
+/**
+ * Configuration for creating a component
+ * This defines the required properties for component creation
+ */
+export interface ComponentConfig<
+  TModel = unknown,
+  TSelectors = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>
+> {
+  /**
+   * The model instance for the component
+   */
+  model: ModelInstance<TModel>;
+  
+  /**
+   * The selectors instance for the component
+   */
+  selectors: SelectorsInstance<TSelectors>;
+  
+  /**
+   * The actions instance for the component
+   */
+  actions: ActionsInstance<TActions>;
+  
+  /**
+   * A record of named view instances
+   * Each key is a view name, and the value is a view instance
+   */
+  view: {
+    [K in keyof TViews]: ViewInstance<TViews[K]>;
+  };
+}
+
+/**
+ * Branded component factory type
+ */
+export type ComponentFactory<
+  TModel = unknown,
+  TSelectors = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>
+> = Branded<
+  () => Lattice<TModel, TSelectors, TActions, TViews>,
+  typeof COMPONENT_FACTORY_BRAND
+>;
+
+/**
+ * Branded component instance type
+ */
+export type ComponentInstance<
+  TModel = unknown,
+  TSelectors = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>
+> = Branded<
+  () => Lattice<TModel, TSelectors, TActions, TViews>,
+  typeof COMPONENT_INSTANCE_BRAND
+>;
+
+/**
+ * Tools for component composition
+ */
+export interface ComponentCompositionTools<
+  TBaseModel = unknown,
+  TBaseSelectors = unknown,
+  TBaseActions = unknown,
+  TBaseViews extends Record<string, unknown> = Record<string, unknown>
+> {
+  /**
+   * Access to the base component
+   */
+  component: Lattice<TBaseModel, TBaseSelectors, TBaseActions, TBaseViews>;
+}
+
+/**
+ * Component extension with partial override
+ * Allows selectively extending or replacing parts of a component
+ */
+export interface ComponentExtension<
+  TModel = unknown,
+  TSelectors = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>
+> {
+  /**
+   * Optional model extension
+   * If provided, replaces the base model
+   */
+  model?: ModelInstance<TModel>;
+  
+  /**
+   * Optional selectors extension
+   * If provided, replaces the base selectors
+   */
+  selectors?: SelectorsInstance<TSelectors>;
+  
+  /**
+   * Optional actions extension
+   * If provided, replaces the base actions
+   */
+  actions?: ActionsInstance<TActions>;
+  
+  /**
+   * Optional view extensions
+   * Can include new views or override existing views
+   */
+  view?: {
+    [K in keyof TViews]?: ViewInstance<TViews[K]>;
+  };
+}
+
+/**
+ * Type for the withComponent callback function
+ * Receives the base component and returns an extension
+ */
+export type WithComponentCallback<
+  TBaseModel,
+  TBaseSelectors,
+  TBaseActions,
+  TBaseViews extends Record<string, unknown>,
+  TExtModel,
+  TExtSelectors,
+  TExtActions,
+  TExtViews extends Record<string, unknown>
+> = (
+  tools: ComponentCompositionTools<TBaseModel, TBaseSelectors, TBaseActions, TBaseViews>
+) => ComponentExtension<TExtModel, TExtSelectors, TExtActions, TExtViews>;

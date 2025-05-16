@@ -1,7 +1,7 @@
 import {
   ACTIONS_FACTORY_BRAND,
   ACTIONS_INSTANCE_BRAND,
-  ActionsFactory,
+  ActionsFactoryParams,
   ActionsFactoryTools,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
@@ -16,22 +16,27 @@ import { createModel } from '../model';
  * @example
  * ```typescript
  * // Basic usage
- * const counterActions = createActions(({ mutate }) => ({
- *   increment: mutate(counterModel).increment,
- *   decrement: mutate(counterModel).decrement,
- *   reset: mutate(counterModel).reset
+ * const counterActions = createActions({ model: counterModel }, ({ model }) => ({
+ *   increment: model().increment,
+ *   decrement: model().decrement,
+ *   reset: model().reset
  * }));
  *
  * // With composition
- * const enhancedActions = compose(counterActions).with(({ mutate }) => ({
- *   incrementTwice: mutate(enhancedModel).incrementTwice
+ * const enhancedActions = compose(counterActions).with((slice, { model }) => ({
+ *   ...slice,
+ *   incrementTwice: model().incrementTwice
  * }));
  * ```
  *
- * @param factory A function that produces an actions object with methods
- * @returns An actions instance function ready for composition
+ * @param params Object containing model to be used
+ * @param factory Function that returns action methods
+ * @returns An actions instance that can be composed
  */
-export function createActions<T>(factory: ActionsFactory<T>) {
+export function createActions<T, TModel>(
+  params: { model: TModel },
+  factory: (tools: ActionsFactoryParams<TModel>) => T
+) {
   // Create a factory function that returns a slice creator
   const actionsFactory = function actionsFactory() {
     return (options: ActionsFactoryTools) => {
@@ -40,15 +45,16 @@ export function createActions<T>(factory: ActionsFactory<T>) {
         throw new Error('Actions factory requires a mutate function');
       }
 
-      // Call the factory with the tools
-      return factory(
-        brandWithSymbol(
-          {
-            mutate: options.mutate,
-          },
-          ACTIONS_FACTORY_BRAND
-        )
+      // Create branded tools object for the factory
+      const tools = brandWithSymbol(
+        {
+          model: () => options.mutate(params.model) as TModel,
+        },
+        ACTIONS_FACTORY_BRAND
       );
+
+      // Call the factory with object parameters to match the spec
+      return factory(tools);
     };
   };
 
@@ -57,67 +63,119 @@ export function createActions<T>(factory: ActionsFactory<T>) {
 
 // In-source tests
 if (import.meta.vitest) {
-  const { it, expect, vi } = import.meta.vitest;
+  const { it, expect, vi, describe } = import.meta.vitest;
 
-  it('should verify action factory requirements and branding', async () => {
-    // Create a real model for testing
-    const model = createModel<{
-      count: number;
-      testMethod: () => void;
-    }>(({ set, get }) => ({
-      count: 0,
-      testMethod: () => {
-        set({ count: get().count + 1 });
-      },
-    }));
-
-    // Create a spy factory to check it receives the mutate parameter
-    const factorySpy = vi.fn(({ mutate }: ActionsFactoryTools) => ({
-      testAction: mutate(model).testMethod,
-    }));
-
-    const actions = createActions(factorySpy);
-
-    // Actions should be a function
-    expect(typeof actions).toBe('function');
-
-    // Should have lattice actions branding
+  describe('createActions', async () => {
     const { isActionInstance, isActionsFactory } = await import(
       '../shared/identify'
     );
+    
+    it('should verify action factory requirements and branding', () => {
+      // Create a real model for testing
+      const model = createModel<{
+        count: number;
+        testMethod: () => void;
+      }>(({ set, get }) => ({
+        count: 0,
+        testMethod: () => {
+          set({ count: get().count + 1 });
+        },
+      }));
+  
+      // Create a spy factory to check it receives the model parameter
+      const factorySpy = vi.fn(({ model }) => ({
+        testAction: model().testMethod,
+      }));
+  
+      const actions = createActions({ model }, factorySpy);
+  
+      // Actions should be a function
+      expect(typeof actions).toBe('function');
+  
+      expect(isActionInstance(actions)).toBe(true);
+  
+      // Create mock mutation function
+      const mockMutate = vi.fn().mockImplementation(() => ({
+        testMethod: vi.fn()
+      }));
+  
+      // Create a slice with the mock mutate function
+      const sliceCreator = actions();
+      sliceCreator({ mutate: mockMutate });
+  
+      // Factory should be called with object parameters
+      expect(factorySpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          model: expect.any(Function),
+        })
+      );
+  
+      // The tools should be branded with the proper symbol
+      const toolsObj = factorySpy.mock.calls[0]?.[0];
+      expect(isActionsFactory(toolsObj)).toBe(true);
+    });
+  
+    it('should throw an error when mutate function is missing', () => {
+      const actions = createActions({ model: {} }, () => ({ 
+        testAction: () => {} 
+      }));
+      const sliceCreator = actions();
+  
+      // Should throw when mutate is missing
+      expect(() => sliceCreator({ mutate: undefined as any })).toThrow(
+        'Actions factory requires a mutate function'
+      );
+    });
 
-    expect(isActionInstance(actions)).toBe(true);
-
-    // TODO: Replace this simplified mock with actual implementation
-    // that properly implements the dot-notation API and mutation branding
-    const mockMutate = vi.fn().mockImplementation(() => ({
-      // Mock a testMethod property that returns a branded function
-      testMethod: vi.fn()
-    }));
-
-    // Create a slice with the mock mutate function
-    const sliceCreator = actions();
-    sliceCreator({ mutate: mockMutate });
-
-    // Factory should be called with branded tools
-    expect(factorySpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mutate: expect.any(Function),
-      })
-    );
-
-    // The tools should be branded with the proper symbol
-    const toolsObj = factorySpy.mock.calls[0]?.[0];
-    expect(isActionsFactory(toolsObj)).toBe(true);
-  });
-
-  it('should throw an error when mutate function is missing', () => {
-    const actions = createActions(() => ({ testAction: () => {} }));
-    const sliceCreator = actions();
-
-    // Should throw when mutate is missing
-    expect(() => sliceCreator({ mutate: undefined as any })).toThrow(
-      'Actions factory requires a mutate function'
-    );
+    it('should support cherry-picking properties with slice-first pattern', async () => {
+      // Create a mock model with multiple methods
+      const mockModel = {
+        increment: vi.fn(),
+        decrement: vi.fn(),
+        reset: vi.fn(),
+        internalMethod: vi.fn()
+      };
+      
+      // Base actions with all methods exposed
+      const baseActions = createActions({ model: mockModel }, ({ model }) => ({
+        increment: model().increment,
+        decrement: model().decrement,
+        reset: model().reset
+      }));
+      
+      // Get the compose function to test composition
+      const { compose } = await import('../shared/compose/fluent');
+      
+      // Compose with cherry-picking - only include some methods
+      const enhancedActions = compose(baseActions).with<
+        { doubleIncrement: () => void },
+        typeof mockModel
+      >(
+        (slice, { model }) => ({
+          // Only include increment from the base actions
+          increment: slice.increment,
+          // Add a new method
+          doubleIncrement: () => {
+            model().increment();
+            model().increment();
+          }
+        })
+      );
+      
+      expect(isActionInstance(enhancedActions)).toBe(true);
+      
+      // Create mock mutation function for the enhanced actions
+      const mockMutate = vi.fn().mockImplementation(() => mockModel);
+      
+      // Create a slice with the mock mutate function
+      const sliceCreator = enhancedActions();
+      const actionObj = sliceCreator({ mutate: mockMutate });
+      
+      // Should contain only the selected methods plus new ones
+      expect(actionObj).toHaveProperty('increment');
+      expect(actionObj).toHaveProperty('doubleIncrement');
+      expect(actionObj).not.toHaveProperty('decrement');
+      expect(actionObj).not.toHaveProperty('reset');
+    });
   });
 }

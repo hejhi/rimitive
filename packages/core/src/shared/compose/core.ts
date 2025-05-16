@@ -1,6 +1,6 @@
 import {
   isModelInstance,
-  isStateInstance,
+  isSelectorsInstance,
   isActionInstance,
   isViewInstance,
   brandWithSymbol,
@@ -8,18 +8,13 @@ import {
 
 import {
   ModelInstance,
-  StateInstance,
+  SelectorsInstance,
   ActionsInstance,
   ViewInstance,
-  ActionsFactoryTools,
   StoreFactoryTools,
   MODEL_INSTANCE_BRAND,
-  MODEL_FACTORY_BRAND,
-  STATE_FACTORY_BRAND,
-  STATE_INSTANCE_BRAND,
-  ACTIONS_FACTORY_BRAND,
+  SELECTORS_INSTANCE_BRAND,
   ACTIONS_INSTANCE_BRAND,
-  VIEW_FACTORY_BRAND,
   VIEW_INSTANCE_BRAND,
 } from '../types';
 
@@ -39,29 +34,41 @@ export type InferExtension<F> = F extends (tools: any) => infer R ? R : never;
  * @returns A new composed component combining the base and extensions
  */
 
-// Model
+// Import tools interfaces
+import {
+  ModelCompositionTools,
+  SelectorsCompositionTools,
+  ActionsCompositionTools,
+  ViewCompositionTools
+} from '../types';
+
+// Model - uses slice-first pattern with tools object
 export function composeWith<
   B,
-  F extends (tools: StoreFactoryTools<any>) => any,
->(base: ModelInstance<B>, extension: F): ModelInstance<B & InferExtension<F>>;
+  E,
+>(base: ModelInstance<B>, extension: (slice: B, tools: ModelCompositionTools<B, E>) => E): ModelInstance<B & E>;
 
-// State
+// Selectors - uses slice-first pattern with tools object
 export function composeWith<
   B,
-  F extends (tools: StoreFactoryTools<any>) => any,
->(base: StateInstance<B>, extension: F): StateInstance<B & InferExtension<F>>;
+  E,
+  TModel,
+>(base: SelectorsInstance<B>, extension: (slice: B, tools: SelectorsCompositionTools<TModel>) => E): SelectorsInstance<B & E>;
 
-// Actions
-export function composeWith<B, F extends (tools: ActionsFactoryTools) => any>(
-  base: ActionsInstance<B>,
-  extension: F
-): ActionsInstance<B & InferExtension<F>>;
-
-// View
+// Actions - uses slice-first pattern with tools object
 export function composeWith<
   B,
-  F extends (tools: StoreFactoryTools<B & InferExtension<F>>) => any,
->(base: ViewInstance<B>, extension: F): ViewInstance<B & InferExtension<F>>;
+  E,
+  TModel,
+>(base: ActionsInstance<B>, extension: (slice: B, tools: ActionsCompositionTools<TModel>) => E): ActionsInstance<B & E>;
+
+// View - uses slice-first pattern with tools object
+export function composeWith<
+  B,
+  E,
+  TSelectors,
+  TActions,
+>(base: ViewInstance<B>, extension: (slice: B, tools: ViewCompositionTools<TSelectors, TActions>) => E): ViewInstance<B & E>;
 
 // Implementation using function overloading pattern
 // B: Base type
@@ -75,31 +82,34 @@ export function composeWith(base: any, shape: any): any {
           throw new Error('Model factory requires get and set functions');
         }
         const baseSlice = base()(options);
-        const tools = brandWithSymbol(
-          { get: options.get, set: options.set },
-          MODEL_FACTORY_BRAND
-        );
-        const extensionSlice = shape(tools);
+        // Create tools object with get and set for the slice-first pattern
+        const tools = {
+          get: options.get,
+          set: options.set 
+        };
+        // Call with slice-first pattern and tools object
+        const extensionSlice = shape(baseSlice, tools);
         return { ...(baseSlice as object), ...(extensionSlice as object) };
       },
       MODEL_INSTANCE_BRAND
     );
   }
-  if (isStateInstance(base)) {
+  if (isSelectorsInstance(base)) {
     return brandWithSymbol(
       () => (options: any) => {
         if (!options.get) {
-          throw new Error('State factory requires a get function');
+          throw new Error('Selectors factory requires a get function');
         }
         const baseSlice = base()(options);
-        const tools = brandWithSymbol(
-          { get: options.get },
-          STATE_FACTORY_BRAND
-        );
-        const extensionSlice = shape(tools);
+        // Create tools object with model for the slice-first pattern
+        const tools = {
+          model: options.get
+        };
+        // Call with slice-first pattern and tools object
+        const extensionSlice = shape(baseSlice, tools);
         return { ...(baseSlice as object), ...(extensionSlice as object) };
       },
-      STATE_INSTANCE_BRAND
+      SELECTORS_INSTANCE_BRAND
     );
   }
   if (isActionInstance(base)) {
@@ -109,12 +119,14 @@ export function composeWith(base: any, shape: any): any {
           throw new Error('Actions factory requires mutate function');
         }
         const baseSlice = base()(options);
-        const tools = brandWithSymbol(
-          { mutate: options.mutate },
-          ACTIONS_FACTORY_BRAND
-        );
-        const extensionSlice = shape(tools);
-        return { ...(baseSlice as object), ...(extensionSlice as object) };
+        // Create tools object with model for the slice-first pattern
+        const tools = {
+          model: options.mutate
+        };
+        // Call with slice-first pattern and tools object
+        // For cherry-picking, we return only what is in the extension
+        const extensionSlice = shape(baseSlice, tools);
+        return extensionSlice;
       },
       ACTIONS_INSTANCE_BRAND
     );
@@ -123,18 +135,20 @@ export function composeWith(base: any, shape: any): any {
     return brandWithSymbol(
       () => (options: any) => {
         const baseSlice = base()(options);
-        const tools = brandWithSymbol(
-          { dispatch: options.dispatch },
-          VIEW_FACTORY_BRAND
-        );
-        const extensionSlice = shape(tools);
+        // Create tools object with selectors and actions for the slice-first pattern
+        const tools = {
+          selectors: options.getSelectors || (() => ({})),
+          actions: options.getActions || (() => ({}))
+        };
+        // Call with slice-first pattern and tools object
+        const extensionSlice = shape(baseSlice, tools);
         return { ...(baseSlice as object), ...(extensionSlice as object) };
       },
       VIEW_INSTANCE_BRAND
     );
   }
   throw new Error(
-    'Invalid component: Must be a model, state, actions, or view'
+    'Invalid component: Must be a model, selectors, actions, or view'
   );
 }
 
@@ -152,22 +166,31 @@ if (import.meta.vitest) {
 
     // @ts-expect-error
     expect(() => composeWith(invalidComponent, extension)).toThrow(
-      'Invalid component'
+      'Invalid component: Must be a model, selectors, actions, or view'
     );
   });
 
   it('should compose a model with an extension (internal/advanced use)', () => {
-    // Create a mock model
-    const baseModel = brandWithSymbol(
-      () => ({ count: 1 }),
-      MODEL_INSTANCE_BRAND
-    );
-    const brandedModel = brandWithSymbol(() => baseModel, MODEL_INSTANCE_BRAND);
+    // Define the types we'll be working with
+    type BaseModel = { count: number };
 
-    // Compose them
-    const composed = composeWith(brandedModel, ({ get }) => ({
-      doubleCount: () => get().count * 2,
-    }));
+    // Create a mock model with the proper structure
+    const mockModelFn = () => (_options: StoreFactoryTools<BaseModel>) => ({
+      count: 1,
+    });
+    const brandedModel = brandWithSymbol(mockModelFn, MODEL_INSTANCE_BRAND);
+
+    // Compose them with slice and tools object (slice-first pattern)
+    const composed = composeWith<
+      BaseModel, 
+      { doubleCount: () => number }
+    >(
+      brandedModel,
+      (slice, tools) => ({
+        ...slice,
+        doubleCount: () => tools.get().count * 2,
+      })
+    );
 
     // Should be a function
     expect(typeof composed).toBe('function');

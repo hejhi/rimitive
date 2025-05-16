@@ -12,6 +12,51 @@ A **lattice component** is both the declarative contract and the actual API for 
 - **Contract Enforcement**: Composing any part changes the contract at both type and runtime levels
 - **Predictable Variations**: Providing callbacks allows you to select, filter, or extend the API surface
 
+### How Lattice Differs from Other Headless Libraries
+
+Lattice takes a fundamentally different approach compared to traditional "headless" component libraries:
+
+- **Attribute-Level Composition**: Views in Lattice are pure attribute maps rather than component trees. They don't represent UI hierarchy at all, just collections of properties that can be spread onto any element.
+
+- **Rendering-System Agnostic**: Lattice completely decouples attribute generation from any rendering system, making it framework-agnostic at its core.
+
+- **No Parent-Child Relationships**: Traditional frameworks maintain component hierarchy. Lattice views stand alone as independent attribute sets without inherent relationships.
+
+- **Behavior Over Structure**: Lattice focuses on composing behaviors (increment, toggle, etc.) rather than structural components (Dropdown, Modal, etc.).
+
+- **Contract-First Architecture**: The explicit contracts make Lattice more like a design system foundation than a component library, enabling type-safe composition across boundaries.
+
+This approach enables Lattice to be used across different frameworks, platforms (native + web), and even non-UI domains that benefit from the same composition patterns.
+
+### Rethinking Component Boundaries
+
+Lattice presents a distinctive perspective on what constitutes a "component":
+
+- **Components as Compositions**: Rather than rigid boundaries, components in Lattice are flexible compositions of independent elements (models, actions, selectors, views) that can be freely shared and recombined.
+
+- **Shared Elements Across Components**: A model, set of actions, or selectors can exist across multiple "components" - enabling cross-cutting concerns that traditional component boundaries might obscure.
+
+- **Behavioral Domains**: Components can be divided along behavioral lines (Selectable, Sortable, Draggable) rather than just UI lines (Dropdown, Modal), creating more reusable primitives.
+
+- **Aspect-Oriented Design**: Lattice lets you define behaviors separately from where they're used, similar to aspect-oriented programming patterns.
+
+- **Emergent Components**: What we call a "component" emerges from composition rather than being a predefined unit - more like a temporary arrangement of compatible elements that fulfills a specific need.
+
+This approach challenges conventional component boundaries, suggesting that real-world domains are often better modeled as collections of composable behaviors that can be mixed and matched as needed.
+
+### Lattice's Architectural Pattern
+
+Lattice introduces an architectural pattern that could be called "MSAV" (Model-Selector-Action-View) - a novel approach that draws inspiration from established patterns like MVC, MVVM, and SAM (State-Action-Model), but with an emphasis on composition and clear separation of concerns:
+
+| Component | Purpose                                                           | Accessibility                      | Traditional Parallel |
+|-----------|-------------------------------------------------------------------|------------------------------------|----------------------|
+| **Model** | Contains state and business logic (HOW)                           | Internal (composition only)        | Model in MVC, ViewModel in MVVM |
+| **Actions** | Pure intent functions representing operations (WHAT)            | Internal (composition only)        | Controller in MVC, Actions in Redux/Flux |
+| **Selectors** | Public read-only values and functions derived from the model  | Public (composition & consumption) | Computed Properties in MVVM |
+| **View**  | Reactive representations transforming selectors into UI attributes | Public (composition & consumption) | View in MVC, but as pure data rather than components |
+
+What distinguishes Lattice from traditional patterns is its aspect-oriented approach: each concern is modular and can be composed across traditional component boundaries. This enables separation of cross-cutting concerns (like selection state, drag-and-drop behavior, etc.) that would typically be scattered throughout a codebase.
+
 ### Mental Model & Flow
 
 ```
@@ -20,12 +65,12 @@ A **lattice component** is both the declarative contract and the actual API for 
 View event ──▶ Actions ──▶ Model Mutation ──▶ Selectors/View update ──▶ UI re‑render
 ```
 
-| Component | Purpose                                                           | Accessibility                      |
-|-----------|-------------------------------------------------------------------|------------------------------------|
-| **Model** | Contains state and business logic (HOW)                           | Internal (composition only)        |
-| **Actions** | Pure intent functions representing operations (WHAT)            | Internal (composition only)        |
-| **Selectors** | Public read-only values and functions derived from the model  | Public (composition & consumption) |
-| **View**  | Reactive representations transforming selectors into UI attributes | Public (composition & consumption) |
+The flow follows a unidirectional data pattern:
+1. User interactions trigger **Actions** (pure intent)
+2. Actions cause **Model** mutations (state changes)
+3. Model changes flow to **Selectors** (derived state)
+4. Selectors update **Views** (UI attributes)
+5. Views cause UI re-renders
 
 ### Composition Pattern
 
@@ -33,7 +78,7 @@ Components uses a factory pattern:
 
 1. **Creation**: Factory functions create base components
    ```typescript
-   const counterModel = createModel((set, get) => ({
+   const counterModel = createModel(({ set, get }) => ({
      count: 0,
      increment: () => set((state) => ({ count: state.count + 1 })),
    }));
@@ -42,7 +87,7 @@ Components uses a factory pattern:
 2. **Composition**: The `.with()` method adds new properties or behaviors
    ```typescript
    const enhancedModel = createModel(
-    compose(counterModel).with((set, get, slice) => ({
+    compose(counterModel).with((slice, { set, get }) => ({
       ...slice,
       incrementTwice: () => {
         get().increment();
@@ -60,7 +105,7 @@ Models encapsulate state and business logic, defining the contract for state and
 
 ```typescript
 // Create a model with state and methods
-const counterModel = createModel((set, get) => ({
+const counterModel = createModel(({ set, get }) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
   decrement: () => set((state) => ({ count: state.count - 1 })),
@@ -68,7 +113,7 @@ const counterModel = createModel((set, get) => ({
 
 // progressively compose in new behavior
 const enhancedModel = createModel(
-  compose(counterModel).with((set, get, slice) => ({
+  compose(counterModel).with((slice, { set, get }) => ({
     ...slice,
     incrementTwice: () => {
       get().increment();
@@ -84,9 +129,9 @@ Actions represent WHAT should happen, delegating to model methods (HOW).
 
 ```typescript
 // Create actions that delegate to model methods
-const actions = createActions(model, (getModel) => ({
-  increment: getModel().increment,
-  incrementTwice: getModel().incrementTwice,
+const actions = createActions({ model }, ({ model }) => ({
+  increment: model().increment,
+  incrementTwice: model().incrementTwice,
 }));
 ```
 
@@ -96,27 +141,41 @@ Selectors provide read-only access to the model through direct properties and co
 
 ```typescript
 // Create selectors for the model
-const selectors = createSelectors(model, (getModel) => ({
+const selectors = createSelectors({ model }, ({ model }) => ({
   // Direct property access
-  count: getModel().count,
+  count: model().count,
   // Computed value
-  isPositive: getModel().count > 0,
+  isPositive: model().count > 0,
   // Function that computes a value based on runtime input
-  getFilteredItems: (filter) => getModel().items.filter(item => 
+  getFilteredItems: (filter) => model().items.filter(item => 
     item.name.includes(filter)
   ),
 }));
 
 // Compose to add more derived values
 const enhancedSelectors = createSelectors(
-  model,
-  compose(selectors).with((getModel, slice) => ({
+  { model },
+  compose(selectors).with((slice, { model }) => ({
     ...slice,
-    doubled: getModel().count * 2,
-    formatted: `Count: ${getModel().count}`,
+    doubled: model().count * 2,
+    formatted: `Count: ${model().count}`,
   }))
 );
 ```
+
+### Understanding Selector Implementation
+
+When writing expressions like `doubled: model().count * 2`, it's important to understand:
+
+1. **At Composition Time**: This defines the structure but doesn't execute it. The `model()` function provides type-safe access to model properties.
+
+2. **After Zustand Store Creation**:
+   - In vanilla JS: Becomes a JavaScript getter that recalculates on each access
+   - In React: Becomes a Zustand selector with proper reactivity
+
+Selectors are NOT implemented as subscriptions, but as:
+- JavaScript getters for vanilla JS
+- Zustand's `useStore` selectors for React
 
 ### Type Safety During Composition
 
@@ -124,37 +183,37 @@ Lattice ensures type safety when composing components with different underlying 
 
 ```typescript
 // Model A has count: number, title: string
-const modelA = createModel(() => ({ 
+const modelA = createModel(({ set, get }) => ({ 
   count: 0, 
   title: "Counter A"
 }));
 
-const selectorsA = createSelectors(modelA, (getModel) => ({
-  count: getModel().count,
-  title: getModel().title,
+const selectorsA = createSelectors({ model: modelA }, ({ model }) => ({
+  count: model().count,
+  title: model().title,
 }));
 
 // Model B has count: number, but no title property
-const modelB = createModel(() => ({ 
+const modelB = createModel(({ set, get }) => ({ 
   count: 0 
   // No title property
 }));
 
 // This would cause a TypeScript error - title property doesn't exist on modelB
 const selectorsB = createSelectors(
-  modelB,
-  compose(selectorsA).with((getModel, slice) => ({
+  { model: modelB },
+  compose(selectorsA).with((slice, { model }) => ({
     ...slice,  // Error: Property 'title' is accessed but doesn't exist on modelB
-    doubled: getModel().count * 2,
+    doubled: model().count * 2,
   }))
 );
 
 // Correct approach - manually select compatible properties
 const selectorsB = createSelectors(
-  modelB,
-  compose(selectorsA).with((getModel, slice) => ({
+  { model: modelB },
+  compose(selectorsA).with((slice, { model }) => ({
     count: slice.count,  // Only include properties that exist in both
-    doubled: getModel().count * 2,
+    doubled: model().count * 2,
   }))
 );
 ```
@@ -163,20 +222,20 @@ Similarly, TypeScript will catch type incompatibilities:
 
 ```typescript
 // Model A has count as number
-const modelA = createModel(() => ({ count: 0 }));
-const selectorsA = createSelectors(modelA, getModel => ({
-  count: getModel().count, // number
+const modelA = createModel(({ set, get }) => ({ count: 0 }));
+const selectorsA = createSelectors({ model: modelA }, ({ model }) => ({
+  count: model().count, // number
 }));
 
 // Model B has count as string
-const modelB = createModel(() => ({ count: "zero" }));
+const modelB = createModel(({ set, get }) => ({ count: "zero" }));
 
 // This would cause a TypeScript error - incompatible types
 const selectorsB = createSelectors(
-  modelB,
-  compose(selectorsA).with((getModel, slice) => ({
+  { model: modelB },
+  compose(selectorsA).with((slice, { model }) => ({
     ...slice,  // Error: Type 'number' is not assignable to type 'string'
-    formatted: `Count: ${getModel().count}`,
+    formatted: `Count: ${model().count}`,
   }))
 );
 ```
@@ -189,19 +248,19 @@ Views transform selectors into UI attributes and provide interaction logic. They
 
 ```typescript
 // Create a view with UI attributes and interaction handlers
-const counterView = createView(selectors, actions, (getSelectors, getActions) => ({
-  "data-count": getSelectors().count,
+const counterView = createView({ selectors, actions }, ({ selectors, actions }) => ({
+  "data-count": selectors().count,
   "aria-live": "polite",
-  onClick: getActions().increment,
+  onClick: actions().increment,
 }));
 
 // Complex interaction logic is also supported
-const advancedView = createView(selectors, actions, (getSelectors, getActions) => ({
+const advancedView = createView({ selectors, actions }, ({ selectors, actions }) => ({
   onClick: (props) => {
     if (props.shiftKey) {
-      getActions().incrementTwice();
+      actions().incrementTwice();
     } else {
-      getActions().increment();
+      actions().increment();
     }
   },
 }));
@@ -209,115 +268,118 @@ const advancedView = createView(selectors, actions, (getSelectors, getActions) =
 
 ## Composition Example
 
+Components follow the same callback pattern as other factories, allowing for self-contained definitions. All component parts are defined within a single callback, creating a clean and component-like API.
+
 ```typescript
-// Create a base lattice
-const createCounterLattice = () => {
+// Create a base component - all parts defined within a single callback
+const counterComponent = createComponent(() => {
   // Define model with state and behavior
-  const model = createModel((set, get) => ({ count: 0 }));
+  const model = createModel(({ set, get }) => ({ 
+    count: 0,
+    increment: () => set(state => ({ count: state.count + 1 })),
+    decrement: () => set(state => ({ count: state.count - 1 }))
+  }));
 
-  // compose a base model to augment it
-  const enhancedModel = createModel(compose(model).with((set, get, slice) => ({
-    ...slice,
-    // `count` is accessible in getters and setters, as is countMultiplied
-    countMultiplied: get().count * 2,
-    increment: () => set((state) => ({ count: state.count + 1 })),
-    decrement: () => set((state) => ({ count: state.count - 1 })),
-  })))
-
-  // Define actions that delegate to enhancedModel
-  const actions = createActions(enhancedModel, (getModel) => ({
-    increment: getModel().increment,
-    decrement: getModel().decrement,
+  // Define actions that delegate to model methods
+  const actions = createActions({ model }, ({ model }) => ({
+    increment: model().increment,
+    decrement: model().decrement
   }));
 
   // Define selectors that expose model properties
-  const selectors = createSelectors(enhancedModel, (getModel) => ({
-    count: getModel().count,
-    isPositive: getModel().count > 0,
+  const selectors = createSelectors({ model }, ({ model }) => ({
+    count: model().count,
+    isPositive: model().count > 0
   }));
 
   // Define views for UI
-  const counterView = createView(selectors, null, (getSelectors) => ({
-    "data-count": getSelectors().count,
-    "aria-live": "polite",
+  const counterView = createView({ selectors }, ({ selectors }) => ({
+    "data-count": selectors().count,
+    "aria-live": "polite"
   }));
 
-  const buttonView = createView(null, actions, (null, getActions) => ({
-    onClick: getActions().increment,
+  const buttonView = createView({ actions }, ({ actions }) => ({
+    onClick: actions().increment
   }));
 
-  // Return the lattice component
-  return createComponent({
-    // if the user had provided a selectors/view/action that referenced a different model,
-    // there would be a type error
-    model: enhancedModel,
+  // Return the component configuration
+  return {
+    model,
     actions, 
     selectors,
     view: {
       counter: counterView,
-      button: buttonView,
-    },
-  });
-};
+      button: buttonView
+    }
+  };
+});
 
-// Create an enhanced component from the base component
-const createEnhancedComponent = (baseComponent) => {
-  // Enhance the model with new functionality
-  const model = createModel(compose(baseComponent).with((set, get, slice) => ({
-    ...slice,
-    incrementTwice: () => {
-      get().increment();
-      get().increment();
-    },
-    reset: () => get().set({ count: 0 }),
-  })));
+// Enhanced component using composition - follows the same self-contained pattern
+const enhancedComponent = createComponent(
+  compose(counterComponent).with((slice) => {
+    // Enhance the model with new functionality
+    const model = createModel(
+      compose(slice.model).with((modelSlice, { get, set }) => ({
+        ...modelSlice,
+        incrementTwice: () => {
+          get().increment();
+          get().increment();
+        },
+        reset: () => set({ count: 0 })
+      }))
+    );
 
-  const actions = createActions(
-    model,
-    compose(baseComponent).with((getModel, slice) => ({
-      // cherry-pick properties from slice
-      ...slice,
-      incrementTwice: getModel().incrementTwice,
-      reset: getModel().reset,
-    }))
-  );
+    // Create actions that reference the enhanced model
+    const actions = createActions(
+      { model },
+      compose(slice.actions).with((actionsSlice, { model }) => ({
+        ...actionsSlice,
+        incrementTwice: model().incrementTwice,
+        reset: model().reset
+      }))
+    );
 
-  const selectors = createSelectors(
-    model, 
-    compose(baseComponent).with((getModel, slice) => ({
-      ...slice,
-      doubled: getModel().count * 2,
-      isEven: getModel().count % 2 === 0,
-    }))
-  );
+    // Create selectors that reference the enhanced model
+    const selectors = createSelectors(
+      { model },
+      compose(slice.selectors).with((selectorsSlice, { model }) => ({
+        ...selectorsSlice,
+        doubled: model().count * 2,
+        isEven: model().count % 2 === 0
+      }))
+    );
 
-  // both selectors and actions are optional
-  const view = createView(
-    selectors,
-    null,
-    compose(baseComponent.getView('counter')).with((getSelectors, _, slice) => ({
-        ...slice,
-        "data-doubled": getSelectors().doubled,
-        "data-even": getSelectors().isEven,
-      }),
-    )
-  );
+    // Create enhanced counter view
+    const counterView = createView(
+      { selectors },
+      compose(slice.view.counter).with((viewSlice, { selectors }) => ({
+        ...viewSlice,
+        "data-doubled": selectors().doubled,
+        "data-even": selectors().isEven
+      }))
+    );
 
-  const resetButton = createView(null, actions, (_, getActions) => ({
-    onClick: getActions().reset
-  }))
+    // Create new reset button view
+    const resetButtonView = createView(
+      { actions },
+      ({ actions }) => ({
+        onClick: actions().reset
+      })
+    );
 
-  return createComponent({
-    model,
-    actions,
-    selectors,
-    view: {
-      ...baseComponent.getViews(),  // Keep original views
-      counter: view,                // Override with enhanced view
-      resetButton,                  // Add new view
-    },
-  });
-};
+    // Return the enhanced component configuration
+    return {
+      model,
+      actions,
+      selectors,
+      view: {
+        ...slice.view,               // Keep original views
+        counter: counterView,        // Override counter view
+        resetButton: resetButtonView // Add new view
+      }
+    };
+  })
+);
 ```
 
 ## Implementation Notes

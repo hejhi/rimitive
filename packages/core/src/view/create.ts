@@ -2,6 +2,7 @@ import {
   VIEW_FACTORY_BRAND,
   VIEW_INSTANCE_BRAND,
   ViewFactory,
+  ViewFactoryParams,
   SelectFactoryTools,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
@@ -10,12 +11,38 @@ import { brandWithSymbol } from '../shared/identify';
  * Creates a view factory.
  *
  * This is the primary API for creating views in Lattice. Use it to define your
- * view's projections and values from models and actions. For composition, use the fluent compose API.
+ * view's projections and values from selectors and actions. For composition, use the fluent compose API.
  *
- * @param factory A function that produces a view object with projections and values
+ * @example
+ * ```typescript
+ * // Basic usage
+ * const counterView = createView({ selectors, actions }, ({ selectors, actions }) => ({
+ *   "data-count": selectors().count,
+ *   "aria-live": "polite",
+ *   onClick: actions().increment,
+ *   onKeyDown: (event) => {
+ *     if (event.key === 'Enter') {
+ *       actions().increment();
+ *     }
+ *   }
+ * }));
+ *
+ * // With composition
+ * const enhancedView = compose(counterView).with((slice, { selectors }) => ({
+ *   ...slice,
+ *   "data-doubled": selectors().doubled,
+ *   "data-even": selectors().isEven,
+ * }));
+ * ```
+ *
+ * @param params Object containing selectors and actions to be used
+ * @param factory Function that produces a view object with projections and values
  * @returns A view instance function that can be used with compose
  */
-export function createView<T>(factory: ViewFactory<T>) {
+export function createView<T, TSelectors = unknown, TActions = unknown>(
+  params: { selectors?: TSelectors; actions?: TActions },
+  factory: ViewFactory<T, TSelectors, TActions>
+) {
   // Create a factory function that returns a slice creator
   const viewFactory = function viewFactory() {
     return (options: SelectFactoryTools<T>) => {
@@ -24,14 +51,57 @@ export function createView<T>(factory: ViewFactory<T>) {
         throw new Error('View factory requires a get function');
       }
 
-      // Call the factory with the tools
-      return factory(brandWithSymbol({ get: options.get }, VIEW_FACTORY_BRAND));
+      // Validate selectors and actions if they're used in the factory
+      if (
+        params.selectors === undefined &&
+        factory.toString().includes('selectors()')
+      ) {
+        throw new Error(
+          'View factory is using selectors() but no selectors were provided'
+        );
+      }
+
+      if (
+        params.actions === undefined &&
+        factory.toString().includes('actions()')
+      ) {
+        throw new Error(
+          'View factory is using actions() but no actions were provided'
+        );
+      }
+
+      // Create branded tools object with access functions for the factory
+      const tools = brandWithSymbol(
+        {
+          selectors: () => {
+            if (params.selectors === undefined) {
+              throw new Error(
+                'Attempting to access selectors that were not provided to createView'
+              );
+            }
+            return params.selectors as TSelectors;
+          },
+          actions: () => {
+            if (params.actions === undefined) {
+              throw new Error(
+                'Attempting to access actions that were not provided to createView'
+              );
+            }
+            return params.actions as TActions;
+          },
+        },
+        VIEW_FACTORY_BRAND
+      );
+
+      // Call the factory with object parameters to match the spec
+      return factory(tools);
     };
   };
 
   return brandWithSymbol(viewFactory, VIEW_INSTANCE_BRAND);
 }
 
+// In-source tests
 if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
@@ -41,12 +111,34 @@ if (import.meta.vitest) {
     );
 
     it('should verify view factory requirements and branding', () => {
-      // Create a spy factory
-      const factorySpy = vi.fn((_: SelectFactoryTools<{ count: number }>) => ({
-        count: 1,
-      }));
+      // Create mock selectors and actions
+      const mockSelectors = {
+        count: 42,
+        isPositive: true,
+      };
 
-      const view = createView(factorySpy);
+      const mockActions = {
+        increment: vi.fn(),
+        reset: vi.fn(),
+      };
+
+      // Create a spy factory with object parameters
+      const factorySpy = vi.fn(
+        ({
+          selectors,
+          actions,
+        }: ViewFactoryParams<typeof mockSelectors, typeof mockActions>) => ({
+          'data-count': selectors().count,
+          'aria-positive': selectors().isPositive,
+          onClick: actions().increment,
+          onReset: actions().reset,
+        })
+      );
+
+      const view = createView(
+        { selectors: mockSelectors, actions: mockActions },
+        factorySpy
+      );
 
       // View should be a function
       expect(typeof view).toBe('function');
@@ -60,25 +152,35 @@ if (import.meta.vitest) {
       const sliceCreator = view();
       const slice = sliceCreator({ get: mockGet });
 
-      // Factory should be called with the tools
+      // Factory should be called with object parameters
       expect(factorySpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          get: mockGet,
+          selectors: expect.any(Function),
+          actions: expect.any(Function),
         })
       );
 
       const toolsObj = factorySpy.mock.calls[0]?.[0];
       expect(isViewFactory(toolsObj)).toBe(true);
 
-      // Verify slice contains the expected value
-      expect(slice).toEqual({ count: 1 });
+      // Verify slice contains the expected values
+      expect(slice).toEqual({
+        'data-count': 42,
+        'aria-positive': true,
+        onClick: mockActions.increment,
+        onReset: mockActions.reset,
+      });
+
+      // Ensure selectors and actions functions return the correct values
+      expect(factorySpy.mock.calls[0]?.[0].selectors()).toBe(mockSelectors);
+      expect(factorySpy.mock.calls[0]?.[0].actions()).toBe(mockActions);
     });
 
     it('should throw an error when required tools are missing', () => {
-      const view = createView(() => ({ count: 1 }));
+      const view = createView({}, () => ({ count: 1 }));
       const sliceCreator = view();
 
-      // Should throw when get or set are missing
+      // Should throw when get is missing
       // @ts-expect-error
       expect(() => sliceCreator({})).toThrow(
         'View factory requires a get function'
@@ -89,5 +191,75 @@ if (import.meta.vitest) {
         'View factory requires a get function'
       );
     });
+
+    it('should throw an error when accessing selectors that were not provided', () => {
+      // Create a view that tries to use selectors without providing them
+      const view = createView({}, ({ selectors }) => ({
+        // @ts-expect-error
+        value: selectors().count, // This should throw
+      }));
+
+      const sliceCreator = view();
+
+      // Should throw when trying to access unavailable selectors
+      expect(() => sliceCreator({ get: vi.fn() })).toThrow(
+        'View factory is using selectors() but no selectors were provided'
+      );
+    });
+
+    it('should throw an error when accessing actions that were not provided', () => {
+      // Create a view that tries to use actions without providing them
+      const view = createView({}, ({ actions }) => ({
+        // @ts-expect-error
+        handler: actions().increment, // This should throw
+      }));
+
+      const sliceCreator = view();
+
+      // Should throw when trying to access unavailable actions
+      expect(() => sliceCreator({ get: vi.fn() })).toThrow(
+        'View factory is using actions() but no actions were provided'
+      );
+    });
+
+    it('should check for selectors and actions usage at creation time', () => {
+      // Should throw when using selectors without providing them
+      expect(() => {
+        const viewFactory = createView(
+          {}, // No selectors
+          ({ selectors }) => ({
+            // @ts-expect-error
+            value: selectors().count, // This reference will be detected
+          })
+        );
+
+        const sliceCreator = viewFactory();
+        sliceCreator({ get: vi.fn() }); // This should throw
+      }).toThrow();
+
+      // Should throw when using actions without providing them
+      expect(() => {
+        const viewFactory = createView(
+          {}, // No actions
+          ({ actions }) => ({
+            // @ts-expect-error
+            handler: actions().increment, // This reference will be detected
+          })
+        );
+
+        const sliceCreator = viewFactory();
+        sliceCreator({ get: vi.fn() }); // This should throw
+      }).toThrow();
+    });
+
+    // Note: Full view composition tests will be added when the component
+    // infrastructure is implemented. For now we're testing function-access patterns
+    // and object parameters, which are the focus of this PR.
+    it.todo('should support slice-first pattern in composition');
+
+    // Note: Full view composition tests with cherry-picking will be added when the component
+    // infrastructure is implemented. For now we're testing function-access patterns
+    // and object parameters, which are the focus of this PR.
+    it.todo('should support cherry-picking properties in composition');
   });
 }

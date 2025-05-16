@@ -1,10 +1,10 @@
 import {
   MODEL_INSTANCE_BRAND,
-  STATE_INSTANCE_BRAND,
+  SELECTORS_INSTANCE_BRAND,
   ACTIONS_INSTANCE_BRAND,
   VIEW_INSTANCE_BRAND,
   ModelInstance,
-  StateInstance,
+  SelectorsInstance,
   ActionsInstance,
   ViewInstance,
 } from '../types';
@@ -23,15 +23,15 @@ export function isModelInstance<T = unknown>(
 }
 
 /**
- * Type guard to check if a value is a state instance
+ * Type guard to check if a value is a selectors instance
  *
  * @param value The value to check
- * @returns Whether the value is a state instance
+ * @returns Whether the value is a selectors instance
  */
-export function isStateInstance<T = unknown>(
+export function isSelectorsInstance<T = unknown>(
   value: unknown
-): value is StateInstance<T> {
-  return isBranded(value, STATE_INSTANCE_BRAND);
+): value is SelectorsInstance<T> {
+  return isBranded(value, SELECTORS_INSTANCE_BRAND);
 }
 
 /**
@@ -77,16 +77,16 @@ if (import.meta.vitest) {
       expect(isModelInstance({})).toBe(false);
     });
 
-    it('identifies a branded state instance as true', () => {
-      const fn = function uniqueStateFn() {
+    it('identifies a branded selectors instance as true', () => {
+      const fn = function uniqueSelectorsFn() {
         return { value: 'test' };
       };
-      const branded = brandWithSymbol(fn, STATE_INSTANCE_BRAND);
-      expect(isStateInstance(branded)).toBe(true);
+      const branded = brandWithSymbol(fn, SELECTORS_INSTANCE_BRAND);
+      expect(isSelectorsInstance(branded)).toBe(true);
     });
 
-    it('identifies a non-branded object as false for state instance', () => {
-      expect(isStateInstance({})).toBe(false);
+    it('identifies a non-branded object as false for selectors instance', () => {
+      expect(isSelectorsInstance({})).toBe(false);
     });
 
     it('identifies a branded action instance as true', () => {

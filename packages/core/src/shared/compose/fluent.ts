@@ -1,19 +1,21 @@
 import {
   ModelInstance,
-  StateInstance,
+  SelectorsInstance,
   ActionsInstance,
   ViewInstance,
-  StoreFactoryTools,
-  ActionsFactoryTools,
+  ModelCompositionTools,
+  SelectorsCompositionTools,
+  ActionsCompositionTools,
+  ViewCompositionTools,
   MODEL_INSTANCE_BRAND,
-  STATE_INSTANCE_BRAND,
+  SELECTORS_INSTANCE_BRAND,
   ACTIONS_INSTANCE_BRAND,
   VIEW_INSTANCE_BRAND,
 } from '../types';
 import { composeWith } from './core';
 
 /**
- * Unified fluent API for composing all Lattice entities (model, state, actions, view) with best-in-class type inference.
+ * Unified fluent API for composing all Lattice entities (model, selectors, actions, view) with best-in-class type inference.
  *
  * Usage:
  *   const enhanced = compose(base).with<Ext>(cb)
@@ -25,26 +27,31 @@ import { composeWith } from './core';
  *
  * This is the recommended public API for Lattice composition.
  */
-// Model
+// Model - uses slice-first pattern with tools object
 export function compose<B>(base: ModelInstance<B>): {
   with<Ext>(
-    cb: (tools: StoreFactoryTools<B & Ext>) => Ext
+    cb: (slice: B, tools: ModelCompositionTools<B, Ext>) => Ext
   ): ModelInstance<B & Ext>;
 };
-// State
-export function compose<B>(base: StateInstance<B>): {
-  with<Ext>(
-    cb: (tools: StoreFactoryTools<B & Ext>) => Ext
-  ): StateInstance<B & Ext>;
+
+// Selectors - uses slice-first pattern with tools object
+export function compose<B>(base: SelectorsInstance<B>): {
+  with<Ext, TModel>(
+    cb: (slice: B, tools: SelectorsCompositionTools<TModel>) => Ext
+  ): SelectorsInstance<B & Ext>;
 };
-// Actions
+
+// Actions - uses slice-first pattern with tools object
 export function compose<B>(base: ActionsInstance<B>): {
-  with<Ext>(cb: (tools: ActionsFactoryTools) => Ext): ActionsInstance<B & Ext>;
+  with<Ext, TModel>(
+    cb: (slice: B, tools: ActionsCompositionTools<TModel>) => Ext
+  ): ActionsInstance<B & Ext>;
 };
-// View
+
+// View - uses slice-first pattern with tools object
 export function compose<B>(base: ViewInstance<B>): {
-  with<Ext>(
-    cb: (tools: StoreFactoryTools<B & Ext>) => Ext
+  with<Ext, TSelectors, TActions>(
+    cb: (slice: B, tools: ViewCompositionTools<TSelectors, TActions>) => Ext
   ): ViewInstance<B & Ext>;
 };
 // Implementation
@@ -63,15 +70,14 @@ if (import.meta.vitest) {
     const { createModel } = await import('../../model');
 
     it('should support fluent compose for models', () => {
-      const baseModel = createModel<{
-        count: number;
-      }>(() => ({
+      const baseModel = createModel(() => ({
         count: 1,
       }));
 
       const enhanced = compose(baseModel).with<{ doubled: () => number }>(
-        ({ get }) => ({
-          doubled: () => get().count * 2,
+        (slice, tools) => ({
+          ...slice,
+          doubled: () => tools.get().count * 2,
         })
       );
 
@@ -79,18 +85,41 @@ if (import.meta.vitest) {
       expect(enhanced[MODEL_INSTANCE_BRAND]).toBe(true);
     });
 
-    it('should support fluent compose for state', () => {
-      const baseState = brandWithSymbol(
-        () => () => ({ foo: 'bar' }),
-        STATE_INSTANCE_BRAND
+    it('should support cherry-picking properties from slice in models', () => {
+      const baseModel = createModel(() => ({
+        count: 1,
+        privateData: 'sensitive',
+      }));
+
+      // Should allow cherry-picking specific properties
+      const enhanced = compose(baseModel).with<{ doubled: () => number }>(
+        (slice, tools) => ({
+          // Only include count, omit privateData
+          count: slice.count,
+          doubled: () => tools.get().count * 2,
+        })
       );
 
-      const enhanced = compose(baseState).with<{ bar: number }>(({ get }) => ({
-        bar: get().foo.length,
+      expect(typeof enhanced).toBe('function');
+      expect(enhanced[MODEL_INSTANCE_BRAND]).toBe(true);
+    });
+
+    it('should support fluent compose for selectors', () => {
+      const baseSelectors = brandWithSymbol(
+        () => () => ({ foo: 'bar' }),
+        SELECTORS_INSTANCE_BRAND
+      );
+
+      const enhanced = compose(baseSelectors).with<
+        { bar: number },
+        { foo: string }
+      >((slice) => ({
+        ...slice,
+        bar: slice.foo.length,
       }));
 
       expect(typeof enhanced).toBe('function');
-      expect(enhanced[STATE_INSTANCE_BRAND]).toBe(true);
+      expect(enhanced[SELECTORS_INSTANCE_BRAND]).toBe(true);
     });
 
     it('should support fluent compose for actions', () => {
@@ -99,14 +128,16 @@ if (import.meta.vitest) {
         ACTIONS_INSTANCE_BRAND
       );
 
-      // Create a mock model with a dec method for testing
+      // Mock model with a dec method
       const mockModel = { dec: () => {} };
 
-      const enhanced = compose(baseActions).with<{ dec: () => void }>(
-        ({ mutate }) => ({
-          dec: mutate(mockModel).dec,
-        })
-      );
+      const enhanced = compose(baseActions).with<
+        { dec: () => void },
+        typeof mockModel
+      >((slice, tools) => ({
+        ...slice,
+        dec: tools.model().dec,
+      }));
 
       expect(typeof enhanced).toBe('function');
       expect(enhanced[ACTIONS_INSTANCE_BRAND]).toBe(true);
@@ -118,7 +149,12 @@ if (import.meta.vitest) {
         VIEW_INSTANCE_BRAND
       );
 
-      const enhanced = compose(baseView).with<{ bar: number }>(({}) => ({
+      const enhanced = compose(baseView).with<
+        { bar: number },
+        unknown,
+        unknown
+      >((slice) => ({
+        ...slice,
         bar: 2,
       }));
 
