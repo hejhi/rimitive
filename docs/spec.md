@@ -509,7 +509,54 @@ export const createComponentStore = (config) => create((...a) => ({
    )
    ```
 
-This implementation approach allows us to maintain the clean, compositional API surface while leveraging Zustand's performance optimizations under the hood.
+4. **Framework Adapters**: Each framework integration gets a dedicated adapter to handle framework-specific optimizations:
+   ```typescript
+   // Core library - framework agnostic
+   export function createComponentStore(config) {
+     // Create a basic Zustand store with slices
+     return createStore((set, get) => ({
+       model: config.getModel(set, get),
+       selectors: config.getSelectors(set, get),
+       actions: config.getActions(set, get),
+       views: config.getViews(set, get),
+     }));
+   }
+
+   // React adapter
+   export function createReactAdapter(store) {
+     return {
+       // React-specific optimized selectors
+       useModel: (selector) => useStore(store, 
+         state => selector(state.model), 
+         shallow
+       ),
+       useSelector: (key) => useStore(store, 
+         state => state.selectors[key]
+       ),
+       useView: (name) => useStore(store, 
+         state => state.views[name], 
+         shallow
+       ),
+       useAction: (name) => useStore(store, 
+         state => state.actions[name]
+       ),
+     };
+   }
+
+   // Vanilla JS adapter
+   export function createVanillaAdapter(store) {
+     return {
+       // Simpler getter-based API for vanilla JS
+       getModel: () => store.getState().model,
+       getSelector: (key) => store.getState().selectors[key],
+       getView: (name) => store.getState().views[name],
+       getAction: (name) => store.getState().actions[name],
+       // Plus subscription helpers if needed
+     };
+   }
+   ```
+
+This implementation approach allows us to maintain the clean, compositional API surface while leveraging Zustand's performance optimizations under the hood. The framework adapters ensure that each integration can take advantage of framework-specific optimization techniques (like React's memoization) while the core library remains framework-agnostic.
 
 ## License
 

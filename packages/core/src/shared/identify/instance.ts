@@ -3,10 +3,12 @@ import {
   SELECTORS_INSTANCE_BRAND,
   ACTIONS_INSTANCE_BRAND,
   VIEW_INSTANCE_BRAND,
+  COMPONENT_INSTANCE_BRAND,
   ModelInstance,
   SelectorsInstance,
   ActionsInstance,
   ViewInstance,
+  ComponentInstance,
 } from '../types';
 import { isBranded } from './marker';
 
@@ -56,6 +58,23 @@ export function isViewInstance<T = unknown>(
   value: unknown
 ): value is ViewInstance<T> {
   return isBranded(value, VIEW_INSTANCE_BRAND);
+}
+
+/**
+ * Type guard to check if a value is a component instance
+ *
+ * @param value The value to check
+ * @returns Whether the value is a component instance
+ */
+export function isComponentInstance<
+  TModel = unknown,
+  TSelectors = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>
+>(
+  value: unknown
+): value is ComponentInstance<TModel, TSelectors, TActions, TViews> {
+  return isBranded(value, COMPONENT_INSTANCE_BRAND);
 }
 
 // In-source tests
@@ -111,6 +130,18 @@ if (import.meta.vitest) {
 
     it('identifies a non-branded object as false for view instance', () => {
       expect(isViewInstance({})).toBe(false);
+    });
+    
+    it('identifies a branded component instance as true', () => {
+      const fn = function uniqueComponentFn() {
+        return {};
+      };
+      const branded = brandWithSymbol(fn, COMPONENT_INSTANCE_BRAND);
+      expect(isComponentInstance(branded)).toBe(true);
+    });
+
+    it('identifies a non-branded object as false for component instance', () => {
+      expect(isComponentInstance({})).toBe(false);
     });
   });
 }

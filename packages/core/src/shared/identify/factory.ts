@@ -3,8 +3,10 @@ import {
   SELECTORS_FACTORY_BRAND,
   ACTIONS_FACTORY_BRAND,
   VIEW_FACTORY_BRAND,
+  COMPONENT_FACTORY_BRAND,
   LATTICE_BRAND,
   Lattice,
+  ComponentFactory,
 } from '../types';
 import { brandWithSymbol } from './marker';
 
@@ -108,6 +110,28 @@ export function markAsLattice<
   >;
 }
 
+/**
+ * Type guard to check if a value is a component factory
+ *
+ * @param value The value to check
+ * @returns Whether the value is a component factory
+ */
+export function isComponentFactory<
+  TModel = unknown,
+  TSelectors = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>,
+>(
+  value: unknown
+): value is ComponentFactory<TModel, TSelectors, TActions, TViews> {
+  return (
+    value !== null &&
+    typeof value === 'function' &&
+    Object.prototype.hasOwnProperty.call(value, COMPONENT_FACTORY_BRAND) &&
+    Boolean(Reflect.get(value, COMPONENT_FACTORY_BRAND))
+  );
+}
+
 // In-source tests
 if (import.meta.vitest) {
   const { it, expect, describe, vi } = import.meta.vitest;
@@ -196,6 +220,18 @@ if (import.meta.vitest) {
       expect(isLattice('string')).toBe(false);
       expect(isLattice({})).toBe(false);
       expect(isLattice(() => {})).toBe(false);
+    });
+    
+    it('should correctly identify a ComponentFactory', () => {
+      const mockComponentFactory = brandWithSymbol(
+        () => ({}),
+        COMPONENT_FACTORY_BRAND
+      );
+      
+      expect(isComponentFactory(mockComponentFactory)).toBe(true);
+      expect(isComponentFactory({})).toBe(false);
+      expect(isComponentFactory(() => {})).toBe(false);
+      expect(isComponentFactory({ [Symbol('wrong')]: true })).toBe(false);
     });
   });
 }

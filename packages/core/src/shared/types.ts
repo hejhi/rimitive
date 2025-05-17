@@ -299,6 +299,10 @@ export interface LatticeLike<
   readonly getAllViews: () => {
     readonly [K in keyof TViews]: ViewInstance<TViews[K]>;
   };
+  
+  // Internal store access (prefixed with double underscore to indicate internal use)
+  readonly __store?: any;
+  readonly __selectors?: any;
 }
 
 /**
@@ -438,20 +442,53 @@ export interface ComponentExtension<
 }
 
 /**
+ * Component elements access structure
+ * Provides direct access to component elements for composition
+ */
+export interface ComponentElements<
+  TModel,
+  TSelectors,
+  TActions,
+  TViews extends Record<string, unknown>
+> {
+  /**
+   * The model instance of the component
+   */
+  model: ModelInstance<TModel>;
+  
+  /**
+   * The selectors instance of the component
+   */
+  selectors: SelectorsInstance<TSelectors>;
+  
+  /**
+   * The actions instance of the component
+   */
+  actions: ActionsInstance<TActions>;
+  
+  /**
+   * The view instances of the component
+   */
+  view: {
+    readonly [K in keyof TViews]: ViewInstance<TViews[K]>;
+  };
+}
+
+/**
  * Type for the withComponent callback function
- * Receives the base component and returns an extension
+ * Receives component elements and returns an extension
  */
 export type WithComponentCallback<
   TBaseModel,
   TBaseSelectors,
   TBaseActions,
   TBaseViews extends Record<string, unknown>,
-  TExtModel,
-  TExtSelectors,
-  TExtActions,
-  TExtViews extends Record<string, unknown>,
+  TExtModel extends TBaseModel,
+  TExtSelectors extends TBaseSelectors,
+  TExtActions extends TBaseActions,
+  TExtViews extends TBaseViews
 > = (
-  tools: ComponentCompositionTools<
+  elements: ComponentElements<
     TBaseModel,
     TBaseSelectors,
     TBaseActions,
