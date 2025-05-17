@@ -91,6 +91,7 @@ However, the following components are missing or incomplete:
 - [x] Implement createComponentStore with slice model
 - [x] Add property prefixing to prevent collisions
 - [x] Implement JavaScript getters for vanilla JS
+- [x] Align implementation with namespace-level getters in spec
 - [ ] Implement subscription support
 - [ ] Implement Zustand selectors for React integration
 - [x] Test the distinction between composition time and post-store creation
