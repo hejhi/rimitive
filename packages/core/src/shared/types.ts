@@ -123,6 +123,11 @@ export interface SelectorsFactoryParams<TModel> {
   model: () => TModel;
 }
 
+export interface SelectFactoryTools<T, TModel = unknown> {
+  get: GetState<T>;
+  model?: () => TModel; // Optional but properly typed model accessor function
+}
+
 export type SelectorsFactoryCallback<T, TModel> = (
   params: SelectorsFactoryParams<TModel>
 ) => T;
@@ -144,6 +149,14 @@ export type ActionsFactoryCallback<T, TModel> = (
 export interface ViewFactoryParams<TSelectors, TActions> {
   selectors: () => TSelectors;
   actions: () => TActions;
+}
+
+/**
+ * Adapter that maps ViewFactoryParams to SelectFactoryTools
+ * This is needed for backwards compatibility with view instance functions
+ */
+export type ViewParamsToToolsAdapter<T, TSelectors, TActions> = ViewFactoryParams<TSelectors, TActions> & {
+  get?: () => T;
 }
 
 export type ViewFactoryCallback<T, TSelectors, TActions> = (
@@ -233,8 +246,8 @@ export type BrandedModelFactoryTools<T> = Branded<
   StoreFactoryTools<T>,
   typeof MODEL_FACTORY_BRAND
 >;
-export type BrandedSelectorsFactoryTools<T> = Branded<
-  SelectFactoryTools<T>,
+export type BrandedSelectorsFactoryTools<T, TModel = unknown> = Branded<
+  SelectFactoryTools<T, TModel>,
   typeof SELECTORS_FACTORY_BRAND
 >;
 export type BrandedActionsFactoryTools = Branded<
@@ -261,8 +274,16 @@ export type ActionsInstance<T> = Branded<
   () => (options: ActionsFactoryTools) => T,
   typeof ACTIONS_INSTANCE_BRAND
 >;
-export type ViewInstance<T> = Branded<
-  () => (options: SelectFactoryTools<T>) => T,
+/**
+ * The ViewInstance type represents a view that can be composed with others
+ * It's a function that returns a function that takes the tools and returns the view data
+ * The generics represent:
+ * - T: The view data type
+ * - TSelectors: The type of selectors this view needs access to
+ * - TActions: The type of actions this view needs access to
+ */
+export type ViewInstance<T, TSelectors = unknown, TActions = unknown> = Branded<
+  () => (options: ViewParamsToToolsAdapter<T, TSelectors, TActions>) => T,
   typeof VIEW_INSTANCE_BRAND
 >;
 
