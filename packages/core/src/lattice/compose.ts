@@ -5,10 +5,10 @@ import {
   ComponentElements,
   ComponentExtension,
   Lattice,
-  ModelInstance,
-  SelectorsInstance,
-  ActionsInstance,
-  ViewInstance,
+  ModelFactory,
+  SelectorsFactory,
+  ActionsFactory,
+  ViewFactory,
 } from '../shared/types';
 import { createComponent } from './create';
 
@@ -104,13 +104,13 @@ export function withComponent<
       TExtViews
     > = {
       model: (extensions.model ||
-        component.getModel()) as ModelInstance<TExtModel>,
+        component.getModel()) as ModelFactory<TExtModel>,
       selectors: (extensions.selectors ||
-        component.getSelectors()) as SelectorsInstance<TExtSelectors>,
+        component.getSelectors()) as SelectorsFactory<TExtSelectors>,
       actions: (extensions.actions ||
-        component.getActions()) as ActionsInstance<TExtActions>,
+        component.getActions()) as ActionsFactory<TExtActions>,
       view: (extensions.view || component.getAllViews()) as {
-        [K in keyof TExtViews]: ViewInstance<TExtViews[K]>;
+        [K in keyof TExtViews]: ViewFactory<TExtViews[K]>;
       },
     };
     return result;
@@ -179,35 +179,35 @@ if (import.meta.vitest) {
     // Import modules once at the describe level
     const { brandWithSymbol } = await import('../shared/identify');
     const {
-      MODEL_INSTANCE_BRAND,
-      SELECTORS_INSTANCE_BRAND,
-      ACTIONS_INSTANCE_BRAND,
-      VIEW_INSTANCE_BRAND,
+      MODEL_FACTORY_BRAND,
+      SELECTORS_FACTORY_BRAND,
+      ACTIONS_FACTORY_BRAND,
+      VIEW_FACTORY_BRAND,
       LATTICE_BRAND,
       COMPONENT_FACTORY_BRAND,
     } = await import('../shared/types');
 
     // Create mock components for all tests in this describe block
-    // Create properly typed mocks that match the instance interfaces
+    // Create properly typed mocks that match the factory interfaces
     const mockModel = brandWithSymbol(
       () => (_: any) => ({}),
-      MODEL_INSTANCE_BRAND
+      MODEL_FACTORY_BRAND
     );
     const mockSelectors = brandWithSymbol(
       () => (_: any) => ({}),
-      SELECTORS_INSTANCE_BRAND
+      SELECTORS_FACTORY_BRAND
     );
     const mockActions = brandWithSymbol(
       () => (_: any) => ({}),
-      ACTIONS_INSTANCE_BRAND
+      ACTIONS_FACTORY_BRAND
     );
     const mockCounterView = brandWithSymbol(
       () => (_: any) => ({}),
-      VIEW_INSTANCE_BRAND
+      VIEW_FACTORY_BRAND
     );
     const mockButtonView = brandWithSymbol(
       () => (_: any) => ({}),
-      VIEW_INSTANCE_BRAND
+      VIEW_FACTORY_BRAND
     );
 
     const mockLattice = brandWithSymbol(
@@ -282,28 +282,28 @@ if (import.meta.vitest) {
         reset: { onClick: () => void };
       };
 
-      // Create properly typed mock instances
+      // Create properly typed mock factories
       const extModel = brandWithSymbol(
         () => (_: any) => ({ count: 0, reset: vi.fn() }) as TestExtModel,
-        MODEL_INSTANCE_BRAND
+        MODEL_FACTORY_BRAND
       );
       const extSelectors = brandWithSymbol(
         () => (_: any) =>
           ({ isPositive: false, isEven: true }) as TestExtSelectors,
-        SELECTORS_INSTANCE_BRAND
+        SELECTORS_FACTORY_BRAND
       );
       const extActions = brandWithSymbol(
         () => (_: any) =>
           ({ increment: vi.fn(), reset: vi.fn() }) as TestExtActions,
-        ACTIONS_INSTANCE_BRAND
+        ACTIONS_FACTORY_BRAND
       );
       const extCounterView = brandWithSymbol(
         () => (_: any) => ({ 'data-count': 0 }) as TestExtViews['counter'],
-        VIEW_INSTANCE_BRAND
+        VIEW_FACTORY_BRAND
       );
       const extResetView = brandWithSymbol(
         () => (_: any) => ({ onClick: vi.fn() }) as TestExtViews['reset'],
-        VIEW_INSTANCE_BRAND
+        VIEW_FACTORY_BRAND
       );
 
       // Create a properly typed callback
@@ -324,15 +324,15 @@ if (import.meta.vitest) {
         console.log('Base model:', elements.model);
 
         return {
-          model: extModel as unknown as ModelInstance<TestExtModel>,
+          model: extModel as unknown as ModelFactory<TestExtModel>,
           selectors:
-            extSelectors as unknown as SelectorsInstance<TestExtSelectors>,
-          actions: extActions as unknown as ActionsInstance<TestExtActions>,
+            extSelectors as unknown as SelectorsFactory<TestExtSelectors>,
+          actions: extActions as unknown as ActionsFactory<TestExtActions>,
           view: {
-            counter: extCounterView as unknown as ViewInstance<
+            counter: extCounterView as unknown as ViewFactory<
               TestExtViews['counter']
             >,
-            reset: extResetView as unknown as ViewInstance<
+            reset: extResetView as unknown as ViewFactory<
               TestExtViews['reset']
             >,
           },
@@ -385,7 +385,7 @@ if (import.meta.vitest) {
       // Create a properly typed extended model
       const extModel = brandWithSymbol(
         () => (_: any) => ({ count: 0, reset: vi.fn() }) as TestExtModel,
-        MODEL_INSTANCE_BRAND
+        MODEL_FACTORY_BRAND
       );
 
       // Create a properly typed callback that only extends the model
@@ -407,7 +407,7 @@ if (import.meta.vitest) {
 
         return {
           // Only extend the model
-          model: extModel as unknown as ModelInstance<TestExtModel>,
+          model: extModel as unknown as ModelFactory<TestExtModel>,
         };
       };
 
@@ -450,7 +450,7 @@ if (import.meta.vitest) {
     const { isComponentFactory, brandWithSymbol } = await import(
       '../shared/identify'
     );
-    const { MODEL_INSTANCE_BRAND, COMPONENT_FACTORY_BRAND, LATTICE_BRAND } =
+    const { MODEL_FACTORY_BRAND, COMPONENT_FACTORY_BRAND, LATTICE_BRAND } =
       await import('../shared/types');
 
     // Create a mock component factory
@@ -486,7 +486,7 @@ if (import.meta.vitest) {
       // Create a callback that returns extensions
       const callback = ((_: any) => ({
         // Return minimal extensions
-        model: brandWithSymbol(() => (_: any) => ({}), MODEL_INSTANCE_BRAND),
+        model: brandWithSymbol(() => (_: any) => ({}), MODEL_FACTORY_BRAND),
       })) as any;
 
       // Call extendComponent

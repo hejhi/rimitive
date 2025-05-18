@@ -12,7 +12,7 @@ import type {
   SetState,
   GetState,
   MutatedModel,
-  ViewInstance,
+  ViewFactory,
 } from '../types';
 
 /**
@@ -217,7 +217,7 @@ export function createStoreConfig<
         
         Object.entries(views).forEach(([key, viewInstance]) => {
           // Assert the view instance type more specifically
-          const typedViewInstance = viewInstance as ViewInstance<unknown>;
+          const typedViewInstance = viewInstance as ViewFactory<unknown>;
           const viewFn = typedViewInstance();
 
           // Create a properly typed view tools adapter that satisfies both interfaces

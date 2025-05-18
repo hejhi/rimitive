@@ -3,23 +3,24 @@ import type { StoreApi } from 'zustand/vanilla';
 /**
  * Brand symbols for runtime type identification
  */
-// Factory brand symbols
+// Tools brand symbols (previously factory brand symbols)
+export const MODEL_TOOLS_BRAND = Symbol('model-tools');
+export const SELECTORS_TOOLS_BRAND = Symbol('selectors-tools');
+export const ACTIONS_TOOLS_BRAND = Symbol('actions-tools');
+export const VIEW_TOOLS_BRAND = Symbol('view-tools');
+export const MUTATION_BRAND = Symbol('mutation-brand');
+export const COMPONENT_FACTORY_BRAND = Symbol('component-factory');
+
+// Factory brand symbols (previously instance brand symbols)
 export const MODEL_FACTORY_BRAND = Symbol('model-factory');
 export const SELECTORS_FACTORY_BRAND = Symbol('selectors-factory');
 export const ACTIONS_FACTORY_BRAND = Symbol('actions-factory');
 export const VIEW_FACTORY_BRAND = Symbol('view-factory');
-export const MUTATION_BRAND = Symbol('mutation-brand');
-export const COMPONENT_FACTORY_BRAND = Symbol('component-factory');
-
-// Instance brand symbols
-export const MODEL_INSTANCE_BRAND = Symbol('model-instance');
-export const SELECTORS_INSTANCE_BRAND = Symbol('selectors-instance');
-export const ACTIONS_INSTANCE_BRAND = Symbol('actions-instance');
-export const VIEW_INSTANCE_BRAND = Symbol('view-instance');
-export const COMPONENT_INSTANCE_BRAND = Symbol('component-instance');
+export const COMPONENT_FACTORY_INSTANCE_BRAND = Symbol('component-factory-instance');
 
 // Lattice brand symbol
 export const LATTICE_BRAND = Symbol('lattice');
+
 
 /**
  * Type utility for creating branded types
@@ -61,10 +62,10 @@ export type Mutation<T extends (...args: any[]) => any> = Branded<
 >;
 
 /**
- * Helper type to extract the actual model type from a model instance
+ * Helper type to extract the actual model type from a model factory
  */
 export type ExtractModelType<M> =
-  M extends ModelInstance<infer T>
+  M extends ModelFactory<infer T>
     ? T
     : M extends () => any
       ? ReturnType<M>
@@ -93,7 +94,7 @@ export type MutatedModel<M> = {
  * Factory tools for creating actions
  */
 export interface ActionsFactoryTools {
-  // Enhanced mutate function for both ModelInstance and regular objects
+  // Enhanced mutate function for both ModelFactory and regular objects
   mutate: <M>(model: M) => MutatedModel<M>;
 }
 
@@ -153,7 +154,7 @@ export interface ViewFactoryParams<TSelectors, TActions> {
 
 /**
  * Adapter that maps ViewFactoryParams to SelectFactoryTools
- * This is needed for backwards compatibility with view instance functions
+ * This is needed for backwards compatibility with view factory functions
  */
 export type ViewParamsToToolsAdapter<T, TSelectors, TActions> =
   ViewFactoryParams<TSelectors, TActions> & {
@@ -226,74 +227,84 @@ export type View<T, TSelectors, TActions> = (
 ) => T;
 
 /**
- * Updated factory function types with object parameters
+ * Slice factory function types with object parameters
+ * 
+ * These represent the user-provided factory functions that define the behavior
+ * of each slice type (model, selectors, actions, views)
  */
-export type ModelFactory<T> = ModelFactoryCallback<T>;
+export type ModelSliceFactory<T> = ModelFactoryCallback<T>;
 
-export type SelectorsFactory<T, TModel> = SelectorsFactoryCallback<T, TModel>;
+export type SelectorsSliceFactory<T, TModel> = SelectorsFactoryCallback<T, TModel>;
 
-export type ActionsFactory<T, TModel> = ActionsFactoryCallback<T, TModel>;
+export type ActionsSliceFactory<T, TModel> = ActionsFactoryCallback<T, TModel>;
 
-export type ViewFactory<T, TSelectors, TActions> = ViewFactoryCallback<
+export type ViewSliceFactory<T, TSelectors, TActions> = ViewFactoryCallback<
   T,
   TSelectors,
   TActions
 >;
 
+
 /**
  * Branded tools types
  */
-export type BrandedModelFactoryTools<T> = Branded<
+export type BrandedModelTools<T> = Branded<
   StoreFactoryTools<T>,
-  typeof MODEL_FACTORY_BRAND
+  typeof MODEL_TOOLS_BRAND
 >;
-export type BrandedSelectorsFactoryTools<T, TModel = unknown> = Branded<
+export type BrandedSelectorsTools<T, TModel = unknown> = Branded<
   SelectFactoryTools<T, TModel>,
-  typeof SELECTORS_FACTORY_BRAND
+  typeof SELECTORS_TOOLS_BRAND
 >;
-export type BrandedActionsFactoryTools = Branded<
+export type BrandedActionsTools = Branded<
   ActionsFactoryTools,
-  typeof ACTIONS_FACTORY_BRAND
+  typeof ACTIONS_TOOLS_BRAND
 >;
-export type BrandedViewFactoryTools<T> = Branded<
+export type BrandedViewTools<T> = Branded<
   SelectFactoryTools<T>,
-  typeof VIEW_FACTORY_BRAND
+  typeof VIEW_TOOLS_BRAND
 >;
 
+
 /**
- * Instance types
+ * Factory types (previously instance types)
+ * 
+ * These are the primary factory types used throughout the system.
+ * They represent branded factory functions that can be composed and eventually
+ * instantiated with runtime tools.
  */
-export type ModelInstance<T> = Branded<
+export type ModelFactory<T> = Branded<
   () => (options: StoreFactoryTools<T>) => T,
-  typeof MODEL_INSTANCE_BRAND
+  typeof MODEL_FACTORY_BRAND
 >;
-export type SelectorsInstance<T> = Branded<
+export type SelectorsFactory<T> = Branded<
   () => (options: SelectFactoryTools<T>) => T,
-  typeof SELECTORS_INSTANCE_BRAND
+  typeof SELECTORS_FACTORY_BRAND
 >;
-export type ActionsInstance<T> = Branded<
+export type ActionsFactory<T> = Branded<
   () => (options: ActionsFactoryTools) => T,
-  typeof ACTIONS_INSTANCE_BRAND
+  typeof ACTIONS_FACTORY_BRAND
 >;
 /**
- * The ViewInstance type represents a view that can be composed with others
+ * The ViewFactory type represents a view factory that can be composed with others
  * It's a function that returns a function that takes the tools and returns the view data
  * The generics represent:
  * - T: The view data type
  * - TSelectors: The type of selectors this view needs access to
  * - TActions: The type of actions this view needs access to
  */
-export type ViewInstance<T, TSelectors = unknown, TActions = unknown> = Branded<
+export type ViewFactory<T, TSelectors = unknown, TActions = unknown> = Branded<
   () => (options: ViewParamsToToolsAdapter<T, TSelectors, TActions>) => T,
-  typeof VIEW_INSTANCE_BRAND
+  typeof VIEW_FACTORY_BRAND
 >;
 
-// Union of all instance types
-export type BaseInstance<T> =
-  | ModelInstance<T>
-  | SelectorsInstance<T>
-  | ActionsInstance<T>
-  | ViewInstance<T>;
+// Union of all factory types
+export type BaseFactory<T> =
+  | ModelFactory<T>
+  | SelectorsFactory<T>
+  | ActionsFactory<T>
+  | ViewFactory<T>;
+
 
 /**
  * Lattice component types - internal interface
@@ -310,16 +321,16 @@ export interface LatticeLike<
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > {
   // Internal accessor methods (not exposed publicly)
-  readonly getModel: () => ModelInstance<TModel>;
-  readonly getSelectors: () => SelectorsInstance<TSelectors>;
-  readonly getActions: () => ActionsInstance<TActions>;
+  readonly getModel: () => ModelFactory<TModel>;
+  readonly getSelectors: () => SelectorsFactory<TSelectors>;
+  readonly getActions: () => ActionsFactory<TActions>;
 
   // View accessors with name-based retrieval
   readonly getView: <K extends keyof TViews>(
     viewName: K
-  ) => ViewInstance<TViews[K]>;
+  ) => ViewFactory<TViews[K]>;
   readonly getAllViews: () => {
-    readonly [K in keyof TViews]: ViewInstance<TViews[K]>;
+    readonly [K in keyof TViews]: ViewFactory<TViews[K]>;
   };
 
   // Internal store access (prefixed with double underscore to indicate internal use)
@@ -362,26 +373,26 @@ export interface ComponentConfig<
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > {
   /**
-   * The model instance for the component
+   * The model factory for the component
    */
-  model: ModelInstance<TModel>;
+  model: ModelFactory<TModel>;
 
   /**
-   * The selectors instance for the component
+   * The selectors factory for the component
    */
-  selectors: SelectorsInstance<TSelectors>;
+  selectors: SelectorsFactory<TSelectors>;
 
   /**
-   * The actions instance for the component
+   * The actions factory for the component
    */
-  actions: ActionsInstance<TActions>;
+  actions: ActionsFactory<TActions>;
 
   /**
-   * A record of named view instances
-   * Each key is a view name, and the value is a view instance
+   * A record of named view factories
+   * Each key is a view name, and the value is a view factory
    */
   view: {
-    [K in keyof TViews]: ViewInstance<TViews[K]>;
+    [K in keyof TViews]: ViewFactory<TViews[K]>;
   };
 }
 
@@ -399,17 +410,25 @@ export type ComponentFactory<
 >;
 
 /**
- * Branded component instance type
+ * Branded component factory instance type
  */
-export type ComponentInstance<
+export type ComponentFactoryInstance<
   TModel = unknown,
   TSelectors = unknown,
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > = Branded<
   () => Lattice<TModel, TSelectors, TActions, TViews>,
-  typeof COMPONENT_INSTANCE_BRAND
+  typeof COMPONENT_FACTORY_INSTANCE_BRAND
 >;
+
+// Legacy type for backward compatibility - marked for deprecation
+export type ComponentInstance<
+  TModel = unknown,
+  TSelectors = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>,
+> = ComponentFactoryInstance<TModel, TSelectors, TActions, TViews>;
 
 /**
  * Tools for component composition
@@ -440,26 +459,26 @@ export interface ComponentExtension<
    * Optional model extension
    * If provided, replaces the base model
    */
-  model?: ModelInstance<TModel>;
+  model?: ModelFactory<TModel>;
 
   /**
    * Optional selectors extension
    * If provided, replaces the base selectors
    */
-  selectors?: SelectorsInstance<TSelectors>;
+  selectors?: SelectorsFactory<TSelectors>;
 
   /**
    * Optional actions extension
    * If provided, replaces the base actions
    */
-  actions?: ActionsInstance<TActions>;
+  actions?: ActionsFactory<TActions>;
 
   /**
    * Optional view extensions
    * Can include new views or override existing views
    */
   view?: {
-    [K in keyof TViews]?: ViewInstance<TViews[K]>;
+    [K in keyof TViews]?: ViewFactory<TViews[K]>;
   };
 }
 
@@ -474,25 +493,25 @@ export interface ComponentElements<
   TViews extends Record<string, unknown>,
 > {
   /**
-   * The model instance of the component
+   * The model factory of the component
    */
-  model: ModelInstance<TModel>;
+  model: ModelFactory<TModel>;
 
   /**
-   * The selectors instance of the component
+   * The selectors factory of the component
    */
-  selectors: SelectorsInstance<TSelectors>;
+  selectors: SelectorsFactory<TSelectors>;
 
   /**
-   * The actions instance of the component
+   * The actions factory of the component
    */
-  actions: ActionsInstance<TActions>;
+  actions: ActionsFactory<TActions>;
 
   /**
-   * The view instances of the component
+   * The view factories of the component
    */
   view: {
-    readonly [K in keyof TViews]: ViewInstance<TViews[K]>;
+    readonly [K in keyof TViews]: ViewFactory<TViews[K]>;
   };
 }
 

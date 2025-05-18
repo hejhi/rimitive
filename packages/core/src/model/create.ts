@@ -1,8 +1,8 @@
 import {
+  MODEL_TOOLS_BRAND,
   MODEL_FACTORY_BRAND,
-  MODEL_INSTANCE_BRAND,
-  ModelFactory,
-  StoreFactoryTools,
+  ModelSliceFactory,
+  StoreFactoryTools
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
@@ -42,10 +42,10 @@ import { brandWithSymbol } from '../shared/identify';
  * );
  * ```
  *
- * @param factory A function that produces a state object with optional methods and derived properties
- * @returns A model instance function that can be composed
+ * @param sliceFactory A function that produces a state object with optional methods and derived properties
+ * @returns A model factory function that can be composed
  */
-export function createModel<T>(factory: ModelFactory<T>) {
+export function createModel<T>(sliceFactory: ModelSliceFactory<T>) {
   // Create a factory function that returns a slice creator
   const modelFactory = function modelFactory() {
     return (options: StoreFactoryTools<T>) => {
@@ -60,15 +60,15 @@ export function createModel<T>(factory: ModelFactory<T>) {
           set: options.set,
           get: options.get,
         },
-        MODEL_FACTORY_BRAND
+        MODEL_TOOLS_BRAND
       );
 
       // Call the factory with object parameters to match the spec
-      return factory(tools);
+      return sliceFactory(tools);
     };
   };
 
-  return brandWithSymbol(modelFactory, MODEL_INSTANCE_BRAND);
+  return brandWithSymbol(modelFactory, MODEL_FACTORY_BRAND);
 }
 
 // In-source tests
@@ -76,7 +76,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createModel', async () => {
-    const { isModelInstance, isModelFactory } = await import(
+    const { isModelFactory, isModelTools } = await import(
       '../shared/identify'
     );
 
@@ -91,7 +91,7 @@ if (import.meta.vitest) {
       // Model should be a function
       expect(typeof model).toBe('function');
 
-      expect(isModelInstance(model)).toBe(true);
+      expect(isModelFactory(model)).toBe(true);
 
       // Create tools for testing
       const mockSet = vi.fn();
@@ -111,7 +111,7 @@ if (import.meta.vitest) {
 
       // The tools should be branded with the proper symbol
       const toolsObj = factorySpy.mock.calls[0]?.[0];
-      expect(isModelFactory(toolsObj)).toBe(true);
+      expect(isModelTools(toolsObj)).toBe(true);
 
       // Verify slice contains the expected value
       expect(slice).toEqual({ count: 1 });

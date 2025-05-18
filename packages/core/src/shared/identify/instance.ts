@@ -1,147 +1,150 @@
 import {
-  MODEL_INSTANCE_BRAND,
-  SELECTORS_INSTANCE_BRAND,
-  ACTIONS_INSTANCE_BRAND,
-  VIEW_INSTANCE_BRAND,
-  COMPONENT_INSTANCE_BRAND,
-  ModelInstance,
-  SelectorsInstance,
-  ActionsInstance,
-  ViewInstance,
-  ComponentInstance,
+  MODEL_FACTORY_BRAND,
+  SELECTORS_FACTORY_BRAND,
+  ACTIONS_FACTORY_BRAND,
+  VIEW_FACTORY_BRAND,
+  COMPONENT_FACTORY_INSTANCE_BRAND,
+  ModelFactory,
+  SelectorsFactory,
+  ActionsFactory,
+  ViewFactory,
+  ComponentFactoryInstance
 } from '../types';
 import { isBranded } from './marker';
 
 /**
- * Type guard to check if a value is a model instance
+ * Type guard to check if a value is a model factory
  *
  * @param value The value to check
- * @returns Whether the value is a model instance
+ * @returns Whether the value is a model factory
  */
-export function isModelInstance<T = unknown>(
+export function isModelFactory<T = unknown>(
   value: unknown
-): value is ModelInstance<T> {
-  return isBranded(value, MODEL_INSTANCE_BRAND);
+): value is ModelFactory<T> {
+  return isBranded(value, MODEL_FACTORY_BRAND);
 }
 
 /**
- * Type guard to check if a value is a selectors instance
+ * Type guard to check if a value is a selectors factory
  *
  * @param value The value to check
- * @returns Whether the value is a selectors instance
+ * @returns Whether the value is a selectors factory
  */
-export function isSelectorsInstance<T = unknown>(
+export function isSelectorsFactory<T = unknown>(
   value: unknown
-): value is SelectorsInstance<T> {
-  return isBranded(value, SELECTORS_INSTANCE_BRAND);
+): value is SelectorsFactory<T> {
+  return isBranded(value, SELECTORS_FACTORY_BRAND);
 }
 
 /**
- * Type guard to check if a value is an action instance
+ * Type guard to check if a value is an actions factory
  *
  * @param value The value to check
- * @returns Whether the value is an action instance
+ * @returns Whether the value is an actions factory
  */
-export function isActionInstance<T = unknown>(
+export function isActionsFactory<T = unknown>(
   value: unknown
-): value is ActionsInstance<T> {
-  return isBranded(value, ACTIONS_INSTANCE_BRAND);
+): value is ActionsFactory<T> {
+  return isBranded(value, ACTIONS_FACTORY_BRAND);
 }
 
 /**
- * Type guard to check if a value is a view instance
+ * Type guard to check if a value is a view factory
  *
  * @param value The value to check
- * @returns Whether the value is a view instance
+ * @returns Whether the value is a view factory
  */
-export function isViewInstance<T = unknown>(
+export function isViewFactory<T = unknown>(
   value: unknown
-): value is ViewInstance<T> {
-  return isBranded(value, VIEW_INSTANCE_BRAND);
+): value is ViewFactory<T> {
+  return isBranded(value, VIEW_FACTORY_BRAND);
 }
 
 /**
- * Type guard to check if a value is a component instance
+ * Type guard to check if a value is a component factory instance
  *
  * @param value The value to check
- * @returns Whether the value is a component instance
+ * @returns Whether the value is a component factory instance
  */
-export function isComponentInstance<
+export function isComponentFactoryInstance<
   TModel = unknown,
   TSelectors = unknown,
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>
 >(
   value: unknown
-): value is ComponentInstance<TModel, TSelectors, TActions, TViews> {
-  return isBranded(value, COMPONENT_INSTANCE_BRAND);
+): value is ComponentFactoryInstance<TModel, TSelectors, TActions, TViews> {
+  return isBranded(value, COMPONENT_FACTORY_INSTANCE_BRAND);
 }
+
 
 // In-source tests
 if (import.meta.vitest) {
   const { it, expect, describe } = import.meta.vitest;
   const { brandWithSymbol } = await import('./marker');
 
-  describe('instance', () => {
+  describe('factory identification', () => {
     // Using separate tests with just one assertion each to isolate potential issues
-    it('identifies a branded model instance as true', () => {
+    it('identifies a branded model factory as true', () => {
       const fn = function uniqueModelFn() {
         return { count: 1 };
       };
-      const branded = brandWithSymbol(fn, MODEL_INSTANCE_BRAND);
-      expect(isModelInstance(branded)).toBe(true);
+      const branded = brandWithSymbol(fn, MODEL_FACTORY_BRAND);
+      expect(isModelFactory(branded)).toBe(true);
     });
 
-    it('identifies a non-branded object as false for model instance', () => {
-      expect(isModelInstance({})).toBe(false);
+    it('identifies a non-branded object as false for model factory', () => {
+      expect(isModelFactory({})).toBe(false);
     });
 
-    it('identifies a branded selectors instance as true', () => {
+    it('identifies a branded selectors factory as true', () => {
       const fn = function uniqueSelectorsFn() {
         return { value: 'test' };
       };
-      const branded = brandWithSymbol(fn, SELECTORS_INSTANCE_BRAND);
-      expect(isSelectorsInstance(branded)).toBe(true);
+      const branded = brandWithSymbol(fn, SELECTORS_FACTORY_BRAND);
+      expect(isSelectorsFactory(branded)).toBe(true);
     });
 
-    it('identifies a non-branded object as false for selectors instance', () => {
-      expect(isSelectorsInstance({})).toBe(false);
+    it('identifies a non-branded object as false for selectors factory', () => {
+      expect(isSelectorsFactory({})).toBe(false);
     });
 
-    it('identifies a branded action instance as true', () => {
+    it('identifies a branded actions factory as true', () => {
       const fn = function uniqueActionFn() {
         return { increment: () => {} };
       };
-      const branded = brandWithSymbol(fn, ACTIONS_INSTANCE_BRAND);
-      expect(isActionInstance(branded)).toBe(true);
+      const branded = brandWithSymbol(fn, ACTIONS_FACTORY_BRAND);
+      expect(isActionsFactory(branded)).toBe(true);
     });
 
-    it('identifies a non-branded object as false for action instance', () => {
-      expect(isActionInstance({})).toBe(false);
+    it('identifies a non-branded object as false for actions factory', () => {
+      expect(isActionsFactory({})).toBe(false);
     });
 
-    it('identifies a branded view instance as true', () => {
+    it('identifies a branded view factory as true', () => {
       const fn = function uniqueViewFn() {
         return { render: () => {} };
       };
-      const branded = brandWithSymbol(fn, VIEW_INSTANCE_BRAND);
-      expect(isViewInstance(branded)).toBe(true);
+      const branded = brandWithSymbol(fn, VIEW_FACTORY_BRAND);
+      expect(isViewFactory(branded)).toBe(true);
     });
 
-    it('identifies a non-branded object as false for view instance', () => {
-      expect(isViewInstance({})).toBe(false);
+    it('identifies a non-branded object as false for view factory', () => {
+      expect(isViewFactory({})).toBe(false);
     });
     
-    it('identifies a branded component instance as true', () => {
+    it('identifies a branded component factory instance as true', () => {
       const fn = function uniqueComponentFn() {
         return {};
       };
-      const branded = brandWithSymbol(fn, COMPONENT_INSTANCE_BRAND);
-      expect(isComponentInstance(branded)).toBe(true);
+      const branded = brandWithSymbol(fn, COMPONENT_FACTORY_INSTANCE_BRAND);
+      expect(isComponentFactoryInstance(branded)).toBe(true);
     });
 
-    it('identifies a non-branded object as false for component instance', () => {
-      expect(isComponentInstance({})).toBe(false);
+    it('identifies a non-branded object as false for component factory instance', () => {
+      expect(isComponentFactoryInstance({})).toBe(false);
     });
   });
+  
+  // Legacy instance tests have been removed as backwards compatibility is no longer needed
 }

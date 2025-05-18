@@ -1,6 +1,6 @@
 import {
+  ACTIONS_TOOLS_BRAND,
   ACTIONS_FACTORY_BRAND,
-  ACTIONS_INSTANCE_BRAND,
   ActionsFactoryParams,
   ActionsFactoryTools,
 } from '../shared/types';
@@ -49,7 +49,7 @@ export function createActions<T, TModel>(
         {
           model: () => options.mutate(params.model) as TModel,
         },
-        ACTIONS_FACTORY_BRAND
+        ACTIONS_TOOLS_BRAND
       );
 
       // Call the factory with object parameters to match the spec
@@ -57,7 +57,7 @@ export function createActions<T, TModel>(
     };
   };
 
-  return brandWithSymbol(actionsFactory, ACTIONS_INSTANCE_BRAND);
+  return brandWithSymbol(actionsFactory, ACTIONS_FACTORY_BRAND);
 }
 
 // In-source tests
@@ -65,7 +65,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createActions', async () => {
-    const { isActionInstance, isActionsFactory } = await import(
+    const { isActionsFactory, isActionsTools } = await import(
       '../shared/identify'
     );
 
@@ -91,7 +91,7 @@ if (import.meta.vitest) {
       // Actions should be a function
       expect(typeof actions).toBe('function');
 
-      expect(isActionInstance(actions)).toBe(true);
+      expect(isActionsFactory(actions)).toBe(true);
 
       // Create mock mutation function
       const mockMutate = vi.fn().mockImplementation(() => ({
@@ -111,7 +111,7 @@ if (import.meta.vitest) {
 
       // The tools should be branded with the proper symbol
       const toolsObj = factorySpy.mock.calls[0]?.[0];
-      expect(isActionsFactory(toolsObj)).toBe(true);
+      expect(isActionsTools(toolsObj)).toBe(true);
     });
 
     it('should throw an error when mutate function is missing', () => {

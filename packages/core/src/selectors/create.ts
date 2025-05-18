@@ -1,4 +1,4 @@
-import { SELECTORS_INSTANCE_BRAND, SelectFactoryTools } from '../shared/types';
+import { SELECTORS_FACTORY_BRAND, SelectFactoryTools } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
 /**
@@ -47,7 +47,7 @@ export function createSelectors<TSelectors, TModel>(
     };
   };
 
-  return brandWithSymbol(selectorsFactory, SELECTORS_INSTANCE_BRAND);
+  return brandWithSymbol(selectorsFactory, SELECTORS_FACTORY_BRAND);
 }
 
 // In-source tests
@@ -55,7 +55,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createSelectors', async () => {
-    const { isSelectorsInstance } = await import('../shared/identify');
+    const { isSelectorsFactory } = await import('../shared/identify');
 
     it('should verify selectors factory requirements and branding', () => {
       // Create mock model
@@ -76,7 +76,7 @@ if (import.meta.vitest) {
       // Selectors should be a function
       expect(typeof selectors).toBe('function');
 
-      expect(isSelectorsInstance(selectors)).toBe(true);
+      expect(isSelectorsFactory(selectors)).toBe(true);
 
       // Create tools for testing
       const mockGet = vi.fn();

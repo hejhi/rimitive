@@ -1,7 +1,7 @@
 import {
+  VIEW_TOOLS_BRAND,
   VIEW_FACTORY_BRAND,
-  VIEW_INSTANCE_BRAND,
-  ViewFactory,
+  ViewSliceFactory,
   ViewFactoryParams,
   SelectFactoryTools,
 } from '../shared/types';
@@ -40,7 +40,7 @@ import { brandWithSymbol } from '../shared/identify';
  */
 export function createView<T, TSelectors = unknown, TActions = unknown>(
   params: { selectors?: TSelectors; actions?: TActions },
-  factory: ViewFactory<T, TSelectors, TActions>
+  factory: ViewSliceFactory<T, TSelectors, TActions>
 ) {
   // Create a factory function that returns a slice creator
   const viewFactory = function viewFactory() {
@@ -89,7 +89,7 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
             return params.actions as TActions;
           },
         },
-        VIEW_FACTORY_BRAND
+        VIEW_TOOLS_BRAND
       );
 
       // Call the factory with object parameters to match the spec
@@ -97,7 +97,7 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
     };
   };
 
-  return brandWithSymbol(viewFactory, VIEW_INSTANCE_BRAND);
+  return brandWithSymbol(viewFactory, VIEW_FACTORY_BRAND);
 }
 
 // In-source tests
@@ -105,7 +105,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createView', async () => {
-    const { isViewInstance, isViewFactory } = await import(
+    const { isViewFactory, isViewTools } = await import(
       '../shared/identify'
     );
 
@@ -142,7 +142,7 @@ if (import.meta.vitest) {
       // View should be a function
       expect(typeof view).toBe('function');
 
-      expect(isViewInstance(view)).toBe(true);
+      expect(isViewFactory(view)).toBe(true);
 
       // Create tools for testing
       const mockGet = vi.fn();
@@ -160,7 +160,7 @@ if (import.meta.vitest) {
       );
 
       const toolsObj = factorySpy.mock.calls[0]?.[0];
-      expect(isViewFactory(toolsObj)).toBe(true);
+      expect(isViewTools(toolsObj)).toBe(true);
 
       // Verify slice contains the expected values
       expect(slice).toEqual({

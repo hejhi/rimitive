@@ -1,19 +1,25 @@
 import {
-  isModelInstance,
-  isSelectorsInstance,
-  isActionInstance,
-  isViewInstance,
-  brandWithSymbol,
+  isModelFactory,
+  isSelectorsFactory,
+  isActionsFactory,
+  isViewFactory, 
+  brandWithSymbol
 } from '../identify';
 
 import {
-  ModelInstance,
-  SelectorsInstance,
-  ActionsInstance,
-  ViewInstance,
+  ModelFactory,
+  SelectorsFactory,
+  ActionsFactory,
+  ViewFactory,
   StoreFactoryTools,
-  MODEL_INSTANCE_BRAND,
+  MODEL_FACTORY_BRAND
 } from '../types';
+
+// Define the ViewParamsToToolsAdapter to represent view tools
+interface ViewParamsToToolsAdapter<TSelectors = unknown, TActions = unknown> {
+  getSelectors?: () => TSelectors;
+  getActions?: () => TActions;
+}
 
 /**
  * Helper type to infer the return type of an extension function
@@ -39,86 +45,110 @@ import {
   ViewCompositionTools,
 } from '../types';
 
-// When composing models, we now return a simple factory function, not a ModelInstance
+// When composing models, we now return a simple factory function, not a factory
 export function composeWith<B, E>(
-  base: ModelInstance<B>,
+  base: ModelFactory<B>,
   extension: (tools: ModelCompositionTools<B, E>) => E
 ): (tools: StoreFactoryTools<B & E>) => B & E;
 
 // When composing selectors, we now return a simple factory function
 export function composeWith<B, E, TModel>(
-  base: SelectorsInstance<B>,
+  base: SelectorsFactory<B>,
   extension: (tools: SelectorsCompositionTools<TModel>) => E
 ): (options: { get: any }) => B & E;
 
 // When composing actions, we now return a simple factory function
 export function composeWith<B, E, TModel>(
-  base: ActionsInstance<B>,
+  base: ActionsFactory<B>,
   extension: (tools: ActionsCompositionTools<TModel>) => E
 ): (options: { mutate: any }) => B & E;
 
 // When composing views, we now return a simple factory function
 export function composeWith<B, E, TSelectors, TActions>(
-  base: ViewInstance<B>,
+  base: ViewFactory<B>,
   extension: (tools: ViewCompositionTools<TSelectors, TActions>) => E
 ): (options: any) => B & E;
 
 // Implementation using function overloading pattern
 // B: Base type
 // R: Result type
-// extension composes the entire base and result. the user must specify the result only.
-export function composeWith(base: any, shape: any): any {
-  if (isModelInstance(base)) {
+// extension composes the entire base and result. The user must specify the result only.
+// Implementation with type discrimination
+// Each overload case is handled by checking the input type
+export function composeWith<B, E>(
+  base: ModelFactory<B> | SelectorsFactory<B> | ActionsFactory<B> | ViewFactory<B>,
+  shape: unknown
+): unknown {
+  if (isModelFactory<B>(base)) {
     // Return a factory function that createModel can use directly
     // This is a simplified version that avoids nested functions
-    return ({ get, set }: StoreFactoryTools<any>) => {
+    return ({ get, set }: StoreFactoryTools<B & E>) => {
       // When createModel calls this function with tools, we:
       // 1. Get the base slice from the base model (which is already a branded factory)
       const baseSlice = base()({ get, set });
       // 2. Get the extension slice by calling the extension function with the same tools
-      const extensionSlice = shape({ get, set });
-      // 3. Merge and return the combined result
-      return { ...(baseSlice as object), ...(extensionSlice as object) };
+      const extensionSlice = (shape as (tools: ModelCompositionTools<B, E>) => E)({ get, set });
+      // 3. Merge and return the combined result with proper typing
+      return { ...baseSlice, ...extensionSlice };
     };
   }
-  if (isSelectorsInstance(base)) {
+  if (isSelectorsFactory<B>(base)) {
     // Return a function that performs the composition
-    return ({ get }: { get: any }) => {
+    return ({ get }: { get: () => B }) => {
       if (!get) {
         throw new Error('Selectors factory requires a get function');
       }
       // Get the base slice and extension slice
       const baseSlice = base()({ get });
-      const extensionSlice = shape({ model: get });
-      // Combine them
-      return { ...(baseSlice as object), ...(extensionSlice as object) };
+      const extensionSlice = (shape as (tools: SelectorsCompositionTools<unknown>) => E)({ model: get as () => unknown });
+      // Combine them with proper typing
+      return { ...baseSlice, ...extensionSlice };
     };
   }
-  if (isActionInstance(base)) {
-    // Return a function that performs the composition
-    return ({ mutate }: { mutate: any }) => {
-      if (!mutate) {
+  if (isActionsFactory<B>(base)) {
+    // Define a safer type for Actions factory tools
+    type ActionsMutateFunction = {
+      mutate: <M>(model: M) => any;
+    };
+    
+    // Return a function that performs the composition 
+    return (options: ActionsMutateFunction) => {
+      if (!options.mutate) {
         throw new Error('Actions factory requires mutate function');
       }
-      // Get the base slice and extension slice
-      const baseSlice = base()({ mutate });
-      const extensionSlice = shape({ model: mutate });
-      // Combine them
-      return { ...(baseSlice as object), ...(extensionSlice as object) };
+      // Get the base slice and extension slice 
+      const baseSlice = base()(options);
+      // For the extension, we create a compatible tools object
+      // We need to wrap the mutate function to make it compatible with the expected model() format
+      const model = function() { 
+        return options.mutate;
+      };
+      
+      // Cast is required here due to the generic nature of the function
+      const extensionSlice = (shape as (tools: ActionsCompositionTools<unknown>) => E)({ 
+        model 
+      });
+      // Combine them with proper typing
+      return { ...baseSlice, ...extensionSlice };
     };
   }
-  if (isViewInstance(base)) {
+  if (isViewFactory<B>(base)) {
     // Return a function that performs the composition
-    return (options: any) => {
-      // Get the base slice and extension slice
-      const baseSlice = base()(options);
+    return (options: ViewParamsToToolsAdapter<unknown, unknown>) => {
+      // Use a runtime check for the ViewFactory API compatibility
+      const viewOptions = options as Record<string, unknown>;
+      // Get the base slice and extension slice - we need to use any here
+      // due to the fundamental mismatch between ViewFactory and ViewParamsToToolsAdapter
+      const baseSlice = base()(viewOptions as any);
+      
+      // Create consistent tools object for the extension function
       const tools = {
         selectors: options.getSelectors || (() => ({})),
         actions: options.getActions || (() => ({})),
       };
-      const extensionSlice = shape(tools);
-      // Combine them
-      return { ...(baseSlice as object), ...(extensionSlice as object) };
+      const extensionSlice = (shape as (tools: ViewCompositionTools<unknown, unknown>) => E)(tools);
+      // Combine them with proper typing
+      return { ...baseSlice, ...extensionSlice };
     };
   }
   throw new Error(
@@ -152,7 +182,7 @@ if (import.meta.vitest) {
     const mockModelFn = () => (_options: StoreFactoryTools<BaseModel>) => ({
       count: 1,
     });
-    const brandedModel = brandWithSymbol(mockModelFn, MODEL_INSTANCE_BRAND);
+    const brandedModel = brandWithSymbol(mockModelFn, MODEL_FACTORY_BRAND);
 
     // Compose them with slice and tools object
     const composed = composeWith<BaseModel, { doubleCount: () => number }>(
@@ -172,7 +202,7 @@ if (import.meta.vitest) {
     }));
     const mockSet = vi.fn();
 
-    // This is a direct model factory, not an instance that needs to be called first
+    // This is a direct model factory, not a factory that needs to be called first
     const result = composed({ get: mockGet, set: mockSet });
 
     // Should have properties from both base and extension

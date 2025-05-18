@@ -1,12 +1,12 @@
 import {
   COMPONENT_FACTORY_BRAND,
-  COMPONENT_INSTANCE_BRAND,
+  COMPONENT_FACTORY_INSTANCE_BRAND,
   LATTICE_BRAND,
   ComponentConfig,
   ComponentFactory,
   ComponentInstance,
   Lattice,
-  ViewInstance,
+  ViewFactory,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 import {
@@ -127,17 +127,17 @@ export function createComponent<
           // View accessors with name-based retrieval
           getView: <K extends keyof TViews>(
             viewName: K
-          ): ViewInstance<TViews[K]> => {
+          ): ViewFactory<TViews[K]> => {
             const view = config.view[viewName];
             if (!view) {
               throw new Error(`View "${String(viewName)}" not found`);
             }
-            return view as ViewInstance<TViews[K]>;
+            return view as ViewFactory<TViews[K]>;
           },
 
           getAllViews: () => {
             return { ...config.view } as {
-              readonly [K in keyof TViews]: ViewInstance<TViews[K]>;
+              readonly [K in keyof TViews]: ViewFactory<TViews[K]>;
             };
           },
 
@@ -168,7 +168,7 @@ export function instantiateComponent<
 >(
   factory: ComponentFactory<TModel, TSelectors, TActions, TViews>
 ): ComponentInstance<TModel, TSelectors, TActions, TViews> {
-  return brandWithSymbol(() => factory(), COMPONENT_INSTANCE_BRAND);
+  return brandWithSymbol(() => factory(), COMPONENT_FACTORY_INSTANCE_BRAND);
 }
 
 // In-source tests
@@ -267,10 +267,10 @@ if (import.meta.vitest) {
       // Import necessary branding functions
       const { brandWithSymbol } = await import('../shared/identify');
       const {
-        MODEL_INSTANCE_BRAND,
-        SELECTORS_INSTANCE_BRAND,
-        ACTIONS_INSTANCE_BRAND,
-        VIEW_INSTANCE_BRAND,
+        MODEL_FACTORY_BRAND,
+        SELECTORS_FACTORY_BRAND,
+        ACTIONS_FACTORY_BRAND,
+        VIEW_FACTORY_BRAND,
       } = await import('../shared/types');
 
       // Define test model types
@@ -284,28 +284,28 @@ if (import.meta.vitest) {
       function createMockModelInstance<T>(mockFn: (tools: any) => T) {
         return brandWithSymbol(
           () => (tools: any) => mockFn(tools),
-          MODEL_INSTANCE_BRAND
+          MODEL_FACTORY_BRAND
         );
       }
 
       function createMockSelectorsInstance<T>(mockFn: (tools: any) => T) {
         return brandWithSymbol(
           () => (tools: any) => mockFn(tools),
-          SELECTORS_INSTANCE_BRAND
+          SELECTORS_FACTORY_BRAND
         );
       }
 
       function createMockActionsInstance<T>(mockFn: (tools: any) => T) {
         return brandWithSymbol(
           () => (tools: any) => mockFn(tools),
-          ACTIONS_INSTANCE_BRAND
+          ACTIONS_FACTORY_BRAND
         );
       }
 
       function createMockViewInstance<T>(mockFn: (tools: any) => T) {
         return brandWithSymbol(
           () => (tools: any) => mockFn(tools),
-          VIEW_INSTANCE_BRAND
+          VIEW_FACTORY_BRAND
         );
       }
 
@@ -386,7 +386,7 @@ if (import.meta.vitest) {
       const instance = instantiateComponent(brandedFactory as any);
 
       // Instance should be properly branded
-      expect(instance[COMPONENT_INSTANCE_BRAND]).toBe(true);
+      expect(instance[COMPONENT_FACTORY_INSTANCE_BRAND]).toBe(true);
 
       // Should return the lattice when called
       const result = instance();

@@ -13,10 +13,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { createComponentStore, createStoreConfig } from './slice';
 import type {
   ComponentConfig,
-  ModelInstance,
-  SelectorsInstance,
-  ActionsInstance,
-  ViewInstance,
+  ModelFactory,
+  SelectorsFactory,
+  ActionsFactory,
+  ViewFactory,
 } from '../types';
 
 describe('Lattice Implementation of JavaScript Namespace-Level Getters', () => {
@@ -37,25 +37,25 @@ describe('Lattice Implementation of JavaScript Namespace-Level Getters', () => {
     // Cast only the mocks, not the actual API usage
     const mockModelFactory = vi.fn(() =>
       vi.fn(() => ({ count: 0 }))
-    ) as unknown as ModelInstance<TestModel>;
+    ) as unknown as ModelFactory<TestModel>;
 
     const mockSelectorsFactory = vi.fn(() =>
       vi.fn(({ model }) => ({
         count: model().count,
         isPositive: model().count > 0,
       }))
-    ) as unknown as SelectorsInstance<TestSelectors>;
+    ) as unknown as SelectorsFactory<TestSelectors>;
 
     const mockActionsFactory = vi.fn(() =>
       vi.fn(() => ({}))
-    ) as unknown as ActionsInstance<TestActions>;
+    ) as unknown as ActionsFactory<TestActions>;
 
     // For the view, we need to match the constraint of unknown selectors/actions for compatibility
     const mockViewFactory = vi.fn(() =>
       vi.fn(({ selectors }) => ({
         'data-count': selectors().count,
       }))
-    ) as unknown as ViewInstance<TestViewData, unknown, unknown>;
+    ) as unknown as ViewFactory<TestViewData>;
 
     // Only cast the mock instances, not our actual API
     const mockComponent: ComponentConfig<
@@ -161,15 +161,13 @@ describe('Lattice Implementation of JavaScript Namespace-Level Getters', () => {
     const mockView = vi.fn(() => mockViewFn);
 
     // Create typed mock factories
-    const mockModelFactory = mockModel as unknown as ModelInstance<TestModel>;
+    const mockModelFactory = mockModel as unknown as ModelFactory<TestModel>;
     const mockSelectorsFactory =
-      mockSelectors as unknown as SelectorsInstance<TestSelectors>;
+      mockSelectors as unknown as SelectorsFactory<TestSelectors>;
     const mockActionsFactory =
-      mockActions as unknown as ActionsInstance<TestActions>;
-    const mockViewFactory = vi.fn(() => mockView) as unknown as ViewInstance<
-      TestViewData,
-      unknown,
-      unknown
+      mockActions as unknown as ActionsFactory<TestActions>;
+    const mockViewFactory = vi.fn(() => mockView) as unknown as ViewFactory<
+      TestViewData
     >;
 
     // Create the component config with proper typing
@@ -355,15 +353,11 @@ describe('Lattice Implementation of JavaScript Namespace-Level Getters', () => {
       TestActions,
       TestViews
     > = {
-      model: mockModel as unknown as ModelInstance<TestModel>,
-      selectors: mockSelectors as unknown as SelectorsInstance<TestSelectors>,
-      actions: mockActions as unknown as ActionsInstance<TestActions>,
+      model: mockModel as unknown as ModelFactory<TestModel>,
+      selectors: mockSelectors as unknown as SelectorsFactory<TestSelectors>,
+      actions: mockActions as unknown as ActionsFactory<TestActions>,
       view: {
-        counter: mockView as unknown as ViewInstance<
-          TestViewData,
-          unknown,
-          unknown
-        >,
+        counter: mockView as unknown as ViewFactory<TestViewData>,
       },
     };
 

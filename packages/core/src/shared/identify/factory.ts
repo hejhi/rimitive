@@ -1,74 +1,75 @@
 import {
-  MODEL_FACTORY_BRAND,
-  SELECTORS_FACTORY_BRAND,
-  ACTIONS_FACTORY_BRAND,
-  VIEW_FACTORY_BRAND,
+  MODEL_TOOLS_BRAND,
+  SELECTORS_TOOLS_BRAND,
+  ACTIONS_TOOLS_BRAND,
+  VIEW_TOOLS_BRAND,
   COMPONENT_FACTORY_BRAND,
   LATTICE_BRAND,
   Lattice,
-  ComponentFactory,
+  ComponentFactory
 } from '../types';
 import { brandWithSymbol } from './marker';
 
 /**
- * Type guard to check if an object is a ModelFactory
+ * Type guard to check if an object is a Model Tools object
  *
  * @param value The value to check
- * @returns Whether the value is a ModelFactory
+ * @returns Whether the value is a Model Tools object
  */
-export function isModelFactory(value: unknown): boolean {
+export function isModelTools(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
-    Object.prototype.hasOwnProperty.call(value, MODEL_FACTORY_BRAND) &&
-    Boolean(Reflect.get(value, MODEL_FACTORY_BRAND))
+    Object.prototype.hasOwnProperty.call(value, MODEL_TOOLS_BRAND) &&
+    Boolean(Reflect.get(value, MODEL_TOOLS_BRAND))
   );
 }
 
 /**
- * Type guard to check if an object is a SelectorsFactory
+ * Type guard to check if an object is a Selectors Tools object
  *
  * @param value The value to check
- * @returns Whether the value is a SelectorsFactory
+ * @returns Whether the value is a Selectors Tools object
  */
-export function isSelectorsFactory(value: unknown): boolean {
+export function isSelectorsTools(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
-    Object.prototype.hasOwnProperty.call(value, SELECTORS_FACTORY_BRAND) &&
-    Boolean(Reflect.get(value, SELECTORS_FACTORY_BRAND))
+    Object.prototype.hasOwnProperty.call(value, SELECTORS_TOOLS_BRAND) &&
+    Boolean(Reflect.get(value, SELECTORS_TOOLS_BRAND))
   );
 }
 
 /**
- * Type guard to check if an object is an ActionsFactory
+ * Type guard to check if an object is an Actions Tools object
  *
  * @param value The value to check
- * @returns Whether the value is an ActionsFactory
+ * @returns Whether the value is an Actions Tools object
  */
-export function isActionsFactory(value: unknown): boolean {
+export function isActionsTools(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
-    Object.prototype.hasOwnProperty.call(value, ACTIONS_FACTORY_BRAND) &&
-    Boolean(Reflect.get(value, ACTIONS_FACTORY_BRAND))
+    Object.prototype.hasOwnProperty.call(value, ACTIONS_TOOLS_BRAND) &&
+    Boolean(Reflect.get(value, ACTIONS_TOOLS_BRAND))
   );
 }
 
 /**
- * Type guard to check if an object is a ViewFactory
+ * Type guard to check if an object is a View Tools object
  *
  * @param value The value to check
- * @returns Whether the value is a ViewFactory
+ * @returns Whether the value is a View Tools object
  */
-export function isViewFactory(value: unknown): boolean {
+export function isViewTools(value: unknown): boolean {
   return (
     value !== null &&
     typeof value === 'object' &&
-    Object.prototype.hasOwnProperty.call(value, VIEW_FACTORY_BRAND) &&
-    Boolean(Reflect.get(value, VIEW_FACTORY_BRAND))
+    Object.prototype.hasOwnProperty.call(value, VIEW_TOOLS_BRAND) &&
+    Boolean(Reflect.get(value, VIEW_TOOLS_BRAND))
   );
 }
+
 
 /**
  * Type guard to check if a value is a lattice instance
@@ -136,60 +137,64 @@ export function isComponentFactory<
 if (import.meta.vitest) {
   const { it, expect, describe, vi } = import.meta.vitest;
 
-  describe('factory', () => {
-    it('should correctly identify a ModelFactory', () => {
-      const mockModelFactory = brandWithSymbol(
+  describe('tools identification', () => {
+    it('should correctly identify a ModelTools object', () => {
+      const mockModelTools = brandWithSymbol(
         {
           get: () => ({}),
           set: () => {},
         },
-        MODEL_FACTORY_BRAND
+        MODEL_TOOLS_BRAND
       );
 
-      expect(isModelFactory(mockModelFactory)).toBe(true);
-      expect(isModelFactory({})).toBe(false);
-      expect(isModelFactory({ [Symbol('wrong')]: true })).toBe(false);
+      expect(isModelTools(mockModelTools)).toBe(true);
+      expect(isModelTools({})).toBe(false);
+      expect(isModelTools({ [Symbol('wrong')]: true })).toBe(false);
     });
 
-    it('should correctly identify a SelectorsFactory', () => {
-      const mockSelectorsFactory = brandWithSymbol(
+    it('should correctly identify a SelectorsTools object', () => {
+      const mockSelectorsTools = brandWithSymbol(
         {
           get: () => ({}),
         },
-        SELECTORS_FACTORY_BRAND
+        SELECTORS_TOOLS_BRAND
       );
 
-      expect(isSelectorsFactory(mockSelectorsFactory)).toBe(true);
-      expect(isSelectorsFactory({})).toBe(false);
-      expect(isSelectorsFactory({ [Symbol('wrong')]: true })).toBe(false);
+      expect(isSelectorsTools(mockSelectorsTools)).toBe(true);
+      expect(isSelectorsTools({})).toBe(false);
+      expect(isSelectorsTools({ [Symbol('wrong')]: true })).toBe(false);
     });
 
-    it('should correctly identify an ActionsFactory', () => {
-      const mockActionsFactory = brandWithSymbol(
+    it('should correctly identify an ActionsTools object', () => {
+      const mockActionsTools = brandWithSymbol(
         {
           mutate: () => () => {},
         },
-        ACTIONS_FACTORY_BRAND
+        ACTIONS_TOOLS_BRAND
       );
 
-      expect(isActionsFactory(mockActionsFactory)).toBe(true);
-      expect(isActionsFactory({})).toBe(false);
-      expect(isActionsFactory({ [Symbol('wrong')]: true })).toBe(false);
+      expect(isActionsTools(mockActionsTools)).toBe(true);
+      expect(isActionsTools({})).toBe(false);
+      expect(isActionsTools({ [Symbol('wrong')]: true })).toBe(false);
     });
 
-    it('should correctly identify a ViewFactory', () => {
-      const mockViewFactory = brandWithSymbol(
+    it('should correctly identify a ViewTools object', () => {
+      const mockViewTools = brandWithSymbol(
         {
           dispatch: () => {},
         },
-        VIEW_FACTORY_BRAND
+        VIEW_TOOLS_BRAND
       );
 
-      expect(isViewFactory(mockViewFactory)).toBe(true);
-      expect(isViewFactory({})).toBe(false);
-      expect(isViewFactory({ [Symbol('wrong')]: true })).toBe(false);
+      expect(isViewTools(mockViewTools)).toBe(true);
+      expect(isViewTools({})).toBe(false);
+      expect(isViewTools({ [Symbol('wrong')]: true })).toBe(false);
     });
+  });
+  
+  // Legacy factory tests have been removed as backwards compatibility is no longer needed
 
+  describe('lattice', () => {
     it('should correctly identify a Lattice', () => {
       // Create a mock lattice-like object
       const mockLattice = {
