@@ -13,9 +13,6 @@ import {
   ViewInstance,
   StoreFactoryTools,
   MODEL_INSTANCE_BRAND,
-  SELECTORS_INSTANCE_BRAND,
-  ACTIONS_INSTANCE_BRAND,
-  VIEW_INSTANCE_BRAND,
 } from '../types';
 
 /**
@@ -42,25 +39,29 @@ import {
   ViewCompositionTools,
 } from '../types';
 
+// When composing models, we now return a simple factory function, not a ModelInstance
 export function composeWith<B, E>(
   base: ModelInstance<B>,
   extension: (tools: ModelCompositionTools<B, E>) => E
-): ModelInstance<B & E>;
+): (tools: StoreFactoryTools<B & E>) => B & E;
 
+// When composing selectors, we now return a simple factory function
 export function composeWith<B, E, TModel>(
   base: SelectorsInstance<B>,
   extension: (tools: SelectorsCompositionTools<TModel>) => E
-): SelectorsInstance<B & E>;
+): (options: { get: any }) => B & E;
 
+// When composing actions, we now return a simple factory function
 export function composeWith<B, E, TModel>(
   base: ActionsInstance<B>,
   extension: (tools: ActionsCompositionTools<TModel>) => E
-): ActionsInstance<B & E>;
+): (options: { mutate: any }) => B & E;
 
+// When composing views, we now return a simple factory function
 export function composeWith<B, E, TSelectors, TActions>(
   base: ViewInstance<B>,
   extension: (tools: ViewCompositionTools<TSelectors, TActions>) => E
-): ViewInstance<B & E>;
+): (options: any) => B & E;
 
 // Implementation using function overloading pattern
 // B: Base type
@@ -68,67 +69,57 @@ export function composeWith<B, E, TSelectors, TActions>(
 // extension composes the entire base and result. the user must specify the result only.
 export function composeWith(base: any, shape: any): any {
   if (isModelInstance(base)) {
-    return brandWithSymbol(
-      () => (options: any) => {
-        if (!options.get || !options.set) {
-          throw new Error('Model factory requires get and set functions');
-        }
-        const baseSlice = base()(options);
-        const tools = {
-          get: options.get,
-          set: options.set,
-        };
-        const extensionSlice = shape(tools);
-        return { ...(baseSlice as object), ...(extensionSlice as object) };
-      },
-      MODEL_INSTANCE_BRAND
-    );
+    // Return a factory function that createModel can use directly
+    // This is a simplified version that avoids nested functions
+    return ({ get, set }: StoreFactoryTools<any>) => {
+      // When createModel calls this function with tools, we:
+      // 1. Get the base slice from the base model (which is already a branded factory)
+      const baseSlice = base()({ get, set });
+      // 2. Get the extension slice by calling the extension function with the same tools
+      const extensionSlice = shape({ get, set });
+      // 3. Merge and return the combined result
+      return { ...(baseSlice as object), ...(extensionSlice as object) };
+    };
   }
   if (isSelectorsInstance(base)) {
-    return brandWithSymbol(
-      () => (options: any) => {
-        if (!options.get) {
-          throw new Error('Selectors factory requires a get function');
-        }
-        const baseSlice = base()(options);
-        const tools = {
-          model: options.get,
-        };
-        const extensionSlice = shape(tools);
-        return { ...(baseSlice as object), ...(extensionSlice as object) };
-      },
-      SELECTORS_INSTANCE_BRAND
-    );
+    // Return a function that performs the composition
+    return ({ get }: { get: any }) => {
+      if (!get) {
+        throw new Error('Selectors factory requires a get function');
+      }
+      // Get the base slice and extension slice
+      const baseSlice = base()({ get });
+      const extensionSlice = shape({ model: get });
+      // Combine them
+      return { ...(baseSlice as object), ...(extensionSlice as object) };
+    };
   }
   if (isActionInstance(base)) {
-    return brandWithSymbol(
-      () => (options: any) => {
-        if (!options.mutate) {
-          throw new Error('Actions factory requires mutate function');
-        }
-        const baseSlice = base()(options);
-        const tools = {
-          model: options.mutate,
-        };
-        const extensionSlice = shape(tools);
-        return { ...(baseSlice as object), ...(extensionSlice as object) };
-      },
-      ACTIONS_INSTANCE_BRAND
-    );
+    // Return a function that performs the composition
+    return ({ mutate }: { mutate: any }) => {
+      if (!mutate) {
+        throw new Error('Actions factory requires mutate function');
+      }
+      // Get the base slice and extension slice
+      const baseSlice = base()({ mutate });
+      const extensionSlice = shape({ model: mutate });
+      // Combine them
+      return { ...(baseSlice as object), ...(extensionSlice as object) };
+    };
   }
   if (isViewInstance(base)) {
-    return brandWithSymbol(
-      () => (options: any) => {
-        const baseSlice = base()(options);
-        const tools = {
-          selectors: options.getSelectors || (() => ({})),
-          actions: options.getActions || (() => ({})),
-        };
-        const extensionSlice = shape(tools);
-        return { ...(baseSlice as object), ...(extensionSlice as object) };
-      },
-      VIEW_INSTANCE_BRAND
-    );
+    // Return a function that performs the composition
+    return (options: any) => {
+      // Get the base slice and extension slice
+      const baseSlice = base()(options);
+      const tools = {
+        selectors: options.getSelectors || (() => ({})),
+        actions: options.getActions || (() => ({})),
+      };
+      const extensionSlice = shape(tools);
+      // Combine them
+      return { ...(baseSlice as object), ...(extensionSlice as object) };
+    };
   }
   throw new Error(
     'Invalid component: Must be a model, selectors, actions, or view'
@@ -174,18 +165,15 @@ if (import.meta.vitest) {
     // Should be a function
     expect(typeof composed).toBe('function');
 
-    // Should be marked as a model instance
-    expect(composed[MODEL_INSTANCE_BRAND]).toBe(true);
-
     // Check the composed functionality
-    const factory = composed();
     const mockGet = vi.fn(() => ({
       count: 2,
       doubleCount: () => 4,
     }));
     const mockSet = vi.fn();
 
-    const result = factory({ get: mockGet, set: mockSet });
+    // This is a direct model factory, not an instance that needs to be called first
+    const result = composed({ get: mockGet, set: mockSet });
 
     // Should have properties from both base and extension
     expect(result).toHaveProperty('count');

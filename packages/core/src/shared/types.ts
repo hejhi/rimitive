@@ -155,9 +155,10 @@ export interface ViewFactoryParams<TSelectors, TActions> {
  * Adapter that maps ViewFactoryParams to SelectFactoryTools
  * This is needed for backwards compatibility with view instance functions
  */
-export type ViewParamsToToolsAdapter<T, TSelectors, TActions> = ViewFactoryParams<TSelectors, TActions> & {
-  get?: () => T;
-}
+export type ViewParamsToToolsAdapter<T, TSelectors, TActions> =
+  ViewFactoryParams<TSelectors, TActions> & {
+    get?: () => T;
+  };
 
 export type ViewFactoryCallback<T, TSelectors, TActions> = (
   params: ViewFactoryParams<TSelectors, TActions>
@@ -320,7 +321,7 @@ export interface LatticeLike<
   readonly getAllViews: () => {
     readonly [K in keyof TViews]: ViewInstance<TViews[K]>;
   };
-  
+
   // Internal store access (prefixed with double underscore to indicate internal use)
   readonly __store?: any;
   readonly __selectors?: any;
@@ -470,23 +471,23 @@ export interface ComponentElements<
   TModel,
   TSelectors,
   TActions,
-  TViews extends Record<string, unknown>
+  TViews extends Record<string, unknown>,
 > {
   /**
    * The model instance of the component
    */
   model: ModelInstance<TModel>;
-  
+
   /**
    * The selectors instance of the component
    */
   selectors: SelectorsInstance<TSelectors>;
-  
+
   /**
    * The actions instance of the component
    */
   actions: ActionsInstance<TActions>;
-  
+
   /**
    * The view instances of the component
    */
@@ -507,7 +508,7 @@ export type WithComponentCallback<
   TExtModel extends TBaseModel,
   TExtSelectors extends TBaseSelectors,
   TExtActions extends TBaseActions,
-  TExtViews extends TBaseViews
+  TExtViews extends TBaseViews,
 > = (
   elements: ComponentElements<
     TBaseModel,

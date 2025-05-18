@@ -1,3 +1,6 @@
+import { createActions } from '../../actions';
+import { createSelectors } from '../../selectors';
+import { createView } from '../../view';
 import {
   ModelInstance,
   SelectorsInstance,
@@ -7,10 +10,7 @@ import {
   SelectorsCompositionTools,
   ActionsCompositionTools,
   ViewCompositionTools,
-  MODEL_INSTANCE_BRAND,
-  SELECTORS_INSTANCE_BRAND,
-  ACTIONS_INSTANCE_BRAND,
-  VIEW_INSTANCE_BRAND,
+  StoreFactoryTools,
 } from '../types';
 import { composeWith } from './core';
 
@@ -30,25 +30,25 @@ import { composeWith } from './core';
 export function compose<B>(base: ModelInstance<B>): {
   with<Ext>(
     cb: (tools: ModelCompositionTools<B, Ext>) => Ext
-  ): ModelInstance<B & Ext>;
+  ): (tools: StoreFactoryTools<B & Ext>) => B & Ext;
 };
 
 export function compose<B>(base: SelectorsInstance<B>): {
   with<Ext, TModel>(
     cb: (tools: SelectorsCompositionTools<TModel>) => Ext
-  ): SelectorsInstance<B & Ext>;
+  ): (options: { get: any }) => B & Ext;
 };
 
 export function compose<B>(base: ActionsInstance<B>): {
   with<Ext, TModel>(
     cb: (tools: ActionsCompositionTools<TModel>) => Ext
-  ): ActionsInstance<B & Ext>;
+  ): (options: { mutate: any }) => B & Ext;
 };
 
 export function compose<B>(base: ViewInstance<B>): {
   with<Ext, TSelectors, TActions>(
     cb: (tools: ViewCompositionTools<TSelectors, TActions>) => Ext
-  ): ViewInstance<B & Ext>;
+  ): (options: any) => B & Ext;
 };
 // Implementation
 export function compose(base: any): { with: (cb: any) => any } {
@@ -56,6 +56,15 @@ export function compose(base: any): { with: (cb: any) => any } {
     with: (cb: any) => composeWith(base, cb),
   };
 }
+
+type CounterState = {
+  count: number;
+  increment: () => void;
+};
+
+type EnhancedCounterState = {
+  doubled: () => void;
+};
 
 // In-source tests
 if (import.meta.vitest) {
@@ -65,29 +74,30 @@ if (import.meta.vitest) {
     const { brandWithSymbol } = await import('../identify');
     const { createModel } = await import('../../model');
 
-    it('should support fluent compose for models', () => {
-      const baseModel = createModel(() => ({
-        count: 1,
-      }));
+    const baseModel = createModel<CounterState>(() => ({
+      count: 1,
+      increment: () => {},
+    }));
 
-      const enhanced = compose(baseModel).with<{ doubled: () => number }>(
+    it('should support fluent compose for models', () => {
+      const enhanced = compose(baseModel).with<EnhancedCounterState>(
         (tools) => ({
           doubled: () => tools.get().count * 2,
         })
       );
 
       expect(typeof enhanced).toBe('function');
-      expect(enhanced[MODEL_INSTANCE_BRAND]).toBe(true);
     });
 
+    const baseSelectors = createSelectors<{ count: number }, typeof baseModel>(
+      { model: baseModel },
+      ({ model }) => ({
+        count: model().count,
+      })
+    );
+
     it('should support fluent compose for selectors', () => {
-      const baseSelectors = brandWithSymbol(
-        () => () => ({ foo: 'bar' }),
-        SELECTORS_INSTANCE_BRAND
-      );
-
       const mockModelGetter = { count: 1 };
-
       const enhanced = compose(baseSelectors).with<
         { bar: number },
         typeof mockModelGetter
@@ -96,45 +106,50 @@ if (import.meta.vitest) {
       }));
 
       expect(typeof enhanced).toBe('function');
-      expect(enhanced[SELECTORS_INSTANCE_BRAND]).toBe(true);
     });
 
-    it('should support fluent compose for actions', () => {
-      const baseActions = brandWithSymbol(
-        () => () => ({ inc: () => {} }),
-        ACTIONS_INSTANCE_BRAND
-      );
+    const baseActions = createActions<{ inc: () => void }, typeof baseModel>(
+      { model: baseModel },
+      ({ model }) => ({
+        inc: model().increment,
+      })
+    );
 
+    it('should support fluent compose for actions', () => {
       // Mock model with a dec method
       const mockModelGetter = { dec: () => {} };
 
       const enhanced = compose(baseActions).with<
         { dec: () => void },
         typeof mockModelGetter
-      >((tools) => ({
-        dec: tools.model().dec,
+      >(({ model }) => ({
+        dec: model().dec,
       }));
 
       expect(typeof enhanced).toBe('function');
-      expect(enhanced[ACTIONS_INSTANCE_BRAND]).toBe(true);
     });
 
     it('should support fluent compose for view', () => {
-      const baseView = brandWithSymbol(
-        () => () => ({ foo: 'bar' }),
-        VIEW_INSTANCE_BRAND
+      const baseView = createView<
+        { foo: () => void; bar: number },
+        typeof baseSelectors,
+        typeof baseActions
+      >(
+        { selectors: baseSelectors, actions: baseActions },
+        ({ actions, selectors }) => ({
+          foo: actions().inc,
+          bar: selectors().count,
+        })
       );
 
-      const enhanced = compose(baseView).with<
-        { bar: number },
-        unknown,
-        unknown
-      >(() => ({
-        bar: 2,
-      }));
+      const enhanced = compose(baseView).with<{ baz: number; inc: () => void }>(
+        ({ actions }) => ({
+          baz: 2,
+          inc: actions().inc,
+        })
+      );
 
       expect(typeof enhanced).toBe('function');
-      expect(enhanced[VIEW_INSTANCE_BRAND]).toBe(true);
     });
   });
 }

@@ -272,14 +272,14 @@ if (import.meta.vitest) {
         ACTIONS_INSTANCE_BRAND,
         VIEW_INSTANCE_BRAND,
       } = await import('../shared/types');
-      
+
       // Define test model types
       type TestModel = { count: number };
       type TestSelectors = { isPositive: boolean };
       type TestActions = { increment: () => void };
       type TestCounterView = { 'data-count': number };
       type TestButtonView = { onClick: () => void };
-      
+
       // Create properly typed test helpers for branded types
       function createMockModelInstance<T>(mockFn: (tools: any) => T) {
         return brandWithSymbol(
@@ -287,21 +287,21 @@ if (import.meta.vitest) {
           MODEL_INSTANCE_BRAND
         );
       }
-      
+
       function createMockSelectorsInstance<T>(mockFn: (tools: any) => T) {
         return brandWithSymbol(
           () => (tools: any) => mockFn(tools),
           SELECTORS_INSTANCE_BRAND
         );
       }
-      
+
       function createMockActionsInstance<T>(mockFn: (tools: any) => T) {
         return brandWithSymbol(
           () => (tools: any) => mockFn(tools),
           ACTIONS_INSTANCE_BRAND
         );
       }
-      
+
       function createMockViewInstance<T>(mockFn: (tools: any) => T) {
         return brandWithSymbol(
           () => (tools: any) => mockFn(tools),
@@ -310,19 +310,27 @@ if (import.meta.vitest) {
       }
 
       // Create properly typed mock instances
-      const mockModelFn = vi.fn((_) => ({ count: 0 } as TestModel));
+      const mockModelFn = vi.fn((_) => ({ count: 0 }) as TestModel);
       const mockModel = createMockModelInstance(mockModelFn);
 
-      const mockSelectorsFn = vi.fn((_) => ({ isPositive: false } as TestSelectors));
+      const mockSelectorsFn = vi.fn(
+        (_) => ({ isPositive: false }) as TestSelectors
+      );
       const mockSelectors = createMockSelectorsInstance(mockSelectorsFn);
 
-      const mockActionsFn = vi.fn((_) => ({ increment: vi.fn() } as TestActions));
+      const mockActionsFn = vi.fn(
+        (_) => ({ increment: vi.fn() }) as TestActions
+      );
       const mockActions = createMockActionsInstance(mockActionsFn);
 
-      const mockCounterViewFn = vi.fn((_) => ({ 'data-count': 0 } as TestCounterView));
+      const mockCounterViewFn = vi.fn(
+        (_) => ({ 'data-count': 0 }) as TestCounterView
+      );
       const mockCounterView = createMockViewInstance(mockCounterViewFn);
 
-      const mockButtonViewFn = vi.fn((_) => ({ onClick: vi.fn() } as TestButtonView));
+      const mockButtonViewFn = vi.fn(
+        (_) => ({ onClick: vi.fn() }) as TestButtonView
+      );
       const mockButtonView = createMockViewInstance(mockButtonViewFn);
 
       // Create a component factory with properly typed mock instances
@@ -330,7 +338,7 @@ if (import.meta.vitest) {
         TestModel,
         TestSelectors,
         TestActions,
-        { counter: TestCounterView, button: TestButtonView }
+        { counter: TestCounterView; button: TestButtonView }
       >(() => ({
         model: mockModel as any,
         selectors: mockSelectors as any,
