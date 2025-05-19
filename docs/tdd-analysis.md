@@ -25,11 +25,11 @@ In TDD, we distinguish between unit and integration tests to create a comprehens
 ## Unit Test Checklist
 
 ### 1. Core Component Unit Tests
-- [ ] **Single-Responsibility Tests for Each Building Block**
-  - [ ] Test model state creation and updates (spec lines 101-122)
-  - [ ] Test actions as pure intent functions (spec lines 124-134)
-  - [ ] Test selectors providing read-only access (spec lines 136-162)
-  - [ ] Test views transforming selectors to attributes (spec lines 239-261)
+- [x] **Single-Responsibility Tests for Each Building Block**
+  - [x] Test model state creation and updates (spec lines 101-122)
+  - [x] Test actions as pure intent functions (spec lines 124-134)
+  - [x] Test selectors providing read-only access (spec lines 136-162)
+  - [x] Test views transforming selectors to attributes (spec lines 239-261)
 
 ### 2. JavaScript Getters Unit Tests
 - [x] **Test Namespace-Level Getters (Highest Priority)**
@@ -53,9 +53,9 @@ In TDD, we distinguish between unit and integration tests to create a comprehens
   - [ ] Test selectors and views are public (spec lines 55-56)
 
 ### 2. Composition Pattern Integration Tests
-- [ ] **Test Factory Pattern & Fluent Composition**
-  - [ ] Test `.with()` method behavior across boundaries (spec lines 87-97, 113-121)
-  - [ ] Test progressive composition matches example (spec lines 114-121)
+- [x] **Test Factory Pattern & Fluent Composition**
+  - [x] Test `.with()` method behavior across boundaries (spec lines 87-97, 113-121)
+  - [x] Test progressive composition matches example (spec lines 114-121)
   - [ ] Test type safety with incompatible types (spec lines 182-235)
 
 ### 3. Component Store Integration Tests
@@ -103,8 +103,21 @@ We've made significant progress implementing the core testing infrastructure:
    - Confirmed proper getter implementation for selectors and views
    - Verified full data flow through the system
 
-3. **Remaining Priorities**
-   - Core component unit tests → Core architecture integration tests
+3. ✅ **Core Component Unit Tests**
+   - Implemented unit tests for model state creation and updates
+   - Tested actions as pure intent functions
+   - Verified selectors provide read-only access
+   - Confirmed views transform selectors to attributes
+   - Added component-specific test files (create.test.ts) for each building block
+
+4. ✅ **Composition Pattern Integration Tests**
+   - Tested `.with()` method behavior across boundaries
+   - Verified progressive composition works as expected
+   - Confirmed fluent composition API works for models, actions, selectors, and views
+   - Restored test coverage for the fluent composition API that had been removed
+
+5. **Remaining Priorities**
+   - Core architecture integration tests
    - Framework adapter unit tests → Framework integration tests
    - Subscription support unit tests → Subscription system integration tests
    - Component composition integration tests
