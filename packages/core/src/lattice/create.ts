@@ -7,6 +7,9 @@ import {
   ComponentInstance,
   Lattice,
   ViewFactory,
+  ModelFactory,
+  SelectorsFactory,
+  ActionsFactory,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 import {
@@ -132,7 +135,7 @@ export function createComponent<
             if (!view) {
               throw new Error(`View "${String(viewName)}" not found`);
             }
-            return view as ViewFactory<TViews[K]>;
+            return view;
           },
 
           getAllViews: () => {
@@ -179,18 +182,62 @@ if (import.meta.vitest) {
     const { isComponentFactory } = await import('../shared/identify');
 
     it('should create a branded component factory', () => {
-      // Mock the necessary components
-      const mockModel = vi.fn();
-      const mockSelectors = vi.fn();
-      const mockActions = vi.fn();
-      const mockView = { counter: vi.fn() };
+      // Create proper mock implementations for required components
+      const mockModel = vi.fn(() => ({
+        count: 0,
+        increment: () => {
+          /* implementation */
+        },
+      }));
 
-      // Create a component factory
-      const factory = createComponent(() => ({
-        model: mockModel as any,
-        selectors: mockSelectors as any,
-        actions: mockActions as any,
-        view: mockView as any,
+      const mockSelectors = vi.fn(() => ({
+        count: 0,
+        isPositive: false,
+      }));
+
+      const mockActions = vi.fn(() => ({
+        increment: vi.fn(),
+      }));
+
+      const mockCounterView = vi.fn(() => ({
+        'data-count': 0,
+      }));
+
+      // Create stub implementation of branding for mocks
+      function createMockFactory<T>(mockFn: T): T {
+        // This is a simplified mock that doesn't need the actual symbol branding
+        // since we're testing the createComponent function, not the branding logic
+        return mockFn;
+      }
+
+      // Create properly typed mockups
+      const mockModelFactory = createMockFactory(mockModel);
+      const mockSelectorsFactory = createMockFactory(mockSelectors);
+      const mockActionsFactory = createMockFactory(mockActions);
+      const mockViewFactory = { counter: createMockFactory(mockCounterView) };
+
+      // Cast the mocks to the correct interfaces for testing
+      type TestModel = { count: number; increment: () => void };
+      type TestSelectors = { count: number; isPositive: boolean };
+      type TestActions = { increment: () => void };
+      type TestViews = { counter: { 'data-count': number } };
+
+      // Create a component factory with properly typed implementations
+      const factory = createComponent<
+        TestModel,
+        TestSelectors,
+        TestActions,
+        TestViews
+      >(() => ({
+        model: mockModelFactory as unknown as ModelFactory<TestModel>,
+        selectors:
+          mockSelectorsFactory as unknown as SelectorsFactory<TestSelectors>,
+        actions: mockActionsFactory as unknown as ActionsFactory<TestActions>,
+        view: {
+          counter: mockViewFactory.counter as unknown as ViewFactory<
+            TestViews['counter']
+          >,
+        },
       }));
 
       // Factory should be properly branded
@@ -198,14 +245,40 @@ if (import.meta.vitest) {
     });
 
     it('should throw errors for invalid configurations', () => {
+      // Create valid mock implementations
+      const validModel = vi.fn(() => ({ count: 0 }));
+      const validSelectors = vi.fn(() => ({ count: 0 }));
+      const validActions = vi.fn(() => ({ increment: vi.fn() }));
+      const validView = { counter: vi.fn(() => ({ 'data-count': 0 })) };
+
+      // Create stubs with correct interface but missing implementations
+      function createMockFactory<T>(mockFn: T): T {
+        return mockFn;
+      }
+
+      // Create properly typed mockups as base values for tests
+      const mockModelFactory = createMockFactory(
+        validModel
+      ) as unknown as ModelFactory<unknown>;
+      const mockSelectorsFactory = createMockFactory(
+        validSelectors
+      ) as unknown as SelectorsFactory<unknown>;
+      const mockActionsFactory = createMockFactory(
+        validActions
+      ) as unknown as ActionsFactory<unknown>;
+      const mockViewFactory = {
+        counter: createMockFactory(
+          validView.counter
+        ) as unknown as ViewFactory<unknown>,
+      };
+
       // Missing model
       expect(() => {
         const factory = createComponent(() => ({
-          // @ts-expect-error
-          model: undefined,
-          selectors: {} as any,
-          actions: {} as any,
-          view: { counter: {} as any },
+          model: undefined as unknown as ModelFactory<unknown>,
+          selectors: mockSelectorsFactory,
+          actions: mockActionsFactory,
+          view: mockViewFactory,
         }));
 
         factory();
@@ -214,11 +287,10 @@ if (import.meta.vitest) {
       // Missing selectors
       expect(() => {
         const factory = createComponent(() => ({
-          model: {} as any,
-          // @ts-expect-error
-          selectors: undefined,
-          actions: {} as any,
-          view: { counter: {} as any },
+          model: mockModelFactory,
+          selectors: undefined as unknown as SelectorsFactory<unknown>,
+          actions: mockActionsFactory,
+          view: mockViewFactory,
         }));
 
         factory();
@@ -227,11 +299,10 @@ if (import.meta.vitest) {
       // Missing actions
       expect(() => {
         const factory = createComponent(() => ({
-          model: {} as any,
-          selectors: {} as any,
-          // @ts-expect-error
-          actions: undefined,
-          view: { counter: {} as any },
+          model: mockModelFactory,
+          selectors: mockSelectorsFactory,
+          actions: undefined as unknown as ActionsFactory<unknown>,
+          view: mockViewFactory,
         }));
 
         factory();
@@ -240,11 +311,10 @@ if (import.meta.vitest) {
       // Missing view
       expect(() => {
         const factory = createComponent(() => ({
-          model: {} as any,
-          selectors: {} as any,
-          actions: {} as any,
-          // @ts-expect-error
-          view: undefined,
+          model: mockModelFactory,
+          selectors: mockSelectorsFactory,
+          actions: mockActionsFactory,
+          view: undefined as unknown as Record<string, ViewFactory<unknown>>,
         }));
 
         factory();
@@ -253,9 +323,9 @@ if (import.meta.vitest) {
       // Empty view object
       expect(() => {
         const factory = createComponent(() => ({
-          model: {} as any,
-          selectors: {} as any,
-          actions: {} as any,
+          model: mockModelFactory,
+          selectors: mockSelectorsFactory,
+          actions: mockActionsFactory,
           view: {},
         }));
 
@@ -264,7 +334,7 @@ if (import.meta.vitest) {
     });
 
     it('should provide access to component parts', async () => {
-      // Import necessary branding functions
+      // Import branding function for tests
       const { brandWithSymbol } = await import('../shared/identify');
       const {
         MODEL_FACTORY_BRAND,
@@ -273,79 +343,96 @@ if (import.meta.vitest) {
         VIEW_FACTORY_BRAND,
       } = await import('../shared/types');
 
-      // Define test model types
-      type TestModel = { count: number };
-      type TestSelectors = { isPositive: boolean };
-      type TestActions = { increment: () => void };
-      type TestCounterView = { 'data-count': number };
-      type TestButtonView = { onClick: () => void };
+      // Define test model types with explicit interfaces
+      interface TestModel {
+        count: number;
+      }
+
+      interface TestSelectors {
+        isPositive: boolean;
+      }
+
+      interface TestActions {
+        increment: () => void;
+      }
+
+      interface TestCounterView {
+        'data-count': number;
+      }
+
+      interface TestButtonView {
+        onClick: () => void;
+      }
 
       // Create properly typed test helpers for branded types
-      function createMockModelInstance<T>(mockFn: (tools: any) => T) {
+      function createMockModelFactory<T>(implementation: T): ModelFactory<T> {
         return brandWithSymbol(
-          () => (tools: any) => mockFn(tools),
+          () => () => implementation,
           MODEL_FACTORY_BRAND
-        );
+        ) as unknown as ModelFactory<T>;
       }
 
-      function createMockSelectorsInstance<T>(mockFn: (tools: any) => T) {
+      function createMockSelectorsFactory<T>(
+        implementation: T
+      ): SelectorsFactory<T> {
         return brandWithSymbol(
-          () => (tools: any) => mockFn(tools),
+          () => () => implementation,
           SELECTORS_FACTORY_BRAND
-        );
+        ) as unknown as SelectorsFactory<T>;
       }
 
-      function createMockActionsInstance<T>(mockFn: (tools: any) => T) {
+      function createMockActionsFactory<T>(
+        implementation: T
+      ): ActionsFactory<T> {
         return brandWithSymbol(
-          () => (tools: any) => mockFn(tools),
+          () => () => implementation,
           ACTIONS_FACTORY_BRAND
-        );
+        ) as unknown as ActionsFactory<T>;
       }
 
-      function createMockViewInstance<T>(mockFn: (tools: any) => T) {
+      function createMockViewFactory<T>(implementation: T): ViewFactory<T> {
         return brandWithSymbol(
-          () => (tools: any) => mockFn(tools),
+          () => () => implementation,
           VIEW_FACTORY_BRAND
-        );
+        ) as unknown as ViewFactory<T>;
       }
 
       // Create properly typed mock instances
-      const mockModelFn = vi.fn((_) => ({ count: 0 }) as TestModel);
-      const mockModel = createMockModelInstance(mockModelFn);
-
-      const mockSelectorsFn = vi.fn(
-        (_) => ({ isPositive: false }) as TestSelectors
+      const mockModelImplementation: TestModel = { count: 0 };
+      const mockModel = createMockModelFactory<TestModel>(
+        mockModelImplementation
       );
-      const mockSelectors = createMockSelectorsInstance(mockSelectorsFn);
 
-      const mockActionsFn = vi.fn(
-        (_) => ({ increment: vi.fn() }) as TestActions
+      const mockSelectorsImplementation: TestSelectors = { isPositive: false };
+      const mockSelectors = createMockSelectorsFactory<TestSelectors>(
+        mockSelectorsImplementation
       );
-      const mockActions = createMockActionsInstance(mockActionsFn);
 
-      const mockCounterViewFn = vi.fn(
-        (_) => ({ 'data-count': 0 }) as TestCounterView
+      const mockActionsImplementation: TestActions = { increment: vi.fn() };
+      const mockActions = createMockActionsFactory<TestActions>(
+        mockActionsImplementation
       );
-      const mockCounterView = createMockViewInstance(mockCounterViewFn);
 
-      const mockButtonViewFn = vi.fn(
-        (_) => ({ onClick: vi.fn() }) as TestButtonView
+      const mockCounterViewImplementation: TestCounterView = {
+        'data-count': 0,
+      };
+      const mockCounterView = createMockViewFactory<TestCounterView>(
+        mockCounterViewImplementation
       );
-      const mockButtonView = createMockViewInstance(mockButtonViewFn);
+
+      const mockButtonViewImplementation: TestButtonView = { onClick: vi.fn() };
+      const mockButtonView = createMockViewFactory<TestButtonView>(
+        mockButtonViewImplementation
+      );
 
       // Create a component factory with properly typed mock instances
-      const factory = createComponent<
-        TestModel,
-        TestSelectors,
-        TestActions,
-        { counter: TestCounterView; button: TestButtonView }
-      >(() => ({
-        model: mockModel as any,
-        selectors: mockSelectors as any,
-        actions: mockActions as any,
+      const factory = createComponent(() => ({
+        model: mockModel,
+        selectors: mockSelectors,
+        actions: mockActions,
         view: {
-          counter: mockCounterView as any,
-          button: mockButtonView as any,
+          counter: mockCounterView,
+          button: mockButtonView,
         },
       }));
 
@@ -361,8 +448,7 @@ if (import.meta.vitest) {
 
       // Should throw for non-existent view
       expect(() => {
-        // @ts-expect-error
-        component.getView('nonexistent');
+        (component.getView as any)('nonexistent');
       }).toThrow('View "nonexistent" not found');
 
       // Should provide access to all views
@@ -374,16 +460,28 @@ if (import.meta.vitest) {
 
   describe('instantiateComponent', () => {
     it('should create a branded component instance', () => {
-      // Mock component factory
-      const mockLattice = {};
+      // Mock component factory with proper typing
+      const mockLattice = {} as Lattice<
+        unknown,
+        unknown,
+        unknown,
+        Record<string, unknown>
+      >;
       const mockFactory = vi.fn(() => mockLattice);
       const brandedFactory = brandWithSymbol(
         mockFactory,
         COMPONENT_FACTORY_BRAND
       );
 
-      // Create an instance
-      const instance = instantiateComponent(brandedFactory as any);
+      // Create an instance with proper typing
+      const instance = instantiateComponent(
+        brandedFactory as ComponentFactory<
+          unknown,
+          unknown,
+          unknown,
+          Record<string, unknown>
+        >
+      );
 
       // Instance should be properly branded
       expect(instance[COMPONENT_FACTORY_INSTANCE_BRAND]).toBe(true);
