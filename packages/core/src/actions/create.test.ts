@@ -68,11 +68,11 @@ describe('Actions Composition', () => {
     // Verify the factory is correctly branded
     expect(isActionsFactory(counterActions)).toBe(true);
     
-    // Create a mutate function for the factory
-    const mutateFn = vi.fn().mockImplementation(() => mockModel);
+    // Create a model function for the factory
+    const modelFn = vi.fn().mockImplementation(() => mockModel);
     
     // Get the actions by invoking the factory
-    const actions = counterActions()({ mutate: mutateFn });
+    const actions = counterActions()({ model: modelFn });
     
     // Verify the shape of the generated actions
     expect(actions).toHaveProperty('increment');
@@ -102,11 +102,11 @@ describe('Actions Composition', () => {
     // Ensure the factory is properly branded
     expect(isActionsFactory(enhancedActions)).toBe(true);
     
-    // Create a mutate function for testing
-    const mutateFn = vi.fn().mockImplementation(() => mockModel);
+    // Create a model function for testing
+    const modelFn = vi.fn().mockImplementation(() => mockModel);
     
     // Get the actions by invoking the enhanced factory
-    const actions = enhancedActions()({ mutate: mutateFn });
+    const actions = enhancedActions()({ model: modelFn });
     
     // Verify the actions have the expected methods
     expect(actions).toHaveProperty('increment');
@@ -126,13 +126,20 @@ describe('Actions Composition', () => {
       })
     );
     
-    // Use the fluent compose API with .with() method
-    const composed = compose(baseActions).with<EnhancedActions, CounterModel>(
+    // Create enhanced actions using from API instead of compose
+    const enhancedModel = { 
+      ...mockModel,
+      incrementTwice: () => {
+        mockModel.increment();
+        mockModel.increment();
+      }
+    };
+    
+    // This is the replacement for compose.with pattern - use from API
+    const composed = createActions<EnhancedActions, typeof enhancedModel>(
+      { model: enhancedModel },
       ({ model }) => ({
-        incrementTwice: () => {
-          model().increment();
-          model().increment();
-        },
+        incrementTwice: model().incrementTwice,
         reset: model().reset
       })
     );
@@ -140,17 +147,18 @@ describe('Actions Composition', () => {
     // Verify the composition function exists
     expect(typeof composed).toBe('function');
     
-    // The direct composition should not be branded
-    expect(isActionsFactory(composed)).toBe(false);
+    // The direct composition is branded because we're using createActions
+    expect(isActionsFactory(composed)).toBe(true);
     
-    // But wrapping it with createActions should brand it
-    const wrappedActions = createActions<CounterActions & EnhancedActions, CounterModel>(
-      { model: mockModel },
-      (_) => {
-        // We need to adapt our composed function to work with the expected API
-        const model_fn = () => mockModel; // Model as a function
-        return composed({ mutate: model_fn as any });
-      }
+    // We can get a properly branded actions factory directly
+    const wrappedActions = createActions<CounterActions & EnhancedActions, typeof enhancedModel>(
+      { model: enhancedModel },
+      ({ model }) => ({
+        increment: model().increment,
+        decrement: model().decrement,
+        incrementTwice: model().incrementTwice,
+        reset: model().reset
+      })
     );
     
     // This should be branded

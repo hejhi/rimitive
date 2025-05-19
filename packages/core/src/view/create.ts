@@ -43,7 +43,9 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
   factory: ViewSliceFactory<T, TSelectors, TActions>
 ) {
   // Create a factory function that returns a slice creator
-  const viewFactory = function viewFactory() {
+  const viewFactory = function viewFactory<S extends Partial<T> = T>(
+    selector?: (base: T) => S
+  ) {
     return (options: SelectFactoryTools<T>) => {
       // Ensure the required properties exist
       if (!options.get) {
@@ -93,7 +95,15 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
       );
 
       // Call the factory with object parameters to match the spec
-      return factory(tools);
+      const result = factory(tools);
+      
+      // If a selector is provided, apply it to filter properties
+      if (selector) {
+        return selector(result) as S;
+      }
+      
+      // Otherwise return the full result
+      return result as unknown as S;
     };
   };
 

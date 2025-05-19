@@ -1,15 +1,63 @@
-# Lattice Select API Type Safety
+# Lattice Select & Composition
 
-This directory contains tests and examples that demonstrate the use of the `.select()` method in Lattice, particularly focusing on type safety across component boundaries.
+This directory contains tests and examples that demonstrate the use of composition methods in Lattice, particularly focusing on type safety across component boundaries.
 
 ## Key Files
 
 - `fluent.ts`: Contains the implementation of the `.select()` method on the `compose` API
 - `core.ts`: Contains the underlying `selectWith` function that provides the core functionality
 - `select.integration.test.ts`: Contains working tests that demonstrate the correct usage patterns
-- `select.example.ts`: Contains commented out code examples that demonstrate type errors
+- `select.example.ts`: Contains commented out code examples that demonstrate type errors 
+- `selector.test.ts`: Contains tests for the direct selector pattern
+- `selector.example.ts`: Contains examples of the direct selector pattern
 
-## Type Safety When Using `.select()`
+## Direct Selector Pattern
+
+Lattice now supports a direct selector pattern that provides a more concise way to filter properties. 
+Instead of using the `.select()` method, you can pass a selector function directly to a factory:
+
+```typescript
+// Using direct selector pattern
+const filteredModel = counterModel(({ reset, ...rest }) => rest);
+
+// This is equivalent to
+const filteredModel = compose(counterModel).select(({ reset, ...rest }) => rest);
+```
+
+This pattern works with all factory types:
+
+```typescript
+// Models
+const modelWithoutReset = counterModel(({ reset, ...rest }) => rest);
+
+// Selectors
+const selectorsWithoutDoubled = counterSelectors(({ doubled, ...rest }) => rest);
+
+// Actions
+const actionsWithoutReset = counterActions(({ reset, ...rest }) => rest);
+
+// Views
+const viewWithoutExtraProps = counterView(({ 'data-doubled': _, onReset, ...rest }) => rest);
+```
+
+### Using in Composition
+
+This pattern is especially useful during composition:
+
+```typescript
+createSelectors({ model }, ({ model }) => {
+  // Filter the base selectors using the new pattern
+  const base = baseSelectors(({ unwantedProp, ...rest }) => rest)({ get: () => ({}) });
+  
+  // Then add new properties
+  return {
+    ...base,
+    newProp: model().something
+  };
+});
+```
+
+## Type Safety When Using Selectors
 
 One of the key benefits of the `.select()` method is that it enforces type safety at compile time. This is particularly important when composing components, as it prevents runtime errors where a view might try to access a selector that has been filtered out.
 

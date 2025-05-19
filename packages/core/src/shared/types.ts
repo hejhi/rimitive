@@ -63,13 +63,17 @@ export type Mutation<T extends (...args: any[]) => any> = Branded<
 
 /**
  * Helper type to extract the actual model type from a model factory
+ * 
+ * This extracts the concrete model instance type from a model factory or other model object
  */
 export type ExtractModelType<M> =
   M extends ModelFactory<infer T>
-    ? T
-    : M extends () => any
-      ? ReturnType<M>
-      : M;
+    ? T  // Extract type from ModelFactory
+    : M extends { __MODEL_TYPE__: infer X } 
+      ? X  // Extract from a type with explicit model type
+      : M extends () => infer R
+        ? R  // Extract from a function that returns a model
+        : M;  // Use the type as-is
 
 /**
  * Helper type to infer the underlying model type from a component
@@ -93,15 +97,15 @@ export type MutatedModel<M> = {
 /**
  * Factory tools for creating actions
  */
-export interface ActionsFactoryTools {
-  // Enhanced mutate function for both ModelFactory and regular objects
-  mutate: <M>(model: M) => MutatedModel<M>;
+export interface ActionsFactoryTools<TModel> {
+  // Model function for accessing model methods in actions
+  model: () => TModel;
 }
 
 export type BaseFactoryTools<T> =
   | StoreFactoryTools<T>
   | SelectFactoryTools<T>
-  | ActionsFactoryTools;
+  | ActionsFactoryTools<T>;
 
 /**
  * New object-parameter based factory parameter types
@@ -181,6 +185,7 @@ export interface SelectorsCompositionTools<TModel> {
 }
 
 export interface ActionsCompositionTools<TModel> {
+  // Explicitly typed model access function
   model: () => TModel;
 }
 
@@ -256,8 +261,8 @@ export type BrandedSelectorsTools<T, TModel = unknown> = Branded<
   SelectFactoryTools<T, TModel>,
   typeof SELECTORS_TOOLS_BRAND
 >;
-export type BrandedActionsTools = Branded<
-  ActionsFactoryTools,
+export type BrandedActionsTools<TModel = unknown> = Branded<
+  ActionsFactoryTools<TModel>,
   typeof ACTIONS_TOOLS_BRAND
 >;
 export type BrandedViewTools<T> = Branded<
@@ -274,15 +279,15 @@ export type BrandedViewTools<T> = Branded<
  * instantiated with runtime tools.
  */
 export type ModelFactory<T> = Branded<
-  () => (options: StoreFactoryTools<T>) => T,
+  <S extends Partial<T> = T>(selector?: (base: T) => S) => (options: StoreFactoryTools<T>) => S,
   typeof MODEL_FACTORY_BRAND
 >;
 export type SelectorsFactory<T> = Branded<
-  () => (options: SelectFactoryTools<T>) => T,
+  <S extends Partial<T> = T>(selector?: (base: T) => S) => (options: SelectFactoryTools<T>) => S,
   typeof SELECTORS_FACTORY_BRAND
 >;
-export type ActionsFactory<T> = Branded<
-  () => (options: ActionsFactoryTools) => T,
+export type ActionsFactory<T, TModel = unknown> = Branded<
+  <S extends Partial<T> = T>(selector?: (base: T) => S) => (options: ActionsFactoryTools<TModel>) => S,
   typeof ACTIONS_FACTORY_BRAND
 >;
 /**
@@ -294,7 +299,7 @@ export type ActionsFactory<T> = Branded<
  * - TActions: The type of actions this view needs access to
  */
 export type ViewFactory<T, TSelectors = unknown, TActions = unknown> = Branded<
-  () => (options: ViewParamsToToolsAdapter<T, TSelectors, TActions>) => T,
+  <S extends Partial<T> = T>(selector?: (base: T) => S) => (options: ViewParamsToToolsAdapter<T, TSelectors, TActions>) => S,
   typeof VIEW_FACTORY_BRAND
 >;
 

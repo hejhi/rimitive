@@ -5,19 +5,11 @@
  * to verify that the pattern from the spec works.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createComponent } from '../../lattice/create';
 import { withComponent } from '../../lattice/compose';
 import { createModel } from '../../model/create';
-import { createActions } from '../../actions/create';
-import {
-  SELECTORS_FACTORY_BRAND,
-  VIEW_FACTORY_BRAND,
-  SelectorsFactory,
-  ViewFactory,
-} from '../types';
-import { brandWithSymbol } from '../identify';
-import { compose } from './fluent';
+import { from } from '../from';
 
 describe('Basic Component Composition', () => {
   it('should allow component composition with withComponent', () => {
@@ -37,41 +29,34 @@ describe('Basic Component Composition', () => {
       increment: () => set((state) => ({ count: state.count + 1 })),
     }));
 
-    // Create selectors factory mock
-    const mockSelectors = vi.fn(() => ({ count: 0 }));
-    const mockSelectorsFactory = brandWithSymbol(
-      () => () => mockSelectors(),
-      SELECTORS_FACTORY_BRAND
-    ) as unknown as SelectorsFactory<CounterSelectors>;
-
-    // Need a mock model instance (not factory) since we're testing without the actual store creation
-    const mockModelInstance: CounterModel = {
-      count: 0,
-      increment: () => {},
-    };
-
     // Create real actions using the actual createActions function with correct types
-    const actionsFactory = createActions<CounterActions, CounterModel>(
-      { model: mockModelInstance },
+    const baseActions = from(baseModel).createActions<CounterActions>(
       ({ model }) => ({
         increment: model().increment,
       })
     );
 
-    // Create view factory mock
-    const mockView = vi.fn(() => ({ 'data-count': 0 }));
-    const mockViewFactory = brandWithSymbol(
-      () => () => mockView(),
-      VIEW_FACTORY_BRAND
-    ) as unknown as ViewFactory<CounterView>;
+    // Use the from API for selectors too with explicit type annotation
+    const selectors = from(baseModel).createSelectors<CounterSelectors>(
+      ({ model }) => ({
+        count: model().count,
+      })
+    );
+
+    // Use the from API for views as well with explicit type annotation
+    const counter = from(selectors)
+      .withActions(baseActions)
+      .createView<CounterView>(({ selectors }) => ({
+        'data-count': selectors().count,
+      }));
 
     // Create a base component with our model, actions, and mocks
     const BaseComponent = createComponent(() => ({
       model: baseModel,
-      selectors: mockSelectorsFactory,
-      actions: actionsFactory,
+      selectors,
+      actions: baseActions,
       view: {
-        counter: mockViewFactory,
+        counter,
       },
     }));
 
@@ -83,33 +68,35 @@ describe('Basic Component Composition', () => {
       withComponent(BaseComponent, ({ model, selectors, actions, view }) => {
         // For this test, we just verify we have access to the base component parts
         expect(model).toBe(baseModel);
-        expect(selectors).toBe(mockSelectorsFactory);
-        expect(actions).toBe(actionsFactory);
-        expect(view.counter).toBe(mockViewFactory);
+        expect(selectors).toBe(selectors);
+        expect(actions).toBe(baseActions);
+        expect(view.counter).toBe(counter);
 
         // Create enhanced model that adds reset functionality
-        const enhancedModel = createModel(
-          compose(model).with<EnhancedModel>(({ set }) => ({
-            reset: () => set({ count: 0 }),
-          }))
+        const enhancedModel = createModel<CounterModel & EnhancedModel>(
+          (tools) => {
+            const composedModel = model()(tools);
+
+            return {
+              ...composedModel,
+              reset: () => tools.set({ count: 0 }),
+            };
+          }
         );
 
-        // Create a mock enhanced model instance for actions
-        const mockEnhancedModelInstance: CounterModel & EnhancedModel = {
-          count: 0,
-          increment: () => {},
-          reset: () => {},
-        };
-
-        // Create enhanced actions that include reset using createActions with correct types
-        const enhancedActions = createActions<
-          EnhancedActions,
-          CounterModel & EnhancedModel
-        >({ model: mockEnhancedModelInstance }, ({ model }) => {
+        // Create enhanced actions using the from() API for better type inference
+        const enhancedActions = from(
+          enhancedModel
+        ).createActions<EnhancedActions>(({ model }) => {
           // Create our enhanced actions including the original ones
-          const baseActions = actions as unknown as CounterActions;
+          // Type the mock model explicitly
+          type MockModel = { increment: () => void };
+          const mockModelFn = () => ({ increment: () => {} }) as MockModel;
+          const baseActions = actions()({ model: mockModelFn });
+
+          // model() is now properly typed with the reset method
           return {
-            increment: baseActions.increment,
+            ...baseActions,
             reset: model().reset,
           };
         });

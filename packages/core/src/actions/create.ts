@@ -3,6 +3,7 @@ import {
   ACTIONS_FACTORY_BRAND,
   ActionsFactoryParams,
   ActionsFactoryTools,
+  ExtractModelType
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 import { createModel } from '../model';
@@ -32,28 +33,39 @@ import { createModel } from '../model';
  * @param factory Function that returns action methods
  * @returns An actions instance that can be composed
  */
-export function createActions<T, TModel>(
+// Allow specifying just T (actions type) and infer model instance type
+export function createActions<T, TModel = any>(
   params: { model: TModel },
-  factory: (tools: ActionsFactoryParams<TModel>) => T
+  factory: (tools: ActionsFactoryTools<ExtractModelType<TModel>>) => T
 ) {
   // Create a factory function that returns a slice creator
-  const actionsFactory = function actionsFactory() {
-    return (options: ActionsFactoryTools) => {
+  const actionsFactory = function actionsFactory<S extends Partial<T> = T>(
+    selector?: (base: T) => S
+  ) {
+    return (options: ActionsFactoryTools<TModel>) => {
       // Ensure the required properties exist
-      if (!options.mutate) {
-        throw new Error('Actions factory requires a mutate function');
+      if (!options.model) {
+        throw new Error('Actions factory requires a model function');
       }
 
-      // Create branded tools object for the factory
+      // Create branded tools object for the factory with proper typing
       const tools = brandWithSymbol(
         {
-          model: () => options.mutate(params.model) as TModel,
+          model: options.model as () => ExtractModelType<TModel>,
         },
         ACTIONS_TOOLS_BRAND
       );
 
       // Call the factory with object parameters to match the spec
-      return factory(tools);
+      const result = factory(tools as ActionsFactoryTools<ExtractModelType<TModel>>);
+      
+      // If a selector is provided, apply it to filter properties
+      if (selector) {
+        return selector(result) as S;
+      }
+      
+      // Otherwise return the full result
+      return result as unknown as S;
     };
   };
 
@@ -93,14 +105,14 @@ if (import.meta.vitest) {
 
       expect(isActionsFactory(actions)).toBe(true);
 
-      // Create mock mutation function
-      const mockMutate = vi.fn().mockImplementation(() => ({
+      // Create mock model function
+      const mockModel = vi.fn().mockImplementation(() => ({
         testMethod: vi.fn(),
       }));
 
-      // Create a slice with the mock mutate function
+      // Create a slice with the mock model function
       const sliceCreator = actions();
-      sliceCreator({ mutate: mockMutate });
+      sliceCreator({ model: mockModel });
 
       // Factory should be called with object parameters
       expect(factorySpy).toHaveBeenCalledWith(
@@ -114,15 +126,15 @@ if (import.meta.vitest) {
       expect(isActionsTools(toolsObj)).toBe(true);
     });
 
-    it('should throw an error when mutate function is missing', () => {
+    it('should throw an error when model function is missing', () => {
       const actions = createActions({ model: {} }, () => ({
         testAction: () => {},
       }));
       const sliceCreator = actions();
 
-      // Should throw when mutate is missing
-      expect(() => sliceCreator({ mutate: undefined as any })).toThrow(
-        'Actions factory requires a mutate function'
+      // Should throw when model is missing
+      expect(() => sliceCreator({ model: undefined as any })).toThrow(
+        'Actions factory requires a model function'
       );
     });
   });

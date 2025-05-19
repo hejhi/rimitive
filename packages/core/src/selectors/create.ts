@@ -35,7 +35,9 @@ export function createSelectors<TSelectors, TModel>(
   factory: (tools: { model: () => TModel }) => TSelectors
 ) {
   // Create a factory function that returns a slice creator
-  const selectorsFactory = function selectorsFactory() {
+  const selectorsFactory = function selectorsFactory<S extends Partial<TSelectors> = TSelectors>(
+    selector?: (base: TSelectors) => S
+  ) {
     return (options: SelectFactoryTools<TSelectors>) => {
       // Ensure the required properties exist
       if (!options.get) {
@@ -43,7 +45,15 @@ export function createSelectors<TSelectors, TModel>(
       }
 
       // Call the factory with object parameters to match the spec
-      return factory({ model: () => params.model });
+      const result = factory({ model: () => params.model });
+      
+      // If a selector is provided, apply it to filter properties
+      if (selector) {
+        return selector(result) as S;
+      }
+      
+      // Otherwise return the full result
+      return result as unknown as S;
     };
   };
 

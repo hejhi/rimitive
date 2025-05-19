@@ -188,17 +188,13 @@ export function createStoreConfig<
 
     getActions: (_set, get) => {
       const actionsFn = component.actions();
-      // Define the mutate function to provide access to the model
+      // Define the model function to provide access to the model
       return actionsFn({
-        // Use type assertion to fix the MutatedModel incompatibility
-        mutate: <M>(model: M): MutatedModel<M> => {
-          if (model === undefined) {
-            // When called with no arguments, use the store's model
-            return get().model as unknown as MutatedModel<M>;
-          }
-          // Otherwise mutate the provided model
-          return model as unknown as MutatedModel<M>;
-        },
+        // Use type assertion to fix the model compatibility
+        model: <M>(): M => {
+          // Use the store's model
+          return get().model as unknown as M;
+        }
       });
     },
 
