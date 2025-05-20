@@ -1,11 +1,11 @@
 /**
  * A fluent API for creating Lattice components with proper type inference.
- * 
+ *
  * The `from` function provides a much better developer experience by:
  * 1. Requiring only a single type parameter in most cases
  * 2. Preserving type information across the entire chain
  * 3. Providing a readable, chainable API
- * 
+ *
  * Each overload of `from` provides context-appropriate methods based on what was passed to it.
  */
 
@@ -13,11 +13,11 @@ import { createActions } from '../actions/create';
 import { createSelectors } from '../selectors/create';
 import { createView } from '../view/create';
 import { isModelFactory, isSelectorsFactory } from './identify';
-import { 
-  ModelFactory, 
-  SelectorsFactory, 
-  ActionsFactory, 
-  ViewFactory 
+import {
+  ModelFactory,
+  SelectorsFactory,
+  ActionsFactory,
+  ViewFactory,
 } from './types';
 
 /**
@@ -32,7 +32,7 @@ export function from<TModel>(source: ModelFactory<TModel>): {
   createActions<TActions>(
     factory: (tools: { model: () => TModel }) => TActions
   ): ActionsFactory<TActions>;
-  
+
   createSelectors<TSelectors>(
     factory: (tools: { model: () => TModel }) => TSelectors
   ): SelectorsFactory<TSelectors>;
@@ -45,9 +45,9 @@ export function from<TModel>(source: ModelFactory<TModel>): {
 export function from<TSelectors>(source: SelectorsFactory<TSelectors>): {
   withActions<TActions>(actions: TActions): {
     createView<TView>(
-      factory: (tools: { 
-        selectors: () => TSelectors; 
-        actions: () => TActions 
+      factory: (tools: {
+        selectors: () => TSelectors;
+        actions: () => TActions;
       }) => TView
     ): ViewFactory<TView, TSelectors, TActions>;
   };
@@ -60,11 +60,11 @@ export function from(source: any) {
   if (isModelFactory(source)) {
     return fromModel(source);
   }
-  
+
   if (isSelectorsFactory(source)) {
     return fromSelectors(source);
   }
-  
+
   // Fallback for other types, could be expanded as needed
   throw new Error('Unsupported source type for from()');
 }
@@ -77,14 +77,15 @@ function fromModel<TModel>(model: ModelFactory<TModel>) {
     ) {
       // Use proper type parameters to maintain type safety
       return createActions<TActions, ModelFactory<TModel>>(
-        { model }, 
+        { model },
         // Cast to the correct type to ensure compatibility
-        (tools) => factory({ 
-          model: () => tools.model() as unknown as TModel 
-        })
+        (tools) =>
+          factory({
+            model: () => tools.model() as unknown as TModel,
+          })
       );
     },
-    
+
     createSelectors<TSelectors>(
       factory: (tools: { model: () => TModel }) => TSelectors
     ) {
@@ -92,11 +93,12 @@ function fromModel<TModel>(model: ModelFactory<TModel>) {
       return createSelectors<TSelectors, ModelFactory<TModel>>(
         { model },
         // Cast to the correct type to ensure compatibility
-        (tools) => factory({ 
-          model: () => tools.model() as unknown as TModel 
-        })
+        (tools) =>
+          factory({
+            model: () => tools.model() as unknown as TModel,
+          })
       );
-    }
+    },
   };
 }
 
@@ -105,18 +107,18 @@ function fromSelectors<TSelectors>(selectors: SelectorsFactory<TSelectors>) {
     withActions<TActions>(actions: TActions) {
       return {
         createView<TView>(
-          factory: (tools: { 
-            selectors: () => TSelectors; 
-            actions: () => TActions 
+          factory: (tools: {
+            selectors: () => TSelectors;
+            actions: () => TActions;
           }) => TView
         ) {
           // Explicitly specify all type parameters to ensure proper typing
           return createView<TView, TSelectors, TActions>(
-            { selectors, actions }, 
+            { selectors, actions },
             factory
           );
-        }
+        },
       };
-    }
+    },
   };
 }
