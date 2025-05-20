@@ -11,7 +11,7 @@ This document outlines our iterative TDD-driven approach to implementing the Lat
 The current codebase has established:
 - Core factory functions (`createModel`, `createSelectors`, `createActions`, `createView`)
 - Type branding system for runtime type checking
-- Composition system with the fluent `compose(base).with(extension)` pattern
+- Composition system with the fluent pattern
 - In-source tests for each component
 
 However, the following components are missing or incomplete:
@@ -207,7 +207,6 @@ However, the following components are missing or incomplete:
 2. Enhanced Test Coverage
    - Implemented dedicated test files for each component type
    - Added specific tests for fluent composition API across all component types
-   - Restored test coverage for `compose().with()` pattern that had been lost
    - Verified correct branding and type checking across the entire system
    - Ensured all tests pass with full type safety
 3. Improved Type Safety

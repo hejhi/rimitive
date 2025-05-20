@@ -1,6 +1,6 @@
 /**
  * Lattice - A headless component framework built on Zustand
- * 
+ *
  * This is the main entry point for the Lattice library, exporting
  * the core APIs for creating and composing components.
  */
@@ -13,12 +13,11 @@ export { createView } from './view';
 export { createComponent, instantiateComponent } from './lattice/create';
 
 // Composition APIs
-export { compose } from './shared/compose/fluent';
 export { withComponent, extendComponent } from './lattice/compose';
 
 // Type utilities
 export {
-  // Brand symbols 
+  // Brand symbols
   MODEL_FACTORY_BRAND,
   SELECTORS_FACTORY_BRAND,
   ACTIONS_FACTORY_BRAND,
@@ -30,7 +29,7 @@ export {
   VIEW_TOOLS_BRAND,
   COMPONENT_FACTORY_INSTANCE_BRAND,
   LATTICE_BRAND,
-  
+
   // Types
   Branded,
   ModelFactory,

@@ -1,6 +1,6 @@
 # Lattice
 
-A **headless component framework** built on Zustand. Lattice components are both the declarative contract and the actual API for your component—defining, composing, and enforcing the API surface at both the type and runtime level. Its core compositional mechanism is a fluent composition pattern with `.with()` method, enabling contract preservation, extensibility, and best-in-class developer experience. React‑first DX with a framework‑agnostic core.
+A **headless component framework** built on Zustand. Lattice components are both the declarative contract and the actual API for your component—defining, composing, and enforcing the API surface at both the type and runtime level. Its core compositional mechanism is a composition pattern, enabling contract preservation, extensibility, and best-in-class developer experience. React‑first DX with a framework‑agnostic core.
 
 ## Core Concepts
 
@@ -84,17 +84,7 @@ Components uses a factory pattern:
    }));
    ```
 
-2. **Composition**: The `.with()` method adds new properties or behaviors
-   ```typescript
-   const enhancedModel = createModel(
-    compose(counterModel).with(({ set, get }) => ({
-      incrementTwice: () => {
-        get().increment();
-        get().increment();
-      },
-    }))
-  )
-   ```
+2. **Composition**: The `from()` function
 
 ## Building Blocks
 
@@ -109,16 +99,6 @@ const counterModel = createModel(({ set, get }) => ({
   increment: () => set((state) => ({ count: state.count + 1 })),
   decrement: () => set((state) => ({ count: state.count - 1 })),
 }));
-
-// progressively compose in new behavior
-const enhancedModel = createModel(
-  compose(counterModel).with(({ set, get }) => ({
-    incrementTwice: () => {
-      get().increment();
-      get().increment();
-    },
-  }))
-);
 ```
 
 ### Actions – Pure Intent Functions
@@ -149,15 +129,6 @@ const selectors = createSelectors({ model }, ({ model }) => ({
     item.name.includes(filter)
   ),
 }));
-
-// Compose to add more derived values
-const enhancedSelectors = createSelectors(
-  { model },
-  compose(selectors).with(({ model }) => ({
-    doubled: model().count * 2,
-    formatted: `Count: ${model().count}`,
-  }))
-);
 ```
 
 ### Understanding Selector Implementation
@@ -195,22 +166,6 @@ const modelB = createModel(({ set, get }) => ({
   count: 0 
   // No title property
 }));
-
-// This would cause a TypeScript error - title property doesn't exist on modelB
-const selectorsB = createSelectors(
-  { model: modelB },
-  compose(selectorsA).with(({ model }) => ({
-    doubled: model().count * 2,
-  }))
-);
-
-// Correct approach - manually select compatible properties
-const selectorsB = createSelectors(
-  { model: modelB },
-  compose(selectorsA).with(({ model }) => ({
-    doubled: model().count * 2,
-  }))
-);
 ```
 
 Similarly, TypeScript will catch type incompatibilities:
@@ -224,14 +179,6 @@ const selectorsA = createSelectors({ model: modelA }, ({ model }) => ({
 
 // Model B has count as string
 const modelB = createModel(({ set, get }) => ({ count: "zero" }));
-
-// This would cause a TypeScript error - incompatible types
-const selectorsB = createSelectors(
-  { model: modelB },
-  compose(selectorsA).with(({ model }) => ({
-    formatted: `Count: ${model().count}`,
-  }))
-);
 ```
 
 This type safety helps prevent runtime errors and ensures that compositions are valid.
@@ -315,43 +262,7 @@ const counterComponent = createComponent(() => {
 // they wish, including filtering composed views.
 const enhancedComponent = createComponent(
   withComponent(counterComponent, ({ model, view, actions, selectors }) => {
-    // Enhance the model with new functionality
-    const _model = createModel(
-      compose(model).with(({ get, set }) => ({
-        incrementTwice: () => {
-          get().increment();
-          get().increment();
-        },
-        reset: () => set({ count: 0 })
-      }))
-    );
-
-    // Create actions that reference the enhanced model
-    const _actions = createActions(
-      { model },
-      compose(actions).with(({ model }) => ({
-        incrementTwice: model().incrementTwice,
-        reset: model().reset
-      }))
-    );
-
-    // Create selectors that reference the enhanced model
-    const _selectors = createSelectors(
-      { model },
-      compose(selectors).with(({ model }) => ({
-        doubled: model().count * 2,
-        isEven: model().count % 2 === 0
-      }))
-    );
-
-    // Create enhanced counter view
-    const counterView = createView(
-      { selectors },
-      compose(view.counter).with(({ selectors }) => ({
-        "data-doubled": selectors().doubled,
-        "data-even": selectors().isEven
-      }))
-    );
+    // TODO: fill in composition
 
     // Create new reset button view
     const resetButtonView = createView(

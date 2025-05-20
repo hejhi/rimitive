@@ -21,11 +21,6 @@ import { createModel } from '../model';
  *   decrement: model().decrement,
  *   reset: model().reset
  * }));
- *
- * // With composition
- * const enhancedActions = compose(counterActions).with(({ model }) => ({
- *   incrementTwice: model().incrementTwice
- * }));
  * ```
  *
  * @param params Object containing model to be used

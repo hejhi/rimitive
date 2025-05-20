@@ -2,7 +2,7 @@ import {
   MODEL_TOOLS_BRAND,
   MODEL_FACTORY_BRAND,
   ModelSliceFactory,
-  StoreFactoryTools
+  StoreFactoryTools,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
@@ -22,32 +22,16 @@ import { brandWithSymbol } from '../shared/identify';
  *   reset: () => set({ count: 0 }),
  *   doubleCount: () => get().count * 2
  * }));
- *
- * // With composition
- * const enhancedModel = createModel(
- *   compose(counterModel).with((tools) => ({
- *     incrementTwice: () => {
- *       tools.get().increment();
- *       tools.get().increment();
- *     }
- *   }))
- * );
- *
- * // With selective property inclusion
- * const filteredModel = createModel(
- *   compose(counterModel).with((tools) => ({
- *     // increment, decrement, and reset are omitted
- *     tripleCount: () => tools.get().count * 3, // Add a new property
- *   }))
- * );
- * ```
+ *```
  *
  * @param sliceFactory A function that produces a state object with optional methods and derived properties
  * @returns A model factory function that can be composed
  */
 export function createModel<T>(sliceFactory: ModelSliceFactory<T>) {
   // Create a factory function that returns a slice creator
-  const modelFactory = function modelFactory<S extends Partial<T> = T>(selector?: (base: T) => S) {
+  const modelFactory = function modelFactory<S extends Partial<T> = T>(
+    selector?: (base: T) => S
+  ) {
     return (options: StoreFactoryTools<T>) => {
       // Ensure the required properties exist
       if (!options.get || !options.set) {
@@ -65,12 +49,12 @@ export function createModel<T>(sliceFactory: ModelSliceFactory<T>) {
 
       // Call the factory with object parameters to match the spec
       const result = sliceFactory(tools);
-      
+
       // If a selector is provided, apply it to filter properties
       if (selector) {
         return selector(result) as S;
       }
-      
+
       // Otherwise return the full result
       return result as unknown as S;
     };
@@ -84,9 +68,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createModel', async () => {
-    const { isModelFactory, isModelTools } = await import(
-      '../shared/identify'
-    );
+    const { isModelFactory, isModelTools } = await import('../shared/identify');
 
     it('should verify model factory requirements and branding', () => {
       // Create a spy factory with object parameters

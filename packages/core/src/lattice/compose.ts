@@ -18,31 +18,6 @@ import { createComponent } from './create';
  * This function enables composition of components, allowing selective extension or replacement
  * of component parts (model, selectors, actions, views).
  *
- * @example
- * ```typescript
- * const enhancedComponent = createComponent(
- *   withComponent(counterComponent, ({ model, view, actions, selectors }) => {
- *     // Enhance the model with new functionality
- *     const _model = createModel(
- *       compose(model).with(({ get, set }) => ({
- *         incrementTwice: () => {
- *           get().increment();
- *           get().increment();
- *         },
- *         reset: () => set({ count: 0 })
- *       }))
- *     );
- *
- *     // Enhance other components...
- *
- *     return {
- *       model: _model,
- *       // Other components...
- *     };
- *   })
- * );
- * ```
- *
  * @param baseComponent The base component to extend
  * @param callback A function that receives tools to access the base component and returns extensions
  * @returns A function to be used with createComponent
@@ -121,21 +96,6 @@ export function withComponent<
  * Creates a new component by extending an existing one.
  *
  * This is a convenience function that combines createComponent and withComponent.
- *
- * @example
- * ```typescript
- * const enhancedComponent = extendComponent(baseComponent, ({ model, selectors }) => {
- *   const _model = createModel(
- *     compose(model).with(({ get, set }) => ({
- *       reset: () => set({ count: 0 })
- *     }))
- *   );
- *
- *   return {
- *     model: _model,
- *   };
- * });
- * ```
  *
  * @param baseComponent The base component to extend
  * @param callback A function that receives tools to access the base component and returns extensions

@@ -127,7 +127,7 @@ The terminology has been updated to match the implementation architecture:
 
 This aligns with the actual three-phase architecture:
 1. **Definition Phase:** User defines slice factories
-2. **Composition Phase:** Factories are combined with `compose().with()`
+2. **Composition Phase:** Factories are combined with `from()`
 3. **Instantiation Phase:** Factories create runtime objects when invoked with tools
 
 ## Implementation Checklist (All phases completed!)

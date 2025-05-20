@@ -13,13 +13,13 @@
   - Created dedicated slice factory types: `ModelSliceFactory`, `SelectorsSliceFactory`, etc.
 
 - **Enhanced Type Safety**: Improved typings throughout the codebase:
-  - Added proper function overloads for compose and composeWith functions
+  - Added proper function overloads for composeWith functions
   - Implemented type discrimination instead of type assertions
   - Updated the tsconfig.json with stricter type checking options
   - Eliminated `any` types where possible, replacing with proper type discrimination
 
 - **Fixed Composition Functions**: 
-  - `compose().with()` now returns properly typed functions with correct branding
+  - `from` now returns properly typed functions with correct branding
   - Added explicit documentation with references to the specification
 
 - **Updated Tests**: Refactored tests to verify the new branding scheme:
@@ -31,7 +31,7 @@
 
 1. **Three-Phase Architecture**: Clarified the distinction between:
    - **Definition Phase**: User defines slice factories
-   - **Composition Phase**: Factories are combined using `compose().with()`
+   - **Composition Phase**: Factories are combined using `from()`
    - **Instantiation Phase**: Factories create runtime objects when invoked with tools
 
 2. **Consistent Terminology**: Applied consistent naming across:

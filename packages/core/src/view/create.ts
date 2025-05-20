@@ -26,12 +26,6 @@ import { brandWithSymbol } from '../shared/identify';
  *     }
  *   }
  * }));
- *
- * // With composition
- * const enhancedView = compose(counterView).with(({ selectors }) => ({
- *   "data-doubled": selectors().doubled,
- *   "data-even": selectors().isEven,
- * }));
  * ```
  *
  * @param params Object containing selectors and actions to be used
@@ -96,12 +90,12 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
 
       // Call the factory with object parameters to match the spec
       const result = factory(tools);
-      
+
       // If a selector is provided, apply it to filter properties
       if (selector) {
         return selector(result) as S;
       }
-      
+
       // Otherwise return the full result
       return result as unknown as S;
     };
@@ -115,9 +109,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createView', async () => {
-    const { isViewFactory, isViewTools } = await import(
-      '../shared/identify'
-    );
+    const { isViewFactory, isViewTools } = await import('../shared/identify');
 
     it('should verify view factory requirements and branding', () => {
       // Create mock selectors and actions

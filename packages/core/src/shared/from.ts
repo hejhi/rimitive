@@ -31,7 +31,7 @@ import {
 export function from<TModel>(source: ModelFactory<TModel>): {
   createActions<TActions>(
     factory: (tools: { model: () => TModel }) => TActions
-  ): ActionsFactory<TActions>;
+  ): ActionsFactory<TActions, TModel>;
 
   createSelectors<TSelectors>(
     factory: (tools: { model: () => TModel }) => TSelectors
@@ -56,7 +56,7 @@ export function from<TSelectors>(source: SelectorsFactory<TSelectors>): {
 /**
  * Type guard and implementation to determine which overload to use at runtime.
  */
-export function from(source: any) {
+export function from(source: any): any {
   if (isModelFactory(source)) {
     return fromModel(source);
   }
@@ -81,7 +81,7 @@ function fromModel<TModel>(model: ModelFactory<TModel>) {
         // Cast to the correct type to ensure compatibility
         (tools) =>
           factory({
-            model: () => tools.model() as unknown as TModel,
+            model: () => tools.model() as TModel,
           })
       );
     },
@@ -95,7 +95,7 @@ function fromModel<TModel>(model: ModelFactory<TModel>) {
         // Cast to the correct type to ensure compatibility
         (tools) =>
           factory({
-            model: () => tools.model() as unknown as TModel,
+            model: () => tools.model() as TModel,
           })
       );
     },
@@ -104,7 +104,7 @@ function fromModel<TModel>(model: ModelFactory<TModel>) {
 
 function fromSelectors<TSelectors>(selectors: SelectorsFactory<TSelectors>) {
   return {
-    withActions<TActions>(actions: TActions) {
+    withActions<TActions>(actions: ActionsFactory<TActions>) {
       return {
         createView<TView>(
           factory: (tools: {
@@ -112,10 +112,23 @@ function fromSelectors<TSelectors>(selectors: SelectorsFactory<TSelectors>) {
             actions: () => TActions;
           }) => TView
         ) {
-          // Explicitly specify all type parameters to ensure proper typing
-          return createView<TView, TSelectors, TActions>(
-            { selectors, actions },
-            factory
+          // Following the same pattern as createActions and createSelectors,
+          // we pass the factories directly without unwrapping
+          return createView<
+            TView,
+            SelectorsFactory<TSelectors>,
+            ActionsFactory<TActions>
+          >(
+            {
+              selectors,
+              actions,
+            },
+            // The factory is wrapped to match the expected signature
+            (tools) =>
+              factory({
+                selectors: () => tools.selectors() as TSelectors,
+                actions: () => tools.actions() as TActions,
+              })
           );
         },
       };
