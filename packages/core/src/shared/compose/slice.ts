@@ -11,7 +11,6 @@ import type {
   ComponentConfig,
   SetState,
   GetState,
-  MutatedModel,
   ViewFactory,
 } from '../types';
 
@@ -116,11 +115,11 @@ export function createComponentStore<
       // Get the model and actions directly
       const model = config.getModel(set, get);
       const actions = config.getActions(set, get);
-      
+
       // Get the selector and view factory functions
       const selectorsFactory = config.getSelectors(set, get);
       const viewsFactory = config.getViews(set, get);
-      
+
       // Create an object with getter properties for selectors and views
       return {
         model,
@@ -132,7 +131,7 @@ export function createComponentStore<
         // Define views as a getter property that calls the factory function
         get views() {
           return viewsFactory();
-        }
+        },
       };
     }
   );
@@ -194,13 +193,13 @@ export function createStoreConfig<
         model: <M>(): M => {
           // Use the store's model
           return get().model as unknown as M;
-        }
+        },
       });
     },
 
     getViews: (_set, get) => {
       const views = component.view;
-      
+
       // Create properly typed accessors for selectors and actions
       // These ensure we always access the most up-to-date values via the getters
       const selectorsGetter = () => get().selectors as TSelectors;
@@ -210,7 +209,7 @@ export function createStoreConfig<
       // This will be called each time the views property is accessed
       return function getViewValues() {
         const result: Record<string, unknown> = {};
-        
+
         Object.entries(views).forEach(([key, viewInstance]) => {
           // Assert the view instance type more specifically
           const typedViewInstance = viewInstance as ViewFactory<unknown>;
@@ -430,22 +429,22 @@ if (import.meta.vitest) {
       // Create mock selectors function that returns selectors based on model
       const mockSelectorsFn = vi.fn(({ model }) => ({
         isPositive: model().count > 0,
-        count: model().count
+        count: model().count,
       }));
       const mockSelectors = vi.fn(() => mockSelectorsFn);
 
       // Create mock actions
-      const mockActionsFn = vi.fn(() => ({ 
+      const mockActionsFn = vi.fn(() => ({
         increment: vi.fn(() => {
           mockModelData.count += 1;
-        })
+        }),
       }));
       const mockActions = vi.fn(() => mockActionsFn);
 
       // Create mock view function that returns view props based on selectors
-      const mockCounterViewFn = vi.fn(({ selectors }) => ({ 
+      const mockCounterViewFn = vi.fn(({ selectors }) => ({
         'data-count': selectors().count,
-        'data-positive': selectors().isPositive
+        'data-positive': selectors().isPositive,
       }));
       const mockCounterView = vi.fn(() => mockCounterViewFn);
 
@@ -453,8 +452,10 @@ if (import.meta.vitest) {
       type TestModel = { count: number };
       type TestSelectors = { isPositive: boolean; count: number };
       type TestActions = { increment: () => void };
-      type TestViews = { counter: { 'data-count': number; 'data-positive': boolean } };
-      
+      type TestViews = {
+        counter: { 'data-count': number; 'data-positive': boolean };
+      };
+
       // Create a properly typed mock component
       const mockComponent: ComponentConfig<
         TestModel,
@@ -478,21 +479,21 @@ if (import.meta.vitest) {
 
       // Create mock store functions that match our expected types
       const setState = vi.fn();
-      
+
       // Create a mock state object with all required properties
       // The object needs selectors and views to match the full StoreShape
       const mockStateObject = {
         model: mockModelData,
-        actions: { 
+        actions: {
           increment: vi.fn(() => {
             mockModelData.count += 1;
-          })
+          }),
         },
         // These will be replaced with proper getters below
         selectors: {} as TestSelectors,
-        views: {} as { [K in keyof TestViews]: TestViews[K] }
+        views: {} as { [K in keyof TestViews]: TestViews[K] },
       };
-      
+
       // Mock getState to return our mock state object
       const getState = vi.fn(() => mockStateObject);
 
@@ -501,40 +502,40 @@ if (import.meta.vitest) {
       const selectorsFactory = storeConfig.getSelectors(setState, getState);
       storeConfig.getActions(setState, getState); // Call but don't store the result to avoid unused var warnings
       const viewsFactory = storeConfig.getViews(setState, getState);
-      
+
       // Test that the factories now return functions (for getters)
       expect(typeof selectorsFactory).toBe('function');
       expect(typeof viewsFactory).toBe('function');
-      
+
       // Setup the getter properties on our mock state
       // These getters will call the factory functions each time they're accessed
       Object.defineProperty(mockStateObject, 'selectors', {
         configurable: true,
-        get: selectorsFactory // This is now a function that returns the selectors object
+        get: selectorsFactory, // This is now a function that returns the selectors object
       });
-      
+
       Object.defineProperty(mockStateObject, 'views', {
         configurable: true,
-        get: viewsFactory // This is now a function that returns the views object
+        get: viewsFactory, // This is now a function that returns the views object
       });
-      
+
       // Verify initial state through the getters
       expect(mockStateObject.selectors.isPositive).toBe(false);
       expect(mockStateObject.selectors.count).toBe(0);
-      expect(mockStateObject.views.counter).toEqual({ 
-        'data-count': 0, 
-        'data-positive': false 
+      expect(mockStateObject.views.counter).toEqual({
+        'data-count': 0,
+        'data-positive': false,
       });
-      
+
       // Modify the model and verify the getters update
       mockModelData.count = 5;
-      
+
       // Check that selectors and views update reactively through getters
       expect(mockStateObject.selectors.isPositive).toBe(true);
       expect(mockStateObject.selectors.count).toBe(5);
-      expect(mockStateObject.views.counter).toEqual({ 
-        'data-count': 5, 
-        'data-positive': true 
+      expect(mockStateObject.views.counter).toEqual({
+        'data-count': 5,
+        'data-positive': true,
       });
 
       // Verify that the component functions were called

@@ -1,9 +1,8 @@
 import {
   ACTIONS_TOOLS_BRAND,
   ACTIONS_FACTORY_BRAND,
-  ActionsFactoryParams,
   ActionsFactoryTools,
-  ExtractModelType
+  ExtractModelType,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 import { createModel } from '../model';
@@ -35,7 +34,7 @@ import { createModel } from '../model';
  */
 // Allow specifying just T (actions type) and infer model instance type
 export function createActions<T, TModel = any>(
-  params: { model: TModel },
+  _: { model: TModel },
   factory: (tools: ActionsFactoryTools<ExtractModelType<TModel>>) => T
 ) {
   // Create a factory function that returns a slice creator
@@ -57,13 +56,15 @@ export function createActions<T, TModel = any>(
       );
 
       // Call the factory with object parameters to match the spec
-      const result = factory(tools as ActionsFactoryTools<ExtractModelType<TModel>>);
-      
+      const result = factory(
+        tools as ActionsFactoryTools<ExtractModelType<TModel>>
+      );
+
       // If a selector is provided, apply it to filter properties
       if (selector) {
         return selector(result) as S;
       }
-      
+
       // Otherwise return the full result
       return result as unknown as S;
     };
