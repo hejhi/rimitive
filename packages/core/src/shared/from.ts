@@ -18,6 +18,7 @@ import {
   SelectorsFactory,
   ActionsFactory,
   ViewFactory,
+  ActionsSliceFactory,
 } from './types';
 
 /**
@@ -30,7 +31,7 @@ import {
  */
 export function from<TModel>(source: ModelFactory<TModel>): {
   createActions<TActions>(
-    factory: (tools: { model: () => TModel }) => TActions
+    factory: ActionsSliceFactory<TActions, TModel>
   ): ActionsFactory<TActions, TModel>;
 
   createSelectors<TSelectors>(
@@ -43,7 +44,9 @@ export function from<TModel>(source: ModelFactory<TModel>): {
  * This provides methods for working with selectors and creating views.
  */
 export function from<TSelectors>(source: SelectorsFactory<TSelectors>): {
-  withActions<TActions>(actions: TActions): {
+  withActions<TActions, TModel>(
+    actions: ActionsFactory<TActions, TModel>
+  ): {
     createView<TView>(
       factory: (tools: {
         selectors: () => TSelectors;

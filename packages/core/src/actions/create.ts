@@ -1,8 +1,7 @@
 import {
   ACTIONS_TOOLS_BRAND,
   ACTIONS_FACTORY_BRAND,
-  ActionsFactoryTools,
-  ExtractModelType,
+  ActionsFactoryParams,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 import { createModel } from '../model';
@@ -29,14 +28,14 @@ import { createModel } from '../model';
  */
 // Allow specifying just T (actions type) and infer model instance type
 export function createActions<T, TModel = any>(
-  _: { model: TModel },
-  factory: (tools: ActionsFactoryTools<ExtractModelType<TModel>>) => T
+  params: { model: TModel },
+  factory: (tools: ActionsFactoryParams<TModel>) => T
 ) {
   // Create a factory function that returns a slice creator
   const actionsFactory = function actionsFactory<S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) {
-    return (options: ActionsFactoryTools<TModel>) => {
+    return (options: ActionsFactoryParams<TModel>) => {
       // Ensure the required properties exist
       if (!options.model) {
         throw new Error('Actions factory requires a model function');
@@ -45,15 +44,20 @@ export function createActions<T, TModel = any>(
       // Create branded tools object for the factory with proper typing
       const tools = brandWithSymbol(
         {
-          model: options.model as () => ExtractModelType<TModel>,
+          model: () => {
+            if (params.model === undefined) {
+              throw new Error(
+                'Attempting to access model that was not provided to createAction'
+              );
+            }
+            return params.model;
+          },
         },
         ACTIONS_TOOLS_BRAND
       );
 
       // Call the factory with object parameters to match the spec
-      const result = factory(
-        tools as ActionsFactoryTools<ExtractModelType<TModel>>
-      );
+      const result = factory(tools);
 
       // If a selector is provided, apply it to filter properties
       if (selector) {

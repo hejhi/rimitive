@@ -22,6 +22,8 @@ describe('Basic Component Composition', () => {
     // Create enhanced model type with reset
     type EnhancedModel = { reset: () => void };
     type EnhancedActions = CounterActions & { reset: () => void };
+    type EnhancedSelectors = CounterSelectors & { newThing: number };
+    type EnhancedView = { onClick: () => void };
 
     // Create real model using the actual createModel function
     const baseModel = createModel<CounterModel>(({ set }) => ({
@@ -37,14 +39,14 @@ describe('Basic Component Composition', () => {
     );
 
     // Use the from API for selectors too with explicit type annotation
-    const selectors = from(baseModel).createSelectors<CounterSelectors>(
+    const baseSelectors = from(baseModel).createSelectors<CounterSelectors>(
       ({ model }) => ({
         count: model().count,
       })
     );
 
     // Use the from API for views as well with explicit type annotation
-    const counter = from(selectors)
+    const counter = from(baseSelectors)
       .withActions(baseActions)
       .createView<CounterView>(({ selectors }) => ({
         'data-count': selectors().count,
@@ -53,7 +55,7 @@ describe('Basic Component Composition', () => {
     // Create a base component with our model, actions, and mocks
     const BaseComponent = createComponent(() => ({
       model: baseModel,
-      selectors,
+      selectors: baseSelectors,
       actions: baseActions,
       view: {
         counter,
@@ -68,7 +70,7 @@ describe('Basic Component Composition', () => {
       withComponent(BaseComponent, ({ model, selectors, actions, view }) => {
         // For this test, we just verify we have access to the base component parts
         expect(model).toBe(baseModel);
-        expect(selectors).toBe(selectors);
+        expect(selectors).toBe(baseSelectors);
         expect(actions).toBe(baseActions);
         expect(view.counter).toBe(counter);
 
@@ -88,11 +90,7 @@ describe('Basic Component Composition', () => {
         const enhancedActions = from(
           enhancedModel
         ).createActions<EnhancedActions>(({ model }) => {
-          // Create our enhanced actions including the original ones
-          // Type the mock model explicitly
-          type MockModel = { increment: () => void };
-          const mockModelFn = () => ({ increment: () => {} }) as MockModel;
-          const baseActions = actions()({ model: mockModelFn });
+          const baseActions = actions()({ model });
 
           // model() is now properly typed with the reset method
           return {
@@ -101,10 +99,36 @@ describe('Basic Component Composition', () => {
           };
         });
 
+        const enhancedSelectors = from(
+          enhancedModel
+        ).createSelectors<EnhancedSelectors>(({ model }) => {
+          const baseSelectors = selectors()({ model });
+
+          // model() is now properly typed with the reset method
+          return {
+            ...baseSelectors,
+            newThing: model().count,
+          };
+        });
+
+        const enhancedView = from(enhancedSelectors)
+          .withActions(enhancedActions)
+          .createView<EnhancedView>(({ actions, selectors }) => {
+            const composedSelectors = counter()({ actions, selectors });
+
+            // model() is now properly typed with the reset method
+            return {
+              ...composedSelectors,
+              onClick: actions().reset,
+            };
+          });
+
         // Return the enhanced model and actions
         return {
           model: enhancedModel,
           actions: enhancedActions,
+          selectors: enhancedSelectors,
+          view: enhancedView,
         };
       })
     );

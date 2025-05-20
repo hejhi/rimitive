@@ -3,7 +3,6 @@ import {
   VIEW_FACTORY_BRAND,
   ViewSliceFactory,
   ViewFactoryParams,
-  SelectFactoryTools,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
@@ -40,10 +39,12 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
   const viewFactory = function viewFactory<S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) {
-    return (options: SelectFactoryTools<T>) => {
+    return (options: ViewFactoryParams<TSelectors, TActions>) => {
       // Ensure the required properties exist
-      if (!options.get) {
-        throw new Error('View factory requires a get function');
+      if (!options.selectors || !options.actions) {
+        throw new Error(
+          'View factory requires selectors and actions functions'
+        );
       }
 
       // Validate selectors and actions if they're used in the factory
@@ -74,7 +75,7 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
                 'Attempting to access selectors that were not provided to createView'
               );
             }
-            return params.selectors as TSelectors;
+            return params.selectors;
           },
           actions: () => {
             if (params.actions === undefined) {
@@ -82,7 +83,7 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
                 'Attempting to access actions that were not provided to createView'
               );
             }
-            return params.actions as TActions;
+            return params.actions;
           },
         },
         VIEW_TOOLS_BRAND
@@ -146,12 +147,12 @@ if (import.meta.vitest) {
 
       expect(isViewFactory(view)).toBe(true);
 
-      // Create tools for testing
-      const mockGet = vi.fn();
-
-      // Create a slice with the mock tools
+      // Create a slice with the proper params
       const sliceCreator = view();
-      const slice = sliceCreator({ get: mockGet });
+      const slice = sliceCreator({
+        selectors: () => mockSelectors,
+        actions: () => mockActions,
+      });
 
       // Factory should be called with object parameters
       expect(factorySpy).toHaveBeenCalledWith(
@@ -181,16 +182,16 @@ if (import.meta.vitest) {
       const view = createView({}, () => ({ count: 1 }));
       const sliceCreator = view();
 
-      // Should throw when get is missing
+      // Should throw when selectors or actions are missing
       // @ts-expect-error
       expect(() => sliceCreator({})).toThrow(
-        'View factory requires a get function'
+        'View factory requires selectors and actions functions'
       );
 
-      // @ts-expect-error
-      expect(() => sliceCreator({ get: undefined })).toThrow(
-        'View factory requires a get function'
-      );
+      expect(() =>
+        // @ts-expect-error
+        sliceCreator({ actions: () => ({}) })
+      ).toThrow('View factory requires selectors and actions functions');
     });
 
     it('should throw an error when accessing selectors that were not provided', () => {
@@ -203,7 +204,12 @@ if (import.meta.vitest) {
       const sliceCreator = view();
 
       // Should throw when trying to access unavailable selectors
-      expect(() => sliceCreator({ get: vi.fn() })).toThrow(
+      expect(() =>
+        sliceCreator({
+          selectors: () => ({}),
+          actions: () => ({}),
+        })
+      ).toThrow(
         'View factory is using selectors() but no selectors were provided'
       );
     });
@@ -218,9 +224,12 @@ if (import.meta.vitest) {
       const sliceCreator = view();
 
       // Should throw when trying to access unavailable actions
-      expect(() => sliceCreator({ get: vi.fn() })).toThrow(
-        'View factory is using actions() but no actions were provided'
-      );
+      expect(() =>
+        sliceCreator({
+          selectors: () => ({}),
+          actions: () => ({}),
+        })
+      ).toThrow('View factory is using actions() but no actions were provided');
     });
 
     it('should check for selectors and actions usage at creation time', () => {
@@ -235,7 +244,7 @@ if (import.meta.vitest) {
         );
 
         const sliceCreator = viewFactory();
-        sliceCreator({ get: vi.fn() }); // This should throw
+        sliceCreator({ selectors: () => ({}), actions: () => ({}) }); // This should throw
       }).toThrow();
 
       // Should throw when using actions without providing them
@@ -249,7 +258,7 @@ if (import.meta.vitest) {
         );
 
         const sliceCreator = viewFactory();
-        sliceCreator({ get: vi.fn() }); // This should throw
+        sliceCreator({ selectors: () => ({}), actions: () => ({}) }); // This should throw
       }).toThrow();
     });
 

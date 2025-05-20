@@ -1,4 +1,8 @@
-import { SELECTORS_FACTORY_BRAND, SelectFactoryTools } from '../shared/types';
+import {
+  SELECTORS_FACTORY_BRAND,
+  SelectorsFactoryParams,
+  SelectorsSliceFactory,
+} from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
 /**
@@ -24,20 +28,30 @@ import { brandWithSymbol } from '../shared/identify';
  */
 export function createSelectors<TSelectors, TModel>(
   params: { model: TModel },
-  factory: (tools: { model: () => TModel }) => TSelectors
+  factory: SelectorsSliceFactory<TSelectors, TModel>
 ) {
   // Create a factory function that returns a slice creator
   const selectorsFactory = function selectorsFactory<
     S extends Partial<TSelectors> = TSelectors,
   >(selector?: (base: TSelectors) => S) {
-    return (options: SelectFactoryTools<TSelectors>) => {
+    return (options: SelectorsFactoryParams<TModel>) => {
       // Ensure the required properties exist
-      if (!options.get) {
-        throw new Error('Selectors factory requires a get function');
+      if (!options.model) {
+        throw new Error('Selectors factory requires a model function');
       }
 
+      // Create branded tools object with access functions for the factory
+      const tools = {
+        model: () => {
+          if (params.model === undefined) {
+            throw new Error('Model is required');
+          }
+          return params.model;
+        },
+      };
+
       // Call the factory with object parameters to match the spec
-      const result = factory({ model: () => params.model });
+      const result = factory(tools);
 
       // If a selector is provided, apply it to filter properties
       if (selector) {
@@ -80,12 +94,9 @@ if (import.meta.vitest) {
 
       expect(isSelectorsFactory(selectors)).toBe(true);
 
-      // Create tools for testing
-      const mockGet = vi.fn();
-
-      // Create a slice with the mock tools
+      // Create a slice with the model
       const sliceCreator = selectors();
-      const slice = sliceCreator({ get: mockGet });
+      const slice = sliceCreator({ model: () => mockModel });
 
       // Factory should be called with the model getter
       expect(factorySpy).toHaveBeenCalled();
@@ -109,7 +120,7 @@ if (import.meta.vitest) {
       // Should throw when get is missing
       // @ts-expect-error
       expect(() => sliceCreator({})).toThrow(
-        'Selectors factory requires a get function'
+        'Selectors factory requires a model function'
       );
     });
 
@@ -133,7 +144,7 @@ if (import.meta.vitest) {
       );
 
       const sliceCreator = enhancedSelectors();
-      const slice = sliceCreator({ get: vi.fn() });
+      const slice = sliceCreator({ model: () => mockModel });
 
       // Should contain only selected properties plus new ones
       expect(slice).toEqual({

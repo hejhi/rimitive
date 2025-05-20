@@ -67,11 +67,8 @@ describe('Selectors Composition', () => {
     // Verify factory branding
     expect(isSelectorsFactory(counterSelectors)).toBe(true);
 
-    // Create mock get function
-    const mockGet = vi.fn();
-
-    // Get the selectors by invoking the factory
-    const selectors = counterSelectors()({ get: mockGet });
+    // Get the selectors by invoking the factory with the model
+    const selectors = counterSelectors()({ model: () => mockModel });
 
     // Verify the shape of the generated selectors
     expect(selectors.count).toBe(10);
@@ -105,11 +102,8 @@ describe('Selectors Composition', () => {
     // Verify factory branding
     expect(isSelectorsFactory(enhancedSelectors)).toBe(true);
 
-    // Create mock get function
-    const mockGet = vi.fn();
-
-    // Get the enhanced selectors by invoking the factory
-    const selectors = enhancedSelectors()({ get: mockGet });
+    // Get the enhanced selectors by invoking the factory with the model
+    const selectors = enhancedSelectors()({ model: () => mockModel });
 
     // Verify the shape has both original and new properties
     expect(selectors).toHaveProperty('count');

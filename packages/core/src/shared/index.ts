@@ -7,8 +7,3 @@ export * from './types';
  * Re-export functions from the identify module
  */
 export * from './identify';
-
-/**
- * Re-export functions from the compose module
- */
-export * from './compose';

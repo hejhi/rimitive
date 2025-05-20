@@ -2,7 +2,8 @@ import {
   MODEL_TOOLS_BRAND,
   MODEL_FACTORY_BRAND,
   ModelSliceFactory,
-  StoreFactoryTools,
+  ModelFactoryParams,
+  ModelFactory,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
@@ -27,12 +28,14 @@ import { brandWithSymbol } from '../shared/identify';
  * @param sliceFactory A function that produces a state object with optional methods and derived properties
  * @returns A model factory function that can be composed
  */
-export function createModel<T>(sliceFactory: ModelSliceFactory<T>) {
+export function createModel<T>(
+  sliceFactory: ModelSliceFactory<T>
+): ModelFactory<T> {
   // Create a factory function that returns a slice creator
   const modelFactory = function modelFactory<S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) {
-    return (options: StoreFactoryTools<T>) => {
+    return (options: ModelFactoryParams<T>) => {
       // Ensure the required properties exist
       if (!options.get || !options.set) {
         throw new Error('Model factory requires get and set functions');

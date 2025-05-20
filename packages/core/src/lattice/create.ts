@@ -130,17 +130,21 @@ export function createComponent<
           // View accessors with name-based retrieval
           getView: <K extends keyof TViews>(
             viewName: K
-          ): ViewFactory<TViews[K]> => {
+          ): ViewFactory<TViews[K], TSelectors, TActions> => {
             const view = config.view[viewName];
             if (!view) {
               throw new Error(`View "${String(viewName)}" not found`);
             }
-            return view;
+            return view as ViewFactory<TViews[K], TSelectors, TActions>;
           },
 
           getAllViews: () => {
             return { ...config.view } as {
-              readonly [K in keyof TViews]: ViewFactory<TViews[K]>;
+              readonly [K in keyof TViews]: ViewFactory<
+                TViews[K],
+                TSelectors,
+                TActions
+              >;
             };
           },
 

@@ -66,11 +66,6 @@ The factory/instance terminology has been fixed to match the architectural reali
 
 3. **Types.ts (lines 247-269):** Now uses correct terminology:
    ```typescript
-   export type BrandedModelTools<T> = Branded<
-     StoreFactoryTools<T>,
-     typeof MODEL_TOOLS_BRAND
-   >;
-
    export type ModelFactory<T> = Branded<
      () => (options: StoreFactoryTools<T>) => T,
      typeof MODEL_FACTORY_BRAND

@@ -9,7 +9,6 @@
 
 - **Updated Type Definitions**: Aligned type names with their actual architectural roles:
   - `ModelInstance` → `ModelFactory` (correctly identifies the factory function)
-  - `BrandedModelFactoryTools` → `BrandedModelTools` (clarifies these are tools, not factories)
   - Created dedicated slice factory types: `ModelSliceFactory`, `SelectorsSliceFactory`, etc.
 
 - **Enhanced Type Safety**: Improved typings throughout the codebase:

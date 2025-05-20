@@ -78,18 +78,11 @@ describe('View Composition', () => {
       })
     );
     
-    // Create a mock get function
-    const mockGet = vi.fn();
-    
-    // Mock accessor functions that the view needs
-    const mockOptions = {
-      get: mockGet,
-      getSelectors: () => mockSelectors,
-      getActions: () => mockActions
-    };
-    
-    // Instantiate the view by calling the factory
-    const view = counterView()(mockOptions);
+    // Instantiate the view by calling the factory with the required params
+    const view = counterView()({
+      selectors: () => mockSelectors,
+      actions: () => mockActions
+    });
     
     // Verify the view has the expected attributes
     expect(view).toHaveProperty('data-count');
@@ -131,18 +124,11 @@ describe('View Composition', () => {
       })
     );
     
-    // Create a mock get function
-    const mockGet = vi.fn();
-    
-    // Mock accessor functions for the view
-    const mockOptions = {
-      get: mockGet,
-      getSelectors: () => mockSelectors,
-      getActions: () => mockActions
-    };
-    
-    // Instantiate the view by calling the factory
-    const view = advancedView()(mockOptions);
+    // Instantiate the view by calling the factory with the required params
+    const view = advancedView()({
+      selectors: () => mockSelectors,
+      actions: () => mockActions
+    });
     
     // Verify the event handler exists
     expect(view).toHaveProperty('onClick');
@@ -231,16 +217,11 @@ describe('View Composition', () => {
     expect(isViewFactory(baseView)).toBe(true);
     expect(isViewFactory(enhancedView)).toBe(true);
     
-    // Test for important properties
-    const mockGet = vi.fn();
-    const mockOptions = {
-      get: mockGet,
-      getSelectors: () => mockSelectors,
-      getActions: () => mockActions
-    };
-    
-    // Instantiate the enhanced view
-    const view = enhancedView()(mockOptions);
+    // Instantiate the enhanced view with required params
+    const view = enhancedView()({
+      selectors: () => mockSelectors,
+      actions: () => mockActions
+    });
     
     // Verify it has both base and enhanced properties
     expect(view).toHaveProperty('data-count');
