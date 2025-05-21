@@ -74,17 +74,31 @@ The flow follows a unidirectional data pattern:
 
 ### Composition Pattern
 
-Components uses a factory pattern:
+Lattice uses a fluent API composition pattern centered around the `from()` function:
 
-1. **Creation**: Factory functions create base components
+1. **Creation**: Factory functions create base components with explicit types
    ```typescript
-   const counterModel = createModel(({ set, get }) => ({
+   const counterModel = createModel<CounterModel>(({ set, get }) => ({
      count: 0,
      increment: () => set((state) => ({ count: state.count + 1 })),
    }));
    ```
 
-2. **Composition**: The `from()` function
+2. **Composition**: The `from()` function enables fluent chaining for building derived components
+   ```typescript
+   // Actions from models
+   const actions = from(model).createActions(({ model }) => ({ /* ... */ }));
+   
+   // Selectors from models  
+   const selectors = from(model).createSelectors(({ model }) => ({ /* ... */ }));
+   
+   // Views from selectors with optional actions
+   const view = from(selectors)
+     .withActions(actions)
+     .createView(({ selectors, actions }) => ({ /* ... */ }));
+   ```
+
+3. **Component Composition**: The `withComponent()` function for enhancing existing components
 
 ## Building Blocks
 
@@ -93,8 +107,8 @@ Components uses a factory pattern:
 Models encapsulate state and business logic, defining the contract for state and mutations. They are available for composition but not exposed to consumers.
 
 ```typescript
-// Create a model with state and methods
-const counterModel = createModel(({ set, get }) => ({
+// Create a model with state and methods using explicit type annotation
+const counterModel = createModel<CounterModel>(({ set, get }) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 })),
   decrement: () => set((state) => ({ count: state.count - 1 })),
@@ -103,11 +117,11 @@ const counterModel = createModel(({ set, get }) => ({
 
 ### Actions – Pure Intent Functions
 
-Actions represent WHAT should happen, delegating to model methods (HOW).
+Actions represent WHAT should happen, delegating to model methods (HOW). Actions are created using the fluent `from()` API.
 
 ```typescript
-// Create actions that delegate to model methods
-const actions = createActions({ model }, ({ model }) => ({
+// Create actions that delegate to model methods using from() API
+const actions = from(model).createActions(({ model }) => ({
   increment: model().increment,
   incrementTwice: model().incrementTwice,
 }));
@@ -115,11 +129,11 @@ const actions = createActions({ model }, ({ model }) => ({
 
 ### Selectors – Derived Read API
 
-Selectors provide read-only access to the model through direct properties and computed values. They form the public read API surface.
+Selectors provide read-only access to the model through direct properties and computed values. They form the public read API surface. Selectors are created using the fluent `from()` API.
 
 ```typescript
-// Create selectors for the model
-const selectors = createSelectors({ model }, ({ model }) => ({
+// Create selectors for the model using from() API
+const selectors = from(model).createSelectors(({ model }) => ({
   // Direct property access
   count: model().count,
   // Computed value
@@ -151,18 +165,18 @@ Lattice ensures type safety when composing components with different underlying 
 
 ```typescript
 // Model A has count: number, title: string
-const modelA = createModel(({ set, get }) => ({ 
+const modelA = createModel<{count: number, title: string}>(({ set, get }) => ({ 
   count: 0, 
   title: "Counter A"
 }));
 
-const selectorsA = createSelectors({ model: modelA }, ({ model }) => ({
+const selectorsA = from(modelA).createSelectors(({ model }) => ({
   count: model().count,
   title: model().title,
 }));
 
 // Model B has count: number, but no title property
-const modelB = createModel(({ set, get }) => ({ 
+const modelB = createModel<{count: number}>(({ set, get }) => ({ 
   count: 0 
   // No title property
 }));
@@ -172,39 +186,43 @@ Similarly, TypeScript will catch type incompatibilities:
 
 ```typescript
 // Model A has count as number
-const modelA = createModel(({ set, get }) => ({ count: 0 }));
-const selectorsA = createSelectors({ model: modelA }, ({ model }) => ({
+const modelA = createModel<{count: number}>(({ set, get }) => ({ count: 0 }));
+const selectorsA = from(modelA).createSelectors(({ model }) => ({
   count: model().count, // number
 }));
 
 // Model B has count as string
-const modelB = createModel(({ set, get }) => ({ count: "zero" }));
+const modelB = createModel<{count: string}>(({ set, get }) => ({ count: "zero" }));
 ```
 
 This type safety helps prevent runtime errors and ensures that compositions are valid.
 
 ### View – Reactive UI Attributes
 
-Views transform selectors into UI attributes and provide interaction logic. They **only** access selectors and actions, not the model directly.
+Views transform selectors into UI attributes and provide interaction logic. They **only** access selectors and actions, not the model directly. Views are created using the fluent `from()` API with chaining support.
 
 ```typescript
-// Create a view with UI attributes and interaction handlers
-const counterView = createView({ selectors, actions }, ({ selectors, actions }) => ({
-  "data-count": selectors().count,
-  "aria-live": "polite",
-  onClick: actions().increment,
-}));
+// Create a view with UI attributes and interaction handlers using from() API
+const counterView = from(selectors)
+  .withActions(actions)
+  .createView(({ selectors, actions }) => ({
+    "data-count": selectors().count,
+    "aria-live": "polite",
+    onClick: actions().increment,
+  }));
 
 // Complex interaction logic is also supported
-const advancedView = createView({ selectors, actions }, ({ selectors, actions }) => ({
-  onClick: (props) => {
-    if (props.shiftKey) {
-      actions().incrementTwice();
-    } else {
-      actions().increment();
-    }
-  },
-}));
+const advancedView = from(selectors)
+  .withActions(actions)
+  .createView(({ selectors, actions }) => ({
+    onClick: (props) => {
+      if (props.shiftKey) {
+        actions().incrementTwice();
+      } else {
+        actions().increment();
+      }
+    },
+  }));
 ```
 
 ## Composition Example
@@ -215,33 +233,35 @@ Components follow the same callback pattern as other factories, allowing for sel
 // Create a base component - all parts defined within a single callback
 const counterComponent = createComponent(() => {
   // Define model with state and behavior
-  const model = createModel(({ set, get }) => ({ 
+  const model = createModel<CounterModel>(({ set, get }) => ({ 
     count: 0,
     increment: () => set(state => ({ count: state.count + 1 })),
     decrement: () => set(state => ({ count: state.count - 1 }))
   }));
 
-  // Define actions that delegate to model methods
-  const actions = createActions({ model }, ({ model }) => ({
+  // Define actions that delegate to model methods using from() API
+  const actions = from(model).createActions(({ model }) => ({
     increment: model().increment,
     decrement: model().decrement
   }));
 
-  // Define selectors that expose model properties
-  const selectors = createSelectors({ model }, ({ model }) => ({
+  // Define selectors that expose model properties using from() API
+  const selectors = from(model).createSelectors(({ model }) => ({
     count: model().count,
     isPositive: model().count > 0
   }));
 
-  // Define views for UI
-  const counterView = createView({ selectors }, ({ selectors }) => ({
+  // Define views for UI using from() API with chaining
+  const counterView = from(selectors).createView(({ selectors }) => ({
     "data-count": selectors().count,
     "aria-live": "polite"
   }));
 
-  const buttonView = createView({ actions }, ({ actions }) => ({
-    onClick: actions().increment
-  }));
+  const buttonView = from(selectors)
+    .withActions(actions)
+    .createView(({ actions }) => ({
+      onClick: actions().increment
+    }));
 
   // Return the component configuration
   return {
@@ -262,26 +282,42 @@ const counterComponent = createComponent(() => {
 // they wish, including filtering composed views.
 const enhancedComponent = createComponent(
   withComponent(counterComponent, ({ model, view, actions, selectors }) => {
-    // TODO: fill in composition
-
-    // Create new reset button view
-    const resetButtonView = createView(
-      { actions },
-      ({ actions }) => ({
-        onClick: actions().reset
+    // Create enhanced model that adds reset functionality
+    const enhancedModel = createModel<CounterModel & { reset(): void }>(
+      (tools) => ({
+        ...model()(tools),
+        reset: () => tools.set({ count: 0 }),
       })
     );
 
+    // Create enhanced actions using the from() API for better type inference
+    const enhancedActions = from(enhancedModel).createActions(
+      ({ model }) => ({
+        ...actions()({ model }),
+        reset: model().reset,
+      })
+    );
+
+    const enhancedSelectors = from(enhancedModel).createSelectors(
+      ({ model }) => ({
+        ...selectors()({ model }),
+        // Add new computed properties if needed
+      })
+    );
+
+    const enhancedCounter = from(enhancedSelectors)
+      .withActions(enhancedActions)
+      .createView(({ actions, selectors }) => ({
+        ...view.counter()({ actions, selectors }),
+        onClick: actions().reset,
+      }));
+
     // Return the enhanced component configuration
     return {
-      model: _model,
-      actions: _actions,
-      selectors: _selectors,
-      view: {
-        ...view,               // Keep original views
-        counter: counterView,        // Override counter view
-        resetButton: resetButtonView // Add new view
-      }
+      model: enhancedModel,
+      actions: enhancedActions,
+      selectors: enhancedSelectors,
+      view: { counter: enhancedCounter },
     };
   })
 );
