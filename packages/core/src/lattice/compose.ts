@@ -2,7 +2,6 @@ import {
   ComponentConfig,
   WithComponentCallback,
   ComponentFactory,
-  ComponentElements,
   ComponentExtension,
   Lattice,
   ModelFactory,
@@ -54,7 +53,7 @@ export function withComponent<
     const component = baseComponent();
 
     // Create elements to provide direct access to component parts
-    const elements: ComponentElements<
+    const elements: ComponentConfig<
       TBaseModel,
       TBaseSelectors,
       TBaseActions,
@@ -268,7 +267,7 @@ if (import.meta.vitest) {
 
       // Create a properly typed callback
       const callback = (
-        elements: ComponentElements<
+        _: ComponentConfig<
           TestBaseModel,
           TestBaseSelectors,
           TestBaseActions,
@@ -280,9 +279,6 @@ if (import.meta.vitest) {
         TestExtActions,
         TestExtViews
       > => {
-        // Use elements to demonstrate proper usage
-        console.log('Base model:', elements.model);
-
         return {
           model: extModel as unknown as ModelFactory<TestExtModel>,
           selectors:
@@ -350,7 +346,7 @@ if (import.meta.vitest) {
 
       // Create a properly typed callback that only extends the model
       const callback = (
-        elements: ComponentElements<
+        elements: ComponentConfig<
           TestBaseModel,
           TestBaseSelectors,
           TestBaseActions,

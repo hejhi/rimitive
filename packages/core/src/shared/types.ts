@@ -105,14 +105,6 @@ export type ActionsFactory<T, TModel = unknown> = Branded<
   ) => (options: ActionsFactoryParams<TModel>) => S,
   typeof ACTIONS_FACTORY_BRAND
 >;
-/**
- * The ViewFactory type represents a view factory that can be composed with others
- * It's a function that returns a function that takes the tools and returns the view data
- * The generics represent:
- * - T: The view data type
- * - TSelectors: The type of selectors this view needs access to
- * - TActions: The type of actions this view needs access to
- */
 export type ViewFactory<T, TSelectors = unknown, TActions = unknown> = Branded<
   <S extends Partial<T> = T>(
     selector?: (base: T) => S
@@ -167,25 +159,15 @@ export type Lattice<
 >;
 
 /**
- * Partial lattice for testing purposes
- * Allows individual accessor methods to be optional
- */
-export type PartialLattice = Partial<Omit<LatticeLike, typeof LATTICE_BRAND>>;
-
-/**
- * Component types
- */
-
-/**
  * Configuration for creating a component
  * This defines the required properties for component creation
  */
-export interface ComponentConfig<
+export type ComponentConfig<
   TModel = unknown,
   TSelectors = unknown,
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
-> {
+> = {
   /**
    * The model factory for the component
    */
@@ -208,7 +190,7 @@ export interface ComponentConfig<
   view: {
     [K in keyof TViews]: ViewFactory<TViews[K], TSelectors, TActions>;
   };
-}
+};
 
 /**
  * Branded component factory type
@@ -245,30 +227,15 @@ export type ComponentInstance<
 > = ComponentFactoryInstance<TModel, TSelectors, TActions, TViews>;
 
 /**
- * Tools for component composition
- */
-export interface ComponentCompositionTools<
-  TBaseModel = unknown,
-  TBaseSelectors = unknown,
-  TBaseActions = unknown,
-  TBaseViews extends Record<string, unknown> = Record<string, unknown>,
-> {
-  /**
-   * Access to the base component
-   */
-  component: Lattice<TBaseModel, TBaseSelectors, TBaseActions, TBaseViews>;
-}
-
-/**
  * Component extension with partial override
  * Allows selectively extending or replacing parts of a component
  */
-export interface ComponentExtension<
+export type ComponentExtension<
   TModel = unknown,
   TSelectors = unknown,
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
-> {
+> = {
   /**
    * Optional model extension
    * If provided, replaces the base model
@@ -295,40 +262,7 @@ export interface ComponentExtension<
   view?: {
     [K in keyof TViews]?: ViewFactory<TViews[K], TSelectors, TActions>;
   };
-}
-
-/**
- * Component elements access structure
- * Provides direct access to component elements for composition
- */
-export interface ComponentElements<
-  TModel,
-  TSelectors,
-  TActions,
-  TViews extends Record<string, unknown>,
-> {
-  /**
-   * The model factory of the component
-   */
-  model: ModelFactory<TModel>;
-
-  /**
-   * The selectors factory of the component
-   */
-  selectors: SelectorsFactory<TSelectors>;
-
-  /**
-   * The actions factory of the component
-   */
-  actions: ActionsFactory<TActions, TModel>;
-
-  /**
-   * The view factories of the component
-   */
-  view: {
-    readonly [K in keyof TViews]: ViewFactory<TViews[K], TSelectors, TActions>;
-  };
-}
+};
 
 /**
  * Type for the withComponent callback function
@@ -344,7 +278,7 @@ export type WithComponentCallback<
   TExtActions extends TBaseActions,
   TExtViews extends TBaseViews,
 > = (
-  elements: ComponentElements<
+  elements: ComponentConfig<
     TBaseModel,
     TBaseSelectors,
     TBaseActions,
