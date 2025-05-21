@@ -37,52 +37,21 @@ export type SetState<T> = StoreApi<T>['setState'];
 export type GetState<T> = StoreApi<T>['getState'];
 
 /**
- * Function type utilities
- */
-// Get function keys from a type
-export type FunctionKeys<T> = {
-  [K in keyof T]: T[K] extends Function ? K : never;
-}[keyof T] &
-  keyof T;
-
-/**
- * Helper type to extract the actual model type from a model factory
- *
- * This extracts the concrete model instance type from a model factory or other model object
- */
-export type ExtractModelType<M> =
-  M extends ModelFactory<infer T>
-    ? T // Extract type from ModelFactory
-    : M extends { __MODEL_TYPE__: infer X }
-      ? X // Extract from a type with explicit model type
-      : M extends () => infer R
-        ? R // Extract from a function that returns a model
-        : M; // Use the type as-is
-
-/**
- * Helper type to infer the underlying model type from a component
- * This is used in the composition pattern to automatically infer the model type
- */
-export type InferModelType<T> = T extends { __MODEL_TYPE__: infer M }
-  ? M
-  : never;
-
-/**
  * Model factory parameters and callback types
  */
-export interface ModelFactoryParams<TShape> {
+export type ModelFactoryParams<TShape> = {
   set: SetState<TShape>;
   get: GetState<TShape>;
-}
+};
 
 export type ModelSliceFactory<T> = (params: ModelFactoryParams<T>) => T;
 
 /**
  * Selectors factory parameters and callback types
  */
-export interface SelectorsFactoryParams<TModel> {
+export type SelectorsFactoryParams<TModel> = {
   model: () => TModel;
-}
+};
 
 export type SelectorsSliceFactory<T, TModel> = (
   params: SelectorsFactoryParams<TModel>
@@ -91,9 +60,9 @@ export type SelectorsSliceFactory<T, TModel> = (
 /**
  * Actions factory parameters and callback types
  */
-export interface ActionsFactoryParams<TModel> {
+export type ActionsFactoryParams<TModel> = {
   model: () => TModel;
-}
+};
 
 export type ActionsSliceFactory<T, TModel> = (
   params: ActionsFactoryParams<TModel>
@@ -102,57 +71,14 @@ export type ActionsSliceFactory<T, TModel> = (
 /**
  * View factory parameters and callback types
  */
-export interface ViewFactoryParams<TSelectors, TActions> {
+export type ViewFactoryParams<TSelectors, TActions> = {
   selectors: () => TSelectors;
   actions: () => TActions;
-}
+};
 
 export type ViewSliceFactory<T, TSelectors, TActions> = (
   params: ViewFactoryParams<TSelectors, TActions>
 ) => T;
-
-/**
- * Composition types
- */
-export type ComponentType = 'model' | 'selectors' | 'actions' | 'view';
-
-export type SliceCompositionTools<
-  T,
-  C extends ComponentType,
-> = C extends 'model'
-  ? ModelFactoryParams<T>
-  : C extends 'selectors'
-    ? SelectorsFactoryParams<any>
-    : C extends 'actions'
-      ? ActionsFactoryParams<any>
-      : C extends 'view'
-        ? ViewFactoryParams<any, any>
-        : never;
-
-export type SliceCompositionCallback<Slice, Ext, C extends ComponentType> = (
-  slice: Slice,
-  tools: SliceCompositionTools<Slice & Ext, C>
-) => Ext;
-
-/**
- * Branded tools types
- */
-export type BrandedModelTools<TShape = unknown> = Branded<
-  ModelFactoryParams<TShape>,
-  typeof MODEL_TOOLS_BRAND
->;
-export type BrandedSelectorsTools<TModel = unknown> = Branded<
-  SelectorsFactoryParams<TModel>,
-  typeof SELECTORS_TOOLS_BRAND
->;
-export type BrandedActionsTools<TModel = unknown> = Branded<
-  ActionsFactoryParams<TModel>,
-  typeof ACTIONS_TOOLS_BRAND
->;
-export type BrandedViewTools<
-  TSelectors = unknown,
-  TActions = unknown,
-> = Branded<ViewFactoryParams<TSelectors, TActions>, typeof VIEW_TOOLS_BRAND>;
 
 /**
  * Factory types (previously instance types)
@@ -211,14 +137,14 @@ export interface LatticeLike<
   // Internal accessor methods (not exposed publicly)
   readonly getModel: () => ModelFactory<TModel>;
   readonly getSelectors: () => SelectorsFactory<TSelectors>;
-  readonly getActions: () => ActionsFactory<TActions>;
+  readonly getActions: () => ActionsFactory<TActions, TModel>;
 
   // View accessors with name-based retrieval
   readonly getView: <K extends keyof TViews>(
     viewName: K
-  ) => ViewFactory<TViews[K]>;
+  ) => ViewFactory<TViews[K], TSelectors, TActions>;
   readonly getAllViews: () => {
-    readonly [K in keyof TViews]: ViewFactory<TViews[K]>;
+    readonly [K in keyof TViews]: ViewFactory<TViews[K], TSelectors, TActions>;
   };
 
   // Internal store access (prefixed with double underscore to indicate internal use)
@@ -360,14 +286,14 @@ export interface ComponentExtension<
    * If provided, replaces the base actions
    * TActions should already be an ActionsFactory type
    */
-  actions?: ActionsFactory<TActions>;
+  actions?: ActionsFactory<TActions, TModel>;
 
   /**
    * Optional view extensions
    * Can include new views or override existing views
    */
   view?: {
-    [K in keyof TViews]?: ViewFactory<TViews[K]>;
+    [K in keyof TViews]?: ViewFactory<TViews[K], TSelectors, TActions>;
   };
 }
 
@@ -394,13 +320,13 @@ export interface ComponentElements<
   /**
    * The actions factory of the component
    */
-  actions: ActionsFactory<TActions>;
+  actions: ActionsFactory<TActions, TModel>;
 
   /**
    * The view factories of the component
    */
   view: {
-    readonly [K in keyof TViews]: ViewFactory<TViews[K]>;
+    readonly [K in keyof TViews]: ViewFactory<TViews[K], TSelectors, TActions>;
   };
 }
 

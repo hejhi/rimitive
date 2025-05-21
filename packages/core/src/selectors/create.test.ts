@@ -3,7 +3,7 @@
  * The tests focus on verifying the factory pattern and composition according to lines 140-162
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createSelectors } from './create';
 import { isSelectorsFactory } from '../shared/identify';
 import { SELECTORS_FACTORY_BRAND } from '../shared/types';

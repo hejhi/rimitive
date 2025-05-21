@@ -14,16 +14,7 @@ import { from } from './from';
 describe('Basic Component Composition', () => {
   it('should allow component composition with withComponent', () => {
     // Create test types for our components
-    type CounterModel = { count: number; increment: () => void };
-    type CounterSelectors = { count: number };
-    type CounterActions = { increment: () => void };
-    type CounterView = { 'data-count': number };
-
-    // Create enhanced model type with reset
-    type EnhancedModel = { reset: () => void };
-    type EnhancedActions = CounterActions & { reset: () => void };
-    type EnhancedSelectors = CounterSelectors & { newThing: number };
-    type EnhancedView = { onClick: () => void };
+    type CounterModel = { count: number; increment(): void };
 
     // Create real model using the actual createModel function
     const baseModel = createModel<CounterModel>(({ set }) => ({
@@ -32,23 +23,19 @@ describe('Basic Component Composition', () => {
     }));
 
     // Create real actions using the actual createActions function with correct types
-    const baseActions = from(baseModel).createActions<CounterActions>(
-      ({ model }) => ({
-        increment: model().increment,
-      })
-    );
+    const baseActions = from(baseModel).createActions(({ model }) => ({
+      inc: model().increment,
+    }));
 
     // Use the from API for selectors too with explicit type annotation
-    const baseSelectors = from(baseModel).createSelectors<CounterSelectors>(
-      ({ model }) => ({
-        count: model().count,
-      })
-    );
+    const baseSelectors = from(baseModel).createSelectors(({ model }) => ({
+      count: model().count,
+    }));
 
     // Use the from API for views as well with explicit type annotation
     const counter = from(baseSelectors)
       .withActions(baseActions)
-      .createView<CounterView>(({ selectors }) => ({
+      .createView(({ selectors }) => ({
         'data-count': selectors().count,
       }));
 
@@ -57,9 +44,7 @@ describe('Basic Component Composition', () => {
       model: baseModel,
       selectors: baseSelectors,
       actions: baseActions,
-      view: {
-        counter,
-      },
+      view: { counter },
     }));
 
     // Verify the base component was created
@@ -75,60 +60,41 @@ describe('Basic Component Composition', () => {
         expect(view.counter).toBe(counter);
 
         // Create enhanced model that adds reset functionality
-        const enhancedModel = createModel<CounterModel & EnhancedModel>(
-          (tools) => {
-            const composedModel = model()(tools);
-
-            return {
-              ...composedModel,
-              reset: () => tools.set({ count: 0 }),
-            };
-          }
+        const enhancedModel = createModel<CounterModel & { reset(): void }>(
+          (tools) => ({
+            ...model()(tools),
+            reset: () => tools.set({ count: 0 }),
+          })
         );
 
         // Create enhanced actions using the from() API for better type inference
-        const enhancedActions = from(
-          enhancedModel
-        ).createActions<EnhancedActions>(({ model }) => {
-          const baseActions = actions()({ model });
-
-          // model() is now properly typed with the reset method
-          return {
-            ...baseActions,
+        const enhancedActions = from(enhancedModel).createActions(
+          ({ model }) => ({
+            ...actions()({ model }),
             reset: model().reset,
-          };
-        });
+          })
+        );
 
-        const enhancedSelectors = from(
-          enhancedModel
-        ).createSelectors<EnhancedSelectors>(({ model }) => {
-          const baseSelectors = selectors()({ model });
-
-          // model() is now properly typed with the reset method
-          return {
-            ...baseSelectors,
+        const enhancedSelectors = from(enhancedModel).createSelectors(
+          ({ model }) => ({
+            ...selectors()({ model }),
             newThing: model().count,
-          };
-        });
+          })
+        );
 
-        const enhancedView = from(enhancedSelectors)
+        const enhancedCounter = from(enhancedSelectors)
           .withActions(enhancedActions)
-          .createView<EnhancedView>(({ actions, selectors }) => {
-            const composedSelectors = counter()({ actions, selectors });
-
-            // model() is now properly typed with the reset method
-            return {
-              ...composedSelectors,
-              onClick: actions().reset,
-            };
-          });
+          .createView(({ actions, selectors }) => ({
+            ...counter()({ actions, selectors }),
+            onClick: actions().reset,
+          }));
 
         // Return the enhanced model and actions
         return {
           model: enhancedModel,
           actions: enhancedActions,
           selectors: enhancedSelectors,
-          view: enhancedView,
+          view: { counter: enhancedCounter },
         };
       })
     );
