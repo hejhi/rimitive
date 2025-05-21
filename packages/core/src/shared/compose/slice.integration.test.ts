@@ -166,9 +166,9 @@ describe('Lattice Implementation of JavaScript Namespace-Level Getters', () => {
       mockSelectors as unknown as SelectorsFactory<TestSelectors>;
     const mockActionsFactory =
       mockActions as unknown as ActionsFactory<TestActions>;
-    const mockViewFactory = vi.fn(() => mockView) as unknown as ViewFactory<
-      TestViewData
-    >;
+    const mockViewFactory = vi.fn(
+      () => mockView
+    ) as unknown as ViewFactory<TestViewData>;
 
     // Create the component config with proper typing
     const mockComponent: ComponentConfig<

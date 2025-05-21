@@ -279,6 +279,79 @@ Same logic works on web, mobile, desktop:
 <button {...fileTree.view.folder}>
 ```
 
+## Possibilities: Framework-Specific View Recomposition
+
+One of Lattice's most powerful capabilities is **view recomposition** - the ability to take the same behavior specification and adapt it to different frameworks, design systems, and architectural patterns.
+
+### Component Libraries Ship Behavior + Base Views
+
+```typescript
+// Component library ships semantic behavior
+const TreeComponent = createComponent(() => {
+  // ... model, actions, selectors remain framework-agnostic
+  
+  // Base views provide semantic HTML and accessibility
+  const nodeView = from(selectors)
+    .withActions(actions)
+    .createView(({ selectors, actions }) => ({
+      'role': 'treeitem',
+      'aria-expanded': (nodeId) => selectors().isExpanded(nodeId),
+      'aria-selected': (nodeId) => selectors().isSelected(nodeId),
+      'tabIndex': 0,
+      onClick: (nodeId) => actions().toggleNode(nodeId),
+    }));
+    
+  return { model, actions, selectors, view: { node: nodeView } };
+});
+```
+
+### Users Recompose for Their Context
+
+**Design System Integration:**
+```typescript
+// Same tree behavior, Material-UI components
+const materialTree = TreeComponent./* recompose for Material-UI */;
+
+// Same tree behavior, Chakra UI components  
+const chakraTree = TreeComponent./* recompose for Chakra UI */;
+
+// Same tree behavior, custom design system
+const customTree = TreeComponent./* recompose for custom components */;
+```
+
+**Framework-Specific Adaptations:**
+```typescript
+// React SPA with rich interactions
+const reactTree = TreeComponent./* rich component composition */;
+
+// HTMX hypermedia with server-driven updates
+const htmxTree = TreeComponent./* HTMX attribute generation */;
+
+// Vue with reactive templates
+const vueTree = TreeComponent./* Vue-specific optimizations */;
+```
+
+### Implications
+
+**One Behavior Specification Becomes:**
+- React + Material-UI (rich SPA)
+- Vue + custom CSS (traditional web app) 
+- HTMX + semantic HTML (server-driven)
+- React Native + platform components (mobile)
+- Svelte + design tokens (performance-optimized)
+
+**Component authors** define behavior once. **Users adapt** that behavior to their:
+- Framework (React, Vue, HTMX, Svelte)
+- Design system (Material, Chakra, custom)
+- Architecture (SPA, SSR, hypermedia)
+- Platform (web, mobile, desktop)
+
+This means a single `TreeComponent` from npm could power file explorers in React apps, project browsers in Vue applications, and navigation menus in HTMX-driven sites - each with their own look, feel, and interaction patterns, but sharing the same proven behavior logic underneath.
+
+### Beyond Traditional Component Libraries
+
+Instead of shipping pre-built React components that lock users into specific styling and framework choices, component libraries become **behavior specifications** that users adapt to their exact needs. This creates reusability while maintaining complete design and architectural freedom.
+
 ## Getting Started
 
 ```bash

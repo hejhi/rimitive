@@ -1,16 +1,17 @@
 # Lattice
 
-A **headless component framework** built on Zustand. Lattice components are both the declarative contract and the actual API for your component—defining, composing, and enforcing the API surface at both the type and runtime level. Its core compositional mechanism is a composition pattern, enabling contract preservation, extensibility, and best-in-class developer experience. React‑first DX with a framework‑agnostic core.
+A **headless component framework** that lets you build reusable UI behaviors once and use them everywhere. Lattice components are behavior specifications, not UI - they work across React, Vue, vanilla JS, and any rendering system. Built on Zustand for performance, with a framework-agnostic core that enables contract preservation, extensibility, and best-in-class developer experience.
 
 ## Core Concepts
 
 ### What is a Lattice component?
 
-A **lattice component** is both the declarative contract and the actual API for your component:
+A **lattice component** is a behavior specification that defines reusable UI logic:
 
-- **API Surface**: When you define a component, you specify the API consumers will use
-- **Contract Enforcement**: Composing any part changes the contract at both type and runtime levels
-- **Predictable Variations**: Providing callbacks allows you to select, filter, or extend the API surface
+- **Behavior as Data**: Components generate pure attribute objects that can be spread onto any element
+- **Framework Agnostic**: The same component works across React, Vue, vanilla JS, and any rendering system
+- **Progressive Composition**: Start simple and layer on complexity without breaking existing functionality
+- **Type-Safe Contracts**: Full TypeScript support ensures safe composition and consumption
 
 ### How Lattice Differs from Other Headless Libraries
 
@@ -46,14 +47,14 @@ This approach challenges conventional component boundaries, suggesting that real
 
 ### Lattice's Architectural Pattern
 
-Lattice introduces an architectural pattern that could be called "MSAV" (Model-Selector-Action-View) - a novel approach that draws inspiration from established patterns like MVC, MVVM, and SAM (State-Action-Model), but with an emphasis on composition and clear separation of concerns:
+Lattice introduces an architectural pattern that could be called "VSAM" (View-Selector-Action-Model) - a novel approach that draws inspiration from established patterns like MVC, MVVM, and SAM (State-Action-Model), but with an emphasis on composition, progressive enhancement, and framework-agnostic reusability:
 
 | Component | Purpose                                                           | Accessibility                      | Traditional Parallel |
 |-----------|-------------------------------------------------------------------|------------------------------------|----------------------|
-| **Model** | Contains state and business logic (HOW)                           | Internal (composition only)        | Model in MVC, ViewModel in MVVM |
-| **Actions** | Pure intent functions representing operations (WHAT)            | Internal (composition only)        | Controller in MVC, Actions in Redux/Flux |
-| **Selectors** | Public read-only values and functions derived from the model  | Public (composition & consumption) | Computed Properties in MVVM |
 | **View**  | Reactive representations transforming selectors into UI attributes | Public (composition & consumption) | View in MVC, but as pure data rather than components |
+| **Selectors** | Public read-only values and functions derived from the model  | Public (composition & consumption) | Computed Properties in MVVM |
+| **Actions** | Pure intent functions representing operations (WHAT)            | Internal (composition only)        | Controller in MVC, Actions in Redux/Flux |
+| **Model** | Contains state and business logic (HOW)                           | Internal (composition only)        | Model in MVC, ViewModel in MVVM |
 
 What distinguishes Lattice from traditional patterns is its aspect-oriented approach: each concern is modular and can be composed across traditional component boundaries. This enables separation of cross-cutting concerns (like selection state, drag-and-drop behavior, etc.) that would typically be scattered throughout a codebase.
 
@@ -117,7 +118,7 @@ const counterModel = createModel<CounterModel>(({ set, get }) => ({
 
 ### Actions – Pure Intent Functions
 
-Actions represent WHAT should happen, delegating to model methods (HOW). Actions are created using the fluent `from()` API.
+Actions represent WHAT should happen, delegating to model methods (HOW). Actions are created using the fluent `from()` API. **Actions are pure intent functions** - they contain no logic themselves, only delegation to model methods.
 
 ```typescript
 // Create actions that delegate to model methods using from() API
@@ -208,18 +209,19 @@ const counterView = from(selectors)
   .createView(({ selectors, actions }) => ({
     "data-count": selectors().count,
     "aria-live": "polite",
-    onClick: actions().increment,
+    onClick: () => actions().increment(), // Actions are called, not referenced
   }));
 
 // Complex interaction logic is also supported
 const advancedView = from(selectors)
   .withActions(actions)
   .createView(({ selectors, actions }) => ({
-    onClick: (props) => {
-      if (props.shiftKey) {
-        actions().incrementTwice();
+    onClick: (event) => {
+      // View logic combines multiple pure intents
+      if (event.shiftKey) {
+        actions().incrementTwice(); // Pure intent call
       } else {
-        actions().increment();
+        actions().increment(); // Pure intent call
       }
     },
   }));
@@ -260,7 +262,7 @@ const counterComponent = createComponent(() => {
   const buttonView = from(selectors)
     .withActions(actions)
     .createView(({ actions }) => ({
-      onClick: actions().increment
+      onClick: () => actions().increment() // Actions are called, not referenced
     }));
 
   // Return the component configuration
@@ -309,7 +311,7 @@ const enhancedComponent = createComponent(
       .withActions(enhancedActions)
       .createView(({ actions, selectors }) => ({
         ...view.counter()({ actions, selectors }),
-        onClick: actions().reset,
+        onClick: () => actions().reset(), // Actions are called, not referenced
       }));
 
     // Return the enhanced component configuration
