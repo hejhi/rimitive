@@ -30,8 +30,7 @@ export function createSelectors<TSelectors, TModel>(
   params: { model: TModel },
   factory: SelectorsSliceFactory<TSelectors, TModel>
 ) {
-  // Create a factory function that returns a slice creator
-  const selectorsFactory = function selectorsFactory<
+  return brandWithSymbol(function selectorsFactory<
     S extends Partial<TSelectors> = TSelectors,
   >(selector?: (base: TSelectors) => S) {
     return (options: SelectorsFactoryParams<TModel>) => {
@@ -61,9 +60,7 @@ export function createSelectors<TSelectors, TModel>(
       // Otherwise return the full result
       return result as unknown as S;
     };
-  };
-
-  return brandWithSymbol(selectorsFactory, SELECTORS_FACTORY_BRAND);
+  }, SELECTORS_FACTORY_BRAND);
 }
 
 // In-source tests

@@ -2,6 +2,7 @@ import {
   ACTIONS_TOOLS_BRAND,
   ACTIONS_FACTORY_BRAND,
   ActionsFactoryParams,
+  ActionsSliceFactory,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 import { createModel } from '../model';
@@ -29,10 +30,9 @@ import { createModel } from '../model';
 // Allow specifying just T (actions type) and infer model instance type
 export function createActions<T, TModel = any>(
   params: { model: TModel },
-  factory: (tools: ActionsFactoryParams<TModel>) => T
+  factory: ActionsSliceFactory<T, TModel>
 ) {
-  // Create a factory function that returns a slice creator
-  const actionsFactory = function actionsFactory<S extends Partial<T> = T>(
+  return brandWithSymbol(function actionsFactory<S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) {
     return (options: ActionsFactoryParams<TModel>) => {
@@ -67,9 +67,7 @@ export function createActions<T, TModel = any>(
       // Otherwise return the full result
       return result as unknown as S;
     };
-  };
-
-  return brandWithSymbol(actionsFactory, ACTIONS_FACTORY_BRAND);
+  }, ACTIONS_FACTORY_BRAND);
 }
 
 // In-source tests

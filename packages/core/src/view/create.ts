@@ -35,8 +35,7 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
   params: { selectors?: TSelectors; actions?: TActions },
   factory: ViewSliceFactory<T, TSelectors, TActions>
 ) {
-  // Create a factory function that returns a slice creator
-  const viewFactory = function viewFactory<S extends Partial<T> = T>(
+  return brandWithSymbol(function viewFactory<S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) {
     return (options: ViewFactoryParams<TSelectors, TActions>) => {
@@ -100,9 +99,7 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
       // Otherwise return the full result
       return result as unknown as S;
     };
-  };
-
-  return brandWithSymbol(viewFactory, VIEW_FACTORY_BRAND);
+  }, VIEW_FACTORY_BRAND);
 }
 
 // In-source tests

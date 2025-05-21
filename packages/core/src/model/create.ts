@@ -31,8 +31,7 @@ import { brandWithSymbol } from '../shared/identify';
 export function createModel<T>(
   sliceFactory: ModelSliceFactory<T>
 ): ModelFactory<T> {
-  // Create a factory function that returns a slice creator
-  const modelFactory = function modelFactory<S extends Partial<T> = T>(
+  return brandWithSymbol(function modelFactory<S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) {
     return (options: ModelFactoryParams<T>) => {
@@ -61,9 +60,7 @@ export function createModel<T>(
       // Otherwise return the full result
       return result as unknown as S;
     };
-  };
-
-  return brandWithSymbol(modelFactory, MODEL_FACTORY_BRAND);
+  }, MODEL_FACTORY_BRAND);
 }
 
 // In-source tests

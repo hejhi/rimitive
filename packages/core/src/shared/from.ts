@@ -19,6 +19,8 @@ import {
   ActionsFactory,
   ViewFactory,
   ActionsSliceFactory,
+  ActionsFactoryParams,
+  SelectorsFactoryParams,
 } from './types';
 
 /**
@@ -60,13 +62,8 @@ export function from<TSelectors>(source: SelectorsFactory<TSelectors>): {
  * Type guard and implementation to determine which overload to use at runtime.
  */
 export function from(source: any): any {
-  if (isModelFactory(source)) {
-    return fromModel(source);
-  }
-
-  if (isSelectorsFactory(source)) {
-    return fromSelectors(source);
-  }
+  if (isModelFactory(source)) return fromModel(source);
+  if (isSelectorsFactory(source)) return fromSelectors(source);
 
   // Fallback for other types, could be expanded as needed
   throw new Error('Unsupported source type for from()');
@@ -76,7 +73,7 @@ export function from(source: any): any {
 function fromModel<TModel>(model: ModelFactory<TModel>) {
   return {
     createActions<TActions>(
-      factory: (tools: { model: () => TModel }) => TActions
+      factory: (tools: ActionsFactoryParams<TModel>) => TActions
     ) {
       // Use proper type parameters to maintain type safety
       return createActions<TActions, ModelFactory<TModel>>(
@@ -90,7 +87,7 @@ function fromModel<TModel>(model: ModelFactory<TModel>) {
     },
 
     createSelectors<TSelectors>(
-      factory: (tools: { model: () => TModel }) => TSelectors
+      factory: (tools: SelectorsFactoryParams<TModel>) => TSelectors
     ) {
       // Use proper type parameters to maintain type safety
       return createSelectors<TSelectors, ModelFactory<TModel>>(
