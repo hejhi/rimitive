@@ -9,10 +9,10 @@
  * Each overload of `from` provides context-appropriate methods based on what was passed to it.
  */
 
-import { createActions } from '../actions/create';
-import { createSelectors } from '../selectors/create';
-import { createView } from '../view/create';
-import { isModelFactory, isSelectorsFactory } from './identify';
+import { createActions } from '../../actions/create';
+import { createSelectors } from '../../selectors/create';
+import { createView } from '../../view/create';
+import { isModelFactory, isSelectorsFactory } from '../identify';
 import {
   ModelFactory,
   SelectorsFactory,
@@ -21,7 +21,7 @@ import {
   ActionsSliceFactory,
   ActionsFactoryParams,
   SelectorsFactoryParams,
-} from './types';
+} from '../types';
 
 /**
  * Type overloads for the from function

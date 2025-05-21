@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createModel } from '../../model/create';
-import { createSelectors } from '../../selectors/create';
-import { createActions } from '../../actions/create';
-import { createView } from '../../view/create';
+import { createModel } from '../model/create';
+import { createSelectors } from '../selectors/create';
+import { createActions } from '../actions/create';
+import { createView } from '../view/create';
 
 /**
  * Tests for the new selector pattern implemented across all factory types.

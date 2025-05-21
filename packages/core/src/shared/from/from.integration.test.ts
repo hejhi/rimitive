@@ -6,9 +6,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createComponent } from '../lattice/create';
-import { withComponent } from '../lattice/compose';
-import { createModel } from '../model/create';
+import { createComponent } from '../../lattice/create';
+import { withComponent } from '../../lattice/compose';
+import { createModel } from '../../model/create';
 import { from } from './from';
 
 describe('Basic Component Composition', () => {
