@@ -3,10 +3,11 @@
  * The tests focus on verifying the factory pattern and composition according to lines 128-134
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createActions } from './create';
 import { isActionsFactory } from '../shared/identify';
 import { ACTIONS_FACTORY_BRAND } from '../shared/types';
+import { mockImplementations, createMockTools } from '../test-utils';
 
 // Type for our mock model
 type CounterModel = {
@@ -29,13 +30,8 @@ type EnhancedActions = {
 };
 
 describe('Actions Composition', () => {
-  // Set up a model mock that matches the spec example
-  const mockModel: CounterModel = {
-    count: 0,
-    increment: vi.fn(),
-    decrement: vi.fn(),
-    reset: vi.fn(),
-  };
+  // Use standardized mock model implementation
+  const mockModel = mockImplementations.counter();
 
   // Test branding to verify the factory pattern correctly implements our model
   it('should properly brand actions factories with ACTIONS_FACTORY_BRAND', () => {
@@ -67,11 +63,13 @@ describe('Actions Composition', () => {
     // Verify the factory is correctly branded
     expect(isActionsFactory(counterActions)).toBe(true);
 
-    // Create a model function for the factory
-    const modelFn = vi.fn().mockImplementation(() => mockModel);
+    // Use standardized mock tools
+    const mockTools = createMockTools({
+      model: () => mockModel,
+    });
 
     // Get the actions by invoking the factory
-    const actions = counterActions()({ model: modelFn });
+    const actions = counterActions()(mockTools);
 
     // Verify the shape of the generated actions
     expect(actions).toHaveProperty('increment');
@@ -101,11 +99,13 @@ describe('Actions Composition', () => {
     // Ensure the factory is properly branded
     expect(isActionsFactory(enhancedActions)).toBe(true);
 
-    // Create a model function for testing
-    const modelFn = vi.fn().mockImplementation(() => mockModel);
+    // Use standardized mock tools
+    const mockTools = createMockTools({
+      model: () => mockModel,
+    });
 
     // Get the actions by invoking the enhanced factory
-    const actions = enhancedActions()({ model: modelFn });
+    const actions = enhancedActions()(mockTools);
 
     // Verify the actions have the expected methods
     expect(actions).toHaveProperty('increment');

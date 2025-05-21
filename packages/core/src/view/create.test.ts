@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createView } from './create';
 import { isViewFactory } from '../shared/identify';
 import { VIEW_FACTORY_BRAND } from '../shared/types';
+import { mockImplementations, createMockTools } from '../test-utils';
 
 // Create test types matching spec in lines 245-249
 type CounterView = {
@@ -28,7 +29,7 @@ type EnhancedView = {
 };
 
 describe('View Composition', () => {
-  // Mock selectors and actions for testing
+  // Use standardized mock implementations
   const mockSelectors = {
     count: 10,
     isPositive: true,
@@ -37,12 +38,8 @@ describe('View Composition', () => {
 
   // Test branding to verify the factory pattern is implemented correctly
   it('should properly brand view factories with VIEW_FACTORY_BRAND', () => {
-    // Create fresh action mocks for this test
-    const mockActions = {
-      increment: vi.fn(),
-      incrementTwice: vi.fn(),
-      reset: vi.fn()
-    };
+    // Use standardized mock actions
+    const mockActions = mockImplementations.counterActions();
     
     // Create a view following the pattern in lines 245-249
     const counterView = createView<CounterView>(
@@ -61,12 +58,8 @@ describe('View Composition', () => {
 
   // Test basic functionality without composition
   it('should create view with UI attributes and event handlers', () => {
-    // Create fresh action mocks for this test
-    const mockActions = {
-      increment: vi.fn(),
-      incrementTwice: vi.fn(),
-      reset: vi.fn()
-    };
+    // Use standardized mock actions
+    const mockActions = mockImplementations.counterActions();
     
     // Create a view with simple attributes as in lines 245-249
     const counterView = createView<CounterView>(
@@ -78,11 +71,14 @@ describe('View Composition', () => {
       })
     );
     
-    // Instantiate the view by calling the factory with the required params
-    const view = counterView()({
+    // Use standardized mock tools  
+    const mockTools = createMockTools({
       selectors: () => mockSelectors,
       actions: () => mockActions
     });
+    
+    // Instantiate the view by calling the factory with the required params
+    const view = counterView()(mockTools);
     
     // Verify the view has the expected attributes
     expect(view).toHaveProperty('data-count');
@@ -100,15 +96,12 @@ describe('View Composition', () => {
 
   // Test complex interaction logic as shown in the spec lines 252-259
   it('should support complex interaction logic within views', () => {
-    // Create fresh action mocks for this test
-    const incrementMock = vi.fn();
+    // Use standardized mock actions with specific spy references
+    const mockActions = mockImplementations.counterActions();
+    const incrementMock = mockActions.increment;
     const incrementTwiceMock = vi.fn();
-    
-    const mockActions = {
-      increment: incrementMock,
-      incrementTwice: incrementTwiceMock,
-      reset: vi.fn()
-    };
+    // Override incrementTwice with our spy for this test
+    mockActions.incrementTwice = incrementTwiceMock;
     
     // Create a view with complex event handler as in lines 252-259
     const advancedView = createView<AdvancedView>(
@@ -124,11 +117,14 @@ describe('View Composition', () => {
       })
     );
     
-    // Instantiate the view by calling the factory with the required params
-    const view = advancedView()({
+    // Use standardized mock tools
+    const mockTools = createMockTools({
       selectors: () => mockSelectors,
       actions: () => mockActions
     });
+    
+    // Instantiate the view by calling the factory with the required params
+    const view = advancedView()(mockTools);
     
     // Verify the event handler exists
     expect(view).toHaveProperty('onClick');
@@ -155,12 +151,8 @@ describe('View Composition', () => {
 
   // Test factory creates properly branded objects
   it('should create a branded view factory', () => {
-    // Create fresh action mocks for this test
-    const mockActions = {
-      increment: vi.fn(),
-      incrementTwice: vi.fn(),
-      reset: vi.fn()
-    };
+    // Use standardized mock actions
+    const mockActions = mockImplementations.counterActions();
     
     // Create a view factory
     const counterView = createView(
@@ -177,12 +169,8 @@ describe('View Composition', () => {
   
   // Test the fluent compose pattern specifically
   it('should support the concept of composing views', () => {
-    // Create fresh action mocks for this test
-    const mockActions = {
-      increment: vi.fn(),
-      incrementTwice: vi.fn(),
-      reset: vi.fn()
-    };
+    // Use standardized mock actions
+    const mockActions = mockImplementations.counterActions();
     
     // Since view composition is more complex, we'll demonstrate the concept
     // by testing a simpler case that achieves the same testing goal
@@ -217,11 +205,14 @@ describe('View Composition', () => {
     expect(isViewFactory(baseView)).toBe(true);
     expect(isViewFactory(enhancedView)).toBe(true);
     
-    // Instantiate the enhanced view with required params
-    const view = enhancedView()({
+    // Use standardized mock tools
+    const mockTools = createMockTools({
       selectors: () => mockSelectors,
       actions: () => mockActions
     });
+    
+    // Instantiate the enhanced view with required params
+    const view = enhancedView()(mockTools);
     
     // Verify it has both base and enhanced properties
     expect(view).toHaveProperty('data-count');

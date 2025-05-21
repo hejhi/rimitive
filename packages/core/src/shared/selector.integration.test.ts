@@ -3,6 +3,7 @@ import { createModel } from '../model/create';
 import { createSelectors } from '../selectors/create';
 import { createActions } from '../actions/create';
 import { createView } from '../view/create';
+import { createMockTools, mockImplementations } from '../test-utils';
 
 /**
  * Tests for the new selector pattern implemented across all factory types.
@@ -33,12 +34,14 @@ describe('Selector Pattern', () => {
         increment: () => void;
       }>(({ reset, ...rest }) => rest);
 
-      // Setup mocks for testing
-      const mockSet = vi.fn();
-      const mockGet = vi.fn();
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        set: vi.fn(),
+        get: vi.fn(),
+      });
 
       // Create a slice with the filtered model
-      const slice = filteredModel({ set: mockSet, get: mockGet });
+      const slice = filteredModel(mockTools);
 
       // Verify the selected properties are present
       expect(slice).toHaveProperty('count');
@@ -76,9 +79,11 @@ describe('Selector Pattern', () => {
         doubled: number;
       }>(({ name, isActive, ...rest }) => rest);
 
+      // Use standardized mock tools
+      const mockTools = createMockTools({ model: vi.fn() });
+
       // Initialize the filtered selectors
-      const mockGet = vi.fn();
-      const slice = filteredSelectors({ model: mockGet });
+      const slice = filteredSelectors(mockTools);
 
       // Verify the selected properties are present
       expect(slice).toHaveProperty('count');
@@ -96,11 +101,9 @@ describe('Selector Pattern', () => {
 
   describe('Actions Selector Pattern', () => {
     it('should allow filtering action methods with a selector', () => {
-      // Create a mock model with methods
+      // Use standardized mock model with additional method
       const mockModel = {
-        increment: vi.fn(),
-        decrement: vi.fn(),
-        reset: vi.fn(),
+        ...mockImplementations.counter(),
         update: vi.fn(),
       };
 
@@ -118,9 +121,13 @@ describe('Selector Pattern', () => {
         reset: typeof mockModel.reset;
       }>(({ decrement, update, ...rest }) => rest);
 
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        model: () => mockModel,
+      });
+
       // Initialize the filtered actions
-      const modelFn = vi.fn().mockImplementation(() => mockModel);
-      const slice = filteredActions({ model: modelFn });
+      const slice = filteredActions(mockTools);
 
       // Verify the selected methods are present
       expect(slice).toHaveProperty('increment');
@@ -141,17 +148,14 @@ describe('Selector Pattern', () => {
 
   describe('View Selector Pattern', () => {
     it('should allow filtering view attributes with a selector', () => {
-      // Create mock selectors and actions
+      // Use standardized mock implementations
       const mockSelectors = {
         count: 42,
         doubled: 84,
         isPositive: true,
       };
 
-      const mockActions = {
-        increment: vi.fn(),
-        reset: vi.fn(),
-      };
+      const mockActions = mockImplementations.counterActions();
 
       // Create base view
       const baseView = createView(
@@ -172,12 +176,14 @@ describe('Selector Pattern', () => {
         onClick: typeof mockActions.increment;
       }>(({ 'data-doubled': _, onReset, ...rest }) => rest);
 
-      // Initialize the filtered view
-      const mockGet = vi.fn();
-      const slice = filteredView({
-        actions: mockGet,
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        actions: vi.fn(),
         selectors: () => mockSelectors,
       });
+
+      // Initialize the filtered view
+      const slice = filteredView(mockTools);
 
       // Verify the selected attributes are present
       expect(slice).toHaveProperty('data-count');

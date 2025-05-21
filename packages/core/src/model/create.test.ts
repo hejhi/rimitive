@@ -7,6 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createModel } from './create';
 import { isModelFactory } from '../shared/identify';
 import { MODEL_FACTORY_BRAND, MODEL_TOOLS_BRAND } from '../shared/types';
+import { createMockTools } from '../test-utils';
 
 type CounterState = {
   count: number;
@@ -34,10 +35,12 @@ describe('Model Composition', () => {
     const factorySpy = vi.fn(() => ({ count: 0 }));
     const spyModel = createModel(factorySpy);
 
-    // Invoke the model factory to get the tools
-    const getState = vi.fn(() => ({ count: 0 }));
-    const setState = vi.fn();
-    spyModel()({ get: getState, set: setState });
+    // Use standardized mock tools
+    const mockTools = createMockTools({
+      get: () => ({ count: 0 }),
+      set: vi.fn(),
+    });
+    spyModel()(mockTools);
 
     // Verify the spy was called
     expect(factorySpy).toHaveBeenCalled();
