@@ -1,8 +1,8 @@
 /**
- * Lattice - A headless component framework built on Zustand
+ * Lattice Core - State-agnostic headless component framework
  *
- * This is the main entry point for the Lattice library, exporting
- * the core APIs for creating and composing components.
+ * This is the main entry point for the Lattice core library, providing
+ * framework and store-agnostic APIs for creating and composing components.
  */
 
 // Core factory functions

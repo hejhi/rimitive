@@ -62,7 +62,7 @@ describe('Basic Component Composition', () => {
         // Create enhanced model that adds reset functionality
         const enhancedModel = createModel<CounterModel & { reset(): void }>(
           (tools) => ({
-            ...model()(tools),
+            ...model()(tools as any),
             reset: () => tools.set({ count: 0 }),
           })
         );

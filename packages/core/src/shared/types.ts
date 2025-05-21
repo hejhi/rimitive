@@ -1,5 +1,3 @@
-import type { StoreApi } from 'zustand/vanilla';
-
 /**
  * Brand symbols for runtime type identification
  */
@@ -31,10 +29,16 @@ export type Branded<T, BrandSymbol extends symbol> = T & {
 };
 
 /**
- * Zustand state management types
+ * Generic state management adapter types
+ * These provide the minimal interface that any store adapter must implement
+ * Note: These are temporarily compatible with Zustand but will be abstracted further
  */
-export type SetState<T> = StoreApi<T>['setState'];
-export type GetState<T> = StoreApi<T>['getState'];
+export type SetState<T> = (
+  partial: T | Partial<T> | ((state: T) => T | Partial<T>),
+  replace?: false | undefined
+) => void;
+
+export type GetState<T> = () => T;
 
 /**
  * Model factory parameters and callback types
@@ -138,10 +142,6 @@ export interface LatticeLike<
   readonly getAllViews: () => {
     readonly [K in keyof TViews]: ViewFactory<TViews[K], TSelectors, TActions>;
   };
-
-  // Internal store access (prefixed with double underscore to indicate internal use)
-  readonly __store?: any;
-  readonly __selectors?: any;
 }
 
 /**

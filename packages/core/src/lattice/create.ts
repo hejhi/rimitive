@@ -12,11 +12,6 @@ import {
   ActionsFactory,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
-import {
-  createComponentStore,
-  createStoreConfig,
-  createStoreSelectors,
-} from '../shared/compose/slice';
 
 /**
  * Creates a component factory function.
@@ -108,17 +103,8 @@ export function createComponent<
       throw new Error('Component requires at least one view');
     }
 
-    // Create the component store configuration
-    const storeConfig = createStoreConfig(config);
-
-    // Create the store using slice-based architecture
-    const store = createComponentStore(storeConfig);
-
-    // Create selectors for the store
-    const selectors = createStoreSelectors(store);
-
-    // Create a lattice with proper accessor methods to maintain backwards compatibility
-    // This API will be used at compose time, while the store will be used at runtime
+    // Create a lattice with factory-based access methods
+    // This is a pure composition layer without store dependencies
     const lattice: Lattice<TModel, TSelectors, TActions, TViews> =
       brandWithSymbol(
         {
@@ -147,10 +133,6 @@ export function createComponent<
               >;
             };
           },
-
-          // Store access
-          __store: store,
-          __selectors: selectors,
         },
         LATTICE_BRAND
       );

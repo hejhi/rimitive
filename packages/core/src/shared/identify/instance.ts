@@ -8,7 +8,7 @@ import {
   SelectorsFactory,
   ActionsFactory,
   ViewFactory,
-  ComponentFactoryInstance
+  ComponentFactoryInstance,
 } from '../types';
 import { isBranded } from './marker';
 
@@ -70,13 +70,12 @@ export function isComponentFactoryInstance<
   TModel = unknown,
   TSelectors = unknown,
   TActions = unknown,
-  TViews extends Record<string, unknown> = Record<string, unknown>
+  TViews extends Record<string, unknown> = Record<string, unknown>,
 >(
   value: unknown
 ): value is ComponentFactoryInstance<TModel, TSelectors, TActions, TViews> {
   return isBranded(value, COMPONENT_FACTORY_INSTANCE_BRAND);
 }
-
 
 // In-source tests
 if (import.meta.vitest) {
@@ -132,7 +131,7 @@ if (import.meta.vitest) {
     it('identifies a non-branded object as false for view factory', () => {
       expect(isViewFactory({})).toBe(false);
     });
-    
+
     it('identifies a branded component factory instance as true', () => {
       const fn = function uniqueComponentFn() {
         return {};
@@ -145,6 +144,6 @@ if (import.meta.vitest) {
       expect(isComponentFactoryInstance({})).toBe(false);
     });
   });
-  
+
   // Legacy instance tests have been removed as backwards compatibility is no longer needed
 }
