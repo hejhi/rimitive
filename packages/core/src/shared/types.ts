@@ -79,7 +79,7 @@ export type ViewFactoryParams<TSelectors, TActions> = {
 
 export type ViewSliceFactory<T, TSelectors, TActions> = (
   params: ViewFactoryParams<TSelectors, TActions>
-) => T extends (...args: any[]) => any ? T : T;
+) => T;
 
 /**
  * Factory types - branded factory functions for composition

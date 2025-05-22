@@ -89,3 +89,4 @@ export {
 
 // Composition utilities
 export { from } from './shared/from';
+export { project } from './view/project';

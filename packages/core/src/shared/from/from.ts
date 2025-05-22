@@ -49,12 +49,16 @@ export function from<TSelectors>(source: SelectorsFactory<TSelectors>): {
   withActions<TActions, TModel>(
     actions: ActionsFactory<TActions, TModel>
   ): {
-    createView<TView>(
+    createView<TViewFunc extends (...args: any[]) => Record<string, any>>(
       factory: (tools: {
         selectors: () => TSelectors;
         actions: () => TActions;
-      }) => TView
-    ): ViewFactory<TView, TSelectors, TActions>;
+      }) => TViewFunc
+    ): ViewFactory<
+      TViewFunc,
+      SelectorsFactory<TSelectors>,
+      ActionsFactory<TActions>
+    >;
   };
 };
 
@@ -106,16 +110,16 @@ function fromSelectors<TSelectors>(selectors: SelectorsFactory<TSelectors>) {
   return {
     withActions<TActions>(actions: ActionsFactory<TActions>) {
       return {
-        createView<TView>(
+        createView<TViewFunc extends (...args: any[]) => Record<string, any>>(
           factory: (tools: {
             selectors: () => TSelectors;
             actions: () => TActions;
-          }) => TView
+          }) => TViewFunc
         ) {
           // Following the same pattern as createActions and createSelectors,
           // we pass the factories directly without unwrapping
           return createView<
-            TView,
+            TViewFunc,
             SelectorsFactory<TSelectors>,
             ActionsFactory<TActions>
           >(
@@ -128,7 +132,7 @@ function fromSelectors<TSelectors>(selectors: SelectorsFactory<TSelectors>) {
               factory({
                 selectors: () => tools.selectors() as TSelectors,
                 actions: () => tools.actions() as TActions,
-              }) as TView extends (...args: any[]) => any ? TView : TView
+              })
           );
         },
       };
@@ -148,7 +152,7 @@ if (import.meta.vitest) {
       createMockActions,
       createMockTools,
     } = await import('../../test-utils');
-    
+
     const {
       ACTIONS_FACTORY_BRAND,
       SELECTORS_FACTORY_BRAND,
@@ -179,7 +183,9 @@ if (import.meta.vitest) {
         // @ts-expect-error - Testing with invalid types
         expect(() => from(null)).toThrow('Unsupported source type for from()');
         // @ts-expect-error - Testing with invalid types
-        expect(() => from('string')).toThrow('Unsupported source type for from()');
+        expect(() => from('string')).toThrow(
+          'Unsupported source type for from()'
+        );
         // @ts-expect-error - Testing with invalid types
         expect(() => from(42)).toThrow('Unsupported source type for from()');
       });
@@ -205,10 +211,10 @@ if (import.meta.vitest) {
         const mockTools = createMockTools({
           model: () => ({ count: 0, increment: vi.fn() }),
         });
-        
+
         const actionCreator = actions();
         actionCreator(mockTools as any);
-        
+
         // Verify the factory was called with model access
         expect(actionsSpy).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -236,7 +242,7 @@ if (import.meta.vitest) {
         const mockTools = createMockTools({
           model: () => ({ count: 5 }),
         });
-        
+
         const selectorCreator = selectors();
         selectorCreator(mockTools as any);
 
@@ -268,7 +274,7 @@ if (import.meta.vitest) {
         const result = from(mockSelectors);
         const withActionsResult = result.withActions(mockActions);
 
-        const viewSpy = vi.fn(({ selectors, actions }) => ({
+        const viewSpy = vi.fn(({ selectors, actions }) => () => ({
           'data-value': selectors().value,
           onClick: actions().doSomething,
         }));
@@ -284,7 +290,7 @@ if (import.meta.vitest) {
           selectors: () => ({ value: 'test' }),
           actions: () => ({ doSomething: vi.fn() }),
         });
-        
+
         const viewCreator = view();
         viewCreator(mockTools as any);
 
@@ -322,7 +328,7 @@ if (import.meta.vitest) {
         // Create view from selectors and actions
         const view = from(selectors)
           .withActions(actions)
-          .createView(({ selectors, actions }) => ({
+          .createView(({ selectors, actions }) => () => ({
             'data-count': selectors().count,
             'data-zero': selectors().isZero,
             onClick: actions().inc,
@@ -341,7 +347,9 @@ if (import.meta.vitest) {
         // @ts-expect-error - Testing with invalid types
         expect(() => from(null)).toThrow('Unsupported source type for from()');
         // @ts-expect-error - Testing with invalid types
-        expect(() => from(undefined)).toThrow('Unsupported source type for from()');
+        expect(() => from(undefined)).toThrow(
+          'Unsupported source type for from()'
+        );
       });
 
       it('should handle non-factory objects gracefully', () => {
@@ -350,11 +358,17 @@ if (import.meta.vitest) {
         const plainArray = [1, 2, 3];
 
         // @ts-expect-error - Testing with invalid types
-        expect(() => from(plainObject)).toThrow('Unsupported source type for from()');
+        expect(() => from(plainObject)).toThrow(
+          'Unsupported source type for from()'
+        );
         // @ts-expect-error - Testing with invalid types
-        expect(() => from(plainFunction)).toThrow('Unsupported source type for from()');
+        expect(() => from(plainFunction)).toThrow(
+          'Unsupported source type for from()'
+        );
         // @ts-expect-error - Testing with invalid types
-        expect(() => from(plainArray)).toThrow('Unsupported source type for from()');
+        expect(() => from(plainArray)).toThrow(
+          'Unsupported source type for from()'
+        );
       });
 
       it('should maintain type safety in the fluent chain', () => {
@@ -363,11 +377,15 @@ if (import.meta.vitest) {
         const mockActions = createMockActions({ doSomething: vi.fn() });
 
         // These should all compile and work without type errors
-        const actions = from(mockModel).createActions(() => ({ test: () => {} }));
-        const selectors = from(mockModel).createSelectors(() => ({ test: 'value' }));
+        const actions = from(mockModel).createActions(() => ({
+          test: () => {},
+        }));
+        const selectors = from(mockModel).createSelectors(() => ({
+          test: 'value',
+        }));
         const view = from(mockSelectors)
           .withActions(mockActions)
-          .createView(() => ({ 'data-test': 'value' }));
+          .createView(() => () => ({ 'data-test': 'value' }));
 
         // Use type assertion for symbol access in tests
         expect((actions as any)[ACTIONS_FACTORY_BRAND]).toBe(true);
