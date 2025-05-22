@@ -200,12 +200,4 @@ describe('Selector Pattern', () => {
       expect(slice.onClick).toBe(mockActions.increment);
     });
   });
-
-  describe('Compose with Selector Pattern', () => {
-    it.todo(
-      'should demonstrate how the selector pattern can be used in composition'
-    );
-
-    it.todo('should support basic selector-based filtering');
-  });
 });

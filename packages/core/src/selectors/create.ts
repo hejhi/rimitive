@@ -69,9 +69,10 @@ if (import.meta.vitest) {
 
   describe('createSelectors', async () => {
     const { isSelectorsFactory } = await import('../shared/identify');
+    const { createMockTools } = await import('../test-utils');
 
     it('should verify selectors factory requirements and branding', () => {
-      // Create mock model
+      // Use a simple mock model for this specific test
       const mockModel = {
         count: 42,
         items: [{ name: 'item1' }, { name: 'item2' }],
@@ -91,9 +92,14 @@ if (import.meta.vitest) {
 
       expect(isSelectorsFactory(selectors)).toBe(true);
 
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        model: () => mockModel,
+      });
+
       // Create a slice with the model
       const sliceCreator = selectors();
-      const slice = sliceCreator({ model: () => mockModel });
+      const slice = sliceCreator(mockTools);
 
       // Factory should be called with the model getter
       expect(factorySpy).toHaveBeenCalled();
@@ -140,8 +146,13 @@ if (import.meta.vitest) {
         })
       );
 
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        model: () => mockModel,
+      });
+
       const sliceCreator = enhancedSelectors();
-      const slice = sliceCreator({ model: () => mockModel });
+      const slice = sliceCreator(mockTools);
 
       // Should contain only selected properties plus new ones
       expect(slice).toEqual({

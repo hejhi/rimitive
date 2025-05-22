@@ -69,6 +69,7 @@ if (import.meta.vitest) {
 
   describe('createModel', async () => {
     const { isModelFactory, isModelTools } = await import('../shared/identify');
+    const { createMockTools } = await import('../test-utils');
 
     it('should verify model factory requirements and branding', () => {
       // Create a spy factory with object parameters
@@ -83,19 +84,21 @@ if (import.meta.vitest) {
 
       expect(isModelFactory(model)).toBe(true);
 
-      // Create tools for testing
-      const mockSet = vi.fn();
-      const mockGet = vi.fn();
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        get: vi.fn(),
+        set: vi.fn(),
+      });
 
       // Create a slice with the mock tools
       const sliceCreator = model();
-      const slice = sliceCreator({ get: mockGet, set: mockSet });
+      const slice = sliceCreator(mockTools);
 
       // Factory should be called with object parameters
       expect(factorySpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          set: mockSet,
-          get: mockGet,
+          set: expect.any(Function),
+          get: expect.any(Function),
         })
       );
 

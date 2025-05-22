@@ -108,18 +108,18 @@ if (import.meta.vitest) {
 
   describe('createView', async () => {
     const { isViewFactory, isViewTools } = await import('../shared/identify');
+    const { createMockTools, mockImplementations } = await import(
+      '../test-utils'
+    );
 
     it('should verify view factory requirements and branding', () => {
-      // Create mock selectors and actions
+      // Use standardized mock implementations
       const mockSelectors = {
         count: 42,
         isPositive: true,
       };
 
-      const mockActions = {
-        increment: vi.fn(),
-        reset: vi.fn(),
-      };
+      const mockActions = mockImplementations.counterActions();
 
       // Create a spy factory with object parameters
       const factorySpy = vi.fn(
@@ -144,12 +144,15 @@ if (import.meta.vitest) {
 
       expect(isViewFactory(view)).toBe(true);
 
-      // Create a slice with the proper params
-      const sliceCreator = view();
-      const slice = sliceCreator({
+      // Use standardized mock tools
+      const mockTools = createMockTools({
         selectors: () => mockSelectors,
         actions: () => mockActions,
       });
+
+      // Create a slice with the proper params
+      const sliceCreator = view();
+      const slice = sliceCreator(mockTools);
 
       // Factory should be called with object parameters
       expect(factorySpy).toHaveBeenCalledWith(
@@ -200,13 +203,14 @@ if (import.meta.vitest) {
 
       const sliceCreator = view();
 
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        selectors: () => ({}),
+        actions: () => ({}),
+      });
+
       // Should throw when trying to access unavailable selectors
-      expect(() =>
-        sliceCreator({
-          selectors: () => ({}),
-          actions: () => ({}),
-        })
-      ).toThrow(
+      expect(() => sliceCreator(mockTools)).toThrow(
         'View factory is using selectors() but no selectors were provided'
       );
     });
@@ -220,13 +224,16 @@ if (import.meta.vitest) {
 
       const sliceCreator = view();
 
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        selectors: () => ({}),
+        actions: () => ({}),
+      });
+
       // Should throw when trying to access unavailable actions
-      expect(() =>
-        sliceCreator({
-          selectors: () => ({}),
-          actions: () => ({}),
-        })
-      ).toThrow('View factory is using actions() but no actions were provided');
+      expect(() => sliceCreator(mockTools)).toThrow(
+        'View factory is using actions() but no actions were provided'
+      );
     });
 
     it('should check for selectors and actions usage at creation time', () => {
@@ -241,7 +248,11 @@ if (import.meta.vitest) {
         );
 
         const sliceCreator = viewFactory();
-        sliceCreator({ selectors: () => ({}), actions: () => ({}) }); // This should throw
+        const mockTools = createMockTools({
+          selectors: () => ({}),
+          actions: () => ({}),
+        });
+        sliceCreator(mockTools); // This should throw
       }).toThrow();
 
       // Should throw when using actions without providing them
@@ -255,13 +266,12 @@ if (import.meta.vitest) {
         );
 
         const sliceCreator = viewFactory();
-        sliceCreator({ selectors: () => ({}), actions: () => ({}) }); // This should throw
+        const mockTools = createMockTools({
+          selectors: () => ({}),
+          actions: () => ({}),
+        });
+        sliceCreator(mockTools); // This should throw
       }).toThrow();
     });
-
-    // Note: Full view composition tests with cherry-picking will be added when the component
-    // infrastructure is implemented. For now we're testing function-access patterns
-    // and object parameters, which are the focus of this PR.
-    it.todo('should support cherry-picking properties in composition');
   });
 }

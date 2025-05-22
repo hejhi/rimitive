@@ -166,6 +166,7 @@ if (import.meta.vitest) {
 
   describe('createComponent', async () => {
     const { isComponentFactory } = await import('../shared/identify');
+    const { mockImplementations } = await import('../test-utils');
 
     it('should create a branded component factory', () => {
       // Create proper mock implementations for required components
@@ -231,10 +232,10 @@ if (import.meta.vitest) {
     });
 
     it('should throw errors for invalid configurations', () => {
-      // Create valid mock implementations
-      const validModel = vi.fn(() => ({ count: 0 }));
-      const validSelectors = vi.fn(() => ({ count: 0 }));
-      const validActions = vi.fn(() => ({ increment: vi.fn() }));
+      // Use standardized mock implementations
+      const validModel = vi.fn(() => mockImplementations.counter());
+      const validSelectors = vi.fn(() => mockImplementations.counterSelectors());
+      const validActions = vi.fn(() => mockImplementations.counterActions());
       const validView = { counter: vi.fn(() => ({ 'data-count': 0 })) };
 
       // Create stubs with correct interface but missing implementations

@@ -103,14 +103,14 @@ if (import.meta.vitest) {
 
       expect(isActionsFactory(actions)).toBe(true);
 
-      // Create mock model function
-      const mockModel = vi.fn().mockImplementation(() => ({
+      // Create mock model function for factory invocation
+      const mockModelFn = vi.fn().mockImplementation(() => ({
         testMethod: vi.fn(),
       }));
 
       // Create a slice with the mock model function
       const sliceCreator = actions();
-      sliceCreator({ model: mockModel });
+      sliceCreator({ model: mockModelFn });
 
       // Factory should be called with object parameters
       expect(factorySpy).toHaveBeenCalledWith(
