@@ -80,9 +80,9 @@ export function withComponent<
       model: (extensions.model ||
         component.getModel()) as ModelFactory<TExtModel>,
       selectors: (extensions.selectors ||
-        component.getSelectors()) as SelectorsFactory<TExtSelectors>,
+        component.getSelectors()) as SelectorsFactory<TExtSelectors, TExtModel>,
       actions: (extensions.actions ||
-        component.getActions()) as ActionsFactory<TExtActions>,
+        component.getActions()) as ActionsFactory<TExtActions, TExtModel>,
       view: (extensions.view || component.getAllViews()) as {
         [K in keyof TExtViews]: ViewFactory<TExtViews[K]>;
       },
@@ -275,7 +275,7 @@ if (import.meta.vitest) {
         return {
           model: extModel as unknown as ModelFactory<TestExtModel>,
           selectors:
-            extSelectors as unknown as SelectorsFactory<TestExtSelectors>,
+            extSelectors as unknown as SelectorsFactory<TestExtSelectors, TestExtModel>,
           actions: extActions as unknown as ActionsFactory<TestExtActions>,
           view: {
             counter: extCounterView as unknown as ViewFactory<

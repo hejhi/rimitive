@@ -28,13 +28,13 @@ import { createModel } from '../model';
  * @returns An actions instance that can be composed
  */
 // Allow specifying just T (actions type) and infer model instance type
-export function createActions<T, TModel = any>(
+export function createActions<TActions, TModel = any>(
   params: { model: TModel },
-  factory: ActionsSliceFactory<T, TModel>
+  factory: ActionsSliceFactory<TActions, TModel>
 ) {
-  return brandWithSymbol(function actionsFactory<S extends Partial<T> = T>(
-    selector?: (base: T) => S
-  ) {
+  return brandWithSymbol(function actionsFactory<
+    S extends Partial<TActions> = TActions,
+  >(selector?: (base: TActions) => S) {
     return (options: ActionsFactoryParams<TModel>) => {
       // Ensure the required properties exist
       if (!options.model) {
@@ -47,7 +47,7 @@ export function createActions<T, TModel = any>(
           model: () => {
             if (params.model === undefined) {
               throw new Error(
-                'Attempting to access model that was not provided to createAction'
+                'Attempting to access model that was not provided to createActions'
               );
             }
             return params.model;
@@ -75,9 +75,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createActions', async () => {
-    const { isActionsFactory } = await import(
-      '../shared/identify'
-    );
+    const { isActionsFactory } = await import('../shared/identify');
 
     it('should verify action factory requirements and branding', () => {
       // Create a real model for testing

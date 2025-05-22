@@ -93,10 +93,10 @@ export type ModelFactory<T> = Branded<
   typeof MODEL_FACTORY_BRAND
 >;
 
-export type SelectorsFactory<T> = Branded<
+export type SelectorsFactory<T, TModel = unknown> = Branded<
   <S extends Partial<T> = T>(
     selector?: (base: T) => S
-  ) => (options: SelectorsFactoryParams<T>) => S,
+  ) => (options: SelectorsFactoryParams<TModel>) => S,
   typeof SELECTORS_FACTORY_BRAND
 >;
 
@@ -124,7 +124,7 @@ export interface LatticeLike<
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > {
   readonly getModel: () => ModelFactory<TModel>;
-  readonly getSelectors: () => SelectorsFactory<TSelectors>;
+  readonly getSelectors: () => SelectorsFactory<TSelectors, TModel>;
   readonly getActions: () => ActionsFactory<TActions, TModel>;
   readonly getView: <K extends keyof TViews>(
     viewName: K
@@ -157,7 +157,7 @@ export type ComponentConfig<
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > = {
   model: ModelFactory<TModel>;
-  selectors: SelectorsFactory<TSelectors>;
+  selectors: SelectorsFactory<TSelectors, TModel>;
   actions: ActionsFactory<TActions, TModel>;
   view: {
     [K in keyof TViews]: ViewFactory<TViews[K], TSelectors, TActions>;
@@ -197,7 +197,7 @@ export type ComponentExtension<
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > = {
   model?: ModelFactory<TModel>;
-  selectors?: SelectorsFactory<TSelectors>;
+  selectors?: SelectorsFactory<TSelectors, TModel>;
   actions?: ActionsFactory<TActions, TModel>;
   view?: {
     [K in keyof TViews]?: ViewFactory<TViews[K], TSelectors, TActions>;

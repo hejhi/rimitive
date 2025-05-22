@@ -54,11 +54,11 @@ export function createMockModel<T>(implementation: T): ModelFactory<T> {
  * });
  * ```
  */
-export function createMockSelectors<T>(implementation: T): SelectorsFactory<T> {
+export function createMockSelectors<T>(implementation: T): SelectorsFactory<T, unknown> {
   return brandWithSymbol(
     () => () => implementation,
     SELECTORS_FACTORY_BRAND
-  ) as unknown as SelectorsFactory<T>;
+  ) as unknown as SelectorsFactory<T, unknown>;
 }
 
 /**

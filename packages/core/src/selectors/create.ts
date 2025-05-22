@@ -1,5 +1,6 @@
 import {
   SELECTORS_FACTORY_BRAND,
+  SELECTORS_TOOLS_BRAND,
   SelectorsFactoryParams,
   SelectorsSliceFactory,
 } from '../shared/types';
@@ -22,11 +23,11 @@ import { brandWithSymbol } from '../shared/identify';
  * }));
  * ```
  *
- * @param model The model that these selectors will derive from
+ * @param params The model that these selectors will derive from
  * @param factory A function that produces a selectors object with properties and values
  * @returns A selectors instance function that can be used with compose
  */
-export function createSelectors<TSelectors, TModel>(
+export function createSelectors<TSelectors, TModel = any>(
   params: { model: TModel },
   factory: SelectorsSliceFactory<TSelectors, TModel>
 ) {
@@ -40,14 +41,17 @@ export function createSelectors<TSelectors, TModel>(
       }
 
       // Create branded tools object with access functions for the factory
-      const tools = {
-        model: () => {
-          if (params.model === undefined) {
-            throw new Error('Model is required');
-          }
-          return params.model;
+      const tools = brandWithSymbol(
+        {
+          model: () => {
+            if (params.model === undefined) {
+              ('Attempting to access model that was not provided to createSelectors');
+            }
+            return params.model;
+          },
         },
-      };
+        SELECTORS_TOOLS_BRAND
+      );
 
       // Call the factory with object parameters to match the spec
       const result = factory(tools);

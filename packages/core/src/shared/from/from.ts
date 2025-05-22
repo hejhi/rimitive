@@ -20,6 +20,7 @@ import {
   ActionsSliceFactory,
   ActionsFactoryParams,
   SelectorsFactoryParams,
+  SelectorsSliceFactory,
 } from '../types';
 
 /**
@@ -36,8 +37,8 @@ export function from<TModel>(source: ModelFactory<TModel>): {
   ): ActionsFactory<TActions, TModel>;
 
   createSelectors<TSelectors>(
-    factory: (tools: { model: () => TModel }) => TSelectors
-  ): SelectorsFactory<TSelectors>;
+    factory: SelectorsSliceFactory<TSelectors, TModel>
+  ): SelectorsFactory<TSelectors, TModel>;
 };
 
 /**

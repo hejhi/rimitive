@@ -37,7 +37,7 @@ import { createView } from './create';
  * ```
  */
 export function project<TSelectors, TActions, TModel>(
-  selectorsFactory: SelectorsFactory<TSelectors>,
+  selectorsFactory: SelectorsFactory<TSelectors, TModel>,
   actionsFactory: ActionsFactory<TActions, TModel>
 ) {
   return {
