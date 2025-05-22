@@ -14,53 +14,60 @@ This dual-adapter architecture enables component libraries to focus entirely on 
 
 ### Separation of Concerns
 
-**Lattice Core Responsibilities:**
+**Lattice Core Responsibilities (Composition Only):**
 - Component behavior specification using VSAM (View-Selector-Action-Model) patterns
-- Type-safe composition APIs with unified `{ set, get }` contracts
+- Type-safe composition APIs returning slice factories (specifications)
 - Framework-agnostic and store-agnostic component definitions
 - Pure function composition without infrastructure dependencies
+- **NEVER implements actual state management, UI rendering, or persistence**
 
-**Store Adapter Responsibilities:**
-- Data storage and persistence strategies (memory, localStorage, server, database)
-- State orchestration and subscription mechanisms
-- Middleware integration (devtools, immer, analytics, persistence, etc.)
-- Performance optimizations for data operations
-- Infrastructure concerns completely separate from component logic
+**Store Adapter Responsibilities (Data Infrastructure):**
+- Consume slice factories from Lattice Core
+- Execute slice factories with runtime tools (`set`, `get`, model access)
+- Create unified stores from separate slices (model, selectors, actions)
+- Provide standardized Lattice API for framework adapters
+- Handle persistence, middleware integration, and performance optimizations
+- Bridge factory-time specifications to runtime state management
 
-**Framework Adapter Responsibilities:**
-- UI consumption patterns (hooks, reactive refs, computed properties)
-- Framework-specific reactivity and subscription optimization
-- Integration with framework devtools and ecosystems
-- Rendering performance and update batching
-- Platform-specific UI concerns (web, mobile, desktop)
+**Framework Adapter Responsibilities (UI Infrastructure):**
+- Consume standardized Lattice API from any store adapter
+- Create framework-specific interfaces (hooks, reactive refs, computed properties)
+- Handle framework-specific reactivity and subscription optimization
+- Enable mix-and-match with any compatible store adapter
+- Integration with framework devtools and rendering performance
 
-**Key Insight:** Components are defined as pure behavior specifications, while both data management and UI consumption choices are made at instantiation time per component instance.
+**Key Insight:** Lattice Core creates specifications only. Store adapters fulfill specifications with actual infrastructure. Framework adapters consume the standardized API to create UI interfaces. This dual-adapter system enables complete mix-and-match flexibility.
 
 ### Conceptual Flow
 
-**1. Component Definition Phase (Pure Behavior)**
-- Authors define components using only VSAM patterns and `{ set, get }` contracts
+**1. Component Definition Phase (Factory-Time - Specifications Only)**
+- Authors define components using VSAM patterns, returning slice factories
+- Components specify contracts (`{ set, get }` for models, `{ model }` for selectors/actions)
 - No knowledge of or dependency on infrastructure or framework choices
-- Components are portable, testable behavior specifications
+- Output: Slice factory specifications that can be executed later
 
-**2. Store Adapter Selection (Data Infrastructure)**  
+**2. Store Adapter Selection (Runtime - Data Infrastructure)**  
 - Users choose store adapters based on their data management needs
-- Adapters handle persistence, middleware, state orchestration, and performance
+- Store adapters consume slice factories and execute them with runtime tools
+- Store adapters create unified stores and return standardized Lattice API
 - Multiple instances of the same component can use different store adapters
 
-**3. Framework Adapter Selection (UI Infrastructure)**
+**3. Framework Adapter Selection (Runtime - UI Infrastructure)**
 - Users choose framework adapters based on their UI platform and consumption patterns
-- Adapters handle reactivity, hooks, framework integration, and rendering optimization
-- Same store can be consumed differently across frameworks
+- Framework adapters consume standardized Lattice API from any store adapter
+- Framework adapters create framework-specific interfaces (hooks, composables, etc.)
+- Same standardized API can be consumed by different framework adapters
 
 **4. Adapter Coupling Considerations**
-- Some combinations are naturally independent (memory stores work across frameworks)
-- Some combinations are inherently coupled (NextJS requires React, Vue reactivity works best with Vue)
-- Architecture accommodates both scenarios with smart defaults and validation
+- Universal store adapters (Zustand, Redux, Jotai) work with any framework adapter
+- Coupled store adapters (NextJS requires React, Nuxt requires Vue) are type-enforced
+- Builder pattern with `.with()` provides type-safe compatibility declarations
+- Architecture accommodates both scenarios with compile-time validation
 
-**5. Runtime Execution (Unified Interface)**
-- All adapters present consistent interfaces to components
-- Component behavior remains identical regardless of backing infrastructure
+**5. Runtime Execution (Mix-and-Match Flexibility)**
+- Same behavior specifications work with any compatible adapter combination
+- Store adapters provide actual state management infrastructure
+- Framework adapters provide actual UI reactivity and integration
 - Users get full ecosystem compatibility with their chosen stack
 
 ## Store Adapter Ecosystem
@@ -133,25 +140,38 @@ This dual-adapter architecture enables component libraries to focus entirely on 
 
 ### Adapter Implementation Principles
 
-**Unified Interface Contract**
-- All adapters expose the same `{ set, get }` interface to component models
-- Components remain completely agnostic to the underlying infrastructure
-- Type safety maintained across all adapter implementations
+**Store Adapter Contract**
+- Consume slice factories from Lattice Core component definitions
+- Execute slice factories with appropriate runtime tools (`set`, `get`, model access)
+- Create unified stores from separate slices with proper dependency injection
+- Return standardized Lattice API that framework adapters can consume
+- Handle namespacing (selectors need `{ model: () => get().model }`)
+
+**Framework Adapter Contract**
+- Consume standardized Lattice API from any store adapter
+- Create framework-specific interfaces (hooks, composables, direct access)
+- Handle framework-specific reactivity, subscription, and optimization patterns
+- Remain agnostic to which store adapter provided the Lattice API
+
+**Standardized Lattice API (Missing - See TODO.md)**
+- Interface that all store adapters must implement
+- Interface that all framework adapters can consume
+- Enables mix-and-match compatibility between any store and framework adapter
+- **Critical missing piece**: Must be defined before adapter ecosystem can be built
 
 **Middleware Composition**
-- Adapters support composable middleware stacks specific to their ecosystem
+- Store adapters orchestrate middleware stacks specific to their ecosystem
 - Existing middleware from Zustand, Redux, etc. works without modification
-- Custom middleware can be developed per adapter type
+- Framework adapters handle framework-specific tooling and devtools integration
 
 **Performance Optimization**
-- Each adapter optimizes for its specific use case and infrastructure
-- Memory-based adapters focus on subscription efficiency and batching
-- Persistence-based adapters focus on optimistic updates and sync strategies
-- Specialized adapters implement domain-specific optimizations
+- Store adapters optimize data operations (subscription efficiency, batching)
+- Framework adapters optimize UI operations (rendering, reactivity)
+- Each adapter specializes in its domain without cross-concerns
 
 **Ecosystem Integration**
 - Adapters bring their entire ecosystem (devtools, middleware, tooling)
-- No need to reimplement existing solutions
+- No need to reimplement existing solutions in Lattice Core
 - Users get full ecosystem benefits with Lattice composition patterns
 
 ## Architectural Benefits
@@ -251,17 +271,26 @@ lattice/
 - **Future-proof**: New state engines can be supported without core changes
 - **Simpler core**: Focus on composition patterns, not state management specifics
 
-## Open Questions
+## Resolved Architecture Decisions
 
-1. **Adapter API**: Should adapters expose additional methods beyond the core contract?
-2. **Type safety**: How to ensure TypeScript safety across different adapters?
-3. **Performance**: Should there be adapter performance benchmarks/guidelines?
-4. **Compatibility**: How to handle adapter-specific features in shared components?
+1. **Dual-Adapter Pattern**: Separate store adapters (data) from framework adapters (UI) for maximum mix-and-match flexibility
+2. **Factory-Time vs Runtime**: Lattice Core creates specifications only, adapters handle all runtime execution
+3. **Adapter Coupling**: Builder pattern with `.with()` provides type-safe compatibility declarations
+4. **Slice Factory Execution**: Store adapters execute slice factories with runtime tools and handle dependency injection
+
+## Critical Missing Pieces (See TODO.md)
+
+1. **Standardized Lattice API Interface**: Must be defined before any adapter implementations
+2. **Builder Pattern Implementation**: Type-safe `.with()` compatibility system
+3. **Adapter Packaging Strategy**: How to distribute and version adapters
+4. **Reference Implementation**: Zustand store adapter as ecosystem starting point
 
 ## Next Steps
 
-1. Extract state-agnostic core from current Zustand implementation
-2. Build Zustand adapter as reference implementation
-3. Create minimal custom adapter for testing
-4. Design adapter packaging and distribution strategy
-5. Update documentation with pluggable architecture examples
+1. **Define standardized Lattice API interface** (blocks all adapter work)
+2. Build Zustand store adapter as reference implementation
+3. Build React framework adapter as reference implementation
+4. Create adapter compatibility builder pattern
+5. Extract state-agnostic core from current Zustand implementation
+6. Design adapter packaging and distribution strategy
+7. Update documentation with concrete adapter examples

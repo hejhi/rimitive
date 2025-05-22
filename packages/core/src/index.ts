@@ -16,7 +16,7 @@ export { createComponent, instantiateComponent } from './lattice/create';
 export { withComponent, extendComponent } from './lattice/compose';
 
 // Component creation with state adapters
-export { createComponentWithAdapter } from './lattice/create-with-adapter';
+// export { createComponentWithAdapter } from './lattice/create-with-adapter';
 
 // State adapter interfaces
 export type {

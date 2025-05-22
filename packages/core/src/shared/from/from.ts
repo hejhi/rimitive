@@ -128,7 +128,7 @@ function fromSelectors<TSelectors>(selectors: SelectorsFactory<TSelectors>) {
               factory({
                 selectors: () => tools.selectors() as TSelectors,
                 actions: () => tools.actions() as TActions,
-              })
+              }) as TView extends (...args: any[]) => any ? TView : TView
           );
         },
       };

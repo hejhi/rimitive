@@ -42,7 +42,7 @@ describe('View Composition', () => {
     const mockActions = mockImplementations.counterActions();
     
     // Create a view following the pattern in lines 245-249
-    const counterView = createView<CounterView>(
+    const counterView = createView<CounterView, typeof mockSelectors, typeof mockActions>(
       { selectors: mockSelectors, actions: mockActions },
       () => ({
         'data-count': 10,
@@ -62,12 +62,12 @@ describe('View Composition', () => {
     const mockActions = mockImplementations.counterActions();
     
     // Create a view with simple attributes as in lines 245-249
-    const counterView = createView<CounterView>(
+    const counterView = createView<CounterView, typeof mockSelectors, typeof mockActions>(
       { selectors: mockSelectors, actions: mockActions },
-      () => ({
-        'data-count': 10,
+      ({ selectors, actions }) => ({
+        'data-count': selectors().count,
         'aria-live': 'polite',
-        onClick: () => mockActions.increment(),
+        onClick: () => actions().increment(),
       })
     );
     
@@ -104,14 +104,14 @@ describe('View Composition', () => {
     mockActions.incrementTwice = incrementTwiceMock;
     
     // Create a view with complex event handler as in lines 252-259
-    const advancedView = createView<AdvancedView>(
+    const advancedView = createView<AdvancedView, typeof mockSelectors, typeof mockActions>(
       { selectors: mockSelectors, actions: mockActions },
-      () => ({
+      ({ actions }) => ({
         onClick: (props: { shiftKey: boolean }) => {
           if (props.shiftKey) {
-            incrementTwiceMock();
+            actions().incrementTwice();
           } else {
-            incrementMock();
+            actions().increment();
           }
         }
       })
@@ -177,7 +177,7 @@ describe('View Composition', () => {
     // This tests that we have a way to compose views together
     
     // Create base view
-    const baseView = createView<CounterView>(
+    const baseView = createView<CounterView, typeof mockSelectors, typeof mockActions>(
       { selectors: mockSelectors, actions: mockActions },
       () => ({
         'data-count': 10,
@@ -187,7 +187,7 @@ describe('View Composition', () => {
     );
     
     // Create enhanced view with additional properties
-    const enhancedView = createView<CounterView & EnhancedView>(
+    const enhancedView = createView<CounterView & EnhancedView, typeof mockSelectors, typeof mockActions>(
       { selectors: mockSelectors, actions: mockActions },
       () => ({
         // Base properties
@@ -221,5 +221,141 @@ describe('View Composition', () => {
     expect(view).toHaveProperty('data-doubled');
     expect(view).toHaveProperty('aria-label');
     expect(view).toHaveProperty('onReset');
+  });
+
+  // Test parameterized views
+  describe('Parameterized Views', () => {
+    it('should support views that return functions (parameterized views)', () => {
+      // Mock selectors that include selection state
+      const mockSelectorsWithSelection = {
+        ...mockSelectors,
+        isSelected: (nodeId: string) => nodeId === 'node-1',
+        selectedCount: 1
+      };
+      
+      // Use standardized mock actions
+      const mockActions = {
+        ...mockImplementations.counterActions(),
+        selectFile: vi.fn((nodeId: string) => console.log(`Selected ${nodeId}`))
+      };
+      
+      // Create a parameterized view that returns a function
+      type NodeViewFactory = (nodeId: string) => {
+        'aria-selected': boolean;
+        'data-node-id': string;
+        onClick: () => void;
+      };
+      
+      const nodeView = createView<NodeViewFactory, typeof mockSelectorsWithSelection, typeof mockActions>(
+        { selectors: mockSelectorsWithSelection, actions: mockActions },
+        ({ selectors, actions }) => (nodeId: string) => ({
+          'aria-selected': selectors().isSelected(nodeId),
+          'data-node-id': nodeId,
+          onClick: () => actions().selectFile(nodeId)
+        })
+      );
+      
+      // Use standardized mock tools
+      const mockTools = createMockTools({
+        selectors: () => mockSelectorsWithSelection,
+        actions: () => mockActions
+      });
+      
+      // Instantiate the view factory
+      const viewFactory = nodeView()(mockTools);
+      
+      // Verify the view factory returns a function
+      expect(typeof viewFactory).toBe('function');
+      
+      // Use the parameterized view with different node IDs
+      const node1Props = viewFactory('node-1');
+      const node2Props = viewFactory('node-2');
+      
+      // Verify the properties are generated correctly for each node
+      expect(node1Props['aria-selected']).toBe(true);
+      expect(node1Props['data-node-id']).toBe('node-1');
+      expect(node2Props['aria-selected']).toBe(false);
+      expect(node2Props['data-node-id']).toBe('node-2');
+      
+      // Verify the onClick handlers are specific to each node
+      node1Props.onClick();
+      expect(mockActions.selectFile).toHaveBeenCalledWith('node-1');
+      
+      node2Props.onClick();
+      expect(mockActions.selectFile).toHaveBeenCalledWith('node-2');
+    });
+    
+    it('should support views with multiple parameters', () => {
+      const mockSelectorsWithExpanded = {
+        ...mockSelectors,
+        isExpanded: (id: string) => id === 'folder-1',
+        getNodeType: (id: string) => id.startsWith('folder') ? 'folder' : 'file'
+      };
+      
+      const mockActions = {
+        toggleExpanded: vi.fn(),
+        selectItem: vi.fn()
+      };
+      
+      // Create a parameterized view with multiple parameters
+      type TreeNodeViewFactory = (nodeId: string, depth: number) => {
+        'aria-expanded'?: boolean;
+        'aria-level': number;
+        'role': string;
+        onClick: () => void;
+      };
+      
+      const treeNodeView = createView<TreeNodeViewFactory, typeof mockSelectorsWithExpanded, typeof mockActions>(
+        { selectors: mockSelectorsWithExpanded, actions: mockActions },
+        ({ selectors, actions }) => (nodeId: string, depth: number) => {
+          const nodeType = selectors().getNodeType(nodeId);
+          const baseProps = {
+            'aria-level': depth,
+            'role': 'treeitem',
+            onClick: () => {
+              if (nodeType === 'folder') {
+                actions().toggleExpanded(nodeId);
+              } else {
+                actions().selectItem(nodeId);
+              }
+            }
+          };
+          
+          // Only add aria-expanded for folders
+          if (nodeType === 'folder') {
+            return {
+              ...baseProps,
+              'aria-expanded': selectors().isExpanded(nodeId)
+            };
+          }
+          
+          return baseProps;
+        }
+      );
+      
+      const mockTools = createMockTools({
+        selectors: () => mockSelectorsWithExpanded,
+        actions: () => mockActions
+      });
+      
+      const viewFactory = treeNodeView()(mockTools);
+      
+      // Test folder node
+      const folderProps = viewFactory('folder-1', 2);
+      expect(folderProps['aria-expanded']).toBe(true);
+      expect(folderProps['aria-level']).toBe(2);
+      expect(folderProps['role']).toBe('treeitem');
+      
+      folderProps.onClick();
+      expect(mockActions.toggleExpanded).toHaveBeenCalledWith('folder-1');
+      
+      // Test file node
+      const fileProps = viewFactory('file-1', 3);
+      expect(fileProps['aria-expanded']).toBeUndefined();
+      expect(fileProps['aria-level']).toBe(3);
+      
+      fileProps.onClick();
+      expect(mockActions.selectItem).toHaveBeenCalledWith('file-1');
+    });
   });
 });

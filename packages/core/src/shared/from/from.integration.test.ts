@@ -3,6 +3,9 @@
  *
  * This file demonstrates the simplest possible test for component composition
  * to verify that the pattern from the spec works.
+ * 
+ * NOTE: Parameterized views are included to demonstrate the type safety works,
+ * but full execution testing is pending implementation support.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,6 +15,7 @@ import { createModel } from '../../model/create';
 import { from } from './from';
 
 describe('Basic Component Composition', () => {
+
   it('should allow component composition with withComponent', () => {
     // Create test types for our components
     type CounterModel = { count: number; increment(): void };
@@ -39,12 +43,38 @@ describe('Basic Component Composition', () => {
         'data-count': selectors().count,
       }));
 
+    // Add a parameterized view example
+    // Note: Parameterized views are typed correctly but implementation support is pending
+    const counterWithLabel = from(baseSelectors)
+      .withActions(baseActions)
+      .createView(
+        ({ selectors, actions }) =>
+          (label: string) => ({
+            'data-count': selectors().count,
+            'aria-label': `${label}: ${selectors().count}`,
+            onClick: actions().inc,
+          })
+      );
+
+    // Add a multi-parameter view example
+    const counterWithOptions = from(baseSelectors)
+      .withActions(baseActions)
+      .createView(
+        ({ selectors, actions }) =>
+          (label: string, options: { showCount?: boolean; variant?: 'primary' | 'secondary' } = {}) => ({
+            'data-count': options.showCount ? selectors().count : undefined,
+            'aria-label': label,
+            className: `counter counter-${options.variant || 'primary'}`,
+            onClick: actions().inc,
+          })
+      );
+
     // Create a base component with our model, actions, and mocks
     const BaseComponent = createComponent(() => ({
       model: baseModel,
       selectors: baseSelectors,
       actions: baseActions,
-      view: { counter },
+      view: { counter, counterWithLabel, counterWithOptions },
     }));
 
     // Verify the base component was created
@@ -58,6 +88,8 @@ describe('Basic Component Composition', () => {
         expect(selectors).toBe(baseSelectors);
         expect(actions).toBe(baseActions);
         expect(view.counter).toBe(counter);
+        expect(view.counterWithLabel).toBe(counterWithLabel);
+        expect(view.counterWithOptions).toBe(counterWithOptions);
 
         // Create enhanced model that adds reset functionality
         const enhancedModel = createModel<CounterModel & { reset(): void }>(
@@ -89,12 +121,41 @@ describe('Basic Component Composition', () => {
             onClick: actions().reset,
           }));
 
+        // Enhanced parameterized view
+        // This demonstrates composing parameterized views
+        const enhancedCounterWithLabel = from(enhancedSelectors)
+          .withActions(enhancedActions)
+          .createView(
+            ({ actions, selectors }) =>
+              (label: string, showReset = false) => ({
+                ...counterWithLabel()({ actions, selectors })(label),
+                'data-can-reset': showReset,
+                onReset: showReset ? actions().reset : undefined,
+              })
+          );
+
+        // Another parameterized view with enhanced functionality
+        const enhancedCounterWithOptions = from(enhancedSelectors)
+          .withActions(enhancedActions)
+          .createView(
+            ({ actions, selectors }) =>
+              (label: string, options: { showCount?: boolean; variant?: 'primary' | 'secondary'; showReset?: boolean } = {}) => ({
+                ...counterWithOptions()({ actions, selectors })(label, options),
+                'data-resettable': true,
+                onReset: options.showReset ? actions().reset : undefined,
+              })
+          );
+
         // Return the enhanced model and actions
         return {
           model: enhancedModel,
           actions: enhancedActions,
           selectors: enhancedSelectors,
-          view: { counter: enhancedCounter },
+          view: { 
+            counter: enhancedCounter,
+            counterWithLabel: enhancedCounterWithLabel,
+            counterWithOptions: enhancedCounterWithOptions,
+          },
         };
       })
     );
