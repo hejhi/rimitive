@@ -1,4 +1,4 @@
-import type { ComponentFactory, LatticeAPI } from '@lattice/core';
+import type { ComponentFactory, LatticeAPI, SetState, GetState } from '@lattice/core';
 import { createStore } from 'zustand/vanilla';
 
 /**
@@ -34,35 +34,28 @@ export function createZustandAdapter<
   const store = createStore<ZustandStoreState<TModel, TSelectors, TActions>>(
     (set, get) => {
       // Create model-specific set/get that only operate on the model slice
-      const modelSet = (updater: any) => {
-        if (typeof updater === 'function') {
-          set((state) => ({ ...state, model: updater(state.model) }));
+      const modelSet: SetState<TModel> = (partial) => {
+        if (typeof partial === 'function') {
+          set((state) => {
+            const updater = partial as (state: TModel) => TModel | Partial<TModel>;
+            const newModel = updater(state.model);
+            return { ...state, model: { ...state.model, ...newModel } };
+          });
         } else {
-          set((state) => ({ ...state, model: updater }));
+          set((state) => ({ ...state, model: { ...state.model, ...partial } }));
         }
       };
-      const modelGet = () => get().model;
+      const modelGet: GetState<TModel> = () => get().model;
 
       // Execute model factory with model-scoped set/get tools
       const model = modelFactory()({ set: modelSet, get: modelGet });
 
-      // Now we need to create a model getter that returns the just-created model
-      // instead of trying to access it from the store state (which doesn't exist yet)
-      const modelAccessor = () => model;
+      // Execute selectors factory with model access
+      // During store initialization, we need to use the model we just created
+      const selectors = selectorsFactory()({ model: () => model });
 
       // Execute actions factory with model access
-      const actions = actionsFactory()({ model: modelAccessor });
-
-      // const actionsFactory: <TActions>(
-      //   selector?: ((base: TActions) => TActions) | undefined
-      // ) => (options: ActionsFactoryParams<TModel>) => TActions;
-
-      // const selectorsFactory: <TSelectors>(
-      //   selector?: ((base: TSelectors) => TSelectors) | undefined
-      // ) => (options: SelectorsFactoryParams<TSelectors>) => TSelectors;
-
-      // Execute selectors factory with model access
-      const selectors = selectorsFactory()({ model: modelAccessor });
+      const actions = actionsFactory()({ model: () => model });
 
       return { model, selectors, actions };
     }
@@ -148,6 +141,63 @@ if (import.meta.vitest) {
       expect(mockActionsSliceFactory).toHaveBeenCalledWith(
         expect.objectContaining({ model: expect.any(Function) })
       );
+    });
+    
+    it('should return a working LatticeAPI with getSelectors, getActions, subscribe, and destroy', () => {
+      // Arrange
+      const mockModel = { count: 0, increment: vi.fn() };
+      const mockSelectors = { count: 0, isEven: () => mockModel.count % 2 === 0 };
+      const mockActions = { increment: vi.fn() };
+      const mockViews = { button: vi.fn() };
+      
+      const mockModelSliceFactory = vi.fn(() => mockModel);
+      const mockSelectorsSliceFactory = vi.fn(() => mockSelectors);
+      const mockActionsSliceFactory = vi.fn(() => mockActions);
+      
+      const mockModelFactory = vi.fn(() => mockModelSliceFactory);
+      const mockSelectorsFactory = vi.fn(() => mockSelectorsSliceFactory);
+      const mockActionsFactory = vi.fn(() => mockActionsSliceFactory);
+      
+      const mockLattice = {
+        getModel: vi.fn(() => mockModelFactory),
+        getSelectors: vi.fn(() => mockSelectorsFactory),
+        getActions: vi.fn(() => mockActionsFactory),
+        getView: vi.fn(),
+        getAllViews: vi.fn(() => mockViews),
+      };
+      
+      const mockComponentFactory = vi.fn(() => mockLattice) as any;
+
+      // Act
+      const api = createZustandAdapter(mockComponentFactory);
+
+      // Assert LatticeAPI methods exist and work
+      expect(api.getSelectors).toBeDefined();
+      expect(api.getActions).toBeDefined();
+      expect(api.subscribe).toBeDefined();
+      expect(api.getViews).toBeDefined();
+      expect(api.destroy).toBeDefined();
+      
+      // Test getSelectors returns the selectors
+      const selectors = api.getSelectors();
+      expect(selectors).toBe(mockSelectors);
+      
+      // Test getActions returns the actions
+      const actions = api.getActions();
+      expect(actions).toBe(mockActions);
+      
+      // Test getViews returns the views
+      const views = api.getViews();
+      expect(views).toBe(mockViews);
+      
+      // Test subscribe and unsubscribe
+      const callback = vi.fn();
+      const unsubscribe = api.subscribe(callback);
+      expect(unsubscribe).toBeInstanceOf(Function);
+      
+      // Cleanup
+      unsubscribe();
+      api.destroy();
     });
   });
 }
