@@ -163,10 +163,11 @@ if (import.meta.vitest) {
       );
 
       const toolsObj = factorySpy.mock.calls[0]?.[0];
+      expect(toolsObj).toBeDefined();
       expect(toolsObj).toHaveProperty('selectors');
       expect(toolsObj).toHaveProperty('actions');
-      expect(typeof toolsObj.selectors).toBe('function');
-      expect(typeof toolsObj.actions).toBe('function');
+      expect(typeof toolsObj!.selectors).toBe('function');
+      expect(typeof toolsObj!.actions).toBe('function');
 
       // Verify slice contains the expected values
       expect(slice).toEqual({

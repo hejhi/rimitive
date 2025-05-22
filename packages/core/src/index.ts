@@ -1,8 +1,8 @@
 /**
- * Lattice Core - State-agnostic headless component framework
+ * Lattice Core - Framework-agnostic headless component framework
  *
  * This is the main entry point for the Lattice core library, providing
- * framework and store-agnostic APIs for creating and composing components.
+ * clean APIs for creating and composing components with pluggable state management.
  */
 
 // Core factory functions
@@ -15,47 +15,60 @@ export { createComponent, instantiateComponent } from './lattice/create';
 // Composition APIs
 export { withComponent, extendComponent } from './lattice/compose';
 
-// State Adapter APIs (new pluggable architecture)
-export {
-  // Core adapter interfaces and utilities
-  stateAdapterRegistry,
-  isStateAdapter,
-  isStateStore,
-  registerCommonAdapters,
-  getAdapter,
-  
-  // Adapter implementations
-  CustomStateAdapter,
-  createCustomAdapter,
-  customAdapter,
-  ZustandStateAdapter,
-  createZustandAdapter,
-  zustandAdapter,
-  zustandAdapterWithDevtools,
-  createZustandAdapterWithImmer,
-  
-  // Enhanced component creation with adapters
-  createComponentWithAdapter,
-  createComponentWithCustomAdapter,
-  createComponentWithNamedAdapter,
-  withAdapter,
-} from './adapters';
+// Component creation with state adapters
+export { createComponentWithAdapter } from './lattice/create-with-adapter';
 
+// State adapter interfaces
 export type {
-  // Adapter types
   StateAdapter,
   StateStore,
   StateAdapterWithMiddleware,
   StateAdapterFactory,
-  StateAdapterRegistry,
-  CustomAdapterConfig,
-  ZustandAdapterConfig,
-  ComponentWithAdapterConfig,
-} from './adapters';
+} from './shared/state-adapter';
 
-// Type utilities
 export {
+  isStateAdapter,
+  isStateStore,
+} from './shared/state-adapter';
+
+// Core types
+export type {
   // Brand symbols
+  Branded,
+  
+  // Factory types
+  ModelFactory,
+  SelectorsFactory,
+  ActionsFactory,
+  ViewFactory,
+  ComponentFactory,
+  ComponentFactoryInstance,
+  
+  // Component types
+  Lattice,
+  LatticeLike,
+  ComponentConfig,
+  ComponentExtension,
+  
+  // Factory parameters
+  ModelFactoryParams,
+  SelectorsFactoryParams,
+  ActionsFactoryParams,
+  ViewFactoryParams,
+  
+  // Slice factory types
+  ModelSliceFactory,
+  SelectorsSliceFactory,
+  ActionsSliceFactory,
+  ViewSliceFactory,
+  
+  // State management types
+  SetState,
+  GetState,
+} from './shared/types';
+
+// Brand symbols
+export {
   MODEL_FACTORY_BRAND,
   SELECTORS_FACTORY_BRAND,
   ACTIONS_FACTORY_BRAND,
@@ -63,19 +76,6 @@ export {
   COMPONENT_FACTORY_BRAND,
   COMPONENT_FACTORY_INSTANCE_BRAND,
   LATTICE_BRAND,
-
-  // Types
-  Branded,
-  ModelFactory,
-  SelectorsFactory,
-  ActionsFactory,
-  ViewFactory,
-  ComponentFactoryInstance,
-  Lattice,
-  LatticeLike,
-  ComponentFactory,
-  ComponentConfig,
-  ComponentExtension,
 } from './shared/types';
 
 // Type guards and utilities
@@ -86,3 +86,6 @@ export {
   isViewFactory,
   brandWithSymbol,
 } from './shared/identify';
+
+// Composition utilities
+export { from } from './shared/from';

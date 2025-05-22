@@ -7,8 +7,6 @@ followed without exception when working with this codebase.
 
 ## Thinking
 
-- **Use CHAIN-OF-DRAFT thinking instead of CHAIN-OF-THOUGHT**: Think
-  STEP-BY-STEP, but ONLY keep a minimum draft for each thinking step (5 WORDS at most)
 - **DELEGATE**: You are the LEAD ENGINEER, and your agents are your engineering team—to be successful, you MUST:
   - ALWAYS plan ahead and have a clear path forward
   - Delegate to agents for execution with CLEAR instructions
@@ -42,10 +40,16 @@ followed without exception when working with this codebase.
 - Declarative: Write pure functions, minimize side-effects
 - Semantic: Naming is crucial, be precise and accurate
 - Simplicity: Complexity is the enemy, prioritize readability
+- ES IMPORTS ONLY. NO COMMONJS.
 
 ## Commands
 
 @package.json
+
+Helpful commands:
+`cd /Users/henryivry/repos/lattice && pnpm --filter @lattice/core test`
+`cd /Users/henryivry/repos/lattice && pnpm --filter @lattice/core test --reporter=verbose`
+`cd /Users/henryivry/repos/lattice && pnpm typecheck`
 
 ## Project Structure
 

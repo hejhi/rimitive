@@ -354,10 +354,6 @@ Instead of shipping pre-built React components that lock users into specific sty
 
 ## Getting Started
 
-```bash
-npm install lattice
-```
-
 ```typescript
 import { createComponent, createModel, from } from 'lattice';
 

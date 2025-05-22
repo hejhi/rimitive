@@ -2,7 +2,7 @@
  * Core State Adapter Interface for Lattice Components
  * 
  * This defines the minimal contract that any state management solution must implement
- * to work with Lattice components. It provides complete type safety without any `any` casts.
+ * to work with Lattice components. Provides complete type safety without compromises.
  */
 
 import type { SetState, GetState } from './types';
@@ -47,7 +47,7 @@ export interface StateAdapter<T> {
 
 /**
  * Enhanced adapter interface that supports middleware composition
- * TMiddleware is adapter-specific (e.g., Zustand middleware vs Redux middleware)
+ * TMiddleware is adapter-specific and fully type-safe
  */
 export interface StateAdapterWithMiddleware<T, TMiddleware> 
   extends StateAdapter<T> {

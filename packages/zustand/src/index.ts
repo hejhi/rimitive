@@ -5,8 +5,8 @@
  * including middleware, devtools, and performance optimizations with zero compromises.
  */
 
-import type { StateAdapter, StateStore, StateAdapterWithMiddleware } from '../shared/state-adapter';
-import type { SetState, GetState } from '../shared/types';
+import type { StateAdapter, StateStore, StateAdapterWithMiddleware } from '@lattice/core/shared/state-adapter';
+import type { SetState, GetState } from '@lattice/core/shared/types';
 
 /**
  * Type-safe Zustand store interface
