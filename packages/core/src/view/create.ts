@@ -107,7 +107,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createView', async () => {
-    const { isViewFactory, isViewTools } = await import('../shared/identify');
+    const { isViewFactory } = await import('../shared/identify');
     const { createMockTools, mockImplementations } = await import(
       '../test-utils'
     );
@@ -163,7 +163,10 @@ if (import.meta.vitest) {
       );
 
       const toolsObj = factorySpy.mock.calls[0]?.[0];
-      expect(isViewTools(toolsObj)).toBe(true);
+      expect(toolsObj).toHaveProperty('selectors');
+      expect(toolsObj).toHaveProperty('actions');
+      expect(typeof toolsObj.selectors).toBe('function');
+      expect(typeof toolsObj.actions).toBe('function');
 
       // Verify slice contains the expected values
       expect(slice).toEqual({

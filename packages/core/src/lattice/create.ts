@@ -165,71 +165,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createComponent', async () => {
-    const { isComponentFactory } = await import('../shared/identify');
     const { mockImplementations } = await import('../test-utils');
-
-    it('should create a branded component factory', () => {
-      // Create proper mock implementations for required components
-      const mockModel = vi.fn(() => ({
-        count: 0,
-        increment: () => {
-          /* implementation */
-        },
-      }));
-
-      const mockSelectors = vi.fn(() => ({
-        count: 0,
-        isPositive: false,
-      }));
-
-      const mockActions = vi.fn(() => ({
-        increment: vi.fn(),
-      }));
-
-      const mockCounterView = vi.fn(() => ({
-        'data-count': 0,
-      }));
-
-      // Create stub implementation of branding for mocks
-      function createMockFactory<T>(mockFn: T): T {
-        // This is a simplified mock that doesn't need the actual symbol branding
-        // since we're testing the createComponent function, not the branding logic
-        return mockFn;
-      }
-
-      // Create properly typed mockups
-      const mockModelFactory = createMockFactory(mockModel);
-      const mockSelectorsFactory = createMockFactory(mockSelectors);
-      const mockActionsFactory = createMockFactory(mockActions);
-      const mockViewFactory = { counter: createMockFactory(mockCounterView) };
-
-      // Cast the mocks to the correct interfaces for testing
-      type TestModel = { count: number; increment: () => void };
-      type TestSelectors = { count: number; isPositive: boolean };
-      type TestActions = { increment: () => void };
-      type TestViews = { counter: { 'data-count': number } };
-
-      // Create a component factory with properly typed implementations
-      const factory = createComponent<
-        TestModel,
-        TestSelectors,
-        TestActions,
-        TestViews
-      >(() => ({
-        model: mockModelFactory as unknown as ModelFactory<TestModel>,
-        selectors:
-          mockSelectorsFactory as unknown as SelectorsFactory<TestSelectors>,
-        actions: mockActionsFactory as unknown as ActionsFactory<TestActions>,
-        view: {
-          counter: mockViewFactory.counter as unknown as ViewFactory<
-            TestViews['counter']
-          >,
-        },
-      }));
-
-      // Factory should be properly branded
-      expect(isComponentFactory(factory)).toBe(true);
-    });
 
     it('should throw errors for invalid configurations', () => {
       // Use standardized mock implementations

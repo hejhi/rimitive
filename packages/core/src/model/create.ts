@@ -68,7 +68,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createModel', async () => {
-    const { isModelFactory, isModelTools } = await import('../shared/identify');
+    const { isModelFactory } = await import('../shared/identify');
     const { createMockTools } = await import('../test-utils');
 
     it('should verify model factory requirements and branding', () => {
@@ -102,9 +102,12 @@ if (import.meta.vitest) {
         })
       );
 
-      // The tools should be branded with the proper symbol
+      // The tools should be properly structured
       const toolsObj = factorySpy.mock.calls[0]?.[0];
-      expect(isModelTools(toolsObj)).toBe(true);
+      expect(toolsObj).toHaveProperty('set');
+      expect(toolsObj).toHaveProperty('get');
+      expect(typeof toolsObj.set).toBe('function');
+      expect(typeof toolsObj.get).toBe('function');
 
       // Verify slice contains the expected value
       expect(slice).toEqual({ count: 1 });

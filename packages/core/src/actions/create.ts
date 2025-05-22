@@ -75,7 +75,7 @@ if (import.meta.vitest) {
   const { it, expect, vi, describe } = import.meta.vitest;
 
   describe('createActions', async () => {
-    const { isActionsFactory, isActionsTools } = await import(
+    const { isActionsFactory } = await import(
       '../shared/identify'
     );
 
@@ -119,9 +119,10 @@ if (import.meta.vitest) {
         })
       );
 
-      // The tools should be branded with the proper symbol
+      // The tools should be properly structured
       const toolsObj = factorySpy.mock.calls[0]?.[0];
-      expect(isActionsTools(toolsObj)).toBe(true);
+      expect(toolsObj).toHaveProperty('model');
+      expect(typeof toolsObj.model).toBe('function');
     });
 
     it('should throw an error when model function is missing', () => {

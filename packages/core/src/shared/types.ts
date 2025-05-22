@@ -6,7 +6,6 @@ export const MODEL_TOOLS_BRAND = Symbol('model-tools');
 export const SELECTORS_TOOLS_BRAND = Symbol('selectors-tools');
 export const ACTIONS_TOOLS_BRAND = Symbol('actions-tools');
 export const VIEW_TOOLS_BRAND = Symbol('view-tools');
-export const MUTATION_BRAND = Symbol('mutation-brand');
 export const COMPONENT_FACTORY_BRAND = Symbol('component-factory');
 
 // Factory brand symbols (previously instance brand symbols)

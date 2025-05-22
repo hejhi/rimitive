@@ -46,12 +46,5 @@ export {
   isSelectorsFactory,
   isActionsFactory,
   isViewFactory,
-  isComponentFactoryInstance,
-  isComponentFactory,
-  isLattice,
   brandWithSymbol,
-  isModelTools,
-  isSelectorsTools,
-  isActionsTools,
-  isViewTools,
 } from './shared/identify';

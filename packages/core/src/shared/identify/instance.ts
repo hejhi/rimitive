@@ -3,12 +3,10 @@ import {
   SELECTORS_FACTORY_BRAND,
   ACTIONS_FACTORY_BRAND,
   VIEW_FACTORY_BRAND,
-  COMPONENT_FACTORY_INSTANCE_BRAND,
   ModelFactory,
   SelectorsFactory,
   ActionsFactory,
   ViewFactory,
-  ComponentFactoryInstance,
 } from '../types';
 import { isBranded } from './marker';
 
@@ -58,23 +56,6 @@ export function isViewFactory<T = unknown>(
   value: unknown
 ): value is ViewFactory<T> {
   return isBranded(value, VIEW_FACTORY_BRAND);
-}
-
-/**
- * Type guard to check if a value is a component factory instance
- *
- * @param value The value to check
- * @returns Whether the value is a component factory instance
- */
-export function isComponentFactoryInstance<
-  TModel = unknown,
-  TSelectors = unknown,
-  TActions = unknown,
-  TViews extends Record<string, unknown> = Record<string, unknown>,
->(
-  value: unknown
-): value is ComponentFactoryInstance<TModel, TSelectors, TActions, TViews> {
-  return isBranded(value, COMPONENT_FACTORY_INSTANCE_BRAND);
 }
 
 // In-source tests
@@ -130,18 +111,6 @@ if (import.meta.vitest) {
 
     it('identifies a non-branded object as false for view factory', () => {
       expect(isViewFactory({})).toBe(false);
-    });
-
-    it('identifies a branded component factory instance as true', () => {
-      const fn = function uniqueComponentFn() {
-        return {};
-      };
-      const branded = brandWithSymbol(fn, COMPONENT_FACTORY_INSTANCE_BRAND);
-      expect(isComponentFactoryInstance(branded)).toBe(true);
-    });
-
-    it('identifies a non-branded object as false for component factory instance', () => {
-      expect(isComponentFactoryInstance({})).toBe(false);
     });
   });
 }
