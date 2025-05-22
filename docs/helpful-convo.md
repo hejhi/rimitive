@@ -67,10 +67,9 @@
     }));
 
   // The composed logic belongs in the VIEW layer
-  const nodeView = from(selectors)
-    .withActions(treeActions)
-    .createView(({ selectors, actions }) => ({
-      onClick: (nodeId) => {
+  const nodeView = project(selectors, treeActions).toView(
+    ({ selectors, actions }) => (nodeId: string) => ({
+      onClick: () => {
         // THIS is where the composed logic lives
         if (selectors().shouldExpandOnSelect) {
           actions().selectNode(nodeId);
@@ -79,7 +78,8 @@
           actions().selectNode(nodeId);
         }
       }
-    }));
+    })
+  );
 
   Back to the core question: Given this correction, does the separation still address
    your tree view frustrations? The key insight being that complex interaction
@@ -819,15 +819,17 @@
   Now your different trees:
 
   // Read-only tree
-  const readOnlyTree = from(baseTreeModel)
-    .createSelectors(({ model }) => ({
-      nodes: model().nodes,
-      isExpanded: (id) => model().expandedIds.includes(id),
-    }))
-    .createView(({ selectors }) => ({
+  const readOnlySelectors = from(baseTreeModel).createSelectors(({ model }) => ({
+    nodes: model().nodes,
+    isExpanded: (id) => model().expandedIds.includes(id),
+  }));
+  
+  const readOnlyTree = project(readOnlySelectors, null).toView(
+    ({ selectors }) => () => ({
       "aria-readonly": true,
       // Just display logic
-    }));
+    })
+  );
 
   // Multi-select tree
   const multiSelectTree = from(selectableTreeModel)
@@ -935,7 +937,7 @@
   This is really elegant:
 
   // Same tree component, totally different UI structures
-  const treeView = from(selectors).createView(({ selectors }) => ({
+  const treeView = project(selectors).toView(({ selectors }) => () => ({
     "aria-expanded": selectors().isExpanded(nodeId),
     "data-level": selectors().getLevel(nodeId),
     onClick: actions().toggleNode,

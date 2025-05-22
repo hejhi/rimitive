@@ -85,7 +85,7 @@ Lattice uses a fluent API composition pattern centered around the `from()` funct
    }));
    ```
 
-2. **Composition**: The `from()` function enables fluent chaining for building derived components
+2. **Composition**: The `from()` function enables fluent chaining for building derived components from models, while `project()` is used for creating views
    ```typescript
    // Actions from models
    const actions = from(model).createActions(({ model }) => ({ /* ... */ }));
@@ -93,10 +93,10 @@ Lattice uses a fluent API composition pattern centered around the `from()` funct
    // Selectors from models  
    const selectors = from(model).createSelectors(({ model }) => ({ /* ... */ }));
    
-   // Views from selectors with optional actions
-   const view = from(selectors)
-     .withActions(actions)
-     .createView(({ selectors, actions }) => ({ /* ... */ }));
+   // Views from selectors and actions using project()
+   const view = project(selectors, actions).toView(
+     ({ selectors, actions }) => () => ({ /* ... */ })
+   );
    ```
 
 3. **Component Composition**: The `withComponent()` function for enhancing existing components
@@ -200,22 +200,21 @@ This type safety helps prevent runtime errors and ensures that compositions are 
 
 ### View – Reactive UI Attributes
 
-Views transform selectors into UI attributes and provide interaction logic. They **only** access selectors and actions, not the model directly. Views are created using the fluent `from()` API with chaining support.
+Views transform selectors into UI attributes and provide interaction logic. They **only** access selectors and actions, not the model directly. Views are created using the `project()` API which provides clean ergonomics for parameterized views.
 
 ```typescript
-// Create a view with UI attributes and interaction handlers using from() API
-const counterView = from(selectors)
-  .withActions(actions)
-  .createView(({ selectors, actions }) => ({
+// Create a parameterized view with UI attributes and interaction handlers using project() API
+const counterView = project(selectors, actions).toView(
+  ({ selectors, actions }) => () => ({
     "data-count": selectors().count,
     "aria-live": "polite",
     onClick: () => actions().increment(), // Actions are called, not referenced
-  }));
+  })
+);
 
 // Complex interaction logic is also supported
-const advancedView = from(selectors)
-  .withActions(actions)
-  .createView(({ selectors, actions }) => ({
+const advancedView = project(selectors, actions).toView(
+  ({ selectors, actions }) => () => ({
     onClick: (event) => {
       // View logic combines multiple pure intents
       if (event.shiftKey) {
@@ -224,7 +223,16 @@ const advancedView = from(selectors)
         actions().increment(); // Pure intent call
       }
     },
-  }));
+  })
+);
+
+// Parameterized views with arguments
+const nodeView = project(selectors, actions).toView(
+  ({ selectors, actions }) => (nodeId: string) => ({
+    "aria-selected": selectors().isSelected(nodeId),
+    onClick: () => actions().selectNode(nodeId),
+  })
+);
 ```
 
 ## Composition Example
@@ -253,17 +261,19 @@ const counterComponent = createComponent(() => {
     isPositive: model().count > 0
   }));
 
-  // Define views for UI using from() API with chaining
-  const counterView = from(selectors).createView(({ selectors }) => ({
-    "data-count": selectors().count,
-    "aria-live": "polite"
-  }));
+  // Define views for UI using project() API
+  const counterView = project(selectors, actions).toView(
+    ({ selectors }) => () => ({
+      "data-count": selectors().count,
+      "aria-live": "polite"
+    })
+  );
 
-  const buttonView = from(selectors)
-    .withActions(actions)
-    .createView(({ actions }) => ({
+  const buttonView = project(selectors, actions).toView(
+    ({ actions }) => () => ({
       onClick: () => actions().increment() // Actions are called, not referenced
-    }));
+    })
+  );
 
   // Return the component configuration
   return {
@@ -307,12 +317,12 @@ const enhancedComponent = createComponent(
       })
     );
 
-    const enhancedCounter = from(enhancedSelectors)
-      .withActions(enhancedActions)
-      .createView(({ actions, selectors }) => ({
-        ...view.counter()({ actions, selectors }),
+    const enhancedCounter = project(enhancedSelectors, enhancedActions).toView(
+      ({ actions, selectors }) => () => ({
+        ...view.counter()({ actions, selectors })(),
         onClick: () => actions().reset(), // Actions are called, not referenced
-      }));
+      })
+    );
 
     // Return the enhanced component configuration
     return {

@@ -63,13 +63,13 @@ const fileTree = createComponent(() => {
     isExpanded: (nodeId) => model().expandedIds.includes(nodeId),
   }));
   
-  const folderView = from(selectors)
-    .withActions(actions)
-    .createView(({ selectors, actions }) => ({
-      'aria-expanded': (nodeId) => selectors().isExpanded(nodeId),
+  const folderView = project(selectors, actions).toView(
+    ({ selectors, actions }) => (nodeId: string) => ({
+      'aria-expanded': selectors().isExpanded(nodeId),
       'role': 'treeitem',
-      onClick: (nodeId) => actions().expandFolder(nodeId), // Pure intent call
-    }));
+      onClick: () => actions().expandFolder(nodeId), // Pure intent call
+    })
+  );
   
   return { model, actions, selectors, view: { folder: folderView } };
 });
@@ -120,12 +120,11 @@ const selectableFileTree = createComponent(
       })
     );
     
-    const fileView = from(enhancedSelectors)
-      .withActions(enhancedActions)
-      .createView(({ actions, selectors }) => ({
-        ...view.folder()({ actions, selectors }),
-        'aria-selected': (fileId) => selectors().isSelected(fileId),
-        onClick: (fileId, event) => {
+    const fileView = project(enhancedSelectors, enhancedActions).toView(
+      ({ actions, selectors }) => (fileId: string) => ({
+        ...view.folder()({ actions, selectors })(fileId),
+        'aria-selected': selectors().isSelected(fileId),
+        onClick: (event) => {
           // View logic combines multiple intents
           if (event.ctrlKey) {
             actions().selectFile(fileId);      // Pure intent
@@ -291,9 +290,8 @@ const TreeComponent = createComponent(() => {
   // ... model, actions, selectors remain framework-agnostic
   
   // Base views provide semantic HTML and accessibility
-  const nodeView = from(selectors)
-    .withActions(actions)
-    .createView(({ selectors, actions }) => ({
+  const nodeView = project(selectors, actions)
+    .toView(({ selectors, actions }) => ({
       'role': 'treeitem',
       'aria-expanded': (nodeId) => selectors().isExpanded(nodeId),
       'aria-selected': (nodeId) => selectors().isSelected(nodeId),
