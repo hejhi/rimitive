@@ -1,0 +1,44 @@
+{
+  "name": "@lattice/zustand",
+  "version": "0.0.1",
+  "description": "Zustand store adapter for Lattice",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:ci": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@lattice/core": "workspace:*",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "tsup": "^8.3.0",
+    "typescript": "^5.8.3",
+    "vitest": "^2.1.8"
+  },
+  "peerDependencies": {
+    "zustand": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "license": "MIT"
+}
