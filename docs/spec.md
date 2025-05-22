@@ -85,7 +85,7 @@ Lattice uses a fluent API composition pattern centered around the `from()` funct
    }));
    ```
 
-2. **Composition**: The `from()` function enables fluent chaining for building derived components from models, while `project()` is used for creating views
+2. **Composition**: The `from()` and `project` functions enable fluent chaining for building derived components from models, while `project()` is used for creating views
    ```typescript
    // Actions from models
    const actions = from(model).createActions(({ model }) => ({ /* ... */ }));

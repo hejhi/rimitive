@@ -16,7 +16,9 @@ export const MODEL_FACTORY_BRAND = Symbol('model-factory');
 export const SELECTORS_FACTORY_BRAND = Symbol('selectors-factory');
 export const ACTIONS_FACTORY_BRAND = Symbol('actions-factory');
 export const VIEW_FACTORY_BRAND = Symbol('view-factory');
-export const COMPONENT_FACTORY_INSTANCE_BRAND = Symbol('component-factory-instance');
+export const COMPONENT_FACTORY_INSTANCE_BRAND = Symbol(
+  'component-factory-instance'
+);
 
 export const LATTICE_BRAND = Symbol('lattice');
 
@@ -219,3 +221,92 @@ export type WithComponentCallback<
     TBaseViews
   >
 ) => ComponentExtension<TExtModel, TExtSelectors, TExtActions, TExtViews>;
+
+/**
+ * Subscription callback type for state changes
+ */
+export type SubscribeCallback = () => void;
+
+/**
+ * Unsubscribe function returned by subscribe
+ */
+export type UnsubscribeFunction = () => void;
+
+/**
+ * Standardized Lattice API interface
+ *
+ * This is the contract that all store adapters must implement
+ * and all framework adapters can consume. It provides a unified
+ * interface for accessing component state and behavior regardless
+ * of the underlying state management solution.
+ *
+ * @template TSelectors - The selectors type for the component
+ * @template TActions - The actions type for the component
+ * @template TViews - The views type for the component
+ */
+export interface LatticeAPI<
+  TSelectors = unknown,
+  TActions = unknown,
+  TViews extends Record<string, unknown> = Record<string, unknown>,
+> {
+  /**
+   * Access the current selector values.
+   * Selectors are derived state and computed values from the model.
+   *
+   * @returns The current selectors object
+   * @example
+   * const selectors = api.getSelectors();
+   * const count = selectors.count;
+   * const isEven = selectors.isEven();
+   */
+  getSelectors: () => TSelectors;
+
+  /**
+   * Access the action functions.
+   * Actions are functions that can modify the model state.
+   *
+   * @returns The actions object with bound functions
+   * @example
+   * const actions = api.getActions();
+   * actions.increment();
+   * actions.setValue(42);
+   */
+  getActions: () => TActions;
+
+  /**
+   * Subscribe to state changes.
+   * The callback will be invoked whenever any part of the state changes.
+   *
+   * @param callback - Function to call on state changes
+   * @returns A function to unsubscribe
+   * @example
+   * const unsubscribe = api.subscribe(() => {
+   *   console.log('State changed!');
+   * });
+   * // Later: unsubscribe();
+   */
+  subscribe: (callback: SubscribeCallback) => UnsubscribeFunction;
+
+  /**
+   * Access the view functions.
+   * Views generate UI attributes and event handlers based on current state.
+   *
+   * @returns The views object with view generator functions
+   * @example
+   * const views = api.getViews();
+   * const buttonProps = views.button();
+   * // { onClick: [Function], disabled: false, 'aria-label': 'Click me' }
+   */
+  getViews: () => TViews;
+
+  /**
+   * Clean up and destroy the component instance.
+   * This should release all resources, unsubscribe all listeners,
+   * and perform any necessary cleanup.
+   *
+   * @example
+   * // When component is no longer needed
+   * api.destroy();
+   */
+  destroy: () => void;
+}

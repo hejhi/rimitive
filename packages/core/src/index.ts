@@ -26,16 +26,13 @@ export type {
   StateAdapterFactory,
 } from './shared/state-adapter';
 
-export {
-  isStateAdapter,
-  isStateStore,
-} from './shared/state-adapter';
+export { isStateAdapter, isStateStore } from './shared/state-adapter';
 
 // Core types
 export type {
   // Brand symbols
   Branded,
-  
+
   // Factory types
   ModelFactory,
   SelectorsFactory,
@@ -43,28 +40,33 @@ export type {
   ViewFactory,
   ComponentFactory,
   ComponentFactoryInstance,
-  
+
   // Component types
   Lattice,
   LatticeLike,
   ComponentConfig,
   ComponentExtension,
-  
+
   // Factory parameters
   ModelFactoryParams,
   SelectorsFactoryParams,
   ActionsFactoryParams,
   ViewFactoryParams,
-  
+
   // Slice factory types
   ModelSliceFactory,
   SelectorsSliceFactory,
   ActionsSliceFactory,
   ViewSliceFactory,
-  
+
   // State management types
   SetState,
   GetState,
+
+  // Lattice API types
+  LatticeAPI,
+  SubscribeCallback,
+  UnsubscribeFunction,
 } from './shared/types';
 
 // Brand symbols
