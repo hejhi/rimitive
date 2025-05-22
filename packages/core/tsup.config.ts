@@ -9,4 +9,5 @@ export default defineConfig({
   clean: false, // Don't clean, as we want to keep the declaration files
   treeshake: true,
   external: [],
+  target: 'es2022', // Support for top-level await
 });
