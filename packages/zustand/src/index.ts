@@ -1,2 +1,2 @@
 // Zustand adapter for Lattice
-export {};
+export { createZustandAdapter } from './adapter';
