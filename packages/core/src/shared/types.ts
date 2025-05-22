@@ -30,7 +30,6 @@ export type Branded<T, BrandSymbol extends symbol> = T & {
 /**
  * Generic state management adapter types
  * These provide the minimal interface that any store adapter must implement
- * Note: These are temporarily compatible with Zustand but will be abstracted further
  */
 export type SetState<T> = (
   partial: T | Partial<T> | ((state: T) => T | Partial<T>),
@@ -41,6 +40,7 @@ export type GetState<T> = () => T;
 
 /**
  * Model factory parameters and callback types
+ * This now supports both direct { set, get } (legacy) and StateAdapter (new)
  */
 export type ModelFactoryParams<TShape> = {
   set: SetState<TShape>;

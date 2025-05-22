@@ -19,52 +19,6 @@ import { brandWithSymbol } from '../shared/identify';
  * This is the primary API for creating components in Lattice. Use it to define your
  * component's model, selectors, actions, and views.
  *
- * @example
- * ```typescript
- * // Create a base component - all parts defined within a single callback
- * const counterComponent = createComponent(() => {
- *   // Define model with state and behavior
- *   const model = createModel(({ set, get }) => ({
- *     count: 0,
- *     increment: () => set(state => ({ count: state.count + 1 })),
- *     decrement: () => set(state => ({ count: state.count - 1 }))
- *   }));
- *
- *   // Define actions that delegate to model methods
- *   const actions = createActions({ model }, ({ model }) => ({
- *     increment: model().increment,
- *     decrement: model().decrement
- *   }));
- *
- *   // Define selectors that expose model properties
- *   const selectors = createSelectors({ model }, ({ model }) => ({
- *     count: model().count,
- *     isPositive: model().count > 0
- *   }));
- *
- *   // Define views for UI
- *   const counterView = createView({ selectors }, ({ selectors }) => ({
- *     "data-count": selectors().count,
- *     "aria-live": "polite"
- *   }));
- *
- *   const buttonView = createView({ actions }, ({ actions }) => ({
- *     onClick: actions().increment
- *   }));
- *
- *   // Return the component configuration
- *   return {
- *     model,
- *     actions,
- *     selectors,
- *     view: {
- *       counter: counterView,
- *       button: buttonView
- *     }
- *   };
- * });
- * ```
- *
  * @param configFactory A factory function that produces a component configuration
  * @returns A component factory function that can be used to create component instances
  */
