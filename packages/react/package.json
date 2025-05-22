@@ -1,0 +1,39 @@
+{
+  "name": "@lattice/react",
+  "version": "0.0.1",
+  "description": "React framework adapter for Lattice components",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "@lattice/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@lattice/core": "workspace:*",
+    "@types/react": "^18.0.0",
+    "react": "^18.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.8.3",
+    "vitest": "^2.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

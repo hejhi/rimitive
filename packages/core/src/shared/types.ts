@@ -1,23 +1,23 @@
 /**
+ * Core type definitions for Lattice components
+ * Production-quality types with full type safety and no compromises
+ */
+
+/**
  * Brand symbols for runtime type identification
  */
-// Tools brand symbols (previously factory brand symbols)
 export const MODEL_TOOLS_BRAND = Symbol('model-tools');
 export const SELECTORS_TOOLS_BRAND = Symbol('selectors-tools');
 export const ACTIONS_TOOLS_BRAND = Symbol('actions-tools');
 export const VIEW_TOOLS_BRAND = Symbol('view-tools');
 export const COMPONENT_FACTORY_BRAND = Symbol('component-factory');
 
-// Factory brand symbols (previously instance brand symbols)
 export const MODEL_FACTORY_BRAND = Symbol('model-factory');
 export const SELECTORS_FACTORY_BRAND = Symbol('selectors-factory');
 export const ACTIONS_FACTORY_BRAND = Symbol('actions-factory');
 export const VIEW_FACTORY_BRAND = Symbol('view-factory');
-export const COMPONENT_FACTORY_INSTANCE_BRAND = Symbol(
-  'component-factory-instance'
-);
+export const COMPONENT_FACTORY_INSTANCE_BRAND = Symbol('component-factory-instance');
 
-// Lattice brand symbol
 export const LATTICE_BRAND = Symbol('lattice');
 
 /**
@@ -28,8 +28,7 @@ export type Branded<T, BrandSymbol extends symbol> = T & {
 };
 
 /**
- * Generic state management adapter types
- * These provide the minimal interface that any store adapter must implement
+ * Core state management interface
  */
 export type SetState<T> = (
   partial: T | Partial<T> | ((state: T) => T | Partial<T>),
@@ -40,7 +39,6 @@ export type GetState<T> = () => T;
 
 /**
  * Model factory parameters and callback types
- * This now supports both direct { set, get } (legacy) and StateAdapter (new)
  */
 export type ModelFactoryParams<TShape> = {
   set: SetState<TShape>;
@@ -84,11 +82,7 @@ export type ViewSliceFactory<T, TSelectors, TActions> = (
 ) => T;
 
 /**
- * Factory types (previously instance types)
- *
- * These are the primary factory types used throughout the system.
- * They represent branded factory functions that can be composed and eventually
- * instantiated with runtime tools.
+ * Factory types - branded factory functions for composition
  */
 export type ModelFactory<T> = Branded<
   <S extends Partial<T> = T>(
@@ -96,18 +90,21 @@ export type ModelFactory<T> = Branded<
   ) => (options: ModelFactoryParams<T>) => S,
   typeof MODEL_FACTORY_BRAND
 >;
+
 export type SelectorsFactory<T> = Branded<
   <S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) => (options: SelectorsFactoryParams<T>) => S,
   typeof SELECTORS_FACTORY_BRAND
 >;
+
 export type ActionsFactory<T, TModel = unknown> = Branded<
   <S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) => (options: ActionsFactoryParams<TModel>) => S,
   typeof ACTIONS_FACTORY_BRAND
 >;
+
 export type ViewFactory<T, TSelectors = unknown, TActions = unknown> = Branded<
   <S extends Partial<T> = T>(
     selector?: (base: T) => S
@@ -116,12 +113,7 @@ export type ViewFactory<T, TSelectors = unknown, TActions = unknown> = Branded<
 >;
 
 /**
- * Lattice component types - internal interface
- *
- * This uses a closure-based design for proper encapsulation:
- * - No direct property access
- * - Access via accessor methods for internal use
- * - Components can be properly isolated and hidden
+ * Lattice component interface
  */
 export interface LatticeLike<
   TModel = unknown,
@@ -129,12 +121,9 @@ export interface LatticeLike<
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > {
-  // Internal accessor methods (not exposed publicly)
   readonly getModel: () => ModelFactory<TModel>;
   readonly getSelectors: () => SelectorsFactory<TSelectors>;
   readonly getActions: () => ActionsFactory<TActions, TModel>;
-
-  // View accessors with name-based retrieval
   readonly getView: <K extends keyof TViews>(
     viewName: K
   ) => ViewFactory<TViews[K], TSelectors, TActions>;
@@ -145,7 +134,6 @@ export interface LatticeLike<
 
 /**
  * Branded Lattice type
- * Adds the brand symbol to the LatticeLike interface for runtime type checking
  */
 export type Lattice<
   TModel = unknown,
@@ -158,8 +146,7 @@ export type Lattice<
 >;
 
 /**
- * Configuration for creating a component
- * This defines the required properties for component creation
+ * Component configuration
  */
 export type ComponentConfig<
   TModel = unknown,
@@ -167,32 +154,16 @@ export type ComponentConfig<
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > = {
-  /**
-   * The model factory for the component
-   */
   model: ModelFactory<TModel>;
-
-  /**
-   * The selectors factory for the component
-   */
   selectors: SelectorsFactory<TSelectors>;
-
-  /**
-   * The actions factory for the component
-   */
   actions: ActionsFactory<TActions, TModel>;
-
-  /**
-   * A record of named view factories
-   * Each key is a view name, and the value is a view factory
-   */
   view: {
     [K in keyof TViews]: ViewFactory<TViews[K], TSelectors, TActions>;
   };
 };
 
 /**
- * Branded component factory type
+ * Component factory types
  */
 export type ComponentFactory<
   TModel = unknown,
@@ -204,9 +175,6 @@ export type ComponentFactory<
   typeof COMPONENT_FACTORY_BRAND
 >;
 
-/**
- * Branded component factory instance type
- */
 export type ComponentFactoryInstance<
   TModel = unknown,
   TSelectors = unknown,
@@ -218,8 +186,7 @@ export type ComponentFactoryInstance<
 >;
 
 /**
- * Component extension with partial override
- * Allows selectively extending or replacing parts of a component
+ * Component extension types
  */
 export type ComponentExtension<
   TModel = unknown,
@@ -227,38 +194,14 @@ export type ComponentExtension<
   TActions = unknown,
   TViews extends Record<string, unknown> = Record<string, unknown>,
 > = {
-  /**
-   * Optional model extension
-   * If provided, replaces the base model
-   */
   model?: ModelFactory<TModel>;
-
-  /**
-   * Optional selectors extension
-   * If provided, replaces the base selectors
-   */
   selectors?: SelectorsFactory<TSelectors>;
-
-  /**
-   * Optional actions extension
-   * If provided, replaces the base actions
-   * TActions should already be an ActionsFactory type
-   */
   actions?: ActionsFactory<TActions, TModel>;
-
-  /**
-   * Optional view extensions
-   * Can include new views or override existing views
-   */
   view?: {
     [K in keyof TViews]?: ViewFactory<TViews[K], TSelectors, TActions>;
   };
 };
 
-/**
- * Type for the withComponent callback function
- * Receives component elements and returns an extension
- */
 export type WithComponentCallback<
   TBaseModel,
   TBaseSelectors,

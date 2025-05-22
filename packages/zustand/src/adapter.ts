@@ -2,15 +2,17 @@
  * Production-Quality Zustand State Adapter for Lattice Components
  * 
  * This adapter provides full type safety and integrates the complete Zustand ecosystem
- * including middleware, devtools, and performance optimizations with zero compromises.
+ * including middleware, devtools, and performance optimizations.
  */
 
-import type { StateAdapter, StateStore, StateAdapterWithMiddleware } from '../shared/state-adapter';
-import type { SetState, GetState } from '../shared/types';
+import type { 
+  StateAdapter, 
+  StateStore, 
+  StateAdapterWithMiddleware 
+} from '@lattice/core/adapters/state-adapter';
+import type { SetState, GetState } from '@lattice/core/shared/types';
 
-/**
- * Type-safe Zustand store interface
- */
+// Type-safe Zustand interfaces
 export interface ZustandStore<T> {
   getState: () => T;
   setState: (
@@ -21,21 +23,17 @@ export interface ZustandStore<T> {
   destroy: () => void;
 }
 
-/**
- * Type-safe Zustand middleware interface
- */
-export type ZustandMiddleware<T> = (
-  config: (set: SetState<T>, get: GetState<T>) => T
-) => (set: SetState<T>, get: GetState<T>) => T;
-
-/**
- * Type-safe Zustand store creator
- */
 export interface ZustandStoreCreator {
   <T>(
-    createState: (set: SetState<T>, get: GetState<T>) => T
+    createState: (set: SetState<T>, get: GetState<T>) => T,
+    ...middleware: ZustandMiddleware<T>[]
   ): ZustandStore<T>;
 }
+
+// Type-safe middleware interface
+export type ZustandMiddleware<T> = (
+  createStore: ZustandStoreCreator
+) => ZustandStoreCreator;
 
 /**
  * Configuration options for the Zustand adapter
@@ -52,7 +50,7 @@ export interface ZustandAdapterConfig {
   name?: string;
   
   /**
-   * Store creator function (for dependency injection)
+   * Custom store creator (for testing or custom builds)
    */
   storeCreator?: ZustandStoreCreator;
 }
@@ -95,16 +93,30 @@ export class ZustandStateAdapter<T> implements StateAdapterWithMiddleware<T, Zus
   private config: ZustandAdapterConfig;
   private storeCreator: ZustandStoreCreator;
 
-  constructor(config: ZustandAdapterConfig) {
+  constructor(config: ZustandAdapterConfig = {}) {
     this.config = config;
     
-    if (!config.storeCreator) {
+    if (config.storeCreator) {
+      this.storeCreator = config.storeCreator;
+    } else {
+      // Dynamic import for optional dependency
+      this.storeCreator = this.getZustandCreator();
+    }
+  }
+
+  private getZustandCreator(): ZustandStoreCreator {
+    try {
+      // Use dynamic import instead of require()
+      const zustandImport = import('zustand');
+      
+      // For now, we need to handle the synchronous requirement
+      // In a real implementation, this would be handled at build time
+      throw new Error('Dynamic import not supported in this context. Please provide storeCreator in config.');
+    } catch (error) {
       throw new Error(
-        'ZustandStateAdapter requires a storeCreator. Use createZustandAdapter() factory function instead.'
+        'Zustand is required for ZustandStateAdapter. Please install zustand and provide storeCreator in config, or use createZustandAdapter() factory function.'
       );
     }
-    
-    this.storeCreator = config.storeCreator;
   }
 
   createStore(initialState: T): StateStore<T> {
@@ -126,54 +138,39 @@ export class ZustandStateAdapter<T> implements StateAdapterWithMiddleware<T, Zus
     initialState: T, 
     middleware: ZustandMiddleware<T>[]
   ): StateStore<T> {
-    // Apply middleware to the state creator function
-    const baseStateCreator = (set: SetState<T>, get: GetState<T>) => {
-      if (typeof initialState === 'function') {
-        const stateFactory = initialState as (params: { set: SetState<T>; get: GetState<T> }) => T;
-        return stateFactory({ set, get });
-      }
-      return initialState;
-    };
-
-    // Apply middleware chain
-    const enhancedStateCreator = middleware.reduce(
-      (creator, middleware) => middleware(creator),
-      baseStateCreator
+    const zustandStore = this.storeCreator<T>(
+      (set, get) => {
+        if (typeof initialState === 'function') {
+          const stateFactory = initialState as (params: { set: SetState<T>; get: GetState<T> }) => T;
+          return stateFactory({ set, get });
+        }
+        return initialState;
+      },
+      ...middleware
     );
 
-    const zustandStore = this.storeCreator<T>(enhancedStateCreator);
     return new ZustandStateStore(zustandStore);
   }
 }
 
 /**
- * Factory function for creating Zustand state adapters
- * This handles the async import and provides a clean API
+ * Factory function for creating Zustand state adapters with imported dependencies
  */
 export async function createZustandAdapter<T>(
-  config: Omit<ZustandAdapterConfig, 'storeCreator'> = {}
+  config: ZustandAdapterConfig = {}
 ): Promise<StateAdapter<T>> {
   try {
     // Dynamic import for Zustand
-    const zustand = await import('zustand');
-    const create = zustand.create || zustand.default?.create;
-    
-    if (!create) {
-      throw new Error('Could not find Zustand create function');
-    }
-    
-    let storeCreator: ZustandStoreCreator = create;
+    const { create } = await import('zustand');
     
     // Handle devtools middleware if enabled
+    let storeCreator: ZustandStoreCreator = create;
+    
     if (config.devtools) {
       try {
-        const devtoolsModule = await import('zustand/middleware');
-        const devtools = devtoolsModule.devtools;
-        
-        if (devtools) {
-          storeCreator = <T>(createFn: (set: SetState<T>, get: GetState<T>) => T) =>
-            create(devtools(createFn, { name: config.name || 'Lattice Component' }));
-        }
+        const { devtools } = await import('zustand/middleware');
+        storeCreator = (createFn, ...middleware) => 
+          create(devtools(createFn, { name: config.name }), ...middleware);
       } catch (error) {
         console.warn('Zustand devtools middleware not available, continuing without devtools');
       }
@@ -185,7 +182,7 @@ export async function createZustandAdapter<T>(
     });
   } catch (error) {
     throw new Error(
-      `Failed to create Zustand adapter: ${error}. Please ensure zustand is installed: npm install zustand`
+      'Failed to create Zustand adapter. Please ensure zustand is installed: npm install zustand'
     );
   }
 }
@@ -197,33 +194,17 @@ export async function createZustandAdapterWithImmer<T>(
   config: Omit<ZustandAdapterConfig, 'storeCreator'> = {}
 ): Promise<StateAdapter<T>> {
   try {
-    const zustand = await import('zustand');
-    const create = zustand.create || zustand.default?.create;
+    const { create } = await import('zustand');
+    const { immer } = await import('zustand/middleware/immer');
     
-    if (!create) {
-      throw new Error('Could not find Zustand create function');
-    }
+    let storeCreator: ZustandStoreCreator = (createFn, ...middleware) => 
+      create(immer(createFn), ...middleware);
     
-    const immerModule = await import('zustand/middleware/immer');
-    const immer = immerModule.immer;
-    
-    if (!immer) {
-      throw new Error('Could not find Zustand immer middleware');
-    }
-    
-    let storeCreator: ZustandStoreCreator = <T>(createFn: (set: SetState<T>, get: GetState<T>) => T) =>
-      create(immer(createFn));
-    
-    // Handle devtools middleware if enabled
     if (config.devtools) {
       try {
-        const devtoolsModule = await import('zustand/middleware');
-        const devtools = devtoolsModule.devtools;
-        
-        if (devtools) {
-          storeCreator = <T>(createFn: (set: SetState<T>, get: GetState<T>) => T) =>
-            create(devtools(immer(createFn), { name: config.name || 'Lattice Component' }));
-        }
+        const { devtools } = await import('zustand/middleware');
+        storeCreator = (createFn, ...middleware) => 
+          create(devtools(immer(createFn), { name: config.name }), ...middleware);
       } catch (error) {
         console.warn('Zustand devtools middleware not available, continuing without devtools');
       }
@@ -235,18 +216,17 @@ export async function createZustandAdapterWithImmer<T>(
     });
   } catch (error) {
     throw new Error(
-      `Failed to create Zustand adapter with Immer: ${error}. Please ensure zustand and immer are installed: npm install zustand immer`
+      'Failed to create Zustand adapter with Immer. Please ensure zustand and immer are installed: npm install zustand immer'
     );
   }
 }
 
 /**
  * Synchronous factory for testing and controlled environments
- * Requires pre-injected Zustand dependencies
  */
 export function createZustandAdapterSync<T>(
   storeCreator: ZustandStoreCreator,
-  config: Omit<ZustandAdapterConfig, 'storeCreator'> = {}
+  config: ZustandAdapterConfig = {}
 ): StateAdapter<T> {
   return new ZustandStateAdapter<T>({
     ...config,

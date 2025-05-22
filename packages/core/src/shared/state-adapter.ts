@@ -1,28 +1,15 @@
 /**
- * State Adapter Interface for Lattice Components
+ * Core State Adapter Interface for Lattice Components
  * 
- * This interface provides the minimal contract that any state management solution
- * must implement to work with Lattice components. It abstracts away the specific
- * implementation details while providing a consistent API surface.
+ * This defines the minimal contract that any state management solution must implement
+ * to work with Lattice components. It provides complete type safety without any `any` casts.
  */
 
 import type { SetState, GetState } from './types';
 
 /**
- * Core interface that all state adapters must implement
- * This provides the minimal { set, get } contract that Lattice components expect
- */
-export interface StateAdapter<T> {
-  /**
-   * Creates a new state store instance for the given initial state
-   * Returns the tools needed by Lattice components: { set, get }
-   */
-  createStore(initialState: T): StateStore<T>;
-}
-
-/**
- * The store instance returned by StateAdapter.createStore()
- * This is what gets passed to component factories as ModelFactoryParams
+ * The store instance that provides the { set, get } interface
+ * This is what gets passed to component model factories
  */
 export interface StateStore<T> {
   /**
@@ -36,27 +23,37 @@ export interface StateStore<T> {
   set: SetState<T>;
   
   /**
-   * Optional: Subscribe to state changes
-   * This enables framework adapters to build reactive systems
+   * Subscribe to state changes (optional for reactive systems)
    */
   subscribe?: (listener: (state: T) => void) => () => void;
   
   /**
-   * Optional: Destroy the store and clean up resources
-   * Useful for memory management in dynamic component scenarios
+   * Clean up resources (optional for memory management)
    */
   destroy?: () => void;
 }
 
 /**
- * Configuration for state adapters that support middleware
- * Allows adapters to accept middleware stacks for enhanced functionality
+ * Core interface that all state adapters must implement
+ * Provides type-safe state store creation
  */
-export interface StateAdapterWithMiddleware<T, TMiddleware = unknown> 
+export interface StateAdapter<T> {
+  /**
+   * Creates a new state store instance for the given initial state
+   * Returns the tools needed by Lattice components: { set, get }
+   */
+  createStore(initialState: T): StateStore<T>;
+}
+
+/**
+ * Enhanced adapter interface that supports middleware composition
+ * TMiddleware is adapter-specific (e.g., Zustand middleware vs Redux middleware)
+ */
+export interface StateAdapterWithMiddleware<T, TMiddleware> 
   extends StateAdapter<T> {
   /**
    * Creates a store with the specified middleware stack
-   * Middleware stacks are adapter-specific (e.g., Zustand middleware vs Redux middleware)
+   * Middleware stacks are adapter-specific and type-safe
    */
   createStoreWithMiddleware(
     initialState: T, 
@@ -65,53 +62,11 @@ export interface StateAdapterWithMiddleware<T, TMiddleware = unknown>
 }
 
 /**
- * Factory function signature for creating state adapters
- * This allows adapters to be configured before use
+ * Factory function signature for creating configurable state adapters
  */
-export type StateAdapterFactory<T, TConfig = unknown> = (
+export type StateAdapterFactory<T, TConfig = Record<string, unknown>> = (
   config?: TConfig
 ) => StateAdapter<T>;
-
-/**
- * Registry for state adapters
- * Allows runtime selection of different state management strategies
- */
-export interface StateAdapterRegistry {
-  /**
-   * Register a state adapter with a name
-   */
-  register<T>(name: string, adapter: StateAdapter<T>): void;
-  
-  /**
-   * Get a registered state adapter by name
-   */
-  get<T>(name: string): StateAdapter<T> | undefined;
-  
-  /**
-   * List all registered adapter names
-   */
-  list(): string[];
-}
-
-/**
- * Default registry instance
- * Components can use this for adapter selection if no specific adapter is provided
- */
-export const stateAdapterRegistry: StateAdapterRegistry = {
-  adapters: new Map(),
-  
-  register<T>(name: string, adapter: StateAdapter<T>) {
-    (this.adapters as Map<string, StateAdapter<any>>).set(name, adapter);
-  },
-  
-  get<T>(name: string): StateAdapter<T> | undefined {
-    return (this.adapters as Map<string, StateAdapter<any>>).get(name);
-  },
-  
-  list(): string[] {
-    return Array.from((this.adapters as Map<string, StateAdapter<any>>).keys());
-  }
-} as StateAdapterRegistry & { adapters: Map<string, StateAdapter<any>> };
 
 /**
  * Type guard to check if an object implements StateAdapter
@@ -121,7 +76,7 @@ export function isStateAdapter<T>(obj: unknown): obj is StateAdapter<T> {
     typeof obj === 'object' &&
     obj !== null &&
     'createStore' in obj &&
-    typeof (obj as any).createStore === 'function'
+    typeof (obj as StateAdapter<T>).createStore === 'function'
   );
 }
 
@@ -134,7 +89,7 @@ export function isStateStore<T>(obj: unknown): obj is StateStore<T> {
     obj !== null &&
     'get' in obj &&
     'set' in obj &&
-    typeof (obj as any).get === 'function' &&
-    typeof (obj as any).set === 'function'
+    typeof (obj as StateStore<T>).get === 'function' &&
+    typeof (obj as StateStore<T>).set === 'function'
   );
 }
