@@ -6,7 +6,7 @@ import {
   COMPONENT_FACTORY_BRAND,
   LATTICE_BRAND,
   Lattice,
-  ComponentFactory
+  ComponentFactory,
 } from '../types';
 import { brandWithSymbol } from './marker';
 
@@ -69,7 +69,6 @@ export function isViewTools(value: unknown): boolean {
     Boolean(Reflect.get(value, VIEW_TOOLS_BRAND))
   );
 }
-
 
 /**
  * Type guard to check if a value is a lattice instance
@@ -191,8 +190,6 @@ if (import.meta.vitest) {
       expect(isViewTools({ [Symbol('wrong')]: true })).toBe(false);
     });
   });
-  
-  // Legacy factory tests have been removed as backwards compatibility is no longer needed
 
   describe('lattice', () => {
     it('should correctly identify a Lattice', () => {
@@ -226,13 +223,13 @@ if (import.meta.vitest) {
       expect(isLattice({})).toBe(false);
       expect(isLattice(() => {})).toBe(false);
     });
-    
+
     it('should correctly identify a ComponentFactory', () => {
       const mockComponentFactory = brandWithSymbol(
         () => ({}),
         COMPONENT_FACTORY_BRAND
       );
-      
+
       expect(isComponentFactory(mockComponentFactory)).toBe(true);
       expect(isComponentFactory({})).toBe(false);
       expect(isComponentFactory(() => {})).toBe(false);

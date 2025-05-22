@@ -4,7 +4,7 @@ import {
   LATTICE_BRAND,
   ComponentConfig,
   ComponentFactory,
-  ComponentInstance,
+  ComponentFactoryInstance,
   Lattice,
   ViewFactory,
   ModelFactory,
@@ -156,7 +156,7 @@ export function instantiateComponent<
   TViews extends Record<string, unknown> = Record<string, unknown>,
 >(
   factory: ComponentFactory<TModel, TSelectors, TActions, TViews>
-): ComponentInstance<TModel, TSelectors, TActions, TViews> {
+): ComponentFactoryInstance<TModel, TSelectors, TActions, TViews> {
   return brandWithSymbol(() => factory(), COMPONENT_FACTORY_INSTANCE_BRAND);
 }
 
@@ -234,7 +234,9 @@ if (import.meta.vitest) {
     it('should throw errors for invalid configurations', () => {
       // Use standardized mock implementations
       const validModel = vi.fn(() => mockImplementations.counter());
-      const validSelectors = vi.fn(() => mockImplementations.counterSelectors());
+      const validSelectors = vi.fn(() =>
+        mockImplementations.counterSelectors()
+      );
       const validActions = vi.fn(() => mockImplementations.counterActions());
       const validView = { counter: vi.fn(() => ({ 'data-count': 0 })) };
 

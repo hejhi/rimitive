@@ -218,14 +218,6 @@ export type ComponentFactoryInstance<
   typeof COMPONENT_FACTORY_INSTANCE_BRAND
 >;
 
-// Legacy type for backward compatibility - marked for deprecation
-export type ComponentInstance<
-  TModel = unknown,
-  TSelectors = unknown,
-  TActions = unknown,
-  TViews extends Record<string, unknown> = Record<string, unknown>,
-> = ComponentFactoryInstance<TModel, TSelectors, TActions, TViews>;
-
 /**
  * Component extension with partial override
  * Allows selectively extending or replacing parts of a component

@@ -144,6 +144,4 @@ if (import.meta.vitest) {
       expect(isComponentFactoryInstance({})).toBe(false);
     });
   });
-
-  // Legacy instance tests have been removed as backwards compatibility is no longer needed
 }

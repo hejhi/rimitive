@@ -201,11 +201,6 @@ This dual-adapter architecture enables component libraries to focus entirely on 
 
 ## Adoption Scenarios
 
-### Legacy Integration
-- **Existing Redux Applications**: Use Redux adapter to integrate Lattice components without architectural changes
-- **Zustand Codebases**: Direct compatibility with existing Zustand infrastructure and middleware
-- **Custom State Solutions**: Build minimal adapters for proprietary state management systems
-
 ### Hybrid Applications
 - **Performance-Critical Components**: Use memory-based adapters (Zustand) for high-frequency interactions
 - **Data-Heavy Components**: Use persistence-based adapters (NextJS, Database) for server-state integration  

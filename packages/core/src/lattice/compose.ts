@@ -266,14 +266,7 @@ if (import.meta.vitest) {
       );
 
       // Create a properly typed callback
-      const callback = (
-        _: ComponentConfig<
-          TestBaseModel,
-          TestBaseSelectors,
-          TestBaseActions,
-          TestBaseViews
-        >
-      ): ComponentExtension<
+      const callback = (): ComponentExtension<
         TestExtModel,
         TestExtSelectors,
         TestExtActions,
