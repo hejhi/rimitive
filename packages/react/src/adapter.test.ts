@@ -48,4 +48,55 @@ describe('createReactAdapter', () => {
     // Assert: Verify useActions returns the exact actions from the LatticeAPI
     expect(actions).toBe(mockActions);
   });
+
+  it('useSelectors should return selected values from LatticeAPI', () => {
+    // Arrange: Mock selectors that the store adapter provides
+    const mockSelectors = {
+      count: 5,
+      doubled: 10,
+    };
+    
+    const mockLatticeAPI: LatticeAPI<typeof mockSelectors, any, any> = {
+      getSelectors: () => mockSelectors,
+      getActions: () => ({}),
+      getViews: () => ({}),
+      subscribe: () => () => {},
+      destroy: () => {},
+    };
+
+    // Act: Create adapter and use selector
+    const reactAdapter = createReactAdapter(mockLatticeAPI);
+    // Select a specific value using a selector function
+    const count = reactAdapter.useSelectors((selectors) => selectors.count);
+
+    // Assert: Verify useSelectors returns the selected value
+    expect(count).toBe(5);
+  });
+
+  it('useSelectors should support selecting multiple values', () => {
+    // Arrange: Mock selectors
+    const mockSelectors = {
+      count: 5,
+      doubled: 10,
+      name: 'test',
+    };
+    
+    const mockLatticeAPI: LatticeAPI<typeof mockSelectors, any, any> = {
+      getSelectors: () => mockSelectors,
+      getActions: () => ({}),
+      getViews: () => ({}),
+      subscribe: () => () => {},
+      destroy: () => {},
+    };
+
+    // Act: Select multiple values
+    const reactAdapter = createReactAdapter(mockLatticeAPI);
+    const selected = reactAdapter.useSelectors((selectors) => ({
+      count: selectors.count,
+      name: selectors.name,
+    }));
+
+    // Assert: Verify the selected object
+    expect(selected).toEqual({ count: 5, name: 'test' });
+  });
 });
