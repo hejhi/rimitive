@@ -159,7 +159,7 @@ export type ComponentConfig<
   model: ModelFactory<TModel>;
   selectors: SelectorsFactory<TSelectors, TModel>;
   actions: ActionsFactory<TActions, TModel>;
-  view: {
+  views: {
     [K in keyof TViews]: ViewFactory<TViews[K], TSelectors, TActions>;
   };
 };
@@ -199,7 +199,7 @@ export type ComponentExtension<
   model?: ModelFactory<TModel>;
   selectors?: SelectorsFactory<TSelectors, TModel>;
   actions?: ActionsFactory<TActions, TModel>;
-  view?: {
+  views?: {
     [K in keyof TViews]?: ViewFactory<TViews[K], TSelectors, TActions>;
   };
 };

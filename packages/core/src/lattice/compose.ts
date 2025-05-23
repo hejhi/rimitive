@@ -62,7 +62,7 @@ export function withComponent<
       model: component.getModel(),
       selectors: component.getSelectors(),
       actions: component.getActions(),
-      view: component.getAllViews(),
+      views: component.getAllViews(),
     };
 
     // Get extensions from the callback using the elements
@@ -81,9 +81,11 @@ export function withComponent<
         component.getModel()) as ModelFactory<TExtModel>,
       selectors: (extensions.selectors ||
         component.getSelectors()) as SelectorsFactory<TExtSelectors, TExtModel>,
-      actions: (extensions.actions ||
-        component.getActions()) as ActionsFactory<TExtActions, TExtModel>,
-      view: (extensions.view || component.getAllViews()) as {
+      actions: (extensions.actions || component.getActions()) as ActionsFactory<
+        TExtActions,
+        TExtModel
+      >,
+      views: (extensions.views || component.getAllViews()) as {
         [K in keyof TExtViews]: ViewFactory<TExtViews[K]>;
       },
     };
@@ -210,8 +212,8 @@ if (import.meta.vitest) {
         expect(elements.model).toBe(mockModel);
         expect(elements.selectors).toBe(mockSelectors);
         expect(elements.actions).toBe(mockActions);
-        expect(elements.view.counter).toBe(mockCounterView);
-        expect(elements.view.button).toBe(mockButtonView);
+        expect(elements.views.counter).toBe(mockCounterView);
+        expect(elements.views.button).toBe(mockButtonView);
 
         return {};
       });
@@ -274,10 +276,12 @@ if (import.meta.vitest) {
       > => {
         return {
           model: extModel as unknown as ModelFactory<TestExtModel>,
-          selectors:
-            extSelectors as unknown as SelectorsFactory<TestExtSelectors, TestExtModel>,
+          selectors: extSelectors as unknown as SelectorsFactory<
+            TestExtSelectors,
+            TestExtModel
+          >,
           actions: extActions as unknown as ActionsFactory<TestExtActions>,
-          view: {
+          views: {
             counter: extCounterView as unknown as ViewFactory<
               TestExtViews['counter']
             >,
@@ -315,8 +319,8 @@ if (import.meta.vitest) {
       expect(result.model).toBe(extModel);
       expect(result.selectors).toBe(extSelectors);
       expect(result.actions).toBe(extActions);
-      expect(result.view.counter).toBe(extCounterView);
-      expect(result.view.reset).toBe(extResetView);
+      expect(result.views.counter).toBe(extCounterView);
+      expect(result.views.reset).toBe(extResetView);
     });
 
     it('should use base components when extensions are not provided', () => {
@@ -387,7 +391,7 @@ if (import.meta.vitest) {
       expect(result.model).toBe(extModel);
       expect(result.selectors).toBe(mockSelectors);
       expect(result.actions).toBe(mockActions);
-      expect(result.view).toEqual({
+      expect(result.views).toEqual({
         counter: mockCounterView,
         button: mockButtonView,
       });

@@ -11,9 +11,9 @@ Traditional component libraries lock you into their UI decisions and framework c
 const searchableList = createComponent(/* behavior specification */);
 
 // Use anywhere
-<div {...searchableList.view.input}>           // React
-<ul {...searchableList.view.results}>          // Any structure  
-<MyCustomList {...searchableList.view.list}>  // Your components
+<div {...searchableList.views.input}>           // React
+<ul {...searchableList.views.results}>          // Any structure  
+<MyCustomList {...searchableList.views.list}>  // Your components
 ```
 
 **Key insight**: Most UI complexity isn't about styling; it's about **state management, interaction patterns, and accessibility**. Lattice lets you solve these once and reuse everywhere.
@@ -71,7 +71,7 @@ const fileTree = createComponent(() => {
     })
   );
   
-  return { model, actions, selectors, view: { folder: folderView } };
+  return { model, actions, selectors, views: { folder: folderView } };
 });
 ```
 
@@ -100,7 +100,7 @@ const selectableFileModel = createModel<FileTreeModel & SelectionModel>(
 
 // Enhanced component with selection
 const selectableFileTree = createComponent(
-  withComponent(fileTree, ({ model, view, actions, selectors }) => {
+  withComponent(fileTree, ({ model, views, actions, selectors }) => {
     const enhancedModel = selectableFileModel;
     
     // Actions remain pure intent
@@ -122,7 +122,7 @@ const selectableFileTree = createComponent(
     
     const fileView = project(enhancedSelectors, enhancedActions).toView(
       ({ actions, selectors }) => (fileId: string) => ({
-        ...view.folder()({ actions, selectors })(fileId),
+        ...views.folder()({ actions, selectors })(fileId),
         'aria-selected': selectors().isSelected(fileId),
         onClick: (event) => {
           // View logic combines multiple intents
@@ -138,7 +138,7 @@ const selectableFileTree = createComponent(
       model: enhancedModel,
       actions: enhancedActions,
       selectors: enhancedSelectors,
-      view: { folder: view.folder, file: fileView },
+      views: { folder: views.folder, file: fileView },
     };
   })
 );
@@ -159,7 +159,7 @@ function FileExplorer() {
   return (
     <div role="tree">
       {nodes.map(node => (
-        <div key={node.id} {...selectableFileTree.view.file(node.id)}>
+        <div key={node.id} {...selectableFileTree.views.file(node.id)}>
           {node.name}
         </div>
       ))}
@@ -182,7 +182,7 @@ function FileExplorer() {
 export default {
   setup() {
     const { nodes } = useSelectors(selectableFileTree);
-    const getFileProps = (nodeId) => selectableFileTree.view.file(nodeId);
+    const getFileProps = (nodeId) => selectableFileTree.views.file(nodeId);
     return { nodes, getFileProps };
   }
 }
@@ -196,7 +196,7 @@ const container = document.getElementById('file-tree');
 
 explorer.selectors.nodes.forEach(node => {
   const element = document.createElement('div');
-  Object.assign(element, explorer.view.file(node.id));
+  Object.assign(element, explorer.views.file(node.id));
   element.textContent = node.name;
   container.appendChild(element);
 });
@@ -255,8 +255,8 @@ export const DataGrid = createComponent(/* data grid behavior */);
 export const Calendar = createComponent(/* calendar behavior */);
 
 // Users apply them to their UI systems
-<MyTable {...DataGrid.view.table}>
-<MyCustomCalendar {...Calendar.view.month}>
+<MyTable {...DataGrid.views.table}>
+<MyCustomCalendar {...Calendar.views.month}>
 ```
 
 ### Design Systems
@@ -269,13 +269,13 @@ Separate behavior from design:
 Same logic works on web, mobile, desktop:
 ```typescript
 // Web
-<div {...fileTree.view.folder}>
+<div {...fileTree.views.folder}>
 
 // React Native  
-<TouchableOpacity {...fileTree.view.folder}>
+<TouchableOpacity {...fileTree.views.folder}>
 
 // Desktop (Electron)
-<button {...fileTree.view.folder}>
+<button {...fileTree.views.folder}>
 ```
 
 ## Possibilities: Framework-Specific View Recomposition
@@ -299,7 +299,7 @@ const TreeComponent = createComponent(() => {
       onClick: (nodeId) => actions().toggleNode(nodeId),
     }));
     
-  return { model, actions, selectors, view: { node: nodeView } };
+  return { model, actions, selectors, views: { node: nodeView } };
 });
 ```
 

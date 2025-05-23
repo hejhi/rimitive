@@ -53,7 +53,7 @@ export function createComponent<
       throw new Error('Component requires actions');
     }
 
-    if (!config.view || Object.keys(config.view).length === 0) {
+    if (!config.views || Object.keys(config.views).length === 0) {
       throw new Error('Component requires at least one view');
     }
 
@@ -71,7 +71,7 @@ export function createComponent<
           getView: <K extends keyof TViews>(
             viewName: K
           ): ViewFactory<TViews[K], TSelectors, TActions> => {
-            const view = config.view[viewName];
+            const view = config.views[viewName];
             if (!view) {
               throw new Error(`View "${String(viewName)}" not found`);
             }
@@ -79,7 +79,7 @@ export function createComponent<
           },
 
           getAllViews: () => {
-            return { ...config.view } as {
+            return { ...config.views } as {
               readonly [K in keyof TViews]: ViewFactory<
                 TViews[K],
                 TSelectors,
@@ -157,7 +157,7 @@ if (import.meta.vitest) {
           model: undefined as unknown as ModelFactory<unknown>,
           selectors: mockSelectorsFactory,
           actions: mockActionsFactory,
-          view: mockViewFactory,
+          views: mockViewFactory,
         }));
 
         factory();
@@ -169,7 +169,7 @@ if (import.meta.vitest) {
           model: mockModelFactory,
           selectors: undefined as unknown as SelectorsFactory<unknown>,
           actions: mockActionsFactory,
-          view: mockViewFactory,
+          views: mockViewFactory,
         }));
 
         factory();
@@ -181,19 +181,19 @@ if (import.meta.vitest) {
           model: mockModelFactory,
           selectors: mockSelectorsFactory,
           actions: undefined as unknown as ActionsFactory<unknown>,
-          view: mockViewFactory,
+          views: mockViewFactory,
         }));
 
         factory();
       }).toThrow('Component requires actions');
 
-      // Missing view
+      // Missing views
       expect(() => {
         const factory = createComponent(() => ({
           model: mockModelFactory,
           selectors: mockSelectorsFactory,
           actions: mockActionsFactory,
-          view: undefined as unknown as Record<string, ViewFactory<unknown>>,
+          views: undefined as unknown as Record<string, ViewFactory<unknown>>,
         }));
 
         factory();
@@ -205,7 +205,7 @@ if (import.meta.vitest) {
           model: mockModelFactory,
           selectors: mockSelectorsFactory,
           actions: mockActionsFactory,
-          view: {},
+          views: {},
         }));
 
         factory();
@@ -309,7 +309,7 @@ if (import.meta.vitest) {
         model: mockModel,
         selectors: mockSelectors,
         actions: mockActions,
-        view: {
+        views: {
           counter: mockCounterView,
           button: mockButtonView,
         },

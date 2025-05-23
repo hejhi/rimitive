@@ -32,7 +32,7 @@ import { createView } from './create';
  *   model,
  *   selectors: selectorsFactory,
  *   actions: actionsFactory,
- *   view: { node: nodeView }  // Compatible!
+ *   views: { node: nodeView }  // Compatible!
  * }));
  * ```
  */

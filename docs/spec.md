@@ -51,7 +51,7 @@ Lattice introduces an architectural pattern that could be called "VSAM" (View-Se
 
 | Component | Purpose                                                           | Accessibility                      | Traditional Parallel |
 |-----------|-------------------------------------------------------------------|------------------------------------|----------------------|
-| **View**  | Reactive representations transforming selectors into UI attributes | Public (composition & consumption) | View in MVC, but as pure data rather than components |
+| **Views**  | Reactive representations transforming selectors into UI attributes | Public (composition & consumption) | View in MVC, but as pure data rather than components |
 | **Selectors** | Public read-only values and functions derived from the model  | Public (composition & consumption) | Computed Properties in MVVM |
 | **Actions** | Pure intent functions representing operations (WHAT)            | Internal (composition only)        | Controller in MVC, Actions in Redux/Flux |
 | **Model** | Contains state and business logic (HOW)                           | Internal (composition only)        | Model in MVC, ViewModel in MVVM |
@@ -280,7 +280,7 @@ const counterComponent = createComponent(() => {
     model,
     actions, 
     selectors,
-    view: {
+    views: {
       counter: counterView,
       button: buttonView
     }
@@ -293,7 +293,7 @@ const counterComponent = createComponent(() => {
 // which has no dependencies, and is purely computed from state. The user can merge in any of the views
 // they wish, including filtering composed views.
 const enhancedComponent = createComponent(
-  withComponent(counterComponent, ({ model, view, actions, selectors }) => {
+  withComponent(counterComponent, ({ model, views, actions, selectors }) => {
     // Create enhanced model that adds reset functionality
     const enhancedModel = createModel<CounterModel & { reset(): void }>(
       (tools) => ({
@@ -319,7 +319,7 @@ const enhancedComponent = createComponent(
 
     const enhancedCounter = project(enhancedSelectors, enhancedActions).toView(
       ({ actions, selectors }) => () => ({
-        ...view.counter()({ actions, selectors })(),
+        ...views.counter()({ actions, selectors })(),
         onClick: () => actions().reset(), // Actions are called, not referenced
       })
     );
@@ -329,7 +329,7 @@ const enhancedComponent = createComponent(
       model: enhancedModel,
       actions: enhancedActions,
       selectors: enhancedSelectors,
-      view: { counter: enhancedCounter },
+      views: { counter: enhancedCounter },
     };
   })
 );
@@ -434,14 +434,14 @@ export const createComponentStore = (config) => create((...a) => ({
     }
   }));
 
-  export const { selector, view, action } = createStoreSelectors(store);
+  export const { selector, views, action } = createStoreSelectors(store);
 
   // example in React adaptor
   function Counter() {
     const count = selector('count');
     const isEven = selector('isEven');
-    const labelProps = view('label');
-    const buttonProps = view('button');
+    const labelProps = views('label');
+    const buttonProps = views('button');
     const increment = action('increment');
     const toggleTheme = action('toggleTheme');
 
@@ -456,7 +456,7 @@ export const createComponentStore = (config) => create((...a) => ({
   }
   ```
   - selector() uses strict equality (primitives)
-  - view() uses shallow comparison (objects)
+  - views() uses shallow comparison (objects)
   - action() returns stable function references
 
 3. **Subscription Support**: The architecture enables targeted subscriptions to specific slices:

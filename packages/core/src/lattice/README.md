@@ -53,7 +53,7 @@ Lattice introduces the **VSAM** (View-Selector-Action-Model) pattern for describ
 ```mermaid
 graph TB
     subgraph "VSAM Contracts"
-        V[View<br/>UI Attribute Specifications]
+        V[Views<br/>UI Attribute Specifications]
         S[Selectors<br/>Data Access Contracts]
         A[Actions<br/>Intent Specifications]
         M[Model<br/>State & Logic Contracts]
@@ -86,7 +86,7 @@ graph TB
 | **Model** | State structure & mutation contracts | Actual state storage (`set`, `get` tools) |
 | **Selectors** | Data derivation specifications | State access & subscription mechanisms |
 | **Actions** | Intent function signatures | Event handling & state mutation execution |
-| **View** | UI attribute specifications | Framework-specific rendering & reactivity |
+| **Views** | UI attribute specifications | Framework-specific rendering & reactivity |
 
 ## Dual-Adapter Architecture
 

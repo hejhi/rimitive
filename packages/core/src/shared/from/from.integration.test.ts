@@ -8,6 +8,12 @@
  * but full execution testing is pending implementation support.
  */
 
+// the model is the data store.
+// actions are a mapping of selectors of methods on the model.
+// selectors can compute off the model (not just select)
+// views can select/compute off selectors and call actions.
+// selectors and views need to be reactive and memoized.
+
 import { describe, it, expect } from 'vitest';
 import { createComponent } from '../../lattice/create';
 import { withComponent } from '../../lattice/compose';
@@ -77,7 +83,7 @@ describe('Basic Component Composition', () => {
       model: baseModel,
       selectors: baseSelectors,
       actions: baseActions,
-      view: { counter, counterWithLabel, counterWithOptions },
+      views: { counter, counterWithLabel, counterWithOptions },
     }));
 
     // Verify the base component was created
@@ -85,14 +91,14 @@ describe('Basic Component Composition', () => {
 
     // Create an enhanced component using withComponent
     const EnhancedComponent = createComponent(
-      withComponent(BaseComponent, ({ model, selectors, actions, view }) => {
+      withComponent(BaseComponent, ({ model, selectors, actions, views }) => {
         // For this test, we just verify we have access to the base component parts
         expect(model).toBe(baseModel);
         expect(selectors).toBe(baseSelectors);
         expect(actions).toBe(baseActions);
-        expect(view.counter).toBe(counter);
-        expect(view.counterWithLabel).toBe(counterWithLabel);
-        expect(view.counterWithOptions).toBe(counterWithOptions);
+        expect(views.counter).toBe(counter);
+        expect(views.counterWithLabel).toBe(counterWithLabel);
+        expect(views.counterWithOptions).toBe(counterWithOptions);
 
         // Create enhanced model that adds reset functionality
         const enhancedModel = createModel<CounterModel & { reset(): void }>(
@@ -164,7 +170,7 @@ describe('Basic Component Composition', () => {
           model: enhancedModel,
           actions: enhancedActions,
           selectors: enhancedSelectors,
-          view: {
+          views: {
             counter: enhancedCounter,
             counterWithLabel: enhancedCounterWithLabel,
             counterWithOptions: enhancedCounterWithOptions,
