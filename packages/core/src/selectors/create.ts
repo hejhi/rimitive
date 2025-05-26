@@ -1,6 +1,7 @@
 import {
   SELECTORS_FACTORY_BRAND,
   SELECTORS_TOOLS_BRAND,
+  SelectorsFactory,
   SelectorsFactoryParams,
   SelectorsSliceFactory,
 } from '../shared/types';
@@ -12,17 +13,6 @@ import { brandWithSymbol } from '../shared/identify';
  * This is the primary API for creating selectors in Lattice. Use it to define your
  * selectors' properties and derived values for accessing the model's state.
  *
- * @example
- * ```typescript
- * // Basic usage
- * const counterSelectors = createSelectors(model, (getModel) => ({
- *   count: getModel().count,
- *   doubleCount: getModel().count * 2,
- *   isPositive: getModel().count > 0,
- *   formattedCount: `Count: ${getModel().count}`
- * }));
- * ```
- *
  * @param params The model that these selectors will derive from
  * @param factory A function that produces a selectors object with properties and values
  * @returns A selectors instance function that can be used with compose
@@ -30,7 +20,7 @@ import { brandWithSymbol } from '../shared/identify';
 export function createSelectors<TSelectors, TModel = any>(
   params: { model: TModel },
   factory: SelectorsSliceFactory<TSelectors, TModel>
-) {
+): SelectorsFactory<TSelectors, TModel> {
   return brandWithSymbol(function selectorsFactory<
     S extends Partial<TSelectors> = TSelectors,
   >(selector?: (base: TSelectors) => S) {
@@ -40,26 +30,10 @@ export function createSelectors<TSelectors, TModel = any>(
         throw new Error('Selectors factory requires a model function');
       }
 
-      // Create branded tools object with access functions for the factory
-      const tools = brandWithSymbol(
-        {
-          model: () => {
-            if (params.model === undefined) {
-              ('Attempting to access model that was not provided to createSelectors');
-            }
-            return params.model;
-          },
-        },
-        SELECTORS_TOOLS_BRAND
-      );
-
-      // Call the factory with object parameters to match the spec
-      const result = factory(tools);
+      const result = factory(brandWithSymbol(options, SELECTORS_TOOLS_BRAND));
 
       // If a selector is provided, apply it to filter properties
-      if (selector) {
-        return selector(result) as S;
-      }
+      if (selector) return selector(result);
 
       // Otherwise return the full result
       return result as unknown as S;

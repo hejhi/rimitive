@@ -13,49 +13,26 @@ import { brandWithSymbol } from '../shared/identify';
  * This is the primary API for creating models in Lattice. Use it to define your
  * model's state, actions, and derived values.
  *
- * @example
- * ```typescript
- * // Basic usage
- * const counterModel = createModel(({ get, set }) => ({
- *   count: 0,
- *   increment: () => set(state => ({ count: state.count + 1 })),
- *   decrement: () => set(state => ({ count: state.count - 1 })),
- *   reset: () => set({ count: 0 }),
- *   doubleCount: () => get().count * 2
- * }));
- *```
- *
  * @param sliceFactory A function that produces a state object with optional methods and derived properties
  * @returns A model factory function that can be composed
  */
-export function createModel<T>(
-  sliceFactory: ModelSliceFactory<T>
-): ModelFactory<T> {
-  return brandWithSymbol(function modelFactory<S extends Partial<T> = T>(
-    selector?: (base: T) => S
-  ) {
-    return (options: ModelFactoryParams<T>) => {
+export function createModel<TModel>(
+  sliceFactory: ModelSliceFactory<TModel>
+): ModelFactory<TModel> {
+  return brandWithSymbol(function modelFactory<
+    S extends Partial<TModel> = TModel,
+  >(selector?: (base: TModel) => S) {
+    return (options: ModelFactoryParams<TModel>) => {
       // Ensure the required properties exist
       if (!options.get || !options.set) {
         throw new Error('Model factory requires get and set functions');
       }
 
-      // Create a branded tools object for the factory
-      const tools = brandWithSymbol(
-        {
-          set: options.set,
-          get: options.get,
-        },
-        MODEL_TOOLS_BRAND
-      );
-
       // Call the factory with object parameters to match the spec
-      const result = sliceFactory(tools);
+      const result = sliceFactory(brandWithSymbol(options, MODEL_TOOLS_BRAND));
 
       // If a selector is provided, apply it to filter properties
-      if (selector) {
-        return selector(result) as S;
-      }
+      if (selector) return selector(result);
 
       // Otherwise return the full result
       return result as unknown as S;

@@ -3,6 +3,7 @@ import {
   ACTIONS_FACTORY_BRAND,
   ActionsFactoryParams,
   ActionsSliceFactory,
+  ActionsFactory,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 import { createModel } from '../model';
@@ -31,7 +32,7 @@ import { createModel } from '../model';
 export function createActions<TActions, TModel = any>(
   params: { model: TModel },
   factory: ActionsSliceFactory<TActions, TModel>
-) {
+): ActionsFactory<TActions, TModel> {
   return brandWithSymbol(function actionsFactory<
     S extends Partial<TActions> = TActions,
   >(selector?: (base: TActions) => S) {
@@ -41,28 +42,11 @@ export function createActions<TActions, TModel = any>(
         throw new Error('Actions factory requires a model function');
       }
 
-      // Create branded tools object for the factory with proper typing
-      const tools = brandWithSymbol(
-        {
-          model: () => {
-            if (params.model === undefined) {
-              throw new Error(
-                'Attempting to access model that was not provided to createActions'
-              );
-            }
-            return params.model;
-          },
-        },
-        ACTIONS_TOOLS_BRAND
-      );
-
       // Call the factory with object parameters to match the spec
-      const result = factory(tools);
+      const result = factory(brandWithSymbol(options, ACTIONS_TOOLS_BRAND));
 
       // If a selector is provided, apply it to filter properties
-      if (selector) {
-        return selector(result) as S;
-      }
+      if (selector) return selector(result);
 
       // Otherwise return the full result
       return result as unknown as S;

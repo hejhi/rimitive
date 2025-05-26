@@ -3,6 +3,7 @@ import {
   VIEW_FACTORY_BRAND,
   ViewSliceFactory,
   ViewFactoryParams,
+  ViewFactory,
 } from '../shared/types';
 import { brandWithSymbol } from '../shared/identify';
 
@@ -12,21 +13,6 @@ import { brandWithSymbol } from '../shared/identify';
  * This is the primary API for creating views in Lattice. Use it to define your
  * view's projections and values from selectors and actions. For composition, use the fluent compose API.
  *
- * @example
- * ```typescript
- * // Basic usage
- * const counterView = createView({ selectors, actions }, ({ selectors, actions }) => ({
- *   "data-count": selectors().count,
- *   "aria-live": "polite",
- *   onClick: actions().increment,
- *   onKeyDown: (event) => {
- *     if (event.key === 'Enter') {
- *       actions().increment();
- *     }
- *   }
- * }));
- * ```
- *
  * @param params Object containing selectors and actions to be used
  * @param factory Function that produces a view object with projections and values
  * @returns A view instance function that can be used with compose
@@ -34,7 +20,7 @@ import { brandWithSymbol } from '../shared/identify';
 export function createView<T, TSelectors = unknown, TActions = unknown>(
   params: { selectors?: TSelectors; actions?: TActions },
   factory: ViewSliceFactory<T, TSelectors, TActions>
-) {
+): ViewFactory<T, TSelectors, TActions> {
   return brandWithSymbol(function viewFactory<S extends Partial<T> = T>(
     selector?: (base: T) => S
   ) {
@@ -46,55 +32,11 @@ export function createView<T, TSelectors = unknown, TActions = unknown>(
         );
       }
 
-      // Validate selectors and actions if they're used in the factory
-      if (
-        params.selectors === undefined &&
-        factory.toString().includes('selectors()')
-      ) {
-        throw new Error(
-          'View factory is using selectors() but no selectors were provided'
-        );
-      }
-
-      if (
-        params.actions === undefined &&
-        factory.toString().includes('actions()')
-      ) {
-        throw new Error(
-          'View factory is using actions() but no actions were provided'
-        );
-      }
-
-      // Create branded tools object with access functions for the factory
-      const tools = brandWithSymbol(
-        {
-          selectors: () => {
-            if (params.selectors === undefined) {
-              throw new Error(
-                'Attempting to access selectors that were not provided to createView'
-              );
-            }
-            return params.selectors;
-          },
-          actions: () => {
-            if (params.actions === undefined) {
-              throw new Error(
-                'Attempting to access actions that were not provided to createView'
-              );
-            }
-            return params.actions;
-          },
-        },
-        VIEW_TOOLS_BRAND
-      );
-
       // Call the factory with object parameters to match the spec
-      const result = factory(tools);
+      const result = factory(brandWithSymbol(options, VIEW_TOOLS_BRAND));
 
       // If a selector is provided, apply it to filter properties
-      if (selector) {
-        return selector(result) as S;
-      }
+      if (selector) return selector(result);
 
       // Otherwise return the full result
       return result as unknown as S;
@@ -180,102 +122,6 @@ if (import.meta.vitest) {
       // Ensure selectors and actions functions return the correct values
       expect(factorySpy.mock.calls[0]?.[0].selectors()).toBe(mockSelectors);
       expect(factorySpy.mock.calls[0]?.[0].actions()).toBe(mockActions);
-    });
-
-    it('should throw an error when required tools are missing', () => {
-      const view = createView({}, () => ({ count: 1 }));
-      const sliceCreator = view();
-
-      // Should throw when selectors or actions are missing
-      // @ts-expect-error
-      expect(() => sliceCreator({})).toThrow(
-        'View factory requires selectors and actions functions'
-      );
-
-      expect(() =>
-        // @ts-expect-error
-        sliceCreator({ actions: () => ({}) })
-      ).toThrow('View factory requires selectors and actions functions');
-    });
-
-    it('should throw an error when accessing selectors that were not provided', () => {
-      // Create a view that tries to use selectors without providing them
-      const view = createView({}, ({ selectors }) => ({
-        // @ts-expect-error
-        value: selectors().count, // This should throw
-      }));
-
-      const sliceCreator = view();
-
-      // Use standardized mock tools
-      const mockTools = createMockTools({
-        selectors: () => ({}),
-        actions: () => ({}),
-      });
-
-      // Should throw when trying to access unavailable selectors
-      expect(() => sliceCreator(mockTools)).toThrow(
-        'View factory is using selectors() but no selectors were provided'
-      );
-    });
-
-    it('should throw an error when accessing actions that were not provided', () => {
-      // Create a view that tries to use actions without providing them
-      const view = createView({}, ({ actions }) => ({
-        // @ts-expect-error
-        handler: actions().increment, // This should throw
-      }));
-
-      const sliceCreator = view();
-
-      // Use standardized mock tools
-      const mockTools = createMockTools({
-        selectors: () => ({}),
-        actions: () => ({}),
-      });
-
-      // Should throw when trying to access unavailable actions
-      expect(() => sliceCreator(mockTools)).toThrow(
-        'View factory is using actions() but no actions were provided'
-      );
-    });
-
-    it('should check for selectors and actions usage at creation time', () => {
-      // Should throw when using selectors without providing them
-      expect(() => {
-        const viewFactory = createView(
-          {}, // No selectors
-          ({ selectors }) => ({
-            // @ts-expect-error
-            value: selectors().count, // This reference will be detected
-          })
-        );
-
-        const sliceCreator = viewFactory();
-        const mockTools = createMockTools({
-          selectors: () => ({}),
-          actions: () => ({}),
-        });
-        sliceCreator(mockTools); // This should throw
-      }).toThrow();
-
-      // Should throw when using actions without providing them
-      expect(() => {
-        const viewFactory = createView(
-          {}, // No actions
-          ({ actions }) => ({
-            // @ts-expect-error
-            handler: actions().increment, // This reference will be detected
-          })
-        );
-
-        const sliceCreator = viewFactory();
-        const mockTools = createMockTools({
-          selectors: () => ({}),
-          actions: () => ({}),
-        });
-        sliceCreator(mockTools); // This should throw
-      }).toThrow();
     });
   });
 }

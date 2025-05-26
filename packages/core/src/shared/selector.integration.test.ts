@@ -80,7 +80,7 @@ describe('Selector Pattern', () => {
       }>(({ name, isActive, ...rest }) => rest);
 
       // Use standardized mock tools
-      const mockTools = createMockTools({ model: vi.fn() });
+      const mockTools = createMockTools({ model: () => mockModel });
 
       // Initialize the filtered selectors
       const slice = filteredSelectors(mockTools);
@@ -178,7 +178,7 @@ describe('Selector Pattern', () => {
 
       // Use standardized mock tools
       const mockTools = createMockTools({
-        actions: vi.fn(),
+        actions: () => mockActions,
         selectors: () => mockSelectors,
       });
 
