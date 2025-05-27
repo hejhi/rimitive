@@ -92,3 +92,7 @@ export {
 // Composition utilities
 export { from } from './shared/from';
 export { project } from './view/project';
+
+// Enhancers
+export { derive, combine } from './shared/enhancers/index';
+export type { Enhancer, EnhancerContext } from './shared/enhancers';
