@@ -30,7 +30,7 @@ import { createModel } from '../model';
  */
 // Allow specifying just T (actions type) and infer model instance type
 export function createActions<TActions, TModel = any>(
-  params: { model: TModel },
+  _params: { model: TModel },
   factory: ActionsSliceFactory<TActions, TModel>
 ): ActionsFactory<TActions, TModel> {
   return brandWithSymbol(function actionsFactory<

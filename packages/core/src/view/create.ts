@@ -18,7 +18,7 @@ import { brandWithSymbol } from '../shared/identify';
  * @returns A view instance function that can be used with compose
  */
 export function createView<T, TSelectors = unknown, TActions = unknown>(
-  params: { selectors?: TSelectors; actions?: TActions },
+  _params: { selectors?: TSelectors; actions?: TActions },
   factory: ViewSliceFactory<T, TSelectors, TActions>
 ): ViewFactory<T, TSelectors, TActions> {
   return brandWithSymbol(function viewFactory<S extends Partial<T> = T>(
