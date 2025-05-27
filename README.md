@@ -1,364 +1,491 @@
 # Lattice
 
-A **headless component framework** that lets you build reusable UI behaviors once and use them everywhere. Lattice components are behavior specifications, not UI - they work across React, Vue, vanilla JS, and any rendering system.
+A **compositional framework** for building reusable UI behavior specifications. Lattice separates behavior definition from state management and rendering, enabling true write-once, use-anywhere components.
 
 ## Why Lattice?
 
-Traditional component libraries lock you into their UI decisions and framework choices. Lattice flips this: you define the **behavior** and **state** of your component as contracts, which can power any UI structure in any framework.
+Traditional component libraries couple behavior to specific frameworks and state management. Lattice introduces a new approach: define behavior as **composable specifications** that adapters can execute with any infrastructure.
 
 ```typescript
-// Define behavior once
-const searchableList = createComponent(/* behavior specification */);
-
-// Use anywhere
-<div {...searchableList.views.input}>           // React
-<ul {...searchableList.views.results}>          // Any structure  
-<MyCustomList {...searchableList.views.list}>  // Your components
-```
-
-**Key insight**: Most UI complexity isn't about styling; it's about **state management, interaction patterns, and accessibility**. Lattice lets you solve these once and reuse everywhere.
-
-## A Real Example: Building a File Explorer
-
-Let's build something useful - a file explorer that we'll progressively enhance to show Lattice's power.
-
-### Start Simple: Basic File Tree
-
-```typescript
-import { createComponent, createModel, from } from 'lattice';
-
-// Define the core data model
-const fileTreeModel = createModel<FileTreeModel>(({ set, get }) => ({
-  nodes: [],
-  expandedIds: [],
-  
-  loadNodes: async (path) => {
-    const nodes = await fetchFiles(path);
-    set({ nodes });
-  },
-  
-  toggleExpanded: (nodeId) => {
-    const expanded = get().expandedIds;
-    const isExpanded = expanded.includes(nodeId);
-    set({ 
-      expandedIds: isExpanded 
-        ? expanded.filter(id => id !== nodeId)
-        : [...expanded, nodeId]
-    });
-  }
+// Define behavior specification
+const counter = createComponent(() => ({
+  model: createModel(/* count state and increment logic */),
+  selectors: createSelectors(/* derive computed values */),
+  actions: createActions(/* map intents to model methods */),
+  views: createViews(/* generate UI attributes */)
 }));
 
-// Create the basic component
-const fileTree = createComponent(() => {
-  const model = fileTreeModel;
-  
-  // Actions are pure intent - they delegate to model methods
-  const actions = from(model).createActions(({ model }) => ({
-    expandFolder: model().toggleExpanded,
-    loadFiles: model().loadNodes,
-  }));
-  
-  const selectors = from(model).createSelectors(({ model }) => ({
-    nodes: model().nodes,
-    isExpanded: (nodeId) => model().expandedIds.includes(nodeId),
-  }));
-  
-  const folderView = project(selectors, actions).toView(
-    ({ selectors, actions }) => (nodeId: string) => ({
-      'aria-expanded': selectors().isExpanded(nodeId),
-      'role': 'treeitem',
-      onClick: () => actions().expandFolder(nodeId), // Pure intent call
-    })
-  );
-  
-  return { model, actions, selectors, views: { folder: folderView } };
-});
+// Adapters execute it with real infrastructure
+const storeAdapter = createZustandAdapter(counter);  // Or Redux, MobX, etc.
+const Component = createReactComponent(counter);     // Or Vue, Svelte, etc.
 ```
 
-**What you get**: A working file tree with proper accessibility, clean state management, and no framework dependencies.
+**Key insight**: Behavior patterns (selection, filtering, pagination) are universal. The infrastructure (React vs Vue, Redux vs Zustand) is an implementation detail.
 
-## Progressive Enhancement: Add Selection
+## Core Concepts
 
-Now let's add file selection without changing our existing code:
+### The layers
+
+Lattice cleanly separates **composition** (defining behavior) from **execution** (running with real infrastructure):
+
+1. **Composition**: Define behavior specifications by creating and composing Lattice components
+2. **Adapters**: Execute specifications with actual state management and UI frameworks
+3. **Runtime**: Consuming the adapters in a runtime environment
+
+### Building Blocks
+
+- **Model**: Encapsulates state and business logic
+- **Selectors**: Derive computed values from models  
+- **Actions**: Map user intents to model methods
+- **Views**: Generate UI attributes from selectors and actions
+
+### Lattice Toolkit
+
+Powerful composition tools, like:
+
+- **`withDerive`**: Create memoized computed values
+- **`withCombine`**: Combine multiple sources into one
+- **`withCompute`**: Compute on access only (not reactive, but memoized)
+- **`withLens`**: Focus on nested properties (coming soon)
+
+Composition tools can be published by authors as well.
+
+## A Real Example: Building a Counter
+
+Let's start with a simple counter to understand the patterns:
+
+### Basic Counter
 
 ```typescript
-// Extend the model with selection capability
-const selectableFileModel = createModel<FileTreeModel & SelectionModel>(
-  (tools) => ({
-    ...fileTreeModel()(tools),
-    selectedIds: [],
-    
-    selectFile: (fileId) => {
-      tools.set({ selectedIds: [fileId] });
-    },
-    
-    selectMultiple: (fileIds) => {
-      tools.set({ selectedIds: fileIds });
-    }
-  })
-);
+import { createComponent, createModel, createSelectors, createActions, createViews } from '@lattice/core';
+import { withCompute } from '@lattice/core/model'; 
+import { withSelect } from '@lattice/core/selectors'; 
+import { withDerive } from '@lattice/core/views';
 
-// Enhanced component with selection
-const selectableFileTree = createComponent(
-  withComponent(fileTree, ({ model, views, actions, selectors }) => {
-    const enhancedModel = selectableFileModel;
+const counter = createComponent(() => {
+  // Model: State + business logic
+  const model = createModel(
+    withCompute(({ set, get }, { compute }) => ({
+      count: 0,
+      increment: () => set({ count: get().count + 1 }),
+      decrement: () => set({ count: get().count - 1 }),
+      
+      // Derived value in the model
+      doubled: compute(() => get().count * 2)
+    }))
+  );
+  
+  // Selectors: Computed values from model
+  const selectors = createSelectors(
+    model,
+    withSelect((model, { select }) => ({
+      count: model.count,
+      doubled: model.doubled,
+      
+      // Selector-specific derivation  
+      isEven: select(model.count, (count) => count % 2 === 0),
+      message: select(model.count, (count) => `Count is ${count}`)
+    }))
+  );
+  
+  // Actions: User intents mapped to model methods (should be a logic-less, direct mapping)
+  const actions = createActions(model, ({ increment, decrement }) => ({
+    increment,
+    decrement,
+  }));
+  
+  // Views: UI attributes from selectors and actions
+  const views = createViews(
+    { selectors, actions },
+    withDerive(({ selectors, actions }, { derive }) => ({
+      counter: derive(
+        ({ selectors }) => ({
+          count: selectors.count,
+          message: selectors.message,
+          isEven: selectors.isEven
+        }),
+        ({ count, message, isEven }) => () => ({
+          'data-count': count,
+          'aria-label': message,
+          className: isEven ? 'even' : 'odd'
+        })
+      ),
+      
+      incrementButton: derive(
+        ({ selectors, actions }) => ({
+          increment: actions.increment,
+          count: selectors.count
+        }),
+        ({ increment, count }) => () => ({
+          onClick: increment,
+          disabled: count >= 10,
+          'aria-label': 'Increment counter'
+        })
+      ),
+      
+      decrementButton: derive(
+        ({ selectors, actions }) => ({
+          decrement: actions.decrement,
+          count: selectors.count
+        }),
+        ({ decrement, count }) => () => ({
+          onClick: decrement,
+          disabled: count <= 0,
+          'aria-label': 'Decrement counter'
+        })
+      )
+    }))
+  );
+  
+  return { model, selectors, actions, views };
+});
+
+```
+
+## More Examples
+
+### Parameterized Views
+
+Views can accept runtime parameters for dynamic UI generation:
+
+```typescript
+const todoList = createComponent(() => {
+  const model = createModel(
+    withCompute(({ set, get }, { compute }) => ({
+      todos: [],
+      filter: 'all', // 'all' | 'active' | 'completed'
+      
+      addTodo: (text: string) => {
+        const newTodo = { id: Date.now(), text, completed: false };
+        set({ todos: [...get().todos, newTodo] });
+      },
+      
+      toggleTodo: (id: number) => {
+        set({
+          todos: get().todos.map(todo =>
+            todo.id === id ? { ...todo, completed: !todo.completed } : todo
+          )
+        });
+      },
+      
+      visibleTodos: compute(() => {
+        const { todos, filter } = get();
+        if (filter === 'active') return todos.filter(t => !t.completed);
+        if (filter === 'completed') return todos.filter(t => t.completed);
+        return todos;
+      })
+    }))
+  );
+  
+  const selectors = createSelectors(
+    model,
+    withSelect((model, { select }) => ({
+      todos: model.visibleTodos,
+      filter: model.filter,
+      todoCount: select(model.visibleTodos, (visibleTodos) => visibleTodos.length),
+      hasCompleted: select(model.visibleTodos, (visibleTodos) => visibleTodos.some(t => t.completed))
+    }))
+  );
+
+  const views = createViews(
+    { selectors, actions },
+    withDerive(({ selectors, actions }, { derive }) => ({
+      // Parameterized view for individual todos
+      todoItem: derive(
+        ({ selectors, actions }) => ({
+          todos: selectors.todos,
+          toggle: actions.toggle,
+        }),
+        ({ todos, toggle }) => (todoId: number) => {
+          const todo = todos.find(t => t.id === todoId);
+          return {
+            className: todo?.completed ? 'completed' : 'active',
+            onClick: () => toggle(todoId),
+            'aria-checked': todo?.completed
+          };
+        }
+      ),
+      
+      // View with multiple parameters
+      filterButton: derive(
+        ({ selectors, actions }) => ({
+          filter: selectors.filter,
+          setFilter: actions.setFilter,
+        }),
+        ({ filter, setFilter }) => (filterType: 'all' | 'active' | 'completed') => ({
+          className: filter === filterType ? 'selected' : '',
+          onClick: () => setFilter(filterType),
+          'aria-pressed': filter === filterType
+        })
+      )
+    }))
+  );
+  
+  return { model, selectors, actions, views };
+});
+
+```
+
+### Extracting Complex Views
+
+For complex views, it's often cleaner to extract the view creation logic:
+
+```typescript
+// Extract complex view logic for clarity
+const createTodoItemView = ({ todos, toggle }) => (todoId: number) => {
+  const todo = todos.find(t => t.id === todoId);
+  return {
+    className: todo?.completed ? 'completed' : 'active',
+    onClick: () => toggle(todoId),
+    'aria-checked': todo?.completed
+  };
+};
+
+const views = createViews(
+  { selectors, actions },
+  withDerive(({ selectors, actions }, { derive }) => ({
+    // Clean and readable
+    todoItem: derive(
+      ({ selectors, actions }) => ({
+        todos: selectors.todos,
+        toggle: actions.toggle,
+      }),
+      createTodoItemView
+    )
+  }))
+);
+```
+
+This pattern keeps your view definitions clean while maintaining full type safety.
+
+### Component Composition
+
+Lattice's composition system lets you build complex behaviors from simple ones:
+
+```typescript
+import { createComponent, withComponent, withDerive, withCombine } from '@lattice/core';
+
+// Base counter from above
+const counter = createComponent(() => {
+  // ... counter implementation
+});
+
+// Enhance with persistence
+const persistentCounter = createComponent(
+  withComponent(counter, ({ model, selectors, actions, views }) => {
+    // Enhanced model adds persistence
+    const enhancedModel = createModel(
+      withCompute(({ set, get }, { compute }) => ({
+        // Compose the base model - explicitly pass tools
+        ...model()({ set, get }, { compute }),
+        
+        // Add new capability
+        lastSaved: Date.now(),
+        save: () => {
+          localStorage.setItem('count', String(get().count));
+          set({ lastSaved: Date.now() });
+        }
+      }))
+    );
     
-    // Actions remain pure intent
-    const enhancedActions = from(enhancedModel).createActions(
+    // Enhanced selectors with save status
+    const enhancedSelectors = createSelectors(
+      enhancedModel,
+      withCombine((model, { combine }) => ({
+        // In this scenario, the sub-selectors doesn't require `combine`, so we don't need to pass anything
+        // as the second param
+        ...selectors()(model),
+        
+        // Add new computed values
+        saveStatus: combine(
+          () => model.lastSaved,
+          () => Date.now(),
+          (lastSaved, now) => {
+            const secondsAgo = Math.floor((now - lastSaved) / 1000);
+            return secondsAgo > 60 ? 'unsaved changes' : 'saved';
+          }
+        )
+      }))
+    );
+    
+    // Enhanced actions
+    const enhancedActions = createActions(
+      enhancedModel,
       ({ model }) => ({
         ...actions()({ model }),
-        selectFile: model().selectFile,
-        selectAll: model().selectMultiple,
+        someNewMethod: model.someNewMethod
       })
     );
     
-    const enhancedSelectors = from(enhancedModel).createSelectors(
-      ({ model }) => ({
-        ...selectors()({ model }),
-        selectedFiles: model().selectedIds,
-        isSelected: (fileId) => model().selectedIds.includes(fileId),
-      })
+    // Enhanced views
+    const enhancedViews = createViews(
+      { selectors: enhancedSelectors, actions: enhancedActions },
+      withDerive(({ selectors, actions }, { derive }) => ({
+        ...views()({ selectors, actions }, { derive }),
+        
+        saveButton: derive(
+          ({ selectors, actions }) => ({
+            incrementAndSave: actions.incrementAndSave,
+            saveStatus: selectors.saveStatus
+          }), 
+          ({ incrementAndSave, saveStatus }) => () => ({
+            onClick: incrementAndSave,
+            'aria-label': 'Save counter',
+            className: saveStatus === 'unsaved changes' ? 'warning' : ''
+          })
+        )
+      }))
     );
-    
-    const fileView = project(enhancedSelectors, enhancedActions).toView(
-      ({ actions, selectors }) => (fileId: string) => ({
-        ...views.folder()({ actions, selectors })(fileId),
-        'aria-selected': selectors().isSelected(fileId),
-        onClick: (event) => {
-          // View logic combines multiple intents
-          if (event.ctrlKey) {
-            actions().selectFile(fileId);      // Pure intent
-          } else {
-            actions().expandFolder(fileId);    // Pure intent
-          }
-        },
-      }));
     
     return {
       model: enhancedModel,
-      actions: enhancedActions,
       selectors: enhancedSelectors,
-      views: { folder: views.folder, file: fileView },
+      actions: enhancedActions,
+      views: enhancedViews
     };
+  })
+);
+
+```
+
+## Key Principles
+
+### 1. **Explicit Tool Usage**
+Every factory declares exactly what tools it needs:
+
+```typescript
+// Clear tool dependencies
+const model = createModel(
+  withCompute(({ set, get }, { derive }) => ({
+    // Model has derive available
+  }))
+);
+
+const selectors = createSelectors(
+  model,
+  withCombine((model, { combine }) => ({
+    // Selectors have combine available
+  }))
+);
+```
+
+### 2. **Clean Model References in Selectors**
+Selectors receive model properties directly, avoiding top-level state access:
+
+```typescript
+// Model properties can be destructured
+const selectors = createSelectors(
+  model,
+  withSelect(({ count, filter, todos }, { select }) => ({
+    // Direct references - no function calls
+    count,
+    filter,
+    
+    // Computations use derive with selector state
+    isEven: select(count, (countVal) => countVal % 2 === 0),
+    summary: select(todos, (todosVal) => `${todosVal.length} items`)
+  }))
+);
+```
+
+This pattern ensures:
+- No stale state captures (no `model()` calls at top level)
+- Clear distinction between references and computations
+- Consistent with model's `get()` pattern inside `compute()`
+
+### 3. **Composition Over Inheritance**
+When composing, you explicitly pass tools through:
+
+```typescript
+const enhanced = createModel(
+  withCompute(({ set, get }, { compute }) => ({
+    // Must explicitly pass derive to base model
+    ...baseModel()({ set, get }, { compute }),
+    // Add enhancements
+  }))
+);
+```
+
+### 4. **Clean Separation of Concerns**
+- **Models**: Own state and business logic
+- **Selectors**: Compute derived values
+- **Actions**: Map intents to model methods
+- **Views**: Generate UI attributes
+
+### 5. **Type-Safe Contracts**
+TypeScript ensures all contracts are satisfied at compile time:
+
+```typescript
+// Type error if model doesn't provide required properties
+const selectors = createSelectors(
+  model, // Must satisfy model contract
+  ({ count }) => ({
+    // TypeScript knows model shape through destructuring
+    count
   })
 );
 ```
 
-**Key insight**: Your basic tree still works unchanged. Selection is layered on top without breaking existing functionality.
+## The Power of Composition
 
-## Framework Agnostic Usage
+Lattice's compositional approach enables powerful patterns:
 
-The same component works across any framework:
+### Behavior Libraries
 
-### React
-```tsx
-function FileExplorer() {
-  const { nodes, isSelected } = useSelectors(selectableFileTree);
-  const { selectFile, expandFolder } = useActions(selectableFileTree);
-  
-  return (
-    <div role="tree">
-      {nodes.map(node => (
-        <div key={node.id} {...selectableFileTree.views.file(node.id)}>
-          {node.name}
-        </div>
-      ))}
-    </div>
-  );
-}
-```
-
-### Vue
-```vue
-<template>
-  <div role="tree">
-    <div v-for="node in nodes" v-bind="getFileProps(node.id)">
-      {{ node.name }}
-    </div>
-  </div>
-</template>
-
-<script>
-export default {
-  setup() {
-    const { nodes } = useSelectors(selectableFileTree);
-    const getFileProps = (nodeId) => selectableFileTree.views.file(nodeId);
-    return { nodes, getFileProps };
-  }
-}
-</script>
-```
-
-### Vanilla JavaScript
-```javascript
-const explorer = selectableFileTree();
-const container = document.getElementById('file-tree');
-
-explorer.selectors.nodes.forEach(node => {
-  const element = document.createElement('div');
-  Object.assign(element, explorer.views.file(node.id));
-  element.textContent = node.name;
-  container.appendChild(element);
-});
-```
-
-## Why This Approach Works
-
-### 1. **Behavior as Data**
-Views are pure attribute objects, not components. This means:
-- Any UI structure can consume them
-- No framework lock-in
-- Easy to test and reason about
-
-### 2. **Progressive Composition**
-Start simple, add complexity only when needed:
-- Basic tree � Selection � Drag-drop � Keyboard navigation
-- Each layer enhances without breaking previous functionality
-- Reuse behaviors across different component types
-
-### 3. **No Prop Drilling**
-Different parts of your UI access exactly what they need:
+Instead of framework-specific component libraries, create behavior specifications:
 
 ```typescript
-// Toolbar only needs selection info
-function FileToolbar() {
-  const { selectedFiles } = useSelectors(selectableFileTree);
-  return <div>Selected: {selectedFiles.length} files</div>;
-}
+// @awesome-ui/behaviors
+export const DataGrid = createComponent(() => ({
+  model: createModel(withCompute(/* filtering, sorting, pagination */)),
+  selectors: createSelectors(/* visible rows, sort indicators */),
+  actions: createActions(/* sort, filter, paginate */),
+  views: createViews(/* table, headers, cells, pagination */)
+}));
 
-// Tree nodes only need their specific state
-function FileNode({ nodeId }) {
-  const { isSelected } = useSelectors(selectableFileTree);
-  const { selectFile } = useActions(selectableFileTree);
-  
-  const handleClick = () => {
-    selectFile(nodeId); // Pure intent call
-  };
-  
-  // Only re-renders when this node's state changes
-}
+// Users adapt to their needs
+const MyDataGrid = createComponent(
+  withComponent(DataGrid, (base) => ({
+    // Add custom features
+    model: createModel(withCompute(({ set, get }, { compute }) => ({
+      ...base.model()({ set, get }, { compute }),
+      // Add Excel export
+      exportToExcel: () => { /* ... */ }
+    })))
+  }))
+);
 ```
 
-### 4. **Framework Performance**
-Unlike React Context or global stores:
-- Components subscribe to specific data slices
-- Fine-grained updates without ceremony
-- No unnecessary re-renders
+### Cross-Cutting Concerns
 
-## Real-World Benefits
-
-### Component Libraries
-Instead of shipping React components, ship behavior specifications:
-```typescript
-// Your library exports behaviors, not UI
-export const DataGrid = createComponent(/* data grid behavior */);
-export const Calendar = createComponent(/* calendar behavior */);
-
-// Users apply them to their UI systems
-<MyTable {...DataGrid.views.table}>
-<MyCustomCalendar {...Calendar.views.month}>
-```
-
-### Design Systems
-Separate behavior from design:
-- Design team handles styling and layout
-- Engineering team handles behavior and accessibility
-- Behaviors work across different design implementations
-
-### Cross-Platform Development
-Same logic works on web, mobile, desktop:
-```typescript
-// Web
-<div {...fileTree.views.folder}>
-
-// React Native  
-<TouchableOpacity {...fileTree.views.folder}>
-
-// Desktop (Electron)
-<button {...fileTree.views.folder}>
-```
-
-## Possibilities: Framework-Specific View Recomposition
-
-One of Lattice's most powerful capabilities is **view recomposition** - the ability to take the same behavior specification and adapt it to different frameworks, design systems, and architectural patterns.
-
-### Component Libraries Ship Behavior + Base Views
+Build reusable behaviors that work across different components:
 
 ```typescript
-// Component library ships semantic behavior
-const TreeComponent = createComponent(() => {
-  // ... model, actions, selectors remain framework-agnostic
-  
-  // Base views provide semantic HTML and accessibility
-  const nodeView = project(selectors, actions)
-    .toView(({ selectors, actions }) => ({
-      'role': 'treeitem',
-      'aria-expanded': (nodeId) => selectors().isExpanded(nodeId),
-      'aria-selected': (nodeId) => selectors().isSelected(nodeId),
-      'tabIndex': 0,
-      onClick: (nodeId) => actions().toggleNode(nodeId),
-    }));
+// Selectable behavior
+const withSelection = <T extends { id: string }>(
+  model: ModelFactory<{ items: T[] }>
+) => createModel(
+  withCompute(({ set, get }, { compute }) => ({
+    ...model()({ set, get }, { compute }),
+    selectedIds: new Set<string>(),
     
-  return { model, actions, selectors, views: { node: nodeView } };
-});
+    selectItem: (id: string) => {
+      const selected = new Set(get().selectedIds);
+      selected.add(id);
+      set({ selectedIds: selected });
+    },
+    
+    selectedItems: compute(() => 
+      get().items.filter(item => get().selectedIds.has(item.id))
+    )
+  }))
+);
+
+// Apply to any component with items
+const selectableList = withSelection(listModel);
+const selectableTree = withSelection(treeModel);
+const selectableGrid = withSelection(gridModel);
 ```
-
-### Users Recompose for Their Context
-
-**Design System Integration:**
-```typescript
-// Same tree behavior, Material-UI components
-const materialTree = TreeComponent./* recompose for Material-UI */;
-
-// Same tree behavior, Chakra UI components  
-const chakraTree = TreeComponent./* recompose for Chakra UI */;
-
-// Same tree behavior, custom design system
-const customTree = TreeComponent./* recompose for custom components */;
-```
-
-**Framework-Specific Adaptations:**
-```typescript
-// React SPA with rich interactions
-const reactTree = TreeComponent./* rich component composition */;
-
-// HTMX hypermedia with server-driven updates
-const htmxTree = TreeComponent./* HTMX attribute generation */;
-
-// Vue with reactive templates
-const vueTree = TreeComponent./* Vue-specific optimizations */;
-```
-
-### Implications
-
-**One Behavior Specification Becomes:**
-- React + Material-UI (rich SPA)
-- Vue + custom CSS (traditional web app) 
-- HTMX + semantic HTML (server-driven)
-- React Native + platform components (mobile)
-- Svelte + design tokens (performance-optimized)
-
-**Component authors** define behavior once. **Users adapt** that behavior to their:
-- Framework (React, Vue, HTMX, Svelte)
-- Design system (Material, Chakra, custom)
-- Architecture (SPA, SSR, hypermedia)
-- Platform (web, mobile, desktop)
-
-This means a single `TreeComponent` from npm could power file explorers in React apps, project browsers in Vue applications, and navigation menus in HTMX-driven sites - each with their own look, feel, and interaction patterns, but sharing the same proven behavior logic underneath.
-
-### Beyond Traditional Component Libraries
-
-Instead of shipping pre-built React components that lock users into specific styling and framework choices, component libraries become **behavior specifications** that users adapt to their exact needs. This creates reusability while maintaining complete design and architectural freedom.
-
-## Getting Started
-
-```typescript
-import { createComponent, createModel, from } from 'lattice';
-
-// Start building behaviors that work everywhere
-```
-
-**Next**: Check out our [guides](./docs) to build your first component, or explore our [examples](./examples) to see Lattice in action with complex real-world components.
 
 ---
 
