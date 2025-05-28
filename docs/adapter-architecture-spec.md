@@ -8,16 +8,18 @@ Adapters bridge Lattice's compositional specifications with runtime state manage
 
 ### Composition vs Runtime
 
-- **Composition Time**: Building behavior specifications as partially executed factories
+- **Composition Time**: Building behavior specifications as factory closures
 - **Runtime**: Executing factories with actual state management tools
-- **Boundary**: `component.getSpec()` returns partially executed factories
+- **Boundary**: `component.getSpec()` returns deferred factories that capture their context but await runtime tools
 
 ### Layered Execution
 
 Each layer partially executes and reveals the next interface:
 
 ```
-getSpec() → model({ set, get }) → selectors(model) → actions(model) → views({ selectors, actions })
+         ┌─> selectors(model) ─┐
+getSpec() → model({ set, get }) ─┤                       ├─> views({ selectors, actions })
+         └─> actions(model) ───┘
 ```
 
 ## Pipeline Architecture
@@ -25,7 +27,8 @@ getSpec() → model({ set, get }) → selectors(model) → actions(model) → vi
 ### Layer 1: Specification Retrieval
 ```typescript
 const spec = component.getSpec();
-// Returns: { model, selectors, actions, views } as unexecuted factories
+// Returns: { model, selectors, actions, views } as factory closures
+// These capture their enhancers/context but haven't been called yet
 ```
 
 ### Layer 2: Model Hydration
@@ -41,6 +44,15 @@ Model factory executes with runtime tools, returns state + methods.
 const modelWithReactivity = transformStore(store);
 ```
 Wraps store to provide consistent interface for subsequent layers.
+
+**Implementation approach**: Use getter proxies for fresh state access:
+```typescript
+const transformStore = (store) => ({
+  get count() { return store.getState().count; },
+  get doubled() { return store.getState().doubled; },
+  increment: store.getState().increment
+});
+```
 
 ### Layer 4: Selector Execution
 ```typescript
@@ -68,6 +80,11 @@ State access (via `get()` or equivalent) threads through all layers:
 - Actions reference current state
 - View's `derive()` creates reactive UI attributes
 
+**Reactivity mechanism**: Hybrid approach
+- **Pull-based** for initial values (via getters)
+- **Push-based** for updates (via subscriptions)
+- **Lazy evaluation** with memoization for selectors
+
 ## Adapter Responsibilities
 
 1. **Execute specifications** with runtime tools
@@ -75,9 +92,19 @@ State access (via `get()` or equivalent) threads through all layers:
 3. **Thread reactivity** through the pipeline
 4. **Expose idiomatic API** for the target framework
 
+## Layer Return Types
+
+```typescript
+type ModelInstance = { state: any, methods: any, computed: any }
+type SelectorsInstance = { [key: string]: () => any }
+type ActionsInstance = { [key: string]: (...args) => void }
+type ViewsInstance = { [key: string]: (params?) => UIAttributes }
+```
+
 ## Open Questions
 
-- How to safely pass `get()` outside store context?
-- Should selectors auto-generate Zustand selectors?
-- How to handle subscription/unsubscription?
-- Framework-specific adapter patterns (React hooks, Vue composables, etc.)
+- **Subscription lifecycle**: When/how do selectors subscribe to model changes?
+- **Memoization strategy**: Per-instance or shared across components?
+- **Error boundaries**: How to handle errors in the execution pipeline?
+- **Type inference**: How to maintain TypeScript inference through transforms?
+- **Framework-specific adapter patterns**: React hooks, Vue composables, etc.
