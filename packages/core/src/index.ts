@@ -7,7 +7,10 @@ export interface ModelTools<T = any> {
 }
 
 export type ModelFactory<T = any> = (tools: ModelTools<T>) => T;
-export type SliceFactory<Model = any, Slice = any> = (model: Model) => Slice;
+export interface SliceFactory<Model = any, Slice = any> {
+  (model: Model): Slice;
+  <T>(transform: (slice: Slice) => T): SliceFactory<Model, T>;
+}
 
 // Implementation
 export function createModel<T>(factory: (tools: ModelTools<T>) => T): ModelFactory<T> {
@@ -18,11 +21,27 @@ export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
   selector: (model: Model) => Slice
 ): SliceFactory<Model, Slice> {
-  return selector;
+  // Create a function that can both execute the selector and accept transforms
+  const sliceFactory = function sliceFactory(modelOrTransform: Model | ((slice: Slice) => any)) {
+    // Check if the argument is a transform function
+    if (typeof modelOrTransform === 'function') {
+      // Return a new SliceFactory that applies the transform
+      const transform = modelOrTransform as (slice: Slice) => any;
+      return createSlice(_model, (model: Model) => {
+        const slice = selector(model);
+        return transform(slice);
+      });
+    }
+    
+    // Otherwise, it's a model - execute the selector
+    return selector(modelOrTransform as Model);
+  } as SliceFactory<Model, Slice>;
+  
+  return sliceFactory;
 }
 
 // Marker symbol for select
-const SELECT_MARKER = Symbol('lattice.select');
+export const SELECT_MARKER = Symbol('lattice.select');
 
 export function select<Model, T>(slice: SliceFactory<Model, T>): T {
   // Return a marker that adapters can recognize
@@ -47,4 +66,45 @@ export function createComponent<Model, Actions, Views>(
   factory: () => ComponentSpec<Model, Actions, Views>
 ): ComponentFactory<Model, Actions, Views> {
   return factory;
+}
+
+// In-source tests for slice transforms
+if (import.meta.vitest) {
+  const { it, expect } = import.meta.vitest;
+
+  it('SliceFactory should support transforms', () => {
+    const model = createModel<{ count: number }>(() => ({ count: 5 }));
+    const slice = createSlice(model, m => ({ value: m.count }));
+    
+    // Direct execution
+    const result1 = slice({ count: 10 });
+    expect(result1).toEqual({ value: 10 });
+    
+    // With transform
+    const transformed = slice(s => ({ doubled: s.value * 2 }));
+    const result2 = transformed({ count: 10 });
+    expect(result2).toEqual({ doubled: 20 });
+  });
+
+  it('Transformed slices should maintain type safety', () => {
+    const model = createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 }));
+    const pointSlice = createSlice(model, m => ({ x: m.x, y: m.y }));
+    
+    // Transform to distance
+    const distanceSlice = pointSlice(p => ({
+      distance: Math.sqrt(p.x * p.x + p.y * p.y)
+    }));
+    
+    const result = distanceSlice({ x: 3, y: 4 });
+    expect(result).toEqual({ distance: 5 });
+  });
+
+  it('select() should create proper markers', () => {
+    const model = createModel<{ value: string }>(() => ({ value: 'test' }));
+    const slice = createSlice(model, m => ({ val: m.value }));
+    
+    const marker = select(slice);
+    expect(SELECT_MARKER in marker).toBe(true);
+    expect((marker as any)[SELECT_MARKER]).toBe(slice);
+  });
 }

@@ -4,8 +4,7 @@ import {
   createModel,
   createSlice,
   select,
-  type ModelTools,
-  type SliceFactory,
+  SELECT_MARKER,
 } from './index';
 
 describe('Lattice Core', () => {
@@ -204,11 +203,34 @@ describe('Lattice Core', () => {
 
       const buttonView = incrementButton(model);
 
-      // The select() call creates a marker, but accessing .increment on it returns undefined
-      // This is expected - adapters will interpret the marker, not access properties directly
+      // When we do select(actions).increment, the .increment access returns undefined
+      // because the marker object doesn't have that property
       expect(buttonView.onClick).toBeUndefined();
       expect(buttonView.disabled).toBe(false);
       expect(buttonView['aria-label']).toBe('Increment counter');
+    });
+
+    it('should demonstrate how adapters would process select() in slices', () => {
+      const modelFactory = createModel<{ value: number }>(() => ({ value: 42 }));
+      
+      const baseSlice = createSlice(modelFactory, (m) => ({ val: m.value }));
+      
+      // When we compose slices with select()
+      const composedSlice = createSlice(modelFactory, () => ({
+        // This stores the whole marker object
+        selected: select(baseSlice),
+        // This tries to access a property on the marker, returns undefined
+        selectedVal: select(baseSlice).val
+      }));
+
+      const result = composedSlice({ value: 100 });
+      
+      // The whole select() marker is preserved
+      expect(SELECT_MARKER in result.selected).toBe(true);
+      expect((result.selected as any)[SELECT_MARKER]).toBe(baseSlice);
+      
+      // But accessing properties on the marker returns undefined
+      expect(result.selectedVal).toBeUndefined();
     });
 
     it('should support parameterized view factories from todoList example', () => {
@@ -231,18 +253,13 @@ describe('Lattice Core', () => {
         filter: m.filter,
       }));
 
-      // Parameterized slice factory from README
+      // Parameterized slice factory from README using slice transform
       const createFilterButtonView = (filterType: Filter) => 
-        () => {
-          return (model: { setFilter: (f: Filter) => void; filter: Filter }) => {
-            const state = buttonSlice(model);
-            return {
-              onClick: state.setFilter,
-              className: state.filter === filterType ? 'selected' : '',
-              'aria-pressed': state.filter === filterType
-            };
-          };
-        };
+        () => buttonSlice((state) => ({
+          onClick: state.setFilter,
+          className: state.filter === filterType ? 'selected' : '',
+          'aria-pressed': state.filter === filterType
+        }));
 
       // Test the factory
       const allButton = createFilterButtonView('all');
@@ -261,18 +278,45 @@ describe('Lattice Core', () => {
 
       const allButtonView = allButton();
       const allButtonResult = allButtonView(model);
-      expect(allButtonResult.onClick).toBeUndefined(); // select() marker
+      expect(allButtonResult.onClick).toBeUndefined(); // select() marker property access
       expect(allButtonResult.className).toBe('selected');
       expect(allButtonResult['aria-pressed']).toBe(true);
 
       const activeButtonView = activeButton();
       const activeButtonResult = activeButtonView(model);
+      expect(activeButtonResult.onClick).toBeUndefined(); // select() marker property access
       expect(activeButtonResult.className).toBe('');
       expect(activeButtonResult['aria-pressed']).toBe(false);
     });
   });
 
   describe('Computed views', () => {
+    it('should support slice transform pattern from README counter example', () => {
+      const modelFactory = createModel<{ count: number }>(() => ({ count: 5 }));
+
+      const countSlice = createSlice(modelFactory, (m) => ({
+        count: m.count,
+      }));
+
+      // This is the exact pattern from README - should work but currently doesn't
+      const counter = () => countSlice((state) => ({
+        'data-count': state.count,
+        'aria-label': `Count is ${state.count}`,
+        className: state.count % 2 === 0 ? 'even' : 'odd',
+      }));
+
+      // Test the computed view
+      const computedView = counter();
+      const model = { count: 5 };
+      const result = computedView(model);
+
+      expect(result).toEqual({
+        'data-count': 5,
+        'aria-label': 'Count is 5',
+        className: 'odd',
+      });
+    });
+
     it('should support computed view functions from counter example', () => {
       const modelFactory = createModel<{ count: number }>(() => ({ count: 5 }));
 
@@ -280,19 +324,12 @@ describe('Lattice Core', () => {
         count: m.count,
       }));
 
-      // Computed view from README
-      // Note: Our current implementation doesn't support slice transforms
-      // This would require enhancing createSlice to accept transform functions
-      const counter = () => {
-        return (model: { count: number }) => {
-          const state = countSlice(model);
-          return {
-            'data-count': state.count,
-            'aria-label': `Count is ${state.count}`,
-            className: state.count % 2 === 0 ? 'even' : 'odd',
-          };
-        };
-      };
+      // Using the proper slice transform pattern
+      const counter = () => countSlice((state) => ({
+        'data-count': state.count,
+        'aria-label': `Count is ${state.count}`,
+        className: state.count % 2 === 0 ? 'even' : 'odd',
+      }));
 
       // Test the computed view
       const computedView = counter();
@@ -323,21 +360,18 @@ describe('Lattice Core', () => {
         })
       );
 
-      // Shared computation from README
-      const todoStats = () => {
-        return (model: { todos: Todo[]; filter: string }) => {
-          const state = todoState(model);
-          const active = state.todos.filter((t: Todo) => !t.completed);
-          const completed = state.todos.filter((t: Todo) => t.completed);
+      // Shared computation using slice transform
+      const todoStats = () => todoState((state) => {
+        const active = state.todos.filter((t: Todo) => !t.completed);
+        const completed = state.todos.filter((t: Todo) => t.completed);
 
-          return {
-            activeTodos: active,
-            activeCount: active.length,
-            completedCount: completed.length,
-            hasCompleted: completed.length > 0,
-          };
+        return {
+          activeTodos: active,
+          activeCount: active.length,
+          completedCount: completed.length,
+          hasCompleted: completed.length > 0,
         };
-      };
+      });
 
       // Test the computation
       const stats = todoStats();
@@ -427,8 +461,7 @@ describe('Lattice Core', () => {
 
       const headerResult = headerSlice(model);
 
-      // select() creates markers, but accessing properties returns undefined
-      // This is by design - adapters interpret markers
+      // When accessing properties on select() markers, they return undefined
       expect(headerResult.user).toBeUndefined();
       expect(headerResult.theme).toBeUndefined();
       expect(headerResult.onLogout).toBe(mockLogout);
@@ -467,11 +500,11 @@ describe('Lattice Core', () => {
       };
 
       const result = composite(model);
-      // select() returns a marker object, but .increment returns undefined
+      // Property access on select() markers returns undefined
       expect(result.action).toBeUndefined();
-      // select(stateSlice) returns the marker object itself
-      expect(result.state).toBeDefined();
-      expect(typeof result.state).toBe('object');
+      // But the whole select() object is preserved
+      expect(SELECT_MARKER in result.state).toBe(true);
+      expect((result.state as any)[SELECT_MARKER]).toBe(stateSlice);
     });
   });
 
@@ -513,17 +546,12 @@ describe('Lattice Core', () => {
           model,
           actions,
           views: {
-            // Computed view - needs runtime calculation
-            counter: () => {
-              return (model: { count: number; increment: () => void; decrement: () => void; disabled: boolean }) => {
-                const state = countSlice(model);
-                return {
-                  'data-count': state.count,
-                  'aria-label': `Count is ${state.count}`,
-                  className: state.count % 2 === 0 ? 'even' : 'odd',
-                };
-              };
-            },
+            // Computed view using slice transform
+            counter: () => countSlice((state) => ({
+              'data-count': state.count,
+              'aria-label': `Count is ${state.count}`,
+              className: state.count % 2 === 0 ? 'even' : 'odd',
+            })),
 
             // Static view - slice is the view
             incrementButton,
@@ -583,21 +611,18 @@ describe('Lattice Core', () => {
           filter: m.filter,
         }));
 
-        // Shared computation - memoized automatically
-        const todoStats = () => {
-          return (model: { todos: Todo[]; filter: Filter; addTodo: (text: string) => void; toggleTodo: (id: number) => void; setFilter: (filter: Filter) => void }) => {
-            const state = todoState(model);
-            const active = state.todos.filter((t: Todo) => !t.completed);
-            const completed = state.todos.filter((t: Todo) => t.completed);
+        // Shared computation using slice transform
+        const todoStats = () => todoState((state) => {
+          const active = state.todos.filter((t: Todo) => !t.completed);
+          const completed = state.todos.filter((t: Todo) => t.completed);
 
-            return {
-              activeTodos: active,
-              activeCount: active.length,
-              completedCount: completed.length,
-              hasCompleted: completed.length > 0,
-            };
+          return {
+            activeTodos: active,
+            activeCount: active.length,
+            completedCount: completed.length,
+            hasCompleted: completed.length > 0,
           };
-        };
+        });
 
         // Actions slice
         const actions = createSlice(model, (m) => ({
@@ -611,32 +636,24 @@ describe('Lattice Core', () => {
           filter: m.filter,
         }));
 
-        // Composite slice factory for filter buttons
+        // Composite slice factory for filter buttons using transform
         const createFilterButtonView = (filterType: Filter) => 
-          () => {
-            return (model: { todos: Todo[]; filter: Filter; addTodo: (text: string) => void; toggleTodo: (id: number) => void; setFilter: (filter: Filter) => void }) => {
-              const state = buttonSlice(model);
-              return {
-                onClick: state.setFilter,
-                className: state.filter === filterType ? 'selected' : '',
-                'aria-pressed': state.filter === filterType
-              };
-            };
-          };
+          () => buttonSlice((state) => ({
+            onClick: state.setFilter,
+            className: state.filter === filterType ? 'selected' : '',
+            'aria-pressed': state.filter === filterType
+          }));
 
         return {
           model,
           actions,
           views: {
-            // Computed view
+            // Computed view using nested slice transform
             summary: () => {
               const stats = todoStats();
-              return (state: { todos: Todo[]; filter: Filter; addTodo: (text: string) => void; toggleTodo: (id: number) => void; setFilter: (filter: Filter) => void }) => {
-                const computed = stats(state);
-                return {
-                  textContent: `${computed.activeCount} active, ${computed.completedCount} completed`,
-                };
-              };
+              return stats((computed) => ({
+                textContent: `${computed.activeCount} active, ${computed.completedCount} completed`,
+              }));
             },
 
             // Parameterized slices as views
@@ -671,46 +688,46 @@ describe('Lattice Core', () => {
         increment: () => void;
       }
 
-      const model = createModel<ModelState>(({ set, get }) => ({
+      const modelFactory = createModel<ModelState>(({ set, get }) => ({
         count: 0,
         name: 'test',
         increment: () => set({ count: get().count + 1 }),
       }));
 
       // This should compile with correct types
-      const validSlice = createSlice(model, (m) => ({
+      const validSlice = createSlice(modelFactory, (m) => ({
         count: m.count,
         name: m.name,
       }));
 
-      // TypeScript should infer the correct return type
-      type SliceType = ReturnType<typeof validSlice>;
-      type Expected = { count: number; name: string };
-
-      // This is a compile-time check
-      const _typeCheck: SliceType = {} as Expected;
+      // TypeScript should infer the correct return type when called with a model
+      const modelInstance: ModelState = { count: 0, name: 'test', increment: () => {} };
+      const result = validSlice(modelInstance);
+      
+      // Verify the type
+      const _typeCheck: typeof result = { count: 0, name: 'test' };
       expect(_typeCheck).toBeDefined();
     });
 
     it('should maintain type safety with select()', () => {
-      const model = createModel<{ value: number }>(() => ({
+      const modelFactory = createModel<{ value: number }>(() => ({
         value: 42,
       }));
 
-      const slice1 = createSlice(model, (m) => ({
+      const slice1 = createSlice(modelFactory, (m) => ({
         value: m.value,
       }));
 
-      const slice2 = createSlice(model, () => ({
+      const slice2 = createSlice(modelFactory, () => ({
         selected: select(slice1).value,
       }));
 
       // The type should flow through select()
-      type Slice2Type = ReturnType<typeof slice2>;
-      type Expected = { selected: number };
-
-      // Compile-time type check
-      const _typeCheck: Slice2Type = {} as Expected;
+      const modelInstance = { value: 42 };
+      const result = slice2(modelInstance);
+      
+      // Verify the type
+      const _typeCheck: typeof result = { selected: 42 };
       expect(_typeCheck).toBeDefined();
     });
 
@@ -735,19 +752,15 @@ describe('Lattice Core', () => {
 
       const spec = component();
 
-      // Types should be properly inferred
-      type ModelType = Parameters<typeof spec.model>[0];
-      type ActionsType = ReturnType<typeof spec.actions>;
-      type ViewsType = typeof spec.views;
-
-      // These are compile-time checks
-      const _modelCheck: ModelType = {} as ModelTools<{ count: number }>;
-      const _actionsCheck: ActionsType = {};
-      const _viewsCheck: ViewsType = { display: {} as SliceFactory<{ count: number }, { count: number }> };
-
-      expect(_modelCheck).toBeDefined();
-      expect(_actionsCheck).toBeDefined();
-      expect(_viewsCheck).toBeDefined();
+      // Verify component structure
+      expect(spec.model).toBeDefined();
+      expect(spec.actions).toBeDefined();
+      expect(spec.views.display).toBeDefined();
+      
+      // Verify types work correctly
+      const modelInstance = { count: 0 };
+      const actionsResult = spec.actions(modelInstance);
+      expect(actionsResult).toEqual({});
     });
   });
 
@@ -810,18 +823,15 @@ describe('Lattice Core', () => {
             save: m.save,
           })),
           views: {
-            // New view using computed status
-            saveIndicator: () => {
-              return (model: { count: number; increment: () => void; lastSaved: number; save: () => void }) => {
-                const state = saveSlice(model);
-                const secondsAgo = Math.floor((Date.now() - state.lastSaved) / 1000);
-                const status = secondsAgo > 60 ? 'unsaved changes' : 'saved';
-                return {
-                  className: status === 'unsaved changes' ? 'warning' : 'success',
-                  textContent: status
-                };
+            // New view using slice transform
+            saveIndicator: () => saveSlice((state) => {
+              const secondsAgo = Math.floor((Date.now() - state.lastSaved) / 1000);
+              const status = secondsAgo > 60 ? 'unsaved changes' : 'saved';
+              return {
+                className: status === 'unsaved changes' ? 'warning' : 'success',
+                textContent: status
               };
-            },
+            }),
           },
         };
       });
@@ -839,6 +849,97 @@ describe('Lattice Core', () => {
       const indicatorView = indicatorSlice({ count: 0, increment: () => {}, lastSaved: Date.now(), save: () => {} });
       expect(indicatorView.className).toBe('success');
       expect(indicatorView.textContent).toBe('saved');
+    });
+  });
+
+  describe('SELECT_MARKER export', () => {
+    it('should export SELECT_MARKER symbol for adapter use', () => {
+      expect(SELECT_MARKER).toBeDefined();
+      expect(typeof SELECT_MARKER).toBe('symbol');
+      expect(SELECT_MARKER.toString()).toBe('Symbol(lattice.select)');
+    });
+
+    it('should use SELECT_MARKER in select() function', () => {
+      const model = createModel<{ value: number }>(() => ({ value: 42 }));
+      const slice = createSlice(model, (m) => ({ value: m.value }));
+      
+      const selected = select(slice);
+      
+      // Verify the marker is present
+      expect(SELECT_MARKER in selected).toBe(true);
+      expect((selected as any)[SELECT_MARKER]).toBe(slice);
+    });
+
+    it('should handle deeply nested select() markers', () => {
+      const model = createModel<{ a: number; b: string; c: boolean }>(() => ({
+        a: 1,
+        b: 'test',
+        c: true
+      }));
+
+      const slice1 = createSlice(model, (m) => ({ a: m.a }));
+      const slice2 = createSlice(model, (m) => ({ b: m.b }));
+      const slice3 = createSlice(model, (m) => ({ c: m.c }));
+
+      // Create a deeply nested composition
+      const deepSlice = createSlice(model, () => ({
+        nested: {
+          level1: select(slice1),
+          level2: {
+            item: select(slice2),
+            deeper: {
+              value: select(slice3)
+            }
+          }
+        }
+      }));
+
+      const result = deepSlice({ a: 10, b: 'hello', c: false });
+
+      // Verify all markers are correctly placed
+      expect(SELECT_MARKER in result.nested.level1).toBe(true);
+      expect((result.nested.level1 as any)[SELECT_MARKER]).toBe(slice1);
+      
+      expect(SELECT_MARKER in result.nested.level2.item).toBe(true);
+      expect((result.nested.level2.item as any)[SELECT_MARKER]).toBe(slice2);
+      
+      expect(SELECT_MARKER in result.nested.level2.deeper.value).toBe(true);
+      expect((result.nested.level2.deeper.value as any)[SELECT_MARKER]).toBe(slice3);
+    });
+
+    it('should allow adapters to identify and process select() markers', () => {
+      const model = createModel<{ count: number }>(() => ({ count: 0 }));
+      const slice = createSlice(model, (m) => ({ value: m.count }));
+      
+      const viewSlice = createSlice(model, () => ({
+        display: select(slice).value
+      }));
+
+      const result = viewSlice({ count: 5 });
+
+      // When accessing properties on markers, they return undefined
+      expect(result.display).toBeUndefined();
+      
+      // To demonstrate how adapters would work, let's create a slice that stores the whole marker
+      const viewSlice2 = createSlice(model, () => ({
+        display: select(slice) // Without property access
+      }));
+
+      const result2 = viewSlice2({ count: 5 });
+      
+      // Now the adapter can check for markers
+      const hasMarker = SELECT_MARKER in result2.display;
+      expect(hasMarker).toBe(true);
+
+      // Adapter would retrieve the slice like this
+      if (hasMarker) {
+        const originalSlice = (result2.display as any)[SELECT_MARKER];
+        expect(originalSlice).toBe(slice);
+        
+        // Adapter could then execute the original slice
+        const sliceResult = originalSlice({ count: 5 });
+        expect(sliceResult).toEqual({ value: 5 });
+      }
     });
   });
 
@@ -871,14 +972,11 @@ describe('Lattice Core', () => {
 
       const modeSlice = createSlice(model, (m) => ({ mode: m.mode }));
 
-      const adaptiveView = () => {
-        return (model: { mode: 'light' | 'dark' }) => {
-          const state = modeSlice(model);
-          return state.mode === 'light'
-            ? { background: 'white', color: 'black' }
-            : { background: 'black', color: 'white', border: '1px solid gray' };
-        };
-      };
+      const adaptiveView = () => modeSlice((state) => 
+        state.mode === 'light'
+          ? { background: 'white', color: 'black' }
+          : { background: 'black', color: 'white', border: '1px solid gray' }
+      );
 
       const adaptiveSlice = adaptiveView();
       const lightView = adaptiveSlice({ mode: 'light' });
