@@ -1,98 +1,48 @@
-/**
- * Lattice Core - Framework-agnostic headless component framework
- *
- * This is the main entry point for the Lattice core library, providing
- * clean APIs for creating and composing components with pluggable state management.
- */
-
-// Core factory functions
-export { createModel } from './model';
-export { createSelectors } from './selectors';
-export { createActions } from './actions';
-export { createView } from './view';
-export { createComponent, instantiateComponent } from './lattice/create';
-
-// Composition APIs
-export { withComponent, extendComponent } from './lattice/compose';
-
-// Component creation with state adapters
-// export { createComponentWithAdapter } from './lattice/create-with-adapter';
-
-// State adapter interfaces
-export type {
-  StateAdapter,
-  StateStore,
-  StateAdapterWithMiddleware,
-  StateAdapterFactory,
-} from './shared/state-adapter';
-
-export { isStateAdapter, isStateStore } from './shared/state-adapter';
+// Slice-based Lattice Core API
 
 // Core types
-export type {
-  // Brand symbols
-  Branded,
+export interface ModelTools<T = any> {
+  get: () => T;
+  set: (updates: Partial<T>) => void;
+}
 
-  // Factory types
-  ModelFactory,
-  SelectorsFactory,
-  ActionsFactory,
-  ViewFactory,
-  ComponentFactory,
-  ComponentFactoryInstance,
+export type ModelFactory<T = any> = (tools: ModelTools<T>) => T;
+export type SliceFactory<Model = any, Slice = any> = (model: Model) => Slice;
 
-  // Component types
-  Lattice,
-  LatticeLike,
-  ComponentConfig,
-  ComponentExtension,
+// Implementation
+export function createModel<T>(factory: (tools: ModelTools<T>) => T): ModelFactory<T> {
+  return factory;
+}
 
-  // Factory parameters
-  ModelFactoryParams,
-  SelectorsFactoryParams,
-  ActionsFactoryParams,
-  ViewFactoryParams,
+export function createSlice<Model, Slice>(
+  _model: ModelFactory<Model>,
+  selector: (model: Model) => Slice
+): SliceFactory<Model, Slice> {
+  return selector;
+}
 
-  // Slice factory types
-  ModelSliceFactory,
-  SelectorsSliceFactory,
-  ActionsSliceFactory,
-  ViewSliceFactory,
+// Marker symbol for select
+const SELECT_MARKER = Symbol('lattice.select');
 
-  // State management types
-  SetState,
-  GetState,
+export function select<T>(slice: SliceFactory<any, T>): T {
+  // Return a marker that adapters can recognize
+  // This allows slices to compose other slices
+  return {
+    [SELECT_MARKER]: slice
+  } as unknown as T;
+}
 
-  // Lattice API types
-  LatticeAPI,
-  SubscribeCallback,
-  UnsubscribeFunction,
-} from './shared/types';
+export interface ComponentSpec<Model = any, Actions = any, Views = any> {
+  model: ModelFactory<Model>;
+  actions: SliceFactory<Model, Actions>;
+  views: Views;
+}
 
-// Brand symbols
-export {
-  MODEL_FACTORY_BRAND,
-  SELECTORS_FACTORY_BRAND,
-  ACTIONS_FACTORY_BRAND,
-  VIEW_FACTORY_BRAND,
-  COMPONENT_FACTORY_BRAND,
-  COMPONENT_FACTORY_INSTANCE_BRAND,
-  LATTICE_BRAND,
-} from './shared/types';
+export type ComponentFactory<Model = any, Actions = any, Views = any> = 
+  () => ComponentSpec<Model, Actions, Views>;
 
-// Type guards and utilities
-export {
-  isModelFactory,
-  isSelectorsFactory,
-  isActionsFactory,
-  isViewFactory,
-  brandWithSymbol,
-} from './shared/identify';
-
-// Composition utilities
-export { from } from './shared/from';
-export { project } from './view/project';
-
-// Enhancers
-export { derive, combine } from './shared/enhancers/index';
-export type { Enhancer, EnhancerContext } from './shared/enhancers';
+export function createComponent<Model, Actions, Views>(
+  factory: () => ComponentSpec<Model, Actions, Views>
+): ComponentFactory<Model, Actions, Views> {
+  return factory;
+}
