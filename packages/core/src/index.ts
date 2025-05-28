@@ -24,12 +24,14 @@ export function createSlice<Model, Slice>(
 // Marker symbol for select
 const SELECT_MARKER = Symbol('lattice.select');
 
-export function select<T>(slice: SliceFactory<any, T>): T {
+export function select<Model, T>(slice: SliceFactory<Model, T>): T {
   // Return a marker that adapters can recognize
   // This allows slices to compose other slices
+  // The cast is necessary because we're returning a marker object
+  // that will be interpreted by adapters, not the actual type T
   return {
     [SELECT_MARKER]: slice
-  } as unknown as T;
+  } as T;
 }
 
 export interface ComponentSpec<Model = any, Actions = any, Views = any> {

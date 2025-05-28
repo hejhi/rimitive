@@ -357,6 +357,8 @@ describe('Lattice Core', () => {
     });
 
     it('should support summary view from todoList example', () => {
+      type Todo = { id: number; text: string; completed: boolean };
+      
       const todoStats = () => () => ({
         activeCount: 3,
         completedCount: 2,
@@ -365,8 +367,8 @@ describe('Lattice Core', () => {
       // Summary view from README
       const summary = () => {
         const stats = todoStats();
-        return (state) => {
-          const computed = stats(state);
+        return (_state: { todos: Todo[]; filter: string }) => {
+          const computed = stats();
           return {
             textContent: `${computed.activeCount} active, ${computed.completedCount} completed`,
           };
@@ -394,7 +396,7 @@ describe('Lattice Core', () => {
         user: { name: string };
         theme: string;
         logout: () => void;
-      }>(({ set, get }) => ({
+      }>(({ set }) => ({
         user: { name: 'John' },
         theme: 'dark',
         logout: () => set({ user: { name: '' } }),
@@ -513,7 +515,7 @@ describe('Lattice Core', () => {
           views: {
             // Computed view - needs runtime calculation
             counter: () => {
-              return (model: { count: number }) => {
+              return (model: { count: number; increment: () => void; decrement: () => void; disabled: boolean }) => {
                 const state = countSlice(model);
                 return {
                   'data-count': state.count,
@@ -583,7 +585,7 @@ describe('Lattice Core', () => {
 
         // Shared computation - memoized automatically
         const todoStats = () => {
-          return (model: { todos: Todo[]; filter: Filter }) => {
+          return (model: { todos: Todo[]; filter: Filter; addTodo: (text: string) => void; toggleTodo: (id: number) => void; setFilter: (filter: Filter) => void }) => {
             const state = todoState(model);
             const active = state.todos.filter((t: Todo) => !t.completed);
             const completed = state.todos.filter((t: Todo) => t.completed);
@@ -612,7 +614,7 @@ describe('Lattice Core', () => {
         // Composite slice factory for filter buttons
         const createFilterButtonView = (filterType: Filter) => 
           () => {
-            return (model: { setFilter: (f: Filter) => void; filter: Filter }) => {
+            return (model: { todos: Todo[]; filter: Filter; addTodo: (text: string) => void; toggleTodo: (id: number) => void; setFilter: (filter: Filter) => void }) => {
               const state = buttonSlice(model);
               return {
                 onClick: state.setFilter,
@@ -629,7 +631,7 @@ describe('Lattice Core', () => {
             // Computed view
             summary: () => {
               const stats = todoStats();
-              return (state) => {
+              return (state: { todos: Todo[]; filter: Filter; addTodo: (text: string) => void; toggleTodo: (id: number) => void; setFilter: (filter: Filter) => void }) => {
                 const computed = stats(state);
                 return {
                   textContent: `${computed.activeCount} active, ${computed.completedCount} completed`,
@@ -741,7 +743,7 @@ describe('Lattice Core', () => {
       // These are compile-time checks
       const _modelCheck: ModelType = {} as ModelTools<{ count: number }>;
       const _actionsCheck: ActionsType = {};
-      const _viewsCheck: ViewsType = { display: {} as SliceFactory<any, any> };
+      const _viewsCheck: ViewsType = { display: {} as SliceFactory<{ count: number }, { count: number }> };
 
       expect(_modelCheck).toBeDefined();
       expect(_actionsCheck).toBeDefined();
@@ -810,7 +812,7 @@ describe('Lattice Core', () => {
           views: {
             // New view using computed status
             saveIndicator: () => {
-              return (model: { lastSaved: number }) => {
+              return (model: { count: number; increment: () => void; lastSaved: number; save: () => void }) => {
                 const state = saveSlice(model);
                 const secondsAgo = Math.floor((Date.now() - state.lastSaved) / 1000);
                 const status = secondsAgo > 60 ? 'unsaved changes' : 'saved';
@@ -834,7 +836,7 @@ describe('Lattice Core', () => {
 
       // Test the save indicator view
       const indicatorSlice = enhanced.views.saveIndicator();
-      const indicatorView = indicatorSlice({ lastSaved: Date.now() });
+      const indicatorView = indicatorSlice({ count: 0, increment: () => {}, lastSaved: Date.now(), save: () => {} });
       expect(indicatorView.className).toBe('success');
       expect(indicatorView.textContent).toBe('saved');
     });
