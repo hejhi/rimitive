@@ -22,110 +22,51 @@ getSpec() → model({ set, get }) ─┤                       ├─> views({ s
          └─> actions(model) ───┘
 ```
 
-## Pipeline Architecture
+## Execution Model
 
-### Layer 1: Specification Retrieval
+Adapters receive executable specifications and provide reactive primitives:
+
 ```typescript
 const spec = component.getSpec();
-// Returns: { model, selectors, actions, views } as factory closures
-// These capture their enhancers/context but haven't been called yet
+// Spec contains factory functions ready for execution with adapter primitives
 ```
 
-### Layer 2: Model Hydration
-```typescript
-const store = createStore((set, get) => {
-  return spec.model({ set, get });
-});
-```
-Model factory executes with runtime tools, returns state + methods.
 
-### Layer 3: Model Transformation
-```typescript
-const modelWithReactivity = transformStore(store);
-```
-Wraps store to provide consistent interface for subsequent layers.
+## Adapter Primitives
 
-**Implementation approach**: Use getter proxies for fresh state access:
-```typescript
-const transformStore = (store) => ({
-  get count() { return store.getState().count; },
-  get doubled() { return store.getState().doubled; },
-  increment: store.getState().increment
-});
-```
-
-### Layer 4: Selector Execution
-```typescript
-const selectors = spec.selectors(modelWithReactivity);
-```
-Selectors build computed values using the reactive model.
-
-### Layer 5: Action Execution
-```typescript
-const actions = spec.actions(modelWithReactivity);
-```
-Actions bind to model methods with current state access.
-
-### Layer 6: View Execution
-```typescript
-const views = spec.views({ selectors, actions });
-```
-Views create UI attribute factories from selectors and actions.
-
-## Reactivity Threading
-
-State access threads through all layers with two distinct patterns:
-
-**Lazy Computation** (pull-based):
-- Model's `compute()` - Recomputes on access when dependencies change
-- Memoized but not reactive
-
-**Reactive Binding** (push-based):
-- Selector's `select()` - Updates when source changes
-- View's `derive()` - Updates when any dependency changes
-- Triggers re-renders in UI frameworks
-
-## Adapter Requirements
-
-Adapters provide seven core primitives:
+Adapters provide three core primitives:
 
 ```typescript
-interface AdapterRequirements {
-  // Store operations
-  createStore: (initial?: any) => Store;
-  get: () => State;
-  set: (updates: Partial<State>) => void;
-  subscribe: (listener: () => void) => Unsubscribe;
-  destroy?: () => void;
+interface AdapterPrimitives {
+  // Create a reactive value
+  atom<T>(initial: T): {
+    get(): T;
+    set(value: T): void;
+    subscribe(fn: (value: T) => void): () => void;
+  };
   
-  // Computation primitives
-  createComputed: <T>(fn: () => T) => () => T;           // Lazy, memoized
-  createReactive: <S, T>(                               // Reactive binding
-    selector: () => S,
-    transform: (selected: S) => T
-  ) => () => T;
+  // Create a computed value (lazy or reactive)
+  computed<T>(fn: () => T): {
+    get(): T;
+    subscribe(fn: (value: T) => void): () => void;
+  };
+  
+  // Run side effects
+  effect(fn: () => void | (() => void)): void;
 }
 ```
 
-## Adapter Responsibilities
+## Adapter Pattern
 
-1. **Provide primitives** - The seven core operations above
-2. **Execute specifications** - Let Lattice orchestrate, adapter provides capabilities
-3. **Expose idiomatic API** - Match the patterns of the target library
+Lattice specifications are data. Adapters provide execution:
 
-## Layer Return Types
+1. **Specs describe what** - Component behavior as executable schemas
+2. **Adapters provide how** - Reactive primitives for execution
+3. **Bindings stay thin** - Just subscribe and trigger framework updates
 
-Each layer produces specific outputs:
 
-- **Model**: State properties, methods, and computed getters
-- **Selectors**: Reactive getters that return current values
-- **Actions**: Methods that trigger state changes
-- **Views**: Factories that produce UI attribute objects
+## Design Principles
 
-## Open Questions
-
-- **Subscription lifecycle**: When/how do selectors subscribe to model changes?
-- **Memoization strategy**: Per-instance or shared across components?
-- **Error boundaries**: How to handle errors in the execution pipeline?
-- **Type inference**: How to maintain TypeScript inference through transforms?
-- **Framework-specific adapter patterns**: React hooks, Vue composables, etc.
+- **Less is more**: Minimal primitives enable maximum flexibility
+- **Specs as data**: Behavior descriptions, not implementations
+- **Adapter freedom**: Each library implements primitives idiomatically
