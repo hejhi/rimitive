@@ -232,42 +232,43 @@ describe('Lattice Core', () => {
       }));
 
       // Parameterized slice factory from README
-      // The actual implementation would use buttonSlice, but for testing we'll simulate
-      const createFilterButtonView = (filterType: Filter) => {
-        // This returns a function that returns a computed view
-        return () =>
-          (state: { setFilter: (f: Filter) => void; filter: Filter }) => ({
-            onClick: state.setFilter,
-            className: state.filter === filterType ? 'selected' : '',
-            'aria-pressed': state.filter === filterType,
-          });
-      };
+      const createFilterButtonView = (filterType: Filter) => 
+        () => {
+          return (model: { setFilter: (f: Filter) => void; filter: Filter }) => {
+            const state = buttonSlice(model);
+            return {
+              onClick: state.setFilter,
+              className: state.filter === filterType ? 'selected' : '',
+              'aria-pressed': state.filter === filterType
+            };
+          };
+        };
 
       // Test the factory
       const allButton = createFilterButtonView('all');
       const activeButton = createFilterButtonView('active');
 
-      // These should be functions that return computed views
+      // These should be functions
       expect(typeof allButton).toBe('function');
       expect(typeof activeButton).toBe('function');
 
       // Test execution
       const mockSetFilter = () => {};
-      const sliceState = {
-        setFilter: mockSetFilter,
+      const model = {
         filter: 'all' as Filter,
+        setFilter: mockSetFilter,
       };
 
-      const allButtonComputed = allButton();
-      const allButtonView = allButtonComputed(sliceState);
-      expect(allButtonView.onClick).toBe(mockSetFilter);
-      expect(allButtonView.className).toBe('selected');
-      expect(allButtonView['aria-pressed']).toBe(true);
+      const allButtonView = allButton();
+      const allButtonResult = allButtonView(model);
+      expect(allButtonResult.onClick).toBeUndefined(); // select() marker
+      expect(allButtonResult.className).toBe('selected');
+      expect(allButtonResult['aria-pressed']).toBe(true);
 
-      const activeButtonComputed = activeButton();
-      const activeButtonView = activeButtonComputed(sliceState);
-      expect(activeButtonView.className).toBe('');
-      expect(activeButtonView['aria-pressed']).toBe(false);
+      const activeButtonView = activeButton();
+      const activeButtonResult = activeButtonView(model);
+      expect(activeButtonResult.className).toBe('');
+      expect(activeButtonResult['aria-pressed']).toBe(false);
     });
   });
 
@@ -280,12 +281,18 @@ describe('Lattice Core', () => {
       }));
 
       // Computed view from README
-      // In the actual implementation, this would use countSlice
-      const counter = () => (state: { count: number }) => ({
-        'data-count': state.count,
-        'aria-label': `Count is ${state.count}`,
-        className: state.count % 2 === 0 ? 'even' : 'odd',
-      });
+      // Note: Our current implementation doesn't support slice transforms
+      // This would require enhancing createSlice to accept transform functions
+      const counter = () => {
+        return (model: { count: number }) => {
+          const state = countSlice(model);
+          return {
+            'data-count': state.count,
+            'aria-label': `Count is ${state.count}`,
+            className: state.count % 2 === 0 ? 'even' : 'odd',
+          };
+        };
+      };
 
       // Test the computed view
       const computedView = counter();
@@ -317,15 +324,18 @@ describe('Lattice Core', () => {
       );
 
       // Shared computation from README
-      const todoStats = () => (state: { todos: Todo[]; filter: string }) => {
-        const active = state.todos.filter((t: Todo) => !t.completed);
-        const completed = state.todos.filter((t: Todo) => t.completed);
+      const todoStats = () => {
+        return (model: { todos: Todo[]; filter: string }) => {
+          const state = todoState(model);
+          const active = state.todos.filter((t: Todo) => !t.completed);
+          const completed = state.todos.filter((t: Todo) => t.completed);
 
-        return {
-          activeTodos: active,
-          activeCount: active.length,
-          completedCount: completed.length,
-          hasCompleted: completed.length > 0,
+          return {
+            activeTodos: active,
+            activeCount: active.length,
+            completedCount: completed.length,
+            hasCompleted: completed.length > 0,
+          };
         };
       };
 
@@ -354,13 +364,26 @@ describe('Lattice Core', () => {
 
       // Summary view from README
       const summary = () => {
-        const stats = todoStats()();
-        return {
-          textContent: `${stats.activeCount} active, ${stats.completedCount} completed`,
+        const stats = todoStats();
+        return (state) => {
+          const computed = stats(state);
+          return {
+            textContent: `${computed.activeCount} active, ${computed.completedCount} completed`,
+          };
         };
       };
 
-      const result = summary();
+      const summaryView = summary();
+      const result = summaryView({
+        todos: [
+          { id: 1, text: 'Task 1', completed: false },
+          { id: 2, text: 'Task 2', completed: true },
+          { id: 3, text: 'Task 3', completed: false },
+          { id: 4, text: 'Task 4', completed: false },
+          { id: 5, text: 'Task 5', completed: true },
+        ],
+        filter: 'all',
+      });
       expect(result.textContent).toBe('3 active, 2 completed');
     });
   });
@@ -489,11 +512,16 @@ describe('Lattice Core', () => {
           actions,
           views: {
             // Computed view - needs runtime calculation
-            counter: () => (state: { count: number }) => ({
-              'data-count': state.count,
-              'aria-label': `Count is ${state.count}`,
-              className: state.count % 2 === 0 ? 'even' : 'odd',
-            }),
+            counter: () => {
+              return (model: { count: number }) => {
+                const state = countSlice(model);
+                return {
+                  'data-count': state.count,
+                  'aria-label': `Count is ${state.count}`,
+                  className: state.count % 2 === 0 ? 'even' : 'odd',
+                };
+              };
+            },
 
             // Static view - slice is the view
             incrementButton,
@@ -554,15 +582,18 @@ describe('Lattice Core', () => {
         }));
 
         // Shared computation - memoized automatically
-        const todoStats = () => (state: { todos: Todo[]; filter: Filter }) => {
-          const active = state.todos.filter((t: Todo) => !t.completed);
-          const completed = state.todos.filter((t: Todo) => t.completed);
+        const todoStats = () => {
+          return (model: { todos: Todo[]; filter: Filter }) => {
+            const state = todoState(model);
+            const active = state.todos.filter((t: Todo) => !t.completed);
+            const completed = state.todos.filter((t: Todo) => t.completed);
 
-          return {
-            activeTodos: active,
-            activeCount: active.length,
-            completedCount: completed.length,
-            hasCompleted: completed.length > 0,
+            return {
+              activeTodos: active,
+              activeCount: active.length,
+              completedCount: completed.length,
+              hasCompleted: completed.length > 0,
+            };
           };
         };
 
@@ -579,14 +610,17 @@ describe('Lattice Core', () => {
         }));
 
         // Composite slice factory for filter buttons
-        const createFilterButtonView =
-          (filterType: Filter) =>
-          () =>
-          (state: { setFilter: (f: Filter) => void; filter: Filter }) => ({
-            onClick: state.setFilter,
-            className: state.filter === filterType ? 'selected' : '',
-            'aria-pressed': state.filter === filterType,
-          });
+        const createFilterButtonView = (filterType: Filter) => 
+          () => {
+            return (model: { setFilter: (f: Filter) => void; filter: Filter }) => {
+              const state = buttonSlice(model);
+              return {
+                onClick: state.setFilter,
+                className: state.filter === filterType ? 'selected' : '',
+                'aria-pressed': state.filter === filterType
+              };
+            };
+          };
 
         return {
           model,
@@ -595,7 +629,7 @@ describe('Lattice Core', () => {
             // Computed view
             summary: () => {
               const stats = todoStats();
-              return (state: { todos: Todo[]; filter: Filter }) => {
+              return (state) => {
                 const computed = stats(state);
                 return {
                   textContent: `${computed.activeCount} active, ${computed.completedCount} completed`,
@@ -740,6 +774,8 @@ describe('Lattice Core', () => {
 
       // Enhanced counter with persistence
       const persistentCounter = createComponent(() => {
+        const base = counter();
+        
         // Extend the model
         const model = createModel<{
           count: number;
@@ -747,14 +783,13 @@ describe('Lattice Core', () => {
           lastSaved: number;
           save: () => void;
         }>(({ set, get }) => ({
-          // Would get base state schema in real implementation
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
+          // Get base state schema
+          ...base.model({ set, get }),
 
           // Add new state
           lastSaved: Date.now(),
           save: () => {
-            // In real implementation: localStorage.setItem('count', String(get().count));
+            localStorage.setItem('count', String(get().count));
             set({ lastSaved: Date.now() });
           },
         }));
@@ -764,11 +799,7 @@ describe('Lattice Core', () => {
           lastSaved: m.lastSaved,
         }));
 
-        // Compute save status
-        const saveStatus = (lastSaved: number) => {
-          const secondsAgo = Math.floor((Date.now() - lastSaved) / 1000);
-          return secondsAgo > 60 ? 'unsaved changes' : 'saved';
-        };
+        // Compute save status - removed as it's now inline in the view
 
         return {
           model,
@@ -779,11 +810,14 @@ describe('Lattice Core', () => {
           views: {
             // New view using computed status
             saveIndicator: () => {
-              // Mock a recent save time for the test
-              const status = saveStatus(Date.now());
-              return {
-                className: status === 'unsaved changes' ? 'warning' : 'success',
-                textContent: status,
+              return (model: { lastSaved: number }) => {
+                const state = saveSlice(model);
+                const secondsAgo = Math.floor((Date.now() - state.lastSaved) / 1000);
+                const status = secondsAgo > 60 ? 'unsaved changes' : 'saved';
+                return {
+                  className: status === 'unsaved changes' ? 'warning' : 'success',
+                  textContent: status
+                };
               };
             },
           },
@@ -799,7 +833,8 @@ describe('Lattice Core', () => {
       expect(typeof enhanced.views.saveIndicator).toBe('function');
 
       // Test the save indicator view
-      const indicatorView = enhanced.views.saveIndicator();
+      const indicatorSlice = enhanced.views.saveIndicator();
+      const indicatorView = indicatorSlice({ lastSaved: Date.now() });
       expect(indicatorView.className).toBe('success');
       expect(indicatorView.textContent).toBe('saved');
     });
@@ -834,16 +869,20 @@ describe('Lattice Core', () => {
 
       const modeSlice = createSlice(model, (m) => ({ mode: m.mode }));
 
-      const adaptiveView = () => (state: { mode: 'light' | 'dark' }) =>
-        state.mode === 'light'
-          ? { background: 'white', color: 'black' }
-          : { background: 'black', color: 'white', border: '1px solid gray' };
+      const adaptiveView = () => {
+        return (model: { mode: 'light' | 'dark' }) => {
+          const state = modeSlice(model);
+          return state.mode === 'light'
+            ? { background: 'white', color: 'black' }
+            : { background: 'black', color: 'white', border: '1px solid gray' };
+        };
+      };
 
-      const lightView = adaptiveView()({ mode: 'light' });
+      const adaptiveSlice = adaptiveView();
+      const lightView = adaptiveSlice({ mode: 'light' });
       expect(lightView).toEqual({ background: 'white', color: 'black' });
 
-      const computedAdaptiveView = adaptiveView();
-      const darkView = computedAdaptiveView({ mode: 'dark' });
+      const darkView = adaptiveSlice({ mode: 'dark' });
       expect(darkView).toEqual({
         background: 'black',
         color: 'white',
