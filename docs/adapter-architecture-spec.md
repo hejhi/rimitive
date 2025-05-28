@@ -74,32 +74,53 @@ Views create UI attribute factories from selectors and actions.
 
 ## Reactivity Threading
 
-State access (via `get()` or equivalent) threads through all layers:
-- Model's `compute()` uses `get()` for derived state
-- Selector's `select()` accesses state through the model interface
-- Actions reference current state
-- View's `derive()` creates reactive UI attributes
+State access threads through all layers with two distinct patterns:
 
-**Reactivity mechanism**: Hybrid approach
-- **Pull-based** for initial values (via getters)
-- **Push-based** for updates (via subscriptions)
-- **Lazy evaluation** with memoization for selectors
+**Lazy Computation** (pull-based):
+- Model's `compute()` - Recomputes on access when dependencies change
+- Memoized but not reactive
+
+**Reactive Binding** (push-based):
+- Selector's `select()` - Updates when source changes
+- View's `derive()` - Updates when any dependency changes
+- Triggers re-renders in UI frameworks
+
+## Adapter Requirements
+
+Adapters provide seven core primitives:
+
+```typescript
+interface AdapterRequirements {
+  // Store operations
+  createStore: (initial?: any) => Store;
+  get: () => State;
+  set: (updates: Partial<State>) => void;
+  subscribe: (listener: () => void) => Unsubscribe;
+  destroy?: () => void;
+  
+  // Computation primitives
+  createComputed: <T>(fn: () => T) => () => T;           // Lazy, memoized
+  createReactive: <S, T>(                               // Reactive binding
+    selector: () => S,
+    transform: (selected: S) => T
+  ) => () => T;
+}
+```
 
 ## Adapter Responsibilities
 
-1. **Execute specifications** with runtime tools
-2. **Transform interfaces** between layers
-3. **Thread reactivity** through the pipeline
-4. **Expose idiomatic API** for the target framework
+1. **Provide primitives** - The seven core operations above
+2. **Execute specifications** - Let Lattice orchestrate, adapter provides capabilities
+3. **Expose idiomatic API** - Match the patterns of the target library
 
 ## Layer Return Types
 
-```typescript
-type ModelInstance = { state: any, methods: any, computed: any }
-type SelectorsInstance = { [key: string]: () => any }
-type ActionsInstance = { [key: string]: (...args) => void }
-type ViewsInstance = { [key: string]: (params?) => UIAttributes }
-```
+Each layer produces specific outputs:
+
+- **Model**: State properties, methods, and computed getters
+- **Selectors**: Reactive getters that return current values
+- **Actions**: Methods that trigger state changes
+- **Views**: Factories that produce UI attribute objects
 
 ## Open Questions
 
