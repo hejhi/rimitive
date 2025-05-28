@@ -2,7 +2,7 @@
 
 ## Overview
 
-Adapters bridge Lattice's compositional specifications with runtime state management libraries. They execute specifications in layers, threading reactivity through the entire pipeline.
+Adapters bridge Lattice's slice-based specifications with runtime state management libraries. They make models and slices reactive, enabling the "everything is a slice" architecture.
 
 ## Core Concepts
 
@@ -10,63 +10,168 @@ Adapters bridge Lattice's compositional specifications with runtime state manage
 
 - **Composition Time**: Building behavior specifications as factory closures
 - **Runtime**: Executing factories with actual state management tools
-- **Boundary**: `component.getSpec()` returns deferred factories that capture their context but await runtime tools
+- **Boundary**: Components return slice factories that await runtime execution
 
-### Layered Execution
+### Slice-Based Execution
 
-Each layer partially executes and reveals the next interface:
+In the slice architecture, execution is simpler:
 
 ```
-         ┌─> selectors(model) ─┐
-getSpec() → model({ set, get }) ─┤                       ├─> views({ selectors, actions })
-         └─> actions(model) ───┘
+component() → model({ set, get }) → slices(model) → reactive stores
 ```
+
+Everything is a slice - a selector function that projects from the model.
 
 ## Execution Model
 
-Adapters receive executable specifications and provide reactive primitives:
+Adapters receive slice specifications and make them reactive:
 
 ```typescript
-const spec = component.getSpec();
-// Spec contains factory functions ready for execution with adapter primitives
+const spec = component();
+// Spec contains:
+// - model: factory for creating state
+// - actions: slice selecting methods 
+// - views: slices or computed view functions
 ```
-
 
 ## Adapter Primitives
 
-Adapters provide three core primitives:
+Adapters provide just two core primitives:
 
 ```typescript
 interface AdapterPrimitives {
-  // Create a reactive value
-  atom<T>(initial: T): {
-    get(): T;
-    set(value: T): void;
-    subscribe(fn: (value: T) => void): () => void;
-  };
+  // Create a reactive store from model
+  createStore<T>(initial: T): Store<T>;
   
-  // Create a computed value (lazy or reactive)
-  computed<T>(fn: () => T): {
-    get(): T;
-    subscribe(fn: (value: T) => void): () => void;
-  };
-  
-  // Run side effects
-  effect(fn: () => void | (() => void)): void;
+  // Create a reactive slice from a store
+  createSlice<T, U>(store: Store<T>, selector: (state: T) => U): Store<U>;
+}
+
+interface Store<T> {
+  get(): T;
+  set(value: T | ((prev: T) => T)): void;
+  subscribe(listener: (value: T) => void): () => void;
+  destroy?: () => void;
 }
 ```
 
-## Adapter Pattern
+That's it! Just two functions to make any state management library work with Lattice.
 
-Lattice specifications are data. Adapters provide execution:
+## Implementation Pattern
 
-1. **Specs describe what** - Component behavior as executable schemas
-2. **Adapters provide how** - Reactive primitives for execution
-3. **Bindings stay thin** - Just subscribe and trigger framework updates
+```typescript
+function createAdapter(primitives: AdapterPrimitives) {
+  return function executeComponent(componentFactory: ComponentFactory) {
+    const spec = componentFactory();
+    
+    // 1. Create reactive model
+    const modelStore = primitives.createStore({});
+    const model = spec.model({
+      get: () => modelStore.get(),
+      set: (updates) => modelStore.set(prev => ({ ...prev, ...updates }))
+    });
+    modelStore.set(model);
+    
+    // 2. Create reactive slices
+    const actions = primitives.createSlice(modelStore, spec.actions);
+    
+    // 3. Handle views (static slices or computed functions)
+    const views = Object.entries(spec.views).reduce((acc, [key, view]) => {
+      if (typeof view === 'function') {
+        // Computed view - returns a slice
+        acc[key] = () => {
+          const innerSlice = view();
+          return primitives.createSlice(modelStore, innerSlice);
+        };
+      } else {
+        // Static slice view
+        acc[key] = primitives.createSlice(modelStore, view);
+      }
+      return acc;
+    }, {});
+    
+    return { model: modelStore, actions, views };
+  };
+}
+```
 
+## Example Implementations
+
+### Zustand
+
+```typescript
+const zustandPrimitives: AdapterPrimitives = {
+  createStore: (initial) => {
+    const store = create(() => initial);
+    return {
+      get: store.getState,
+      set: store.setState,
+      subscribe: store.subscribe,
+      destroy: store.destroy
+    };
+  },
+  
+  createSlice: (store, selector) => {
+    return {
+      get: () => selector(store.get()),
+      set: () => {}, // Slices are read-only
+      subscribe: (listener) => 
+        store.subscribe((state) => listener(selector(state)))
+    };
+  }
+};
+```
+
+### Nano Stores
+
+```typescript
+const nanoPrimitives: AdapterPrimitives = {
+  createStore: (initial) => {
+    const store = map(initial);
+    return {
+      get: () => store.get(),
+      set: (value) => store.set(value),
+      subscribe: (fn) => store.listen(fn)
+    };
+  },
+  
+  createSlice: (store, selector) => {
+    const slice = computed([store], () => selector(store.get()));
+    return {
+      get: () => slice.get(),
+      set: () => {}, // Read-only
+      subscribe: (fn) => slice.listen(fn)
+    };
+  }
+};
+```
+
+## Framework Bindings
+
+Framework bindings remain minimal - they just subscribe and trigger updates:
+
+```typescript
+// React
+function useSlice<T>(slice: Store<T>): T {
+  const [value, setValue] = useState(() => slice.get());
+  useEffect(() => slice.subscribe(setValue), [slice]);
+  return value;
+}
+
+// Vue
+function useSlice<T>(slice: Store<T>) {
+  const value = ref(slice.get());
+  onMounted(() => {
+    const unsub = slice.subscribe(v => value.value = v);
+    onUnmounted(unsub);
+  });
+  return value;
+}
+```
 
 ## Design Principles
 
-- **Less is more**: Minimal primitives enable maximum flexibility
-- **Specs as data**: Behavior descriptions, not implementations
-- **Adapter freedom**: Each library implements primitives idiomatically
+- **Absolute minimalism**: Just 4 methods (get/set/subscribe/destroy)
+- **Everything is a slice**: Unified mental model
+- **Native performance**: Libraries use their optimized reactive primitives
+- **Adapter freedom**: Each library implements the minimal contract idiomatically
