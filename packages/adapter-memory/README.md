@@ -74,6 +74,81 @@ interface MemoryStore<T> {
 - **Minimal overhead**: Simple implementation for maximum performance
 - **Testing friendly**: Perfect for unit tests and integration tests
 
+## Error Handling
+
+The memory adapter implements a simple error propagation model suitable for reference implementations and testing:
+
+### Error Propagation
+
+- **Direct propagation**: Errors thrown in model methods are propagated directly to callers
+- **No error boundaries**: The adapter does not catch or handle errors internally
+- **State persistence**: State remains intact even after errors occur
+- **Synchronous behavior**: All errors are thrown synchronously
+
+### Error Context Enhancement
+
+When errors occur, the adapter enhances them with context via `MemoryAdapterError`:
+
+```typescript
+try {
+  store.getState().riskyOperation();
+} catch (error) {
+  // Error is wrapped with context
+  console.error(error.message); // "Memory adapter error in 'riskyOperation': Original error message"
+  console.error(error.methodName); // 'riskyOperation'
+  console.error(error.originalError); // The original error object
+}
+```
+
+### Example: Working with Errors
+
+```typescript
+const component = createComponent(() => {
+  const model = createModel(({ set, get }) => ({
+    value: 0,
+    riskyDivide: (divisor: number) => {
+      if (divisor === 0) {
+        throw new Error('Division by zero');
+      }
+      set({ value: get().value / divisor });
+    }
+  }));
+  
+  return { model };
+});
+
+const adapter = createMemoryAdapter();
+const store = adapter(component().model);
+
+// This will throw
+try {
+  store.getState().riskyDivide(0);
+} catch (error) {
+  // Error is caught here with added context
+  // State remains unchanged
+  console.log(store.getState().value); // Still 0
+}
+
+// Store continues to work normally
+store.getState().riskyDivide(2); // Works fine
+```
+
+### Best Practices
+
+1. **Handle errors at the call site**: Always wrap risky operations in try-catch blocks
+2. **Validate inputs**: Perform validation in your model methods before operations
+3. **Fail fast**: Throw errors early when invalid conditions are detected
+4. **Use for testing**: This behavior is ideal for testing error scenarios
+
+### Limitations
+
+- **No error recovery**: The adapter provides no automatic error recovery mechanisms
+- **No error isolation**: Errors in one method can affect the entire application flow
+- **No async error handling**: Only synchronous errors are enhanced with context
+- **Not production-ready**: This simple model is designed for reference and testing, not production use
+
+For production applications requiring robust error handling, consider using adapters for state management libraries that provide error boundaries, middleware, and recovery mechanisms.
+
 ## Use Cases
 
 1. **Testing**: Ideal for testing Lattice components without external dependencies

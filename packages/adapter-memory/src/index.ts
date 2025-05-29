@@ -16,6 +16,50 @@ import type { ComponentFactory, SliceFactory, SelectMarkerValue } from '@lattice
 import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
 
 // ============================================================================
+// Error Handling
+// ============================================================================
+
+/**
+ * Custom error class for memory adapter errors with helpful context
+ */
+export class MemoryAdapterError extends Error {
+  constructor(
+    message: string,
+    public readonly context: {
+      operation: string;
+      details?: Record<string, unknown>;
+      cause?: unknown;
+    }
+  ) {
+    // If there's a cause error, use its message as the primary message
+    const errorMessage = context.cause instanceof Error 
+      ? context.cause.message 
+      : message;
+    
+    super(errorMessage);
+    this.name = 'MemoryAdapterError';
+    
+    // Capture stack trace first if needed
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, MemoryAdapterError);
+    }
+    
+    // Now modify the stack trace to include context
+    if (context.cause instanceof Error && context.cause.stack) {
+      // Inject context into the original stack trace
+      const stackLines = context.cause.stack.split('\n');
+      stackLines[0] = `${this.name}: ${errorMessage} [${context.operation}]`;
+      this.stack = stackLines.join('\n');
+    } else if (this.stack) {
+      // Add context to our stack trace
+      const stackLines = this.stack.split('\n');
+      stackLines[0] = `${this.name}: ${errorMessage} [${context.operation}]`;
+      this.stack = stackLines.join('\n');
+    }
+  }
+}
+
+// ============================================================================
 // Core Types
 // ============================================================================
 
@@ -80,10 +124,42 @@ function createBasicStore<T>(initial: T): Store<T> {
   return {
     get: () => state,
     set: (value: T | ((prev: T) => T)) => {
-      // Handle both direct values and updater functions
-      state =
-        typeof value === 'function' ? (value as (prev: T) => T)(state) : value;
-      listeners.forEach((listener) => listener(state));
+      try {
+        // Handle both direct values and updater functions
+        state =
+          typeof value === 'function' ? (value as (prev: T) => T)(state) : value;
+        
+        // Notify listeners with error handling
+        listeners.forEach((listener) => {
+          try {
+            listener(state);
+          } catch (error) {
+            throw new MemoryAdapterError(
+              'Subscription callback failed during state update',
+              {
+                operation: 'store.set.notifyListeners',
+                details: { storeValue: state },
+                cause: error
+              }
+            );
+          }
+        });
+      } catch (error) {
+        if (error instanceof MemoryAdapterError) {
+          throw error;
+        }
+        throw new MemoryAdapterError(
+          'Failed to update store state',
+          {
+            operation: 'store.set',
+            details: { 
+              valueType: typeof value,
+              isFunction: typeof value === 'function'
+            },
+            cause: error
+          }
+        );
+      }
     },
     subscribe: (listener: (value: T) => void) => {
       listeners.add(listener);
@@ -99,20 +175,72 @@ function createReadOnlySlice<T, U>(
   store: Store<T>,
   selector: (state: T) => U
 ): Store<U> {
-  let cachedValue = selector(store.get());
+  let cachedValue: U;
+  try {
+    cachedValue = selector(store.get());
+  } catch (error) {
+    throw new MemoryAdapterError(
+      'Initial slice selector execution failed',
+      {
+        operation: 'createSlice.initial',
+        details: { storeValue: store.get() },
+        cause: error
+      }
+    );
+  }
   const listeners = new Set<(value: U) => void>();
 
   // Subscribe to parent store and only notify on actual changes
   const unsubscribe = store.subscribe((state) => {
-    const newValue = selector(state);
-    if (newValue !== cachedValue) {
-      cachedValue = newValue;
-      listeners.forEach((listener) => listener(newValue));
+    try {
+      const newValue = selector(state);
+      if (newValue !== cachedValue) {
+        cachedValue = newValue;
+        listeners.forEach((listener) => {
+          try {
+            listener(newValue);
+          } catch (error) {
+            throw new MemoryAdapterError(
+              'Slice subscription callback failed',
+              {
+                operation: 'slice.subscribe.callback',
+                details: { sliceValue: newValue },
+                cause: error
+              }
+            );
+          }
+        });
+      }
+    } catch (error) {
+      if (error instanceof MemoryAdapterError) {
+        throw error;
+      }
+      throw new MemoryAdapterError(
+        'Slice selector failed during state update',
+        {
+          operation: 'slice.selector',
+          details: { parentState: state },
+          cause: error
+        }
+      );
     }
   });
 
   return {
-    get: () => selector(store.get()),
+    get: () => {
+      try {
+        return selector(store.get());
+      } catch (error) {
+        throw new MemoryAdapterError(
+          'Slice selector failed during get',
+          {
+            operation: 'slice.get',
+            details: { storeValue: store.get() },
+            cause: error
+          }
+        );
+      }
+    },
     set: () => {
       throw new Error(
         'Cannot set value on a slice - slices are read-only projections'
@@ -215,19 +343,52 @@ export function createMemoryAdapter() {
 
       if (!slice) {
         // Create slice lazily with recursive resolution
-        slice = primitives.createSlice(modelStore, (state) => {
-          const rawResult = sliceFactory(state);
-          return resolveSelectMarkers(rawResult, sliceCache, modelStore);
-        });
-        sliceCache.set(sliceFactory, slice);
+        try {
+          slice = primitives.createSlice(modelStore, (state) => {
+            const rawResult = sliceFactory(state);
+            return resolveSelectMarkers(rawResult, sliceCache, modelStore);
+          });
+          sliceCache.set(sliceFactory, slice);
+        } catch (error) {
+          throw new MemoryAdapterError(
+            'Failed to create slice for select() marker',
+            {
+              operation: 'resolveSelectMarkers.createSlice',
+              details: { sliceFactory: sliceFactory.name || 'anonymous' },
+              cause: error
+            }
+          );
+        }
       }
 
       // Get the slice result
-      const sliceResult = slice.get();
+      let sliceResult: unknown;
+      try {
+        sliceResult = slice.get();
+      } catch (error) {
+        throw new MemoryAdapterError(
+          'Failed to get value from slice in select() resolution',
+          {
+            operation: 'resolveSelectMarkers.getSlice',
+            cause: error
+          }
+        );
+      }
 
       // Apply selector if present
       if (markerValue.selector) {
-        return markerValue.selector(sliceResult) as T;
+        try {
+          return markerValue.selector(sliceResult) as T;
+        } catch (error) {
+          throw new MemoryAdapterError(
+            'Select marker selector function failed',
+            {
+              operation: 'resolveSelectMarkers.selector',
+              details: { sliceResult },
+              cause: error
+            }
+          );
+        }
       }
 
       return sliceResult as T;
@@ -262,12 +423,38 @@ export function createMemoryAdapter() {
     sliceFactory: SliceFactory<Model, T>,
     sliceCache: SliceCache<Model>
   ): Store<T> {
-    const slice = primitives.createSlice(modelStore, (state) => {
-      const rawResult = sliceFactory(state);
-      return resolveSelectMarkers<T, Model>(rawResult, sliceCache, modelStore);
-    });
-    sliceCache.set(sliceFactory, slice);
-    return slice;
+    try {
+      const slice = primitives.createSlice(modelStore, (state) => {
+        let rawResult: T;
+        try {
+          rawResult = sliceFactory(state);
+        } catch (error) {
+          throw new MemoryAdapterError(
+            'Slice factory execution failed',
+            {
+              operation: 'createSliceWithSelectSupport.sliceFactory',
+              details: { sliceFactory: sliceFactory.name || 'anonymous' },
+              cause: error
+            }
+          );
+        }
+        return resolveSelectMarkers<T, Model>(rawResult, sliceCache, modelStore);
+      });
+      sliceCache.set(sliceFactory, slice);
+      return slice;
+    } catch (error) {
+      if (error instanceof MemoryAdapterError) {
+        throw error;
+      }
+      throw new MemoryAdapterError(
+        'Failed to create slice with select support',
+        {
+          operation: 'createSliceWithSelectSupport',
+          details: { sliceFactory: sliceFactory.name || 'anonymous' },
+          cause: error
+        }
+      );
+    }
   }
 
   /**
@@ -292,17 +479,39 @@ export function createMemoryAdapter() {
 
       if (isSliceFactory(view)) {
         // Static slice view - execute immediately
-        Object.defineProperty(views, key, {
-          value: createSlice(view),
-          enumerable: true,
-          configurable: true,
-        });
+        try {
+          Object.defineProperty(views, key, {
+            value: createSlice(view),
+            enumerable: true,
+            configurable: true,
+          });
+        } catch (error) {
+          throw new MemoryAdapterError(
+            `Failed to create static view "${String(key)}"`,
+            {
+              operation: 'processViews.staticView',
+              details: { viewKey: String(key) },
+              cause: error
+            }
+          );
+        }
       } else {
         // Computed view - returns a function that creates the store
         Object.defineProperty(views, key, {
           value: () => {
-            const sliceFactory = (view as () => SliceFactory<Model>)();
-            return createSlice(sliceFactory);
+            try {
+              const sliceFactory = (view as () => SliceFactory<Model>)();
+              return createSlice(sliceFactory);
+            } catch (error) {
+              throw new MemoryAdapterError(
+                `Failed to create computed view "${String(key)}"`,
+                {
+                  operation: 'processViews.computedView',
+                  details: { viewKey: String(key) },
+                  cause: error
+                }
+              );
+            }
           },
           enumerable: true,
           configurable: true,
@@ -326,14 +535,38 @@ export function createMemoryAdapter() {
   >(
     componentFactory: ComponentFactory<Model, Actions, Views>
   ): ExecuteResult<Model, Actions, Views> {
-    const spec = componentFactory();
+    let spec: ReturnType<typeof componentFactory>;
+    try {
+      spec = componentFactory();
+    } catch (error) {
+      throw new MemoryAdapterError(
+        'Component factory execution failed',
+        {
+          operation: 'executeComponent.componentFactory',
+          cause: error
+        }
+      );
+    }
 
     // 1. Create model store
     const modelStore = primitives.createStore<Model>({} as Model);
-    const model = spec.model({
-      get: () => modelStore.get(),
-      set: (updates) => modelStore.set((prev) => ({ ...prev, ...updates })),
-    });
+    
+    let model: Model;
+    try {
+      model = spec.model({
+        get: () => modelStore.get(),
+        set: (updates) => modelStore.set((prev) => ({ ...prev, ...updates })),
+      });
+    } catch (error) {
+      throw new MemoryAdapterError(
+        'Model factory execution failed',
+        {
+          operation: 'executeComponent.modelFactory',
+          cause: error
+        }
+      );
+    }
+    
     modelStore.set(model);
 
     // 2. Set up slice tracking for select() resolution
@@ -342,8 +575,31 @@ export function createMemoryAdapter() {
       createSliceWithSelectSupport(modelStore, factory, sliceCache);
 
     // 3. Create actions and views
-    const actions = createSlice(spec.actions);
-    const views = processViews<Model, Views>(spec, createSlice);
+    let actions: Store<Actions>;
+    try {
+      actions = createSlice(spec.actions);
+    } catch (error) {
+      throw new MemoryAdapterError(
+        'Actions slice creation failed',
+        {
+          operation: 'executeComponent.actions',
+          cause: error
+        }
+      );
+    }
+    
+    let views: ExecutedViews<Model, Views>;
+    try {
+      views = processViews<Model, Views>(spec, createSlice);
+    } catch (error) {
+      throw new MemoryAdapterError(
+        'Views processing failed',
+        {
+          operation: 'executeComponent.views',
+          cause: error
+        }
+      );
+    }
 
     return { model: modelStore, actions, views };
   }
