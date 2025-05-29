@@ -10,6 +10,7 @@ export type ModelFactory<T = any> = (tools: ModelTools<T>) => T;
 export interface SliceFactory<Model = any, Slice = any> {
   (model: Model): Slice;
   <T>(transform: (slice: Slice) => T): SliceFactory<Model, T>;
+  [SLICE_FACTORY_MARKER]?: true;
 }
 
 // Implementation
@@ -37,11 +38,15 @@ export function createSlice<Model, Slice>(
     return selector(modelOrTransform as Model);
   } as SliceFactory<Model, Slice>;
   
+  // Brand the slice factory
+  sliceFactory[SLICE_FACTORY_MARKER] = true;
+  
   return sliceFactory;
 }
 
-// Marker symbol for select
+// Marker symbols
 export const SELECT_MARKER = Symbol('lattice.select');
+export const SLICE_FACTORY_MARKER = Symbol('lattice.sliceFactory');
 
 export function select<Model, T>(slice: SliceFactory<Model, T>): T {
   // Return a marker that adapters can recognize
@@ -67,6 +72,7 @@ export function createComponent<Model, Actions, Views>(
 ): ComponentFactory<Model, Actions, Views> {
   return factory;
 }
+
 
 // In-source tests for slice transforms
 if (import.meta.vitest) {

@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest';
-import type { ModelFactory } from '@lattice/core';
 import { createMemoryAdapter } from './index';
 
 describe('createMemoryAdapter', () => {
@@ -8,33 +7,37 @@ describe('createMemoryAdapter', () => {
     expect(typeof createMemoryAdapter).toBe('function');
   });
 
-  it('should create an adapter that fulfills a simple counter model factory', () => {
+  it('should create an adapter with working primitives', () => {
     interface CounterState {
       count: number;
       increment: () => void;
       decrement: () => void;
     }
 
-    // Simple counter model factory specification
-    const counterModelFactory: ModelFactory<CounterState> = ({ set, get }) => ({
+    // Create adapter and use primitives
+    const adapter = createMemoryAdapter();
+    const { primitives } = adapter;
+    
+    // Create store with initial state
+    const store = primitives.createStore<CounterState>({
       count: 0,
-      increment: () => set({ count: get().count + 1 }),
-      decrement: () => set({ count: get().count - 1 })
+      increment: () => {
+        store.set(prev => ({ ...prev, count: prev.count + 1 }));
+      },
+      decrement: () => {
+        store.set(prev => ({ ...prev, count: prev.count - 1 }));
+      }
     });
 
-    // Create adapter and execute the model factory
-    const adapter = createMemoryAdapter();
-    const store = adapter(counterModelFactory);
-
     // Verify initial state
-    expect(store.getState().count).toBe(0);
+    expect(store.get().count).toBe(0);
 
     // Verify actions work
-    store.getState().increment();
-    expect(store.getState().count).toBe(1);
+    store.get().increment();
+    expect(store.get().count).toBe(1);
 
-    store.getState().decrement();
-    expect(store.getState().count).toBe(0);
+    store.get().decrement();
+    expect(store.get().count).toBe(0);
   });
 
   it('should support subscriptions to state changes', () => {
@@ -43,13 +46,15 @@ describe('createMemoryAdapter', () => {
       increment: () => void;
     }
 
-    const counterModelFactory: ModelFactory<CounterState> = ({ set, get }) => ({
-      count: 0,
-      increment: () => set({ count: get().count + 1 })
-    });
-
     const adapter = createMemoryAdapter();
-    const store = adapter(counterModelFactory);
+    const { primitives } = adapter;
+    
+    const store = primitives.createStore<CounterState>({
+      count: 0,
+      increment: () => {
+        store.set(prev => ({ ...prev, count: prev.count + 1 }));
+      }
+    });
 
     let callCount = 0;
     let lastState: CounterState | undefined;
@@ -61,7 +66,7 @@ describe('createMemoryAdapter', () => {
     });
 
     // Trigger state change
-    store.getState().increment();
+    store.get().increment();
 
     // Verify subscription was called
     expect(callCount).toBe(1);
@@ -69,7 +74,7 @@ describe('createMemoryAdapter', () => {
 
     // Unsubscribe and verify no more calls
     unsubscribe();
-    store.getState().increment();
+    store.get().increment();
     expect(callCount).toBe(1);
   });
 });

@@ -7,17 +7,20 @@ export default defineConfig({
       entry: resolve(__dirname, 'src/index.ts'),
       name: 'LatticeAdapterMemory',
       formats: ['es'],
-      fileName: 'index'
+      fileName: 'index',
     },
     rollupOptions: {
       external: ['@lattice/core'],
       output: {
         globals: {
-          '@lattice/core': 'LatticeCore'
-        }
-      }
+          '@lattice/core': 'LatticeCore',
+        },
+      },
     },
     sourcemap: true,
-    minify: false
-  }
+    minify: false,
+  },
+  define: {
+    'import.meta.vitest': 'undefined',
+  },
 });
