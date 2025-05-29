@@ -1,7 +1,7 @@
 // Slice-based Lattice Core API
 
 // Core types
-export interface ModelTools<T = any> {
+export interface ModelTools<T> {
   get: () => T;
   set: (updates: Partial<T>) => void;
 }
@@ -25,13 +25,13 @@ export function createSlice<Model, Slice>(
   selector: (model: Model) => Slice
 ): SliceFactory<Model, Slice> {
   // Create a function that can both execute the selector and accept transforms
-  const sliceFactory = function sliceFactory(
-    modelOrTransform: Model | ((slice: Slice) => any)
-  ) {
+  const sliceFactory = function <T>(
+    modelOrTransform: Model | ((slice: Slice) => T)
+  ): Slice | SliceFactory<Model, T> {
     // Check if the argument is a transform function
     if (typeof modelOrTransform === 'function') {
       // Return a new SliceFactory that applies the transform
-      const transform = modelOrTransform as (slice: Slice) => any;
+      const transform = modelOrTransform as (slice: Slice) => T;
       return createSlice(_model, (model: Model) => {
         const slice = selector(model);
         return transform(slice);
@@ -40,39 +40,45 @@ export function createSlice<Model, Slice>(
 
     // Otherwise, it's a model - execute the selector
     return selector(modelOrTransform);
-  };
+  } as SliceFactory<Model, Slice>;
 
   // Brand the slice factory
-  sliceFactory[SLICE_FACTORY_MARKER] = true;
+  Object.defineProperty(sliceFactory, SLICE_FACTORY_MARKER, {
+    value: true,
+    enumerable: false,
+    configurable: false,
+  });
 
-  return sliceFactory as SliceFactory<Model, Slice>;
+  return sliceFactory;
 }
 
 // Marker symbols
 export const SELECT_MARKER = Symbol('lattice.select');
 export const SLICE_FACTORY_MARKER = Symbol('lattice.sliceFactory');
 
+// Note: The select() function must return a type-cast value because it returns
+// a marker object that pretends to be type T. This is by design - adapters
+// recognize and handle these markers specially.
 export function select<Model, T>(slice: SliceFactory<Model, T>): T {
-  // Return a marker that adapters can recognize
-  // This allows slices to compose other slices
-  // The cast is necessary because we're returning a marker object
-  // that will be interpreted by adapters, not the actual type T
-  return {
-    [SELECT_MARKER]: slice,
-  } as T;
+  // Create marker object with proper type
+  const marker = Object.create(null);
+  marker[SELECT_MARKER] = slice;
+
+  // This cast is intentional and required for the marker pattern to work
+  return marker as T;
 }
 
-export interface ComponentSpec<Model = any, Actions = any, Views = any> {
+export interface ComponentSpec<Model, Actions, Views> {
   model: ModelFactory<Model>;
   actions: SliceFactory<Model, Actions>;
   views: Views;
 }
 
-export type ComponentFactory<
-  Model = any,
-  Actions = any,
-  Views = any,
-> = () => ComponentSpec<Model, Actions, Views>;
+export type ComponentFactory<Model, Actions, Views> = () => ComponentSpec<
+  Model,
+  Actions,
+  Views
+>;
 
 export function createComponent<Model, Actions, Views>(
   factory: () => ComponentSpec<Model, Actions, Views>
@@ -117,6 +123,6 @@ if (import.meta.vitest) {
 
     const marker = select(slice);
     expect(SELECT_MARKER in marker).toBe(true);
-    expect((marker as any)[SELECT_MARKER]).toBe(slice);
+    expect((marker as Record<symbol, unknown>)[SELECT_MARKER]).toBe(slice);
   });
 }
