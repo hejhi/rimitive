@@ -46,6 +46,7 @@ export function createMemoryAdapter() {
       return {
         get: () => state,
         set: (value: T | ((prev: T) => T)) => {
+          // Use type assertion after runtime check
           state =
             typeof value === 'function'
               ? (value as (prev: T) => T)(state)
@@ -97,6 +98,19 @@ export function createMemoryAdapter() {
     },
   };
 
+  // Type to safely access symbol properties
+  type SelectMarkerObj = Record<symbol, unknown> & { [SELECT_MARKER]: SliceFactory<any, unknown> };
+  
+  // Type guard for select markers
+  function isSelectMarker(obj: unknown): obj is SelectMarkerObj {
+    return (
+      typeof obj === 'object' &&
+      obj !== null &&
+      typeof SELECT_MARKER !== 'undefined' &&
+      SELECT_MARKER in obj
+    );
+  }
+
   // Helper to resolve select() markers
   function resolveSelectMarkers<T, Model>(
     obj: T,
@@ -108,10 +122,8 @@ export function createMemoryAdapter() {
     }
 
     // Check if this is a select marker
-    if (typeof SELECT_MARKER !== 'undefined' && SELECT_MARKER in obj) {
-      const sliceFactory = (obj as Record<symbol, unknown>)[
-        SELECT_MARKER
-      ] as SliceFactory<Model, unknown>;
+    if (isSelectMarker(obj)) {
+      const sliceFactory = obj[SELECT_MARKER] as SliceFactory<Model, unknown>;
       let slice = sliceMap.get(sliceFactory);
 
       // If slice doesn't exist yet, create it
@@ -127,10 +139,14 @@ export function createMemoryAdapter() {
     }
 
     // Recursively resolve nested objects
-    const resolved = Array.isArray(obj) ? [] : ({} as Record<string, unknown>);
+    if (Array.isArray(obj)) {
+      return obj.map(item => resolveSelectMarkers(item, sliceMap, modelStore)) as T;
+    }
+    
+    const resolved: Record<string, unknown> = {};
     const source = obj as Record<string, unknown>;
     for (const key in source) {
-      (resolved as Record<string, unknown>)[key] = resolveSelectMarkers(
+      resolved[key] = resolveSelectMarkers(
         source[key],
         sliceMap,
         modelStore
@@ -153,7 +169,7 @@ export function createMemoryAdapter() {
     const spec = componentFactory();
 
     // 1. Create reactive model
-    const modelStore = primitives.createStore({} as Model);
+    const modelStore = primitives.createStore<Model>({} as Model);
     const model = spec.model({
       get: () => modelStore.get(),
       set: (updates) => modelStore.set((prev) => ({ ...prev, ...updates })),
@@ -178,30 +194,48 @@ export function createMemoryAdapter() {
     // 2. Create reactive actions slice
     const actions = createSliceWithSelect(spec.actions);
 
-    // 3. Handle views
-    const views = {} as ExecutedViews<Model, Views>;
+    // 3. Handle views with proper typing
+    type ViewsBuilder = {
+      [K in keyof Views]: ViewType<Model, Views[K]>
+    };
+    
+    const viewsBuilder = {} as ViewsBuilder;
+    
+    // Helper to check if a function is a SliceFactory
+    function isSliceFactory<M, S>(
+      fn: SliceFactory<M, S> | (() => SliceFactory<M, S>)
+    ): fn is SliceFactory<M, S> {
+      return SLICE_FACTORY_MARKER in fn;
+    }
 
     // Process each view
-    (Object.keys(spec.views) as Array<keyof Views>).forEach((key) => {
+    for (const key in spec.views) {
       const view = spec.views[key];
-      if (!view) return;
+      if (!view) continue;
 
       if (typeof view === 'function') {
-        // Check if it's a SliceFactory using the brand
-        if (SLICE_FACTORY_MARKER in view) {
+        if (isSliceFactory(view)) {
           // Static slice view
-          (views as any)[key] = createSliceWithSelect(
-            view as SliceFactory<Model, unknown>
-          );
+          Object.defineProperty(viewsBuilder, key, {
+            value: createSliceWithSelect(view),
+            enumerable: true,
+            configurable: true
+          });
         } else {
           // Computed view - function that returns a SliceFactory
-          (views as any)[key] = () => {
-            const sliceFactory = (view as () => SliceFactory<Model, unknown>)();
-            return createSliceWithSelect(sliceFactory);
-          };
+          Object.defineProperty(viewsBuilder, key, {
+            value: () => {
+              const sliceFactory = (view as () => SliceFactory<Model, unknown>)();
+              return createSliceWithSelect(sliceFactory);
+            },
+            enumerable: true,
+            configurable: true
+          });
         }
       }
-    });
+    }
+    
+    const views = viewsBuilder as ExecutedViews<Model, Views>;
 
     return { model: modelStore, actions, views };
   }
@@ -385,10 +419,7 @@ if (import.meta.vitest) {
       const result = adapter.executeComponent(component);
 
       // Static view should be a reactive store
-      const display = result.views.display as Store<{
-        value: number;
-        isDisabled: boolean;
-      }>;
+      const display = result.views.display;
       expect(display.get()).toEqual({
         value: 5,
         isDisabled: false,
