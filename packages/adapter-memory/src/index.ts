@@ -178,16 +178,28 @@ export function createMemoryAdapter() {
   }
 
   /**
-   * Type-safe slice map that preserves slice result types
+   * Internal slice cache for select() resolution
+   * Note: We use a WeakMap for better memory management and type erasure is necessary
+   * here since we're storing heterogeneous slice types.
    */
-  type SliceMap<Model> = Map<SliceFactory<Model, unknown>, Store<any>>;
+  class SliceCache<Model> {
+    private cache = new Map<SliceFactory<Model, unknown>, Store<unknown>>();
+
+    get<T>(factory: SliceFactory<Model, T>): Store<T> | undefined {
+      return this.cache.get(factory) as Store<T> | undefined;
+    }
+
+    set<T>(factory: SliceFactory<Model, T>, store: Store<T>): void {
+      this.cache.set(factory, store as Store<unknown>);
+    }
+  }
 
   /**
    * Recursively resolves select() markers in slice results
    */
   function resolveSelectMarkers<T, Model>(
     obj: T,
-    sliceMap: SliceMap<Model>,
+    sliceCache: SliceCache<Model>,
     modelStore: Store<Model>
   ): T {
     // Primitives pass through unchanged
@@ -198,15 +210,15 @@ export function createMemoryAdapter() {
     // Handle select() markers
     if (isSelectMarker<Model>(obj)) {
       const sliceFactory = obj[SELECT_MARKER];
-      let slice = sliceMap.get(sliceFactory);
+      let slice = sliceCache.get(sliceFactory);
 
       if (!slice) {
         // Create slice lazily with recursive resolution
         slice = primitives.createSlice(modelStore, (state) => {
           const rawResult = sliceFactory(state);
-          return resolveSelectMarkers(rawResult, sliceMap, modelStore);
+          return resolveSelectMarkers(rawResult, sliceCache, modelStore);
         });
-        sliceMap.set(sliceFactory, slice);
+        sliceCache.set(sliceFactory, slice);
       }
 
       return slice.get() as T;
@@ -215,7 +227,7 @@ export function createMemoryAdapter() {
     // Handle arrays
     if (Array.isArray(obj)) {
       return obj.map((item) =>
-        resolveSelectMarkers(item, sliceMap, modelStore)
+        resolveSelectMarkers(item, sliceCache, modelStore)
       ) as T;
     }
 
@@ -223,7 +235,7 @@ export function createMemoryAdapter() {
     const resolved = {} as T;
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        resolved[key] = resolveSelectMarkers(obj[key], sliceMap, modelStore);
+        resolved[key] = resolveSelectMarkers(obj[key], sliceCache, modelStore);
       }
     }
     return resolved;
@@ -239,13 +251,13 @@ export function createMemoryAdapter() {
   function createSliceWithSelectSupport<Model, T>(
     modelStore: Store<Model>,
     sliceFactory: SliceFactory<Model, T>,
-    sliceMap: SliceMap<Model>
+    sliceCache: SliceCache<Model>
   ): Store<T> {
     const slice = primitives.createSlice(modelStore, (state) => {
       const rawResult = sliceFactory(state);
-      return resolveSelectMarkers<T, Model>(rawResult, sliceMap, modelStore);
+      return resolveSelectMarkers<T, Model>(rawResult, sliceCache, modelStore);
     });
-    sliceMap.set(sliceFactory, slice);
+    sliceCache.set(sliceFactory, slice);
     return slice;
   }
 
@@ -280,7 +292,7 @@ export function createMemoryAdapter() {
         // Computed view - returns a function that creates the store
         Object.defineProperty(views, key, {
           value: () => {
-            const sliceFactory = (view as () => SliceFactory<Model, unknown>)();
+            const sliceFactory = (view as () => SliceFactory<Model>)();
             return createSlice(sliceFactory);
           },
           enumerable: true,
@@ -316,9 +328,9 @@ export function createMemoryAdapter() {
     modelStore.set(model);
 
     // 2. Set up slice tracking for select() resolution
-    const sliceMap: SliceMap<Model> = new Map();
+    const sliceCache = new SliceCache<Model>();
     const createSlice = <T>(factory: SliceFactory<Model, T>) =>
-      createSliceWithSelectSupport(modelStore, factory, sliceMap);
+      createSliceWithSelectSupport(modelStore, factory, sliceCache);
 
     // 3. Create actions and views
     const actions = createSlice(spec.actions);
@@ -338,8 +350,8 @@ export function createMemoryAdapter() {
     modelStore: Store<Model>,
     sliceFactory: SliceFactory<Model, Slice>
   ): Store<Slice> {
-    const sliceMap: SliceMap<Model> = new Map();
-    return createSliceWithSelectSupport(modelStore, sliceFactory, sliceMap);
+    const sliceCache = new SliceCache<Model>();
+    return createSliceWithSelectSupport(modelStore, sliceFactory, sliceCache);
   }
 
   return {
