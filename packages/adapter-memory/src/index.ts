@@ -1,7 +1,27 @@
+/**
+ * @fileoverview Memory adapter for Lattice
+ *
+ * This adapter provides a simple in-memory state management solution
+ * that implements the Lattice adapter specification. It creates reactive
+ * stores and slices without any external dependencies.
+ *
+ * Key features:
+ * - Minimal implementation using only JavaScript primitives
+ * - Full support for select() markers and slice composition
+ * - Type-safe component execution
+ * - Read-only slices with proper error messages
+ */
+
 import type { ComponentFactory, SliceFactory } from '@lattice/core';
 import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
 
-// Core adapter interfaces
+// ============================================================================
+// Core Types
+// ============================================================================
+
+/**
+ * Store interface - the fundamental reactive primitive
+ */
 interface Store<T> {
   get: () => T;
   set: (value: T | ((prev: T) => T)) => void;
@@ -9,101 +29,145 @@ interface Store<T> {
   destroy?: () => void;
 }
 
+/**
+ * Adapter primitives - minimal interface for state management
+ */
 interface AdapterPrimitives {
   createStore<T>(initial: T): Store<T>;
   createSlice<T, U>(store: Store<T>, selector: (state: T) => U): Store<U>;
 }
 
-// Type helpers for view execution
+// ============================================================================
+// Type Helpers
+// ============================================================================
+
+/**
+ * Maps view types from slice factories to stores
+ */
 type ViewType<Model, T> = T extends () => SliceFactory<Model, infer S>
   ? () => Store<S>
   : T extends SliceFactory<Model, infer S>
     ? Store<S>
     : never;
 
+/**
+ * Maps all views in a component to their executed types
+ */
 type ExecutedViews<Model, Views> = {
   [K in keyof Views]: ViewType<Model, Views[K]>;
 };
 
-// Result type for executed components
+/**
+ * Result of executing a component
+ */
 export interface ExecuteResult<Model, Actions, Views> {
   model: Store<Model>;
   actions: Store<Actions>;
   views: ExecutedViews<Model, Views>;
 }
 
+// ============================================================================
+// Primitive Implementations
+// ============================================================================
+
 /**
- * Creates an in-memory adapter for Lattice slice factories.
- * This adapter provides a simple state management solution without external dependencies.
+ * Creates a basic reactive store
  */
-export function createMemoryAdapter() {
-  // Implement adapter primitives
-  const primitives: AdapterPrimitives = {
-    createStore<T>(initial: T): Store<T> {
-      let state = initial;
-      const listeners = new Set<(value: T) => void>();
+function createBasicStore<T>(initial: T): Store<T> {
+  let state = initial;
+  const listeners = new Set<(value: T) => void>();
 
-      return {
-        get: () => state,
-        set: (value: T | ((prev: T) => T)) => {
-          // Use type assertion after runtime check
-          state =
-            typeof value === 'function'
-              ? (value as (prev: T) => T)(state)
-              : value;
-          listeners.forEach((listener) => listener(state));
-        },
-        subscribe: (listener: (value: T) => void) => {
-          listeners.add(listener);
-          return () => {
-            listeners.delete(listener);
-          };
-        },
-      };
+  return {
+    get: () => state,
+    set: (value: T | ((prev: T) => T)) => {
+      // Handle both direct values and updater functions
+      state =
+        typeof value === 'function' ? (value as (prev: T) => T)(state) : value;
+      listeners.forEach((listener) => listener(state));
     },
-
-    createSlice<T, U>(store: Store<T>, selector: (state: T) => U): Store<U> {
-      let cachedValue = selector(store.get());
-      const listeners = new Set<(value: U) => void>();
-
-      // Subscribe to parent store changes
-      const unsubscribe = store.subscribe((state) => {
-        const newValue = selector(state);
-        // Only notify if value actually changed (simple equality check)
-        if (newValue !== cachedValue) {
-          cachedValue = newValue;
-          listeners.forEach((listener) => listener(newValue));
-        }
-      });
-
-      return {
-        get: () => selector(store.get()),
-        set: () => {
-          // Slices are read-only
-          throw new Error(
-            'Cannot set value on a slice - slices are read-only projections'
-          );
-        },
-        subscribe: (listener: (value: U) => void) => {
-          listeners.add(listener);
-          return () => {
-            listeners.delete(listener);
-          };
-        },
-        destroy: () => {
-          unsubscribe();
-          listeners.clear();
-        },
-      };
+    subscribe: (listener: (value: T) => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
     },
   };
+}
 
-  // Type for select marker objects
+/**
+ * Creates a read-only slice of a store
+ */
+function createReadOnlySlice<T, U>(
+  store: Store<T>,
+  selector: (state: T) => U
+): Store<U> {
+  let cachedValue = selector(store.get());
+  const listeners = new Set<(value: U) => void>();
+
+  // Subscribe to parent store and only notify on actual changes
+  const unsubscribe = store.subscribe((state) => {
+    const newValue = selector(state);
+    if (newValue !== cachedValue) {
+      cachedValue = newValue;
+      listeners.forEach((listener) => listener(newValue));
+    }
+  });
+
+  return {
+    get: () => selector(store.get()),
+    set: () => {
+      throw new Error(
+        'Cannot set value on a slice - slices are read-only projections'
+      );
+    },
+    subscribe: (listener: (value: U) => void) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    destroy: () => {
+      unsubscribe();
+      listeners.clear();
+    },
+  };
+}
+
+/**
+ * Creates an in-memory adapter for Lattice slice factories.
+ *
+ * @returns An adapter with primitives and component execution methods
+ *
+ * @example
+ * ```typescript
+ * const adapter = createMemoryAdapter();
+ * const result = adapter.executeComponent(myComponent);
+ *
+ * // Access reactive stores
+ * console.log(result.model.get());
+ * result.actions.get().doSomething();
+ * ```
+ */
+export function createMemoryAdapter() {
+  // ============================================================================
+  // Architecture Overview:
+  //
+  // 1. Primitives: Basic reactive store and read-only slice implementations
+  // 2. Select Resolution: Handles select() markers for slice composition
+  // 3. Component Execution: Transforms slice factories into reactive stores
+  // 4. Public API: Exposes primitives and high-level execution methods
+  // ============================================================================
+
+  // Create adapter primitives using our implementations
+  const primitives: AdapterPrimitives = {
+    createStore: createBasicStore,
+    createSlice: createReadOnlySlice,
+  };
+
+  // ============================================================================
+  // Select Marker Resolution
+  // ============================================================================
+
   interface SelectMarkerObj<Model = any> {
     [SELECT_MARKER]: SliceFactory<Model, unknown>;
   }
 
-  // Type guard for select markers
   function isSelectMarker<Model>(obj: unknown): obj is SelectMarkerObj<Model> {
     return (
       typeof obj === 'object' &&
@@ -113,23 +177,26 @@ export function createMemoryAdapter() {
     );
   }
 
-  // Helper to resolve select() markers
+  /**
+   * Recursively resolves select() markers in slice results
+   */
   function resolveSelectMarkers<T, Model>(
     obj: T,
     sliceMap: Map<SliceFactory<Model, unknown>, Store<unknown>>,
     modelStore: Store<Model>
   ): T {
+    // Primitives pass through unchanged
     if (typeof obj !== 'object' || obj === null) {
       return obj;
     }
 
-    // Check if this is a select marker
+    // Handle select() markers
     if (isSelectMarker<Model>(obj)) {
       const sliceFactory = obj[SELECT_MARKER];
       let slice = sliceMap.get(sliceFactory);
 
-      // If slice doesn't exist yet, create it
       if (!slice) {
+        // Create slice lazily with recursive resolution
         slice = primitives.createSlice(modelStore, (state) => {
           const rawResult = sliceFactory(state);
           return resolveSelectMarkers(rawResult, sliceMap, modelStore);
@@ -140,16 +207,15 @@ export function createMemoryAdapter() {
       return slice.get() as T;
     }
 
-    // Recursively resolve nested objects
+    // Handle arrays
     if (Array.isArray(obj)) {
       return obj.map((item) =>
         resolveSelectMarkers(item, sliceMap, modelStore)
       ) as T;
     }
 
-    // Handle object case
+    // Handle objects
     const resolved = {} as T;
-
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
         resolved[key] = resolveSelectMarkers(obj[key], sliceMap, modelStore);
@@ -158,21 +224,85 @@ export function createMemoryAdapter() {
     return resolved;
   }
 
-  // Execute component with full type safety
+  // ============================================================================
+  // Component Execution
+  // ============================================================================
+
+  /**
+   * Creates a slice that automatically resolves select() markers
+   */
+  function createSliceWithSelectSupport<Model, T>(
+    modelStore: Store<Model>,
+    sliceFactory: SliceFactory<Model, T>,
+    sliceMap: Map<SliceFactory<Model, unknown>, Store<unknown>>
+  ): Store<T> {
+    const slice = primitives.createSlice(modelStore, (state) => {
+      const rawResult = sliceFactory(state);
+      return resolveSelectMarkers<T, Model>(rawResult, sliceMap, modelStore);
+    });
+    sliceMap.set(sliceFactory, slice as Store<unknown>);
+    return slice;
+  }
+
+  /**
+   * Checks if a function is a SliceFactory (has the brand)
+   */
+  function isSliceFactory(fn: unknown): fn is SliceFactory {
+    return typeof fn === 'function' && SLICE_FACTORY_MARKER in fn;
+  }
+
+  /**
+   * Processes views into reactive stores
+   */
+  function processViews<Model, Views>(
+    spec: { views: Views },
+    createSlice: (factory: SliceFactory<Model, unknown>) => Store<unknown>
+  ): ExecutedViews<Model, Views> {
+    const views = {} as ExecutedViews<Model, Views>;
+
+    for (const key in spec.views) {
+      const view = spec.views[key];
+      if (!view || typeof view !== 'function') continue;
+
+      if (isSliceFactory(view)) {
+        // Static slice view - execute immediately
+        Object.defineProperty(views, key, {
+          value: createSlice(view),
+          enumerable: true,
+          configurable: true,
+        });
+      } else {
+        // Computed view - returns a function that creates the store
+        Object.defineProperty(views, key, {
+          value: () => {
+            const sliceFactory = (view as () => SliceFactory<Model, unknown>)();
+            return createSlice(sliceFactory);
+          },
+          enumerable: true,
+          configurable: true,
+        });
+      }
+    }
+
+    return views;
+  }
+
+  /**
+   * Executes a component factory into reactive stores
+   */
   function executeComponent<
     Model,
     Actions,
     Views extends Record<
       string,
-      SliceFactory<Model, any> | (() => SliceFactory<Model, any>)
+      SliceFactory<Model, unknown> | (() => SliceFactory<Model, unknown>)
     >,
   >(
     componentFactory: ComponentFactory<Model, Actions, Views>
   ): ExecuteResult<Model, Actions, Views> {
     const spec = componentFactory();
 
-    // 1. Create reactive model
-    // Initialize with empty object - will be replaced by model factory result
+    // 1. Create model store
     const modelStore = primitives.createStore<Model>({} as Model);
     const model = spec.model({
       get: () => modelStore.get(),
@@ -180,87 +310,33 @@ export function createMemoryAdapter() {
     });
     modelStore.set(model);
 
-    // Track created slices for select() resolution
+    // 2. Set up slice tracking for select() resolution
     const sliceMap = new Map<SliceFactory<Model, unknown>, Store<unknown>>();
+    const createSlice = <T>(factory: SliceFactory<Model, T>) =>
+      createSliceWithSelectSupport(modelStore, factory, sliceMap);
 
-    // Helper to create a slice with select() support
-    function createSliceWithSelect<T>(
-      sliceFactory: SliceFactory<Model, T>
-    ): Store<T> {
-      const slice = primitives.createSlice(modelStore, (state) => {
-        const rawResult = sliceFactory(state);
-        return resolveSelectMarkers<T, Model>(rawResult, sliceMap, modelStore);
-      });
-      sliceMap.set(sliceFactory, slice as Store<unknown>);
-      return slice;
-    }
-
-    // 2. Create reactive actions slice
-    const actions = createSliceWithSelect(spec.actions);
-
-    // 3. Handle views with proper typing
-    type ViewsBuilder = {
-      [K in keyof Views]: ViewType<Model, Views[K]>;
-    };
-
-    const views = {} as ViewsBuilder;
-
-    // Helper to check if a function is a SliceFactory
-    function isSliceFactory<M, S>(
-      fn: SliceFactory<M, S> | (() => SliceFactory<M, S>)
-    ): fn is SliceFactory<M, S> {
-      return SLICE_FACTORY_MARKER in fn;
-    }
-
-    // Process each view
-    for (const key in spec.views) {
-      const view = spec.views[key];
-      if (!view) continue;
-
-      if (typeof view === 'function') {
-        if (isSliceFactory(view)) {
-          // Static slice view
-          Object.defineProperty(views, key, {
-            value: createSliceWithSelect(view),
-            enumerable: true,
-            configurable: true,
-          });
-        } else {
-          // Computed view - function that returns a SliceFactory
-          Object.defineProperty(views, key, {
-            value: () => {
-              const sliceFactory = (
-                view as () => SliceFactory<Model, unknown>
-              )();
-              return createSliceWithSelect(sliceFactory);
-            },
-            enumerable: true,
-            configurable: true,
-          });
-        }
-      }
-    }
+    // 3. Create actions and views
+    const actions = createSlice(spec.actions);
+    const views = processViews<Model, Views>(spec, createSlice);
 
     return { model: modelStore, actions, views };
   }
 
-  // Return adapter with all methods
-  // Type-safe builder for creating stores from slices
+  // ============================================================================
+  // Public API
+  // ============================================================================
+
+  /**
+   * Creates a store from a slice factory with select() support
+   */
   function createStoreFromSlice<Model, Slice>(
     modelStore: Store<Model>,
     sliceFactory: SliceFactory<Model, Slice>
   ): Store<Slice> {
-    return primitives.createSlice(modelStore, (state) => {
-      const rawResult = sliceFactory(state);
-      return resolveSelectMarkers<Slice, Model>(
-        rawResult,
-        new Map<SliceFactory<Model, unknown>, Store<unknown>>(),
-        modelStore
-      );
-    });
+    const sliceMap = new Map<SliceFactory<Model, unknown>, Store<unknown>>();
+    return createSliceWithSelectSupport(modelStore, sliceFactory, sliceMap);
   }
 
-  // Return adapter API focused on primitives
   return {
     primitives,
     executeComponent,
@@ -268,7 +344,10 @@ export function createMemoryAdapter() {
   };
 }
 
+// ============================================================================
 // In-source tests
+// ============================================================================
+
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
   const { createComponent, createModel, createSlice, select } = await import(
