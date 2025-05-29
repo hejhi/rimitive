@@ -53,10 +53,14 @@ const actions = createSlice(model, (m) => ({
   increment: m.increment
 }));
 
-// select() creates a marker, not an actual reference
+// select() uses a selector function to create a marker for composition
 const button = createSlice(model, (m) => ({
-  onClick: select(actions).increment  // Marker for adapters to process
+  onClick: select(actions, (a) => a.increment)  // Selector function specifies what to select
 }));
+
+// Why use a selector function?
+// The selector pattern ensures type safety and allows adapters to understand
+// exactly what property you want to select from the slice at runtime.
 ```
 
 ### 2. **Adapters Execute Specifications**
@@ -73,6 +77,27 @@ const Component = createReactAdapter(counter); // Renders with React
 - Your specifications remain pure data with no side effects
 
 **Key insight**: Lattice Core is like writing SQL - you describe what you want, not how to get it. Adapters are like database engines that execute your queries.
+
+### Understanding the `select()` API
+
+The `select()` function is how you compose slices together. It uses a **selector function** pattern:
+
+```typescript
+// ✅ Correct: Use a selector function
+select(actions, (a) => a.increment)
+
+// ❌ Wrong: Direct property access doesn't work
+select(actions).increment  // This won't work!
+```
+
+**Why use a selector function?**
+
+1. **Type Safety**: TypeScript can verify that the property exists on the slice
+2. **Clear Intent**: The selector explicitly shows what you're selecting
+3. **Adapter Processing**: Adapters need to know which property to extract at runtime
+4. **Prevents Execution**: The selector function is never called during composition - it's just a specification
+
+Remember: During composition, `select()` creates a marker object that adapters will process later. The selector function tells the adapter exactly what to select when the slice is executed.
 
 ## A Real Example: Building a Counter
 
@@ -105,7 +130,7 @@ const counter = createComponent(() => {
   
   // Composite slice: Combines state and actions
   const incrementButton = createSlice(model, (m) => ({
-    onClick: select(actions).increment,  // Creates a marker, NOT a function call
+    onClick: select(actions, (a) => a.increment),  // Selector function creates a marker
     disabled: m.disabled,
     'aria-label': 'Increment counter'
   }))
@@ -148,7 +173,7 @@ When you write the above code, here's what you're creating:
   })
 }
 
-// The select(actions).increment doesn't execute anything!
+// The select(actions, (a) => a.increment) doesn't execute anything!
 // It creates this data structure for adapters to process
 ```
 
@@ -264,7 +289,7 @@ const todoList = createComponent(() => {
   }));
 
   const buttonSlice = createSlice(model, (m) => ({
-    setFilter: select(actions).setFilter,  // Creates a selection marker
+    setFilter: select(actions, (a) => a.setFilter),  // Selector function creates a marker
     filter: m.filter,
   }));
   
@@ -319,11 +344,11 @@ const themeSlice = createSlice(model, (m) => ({
   toggleTheme: m.toggleTheme
 }));
 
-// Step 2: Compose slices using select()
+// Step 2: Compose slices using select() with selector functions
 const headerSlice = createSlice(model, (m) => ({
-  user: select(userSlice).user,        // Creates a selection marker
-  theme: select(themeSlice).theme,      // Another selection marker
-  onLogout: m.logout                    // Direct model reference
+  user: select(userSlice, (u) => u.user),        // Selector specifies the property
+  theme: select(themeSlice, (t) => t.theme),      // Type-safe selection
+  onLogout: m.logout                              // Direct model reference
 }));
 
 // What headerSlice specification contains:
@@ -337,7 +362,7 @@ const headerSlice = createSlice(model, (m) => ({
 // When adapter processes headerSlice:
 // 1. Finds userSlice in the component registry
 // 2. Executes userSlice to get actual state
-// 3. Resolves select(userSlice).user to the real value
+// 3. Resolves select(userSlice, (u) => u.user) to the real value
 // 4. Same for themeSlice
 // 5. Returns a working slice with all references resolved
 
@@ -453,14 +478,14 @@ const actions = createSlice(model, (m) => ({
 
 // Views are slices (or functions of slices)
 const button = createSlice(model, (m) => ({
-  onClick: select(actions).increment,  // Creates a specification marker
+  onClick: select(actions, (a) => a.increment),  // Selector creates a specification marker
   disabled: m.isLoading
 }));
 
 // Compose slices from other slices
 const composite = createSlice(model, (m) => ({
-  action: select(actions).increment,   // Markers that adapters process
-  state: select(button).disabled       // No actual execution happens here
+  action: select(actions, (a) => a.increment),   // Selector functions for type safety
+  state: select(button, (b) => b.disabled)       // No actual execution happens here
 }));
 ```
 
@@ -468,8 +493,8 @@ const composite = createSlice(model, (m) => ({
 
 ```typescript
 // During composition (what Lattice Core does):
-select(actions).increment
-// Returns: { type: 'selection', source: 'actions', path: 'increment' }
+select(actions, (a) => a.increment)
+// Returns: { type: 'selection', source: 'actions', selector: (a) => a.increment }
 
 // During runtime (what adapters do):
 // 1. Find the 'actions' slice in the registry
@@ -522,8 +547,8 @@ The key to understanding Lattice is the distinction between **specification time
 ```typescript
 // You write specifications that describe behavior
 const button = createSlice(model, (m) => ({
-  onClick: select(actions).increment,  // Just a marker
-  disabled: m.disabled                 // Just a reference
+  onClick: select(actions, (a) => a.increment),  // Selector function creates a marker
+  disabled: m.disabled                           // Just a reference
 }));
 ```
 
@@ -533,7 +558,7 @@ const button = createSlice(model, (m) => ({
 {
   type: 'slice',
   selector: (m) => ({
-    onClick: { type: 'selection', source: 'actions', path: 'increment' },
+    onClick: { type: 'selection', source: 'actions', selector: (a) => a.increment },
     disabled: m.disabled
   })
 }

@@ -335,6 +335,53 @@ describe('@lattice/test-utils', () => {
       expect(test.getState().value).toBe(42);
     });
 
+    it('should handle select() markers with selectors', () => {
+      const component = createComponent(() => {
+        const model = createModel(({ set, get }) => ({
+          user: { id: 1, name: 'Alice', email: 'alice@example.com' },
+          posts: [
+            { id: 1, title: 'First Post', authorId: 1 },
+            { id: 2, title: 'Second Post', authorId: 1 },
+          ],
+        }));
+
+        const userSlice = createSlice(model, (m) => m.user);
+        const postsSlice = createSlice(model, (m) => m.posts);
+
+        // Create a composite slice that uses select with selectors
+        const profileSlice = createSlice(model, () => ({
+          // Select only name from user slice
+          userName: select(userSlice, (u) => u.name),
+          // Select only post count from posts slice
+          postCount: select(postsSlice, (p) => p.length),
+          // Select full user object (no selector)
+          fullUser: select(userSlice),
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, () => ({})),
+          views: {
+            profile: profileSlice,
+          },
+        };
+      });
+
+      const test = createComponentTest(component);
+      const profileView = test.getView('profile');
+
+      // Verify that select with selector returns only the selected value
+      expect(profileView.userName).toBe('Alice');
+      expect(profileView.postCount).toBe(2);
+      
+      // Verify that select without selector returns the full slice result
+      expect(profileView.fullUser).toEqual({
+        id: 1,
+        name: 'Alice',
+        email: 'alice@example.com',
+      });
+    });
+
     it('should handle deeply nested select() markers', () => {
       const nested = createComponent(() => {
         const model = createModel(() => ({

@@ -13,7 +13,7 @@
  */
 
 import type { ComponentFactory, SliceFactory } from '@lattice/core';
-import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
+import { SELECT_MARKER, SELECT_SELECTOR, SLICE_FACTORY_MARKER } from '@lattice/core';
 
 // ============================================================================
 // Core Types
@@ -164,8 +164,9 @@ export function createMemoryAdapter() {
   // Select Marker Resolution
   // ============================================================================
 
-  interface SelectMarkerObj<Model = any, T = any> {
+  interface SelectMarkerObj<Model = any, T = any, U = T> {
     [SELECT_MARKER]: SliceFactory<Model, T>;
+    [SELECT_SELECTOR]?: (value: T) => U;
   }
 
   function isSelectMarker<Model>(obj: unknown): obj is SelectMarkerObj<Model> {
@@ -221,7 +222,15 @@ export function createMemoryAdapter() {
         sliceCache.set(sliceFactory, slice);
       }
 
-      return slice.get() as T;
+      // Get the slice result
+      const sliceResult = slice.get();
+
+      // Apply selector if present
+      if (SELECT_SELECTOR in obj && obj[SELECT_SELECTOR]) {
+        return obj[SELECT_SELECTOR](sliceResult) as T;
+      }
+
+      return sliceResult as T;
     }
 
     // Handle arrays
@@ -605,6 +614,114 @@ if (import.meta.vitest) {
       // Clicking should increment
       buttonView.onClick.increment();
       expect(result.model.get().count).toBe(1);
+    });
+
+    it('should handle select() with selector function', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          user: { id: number; name: string; email: string };
+          posts: Array<{ id: number; title: string; authorId: number }>;
+        }>(() => ({
+          user: { id: 1, name: 'Alice', email: 'alice@example.com' },
+          posts: [
+            { id: 1, title: 'First Post', authorId: 1 },
+            { id: 2, title: 'Second Post', authorId: 1 },
+          ],
+        }));
+
+        const userSlice = createSlice(model, (m) => m.user);
+        const postsSlice = createSlice(model, (m) => m.posts);
+
+        // Create a composite slice that uses select with selectors
+        const profileSlice = createSlice(model, () => ({
+          // Select only name from user slice
+          userName: select(userSlice, (u) => u.name),
+          // Select only post count from posts slice
+          postCount: select(postsSlice, (p) => p.length),
+          // Select full user object (no selector)
+          fullUser: select(userSlice),
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, () => ({})),
+          views: { profile: profileSlice },
+        };
+      });
+
+      const adapter = createMemoryAdapter();
+      const result = adapter.executeComponent(component);
+
+      const profile = result.views.profile;
+      const profileView = profile.get();
+      
+      // Verify select with selector resolved correctly
+      expect(profileView.userName).toBe('Alice');
+      expect(profileView.postCount).toBe(2);
+      
+      // Verify select without selector resolved correctly
+      expect(profileView.fullUser).toEqual({
+        id: 1,
+        name: 'Alice',
+        email: 'alice@example.com'
+      });
+    });
+
+    it('should handle nested select() with selector', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          data: {
+            items: Array<{ id: number; value: string; active: boolean }>;
+            filter: 'all' | 'active';
+          };
+        }>(() => ({
+          data: {
+            items: [
+              { id: 1, value: 'one', active: true },
+              { id: 2, value: 'two', active: false },
+              { id: 3, value: 'three', active: true },
+            ],
+            filter: 'all',
+          },
+        }));
+
+        const dataSlice = createSlice(model, (m) => m.data);
+        
+        // Create slices with different selectors
+        const statsSlice = createSlice(model, () => ({
+          // Select active items only
+          activeItems: select(dataSlice, (d) => 
+            d.items.filter(item => item.active)
+          ),
+          // Select item count
+          totalCount: select(dataSlice, (d) => d.items.length),
+          // Complex selector with computation
+          summary: select(dataSlice, (d) => {
+            const active = d.items.filter(i => i.active).length;
+            const total = d.items.length;
+            return `${active} of ${total} active`;
+          }),
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, () => ({})),
+          views: { stats: statsSlice },
+        };
+      });
+
+      const adapter = createMemoryAdapter();
+      const result = adapter.executeComponent(component);
+
+      const stats = result.views.stats.get();
+      
+      // Verify selectors applied correctly
+      expect(stats.activeItems).toHaveLength(2);
+      expect(stats.activeItems[0]).toEqual({ id: 1, value: 'one', active: true });
+      expect(stats.activeItems[1]).toEqual({ id: 3, value: 'three', active: true });
+      
+      expect(stats.totalCount).toBe(3);
+      expect(stats.summary).toBe('2 of 3 active');
     });
 
     it('should update slices reactively when model changes', () => {

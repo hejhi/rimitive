@@ -683,7 +683,7 @@ describe('View UI Attributes', () => {
   });
 
   describe('README pattern compliance', () => {
-    it('should support select(actions).propertyName pattern for onClick handlers', () => {
+    it('should support select(actions, selector) pattern for onClick handlers', () => {
       const counter = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -704,7 +704,7 @@ describe('View UI Attributes', () => {
 
         // This is the EXACT pattern from the README
         const incrementButton = createSlice(model, (m) => ({
-          onClick: select(actions).increment,
+          onClick: select(actions, (a) => a.increment),
           disabled: m.disabled,
           'aria-label': 'Increment counter',
         }));
@@ -737,7 +737,7 @@ describe('View UI Attributes', () => {
       expect(model.get().count).toBe(1);
     });
 
-    it('should support filter button pattern with onClick: state.setFilter from select(actions)', () => {
+    it('should support filter button pattern with onClick: state.setFilter from select(actions, selector)', () => {
       const todoList = createComponent(() => {
         const model = createModel<{
           filter: 'all' | 'active' | 'completed';
@@ -754,7 +754,7 @@ describe('View UI Attributes', () => {
 
         // This matches the README pattern more closely
         const buttonSlice = createSlice(model, (m) => ({
-          setFilter: select(actions).setFilter,
+          setFilter: select(actions, (a) => a.setFilter),
           filter: m.filter,
         }));
 
@@ -824,8 +824,8 @@ describe('View UI Attributes', () => {
 
         // Composite slice combining multiple slices - EXACT README pattern
         const headerSlice = createSlice(model, (m) => ({
-          user: select(userSlice).user,
-          theme: select(themeSlice).theme,
+          user: select(userSlice, (s) => s.user),
+          theme: select(themeSlice, (s) => s.theme),
           onLogout: m.logout,
         }));
 
@@ -883,7 +883,7 @@ describe('View UI Attributes', () => {
 
         // Pattern that uses select(actions) in the slice
         const submitButton = createSlice(model, (m) => ({
-          onClick: select(actions).submit,
+          onClick: select(actions, (a) => a.submit),
           disabled: m.value === '',
           type: 'submit',
         }));

@@ -54,18 +54,27 @@ export function createSlice<Model, Slice>(
 
 // Marker symbols
 export const SELECT_MARKER = Symbol('lattice.select');
+export const SELECT_SELECTOR = Symbol('lattice.select.selector');
 export const SLICE_FACTORY_MARKER = Symbol('lattice.sliceFactory');
 
 // Note: The select() function must return a type-cast value because it returns
-// a marker object that pretends to be type T. This is by design - adapters
-// recognize and handle these markers specially.
-export function select<Model, T>(slice: SliceFactory<Model, T>): T {
+// a marker object that pretends to be type T (or U if selector is provided).
+// This is by design - adapters recognize and handle these markers specially.
+export function select<Model, T, U = T>(
+  slice: SliceFactory<Model, T>,
+  selector?: (value: T) => U
+): U {
   // Create marker object with proper type
   const marker = Object.create(null);
   marker[SELECT_MARKER] = slice;
+  
+  // Store selector if provided
+  if (selector !== undefined) {
+    marker[SELECT_SELECTOR] = selector;
+  }
 
   // This cast is intentional and required for the marker pattern to work
-  return marker as T;
+  return marker as U;
 }
 
 export interface ComponentSpec<Model, Actions, Views> {
@@ -124,5 +133,104 @@ if (import.meta.vitest) {
     const marker = select(slice);
     expect(SELECT_MARKER in marker).toBe(true);
     expect((marker as Record<symbol, unknown>)[SELECT_MARKER]).toBe(slice);
+  });
+
+  it('select() should support selector parameter', () => {
+    const model = createModel<{ count: number; name: string }>(() => ({
+      count: 5,
+      name: 'test',
+    }));
+    const slice = createSlice(model, (m) => ({ count: m.count, name: m.name }));
+
+    // Without selector - returns full slice result type
+    const fullMarker = select(slice);
+    expect(SELECT_MARKER in fullMarker).toBe(true);
+    expect((fullMarker as Record<symbol, unknown>)[SELECT_MARKER]).toBe(slice);
+    expect(SELECT_SELECTOR in fullMarker).toBe(false);
+
+    // With selector - returns selector result type
+    const countMarker = select(slice, (s) => s.count);
+    // Since countMarker is typed as number, we need to check it as an object
+    const countMarkerObj = countMarker as unknown as Record<symbol, unknown>;
+    expect(SELECT_MARKER in countMarkerObj).toBe(true);
+    expect(countMarkerObj[SELECT_MARKER]).toBe(slice);
+    expect(SELECT_SELECTOR in countMarkerObj).toBe(true);
+    expect(typeof countMarkerObj[SELECT_SELECTOR]).toBe('function');
+
+    // Verify selector function is stored correctly
+    const selectorFn = countMarkerObj[SELECT_SELECTOR] as (
+      s: { count: number; name: string }
+    ) => number;
+    expect(selectorFn({ count: 10, name: 'test' })).toBe(10);
+  });
+
+  it('select() with selector should maintain type safety', () => {
+    const model = createModel<{ x: number; y: number; z: number }>(() => ({
+      x: 1,
+      y: 2,
+      z: 3,
+    }));
+    const vectorSlice = createSlice(model, (m) => ({ x: m.x, y: m.y, z: m.z }));
+
+    // Select only x and y coordinates
+    const xyMarker = select(vectorSlice, (v) => ({ x: v.x, y: v.y }));
+    
+    // Type should be inferred as { x: number; y: number }
+    // This test verifies the marker is created correctly
+    expect(SELECT_MARKER in xyMarker).toBe(true);
+    expect(SELECT_SELECTOR in xyMarker).toBe(true);
+    
+    const selector = (xyMarker as Record<symbol, unknown>)[SELECT_SELECTOR] as (
+      v: { x: number; y: number; z: number }
+    ) => { x: number; y: number };
+    
+    const result = selector({ x: 10, y: 20, z: 30 });
+    expect(result).toEqual({ x: 10, y: 20 });
+    expect('z' in result).toBe(false);
+  });
+
+  it('select() usage example in slice composition', () => {
+    // Example showing practical usage of select with selector
+    const model = createModel<{
+      user: { id: number; name: string; email: string };
+      posts: Array<{ id: number; title: string; authorId: number }>;
+    }>(() => ({
+      user: { id: 1, name: 'Alice', email: 'alice@example.com' },
+      posts: [
+        { id: 1, title: 'First Post', authorId: 1 },
+        { id: 2, title: 'Second Post', authorId: 1 },
+      ],
+    }));
+
+    const userSlice = createSlice(model, (m) => m.user);
+    const postsSlice = createSlice(model, (m) => m.posts);
+
+    // Create a composite slice that uses select with selectors
+    const profileSlice = createSlice(model, () => ({
+      // Select only name from user slice
+      userName: select(userSlice, (u) => u.name),
+      // Select only post count from posts slice
+      postCount: select(postsSlice, (p) => p.length),
+      // Select full user object (no selector)
+      fullUser: select(userSlice),
+    }));
+
+    // Verify the markers are created correctly
+    const profileMarkers = profileSlice(null as never);
+    
+    // userName should be a string marker
+    const userNameMarker = profileMarkers.userName as unknown as Record<symbol, unknown>;
+    expect(SELECT_MARKER in userNameMarker).toBe(true);
+    expect(SELECT_SELECTOR in userNameMarker).toBe(true);
+    
+    // postCount should be a number marker
+    const postCountMarker = profileMarkers.postCount as unknown as Record<symbol, unknown>;
+    expect(SELECT_MARKER in postCountMarker).toBe(true);
+    expect(SELECT_SELECTOR in postCountMarker).toBe(true);
+    
+    // fullUser should be a user object marker without selector
+    const fullUserMarker = profileMarkers.fullUser as unknown as Record<symbol, unknown>;
+    expect(SELECT_MARKER in fullUserMarker).toBe(true);
+    expect(SELECT_SELECTOR in fullUserMarker).toBe(false);
   });
 }
