@@ -3,8 +3,9 @@ import type {
   ModelFactory,
   ComponentFactory,
   ComponentSpec,
+  SelectMarkerValue,
 } from '@lattice/core';
-import { SELECT_MARKER, SELECT_SELECTOR, SLICE_FACTORY_MARKER } from '@lattice/core';
+import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
 
 // Define types locally
 type StateSubscriber<T> = (state: T) => void;
@@ -81,13 +82,15 @@ export class TestStore<TState> {
     }
 
     if (this.isSelectMarker(value)) {
+      // Get the marker value
+      const markerValue = (value as any)[SELECT_MARKER] as SelectMarkerValue<any, any, any>;
+      
       // Execute the referenced slice
-      const sliceResult = this.executeSlice((value as any)[SELECT_MARKER]);
+      const sliceResult = this.executeSlice(markerValue.slice);
       
       // Check if there's a selector function to apply
-      if (SELECT_SELECTOR in (value as any)) {
-        const selector = (value as any)[SELECT_SELECTOR];
-        const selectedValue = selector(sliceResult);
+      if (markerValue.selector) {
+        const selectedValue = markerValue.selector(sliceResult);
         return this.resolveSelectMarkers(selectedValue) as T;
       }
       
@@ -114,7 +117,7 @@ export class TestStore<TState> {
     return value;
   }
 
-  private isSelectMarker(value: any): value is { [SELECT_MARKER]: any; [SELECT_SELECTOR]?: (value: any) => any } {
+  private isSelectMarker(value: any): value is { [SELECT_MARKER]: SelectMarkerValue<any, any, any> } {
     return value && typeof value === 'object' && SELECT_MARKER in value;
   }
 

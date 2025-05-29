@@ -5,6 +5,7 @@ import {
   createSlice,
   select,
   SELECT_MARKER,
+  type SelectMarkerValue,
 } from './index';
 
 describe('Lattice Core', () => {
@@ -227,7 +228,9 @@ describe('Lattice Core', () => {
       
       // The whole select() marker is preserved
       expect(SELECT_MARKER in result.selected).toBe(true);
-      expect((result.selected as any)[SELECT_MARKER]).toBe(baseSlice);
+      const markerValue = (result.selected as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+      expect(markerValue.slice).toBe(baseSlice);
+      expect(markerValue.selector).toBeUndefined();
       
       // But accessing properties on the marker returns undefined
       expect(result.selectedVal).toBeUndefined();
@@ -504,7 +507,9 @@ describe('Lattice Core', () => {
       expect(result.action).toBeUndefined();
       // But the whole select() object is preserved
       expect(SELECT_MARKER in result.state).toBe(true);
-      expect((result.state as any)[SELECT_MARKER]).toBe(stateSlice);
+      const markerValue = (result.state as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+      expect(markerValue.slice).toBe(stateSlice);
+      expect(markerValue.selector).toBeUndefined();
     });
   });
 
@@ -867,7 +872,9 @@ describe('Lattice Core', () => {
       
       // Verify the marker is present
       expect(SELECT_MARKER in selected).toBe(true);
-      expect((selected as any)[SELECT_MARKER]).toBe(slice);
+      const markerValue = (selected as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+      expect(markerValue.slice).toBe(slice);
+      expect(markerValue.selector).toBeUndefined();
     });
 
     it('should handle deeply nested select() markers', () => {
@@ -898,13 +905,19 @@ describe('Lattice Core', () => {
 
       // Verify all markers are correctly placed
       expect(SELECT_MARKER in result.nested.level1).toBe(true);
-      expect((result.nested.level1 as any)[SELECT_MARKER]).toBe(slice1);
+      const markerValue1 = (result.nested.level1 as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+      expect(markerValue1.slice).toBe(slice1);
+      expect(markerValue1.selector).toBeUndefined();
       
       expect(SELECT_MARKER in result.nested.level2.item).toBe(true);
-      expect((result.nested.level2.item as any)[SELECT_MARKER]).toBe(slice2);
+      const markerValue2 = (result.nested.level2.item as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+      expect(markerValue2.slice).toBe(slice2);
+      expect(markerValue2.selector).toBeUndefined();
       
       expect(SELECT_MARKER in result.nested.level2.deeper.value).toBe(true);
-      expect((result.nested.level2.deeper.value as any)[SELECT_MARKER]).toBe(slice3);
+      const markerValue3 = (result.nested.level2.deeper.value as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+      expect(markerValue3.slice).toBe(slice3);
+      expect(markerValue3.selector).toBeUndefined();
     });
 
     it('should allow adapters to identify and process select() markers', () => {
@@ -933,11 +946,12 @@ describe('Lattice Core', () => {
 
       // Adapter would retrieve the slice like this
       if (hasMarker) {
-        const originalSlice = (result2.display as any)[SELECT_MARKER];
-        expect(originalSlice).toBe(slice);
+        const markerValue = (result2.display as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+        expect(markerValue.slice).toBe(slice);
+        expect(markerValue.selector).toBeUndefined();
         
         // Adapter could then execute the original slice
-        const sliceResult = originalSlice({ count: 5 });
+        const sliceResult = markerValue.slice({ count: 5 });
         expect(sliceResult).toEqual({ value: 5 });
       }
     });

@@ -12,8 +12,8 @@
  * - Read-only slices with proper error messages
  */
 
-import type { ComponentFactory, SliceFactory } from '@lattice/core';
-import { SELECT_MARKER, SELECT_SELECTOR, SLICE_FACTORY_MARKER } from '@lattice/core';
+import type { ComponentFactory, SliceFactory, SelectMarkerValue } from '@lattice/core';
+import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
 
 // ============================================================================
 // Core Types
@@ -165,8 +165,7 @@ export function createMemoryAdapter() {
   // ============================================================================
 
   interface SelectMarkerObj<Model = any, T = any, U = T> {
-    [SELECT_MARKER]: SliceFactory<Model, T>;
-    [SELECT_SELECTOR]?: (value: T) => U;
+    [SELECT_MARKER]: SelectMarkerValue<Model, T, U>;
   }
 
   function isSelectMarker<Model>(obj: unknown): obj is SelectMarkerObj<Model> {
@@ -210,7 +209,8 @@ export function createMemoryAdapter() {
 
     // Handle select() markers
     if (isSelectMarker<Model>(obj)) {
-      const sliceFactory = obj[SELECT_MARKER];
+      const markerValue = obj[SELECT_MARKER];
+      const sliceFactory = markerValue.slice;
       let slice = sliceCache.get(sliceFactory);
 
       if (!slice) {
@@ -226,8 +226,8 @@ export function createMemoryAdapter() {
       const sliceResult = slice.get();
 
       // Apply selector if present
-      if (SELECT_SELECTOR in obj && obj[SELECT_SELECTOR]) {
-        return obj[SELECT_SELECTOR](sliceResult) as T;
+      if (markerValue.selector) {
+        return markerValue.selector(sliceResult) as T;
       }
 
       return sliceResult as T;
