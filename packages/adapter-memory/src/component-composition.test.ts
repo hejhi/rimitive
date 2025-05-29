@@ -8,11 +8,10 @@ import { createComponent, createModel, createSlice } from '@lattice/core';
  * These tests document component composition patterns and their current limitations.
  * 
  * Key findings:
- * 1. Model composition via spreading doesn't work (models are factories, not objects)
- * 2. Manual state recreation is required for extending components
- * 3. Views that use slice selectors (sliceA((state) => ...)) have limited support
- * 4. Direct model access works better than select() in many cases
- * 5. Component instances are properly isolated when using separate adapters
+ * 1. Model composition via spreading DOES work: ...base.model({ set, get })
+ * 2. Views that use slice selectors (sliceA((state) => ...)) have limited support
+ * 3. Direct model access works better than select() in many cases
+ * 4. Component instances are properly isolated when using separate adapters
  * 
  * Working patterns:
  * - Direct model access in slices: createSlice(model, m => ({ value: m.value }))
@@ -47,7 +46,7 @@ describe('Component Composition', () => {
   describe('Basic Component Composition', () => {
     it('should compose persistentCounter from base counter', () => {
       // Base counter component
-      createComponent(() => {
+      const counter = createComponent(() => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -84,6 +83,9 @@ describe('Component Composition', () => {
 
       // Persistent counter extending base counter
       const persistentCounter = createComponent(() => {
+        // Get the base component
+        const base = counter();
+        
         // Extended model with save functionality
         const model = createModel<{
           count: number;
@@ -93,13 +95,8 @@ describe('Component Composition', () => {
           lastSaved: number;
           save: () => void;
         }>(({ set, get }) => ({
-          // NOTE: This pattern from README doesn't work as shown
-          // ...base.model(({ set, get })),
-          // Instead, we need to manually recreate the base state
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-          decrement: () => set({ count: get().count - 1 }),
-          disabled: false,
+          // Spread base model state and methods - this WORKS!
+          ...base.model({ set, get }),
           
           // Add new state
           lastSaved: Date.now(),
@@ -168,9 +165,9 @@ describe('Component Composition', () => {
       });
     });
 
-    it('should fail when trying to spread model factory (documenting README pattern)', () => {
-      // Example of base counter component that could be composed
-      createComponent(() => {
+    it('should correctly spread model factory as shown in README', () => {
+      // Base counter component
+      const counter = createComponent(() => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -181,34 +178,39 @@ describe('Component Composition', () => {
         return { model, actions: createSlice(model, () => ({})), views: {} };
       });
 
-      // This pattern from README doesn't work
-      // The spread operator can't be used on factory functions
-      const attemptComposition = () => {
-        // const base = counter(); // unused
+      // Demonstrate that the spread pattern from README DOES work
+      const extendedCounter = createComponent(() => {
+        const base = counter();
         
-        // This would fail if we tried to execute it, but TypeScript prevents it
-        // base.model is a factory function, not an object
-        // const model = createModel(({ set, get }) => ({
-        //   ...base.model(({ set, get })), // TypeScript error
-        //   extra: 'value'
-        // }));
-        
-        // Instead, you have to manually recreate the base state
+        // This pattern from the README works correctly!
         const model = createModel<{
           count: number;
           increment: () => void;
           extra: string;
+          setExtra: (value: string) => void;
         }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-          extra: 'value'
+          // Spread the base model by calling it with set/get
+          ...base.model({ set, get }),
+          // Add new state
+          extra: 'initial value',
+          setExtra: (value: string) => set({ extra: value })
         }));
         
         return { model, actions: createSlice(model, () => ({})), views: {} };
-      };
+      });
       
-      // This documents that the pattern shown in README doesn't work as written
-      expect(attemptComposition).not.toThrow();
+      // Execute and verify it works
+      const { model } = adapter.executeComponent(extendedCounter);
+      
+      // Test base functionality from spread
+      expect(model.get().count).toBe(0);
+      model.get().increment();
+      expect(model.get().count).toBe(1);
+      
+      // Test extended functionality
+      expect(model.get().extra).toBe('initial value');
+      model.get().setExtra('updated value');
+      expect(model.get().extra).toBe('updated value');
     });
   });
 
@@ -243,7 +245,7 @@ describe('Component Composition', () => {
           history: number[];
           recordValue: () => void;
         }>(({ set, get }) => ({
-          // Manually copy base state (since spreading doesn't work)
+          // Manually copy base state (demonstrating alternative to spreading)
           value: 0,
           setValue: (v: number) => set({ value: v }),
           double: () => set({ value: get().value * 2 }),
