@@ -87,7 +87,7 @@ The `select()` function is how you compose slices together. It uses a **selector
 select(actions, (a) => a.increment)
 
 // ❌ Wrong: Direct property access doesn't work
-select(actions).increment  // This won't work!
+actions.increment  // This won't work!
 ```
 
 **Why use a selector function?**
@@ -164,9 +164,10 @@ When you write the above code, here's what you're creating:
   dependencies: ['model'],
   selector: (m) => ({
     onClick: { 
-      type: 'selection',
-      source: 'actions',
-      path: 'increment'
+      [SELECT_MARKER]: {  // SELECT_MARKER is a Symbol used internally by Lattice
+        slice: actions,
+        selector: (a) => a.increment
+      }
     },
     disabled: m.disabled,
     'aria-label': 'Increment counter'
@@ -295,7 +296,7 @@ const todoList = createComponent(() => {
   
   // What buttonSlice actually contains:
   // {
-  //   setFilter: { type: 'selection', source: 'actions', path: 'setFilter' },
+  //   setFilter: { [SELECT_MARKER]: { slice: actions, selector: (a) => a.setFilter } },
   //   filter: <direct reference to model.filter>
   // }
   
@@ -353,8 +354,8 @@ const headerSlice = createSlice(model, (m) => ({
 
 // What headerSlice specification contains:
 // {
-//   user: { type: 'selection', source: 'userSlice', path: 'user' },
-//   theme: { type: 'selection', source: 'themeSlice', path: 'theme' },
+//   user: { [SELECT_MARKER]: { slice: userSlice, selector: (u) => u.user } },
+//   theme: { [SELECT_MARKER]: { slice: themeSlice, selector: (t) => t.theme } },
 //   onLogout: <reference to model.logout>
 // }
 
@@ -494,7 +495,7 @@ const composite = createSlice(model, (m) => ({
 ```typescript
 // During composition (what Lattice Core does):
 select(actions, (a) => a.increment)
-// Returns: { type: 'selection', source: 'actions', selector: (a) => a.increment }
+// Returns: { [SELECT_MARKER]: { slice: actions, selector: (a) => a.increment } }
 
 // During runtime (what adapters do):
 // 1. Find the 'actions' slice in the registry
@@ -558,7 +559,7 @@ const button = createSlice(model, (m) => ({
 {
   type: 'slice',
   selector: (m) => ({
-    onClick: { type: 'selection', source: 'actions', selector: (a) => a.increment },
+    onClick: { [SELECT_MARKER]: { slice: actions, selector: (a) => a.increment } },
     disabled: m.disabled
   })
 }
