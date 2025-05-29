@@ -1,8 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createZustandAdapter } from './index';
-import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createComponent, createModel, createSlice, select } from '@lattice/core';
 
 describe('createZustandAdapter', () => {
   it('should export createZustandAdapter function', () => {
@@ -10,7 +8,7 @@ describe('createZustandAdapter', () => {
     expect(typeof createZustandAdapter).toBe('function');
   });
 
-  it('should create a state creator that works with Zustand create()', () => {
+  it('should return enhanced store with use, actions, and views', () => {
     const counter = createComponent(() => {
       const model = createModel<{
         count: number;
@@ -27,14 +25,28 @@ describe('createZustandAdapter', () => {
       return { model, actions, views: {} };
     });
 
-    const useStore = create(createZustandAdapter(counter));
+    const counterStore = createZustandAdapter(counter);
+    
+    // Verify it's a Zustand store
+    expect(counterStore).toBeDefined();
+    expect(typeof counterStore.getState).toBe('function');
+    expect(typeof counterStore.subscribe).toBe('function');
+    expect(typeof counterStore.setState).toBe('function');
+    
+    // Verify enhanced properties
+    expect(counterStore.use).toBeDefined();
+    expect(counterStore.actions).toBeDefined();
+    expect(counterStore.views).toBeDefined();
     
     // Verify initial state
-    expect(useStore.getState().count).toBe(0);
+    expect(counterStore.getState().count).toBe(0);
+    expect(counterStore.use.count()).toBe(0);
     
-    // Verify methods work
-    useStore.getState().increment();
-    expect(useStore.getState().count).toBe(1);
+    // Verify actions work
+    const increment = counterStore.actions.increment();
+    increment();
+    expect(counterStore.getState().count).toBe(1);
+    expect(counterStore.use.count()).toBe(1);
   });
   
   it('should support state subscriptions through Zustand', () => {
@@ -54,17 +66,18 @@ describe('createZustandAdapter', () => {
       };
     });
 
-    const useStore = create(createZustandAdapter(counter));
+    const counterStore = createZustandAdapter(counter);
     
     // Track state changes
     const states: any[] = [];
-    const unsubscribe = useStore.subscribe((state) => {
+    const unsubscribe = counterStore.subscribe((state) => {
       states.push({ count: state.count });
     });
     
     // Make changes
-    useStore.getState().increment();
-    useStore.getState().increment();
+    const increment = counterStore.actions.increment();
+    increment();
+    increment();
     
     expect(states.length).toBe(2);
     expect(states[0].count).toBe(1);
@@ -73,7 +86,7 @@ describe('createZustandAdapter', () => {
     unsubscribe();
   });
   
-  it('should handle slice selection with Zustand selectors', () => {
+  it('should handle vanilla JS usage pattern', () => {
     const counter = createComponent(() => {
       const model = createModel<{
         count: number;
@@ -92,17 +105,24 @@ describe('createZustandAdapter', () => {
       };
     });
 
-    const useStore = create(createZustandAdapter(counter));
+    const counterStore = createZustandAdapter(counter);
     
-    // Use Zustand selector
+    // Vanilla JS pattern - access state and methods directly
+    const state = counterStore.getState();
+    expect(state.count).toBe(0);
+    expect(state.multiplier).toBe(2);
+    expect(typeof state.increment).toBe('function');
+    
+    // Call method directly from state
+    state.increment();
+    expect(counterStore.getState().count).toBe(1);
+    
+    // Custom selector
     const selectDoubled = (state: any) => state.count * state.multiplier;
-    expect(selectDoubled(useStore.getState())).toBe(0);
-    
-    useStore.getState().increment();
-    expect(selectDoubled(useStore.getState())).toBe(2);
+    expect(selectDoubled(counterStore.getState())).toBe(2);
   });
   
-  it('should support middleware integration', () => {
+  it('should work with React-style usage', () => {
     const counter = createComponent(() => {
       const model = createModel<{
         count: number;
@@ -119,29 +139,19 @@ describe('createZustandAdapter', () => {
       };
     });
 
-    // Test with devtools middleware
-    const useStoreWithDevtools = create(
-      devtools(createZustandAdapter(counter), { name: 'counter-store' })
-    );
+    // React-style usage with hooks
+    const counterStore = createZustandAdapter(counter);
     
-    expect(useStoreWithDevtools.getState().count).toBe(0);
+    // Use auto-generated selectors (simulating React hooks)
+    const count = counterStore.use.count();
+    const increment = counterStore.actions.increment();
     
-    // Test with persist middleware
-    const useStoreWithPersist = create(
-      persist(createZustandAdapter(counter), { name: 'counter-storage' })
-    );
+    expect(count).toBe(0);
+    expect(typeof increment).toBe('function');
     
-    expect(useStoreWithPersist.getState().count).toBe(0);
-    
-    // Test with combined middleware
-    const useStoreWithBoth = create(
-      devtools(
-        persist(createZustandAdapter(counter), { name: 'counter-storage' }),
-        { name: 'counter-store' }
-      )
-    );
-    
-    expect(useStoreWithBoth.getState().count).toBe(0);
+    // Actions work
+    increment();
+    expect(counterStore.use.count()).toBe(1);
   });
   
   it('should handle async actions properly', async () => {
@@ -167,18 +177,677 @@ describe('createZustandAdapter', () => {
       };
     });
 
-    const useStore = create(createZustandAdapter(counter));
+    const counterStore = createZustandAdapter(counter);
     
-    expect(useStore.getState().count).toBe(0);
-    expect(useStore.getState().loading).toBe(false);
+    expect(counterStore.use.count()).toBe(0);
+    expect(counterStore.use.loading()).toBe(false);
     
     // Start async operation
-    const promise = useStore.getState().incrementAsync();
-    expect(useStore.getState().loading).toBe(true);
+    const incrementAsync = counterStore.actions.incrementAsync();
+    const promise = incrementAsync();
+    expect(counterStore.use.loading()).toBe(true);
     
     // Wait for completion
     await promise;
-    expect(useStore.getState().count).toBe(1);
-    expect(useStore.getState().loading).toBe(false);
+    expect(counterStore.use.count()).toBe(1);
+    expect(counterStore.use.loading()).toBe(false);
+  });
+
+  describe('views', () => {
+    it('should handle static slice views', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          disabled: boolean;
+        }>(() => ({
+          count: 5,
+          disabled: false,
+        }));
+
+        const displaySlice = createSlice(model, (m) => ({
+          value: m.count,
+          isDisabled: m.disabled,
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, () => ({})),
+          views: { display: displaySlice },
+        };
+      });
+
+      const componentStore = createZustandAdapter(component);
+
+      // Static view is a reactive store
+      const display = componentStore.views.display;
+      expect(display.get()).toEqual({
+        value: 5,
+        isDisabled: false,
+      });
+
+      // Can subscribe to changes
+      const changes: any[] = [];
+      const unsubscribe = display.subscribe((value) => changes.push(value));
+      expect(changes).toHaveLength(0); // No changes yet
+      unsubscribe();
+    });
+
+    it('should handle computed view functions', () => {
+      const component = createComponent(() => {
+        const model = createModel<{ count: number }>(() => ({ count: 5 }));
+
+        const countSlice = createSlice(model, (m) => ({
+          count: m.count,
+        }));
+
+        const counterView = () =>
+          countSlice((state) => ({
+            'data-count': state.count,
+            className: state.count % 2 === 0 ? 'even' : 'odd',
+            'aria-label': `Count is ${state.count}`,
+          }));
+
+        const views = { counter: counterView };
+
+        return {
+          model,
+          actions: createSlice(model, () => ({})),
+          views,
+        };
+      });
+
+      const componentStore = createZustandAdapter(component);
+
+      // Computed view is a function that returns a store
+      expect(typeof componentStore.views.counter).toBe('function');
+
+      const counterViewStore = componentStore.views.counter();
+      expect(counterViewStore.get()).toEqual({
+        'data-count': 5,
+        className: 'odd',
+        'aria-label': 'Count is 5',
+      });
+    });
+
+    it('should update views reactively when model changes', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }));
+
+        const countSlice = createSlice(model, (m) => ({
+          value: m.count,
+          doubled: m.count * 2,
+          isEven: m.count % 2 === 0,
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+        }));
+
+        return {
+          model,
+          actions,
+          views: { display: countSlice },
+        };
+      });
+
+      const componentStore = createZustandAdapter(component);
+      
+      // Subscribe to view changes
+      const viewChanges: any[] = [];
+      const unsubscribe = componentStore.views.display.subscribe((value) => viewChanges.push(value));
+
+      // Initial state
+      expect(componentStore.views.display.get()).toEqual({ value: 0, doubled: 0, isEven: true });
+
+      // Update model
+      const increment = componentStore.actions.increment();
+      increment();
+
+      // View should update
+      expect(componentStore.views.display.get()).toEqual({ value: 1, doubled: 2, isEven: false });
+      expect(viewChanges).toHaveLength(1);
+      expect(viewChanges[0]).toEqual({ value: 1, doubled: 2, isEven: false });
+
+      // Another update
+      increment();
+      expect(componentStore.views.display.get()).toEqual({ value: 2, doubled: 4, isEven: true });
+      expect(viewChanges).toHaveLength(2);
+
+      unsubscribe();
+    });
+
+    it('should handle views with select() markers', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+          decrement: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+          decrement: () => set({ count: get().count - 1 }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+          decrement: m.decrement,
+        }));
+
+        const buttonSlice = createSlice(model, (m) => ({
+          onIncrement: select(actions, (a) => a.increment),
+          onDecrement: select(actions, (a) => a.decrement),
+          count: m.count,
+          'aria-label': `Current count: ${m.count}`,
+        }));
+
+        return {
+          model,
+          actions,
+          views: { button: buttonSlice },
+        };
+      });
+
+      const componentStore = createZustandAdapter(component);
+
+      const button = componentStore.views.button;
+      const buttonView = button.get();
+      
+      expect(buttonView.count).toBe(0);
+      expect(buttonView['aria-label']).toBe('Current count: 0');
+      expect(typeof buttonView.onIncrement).toBe('function');
+      expect(typeof buttonView.onDecrement).toBe('function');
+
+      // Actions should work
+      buttonView.onIncrement();
+      expect(componentStore.use.count()).toBe(1);
+      expect(componentStore.getState().count).toBe(1);
+      
+      buttonView.onDecrement();
+      expect(componentStore.use.count()).toBe(0);
+      expect(componentStore.getState().count).toBe(0);
+      
+      // View should update
+      const updatedView = button.get();
+      expect(updatedView['aria-label']).toBe('Current count: 0');
+    });
+
+    it('should handle nested select() markers', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          user: { id: number; name: string; role: string };
+          permissions: { canEdit: boolean; canDelete: boolean };
+          updatePermissions: (perms: Partial<{ canEdit: boolean; canDelete: boolean }>) => void;
+        }>(({ set, get }) => ({
+          user: { id: 1, name: 'Alice', role: 'admin' },
+          permissions: { canEdit: true, canDelete: false },
+          updatePermissions: (perms) => set({ 
+            permissions: { ...get().permissions, ...perms } 
+          }),
+        }));
+
+        const userSlice = createSlice(model, (m) => m.user);
+        const permissionsSlice = createSlice(model, (m) => m.permissions);
+        const actionsSlice = createSlice(model, (m) => ({
+          updatePermissions: m.updatePermissions,
+        }));
+
+        const dashboardSlice = createSlice(model, () => ({
+          userName: select(userSlice, (u) => u.name),
+          userRole: select(userSlice, (u) => u.role),
+          canEdit: select(permissionsSlice, (p) => p.canEdit),
+          canDelete: select(permissionsSlice, (p) => p.canDelete),
+          actions: select(actionsSlice),
+        }));
+
+        return {
+          model,
+          actions: actionsSlice,
+          views: { dashboard: dashboardSlice },
+        };
+      });
+
+      const componentStore = createZustandAdapter(component);
+
+      const dashboard = componentStore.views.dashboard;
+      const dashboardView = dashboard.get();
+      
+      expect(dashboardView.userName).toBe('Alice');
+      expect(dashboardView.userRole).toBe('admin');
+      expect(dashboardView.canEdit).toBe(true);
+      expect(dashboardView.canDelete).toBe(false);
+      expect(typeof dashboardView.actions.updatePermissions).toBe('function');
+
+      // Update permissions
+      dashboardView.actions.updatePermissions({ canDelete: true });
+      
+      // View should update
+      const updatedView = dashboard.get();
+      expect(updatedView.canDelete).toBe(true);
+      expect(updatedView.canEdit).toBe(true); // Unchanged
+    });
+  });
+
+  describe('vanilla JavaScript usage', () => {
+    it('should demonstrate comprehensive vanilla JS usage outside React', () => {
+      // This test shows how to use Lattice with vanilla JavaScript
+      // Key difference: In React, hooks handle subscriptions automatically
+      // In vanilla JS, you manage subscriptions manually for reactivity
+      
+      const todoApp = createComponent(() => {
+        const model = createModel<{
+          todos: Array<{ id: number; text: string; done: boolean }>;
+          filter: 'all' | 'active' | 'completed';
+          addTodo: (text: string) => void;
+          toggleTodo: (id: number) => void;
+          setFilter: (filter: 'all' | 'active' | 'completed') => void;
+        }>(({ set, get }) => ({
+          todos: [
+            { id: 1, text: 'Learn Lattice', done: false },
+            { id: 2, text: 'Build app', done: false }
+          ],
+          filter: 'all',
+          addTodo: (text) => {
+            const newTodo = { id: Date.now(), text, done: false };
+            set({ todos: [...get().todos, newTodo] });
+          },
+          toggleTodo: (id) => {
+            set({
+              todos: get().todos.map(todo =>
+                todo.id === id ? { ...todo, done: !todo.done } : todo
+              )
+            });
+          },
+          setFilter: (filter) => set({ filter })
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          addTodo: m.addTodo,
+          toggleTodo: m.toggleTodo,
+          setFilter: m.setFilter
+        }));
+
+        // View that computes filtered todos
+        const filteredTodosSlice = createSlice(model, (m) => {
+          const todos = m.todos;
+          const filter = m.filter;
+          
+          switch (filter) {
+            case 'active':
+              return todos.filter(t => !t.done);
+            case 'completed':
+              return todos.filter(t => t.done);
+            default:
+              return todos;
+          }
+        });
+
+        // View that computes stats
+        const statsSlice = createSlice(model, (m) => ({
+          total: m.todos.length,
+          active: m.todos.filter(t => !t.done).length,
+          completed: m.todos.filter(t => t.done).length
+        }));
+
+        return { 
+          model, 
+          actions, 
+          views: { 
+            filteredTodos: filteredTodosSlice,
+            stats: statsSlice
+          } 
+        };
+      });
+
+      const store = createZustandAdapter(todoApp);
+      
+      // === Direct State Access (No Reactivity) ===
+      // You can access state directly without subscriptions
+      const initialState = store.getState();
+      expect(initialState.todos).toHaveLength(2);
+      expect(initialState.filter).toBe('all');
+      
+      // Actions are available in the state
+      expect(typeof initialState.addTodo).toBe('function');
+      expect(typeof initialState.toggleTodo).toBe('function');
+      
+      // === Using Actions Outside React ===
+      // Option 1: Get actions from state (direct reference)
+      const { addTodo: addTodoFromState } = store.getState();
+      
+      // Option 2: Get actions through adapter (selector pattern)
+      const addTodoFromAdapter = store.actions.addTodo();
+      
+      // Both work identically
+      addTodoFromState('Test todo 1');
+      expect(store.getState().todos).toHaveLength(3);
+      
+      addTodoFromAdapter('Test todo 2');
+      expect(store.getState().todos).toHaveLength(4);
+      
+      // === Accessing Views Outside React ===
+      // Views are reactive stores that need .get() to access values
+      const filteredTodos = store.views.filteredTodos.get();
+      expect(filteredTodos).toHaveLength(4); // All todos shown with 'all' filter
+      
+      const stats = store.views.stats.get();
+      expect(stats.total).toBe(4);
+      expect(stats.active).toBe(4);
+      expect(stats.completed).toBe(0);
+      
+      // === Manual Subscriptions for Reactivity ===
+      // This is the key difference from React - you manage subscriptions yourself
+      
+      // Track state changes
+      const stateChanges: any[] = [];
+      const unsubscribeState = store.subscribe((state) => {
+        stateChanges.push({
+          todoCount: state.todos.length,
+          filter: state.filter
+        });
+      });
+      
+      // Track view changes  
+      const viewChanges: any[] = [];
+      const unsubscribeView = store.views.stats.subscribe((stats) => {
+        viewChanges.push(stats);
+      });
+      
+      // Make changes
+      const toggleTodo = store.actions.toggleTodo();
+      toggleTodo(1); // Mark first todo as done
+      
+      // Verify subscriptions fired
+      expect(stateChanges).toHaveLength(1);
+      expect(viewChanges).toHaveLength(1);
+      expect(viewChanges[0]).toEqual({ total: 4, active: 3, completed: 1 });
+      
+      // === Using Selectors for Computed Values ===
+      // You can create custom selectors for derived state
+      const selectActiveTodoTexts = (state: any) => 
+        state.todos.filter((t: any) => !t.done).map((t: any) => t.text);
+      
+      const activeTodoTexts = selectActiveTodoTexts(store.getState());
+      expect(activeTodoTexts).toEqual(['Build app', 'Test todo 1', 'Test todo 2']);
+      
+      // === Filtering Example ===
+      const setFilter = store.actions.setFilter();
+      setFilter('active');
+      
+      // Views update automatically
+      expect(store.views.filteredTodos.get()).toHaveLength(3); // Only active todos
+      
+      setFilter('completed');
+      expect(store.views.filteredTodos.get()).toHaveLength(1); // Only completed todos
+      
+      // === Cleanup ===
+      // Important: Always unsubscribe when done
+      unsubscribeState();
+      unsubscribeView();
+      
+      // === Key Takeaways ===
+      // 1. Direct state access works via getState() - no reactivity needed
+      // 2. Actions can be called from state or through adapter hooks
+      // 3. Views require .get() to access current values
+      // 4. For reactivity, manually subscribe and unsubscribe
+      // 5. In React, useStore hooks handle subscriptions automatically
+      // 6. In vanilla JS, you manage the subscription lifecycle yourself
+    });
+
+    it('should show practical vanilla JS UI update pattern', () => {
+      // This example shows a realistic pattern for updating UI in vanilla JS
+      
+      const counter = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+          decrement: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+          decrement: () => set({ count: get().count - 1 })
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+          decrement: m.decrement
+        }));
+
+        // View for button attributes
+        const buttonAttrs = createSlice(model, (m) => ({
+          incrementDisabled: m.count >= 10,
+          decrementDisabled: m.count <= -10,
+          countText: `Count: ${m.count}`,
+          className: m.count === 0 ? 'zero' : m.count > 0 ? 'positive' : 'negative'
+        }));
+
+        return { model, actions, views: { buttonAttrs } };
+      });
+
+      const store = createZustandAdapter(counter);
+      
+      // Simulate a simple UI update function
+      const renderedStates: any[] = [];
+      const renderUI = () => {
+        const state = store.getState();
+        const attrs = store.views.buttonAttrs.get();
+        
+        renderedStates.push({
+          count: state.count,
+          ...attrs
+        });
+        
+        // In real app, you'd update DOM here:
+        // document.querySelector('#count').textContent = attrs.countText;
+        // document.querySelector('#increment').disabled = attrs.incrementDisabled;
+        // etc.
+      };
+      
+      // Initial render
+      renderUI();
+      expect(renderedStates[0]).toEqual({
+        count: 0,
+        incrementDisabled: false,
+        decrementDisabled: false,
+        countText: 'Count: 0',
+        className: 'zero'
+      });
+      
+      // Set up subscription for reactive updates
+      const unsubscribe = store.subscribe(() => renderUI());
+      
+      // Get actions
+      const { increment, decrement } = store.getState();
+      
+      // Simulate button clicks
+      increment();
+      expect(renderedStates[1].count).toBe(1);
+      expect(renderedStates[1].className).toBe('positive');
+      
+      increment();
+      increment();
+      expect(renderedStates[3].count).toBe(3);
+      expect(renderedStates[3].countText).toBe('Count: 3');
+      
+      // Test boundary
+      for (let i = 0; i < 7; i++) increment(); // Total: 10
+      expect(renderedStates[10].count).toBe(10);
+      expect(renderedStates[10].incrementDisabled).toBe(true);
+      expect(renderedStates[10].decrementDisabled).toBe(false);
+      
+      // Decrement
+      decrement();
+      expect(renderedStates[11].count).toBe(9);
+      expect(renderedStates[11].incrementDisabled).toBe(false);
+      
+      // Cleanup
+      unsubscribe();
+      
+      // After unsubscribe, changes don't trigger renders
+      increment();
+      expect(store.getState().count).toBe(10); // State updates
+      expect(renderedStates).toHaveLength(12); // But no new renders
+    });
+
+    it('should demonstrate view subscriptions separate from state subscriptions', () => {
+      // This shows how views have their own subscription mechanism
+      
+      const app = createComponent(() => {
+        const model = createModel<{
+          user: { name: string; role: string };
+          theme: 'light' | 'dark';
+          updateUser: (user: { name: string; role: string }) => void;
+          toggleTheme: () => void;
+        }>(({ set, get }) => ({
+          user: { name: 'Alice', role: 'user' },
+          theme: 'light',
+          updateUser: (user) => set({ user }),
+          toggleTheme: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' })
+        }));
+
+        const userView = createSlice(model, (m) => ({
+          displayName: `${m.user.name} (${m.user.role})`,
+          isAdmin: m.user.role === 'admin',
+          themeClass: `theme-${m.theme}`
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, (m) => ({
+            updateUser: m.updateUser,
+            toggleTheme: m.toggleTheme
+          })),
+          views: { user: userView }
+        };
+      });
+
+      const store = createZustandAdapter(app);
+      
+      // Track what triggers updates
+      let stateUpdateCount = 0;
+      let viewUpdateCount = 0;
+      
+      // Subscribe to raw state
+      const unsubscribeState = store.subscribe(() => {
+        stateUpdateCount++;
+      });
+      
+      // Subscribe to specific view
+      const unsubscribeView = store.views.user.subscribe(() => {
+        viewUpdateCount++;
+      });
+      
+      // Initial state
+      expect(store.views.user.get()).toEqual({
+        displayName: 'Alice (user)',
+        isAdmin: false,
+        themeClass: 'theme-light'
+      });
+      
+      // Update theme - both subscriptions fire
+      const toggleTheme = store.actions.toggleTheme();
+      toggleTheme();
+      
+      expect(stateUpdateCount).toBe(1);
+      expect(viewUpdateCount).toBe(1);
+      expect(store.views.user.get().themeClass).toBe('theme-dark');
+      
+      // Update user - both fire again
+      const updateUser = store.actions.updateUser();
+      updateUser({ name: 'Bob', role: 'admin' });
+      
+      expect(stateUpdateCount).toBe(2);
+      expect(viewUpdateCount).toBe(2);
+      expect(store.views.user.get()).toEqual({
+        displayName: 'Bob (admin)',
+        isAdmin: true,
+        themeClass: 'theme-dark'
+      });
+      
+      // View subscriptions are efficient - they only fire when the view's data changes
+      // (In this example, every state change affects the view, but in practice
+      // views often filter out irrelevant changes)
+      
+      unsubscribeState();
+      unsubscribeView();
+    });
+  });
+
+  describe('namespace collision avoidance', () => {
+    it('should handle models with properties named store, actions, or views', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          store: string;
+          actions: number;
+          views: boolean;
+          data: { nested: string };
+          update: (updates: Partial<{ store: string; actions: number; views: boolean }>) => void;
+        }>(({ set, get }) => ({
+          store: 'model-store-value',
+          actions: 42,
+          views: true,
+          data: { nested: 'value' },
+          update: (updates) => set({ ...get(), ...updates }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          update: m.update,
+        }));
+
+        const stateSlice = createSlice(model, (m) => ({
+          store: m.store,
+          actions: m.actions,
+          views: m.views,
+          nested: m.data.nested,
+        }));
+
+        return { model, actions, views: { state: stateSlice } };
+      });
+
+      const componentStore = createZustandAdapter(component);
+      
+      // Adapter properties should be of correct types
+      expect(typeof componentStore.getState).toBe('function');
+      expect(typeof componentStore.subscribe).toBe('function');
+      expect(typeof componentStore.use.store).toBe('function');
+      expect(typeof componentStore.use.actions).toBe('function');
+      expect(typeof componentStore.use.views).toBe('function');
+      expect(typeof componentStore.actions.update).toBe('function');
+      expect(typeof componentStore.views.state).toBe('object');
+      
+      // Model state should be accessible through use selectors
+      expect(componentStore.use.store()).toBe('model-store-value');
+      expect(componentStore.use.actions()).toBe(42);
+      expect(componentStore.use.views()).toBe(true);
+      expect(componentStore.use.data()).toEqual({ nested: 'value' });
+      
+      // Model state should also be accessible through getState
+      expect(componentStore.getState().store).toBe('model-store-value');
+      expect(componentStore.getState().actions).toBe(42);
+      expect(componentStore.getState().views).toBe(true);
+      expect(componentStore.getState().data.nested).toBe('value');
+      
+      // Views should work correctly
+      const stateView = componentStore.views.state.get();
+      expect(stateView.store).toBe('model-store-value');
+      expect(stateView.actions).toBe(42);
+      expect(stateView.views).toBe(true);
+      expect(stateView.nested).toBe('value');
+      
+      // Updates should work
+      const update = componentStore.actions.update();
+      update({ store: 'new-value', actions: 100 });
+      
+      expect(componentStore.use.store()).toBe('new-value');
+      expect(componentStore.use.actions()).toBe(100);
+      expect(componentStore.use.views()).toBe(true); // Unchanged
+      expect(componentStore.getState().store).toBe('new-value');
+      expect(componentStore.getState().actions).toBe(100);
+    });
   });
 });

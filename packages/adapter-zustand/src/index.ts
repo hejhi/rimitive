@@ -9,12 +9,14 @@
  * - Full Zustand integration with subscriptions and middleware support
  * - Full support for select() markers and slice composition
  * - Type-safe component execution
- * - Read-only slices with proper error messages
+ * - Auto-generating selectors pattern for clean API
+ * - No namespace collision between model state and adapter properties
  */
 
 import type { ComponentFactory, SliceFactory, SelectMarkerValue } from '@lattice/core';
 import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
-import type { StateCreator } from 'zustand';
+import type { StoreApi } from 'zustand';
+import { createStore } from 'zustand/vanilla';
 
 // ============================================================================
 // Error Handling
@@ -74,40 +76,97 @@ interface Store<T> {
   destroy?: () => void;
 }
 
-// ============================================================================
-// Type Helpers
-// ============================================================================
+/**
+ * Selector hook that can be used directly in React components
+ */
+type SelectorHook<T> = () => T;
 
 /**
- * Maps view types from slice factories to stores
+ * Maps model properties to selector hooks for the use property
  */
-type ViewType<Model, T> = T extends () => SliceFactory<Model, infer S>
+type UseSelectors<Model> = {
+  [K in keyof Model]: SelectorHook<Model[K]>;
+};
+
+/**
+ * Maps action methods to selector hooks
+ */
+type ActionHooks<Actions> = {
+  [K in keyof Actions]: SelectorHook<Actions[K]>;
+};
+
+/**
+ * Maps view types from slice factories to selector hooks that return stores
+ */
+type ViewHook<Model, T> = T extends () => SliceFactory<Model, infer S>
   ? () => Store<S>
   : T extends SliceFactory<Model, infer S>
     ? Store<S>
     : never;
 
 /**
- * Maps all views in a component to their executed types
+ * Maps all views in a component to their hook types
  */
-type ExecutedViews<Model, Views> = {
-  [K in keyof Views]: ViewType<Model, Views[K]>;
+type ViewHooks<Model, Views> = {
+  [K in keyof Views]: ViewHook<Model, Views[K]>;
 };
 
 /**
- * Result of executing a component
+ * Result of executing a component with the zustand adapter
  */
-export interface ExecuteResult<Model, Actions, Views> {
-  model: Store<Model>;
-  actions: Store<Actions>;
-  views: ExecutedViews<Model, Views>;
+export interface ZustandAdapterResult<Model, Actions, Views> extends StoreApi<Model> {
+  /**
+   * Auto-generated selectors for each model property
+   * @example
+   * const count = counterStore.use.count();
+   * const user = userStore.use.user();
+   */
+  use: UseSelectors<Model>;
+  
+  /**
+   * Action selector hooks - each returns the corresponding method
+   * @example
+   * const increment = counterStore.actions.increment();
+   * // Later: increment();
+   */
+  actions: ActionHooks<Actions>;
+  
+  /**
+   * View hooks - static views are stores, computed views return stores
+   * @example
+   * const display = counterStore.views.display(); // Returns a store
+   * const attrs = display.get();
+   */
+  views: ViewHooks<Model, Views>;
 }
 
+// ============================================================================
+// Type Helpers
+// ============================================================================
+
+interface SelectMarkerObj<Model = any, T = any, U = T> {
+  [SELECT_MARKER]: SelectMarkerValue<Model, T, U>;
+}
+
+function isSelectMarker<Model>(obj: unknown): obj is SelectMarkerObj<Model> {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    typeof SELECT_MARKER !== 'undefined' &&
+    SELECT_MARKER in obj
+  );
+}
+
+/**
+ * Checks if a function is a SliceFactory (has the brand)
+ */
+function isSliceFactory(fn: unknown): fn is SliceFactory {
+  return typeof fn === 'function' && SLICE_FACTORY_MARKER in fn;
+}
 
 // ============================================================================
 // Primitive Implementations
 // ============================================================================
-
 
 /**
  * Creates a read-only slice of a store using Zustand subscription
@@ -198,185 +257,6 @@ function createZustandSlice<T, U>(
   };
 }
 
-/**
- * Creates a Zustand state creator function from a Lattice component.
- *
- * This function returns a StateCreator that can be used directly with Zustand's
- * create() function or composed with middleware. The resulting store will have
- * the component's model state and methods at the root level, with additional
- * properties for actions and views.
- *
- * @param componentFactory - The Lattice component factory
- * @returns A Zustand StateCreator function
- *
- * @example
- * ```typescript
- * import { create } from 'zustand';
- * import { devtools } from 'zustand/middleware';
- * 
- * // Direct usage
- * const useStore = create(createZustandAdapter(myComponent));
- * 
- * // With middleware
- * const useStore = create(devtools(createZustandAdapter(myComponent)));
- * 
- * // Access state and methods
- * const count = useStore(state => state.count);
- * const increment = useStore(state => state.increment);
- * 
- * // Access actions and views
- * const actions = useStore(state => state.actions);
- * const views = useStore(state => state.views);
- * ```
- */
-export function createZustandAdapter<
-  Model,
-  Actions,
-  Views extends Record<
-    string,
-    SliceFactory<Model, unknown> | (() => SliceFactory<Model, unknown>)
-  >,
->(
-  componentFactory: ComponentFactory<Model, Actions, Views>
-): StateCreator<Model & { actions: Actions; views: ExecutedViews<Model, Views> }> {
-  // Return a state creator function that Zustand's create() can use
-  return (set, get, api) => {
-    // Execute the component factory to get the specification
-    let spec: ReturnType<typeof componentFactory>;
-    try {
-      spec = componentFactory();
-    } catch (error) {
-      throw new ZustandAdapterError(
-        'Component factory execution failed',
-        {
-          operation: 'createZustandAdapter.componentFactory',
-          cause: error
-        }
-      );
-    }
-
-    // First, create a temporary model with just the initial state to bootstrap
-    let tempModel: Model;
-    try {
-      tempModel = spec.model({
-        get: () => ({} as Model), // Temporary empty model
-        set: () => {}, // No-op during initialization
-      });
-    } catch (error) {
-      throw new ZustandAdapterError(
-        'Model factory execution failed',
-        {
-          operation: 'createZustandAdapter.modelFactory',
-          cause: error
-        }
-      );
-    }
-
-    // Helper to extract model properties from the full state
-    const getModelFromState = (state: any): Model => {
-      if (!state) return tempModel; // Return the initial model if state is undefined
-      const modelState = {} as Model;
-      for (const key in tempModel) {
-        if (Object.prototype.hasOwnProperty.call(tempModel, key) && 
-            key !== 'actions' && key !== 'views' && key in state) {
-          (modelState as any)[key] = state[key];
-        }
-      }
-      // If modelState is empty, return tempModel
-      const hasKeys = Object.keys(modelState as any).length > 0;
-      return hasKeys ? modelState : tempModel;
-    };
-
-    // Now create the actual model with proper get/set
-    let model: Model;
-    try {
-      model = spec.model({
-        get: () => getModelFromState(get()),
-        set: (updates) => set((state) => ({ ...state, ...updates })),
-      });
-    } catch (error) {
-      throw new ZustandAdapterError(
-        'Model factory execution failed during second pass',
-        {
-          operation: 'createZustandAdapter.modelFactory.secondPass',
-          cause: error
-        }
-      );
-    }
-
-    // Create a lightweight store interface for our internal use
-    const modelStore: Store<Model> = {
-      get: () => getModelFromState(get()),
-      set: (value) => {
-        if (typeof value === 'function') {
-          set((state) => {
-            const modelState = getModelFromState(state);
-            const updates = (value as (prev: Model) => Model)(modelState);
-            return { ...state, ...updates };
-          });
-        } else {
-          set((state) => ({ ...state, ...value }));
-        }
-      },
-      subscribe: (listener) => {
-        // Subscribe to state changes but only call listener when model parts change
-        return api.subscribe((state, prevState) => {
-          // Extract only model properties for comparison
-          const modelKeys = Object.keys(model as any) as (keyof Model)[];
-          const hasModelChange = modelKeys.some(key => 
-            key !== 'actions' && key !== 'views' && 
-            state[key as keyof typeof state] !== prevState[key as keyof typeof prevState]
-          );
-          if (hasModelChange) {
-            listener(getModelFromState(state));
-          }
-        });
-      },
-    };
-
-    // Set up slice tracking for select() resolution
-    const sliceCache = new SliceCache<Model>();
-
-    // Process actions slice
-    let actions: Actions;
-    try {
-      const actionsSlice = createSliceWithSelectSupport(modelStore, spec.actions, sliceCache);
-      actions = actionsSlice.get();
-    } catch (error) {
-      throw new ZustandAdapterError(
-        'Actions slice creation failed',
-        {
-          operation: 'createZustandAdapter.actions',
-          cause: error
-        }
-      );
-    }
-
-    // Process views
-    let views: ExecutedViews<Model, Views>;
-    try {
-      views = processViews<Model, Views>(spec, (factory) =>
-        createSliceWithSelectSupport(modelStore, factory, sliceCache)
-      );
-    } catch (error) {
-      throw new ZustandAdapterError(
-        'Views processing failed',
-        {
-          operation: 'createZustandAdapter.views',
-          cause: error
-        }
-      );
-    }
-
-    // Return the complete state object
-    return {
-      ...model,
-      actions,
-      views,
-    };
-  };
-}
-
 // ============================================================================
 // Supporting Types and Functions
 // ============================================================================
@@ -394,19 +274,6 @@ class SliceCache<Model> {
   set<T>(factory: SliceFactory<Model, T>, store: Store<T>): void {
     this.cache.set(factory, store as Store<unknown>);
   }
-}
-
-interface SelectMarkerObj<Model = any, T = any, U = T> {
-  [SELECT_MARKER]: SelectMarkerValue<Model, T, U>;
-}
-
-function isSelectMarker<Model>(obj: unknown): obj is SelectMarkerObj<Model> {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    typeof SELECT_MARKER !== 'undefined' &&
-    SELECT_MARKER in obj
-  );
 }
 
 /**
@@ -465,7 +332,8 @@ function resolveSelectMarkers<T, Model>(
     // Apply selector if present
     if (markerValue.selector) {
       try {
-        return markerValue.selector(sliceResult) as T;
+        const selected = markerValue.selector(sliceResult);
+        return selected as T;
       } catch (error) {
         throw new ZustandAdapterError(
           'Select marker selector function failed',
@@ -541,27 +409,20 @@ function createSliceWithSelectSupport<Model, T>(
 }
 
 /**
- * Checks if a function is a SliceFactory (has the brand)
- */
-function isSliceFactory(fn: unknown): fn is SliceFactory {
-  return typeof fn === 'function' && SLICE_FACTORY_MARKER in fn;
-}
-
-/**
- * Processes views into reactive stores
+ * Processes views into reactive stores or functions that return stores
  */
 function processViews<Model, Views>(
   spec: { views: Views },
   createSlice: <T>(factory: SliceFactory<Model, T>) => Store<T>
-): ExecutedViews<Model, Views> {
-  const views = {} as ExecutedViews<Model, Views>;
+): ViewHooks<Model, Views> {
+  const views = {} as ViewHooks<Model, Views>;
 
   for (const key in spec.views) {
     const view = spec.views[key];
     if (!view || typeof view !== 'function') continue;
 
     if (isSliceFactory(view)) {
-      // Static slice view - execute immediately
+      // Static slice view - create the store immediately
       try {
         Object.defineProperty(views, key, {
           value: createSlice(view),
@@ -605,20 +466,202 @@ function processViews<Model, Views>(
   return views;
 }
 
+/**
+ * Creates a Zustand adapter for a Lattice component, following Zustand's
+ * auto-generating selectors pattern for a clean, namespace-collision-free API.
+ *
+ * The adapter returns a store object enhanced with:
+ * - `use`: Auto-generated selectors for each model property
+ * - `actions`: Selector hooks for each action method
+ * - `views`: Hooks that return reactive stores for each view
+ *
+ * @param componentFactory - The Lattice component factory
+ * @returns A Zustand store enhanced with use, actions, and views
+ *
+ * @example
+ * ```typescript
+ * // Create the adapter
+ * const counterStore = createZustandAdapter(counter);
+ * 
+ * // === React Usage ===
+ * function Component() {
+ *   const count = counterStore.use.count();
+ *   const increment = counterStore.actions.increment();
+ *   const display = counterStore.views.display();
+ *   return <div onClick={increment}>{display.get().text}</div>;
+ * }
+ * 
+ * // === Vanilla JavaScript Usage ===
+ * // Direct state access (no reactivity needed)
+ * const state = counterStore.getState();
+ * console.log(state.count); // Access state
+ * state.increment(); // Call actions directly
+ * 
+ * // With subscriptions for reactivity
+ * const unsubscribe = counterStore.subscribe((state) => {
+ *   console.log('Count changed:', state.count);
+ * });
+ * 
+ * // Access views (reactive stores)
+ * const displayView = counterStore.views.display;
+ * console.log(displayView.get()); // Get current view state
+ * 
+ * // Subscribe to view changes
+ * const unsubView = displayView.subscribe((viewState) => {
+ *   console.log('View updated:', viewState);
+ * });
+ * 
+ * // Clean up subscriptions when done
+ * unsubscribe();
+ * unsubView();
+ * ```
+ * 
+ * @remarks
+ * Key differences between React and vanilla usage:
+ * - React: Hooks handle subscriptions automatically via React's rendering cycle
+ * - Vanilla: You manage subscriptions manually for reactive updates
+ * - Both: Direct state access via getState() works without subscriptions
+ * - Views: Always require .get() to access current values in vanilla JS
+ */
+export function createZustandAdapter<
+  Model,
+  Actions,
+  Views extends Record<
+    string,
+    SliceFactory<Model, unknown> | (() => SliceFactory<Model, unknown>)
+  >,
+>(
+  componentFactory: ComponentFactory<Model, Actions, Views>
+): ZustandAdapterResult<Model, Actions, Views> {
+  // Execute the component factory to get the specification
+  let spec: ReturnType<typeof componentFactory>;
+  try {
+    spec = componentFactory();
+  } catch (error) {
+    throw new ZustandAdapterError(
+      'Component factory execution failed',
+      {
+        operation: 'createZustandAdapter.componentFactory',
+        cause: error
+      }
+    );
+  }
+
+  // Create the Zustand store with only model state
+  const store = createStore<Model>((set, get) => {
+    // Execute the model factory with Zustand's set/get
+    let model: Model;
+    try {
+      model = spec.model({ set, get });
+    } catch (error) {
+      throw new ZustandAdapterError(
+        'Model factory execution failed',
+        {
+          operation: 'createZustandAdapter.modelFactory',
+          cause: error
+        }
+      );
+    }
+    
+    return model;
+  });
+
+  // Create a store interface for internal use
+  const modelStore: Store<Model> = {
+    get: () => store.getState(),
+    set: (value) => {
+      if (typeof value === 'function') {
+        store.setState((state) => (value as (prev: Model) => Model)(state));
+      } else {
+        store.setState(value);
+      }
+    },
+    subscribe: (listener) => store.subscribe(listener),
+  };
+
+  // Set up slice tracking for select() resolution
+  const sliceCache = new SliceCache<Model>();
+
+  // Process actions slice
+  let actionsSlice: Store<Actions>;
+  try {
+    actionsSlice = createSliceWithSelectSupport(modelStore, spec.actions, sliceCache);
+  } catch (error) {
+    throw new ZustandAdapterError(
+      'Actions slice creation failed',
+      {
+        operation: 'createZustandAdapter.actions',
+        cause: error
+      }
+    );
+  }
+
+  // Create action selector hooks
+  const actions = {} as ActionHooks<Actions>;
+  const actionsValue = actionsSlice.get();
+  
+  for (const key in actionsValue) {
+    if (Object.prototype.hasOwnProperty.call(actionsValue, key)) {
+      // Each action hook returns the current method from the actions slice
+      Object.defineProperty(actions, key, {
+        value: () => actionsSlice.get()[key as keyof Actions],
+        enumerable: true,
+        configurable: true,
+      });
+    }
+  }
+
+  // Process views
+  let views: ViewHooks<Model, Views>;
+  try {
+    views = processViews<Model, Views>(spec, (factory) =>
+      createSliceWithSelectSupport(modelStore, factory, sliceCache)
+    );
+  } catch (error) {
+    throw new ZustandAdapterError(
+      'Views processing failed',
+      {
+        operation: 'createZustandAdapter.views',
+        cause: error
+      }
+    );
+  }
+
+  // Create auto-generated selectors for the `use` property
+  const use = {} as UseSelectors<Model>;
+  const modelState = store.getState();
+  
+  for (const key in modelState) {
+    if (Object.prototype.hasOwnProperty.call(modelState, key)) {
+      // Each selector returns the current value from the store
+      Object.defineProperty(use, key, {
+        value: () => store.getState()[key],
+        enumerable: true,
+        configurable: true,
+      });
+    }
+  }
+
+  // Return enhanced store object
+  return Object.assign(store, {
+    use,
+    actions,
+    views,
+  });
+}
+
 // ============================================================================
 // In-source tests
 // ============================================================================
 
 if (import.meta.vitest) {
-  const { describe, it, expect, vi } = import.meta.vitest;
+  const { describe, it, expect } = import.meta.vitest;
   const { createComponent, createModel, createSlice, select } = await import(
     '@lattice/core'
   );
-  const { create } = await import('zustand');
-  const { devtools: _devtools } = await import('zustand/middleware');
 
-  describe('createZustandAdapter - basic usage', () => {
-    it('should return a state creator function', () => {
+  describe('createZustandAdapter - refactored API', () => {
+    it('should return store, actions, and views separately', () => {
       const counter = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -635,17 +678,25 @@ if (import.meta.vitest) {
         return { model, actions, views: {} };
       });
 
-      const stateCreator = createZustandAdapter(counter);
-      expect(typeof stateCreator).toBe('function');
+      const counterStore = createZustandAdapter(counter);
+      
+      expect(counterStore).toBeDefined();
+      expect(typeof counterStore.getState).toBe('function');
+      expect(typeof counterStore.subscribe).toBe('function');
+      expect(counterStore.use).toBeDefined();
+      expect(counterStore.actions).toBeDefined();
+      expect(counterStore.views).toBeDefined();
     });
 
-    it('should work with zustand create()', () => {
+    it('should access state through use selectors and getState', () => {
       const counter = createComponent(() => {
         const model = createModel<{
           count: number;
+          multiplier: number;
           increment: () => void;
         }>(({ set, get }) => ({
           count: 0,
+          multiplier: 2,
           increment: () => set({ count: get().count + 1 }),
         }));
 
@@ -656,43 +707,118 @@ if (import.meta.vitest) {
         return { model, actions, views: {} };
       });
 
-      const useStore = create(createZustandAdapter(counter));
+      const counterStore = createZustandAdapter(counter);
       
-      // Access state directly
-      expect(useStore.getState().count).toBe(0);
+      // Use auto-generated selectors
+      expect(counterStore.use.count()).toBe(0);
+      expect(counterStore.use.multiplier()).toBe(2);
       
-      // Call methods directly
-      useStore.getState().increment();
-      expect(useStore.getState().count).toBe(1);
+      // Direct access via getState
+      expect(counterStore.getState().count).toBe(0);
+      expect(counterStore.getState().multiplier).toBe(2);
       
-      // Access actions - they should be the same function
-      expect(typeof useStore.getState().actions.increment).toBe('function');
-      expect(typeof useStore.getState().increment).toBe('function');
+      // Manual computed selectors work
+      const state = counterStore.getState();
+      expect(state.count * state.multiplier).toBe(0);
     });
 
-    it('should work with middleware', () => {
+    it('should provide action selector hooks', () => {
       const counter = createComponent(() => {
         const model = createModel<{
           count: number;
           increment: () => void;
+          decrement: () => void;
         }>(({ set, get }) => ({
           count: 0,
           increment: () => set({ count: get().count + 1 }),
+          decrement: () => set({ count: get().count - 1 }),
         }));
 
         const actions = createSlice(model, (m) => ({
           increment: m.increment,
+          decrement: m.decrement,
         }));
 
         return { model, actions, views: {} };
       });
 
-      // Mock devtools to verify it's called
-      const mockDevtools = vi.fn((config: any) => config);
-      const useStore = create(mockDevtools(createZustandAdapter(counter)) as StateCreator<any>);
+      const counterStore = createZustandAdapter(counter);
       
-      expect(mockDevtools).toHaveBeenCalledOnce();
-      expect(useStore.getState().count).toBe(0);
+      // Action hooks return the methods
+      const increment = counterStore.actions.increment();
+      const decrement = counterStore.actions.decrement();
+      
+      expect(typeof increment).toBe('function');
+      expect(typeof decrement).toBe('function');
+      
+      // Methods work correctly
+      increment();
+      expect(counterStore.use.count()).toBe(1);
+      expect(counterStore.getState().count).toBe(1);
+      
+      decrement();
+      expect(counterStore.use.count()).toBe(0);
+      expect(counterStore.getState().count).toBe(0);
+    });
+
+    it('should avoid namespace collision', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          store: string;  // Model has a 'store' property
+          actions: string;  // Model has an 'actions' property
+          views: string;  // Model has a 'views' property
+          update: (data: { store?: string; actions?: string; views?: string }) => void;
+        }>(({ set, get }) => ({
+          store: 'model-store',
+          actions: 'model-actions',
+          views: 'model-views',
+          update: (data) => set({ ...get(), ...data }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          update: m.update,
+        }));
+
+        const stateSlice = createSlice(model, (m) => ({
+          store: m.store,
+          actions: m.actions,
+          views: m.views,
+        }));
+
+        return { model, actions, views: { state: stateSlice } };
+      });
+
+      const componentStore = createZustandAdapter(component);
+      
+      // Adapter properties are separate from model state
+      expect(typeof componentStore.getState).toBe('function');
+      expect(typeof componentStore.use.store).toBe('function');
+      expect(typeof componentStore.use.actions).toBe('function');
+      expect(typeof componentStore.use.views).toBe('function');
+      expect(typeof componentStore.actions.update).toBe('function');
+      expect(typeof componentStore.views.state).toBe('object');
+      
+      // Model state is accessible through use selectors
+      expect(componentStore.use.store()).toBe('model-store');
+      expect(componentStore.use.actions()).toBe('model-actions');
+      expect(componentStore.use.views()).toBe('model-views');
+      
+      // Model state is also accessible through getState
+      expect(componentStore.getState().store).toBe('model-store');
+      expect(componentStore.getState().actions).toBe('model-actions');
+      expect(componentStore.getState().views).toBe('model-views');
+      
+      // Views work correctly
+      const stateView = componentStore.views.state.get();
+      expect(stateView.store).toBe('model-store');
+      expect(stateView.actions).toBe('model-actions');
+      expect(stateView.views).toBe('model-views');
+      
+      // Updates work
+      const update = componentStore.actions.update();
+      update({ store: 'new-store' });
+      expect(componentStore.use.store()).toBe('new-store');
+      expect(componentStore.getState().store).toBe('new-store');
     });
   });
 
@@ -719,11 +845,10 @@ if (import.meta.vitest) {
         };
       });
 
-      const useStore = create(createZustandAdapter(component));
-      const state = useStore.getState();
+      const componentStore = createZustandAdapter(component);
 
-      // Static view should be a reactive store
-      const display = state.views.display;
+      // Static view is a reactive store
+      const display = componentStore.views.display;
       expect(display.get()).toEqual({
         value: 5,
         isDisabled: false,
@@ -753,19 +878,110 @@ if (import.meta.vitest) {
         };
       });
 
-      const useStore = create(createZustandAdapter(component));
-      const state = useStore.getState();
+      const componentStore = createZustandAdapter(component);
 
-      // Computed view should be a function that returns a store
-      expect(typeof state.views.counter).toBe('function');
+      // Computed view is a function that returns a store
+      expect(typeof componentStore.views.counter).toBe('function');
 
-      // Type should be inferred correctly
-      const counter = state.views.counter;
-      const counterStore = counter();
-      expect(counterStore.get()).toEqual({
+      const counterViewStore = componentStore.views.counter();
+      expect(counterViewStore.get()).toEqual({
         'data-count': 5,
         className: 'odd',
       });
+    });
+
+    it('should update views reactively', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }));
+
+        const countSlice = createSlice(model, (m) => ({
+          value: m.count,
+          doubled: m.count * 2,
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+        }));
+
+        return {
+          model,
+          actions,
+          views: { display: countSlice },
+        };
+      });
+
+      const componentStore = createZustandAdapter(component);
+      
+      // Subscribe to view changes
+      const viewChanges: { value: number; doubled: number }[] = [];
+      const unsubscribe = componentStore.views.display.subscribe((value) => viewChanges.push(value));
+
+      // Initial state
+      expect(componentStore.views.display.get()).toEqual({ value: 0, doubled: 0 });
+
+      // Update model
+      const increment = componentStore.actions.increment();
+      increment();
+
+      // View should update
+      expect(componentStore.views.display.get()).toEqual({ value: 1, doubled: 2 });
+      expect(viewChanges).toHaveLength(1);
+      expect(viewChanges[0]).toEqual({ value: 1, doubled: 2 });
+
+      unsubscribe();
+    });
+
+    it('should handle view with select() markers', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+        }));
+
+        const buttonSlice = createSlice(model, (m) => ({
+          onClick: select(actions, (a) => a.increment),
+          count: m.count,
+          'aria-label': `Count: ${m.count}`,
+        }));
+
+        return {
+          model,
+          actions,
+          views: { button: buttonSlice },
+        };
+      });
+
+      const componentStore = createZustandAdapter(component);
+
+      const button = componentStore.views.button;
+      const buttonView = button.get();
+      
+      expect(buttonView.count).toBe(0);
+      expect(buttonView['aria-label']).toBe('Count: 0');
+      expect(typeof buttonView.onClick).toBe('function');
+
+      // Click should increment
+      buttonView.onClick();
+      expect(componentStore.use.count()).toBe(1);
+      expect(componentStore.getState().count).toBe(1);
+      
+      // View should update
+      const updatedView = button.get();
+      expect(updatedView.count).toBe(1);
+      expect(updatedView['aria-label']).toBe('Count: 1');
     });
   });
 
@@ -785,7 +1001,7 @@ if (import.meta.vitest) {
         }));
 
         const buttonSlice = createSlice(model, (m) => ({
-          onClick: select(actions),
+          actions: select(actions),
           count: m.count,
         }));
 
@@ -796,19 +1012,19 @@ if (import.meta.vitest) {
         };
       });
 
-      const useStore = create(createZustandAdapter(component));
-      const state = useStore.getState();
+      const componentStore = createZustandAdapter(component);
 
-      const button = state.views.button;
+      const button = componentStore.views.button;
       const buttonView = button.get();
       expect(buttonView.count).toBe(0);
-      // onClick should be the resolved actions object
-      expect(typeof buttonView.onClick).toBe('object');
-      expect(typeof buttonView.onClick.increment).toBe('function');
+      // actions should be the resolved actions object
+      expect(typeof buttonView.actions).toBe('object');
+      expect(typeof buttonView.actions.increment).toBe('function');
 
-      // Clicking should increment
-      buttonView.onClick.increment();
-      expect(useStore.getState().count).toBe(1);
+      // Calling increment should work
+      buttonView.actions.increment();
+      expect(componentStore.use.count()).toBe(1);
+      expect(componentStore.getState().count).toBe(1);
     });
 
     it('should handle select() with selector function', () => {
@@ -840,10 +1056,9 @@ if (import.meta.vitest) {
         };
       });
 
-      const useStore = create(createZustandAdapter(component));
-      const state = useStore.getState();
+      const componentStore = createZustandAdapter(component);
 
-      const profile = state.views.profile;
+      const profile = componentStore.views.profile;
       const profileView = profile.get();
       
       expect(profileView.userName).toBe('Alice');
@@ -857,48 +1072,6 @@ if (import.meta.vitest) {
   });
 
   describe('createZustandAdapter - reactivity', () => {
-    it('should update views reactively when model changes', () => {
-      const component = createComponent(() => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
-
-        const countSlice = createSlice(model, (m) => ({
-          value: m.count,
-          doubled: m.count * 2,
-        }));
-
-        return {
-          model,
-          actions: createSlice(model, (m) => ({ increment: m.increment })),
-          views: { display: countSlice },
-        };
-      });
-
-      const useStore = create(createZustandAdapter(component));
-      
-      // Subscribe to view changes
-      const viewChanges: { value: number; doubled: number }[] = [];
-      const unsubscribe = useStore.getState().views.display.subscribe((value) => viewChanges.push(value));
-
-      // Initial state
-      expect(useStore.getState().views.display.get()).toEqual({ value: 0, doubled: 0 });
-
-      // Update model
-      useStore.getState().increment();
-
-      // View should update
-      expect(useStore.getState().views.display.get()).toEqual({ value: 1, doubled: 2 });
-      expect(viewChanges).toHaveLength(1);
-      expect(viewChanges[0]).toEqual({ value: 1, doubled: 2 });
-
-      unsubscribe();
-    });
-
     it('should work with zustand subscriptions', () => {
       const component = createComponent(() => {
         const model = createModel<{
@@ -916,23 +1089,63 @@ if (import.meta.vitest) {
         };
       });
 
-      const useStore = create(createZustandAdapter(component));
+      const componentStore = createZustandAdapter(component);
       
       // Subscribe to state changes
       const states: any[] = [];
-      const unsubscribe = useStore.subscribe((state) => {
+      const unsubscribe = componentStore.subscribe((state) => {
         states.push({ count: state.count });
       });
 
       // Trigger changes
-      useStore.getState().increment();
-      useStore.getState().increment();
+      const increment = componentStore.actions.increment();
+      increment();
+      increment();
 
       expect(states.length).toBe(2);
       expect(states[0].count).toBe(1);
       expect(states[1].count).toBe(2);
       
       unsubscribe();
+    });
+
+    it('should handle async actions properly', async () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          loading: boolean;
+          incrementAsync: () => Promise<void>;
+        }>(({ set, get }) => ({
+          count: 0,
+          loading: false,
+          incrementAsync: async () => {
+            set({ loading: true });
+            await new Promise(resolve => setTimeout(resolve, 10));
+            set({ count: get().count + 1, loading: false });
+          },
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, (m) => ({ incrementAsync: m.incrementAsync })),
+          views: {},
+        };
+      });
+
+      const componentStore = createZustandAdapter(component);
+      
+      expect(componentStore.use.count()).toBe(0);
+      expect(componentStore.use.loading()).toBe(false);
+      
+      // Start async operation
+      const incrementAsync = componentStore.actions.incrementAsync();
+      const promise = incrementAsync();
+      expect(componentStore.use.loading()).toBe(true);
+      
+      // Wait for completion
+      await promise;
+      expect(componentStore.use.count()).toBe(1);
+      expect(componentStore.use.loading()).toBe(false);
     });
   });
 }
