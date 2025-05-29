@@ -1,6 +1,6 @@
 # @lattice/adapter-zustand
 
-A Zustand adapter for Lattice that enables you to use Lattice components with Zustand's powerful state management capabilities.
+A Zustand adapter for Lattice that enables you to use Lattice components with Zustand's powerful state management capabilities. The adapter returns a StateCreator function, making it feel natural for Zustand users and enabling seamless middleware composition.
 
 ## Installation
 
@@ -11,6 +11,7 @@ npm install @lattice/adapter-zustand zustand
 ## Usage
 
 ```typescript
+import { create } from 'zustand';
 import { createModel, createComponent } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 
@@ -27,8 +28,7 @@ const counter = createComponent(() => {
 
 // Create a Zustand store from your Lattice component
 const { model } = counter();
-const adapter = createZustandAdapter();
-const useStore = adapter(model);
+const useStore = create(createZustandAdapter(model));
 
 // Use in React components
 function Counter() {
@@ -44,31 +44,50 @@ function Counter() {
 }
 
 // Or use outside React
-const store = useStore;
-console.log(store.getState().count); // 0
-store.getState().increment();
-console.log(store.getState().count); // 1
+console.log(useStore.getState().count); // 0
+useStore.getState().increment();
+console.log(useStore.getState().count); // 1
 
 // Subscribe to changes
-const unsubscribe = store.subscribe((state) => {
+const unsubscribe = useStore.subscribe((state) => {
   console.log('Count changed to:', state.count);
 });
 
-store.getState().increment(); // Logs: "Count changed to: 2"
+useStore.getState().increment(); // Logs: "Count changed to: 2"
 unsubscribe();
 ```
 
 ## API
 
-### `createZustandAdapter()`
+### `createZustandAdapter(modelFactory)`
 
-Creates a new Zustand adapter instance.
+Creates a Zustand StateCreator from a Lattice model factory. This follows Zustand's natural patterns and enables middleware composition.
 
-Returns: `StateAdapter` - A function that accepts a Lattice model factory and returns a Zustand store.
+**Parameters:**
+- `modelFactory`: A Lattice model factory function
+
+**Returns:** `StateCreator<T>` - A Zustand state creator function that can be passed to `create()` or composed with middleware
+
+```typescript
+import { create } from 'zustand';
+import { createZustandAdapter } from '@lattice/adapter-zustand';
+
+// Basic usage
+const useStore = create(createZustandAdapter(modelFactory));
+
+// With TypeScript
+type CounterState = {
+  count: number;
+  increment: () => void;
+  decrement: () => void;
+};
+
+const useStore = create<CounterState>(createZustandAdapter(modelFactory));
+```
 
 ### Store Interface
 
-The store returned by the adapter is a standard Zustand store with all Zustand features:
+The store created with `create()` is a standard Zustand store with all Zustand features:
 
 ```typescript
 interface ZustandStore<T> extends UseBoundStore<StoreApi<T>> {
@@ -82,9 +101,10 @@ interface ZustandStore<T> extends UseBoundStore<StoreApi<T>> {
 ## Features
 
 - **Full Zustand compatibility**: Access to all Zustand features including middleware, devtools, and persistence
+- **Natural Zustand patterns**: Returns a StateCreator that works with `create()` and middleware
 - **React integration**: Use hooks for efficient React rendering
 - **TypeScript support**: Complete type safety for your models
-- **Middleware support**: Compatible with Zustand middleware like `devtools`, `persist`, and `immer`
+- **Middleware support**: Compatible with all Zustand middleware like `devtools`, `persist`, and `immer`
 - **Subscriptions**: Fine-grained subscriptions with selectors
 - **SSR friendly**: Works with server-side rendering
 
@@ -92,18 +112,80 @@ interface ZustandStore<T> extends UseBoundStore<StoreApi<T>> {
 
 ### With Zustand Middleware
 
+The adapter returns a StateCreator, so you can compose it with any Zustand middleware using their standard patterns:
+
 ```typescript
+import { create } from 'zustand';
+import { devtools, persist, subscribeWithSelector } from 'zustand/middleware';
+import { immer } from 'zustand/middleware/immer';
+import { createZustandAdapter } from '@lattice/adapter-zustand';
+
+// Single middleware
+const useStore = create(
+  devtools(
+    createZustandAdapter(modelFactory),
+    { name: 'MyApp' }
+  )
+);
+
+// Multiple middleware with persist
+const usePersistedStore = create(
+  persist(
+    createZustandAdapter(modelFactory),
+    { name: 'app-storage' }
+  )
+);
+
+// Complex middleware composition
+const useAdvancedStore = create(
+  devtools(
+    persist(
+      subscribeWithSelector(
+        immer(
+          createZustandAdapter(modelFactory)
+        )
+      ),
+      { name: 'app-storage' }
+    ),
+    { name: 'MyApp' }
+  )
+);
+```
+
+### Middleware Composition Patterns
+
+```typescript
+// Using TypeScript's compose pattern for cleaner middleware stacking
+import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 
-const adapter = createZustandAdapter({
-  middleware: [
-    devtools({ name: 'MyApp' }),
-    persist({ name: 'app-storage' })
-  ]
-});
+const withDevtools = (name: string) => <T>(config: StateCreator<T>) =>
+  devtools(config, { name });
 
-const useStore = adapter(model);
+const withPersist = (name: string) => <T>(config: StateCreator<T>) => 
+  persist(config, { name });
+
+// Clean composition
+const useStore = create(
+  withDevtools('MyApp')(
+    withPersist('app-storage')(
+      createZustandAdapter(modelFactory)
+    )
+  )
+);
+
+// Or with pipe utility
+const pipe = (...fns: Function[]) => (x: any) => 
+  fns.reduceRight((v, f) => f(v), x);
+
+const useStore = create(
+  pipe(
+    createZustandAdapter,
+    withPersist('app-storage'),
+    withDevtools('MyApp')
+  )(modelFactory)
+);
 ```
 
 ### With Selectors
@@ -121,11 +203,26 @@ function CountDisplay() {
 ### Multiple Stores
 
 ```typescript
-const counterAdapter = createZustandAdapter();
-const todoAdapter = createZustandAdapter();
+import { create } from 'zustand';
+import { createZustandAdapter } from '@lattice/adapter-zustand';
 
-const useCounterStore = counterAdapter(counterModel);
-const useTodoStore = todoAdapter(todoModel);
+// Create multiple independent stores
+const useCounterStore = create(createZustandAdapter(counterModel));
+const useTodoStore = create(createZustandAdapter(todoModel));
+
+// Or with shared middleware configuration
+const createStore = <T>(modelFactory: ModelFactory<T>) => 
+  create(
+    devtools(
+      persist(
+        createZustandAdapter(modelFactory),
+        { name: `${modelFactory.name}-storage` }
+      )
+    )
+  );
+
+const useCounterStore = createStore(counterModel);
+const useTodoStore = createStore(todoModel);
 ```
 
 ## Benefits over Memory Adapter
@@ -138,31 +235,126 @@ const useTodoStore = todoAdapter(todoModel);
 
 ## Migration from Memory Adapter
 
-The API is nearly identical to the memory adapter. Key differences:
-
-1. The returned store is a Zustand hook (can be used as both hook and store)
-2. Access to Zustand middleware and devtools
-3. Built-in React integration
+The new API follows Zustand's natural patterns while maintaining compatibility:
 
 ```typescript
 // Memory adapter
-const store = memoryAdapter(model);
+import { createMemoryAdapter } from '@lattice/adapter-memory';
+const adapter = createMemoryAdapter();
+const store = adapter(modelFactory);
 const state = store.getState();
 
-// Zustand adapter - same API
-const useStore = zustandAdapter(model);
+// Zustand adapter - now returns StateCreator
+import { create } from 'zustand';
+import { createZustandAdapter } from '@lattice/adapter-zustand';
+const useStore = create(createZustandAdapter(modelFactory));
 const state = useStore.getState();
 
 // Plus React hook usage
 const state = useStore(); // In React components
+
+// Key benefit: Natural middleware composition
+const useStore = create(
+  devtools(
+    persist(
+      createZustandAdapter(modelFactory),
+      { name: 'app-storage' }
+    )
+  )
+);
+```
+
+## Real-World Example
+
+Here's a complete example showing how natural the adapter feels in a Zustand project:
+
+```typescript
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { createModel, createComponent } from '@lattice/core';
+import { createZustandAdapter } from '@lattice/adapter-zustand';
+
+// Define a todo list component with Lattice
+const todoList = createComponent(() => {
+  const model = createModel(({ set, get }) => ({
+    todos: [] as Todo[],
+    filter: 'all' as 'all' | 'active' | 'completed',
+    
+    addTodo: (text: string) => {
+      const todo = { id: Date.now(), text, completed: false };
+      set({ todos: [...get().todos, todo] });
+    },
+    
+    toggleTodo: (id: number) => {
+      set({
+        todos: get().todos.map(todo =>
+          todo.id === id ? { ...todo, completed: !todo.completed } : todo
+        )
+      });
+    },
+    
+    setFilter: (filter: 'all' | 'active' | 'completed') => set({ filter })
+  }));
+
+  return { model };
+});
+
+// Create store with Zustand patterns
+const { model } = todoList();
+const useTodoStore = create(
+  devtools(
+    persist(
+      createZustandAdapter(model),
+      { 
+        name: 'todo-storage',
+        partialize: (state) => ({ todos: state.todos }) // Only persist todos
+      }
+    ),
+    { name: 'TodoApp' }
+  )
+);
+
+// Use in React components with selectors
+function TodoList() {
+  const todos = useTodoStore((state) => state.todos);
+  const filter = useTodoStore((state) => state.filter);
+  const toggleTodo = useTodoStore((state) => state.toggleTodo);
+
+  const filteredTodos = todos.filter(todo => {
+    if (filter === 'active') return !todo.completed;
+    if (filter === 'completed') return todo.completed;
+    return true;
+  });
+
+  return (
+    <ul>
+      {filteredTodos.map(todo => (
+        <li key={todo.id} onClick={() => toggleTodo(todo.id)}>
+          {todo.text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// Shallow equality checks for performance
+function TodoStats() {
+  const todoCount = useTodoStore(
+    (state) => state.todos.filter(t => !t.completed).length
+  );
+  
+  return <div>Active todos: {todoCount}</div>;
+}
 ```
 
 ## Best Practices
 
 1. **Use selectors**: Leverage Zustand's selector pattern for optimal React performance
-2. **Middleware composition**: Take advantage of Zustand's middleware ecosystem
-3. **DevTools in development**: Use Redux DevTools for debugging
-4. **Persist important state**: Use persist middleware for user preferences
+2. **StateCreator composition**: The adapter returns a StateCreator, enabling natural middleware composition
+3. **Type inference**: Let TypeScript infer types from your model for the best developer experience
+4. **Middleware order**: Apply middleware in the correct order (e.g., `immer` before `persist`)
+5. **DevTools in development**: Use Redux DevTools for debugging
+6. **Persist important state**: Use persist middleware for user preferences
 
 ## Limitations
 

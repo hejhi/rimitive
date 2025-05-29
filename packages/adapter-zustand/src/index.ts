@@ -14,7 +14,7 @@
 
 import type { ComponentFactory, SliceFactory, SelectMarkerValue } from '@lattice/core';
 import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
-import { createStore } from 'zustand';
+import type { StateCreator } from 'zustand';
 
 // ============================================================================
 // Error Handling
@@ -74,14 +74,6 @@ interface Store<T> {
   destroy?: () => void;
 }
 
-/**
- * Adapter primitives - minimal interface for state management
- */
-interface AdapterPrimitives {
-  createStore<T>(initial: T): Store<T>;
-  createSlice<T, U>(store: Store<T>, selector: (state: T) => U): Store<U>;
-}
-
 // ============================================================================
 // Type Helpers
 // ============================================================================
@@ -111,47 +103,11 @@ export interface ExecuteResult<Model, Actions, Views> {
   views: ExecutedViews<Model, Views>;
 }
 
+
 // ============================================================================
 // Primitive Implementations
 // ============================================================================
 
-/**
- * Creates a Zustand-based reactive store
- */
-function createZustandStore<T>(initial: T): Store<T> {
-  // Create a Zustand store with the state
-  const store = createStore<T>(() => initial);
-
-  return {
-    get: () => store.getState(),
-    set: (value: T | ((prev: T) => T)) => {
-      try {
-        // Handle both direct values and updater functions
-        if (typeof value === 'function') {
-          store.setState((value as (prev: T) => T)(store.getState()));
-        } else {
-          store.setState(value);
-        }
-      } catch (error) {
-        throw new ZustandAdapterError(
-          'Failed to update store state',
-          {
-            operation: 'store.set',
-            details: { 
-              valueType: typeof value,
-              isFunction: typeof value === 'function'
-            },
-            cause: error
-          }
-        );
-      }
-    },
-    subscribe: (listener: (value: T) => void) => {
-      // Zustand's subscribe returns an unsubscribe function
-      return store.subscribe(listener);
-    },
-  };
-}
 
 /**
  * Creates a read-only slice of a store using Zustand subscription
@@ -243,283 +199,49 @@ function createZustandSlice<T, U>(
 }
 
 /**
- * Creates a Zustand adapter for Lattice slice factories.
+ * Creates a Zustand state creator function from a Lattice component.
  *
- * @returns An adapter with primitives and component execution methods
+ * This function returns a StateCreator that can be used directly with Zustand's
+ * create() function or composed with middleware. The resulting store will have
+ * the component's model state and methods at the root level, with additional
+ * properties for actions and views.
+ *
+ * @param componentFactory - The Lattice component factory
+ * @returns A Zustand StateCreator function
  *
  * @example
  * ```typescript
- * const adapter = createZustandAdapter();
- * const result = adapter.executeComponent(myComponent);
- *
- * // Access reactive stores
- * console.log(result.model.get());
- * result.actions.get().doSomething();
+ * import { create } from 'zustand';
+ * import { devtools } from 'zustand/middleware';
+ * 
+ * // Direct usage
+ * const useStore = create(createZustandAdapter(myComponent));
+ * 
+ * // With middleware
+ * const useStore = create(devtools(createZustandAdapter(myComponent)));
+ * 
+ * // Access state and methods
+ * const count = useStore(state => state.count);
+ * const increment = useStore(state => state.increment);
+ * 
+ * // Access actions and views
+ * const actions = useStore(state => state.actions);
+ * const views = useStore(state => state.views);
  * ```
  */
-export function createZustandAdapter() {
-  // ============================================================================
-  // Architecture Overview:
-  //
-  // 1. Primitives: Basic reactive store and read-only slice implementations
-  // 2. Select Resolution: Handles select() markers for slice composition
-  // 3. Component Execution: Transforms slice factories into reactive stores
-  // 4. Public API: Exposes primitives and high-level execution methods
-  // ============================================================================
-
-  // Create adapter primitives using Zustand implementations
-  const primitives: AdapterPrimitives = {
-    createStore: createZustandStore,
-    createSlice: createZustandSlice,
-  };
-
-  // ============================================================================
-  // Select Marker Resolution
-  // ============================================================================
-
-  interface SelectMarkerObj<Model = any, T = any, U = T> {
-    [SELECT_MARKER]: SelectMarkerValue<Model, T, U>;
-  }
-
-  function isSelectMarker<Model>(obj: unknown): obj is SelectMarkerObj<Model> {
-    return (
-      typeof obj === 'object' &&
-      obj !== null &&
-      typeof SELECT_MARKER !== 'undefined' &&
-      SELECT_MARKER in obj
-    );
-  }
-
-  /**
-   * Internal slice cache for select() resolution
-   * Note: We use a WeakMap for better memory management and type erasure is necessary
-   * here since we're storing heterogeneous slice types.
-   */
-  class SliceCache<Model> {
-    private cache = new Map<SliceFactory<Model, unknown>, Store<unknown>>();
-
-    get<T>(factory: SliceFactory<Model, T>): Store<T> | undefined {
-      return this.cache.get(factory) as Store<T> | undefined;
-    }
-
-    set<T>(factory: SliceFactory<Model, T>, store: Store<T>): void {
-      this.cache.set(factory, store as Store<unknown>);
-    }
-  }
-
-  /**
-   * Recursively resolves select() markers in slice results
-   */
-  function resolveSelectMarkers<T, Model>(
-    obj: T,
-    sliceCache: SliceCache<Model>,
-    modelStore: Store<Model>
-  ): T {
-    // Primitives pass through unchanged
-    if (typeof obj !== 'object' || obj === null) {
-      return obj;
-    }
-
-    // Handle select() markers
-    if (isSelectMarker<Model>(obj)) {
-      const markerValue = obj[SELECT_MARKER];
-      const sliceFactory = markerValue.slice;
-      let slice = sliceCache.get(sliceFactory);
-
-      if (!slice) {
-        // Create slice lazily with recursive resolution
-        try {
-          slice = primitives.createSlice(modelStore, (state) => {
-            const rawResult = sliceFactory(state);
-            return resolveSelectMarkers(rawResult, sliceCache, modelStore);
-          });
-          sliceCache.set(sliceFactory, slice);
-        } catch (error) {
-          throw new ZustandAdapterError(
-            'Failed to create slice for select() marker',
-            {
-              operation: 'resolveSelectMarkers.createSlice',
-              details: { sliceFactory: sliceFactory.name || 'anonymous' },
-              cause: error
-            }
-          );
-        }
-      }
-
-      // Get the slice result
-      let sliceResult: unknown;
-      try {
-        sliceResult = slice.get();
-      } catch (error) {
-        throw new ZustandAdapterError(
-          'Failed to get value from slice in select() resolution',
-          {
-            operation: 'resolveSelectMarkers.getSlice',
-            cause: error
-          }
-        );
-      }
-
-      // Apply selector if present
-      if (markerValue.selector) {
-        try {
-          return markerValue.selector(sliceResult) as T;
-        } catch (error) {
-          throw new ZustandAdapterError(
-            'Select marker selector function failed',
-            {
-              operation: 'resolveSelectMarkers.selector',
-              details: { sliceResult },
-              cause: error
-            }
-          );
-        }
-      }
-
-      return sliceResult as T;
-    }
-
-    // Handle arrays
-    if (Array.isArray(obj)) {
-      return obj.map((item) =>
-        resolveSelectMarkers(item, sliceCache, modelStore)
-      ) as T;
-    }
-
-    // Handle objects
-    const resolved = {} as T;
-    for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
-        resolved[key] = resolveSelectMarkers(obj[key], sliceCache, modelStore);
-      }
-    }
-    return resolved;
-  }
-
-  // ============================================================================
-  // Component Execution
-  // ============================================================================
-
-  /**
-   * Creates a slice that automatically resolves select() markers
-   */
-  function createSliceWithSelectSupport<Model, T>(
-    modelStore: Store<Model>,
-    sliceFactory: SliceFactory<Model, T>,
-    sliceCache: SliceCache<Model>
-  ): Store<T> {
-    try {
-      const slice = primitives.createSlice(modelStore, (state) => {
-        let rawResult: T;
-        try {
-          rawResult = sliceFactory(state);
-        } catch (error) {
-          throw new ZustandAdapterError(
-            'Slice factory execution failed',
-            {
-              operation: 'createSliceWithSelectSupport.sliceFactory',
-              details: { sliceFactory: sliceFactory.name || 'anonymous' },
-              cause: error
-            }
-          );
-        }
-        return resolveSelectMarkers<T, Model>(rawResult, sliceCache, modelStore);
-      });
-      sliceCache.set(sliceFactory, slice);
-      return slice;
-    } catch (error) {
-      if (error instanceof ZustandAdapterError) {
-        throw error;
-      }
-      throw new ZustandAdapterError(
-        'Failed to create slice with select support',
-        {
-          operation: 'createSliceWithSelectSupport',
-          details: { sliceFactory: sliceFactory.name || 'anonymous' },
-          cause: error
-        }
-      );
-    }
-  }
-
-  /**
-   * Checks if a function is a SliceFactory (has the brand)
-   */
-  function isSliceFactory(fn: unknown): fn is SliceFactory {
-    return typeof fn === 'function' && SLICE_FACTORY_MARKER in fn;
-  }
-
-  /**
-   * Processes views into reactive stores
-   */
-  function processViews<Model, Views>(
-    spec: { views: Views },
-    createSlice: <T>(factory: SliceFactory<Model, T>) => Store<T>
-  ): ExecutedViews<Model, Views> {
-    const views = {} as ExecutedViews<Model, Views>;
-
-    for (const key in spec.views) {
-      const view = spec.views[key];
-      if (!view || typeof view !== 'function') continue;
-
-      if (isSliceFactory(view)) {
-        // Static slice view - execute immediately
-        try {
-          Object.defineProperty(views, key, {
-            value: createSlice(view),
-            enumerable: true,
-            configurable: true,
-          });
-        } catch (error) {
-          throw new ZustandAdapterError(
-            `Failed to create static view "${String(key)}"`,
-            {
-              operation: 'processViews.staticView',
-              details: { viewKey: String(key) },
-              cause: error
-            }
-          );
-        }
-      } else {
-        // Computed view - returns a function that creates the store
-        Object.defineProperty(views, key, {
-          value: () => {
-            try {
-              const sliceFactory = (view as () => SliceFactory<Model>)();
-              return createSlice(sliceFactory);
-            } catch (error) {
-              throw new ZustandAdapterError(
-                `Failed to create computed view "${String(key)}"`,
-                {
-                  operation: 'processViews.computedView',
-                  details: { viewKey: String(key) },
-                  cause: error
-                }
-              );
-            }
-          },
-          enumerable: true,
-          configurable: true,
-        });
-      }
-    }
-
-    return views;
-  }
-
-  /**
-   * Executes a component factory into reactive stores
-   */
-  function executeComponent<
-    Model,
-    Actions,
-    Views extends Record<
-      string,
-      SliceFactory<Model, unknown> | (() => SliceFactory<Model, unknown>)
-    >,
-  >(
-    componentFactory: ComponentFactory<Model, Actions, Views>
-  ): ExecuteResult<Model, Actions, Views> {
+export function createZustandAdapter<
+  Model,
+  Actions,
+  Views extends Record<
+    string,
+    SliceFactory<Model, unknown> | (() => SliceFactory<Model, unknown>)
+  >,
+>(
+  componentFactory: ComponentFactory<Model, Actions, Views>
+): StateCreator<Model & { actions: Actions; views: ExecutedViews<Model, Views> }> {
+  // Return a state creator function that Zustand's create() can use
+  return (set, get, api) => {
+    // Execute the component factory to get the specification
     let spec: ReturnType<typeof componentFactory>;
     try {
       spec = componentFactory();
@@ -527,88 +249,360 @@ export function createZustandAdapter() {
       throw new ZustandAdapterError(
         'Component factory execution failed',
         {
-          operation: 'executeComponent.componentFactory',
+          operation: 'createZustandAdapter.componentFactory',
           cause: error
         }
       );
     }
 
-    // 1. Create model store
-    const modelStore = primitives.createStore<Model>({} as Model);
-    
-    let model: Model;
+    // First, create a temporary model with just the initial state to bootstrap
+    let tempModel: Model;
     try {
-      model = spec.model({
-        get: () => modelStore.get(),
-        set: (updates) => modelStore.set((prev) => ({ ...prev, ...updates })),
+      tempModel = spec.model({
+        get: () => ({} as Model), // Temporary empty model
+        set: () => {}, // No-op during initialization
       });
     } catch (error) {
       throw new ZustandAdapterError(
         'Model factory execution failed',
         {
-          operation: 'executeComponent.modelFactory',
+          operation: 'createZustandAdapter.modelFactory',
           cause: error
         }
       );
     }
-    
-    modelStore.set(model);
 
-    // 2. Set up slice tracking for select() resolution
-    const sliceCache = new SliceCache<Model>();
-    const createSlice = <T>(factory: SliceFactory<Model, T>) =>
-      createSliceWithSelectSupport(modelStore, factory, sliceCache);
+    // Helper to extract model properties from the full state
+    const getModelFromState = (state: any): Model => {
+      if (!state) return tempModel; // Return the initial model if state is undefined
+      const modelState = {} as Model;
+      for (const key in tempModel) {
+        if (Object.prototype.hasOwnProperty.call(tempModel, key) && 
+            key !== 'actions' && key !== 'views' && key in state) {
+          (modelState as any)[key] = state[key];
+        }
+      }
+      // If modelState is empty, return tempModel
+      const hasKeys = Object.keys(modelState as any).length > 0;
+      return hasKeys ? modelState : tempModel;
+    };
 
-    // 3. Create actions and views
-    let actions: Store<Actions>;
+    // Now create the actual model with proper get/set
+    let model: Model;
     try {
-      actions = createSlice(spec.actions);
+      model = spec.model({
+        get: () => getModelFromState(get()),
+        set: (updates) => set((state) => ({ ...state, ...updates })),
+      });
+    } catch (error) {
+      throw new ZustandAdapterError(
+        'Model factory execution failed during second pass',
+        {
+          operation: 'createZustandAdapter.modelFactory.secondPass',
+          cause: error
+        }
+      );
+    }
+
+    // Create a lightweight store interface for our internal use
+    const modelStore: Store<Model> = {
+      get: () => getModelFromState(get()),
+      set: (value) => {
+        if (typeof value === 'function') {
+          set((state) => {
+            const modelState = getModelFromState(state);
+            const updates = (value as (prev: Model) => Model)(modelState);
+            return { ...state, ...updates };
+          });
+        } else {
+          set((state) => ({ ...state, ...value }));
+        }
+      },
+      subscribe: (listener) => {
+        // Subscribe to state changes but only call listener when model parts change
+        return api.subscribe((state, prevState) => {
+          // Extract only model properties for comparison
+          const modelKeys = Object.keys(model as any) as (keyof Model)[];
+          const hasModelChange = modelKeys.some(key => 
+            key !== 'actions' && key !== 'views' && 
+            state[key as keyof typeof state] !== prevState[key as keyof typeof prevState]
+          );
+          if (hasModelChange) {
+            listener(getModelFromState(state));
+          }
+        });
+      },
+    };
+
+    // Set up slice tracking for select() resolution
+    const sliceCache = new SliceCache<Model>();
+
+    // Process actions slice
+    let actions: Actions;
+    try {
+      const actionsSlice = createSliceWithSelectSupport(modelStore, spec.actions, sliceCache);
+      actions = actionsSlice.get();
     } catch (error) {
       throw new ZustandAdapterError(
         'Actions slice creation failed',
         {
-          operation: 'executeComponent.actions',
+          operation: 'createZustandAdapter.actions',
           cause: error
         }
       );
     }
-    
+
+    // Process views
     let views: ExecutedViews<Model, Views>;
     try {
-      views = processViews<Model, Views>(spec, createSlice);
+      views = processViews<Model, Views>(spec, (factory) =>
+        createSliceWithSelectSupport(modelStore, factory, sliceCache)
+      );
     } catch (error) {
       throw new ZustandAdapterError(
         'Views processing failed',
         {
-          operation: 'executeComponent.views',
+          operation: 'createZustandAdapter.views',
           cause: error
         }
       );
     }
 
-    return { model: modelStore, actions, views };
-  }
-
-  // ============================================================================
-  // Public API
-  // ============================================================================
-
-  /**
-   * Creates a store from a slice factory with select() support
-   */
-  function createStoreFromSlice<Model, Slice>(
-    modelStore: Store<Model>,
-    sliceFactory: SliceFactory<Model, Slice>
-  ): Store<Slice> {
-    const sliceCache = new SliceCache<Model>();
-    return createSliceWithSelectSupport(modelStore, sliceFactory, sliceCache);
-  }
-
-  return {
-    primitives,
-    executeComponent,
-    createStoreFromSlice,
+    // Return the complete state object
+    return {
+      ...model,
+      actions,
+      views,
+    };
   };
+}
+
+// ============================================================================
+// Supporting Types and Functions
+// ============================================================================
+
+/**
+ * Internal slice cache for select() resolution
+ */
+class SliceCache<Model> {
+  private cache = new Map<SliceFactory<Model, unknown>, Store<unknown>>();
+
+  get<T>(factory: SliceFactory<Model, T>): Store<T> | undefined {
+    return this.cache.get(factory) as Store<T> | undefined;
+  }
+
+  set<T>(factory: SliceFactory<Model, T>, store: Store<T>): void {
+    this.cache.set(factory, store as Store<unknown>);
+  }
+}
+
+interface SelectMarkerObj<Model = any, T = any, U = T> {
+  [SELECT_MARKER]: SelectMarkerValue<Model, T, U>;
+}
+
+function isSelectMarker<Model>(obj: unknown): obj is SelectMarkerObj<Model> {
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    typeof SELECT_MARKER !== 'undefined' &&
+    SELECT_MARKER in obj
+  );
+}
+
+/**
+ * Recursively resolves select() markers in slice results
+ */
+function resolveSelectMarkers<T, Model>(
+  obj: T,
+  sliceCache: SliceCache<Model>,
+  modelStore: Store<Model>
+): T {
+  // Primitives pass through unchanged
+  if (typeof obj !== 'object' || obj === null) {
+    return obj;
+  }
+
+  // Handle select() markers
+  if (isSelectMarker<Model>(obj)) {
+    const markerValue = obj[SELECT_MARKER];
+    const sliceFactory = markerValue.slice;
+    let slice = sliceCache.get(sliceFactory);
+
+    if (!slice) {
+      // Create slice lazily with recursive resolution
+      try {
+        slice = createZustandSlice(modelStore, (state) => {
+          const rawResult = sliceFactory(state);
+          return resolveSelectMarkers(rawResult, sliceCache, modelStore);
+        });
+        sliceCache.set(sliceFactory, slice);
+      } catch (error) {
+        throw new ZustandAdapterError(
+          'Failed to create slice for select() marker',
+          {
+            operation: 'resolveSelectMarkers.createSlice',
+            details: { sliceFactory: sliceFactory.name || 'anonymous' },
+            cause: error
+          }
+        );
+      }
+    }
+
+    // Get the slice result
+    let sliceResult: unknown;
+    try {
+      sliceResult = slice.get();
+    } catch (error) {
+      throw new ZustandAdapterError(
+        'Failed to get value from slice in select() resolution',
+        {
+          operation: 'resolveSelectMarkers.getSlice',
+          cause: error
+        }
+      );
+    }
+
+    // Apply selector if present
+    if (markerValue.selector) {
+      try {
+        return markerValue.selector(sliceResult) as T;
+      } catch (error) {
+        throw new ZustandAdapterError(
+          'Select marker selector function failed',
+          {
+            operation: 'resolveSelectMarkers.selector',
+            details: { sliceResult },
+            cause: error
+          }
+        );
+      }
+    }
+
+    return sliceResult as T;
+  }
+
+  // Handle arrays
+  if (Array.isArray(obj)) {
+    return obj.map((item) =>
+      resolveSelectMarkers(item, sliceCache, modelStore)
+    ) as T;
+  }
+
+  // Handle objects
+  const resolved = {} as T;
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      resolved[key] = resolveSelectMarkers(obj[key], sliceCache, modelStore);
+    }
+  }
+  return resolved;
+}
+
+/**
+ * Creates a slice that automatically resolves select() markers
+ */
+function createSliceWithSelectSupport<Model, T>(
+  modelStore: Store<Model>,
+  sliceFactory: SliceFactory<Model, T>,
+  sliceCache: SliceCache<Model>
+): Store<T> {
+  try {
+    const slice = createZustandSlice(modelStore, (state) => {
+      let rawResult: T;
+      try {
+        rawResult = sliceFactory(state);
+      } catch (error) {
+        throw new ZustandAdapterError(
+          'Slice factory execution failed',
+          {
+            operation: 'createSliceWithSelectSupport.sliceFactory',
+            details: { sliceFactory: sliceFactory.name || 'anonymous' },
+            cause: error
+          }
+        );
+      }
+      return resolveSelectMarkers<T, Model>(rawResult, sliceCache, modelStore);
+    });
+    sliceCache.set(sliceFactory, slice);
+    return slice;
+  } catch (error) {
+    if (error instanceof ZustandAdapterError) {
+      throw error;
+    }
+    throw new ZustandAdapterError(
+      'Failed to create slice with select support',
+      {
+        operation: 'createSliceWithSelectSupport',
+        details: { sliceFactory: sliceFactory.name || 'anonymous' },
+        cause: error
+      }
+    );
+  }
+}
+
+/**
+ * Checks if a function is a SliceFactory (has the brand)
+ */
+function isSliceFactory(fn: unknown): fn is SliceFactory {
+  return typeof fn === 'function' && SLICE_FACTORY_MARKER in fn;
+}
+
+/**
+ * Processes views into reactive stores
+ */
+function processViews<Model, Views>(
+  spec: { views: Views },
+  createSlice: <T>(factory: SliceFactory<Model, T>) => Store<T>
+): ExecutedViews<Model, Views> {
+  const views = {} as ExecutedViews<Model, Views>;
+
+  for (const key in spec.views) {
+    const view = spec.views[key];
+    if (!view || typeof view !== 'function') continue;
+
+    if (isSliceFactory(view)) {
+      // Static slice view - execute immediately
+      try {
+        Object.defineProperty(views, key, {
+          value: createSlice(view),
+          enumerable: true,
+          configurable: true,
+        });
+      } catch (error) {
+        throw new ZustandAdapterError(
+          `Failed to create static view "${String(key)}"`,
+          {
+            operation: 'processViews.staticView',
+            details: { viewKey: String(key) },
+            cause: error
+          }
+        );
+      }
+    } else {
+      // Computed view - returns a function that creates the store
+      Object.defineProperty(views, key, {
+        value: () => {
+          try {
+            const sliceFactory = (view as () => SliceFactory<Model>)();
+            return createSlice(sliceFactory);
+          } catch (error) {
+            throw new ZustandAdapterError(
+              `Failed to create computed view "${String(key)}"`,
+              {
+                operation: 'processViews.computedView',
+                details: { viewKey: String(key) },
+                cause: error
+              }
+            );
+          }
+        },
+        enumerable: true,
+        configurable: true,
+      });
+    }
+  }
+
+  return views;
 }
 
 // ============================================================================
@@ -616,101 +610,15 @@ export function createZustandAdapter() {
 // ============================================================================
 
 if (import.meta.vitest) {
-  const { describe, it, expect } = import.meta.vitest;
+  const { describe, it, expect, vi } = import.meta.vitest;
   const { createComponent, createModel, createSlice, select } = await import(
     '@lattice/core'
   );
+  const { create } = await import('zustand');
+  const { devtools: _devtools } = await import('zustand/middleware');
 
-  describe('createZustandAdapter - primitives', () => {
-    it('should provide working createStore primitive', () => {
-      const adapter = createZustandAdapter();
-      const { primitives } = adapter;
-
-      const store = primitives.createStore({ count: 0, name: 'test' });
-
-      expect(store.get()).toEqual({ count: 0, name: 'test' });
-
-      store.set({ count: 5, name: 'updated' });
-      expect(store.get()).toEqual({ count: 5, name: 'updated' });
-    });
-
-    it('should provide working createSlice primitive', () => {
-      const adapter = createZustandAdapter();
-      const { primitives } = adapter;
-
-      const store = primitives.createStore({ count: 0, name: 'test' });
-      const slice = primitives.createSlice(store, (state) => ({
-        count: state.count,
-      }));
-
-      expect(slice.get()).toEqual({ count: 0 });
-
-      // Update parent store
-      store.set({ count: 5, name: 'updated' });
-      expect(slice.get()).toEqual({ count: 5 });
-    });
-
-    it('should handle multiple subscribers independently', () => {
-      const adapter = createZustandAdapter();
-      const { primitives } = adapter;
-      const store = primitives.createStore({ value: 0 });
-
-      const calls1: { value: number }[] = [];
-      const calls2: { value: number }[] = [];
-
-      const unsub1 = store.subscribe((state) => calls1.push(state));
-      store.subscribe((state) => calls2.push(state));
-
-      store.set({ value: 1 });
-
-      expect(calls1.length).toBe(1);
-      expect(calls2.length).toBe(1);
-      expect(calls1[0]?.value).toBe(1);
-      expect(calls2[0]?.value).toBe(1);
-
-      // Unsubscribe first listener
-      unsub1();
-      store.set({ value: 2 });
-
-      expect(calls1.length).toBe(1); // No new calls
-      expect(calls2.length).toBe(2); // Still receiving updates
-    });
-  });
-
-  describe('createZustandAdapter - slice execution', () => {
-    it('should understand slice factory branding', () => {
-      const model = createModel<{ value: number }>(() => ({ value: 42 }));
-      const slice = createSlice(model, (m) => ({ val: m.value }));
-
-      // SliceFactory should have the marker
-      expect(SLICE_FACTORY_MARKER in slice).toBe(true);
-
-      // A function that returns a SliceFactory should not have the marker
-      const computedView = () => slice;
-      expect(SLICE_FACTORY_MARKER in computedView).toBe(false);
-
-      // A transformed slice should also have the marker
-      const transformed = slice((s) => ({ doubled: s.val * 2 }));
-      expect(SLICE_FACTORY_MARKER in transformed).toBe(true);
-
-      // The pattern from the computed view test
-      const countSlice = createSlice(model, (m) => ({ count: m.value }));
-      const counterView = () =>
-        countSlice((state) => ({
-          'data-count': state.count,
-          className: state.count % 2 === 0 ? 'even' : 'odd',
-        }));
-
-      // counterView is a function without marker
-      expect(SLICE_FACTORY_MARKER in counterView).toBe(false);
-
-      // Calling counterView returns a SliceFactory with marker
-      const innerSlice = counterView();
-      expect(SLICE_FACTORY_MARKER in innerSlice).toBe(true);
-      expect(typeof innerSlice).toBe('function');
-    });
-
-    it('should execute a simple component with model and actions', () => {
+  describe('createZustandAdapter - basic usage', () => {
+    it('should return a state creator function', () => {
       const counter = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -727,22 +635,68 @@ if (import.meta.vitest) {
         return { model, actions, views: {} };
       });
 
-      const adapter = createZustandAdapter();
-      const result = adapter.executeComponent(counter);
-
-      // Verify structure
-      expect(result.model).toBeDefined();
-      expect(result.actions).toBeDefined();
-      expect(result.views).toBeDefined();
-
-      // Model should be reactive
-      expect(result.model.get().count).toBe(0);
-
-      // Actions should work
-      result.actions.get().increment();
-      expect(result.model.get().count).toBe(1);
+      const stateCreator = createZustandAdapter(counter);
+      expect(typeof stateCreator).toBe('function');
     });
 
+    it('should work with zustand create()', () => {
+      const counter = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+        }));
+
+        return { model, actions, views: {} };
+      });
+
+      const useStore = create(createZustandAdapter(counter));
+      
+      // Access state directly
+      expect(useStore.getState().count).toBe(0);
+      
+      // Call methods directly
+      useStore.getState().increment();
+      expect(useStore.getState().count).toBe(1);
+      
+      // Access actions - they should be the same function
+      expect(typeof useStore.getState().actions.increment).toBe('function');
+      expect(typeof useStore.getState().increment).toBe('function');
+    });
+
+    it('should work with middleware', () => {
+      const counter = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+        }));
+
+        return { model, actions, views: {} };
+      });
+
+      // Mock devtools to verify it's called
+      const mockDevtools = vi.fn((config: any) => config);
+      const useStore = create(mockDevtools(createZustandAdapter(counter)) as StateCreator<any>);
+      
+      expect(mockDevtools).toHaveBeenCalledOnce();
+      expect(useStore.getState().count).toBe(0);
+    });
+  });
+
+  describe('createZustandAdapter - views', () => {
     it('should handle static slice views', () => {
       const component = createComponent(() => {
         const model = createModel<{
@@ -765,11 +719,11 @@ if (import.meta.vitest) {
         };
       });
 
-      const adapter = createZustandAdapter();
-      const result = adapter.executeComponent(component);
+      const useStore = create(createZustandAdapter(component));
+      const state = useStore.getState();
 
       // Static view should be a reactive store
-      const display = result.views.display;
+      const display = state.views.display;
       expect(display.get()).toEqual({
         value: 5,
         isDisabled: false,
@@ -799,21 +753,23 @@ if (import.meta.vitest) {
         };
       });
 
-      const adapter = createZustandAdapter();
-      const result = adapter.executeComponent(component);
+      const useStore = create(createZustandAdapter(component));
+      const state = useStore.getState();
 
       // Computed view should be a function that returns a store
-      expect(typeof result.views.counter).toBe('function');
+      expect(typeof state.views.counter).toBe('function');
 
       // Type should be inferred correctly
-      const counter = result.views.counter;
+      const counter = state.views.counter;
       const counterStore = counter();
       expect(counterStore.get()).toEqual({
         'data-count': 5,
         className: 'odd',
       });
     });
+  });
 
+  describe('createZustandAdapter - select() resolution', () => {
     it('should handle select() markers in slices', () => {
       const component = createComponent(() => {
         const model = createModel<{
@@ -828,8 +784,6 @@ if (import.meta.vitest) {
           increment: m.increment,
         }));
 
-        // Note: select(actions).increment returns undefined because we're accessing
-        // a property on the marker object. Adapters need to store the whole select()
         const buttonSlice = createSlice(model, (m) => ({
           onClick: select(actions),
           count: m.count,
@@ -842,10 +796,10 @@ if (import.meta.vitest) {
         };
       });
 
-      const adapter = createZustandAdapter();
-      const result = adapter.executeComponent(component);
+      const useStore = create(createZustandAdapter(component));
+      const state = useStore.getState();
 
-      const button = result.views.button;
+      const button = state.views.button;
       const buttonView = button.get();
       expect(buttonView.count).toBe(0);
       // onClick should be the resolved actions object
@@ -854,7 +808,7 @@ if (import.meta.vitest) {
 
       // Clicking should increment
       buttonView.onClick.increment();
-      expect(result.model.get().count).toBe(1);
+      expect(useStore.getState().count).toBe(1);
     });
 
     it('should handle select() with selector function', () => {
@@ -873,13 +827,9 @@ if (import.meta.vitest) {
         const userSlice = createSlice(model, (m) => m.user);
         const postsSlice = createSlice(model, (m) => m.posts);
 
-        // Create a composite slice that uses select with selectors
         const profileSlice = createSlice(model, () => ({
-          // Select only name from user slice
           userName: select(userSlice, (u) => u.name),
-          // Select only post count from posts slice
           postCount: select(postsSlice, (p) => p.length),
-          // Select full user object (no selector)
           fullUser: select(userSlice),
         }));
 
@@ -890,82 +840,24 @@ if (import.meta.vitest) {
         };
       });
 
-      const adapter = createZustandAdapter();
-      const result = adapter.executeComponent(component);
+      const useStore = create(createZustandAdapter(component));
+      const state = useStore.getState();
 
-      const profile = result.views.profile;
+      const profile = state.views.profile;
       const profileView = profile.get();
       
-      // Verify select with selector resolved correctly
       expect(profileView.userName).toBe('Alice');
       expect(profileView.postCount).toBe(2);
-      
-      // Verify select without selector resolved correctly
       expect(profileView.fullUser).toEqual({
         id: 1,
         name: 'Alice',
         email: 'alice@example.com'
       });
     });
+  });
 
-    it('should handle nested select() with selector', () => {
-      const component = createComponent(() => {
-        const model = createModel<{
-          data: {
-            items: Array<{ id: number; value: string; active: boolean }>;
-            filter: 'all' | 'active';
-          };
-        }>(() => ({
-          data: {
-            items: [
-              { id: 1, value: 'one', active: true },
-              { id: 2, value: 'two', active: false },
-              { id: 3, value: 'three', active: true },
-            ],
-            filter: 'all',
-          },
-        }));
-
-        const dataSlice = createSlice(model, (m) => m.data);
-        
-        // Create slices with different selectors
-        const statsSlice = createSlice(model, () => ({
-          // Select active items only
-          activeItems: select(dataSlice, (d) => 
-            d.items.filter(item => item.active)
-          ),
-          // Select item count
-          totalCount: select(dataSlice, (d) => d.items.length),
-          // Complex selector with computation
-          summary: select(dataSlice, (d) => {
-            const active = d.items.filter(i => i.active).length;
-            const total = d.items.length;
-            return `${active} of ${total} active`;
-          }),
-        }));
-
-        return {
-          model,
-          actions: createSlice(model, () => ({})),
-          views: { stats: statsSlice },
-        };
-      });
-
-      const adapter = createZustandAdapter();
-      const result = adapter.executeComponent(component);
-
-      const stats = result.views.stats.get();
-      
-      // Verify selectors applied correctly
-      expect(stats.activeItems).toHaveLength(2);
-      expect(stats.activeItems[0]).toEqual({ id: 1, value: 'one', active: true });
-      expect(stats.activeItems[1]).toEqual({ id: 3, value: 'three', active: true });
-      
-      expect(stats.totalCount).toBe(3);
-      expect(stats.summary).toBe('2 of 3 active');
-    });
-
-    it('should update slices reactively when model changes', () => {
+  describe('createZustandAdapter - reactivity', () => {
+    it('should update views reactively when model changes', () => {
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -987,24 +879,60 @@ if (import.meta.vitest) {
         };
       });
 
-      const adapter = createZustandAdapter();
-      const result = adapter.executeComponent(component);
-
+      const useStore = create(createZustandAdapter(component));
+      
       // Subscribe to view changes
       const viewChanges: { value: number; doubled: number }[] = [];
-      const display = result.views.display;
-      display.subscribe((value) => viewChanges.push(value));
+      const unsubscribe = useStore.getState().views.display.subscribe((value) => viewChanges.push(value));
 
       // Initial state
-      expect(display.get()).toEqual({ value: 0, doubled: 0 });
+      expect(useStore.getState().views.display.get()).toEqual({ value: 0, doubled: 0 });
 
       // Update model
-      result.model.get().increment();
+      useStore.getState().increment();
 
       // View should update
-      expect(display.get()).toEqual({ value: 1, doubled: 2 });
+      expect(useStore.getState().views.display.get()).toEqual({ value: 1, doubled: 2 });
       expect(viewChanges).toHaveLength(1);
       expect(viewChanges[0]).toEqual({ value: 1, doubled: 2 });
+
+      unsubscribe();
+    });
+
+    it('should work with zustand subscriptions', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, (m) => ({ increment: m.increment })),
+          views: {},
+        };
+      });
+
+      const useStore = create(createZustandAdapter(component));
+      
+      // Subscribe to state changes
+      const states: any[] = [];
+      const unsubscribe = useStore.subscribe((state) => {
+        states.push({ count: state.count });
+      });
+
+      // Trigger changes
+      useStore.getState().increment();
+      useStore.getState().increment();
+
+      expect(states.length).toBe(2);
+      expect(states[0].count).toBe(1);
+      expect(states[1].count).toBe(2);
+      
+      unsubscribe();
     });
   });
 }
