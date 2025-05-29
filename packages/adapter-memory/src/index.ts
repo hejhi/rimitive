@@ -164,8 +164,8 @@ export function createMemoryAdapter() {
   // Select Marker Resolution
   // ============================================================================
 
-  interface SelectMarkerObj<Model = any> {
-    [SELECT_MARKER]: SliceFactory<Model, unknown>;
+  interface SelectMarkerObj<Model = any, T = any> {
+    [SELECT_MARKER]: SliceFactory<Model, T>;
   }
 
   function isSelectMarker<Model>(obj: unknown): obj is SelectMarkerObj<Model> {
@@ -178,11 +178,16 @@ export function createMemoryAdapter() {
   }
 
   /**
+   * Type-safe slice map that preserves slice result types
+   */
+  type SliceMap<Model> = Map<SliceFactory<Model, unknown>, Store<any>>;
+
+  /**
    * Recursively resolves select() markers in slice results
    */
   function resolveSelectMarkers<T, Model>(
     obj: T,
-    sliceMap: Map<SliceFactory<Model, unknown>, Store<unknown>>,
+    sliceMap: SliceMap<Model>,
     modelStore: Store<Model>
   ): T {
     // Primitives pass through unchanged
@@ -234,13 +239,13 @@ export function createMemoryAdapter() {
   function createSliceWithSelectSupport<Model, T>(
     modelStore: Store<Model>,
     sliceFactory: SliceFactory<Model, T>,
-    sliceMap: Map<SliceFactory<Model, unknown>, Store<unknown>>
+    sliceMap: SliceMap<Model>
   ): Store<T> {
     const slice = primitives.createSlice(modelStore, (state) => {
       const rawResult = sliceFactory(state);
       return resolveSelectMarkers<T, Model>(rawResult, sliceMap, modelStore);
     });
-    sliceMap.set(sliceFactory, slice as Store<unknown>);
+    sliceMap.set(sliceFactory, slice);
     return slice;
   }
 
@@ -256,7 +261,7 @@ export function createMemoryAdapter() {
    */
   function processViews<Model, Views>(
     spec: { views: Views },
-    createSlice: (factory: SliceFactory<Model, unknown>) => Store<unknown>
+    createSlice: <T>(factory: SliceFactory<Model, T>) => Store<T>
   ): ExecutedViews<Model, Views> {
     const views = {} as ExecutedViews<Model, Views>;
 
@@ -311,7 +316,7 @@ export function createMemoryAdapter() {
     modelStore.set(model);
 
     // 2. Set up slice tracking for select() resolution
-    const sliceMap = new Map<SliceFactory<Model, unknown>, Store<unknown>>();
+    const sliceMap: SliceMap<Model> = new Map();
     const createSlice = <T>(factory: SliceFactory<Model, T>) =>
       createSliceWithSelectSupport(modelStore, factory, sliceMap);
 
@@ -333,7 +338,7 @@ export function createMemoryAdapter() {
     modelStore: Store<Model>,
     sliceFactory: SliceFactory<Model, Slice>
   ): Store<Slice> {
-    const sliceMap = new Map<SliceFactory<Model, unknown>, Store<unknown>>();
+    const sliceMap: SliceMap<Model> = new Map();
     return createSliceWithSelectSupport(modelStore, sliceFactory, sliceMap);
   }
 
