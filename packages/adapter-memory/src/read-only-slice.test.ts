@@ -63,9 +63,9 @@ describe('Memory Adapter - Read-only Slices', () => {
     const adapter = createMemoryAdapter();
     const { views } = adapter.executeComponent(component);
 
-    const display = views.display as any;
+    const display = views.display;
     // View slice should be read-only
-    expect(() => display.set({ value: 10 })).toThrow('Cannot set value on a slice - slices are read-only projections');
+    expect(() => display.set({ value: 10, isDisabled: false })).toThrow('Cannot set value on a slice - slices are read-only projections');
   });
 
   it('should allow set on the model store but not on slices', () => {
@@ -95,7 +95,7 @@ describe('Memory Adapter - Read-only Slices', () => {
     expect(model.get().count).toBe(5);
 
     // But slices should not
-    const countSlice = views.countSlice as any;
+    const countSlice = views.countSlice;
     expect(() => countSlice.set({ count: 10 })).toThrow('Cannot set value on a slice - slices are read-only projections');
   });
 

@@ -1,7 +1,4 @@
-import type {
-  ComponentFactory,
-  SliceFactory,
-} from '@lattice/core';
+import type { ComponentFactory, SliceFactory } from '@lattice/core';
 import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
 
 // Core adapter interfaces
@@ -17,13 +14,22 @@ interface AdapterPrimitives {
   createSlice<T, U>(store: Store<T>, selector: (state: T) => U): Store<U>;
 }
 
+// Type helpers for view execution
+type ViewType<Model, T> = T extends () => SliceFactory<Model, infer S>
+  ? () => Store<S>
+  : T extends SliceFactory<Model, infer S>
+    ? Store<S>
+    : never;
+
+type ExecutedViews<Model, Views> = {
+  [K in keyof Views]: ViewType<Model, Views[K]>;
+};
 
 // Result type for executed components
-// Note: View types require type assertions due to the dynamic nature of view execution
-export interface ExecuteResult<Model, Actions> {
+export interface ExecuteResult<Model, Actions, Views> {
   model: Store<Model>;
   actions: Store<Actions>;
-  views: Record<string, unknown>;
+  views: ExecutedViews<Model, Views>;
 }
 
 /**
@@ -133,17 +139,17 @@ export function createMemoryAdapter() {
     return resolved as T;
   }
 
-  // Execute component - users should use type assertions or the primitives directly for full type safety
+  // Execute component with full type safety
   function executeComponent<
     Model,
     Actions,
     Views extends Record<
       string,
-      SliceFactory<Model, unknown> | (() => SliceFactory<Model, unknown>)
+      SliceFactory<Model, any> | (() => SliceFactory<Model, any>)
     >,
   >(
     componentFactory: ComponentFactory<Model, Actions, Views>
-  ): ExecuteResult<Model, Actions> {
+  ): ExecuteResult<Model, Actions, Views> {
     const spec = componentFactory();
 
     // 1. Create reactive model
@@ -173,22 +179,23 @@ export function createMemoryAdapter() {
     const actions = createSliceWithSelect(spec.actions);
 
     // 3. Handle views
-    const views: Record<string, unknown> = {};
+    const views = {} as ExecutedViews<Model, Views>;
 
     // Process each view
-    Object.keys(spec.views).forEach((key) => {
+    (Object.keys(spec.views) as Array<keyof Views>).forEach((key) => {
       const view = spec.views[key];
+      if (!view) return;
 
       if (typeof view === 'function') {
         // Check if it's a SliceFactory using the brand
         if (SLICE_FACTORY_MARKER in view) {
           // Static slice view
-          views[key] = createSliceWithSelect(
+          (views as any)[key] = createSliceWithSelect(
             view as SliceFactory<Model, unknown>
           );
         } else {
           // Computed view - function that returns a SliceFactory
-          views[key] = () => {
+          (views as any)[key] = () => {
             const sliceFactory = (view as () => SliceFactory<Model, unknown>)();
             return createSliceWithSelect(sliceFactory);
           };
@@ -198,7 +205,6 @@ export function createMemoryAdapter() {
 
     return { model: modelStore, actions, views };
   }
-
 
   // Return adapter with all methods
   // Type-safe builder for creating stores from slices
@@ -220,7 +226,7 @@ export function createMemoryAdapter() {
   return {
     primitives,
     executeComponent,
-    createStoreFromSlice
+    createStoreFromSlice,
   };
 }
 
@@ -235,11 +241,11 @@ if (import.meta.vitest) {
     it('should provide working createStore primitive', () => {
       const adapter = createMemoryAdapter();
       const { primitives } = adapter;
-      
+
       const store = primitives.createStore({ count: 0, name: 'test' });
-      
+
       expect(store.get()).toEqual({ count: 0, name: 'test' });
-      
+
       store.set({ count: 5, name: 'updated' });
       expect(store.get()).toEqual({ count: 5, name: 'updated' });
     });
@@ -247,12 +253,14 @@ if (import.meta.vitest) {
     it('should provide working createSlice primitive', () => {
       const adapter = createMemoryAdapter();
       const { primitives } = adapter;
-      
+
       const store = primitives.createStore({ count: 0, name: 'test' });
-      const slice = primitives.createSlice(store, state => ({ count: state.count }));
-      
+      const slice = primitives.createSlice(store, (state) => ({
+        count: state.count,
+      }));
+
       expect(slice.get()).toEqual({ count: 0 });
-      
+
       // Update parent store
       store.set({ count: 5, name: 'updated' });
       expect(slice.get()).toEqual({ count: 5 });
@@ -416,11 +424,8 @@ if (import.meta.vitest) {
       // Computed view should be a function that returns a store
       expect(typeof result.views.counter).toBe('function');
 
-      // Cast to the expected type
-      const counter = result.views.counter as () => Store<{
-        'data-count': number;
-        className: string;
-      }>;
+      // Type should be inferred correctly
+      const counter = result.views.counter;
       const counterStore = counter();
       expect(counterStore.get()).toEqual({
         'data-count': 5,
@@ -459,10 +464,7 @@ if (import.meta.vitest) {
       const adapter = createMemoryAdapter();
       const result = adapter.executeComponent(component);
 
-      const button = result.views.button as Store<{
-        onClick: { increment: () => void };
-        count: number;
-      }>;
+      const button = result.views.button;
       const buttonView = button.get();
       expect(buttonView.count).toBe(0);
       // onClick should be the resolved actions object
@@ -501,10 +503,7 @@ if (import.meta.vitest) {
 
       // Subscribe to view changes
       const viewChanges: { value: number; doubled: number }[] = [];
-      const display = result.views.display as Store<{
-        value: number;
-        doubled: number;
-      }>;
+      const display = result.views.display;
       display.subscribe((value) => viewChanges.push(value));
 
       // Initial state

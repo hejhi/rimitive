@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { createMemoryAdapter } from './index';
 import { createModel, createSlice, createComponent, select } from '@lattice/core';
 
-interface Store<T> {
-  get: () => T;
-  set: (value: T | ((prev: T) => T)) => void;
-  subscribe: (listener: (value: T) => void) => () => void;
-  destroy?: () => void;
-}
-
 describe('memory adapter - slice support', () => {
   describe('executeComponent', () => {
     it('should execute a component spec with model, actions, and views', () => {
@@ -53,7 +46,7 @@ describe('memory adapter - slice support', () => {
       expect(model.get().count).toBe(1);
 
       // Test view slice
-      const countView = views.count as Store<{ count: number }>;
+      const countView = views.count;
       expect(countView.get()).toEqual({ count: 1 });
     });
 
@@ -102,7 +95,7 @@ describe('memory adapter - slice support', () => {
       const { model, actions, views } = adapter.executeComponent(todo);
 
       // Initial state
-      const statsFactory = views.stats as () => Store<{ total: number; completed: number }>;
+      const statsFactory = views.stats;
       const initialStats = statsFactory().get();
       expect(initialStats).toEqual({ total: 0, completed: 0 });
 
@@ -165,7 +158,7 @@ describe('memory adapter - slice support', () => {
       const { actions, views } = adapter.executeComponent(app);
 
       // Initial state
-      const headerView = views.header as Store<any>;
+      const headerView = views.header;
       const header = headerView.get();
       expect(header.user).toEqual({ name: 'John', role: 'admin' });
       expect(header.theme).toBe('dark');
@@ -203,7 +196,7 @@ describe('memory adapter - slice support', () => {
       const { actions, views } = adapter.executeComponent(counter);
 
       const updates: Array<{ value: number }> = [];
-      const countView = views.count as Store<{ value: number }>;
+      const countView = views.count;
       const unsub = countView.subscribe((state) => {
         updates.push(state);
       });
@@ -255,7 +248,7 @@ describe('memory adapter - slice support', () => {
       const adapter = createMemoryAdapter();
       const { actions, views } = adapter.executeComponent(app);
 
-      const distanceView = views.distance as Store<{ value: number }>;
+      const distanceView = views.distance;
       expect(distanceView.get()).toEqual({ value: 0 });
 
       actions.get().setPosition(3, 4);
