@@ -61,7 +61,14 @@ describe('Memory Adapter - Model Factory Interface', () => {
       const setCalls: any[] = [];
 
       const component = createComponent(() => {
-        const model = createModel(({ get, set }) => {
+        const model = createModel<{
+          x: number;
+          y: number;
+          name: string;
+          moveX: (newX: number) => void;
+          moveY: (newY: number) => void;
+          moveBoth: (newX: number, newY: number) => void;
+        }>(({ set }) => {
           // Capture how set is used
           const wrappedSet = (updates: any) => {
             setCalls.push(updates);
@@ -81,7 +88,7 @@ describe('Memory Adapter - Model Factory Interface', () => {
 
         return {
           model,
-          actions: createSlice(model, (m) => ({
+          actions: createSlice(model, (m: { moveX: (newX: number) => void; moveY: (newY: number) => void; moveBoth: (newX: number, newY: number) => void }) => ({
             moveX: m.moveX,
             moveY: m.moveY,
             moveBoth: m.moveBoth,
@@ -120,20 +127,20 @@ describe('Memory Adapter - Model Factory Interface', () => {
 
     it('should allow model to read its own state during initialization', () => {
       const component = createComponent(() => {
-        const model = createModel(({ get, set }) => {
+        const model = createModel<{ value: number; multiplier: number; result: number; compute: () => void }>(({ get, set }) => {
           // Model should be able to call get() during initialization
           const currentState = get();
           expect(currentState).toEqual({}); // Empty initially
 
           // Create computed initial values based on initial state
-          const defaultMultiplier = currentState.multiplier || 2;
+          const defaultMultiplier = (currentState as any).multiplier || 2;
 
           return {
             value: 5,
             multiplier: defaultMultiplier,
             result: 5 * defaultMultiplier,
             compute: () => {
-              const state = get();
+              const state = get() as { value: number; multiplier: number };
               set({ result: state.value * state.multiplier });
             },
           };
@@ -166,19 +173,27 @@ describe('Memory Adapter - Model Factory Interface', () => {
       const component = createComponent(() => {
         let nextId = 1;
 
-        const model = createModel(({ get, set }) => ({
+        const model = createModel<{
+          todos: TodoItem[];
+          filter: 'all' | 'active' | 'completed';
+          addTodo: (text: string) => void;
+          toggleTodo: (id: number) => void;
+          removeTodo: (id: number) => void;
+          clearCompleted: () => void;
+          setFilter: (filter: 'all' | 'active' | 'completed') => void;
+        }>(({ get, set }) => ({
           todos: [] as TodoItem[],
           filter: 'all' as 'all' | 'active' | 'completed',
 
           addTodo: (text: string) => {
-            const todos = get().todos;
+            const todos = (get() as { todos: TodoItem[] }).todos;
             set({
               todos: [...todos, { id: nextId++, text, done: false }],
             });
           },
 
           toggleTodo: (id: number) => {
-            const todos = get().todos;
+            const todos = (get() as { todos: TodoItem[] }).todos;
             set({
               todos: todos.map((todo) =>
                 todo.id === id ? { ...todo, done: !todo.done } : todo
@@ -187,14 +202,14 @@ describe('Memory Adapter - Model Factory Interface', () => {
           },
 
           removeTodo: (id: number) => {
-            const todos = get().todos;
+            const todos = (get() as { todos: TodoItem[] }).todos;
             set({
               todos: todos.filter((todo) => todo.id !== id),
             });
           },
 
           clearCompleted: () => {
-            const todos = get().todos;
+            const todos = (get() as { todos: TodoItem[] }).todos;
             set({
               todos: todos.filter((todo) => !todo.done),
             });
@@ -249,16 +264,21 @@ describe('Memory Adapter - Model Factory Interface', () => {
 
     it('should handle synchronous get() calls during set() operations', () => {
       const component = createComponent(() => {
-        const model = createModel(({ get, set }) => ({
+        const model = createModel<{
+          count: number;
+          history: number[];
+          increment: () => void;
+          doubleIncrement: () => void;
+        }>(({ get, set }) => ({
           count: 0,
           history: [] as number[],
 
           increment: () => {
-            const currentCount = get().count;
+            const currentCount = (get() as { count: number; history: number[] }).count;
             const newCount = currentCount + 1;
 
             // Get history during the update
-            const currentHistory = get().history;
+            const currentHistory = (get() as { count: number; history: number[] }).history;
 
             set({
               count: newCount,
@@ -268,15 +288,15 @@ describe('Memory Adapter - Model Factory Interface', () => {
 
           doubleIncrement: () => {
             // Multiple get/set calls in sequence
-            const first = get().count;
+            const first = (get() as { count: number; history: number[] }).count;
             set({ count: first + 1 });
 
-            const second = get().count;
+            const second = (get() as { count: number; history: number[] }).count;
             set({ count: second + 1 });
 
             // Update history with final value
-            const final = get().count;
-            const history = get().history;
+            const final = (get() as { count: number; history: number[] }).count;
+            const history = (get() as { count: number; history: number[] }).history;
             set({ history: [...history, final] });
           },
         }));
@@ -313,7 +333,13 @@ describe('Memory Adapter - Model Factory Interface', () => {
 
     it('should not allow set() to completely replace state object', () => {
       const component = createComponent(() => {
-        const model = createModel(({ get, set }) => ({
+        const model = createModel<{
+          a: number;
+          b: number;
+          c: number;
+          updateA: (value: number) => void;
+          updateMultiple: () => void;
+        }>(({ set }) => ({
           a: 1,
           b: 2,
           c: 3,
@@ -331,7 +357,7 @@ describe('Memory Adapter - Model Factory Interface', () => {
 
         return {
           model,
-          actions: createSlice(model, (m) => ({
+          actions: createSlice(model, (m: { updateA: (value: number) => void; updateMultiple: () => void }) => ({
             updateA: m.updateA,
             updateMultiple: m.updateMultiple,
           })),
@@ -386,10 +412,10 @@ describe('Memory Adapter - Model Factory Interface', () => {
 
     it('should handle model factory that only uses get()', () => {
       const component = createComponent(() => {
-        const model = createModel(({ get }) => {
+        const model = createModel<{ wasEmpty: boolean; timestamp: number }>(({ get }) => {
           // Model that only reads, never writes
           const state = get();
-          const isEmpty = Object.keys(state).length === 0;
+          const isEmpty = Object.keys(state as any).length === 0;
 
           return {
             wasEmpty: isEmpty,
@@ -420,11 +446,14 @@ describe('Memory Adapter - Model Factory Interface', () => {
       }
 
       const component = createComponent(() => {
-        const model = createModel(({ get, set }) => ({
+        const model = createModel<{
+          tree: TreeNode;
+          addChild: (parentValue: number, childValue: number) => void;
+        }>(({ get, set }) => ({
           tree: { value: 1, children: [] } as TreeNode,
 
           addChild: (parentValue: number, childValue: number) => {
-            const tree = get().tree;
+            const tree = (get() as { tree: TreeNode }).tree;
 
             const addToNode = (node: TreeNode): TreeNode => {
               if (node.value === parentValue) {
@@ -448,7 +477,7 @@ describe('Memory Adapter - Model Factory Interface', () => {
 
         return {
           model,
-          actions: createSlice(model, (m) => ({ addChild: m.addChild })),
+          actions: createSlice(model, (m: { addChild: (parentValue: number, childValue: number) => void }) => ({ addChild: m.addChild })),
           views: {},
         };
       });
@@ -460,7 +489,7 @@ describe('Memory Adapter - Model Factory Interface', () => {
       result.actions.get().addChild(1, 3);
       result.actions.get().addChild(2, 4);
 
-      const tree = result.model.get().tree;
+      const tree = (result.model.get() as { tree: TreeNode }).tree;
       expect(tree.value).toBe(1);
       expect(tree.children).toHaveLength(2);
       expect(tree.children[0]?.value).toBe(2);

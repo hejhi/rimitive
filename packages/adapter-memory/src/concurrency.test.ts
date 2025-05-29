@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createMemoryAdapter } from './index';
 import { createModel, createSlice, createComponent, select } from '@lattice/core';
 
@@ -173,7 +173,7 @@ describe('Memory Adapter - Concurrent Updates and Race Conditions', () => {
       // Total: 60 + 55 + 115 = 230
       
       const accounts = result.model.get().accounts;
-      const total = accounts.alice + accounts.bob + accounts.charlie;
+      const total = accounts.alice! + accounts.bob! + accounts.charlie!;
       expect(total).toBe(230); // 225 + 35 deposits - 30 withdrawal
       
       // Individual accounts should be correct
