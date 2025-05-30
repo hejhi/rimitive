@@ -258,7 +258,7 @@ describe('React hooks for Zustand adapter', () => {
     });
 
   describe('useView', () => {
-    it('should handle static view hooks', () => {
+    it('should handle static view hooks with selector', () => {
       const viewData = { text: 'Hello', count: 5 };
       const mockViewHook = vi.fn(() => viewData);
       
@@ -272,13 +272,13 @@ describe('React hooks for Zustand adapter', () => {
         return selector();
       });
       
-      const { result } = renderHook(() => useView(mockStore, 'display'));
+      const { result } = renderHook(() => useView(mockStore, views => views.display));
       
       expect(result.current).toEqual(viewData);
       expect(mockViewHook).toHaveBeenCalled();
     });
     
-    it('should handle computed view hooks', () => {
+    it('should handle computed view hooks with selector', () => {
       const viewData = { className: 'even', label: 'Count: 2' };
       const mockViewHook = vi.fn(() => viewData);
       
@@ -292,7 +292,7 @@ describe('React hooks for Zustand adapter', () => {
         return selector();
       });
       
-      const { result } = renderHook(() => useView(mockStore, 'counter'));
+      const { result } = renderHook(() => useView(mockStore, views => views.counter));
       
       expect(result.current).toEqual(viewData);
       expect(mockViewHook).toHaveBeenCalledTimes(1);
@@ -314,7 +314,7 @@ describe('React hooks for Zustand adapter', () => {
         
         const { result } = renderHook(() => {
           try {
-            return useView(mockStore, 'bad');
+            return useView(mockStore, views => views.bad);
           } catch (error) {
             return error;
           }
@@ -322,7 +322,7 @@ describe('React hooks for Zustand adapter', () => {
         
         expect(result.current).toBeInstanceOf(Error);
         expect((result.current as Error).message).toBe(
-          'Invalid view "bad": views must be hooks (functions)'
+          'Invalid view selection: views must be hooks (functions)'
         );
       });
     });
@@ -340,7 +340,7 @@ describe('React hooks for Zustand adapter', () => {
         return selector();
       });
       
-      const { result, rerender } = renderHook(() => useView(mockStore, 'counter'));
+      const { result, rerender } = renderHook(() => useView(mockStore, views => views.counter));
       
       expect(result.current).toEqual({ count: 0 });
       expect(mockViewHook).toHaveBeenCalledTimes(1);
@@ -353,6 +353,76 @@ describe('React hooks for Zustand adapter', () => {
       
       expect(result.current).toEqual({ count: 1 });
       expect(mockViewHook).toHaveBeenCalledTimes(2);
+    });
+    
+    it('should support dynamic view selection with dependencies', () => {
+      const viewData1 = { text: 'View 1' };
+      const viewData2 = { text: 'View 2' };
+      const mockViewHook1 = vi.fn(() => viewData1);
+      const mockViewHook2 = vi.fn(() => viewData2);
+      
+      const mockStore = createMockAdapterResult({
+        views: {
+          view1: mockViewHook1,
+          view2: mockViewHook2
+        } as any
+      });
+      
+      vi.mocked(mockUseZustandStore).mockImplementation((_store: any, selector: any) => {
+        return selector();
+      });
+      
+      const { result, rerender } = renderHook(
+        ({ viewKey }) => useView(mockStore, views => views[viewKey], [viewKey]),
+        { initialProps: { viewKey: 'view1' as 'view1' | 'view2' } }
+      );
+      
+      expect(result.current).toEqual(viewData1);
+      expect(mockViewHook1).toHaveBeenCalled();
+      expect(mockViewHook2).not.toHaveBeenCalled();
+      
+      // Change the view key
+      rerender({ viewKey: 'view2' as 'view1' | 'view2' });
+      
+      expect(result.current).toEqual(viewData2);
+      expect(mockViewHook2).toHaveBeenCalled();
+    });
+    
+    it('should support conditional view selection', () => {
+      const loadingData = { text: 'Loading...' };
+      const contentData = { text: 'Content loaded' };
+      const mockLoadingHook = vi.fn(() => loadingData);
+      const mockContentHook = vi.fn(() => contentData);
+      
+      const mockStore = createMockAdapterResult({
+        views: {
+          loading: mockLoadingHook,
+          content: mockContentHook
+        } as any
+      });
+      
+      vi.mocked(mockUseZustandStore).mockImplementation((_store: any, selector: any) => {
+        return selector();
+      });
+      
+      const { result, rerender } = renderHook(
+        ({ isLoading }) => useView(
+          mockStore,
+          views => isLoading ? views.loading : views.content,
+          [isLoading]
+        ),
+        { initialProps: { isLoading: true } }
+      );
+      
+      expect(result.current).toEqual(loadingData);
+      expect(mockLoadingHook).toHaveBeenCalled();
+      expect(mockContentHook).not.toHaveBeenCalled();
+      
+      // Toggle loading state
+      rerender({ isLoading: false });
+      
+      expect(result.current).toEqual(contentData);
+      expect(mockContentHook).toHaveBeenCalled();
     });
   });
 

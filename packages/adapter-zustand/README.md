@@ -80,8 +80,8 @@ function Counter() {
   const increment = useAction(counterStore, 'increment');
   const decrement = useAction(counterStore, 'decrement');
   
-  // Subscribe to views
-  const display = useView(counterStore, 'display');
+  // Subscribe to views using selector function
+  const display = useView(counterStore, views => views.display);
   
   return (
     <div>
@@ -160,15 +160,24 @@ const increment = useAction(counterStore, 'increment');
 // increment is always the same function reference
 ```
 
-### `useView(store, viewKey)`
-Subscribe to view stores with proper React 18+ concurrent mode support.
+### `useView(store, selector, deps?)`
+Subscribe to view stores using a selector function pattern with proper React 18+ concurrent mode support.
 
 ```tsx
-// For static views
-const display = useView(counterStore, 'display');
+// Basic usage
+const display = useView(counterStore, views => views.display);
 
-// For computed views
-const summary = useView(todoStore, 'summary');
+// Dynamic selection based on state
+const [tabKey, setTabKey] = useState('tab1');
+const tabView = useView(counterStore, views => views[tabKey], [tabKey]);
+
+// Conditional selection
+const [isLoading, setIsLoading] = useState(false);
+const content = useView(
+  counterStore,
+  views => isLoading ? views.loading : views.content,
+  [isLoading]
+);
 ```
 
 ### `useActions(store)`
@@ -225,7 +234,7 @@ const store = createZustandAdapter(component);
 
 // In React
 function Button() {
-  const button = useView(store, 'button');
+  const button = useView(store, views => views.button);
   
   return (
     <button 
@@ -278,7 +287,7 @@ const component = createComponent(() => {
 
 // In React
 function TodoList() {
-  const filteredTodos = useView(store, 'filteredTodos');
+  const filteredTodos = useView(store, views => views.filteredTodos);
   
   if (filteredTodos.empty) {
     return <div>No todos</div>;
@@ -304,7 +313,7 @@ const store = createZustandAdapter(counter);
 // Types are automatically inferred
 const count = useModelSelector(store.use.count); // number
 const { increment } = useActions(store); // increment: () => void
-const display = useView(store, 'display'); // { value: number, label: string }
+const display = useView(store, views => views.display); // { value: number, label: string }
 
 // Type errors are caught
 const { notExist } = useActions(store); // TS Error: Property 'notExist' does not exist
