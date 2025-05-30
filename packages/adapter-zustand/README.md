@@ -67,7 +67,6 @@ The adapter provides React hooks for seamless integration with React components:
 import {
   useStore,
   useModelSelector,
-  useAction,
   useView,
   useActions,
 } from '@lattice/adapter-zustand/react';
@@ -76,9 +75,8 @@ function Counter() {
   // Select individual state properties with proper type inference
   const count = useModelSelector(counterStore.use.count);
   
-  // Get individual actions
-  const increment = useAction(counterStore, 'increment');
-  const decrement = useAction(counterStore, 'decrement');
+  // Get actions with destructuring
+  const { increment, decrement } = useActions(counterStore);
   
   // Subscribe to views using selector function
   const display = useView(counterStore, views => views.display);
@@ -93,8 +91,8 @@ function Counter() {
   );
 }
 
-// Alternative: Get all actions at once
-function CounterWithAllActions() {
+// Alternative: Use actions object directly
+function CounterWithActionsObject() {
   const count = useModelSelector(counterStore.use.count);
   const actions = useActions(counterStore);
   
@@ -152,14 +150,6 @@ const disabled = useModelSelector(counterStore.use.disabled);
 
 The selector hook provides full type inference and automatic subscription to state changes.
 
-### `useAction(store, key)`
-Get stable action references that won't change between renders.
-
-```tsx
-const increment = useAction(counterStore, 'increment');
-// increment is always the same function reference
-```
-
 ### `useView(store, selector)`
 Subscribe to view stores using a selector function pattern. Zustand automatically handles selector stability.
 
@@ -180,11 +170,16 @@ const content = useView(
 ```
 
 ### `useActions(store)`
-Get all actions as a stable object.
+Get all actions as a stable object. Actions can be destructured for individual use.
 
 ```tsx
+// Get all actions as an object
 const actions = useActions(counterStore);
 // actions.increment, actions.decrement, etc.
+
+// Or destructure for individual actions
+const { increment, decrement } = useActions(counterStore);
+// increment and decrement are stable function references
 ```
 
 ### `useStoreSelector(store, selector)`
@@ -320,10 +315,54 @@ const { notExist } = useActions(store); // TS Error: Property 'notExist' does no
 
 ## Performance Considerations
 
-1. **Action Stability**: Actions returned by `useActions` are always stable references
+1. **Action Stability**: Actions returned by `useActions` are always stable references, whether accessed from the object or destructured
 2. **Selective Re-renders**: `useModelSelector` only re-renders when the selected property changes
 3. **View Efficiency**: Views use `useSyncExternalStore` for optimal React 18+ performance
 4. **Computed Selectors**: Use `useStore` with selectors for derived state to minimize re-renders
+
+## Note on Dynamic Views
+
+**Re-render** vs **Re-evaluation**
+
+```tsx
+const [activeTab, setActiveTab] = useState('overview');
+const [count, setCount] = useState(0);
+
+const tabContent = useView(store, views => views[activeTab]);
+```
+
+**Breakdown**:
+
+When count changes:
+
+1. Component re-renders ✅
+2. New selector function created ✅
+3. Zustand calls the new selector ✅
+4. The selector returns the SAME result (same view, same data)
+5. Zustand sees no change in value
+6. No re-render triggered by useView ✅
+
+When activeTab changes:
+
+1. Component re-renders ✅
+2. New selector function created ✅
+3. Zustand calls the new selector ✅
+4. Selector returns a DIFFERENT result (different view, different data)
+5. Zustand sees the value changed
+6. Re-render triggered by useView ✅
+
+The key is **Value Equality**.
+
+Zustand (via useSyncExternalStore) only triggers re-renders when the return value changes, not when the selector function changes:
+
+```tsx
+// Even though selector is new every render...
+views => views[activeTab]
+
+// Zustand only cares if the RESULT changes:
+// views.overview → views.overview (no re-render)
+// views.overview → views.settings (re-render!)
+```
 
 ## Comparison with Direct Zustand Usage
 
