@@ -7,7 +7,7 @@
  * Key features:
  * - Direct Zustand state selectors via useStore
  * - Auto-generated model property selectors via useModelSelector
- * - Stable action references via useAction
+ * - Stable action references via useActions
  * - View store subscriptions via useView with useSyncExternalStore
  * - Full TypeScript support with proper inference
  */
@@ -102,40 +102,6 @@ export function useModelSelector<T>(selectorHook: () => T): T {
   return selectorHook();
 }
 
-/**
- * Hook for accessing stable action references.
- * Actions are always stable (don't change between renders) but this hook
- * ensures proper React integration and type safety.
- * 
- * @param store - The Zustand adapter store
- * @param key - The action key to access
- * @returns The action method
- * 
- * @example
- * ```tsx
- * function Counter() {
- *   const increment = useAction(counterStore, 'increment');
- *   const decrement = useAction(counterStore, 'decrement');
- *   
- *   return (
- *     <div>
- *       <button onClick={increment}>+</button>
- *       <button onClick={decrement}>-</button>
- *     </div>
- *   );
- * }
- * ```
- */
-export function useAction<
-  S extends ZustandAdapterResult<unknown, unknown, unknown>,
-  K extends keyof ExtractActions<S>
->(store: S, key: K): ExtractActions<S>[K] {
-  // Type assertion to ensure proper inference
-  type ActionType = ExtractActions<S>[K];
-  const actions = store.actions as Record<K, () => ActionType>;
-  const actionHook = actions[key];
-  return actionHook();
-}
 
 /**
  * Hook for accessing views with automatic reactivity.
@@ -210,14 +176,16 @@ export function useStoreSelector<
 }
 
 /**
- * Hook for accessing all actions at once.
+ * Hook for accessing actions from the store.
  * Returns a stable object containing all action methods.
+ * Supports destructuring for convenient access to specific actions.
  * 
  * @param store - The Zustand adapter store
  * @returns Object containing all actions
  * 
  * @example
  * ```tsx
+ * // Get all actions
  * function Controls() {
  *   const actions = useActions(counterStore);
  *   
@@ -226,6 +194,18 @@ export function useStoreSelector<
  *       <button onClick={actions.increment}>+</button>
  *       <button onClick={actions.decrement}>-</button>
  *       <button onClick={actions.reset}>Reset</button>
+ *     </div>
+ *   );
+ * }
+ * 
+ * // Destructure specific actions
+ * function Counter() {
+ *   const { increment, decrement } = useActions(counterStore);
+ *   
+ *   return (
+ *     <div>
+ *       <button onClick={increment}>+</button>
+ *       <button onClick={decrement}>-</button>
  *     </div>
  *   );
  * }

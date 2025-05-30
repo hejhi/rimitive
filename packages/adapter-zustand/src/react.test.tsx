@@ -11,7 +11,6 @@ import type { ZustandAdapterResult, Store } from './index.js';
 import { 
   useStore, 
   useModelSelector, 
-  useAction, 
   useView, 
   useStoreSelector, 
   useActions 
@@ -161,23 +160,8 @@ describe('React hooks for Zustand adapter', () => {
     });
   });
 
-  describe('useAction', () => {
-    it('should return action method from hook', () => {
-      const mockIncrement = vi.fn();
-      const mockStore = createMockAdapterResult({
-        actions: {
-          increment: vi.fn(() => mockIncrement)
-        }
-      });
-      
-      const { result } = renderHook(() => useAction(mockStore, 'increment'));
-      
-      expect(result.current).toBe(mockIncrement);
-      expect(typeof result.current).toBe('function');
-      expect(mockStore.actions.increment).toHaveBeenCalledTimes(1);
-    });
-    
-    it('should work with multiple actions', () => {
+  describe('useActions', () => {
+    it('should return all actions as an object', () => {
       const mockIncrement = vi.fn();
       const mockDecrement = vi.fn();
       const mockReset = vi.fn();
@@ -190,40 +174,64 @@ describe('React hooks for Zustand adapter', () => {
         }
       });
       
-      const { result: incrementResult } = renderHook(() => 
-        useAction(mockStore, 'increment')
-      );
-      const { result: decrementResult } = renderHook(() => 
-        useAction(mockStore, 'decrement')
-      );
-      const { result: resetResult } = renderHook(() => 
-        useAction(mockStore, 'reset')
-      );
+      const { result } = renderHook(() => useActions(mockStore));
       
-      expect(incrementResult.current).toBe(mockIncrement);
-      expect(decrementResult.current).toBe(mockDecrement);
-      expect(resetResult.current).toBe(mockReset);
+      expect(result.current).toEqual({
+        increment: mockIncrement,
+        decrement: mockDecrement,
+        reset: mockReset
+      });
+      
+      // Verify all action hooks were called
+      expect(mockStore.actions.increment).toHaveBeenCalledTimes(1);
+      expect(mockStore.actions.decrement).toHaveBeenCalledTimes(1);
+      expect(mockStore.actions.reset).toHaveBeenCalledTimes(1);
     });
     
-    it('should return stable action references', () => {
-      const stableAction = vi.fn();
+    it('should support destructuring specific actions', () => {
+      const mockIncrement = vi.fn();
+      const mockDecrement = vi.fn();
+      const mockReset = vi.fn();
+      
       const mockStore = createMockAdapterResult({
         actions: {
-          myAction: vi.fn(() => stableAction)
+          increment: vi.fn(() => mockIncrement),
+          decrement: vi.fn(() => mockDecrement),
+          reset: vi.fn(() => mockReset)
         }
       });
       
-      const { result, rerender } = renderHook(() => 
-        useAction(mockStore, 'myAction')
-      );
+      const { result } = renderHook(() => {
+        const { increment, decrement } = useActions(mockStore);
+        return { increment, decrement };
+      });
       
-      const firstRef = result.current;
+      expect(result.current.increment).toBe(mockIncrement);
+      expect(result.current.decrement).toBe(mockDecrement);
+      expect(typeof result.current.increment).toBe('function');
+      expect(typeof result.current.decrement).toBe('function');
+    });
+    
+    it('should return stable action references', () => {
+      const stableIncrement = vi.fn();
+      const stableDecrement = vi.fn();
+      const mockStore = createMockAdapterResult({
+        actions: {
+          increment: vi.fn(() => stableIncrement),
+          decrement: vi.fn(() => stableDecrement)
+        }
+      });
       
-      // Rerender to check stability
+      const { result, rerender } = renderHook(() => useActions(mockStore));
+      
+      const firstResult = result.current;
+      
+      // Rerender
       rerender();
       
-      expect(result.current).toBe(firstRef);
-      expect(result.current).toBe(stableAction);
+      // Actions should be stable
+      expect(result.current.increment).toBe(firstResult.increment);
+      expect(result.current.decrement).toBe(firstResult.decrement);
     });
     
     it('should handle action execution', async () => {
@@ -238,17 +246,16 @@ describe('React hooks for Zustand adapter', () => {
         }
       });
       
-      const { result } = renderHook(() => useAction(mockStore, 'testAction'));
+      const { result } = renderHook(() => useActions(mockStore));
       
       // Execute the action
       await act(async () => {
-        result.current();
+        result.current.testAction();
       });
       
       expect(mockAction).toHaveBeenCalledTimes(1);
       expect(actionCallCount).toBe(1);
     });
-  });
 
   describe('useView', () => {
     it('should handle static view hooks', () => {
@@ -398,33 +405,6 @@ describe('React hooks for Zustand adapter', () => {
     });
   });
 
-  describe('useActions', () => {
-    it('should return all actions as an object', () => {
-      const mockIncrement = vi.fn();
-      const mockDecrement = vi.fn();
-      const mockReset = vi.fn();
-      
-      const mockStore = createMockAdapterResult({
-        actions: {
-          increment: vi.fn(() => mockIncrement),
-          decrement: vi.fn(() => mockDecrement),
-          reset: vi.fn(() => mockReset)
-        }
-      });
-      
-      const { result } = renderHook(() => useActions(mockStore));
-      
-      expect(result.current).toEqual({
-        increment: mockIncrement,
-        decrement: mockDecrement,
-        reset: mockReset
-      });
-      
-      // Verify all action hooks were called
-      expect(mockStore.actions.increment).toHaveBeenCalledTimes(1);
-      expect(mockStore.actions.decrement).toHaveBeenCalledTimes(1);
-      expect(mockStore.actions.reset).toHaveBeenCalledTimes(1);
-    });
     
     it('should handle empty actions', () => {
       const mockStore = createMockAdapterResult({ actions: {} });
@@ -452,29 +432,6 @@ describe('React hooks for Zustand adapter', () => {
         validAction: mockAction
       });
       expect(Object.keys(result.current)).toHaveLength(1);
-    });
-    
-    it('should return stable actions object', () => {
-      const mockIncrement = vi.fn();
-      const mockDecrement = vi.fn();
-      
-      const mockStore = createMockAdapterResult({
-        actions: {
-          increment: vi.fn(() => mockIncrement),
-          decrement: vi.fn(() => mockDecrement)
-        }
-      });
-      
-      const { result, rerender } = renderHook(() => useActions(mockStore));
-      
-      const firstResult = result.current;
-      
-      // Rerender
-      rerender();
-      
-      // Actions should be stable
-      expect(result.current.increment).toBe(firstResult.increment);
-      expect(result.current.decrement).toBe(firstResult.decrement);
     });
     
     it('should handle actions with Object.create(null) prototype', () => {
@@ -544,12 +501,6 @@ describe('React hooks for Zustand adapter', () => {
       );
       expect(userResult.current).toEqual({ name: 'Test', id: 1 });
       
-      // Test action hook
-      const { result: incrementResult } = renderHook(() => 
-        useAction(mockStore, 'increment')
-      );
-      expect(incrementResult.current).toBe(mockIncrement);
-      
       // Test all actions
       const { result: actionsResult } = renderHook(() => 
         useActions(mockStore)
@@ -584,8 +535,8 @@ describe('React hooks for Zustand adapter', () => {
         }
       });
       
-      const { result: actionResult } = renderHook(() => 
-        useAction(mockStore, 'increment')
+      const { result: actionsResult } = renderHook(() => 
+        useActions(mockStore)
       );
       
       const { result: countResult, rerender } = renderHook(() => 
@@ -596,7 +547,7 @@ describe('React hooks for Zustand adapter', () => {
       
       // Execute action
       await act(async () => {
-        actionResult.current();
+        actionsResult.current.increment();
       });
       
       // Simulate state update

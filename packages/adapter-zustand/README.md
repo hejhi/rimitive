@@ -303,16 +303,16 @@ const store = createZustandAdapter(counter);
 
 // Types are automatically inferred
 const count = useModelSelector(store.use.count); // number
-const increment = useAction(store, 'increment'); // () => void
+const { increment } = useActions(store); // increment: () => void
 const display = useView(store, 'display'); // { value: number, label: string }
 
 // Type errors are caught
-const invalid = useAction(store, 'notExist'); // TS Error!
+const { notExist } = useActions(store); // TS Error: Property 'notExist' does not exist
 ```
 
 ## Performance Considerations
 
-1. **Action Stability**: Actions returned by `useAction` and `useActions` are always stable references
+1. **Action Stability**: Actions returned by `useActions` are always stable references
 2. **Selective Re-renders**: `useModelSelector` only re-renders when the selected property changes
 3. **View Efficiency**: Views use `useSyncExternalStore` for optimal React 18+ performance
 4. **Computed Selectors**: Use `useStore` with selectors for derived state to minimize re-renders
