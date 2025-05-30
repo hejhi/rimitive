@@ -102,6 +102,9 @@ export function createComponent<Model, Actions, Views>(
   return factory;
 }
 
+// Export compose utilities
+export { compose, composeSlices } from './compose';
+
 // In-source tests for slice transforms
 if (import.meta.vitest) {
   const { it, expect } = import.meta.vitest;
