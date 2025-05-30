@@ -12,7 +12,6 @@
  * - Full TypeScript support with proper inference
  */
 
-import { useSyncExternalStore } from 'react';
 import { useStore as useZustandStore } from 'zustand/react';
 import type { ExtractState } from 'zustand/vanilla';
 import type { ZustandAdapterResult, Store } from './index.js';
@@ -139,12 +138,12 @@ export function useAction<
 }
 
 /**
- * Hook for subscribing to view stores.
- * Uses React's useSyncExternalStore for proper concurrent mode support.
+ * Hook for accessing views with automatic reactivity.
+ * Views are now hooks that return attributes directly from the model store.
  * 
  * @param store - The Zustand adapter store
- * @param viewKey - The view key to subscribe to
- * @returns The current view state
+ * @param viewKey - The view key to access
+ * @returns The current view attributes
  * 
  * @example
  * ```tsx
@@ -163,27 +162,17 @@ export function useView<
   S extends ZustandAdapterResult<unknown, unknown, unknown>,
   K extends keyof ExtractViews<S>
 >(store: S, viewKey: K): ExtractView<S, K> {
-  const views = store.views as Record<K, Store<ExtractView<S, K>> | (() => Store<ExtractView<S, K>>)>;
-  const view = views[viewKey];
+  const views = store.views as Record<K, () => ExtractView<S, K>>;
+  const viewHook = views[viewKey];
   
-  // Handle computed views (functions that return stores)
-  let viewStore: Store<ExtractView<S, K>>;
-  if (typeof view === 'function') {
-    viewStore = view();
-  } else {
-    viewStore = view;
+  if (typeof viewHook !== 'function') {
+    throw new Error(`Invalid view "${String(viewKey)}": views must be hooks (functions)`);
   }
   
-  if (!viewStore || typeof viewStore.subscribe !== 'function' || typeof viewStore.get !== 'function') {
-    throw new Error(`Invalid view "${String(viewKey)}": views must be Store objects with get() and subscribe() methods`);
-  }
-  
-  // Use useSyncExternalStore for proper React 18+ concurrent mode support
-  return useSyncExternalStore(
-    viewStore.subscribe,
-    viewStore.get,
-    viewStore.get // Server snapshot is the same as client
-  );
+  // The view hook is already reactive via the underlying model store
+  // We just need to ensure React knows to re-render when the view changes
+  // This is achieved by subscribing to the store and calling the view hook
+  return useZustandStore(store, () => viewHook());
 }
 
 // ============================================================================

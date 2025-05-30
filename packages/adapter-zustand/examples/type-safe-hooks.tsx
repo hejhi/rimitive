@@ -142,10 +142,11 @@ function TodoInput() {
 
 /**
  * Example 2: Using views with proper type inference
+ * Views are now hooks that return attributes directly
  */
 function TodoList() {
-  // Views are fully typed
-  const stats = useView(todoStore, 'stats'); // Properly typed stats object
+  // Views are fully typed hooks that return attributes directly
+  const stats = useView(todoStore, 'stats'); // Returns stats attributes directly
   const toggleTodo = useAction(todoStore, 'toggleTodo'); // (id: number) => void
   const deleteTodo = useAction(todoStore, 'deleteTodo'); // (id: number) => void
 

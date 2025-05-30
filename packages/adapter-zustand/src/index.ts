@@ -96,12 +96,12 @@ type ActionHooks<Actions> = {
 };
 
 /**
- * Maps view types from slice factories to selector hooks that return stores
+ * Maps view types from slice factories to selector hooks that return view attributes
  */
 type ViewHook<Model, T> = T extends () => SliceFactory<Model, infer S>
-  ? () => Store<S>
+  ? () => S
   : T extends SliceFactory<Model, infer S>
-    ? Store<S>
+    ? () => S
     : never;
 
 /**
@@ -132,10 +132,10 @@ export interface ZustandAdapterResult<Model, Actions, Views> extends StoreApi<Mo
   actions: ActionHooks<Actions>;
   
   /**
-   * View hooks - static views are stores, computed views return stores
+   * View hooks - each returns the view attributes directly
    * @example
-   * const display = counterStore.views.display(); // Returns a store
-   * const attrs = display.get();
+   * const attrs = counterStore.views.display(); // Returns view attributes
+   * const buttonAttrs = counterStore.views.button(); // Returns UI attributes
    */
   views: ViewHooks<Model, Views>;
 }
@@ -409,11 +409,12 @@ function createSliceWithSelectSupport<Model, T>(
 }
 
 /**
- * Processes views into reactive stores or functions that return stores
+ * Processes views into reactive hooks that return view attributes
  */
 function processViews<Model, Views>(
   spec: { views: Views },
-  createSlice: <T>(factory: SliceFactory<Model, T>) => Store<T>
+  modelStore: Store<Model>,
+  sliceCache: SliceCache<Model>
 ): ViewHooks<Model, Views> {
   const views = {} as ViewHooks<Model, Views>;
 
@@ -422,33 +423,25 @@ function processViews<Model, Views>(
     if (!view || typeof view !== 'function') continue;
 
     if (isSliceFactory(view)) {
-      // Static slice view - create the store immediately
-      try {
-        Object.defineProperty(views, key, {
-          value: createSlice(view),
-          enumerable: true,
-          configurable: true,
-        });
-      } catch (error) {
-        throw new ZustandAdapterError(
-          `Failed to create static view "${String(key)}"`,
-          {
-            operation: 'processViews.staticView',
-            details: { viewKey: String(key) },
-            cause: error
-          }
-        );
-      }
+      // Static slice view - create a hook that returns view attributes
+      const viewSlice = createSliceWithSelectSupport(modelStore, view, sliceCache);
+      
+      Object.defineProperty(views, key, {
+        value: () => viewSlice.get(),
+        enumerable: true,
+        configurable: true,
+      });
     } else {
-      // Computed view - returns a function that creates the store
+      // Computed view - create a hook that computes and returns view attributes
       Object.defineProperty(views, key, {
         value: () => {
           try {
             const sliceFactory = (view as () => SliceFactory<Model>)();
-            return createSlice(sliceFactory);
+            const viewSlice = createSliceWithSelectSupport(modelStore, sliceFactory, sliceCache);
+            return viewSlice.get();
           } catch (error) {
             throw new ZustandAdapterError(
-              `Failed to create computed view "${String(key)}"`,
+              `Failed to compute view "${String(key)}"`,
               {
                 operation: 'processViews.computedView',
                 details: { viewKey: String(key) },
@@ -488,7 +481,7 @@ function processViews<Model, Views>(
  *   const count = counterStore.use.count();
  *   const increment = counterStore.actions.increment();
  *   const display = counterStore.views.display();
- *   return <div onClick={increment}>{display.get().text}</div>;
+ *   return <div onClick={increment}>{display.text}</div>;
  * }
  * 
  * // === Vanilla JavaScript Usage ===
@@ -502,18 +495,15 @@ function processViews<Model, Views>(
  *   console.log('Count changed:', state.count);
  * });
  * 
- * // Access views (reactive stores)
- * const displayView = counterStore.views.display;
- * console.log(displayView.get()); // Get current view state
+ * // Access views (hooks returning attributes)
+ * const displayAttrs = counterStore.views.display();
+ * console.log(displayAttrs); // Get current view attributes
  * 
- * // Subscribe to view changes
- * const unsubView = displayView.subscribe((viewState) => {
- *   console.log('View updated:', viewState);
- * });
+ * // Views are reactive via the main store subscription
+ * // No separate view subscriptions needed
  * 
- * // Clean up subscriptions when done
+ * // Clean up main subscription when done
  * unsubscribe();
- * unsubView();
  * ```
  * 
  * @remarks
@@ -521,7 +511,7 @@ function processViews<Model, Views>(
  * - React: Hooks handle subscriptions automatically via React's rendering cycle
  * - Vanilla: You manage subscriptions manually for reactive updates
  * - Both: Direct state access via getState() works without subscriptions
- * - Views: Always require .get() to access current values in vanilla JS
+ * - Views: Call as functions to get current attributes in vanilla JS
  */
 export function createZustandAdapter<
   Model,
@@ -614,9 +604,7 @@ export function createZustandAdapter<
   // Process views
   let views: ViewHooks<Model, Views>;
   try {
-    views = processViews<Model, Views>(spec, (factory) =>
-      createSliceWithSelectSupport(modelStore, factory, sliceCache)
-    );
+    views = processViews<Model, Views>(spec, modelStore, sliceCache);
   } catch (error) {
     throw new ZustandAdapterError(
       'Views processing failed',
@@ -796,7 +784,7 @@ if (import.meta.vitest) {
       expect(typeof componentStore.use.actions).toBe('function');
       expect(typeof componentStore.use.views).toBe('function');
       expect(typeof componentStore.actions.update).toBe('function');
-      expect(typeof componentStore.views.state).toBe('object');
+      expect(typeof componentStore.views.state).toBe('function');
       
       // Model state is accessible through use selectors
       expect(componentStore.use.store()).toBe('model-store');
@@ -809,7 +797,7 @@ if (import.meta.vitest) {
       expect(componentStore.getState().views).toBe('model-views');
       
       // Views work correctly
-      const stateView = componentStore.views.state.get();
+      const stateView = componentStore.views.state();
       expect(stateView.store).toBe('model-store');
       expect(stateView.actions).toBe('model-actions');
       expect(stateView.views).toBe('model-views');
@@ -847,9 +835,9 @@ if (import.meta.vitest) {
 
       const componentStore = createZustandAdapter(component);
 
-      // Static view is a reactive store
-      const display = componentStore.views.display;
-      expect(display.get()).toEqual({
+      // Static view is a hook that returns attributes
+      const display = componentStore.views.display();
+      expect(display).toEqual({
         value: 5,
         isDisabled: false,
       });
@@ -880,11 +868,11 @@ if (import.meta.vitest) {
 
       const componentStore = createZustandAdapter(component);
 
-      // Computed view is a function that returns a store
+      // Computed view is a hook that returns attributes
       expect(typeof componentStore.views.counter).toBe('function');
 
-      const counterViewStore = componentStore.views.counter();
-      expect(counterViewStore.get()).toEqual({
+      const counterAttrs = componentStore.views.counter();
+      expect(counterAttrs).toEqual({
         'data-count': 5,
         className: 'odd',
       });
@@ -918,23 +906,16 @@ if (import.meta.vitest) {
 
       const componentStore = createZustandAdapter(component);
       
-      // Subscribe to view changes
-      const viewChanges: { value: number; doubled: number }[] = [];
-      const unsubscribe = componentStore.views.display.subscribe((value) => viewChanges.push(value));
-
+      // Views update reactively via the model store
       // Initial state
-      expect(componentStore.views.display.get()).toEqual({ value: 0, doubled: 0 });
+      expect(componentStore.views.display()).toEqual({ value: 0, doubled: 0 });
 
       // Update model
       const increment = componentStore.actions.increment();
       increment();
 
       // View should update
-      expect(componentStore.views.display.get()).toEqual({ value: 1, doubled: 2 });
-      expect(viewChanges).toHaveLength(1);
-      expect(viewChanges[0]).toEqual({ value: 1, doubled: 2 });
-
-      unsubscribe();
+      expect(componentStore.views.display()).toEqual({ value: 1, doubled: 2 });
     });
 
     it('should handle view with select() markers', () => {
@@ -966,8 +947,7 @@ if (import.meta.vitest) {
 
       const componentStore = createZustandAdapter(component);
 
-      const button = componentStore.views.button;
-      const buttonView = button.get();
+      const buttonView = componentStore.views.button();
       
       expect(buttonView.count).toBe(0);
       expect(buttonView['aria-label']).toBe('Count: 0');
@@ -979,7 +959,7 @@ if (import.meta.vitest) {
       expect(componentStore.getState().count).toBe(1);
       
       // View should update
-      const updatedView = button.get();
+      const updatedView = componentStore.views.button();
       expect(updatedView.count).toBe(1);
       expect(updatedView['aria-label']).toBe('Count: 1');
     });
@@ -1014,8 +994,7 @@ if (import.meta.vitest) {
 
       const componentStore = createZustandAdapter(component);
 
-      const button = componentStore.views.button;
-      const buttonView = button.get();
+      const buttonView = componentStore.views.button();
       expect(buttonView.count).toBe(0);
       // actions should be the resolved actions object
       expect(typeof buttonView.actions).toBe('object');
@@ -1058,8 +1037,7 @@ if (import.meta.vitest) {
 
       const componentStore = createZustandAdapter(component);
 
-      const profile = componentStore.views.profile;
-      const profileView = profile.get();
+      const profileView = componentStore.views.profile();
       
       expect(profileView.userName).toBe('Alice');
       expect(profileView.postCount).toBe(2);

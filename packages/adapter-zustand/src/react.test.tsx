@@ -31,18 +31,9 @@ vi.mock('zustand/react', () => ({
   useStore: vi.fn()
 }));
 
-// Mock React's useSyncExternalStore
-vi.mock('react', async () => {
-  const actual = await vi.importActual<typeof import('react')>('react');
-  return {
-    ...actual,
-    useSyncExternalStore: vi.fn()
-  };
-});
 
 // Import mocked functions
 import { useStore as mockUseZustandStore } from 'zustand/react';
-import { useSyncExternalStore as mockUseSyncExternalStore } from 'react';
 
 describe('React hooks for Zustand adapter', () => {
   beforeEach(() => {
@@ -260,53 +251,53 @@ describe('React hooks for Zustand adapter', () => {
   });
 
   describe('useView', () => {
-    it('should handle static view (direct store)', () => {
+    it('should handle static view hooks', () => {
       const viewData = { text: 'Hello', count: 5 };
-      const mockViewStore = createMockStore(viewData);
+      const mockViewHook = vi.fn(() => viewData);
       
       const mockStore = createMockAdapterResult({
         views: {
-          display: mockViewStore
+          display: mockViewHook
         } as any
       });
       
-      vi.mocked(mockUseSyncExternalStore).mockImplementation((_subscribe, getSnapshot) => {
-        return getSnapshot();
+      vi.mocked(mockUseZustandStore).mockImplementation((_store: any, selector: any) => {
+        return selector();
       });
       
       const { result } = renderHook(() => useView(mockStore, 'display'));
       
       expect(result.current).toEqual(viewData);
-      expect(mockViewStore.get).toHaveBeenCalled();
+      expect(mockViewHook).toHaveBeenCalled();
     });
     
-    it('should handle computed view (function returning store)', () => {
+    it('should handle computed view hooks', () => {
       const viewData = { className: 'even', label: 'Count: 2' };
-      const mockViewStore = createMockStore(viewData);
-      const mockViewFactory = vi.fn(() => mockViewStore);
+      const mockViewHook = vi.fn(() => viewData);
       
       const mockStore = createMockAdapterResult({
         views: {
-          counter: mockViewFactory
+          counter: mockViewHook
         } as any
       });
       
-      vi.mocked(mockUseSyncExternalStore).mockImplementation((_subscribe, getSnapshot) => {
-        return getSnapshot();
+      vi.mocked(mockUseZustandStore).mockImplementation((_store: any, selector: any) => {
+        return selector();
       });
       
       const { result } = renderHook(() => useView(mockStore, 'counter'));
       
       expect(result.current).toEqual(viewData);
-      expect(mockViewFactory).toHaveBeenCalledTimes(1);
-      expect(mockViewStore.get).toHaveBeenCalled();
+      expect(mockViewHook).toHaveBeenCalledTimes(1);
     });
     
-    it('should throw error for invalid view (missing methods)', () => {
+    it('should throw error for invalid view (not a function)', () => {
       const invalidViews = [
-        { get: vi.fn() }, // Missing subscribe
-        { subscribe: vi.fn() }, // Missing get  
-        {} // Missing both
+        { someProperty: 'value' },
+        'not-a-function',
+        123,
+        null,
+        undefined
       ];
       
       invalidViews.forEach((invalidView) => {
@@ -324,53 +315,37 @@ describe('React hooks for Zustand adapter', () => {
         
         expect(result.current).toBeInstanceOf(Error);
         expect((result.current as Error).message).toBe(
-          'Invalid view "bad": views must be Store objects with get() and subscribe() methods'
+          'Invalid view "bad": views must be hooks (functions)'
         );
       });
     });
     
-    it('should handle view updates with useSyncExternalStore', async () => {
+    it('should handle view updates through store subscription', async () => {
       let currentValue = { count: 0 };
-      const listeners = new Set<(value: typeof currentValue) => void>();
-      
-      const mockViewStore: Store<typeof currentValue> = {
-        get: vi.fn(() => currentValue),
-        set: vi.fn((newValue) => {
-          currentValue = newValue;
-          listeners.forEach(listener => listener(currentValue));
-        }),
-        subscribe: vi.fn((listener: (value: typeof currentValue) => void) => {
-          listeners.add(listener);
-          return () => {
-            listeners.delete(listener);
-          };
-        })
-      };
+      const mockViewHook = vi.fn(() => currentValue);
       
       const mockStore = createMockAdapterResult({
-        views: { counter: mockViewStore } as any
+        views: { counter: mockViewHook } as any
       });
       
-      let subscribeCallback: (() => void) | undefined;
-      vi.mocked(mockUseSyncExternalStore).mockImplementation((subscribe, getSnapshot) => {
-        // Capture the subscribe callback
-        subscribe(() => {
-          subscribeCallback?.();
-        });
-        return getSnapshot();
+      // Mock the store subscription behavior
+      vi.mocked(mockUseZustandStore).mockImplementation((_store: any, selector: any) => {
+        return selector();
       });
       
-      const { result } = renderHook(() => useView(mockStore, 'counter'));
+      const { result, rerender } = renderHook(() => useView(mockStore, 'counter'));
       
       expect(result.current).toEqual({ count: 0 });
+      expect(mockViewHook).toHaveBeenCalledTimes(1);
       
-      // Update the view
-      await act(async () => {
-        mockViewStore.set({ count: 1 });
-      });
+      // Update the value that the hook returns
+      currentValue = { count: 1 };
       
-      // Verify subscription was called
-      expect(mockViewStore.subscribe).toHaveBeenCalled();
+      // Rerender to simulate store update
+      rerender();
+      
+      expect(result.current).toEqual({ count: 1 });
+      expect(mockViewHook).toHaveBeenCalledTimes(2);
     });
   });
 
