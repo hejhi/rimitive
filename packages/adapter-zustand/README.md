@@ -160,8 +160,8 @@ const increment = useAction(counterStore, 'increment');
 // increment is always the same function reference
 ```
 
-### `useView(store, selector, deps?)`
-Subscribe to view stores using a selector function pattern with proper React 18+ concurrent mode support.
+### `useView(store, selector)`
+Subscribe to view stores using a selector function pattern. Zustand automatically handles selector stability.
 
 ```tsx
 // Basic usage
@@ -169,14 +169,13 @@ const display = useView(counterStore, views => views.display);
 
 // Dynamic selection based on state
 const [tabKey, setTabKey] = useState('tab1');
-const tabView = useView(counterStore, views => views[tabKey], [tabKey]);
+const tabView = useView(counterStore, views => views[tabKey]);
 
 // Conditional selection
 const [isLoading, setIsLoading] = useState(false);
 const content = useView(
   counterStore,
-  views => isLoading ? views.loading : views.content,
-  [isLoading]
+  views => isLoading ? views.loading : views.content
 );
 ```
 

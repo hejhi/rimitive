@@ -12,7 +12,6 @@
  * - Full TypeScript support with proper inference
  */
 
-import * as React from 'react';
 import { useStore as useZustandStore } from 'zustand/react';
 import type { ExtractState } from 'zustand/vanilla';
 import type { ZustandAdapterResult, Store } from './index.js';
@@ -98,30 +97,31 @@ export function useModelSelector<T>(selectorHook: () => T): T {
 }
 
 /**
- * Hook for accessing views with automatic reactivity using a selector function.
- * Views are now hooks that return attributes directly from the model store.
+ * Hook for accessing views with automatic reactivity.
+ * 
+ * Subscribes to views using a selector function pattern, following Zustand's
+ * simple and elegant API design. The selector stability is handled automatically
+ * by Zustand, so you don't need to think about memoization.
  *
  * @param store - The Zustand adapter store
  * @param selector - Selector function that receives the views object and returns a single view hook
- * @param deps - Optional dependency array for dynamic selection
  * @returns The current view attributes
  *
  * @example
  * ```tsx
  * function DisplayCounter() {
- *   // Basic usage
+ *   // Basic usage - Zustand handles selector stability
  *   const display = useView(counterStore, views => views.display);
  *
- *   // Dynamic selection based on state
- *   const [tabKey, setTabKey] = useState('tab1');
- *   const tabView = useView(counterStore, views => views[tabKey], [tabKey]);
+ *   // Dynamic selection based on component state
+ *   const [currentView, setCurrentView] = useState('view1');
+ *   const view = useView(counterStore, views => views[currentView]);
  *
  *   // Conditional selection
  *   const [isLoading, setIsLoading] = useState(false);
  *   const content = useView(
  *     counterStore,
- *     views => isLoading ? views.loading : views.content,
- *     [isLoading]
+ *     views => isLoading ? views.loading : views.content
  *   );
  *
  *   return <div {...display} />;
@@ -134,15 +134,11 @@ export function useView<
   R = unknown,
 >(
   store: S,
-  selector: (views: V) => Store<R> | (() => Store<R>),
-  deps: React.DependencyList = []
+  selector: (views: V) => Store<R> | (() => Store<R>)
 ): R {
-  // Get the views object from the store
-  const views = store.views as V;
-  
-  // Use React.useMemo to memoize the view selection based on deps
-  const viewHook = React.useMemo(() => {
-    const selectedView = selector(views);
+  // Create a selector that selects and invokes the view
+  return useZustandStore(store, () => {
+    const selectedView = selector(store.views as V);
     
     if (typeof selectedView !== 'function') {
       throw new Error(
@@ -150,13 +146,9 @@ export function useView<
       );
     }
     
-    return selectedView as () => R;
-  }, [views, ...deps]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // The view hook is already reactive via the underlying model store
-  // We just need to ensure React knows to re-render when the view changes
-  // This is achieved by subscribing to the store and calling the view hook
-  return useZustandStore(store, viewHook);
+    // Invoke the view hook to get the current attributes
+    return (selectedView as () => R)();
+  });
 }
 
 // ============================================================================
