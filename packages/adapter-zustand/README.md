@@ -1,6 +1,6 @@
 # @lattice/adapter-zustand
 
-A Zustand adapter for Lattice that provides seamless integration with Zustand's powerful state management. The adapter follows Zustand's auto-generating selectors pattern, providing a familiar API that feels natural to Zustand users while avoiding namespace collisions.
+Zustand adapter for Lattice - integrate Lattice components with Zustand state management.
 
 ## Installation
 
@@ -8,7 +8,7 @@ A Zustand adapter for Lattice that provides seamless integration with Zustand's 
 npm install @lattice/adapter-zustand zustand
 ```
 
-## Usage
+## Basic Usage
 
 ```typescript
 import { createComponent, createModel, createSlice, select } from '@lattice/core';
@@ -19,7 +19,7 @@ const counter = createComponent(() => {
   const model = createModel(({ set, get }) => ({
     count: 0,
     increment: () => set({ count: get().count + 1 }),
-    decrement: () => set({ count: get().count - 1 })
+    decrement: () => set({ count: get().count - 1 }),
   }));
 
   const actions = createSlice(model, (m) => ({
@@ -29,11 +29,11 @@ const counter = createComponent(() => {
 
   const displaySlice = createSlice(model, (m) => ({
     value: m.count,
-    text: `Count: ${m.count}`,
+    label: `Count: ${m.count}`,
   }));
 
-  return { 
-    model, 
+  return {
+    model,
     actions,
     views: {
       display: displaySlice,
@@ -41,123 +41,160 @@ const counter = createComponent(() => {
   };
 });
 
-// Create a Zustand adapter - returns an enhanced store
-const store = createZustandAdapter(counter);
+// Create the Zustand store
+const counterStore = createZustandAdapter(counter);
 
-// React usage - feels just like Zustand!
+// Use in vanilla JavaScript
+console.log(counterStore.getState().count); // 0
+counterStore.getState().increment();
+console.log(counterStore.getState().count); // 1
+
+// Subscribe to changes
+const unsubscribe = counterStore.subscribe((state) => {
+  console.log('Count changed:', state.count);
+});
+
+// Access views
+const display = counterStore.views.display;
+console.log(display.get()); // { value: 1, label: 'Count: 1' }
+```
+
+## React Integration
+
+The adapter provides React hooks for seamless integration with React components:
+
+```tsx
+import {
+  useStore,
+  useModelSelector,
+  useAction,
+  useView,
+  useActions,
+} from '@lattice/adapter-zustand/react';
+
 function Counter() {
-  // Use auto-generated selectors via .use property
-  const count = store.use.count();
+  // Select individual state properties with proper type inference
+  const count = useModelSelector(counterStore.use.count);
   
-  // Access actions through .actions property
-  const increment = store.actions.increment();
+  // Get individual actions
+  const increment = useAction(counterStore, 'increment');
+  const decrement = useAction(counterStore, 'decrement');
   
-  // Access view stores through .views property
-  const display = store.views.display.use();
+  // Subscribe to views
+  const display = useView(counterStore, 'display');
   
   return (
     <div>
-      <p>{display.text}</p>
-      <button onClick={increment}>{count}</button>
+      <h1>{display.label}</h1>
+      <button onClick={decrement}>-</button>
+      <span>{count}</span>
+      <button onClick={increment}>+</button>
     </div>
   );
 }
 
-// Vanilla usage - it's a standard Zustand store
-const state = store.getState();
-state.increment();
-console.log(store.getState().count); // 1
-```
-
-## API
-
-### `createZustandAdapter(componentFactory)`
-
-Creates an enhanced Zustand store following Zustand's auto-generating selectors pattern.
-
-**Parameters:**
-- `componentFactory`: A Lattice component factory function
-
-**Returns:** An enhanced Zustand store that extends the standard StoreApi with:
-- `.use`: Auto-generated selectors for each model property (just like Zustand's pattern!)
-- `.actions`: Hook selectors for action methods
-- `.views`: Reactive view stores with their own `.use` selectors
-
-```typescript
-const store = createZustandAdapter(component);
-
-// Standard Zustand store methods
-store.getState();
-store.setState(newState);
-store.subscribe(listener);
-
-// Enhanced properties following Zustand patterns
-store.use.count();              // Hook selector for count
-store.actions.increment();      // Hook selector for increment action
-store.views.display.use();      // Hook selector for display view
-```
-
-### The Pattern: Auto-Generated Selectors
-
-Just like Zustand's own auto-generating selectors, the adapter creates hooks automatically:
-
-```typescript
-// Your model
-const model = createModel(({ set, get }) => ({
-  count: 0,
-  user: { name: 'Alice', id: 1 },
-  todos: [],
-  increment: () => set({ count: get().count + 1 })
-}));
-
-// The adapter generates
-store.use.count()    // Hook for count
-store.use.user()     // Hook for user
-store.use.todos()    // Hook for todos
-
-// Actions get their own namespace
-store.actions.increment()  // Hook for increment action
-```
-
-### Store Interface
-
-```typescript
-interface ZustandAdapterStore<Model, Actions, Views> extends StoreApi<Model> {
-  // Auto-generated selectors - just like Zustand!
-  use: {
-    [K in keyof Model]: () => Model[K];
-  };
+// Alternative: Get all actions at once
+function CounterWithAllActions() {
+  const count = useModelSelector(counterStore.use.count);
+  const actions = useActions(counterStore);
   
-  // Action hooks - clean namespace
-  actions: {
-    [K in keyof Actions]: () => Actions[K];
-  };
-  
-  // View stores with their own selectors
-  views: {
-    [K in keyof Views]: ViewStore<Views[K]>;
-  };
+  return (
+    <div>
+      <span>{count}</span>
+      <button onClick={actions.increment}>+</button>
+      <button onClick={actions.decrement}>-</button>
+    </div>
+  );
 }
 
-interface ViewStore<T> {
-  get: () => T;
-  use: () => T;
-  subscribe: (listener: (state: T) => void) => () => void;
+// Use custom selectors for derived state
+function CounterStats() {
+  const stats = useStore(counterStore, (state) => ({
+    count: state.count,
+    isEven: state.count % 2 === 0,
+    isPositive: state.count > 0,
+  }));
+  
+  return (
+    <div>
+      Count: {stats.count} 
+      {stats.isEven && ' (even)'}
+      {stats.isPositive && ' (positive)'}
+    </div>
+  );
 }
 ```
 
-## Features
+## React Hooks API
 
-- **Familiar Zustand patterns**: Auto-generating selectors via `.use` property
-- **Clean namespace separation**: Model properties never collide with adapter properties
-- **Full Zustand compatibility**: Works with all middleware, DevTools, and Zustand features
-- **Type-safe throughout**: Complete TypeScript support with inference
-- **Reactive view stores**: Each view gets its own store with `.use` selector
-- **Seamless composition**: Full support for Lattice's `select()` markers
+### `useStore(store, selector?)`
+Direct Zustand selector hook for accessing model state.
 
-## Working with Views
+```tsx
+// Get entire state
+const state = useStore(counterStore);
 
-Views are reactive stores that provide UI attributes. Each view gets its own `.use` selector:
+// Select specific value
+const count = useStore(counterStore, state => state.count);
+
+// Compute derived values
+const doubled = useStore(counterStore, state => state.count * 2);
+```
+
+### `useModelSelector(selectorHook)`
+Access individual model properties with automatic subscription.
+
+```tsx
+// Direct usage with full type inference
+const count = useModelSelector(counterStore.use.count);
+const disabled = useModelSelector(counterStore.use.disabled);
+```
+
+The selector hook provides full type inference and automatic subscription to state changes.
+
+### `useAction(store, key)`
+Get stable action references that won't change between renders.
+
+```tsx
+const increment = useAction(counterStore, 'increment');
+// increment is always the same function reference
+```
+
+### `useView(store, viewKey)`
+Subscribe to view stores with proper React 18+ concurrent mode support.
+
+```tsx
+// For static views
+const display = useView(counterStore, 'display');
+
+// For computed views
+const summary = useView(todoStore, 'summary');
+```
+
+### `useActions(store)`
+Get all actions as a stable object.
+
+```tsx
+const actions = useActions(counterStore);
+// actions.increment, actions.decrement, etc.
+```
+
+### `useStoreSelector(store, selector)`
+Utility hook for complex selections.
+
+```tsx
+const { activeCount, completedCount } = useStoreSelector(
+  todoStore,
+  state => ({
+    activeCount: state.todos.filter(t => !t.completed).length,
+    completedCount: state.todos.filter(t => t.completed).length
+  })
+);
+```
+
+## Advanced Usage
+
+### Views with select() markers
 
 ```typescript
 const component = createComponent(() => {
@@ -170,308 +207,126 @@ const component = createComponent(() => {
     increment: m.increment,
   }));
 
-  // Static view - a slice that returns UI attributes
+  // View that includes actions via select()
   const buttonSlice = createSlice(model, (m) => ({
-    onClick: select(actions).increment,
+    onClick: select(actions, (a) => a.increment),
     disabled: m.count >= 10,
     'aria-label': `Count: ${m.count}`,
   }));
 
-  // Computed view - a function that returns UI attributes
-  const displayView = () => 
-    createSlice(model, (m) => ({
-      count: m.count,
-    }))((state) => ({
-      text: `Current count: ${state.count}`,
-      className: state.count > 5 ? 'high' : 'low',
-    }));
-
   return {
     model,
     actions,
-    views: {
-      button: buttonSlice,      // Static view
-      display: displayView,     // Computed view
-    },
+    views: { button: buttonSlice },
   };
 });
 
 const store = createZustandAdapter(component);
 
-// React usage - views have their own .use selectors!
-function MyComponent() {
-  const button = store.views.button.use();
-  const display = store.views.display.use();
+// In React
+function Button() {
+  const button = useView(store, 'button');
   
   return (
-    <div className={display.className}>
-      <p>{display.text}</p>
-      <button 
-        onClick={button.onClick}
-        disabled={button.disabled}
-        aria-label={button['aria-label']}
-      >
-        Increment
-      </button>
-    </div>
+    <button 
+      onClick={button.onClick}
+      disabled={button.disabled}
+      aria-label={button['aria-label']}
+    >
+      Click me
+    </button>
   );
 }
-
-// Vanilla usage
-const buttonAttrs = store.views.button.get();
-console.log(buttonAttrs['aria-label']); // "Count: 0"
-
-// Subscribe to view changes
-store.views.button.subscribe((attrs) => {
-  console.log('Button updated:', attrs);
-});
 ```
 
-## Using select() for Composition
-
-The adapter seamlessly resolves `select()` markers, enabling powerful composition:
+### Computed Views
 
 ```typescript
 const component = createComponent(() => {
   const model = createModel(({ set, get }) => ({
-    user: { id: 1, name: 'Alice' },
-    posts: [{ id: 1, title: 'Hello' }],
-    updateUser: (name: string) => 
-      set({ user: { ...get().user, name } }),
+    todos: [],
+    filter: 'all', // 'all' | 'active' | 'completed'
   }));
 
-  const userSlice = createSlice(model, (m) => m.user);
-  const postsSlice = createSlice(model, (m) => m.posts);
-  const actions = createSlice(model, (m) => ({
-    updateUser: m.updateUser,
+  const todoState = createSlice(model, (m) => ({
+    todos: m.todos,
+    filter: m.filter,
   }));
 
-  // Compose slices using select() - clean and declarative!
-  const profileSlice = createSlice(model, () => ({
-    userName: select(userSlice).name,
-    postCount: select(postsSlice).length,
-    onUpdateName: select(actions).updateUser,
-  }));
+  // Computed view function
+  const filteredTodosView = () =>
+    todoState((state) => {
+      const filtered = state.filter === 'all' 
+        ? state.todos
+        : state.todos.filter(t => 
+            state.filter === 'active' ? !t.completed : t.completed
+          );
+      
+      return {
+        items: filtered,
+        count: filtered.length,
+        empty: filtered.length === 0,
+      };
+    });
 
   return {
     model,
-    actions,
-    views: { profile: profileSlice },
+    actions: createSlice(model, () => ({})),
+    views: { filteredTodos: filteredTodosView },
   };
 });
 
-const store = createZustandAdapter(component);
-
-// React usage
-function Profile() {
-  const profile = store.views.profile.use();
-  const [newName, setNewName] = useState('');
+// In React
+function TodoList() {
+  const filteredTodos = useView(store, 'filteredTodos');
+  
+  if (filteredTodos.empty) {
+    return <div>No todos</div>;
+  }
   
   return (
-    <div>
-      <h2>{profile.userName}'s Profile</h2>
-      <p>Posts: {profile.postCount}</p>
-      <input 
-        value={newName} 
-        onChange={(e) => setNewName(e.target.value)}
-      />
-      <button onClick={() => profile.onUpdateName(newName)}>
-        Update Name
-      </button>
-    </div>
-  );
-}
-
-// Vanilla usage
-const profile = store.views.profile.get();
-console.log(profile.userName); // "Alice"
-profile.onUpdateName('Bob');
-console.log(store.use.user().name); // "Bob"
-```
-
-## Avoiding Namespace Collisions
-
-The beauty of this pattern is complete namespace separation. Your model can use ANY property names:
-
-```typescript
-const component = createComponent(() => {
-  const model = createModel(({ set, get }) => ({
-    // Model can freely use reserved names!
-    use: 'my-use-data',
-    actions: 'my-actions-data', 
-    views: 'my-views-data',
-    store: 'my-store-data',
-    getState: 'my-getState-data',
-    setState: 'my-setState-data',
-    
-    update: (field: string, value: string) => 
-      set({ ...get(), [field]: value }),
-  }));
-
-  return {
-    model,
-    actions: createSlice(model, (m) => ({ update: m.update })),
-    views: {},
-  };
-});
-
-const store = createZustandAdapter(component);
-
-// Adapter properties are always available
-console.log(typeof store.use); // "object" - the selector namespace
-console.log(typeof store.actions); // "object" - the actions namespace
-console.log(typeof store.getState); // "function" - Zustand method
-
-// Model properties are accessed through selectors
-const use = store.use.use(); // Gets model.use value
-const actions = store.use.actions(); // Gets model.actions value
-
-console.log(use); // "my-use-data"
-console.log(actions); // "my-actions-data"
-
-// React usage - no conflicts!
-function Component() {
-  const modelUse = store.use.use();
-  const modelActions = store.use.actions();
-  const update = store.actions.update();
-  
-  return (
-    <div>
-      <p>Model use: {modelUse}</p>
-      <p>Model actions: {modelActions}</p>
-      <button onClick={() => update('use', 'updated!')}>
-        Update
-      </button>
-    </div>
+    <ul>
+      {filteredTodos.items.map(todo => (
+        <li key={todo.id}>{todo.text}</li>
+      ))}
+    </ul>
   );
 }
 ```
 
-## With Zustand Middleware
+## TypeScript Support
 
-The adapter returns a standard Zustand store, so middleware works seamlessly:
-
-```typescript
-import { subscribeWithSelector } from 'zustand/middleware';
-import { devtools } from 'zustand/middleware';
-
-// Option 1: Apply middleware after creation
-const store = createZustandAdapter(component);
-const storeWithSubs = subscribeWithSelector(store);
-
-// Subscribe to specific fields
-storeWithSubs.subscribe(
-  (state) => state.count,
-  (count) => console.log('Count changed:', count)
-);
-
-// Option 2: Create adapter with middleware (recommended)
-const createEnhancedAdapter = (component) => {
-  const baseStore = createZustandAdapter(component);
-  return devtools(subscribeWithSelector(baseStore));
-};
-
-const store = createEnhancedAdapter(counter);
-
-// Now you have DevTools + granular subscriptions!
-store.subscribe(
-  (state) => state.user,
-  (user) => console.log('User changed:', user),
-  { equalityFn: shallow }
-);
-
-// The enhanced properties still work
-function App() {
-  const count = store.use.count();
-  const increment = store.actions.increment();
-  
-  return <button onClick={increment}>{count}</button>;
-}
-```
-
-## Best Practices
-
-1. **Follow Zustand patterns**: Use `.use` selectors in React components for optimal performance
-2. **Consistent action access**: Always use `store.actions.method()` hooks in components
-3. **View stores are reactive**: Each view has `.use()`, `.get()`, and `.subscribe()`
-4. **Leverage TypeScript**: Full type inference throughout the adapter
-5. **Compose fearlessly**: The adapter handles all `select()` resolutions automatically
-
-## Comparison with Memory Adapter
-
-The Zustand adapter provides:
-- Production-ready state management
-- React optimization out of the box
-- DevTools integration potential
-- Larger ecosystem and community
-- Battle-tested performance
-
-The memory adapter is better for:
-- Testing and development
-- Lightweight scenarios
-- Learning Lattice patterns
-- Non-React environments
-
-## Migration Guide
-
-If you're coming from Zustand, the patterns will feel familiar:
+The adapter provides full TypeScript support with automatic type inference:
 
 ```typescript
-// Standard Zustand
-const useStore = create((set, get) => ({
-  count: 0,
-  increment: () => set({ count: get().count + 1 })
-}));
-
-// With auto-generating selectors
-const store = createSelectors(useStore);
-const count = store.use.count();
-
-// Lattice with Zustand adapter - same pattern!
 const store = createZustandAdapter(counter);
-const count = store.use.count();
-const increment = store.actions.increment();
+
+// Types are automatically inferred
+const count = useModelSelector(store.use.count); // number
+const increment = useAction(store, 'increment'); // () => void
+const display = useView(store, 'display'); // { value: number, label: string }
+
+// Type errors are caught
+const invalid = useAction(store, 'notExist'); // TS Error!
 ```
 
-If migrating from the memory adapter:
+## Performance Considerations
 
-```typescript
-// Memory adapter
-const adapter = createMemoryAdapter();
-const { model, actions, views } = adapter.executeComponent(component);
-const state = model.get();
-actions.get().increment();
+1. **Action Stability**: Actions returned by `useAction` and `useActions` are always stable references
+2. **Selective Re-renders**: `useModelSelector` only re-renders when the selected property changes
+3. **View Efficiency**: Views use `useSyncExternalStore` for optimal React 18+ performance
+4. **Computed Selectors**: Use `useStore` with selectors for derived state to minimize re-renders
 
-// Zustand adapter - cleaner API
-const store = createZustandAdapter(component);
-const state = store.getState();
-store.use.count(); // In React
-store.actions.increment(); // Action hook
+## Comparison with Direct Zustand Usage
 
-// The big win: React optimization built-in
-function Component() {
-  const count = store.use.count(); // Only re-renders on count change
-  const increment = store.actions.increment();
-  
-  return <button onClick={increment}>{count}</button>;
-}
-```
+The Lattice adapter provides several benefits over direct Zustand usage:
 
-## Why This Pattern?
+1. **Compositional Architecture**: Define behavior once, use with any state management
+2. **Type-Safe Views**: Views are fully typed and reactive
+3. **select() Integration**: Seamlessly compose slices and actions
+4. **Clean Separation**: Model, actions, and views are clearly separated
+5. **Framework Agnostic Core**: Same component works with Redux, MobX, etc.
 
-The `.use`, `.actions`, and `.views` pattern provides several benefits:
+## License
 
-1. **Familiar to Zustand users**: Follows Zustand's own auto-generating selectors pattern
-2. **Zero namespace collisions**: Model can use any property names without conflicts
-3. **Optimized for React**: Selectors ensure minimal re-renders automatically
-4. **Clean organization**: Clear separation between state, actions, and views
-5. **Type-safe**: TypeScript knows exactly what's available in each namespace
-
-## Summary
-
-The Zustand adapter brings the best of both worlds:
-- **Lattice's power**: Compositional behavior specifications with `select()`
-- **Zustand's performance**: Battle-tested React optimization and state management
-- **Familiar patterns**: Auto-generating selectors that Zustand users already know
-
-For React applications, this adapter provides the ideal combination of developer experience, performance, and maintainability.
+MIT

@@ -69,7 +69,7 @@ export class ZustandAdapterError extends Error {
 /**
  * Store interface - the fundamental reactive primitive
  */
-interface Store<T> {
+export interface Store<T> {
   get: () => T;
   set: (value: T | ((prev: T) => T)) => void;
   subscribe: (listener: (value: T) => void) => () => void;

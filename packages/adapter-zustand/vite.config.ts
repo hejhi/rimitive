@@ -4,16 +4,22 @@ import { resolve } from 'path';
 export default defineConfig({
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'LatticeAdapterMemory',
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        react: resolve(__dirname, 'src/react.ts'),
+      },
+      name: 'LatticeAdapterZustand',
       formats: ['es'],
-      fileName: 'index',
     },
     rollupOptions: {
-      external: ['@lattice/core'],
+      external: ['@lattice/core', 'zustand', 'zustand/vanilla', 'zustand/react', 'react'],
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
+          'zustand': 'zustand',
+          'zustand/vanilla': 'zustandVanilla',
+          'zustand/react': 'zustandReact',
+          'react': 'React',
         },
       },
     },

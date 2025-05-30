@@ -10,6 +10,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./react": {
+      "import": "./dist/react.js",
+      "types": "./dist/react.d.ts"
     }
   },
   "scripts": {
@@ -23,8 +27,24 @@
     "@lattice/core": "workspace:*",
     "zustand": "^5.0.3"
   },
+  "peerDependencies": {
+    "react": ">=16.8.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/react-hooks": "^8.0.1",
     "@types/node": "^22.5.4",
+    "@types/react": "^18.3.17",
+    "happy-dom": "^17.5.6",
+    "jsdom": "^26.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-test-renderer": "^18.3.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.2",
     "vitest": "^2.1.8"
