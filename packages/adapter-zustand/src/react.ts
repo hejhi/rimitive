@@ -5,16 +5,13 @@
  * enabling reactive component updates with Lattice's compositional patterns.
  *
  * Key features:
- * - Direct Zustand state selectors via useStore
- * - Auto-generated model property selectors via useModelSelector
- * - Stable action references via useActions
- * - View store subscriptions via useView with selector functions
+ * - View-based subscriptions with useViews
+ * - Stable action references via direct access
  * - Full TypeScript support with proper inference
  */
 
-import { useStore as useZustandStore } from 'zustand/react';
-import type { ExtractState } from 'zustand/vanilla';
-import type { ZustandAdapterResult, Store } from './index.js';
+import { useEffect, useState, useMemo } from 'react';
+import type { ZustandAdapterResult } from './index.js';
 
 // ============================================================================
 // Hook Types
@@ -25,7 +22,6 @@ import type { ZustandAdapterResult, Store } from './index.js';
  */
 type ExtractActions<T> =
   T extends ZustandAdapterResult<unknown, infer A, unknown> ? A : never;
-
 
 /**
  * Extracts the views type from a ZustandAdapterResult
@@ -38,185 +34,102 @@ type ExtractViews<T> =
 // ============================================================================
 
 /**
- * Direct Zustand selector hook for accessing model state.
- * Uses Zustand's built-in React integration for optimal performance.
+ * Hook for subscribing to view changes.
+ * Automatically updates component when selected views change.
  *
  * @param store - The Zustand adapter store
- * @param selector - Optional selector function to derive specific values
- * @returns The selected state value
- *
- * @example
- * ```tsx
- * // Get entire state
- * const state = useStore(counterStore);
- *
- * // Select specific value
- * const count = useStore(counterStore, state => state.count);
- *
- * // Compute derived values
- * const doubled = useStore(counterStore, state => state.count * 2);
- * ```
- */
-export function useStore<
-  S extends ZustandAdapterResult<unknown, unknown, unknown>,
->(store: S): ExtractState<S>;
-export function useStore<
-  S extends ZustandAdapterResult<unknown, unknown, unknown>,
-  U,
->(store: S, selector: (state: ExtractState<S>) => U): U;
-export function useStore<
-  S extends ZustandAdapterResult<unknown, unknown, unknown>,
-  U,
->(store: S, selector?: (state: ExtractState<S>) => U) {
-  if (selector) {
-    return useZustandStore(store, selector);
-  }
-  return useZustandStore(store);
-}
-
-/**
- * Hook for using auto-generated model selectors.
- * Provides direct access to individual model properties with automatic subscription.
- *
- * @param selectorHook - The selector hook from store.use
- * @returns The value of the selected property
+ * @param selector - Function to select which views to subscribe to
+ * @returns The selected view values
  *
  * @example
  * ```tsx
  * function Counter() {
- *   // Direct usage with proper type inference
- *   const count = useModelSelector(counterStore.use.count);
- *   const disabled = useModelSelector(counterStore.use.disabled);
+ *   // Subscribe to specific views
+ *   const { display, button } = useViews(store, views => ({
+ *     display: views.display(),
+ *     button: views.button()
+ *   }));
  *
- *   return <div>Count: {count}</div>;
+ *   return (
+ *     <div {...display}>
+ *       <button {...button}>Click me</button>
+ *     </div>
+ *   );
  * }
  * ```
  */
-export function useModelSelector<T>(selectorHook: () => T): T {
-  return selectorHook();
+export function useViews<
+  S extends ZustandAdapterResult<unknown, unknown, unknown>,
+  Selected,
+>(
+  store: S,
+  selector: (views: ExtractViews<S>) => Selected
+): Selected {
+  // Initialize state with the current view values
+  const [state, setState] = useState<Selected>(() => {
+    return selector(store.views as ExtractViews<S>);
+  });
+
+  // Subscribe to view changes
+  useEffect(() => {
+    const unsubscribe = store.subscribe(
+      views => selector(views as ExtractViews<S>),
+      (newState) => {
+        setState(newState);
+      }
+    );
+
+    return unsubscribe;
+  }, [store]); // Don't include selector in deps as it may not be stable
+
+  return state;
 }
 
 /**
- * Hook for accessing views with automatic reactivity.
- * 
- * Subscribes to views using a selector function pattern, following Zustand's
- * simple and elegant API design. The selector stability is handled automatically
- * by Zustand, so you don't need to think about memoization.
+ * Hook for accessing a single view.
+ * Convenience wrapper around useViews for single view access.
  *
  * @param store - The Zustand adapter store
- * @param selector - Selector function that receives the views object and returns a single view hook
- * @returns The current view attributes
+ * @param viewName - The name of the view to access
+ * @returns The view attributes
  *
  * @example
  * ```tsx
- * function DisplayCounter() {
- *   // Basic usage - Zustand handles selector stability
- *   const display = useView(counterStore, views => views.display);
- *
- *   // Dynamic selection based on component state
- *   const [currentView, setCurrentView] = useState('view1');
- *   const view = useView(counterStore, views => views[currentView]);
- *
- *   // Conditional selection
- *   const [isLoading, setIsLoading] = useState(false);
- *   const content = useView(
- *     counterStore,
- *     views => isLoading ? views.loading : views.content
- *   );
- *
- *   return <div {...display} />;
+ * function DisplayComponent() {
+ *   const display = useView(store, 'display');
+ *   return <div {...display}>Content</div>;
  * }
  * ```
  */
 export function useView<
   S extends ZustandAdapterResult<unknown, unknown, unknown>,
-  V extends ExtractViews<S> = ExtractViews<S>,
-  R = unknown,
+  K extends keyof ExtractViews<S>,
+  V extends ExtractViews<S>
 >(
   store: S,
-  selector: (views: V) => Store<R> | (() => Store<R>)
-): R {
-  // Create a selector that selects and invokes the view
-  return useZustandStore(store, () => {
-    const selectedView = selector(store.views as V);
-    
-    if (typeof selectedView !== 'function') {
-      throw new Error(
-        `Invalid view selection: views must be hooks (functions)`
-      );
-    }
-    
-    // Invoke the view hook to get the current attributes
-    return (selectedView as () => R)();
-  });
-}
-
-// ============================================================================
-// Utility Hooks
-// ============================================================================
-
-/**
- * Hook that combines multiple selectors into a single subscription.
- * Useful for selecting multiple related values efficiently.
- *
- * @param store - The Zustand adapter store
- * @param selector - Function that selects multiple values
- * @returns The selected values
- *
- * @example
- * ```tsx
- * function TodoHeader() {
- *   const { activeCount, completedCount } = useStoreSelector(
- *     todoStore,
- *     state => ({
- *       activeCount: state.todos.filter(t => !t.completed).length,
- *       completedCount: state.todos.filter(t => t.completed).length
- *     })
- *   );
- *
- *   return <div>{activeCount} active, {completedCount} completed</div>;
- * }
- * ```
- */
-export function useStoreSelector<
-  S extends ZustandAdapterResult<unknown, unknown, unknown>,
-  U,
->(store: S, selector: (state: ExtractState<S>) => U): U {
-  return useZustandStore(store, selector);
+  viewName: K
+): V[K] extends (...args: any[]) => any ? ReturnType<V[K]> : never {
+  return useViews(store, views => {
+    const viewFn = views[viewName];
+    return typeof viewFn === 'function' ? viewFn() : viewFn;
+  }) as any;
 }
 
 /**
- * Hook for accessing actions from the store.
- * Returns a stable object containing all action methods.
- * Supports destructuring for convenient access to specific actions.
+ * Hook for accessing actions.
+ * Actions are stable and don't need subscriptions.
  *
  * @param store - The Zustand adapter store
- * @returns Object containing all actions
+ * @returns The actions object
  *
  * @example
  * ```tsx
- * // Get all actions
  * function Controls() {
- *   const actions = useActions(counterStore);
- *
+ *   const actions = useActions(store);
+ *   
  *   return (
- *     <div>
- *       <button onClick={actions.increment}>+</button>
- *       <button onClick={actions.decrement}>-</button>
- *       <button onClick={actions.reset}>Reset</button>
- *     </div>
- *   );
- * }
- *
- * // Destructure specific actions
- * function Counter() {
- *   const { increment, decrement } = useActions(counterStore);
- *
- *   return (
- *     <div>
- *       <button onClick={increment}>+</button>
- *       <button onClick={decrement}>-</button>
- *     </div>
+ *     <button onClick={actions.increment}>+</button>
+ *     <button onClick={actions.decrement}>-</button>
  *   );
  * }
  * ```
@@ -224,23 +137,53 @@ export function useStoreSelector<
 export function useActions<
   S extends ZustandAdapterResult<unknown, unknown, unknown>,
 >(store: S): ExtractActions<S> {
-  // Build an object with all actions
-  // Actions are stable, so this object is also stable
-  const actions = {} as ExtractActions<S>;
-  const storeActions = store.actions as Record<string, () => unknown>;
+  // Actions are stable, so we can just return them directly
+  // Use useMemo to ensure referential stability across renders
+  return useMemo(() => store.actions as ExtractActions<S>, [store]);
+}
 
-  for (const key in storeActions) {
-    if (Object.prototype.hasOwnProperty.call(storeActions, key)) {
-      const actionHook = storeActions[key];
-      if (typeof actionHook === 'function') {
-        Object.defineProperty(actions, key, {
-          value: actionHook(),
-          enumerable: true,
-          configurable: true,
-        });
-      }
-    }
-  }
+// ============================================================================
+// Convenience Hooks
+// ============================================================================
 
-  return actions;
+/**
+ * Hook that combines views and actions for convenience.
+ * Useful when you need both in the same component.
+ *
+ * @param store - The Zustand adapter store
+ * @param viewSelector - Function to select which views to subscribe to
+ * @returns Object with selected views and all actions
+ *
+ * @example
+ * ```tsx
+ * function Counter() {
+ *   const { views, actions } = useLattice(store, v => ({
+ *     display: v.display(),
+ *     button: v.button()
+ *   }));
+ *
+ *   return (
+ *     <div {...views.display}>
+ *       <button onClick={actions.increment}>
+ *         {views.button.label}
+ *       </button>
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useLattice<
+  S extends ZustandAdapterResult<unknown, unknown, unknown>,
+  Selected,
+>(
+  store: S,
+  viewSelector: (views: ExtractViews<S>) => Selected
+): {
+  views: Selected;
+  actions: ExtractActions<S>;
+} {
+  const views = useViews(store, viewSelector);
+  const actions = useActions(store);
+  
+  return { views, actions };
 }

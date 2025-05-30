@@ -7,31 +7,13 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import type { ZustandAdapterResult, Store } from './index.js';
+import type { ZustandAdapterResult } from './index.js';
 import {
-  useStore,
-  useModelSelector,
+  useViews,
   useView,
-  useStoreSelector,
   useActions,
+  useLattice,
 } from './react.js';
-
-// Import internal types needed for mocking
-type SelectorHook<T> = () => T;
-type UseSelectors<Model> = {
-  [K in keyof Model]: SelectorHook<Model[K]>;
-};
-type ActionHooks<Actions> = {
-  [K in keyof Actions]: SelectorHook<Actions[K]>;
-};
-
-// Mock zustand/react
-vi.mock('zustand/react', () => ({
-  useStore: vi.fn(),
-}));
-
-// Import mocked functions
-import { useStore as mockUseZustandStore } from 'zustand/react';
 
 describe('React hooks for Zustand adapter', () => {
   beforeEach(() => {
@@ -47,788 +29,528 @@ describe('React hooks for Zustand adapter', () => {
     overrides: Partial<ZustandAdapterResult<M, A, V>> = {}
   ): ZustandAdapterResult<M, A, V> {
     const base = {
-      getState: vi.fn(() => ({ count: 0, name: 'test' }) as M),
-      setState: vi.fn(),
+      actions: {} as A,
+      views: {} as V,
       subscribe: vi.fn(() => vi.fn()),
-      destroy: vi.fn(),
-      use: {} as UseSelectors<M>,
-      actions: {} as ActionHooks<A>,
-      views: {} as any,
     };
     return { ...base, ...overrides } as ZustandAdapterResult<M, A, V>;
   }
 
-  // Helper to create a mock Store
-  function createMockStore<T>(value: T): Store<T> {
-    const listeners = new Set<(value: T) => void>();
-    return {
-      get: vi.fn(() => value),
-      set: vi.fn(),
-      subscribe: vi.fn((listener: (value: T) => void) => {
-        listeners.add(listener);
-        return () => {
-          listeners.delete(listener);
-        };
-      }),
-    };
-  }
+  describe('useViews', () => {
+    it('should return selected view values', () => {
+      const mockViews = {
+        display: vi.fn(() => ({ text: 'Hello', className: 'display' })),
+        button: vi.fn(() => ({ onClick: vi.fn(), disabled: false })),
+      };
 
-  describe('useStore', () => {
-    it('should return entire state when no selector provided', () => {
-      const mockState = { count: 5, name: 'test' };
       const mockStore = createMockAdapterResult({
-        getState: vi.fn(() => mockState),
+        views: mockViews as any,
       });
-
-      vi.mocked(mockUseZustandStore).mockReturnValue(mockState);
-
-      const { result } = renderHook(() => useStore(mockStore));
-
-      expect(result.current).toEqual(mockState);
-      expect(mockUseZustandStore).toHaveBeenCalledWith(mockStore);
-    });
-
-    it('should return selected value when selector provided', () => {
-      const mockState = { count: 5, name: 'test' };
-      const mockStore = createMockAdapterResult({
-        getState: vi.fn(() => mockState),
-      });
-
-      vi.mocked(mockUseZustandStore).mockImplementation(
-        (_store: any, selector: any) =>
-          selector ? selector(mockState) : mockState
-      );
 
       const { result } = renderHook(() =>
-        useStore(mockStore, (state) => state.count)
+        useViews(mockStore, (views) => ({
+          display: views.display(),
+          button: views.button(),
+        }))
       );
 
-      expect(result.current).toBe(5);
-      expect(mockUseZustandStore).toHaveBeenCalledWith(
-        mockStore,
-        expect.any(Function)
-      );
+      expect(result.current.display).toEqual({ text: 'Hello', className: 'display' });
+      expect(result.current.button.disabled).toBe(false);
+      expect(typeof result.current.button.onClick).toBe('function');
     });
 
-    it('should handle computed selectors', () => {
-      const mockState = { count: 10, multiplier: 2 };
+    it('should update when views change', () => {
+      let currentCount = 0;
+      const mockViews = {
+        count: vi.fn(() => ({ value: currentCount })),
+      };
+
+      let subscribeCallback: any;
       const mockStore = createMockAdapterResult({
-        getState: vi.fn(() => mockState),
+        views: mockViews as any,
+        subscribe: vi.fn((_, callback) => {
+          subscribeCallback = callback;
+          return vi.fn();
+        }),
       });
 
-      vi.mocked(mockUseZustandStore).mockImplementation(
-        (_store: any, selector: any) => selector(mockState)
+      const { result } = renderHook(() =>
+        useViews(mockStore, (views) => views.count())
       );
+
+      expect(result.current.value).toBe(0);
+
+      // Simulate view change
+      currentCount = 1;
+      act(() => {
+        subscribeCallback({ value: 1 });
+      });
+
+      expect(result.current.value).toBe(1);
+    });
+
+    it('should unsubscribe on unmount', () => {
+      const unsubscribeMock = vi.fn();
+      const mockViews = { test: vi.fn(() => ({ value: 'test' })) };
+      const mockStore = createMockAdapterResult({
+        views: mockViews as any,
+        subscribe: vi.fn(() => unsubscribeMock),
+      });
+
+      const { unmount } = renderHook(() =>
+        useViews(mockStore, (views) => views.test())
+      );
+
+      unmount();
+
+      expect(unsubscribeMock).toHaveBeenCalled();
+    });
+
+    it('should handle multiple view selections', () => {
+      const mockViews = {
+        user: vi.fn(() => ({ name: 'Alice', id: 1 })),
+        theme: vi.fn(() => ({ mode: 'dark', color: 'blue' })),
+        status: vi.fn(() => ({ online: true })),
+      };
+
+      const mockStore = createMockAdapterResult({
+        views: mockViews as any,
+      });
 
       const { result } = renderHook(() =>
-        useStore(mockStore, (state) => state.count * state.multiplier)
+        useViews(mockStore, (views) => ({
+          user: views.user(),
+          theme: views.theme(),
+        }))
       );
 
-      expect(result.current).toBe(20);
+      expect(result.current).toEqual({
+        user: { name: 'Alice', id: 1 },
+        theme: { mode: 'dark', color: 'blue' },
+      });
     });
   });
 
-  describe('useModelSelector', () => {
-    it('should work with direct selector hook', () => {
-      const mockValue = 'test-value';
-      const mockSelectorHook = vi.fn(() => mockValue);
+  describe('useView', () => {
+    it('should return single view attributes', () => {
+      const mockViews = {
+        display: vi.fn(() => ({ text: 'Hello', className: 'display' })),
+        button: vi.fn(() => ({ onClick: vi.fn(), disabled: false })),
+      };
 
-      const { result } = renderHook(() => useModelSelector(mockSelectorHook));
+      const mockStore = createMockAdapterResult({
+        views: mockViews as any,
+      });
 
-      expect(result.current).toBe(mockValue);
-      expect(mockSelectorHook).toHaveBeenCalledTimes(1);
+      const { result } = renderHook(() => useView(mockStore, 'display'));
+
+      expect(result.current).toEqual({ text: 'Hello', className: 'display' });
     });
 
-    it('should handle complex objects returned by selector hooks', () => {
-      const mockUser = { id: 1, name: 'Bob', role: 'admin' };
-      const mockUserHook = vi.fn(() => mockUser);
+    it('should update when the specific view changes', () => {
+      let currentText = 'Initial';
+      const mockViews = {
+        display: vi.fn(() => ({ text: currentText })),
+      };
 
-      const { result } = renderHook(() => useModelSelector(mockUserHook));
+      let subscribeCallback: any;
+      const mockStore = createMockAdapterResult({
+        views: mockViews as any,
+        subscribe: vi.fn((_, callback) => {
+          subscribeCallback = callback;
+          return vi.fn();
+        }),
+      });
 
-      expect(result.current).toEqual(mockUser);
-      expect(mockUserHook).toHaveBeenCalledTimes(1);
-    });
+      const { result } = renderHook(() => useView(mockStore, 'display'));
 
-    it('should handle multiple calls with different selector hooks', () => {
-      const mockCount = vi.fn(() => 42);
-      const mockName = vi.fn(() => 'Alice');
+      expect(result.current.text).toBe('Initial');
 
-      const { result: countResult } = renderHook(() =>
-        useModelSelector(mockCount)
-      );
-      const { result: nameResult } = renderHook(() =>
-        useModelSelector(mockName)
-      );
+      // Simulate view change
+      currentText = 'Updated';
+      act(() => {
+        subscribeCallback({ text: 'Updated' });
+      });
 
-      expect(countResult.current).toBe(42);
-      expect(nameResult.current).toBe('Alice');
-      expect(mockCount).toHaveBeenCalledTimes(1);
-      expect(mockName).toHaveBeenCalledTimes(1);
+      expect(result.current.text).toBe('Updated');
     });
   });
 
   describe('useActions', () => {
-    it('should return all actions as an object', () => {
-      const mockIncrement = vi.fn();
-      const mockDecrement = vi.fn();
-      const mockReset = vi.fn();
+    it('should return actions object', () => {
+      const mockActions = {
+        increment: vi.fn(),
+        decrement: vi.fn(),
+        reset: vi.fn(),
+      };
 
-      const mockStore = createMockAdapterResult({
-        actions: {
-          increment: vi.fn(() => mockIncrement),
-          decrement: vi.fn(() => mockDecrement),
-          reset: vi.fn(() => mockReset),
-        },
+      const mockStore = createMockAdapterResult<any, typeof mockActions, any>({
+        actions: mockActions,
       });
 
       const { result } = renderHook(() => useActions(mockStore));
 
-      expect(result.current).toEqual({
-        increment: mockIncrement,
-        decrement: mockDecrement,
-        reset: mockReset,
-      });
-
-      // Verify all action hooks were called
-      expect(mockStore.actions.increment).toHaveBeenCalledTimes(1);
-      expect(mockStore.actions.decrement).toHaveBeenCalledTimes(1);
-      expect(mockStore.actions.reset).toHaveBeenCalledTimes(1);
-    });
-
-    it('should support destructuring specific actions', () => {
-      const mockIncrement = vi.fn();
-      const mockDecrement = vi.fn();
-      const mockReset = vi.fn();
-
-      const mockStore = createMockAdapterResult({
-        actions: {
-          increment: vi.fn(() => mockIncrement),
-          decrement: vi.fn(() => mockDecrement),
-          reset: vi.fn(() => mockReset),
-        },
-      });
-
-      const { result } = renderHook(() => {
-        const { increment, decrement } = useActions(mockStore);
-        return { increment, decrement };
-      });
-
-      expect(result.current.increment).toBe(mockIncrement);
-      expect(result.current.decrement).toBe(mockDecrement);
+      expect(result.current).toBe(mockActions);
       expect(typeof result.current.increment).toBe('function');
       expect(typeof result.current.decrement).toBe('function');
+      expect(typeof result.current.reset).toBe('function');
     });
 
-    it('should return stable action references', () => {
-      const stableIncrement = vi.fn();
-      const stableDecrement = vi.fn();
-      const mockStore = createMockAdapterResult({
-        actions: {
-          increment: vi.fn(() => stableIncrement),
-          decrement: vi.fn(() => stableDecrement),
-        },
+    it('should maintain stable reference across renders', () => {
+      const mockActions = {
+        doSomething: vi.fn(),
+      };
+
+      const mockStore = createMockAdapterResult<any, typeof mockActions, any>({
+        actions: mockActions,
       });
 
       const { result, rerender } = renderHook(() => useActions(mockStore));
 
-      const firstResult = result.current;
+      const firstReference = result.current;
 
-      // Rerender
+      // Force re-render
       rerender();
 
-      // Actions should be stable
-      expect(result.current.increment).toBe(firstResult.increment);
-      expect(result.current.decrement).toBe(firstResult.decrement);
-    });
-
-    it('should handle action execution', async () => {
-      let actionCallCount = 0;
-      const mockAction = vi.fn(() => {
-        actionCallCount++;
-      });
-
-      const mockStore = createMockAdapterResult({
-        actions: {
-          testAction: vi.fn(() => mockAction),
-        },
-      });
-
-      const { result } = renderHook(() => useActions(mockStore));
-
-      // Execute the action
-      await act(async () => {
-        result.current.testAction();
-      });
-
-      expect(mockAction).toHaveBeenCalledTimes(1);
-      expect(actionCallCount).toBe(1);
-    });
-
-    describe('useView', () => {
-      it('should handle static view hooks with selector', () => {
-        const viewData = { text: 'Hello', count: 5 };
-        const mockViewHook = vi.fn(() => viewData);
-
-        const mockStore = createMockAdapterResult({
-          views: {
-            display: mockViewHook,
-          } as any,
-        });
-
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => {
-            return selector();
-          }
-        );
-
-        const { result } = renderHook(() =>
-          useView(mockStore, (views) => views.display)
-        );
-
-        expect(result.current).toEqual(viewData);
-        expect(mockViewHook).toHaveBeenCalled();
-      });
-
-      it('should handle computed view hooks with selector', () => {
-        const viewData = { className: 'even', label: 'Count: 2' };
-        const mockViewHook = vi.fn(() => viewData);
-
-        const mockStore = createMockAdapterResult({
-          views: {
-            counter: mockViewHook,
-          } as any,
-        });
-
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => {
-            return selector();
-          }
-        );
-
-        const { result } = renderHook(() =>
-          useView(mockStore, (views) => views.counter)
-        );
-
-        expect(result.current).toEqual(viewData);
-        expect(mockViewHook).toHaveBeenCalledTimes(1);
-      });
-
-      it('should throw error for invalid view (not a function)', () => {
-        const invalidViews = [
-          { someProperty: 'value' },
-          'not-a-function',
-          123,
-          null,
-          undefined,
-        ];
-
-        invalidViews.forEach((invalidView) => {
-          const mockStore = createMockAdapterResult({
-            views: { bad: invalidView } as any,
-          });
-
-          // Mock useZustandStore to trigger the selector
-          vi.mocked(mockUseZustandStore).mockImplementation(
-            (_store: any, selector: any) => {
-              // The selector will throw when it tries to call the invalid view
-              try {
-                return selector();
-              } catch (error) {
-                throw error;
-              }
-            }
-          );
-
-          const { result } = renderHook(() => {
-            try {
-              return useView(mockStore, (views) => views.bad);
-            } catch (error) {
-              return error;
-            }
-          });
-
-          expect(result.current).toBeInstanceOf(Error);
-          expect((result.current as Error).message).toBe(
-            'Invalid view selection: views must be hooks (functions)'
-          );
-        });
-      });
-
-      it('should handle view updates through store subscription', async () => {
-        let currentValue = { count: 0 };
-        const mockViewHook = vi.fn(() => currentValue);
-
-        const mockStore = createMockAdapterResult({
-          views: { counter: mockViewHook } as any,
-        });
-
-        // Mock the store subscription behavior
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => {
-            return selector();
-          }
-        );
-
-        const { result, rerender } = renderHook(() =>
-          useView(mockStore, (views) => views.counter)
-        );
-
-        expect(result.current).toEqual({ count: 0 });
-        expect(mockViewHook).toHaveBeenCalledTimes(1);
-
-        // Update the value that the hook returns
-        currentValue = { count: 1 };
-
-        // Rerender to simulate store update
-        rerender();
-
-        expect(result.current).toEqual({ count: 1 });
-        expect(mockViewHook).toHaveBeenCalledTimes(2);
-      });
-
-      it('should support dynamic view selection', () => {
-        const viewData1 = { text: 'View 1' };
-        const viewData2 = { text: 'View 2' };
-        const mockViewHook1 = vi.fn(() => viewData1);
-        const mockViewHook2 = vi.fn(() => viewData2);
-
-        const mockStore = createMockAdapterResult({
-          views: {
-            view1: mockViewHook1,
-            view2: mockViewHook2,
-          } as any,
-        });
-
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => {
-            // The selector will re-evaluate the view selection each time
-            return selector();
-          }
-        );
-
-        const { result, rerender } = renderHook(
-          ({ viewKey }) => {
-            return useView(mockStore, (views) => views[viewKey]);
-          },
-          { initialProps: { viewKey: 'view1' as 'view1' | 'view2' } }
-        );
-
-        expect(result.current).toEqual(viewData1);
-        expect(mockViewHook1).toHaveBeenCalled();
-        expect(mockViewHook2).not.toHaveBeenCalled();
-
-        // Clear mock calls
-        mockViewHook1.mockClear();
-        mockViewHook2.mockClear();
-
-        // Change the view key
-        rerender({ viewKey: 'view2' as 'view1' | 'view2' });
-
-        expect(result.current).toEqual(viewData2);
-        expect(mockViewHook2).toHaveBeenCalled();
-        expect(mockViewHook1).not.toHaveBeenCalled();
-      });
-
-      it('should support conditional view selection', () => {
-        const loadingData = { text: 'Loading...' };
-        const contentData = { text: 'Content loaded' };
-        const mockLoadingHook = vi.fn(() => loadingData);
-        const mockContentHook = vi.fn(() => contentData);
-
-        const mockStore = createMockAdapterResult({
-          views: {
-            loading: mockLoadingHook,
-            content: mockContentHook,
-          } as any,
-        });
-
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => {
-            return selector();
-          }
-        );
-
-        const { result, rerender } = renderHook(
-          ({ isLoading }) =>
-            useView(mockStore, (views) =>
-              isLoading ? views.loading : views.content
-            ),
-          { initialProps: { isLoading: true } }
-        );
-
-        expect(result.current).toEqual(loadingData);
-        expect(mockLoadingHook).toHaveBeenCalled();
-        expect(mockContentHook).not.toHaveBeenCalled();
-
-        // Clear mock calls
-        mockLoadingHook.mockClear();
-        mockContentHook.mockClear();
-
-        // Toggle loading state
-        rerender({ isLoading: false });
-
-        expect(result.current).toEqual(contentData);
-        expect(mockContentHook).toHaveBeenCalled();
-        expect(mockLoadingHook).not.toHaveBeenCalled();
-      });
-
-      it('should handle inline arrow functions efficiently with Zustand', () => {
-        const viewData = { text: 'Stable view' };
-        const mockViewHook = vi.fn(() => viewData);
-
-        const mockStore = createMockAdapterResult({
-          views: {
-            display: mockViewHook,
-          } as any,
-        });
-
-        // Mock Zustand's behavior - it handles selector stability internally
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => {
-            return selector();
-          }
-        );
-
-        const { result, rerender } = renderHook(() =>
-          // Inline arrow function - Zustand handles stability
-          useView(mockStore, (views) => views.display)
-        );
-
-        expect(result.current).toEqual(viewData);
-
-        // Multiple rerenders - Zustand handles this efficiently
-        rerender();
-        rerender();
-        rerender();
-
-        // Result should remain stable
-        expect(result.current).toEqual(viewData);
-        // View hook is called on each render (Zustand's normal behavior)
-        expect(mockViewHook).toHaveBeenCalledTimes(4); // initial + 3 rerenders
-      });
-
-      it('should handle dynamic selector changes properly', () => {
-        const view1Data = { text: 'View 1' };
-        const view2Data = { text: 'View 2' };
-        const mockView1Hook = vi.fn(() => view1Data);
-        const mockView2Hook = vi.fn(() => view2Data);
-
-        const mockStore = createMockAdapterResult({
-          views: {
-            view1: mockView1Hook,
-            view2: mockView2Hook,
-          } as any,
-        });
-
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => {
-            return selector();
-          }
-        );
-
-        const { result, rerender } = renderHook(
-          ({ viewName }) => {
-            // Dynamic selector based on prop - Zustand handles the changes
-            return useView(mockStore, (views) => views[viewName]);
-          },
-          { initialProps: { viewName: 'view1' as 'view1' | 'view2' } }
-        );
-
-        expect(result.current).toEqual(view1Data);
-        expect(mockView1Hook).toHaveBeenCalled();
-        expect(mockView2Hook).not.toHaveBeenCalled();
-
-        // Clear mocks
-        mockView1Hook.mockClear();
-        mockView2Hook.mockClear();
-
-        // Change to view2 - Zustand handles the selector change
-        rerender({ viewName: 'view2' as 'view1' | 'view2' });
-
-        expect(result.current).toEqual(view2Data);
-        expect(mockView2Hook).toHaveBeenCalled();
-        expect(mockView1Hook).not.toHaveBeenCalled();
-      });
-
-      it('should handle inline function selectors efficiently', () => {
-        const viewData = { count: 0 };
-        const mockViewHook = vi.fn(() => viewData);
-
-        const mockStore = createMockAdapterResult({
-          views: {
-            counter: mockViewHook,
-          } as any,
-        });
-
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => {
-            return selector();
-          }
-        );
-
-        const { result, rerender } = renderHook(() => {
-          // Inline function - behavior should be consistent across renders
-          return useView(mockStore, (views) => views.counter);
-        });
-
-        expect(result.current).toEqual(viewData);
-        const initialCallCount = mockViewHook.mock.calls.length;
-
-        // Multiple rerenders
-        rerender();
-        rerender();
-        rerender();
-
-        // The view should return the same data and not cause excessive re-renders
-        expect(result.current).toEqual(viewData);
-        // View hook should be called on each render (once per render)
-        expect(mockViewHook).toHaveBeenCalledTimes(initialCallCount + 3);
-      });
-    });
-
-    describe('useStoreSelector', () => {
-      it('should pass through to zustand useStore with selector', () => {
-        const mockState = { value: 42, name: 'test' };
-        const mockStore = createMockAdapterResult({
-          getState: vi.fn(() => mockState),
-        });
-
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => selector(mockState)
-        );
-
-        const selector = (state: typeof mockState) => state.value;
-        const { result } = renderHook(() =>
-          useStoreSelector(mockStore, selector)
-        );
-
-        expect(result.current).toBe(42);
-        expect(mockUseZustandStore).toHaveBeenCalledWith(mockStore, selector);
-      });
-
-      it('should handle complex selectors', () => {
-        const mockState = {
-          todos: [
-            { id: 1, text: 'First', completed: false },
-            { id: 2, text: 'Second', completed: true },
-            { id: 3, text: 'Third', completed: false },
-          ],
-        };
-
-        const mockStore = createMockAdapterResult({
-          getState: vi.fn(() => mockState),
-        });
-
-        vi.mocked(mockUseZustandStore).mockImplementation(
-          (_store: any, selector: any) => selector(mockState)
-        );
-
-        const { result } = renderHook(() =>
-          useStoreSelector(mockStore, (state) => ({
-            activeCount: state.todos.filter((t) => !t.completed).length,
-            completedCount: state.todos.filter((t) => t.completed).length,
-          }))
-        );
-
-        expect(result.current).toEqual({
-          activeCount: 2,
-          completedCount: 1,
-        });
-      });
-    });
-
-    it('should handle empty actions', () => {
-      const mockStore = createMockAdapterResult({ actions: {} });
-
-      const { result } = renderHook(() => useActions(mockStore));
-
-      expect(result.current).toEqual({});
-    });
-
-    it('should only include function properties from actions', () => {
-      const mockAction = vi.fn();
-
-      const mockStore = createMockAdapterResult({
-        actions: {
-          validAction: vi.fn(() => mockAction),
-          notAFunction: 'string-value' as any,
-          nullValue: null as any,
-          undefinedValue: undefined as any,
-        },
-      });
-
-      const { result } = renderHook(() => useActions(mockStore));
-
-      expect(result.current).toEqual({
-        validAction: mockAction,
-      });
-      expect(Object.keys(result.current)).toHaveLength(1);
-    });
-
-    it('should handle actions with Object.create(null) prototype', () => {
-      const mockAction = vi.fn();
-      const mockConstructorFn = vi.fn();
-
-      // Create object without prototype
-      const actionsObj = Object.create(null);
-      actionsObj.validAction = vi.fn(() => mockAction);
-      actionsObj.constructor = vi.fn(() => mockConstructorFn);
-
-      const mockStore = createMockAdapterResult({
-        actions: actionsObj,
-      });
-
-      const { result } = renderHook(() => useActions(mockStore));
-
-      expect(result.current.validAction).toBe(mockAction);
-      expect(result.current.constructor).toBe(mockConstructorFn);
-      expect(Object.keys(result.current)).toContain('validAction');
-      expect(Object.keys(result.current)).toContain('constructor');
+      expect(result.current).toBe(firstReference);
     });
   });
 
-  describe('integration scenarios', () => {
-    it('should work with complete adapter result', () => {
-      const mockState = {
-        count: 0,
-        user: { name: 'Test', id: 1 },
-        items: ['a', 'b', 'c'],
+  describe('useLattice', () => {
+    it('should return both views and actions', () => {
+      const mockViews = {
+        display: vi.fn(() => ({ text: 'Hello' })),
+        button: vi.fn(() => ({ disabled: false })),
       };
 
-      const mockIncrement = vi.fn();
-      const mockUpdateUser = vi.fn();
-
-      const mockDisplayStore = createMockStore({
-        text: 'Count: 0',
-        className: 'zero',
-      });
+      const mockActions = {
+        increment: vi.fn(),
+        decrement: vi.fn(),
+      };
 
       const mockStore = createMockAdapterResult({
-        getState: vi.fn(() => mockState),
-        use: {
-          count: vi.fn(() => mockState.count),
-          user: vi.fn(() => mockState.user),
-          items: vi.fn(() => mockState.items),
-        },
-        actions: {
-          increment: vi.fn(() => mockIncrement),
-          updateUser: vi.fn(() => mockUpdateUser),
-        },
-        views: {
-          display: mockDisplayStore,
-          computed: vi.fn(() => mockDisplayStore),
-        } as any,
+        views: mockViews as any,
+        actions: mockActions,
       });
 
-      // Test model selector
-      const { result: countResult } = renderHook(() =>
-        useModelSelector(mockStore.use.count as () => number)
+      const { result } = renderHook(() =>
+        useLattice(mockStore, (views) => ({
+          display: views.display(),
+          button: views.button(),
+        }))
       );
-      expect(countResult.current).toBe(0);
 
-      // Test model selector with user property
-      const { result: userResult } = renderHook(() =>
-        useModelSelector(
-          mockStore.use.user as () => { name: string; id: number }
-        )
-      );
-      expect(userResult.current).toEqual({ name: 'Test', id: 1 });
-
-      // Test all actions
-      const { result: actionsResult } = renderHook(() => useActions(mockStore));
-      expect(actionsResult.current).toEqual({
-        increment: mockIncrement,
-        updateUser: mockUpdateUser,
-      });
+      expect(result.current.views.display).toEqual({ text: 'Hello' });
+      expect(result.current.views.button).toEqual({ disabled: false });
+      expect(result.current.actions).toBe(mockActions);
     });
 
-    it('should handle state updates correctly', async () => {
-      let currentState = { count: 0 };
-      const listeners = new Set<() => void>();
+    it('should update views while keeping actions stable', () => {
+      let currentCount = 0;
+      const mockViews = {
+        count: vi.fn(() => ({ value: currentCount })),
+      };
 
+      const mockActions = {
+        increment: vi.fn(),
+      };
+
+      let subscribeCallback: any;
       const mockStore = createMockAdapterResult({
-        getState: vi.fn(() => currentState),
-        setState: vi.fn((partial) => {
-          currentState = { ...currentState, ...partial };
-          listeners.forEach((l) => l());
+        views: mockViews as any,
+        actions: mockActions,
+        subscribe: vi.fn((_, callback) => {
+          subscribeCallback = callback;
+          return vi.fn();
         }),
-        subscribe: vi.fn((listener) => {
-          listeners.add(listener);
-          return () => listeners.delete(listener);
-        }),
-        use: {
-          count: vi.fn(() => currentState.count),
-        },
-        actions: {
-          increment: vi.fn(() => () => {
-            mockStore.setState({ count: currentState.count + 1 });
-          }),
-        },
       });
 
-      const { result: actionsResult } = renderHook(() => useActions(mockStore));
-
-      const { result: countResult, rerender } = renderHook(() =>
-        useModelSelector(mockStore.use.count as () => number)
+      const { result } = renderHook(() =>
+        useLattice(mockStore, (views) => views.count())
       );
 
-      expect(countResult.current).toBe(0);
+      const initialActions = result.current.actions;
+      expect(result.current.views.value).toBe(0);
 
-      // Execute action
-      await act(async () => {
+      // Simulate view change
+      currentCount = 1;
+      act(() => {
+        subscribeCallback({ value: 1 });
+      });
+
+      expect(result.current.views.value).toBe(1);
+      expect(result.current.actions).toBe(initialActions); // Actions should remain stable
+    });
+  });
+
+  describe('Integration with real Zustand adapter', () => {
+    it('should work with actual adapter result structure', async () => {
+      const { createComponent, createModel, createSlice, select } = await import(
+        '@lattice/core'
+      );
+      const { createZustandAdapter } = await import('./index.js');
+
+      const counter = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+          decrement: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+          decrement: () => set({ count: get().count - 1 }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+          decrement: m.decrement,
+        }));
+
+        const displaySlice = createSlice(model, (m) => ({
+          count: m.count,
+          isPositive: m.count > 0,
+        }));
+
+        const buttonSlice = createSlice(model, (m) => ({
+          onClick: select(actions, (a) => a.increment),
+          disabled: false,
+          label: `Count: ${m.count}`,
+        }));
+
+        return {
+          model,
+          actions,
+          views: {
+            display: displaySlice,
+            button: buttonSlice,
+          },
+        };
+      });
+
+      const store = createZustandAdapter(counter) as ZustandAdapterResult<any, any, any>;
+
+      // Test useViews
+      const { result: viewsResult } = renderHook(() =>
+        useViews(store, (views) => ({
+          display: views.display(),
+          button: views.button(),
+        }))
+      );
+
+      expect(viewsResult.current.display.count).toBe(0);
+      expect(viewsResult.current.display.isPositive).toBe(false);
+      expect(viewsResult.current.button.label).toBe('Count: 0');
+
+      // Test useActions
+      const { result: actionsResult } = renderHook(() => useActions(store));
+
+      act(() => {
         actionsResult.current.increment();
       });
 
-      // Simulate state update
-      (mockStore.use as any).count = vi.fn(() => currentState.count);
-      rerender();
-
-      expect(countResult.current).toBe(1);
+      // Views should update
+      expect(viewsResult.current.display.count).toBe(1);
+      expect(viewsResult.current.display.isPositive).toBe(true);
+      expect(viewsResult.current.button.label).toBe('Count: 1');
     });
-  });
 
-  describe('type safety', () => {
-    it('should properly extract types from ZustandAdapterResult', () => {
-      type TestModel = {
-        count: number;
-        name: string;
-        items: string[];
-      };
+    it('should handle complex view selectors', async () => {
+      const { createComponent, createModel, createSlice } = await import(
+        '@lattice/core'
+      );
+      const { createZustandAdapter } = await import('./index.js');
 
-      type TestActions = {
-        increment: () => void;
-        decrement: () => void;
-        setName: (name: string) => void;
-        addItem: (item: string) => void;
-      };
+      const todoApp = createComponent(() => {
+        const model = createModel<{
+          todos: Array<{ id: number; text: string; completed: boolean }>;
+          filter: 'all' | 'active' | 'completed';
+          addTodo: (text: string) => void;
+          toggleTodo: (id: number) => void;
+          setFilter: (filter: 'all' | 'active' | 'completed') => void;
+        }>(({ set, get }) => ({
+          todos: [
+            { id: 1, text: 'Learn Lattice', completed: false },
+            { id: 2, text: 'Build app', completed: false },
+          ],
+          filter: 'all',
+          addTodo: (text: string) => {
+            const newTodo = { id: Date.now(), text, completed: false };
+            set({ todos: [...get().todos, newTodo] });
+          },
+          toggleTodo: (id: number) => {
+            set({
+              todos: get().todos.map((todo) =>
+                todo.id === id ? { ...todo, completed: !todo.completed } : todo
+              ),
+            });
+          },
+          setFilter: (filter) => set({ filter }),
+        }));
 
-      type TestViews = {
-        display: Store<{ text: string; className: string }>;
-        summary: () => Store<{ total: number; label: string }>;
-      };
+        const todoSlice = createSlice(model, (m) => ({
+          todos: m.todos,
+          filter: m.filter,
+        }));
 
-      // Type verification - these assignments verify type extraction works
-      const model: TestModel = {
-        count: 0,
-        name: 'test',
-        items: [],
-      };
+        const statsView = () =>
+          todoSlice((state) => {
+            const active = state.todos.filter((t) => !t.completed);
+            const completed = state.todos.filter((t) => t.completed);
+            return {
+              activeCount: active.length,
+              completedCount: completed.length,
+              totalCount: state.todos.length,
+            };
+          });
 
-      const actions: TestActions = {
-        increment: vi.fn(),
-        decrement: vi.fn(),
-        setName: vi.fn(),
-        addItem: vi.fn(),
-      };
+        const filteredTodosView = () =>
+          todoSlice((state) => {
+            switch (state.filter) {
+              case 'active':
+                return state.todos.filter((t) => !t.completed);
+              case 'completed':
+                return state.todos.filter((t) => t.completed);
+              default:
+                return state.todos;
+            }
+          });
 
-      const views: TestViews = {
-        display: createMockStore({ text: '', className: '' }),
-        summary: () => createMockStore({ total: 0, label: '' }),
-      };
+        return {
+          model,
+          actions: createSlice(model, (m) => ({
+            addTodo: m.addTodo,
+            toggleTodo: m.toggleTodo,
+            setFilter: m.setFilter,
+          })),
+          views: {
+            stats: statsView,
+            filteredTodos: filteredTodosView,
+          },
+        };
+      });
 
-      expect(model).toBeDefined();
-      expect(actions).toBeDefined();
-      expect(views).toBeDefined();
+      const store = createZustandAdapter(todoApp) as ZustandAdapterResult<any, any, any>;
+
+      const { result } = renderHook(() =>
+        useLattice(store, (views) => ({
+          stats: views.stats(),
+          todos: views.filteredTodos(),
+        }))
+      );
+
+      expect(result.current.views.stats.activeCount).toBe(2);
+      expect(result.current.views.stats.completedCount).toBe(0);
+      expect(result.current.views.todos).toHaveLength(2);
+
+      // Toggle first todo
+      act(() => {
+        result.current.actions.toggleTodo(1);
+      });
+
+      expect(result.current.views.stats.activeCount).toBe(1);
+      expect(result.current.views.stats.completedCount).toBe(1);
+
+      // Filter by active
+      act(() => {
+        result.current.actions.setFilter('active');
+      });
+
+      expect(result.current.views.todos).toHaveLength(1);
+      expect(result.current.views.todos[0].text).toBe('Build app');
+    });
+
+    it('should handle view functions returning stores', async () => {
+      const { createComponent, createModel, createSlice } = await import(
+        '@lattice/core'
+      );
+      const { createZustandAdapter } = await import('./index.js');
+
+      const component = createComponent(() => {
+        const model = createModel<{
+          user: { name: string; role: string };
+          theme: 'light' | 'dark';
+        }>(() => ({
+          user: { name: 'Alice', role: 'admin' },
+          theme: 'light',
+        }));
+
+        const userSlice = createSlice(model, (m) => m.user);
+        const themeSlice = createSlice(model, (m) => ({ theme: m.theme }));
+
+        return {
+          model,
+          actions: createSlice(model, () => ({})),
+          views: {
+            user: userSlice,
+            theme: themeSlice,
+          },
+        };
+      });
+
+      const store = createZustandAdapter(component) as ZustandAdapterResult<any, any, any>;
+
+      const { result } = renderHook(() =>
+        useViews(store, (views) => ({
+          user: views.user(),
+          theme: views.theme(),
+        }))
+      );
+
+      expect(result.current.user).toEqual({ name: 'Alice', role: 'admin' });
+      expect(result.current.theme).toEqual({ theme: 'light' });
+    });
+
+    it('should handle actions with select() markers', async () => {
+      const { createComponent, createModel, createSlice, select } = await import(
+        '@lattice/core'
+      );
+      const { createZustandAdapter } = await import('./index.js');
+
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+        }));
+
+        const buttonView = createSlice(model, () => ({
+          onClick: select(actions, (a) => a.increment),
+          label: 'Click me',
+        }));
+
+        return {
+          model,
+          actions,
+          views: { button: buttonView },
+        };
+      });
+
+      const store = createZustandAdapter(component) as ZustandAdapterResult<any, any, any>;
+
+      const { result } = renderHook(() => useView(store, 'button'));
+
+      expect(typeof result.current.onClick).toBe('function');
+      expect(result.current.label).toBe('Click me');
+
+      // The onClick should work
+      act(() => {
+        result.current.onClick();
+      });
+
+      // Verify the action was called (indirectly through view update)
+      const { result: viewResult } = renderHook(() =>
+        useViews(store, (views) => ({
+          button: views.button(),
+        }))
+      );
+
+      expect(viewResult.current.button.label).toBe('Click me');
     });
   });
 });
