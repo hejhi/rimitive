@@ -49,18 +49,25 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
 // ============================================================================
 // Client-side: Hydrate Zustand store with SSR data
 // ============================================================================
-let clientStore: ReturnType<typeof createZustandAdapter> | null = null;
+// Type the store properly
+type DashboardStore = ReturnType<typeof createZustandAdapter<
+  ReturnType<ReturnType<typeof dashboardComponent>['model']>,
+  any,
+  any
+>>;
 
-function getOrCreateStore(initialState?: any) {
+let clientStore: DashboardStore | null = null;
+
+function getOrCreateStore(initialState?: any): DashboardStore {
   // Create store only once
   if (!clientStore) {
-    clientStore = createZustandAdapter(dashboardComponent);
+    clientStore = createZustandAdapter(dashboardComponent) as DashboardStore;
 
     // Hydrate with server state if provided
     if (initialState && typeof window !== 'undefined') {
       // Hydrate the state using actions
-      if (initialState.activeTab) {
-        clientStore.actions.setActiveTab(initialState.activeTab);
+      if (initialState.activeTab && clientStore) {
+        (clientStore as any).actions.setActiveTab(initialState.activeTab);
       }
       
       // Note: For complex state like user/cart, you'd need custom
@@ -87,10 +94,10 @@ export default function DashboardPage({ initialState }: DashboardPageProps) {
 
   return (
     <div className="dashboard-page">
-      <header {...header} />
+      <header {...(header as any)()} />
 
       <nav>
-        {navigation.tabs.map((tab) => (
+        {(navigation as any)().tabs.map((tab: any) => (
           <button
             key={tab.name}
             onClick={tab.onClick}
@@ -138,10 +145,12 @@ export async function apiRouteExample(req: Request) {
   }
 
   // Return current state
+  // Note: dashboardComponent doesn't have cartSummary view
+  // We return the header view instead as an example
   return new Response(
     JSON.stringify({
       cart: cartStore.model.get(),
-      summary: cartStore.views.cartSummary.get(),
+      header: cartStore.views.header.get(),
     }),
     {
       headers: { 'Content-Type': 'application/json' },

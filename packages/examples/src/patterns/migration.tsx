@@ -40,7 +40,17 @@ export function LegacyApp() {
       <h2>Phase 1: All Redux</h2>
       <div {...userProfile} />
       <div {...cartSummary} />
-      <button {...themeToggle} onClick={() => themeToggle.onClick('system')}>
+      <button 
+        onClick={() => {
+          // Cycle through themes
+          const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
+          const currentIndex = themes.indexOf(themeToggle.currentTheme);
+          const nextTheme = themes[(currentIndex + 1) % themes.length];
+          themeToggle.onThemeChange(nextTheme);
+        }}
+        aria-pressed={themeToggle['aria-pressed']}
+        className={themeToggle.className}
+      >
         Theme
       </button>
     </div>
@@ -71,7 +81,19 @@ export function PhaseTwo() {
       <h2>Phase 2: Theme migrated to Zustand</h2>
       <div {...userProfile} />
       <div {...cartSummary} />
-      <button {...themeToggle}>Theme (now Zustand!)</button>
+      <button 
+        onClick={() => {
+          // Cycle through themes
+          const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
+          const currentIndex = themes.indexOf(themeToggle.currentTheme);
+          const nextTheme = themes[(currentIndex + 1) % themes.length];
+          themeToggle.onThemeChange(nextTheme);
+        }}
+        aria-pressed={themeToggle['aria-pressed']}
+        className={themeToggle.className}
+      >
+        Theme (now Zustand!)
+      </button>
       <p>✅ Theme updates are now faster</p>
       <p>✅ Less boilerplate for theme changes</p>
       <p>✅ All tests still pass</p>
@@ -82,13 +104,21 @@ export function PhaseTwo() {
 // ============================================================================
 // Phase 3: Feature flag controlled migration
 // ============================================================================
+// Create modern store outside component to avoid recreating it
+const modernUserStore = createZustandAdapter(userComponent);
+
 export function FeatureFlagMigration() {
   const [useNewUserStore, setUseNewUserStore] = useState(false);
 
-  // Conditionally use different adapters based on feature flag
-  const userProfile = useNewUserStore
-    ? useZustandView(createZustandAdapter(userComponent), 'userProfile')
-    : useReduxView(legacyUserStore, (views) => views.userProfile());
+  // Always call both hooks to respect React's rules
+  const reduxUserProfile = useReduxView(
+    legacyUserStore,
+    (views) => views.userProfile
+  );
+  const zustandUserProfile = useZustandView(modernUserStore, 'userProfile');
+
+  // Select which one to use based on feature flag
+  const userProfile = useNewUserStore ? zustandUserProfile : reduxUserProfile;
 
   return (
     <div className="app-phase-3">

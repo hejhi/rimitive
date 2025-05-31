@@ -197,7 +197,10 @@ export const themeComponent = createComponent(() => {
     actions,
     views: {
       themeToggle: createSlice(model, (m) => ({
-        onClick: select(actions, (a) => a.setTheme),
+        // Note: This returns the setTheme function, which expects a theme parameter
+        // The consuming component needs to wrap this properly
+        onThemeChange: select(actions, (a) => a.setTheme),
+        currentTheme: m.theme,
         'aria-pressed': m.theme === 'dark',
         className: `theme-${m.theme}`
       })),
