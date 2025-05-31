@@ -472,7 +472,7 @@ function processViews<Model, Views>(
  * - Subscriptions work at the view level, not model level
  */
 export function createZustandAdapter<
-  Model,
+  Model extends Record<string, any>,
   Actions,
   Views extends Record<
     string,
