@@ -23,7 +23,7 @@ import { userComponent, cartComponent, themeComponent } from '../slices';
 // ============================================================================
 const userStore = createZustandAdapter(userComponent);
 
-export function UserProfileWidget() {
+function UserProfileWidget() {
   const profile = useZustandView(userStore, 'userProfile');
   const actions = userStore.actions;
 
@@ -57,7 +57,7 @@ cartStore.subscribe(() => {
   reduxStore.dispatch({ type: 'SYNC' });
 });
 
-export function ShoppingCart() {
+function ShoppingCart() {
   const summary = useReduxView(cartStore, ({ cartSummary }) => cartSummary);
   const actions = cartStore.actions;
 
@@ -114,7 +114,7 @@ if (typeof window !== 'undefined') {
   );
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+function ThemeProvider({ children }: { children: React.ReactNode }) {
   const rootAttrs = useZustandView(themeStore, 'documentRoot');
 
   React.useEffect(() => {
@@ -133,7 +133,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 // ============================================================================
 // Hybrid component using multiple stores
 // ============================================================================
-export function HybridDashboard() {
+function HybridDashboard() {
   // Different stores for different concerns
   const userProfile = useZustandView(userStore, 'userProfile');
   const cartSummary = useReduxView(cartStore, ({ cartSummary }) => cartSummary);
@@ -144,10 +144,14 @@ export function HybridDashboard() {
       <header>
         <div {...userProfile} />
         <div {...cartSummary} />
-        <button 
+        <button
           onClick={() => {
             // Cycle through themes
-            const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
+            const themes: Array<'light' | 'dark' | 'system'> = [
+              'light',
+              'dark',
+              'system',
+            ];
             const currentTheme = themeToggle.currentTheme;
             const currentIndex = themes.indexOf(currentTheme);
             const nextTheme = themes[(currentIndex + 1) % themes.length];

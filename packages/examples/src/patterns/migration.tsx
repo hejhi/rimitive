@@ -151,42 +151,45 @@ export function FeatureFlagMigration() {
   );
 }
 
-// Store that's definitely Redux for the example
-const reduxUserStore = createReduxAdapter(userComponent);
-
 // ============================================================================
-// Shared component that works with any adapter
+// Phase 4: Complete migration
 // ============================================================================
+const modernCartStore = createZustandAdapter(cartComponent);
 
-// Create adapter-specific wrapper components
-function ZustandProfile({
-  store,
-}: {
-  store: ReturnType<typeof createZustandAdapter<any, any, any>>;
-}) {
-  const profile = useZustandView(store, 'userProfile');
-  // userProfile is a computed view, so we need to call it
-  const profileAttrs = typeof profile === 'function' ? profile() : profile;
-  return (
-    <div className="universal-profile">
-      <div {...profileAttrs} />
-      <small>Powered by zustand</small>
-    </div>
-  );
-}
+export function CompleteMigration() {
+  // All stores are now Zustand
+  const userProfile = useZustandView(modernUserStore, 'userProfile');
+  const cartSummary = useZustandView(modernCartStore, 'cartSummary');
+  const themeToggle = useZustandView(modernThemeStore, 'themeToggle');
 
-function ReduxProfile({
-  store,
-}: {
-  store: ReturnType<typeof createReduxAdapter<any, any, any>>;
-}) {
-  const profile = useReduxView(store, (views) => views.userProfile);
-  // userProfile is a computed view, so we need to call it
-  const profileAttrs = typeof profile === 'function' ? profile() : profile;
   return (
-    <div className="universal-profile">
-      <div {...profileAttrs} />
-      <small>Powered by redux</small>
+    <div className="app-phase-4">
+      <h2>Phase 4: Migration Complete</h2>
+      <div {...userProfile} />
+      <div {...cartSummary} />
+      <button
+        onClick={() => {
+          // Cycle through themes
+          const themes: Array<'light' | 'dark' | 'system'> = [
+            'light',
+            'dark',
+            'system',
+          ];
+          const currentTheme = themeToggle.currentTheme;
+          const currentIndex = themes.indexOf(currentTheme);
+          const nextTheme = themes[(currentIndex + 1) % themes.length];
+          themeToggle.onThemeChange(nextTheme!);
+        }}
+        aria-pressed={themeToggle['aria-pressed']}
+        className={themeToggle.className}
+      >
+        Theme
+      </button>
+      <p>✅ All stores migrated to Zustand</p>
+      <p>✅ Reduced bundle size</p>
+      <p>✅ Better performance</p>
+      <p>✅ Less boilerplate</p>
+      <p>✅ All tests still pass!</p>
     </div>
   );
 }
@@ -220,13 +223,7 @@ export function MigrationDashboard() {
         {phase === 1 && <LegacyApp />}
         {phase === 2 && <PhaseTwo />}
         {phase === 3 && <FeatureFlagMigration />}
-        {phase === 4 && (
-          <div>
-            <h2>Phase 4: Flexible Architecture</h2>
-            <ReduxProfile store={reduxUserStore} />
-            <p>Components work with any adapter!</p>
-          </div>
-        )}
+        {phase === 4 && <CompleteMigration />}
       </div>
 
       <div className="migration-benefits">
