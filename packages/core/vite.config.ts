@@ -14,21 +14,17 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'LatticeTestUtils',
-      formats: ['es'],
+      name: 'LatticeCore',
+      fileName: 'index',
+      formats: ['es']
     },
     rollupOptions: {
-      external: ['@lattice/core'],
+      external: [],
       output: {
-        globals: {
-          '@lattice/core': 'LatticeCore',
-        },
-      },
+        preserveModules: false
+      }
     },
     sourcemap: true,
-    minify: false,
-  },
-  define: {
-    'import.meta.vitest': 'undefined',
-  },
+    target: 'es2022' // Support for top-level await
+  }
 });

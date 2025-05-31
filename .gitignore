@@ -42,4 +42,7 @@ pnpm-debug.log*
 *storybook.log
 public/
 
+*.d.ts
+*.ts.map
+
 **/.claude/settings.local.json
