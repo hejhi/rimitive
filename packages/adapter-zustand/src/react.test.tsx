@@ -8,12 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { ZustandAdapterResult } from './index.js';
-import {
-  useViews,
-  useView,
-  useActions,
-  useLattice,
-} from './react.js';
+import { useViews, useView, useActions, useLattice } from './react.js';
 
 describe('React hooks for Zustand adapter', () => {
   beforeEach(() => {
@@ -54,7 +49,10 @@ describe('React hooks for Zustand adapter', () => {
         }))
       );
 
-      expect(result.current.display).toEqual({ text: 'Hello', className: 'display' });
+      expect(result.current.display).toEqual({
+        text: 'Hello',
+        className: 'display',
+      });
       expect(result.current.button.disabled).toBe(false);
       expect(typeof result.current.button.onClick).toBe('function');
     });
@@ -285,9 +283,8 @@ describe('React hooks for Zustand adapter', () => {
 
   describe('Integration with real Zustand adapter', () => {
     it('should work with actual adapter result structure', async () => {
-      const { createComponent, createModel, createSlice, select } = await import(
-        '@lattice/core'
-      );
+      const { createComponent, createModel, createSlice, select } =
+        await import('@lattice/core');
       const { createZustandAdapter } = await import('./index.js');
 
       const counter = createComponent(() => {
@@ -327,7 +324,7 @@ describe('React hooks for Zustand adapter', () => {
         };
       });
 
-      const store = createZustandAdapter(counter) as ZustandAdapterResult<any, any, any>;
+      const store = createZustandAdapter(counter);
 
       // Test useViews
       const { result: viewsResult } = renderHook(() =>
@@ -429,7 +426,11 @@ describe('React hooks for Zustand adapter', () => {
         };
       });
 
-      const store = createZustandAdapter(todoApp) as ZustandAdapterResult<any, any, any>;
+      const store = createZustandAdapter(todoApp) as ZustandAdapterResult<
+        any,
+        any,
+        any
+      >;
 
       const { result } = renderHook(() =>
         useLattice(store, (views) => ({
@@ -487,7 +488,11 @@ describe('React hooks for Zustand adapter', () => {
         };
       });
 
-      const store = createZustandAdapter(component) as ZustandAdapterResult<any, any, any>;
+      const store = createZustandAdapter(component) as ZustandAdapterResult<
+        any,
+        any,
+        any
+      >;
 
       const { result } = renderHook(() =>
         useViews(store, (views) => ({
@@ -501,9 +506,8 @@ describe('React hooks for Zustand adapter', () => {
     });
 
     it('should handle actions with select() markers', async () => {
-      const { createComponent, createModel, createSlice, select } = await import(
-        '@lattice/core'
-      );
+      const { createComponent, createModel, createSlice, select } =
+        await import('@lattice/core');
       const { createZustandAdapter } = await import('./index.js');
 
       const component = createComponent(() => {
@@ -531,7 +535,11 @@ describe('React hooks for Zustand adapter', () => {
         };
       });
 
-      const store = createZustandAdapter(component) as ZustandAdapterResult<any, any, any>;
+      const store = createZustandAdapter(component) as ZustandAdapterResult<
+        any,
+        any,
+        any
+      >;
 
       const { result } = renderHook(() => useView(store, 'button'));
 
@@ -584,7 +592,7 @@ describe('React hooks for Zustand adapter', () => {
         const filteredTodosView = () =>
           createSlice(model, (m) => {
             if (m.filter === 'all') return m.todos;
-            return m.todos.filter(t => 
+            return m.todos.filter((t) =>
               m.filter === 'active' ? !t.completed : t.completed
             );
           });
@@ -593,8 +601,8 @@ describe('React hooks for Zustand adapter', () => {
         const statsView = () =>
           createSlice(model, (m) => ({
             total: m.todos.length,
-            active: m.todos.filter(t => !t.completed).length,
-            completed: m.todos.filter(t => t.completed).length,
+            active: m.todos.filter((t) => !t.completed).length,
+            completed: m.todos.filter((t) => t.completed).length,
           }));
 
         // Static button slice
@@ -618,10 +626,10 @@ describe('React hooks for Zustand adapter', () => {
       const store = createZustandAdapter(todoComponent);
 
       // Test filteredTodos view
-      const { result: todosResult } = renderHook(() => 
+      const { result: todosResult } = renderHook(() =>
         useView(store, 'filteredTodos')
       );
-      
+
       expect(Array.isArray(todosResult.current)).toBe(true);
       expect(todosResult.current).toHaveLength(2);
       expect((todosResult.current as any)[0]).toEqual({
@@ -631,10 +639,8 @@ describe('React hooks for Zustand adapter', () => {
       });
 
       // Test stats view
-      const { result: statsResult } = renderHook(() => 
-        useView(store, 'stats')
-      );
-      
+      const { result: statsResult } = renderHook(() => useView(store, 'stats'));
+
       expect(statsResult.current).toEqual({
         total: 2,
         active: 1,
@@ -642,10 +648,10 @@ describe('React hooks for Zustand adapter', () => {
       });
 
       // Test static slice view
-      const { result: buttonResult } = renderHook(() => 
+      const { result: buttonResult } = renderHook(() =>
         useView(store, 'filterButton')
       );
-      
+
       expect(buttonResult.current).toEqual({
         filter: 'all',
         className: 'filter-button',

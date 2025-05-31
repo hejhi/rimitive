@@ -15,7 +15,7 @@ import {
   compose,
 } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { useView, useActions } from '@lattice/adapter-zustand/react';
+import { useViews, useActions } from '@lattice/adapter-zustand/react';
 import './todo-app.css';
 
 // ============================================================================
@@ -242,6 +242,9 @@ const todoAppComponent = createComponent(() => {
 // ============================================================================
 const todoStore = createZustandAdapter(todoAppComponent);
 
+// Type helper for better inference
+type TodoStore = typeof todoStore;
+
 // ============================================================================
 // React Components
 // ============================================================================
@@ -295,7 +298,7 @@ function TodoItem({ todo }: { todo: TodoItemType }) {
 }
 
 function TodoList() {
-  const todos = useView(todoStore, 'filteredTodos');
+  const todos = useViews(todoStore, (views) => views.filteredTodos());
 
   if (!todos || todos.length === 0) {
     return <p className="empty">No todos found</p>;
@@ -334,9 +337,11 @@ function TodoInput() {
 }
 
 function TodoFilters() {
-  const allButton = useView(todoStore, 'filterButtonAll');
-  const activeButton = useView(todoStore, 'filterButtonActive');
-  const completedButton = useView(todoStore, 'filterButtonCompleted');
+  const { allButton, activeButton, completedButton } = useViews(todoStore, (views) => ({
+    allButton: views.filterButtonAll(),
+    activeButton: views.filterButtonActive(),
+    completedButton: views.filterButtonCompleted()
+  }));
 
   return (
     <div className="filters">
@@ -348,9 +353,11 @@ function TodoFilters() {
 }
 
 function TodoStats() {
-  const stats = useView(todoStore, 'stats');
-  const clearButton = useView(todoStore, 'clearButton');
-  const toggleAll = useView(todoStore, 'toggleAllCheckbox');
+  const { stats, clearButton, toggleAll } = useViews(todoStore, (views) => ({
+    stats: views.stats(),
+    clearButton: views.clearButton(),
+    toggleAll: views.toggleAllCheckbox()
+  }));
 
   return (
     <div className="stats">

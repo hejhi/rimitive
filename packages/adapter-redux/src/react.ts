@@ -1,6 +1,6 @@
 /**
  * @fileoverview React bindings for the Redux adapter
- * 
+ *
  * Provides React hooks that integrate Lattice components with React Redux.
  */
 
@@ -15,45 +15,53 @@ export function useView<
   Actions,
   Views,
   K extends keyof Views,
-  ViewGetter = LatticeReduxStore<Model, Actions, Views>['views'][K]
+  ViewGetter = LatticeReduxStore<Model, Actions, Views>['views'][K],
 >(
   store: LatticeReduxStore<Model, Actions, Views>,
-  selector: (views: LatticeReduxStore<Model, Actions, Views>['views']) => ViewGetter
+  selector: (
+    views: LatticeReduxStore<Model, Actions, Views>['views']
+  ) => ViewGetter
 ): ViewGetter extends () => infer R ? R : never {
   // Get the view getter
   const viewGetter = selector(store.views);
-  
+
   // Create stable subscribe function
-  const subscribe = useCallback((callback: () => void) => {
-    return store.subscribe(callback);
-  }, [store]);
-  
+  const subscribe = useCallback(
+    (callback: () => void) => {
+      return store.subscribe(callback);
+    },
+    [store]
+  );
+
   // Use a ref to track the current view getter to detect changes
   const viewGetterRef = useRef(viewGetter);
   const resultCacheRef = useRef<any>();
   const lastStateRef = useRef<string>();
-  
+
   // Update ref when viewGetter changes
   if (viewGetterRef.current !== viewGetter) {
     viewGetterRef.current = viewGetter;
     // Clear cache to force recomputation
     resultCacheRef.current = undefined;
   }
-  
+
   // Create stable getSnapshot function
   const getSnapshot = useCallback(() => {
     const currentState = store.getState();
     const stateString = JSON.stringify(currentState);
-    
+
     // Recompute if state changed or cache is empty
-    if (resultCacheRef.current === undefined || lastStateRef.current !== stateString) {
+    if (
+      resultCacheRef.current === undefined ||
+      lastStateRef.current !== stateString
+    ) {
       resultCacheRef.current = (viewGetterRef.current as any)();
       lastStateRef.current = stateString;
     }
-    
+
     return resultCacheRef.current;
   }, [store]);
-  
+
   // Subscribe to store changes
   const snapshot = useSyncExternalStore(
     subscribe,
@@ -142,11 +150,11 @@ if (import.meta.vitest) {
       const store = createReduxAdapter(component);
 
       // We don't need a Redux Provider for our custom hooks
-      const { result } = renderHook(
-        () => useView(store, (views) => views.display)
+      const { result } = renderHook(() =>
+        useView(store, (views) => views.display)
       );
 
-      const displayData = result.current as { value: number; label: string };
+      const displayData = result.current;
       expect(displayData.value).toBe(0);
       expect(displayData.label).toBe('Count: 0');
 
@@ -156,10 +164,10 @@ if (import.meta.vitest) {
       });
 
       // Wait for next tick
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Hook should update
-      const updatedDisplayData = result.current as { value: number; label: string };
+      const updatedDisplayData = result.current;
       expect(updatedDisplayData.value).toBe(1);
       expect(updatedDisplayData.label).toBe('Count: 1');
     });
@@ -186,11 +194,11 @@ if (import.meta.vitest) {
       const component = createTestComponent();
       const store = createReduxAdapter(component);
 
-      const { result } = renderHook(
-        () => useView(store, (views) => views.button)
+      const { result } = renderHook(() =>
+        useView(store, (views) => views.button)
       );
 
-      const buttonData = result.current as { disabled: boolean; 'aria-label': string; onClick: () => void };
+      const buttonData = result.current;
       expect(buttonData.disabled).toBe(false);
       expect(buttonData['aria-label']).toBe('Increment counter');
       expect(typeof buttonData.onClick).toBe('function');
@@ -201,7 +209,7 @@ if (import.meta.vitest) {
       });
 
       // Wait for next tick
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // Verify state was updated
       expect(store.getState().count).toBe(1);
@@ -247,11 +255,11 @@ if (import.meta.vitest) {
 
       let currentTab: 'tab1' | 'tab2' = 'tab1';
 
-      const { result, rerender } = renderHook(
-        () => useView(store, (views) => views[currentTab])
+      const { result, rerender } = renderHook(() =>
+        useView(store, (views) => views[currentTab])
       );
 
-      const tabData = result.current as { content: string; isActive: boolean };
+      const tabData = result.current;
       expect(tabData.content).toBe('Content 1');
       expect(tabData.isActive).toBe(true);
 
@@ -259,7 +267,7 @@ if (import.meta.vitest) {
       currentTab = 'tab2';
       rerender();
 
-      const tab2Data = result.current as { content: string; isActive: boolean };
+      const tab2Data = result.current;
       expect(tab2Data.content).toBe('Content 2');
       expect(tab2Data.isActive).toBe(false);
 
@@ -269,9 +277,9 @@ if (import.meta.vitest) {
       });
 
       // Wait for next tick
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      const activeTabData = result.current as { content: string; isActive: boolean };
+      const activeTabData = result.current;
       expect(activeTabData.isActive).toBe(true);
     });
 
@@ -293,7 +301,8 @@ if (import.meta.vitest) {
           itemsSlice((state) => ({
             count: state.items.length,
             sum: state.items.reduce((a, b) => a + b, 0),
-            average: state.items.reduce((a, b) => a + b, 0) / state.items.length,
+            average:
+              state.items.reduce((a, b) => a + b, 0) / state.items.length,
           }));
 
         return {
@@ -309,11 +318,11 @@ if (import.meta.vitest) {
 
       const store = createReduxAdapter(component);
 
-      const { result } = renderHook(
-        () => useView(store, (views) => views.stats)
+      const { result } = renderHook(() =>
+        useView(store, (views) => views.stats)
       );
 
-      const statsData = result.current as { count: number; sum: number; average: number };
+      const statsData = result.current;
       expect(statsData.count).toBe(3);
       expect(statsData.sum).toBe(6);
       expect(statsData.average).toBe(2);
@@ -324,9 +333,9 @@ if (import.meta.vitest) {
       });
 
       // Wait for next tick
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
-      const updatedStatsData = result.current as { count: number; sum: number; average: number };
+      const updatedStatsData = result.current;
       expect(updatedStatsData.count).toBe(4);
       expect(updatedStatsData.sum).toBe(10);
       expect(updatedStatsData.average).toBe(2.5);

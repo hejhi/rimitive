@@ -103,12 +103,11 @@ export function useViews<
  */
 export function useView<
   S extends ZustandAdapterResult<unknown, unknown, unknown>,
-  K extends keyof ExtractViews<S>,
-  V extends ExtractViews<S>
+  K extends keyof ExtractViews<S>
 >(
   store: S,
   viewName: K
-): V[K] extends (...args: any[]) => infer R ? R : never {
+): ExtractViews<S>[K] extends () => infer R ? R : never {
   return useViews(store, views => {
     const viewFn = views[viewName];
     return typeof viewFn === 'function' ? viewFn() : viewFn;
