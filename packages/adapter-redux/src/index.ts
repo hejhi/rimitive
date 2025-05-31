@@ -57,7 +57,7 @@ export interface LatticeReduxStore<Model, Actions, Views> {
  */
 function isSelectMarker<Model>(
   obj: unknown
-): obj is Record<symbol, SelectMarkerValue<Model, unknown>> {
+): obj is { [SELECT_MARKER]: SelectMarkerValue<Model, unknown> } {
   return (
     typeof obj === 'object' &&
     obj !== null &&
@@ -95,17 +95,17 @@ class SliceCache<Model> {
 /**
  * Separates state data from functions in the model
  */
-function separateStateAndActions<T extends Record<string, any>>(
+function separateStateAndActions<T>(
   obj: T
 ): { state: any; actions: Record<string, Function> } {
   const state: any = {};
   const actions: Record<string, Function> = {};
 
-  for (const key in obj) {
-    if (typeof obj[key] === 'function') {
-      actions[key] = obj[key];
+  for (const key in obj as any) {
+    if (typeof (obj as any)[key] === 'function') {
+      actions[key] = (obj as any)[key];
     } else {
-      state[key] = obj[key];
+      state[key] = (obj as any)[key];
     }
   }
 
@@ -187,7 +187,7 @@ function resolveSelectMarkers<T, Model>(
  * Creates a Redux store from a Lattice component
  */
 export function createReduxAdapter<
-  Model,
+  Model extends Record<string, any>,
   Actions,
   Views extends Record<
     string,
@@ -316,7 +316,7 @@ export function createReduxAdapter<
       // Computed view - returns a slice factory
       Object.defineProperty(views, key, {
         value: () => {
-          const sliceFactory = view();
+          const sliceFactory = (view as () => SliceFactory<Model, unknown>)();
           return executeSliceFactory(sliceFactory);
         },
         enumerable: true,

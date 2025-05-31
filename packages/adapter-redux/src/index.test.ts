@@ -107,14 +107,16 @@ describe('Redux Adapter', () => {
     store.actions.addTodo('Second todo');
 
     expect(store.getState().todos.length).toBe(2);
-    expect(store.getState().todos[0].text).toBe('First todo');
-    expect(store.getState().todos[0].completed).toBe(false);
+    expect(store.getState().todos[0]?.text).toBe('First todo');
+    expect(store.getState().todos[0]?.completed).toBe(false);
 
     // Toggle todo
-    const firstTodoId = store.getState().todos[0].id;
-    store.actions.toggleTodo(firstTodoId);
+    const firstTodoId = store.getState().todos[0]?.id;
+    if (firstTodoId !== undefined) {
+      store.actions.toggleTodo(firstTodoId);
+    }
 
-    expect(store.getState().todos[0].completed).toBe(true);
+    expect(store.getState().todos[0]?.completed).toBe(true);
 
     // Set filter
     store.actions.setFilter('completed');

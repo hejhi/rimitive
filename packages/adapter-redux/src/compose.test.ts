@@ -282,7 +282,7 @@ describe('compose with redux adapter', () => {
         model,
         compose(
           { stats: statsSlice, actions: actionsSlice },
-          (_, { stats, actions }) => ({
+          (_, { stats }) => ({
             text: `${stats.activeCount} of ${stats.total} remaining`,
             className: stats.allCompleted ? 'all-done' : 'in-progress',
             onCompleteAll: () => {

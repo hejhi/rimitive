@@ -4,17 +4,23 @@
  * Provides React hooks that integrate Lattice components with React Redux.
  */
 
-import { useSelector as useReduxSelector } from 'react-redux';
-import { useRef, useMemo, useSyncExternalStore, useCallback } from 'react';
+import { useRef, useSyncExternalStore, useCallback } from 'react';
 import type { LatticeReduxStore } from './index';
+import type { SliceFactory } from '@lattice/core';
 
 /**
  * Custom hook for accessing views with proper subscriptions
  */
-export function useView<Model, Actions, Views, K extends keyof Views>(
+export function useView<
+  Model extends Record<string, any>,
+  Actions,
+  Views,
+  K extends keyof Views,
+  ViewGetter = LatticeReduxStore<Model, Actions, Views>['views'][K]
+>(
   store: LatticeReduxStore<Model, Actions, Views>,
-  selector: (views: Views) => Views[K]
-): Views[K] extends () => infer R ? R : never {
+  selector: (views: LatticeReduxStore<Model, Actions, Views>['views']) => ViewGetter
+): ViewGetter extends () => infer R ? R : never {
   // Get the view getter
   const viewGetter = selector(store.views);
   
@@ -62,7 +68,7 @@ export function useView<Model, Actions, Views, K extends keyof Views>(
 /**
  * Get all actions as a stable reference object
  */
-export function useActions<Model, Actions, Views>(
+export function useActions<Model extends Record<string, any>, Actions, Views>(
   store: LatticeReduxStore<Model, Actions, Views>
 ): Actions {
   // Actions are stable, so we can just return them
@@ -79,11 +85,8 @@ export { useSelector } from 'react-redux';
 // ============================================================================
 
 if (import.meta.vitest) {
-  const { describe, it, expect, vi, afterEach } = import.meta.vitest;
+  const { describe, it, expect, afterEach } = import.meta.vitest;
   const { renderHook, act, cleanup } = await import('@testing-library/react');
-  const { createElement } = await import('react');
-  const { Provider } = await import('react-redux');
-  const { configureStore } = await import('@reduxjs/toolkit');
   const { createComponent, createModel, createSlice, select } = await import(
     '@lattice/core'
   );

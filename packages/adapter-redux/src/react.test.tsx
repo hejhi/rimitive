@@ -65,8 +65,8 @@ describe('Redux React Integration', () => {
     const component = createTestComponent();
     const store = createReduxAdapter(component);
 
-    const { result } = renderHook(
-      () => useView(store, (views) => views.display)
+    const { result } = renderHook(() =>
+      useView(store, (views) => views.display)
     );
 
     expect(result.current.value).toBe(0);
@@ -79,7 +79,7 @@ describe('Redux React Integration', () => {
     });
 
     // Wait for next tick
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Hook should update
     expect(result.current.value).toBe(1);
@@ -112,8 +112,8 @@ describe('Redux React Integration', () => {
     const component = createTestComponent();
     const store = createReduxAdapter(component);
 
-    const { result } = renderHook(
-      () => useView(store, (views) => views.button)
+    const { result } = renderHook(() =>
+      useView(store, (views) => views.button)
     );
 
     expect(result.current.disabled).toBe(false);
@@ -126,7 +126,7 @@ describe('Redux React Integration', () => {
     });
 
     // Wait for next tick
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Verify state was updated
     expect(store.getState().count).toBe(1);
@@ -136,7 +136,7 @@ describe('Redux React Integration', () => {
       store.actions.setDisabled(true);
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(result.current.disabled).toBe(true);
   });
@@ -189,8 +189,8 @@ describe('Redux React Integration', () => {
 
     let currentTab: 'overview' | 'details' | 'settings' = 'overview';
 
-    const { result, rerender } = renderHook(
-      () => useView(store, (views) => views[currentTab])
+    const { result, rerender } = renderHook(() =>
+      useView(store, (views) => views[currentTab])
     );
 
     expect(result.current.content).toBe('Overview content');
@@ -208,7 +208,7 @@ describe('Redux React Integration', () => {
       store.actions.setActiveTab('details');
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(result.current.isActive).toBe(true);
   });
@@ -262,32 +262,50 @@ describe('Redux React Integration', () => {
 
     const store = createReduxAdapter(component);
 
-    const { result } = renderHook(
-      () => useView(store, (views) => views.filteredItems)
+    const { result } = renderHook(() =>
+      useView(store, (views) => views.filteredItems)
     );
 
-    expect(result.current.count).toBe(3);
-    expect(result.current.hasResults).toBe(true);
-    expect(result.current.items).toEqual(['apple', 'banana', 'cherry']);
+    const data = result.current as {
+      items: string[];
+      count: number;
+      hasResults: boolean;
+      searchTerm: string;
+    };
+    expect(data.count).toBe(3);
+    expect(data.hasResults).toBe(true);
+    expect(data.items).toEqual(['apple', 'banana', 'cherry']);
 
     // Apply filter
     act(() => {
       store.actions.setFilter('a');
     });
 
-    expect(result.current.count).toBe(2);
-    expect(result.current.items).toEqual(['apple', 'banana']);
-    expect(result.current.searchTerm).toBe('a');
+    const filteredData = result.current as {
+      items: string[];
+      count: number;
+      hasResults: boolean;
+      searchTerm: string;
+    };
+    expect(filteredData.count).toBe(2);
+    expect(filteredData.items).toEqual(['apple', 'banana']);
+    expect(filteredData.searchTerm).toBe('a');
 
     // Add new item
     act(() => {
       store.actions.addItem('apricot');
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(result.current.count).toBe(3);
-    expect(result.current.items).toEqual(['apple', 'banana', 'apricot']);
+    const finalData = result.current as {
+      items: string[];
+      count: number;
+      hasResults: boolean;
+      searchTerm: string;
+    };
+    expect(finalData.count).toBe(3);
+    expect(finalData.items).toEqual(['apple', 'banana', 'apricot']);
   });
 
   it('should work with useSelector for direct state access', async () => {
@@ -310,7 +328,7 @@ describe('Redux React Integration', () => {
     });
 
     const wrapper = ({ children }: { children: React.ReactNode }) =>
-      React.createElement(Provider, { store: reduxStore }, children);
+      React.createElement(Provider, { store: reduxStore as any }, children);
 
     const { result } = renderHook(
       () => ({
@@ -335,7 +353,7 @@ describe('Redux React Integration', () => {
       store.actions.increment();
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(result.current.count).toBe(2);
     expect(result.current.computed.doubled).toBe(4);
@@ -427,7 +445,8 @@ describe('Redux React Integration', () => {
               total,
               active,
               completed,
-              percentComplete: total > 0 ? Math.round((completed / total) * 100) : 0,
+              percentComplete:
+                total > 0 ? Math.round((completed / total) * 100) : 0,
             },
           };
         });
@@ -448,46 +467,59 @@ describe('Redux React Integration', () => {
 
     const store = createReduxAdapter(component);
 
-    const { result } = renderHook(
-      () => useView(store, (views) => views.filteredTodos)
+    const { result } = renderHook(() =>
+      useView(store, (views) => views.filteredTodos)
     );
 
     // Initial state
-    expect(result.current.items.length).toBe(3);
-    expect(result.current.stats.total).toBe(3);
-    expect(result.current.stats.active).toBe(2);
-    expect(result.current.stats.completed).toBe(1);
-    expect(result.current.stats.percentComplete).toBe(33);
+    type TodoView = {
+      items: Todo[];
+      stats: {
+        total: number;
+        active: number;
+        completed: number;
+        percentComplete: number;
+      };
+    };
+    const initialData = result.current as TodoView;
+    expect(initialData.items.length).toBe(3);
+    expect(initialData.stats.total).toBe(3);
+    expect(initialData.stats.active).toBe(2);
+    expect(initialData.stats.completed).toBe(1);
+    expect(initialData.stats.percentComplete).toBe(33);
 
     // Filter active
     act(() => {
       store.actions.setFilter('active');
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(result.current.items.length).toBe(2);
-    expect(result.current.items.every((t) => !t.completed)).toBe(true);
+    const activeData = result.current as TodoView;
+    expect(activeData.items.length).toBe(2);
+    expect(activeData.items.every((t) => !t.completed)).toBe(true);
 
     // Sort by priority
     act(() => {
       store.actions.setSortBy('priority');
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(result.current.items[0].priority).toBe('high');
-    expect(result.current.items[1].priority).toBe('medium');
+    const sortedData = result.current as TodoView;
+    expect(sortedData.items[0]?.priority).toBe('high');
+    expect(sortedData.items[1]?.priority).toBe('medium');
 
     // Add new high priority todo
     act(() => {
       store.actions.addTodo('Urgent task', 'high');
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(result.current.items.length).toBe(3); // Still filtered to active
-    expect(result.current.stats.total).toBe(4);
-    expect(result.current.stats.active).toBe(3);
+    const updatedData = result.current as TodoView;
+    expect(updatedData.items.length).toBe(3); // Still filtered to active
+    expect(updatedData.stats.total).toBe(4);
+    expect(updatedData.stats.active).toBe(3);
   });
 });

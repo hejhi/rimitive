@@ -40,6 +40,7 @@ followed without exception when working with this codebase.
 - Semantic: Naming is crucial, be precise and accurate
 - Simplicity: Complexity is the enemy, prioritize readability
 - ES IMPORTS ONLY. NO COMMONJS.
+- NEVER use `any` types, and don't use typecasting unless absolutely necessary.
 
 ## Commands
 
