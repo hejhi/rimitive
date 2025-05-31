@@ -1,6 +1,6 @@
 /**
  * @fileoverview Migration Pattern
- * 
+ *
  * This example shows how to gradually migrate from one state management
  * solution to another without rewriting your components or losing tests.
  * The key is that your behavior specifications (slices) remain unchanged.
@@ -12,11 +12,7 @@ import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useView as useReduxView } from '@lattice/adapter-redux/react';
 import { useView as useZustandView } from '@lattice/adapter-zustand/react';
 
-import { 
-  userComponent, 
-  cartComponent, 
-  themeComponent 
-} from '../slices';
+import { userComponent, cartComponent, themeComponent } from '../slices';
 
 // ============================================================================
 // Phase 1: Everything in Redux (legacy app)
@@ -26,10 +22,19 @@ const legacyCartStore = createReduxAdapter(cartComponent);
 const legacyThemeStore = createReduxAdapter(themeComponent);
 
 export function LegacyApp() {
-  const userProfile = useReduxView(legacyUserStore, (views: any) => views.userProfile);
-  const cartSummary = useReduxView(legacyCartStore, (views: any) => views.cartSummary);
-  const themeToggle = useReduxView(legacyThemeStore, (views: any) => views.themeToggle);
-  
+  const userProfile = useReduxView(
+    legacyUserStore,
+    (views) => views.userProfile
+  );
+  const cartSummary = useReduxView(
+    legacyCartStore,
+    (views) => views.cartSummary
+  );
+  const themeToggle = useReduxView(
+    legacyThemeStore,
+    (views) => views.themeToggle
+  );
+
   return (
     <div className="app-phase-1">
       <h2>Phase 1: All Redux</h2>
@@ -47,12 +52,21 @@ const modernThemeStore = createZustandAdapter(themeComponent);
 
 export function PhaseTwo() {
   // Still using Redux for user and cart
-  const userProfile = useReduxView(legacyUserStore, (views: any) => views.userProfile);
-  const cartSummary = useReduxView(legacyCartStore, (views: any) => views.cartSummary);
-  
+  const userProfile = useReduxView(
+    legacyUserStore,
+    (views) => views.userProfile
+  );
+  const cartSummary = useReduxView(
+    legacyCartStore,
+    (views) => views.cartSummary
+  );
+
   // But theme is now in Zustand!
-  const themeToggle = useZustandView(modernThemeStore, (views: any) => views.themeToggle);
-  
+  const themeToggle = useZustandView(
+    modernThemeStore,
+    (views) => views.themeToggle
+  );
+
   return (
     <div className="app-phase-2">
       <h2>Phase 2: Theme migrated to Zustand</h2>
@@ -71,16 +85,19 @@ export function PhaseTwo() {
 // ============================================================================
 export function FeatureFlagMigration() {
   const [useNewUserStore, setUseNewUserStore] = useState(false);
-  
+
   // Conditionally use different adapters based on feature flag
   const userProfile = useNewUserStore
-    ? useZustandView(createZustandAdapter(userComponent), (views: any) => views.userProfile)
-    : useReduxView(legacyUserStore, (views: any) => views.userProfile);
-  
+    ? useZustandView(
+        createZustandAdapter(userComponent),
+        (views) => views.userProfile
+      )
+    : useReduxView(legacyUserStore, (views) => views.userProfile);
+
   return (
     <div className="app-phase-3">
       <h2>Phase 3: Feature Flag Migration</h2>
-      
+
       <label>
         <input
           type="checkbox"
@@ -89,9 +106,9 @@ export function FeatureFlagMigration() {
         />
         Use new Zustand user store
       </label>
-      
+
       <div {...userProfile} />
-      
+
       <p>Current store: {useNewUserStore ? 'Zustand' : 'Redux'}</p>
       <p>This allows A/B testing the migration!</p>
     </div>
@@ -109,7 +126,7 @@ interface StoreConfig {
 
 function createStores(config: StoreConfig = {}) {
   return {
-    user: config.useZustandForUser 
+    user: config.useZustandForUser
       ? createZustandAdapter(userComponent)
       : createReduxAdapter(userComponent),
     cart: config.useZustandForCart
@@ -123,25 +140,28 @@ function createStores(config: StoreConfig = {}) {
 
 // Could be controlled by environment variables, user preferences, etc.
 const stores = createStores({
-  useZustandForUser: false,  // Still testing
-  useZustandForCart: false,  // Not ready yet
-  useZustandForTheme: true,  // Fully migrated!
+  useZustandForUser: false, // Still testing
+  useZustandForCart: false, // Not ready yet
+  useZustandForTheme: true, // Fully migrated!
 });
 
 // ============================================================================
 // Shared component that works with any adapter
 // ============================================================================
 interface ProfileProps {
-  store: ReturnType<typeof createReduxAdapter> | ReturnType<typeof createZustandAdapter>;
+  store:
+    | ReturnType<typeof createReduxAdapter>
+    | ReturnType<typeof createZustandAdapter>;
   adapterType: 'redux' | 'zustand';
 }
 
 export function UniversalProfile({ store, adapterType }: ProfileProps) {
   // The component doesn't care which adapter is used!
-  const profile = adapterType === 'redux'
-    ? useReduxView(store as any, (views: any) => views.userProfile)
-    : useZustandView(store as any, (views: any) => views.userProfile);
-  
+  const profile =
+    adapterType === 'redux'
+      ? useReduxView(store as any, (views) => views.userProfile)
+      : useZustandView(store as any, (views) => views.userProfile);
+
   return (
     <div className="universal-profile">
       <div {...profile} />
@@ -155,18 +175,26 @@ export function UniversalProfile({ store, adapterType }: ProfileProps) {
 // ============================================================================
 export function MigrationDashboard() {
   const [phase, setPhase] = useState<1 | 2 | 3 | 4>(1);
-  
+
   return (
     <div className="migration-dashboard">
       <h1>Migration Strategy Example</h1>
-      
+
       <div className="phase-selector">
-        <button onClick={() => setPhase(1)} disabled={phase === 1}>Phase 1</button>
-        <button onClick={() => setPhase(2)} disabled={phase === 2}>Phase 2</button>
-        <button onClick={() => setPhase(3)} disabled={phase === 3}>Phase 3</button>
-        <button onClick={() => setPhase(4)} disabled={phase === 4}>Phase 4</button>
+        <button onClick={() => setPhase(1)} disabled={phase === 1}>
+          Phase 1
+        </button>
+        <button onClick={() => setPhase(2)} disabled={phase === 2}>
+          Phase 2
+        </button>
+        <button onClick={() => setPhase(3)} disabled={phase === 3}>
+          Phase 3
+        </button>
+        <button onClick={() => setPhase(4)} disabled={phase === 4}>
+          Phase 4
+        </button>
       </div>
-      
+
       <div className="phase-content">
         {phase === 1 && <LegacyApp />}
         {phase === 2 && <PhaseTwo />}
@@ -174,15 +202,15 @@ export function MigrationDashboard() {
         {phase === 4 && (
           <div>
             <h2>Phase 4: Flexible Architecture</h2>
-            <UniversalProfile 
-              store={stores.user as any} 
-              adapterType={stores.user.actions ? 'zustand' : 'redux'} 
+            <UniversalProfile
+              store={stores.user as any}
+              adapterType={stores.user.actions ? 'zustand' : 'redux'}
             />
             <p>Components work with any adapter!</p>
           </div>
         )}
       </div>
-      
+
       <div className="migration-benefits">
         <h3>Benefits of this approach:</h3>
         <ul>

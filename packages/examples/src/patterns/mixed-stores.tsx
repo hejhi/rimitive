@@ -1,6 +1,6 @@
 /**
  * @fileoverview Mixed State Management Pattern
- * 
+ *
  * This example shows how to use different state managers for different parts
  * of your application based on their specific strengths:
  * - Zustand for fast local state (user preferences, UI state)
@@ -16,11 +16,7 @@ import { useView as useReduxView } from '@lattice/adapter-redux/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 
-import { 
-  userComponent, 
-  cartComponent, 
-  themeComponent 
-} from '../slices';
+import { userComponent, cartComponent, themeComponent } from '../slices';
 
 // ============================================================================
 // User state in Zustand - Fast local updates, minimal boilerplate
@@ -28,9 +24,9 @@ import {
 const userStore = createZustandAdapter(userComponent);
 
 export function UserProfileWidget() {
-  const profile = useZustandView(userStore, (views: any) => views.userProfile);
+  const profile = useZustandView(userStore, (views) => views.userProfile);
   const actions = userStore.actions;
-  
+
   return (
     <div {...profile}>
       <button onClick={() => actions.logout()}>Logout</button>
@@ -45,7 +41,7 @@ const cartStore = createReduxAdapter(cartComponent);
 
 // Create Redux store that syncs with Lattice
 const reduxStore = configureStore({
-  reducer: (state = cartStore.getState(), action: any) => {
+  reducer: (state = cartStore.getState(), action) => {
     if (action.type === 'SYNC') {
       return cartStore.getState();
     }
@@ -62,9 +58,9 @@ cartStore.subscribe(() => {
 });
 
 export function ShoppingCart() {
-  const summary = useReduxView(cartStore, (views: any) => views.cartSummary);
+  const summary = useReduxView(cartStore, (views) => views.cartSummary);
   const actions = cartStore.actions;
-  
+
   return (
     <Provider store={reduxStore}>
       <div {...summary}>
@@ -95,17 +91,20 @@ if (typeof window !== 'undefined') {
   // Save on changes
   themeStore.subscribe(() => {
     const state = themeStore.getState();
-    localStorage.setItem('theme-settings', JSON.stringify({
-      theme: state.theme,
-      fontSize: state.fontSize,
-      reducedMotion: state.reducedMotion
-    }));
+    localStorage.setItem(
+      'theme-settings',
+      JSON.stringify({
+        theme: state.theme,
+        fontSize: state.fontSize,
+        reducedMotion: state.reducedMotion,
+      })
+    );
   });
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const rootAttrs = useZustandView(themeStore, (views: any) => views.documentRoot);
-  
+  const rootAttrs = useZustandView(themeStore, (views) => views.documentRoot);
+
   React.useEffect(() => {
     Object.entries(rootAttrs).forEach(([key, value]) => {
       if (key === 'className') {
@@ -115,7 +114,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       }
     });
   }, [rootAttrs]);
-  
+
   return <>{children}</>;
 }
 
@@ -124,10 +123,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 // ============================================================================
 export function HybridDashboard() {
   // Different stores for different concerns
-  const userProfile = useZustandView(userStore, (views: any) => views.userProfile);
-  const cartSummary = useReduxView(cartStore, (views: any) => views.cartSummary);
-  const themeToggle = useZustandView(themeStore, (views: any) => views.themeToggle);
-  
+  const userProfile = useZustandView(userStore, (views) => views.userProfile);
+  const cartSummary = useReduxView(cartStore, (views) => views.cartSummary);
+  const themeToggle = useZustandView(themeStore, (views) => views.themeToggle);
+
   return (
     <div className="dashboard">
       <header>
@@ -135,7 +134,7 @@ export function HybridDashboard() {
         <div {...cartSummary} />
         <button {...themeToggle}>Toggle Theme</button>
       </header>
-      
+
       <main>
         <h1>Mixed State Management Example</h1>
         <p>
