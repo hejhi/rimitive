@@ -3,7 +3,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
+import {
+  createComponent,
+  createModel,
+  createSlice,
+  compose,
+} from '@lattice/core';
 import { createZustandAdapter } from './index';
 
 describe('compose with zustand adapter', () => {
@@ -18,35 +23,32 @@ describe('compose with zustand adapter', () => {
         count: 0,
         increment: () => set({ count: get().count + 1 }),
         user: { name: 'Alice', role: 'admin' },
-        disabled: false
+        disabled: false,
       }));
 
       const actions = createSlice(model, (m) => ({
-        increment: m.increment
+        increment: m.increment,
       }));
 
       const userSlice = createSlice(model, (m) => ({
         name: m.user.name,
-        role: m.user.role
+        role: m.user.role,
       }));
 
       // Use compose instead of select()
       const buttonSlice = createSlice(
         model,
-        compose(
-          { actions, userSlice },
-          (m, { actions, userSlice }) => ({
-            onClick: actions.increment,
-            disabled: m.disabled,
-            'aria-label': `Increment (${userSlice.name})`
-          })
-        )
+        compose({ actions, userSlice }, (m, { actions, userSlice }) => ({
+          onClick: actions.increment,
+          disabled: m.disabled,
+          'aria-label': `Increment (${userSlice.name})`,
+        }))
       );
 
       return {
         model,
         actions,
-        views: { button: buttonSlice }
+        views: { button: buttonSlice },
       };
     });
 
@@ -60,7 +62,7 @@ describe('compose with zustand adapter', () => {
 
     // Increment should work
     button.onClick();
-    
+
     // Check that count incremented (need to check through actions or a view that exposes count)
     // Since we don't have a count view, let's add one
     const componentWithCount = createComponent(() => {
@@ -69,14 +71,14 @@ describe('compose with zustand adapter', () => {
         ...base,
         views: {
           ...base.views,
-          count: createSlice(base.model, (m) => ({ value: m.count }))
-        }
+          count: createSlice(base.model, (m) => ({ value: m.count })),
+        },
       };
     });
 
     const storeWithCount = createZustandAdapter(componentWithCount);
     expect(storeWithCount.views.count().value).toBe(0);
-    
+
     storeWithCount.views.button().onClick();
     expect(storeWithCount.views.count().value).toBe(1);
   });
@@ -88,43 +90,40 @@ describe('compose with zustand adapter', () => {
         setFilter: (filter: 'all' | 'active' | 'completed') => void;
       }>(({ set }) => ({
         filter: 'all',
-        setFilter: (filter) => set({ filter })
+        setFilter: (filter) => set({ filter }),
       }));
 
       const actions = createSlice(model, (m) => ({
-        setFilter: m.setFilter
+        setFilter: m.setFilter,
       }));
 
       const stateSlice = createSlice(model, (m) => ({
-        filter: m.filter
+        filter: m.filter,
       }));
 
       // Compose to create filter buttons
       const filterButtons = createSlice(
         model,
-        compose(
-          { actions, state: stateSlice },
-          (m, { actions, state }) => ({
-            all: {
-              onClick: () => actions.setFilter('all'),
-              active: state.filter === 'all'
-            },
-            active: {
-              onClick: () => actions.setFilter('active'),
-              active: state.filter === 'active'
-            },
-            completed: {
-              onClick: () => actions.setFilter('completed'),
-              active: state.filter === 'completed'
-            }
-          })
-        )
+        compose({ actions, state: stateSlice }, (m, { actions, state }) => ({
+          all: {
+            onClick: () => actions.setFilter('all'),
+            active: m.filter === 'all',
+          },
+          active: {
+            onClick: () => actions.setFilter('active'),
+            active: state.filter === 'active',
+          },
+          completed: {
+            onClick: () => actions.setFilter('completed'),
+            active: state.filter === 'completed',
+          },
+        }))
       );
 
       return {
         model,
         actions,
-        views: { filterButtons, state: stateSlice }
+        views: { filterButtons, state: stateSlice },
       };
     });
 
@@ -160,27 +159,24 @@ describe('compose with zustand adapter', () => {
         x: 5,
         y: 3,
         op: 'add',
-        setOp: (op) => set({ op })
+        setOp: (op) => set({ op }),
       }));
 
       const xySlice = createSlice(model, (m) => ({
         x: m.x,
-        y: m.y
+        y: m.y,
       }));
 
       const opSlice = createSlice(model, (m) => ({
-        operation: m.op
+        operation: m.op,
       }));
 
       // First level compose
       const resultSlice = createSlice(
         model,
-        compose(
-          { xy: xySlice, op: opSlice },
-          (m, { xy, op }) => ({
-            result: op.operation === 'add' ? xy.x + xy.y : xy.x * xy.y
-          })
-        )
+        compose({ xy: xySlice, op: opSlice }, (_, { xy, op }) => ({
+          result: op.operation === 'add' ? xy.x + xy.y : xy.x * xy.y,
+        }))
       );
 
       // Second level compose using first
@@ -188,8 +184,8 @@ describe('compose with zustand adapter', () => {
         model,
         compose(
           { result: resultSlice, xy: xySlice, op: opSlice },
-          (m, { result, xy, op }) => ({
-            text: `${xy.x} ${op.operation === 'add' ? '+' : '×'} ${xy.y} = ${result.result}`
+          (_, { result, xy, op }) => ({
+            text: `${xy.x} ${op.operation === 'add' ? '+' : '×'} ${xy.y} = ${result.result}`,
           })
         )
       );
@@ -197,7 +193,7 @@ describe('compose with zustand adapter', () => {
       return {
         model,
         actions: createSlice(model, (m) => ({ setOp: m.setOp })),
-        views: { display: displaySlice }
+        views: { display: displaySlice },
       };
     });
 
