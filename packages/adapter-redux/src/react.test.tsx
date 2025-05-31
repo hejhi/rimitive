@@ -328,7 +328,7 @@ describe('Redux React Integration', () => {
     });
 
     const wrapper = ({ children }: { children: React.ReactNode }) =>
-      React.createElement(Provider, { store: reduxStore as any }, children);
+      React.createElement(Provider, { store: reduxStore, children });
 
     const { result } = renderHook(
       () => ({

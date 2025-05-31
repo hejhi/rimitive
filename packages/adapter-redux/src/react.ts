@@ -6,7 +6,6 @@
 
 import { useRef, useSyncExternalStore, useCallback } from 'react';
 import type { LatticeReduxStore } from './index';
-import type { SliceFactory } from '@lattice/core';
 
 /**
  * Custom hook for accessing views with proper subscriptions
@@ -147,8 +146,9 @@ if (import.meta.vitest) {
         () => useView(store, (views) => views.display)
       );
 
-      expect(result.current.value).toBe(0);
-      expect(result.current.label).toBe('Count: 0');
+      const displayData = result.current as { value: number; label: string };
+      expect(displayData.value).toBe(0);
+      expect(displayData.label).toBe('Count: 0');
 
       // Update state
       act(() => {
@@ -159,8 +159,9 @@ if (import.meta.vitest) {
       await new Promise(resolve => setTimeout(resolve, 0));
 
       // Hook should update
-      expect(result.current.value).toBe(1);
-      expect(result.current.label).toBe('Count: 1');
+      const updatedDisplayData = result.current as { value: number; label: string };
+      expect(updatedDisplayData.value).toBe(1);
+      expect(updatedDisplayData.label).toBe('Count: 1');
     });
 
     it('should provide stable actions through useActions', () => {
@@ -189,13 +190,14 @@ if (import.meta.vitest) {
         () => useView(store, (views) => views.button)
       );
 
-      expect(result.current.disabled).toBe(false);
-      expect(result.current['aria-label']).toBe('Increment counter');
-      expect(typeof result.current.onClick).toBe('function');
+      const buttonData = result.current as { disabled: boolean; 'aria-label': string; onClick: () => void };
+      expect(buttonData.disabled).toBe(false);
+      expect(buttonData['aria-label']).toBe('Increment counter');
+      expect(typeof buttonData.onClick).toBe('function');
 
       // Test that onClick works
       act(() => {
-        result.current.onClick();
+        buttonData.onClick();
       });
 
       // Wait for next tick
@@ -249,15 +251,17 @@ if (import.meta.vitest) {
         () => useView(store, (views) => views[currentTab])
       );
 
-      expect(result.current.content).toBe('Content 1');
-      expect(result.current.isActive).toBe(true);
+      const tabData = result.current as { content: string; isActive: boolean };
+      expect(tabData.content).toBe('Content 1');
+      expect(tabData.isActive).toBe(true);
 
       // Change tab
       currentTab = 'tab2';
       rerender();
 
-      expect(result.current.content).toBe('Content 2');
-      expect(result.current.isActive).toBe(false);
+      const tab2Data = result.current as { content: string; isActive: boolean };
+      expect(tab2Data.content).toBe('Content 2');
+      expect(tab2Data.isActive).toBe(false);
 
       // Make tab2 active
       act(() => {
@@ -267,7 +271,8 @@ if (import.meta.vitest) {
       // Wait for next tick
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect(result.current.isActive).toBe(true);
+      const activeTabData = result.current as { content: string; isActive: boolean };
+      expect(activeTabData.isActive).toBe(true);
     });
 
     it('should handle computed views', async () => {
@@ -308,9 +313,10 @@ if (import.meta.vitest) {
         () => useView(store, (views) => views.stats)
       );
 
-      expect(result.current.count).toBe(3);
-      expect(result.current.sum).toBe(6);
-      expect(result.current.average).toBe(2);
+      const statsData = result.current as { count: number; sum: number; average: number };
+      expect(statsData.count).toBe(3);
+      expect(statsData.sum).toBe(6);
+      expect(statsData.average).toBe(2);
 
       // Add item
       act(() => {
@@ -320,9 +326,10 @@ if (import.meta.vitest) {
       // Wait for next tick
       await new Promise(resolve => setTimeout(resolve, 0));
 
-      expect(result.current.count).toBe(4);
-      expect(result.current.sum).toBe(10);
-      expect(result.current.average).toBe(2.5);
+      const updatedStatsData = result.current as { count: number; sum: number; average: number };
+      expect(updatedStatsData.count).toBe(4);
+      expect(updatedStatsData.sum).toBe(10);
+      expect(updatedStatsData.average).toBe(2.5);
     });
   });
 }
