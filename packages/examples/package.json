@@ -5,9 +5,7 @@
   "description": "Example usage patterns for Lattice",
   "main": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@lattice/adapter-memory": "workspace:*",
