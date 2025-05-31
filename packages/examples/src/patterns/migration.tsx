@@ -22,9 +22,9 @@ const legacyCartStore = createReduxAdapter(cartComponent);
 const legacyThemeStore = createReduxAdapter(themeComponent);
 
 export function LegacyApp() {
-  const userProfile = useReduxView(legacyUserStore, 'userProfile');
-  const cartSummary = useReduxView(legacyCartStore, 'cartSummary');
-  const themeToggle = useReduxView(legacyThemeStore, 'themeToggle');
+  const userProfile = useReduxView(legacyUserStore, (views) => views.userProfile());
+  const cartSummary = useReduxView(legacyCartStore, (views) => views.cartSummary());
+  const themeToggle = useReduxView(legacyThemeStore, (views) => views.themeToggle());
 
   return (
     <div className="app-phase-1">
@@ -43,8 +43,8 @@ const modernThemeStore = createZustandAdapter(themeComponent);
 
 export function PhaseTwo() {
   // Still using Redux for user and cart
-  const userProfile = useReduxView(legacyUserStore, 'userProfile');
-  const cartSummary = useReduxView(legacyCartStore, 'cartSummary');
+  const userProfile = useReduxView(legacyUserStore, (views) => views.userProfile());
+  const cartSummary = useReduxView(legacyCartStore, (views) => views.cartSummary());
 
   // But theme is now in Zustand!
   const themeToggle = useZustandView(modernThemeStore, 'themeToggle');
@@ -71,7 +71,7 @@ export function FeatureFlagMigration() {
   // Conditionally use different adapters based on feature flag
   const userProfile = useNewUserStore
     ? useZustandView(createZustandAdapter(userComponent), 'userProfile')
-    : useReduxView(legacyUserStore, 'userProfile');
+    : useReduxView(legacyUserStore, (views) => views.userProfile());
 
   return (
     <div className="app-phase-3">
@@ -138,8 +138,8 @@ export function UniversalProfile({ store, adapterType }: ProfileProps) {
   // The component doesn't care which adapter is used!
   const profile =
     adapterType === 'redux'
-      ? useReduxView(store, (views) => views.userProfile)
-      : useZustandView(store, (views) => views.userProfile);
+      ? useReduxView(store as any, (views) => views.userProfile())
+      : useZustandView(store as any, 'userProfile');
 
   return (
     <div className="universal-profile">

@@ -164,7 +164,7 @@ describe('React hooks for Zustand adapter', () => {
 
       const { result } = renderHook(() => useView(mockStore, 'display'));
 
-      expect(result.current.text).toBe('Initial');
+      expect((result.current as any).text).toBe('Initial');
 
       // Simulate view change
       currentText = 'Updated';
@@ -172,7 +172,7 @@ describe('React hooks for Zustand adapter', () => {
         subscribeCallback({ text: 'Updated' });
       });
 
-      expect(result.current.text).toBe('Updated');
+      expect((result.current as any).text).toBe('Updated');
     });
   });
 
@@ -535,12 +535,12 @@ describe('React hooks for Zustand adapter', () => {
 
       const { result } = renderHook(() => useView(store, 'button'));
 
-      expect(typeof result.current.onClick).toBe('function');
-      expect(result.current.label).toBe('Click me');
+      expect(typeof (result.current as any).onClick).toBe('function');
+      expect((result.current as any).label).toBe('Click me');
 
       // The onClick should work
       act(() => {
-        result.current.onClick();
+        (result.current as any).onClick();
       });
 
       // Verify the action was called (indirectly through view update)
@@ -551,6 +551,106 @@ describe('React hooks for Zustand adapter', () => {
       );
 
       expect(viewResult.current.button.label).toBe('Click me');
+    });
+  });
+
+  describe('Integration tests with real components', () => {
+    it('should properly type useView results for todo-app style components', async () => {
+      const { createComponent, createModel, createSlice } = await import(
+        '@lattice/core'
+      );
+      const { createZustandAdapter } = await import('./index.js');
+
+      // Create a todo-app style component
+      const todoComponent = createComponent(() => {
+        interface Todo {
+          id: string;
+          text: string;
+          completed: boolean;
+        }
+
+        const model = createModel<{
+          todos: Todo[];
+          filter: 'all' | 'active' | 'completed';
+        }>(() => ({
+          todos: [
+            { id: '1', text: 'Test todo', completed: false },
+            { id: '2', text: 'Completed todo', completed: true },
+          ],
+          filter: 'all',
+        }));
+
+        // Computed view that returns filtered todos
+        const filteredTodosView = () =>
+          createSlice(model, (m) => {
+            if (m.filter === 'all') return m.todos;
+            return m.todos.filter(t => 
+              m.filter === 'active' ? !t.completed : t.completed
+            );
+          });
+
+        // Stats view
+        const statsView = () =>
+          createSlice(model, (m) => ({
+            total: m.todos.length,
+            active: m.todos.filter(t => !t.completed).length,
+            completed: m.todos.filter(t => t.completed).length,
+          }));
+
+        // Static button slice
+        const filterButtonSlice = createSlice(model, (m) => ({
+          filter: m.filter,
+          className: 'filter-button',
+          'aria-pressed': false,
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, () => ({})),
+          views: {
+            filteredTodos: filteredTodosView,
+            stats: statsView,
+            filterButton: filterButtonSlice,
+          },
+        };
+      });
+
+      const store = createZustandAdapter(todoComponent);
+
+      // Test filteredTodos view
+      const { result: todosResult } = renderHook(() => 
+        useView(store, 'filteredTodos')
+      );
+      
+      expect(Array.isArray(todosResult.current)).toBe(true);
+      expect(todosResult.current).toHaveLength(2);
+      expect((todosResult.current as any)[0]).toEqual({
+        id: '1',
+        text: 'Test todo',
+        completed: false,
+      });
+
+      // Test stats view
+      const { result: statsResult } = renderHook(() => 
+        useView(store, 'stats')
+      );
+      
+      expect(statsResult.current).toEqual({
+        total: 2,
+        active: 1,
+        completed: 1,
+      });
+
+      // Test static slice view
+      const { result: buttonResult } = renderHook(() => 
+        useView(store, 'filterButton')
+      );
+      
+      expect(buttonResult.current).toEqual({
+        filter: 'all',
+        className: 'filter-button',
+        'aria-pressed': false,
+      });
     });
   });
 });

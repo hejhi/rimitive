@@ -297,13 +297,13 @@ function TodoItem({ todo }: { todo: TodoItemType }) {
 function TodoList() {
   const todos = useView(todoStore, 'filteredTodos');
 
-  if (todos.length === 0) {
+  if (!todos || todos.length === 0) {
     return <p className="empty">No todos found</p>;
   }
 
   return (
     <ul className="todo-list">
-      {todos.map((todo: TodoItemType) => (
+      {todos.map((todo) => (
         <TodoItem key={todo.id} todo={todo} />
       ))}
     </ul>

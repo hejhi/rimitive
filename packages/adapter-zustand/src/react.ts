@@ -108,7 +108,7 @@ export function useView<
 >(
   store: S,
   viewName: K
-): V[K] extends (...args: any[]) => any ? ReturnType<V[K]> : never {
+): V[K] extends (...args: any[]) => infer R ? R : never {
   return useViews(store, views => {
     const viewFn = views[viewName];
     return typeof viewFn === 'function' ? viewFn() : viewFn;

@@ -24,7 +24,7 @@ import { userComponent, cartComponent, themeComponent } from '../slices';
 const userStore = createZustandAdapter(userComponent);
 
 export function UserProfileWidget() {
-  const profile = useZustandView(userStore, (views) => views.userProfile);
+  const profile = useZustandView(userStore, 'userProfile');
   const actions = userStore.actions;
 
   return (
@@ -58,7 +58,7 @@ cartStore.subscribe(() => {
 });
 
 export function ShoppingCart() {
-  const summary = useReduxView(cartStore, (views) => views.cartSummary);
+  const summary = useReduxView(cartStore, 'cartSummary');
   const actions = cartStore.actions;
 
   return (
@@ -88,29 +88,35 @@ if (typeof window !== 'undefined') {
     }
   }
 
-  // Save on changes
-  themeStore.subscribe(() => {
-    const state = themeStore.getState();
-    localStorage.setItem(
-      'theme-settings',
-      JSON.stringify({
-        theme: state.theme,
-        fontSize: state.fontSize,
-        reducedMotion: state.reducedMotion,
-      })
-    );
-  });
+  // Save on changes - subscribe to the documentRoot view
+  themeStore.subscribe(
+    views => views.documentRoot(),
+    (rootAttrs) => {
+      // Extract theme settings from the view attributes
+      const className = rootAttrs.className || '';
+      const theme = className.includes('theme-dark') ? 'dark' : 
+                    className.includes('theme-light') ? 'light' : 'system';
+      const fontSize = className.includes('font-small') ? 'small' :
+                      className.includes('font-large') ? 'large' : 'medium';
+      const reducedMotion = className.includes('reduced-motion');
+      
+      localStorage.setItem(
+        'theme-settings',
+        JSON.stringify({ theme, fontSize, reducedMotion })
+      );
+    }
+  );
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const rootAttrs = useZustandView(themeStore, (views) => views.documentRoot);
+  const rootAttrs = useZustandView(themeStore, 'documentRoot');
 
   React.useEffect(() => {
     Object.entries(rootAttrs).forEach(([key, value]) => {
       if (key === 'className') {
-        document.documentElement.className = value;
+        document.documentElement.className = value as string;
       } else {
-        document.documentElement.setAttribute(key, value);
+        document.documentElement.setAttribute(key, value as string);
       }
     });
   }, [rootAttrs]);
@@ -123,9 +129,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 // ============================================================================
 export function HybridDashboard() {
   // Different stores for different concerns
-  const userProfile = useZustandView(userStore, (views) => views.userProfile);
-  const cartSummary = useReduxView(cartStore, (views) => views.cartSummary);
-  const themeToggle = useZustandView(themeStore, (views) => views.themeToggle);
+  const userProfile = useZustandView(userStore, 'userProfile');
+  const cartSummary = useReduxView(cartStore, 'cartSummary');
+  const themeToggle = useZustandView(themeStore, 'themeToggle');
 
   return (
     <div className="dashboard">

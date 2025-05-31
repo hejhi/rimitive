@@ -24,7 +24,7 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
   const dashboardStore = adapter.executeComponent(dashboardComponent);
 
   // Simulate fetching user data
-  await dashboardStore.actions.login('user@example.com', 'password');
+  await dashboardStore.actions.get().login('user@example.com', 'password');
 
   // Simulate loading cart from session
   const cartItems = [
@@ -33,17 +33,11 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
   ];
 
   for (const item of cartItems) {
-    dashboardStore.actions.addToCart(item);
+    dashboardStore.actions.get().addToCart(item);
   }
 
   // Get the entire state for hydration
-  const initialState = {
-    user: dashboardStore.model.get().user,
-    cart: dashboardStore.model.get().cart,
-    theme: dashboardStore.model.get().theme,
-    sidebarOpen: dashboardStore.model.get().sidebarOpen,
-    activeTab: dashboardStore.model.get().activeTab,
-  };
+  const initialState = dashboardStore.model.get();
 
   return {
     props: {
@@ -55,31 +49,24 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
 // ============================================================================
 // Client-side: Hydrate Zustand store with SSR data
 // ============================================================================
-let clientStore: ReturnType<typeof createZustandAdapter<any, any, any>> | null =
-  null;
+let clientStore: ReturnType<typeof createZustandAdapter> | null = null;
 
-function getOrCreateStore(initialState?: {}) {
+function getOrCreateStore(initialState?: any) {
   // Create store only once
   if (!clientStore) {
     clientStore = createZustandAdapter(dashboardComponent);
 
     // Hydrate with server state if provided
     if (initialState && typeof window !== 'undefined') {
-      // We need to carefully merge the initial state
-      const currentState = clientStore.getState();
-
-      // Only hydrate the data, not the functions
-      clientStore.actions.setActiveTab(initialState.activeTab);
-      if (initialState.sidebarOpen !== currentState.sidebarOpen) {
-        clientStore.actions.toggleSidebar();
+      // Hydrate the state using actions
+      if (initialState.activeTab) {
+        clientStore.actions.setActiveTab(initialState.activeTab);
       }
-
-      // For nested components, we might need custom hydration logic
-      if (initialState.user && initialState.user.user) {
-        // User is already logged in from server
-        // We'd need to update the user state directly
-        console.log('User already logged in:', initialState.user.user);
-      }
+      
+      // Note: For complex state like user/cart, you'd need custom
+      // hydration actions in your model to restore the full state
+      // from the server. This is a limitation of action-based updates.
+      console.log('Initial state from server:', initialState);
     }
   }
 
@@ -90,13 +77,13 @@ function getOrCreateStore(initialState?: {}) {
 // Page component
 // ============================================================================
 interface DashboardPageProps {
-  initialState?: {};
+  initialState?: any; // The dashboard component state type
 }
 
 export default function DashboardPage({ initialState }: DashboardPageProps) {
   const store = getOrCreateStore(initialState);
-  const header = useView(store, (views) => views.header);
-  const navigation = useView(store, (views) => views.navigation);
+  const header = useView(store, 'header');
+  const navigation = useView(store, 'navigation');
 
   return (
     <div className="dashboard-page">
@@ -147,13 +134,13 @@ export async function apiRouteExample(req: Request) {
   const body = await req.json();
 
   if (body.action === 'addItem') {
-    cartStore.actions.addItem(body.item);
+    cartStore.actions.get().addToCart(body.item);
   }
 
   // Return current state
   return new Response(
     JSON.stringify({
-      cart: cartStore.model.get().cart,
+      cart: cartStore.model.get(),
       summary: cartStore.views.cartSummary.get(),
     }),
     {
