@@ -48,9 +48,6 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
 // ============================================================================
 // Client-side: Hydrate Zustand store with SSR data
 // ============================================================================
-// Create a dummy call to get the proper types - TypeScript will optimize this away
-const _typeHelper = () => createZustandAdapter(dashboardComponent);
-type DashboardStore = ReturnType<typeof _typeHelper>;
 
 // Type for the initial state - the model state shape
 interface InitialState {
@@ -65,29 +62,55 @@ interface InitialState {
   activeTab: 'overview' | 'orders' | 'settings';
 }
 
-let clientStore: DashboardStore | null = null;
+// Store singleton - created once and reused
+const clientStore = createZustandAdapter(dashboardComponent);
+let hasHydrated = false;
 
-function getOrCreateStore(initialState?: InitialState): DashboardStore {
-  // Create store only once
-  if (!clientStore) {
-    clientStore = createZustandAdapter(dashboardComponent);
+function getOrCreateStore(initialState?: InitialState) {
+  // Hydrate with server state if provided and not already hydrated
+  if (initialState && typeof window !== 'undefined' && !hasHydrated) {
+    hasHydrated = true;
 
-    // Hydrate with server state if provided
-    if (initialState && typeof window !== 'undefined') {
-      // Hydrate the state using actions
-      if (initialState.activeTab && clientStore) {
-        clientStore.actions.setActiveTab(initialState.activeTab);
-      }
-
-      // Note: For complex state like user/cart, you'd need custom
-      // hydration actions in your model to restore the full state
-      // from the server. This is a limitation of action-based updates.
-      console.log('Initial state from server:', initialState);
+    // Use actions to restore state
+    if (initialState.activeTab && initialState.activeTab !== 'overview') {
+      clientStore.actions.setActiveTab(initialState.activeTab);
     }
+
+    // For complex state restoration, you would need to add specific
+    // hydration actions to your model that can restore the full state.
+    // For example:
+    // - restoreUser(user) action to set user state
+    // - restoreCart(items) action to set cart items
+    // This is a trade-off of the action-based approach.
+
+    console.log('Initial state from server:', initialState);
   }
 
   return clientStore;
 }
+
+// ============================================================================
+// Alternative: Create a state view for hydration checking
+// ============================================================================
+// If you need to check the current state, create a view in your component:
+//
+// const dashboardComponentWithStateView = createComponent(() => {
+//   const base = dashboardComponent();
+//   return {
+//     ...base,
+//     views: {
+//       ...base.views,
+//       // Add a state view that exposes what you need
+//       state: createSlice(base.model, (m) => ({
+//         activeTab: m.activeTab,
+//         user: m.user,
+//         cartItems: m.items
+//       }))
+//     }
+//   };
+// });
+//
+// Then you can check: const state = store.views.state();
 
 // ============================================================================
 // Page component
