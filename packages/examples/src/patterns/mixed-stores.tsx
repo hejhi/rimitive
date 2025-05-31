@@ -108,9 +108,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     Object.entries(rootAttrs).forEach(([key, value]) => {
       if (key === 'className') {
-        document.documentElement.className = value as string;
+        document.documentElement.className = value;
       } else {
-        document.documentElement.setAttribute(key, value as string);
+        document.documentElement.setAttribute(key, value);
       }
     });
   }, [rootAttrs]);

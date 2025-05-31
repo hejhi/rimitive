@@ -22,18 +22,9 @@ const legacyCartStore = createReduxAdapter(cartComponent);
 const legacyThemeStore = createReduxAdapter(themeComponent);
 
 export function LegacyApp() {
-  const userProfile = useReduxView(
-    legacyUserStore,
-    (views) => views.userProfile
-  );
-  const cartSummary = useReduxView(
-    legacyCartStore,
-    (views) => views.cartSummary
-  );
-  const themeToggle = useReduxView(
-    legacyThemeStore,
-    (views) => views.themeToggle
-  );
+  const userProfile = useReduxView(legacyUserStore, 'userProfile');
+  const cartSummary = useReduxView(legacyCartStore, 'cartSummary');
+  const themeToggle = useReduxView(legacyThemeStore, 'themeToggle');
 
   return (
     <div className="app-phase-1">
@@ -52,20 +43,11 @@ const modernThemeStore = createZustandAdapter(themeComponent);
 
 export function PhaseTwo() {
   // Still using Redux for user and cart
-  const userProfile = useReduxView(
-    legacyUserStore,
-    (views) => views.userProfile
-  );
-  const cartSummary = useReduxView(
-    legacyCartStore,
-    (views) => views.cartSummary
-  );
+  const userProfile = useReduxView(legacyUserStore, 'userProfile');
+  const cartSummary = useReduxView(legacyCartStore, 'cartSummary');
 
   // But theme is now in Zustand!
-  const themeToggle = useZustandView(
-    modernThemeStore,
-    (views) => views.themeToggle
-  );
+  const themeToggle = useZustandView(modernThemeStore, 'themeToggle');
 
   return (
     <div className="app-phase-2">
@@ -88,11 +70,8 @@ export function FeatureFlagMigration() {
 
   // Conditionally use different adapters based on feature flag
   const userProfile = useNewUserStore
-    ? useZustandView(
-        createZustandAdapter(userComponent),
-        (views) => views.userProfile
-      )
-    : useReduxView(legacyUserStore, (views) => views.userProfile);
+    ? useZustandView(createZustandAdapter(userComponent), 'userProfile')
+    : useReduxView(legacyUserStore, 'userProfile');
 
   return (
     <div className="app-phase-3">
@@ -159,8 +138,8 @@ export function UniversalProfile({ store, adapterType }: ProfileProps) {
   // The component doesn't care which adapter is used!
   const profile =
     adapterType === 'redux'
-      ? useReduxView(store as any, (views) => views.userProfile)
-      : useZustandView(store as any, (views) => views.userProfile);
+      ? useReduxView(store, (views) => views.userProfile)
+      : useZustandView(store, (views) => views.userProfile);
 
   return (
     <div className="universal-profile">
@@ -203,7 +182,7 @@ export function MigrationDashboard() {
           <div>
             <h2>Phase 4: Flexible Architecture</h2>
             <UniversalProfile
-              store={stores.user as any}
+              store={stores.user}
               adapterType={stores.user.actions ? 'zustand' : 'redux'}
             />
             <p>Components work with any adapter!</p>

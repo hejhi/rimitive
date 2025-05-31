@@ -153,18 +153,8 @@ export const cartComponent = createComponent(() => {
     views: {
       cartSummary,
       
-      // Create item views dynamically
-      cartItem: (itemId: string) => createSlice(model, (m) => {
-        const item = m.items.find(i => i.id === itemId);
-        return item ? {
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          subtotal: item.price * item.quantity,
-          onRemove: () => select(actions, (a) => a.removeItem)(itemId),
-          onQuantityChange: (qty: number) => select(actions, (a) => a.updateQuantity)(itemId, qty)
-        } : null;
-      })
+      // For dynamic item views, we'll need to create them outside of the views object
+      // since views must be SliceFactory or () => SliceFactory
     }
   };
 });

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Complete Todo App Example
- * 
+ *
  * This demonstrates building a full application with Lattice, showing:
  * - Multiple related components working together
  * - Complex state interactions
@@ -8,7 +8,12 @@
  */
 
 import React from 'react';
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
+import {
+  createComponent,
+  createModel,
+  createSlice,
+  compose,
+} from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useView, useActions } from '@lattice/adapter-zustand/react';
 import './todo-app.css';
@@ -30,7 +35,7 @@ const todoAppComponent = createComponent(() => {
     filter: 'all' | 'active' | 'completed';
     searchQuery: string;
     sortBy: 'date' | 'alphabetical';
-    
+
     // Actions
     addTodo: (text: string) => void;
     toggleTodo: (id: string) => void;
@@ -38,7 +43,7 @@ const todoAppComponent = createComponent(() => {
     editTodo: (id: string, text: string) => void;
     clearCompleted: () => void;
     toggleAll: () => void;
-    
+
     // UI Actions
     setFilter: (filter: 'all' | 'active' | 'completed') => void;
     setSearchQuery: (query: string) => void;
@@ -49,22 +54,22 @@ const todoAppComponent = createComponent(() => {
     filter: 'all',
     searchQuery: '',
     sortBy: 'date',
-    
+
     // Todo actions
     addTodo: (text) => {
       const trimmed = text.trim();
       if (!trimmed) return;
-      
+
       const newTodo: Todo = {
         id: `${Date.now()}-${Math.random()}`,
         text: trimmed,
         completed: false,
         createdAt: Date.now(),
       };
-      
+
       set({ todos: [...get().todos, newTodo] });
     },
-    
+
     toggleTodo: (id) => {
       set({
         todos: get().todos.map((todo) =>
@@ -72,29 +77,29 @@ const todoAppComponent = createComponent(() => {
         ),
       });
     },
-    
+
     deleteTodo: (id) => {
       set({ todos: get().todos.filter((todo) => todo.id !== id) });
     },
-    
+
     editTodo: (id, text) => {
       const trimmed = text.trim();
       if (!trimmed) {
         get().deleteTodo(id);
         return;
       }
-      
+
       set({
         todos: get().todos.map((todo) =>
           todo.id === id ? { ...todo, text: trimmed } : todo
         ),
       });
     },
-    
+
     clearCompleted: () => {
       set({ todos: get().todos.filter((todo) => !todo.completed) });
     },
-    
+
     toggleAll: () => {
       const allCompleted = get().todos.every((todo) => todo.completed);
       set({
@@ -104,7 +109,7 @@ const todoAppComponent = createComponent(() => {
         })),
       });
     },
-    
+
     // UI actions
     setFilter: (filter) => set({ filter }),
     setSearchQuery: (query) => set({ searchQuery: query.toLowerCase() }),
@@ -142,21 +147,21 @@ const todoAppComponent = createComponent(() => {
   const filteredTodosView = () =>
     todosSlice((state) => {
       let filtered = state.todos;
-      
+
       // Apply search filter
       if (state.searchQuery) {
         filtered = filtered.filter((todo) =>
           todo.text.toLowerCase().includes(state.searchQuery)
         );
       }
-      
+
       // Apply status filter
       if (state.filter !== 'all') {
         filtered = filtered.filter((todo) =>
           state.filter === 'active' ? !todo.completed : todo.completed
         );
       }
-      
+
       // Apply sorting
       filtered = [...filtered].sort((a, b) => {
         if (state.sortBy === 'alphabetical') {
@@ -164,7 +169,7 @@ const todoAppComponent = createComponent(() => {
         }
         return b.createdAt - a.createdAt; // Newest first
       });
-      
+
       return filtered;
     });
 
@@ -174,7 +179,7 @@ const todoAppComponent = createComponent(() => {
       const total = state.todos.length;
       const completed = state.todos.filter((t) => t.completed).length;
       const active = total - completed;
-      
+
       return {
         total,
         active,
@@ -202,14 +207,12 @@ const todoAppComponent = createComponent(() => {
     views: {
       filteredTodos: filteredTodosView,
       stats: statsView,
-      
-      // UI controls
-      filterButtons: {
-        all: createFilterButton('all'),
-        active: createFilterButton('active'),
-        completed: createFilterButton('completed'),
-      },
-      
+
+      // Individual filter buttons
+      filterButtonAll: createFilterButton('all'),
+      filterButtonActive: createFilterButton('active'),
+      filterButtonCompleted: createFilterButton('completed'),
+
       // Clear button
       clearButton: createSlice(
         model,
@@ -219,7 +222,7 @@ const todoAppComponent = createComponent(() => {
           children: `Clear completed (${stats.completed})`,
         }))
       ),
-      
+
       // Toggle all checkbox
       toggleAllCheckbox: createSlice(
         model,
@@ -253,12 +256,12 @@ function TodoItem({ todo }: { todo: TodoItemType }) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editText, setEditText] = React.useState(todo.text);
   const actions = useActions(todoStore);
-  
+
   const handleSubmit = () => {
     actions.editTodo(todo.id, editText);
     setIsEditing(false);
   };
-  
+
   return (
     <li className={todo.completed ? 'completed' : ''}>
       <input
@@ -266,7 +269,7 @@ function TodoItem({ todo }: { todo: TodoItemType }) {
         checked={todo.completed}
         onChange={() => actions.toggleTodo(todo.id)}
       />
-      
+
       {isEditing ? (
         <input
           type="text"
@@ -285,19 +288,19 @@ function TodoItem({ todo }: { todo: TodoItemType }) {
       ) : (
         <span onDoubleClick={() => setIsEditing(true)}>{todo.text}</span>
       )}
-      
+
       <button onClick={() => actions.deleteTodo(todo.id)}>×</button>
     </li>
   );
 }
 
 function TodoList() {
-  const todos = useView(todoStore, (views) => views.filteredTodos) as TodoItemType[];
-  
+  const todos = useView(todoStore, 'filteredTodos');
+
   if (todos.length === 0) {
     return <p className="empty">No todos found</p>;
   }
-  
+
   return (
     <ul className="todo-list">
       {todos.map((todo: TodoItemType) => (
@@ -310,13 +313,13 @@ function TodoList() {
 function TodoInput() {
   const [input, setInput] = React.useState('');
   const actions = useActions(todoStore);
-  
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     actions.addTodo(input);
     setInput('');
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="todo-input">
       <input
@@ -331,10 +334,10 @@ function TodoInput() {
 }
 
 function TodoFilters() {
-  const allButton = useView(todoStore, (views) => views.filterButtons.all) as React.ButtonHTMLAttributes<HTMLButtonElement>;
-  const activeButton = useView(todoStore, (views) => views.filterButtons.active) as React.ButtonHTMLAttributes<HTMLButtonElement>;
-  const completedButton = useView(todoStore, (views) => views.filterButtons.completed) as React.ButtonHTMLAttributes<HTMLButtonElement>;
-  
+  const allButton = useView(todoStore, 'filterButtonAll');
+  const activeButton = useView(todoStore, 'filterButtonActive');
+  const completedButton = useView(todoStore, 'filterButtonCompleted');
+
   return (
     <div className="filters">
       <button {...allButton} />
@@ -345,23 +348,17 @@ function TodoFilters() {
 }
 
 function TodoStats() {
-  const stats = useView(todoStore, (views) => views.stats) as {
-    total: number;
-    active: number;
-    completed: number;
-    hasCompleted: boolean;
-    allCompleted: boolean;
-  };
-  const clearButton = useView(todoStore, (views) => views.clearButton) as React.ButtonHTMLAttributes<HTMLButtonElement>;
-  const toggleAll = useView(todoStore, (views) => views.toggleAllCheckbox) as React.InputHTMLAttributes<HTMLInputElement>;
-  
+  const stats = useView(todoStore, 'stats');
+  const clearButton = useView(todoStore, 'clearButton');
+  const toggleAll = useView(todoStore, 'toggleAllCheckbox');
+
   return (
     <div className="stats">
       <label>
         <input type="checkbox" {...toggleAll} />
         <span>{stats.active} items left</span>
       </label>
-      
+
       <button {...clearButton} />
     </div>
   );
@@ -369,7 +366,7 @@ function TodoStats() {
 
 function SearchBar() {
   const actions = useActions(todoStore);
-  
+
   return (
     <input
       type="search"
@@ -390,7 +387,7 @@ export function TodoApp() {
         <h1>todos</h1>
         <TodoInput />
       </header>
-      
+
       <main>
         <SearchBar />
         <TodoFilters />
