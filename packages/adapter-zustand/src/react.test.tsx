@@ -24,11 +24,11 @@ describe('React hooks for Zustand adapter', () => {
     overrides: Partial<ZustandAdapterResult<M, A, V>> = {}
   ): ZustandAdapterResult<M, A, V> {
     const base = {
-      actions: {} as A,
-      views: {} as V,
+      actions: {},
+      views: {},
       subscribe: vi.fn(() => vi.fn()),
     };
-    return { ...base, ...overrides } as ZustandAdapterResult<M, A, V>;
+    return { ...base, ...overrides };
   }
 
   describe('useViews', () => {
@@ -39,7 +39,7 @@ describe('React hooks for Zustand adapter', () => {
       };
 
       const mockStore = createMockAdapterResult({
-        views: mockViews as any,
+        views: mockViews,
       });
 
       const { result } = renderHook(() =>
@@ -65,7 +65,7 @@ describe('React hooks for Zustand adapter', () => {
 
       let subscribeCallback: any;
       const mockStore = createMockAdapterResult({
-        views: mockViews as any,
+        views: mockViews,
         subscribe: vi.fn((_, callback) => {
           subscribeCallback = callback;
           return vi.fn();
@@ -91,7 +91,7 @@ describe('React hooks for Zustand adapter', () => {
       const unsubscribeMock = vi.fn();
       const mockViews = { test: vi.fn(() => ({ value: 'test' })) };
       const mockStore = createMockAdapterResult({
-        views: mockViews as any,
+        views: mockViews,
         subscribe: vi.fn(() => unsubscribeMock),
       });
 
@@ -112,7 +112,7 @@ describe('React hooks for Zustand adapter', () => {
       };
 
       const mockStore = createMockAdapterResult({
-        views: mockViews as any,
+        views: mockViews,
       });
 
       const { result } = renderHook(() =>
@@ -137,7 +137,7 @@ describe('React hooks for Zustand adapter', () => {
       };
 
       const mockStore = createMockAdapterResult({
-        views: mockViews as any,
+        views: mockViews,
       });
 
       const { result } = renderHook(() => useView(mockStore, 'display'));
@@ -153,7 +153,7 @@ describe('React hooks for Zustand adapter', () => {
 
       let subscribeCallback: any;
       const mockStore = createMockAdapterResult({
-        views: mockViews as any,
+        views: mockViews,
         subscribe: vi.fn((_, callback) => {
           subscribeCallback = callback;
           return vi.fn();
@@ -162,7 +162,7 @@ describe('React hooks for Zustand adapter', () => {
 
       const { result } = renderHook(() => useView(mockStore, 'display'));
 
-      expect((result.current as any).text).toBe('Initial');
+      expect(result.current.text).toBe('Initial');
 
       // Simulate view change
       currentText = 'Updated';
@@ -170,7 +170,7 @@ describe('React hooks for Zustand adapter', () => {
         subscribeCallback({ text: 'Updated' });
       });
 
-      expect((result.current as any).text).toBe('Updated');
+      expect(result.current.text).toBe('Updated');
     });
   });
 
@@ -227,7 +227,7 @@ describe('React hooks for Zustand adapter', () => {
       };
 
       const mockStore = createMockAdapterResult({
-        views: mockViews as any,
+        views: mockViews,
         actions: mockActions,
       });
 
@@ -255,7 +255,7 @@ describe('React hooks for Zustand adapter', () => {
 
       let subscribeCallback: any;
       const mockStore = createMockAdapterResult({
-        views: mockViews as any,
+        views: mockViews,
         actions: mockActions,
         subscribe: vi.fn((_, callback) => {
           subscribeCallback = callback;
@@ -426,11 +426,7 @@ describe('React hooks for Zustand adapter', () => {
         };
       });
 
-      const store = createZustandAdapter(todoApp) as ZustandAdapterResult<
-        any,
-        any,
-        any
-      >;
+      const store = createZustandAdapter(todoApp);
 
       const { result } = renderHook(() =>
         useLattice(store, (views) => ({
@@ -488,11 +484,7 @@ describe('React hooks for Zustand adapter', () => {
         };
       });
 
-      const store = createZustandAdapter(component) as ZustandAdapterResult<
-        any,
-        any,
-        any
-      >;
+      const store = createZustandAdapter(component);
 
       const { result } = renderHook(() =>
         useViews(store, (views) => ({
@@ -535,20 +527,16 @@ describe('React hooks for Zustand adapter', () => {
         };
       });
 
-      const store = createZustandAdapter(component) as ZustandAdapterResult<
-        any,
-        any,
-        any
-      >;
+      const store = createZustandAdapter(component);
 
       const { result } = renderHook(() => useView(store, 'button'));
 
-      expect(typeof (result.current as any).onClick).toBe('function');
-      expect((result.current as any).label).toBe('Click me');
+      expect(typeof result.current.onClick).toBe('function');
+      expect(result.current.label).toBe('Click me');
 
       // The onClick should work
       act(() => {
-        (result.current as any).onClick();
+        result.current.onClick();
       });
 
       // Verify the action was called (indirectly through view update)
@@ -632,7 +620,7 @@ describe('React hooks for Zustand adapter', () => {
 
       expect(Array.isArray(todosResult.current)).toBe(true);
       expect(todosResult.current).toHaveLength(2);
-      expect((todosResult.current as any)[0]).toEqual({
+      expect(todosResult.current[0]).toEqual({
         id: '1',
         text: 'Test todo',
         completed: false,

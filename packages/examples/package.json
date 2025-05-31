@@ -29,6 +29,7 @@
     "@testing-library/react": "^16.1.0",
     "@vitest/ui": "^2.1.8",
     "jsdom": "^26.0.0",
+    "tsx": "^4.19.4",
     "typescript": "^5.8.0",
     "vite": "^6.0.7",
     "vite-plugin-dts": "^4.5.4",

@@ -619,9 +619,12 @@ if (import.meta.vitest) {
       expect(store.views).toBeDefined();
 
       // Should not expose internal store methods
-      expect((store as any).getState).toBeUndefined();
-      expect((store as any).setState).toBeUndefined();
-      expect((store as any).use).toBeUndefined();
+      // @ts-expect-error
+      expect(store.getState).toBeUndefined();
+      // @ts-expect-error
+      expect(store.setState).toBeUndefined();
+      // @ts-expect-error
+      expect(store.use).toBeUndefined();
     });
 
     it('should access state through views', () => {

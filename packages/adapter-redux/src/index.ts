@@ -6,7 +6,10 @@
  * Redux's predictable state management.
  */
 
-import { configureStore, createSlice as createReduxSlice } from '@reduxjs/toolkit';
+import {
+  configureStore,
+  createSlice as createReduxSlice,
+} from '@reduxjs/toolkit';
 import type {
   ComponentFactory,
   SliceFactory,
@@ -24,8 +27,8 @@ import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
 type ViewType<Model, T> = T extends () => SliceFactory<Model, infer S>
   ? () => S
   : T extends SliceFactory<Model, infer S>
-  ? () => S
-  : never;
+    ? () => S
+    : never;
 
 /**
  * Maps all views in a component to their executed types
@@ -42,7 +45,7 @@ export interface LatticeReduxStore<Model, Actions, Views> {
   dispatch: (action: any) => void;
   getState: () => Model;
   subscribe: (listener: () => void) => () => void;
-  
+
   // Lattice enhancements
   actions: Actions;
   views: ExecutedViews<Model, Views>;
@@ -95,17 +98,18 @@ class SliceCache<Model> {
 /**
  * Separates state data from functions in the model
  */
-function separateStateAndActions<T>(
-  obj: T
-): { state: any; actions: Record<string, Function> } {
+function separateStateAndActions<T>(obj: T): {
+  state: any;
+  actions: Record<string, Function>;
+} {
   const state: any = {};
   const actions: Record<string, Function> = {};
 
-  for (const key in obj as any) {
-    if (typeof (obj as any)[key] === 'function') {
-      actions[key] = (obj as any)[key];
+  for (const key in obj) {
+    if (typeof obj[key] === 'function') {
+      actions[key] = obj[key];
     } else {
-      state[key] = (obj as any)[key];
+      state[key] = obj[key];
     }
   }
 
@@ -115,9 +119,9 @@ function separateStateAndActions<T>(
 /**
  * Checks if a selector is a composed selector
  */
-function isComposedSelector(
-  selector: unknown
-): selector is { __composeDeps?: Record<string, SliceFactory<unknown, unknown>> } {
+function isComposedSelector(selector: unknown): selector is {
+  __composeDeps?: Record<string, SliceFactory<unknown, unknown>>;
+} {
   return (
     typeof selector === 'function' &&
     '__composeDeps' in selector &&
@@ -143,7 +147,7 @@ function resolveSelectMarkers<T, Model>(
   if (isSelectMarker<Model>(obj)) {
     const markerValue = obj[SELECT_MARKER];
     const sliceFactory = markerValue.slice;
-    
+
     // Execute the slice factory to get fresh data
     let slice: any;
     if (executeSliceFactory) {
@@ -173,7 +177,12 @@ function resolveSelectMarkers<T, Model>(
   const result: any = {};
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      result[key] = resolveSelectMarkers(obj[key], sliceCache, model, executeSliceFactory);
+      result[key] = resolveSelectMarkers(
+        obj[key],
+        sliceCache,
+        model,
+        executeSliceFactory
+      );
     }
   }
   return result;
@@ -201,12 +210,13 @@ export function createReduxAdapter<
 
   // Create initial model state
   const initialModel = spec.model({
-    get: () => ({} as Model), // Temporary getter
+    get: () => ({}) as Model, // Temporary getter
     set: () => {}, // Temporary setter
   });
 
   // Separate state from actions
-  const { state: initialState, actions: modelActions } = separateStateAndActions(initialModel);
+  const { state: initialState, actions: modelActions } =
+    separateStateAndActions(initialModel);
 
   // Create Redux slice for state only
   const slice = createReduxSlice({
@@ -246,10 +256,10 @@ export function createReduxAdapter<
 
   // Re-execute the model factory with proper tools to bind actions correctly
   const boundModel = spec.model(modelTools);
-  
+
   // Extract the bound actions
   const { actions: boundActions } = separateStateAndActions(boundModel);
-  
+
   // Update modelActions reference
   Object.assign(modelActions, boundActions);
 
@@ -257,18 +267,17 @@ export function createReduxAdapter<
   const sliceCache = new SliceCache<Model>();
 
   // Helper to execute a composed selector
-  const executeComposedSelector = <T>(
-    selector: any,
-    model: Model
-  ): T => {
+  const executeComposedSelector = <T>(selector: any, model: Model): T => {
     const deps = selector.__composeDeps || {};
     const resolvedDeps: any = {};
-    
+
     for (const [key, depFactory] of Object.entries(deps)) {
       // Always re-execute dependencies to get fresh data
-      resolvedDeps[key] = executeSliceFactory(depFactory as SliceFactory<Model, unknown>);
+      resolvedDeps[key] = executeSliceFactory(
+        depFactory as SliceFactory<Model, unknown>
+      );
     }
-    
+
     return selector(model, resolvedDeps);
   };
 
@@ -276,16 +285,16 @@ export function createReduxAdapter<
   const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
     // Don't cache results - they need to be recomputed on each access
     // because the underlying state may have changed
-    
+
     const model = modelTools.get();
     let rawResult: any;
-    
+
     // Check if this is a slice factory created with compose()
     // The compose() selector is stored in the factory's closure
     try {
       // Try to execute as a normal slice factory first
       rawResult = factory(model);
-      
+
       // If the result is a function with __composeDeps, it's a composed selector
       // This happens when createSlice is called with compose() directly
       if (isComposedSelector(rawResult)) {
@@ -296,10 +305,15 @@ export function createReduxAdapter<
       // This is a fallback, but shouldn't normally happen
       throw error;
     }
-    
+
     // Resolve any select markers in the result
-    const resolved = resolveSelectMarkers(rawResult, sliceCache, model, executeSliceFactory);
-    
+    const resolved = resolveSelectMarkers(
+      rawResult,
+      sliceCache,
+      model,
+      executeSliceFactory
+    );
+
     return resolved;
   };
 
@@ -311,7 +325,7 @@ export function createReduxAdapter<
   const views = {} as ExecutedViews<Model, Views>;
   for (const key in spec.views) {
     const view = spec.views[key];
-    
+
     if (typeof view === 'function' && !isSliceFactory(view)) {
       // Computed view - returns a slice factory
       Object.defineProperty(views, key, {
