@@ -21,14 +21,14 @@ import './todo-app.css';
 // ============================================================================
 // Todo App Behavior Specification
 // ============================================================================
-const todoAppComponent = createComponent(() => {
-  interface Todo {
-    id: string;
-    text: string;
-    completed: boolean;
-    createdAt: number;
-  }
+interface Todo {
+  id: string;
+  text: string;
+  completed: boolean;
+  createdAt: number;
+}
 
+const todoAppComponent = createComponent(() => {
   const model = createModel<{
     // State
     todos: Todo[];
@@ -242,9 +242,6 @@ const todoAppComponent = createComponent(() => {
 // ============================================================================
 const todoStore = createZustandAdapter(todoAppComponent);
 
-// Type helper for better inference
-type TodoStore = typeof todoStore;
-
 // ============================================================================
 // React Components
 // ============================================================================
@@ -337,11 +334,14 @@ function TodoInput() {
 }
 
 function TodoFilters() {
-  const { allButton, activeButton, completedButton } = useViews(todoStore, (views) => ({
-    allButton: views.filterButtonAll(),
-    activeButton: views.filterButtonActive(),
-    completedButton: views.filterButtonCompleted()
-  }));
+  const { allButton, activeButton, completedButton } = useViews(
+    todoStore,
+    (views) => ({
+      allButton: views.filterButtonAll(),
+      activeButton: views.filterButtonActive(),
+      completedButton: views.filterButtonCompleted(),
+    })
+  );
 
   return (
     <div className="filters">
@@ -356,7 +356,7 @@ function TodoStats() {
   const { stats, clearButton, toggleAll } = useViews(todoStore, (views) => ({
     stats: views.stats(),
     clearButton: views.clearButton(),
-    toggleAll: views.toggleAllCheckbox()
+    toggleAll: views.toggleAllCheckbox(),
   }));
 
   return (

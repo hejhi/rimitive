@@ -22,16 +22,27 @@ const legacyCartStore = createReduxAdapter(cartComponent);
 const legacyThemeStore = createReduxAdapter(themeComponent);
 
 export function LegacyApp() {
-  const userProfile = useReduxView(legacyUserStore, (views) => views.userProfile());
-  const cartSummary = useReduxView(legacyCartStore, (views) => views.cartSummary());
-  const themeToggle = useReduxView(legacyThemeStore, (views) => views.themeToggle());
+  const userProfile = useReduxView(
+    legacyUserStore,
+    (views) => views.userProfile
+  );
+  const cartSummary = useReduxView(
+    legacyCartStore,
+    (views) => views.cartSummary
+  );
+  const themeToggle = useReduxView(
+    legacyThemeStore,
+    (views) => views.themeToggle
+  );
 
   return (
     <div className="app-phase-1">
       <h2>Phase 1: All Redux</h2>
       <div {...userProfile} />
       <div {...cartSummary} />
-      <button {...themeToggle}>Theme</button>
+      <button {...themeToggle} onClick={() => themeToggle.onClick('system')}>
+        Theme
+      </button>
     </div>
   );
 }
@@ -43,8 +54,14 @@ const modernThemeStore = createZustandAdapter(themeComponent);
 
 export function PhaseTwo() {
   // Still using Redux for user and cart
-  const userProfile = useReduxView(legacyUserStore, (views) => views.userProfile());
-  const cartSummary = useReduxView(legacyCartStore, (views) => views.cartSummary());
+  const userProfile = useReduxView(
+    legacyUserStore,
+    (views) => views.userProfile
+  );
+  const cartSummary = useReduxView(
+    legacyCartStore,
+    (views) => views.cartSummary
+  );
 
   // But theme is now in Zustand!
   const themeToggle = useZustandView(modernThemeStore, 'themeToggle');
@@ -128,18 +145,13 @@ const stores = createStores({
 // Shared component that works with any adapter
 // ============================================================================
 interface ProfileProps {
-  store:
-    | ReturnType<typeof createReduxAdapter>
-    | ReturnType<typeof createZustandAdapter>;
+  store: ReturnType<typeof createZustandAdapter>;
   adapterType: 'redux' | 'zustand';
 }
 
 export function UniversalProfile({ store, adapterType }: ProfileProps) {
   // The component doesn't care which adapter is used!
-  const profile =
-    adapterType === 'redux'
-      ? useReduxView(store as any, (views) => views.userProfile())
-      : useZustandView(store as any, 'userProfile');
+  const profile = useZustandView(store, 'userProfile');
 
   return (
     <div className="universal-profile">

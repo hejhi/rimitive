@@ -58,7 +58,7 @@ cartStore.subscribe(() => {
 });
 
 export function ShoppingCart() {
-  const summary = useReduxView(cartStore, 'cartSummary');
+  const summary = useReduxView(cartStore, ({ cartSummary }) => cartSummary);
   const actions = cartStore.actions;
 
   return (
@@ -90,16 +90,22 @@ if (typeof window !== 'undefined') {
 
   // Save on changes - subscribe to the documentRoot view
   themeStore.subscribe(
-    views => views.documentRoot(),
+    (views) => views.documentRoot(),
     (rootAttrs) => {
       // Extract theme settings from the view attributes
       const className = rootAttrs.className || '';
-      const theme = className.includes('theme-dark') ? 'dark' : 
-                    className.includes('theme-light') ? 'light' : 'system';
-      const fontSize = className.includes('font-small') ? 'small' :
-                      className.includes('font-large') ? 'large' : 'medium';
+      const theme = className.includes('theme-dark')
+        ? 'dark'
+        : className.includes('theme-light')
+          ? 'light'
+          : 'system';
+      const fontSize = className.includes('font-small')
+        ? 'small'
+        : className.includes('font-large')
+          ? 'large'
+          : 'medium';
       const reducedMotion = className.includes('reduced-motion');
-      
+
       localStorage.setItem(
         'theme-settings',
         JSON.stringify({ theme, fontSize, reducedMotion })
@@ -130,7 +136,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 export function HybridDashboard() {
   // Different stores for different concerns
   const userProfile = useZustandView(userStore, 'userProfile');
-  const cartSummary = useReduxView(cartStore, 'cartSummary');
+  const cartSummary = useReduxView(cartStore, ({ cartSummary }) => cartSummary);
   const themeToggle = useZustandView(themeStore, 'themeToggle');
 
   return (
@@ -138,7 +144,9 @@ export function HybridDashboard() {
       <header>
         <div {...userProfile} />
         <div {...cartSummary} />
-        <button {...themeToggle}>Toggle Theme</button>
+        <button {...themeToggle} onClick={() => themeToggle.onClick('dark')}>
+          Toggle Theme
+        </button>
       </header>
 
       <main>
