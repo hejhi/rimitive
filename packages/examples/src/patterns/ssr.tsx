@@ -11,6 +11,7 @@
 import { createMemoryAdapter } from '@lattice/adapter-memory';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useView } from '@lattice/adapter-zustand/react';
+import type { ComponentType } from '@lattice/core';
 import type { GetServerSideProps } from 'next';
 
 import { dashboardComponent } from '../slices';
@@ -49,22 +50,22 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
 // Client-side: Hydrate Zustand store with SSR data
 // ============================================================================
 
-// Type for the initial state - the model state shape
-interface InitialState {
-  user: { id: string; name: string; email: string } | null;
-  isLoading: boolean;
-  error: string | null;
-  items: Array<{ id: string; name: string; price: number; quantity: number }>;
-  theme: 'light' | 'dark' | 'system';
-  fontSize: 'small' | 'medium' | 'large';
-  reducedMotion: boolean;
-  sidebarOpen: boolean;
-  activeTab: 'overview' | 'orders' | 'settings';
-}
+// Extract the component type for better type safety
+type DashboardComponentType = ComponentType<typeof dashboardComponent>;
+
+// Type for the initial state - matches the model state shape
+type InitialState = DashboardComponentType['model'];
 
 // Store singleton - created once and reused
 const clientStore = createZustandAdapter(dashboardComponent);
 let hasHydrated = false;
+
+// Note: If you need to type a store variable explicitly, you can use:
+// type DashboardStore = ReturnType<typeof createZustandAdapter<
+//   DashboardComponentType['model'],
+//   DashboardComponentType['actions'],
+//   DashboardComponentType['views']
+// >>;
 
 function getOrCreateStore(initialState?: InitialState) {
   // Hydrate with server state if provided and not already hydrated

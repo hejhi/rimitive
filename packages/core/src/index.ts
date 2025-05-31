@@ -71,13 +71,13 @@ export function select<Model, T, U = T>(
 ): U {
   // Create marker object with proper type
   const marker = Object.create(null);
-  
+
   // Store both slice and optional selector under SELECT_MARKER
   const markerValue: SelectMarkerValue<Model, T, U> = {
     slice,
-    ...(selector !== undefined && { selector })
+    ...(selector !== undefined && { selector }),
   };
-  
+
   marker[SELECT_MARKER] = markerValue;
 
   // This cast is intentional and required for the marker pattern to work
@@ -104,6 +104,27 @@ export function createComponent<Model, Actions, Views>(
 
 // Export compose utilities
 export { compose, composeSlices } from './compose';
+
+// Type extraction helpers
+export type ComponentModel<
+  C extends ComponentFactory<unknown, unknown, unknown>,
+> = C extends ComponentFactory<infer M, unknown, unknown> ? M : never;
+
+export type ComponentActions<
+  C extends ComponentFactory<unknown, unknown, unknown>,
+> = C extends ComponentFactory<unknown, infer A, unknown> ? A : never;
+
+export type ComponentViews<
+  C extends ComponentFactory<unknown, unknown, unknown>,
+> = C extends ComponentFactory<unknown, unknown, infer V> ? V : never;
+
+export type ComponentType<
+  C extends ComponentFactory<unknown, unknown, unknown>,
+> = {
+  model: ComponentModel<C>;
+  actions: ComponentActions<C>;
+  views: ComponentViews<C>;
+};
 
 // In-source tests for slice transforms
 if (import.meta.vitest) {
@@ -142,7 +163,9 @@ if (import.meta.vitest) {
 
     const marker = select(slice);
     expect(SELECT_MARKER in marker).toBe(true);
-    const markerValue = (marker as Record<symbol, unknown>)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+    const markerValue = (marker as Record<symbol, unknown>)[
+      SELECT_MARKER
+    ] as SelectMarkerValue<unknown, unknown>;
     expect(markerValue.slice).toBe(slice);
     expect(markerValue.selector).toBeUndefined();
   });
@@ -157,7 +180,9 @@ if (import.meta.vitest) {
     // Without selector - returns full slice result type
     const fullMarker = select(slice);
     expect(SELECT_MARKER in fullMarker).toBe(true);
-    const fullMarkerValue = (fullMarker as Record<symbol, unknown>)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+    const fullMarkerValue = (fullMarker as Record<symbol, unknown>)[
+      SELECT_MARKER
+    ] as SelectMarkerValue<unknown, unknown>;
     expect(fullMarkerValue.slice).toBe(slice);
     expect(fullMarkerValue.selector).toBeUndefined();
 
@@ -166,7 +191,11 @@ if (import.meta.vitest) {
     // Since countMarker is typed as number, we need to check it as an object
     const countMarkerObj = countMarker as unknown as Record<symbol, unknown>;
     expect(SELECT_MARKER in countMarkerObj).toBe(true);
-    const countMarkerValue = countMarkerObj[SELECT_MARKER] as SelectMarkerValue<unknown, { count: number; name: string }, number>;
+    const countMarkerValue = countMarkerObj[SELECT_MARKER] as SelectMarkerValue<
+      unknown,
+      { count: number; name: string },
+      number
+    >;
     expect(countMarkerValue.slice).toBe(slice);
     expect(typeof countMarkerValue.selector).toBe('function');
 
@@ -185,19 +214,21 @@ if (import.meta.vitest) {
 
     // Select only x and y coordinates
     const xyMarker = select(vectorSlice, (v) => ({ x: v.x, y: v.y }));
-    
+
     // Type should be inferred as { x: number; y: number }
     // This test verifies the marker is created correctly
     expect(SELECT_MARKER in xyMarker).toBe(true);
-    
-    const markerValue = (xyMarker as Record<symbol, unknown>)[SELECT_MARKER] as SelectMarkerValue<
+
+    const markerValue = (xyMarker as Record<symbol, unknown>)[
+      SELECT_MARKER
+    ] as SelectMarkerValue<
       unknown,
       { x: number; y: number; z: number },
       { x: number; y: number }
     >;
     expect(markerValue.slice).toBe(vectorSlice);
     expect(typeof markerValue.selector).toBe('function');
-    
+
     const result = markerValue.selector!({ x: 10, y: 20, z: 30 });
     expect(result).toEqual({ x: 10, y: 20 });
     expect('z' in result).toBe(false);
@@ -231,25 +262,40 @@ if (import.meta.vitest) {
 
     // Verify the markers are created correctly
     const profileMarkers = profileSlice(null as never);
-    
+
     // userName should be a string marker
-    const userNameMarker = profileMarkers.userName as unknown as Record<symbol, unknown>;
+    const userNameMarker = profileMarkers.userName as unknown as Record<
+      symbol,
+      unknown
+    >;
     expect(SELECT_MARKER in userNameMarker).toBe(true);
-    const userNameMarkerValue = userNameMarker[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+    const userNameMarkerValue = userNameMarker[
+      SELECT_MARKER
+    ] as SelectMarkerValue<unknown, unknown>;
     expect(userNameMarkerValue.slice).toBe(userSlice);
     expect(typeof userNameMarkerValue.selector).toBe('function');
-    
+
     // postCount should be a number marker
-    const postCountMarker = profileMarkers.postCount as unknown as Record<symbol, unknown>;
+    const postCountMarker = profileMarkers.postCount as unknown as Record<
+      symbol,
+      unknown
+    >;
     expect(SELECT_MARKER in postCountMarker).toBe(true);
-    const postCountMarkerValue = postCountMarker[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+    const postCountMarkerValue = postCountMarker[
+      SELECT_MARKER
+    ] as SelectMarkerValue<unknown, unknown>;
     expect(postCountMarkerValue.slice).toBe(postsSlice);
     expect(typeof postCountMarkerValue.selector).toBe('function');
-    
+
     // fullUser should be a user object marker without selector
-    const fullUserMarker = profileMarkers.fullUser as unknown as Record<symbol, unknown>;
+    const fullUserMarker = profileMarkers.fullUser as unknown as Record<
+      symbol,
+      unknown
+    >;
     expect(SELECT_MARKER in fullUserMarker).toBe(true);
-    const fullUserMarkerValue = fullUserMarker[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
+    const fullUserMarkerValue = fullUserMarker[
+      SELECT_MARKER
+    ] as SelectMarkerValue<unknown, unknown>;
     expect(fullUserMarkerValue.slice).toBe(userSlice);
     expect(fullUserMarkerValue.selector).toBeUndefined();
   });
