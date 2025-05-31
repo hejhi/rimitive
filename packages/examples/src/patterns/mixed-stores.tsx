@@ -144,7 +144,18 @@ export function HybridDashboard() {
       <header>
         <div {...userProfile} />
         <div {...cartSummary} />
-        <button {...themeToggle} onClick={() => themeToggle.onClick('dark')}>
+        <button 
+          onClick={() => {
+            // Cycle through themes
+            const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
+            const currentTheme = themeToggle.currentTheme;
+            const currentIndex = themes.indexOf(currentTheme);
+            const nextTheme = themes[(currentIndex + 1) % themes.length];
+            themeToggle.onThemeChange(nextTheme!);
+          }}
+          aria-pressed={themeToggle['aria-pressed']}
+          className={themeToggle.className}
+        >
           Toggle Theme
         </button>
       </header>

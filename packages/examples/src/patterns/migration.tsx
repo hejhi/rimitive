@@ -40,13 +40,18 @@ export function LegacyApp() {
       <h2>Phase 1: All Redux</h2>
       <div {...userProfile} />
       <div {...cartSummary} />
-      <button 
+      <button
         onClick={() => {
           // Cycle through themes
-          const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
-          const currentIndex = themes.indexOf(themeToggle.currentTheme);
+          const themes: Array<'light' | 'dark' | 'system'> = [
+            'light',
+            'dark',
+            'system',
+          ];
+          const currentTheme = themeToggle.currentTheme;
+          const currentIndex = themes.indexOf(currentTheme);
           const nextTheme = themes[(currentIndex + 1) % themes.length];
-          themeToggle.onThemeChange(nextTheme);
+          themeToggle.onThemeChange(nextTheme!);
         }}
         aria-pressed={themeToggle['aria-pressed']}
         className={themeToggle.className}
@@ -81,13 +86,18 @@ export function PhaseTwo() {
       <h2>Phase 2: Theme migrated to Zustand</h2>
       <div {...userProfile} />
       <div {...cartSummary} />
-      <button 
+      <button
         onClick={() => {
           // Cycle through themes
-          const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
-          const currentIndex = themes.indexOf(themeToggle.currentTheme);
+          const themes: Array<'light' | 'dark' | 'system'> = [
+            'light',
+            'dark',
+            'system',
+          ];
+          const currentTheme = themeToggle.currentTheme;
+          const currentIndex = themes.indexOf(currentTheme);
           const nextTheme = themes[(currentIndex + 1) % themes.length];
-          themeToggle.onThemeChange(nextTheme);
+          themeToggle.onThemeChange(nextTheme!);
         }}
         aria-pressed={themeToggle['aria-pressed']}
         className={themeToggle.className}
@@ -141,52 +151,42 @@ export function FeatureFlagMigration() {
   );
 }
 
-// ============================================================================
-// Phase 4: Adapter factory pattern for gradual rollout
-// ============================================================================
-interface StoreConfig {
-  useZustandForUser?: boolean;
-  useZustandForCart?: boolean;
-  useZustandForTheme?: boolean;
-}
-
-function createStores(config: StoreConfig = {}) {
-  return {
-    user: config.useZustandForUser
-      ? createZustandAdapter(userComponent)
-      : createReduxAdapter(userComponent),
-    cart: config.useZustandForCart
-      ? createZustandAdapter(cartComponent)
-      : createReduxAdapter(cartComponent),
-    theme: config.useZustandForTheme
-      ? createZustandAdapter(themeComponent)
-      : createReduxAdapter(themeComponent),
-  };
-}
-
-// Could be controlled by environment variables, user preferences, etc.
-const stores = createStores({
-  useZustandForUser: false, // Still testing
-  useZustandForCart: false, // Not ready yet
-  useZustandForTheme: true, // Fully migrated!
-});
+// Store that's definitely Redux for the example
+const reduxUserStore = createReduxAdapter(userComponent);
 
 // ============================================================================
 // Shared component that works with any adapter
 // ============================================================================
-interface ProfileProps {
-  store: ReturnType<typeof createZustandAdapter>;
-  adapterType: 'redux' | 'zustand';
-}
 
-export function UniversalProfile({ store, adapterType }: ProfileProps) {
-  // The component doesn't care which adapter is used!
+// Create adapter-specific wrapper components
+function ZustandProfile({
+  store,
+}: {
+  store: ReturnType<typeof createZustandAdapter<any, any, any>>;
+}) {
   const profile = useZustandView(store, 'userProfile');
-
+  // userProfile is a computed view, so we need to call it
+  const profileAttrs = typeof profile === 'function' ? profile() : profile;
   return (
     <div className="universal-profile">
-      <div {...profile} />
-      <small>Powered by {adapterType}</small>
+      <div {...profileAttrs} />
+      <small>Powered by zustand</small>
+    </div>
+  );
+}
+
+function ReduxProfile({
+  store,
+}: {
+  store: ReturnType<typeof createReduxAdapter<any, any, any>>;
+}) {
+  const profile = useReduxView(store, (views) => views.userProfile);
+  // userProfile is a computed view, so we need to call it
+  const profileAttrs = typeof profile === 'function' ? profile() : profile;
+  return (
+    <div className="universal-profile">
+      <div {...profileAttrs} />
+      <small>Powered by redux</small>
     </div>
   );
 }
@@ -223,10 +223,7 @@ export function MigrationDashboard() {
         {phase === 4 && (
           <div>
             <h2>Phase 4: Flexible Architecture</h2>
-            <UniversalProfile
-              store={stores.user}
-              adapterType={stores.user.actions ? 'zustand' : 'redux'}
-            />
+            <ReduxProfile store={reduxUserStore} />
             <p>Components work with any adapter!</p>
           </div>
         )}

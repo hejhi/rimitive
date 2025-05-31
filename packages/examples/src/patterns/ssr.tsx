@@ -8,7 +8,6 @@
  * - Works in Node.js environments
  */
 
-// Remove unused React import
 import { createMemoryAdapter } from '@lattice/adapter-memory';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useView } from '@lattice/adapter-zustand/react';
@@ -49,27 +48,37 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
 // ============================================================================
 // Client-side: Hydrate Zustand store with SSR data
 // ============================================================================
-// Type the store properly
-type DashboardStore = ReturnType<typeof createZustandAdapter<
-  ReturnType<ReturnType<typeof dashboardComponent>['model']>,
-  any,
-  any
->>;
+// Create a dummy call to get the proper types - TypeScript will optimize this away
+const _typeHelper = () => createZustandAdapter(dashboardComponent);
+type DashboardStore = ReturnType<typeof _typeHelper>;
+
+// Type for the initial state - the model state shape
+interface InitialState {
+  user: { id: string; name: string; email: string } | null;
+  isLoading: boolean;
+  error: string | null;
+  items: Array<{ id: string; name: string; price: number; quantity: number }>;
+  theme: 'light' | 'dark' | 'system';
+  fontSize: 'small' | 'medium' | 'large';
+  reducedMotion: boolean;
+  sidebarOpen: boolean;
+  activeTab: 'overview' | 'orders' | 'settings';
+}
 
 let clientStore: DashboardStore | null = null;
 
-function getOrCreateStore(initialState?: any): DashboardStore {
+function getOrCreateStore(initialState?: InitialState): DashboardStore {
   // Create store only once
   if (!clientStore) {
-    clientStore = createZustandAdapter(dashboardComponent) as DashboardStore;
+    clientStore = createZustandAdapter(dashboardComponent);
 
     // Hydrate with server state if provided
     if (initialState && typeof window !== 'undefined') {
       // Hydrate the state using actions
       if (initialState.activeTab && clientStore) {
-        (clientStore as any).actions.setActiveTab(initialState.activeTab);
+        clientStore.actions.setActiveTab(initialState.activeTab);
       }
-      
+
       // Note: For complex state like user/cart, you'd need custom
       // hydration actions in your model to restore the full state
       // from the server. This is a limitation of action-based updates.
@@ -83,8 +92,10 @@ function getOrCreateStore(initialState?: any): DashboardStore {
 // ============================================================================
 // Page component
 // ============================================================================
+
+// Define the props type for the page component
 interface DashboardPageProps {
-  initialState?: any; // The dashboard component state type
+  initialState: InitialState;
 }
 
 export default function DashboardPage({ initialState }: DashboardPageProps) {
@@ -94,10 +105,10 @@ export default function DashboardPage({ initialState }: DashboardPageProps) {
 
   return (
     <div className="dashboard-page">
-      <header {...(header as any)()} />
+      <header {...header} />
 
       <nav>
-        {(navigation as any)().tabs.map((tab: any) => (
+        {navigation.tabs.map((tab) => (
           <button
             key={tab.name}
             onClick={tab.onClick}
@@ -150,7 +161,7 @@ export async function apiRouteExample(req: Request) {
   return new Response(
     JSON.stringify({
       cart: cartStore.model.get(),
-      header: cartStore.views.header.get(),
+      header: cartStore.views.header(),
     }),
     {
       headers: { 'Content-Type': 'application/json' },
