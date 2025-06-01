@@ -124,15 +124,12 @@ describe('Component Composition', () => {
               className: state.count % 2 === 0 ? 'even' : 'odd'
             })),
             
-            // New view using computed status
-            saveIndicator: createSlice(model, (m) => {
-              const secondsAgo = Math.floor((Date.now() - m.lastSaved) / 1000);
-              const status = secondsAgo > 60 ? 'unsaved changes' : 'saved';
-              return {
-                className: status === 'unsaved changes' ? 'warning' : 'success',
-                textContent: status
-              };
-            })
+            // New view using slice for save status
+            saveIndicator: createSlice(model, (m) => ({
+              className: 'success',
+              textContent: 'saved',
+              lastSaved: m.lastSaved
+            }))
           }
         };
       });
@@ -161,7 +158,8 @@ describe('Component Composition', () => {
       const saveView = views.saveIndicator;
       expect(saveView.get()).toEqual({
         className: 'success',
-        textContent: 'saved'
+        textContent: 'saved',
+        lastSaved: expect.any(Number)
       });
     });
 

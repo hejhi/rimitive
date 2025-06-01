@@ -1,11 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   createComponent,
   createModel,
   createSlice,
-  select,
-  SELECT_MARKER,
-  type SelectMarkerValue,
+  compose,
 } from './index';
 
 describe('Lattice Core', () => {
@@ -172,7 +170,7 @@ describe('Lattice Core', () => {
   });
 
   describe('View slices', () => {
-    it('should create static view slices as shown in counter example', () => {
+    it('should create static view slices with compose', () => {
       const modelFactory = createModel<{
         count: number;
         increment: () => void;
@@ -187,15 +185,18 @@ describe('Lattice Core', () => {
         increment: m.increment,
       }));
 
-      // This is the incrementButton from the README
-      const incrementButton = createSlice(modelFactory, (m) => ({
-        onClick: select(actions).increment,
-        disabled: m.disabled,
-        'aria-label': 'Increment counter',
-      }));
+      // Using compose for dependency injection
+      const incrementButton = createSlice(
+        modelFactory,
+        compose({ actions }, (m, { actions }) => ({
+          onClick: actions.increment,
+          disabled: m.disabled,
+          'aria-label': 'Increment counter',
+        }))
+      );
 
       // Test the slice
-      const mockIncrement = () => {};
+      const mockIncrement = vi.fn();
       const model = {
         count: 0,
         increment: mockIncrement,
@@ -204,36 +205,36 @@ describe('Lattice Core', () => {
 
       const buttonView = incrementButton(model);
 
-      // When we do select(actions).increment, the .increment access returns undefined
-      // because the marker object doesn't have that property
-      expect(buttonView.onClick).toBeUndefined();
+      // With compose, the action is properly resolved
+      expect(buttonView.onClick).toBe(mockIncrement);
       expect(buttonView.disabled).toBe(false);
       expect(buttonView['aria-label']).toBe('Increment counter');
     });
 
-    it('should demonstrate how adapters would process select() in slices', () => {
+    it('should demonstrate slice composition with compose', () => {
       const modelFactory = createModel<{ value: number }>(() => ({ value: 42 }));
       
       const baseSlice = createSlice(modelFactory, (m) => ({ val: m.value }));
       
-      // When we compose slices with select()
-      const composedSlice = createSlice(modelFactory, () => ({
-        // This stores the whole marker object
-        selected: select(baseSlice),
-        // This tries to access a property on the marker, returns undefined
-        selectedVal: select(baseSlice).val
-      }));
+      // When we compose slices with compose()
+      const composedSlice = createSlice(
+        modelFactory,
+        compose({ baseSlice }, (m, { baseSlice }) => ({
+          // The whole slice is available
+          fullSlice: baseSlice,
+          // And we can access specific properties
+          selectedVal: baseSlice.val,
+          // Can also add model properties
+          directValue: m.value
+        }))
+      );
 
       const result = composedSlice({ value: 100 });
       
-      // The whole select() marker is preserved
-      expect(SELECT_MARKER in result.selected).toBe(true);
-      const markerValue = (result.selected as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
-      expect(markerValue.slice).toBe(baseSlice);
-      expect(markerValue.selector).toBeUndefined();
-      
-      // But accessing properties on the marker returns undefined
-      expect(result.selectedVal).toBeUndefined();
+      // The slice is properly resolved
+      expect(result.fullSlice).toEqual({ val: 100 });
+      expect(result.selectedVal).toBe(100);
+      expect(result.directValue).toBe(100);
     });
 
     it('should support parameterized view factories from todoList example', () => {
@@ -242,19 +243,22 @@ describe('Lattice Core', () => {
       const modelFactory = createModel<{
         filter: Filter;
         setFilter: (filter: Filter) => void;
-      }>(({ set, get }) => ({
+      }>(({ set }) => ({
         filter: 'all',
-        setFilter: () => set({ filter: get().filter }),
+        setFilter: (filter: Filter) => set({ filter }),
       }));
 
       const actions = createSlice(modelFactory, (m) => ({
         setFilter: m.setFilter,
       }));
 
-      const buttonSlice = createSlice(modelFactory, (m) => ({
-        setFilter: select(actions).setFilter,
-        filter: m.filter,
-      }));
+      const buttonSlice = createSlice(
+        modelFactory,
+        compose({ actions }, (m, { actions }) => ({
+          setFilter: actions.setFilter,
+          filter: m.filter,
+        }))
+      );
 
       // Parameterized slice factory from README using slice transform
       const createFilterButtonView = (filterType: Filter) => 
@@ -273,7 +277,7 @@ describe('Lattice Core', () => {
       expect(typeof activeButton).toBe('function');
 
       // Test execution
-      const mockSetFilter = () => {};
+      const mockSetFilter = vi.fn();
       const model = {
         filter: 'all' as Filter,
         setFilter: mockSetFilter,
@@ -281,13 +285,13 @@ describe('Lattice Core', () => {
 
       const allButtonView = allButton();
       const allButtonResult = allButtonView(model);
-      expect(allButtonResult.onClick).toBeUndefined(); // select() marker property access
+      expect(allButtonResult.onClick).toBe(mockSetFilter);
       expect(allButtonResult.className).toBe('selected');
       expect(allButtonResult['aria-pressed']).toBe(true);
 
       const activeButtonView = activeButton();
       const activeButtonResult = activeButtonView(model);
-      expect(activeButtonResult.onClick).toBeUndefined(); // select() marker property access
+      expect(activeButtonResult.onClick).toBe(mockSetFilter);
       expect(activeButtonResult.className).toBe('');
       expect(activeButtonResult['aria-pressed']).toBe(false);
     });
@@ -427,8 +431,8 @@ describe('Lattice Core', () => {
     });
   });
 
-  describe('Slice composition with select()', () => {
-    it('should compose slices using select() as shown in README', () => {
+  describe('Slice composition with compose()', () => {
+    it('should compose slices using compose()', () => {
       const modelFactory = createModel<{
         user: { name: string };
         theme: string;
@@ -441,21 +445,28 @@ describe('Lattice Core', () => {
 
       const userSlice = createSlice(modelFactory, (m) => ({
         user: m.user,
+        isLoggedIn: m.user.name !== '',
       }));
 
       const themeSlice = createSlice(modelFactory, (m) => ({
         theme: m.theme,
+        isDark: m.theme === 'dark',
       }));
 
-      // Composite slice from README
-      const headerSlice = createSlice(modelFactory, (m) => ({
-        user: select(userSlice).user,
-        theme: select(themeSlice).theme,
-        onLogout: m.logout,
-      }));
+      // Composite slice using compose
+      const headerSlice = createSlice(
+        modelFactory,
+        compose({ userSlice, themeSlice }, (m, { userSlice, themeSlice }) => ({
+          user: userSlice.user,
+          theme: themeSlice.theme,
+          onLogout: m.logout,
+          // Can combine data from multiple slices
+          displayName: `${userSlice.user.name} (${themeSlice.theme} mode)`,
+        }))
+      );
 
       // Test the composite slice
-      const mockLogout = () => {};
+      const mockLogout = vi.fn();
       const model = {
         user: { name: 'John' },
         theme: 'dark',
@@ -464,10 +475,11 @@ describe('Lattice Core', () => {
 
       const headerResult = headerSlice(model);
 
-      // When accessing properties on select() markers, they return undefined
-      expect(headerResult.user).toBeUndefined();
-      expect(headerResult.theme).toBeUndefined();
+      // With compose, all values are properly resolved
+      expect(headerResult.user).toEqual({ name: 'John' });
+      expect(headerResult.theme).toBe('dark');
       expect(headerResult.onLogout).toBe(mockLogout);
+      expect(headerResult.displayName).toBe('John (dark mode)');
     });
 
     it('should support nested slice composition', () => {
@@ -490,26 +502,29 @@ describe('Lattice Core', () => {
         user: m.user,
       }));
 
-      // Deeply nested composition
-      const composite = createSlice(modelFactory, () => ({
-        action: select(actions).increment,
-        state: select(stateSlice),
-      }));
+      // Nested composition using compose
+      const composite = createSlice(
+        modelFactory,
+        compose({ actions, stateSlice }, (_, { actions, stateSlice }) => ({
+          action: actions.increment,
+          state: stateSlice,
+          // Can also create derived values
+          summary: `${stateSlice.user}: ${stateSlice.count}`,
+        }))
+      );
 
+      const mockIncrement = vi.fn();
       const model = {
         count: 10,
         user: 'test',
-        increment: () => {},
+        increment: mockIncrement,
       };
 
       const result = composite(model);
-      // Property access on select() markers returns undefined
-      expect(result.action).toBeUndefined();
-      // But the whole select() object is preserved
-      expect(SELECT_MARKER in result.state).toBe(true);
-      const markerValue = (result.state as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
-      expect(markerValue.slice).toBe(stateSlice);
-      expect(markerValue.selector).toBeUndefined();
+      // All values are properly resolved
+      expect(result.action).toBe(mockIncrement);
+      expect(result.state).toEqual({ count: 10, user: 'test' });
+      expect(result.summary).toBe('test: 10');
     });
   });
 
@@ -541,11 +556,14 @@ describe('Lattice Core', () => {
         }));
 
         // Composite slice: Combines state and actions
-        const incrementButton = createSlice(model, (m) => ({
-          onClick: select(actions).increment,
-          disabled: m.disabled,
-          'aria-label': 'Increment counter',
-        }));
+        const incrementButton = createSlice(
+          model,
+          compose({ actions }, (m, { actions }) => ({
+            onClick: actions.increment,
+            disabled: m.disabled,
+            'aria-label': 'Increment counter',
+          }))
+        );
 
         return {
           model,
@@ -636,10 +654,13 @@ describe('Lattice Core', () => {
           setFilter: m.setFilter,
         }));
 
-        const buttonSlice = createSlice(model, (m) => ({
-          setFilter: select(actions).setFilter,
-          filter: m.filter,
-        }));
+        const buttonSlice = createSlice(
+          model,
+          compose({ actions }, (m, { actions }) => ({
+            setFilter: actions.setFilter,
+            filter: m.filter,
+          }))
+        );
 
         // Composite slice factory for filter buttons using transform
         const createFilterButtonView = (filterType: Filter) => 
@@ -714,26 +735,33 @@ describe('Lattice Core', () => {
       expect(_typeCheck).toBeDefined();
     });
 
-    it('should maintain type safety with select()', () => {
+    it('should maintain type safety with compose()', () => {
       const modelFactory = createModel<{ value: number }>(() => ({
         value: 42,
       }));
 
       const slice1 = createSlice(modelFactory, (m) => ({
         value: m.value,
+        doubled: m.value * 2,
       }));
 
-      const slice2 = createSlice(modelFactory, () => ({
-        selected: select(slice1).value,
-      }));
+      const slice2 = createSlice(
+        modelFactory,
+        compose({ slice1 }, (m, { slice1 }) => ({
+          selected: slice1.value,
+          fromModel: m.value,
+          computed: slice1.doubled + m.value,
+        }))
+      );
 
-      // The type should flow through select()
+      // The type should flow through compose()
       const modelInstance = { value: 42 };
       const result = slice2(modelInstance);
       
-      // Verify the type
-      const _typeCheck: typeof result = { selected: 42 };
-      expect(_typeCheck).toBeDefined();
+      // Verify the type and values
+      expect(result.selected).toBe(42);
+      expect(result.fromModel).toBe(42);
+      expect(result.computed).toBe(126); // 84 + 42
     });
 
     it('should enforce type constraints in component factories', () => {
@@ -770,7 +798,7 @@ describe('Lattice Core', () => {
   });
 
   describe('Component composition', () => {
-    it('should support component composition pattern from README', () => {
+    it('should support component composition', () => {
       // Base counter
       const counter = createComponent(() => {
         const model = createModel<{
@@ -785,177 +813,93 @@ describe('Lattice Core', () => {
           increment: m.increment,
         }));
 
+        const countSlice = createSlice(model, (m) => ({
+          count: m.count,
+        }));
+
         return {
           model,
           actions,
-          views: {},
+          views: {
+            display: countSlice,
+          },
         };
       });
 
-      // Enhanced counter with persistence
-      const persistentCounter = createComponent(() => {
+      // Enhanced counter with additional functionality
+      const enhancedCounter = createComponent(() => {
         const base = counter();
         
         // Extend the model
         const model = createModel<{
           count: number;
           increment: () => void;
-          lastSaved: number;
-          save: () => void;
-        }>(({ set, get }) => ({
-          // Get base state schema
-          ...base.model({ set, get }),
+          decrement: () => void;
+          reset: () => void;
+        }>(({ set, get }) => {
+          // Execute base model to get its structure
+          const baseModel = base.model({ set, get });
+          
+          return {
+            // Spread base model properties
+            ...baseModel,
 
-          // Add new state
-          lastSaved: Date.now(),
-          save: () => {
-            localStorage.setItem('count', String(get().count));
-            set({ lastSaved: Date.now() });
-          },
+            // Add new functionality
+            decrement: () => set({ count: get().count - 1 }),
+            reset: () => set({ count: 0 }),
+          };
+        });
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+          decrement: m.decrement,
+          reset: m.reset,
         }));
 
-        // Create a slice for save status
-        const saveSlice = createSlice(model, (m) => ({
-          lastSaved: m.lastSaved,
+        const displaySlice = createSlice(model, (m) => ({
+          count: m.count,
         }));
-
-        // Compute save status - removed as it's now inline in the view
 
         return {
           model,
-          actions: createSlice(model, (m) => ({
-            increment: m.increment,
-            save: m.save,
-          })),
+          actions,
           views: {
-            // New view using slice transform
-            saveIndicator: () => saveSlice((state) => {
-              const secondsAgo = Math.floor((Date.now() - state.lastSaved) / 1000);
-              const status = secondsAgo > 60 ? 'unsaved changes' : 'saved';
-              return {
-                className: status === 'unsaved changes' ? 'warning' : 'success',
-                textContent: status
-              };
-            }),
+            display: displaySlice,
+            // Computed view that adds styling based on count
+            styledDisplay: () => displaySlice((state) => ({
+              count: state.count,
+              className: state.count === 0 ? 'zero' : state.count > 0 ? 'positive' : 'negative',
+            })),
           },
         };
       });
 
-      const enhanced = persistentCounter();
+      const enhanced = enhancedCounter();
 
       // Verify enhanced structure
       expect(enhanced.model).toBeDefined();
       expect(enhanced.actions).toBeDefined();
-      expect(enhanced.views.saveIndicator).toBeDefined();
-      expect(typeof enhanced.views.saveIndicator).toBe('function');
+      expect(enhanced.views.display).toBeDefined();
+      expect(enhanced.views.styledDisplay).toBeDefined();
+      expect(typeof enhanced.views.styledDisplay).toBe('function');
 
-      // Test the save indicator view
-      const indicatorSlice = enhanced.views.saveIndicator();
-      const indicatorView = indicatorSlice({ count: 0, increment: () => {}, lastSaved: Date.now(), save: () => {} });
-      expect(indicatorView.className).toBe('success');
-      expect(indicatorView.textContent).toBe('saved');
+      // Test the enhanced functionality
+      const mockGet = vi.fn(() => ({ count: 0, increment: () => {}, decrement: () => {}, reset: () => {} }));
+      const mockSet = vi.fn();
+      const model = enhanced.model({ set: mockSet, get: mockGet });
+      expect(model.count).toBe(0);  // Base model starts at 0
+      expect(typeof model.increment).toBe('function');
+      expect(typeof model.decrement).toBe('function');
+      expect(typeof model.reset).toBe('function');
+
+      // Test the styled display view
+      const styledSlice = enhanced.views.styledDisplay();
+      const styledView = styledSlice({ count: 5, increment: () => {}, decrement: () => {}, reset: () => {} });
+      expect(styledView.count).toBe(5);
+      expect(styledView.className).toBe('positive');
     });
   });
 
-  describe('SELECT_MARKER export', () => {
-    it('should export SELECT_MARKER symbol for adapter use', () => {
-      expect(SELECT_MARKER).toBeDefined();
-      expect(typeof SELECT_MARKER).toBe('symbol');
-      expect(SELECT_MARKER.toString()).toBe('Symbol(lattice.select)');
-    });
-
-    it('should use SELECT_MARKER in select() function', () => {
-      const model = createModel<{ value: number }>(() => ({ value: 42 }));
-      const slice = createSlice(model, (m) => ({ value: m.value }));
-      
-      const selected = select(slice);
-      
-      // Verify the marker is present
-      expect(SELECT_MARKER in selected).toBe(true);
-      const markerValue = (selected as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
-      expect(markerValue.slice).toBe(slice);
-      expect(markerValue.selector).toBeUndefined();
-    });
-
-    it('should handle deeply nested select() markers', () => {
-      const model = createModel<{ a: number; b: string; c: boolean }>(() => ({
-        a: 1,
-        b: 'test',
-        c: true
-      }));
-
-      const slice1 = createSlice(model, (m) => ({ a: m.a }));
-      const slice2 = createSlice(model, (m) => ({ b: m.b }));
-      const slice3 = createSlice(model, (m) => ({ c: m.c }));
-
-      // Create a deeply nested composition
-      const deepSlice = createSlice(model, () => ({
-        nested: {
-          level1: select(slice1),
-          level2: {
-            item: select(slice2),
-            deeper: {
-              value: select(slice3)
-            }
-          }
-        }
-      }));
-
-      const result = deepSlice({ a: 10, b: 'hello', c: false });
-
-      // Verify all markers are correctly placed
-      expect(SELECT_MARKER in result.nested.level1).toBe(true);
-      const markerValue1 = (result.nested.level1 as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
-      expect(markerValue1.slice).toBe(slice1);
-      expect(markerValue1.selector).toBeUndefined();
-      
-      expect(SELECT_MARKER in result.nested.level2.item).toBe(true);
-      const markerValue2 = (result.nested.level2.item as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
-      expect(markerValue2.slice).toBe(slice2);
-      expect(markerValue2.selector).toBeUndefined();
-      
-      expect(SELECT_MARKER in result.nested.level2.deeper.value).toBe(true);
-      const markerValue3 = (result.nested.level2.deeper.value as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
-      expect(markerValue3.slice).toBe(slice3);
-      expect(markerValue3.selector).toBeUndefined();
-    });
-
-    it('should allow adapters to identify and process select() markers', () => {
-      const model = createModel<{ count: number }>(() => ({ count: 0 }));
-      const slice = createSlice(model, (m) => ({ value: m.count }));
-      
-      const viewSlice = createSlice(model, () => ({
-        display: select(slice).value
-      }));
-
-      const result = viewSlice({ count: 5 });
-
-      // When accessing properties on markers, they return undefined
-      expect(result.display).toBeUndefined();
-      
-      // To demonstrate how adapters would work, let's create a slice that stores the whole marker
-      const viewSlice2 = createSlice(model, () => ({
-        display: select(slice) // Without property access
-      }));
-
-      const result2 = viewSlice2({ count: 5 });
-      
-      // Now the adapter can check for markers
-      const hasMarker = SELECT_MARKER in result2.display;
-      expect(hasMarker).toBe(true);
-
-      // Adapter would retrieve the slice like this
-      if (hasMarker) {
-        const markerValue = (result2.display as any)[SELECT_MARKER] as SelectMarkerValue<unknown, unknown>;
-        expect(markerValue.slice).toBe(slice);
-        expect(markerValue.selector).toBeUndefined();
-        
-        // Adapter could then execute the original slice
-        const sliceResult = markerValue.slice({ count: 5 });
-        expect(sliceResult).toEqual({ value: 5 });
-      }
-    });
-  });
 
   describe('Edge cases and error handling', () => {
     it('should handle empty models', () => {
@@ -965,18 +909,24 @@ describe('Lattice Core', () => {
       expect(slice({})).toEqual({});
     });
 
-    it('should handle deeply nested select() calls', () => {
+    it('should handle deeply nested compose() calls', () => {
       const model = createModel<{ value: number }>(() => ({
         value: 1,
       }));
 
       const slice1 = createSlice(model, (m) => ({ v1: m.value }));
-      const slice2 = createSlice(model, () => ({ v2: select(slice1).v1 }));
-      const slice3 = createSlice(model, () => ({ v3: select(slice2).v2 }));
+      const slice2 = createSlice(
+        model,
+        compose({ slice1 }, (_, { slice1 }) => ({ v2: slice1.v1 }))
+      );
+      const slice3 = createSlice(
+        model,
+        compose({ slice2 }, (_, { slice2 }) => ({ v3: slice2.v2 }))
+      );
 
-      const result = slice3({ value: 1 });
-      // Accessing properties on select() markers returns undefined
-      expect(result.v3).toBeUndefined();
+      const result = slice3({ value: 10 });
+      // With compose, values flow through correctly
+      expect(result.v3).toBe(10);
     });
 
     it('should handle computed views returning different shapes', () => {

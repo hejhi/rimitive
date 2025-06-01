@@ -6,7 +6,7 @@
  * UI framework. These specifications can then be used with any adapter.
  */
 
-import { createComponent, createModel, createSlice, select, compose } from '@lattice/core';
+import { createComponent, createModel, createSlice, compose } from '@lattice/core';
 
 // ============================================================================
 // Shared User Component
@@ -63,7 +63,7 @@ export const userComponent = createComponent(() => {
     actions,
     views: {
       loginButton: createSlice(model, (m) => ({
-        onClick: select(actions, (a) => a.login),
+        onClick: m.login,
         disabled: m.isLoading,
         children: m.isLoading ? 'Logging in...' : 'Login'
       })),
@@ -199,7 +199,7 @@ export const themeComponent = createComponent(() => {
       themeToggle: createSlice(model, (m) => ({
         // Note: This returns the setTheme function, which expects a theme parameter
         // The consuming component needs to wrap this properly
-        onThemeChange: select(actions, (a) => a.setTheme),
+        onThemeChange: m.setTheme,
         currentTheme: m.theme,
         'aria-pressed': m.theme === 'dark',
         className: `theme-${m.theme}`
