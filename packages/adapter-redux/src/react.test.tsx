@@ -235,21 +235,20 @@ describe('Redux React Integration', () => {
         filter: m.filter,
       }));
 
-      const filteredItemsView = () =>
-        itemsSlice((state) => {
-          const filtered = state.filter
-            ? state.items.filter((item) =>
-                item.toLowerCase().includes(state.filter.toLowerCase())
-              )
-            : state.items;
+      const filteredItemsView = itemsSlice((state) => {
+        const filtered = state.filter
+          ? state.items.filter((item) =>
+              item.toLowerCase().includes(state.filter.toLowerCase())
+            )
+          : state.items;
 
-          return {
-            items: filtered,
-            count: filtered.length,
-            hasResults: filtered.length > 0,
-            searchTerm: state.filter,
-          };
-        });
+        return {
+          items: filtered,
+          count: filtered.length,
+          hasResults: filtered.length > 0,
+          searchTerm: state.filter,
+        };
+      });
 
       return {
         model,
@@ -399,8 +398,7 @@ describe('Redux React Integration', () => {
         sortBy: m.sortBy,
       }));
 
-      const filteredTodosView = () =>
-        todoStateSlice((state) => {
+      const filteredTodosView = todoStateSlice((state) => {
           // Filter
           let filtered =
             state.filter === 'all'

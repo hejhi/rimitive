@@ -50,7 +50,7 @@ export interface ComposedSelector<Model, Deps, Result> {
  */
 export function compose<
   Model,
-  Deps extends Record<string, SliceFactory<Model, any>>,
+  Deps extends Record<string, SliceFactory<Model, unknown>>,
   Result,
 >(
   deps: Deps,
@@ -63,16 +63,25 @@ export function compose<
     }
   ) => Result
 ): ComposedSelector<Model, Deps, Result> {
+  // Type for resolved dependencies
+  type ResolvedDeps = {
+    [K in keyof Deps]: Deps[K] extends SliceFactory<Model, infer T>
+      ? T
+      : never;
+  };
+
   // Create the composed selector
   const composedSelector = (model: Model): Result => {
-    // Resolve all dependencies by executing their slice factories
-    const resolvedDeps = Object.entries(deps).reduce(
-      (acc, [key, sliceFactory]) => {
-        acc[key] = sliceFactory(model);
-        return acc;
-      },
-      {} as any
-    );
+    // Build resolved dependencies object
+    // We need to use type assertions here because TypeScript cannot
+    // track the relationship between keys and values through dynamic property access
+    const entries = Object.entries(deps) as Array<[keyof Deps, Deps[keyof Deps]]>;
+    const resolvedDeps = entries.reduce((acc, [key, sliceFactory]) => {
+      return {
+        ...acc,
+        [key]: sliceFactory(model)
+      };
+    }, {} as ResolvedDeps);
 
     // Call the selector with model and resolved dependencies
     return selector(model, resolvedDeps);
@@ -84,13 +93,6 @@ export function compose<
   return composedSelector;
 }
 
-// Stub for the old composeSlices function that was in the original file
-// This can be removed once all references are updated
-export function composeSlices(..._args: any[]): any {
-  throw new Error(
-    'composeSlices has been replaced with compose. Please update your code.'
-  );
-}
 
 // In-source tests
 if (import.meta.vitest) {

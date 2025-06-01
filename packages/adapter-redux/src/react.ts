@@ -300,13 +300,12 @@ if (import.meta.vitest) {
           items: m.items,
         }));
 
-        const statsView = () =>
-          itemsSlice((state) => ({
-            count: state.items.length,
-            sum: state.items.reduce((a, b) => a + b, 0),
-            average:
-              state.items.reduce((a, b) => a + b, 0) / state.items.length,
-          }));
+        const statsView = itemsSlice((state) => ({
+          count: state.items.length,
+          sum: state.items.reduce((a, b) => a + b, 0),
+          average:
+            state.items.reduce((a, b) => a + b, 0) / state.items.length,
+        }));
 
         return {
           model,

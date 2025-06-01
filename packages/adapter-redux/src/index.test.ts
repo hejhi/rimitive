@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { createReduxAdapter } from './index';
-import { createComponent, createModel, createSlice, compose, createAdapterTestSuite } from '@lattice/core';
+import {
+  createComponent,
+  createModel,
+  createSlice,
+  compose,
+  createAdapterTestSuite,
+} from '@lattice/core';
 
 describe('Redux Adapter', () => {
   it('should export createReduxAdapter function', () => {
@@ -211,7 +217,7 @@ describe('Redux Adapter', () => {
 
     store.actions.increment();
     store.actions.increment();
-    
+
     expect(callCount).toBe(2);
     expect(values).toEqual([1, 2]);
 
@@ -313,20 +319,19 @@ describe('Redux Adapter', () => {
       }));
 
       // Computed view
-      const summaryView = () =>
-        cartSlice((cart) => {
-          const subtotal = cart.items.reduce((sum, item) => sum + item.price, 0);
-          const tax = subtotal * cart.taxRate;
-          const total = subtotal + tax;
+      const summaryView = cartSlice((cart) => {
+        const subtotal = cart.items.reduce((sum, item) => sum + item.price, 0);
+        const tax = subtotal * cart.taxRate;
+        const total = subtotal + tax;
 
-          return {
-            itemCount: cart.items.length,
-            subtotal: subtotal.toFixed(2),
-            tax: tax.toFixed(2),
-            total: total.toFixed(2),
-            isEmpty: cart.items.length === 0,
-          };
-        });
+        return {
+          itemCount: cart.items.length,
+          subtotal: subtotal.toFixed(2),
+          tax: tax.toFixed(2),
+          total: total.toFixed(2),
+          isEmpty: cart.items.length === 0,
+        };
+      });
 
       return {
         model,
@@ -349,7 +354,7 @@ describe('Redux Adapter', () => {
 
     // Add items
     store.actions.addItem('Book', 19.99);
-    store.actions.addItem('Pen', 2.50);
+    store.actions.addItem('Pen', 2.5);
 
     summary = store.views.summary();
     expect(summary.itemCount).toBe(2);
@@ -358,7 +363,7 @@ describe('Redux Adapter', () => {
     expect(summary.total).toBe('24.29');
 
     // Change tax rate
-    store.actions.setTaxRate(0.10);
+    store.actions.setTaxRate(0.1);
     summary = store.views.summary();
     expect(summary.tax).toBe('2.25');
     expect(summary.total).toBe('24.74');

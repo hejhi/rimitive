@@ -53,14 +53,21 @@ const actions = createSlice(model, (m) => ({
   increment: m.increment
 }));
 
-// select() uses a selector function to create a marker for composition
-const button = createSlice(model, (m) => ({
-  onClick: select(actions, (a) => a.increment)  // Selector function specifies what to select
-}));
+// compose() provides dependency injection for slices
+const button = createSlice(
+  model,
+  compose(
+    { actions },  // Dependencies
+    (m, { actions }) => ({  // Selector receives model + resolved dependencies
+      onClick: actions.increment,
+      disabled: m.disabled
+    })
+  )
+);
 
-// Why use a selector function?
-// The selector pattern ensures type safety and allows adapters to understand
-// exactly what property you want to select from the slice at runtime.
+// Why use compose()?
+// The compose pattern provides explicit dependency injection, ensuring type safety
+// and making dependencies clear at the composition point.
 ```
 
 ### 2. **Adapters Execute Specifications**
@@ -72,32 +79,38 @@ const Component = createReactAdapter(counter); // Renders with React
 ```
 
 ### 3. **Runtime Magic**
-- `select()` doesn't actually access anything - it creates markers
-- Adapters recognize these markers and wire up the real connections
+- `compose()` doesn't execute dependencies - it attaches them for later resolution
+- Adapters resolve dependencies by executing slice factories with the model
 - Your specifications remain pure data with no side effects
 
 **Key insight**: Lattice Core is like writing SQL - you describe what you want, not how to get it. Adapters are like database engines that execute your queries.
 
-### Understanding the `select()` API
+### Understanding the `compose()` API
 
-The `select()` function is how you compose slices together. It uses a **selector function** pattern:
+The `compose()` function provides dependency injection for slices. It takes dependencies and a selector function:
 
 ```typescript
-// ✅ Correct: Use a selector function
-select(actions, (a) => a.increment)
+// ✅ Correct: Use compose with dependencies
+compose(
+  { actions, userSlice },  // Dependencies object
+  (model, { actions, userSlice }) => ({  // Selector receives model + resolved deps
+    onClick: actions.increment,
+    userName: userSlice.name
+  })
+)
 
-// ❌ Wrong: Direct property access doesn't work
-actions.increment  // This won't work!
+// ❌ Wrong: Direct access to other slices doesn't work
+actions.increment  // This won't work outside of compose!
 ```
 
-**Why use a selector function?**
+**Why use compose()?**
 
-1. **Type Safety**: TypeScript can verify that the property exists on the slice
-2. **Clear Intent**: The selector explicitly shows what you're selecting
-3. **Adapter Processing**: Adapters need to know which property to extract at runtime
-4. **Prevents Execution**: The selector function is never called during composition - it's just a specification
+1. **Explicit Dependencies**: All dependencies are declared upfront
+2. **Type Safety**: TypeScript knows the exact shape of resolved dependencies
+3. **Clean Resolution**: Adapters execute dependency slices before passing to selector
+4. **No Hidden Magic**: Dependencies are visible and traceable
 
-Remember: During composition, `select()` creates a marker object that adapters will process later. The selector function tells the adapter exactly what to select when the slice is executed.
+Remember: During composition, `compose()` attaches dependencies via `__composeDeps`. Adapters resolve these by executing each dependency slice factory with the model before calling your selector.
 
 ## A Real Example: Building a Counter
 
@@ -106,7 +119,7 @@ Let's build a counter step-by-step to understand the patterns:
 ### Step 1: Define the Specification
 
 ```typescript
-import { createComponent, createModel, createSlice, select } from '@lattice/core';
+import { createComponent, createModel, createSlice, compose } from '@lattice/core';
 
 const counter = createComponent(() => {
   // Model: Pure state + mutations
@@ -129,11 +142,17 @@ const counter = createComponent(() => {
   }));
   
   // Composite slice: Combines state and actions
-  const incrementButton = createSlice(model, (m) => ({
-    onClick: select(actions, (a) => a.increment),  // Selector function creates a marker
-    disabled: m.disabled,
-    'aria-label': 'Increment counter'
-  }))
+  const incrementButton = createSlice(
+    model,
+    compose(
+      { actions },  // Declare dependencies
+      (m, { actions }) => ({  // Use resolved dependencies
+        onClick: actions.increment,
+        disabled: m.disabled,
+        'aria-label': 'Increment counter'
+      })
+    )
+  )
 
   return {
     model,
@@ -161,21 +180,15 @@ When you write the above code, here's what you're creating:
 // What incrementButton ACTUALLY contains (simplified):
 {
   type: 'slice',
-  dependencies: ['model'],
-  selector: (m) => ({
-    onClick: { 
-      [SELECT_MARKER]: {  // SELECT_MARKER is a Symbol used internally by Lattice
-        slice: actions,
-        selector: (a) => a.increment
-      }
-    },
-    disabled: m.disabled,
-    'aria-label': 'Increment counter'
-  })
+  selector: composedSelector,  // The selector returned by compose()
+  // composedSelector has __composeDeps property:
+  // composedSelector.__composeDeps = { actions: actionsSliceFactory }
 }
 
-// The select(actions, (a) => a.increment) doesn't execute anything!
-// It creates this data structure for adapters to process
+// The compose() function creates a selector with dependencies attached
+// When called, it:
+// 1. Executes each dependency slice factory with the model
+// 2. Passes model + resolved dependencies to your selector
 ```
 
 ### Step 3: How Adapters Execute It
@@ -187,7 +200,7 @@ const store = createZustandAdapter(counter);
 // The adapter:
 // 1. Executes your model factory with Zustand's set/get
 // 2. Creates actual slices that subscribe to state
-// 3. Resolves select() markers to real function references
+// 3. Resolves compose() dependencies by executing slice factories
 
 // What you get back is a working store:
 store.actions.increment(); // Now this actually works!
@@ -207,7 +220,7 @@ describe('counter', () => {
     // Initial state
     expect(test.store.getState().count).toBe(0);
     
-    // Call the action - test utils resolve select() markers
+    // Call the action - test utils resolve compose() dependencies
     await test.store.actions.increment();
     
     // Verify state changed
@@ -225,7 +238,7 @@ describe('counter', () => {
     // Get button view attributes
     const button = test.views.incrementButton();
     
-    // The onClick is now a real function thanks to test adapter
+    // The onClick is now a real function thanks to dependency resolution
     await button.onClick();
     
     expect(test.store.getState().count).toBe(1);
@@ -289,21 +302,25 @@ const todoList = createComponent(() => {
     setFilter: m.setFilter
   }));
 
-  const buttonSlice = createSlice(model, (m) => ({
-    setFilter: select(actions, (a) => a.setFilter),  // Selector function creates a marker
-    filter: m.filter,
-  }));
+  const buttonSlice = createSlice(
+    model,
+    compose(
+      { actions },  // Declare actions dependency
+      (m, { actions }) => ({  // Receive model + resolved actions
+        setFilter: actions.setFilter,
+        filter: m.filter,
+      })
+    )
+  );
   
   // What buttonSlice actually contains:
-  // {
-  //   setFilter: { [SELECT_MARKER]: { slice: actions, selector: (a) => a.setFilter } },
-  //   filter: <direct reference to model.filter>
-  // }
+  // A slice factory with a composed selector that has __composeDeps = { actions }
+  // At runtime, the adapter will execute the actions slice and pass the result
   
   // Composite slice factory for filter buttons
   const createFilterButtonView = (filterType: 'all' | 'active' | 'completed') => 
     () => buttonSlice((state) => ({
-      onClick: state.setFilter,  // At runtime, this is the actual function
+      onClick: state.setFilter,  // The actual function from resolved dependencies
       className: state.filter === filterType ? 'selected' : '',
       'aria-pressed': state.filter === filterType
     }));
@@ -345,27 +362,31 @@ const themeSlice = createSlice(model, (m) => ({
   toggleTheme: m.toggleTheme
 }));
 
-// Step 2: Compose slices using select() with selector functions
-const headerSlice = createSlice(model, (m) => ({
-  user: select(userSlice, (u) => u.user),        // Selector specifies the property
-  theme: select(themeSlice, (t) => t.theme),      // Type-safe selection
-  onLogout: m.logout                              // Direct model reference
-}));
+// Step 2: Compose slices using compose() for dependency injection
+const headerSlice = createSlice(
+  model,
+  compose(
+    { userSlice, themeSlice },  // Declare dependencies
+    (m, { userSlice, themeSlice }) => ({  // Receive resolved slices
+      user: userSlice.user,
+      theme: themeSlice.theme,
+      onLogout: m.logout  // Direct model reference
+    })
+  )
+);
 
 // What headerSlice specification contains:
-// {
-//   user: { [SELECT_MARKER]: { slice: userSlice, selector: (u) => u.user } },
-//   theme: { [SELECT_MARKER]: { slice: themeSlice, selector: (t) => t.theme } },
-//   onLogout: <reference to model.logout>
-// }
+// A slice factory with a composed selector that has:
+// __composeDeps = { userSlice, themeSlice }
+// The adapter will execute these dependencies before calling the selector
 
-// Step 3: At runtime, adapters resolve these markers
+// Step 3: At runtime, adapters resolve these dependencies
 // When adapter processes headerSlice:
-// 1. Finds userSlice in the component registry
-// 2. Executes userSlice to get actual state
-// 3. Resolves select(userSlice, (u) => u.user) to the real value
-// 4. Same for themeSlice
-// 5. Returns a working slice with all references resolved
+// 1. Checks for __composeDeps on the selector
+// 2. Executes userSlice(model) to get { user, isLoggedIn }
+// 3. Executes themeSlice(model) to get { theme, toggleTheme }
+// 4. Calls selector with model and resolved dependencies
+// 5. Returns a working slice with all values resolved
 
 // Use directly as a view
 views: {
@@ -381,7 +402,7 @@ import { createComponentTest } from '@lattice/test-utils';
 it('should compose slices correctly', async () => {
   const test = createComponentTest(myComponent);
   
-  // The test adapter has resolved all select() markers
+  // The test adapter has resolved all compose() dependencies
   const headerView = test.views.header();
   
   // These are now real values, not markers
@@ -478,39 +499,51 @@ const actions = createSlice(model, (m) => ({
 }));
 
 // Views are slices (or functions of slices)
-const button = createSlice(model, (m) => ({
-  onClick: select(actions, (a) => a.increment),  // Selector creates a specification marker
-  disabled: m.isLoading
-}));
+const button = createSlice(
+  model,
+  compose(
+    { actions },  // Dependencies
+    (m, { actions }) => ({
+      onClick: actions.increment,
+      disabled: m.isLoading
+    })
+  )
+);
 
 // Compose slices from other slices
-const composite = createSlice(model, (m) => ({
-  action: select(actions, (a) => a.increment),   // Selector functions for type safety
-  state: select(button, (b) => b.disabled)       // No actual execution happens here
-}));
+const composite = createSlice(
+  model,
+  compose(
+    { actions, button },  // Multiple dependencies
+    (m, { actions, button }) => ({
+      action: actions.increment,
+      state: button.disabled
+    })
+  )
+);
 ```
 
 **What's Really Happening:**
 
 ```typescript
 // During composition (what Lattice Core does):
-select(actions, (a) => a.increment)
-// Returns: { [SELECT_MARKER]: { slice: actions, selector: (a) => a.increment } }
+compose({ actions }, (m, { actions }) => ({ onClick: actions.increment }))
+// Returns a selector function with __composeDeps = { actions }
 
 // During runtime (what adapters do):
-// 1. Find the 'actions' slice in the registry
-// 2. Execute it to get { increment: [Function] }
-// 3. Extract the 'increment' function
-// 4. Replace the marker with the actual function
+// 1. Check if selector has __composeDeps property
+// 2. Execute actions(model) to get { increment: [Function] }
+// 3. Call selector(model, { actions: resolvedActions })
+// 4. Return the result with resolved dependencies
 
 // So at runtime, button becomes:
 {
-  onClick: [Function: increment],  // The actual function
-  disabled: false                   // The actual value
+  onClick: [Function: increment],  // The actual function from actions
+  disabled: false                   // The actual value from model
 }
 ```
 
-**Remember**: These patterns create specifications. The `select()` function doesn't execute anything - it marks relationships for adapters to wire up at runtime.
+**Remember**: These patterns create specifications. The `compose()` function doesn't execute anything - it attaches dependencies for adapters to resolve at runtime.
 
 ### 3. **Static vs Computed Views**
 Views can be static slices or computed functions:
@@ -547,10 +580,16 @@ The key to understanding Lattice is the distinction between **specification time
 ### Specification Time (Your Code)
 ```typescript
 // You write specifications that describe behavior
-const button = createSlice(model, (m) => ({
-  onClick: select(actions, (a) => a.increment),  // Selector function creates a marker
-  disabled: m.disabled                           // Just a reference
-}));
+const button = createSlice(
+  model,
+  compose(
+    { actions },  // Dependencies declared upfront
+    (m, { actions }) => ({
+      onClick: actions.increment,  // Use resolved dependency
+      disabled: m.disabled         // Direct model reference  
+    })
+  )
+);
 ```
 
 ### What Gets Created
@@ -558,10 +597,8 @@ const button = createSlice(model, (m) => ({
 // Lattice creates a specification object (simplified):
 {
   type: 'slice',
-  selector: (m) => ({
-    onClick: { [SELECT_MARKER]: { slice: actions, selector: (a) => a.increment } },
-    disabled: m.disabled
-  })
+  selector: composedSelector,  // Function with __composeDeps attached
+  // composedSelector.__composeDeps = { actions: actionsSliceFactory }
 }
 ```
 

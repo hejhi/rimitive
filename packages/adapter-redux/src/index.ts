@@ -14,8 +14,9 @@ import type {
   ComponentSpec,
   SliceFactory,
   AdapterResult,
+  ViewTypes,
 } from '@lattice/core';
-import { isSliceFactory, isComputedView } from '@lattice/core';
+import { isSliceFactory } from '@lattice/core';
 
 // ============================================================================
 // Types
@@ -24,9 +25,15 @@ import { isSliceFactory, isComputedView } from '@lattice/core';
 /**
  * Redux adapter result that implements the standard AdapterResult interface
  */
+// Redux action type for state updates
+interface UpdateStateAction<Model> {
+  type: 'lattice/updateState';
+  payload: Partial<Model>;
+}
+
 export interface ReduxAdapterResult<Model, Actions, Views> extends AdapterResult<Model, Actions, Views> {
   // Standard Redux store methods
-  dispatch: (action: any) => void;
+  dispatch: (action: UpdateStateAction<Model>) => void;
   getState: () => Model;
   subscribe: (listener: () => void) => () => void;
   
@@ -38,21 +45,31 @@ export interface ReduxAdapterResult<Model, Actions, Views> extends AdapterResult
 // Helpers
 // ============================================================================
 
+// Type for extracting non-function properties
+type StateProperties<T> = {
+  [K in keyof T as T[K] extends Function ? never : K]: T[K];
+};
+
+// Type for extracting function properties  
+type ActionProperties<T> = {
+  [K in keyof T as T[K] extends Function ? K : never]: T[K];
+};
+
 /**
  * Separates state data from functions in the model
  */
 function separateStateAndActions<T>(obj: T): {
-  state: any;
-  actions: Record<string, Function>;
+  state: StateProperties<T>;
+  actions: ActionProperties<T>;
 } {
-  const state: any = {};
-  const actions: Record<string, Function> = {};
+  const state = {} as StateProperties<T>;
+  const actions = {} as ActionProperties<T>;
 
   for (const key in obj) {
     if (typeof obj[key] === 'function') {
-      actions[key] = obj[key];
+      (actions as Record<string, unknown>)[key] = obj[key];
     } else {
-      state[key] = obj[key];
+      (state as Record<string, unknown>)[key] = obj[key];
     }
   }
 
@@ -142,10 +159,19 @@ export function createReduxAdapter<Model, Actions, Views>(
   // Update modelActions reference
   Object.assign(modelActions, boundActions);
 
+  // Type for composed selector with dependencies
+  interface ComposedSelectorWithDeps<M, D, R> {
+    (model: M, resolvedDeps: D): R;
+    __composeDeps?: Record<string, SliceFactory<M, unknown>>;
+  }
+
   // Helper to execute a composed selector
-  const executeComposedSelector = <T>(selector: any, model: Model): T => {
+  const executeComposedSelector = <T>(
+    selector: ComposedSelectorWithDeps<Model, Record<string, unknown>, T>, 
+    model: Model
+  ): T => {
     const deps = selector.__composeDeps || {};
-    const resolvedDeps: any = {};
+    const resolvedDeps: Record<string, unknown> = {};
 
     for (const [key, depFactory] of Object.entries(deps)) {
       // Always re-execute dependencies to get fresh data
@@ -163,7 +189,7 @@ export function createReduxAdapter<Model, Actions, Views>(
     // because the underlying state may have changed
 
     const model = modelTools.get();
-    let rawResult: any;
+    let rawResult: T | ComposedSelectorWithDeps<Model, Record<string, unknown>, T> | SliceFactory<Model, T>;
 
     // Check if this is a slice factory created with compose()
     // The compose() selector is stored in the factory's closure
@@ -174,11 +200,14 @@ export function createReduxAdapter<Model, Actions, Views>(
       // If the result is a function with __composeDeps, it's a composed selector
       // This happens when createSlice is called with compose() directly
       if (isComposedSelector(rawResult)) {
-        rawResult = executeComposedSelector(rawResult, model);
+        rawResult = executeComposedSelector(
+          rawResult as ComposedSelectorWithDeps<Model, Record<string, unknown>, T>, 
+          model
+        );
       }
       // If the result is itself a slice factory (from transform syntax), execute it
       else if (isSliceFactory(rawResult)) {
-        rawResult = executeSliceFactory(rawResult);
+        rawResult = executeSliceFactory(rawResult as SliceFactory<Model, T>);
       }
     } catch (error) {
       // If execution fails, it might be because the selector expects resolved deps
@@ -187,7 +216,7 @@ export function createReduxAdapter<Model, Actions, Views>(
     }
 
     // Return the result directly - no select markers to resolve
-    return rawResult;
+    return rawResult as T;
   };
 
   // Create actions using the wrapper
@@ -195,30 +224,21 @@ export function createReduxAdapter<Model, Actions, Views>(
   const actions = executeSliceFactory(actionsFactory);
 
   // Process views
-  const views: any = {};
+  const views = {} as ViewTypes<Model, Views>;
   for (const [key, view] of Object.entries(spec.views as Record<string, unknown>)) {
     if (isSliceFactory(view)) {
       // Static view: slice factory
-      views[key] = () => {
+      (views as Record<string, unknown>)[key] = () => {
         const value = executeSliceFactory(view);
         // Return a shallow copy to ensure fresh references
         return typeof value === 'object' && value !== null 
           ? Array.isArray(value) ? [...value] : { ...value }
           : value;
       };
-    } else if (isComputedView(view)) {
-      // Computed view: function returning slice factory
-      views[key] = () => {
-        const sliceFactory = view();
-        const value = executeSliceFactory(sliceFactory);
-        // Return a shallow copy to ensure fresh references
-        return typeof value === 'object' && value !== null 
-          ? Array.isArray(value) ? [...value] : { ...value }
-          : value;
-      };
     } else if (typeof view === 'function') {
-      // Already a function, use as-is
-      views[key] = view;
+      // Function view - use as-is without double execution
+      // The function should return the final view data, not a SliceFactory
+      (views as Record<string, unknown>)[key] = view;
     }
   }
 
@@ -431,20 +451,19 @@ if (import.meta.vitest) {
           filter: m.filter,
         }));
 
-        const filteredTodosView = () =>
-          todoState((state) => {
-            const filtered =
-              state.filter === 'all'
-                ? state.todos
-                : state.todos.filter((t) =>
-                    state.filter === 'active' ? !t.completed : t.completed
-                  );
+        const filteredTodosView = todoState((state) => {
+          const filtered =
+            state.filter === 'all'
+              ? state.todos
+              : state.todos.filter((t: { completed: boolean }) =>
+                  state.filter === 'active' ? !t.completed : t.completed
+                );
 
-            return {
-              items: filtered,
-              count: filtered.length,
-            };
-          });
+          return {
+            items: filtered,
+            count: filtered.length,
+          };
+        });
 
         return {
           model,
@@ -467,13 +486,13 @@ if (import.meta.vitest) {
       store.actions.setFilter('active');
       todos = store.views.filteredTodos();
       expect(todos.count).toBe(2);
-      expect(todos.items.every((t) => !t.completed)).toBe(true);
+      expect(todos.items.every((t: { completed: boolean }) => !t.completed)).toBe(true);
 
       // Filter completed
       store.actions.setFilter('completed');
       todos = store.views.filteredTodos();
       expect(todos.count).toBe(1);
-      expect(todos.items.every((t) => t.completed)).toBe(true);
+      expect(todos.items.every((t: { completed: boolean }) => t.completed)).toBe(true);
     });
   });
 }

@@ -5,19 +5,19 @@ followed without exception when working with this codebase.
 
 **These are not suggestions or guidelines: they are STRICT requirements**
 
-## Thinking
-
-- **DELEGATE**: You are the LEAD ENGINEER, and your agents are your engineering team—to be successful, you MUST:
-  - ALWAYS plan ahead and have a clear path forward
-  - Delegate to agents for execution with CLEAR instructions
-  - ALWAYS review agent code before returning to the user: if the code does not STRICTLY align to the spec, or violates ANY of the below, clarify your instructions to the agent and try again
+Explore the codebase as a senior engineer would:
+- Begin by reading contextual documents, such as `README.md` or any specs
+- Think deeply about the problems the codebase is trying to solve, from both a product and technical perspective
+- Analyze the codebase file directory structure
+- Using all of the context and information you gathered so far, plan your approach to systematically analyze the codebase, setting goals for yourself to understand the code style, typing and testing system, and review it through the lens of coding best practices and well-known relevant patterns.
+- Flag inconsistencies and ambiguities to ask the user about after the review
+- Use socratic questioning to help guide yourself and your agents as you explore and review, thinking as you go
 
 ## Testing Requirements
 
 ### TDD Principles
 
-- **Integration tests > unit tests** for core system behavior
-- **Tests should change rarely but fail when the implementation breaks the contract**
+**Tests should change rarely but fail when the implementation breaks the contract or violates a spec**
 
 ### Mocking Rules
 
@@ -41,55 +41,10 @@ followed without exception when working with this codebase.
 - Simplicity: Complexity is the enemy, prioritize readability
 - ES IMPORTS ONLY. NO COMMONJS.
 - NEVER use `any` types, and don't use typecasting unless absolutely necessary.
+- You are not allowed to type ANYTHING as `any`. If you think you absolutely must typecast, you MUST ask the user for permission first.
 
-## Commands
+## Valid Commands
 
-@package.json
-
-Helpful commands:
-`cd /Users/henryivry/repos/lattice && pnpm --filter @lattice/core test`
-`cd /Users/henryivry/repos/lattice && pnpm --filter @lattice/core test --reporter=verbose`
-`cd /Users/henryivry/repos/lattice && pnpm typecheck`
-
-## Project Structure
-
-- Core directories:
-  - `packages/core/src/model`: Model creation and composition
-  - `packages/core/src/actions`: Action creation and delegation
-  - `packages/core/src/state`: State selectors and derivation
-  - `packages/core/src/view`: View representation and UI attributes
-  - `packages/core/src/shared`: Common utilities, types, and composition
-
-## Source of Truth
-
-The comprehensive specification is in `docs/spec.md`. It MUST always remain the reference point for all implementation and tests.
-
-## CRITICAL ARCHITECTURAL UNDERSTANDING
-
-**Lattice is a COMPOSITIONAL FRAMEWORK, NOT a state management library**
-
-### What Lattice IS
-- **Behavior Specification Framework**: Provides VSAM patterns for describing component behavior as executable contracts
-- **Adapter Orchestration Layer**: Standardizes how behavior specifications interface with actual state management systems
-- **Type-Safe Composition API**: Enables composing complex behaviors from simple primitives without any runtime implementation
-
-### What Lattice NEVER DOES
-- **NEVER implements state management**: No actual state storage, subscriptions, or persistence
-- **NEVER implements UI rendering**: No DOM manipulation, virtual DOM, or framework-specific rendering
-- **NEVER executes slice factories directly**: Always delegates to adapters for execution with runtime tools
-
-### CRITICAL: Factory-Time vs Runtime Distinction
-- **Factory-Time (Lattice Core)**: Creates SPECIFICATIONS ONLY - slice factories that define contracts
-- **Runtime (Adapters)**: FULFILL specifications by executing slice factories with actual infrastructure tools
-
-### ALWAYS REMEMBER
-- Component factories return SLICE FACTORIES (specifications), not executed slices
-- Adapters execute slice factories with appropriate runtime tools
-- Store adapters and framework adapters are separate and can be mixed/matched
-- Lattice Core is pure composition - no side effects, no runtime state, no infrastructure dependencies
-
-## Project Overview
-
-Below is the `README.md`, which should be kept in-sync with the spec at all times. Discrepencies should IMMEDIATELY be flagged to the user.
-
-@README.md
+- `pnpm --filter @lattice/core test`
+- `pnpm --filter @lattice/core test --reporter=verbose`
+- `pnpm typecheck`

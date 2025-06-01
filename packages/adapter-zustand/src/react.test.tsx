@@ -541,27 +541,25 @@ describe('React hooks for Zustand adapter', () => {
           filter: m.filter,
         }));
 
-        const statsView = () =>
-          todosSlice((state) => ({
-            total: state.todos.length,
-            completed: state.todos.filter((t) => t.completed).length,
-            active: state.todos.filter((t) => !t.completed).length,
-          }));
+        const statsView = todosSlice((state) => ({
+          total: state.todos.length,
+          completed: state.todos.filter((t) => t.completed).length,
+          active: state.todos.filter((t) => !t.completed).length,
+        }));
 
-        const filteredTodosView = () =>
-          todosSlice((state) => {
-            const filtered =
-              state.filter === 'all'
-                ? state.todos
-                : state.filter === 'active'
-                  ? state.todos.filter((t) => !t.completed)
-                  : state.todos.filter((t) => t.completed);
+        const filteredTodosView = todosSlice((state) => {
+          const filtered =
+            state.filter === 'all'
+              ? state.todos
+              : state.filter === 'active'
+                ? state.todos.filter((t) => !t.completed)
+                : state.todos.filter((t) => t.completed);
 
-            return {
-              items: filtered,
-              count: filtered.length,
-            };
-          });
+          return {
+            items: filtered,
+            count: filtered.length,
+          };
+        });
 
         return {
           model,

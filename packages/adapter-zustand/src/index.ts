@@ -19,7 +19,7 @@ import type {
   SliceFactory,
   AdapterResult,
 } from '@lattice/core';
-import { isSliceFactory, isComputedView } from '@lattice/core';
+import { isSliceFactory } from '@lattice/core';
 import { createStore, StoreApi } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
 
@@ -269,18 +269,9 @@ function processViews<Model, Views>(
           ? Array.isArray(value) ? [...value] : { ...value }
           : value;
       }) as any;
-    } else if (isComputedView(view)) {
-      // Computed view: function returning slice factory
-      views[key as keyof ViewTypes<Model, Views>] = (() => {
-        const sliceFactory = view();
-        const value = executeSliceFactory(sliceFactory);
-        // Return a shallow copy to ensure fresh references
-        return typeof value === 'object' && value !== null 
-          ? Array.isArray(value) ? [...value] : { ...value }
-          : value;
-      }) as any;
     } else if (typeof view === 'function') {
-      // Already a function, use as-is
+      // Function view - use as-is without double execution
+      // The function should return the final view data, not a SliceFactory
       views[key as keyof ViewTypes<Model, Views>] = view as any;
     }
   }
@@ -600,11 +591,10 @@ if (import.meta.vitest) {
           count: m.count,
         }));
 
-        const counterView = () =>
-          countSlice((state) => ({
-            'data-count': state.count,
-            className: state.count % 2 === 0 ? 'even' : 'odd',
-          }));
+        const counterView = countSlice((state) => ({
+          'data-count': state.count,
+          className: state.count % 2 === 0 ? 'even' : 'odd',
+        }));
 
         const views = { counter: counterView };
 

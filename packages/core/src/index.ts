@@ -74,7 +74,7 @@ export function createComponent<Model, Actions, Views>(
 }
 
 // Export compose utilities
-export { compose, composeSlices } from './compose';
+export { compose } from './compose';
 
 // Export adapter contract types
 export type {

@@ -84,8 +84,8 @@ export function createAdapterTestSuite(
           const views = {
             // Static view
             name: nameSlice,
-            // Computed view
-            fullName: () => nameSlice((state) => ({
+            // Transformed view (not wrapped in function)
+            fullName: nameSlice((state) => ({
               display: `${state.first} ${state.last}`,
               initials: `${state.first[0]}${state.last[0]}`,
             })),
@@ -207,7 +207,7 @@ export function createAdapterTestSuite(
           }));
 
           // Parameterized view factory
-          const createItemView = (itemId: number) => () =>
+          const createItemView = (itemId: number) =>
             itemsSlice((state) => {
               const item = state.items.find(i => i.id === itemId);
               return item ? {
@@ -224,7 +224,7 @@ export function createAdapterTestSuite(
           const views = {
             item1: createItemView(1),
             item2: createItemView(2),
-            selectedCount: () => itemsSlice((state) => ({
+            selectedCount: itemsSlice((state) => ({
               count: state.items.filter(i => i.selected).length,
             })),
           };
@@ -359,10 +359,10 @@ export function createAdapterTestSuite(
 
           const views = {
             // Multiple transforms on same slice
-            doubled: () => valueSlice((state) => ({ result: state.value * 2 })),
-            tripled: () => valueSlice((state) => ({ result: state.value * 3 })),
+            doubled: valueSlice((state) => ({ result: state.value * 2 })),
+            tripled: valueSlice((state) => ({ result: state.value * 3 })),
             // Nested transform
-            formatted: () => valueSlice((state) => ({ 
+            formatted: valueSlice((state) => ({ 
               display: `Value: ${state.value}` 
             })),
           };

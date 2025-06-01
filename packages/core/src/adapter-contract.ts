@@ -85,17 +85,12 @@ export function isSliceFactory<M, S>(value: unknown): value is SliceFactory<M, S
 
 /**
  * Type guard to check if a value is a computed view (function returning slice factory)
+ * 
+ * @deprecated This pattern of functions returning SliceFactories creates ambiguity.
+ * Views should be either SliceFactories directly or final computed functions.
  */
 export function isComputedView<M, S>(value: unknown): value is () => SliceFactory<M, S> {
-  if (typeof value !== 'function') return false;
-  
-  // Try to call it and see if it returns a slice factory
-  // This is a bit risky but necessary for runtime type checking
-  try {
-    const result = (value as () => unknown)();
-    return isSliceFactory(result);
-  } catch {
-    // If it throws, it might need parameters, so it's not a computed view
-    return false;
-  }
+  // We can't reliably detect this pattern without executing the function,
+  // which would have side effects. Return false to prevent double-execution.
+  return false;
 }
