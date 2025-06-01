@@ -16,7 +16,7 @@ import type {
   ComponentSpec, 
   AdapterResult
 } from '@lattice/core';
-import { isSliceFactory, isComputedView } from '@lattice/core';
+import { isSliceFactory } from '@lattice/core';
 
 // ============================================================================
 // Core Types
@@ -168,16 +168,6 @@ function executeComponent<Model, Actions, Views>(
       // Always return a new object to ensure fresh references
       views[key] = () => {
         const value = viewStore.get();
-        // Return a shallow copy to ensure different object references
-        return typeof value === 'object' && value !== null 
-          ? Array.isArray(value) ? [...value] : { ...value }
-          : value;
-      };
-    } else if (isComputedView(view)) {
-      // Computed view: function returning slice factory
-      views[key] = () => {
-        const sliceFactory = view();
-        const value = sliceFactory(modelStore.get());
         // Return a shallow copy to ensure different object references
         return typeof value === 'object' && value !== null 
           ? Array.isArray(value) ? [...value] : { ...value }

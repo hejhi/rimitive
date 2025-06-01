@@ -20,11 +20,10 @@ import { dashboardComponent } from '../slices';
 // Server-side: Use memory adapter
 // ============================================================================
 export const getServerSideProps: GetServerSideProps = async (_context) => {
-  const adapter = createMemoryAdapter();
-  const dashboardStore = adapter.executeComponent(dashboardComponent);
+  const dashboardStore = createMemoryAdapter(dashboardComponent);
 
   // Simulate fetching user data
-  await dashboardStore.actions.get().login('user@example.com', 'password');
+  await dashboardStore.actions.login('user@example.com', 'password');
 
   // Simulate loading cart from session
   const cartItems = [
@@ -33,11 +32,11 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
   ];
 
   for (const item of cartItems) {
-    dashboardStore.actions.get().addToCart(item);
+    dashboardStore.actions.addToCart(item);
   }
 
   // Get the entire state for hydration
-  const initialState = dashboardStore.model.get();
+  const initialState = dashboardStore.getState();
 
   return {
     props: {
@@ -168,14 +167,13 @@ export default function DashboardPage({ initialState }: DashboardPageProps) {
 // ============================================================================
 export async function apiRouteExample(req: Request) {
   // Use memory adapter for API routes too
-  const adapter = createMemoryAdapter();
-  const cartStore = adapter.executeComponent(dashboardComponent);
+  const cartStore = createMemoryAdapter(dashboardComponent);
 
   // Process request
   const body = await req.json();
 
   if (body.action === 'addItem') {
-    cartStore.actions.get().addToCart(body.item);
+    cartStore.actions.addToCart(body.item);
   }
 
   // Return current state
@@ -183,7 +181,7 @@ export async function apiRouteExample(req: Request) {
   // We return the header view instead as an example
   return new Response(
     JSON.stringify({
-      cart: cartStore.model.get(),
+      cart: cartStore.getState(),
       header: cartStore.views.header,
     }),
     {
