@@ -1,7 +1,0 @@
-### Functional Programming First
-
-- Default to **pure functions** and **immutable data**.
-- Embrace **higher-order functions**, **composition**, and **pattern
-  matching/algebraic data types** when available.
-- Resort to OOP only when domain modelling demands identity, shared mutable
-  state, or polymorphic hierarchies.

@@ -1,6 +1,0 @@
-### Documentation and Naming
-
-- Provide **docstrings/comments** for every public module, type, function, and
-  non-obvious block.
-- Document **“why”**, not **“what”**.
-- Use **intent-revealing, domain-specific names**; favour clarity over brevity.
