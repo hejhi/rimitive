@@ -144,50 +144,48 @@ const todoAppComponent = createComponent(() => {
   }));
 
   // Computed todos view
-  const filteredTodosView = () =>
-    todosSlice((state) => {
-      let filtered = state.todos;
+  const filteredTodosView = todosSlice((state) => {
+    let filtered = state.todos;
 
-      // Apply search filter
-      if (state.searchQuery) {
-        filtered = filtered.filter((todo) =>
-          todo.text.toLowerCase().includes(state.searchQuery)
-        );
+    // Apply search filter
+    if (state.searchQuery) {
+      filtered = filtered.filter((todo) =>
+        todo.text.toLowerCase().includes(state.searchQuery)
+      );
+    }
+
+    // Apply status filter
+    if (state.filter !== 'all') {
+      filtered = filtered.filter((todo) =>
+        state.filter === 'active' ? !todo.completed : todo.completed
+      );
+    }
+
+    // Apply sorting
+    filtered = [...filtered].sort((a, b) => {
+      if (state.sortBy === 'alphabetical') {
+        return a.text.localeCompare(b.text);
       }
-
-      // Apply status filter
-      if (state.filter !== 'all') {
-        filtered = filtered.filter((todo) =>
-          state.filter === 'active' ? !todo.completed : todo.completed
-        );
-      }
-
-      // Apply sorting
-      filtered = [...filtered].sort((a, b) => {
-        if (state.sortBy === 'alphabetical') {
-          return a.text.localeCompare(b.text);
-        }
-        return b.createdAt - a.createdAt; // Newest first
-      });
-
-      return filtered;
+      return b.createdAt - a.createdAt; // Newest first
     });
+
+    return filtered;
+  });
 
   // Stats view
-  const statsView = () =>
-    todosSlice((state) => {
-      const total = state.todos.length;
-      const completed = state.todos.filter((t) => t.completed).length;
-      const active = total - completed;
+  const statsView = todosSlice((state) => {
+    const total = state.todos.length;
+    const completed = state.todos.filter((t) => t.completed).length;
+    const active = total - completed;
 
-      return {
-        total,
-        active,
-        completed,
-        hasCompleted: completed > 0,
-        allCompleted: total > 0 && active === 0,
-      };
-    });
+    return {
+      total,
+      active,
+      completed,
+      hasCompleted: completed > 0,
+      allCompleted: total > 0 && active === 0,
+    };
+  });
 
   // Filter button factory
   const createFilterButton = (filterType: 'all' | 'active' | 'completed') =>
@@ -216,7 +214,7 @@ const todoAppComponent = createComponent(() => {
       // Clear button
       clearButton: createSlice(
         model,
-        compose({ actions, stats: statsView() }, (_, { actions, stats }) => ({
+        compose({ actions, stats: statsView }, (_, { actions, stats }) => ({
           onClick: actions.clearCompleted,
           disabled: !stats.hasCompleted,
           children: `Clear completed (${stats.completed})`,
@@ -226,7 +224,7 @@ const todoAppComponent = createComponent(() => {
       // Toggle all checkbox
       toggleAllCheckbox: createSlice(
         model,
-        compose({ actions, stats: statsView() }, (_, { actions, stats }) => ({
+        compose({ actions, stats: statsView }, (_, { actions, stats }) => ({
           onChange: actions.toggleAll,
           checked: stats.allCompleted,
           disabled: stats.total === 0,

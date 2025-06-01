@@ -1,12 +1,17 @@
 /**
  * @fileoverview Single source of truth for all app behavior specifications
- * 
+ *
  * This file demonstrates how you can define all your application's behavior
  * in one place, completely independent of any state management library or
  * UI framework. These specifications can then be used with any adapter.
  */
 
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
+import {
+  createComponent,
+  createModel,
+  createSlice,
+  compose,
+} from '@lattice/core';
 
 // ============================================================================
 // Shared User Component
@@ -23,7 +28,7 @@ export const userComponent = createComponent(() => {
     user: null,
     isLoading: false,
     error: null,
-    
+
     login: async (email, _password) => {
       set({ isLoading: true, error: null });
       try {
@@ -31,31 +36,34 @@ export const userComponent = createComponent(() => {
         const user = { id: '1', name: 'John Doe', email };
         set({ user, isLoading: false });
       } catch (error) {
-        set({ error: error instanceof Error ? error.message : 'Login failed', isLoading: false });
+        set({
+          error: error instanceof Error ? error.message : 'Login failed',
+          isLoading: false,
+        });
       }
     },
-    
+
     logout: () => set({ user: null }),
-    
+
     updateProfile: (updates) => {
       const current = get().user;
       if (current) {
         set({ user: { ...current, ...updates } });
       }
-    }
+    },
   }));
 
   const actions = createSlice(model, (m) => ({
     login: m.login,
     logout: m.logout,
-    updateProfile: m.updateProfile
+    updateProfile: m.updateProfile,
   }));
 
   const userSlice = createSlice(model, (m) => ({
     user: m.user,
     isLoggedIn: m.user !== null,
     isLoading: m.isLoading,
-    error: m.error
+    error: m.error,
   }));
 
   return {
@@ -65,15 +73,15 @@ export const userComponent = createComponent(() => {
       loginButton: createSlice(model, (m) => ({
         onClick: m.login,
         disabled: m.isLoading,
-        children: m.isLoading ? 'Logging in...' : 'Login'
+        children: m.isLoading ? 'Logging in...' : 'Login',
       })),
-      
-      userProfile: () => userSlice((state) => ({
+
+      userProfile: userSlice((state) => ({
         className: state.isLoggedIn ? 'profile-active' : 'profile-inactive',
         'data-user-id': state.user?.id || '',
-        children: state.user ? `Welcome, ${state.user.name}` : 'Not logged in'
-      }))
-    }
+        children: state.user ? `Welcome, ${state.user.name}` : 'Not logged in',
+      })),
+    },
   };
 });
 
@@ -89,62 +97,60 @@ export const cartComponent = createComponent(() => {
     clear: () => void;
   }>(({ set, get }) => ({
     items: [],
-    
+
     addItem: (item) => {
       const items = get().items;
-      const existing = items.find(i => i.id === item.id);
-      
+      const existing = items.find((i) => i.id === item.id);
+
       if (existing) {
         set({
-          items: items.map(i =>
-            i.id === item.id
-              ? { ...i, quantity: i.quantity + 1 }
-              : i
-          )
+          items: items.map((i) =>
+            i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+          ),
         });
       } else {
         set({ items: [...items, { ...item, quantity: 1 }] });
       }
     },
-    
+
     removeItem: (id) => {
-      set({ items: get().items.filter(item => item.id !== id) });
+      set({ items: get().items.filter((item) => item.id !== id) });
     },
-    
+
     updateQuantity: (id, quantity) => {
       if (quantity <= 0) {
         get().removeItem(id);
       } else {
         set({
-          items: get().items.map(item =>
+          items: get().items.map((item) =>
             item.id === id ? { ...item, quantity } : item
-          )
+          ),
         });
       }
     },
-    
-    clear: () => set({ items: [] })
+
+    clear: () => set({ items: [] }),
   }));
 
   const actions = createSlice(model, (m) => ({
     addItem: m.addItem,
     removeItem: m.removeItem,
     updateQuantity: m.updateQuantity,
-    clear: m.clear
+    clear: m.clear,
   }));
 
   const cartSlice = createSlice(model, (m) => ({
     items: m.items,
     itemCount: m.items.reduce((sum, item) => sum + item.quantity, 0),
-    total: m.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    total: m.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   }));
 
   // Computed view for cart summary
-  const cartSummary = () => cartSlice((state) => ({
+  const cartSummary = cartSlice((state) => ({
     className: state.itemCount === 0 ? 'cart-empty' : 'cart-has-items',
     'data-item-count': state.itemCount,
     'aria-label': `Cart with ${state.itemCount} items`,
-    children: `${state.itemCount} items - $${state.total.toFixed(2)}`
+    children: `${state.itemCount} items - $${state.total.toFixed(2)}`,
   }));
 
   return {
@@ -152,10 +158,10 @@ export const cartComponent = createComponent(() => {
     actions,
     views: {
       cartSummary,
-      
+
       // For dynamic item views, we'll need to create them outside of the views object
       // since views must be SliceFactory or () => SliceFactory
-    }
+    },
   };
 });
 
@@ -174,22 +180,22 @@ export const themeComponent = createComponent(() => {
     theme: 'system',
     fontSize: 'medium',
     reducedMotion: false,
-    
+
     setTheme: (theme) => set({ theme }),
     setFontSize: (fontSize) => set({ fontSize }),
-    toggleReducedMotion: () => set({ reducedMotion: !get().reducedMotion })
+    toggleReducedMotion: () => set({ reducedMotion: !get().reducedMotion }),
   }));
 
   const actions = createSlice(model, (m) => ({
     setTheme: m.setTheme,
     setFontSize: m.setFontSize,
-    toggleReducedMotion: m.toggleReducedMotion
+    toggleReducedMotion: m.toggleReducedMotion,
   }));
 
   const themeSlice = createSlice(model, (m) => ({
     theme: m.theme,
     fontSize: m.fontSize,
-    reducedMotion: m.reducedMotion
+    reducedMotion: m.reducedMotion,
   }));
 
   return {
@@ -202,19 +208,21 @@ export const themeComponent = createComponent(() => {
         onThemeChange: m.setTheme,
         currentTheme: m.theme,
         'aria-pressed': m.theme === 'dark',
-        className: `theme-${m.theme}`
+        className: `theme-${m.theme}`,
       })),
-      
-      documentRoot: () => themeSlice((state) => ({
+
+      documentRoot: themeSlice((state) => ({
         className: [
           `theme-${state.theme}`,
           `font-${state.fontSize}`,
-          state.reducedMotion ? 'reduced-motion' : ''
-        ].filter(Boolean).join(' '),
+          state.reducedMotion ? 'reduced-motion' : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
         'data-theme': state.theme,
-        'data-font-size': state.fontSize
-      }))
-    }
+        'data-font-size': state.fontSize,
+      })),
+    },
   };
 });
 
@@ -261,19 +269,27 @@ export const dashboardComponent = createComponent(() => {
     ...theme.model({ set, get }),
     sidebarOpen: true,
     activeTab: 'overview',
-    
+
     toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
-    setActiveTab: (tab) => set({ activeTab: tab })
+    setActiveTab: (tab) => set({ activeTab: tab }),
   }));
 
   // Compose slices from different components
   const dashboardSlice = createSlice(
     model,
     compose(
-      { 
-        userSlice: createSlice(model, m => ({ user: m.user, isLoading: m.isLoading, error: m.error })),
-        cartSlice: createSlice(model, m => ({ items: m.items })),
-        themeSlice: createSlice(model, m => ({ theme: m.theme, fontSize: m.fontSize, reducedMotion: m.reducedMotion }))
+      {
+        userSlice: createSlice(model, (m) => ({
+          user: m.user,
+          isLoading: m.isLoading,
+          error: m.error,
+        })),
+        cartSlice: createSlice(model, (m) => ({ items: m.items })),
+        themeSlice: createSlice(model, (m) => ({
+          theme: m.theme,
+          fontSize: m.fontSize,
+          reducedMotion: m.reducedMotion,
+        })),
       },
       (m, { userSlice, cartSlice, themeSlice }) => ({
         isLoggedIn: userSlice.user !== null,
@@ -281,7 +297,7 @@ export const dashboardComponent = createComponent(() => {
         cartItemCount: cartSlice.items.length,
         currentTheme: themeSlice.theme,
         sidebarOpen: m.sidebarOpen,
-        activeTab: m.activeTab
+        activeTab: m.activeTab,
       })
     )
   );
@@ -292,29 +308,30 @@ export const dashboardComponent = createComponent(() => {
       // User actions
       login: m.login,
       logout: m.logout,
-      // Cart actions  
+      // Cart actions
       addToCart: m.addItem,
       clearCart: m.clear,
       // Theme actions
       setTheme: m.setTheme,
       // Dashboard actions
       toggleSidebar: m.toggleSidebar,
-      setActiveTab: m.setActiveTab
+      setActiveTab: m.setActiveTab,
     })),
     views: {
-      header: () => dashboardSlice((state) => ({
+      header: dashboardSlice((state) => ({
         className: `header ${state.currentTheme}`,
         'data-sidebar-open': state.sidebarOpen,
-        children: `${state.userName} - ${state.cartItemCount} items in cart`
+        children: `${state.userName} - ${state.cartItemCount} items in cart`,
       })),
-      
+
       navigation: createSlice(model, (m) => ({
-        tabs: ['overview', 'orders', 'settings'].map(tab => ({
+        tabs: ['overview', 'orders', 'settings'].map((tab) => ({
           name: tab,
           active: m.activeTab === tab,
-          onClick: () => m.setActiveTab(tab as 'overview' | 'orders' | 'settings')
-        }))
-      }))
-    }
+          onClick: () =>
+            m.setActiveTab(tab as 'overview' | 'orders' | 'settings'),
+        })),
+      })),
+    },
   };
 });
