@@ -11,7 +11,7 @@
 import { createMemoryAdapter } from '@lattice/adapter-memory';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useView } from '@lattice/adapter-zustand/react';
-import type { ModelFactory } from '@lattice/core';
+import type { ComponentType } from '@lattice/core';
 import type { GetServerSideProps } from 'next';
 
 import { dashboardComponent } from '../slices';
@@ -50,12 +50,10 @@ export const getServerSideProps: GetServerSideProps = async (_context) => {
 // Client-side: Hydrate Zustand store with SSR data
 // ============================================================================
 
+type DashboardComponentType = ComponentType<typeof dashboardComponent>;
+
 // Type for the initial state - matches the model state shape
-type InitialState = ReturnType<typeof dashboardComponent>['model'] extends infer M
-  ? M extends ModelFactory<infer State>
-    ? State
-    : never
-  : never;
+type InitialState = DashboardComponentType['model'];
 
 // Store singleton - created once and reused
 const clientStore = createZustandAdapter(dashboardComponent);
