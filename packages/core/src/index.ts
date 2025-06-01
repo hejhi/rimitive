@@ -90,22 +90,15 @@ export { isSliceFactory } from './adapter-contract';
 // Export adapter test suite
 export { createAdapterTestSuite } from './adapter-test-suite';
 
-// Type extraction helpers
-export type ComponentModel<
-  C extends ComponentFactory<unknown, unknown, unknown>,
-> = C extends ComponentFactory<infer M, unknown, unknown> ? M : never;
+// Type extraction helpers - using conditional types without constraints
+// We need to bypass variance checks by using conditional types that infer from usage
+export type ComponentModel<C> = C extends (...args: unknown[]) => ComponentSpec<infer M, unknown, unknown> ? M : never;
 
-export type ComponentActions<
-  C extends ComponentFactory<unknown, unknown, unknown>,
-> = C extends ComponentFactory<unknown, infer A, unknown> ? A : never;
+export type ComponentActions<C> = C extends (...args: unknown[]) => ComponentSpec<unknown, infer A, unknown> ? A : never;
 
-export type ComponentViews<
-  C extends ComponentFactory<unknown, unknown, unknown>,
-> = C extends ComponentFactory<unknown, unknown, infer V> ? V : never;
+export type ComponentViews<C> = C extends (...args: unknown[]) => ComponentSpec<unknown, unknown, infer V> ? V : never;
 
-export type ComponentType<
-  C extends ComponentFactory<unknown, unknown, unknown>
-> = C extends ComponentFactory<infer M, infer A, infer V>
+export type ComponentType<C> = C extends (...args: unknown[]) => ComponentSpec<infer M, infer A, infer V>
   ? {
       model: M;
       actions: A;
