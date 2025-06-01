@@ -11,89 +11,32 @@ import {
   createSlice as createReduxSlice,
 } from '@reduxjs/toolkit';
 import type {
-  ComponentFactory,
+  ComponentSpec,
   SliceFactory,
-  SelectMarkerValue,
+  AdapterResult,
 } from '@lattice/core';
-import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
+import { isSliceFactory, isComputedView } from '@lattice/core';
 
 // ============================================================================
 // Types
 // ============================================================================
 
 /**
- * Maps view types from slice factories to getter functions
+ * Redux adapter result that implements the standard AdapterResult interface
  */
-type ViewType<Model, T> = T extends () => SliceFactory<Model, infer S>
-  ? () => S
-  : T extends SliceFactory<Model, infer S>
-    ? () => S
-    : never;
-
-/**
- * Maps all views in a component to their executed types
- */
-type ExecutedViews<Model, Views> = {
-  [K in keyof Views]: ViewType<Model, Views[K]>;
-};
-
-/**
- * Redux store enhanced with Lattice features
- */
-export interface LatticeReduxStore<Model, Actions, Views> {
+export interface ReduxAdapterResult<Model, Actions, Views> extends AdapterResult<Model, Actions, Views> {
   // Standard Redux store methods
   dispatch: (action: any) => void;
   getState: () => Model;
   subscribe: (listener: () => void) => () => void;
-
-  // Lattice enhancements
-  actions: Actions;
-  views: ExecutedViews<Model, Views>;
+  
+  // Cleanup method
+  destroy: () => void;
 }
 
 // ============================================================================
 // Helpers
 // ============================================================================
-
-/**
- * Checks if an object is a select() marker
- */
-function isSelectMarker<Model>(
-  obj: unknown
-): obj is { [SELECT_MARKER]: SelectMarkerValue<Model, unknown> } {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    typeof SELECT_MARKER !== 'undefined' &&
-    SELECT_MARKER in obj
-  );
-}
-
-/**
- * Checks if a function is a slice factory
- */
-function isSliceFactory(fn: unknown): fn is SliceFactory<unknown, unknown> {
-  return (
-    typeof fn === 'function' &&
-    SLICE_FACTORY_MARKER in fn &&
-    fn[SLICE_FACTORY_MARKER] === true
-  );
-}
-
-/**
- * Internal slice cache for select() resolution
- */
-class SliceCache<Model> {
-  private cache = new Map<SliceFactory<Model, unknown>, unknown>();
-
-  get<T>(factory: SliceFactory<Model, T>): T | undefined {
-    return this.cache.get(factory) as T | undefined;
-  }
-
-  set<T>(factory: SliceFactory<Model, T>, value: T): void {
-    this.cache.set(factory, value);
-  }
-}
 
 /**
  * Separates state data from functions in the model
@@ -129,65 +72,6 @@ function isComposedSelector(selector: unknown): selector is {
   );
 }
 
-/**
- * Recursively resolves select() markers and composed selectors in slice results
- */
-function resolveSelectMarkers<T, Model>(
-  obj: T,
-  sliceCache: SliceCache<Model>,
-  model: Model,
-  executeSliceFactory?: <U>(factory: SliceFactory<Model, U>) => U
-): T {
-  // Primitives pass through unchanged
-  if (typeof obj !== 'object' || obj === null) {
-    return obj;
-  }
-
-  // Handle select() markers
-  if (isSelectMarker<Model>(obj)) {
-    const markerValue = obj[SELECT_MARKER];
-    const sliceFactory = markerValue.slice;
-
-    // Execute the slice factory to get fresh data
-    let slice: any;
-    if (executeSliceFactory) {
-      slice = executeSliceFactory(sliceFactory);
-    } else {
-      // Fallback for when executeSliceFactory is not available
-      const rawResult = sliceFactory(model);
-      slice = resolveSelectMarkers(rawResult, sliceCache, model);
-    }
-
-    // Apply selector if present
-    if (markerValue.selector) {
-      return markerValue.selector(slice) as T;
-    }
-
-    return slice as T;
-  }
-
-  // Handle arrays
-  if (Array.isArray(obj)) {
-    return obj.map((item) =>
-      resolveSelectMarkers(item, sliceCache, model, executeSliceFactory)
-    ) as T;
-  }
-
-  // Handle objects
-  const result: any = {};
-  for (const key in obj) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
-      result[key] = resolveSelectMarkers(
-        obj[key],
-        sliceCache,
-        model,
-        executeSliceFactory
-      );
-    }
-  }
-  return result;
-}
-
 // ============================================================================
 // Main Adapter
 // ============================================================================
@@ -195,18 +79,13 @@ function resolveSelectMarkers<T, Model>(
 /**
  * Creates a Redux store from a Lattice component
  */
-export function createReduxAdapter<
-  Model extends Record<string, any>,
-  Actions,
-  Views extends Record<
-    string,
-    SliceFactory<Model, unknown> | (() => SliceFactory<Model, unknown>)
-  >,
->(
-  componentFactory: ComponentFactory<Model, Actions, Views>
-): LatticeReduxStore<Model, Actions, Views> {
-  // Execute component factory
-  const spec = componentFactory();
+export function createReduxAdapter<Model, Actions, Views>(
+  componentOrFactory: ComponentSpec<Model, Actions, Views> | (() => ComponentSpec<Model, Actions, Views>)
+): ReduxAdapterResult<Model, Actions, Views> {
+  // Get the component spec
+  const spec = typeof componentOrFactory === 'function' 
+    ? componentOrFactory() 
+    : componentOrFactory;
 
   // Create initial model state
   const initialModel = spec.model({
@@ -263,9 +142,6 @@ export function createReduxAdapter<
   // Update modelActions reference
   Object.assign(modelActions, boundActions);
 
-  // Set up slice cache for select() resolution
-  const sliceCache = new SliceCache<Model>();
-
   // Helper to execute a composed selector
   const executeComposedSelector = <T>(selector: any, model: Model): T => {
     const deps = selector.__composeDeps || {};
@@ -300,21 +176,18 @@ export function createReduxAdapter<
       if (isComposedSelector(rawResult)) {
         rawResult = executeComposedSelector(rawResult, model);
       }
+      // If the result is itself a slice factory (from transform syntax), execute it
+      else if (isSliceFactory(rawResult)) {
+        rawResult = executeSliceFactory(rawResult);
+      }
     } catch (error) {
       // If execution fails, it might be because the selector expects resolved deps
       // This is a fallback, but shouldn't normally happen
       throw error;
     }
 
-    // Resolve any select markers in the result
-    const resolved = resolveSelectMarkers(
-      rawResult,
-      sliceCache,
-      model,
-      executeSliceFactory
-    );
-
-    return resolved;
+    // Return the result directly - no select markers to resolve
+    return rawResult;
   };
 
   // Create actions using the wrapper
@@ -322,29 +195,30 @@ export function createReduxAdapter<
   const actions = executeSliceFactory(actionsFactory);
 
   // Process views
-  const views = {} as ExecutedViews<Model, Views>;
-  for (const key in spec.views) {
-    const view = spec.views[key];
-
-    if (typeof view === 'function' && !isSliceFactory(view)) {
-      // Computed view - returns a slice factory
-      Object.defineProperty(views, key, {
-        value: () => {
-          const sliceFactory = (view as () => SliceFactory<Model, unknown>)();
-          return executeSliceFactory(sliceFactory);
-        },
-        enumerable: true,
-        configurable: true,
-      });
-    } else {
-      // Static view - is a slice factory
-      Object.defineProperty(views, key, {
-        value: () => {
-          return executeSliceFactory(view as SliceFactory<Model, unknown>);
-        },
-        enumerable: true,
-        configurable: true,
-      });
+  const views: any = {};
+  for (const [key, view] of Object.entries(spec.views as Record<string, unknown>)) {
+    if (isSliceFactory(view)) {
+      // Static view: slice factory
+      views[key] = () => {
+        const value = executeSliceFactory(view);
+        // Return a shallow copy to ensure fresh references
+        return typeof value === 'object' && value !== null 
+          ? Array.isArray(value) ? [...value] : { ...value }
+          : value;
+      };
+    } else if (isComputedView(view)) {
+      // Computed view: function returning slice factory
+      views[key] = () => {
+        const sliceFactory = view();
+        const value = executeSliceFactory(sliceFactory);
+        // Return a shallow copy to ensure fresh references
+        return typeof value === 'object' && value !== null 
+          ? Array.isArray(value) ? [...value] : { ...value }
+          : value;
+      };
+    } else if (typeof view === 'function') {
+      // Already a function, use as-is
+      views[key] = view;
     }
   }
 
@@ -355,6 +229,9 @@ export function createReduxAdapter<
     subscribe: store.subscribe,
     actions,
     views,
+    destroy: () => {
+      // Redux store doesn't need explicit cleanup, but we can add it for consistency
+    }
   };
 }
 
@@ -364,7 +241,7 @@ export function createReduxAdapter<
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createComponent, createModel, createSlice, select } = await import(
+  const { createComponent, createModel, createSlice, compose } = await import(
     '@lattice/core'
   );
 
@@ -486,7 +363,7 @@ if (import.meta.vitest) {
       expect(callCount).toBe(2); // No more updates
     });
 
-    it('should support views with select() markers', () => {
+    it('should support views with compose()', () => {
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -502,11 +379,14 @@ if (import.meta.vitest) {
           increment: m.increment,
         }));
 
-        const buttonSlice = createSlice(model, (m) => ({
-          onClick: select(actions, (a) => a.increment),
-          disabled: m.disabled,
-          label: `Count: ${m.count}`,
-        }));
+        const buttonSlice = createSlice(
+          model,
+          compose({ actions }, (m, { actions }) => ({
+            onClick: actions.increment,
+            disabled: m.disabled,
+            label: `Count: ${m.count}`,
+          }))
+        );
 
         return {
           model,

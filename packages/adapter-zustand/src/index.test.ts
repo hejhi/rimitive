@@ -4,7 +4,7 @@ import {
   createComponent,
   createModel,
   createSlice,
-  select,
+  compose,
 } from '@lattice/core';
 
 describe('createZustandAdapter', () => {
@@ -143,7 +143,8 @@ describe('createZustandAdapter', () => {
     expect(store.views.state().count).toBe(1);
 
     // Use computed view
-    expect(store.views.doubled().doubled).toBe(2);
+    const doubled = store.views.doubled();
+    expect(doubled.doubled).toBe(2);
   });
 
   it('should work with React-style usage', () => {
@@ -349,7 +350,7 @@ describe('createZustandAdapter', () => {
       });
     });
 
-    it('should handle views with select() markers', () => {
+    it('should handle views with compose()', () => {
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -366,12 +367,15 @@ describe('createZustandAdapter', () => {
           decrement: m.decrement,
         }));
 
-        const buttonSlice = createSlice(model, (m) => ({
-          onIncrement: select(actions, (a) => a.increment),
-          onDecrement: select(actions, (a) => a.decrement),
-          count: m.count,
-          'aria-label': `Current count: ${m.count}`,
-        }));
+        const buttonSlice = createSlice(
+          model,
+          compose({ actions }, (m, { actions }) => ({
+            onIncrement: actions.increment,
+            onDecrement: actions.decrement,
+            count: m.count,
+            'aria-label': `Current count: ${m.count}`,
+          }))
+        );
 
         return {
           model,
@@ -403,7 +407,7 @@ describe('createZustandAdapter', () => {
       expect(updatedView['aria-label']).toBe('Current count: 0');
     });
 
-    it('should handle nested select() markers', () => {
+    it('should handle nested compose()', () => {
       const component = createComponent(() => {
         const model = createModel<{
           user: { id: number; name: string; role: string };
@@ -426,13 +430,19 @@ describe('createZustandAdapter', () => {
           updatePermissions: m.updatePermissions,
         }));
 
-        const dashboardSlice = createSlice(model, () => ({
-          userName: select(userSlice, (u) => u.name),
-          userRole: select(userSlice, (u) => u.role),
-          canEdit: select(permissionsSlice, (p) => p.canEdit),
-          canDelete: select(permissionsSlice, (p) => p.canDelete),
-          actions: select(actionsSlice),
-        }));
+        const dashboardSlice = createSlice(
+          model,
+          compose(
+            { userSlice, permissionsSlice, actionsSlice },
+            (_, { userSlice, permissionsSlice, actionsSlice }) => ({
+              userName: userSlice.name,
+              userRole: userSlice.role,
+              canEdit: permissionsSlice.canEdit,
+              canDelete: permissionsSlice.canDelete,
+              actions: actionsSlice,
+            })
+          )
+        );
 
         return {
           model,

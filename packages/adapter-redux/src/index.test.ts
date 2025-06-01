@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createReduxAdapter } from './index';
-import { createComponent, createModel, createSlice, select } from '@lattice/core';
+import { createComponent, createModel, createSlice, compose, createAdapterTestSuite } from '@lattice/core';
 
 describe('Redux Adapter', () => {
   it('should export createReduxAdapter function', () => {
@@ -224,7 +224,7 @@ describe('Redux Adapter', () => {
     expect(values).toEqual([1, 2]);
   });
 
-  it('should handle select() markers in views', () => {
+  it('should handle compose() in views', () => {
     const component = createComponent(() => {
       const model = createModel<{
         count: number;
@@ -249,13 +249,16 @@ describe('Redux Adapter', () => {
         isNegative: m.count < 0,
       }));
 
-      // View with select() marker
-      const controlsSlice = createSlice(model, (m) => ({
-        onIncrement: select(actions, (a) => a.increment),
-        onDecrement: select(actions, (a) => a.decrement),
-        count: select(countSlice, (c) => c.value),
-        disabled: m.disabled,
-      }));
+      // View with compose()
+      const controlsSlice = createSlice(
+        model,
+        compose({ actions, countSlice }, (m, { actions, countSlice }) => ({
+          onIncrement: actions.increment,
+          onDecrement: actions.decrement,
+          count: countSlice.value,
+          disabled: m.disabled,
+        }))
+      );
 
       return {
         model,
@@ -275,7 +278,7 @@ describe('Redux Adapter', () => {
     expect(controls.count).toBe(0);
     expect(controls.disabled).toBe(false);
 
-    // Test that actions work through select()
+    // Test that actions work through compose()
     controls.onIncrement();
     expect(store.getState().count).toBe(1);
 
@@ -361,3 +364,6 @@ describe('Redux Adapter', () => {
     expect(summary.total).toBe('24.74');
   });
 });
+
+// Run the shared adapter test suite
+createAdapterTestSuite('Redux', createReduxAdapter);

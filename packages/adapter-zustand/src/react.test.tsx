@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { createComponent, createModel, createSlice, select } from '@lattice/core';
+import { createComponent, createModel, createSlice, compose } from '@lattice/core';
 import { createZustandAdapter } from './index.js';
 import { useViews, useView, useActions, useLattice } from './react.js';
 
@@ -587,10 +587,11 @@ describe('React hooks for Zustand adapter', () => {
         completed: 1,
         active: 2,
       });
+      expect(result.current.filteredTodos).toBeDefined();
       expect(result.current.filteredTodos.count).toBe(3);
     });
 
-    it('should handle views with select() markers', () => {
+    it('should handle views with compose()', () => {
       const testComponent = createComponent(() => {
         const model = createModel<{
           user: { name: string; email: string };
@@ -603,10 +604,13 @@ describe('React hooks for Zustand adapter', () => {
         const userSlice = createSlice(model, (m) => m.user);
         const prefsSlice = createSlice(model, (m) => m.preferences);
 
-        const profileView = createSlice(model, () => ({
-          user: select(userSlice),
-          theme: select(prefsSlice, (p) => p.theme),
-        }));
+        const profileView = createSlice(
+          model,
+          compose({ userSlice, prefsSlice }, (_, { userSlice, prefsSlice }) => ({
+            user: userSlice,
+            theme: prefsSlice.theme,
+          }))
+        );
 
         return {
           model,

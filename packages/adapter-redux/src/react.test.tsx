@@ -7,7 +7,7 @@ import {
   createComponent,
   createModel,
   createSlice,
-  select,
+  compose,
 } from '@lattice/core';
 import { createReduxAdapter } from './index';
 import { useView, useActions, useSelector } from './react';
@@ -44,11 +44,14 @@ describe('Redux React Integration', () => {
         isEven: m.count % 2 === 0,
       }));
 
-      const buttonSlice = createSlice(model, (m) => ({
-        onClick: select(actions, (a) => a.increment),
-        disabled: m.disabled,
-        'aria-label': `Increment counter`,
-      }));
+      const buttonSlice = createSlice(
+        model,
+        compose({ actions }, (m, { actions }) => ({
+          onClick: actions.increment,
+          disabled: m.disabled,
+          'aria-label': `Increment counter`,
+        }))
+      );
 
       return {
         model,
@@ -108,7 +111,7 @@ describe('Redux React Integration', () => {
     expect(firstActions.decrement).toBe(secondActions.decrement);
   });
 
-  it('should handle views with select() markers', async () => {
+  it('should handle views with compose()', async () => {
     const component = createTestComponent();
     const store = createReduxAdapter(component);
 
@@ -266,12 +269,7 @@ describe('Redux React Integration', () => {
       useView(store, (views) => views.filteredItems)
     );
 
-    const data = result.current as {
-      items: string[];
-      count: number;
-      hasResults: boolean;
-      searchTerm: string;
-    };
+    const data = result.current;
     expect(data.count).toBe(3);
     expect(data.hasResults).toBe(true);
     expect(data.items).toEqual(['apple', 'banana', 'cherry']);
@@ -281,12 +279,7 @@ describe('Redux React Integration', () => {
       store.actions.setFilter('a');
     });
 
-    const filteredData = result.current as {
-      items: string[];
-      count: number;
-      hasResults: boolean;
-      searchTerm: string;
-    };
+    const filteredData = result.current;
     expect(filteredData.count).toBe(2);
     expect(filteredData.items).toEqual(['apple', 'banana']);
     expect(filteredData.searchTerm).toBe('a');
@@ -298,12 +291,7 @@ describe('Redux React Integration', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const finalData = result.current as {
-      items: string[];
-      count: number;
-      hasResults: boolean;
-      searchTerm: string;
-    };
+    const finalData = result.current;
     expect(finalData.count).toBe(3);
     expect(finalData.items).toEqual(['apple', 'banana', 'apricot']);
   });
@@ -472,16 +460,7 @@ describe('Redux React Integration', () => {
     );
 
     // Initial state
-    type TodoView = {
-      items: Todo[];
-      stats: {
-        total: number;
-        active: number;
-        completed: number;
-        percentComplete: number;
-      };
-    };
-    const initialData = result.current as TodoView;
+    const initialData = result.current;
     expect(initialData.items.length).toBe(3);
     expect(initialData.stats.total).toBe(3);
     expect(initialData.stats.active).toBe(2);
@@ -495,7 +474,7 @@ describe('Redux React Integration', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const activeData = result.current as TodoView;
+    const activeData = result.current;
     expect(activeData.items.length).toBe(2);
     expect(activeData.items.every((t) => !t.completed)).toBe(true);
 
@@ -506,7 +485,7 @@ describe('Redux React Integration', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const sortedData = result.current as TodoView;
+    const sortedData = result.current;
     expect(sortedData.items[0]?.priority).toBe('high');
     expect(sortedData.items[1]?.priority).toBe('medium');
 
@@ -517,7 +496,7 @@ describe('Redux React Integration', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const updatedData = result.current as TodoView;
+    const updatedData = result.current;
     expect(updatedData.items.length).toBe(3); // Still filtered to active
     expect(updatedData.stats.total).toBe(4);
     expect(updatedData.stats.active).toBe(3);

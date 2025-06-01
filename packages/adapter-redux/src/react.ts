@@ -5,21 +5,21 @@
  */
 
 import { useRef, useSyncExternalStore, useCallback } from 'react';
-import type { LatticeReduxStore } from './index';
+import type { ReduxAdapterResult } from './index';
 
 /**
  * Custom hook for accessing views with proper subscriptions
  */
 export function useView<
-  Model extends Record<string, any>,
+  Model,
   Actions,
   Views,
   K extends keyof Views,
-  ViewGetter = LatticeReduxStore<Model, Actions, Views>['views'][K],
+  ViewGetter = ReduxAdapterResult<Model, Actions, Views>['views'][K],
 >(
-  store: LatticeReduxStore<Model, Actions, Views>,
+  store: ReduxAdapterResult<Model, Actions, Views>,
   selector: (
-    views: LatticeReduxStore<Model, Actions, Views>['views']
+    views: ReduxAdapterResult<Model, Actions, Views>['views']
   ) => ViewGetter
 ): ViewGetter extends () => infer R ? R : never {
   // Get the view getter
@@ -75,8 +75,8 @@ export function useView<
 /**
  * Get all actions as a stable reference object
  */
-export function useActions<Model extends Record<string, any>, Actions, Views>(
-  store: LatticeReduxStore<Model, Actions, Views>
+export function useActions<Model, Actions, Views>(
+  store: ReduxAdapterResult<Model, Actions, Views>
 ): Actions {
   // Actions are stable, so we can just return them
   return store.actions;
@@ -94,7 +94,7 @@ export { useSelector } from 'react-redux';
 if (import.meta.vitest) {
   const { describe, it, expect, afterEach } = import.meta.vitest;
   const { renderHook, act, cleanup } = await import('@testing-library/react');
-  const { createComponent, createModel, createSlice, select } = await import(
+  const { createComponent, createModel, createSlice, compose } = await import(
     '@lattice/core'
   );
   const { createReduxAdapter } = await import('./index');
@@ -128,11 +128,14 @@ if (import.meta.vitest) {
           label: `Count: ${m.count}`,
         }));
 
-        const buttonSlice = createSlice(model, (m) => ({
-          onClick: select(actions, (a) => a.increment),
-          disabled: m.disabled,
-          'aria-label': `Increment counter`,
-        }));
+        const buttonSlice = createSlice(
+          model,
+          compose({ actions }, (m, { actions }) => ({
+            onClick: actions.increment,
+            disabled: m.disabled,
+            'aria-label': `Increment counter`,
+          }))
+        );
 
         return {
           model,
