@@ -83,14 +83,3 @@ export function isSliceFactory<M, S>(value: unknown): value is SliceFactory<M, S
     (value as any)[SLICE_FACTORY_MARKER] === true;
 }
 
-/**
- * Type guard to check if a value is a computed view (function returning slice factory)
- * 
- * @deprecated This pattern of functions returning SliceFactories creates ambiguity.
- * Views should be either SliceFactories directly or final computed functions.
- */
-export function isComputedView<M, S>(value: unknown): value is () => SliceFactory<M, S> {
-  // We can't reliably detect this pattern without executing the function,
-  // which would have side effects. Return false to prevent double-execution.
-  return false;
-}

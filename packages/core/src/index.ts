@@ -85,7 +85,7 @@ export type {
   ViewTypes,
 } from './adapter-contract';
 
-export { isSliceFactory, isComputedView } from './adapter-contract';
+export { isSliceFactory } from './adapter-contract';
 
 // Export adapter test suite
 export { createAdapterTestSuite } from './adapter-test-suite';
