@@ -103,13 +103,13 @@ export type ComponentViews<
   C extends ComponentFactory<unknown, unknown, unknown>,
 > = C extends ComponentFactory<unknown, unknown, infer V> ? V : never;
 
-export type ComponentType<
-  C extends ComponentFactory<unknown, unknown, unknown>,
-> = {
-  model: ComponentModel<C>;
-  actions: ComponentActions<C>;
-  views: ComponentViews<C>;
-};
+export type ComponentType<C> = C extends ComponentFactory<infer M, infer A, infer V>
+  ? {
+      model: M;
+      actions: A;
+      views: V;
+    }
+  : never;
 
 // In-source tests for slice transforms
 if (import.meta.vitest) {
