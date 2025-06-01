@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createComponent, createModel, createSlice, select } from '@lattice/core';
+import { createComponent, createModel, createSlice, compose } from '@lattice/core';
 import { 
   createComponentTest, 
   testSlice, 
@@ -12,7 +12,7 @@ import {
 
 describe('@lattice/test-utils', () => {
   describe('integration with real Lattice components', () => {
-    it('should properly test a counter component with select() markers', () => {
+    it('should properly test a counter component', () => {
       const counter = createComponent(() => {
         const model = createModel(({ set, get }) => ({
           count: 0,
@@ -63,7 +63,7 @@ describe('@lattice/test-utils', () => {
         className: 'even',
       });
 
-      // Test static view with select() marker
+      // Test static view
       const buttonView = test.getView('incrementButton');
       expect(buttonView.disabled).toBe(false);
       expect(buttonView['aria-label']).toBe('Increment counter');
@@ -140,23 +140,21 @@ describe('@lattice/test-utils', () => {
   });
 
   describe('testSlice helper', () => {
-    it('should test slices with select() markers', () => {
-      // First create the referenced slice
-      const userSlice = createSlice(
-        (selector: any) => selector({ user: { name: 'Test' } }),
-        (state) => ({ user: state.user })
-      );
+    it('should test slices with compose()', () => {
+      const model = createModel<{ user: { name: string }; status: string }>(({ set }) => ({
+        user: { name: 'Test' },
+        status: 'active',
+      }));
 
-      // Create a slice that uses select()
+      const userSlice = createSlice(model, (m) => ({ user: m.user }));
+
+      // Create a slice that uses compose()
       const compositeSlice = createSlice(
-        (selector: any) => selector({ 
-          user: select(userSlice).user,
-          status: 'active' 
-        }),
-        (state) => ({
-          userName: state.user.name,
-          isActive: state.status === 'active',
-        })
+        model,
+        compose({ userSlice }, (m, { userSlice }) => ({
+          userName: userSlice.user.name,
+          isActive: m.status === 'active',
+        }))
       );
 
       // Test with proper state structure
@@ -165,11 +163,11 @@ describe('@lattice/test-utils', () => {
           user: { name: 'Alice' },
           status: 'active'
         },
-        compositeSlice
+        compositeSlice as any
       );
 
-      // This test is flawed - slices need proper state structure
-      // Skip for now as it's testing an impossible scenario
+      expect(getResult().userName).toBe('Alice');
+      expect(getResult().isActive).toBe(true);
     });
   });
 
@@ -335,7 +333,7 @@ describe('@lattice/test-utils', () => {
       expect(test.getState().value).toBe(42);
     });
 
-    it('should handle select() markers with selectors', () => {
+    it('should handle slice composition with compose()', () => {
       const component = createComponent(() => {
         const model = createModel(({ set, get }) => ({
           user: { id: 1, name: 'Alice', email: 'alice@example.com' },
@@ -348,15 +346,18 @@ describe('@lattice/test-utils', () => {
         const userSlice = createSlice(model, (m) => m.user);
         const postsSlice = createSlice(model, (m) => m.posts);
 
-        // Create a composite slice that uses select with selectors
-        const profileSlice = createSlice(model, () => ({
-          // Select only name from user slice
-          userName: select(userSlice, (u) => u.name),
-          // Select only post count from posts slice
-          postCount: select(postsSlice, (p) => p.length),
-          // Select full user object (no selector)
-          fullUser: select(userSlice),
-        }));
+        // Create a composite slice that uses compose()
+        const profileSlice = createSlice(
+          model,
+          compose({ userSlice, postsSlice }, (m, { userSlice, postsSlice }) => ({
+            // Select only name from user slice
+            userName: userSlice.name,
+            // Select only post count from posts slice
+            postCount: postsSlice.length,
+            // Select full user object
+            fullUser: userSlice,
+          }))
+        );
 
         return {
           model,
@@ -370,11 +371,11 @@ describe('@lattice/test-utils', () => {
       const test = createComponentTest(component);
       const profileView = test.getView('profile');
 
-      // Verify that select with selector returns only the selected value
+      // Verify composed values
       expect(profileView.userName).toBe('Alice');
       expect(profileView.postCount).toBe(2);
       
-      // Verify that select without selector returns the full slice result
+      // Verify full user object
       expect(profileView.fullUser).toEqual({
         id: 1,
         name: 'Alice',
@@ -382,7 +383,7 @@ describe('@lattice/test-utils', () => {
       });
     });
 
-    it('should handle deeply nested select() markers', () => {
+    it('should handle deeply nested slice composition', () => {
       const nested = createComponent(() => {
         const model = createModel(() => ({
           a: { b: { c: 'deep' } },

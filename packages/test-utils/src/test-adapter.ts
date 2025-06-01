@@ -3,9 +3,8 @@ import type {
   ModelFactory,
   ComponentFactory,
   ComponentSpec,
-  SelectMarkerValue,
 } from '@lattice/core';
-import { SELECT_MARKER, SLICE_FACTORY_MARKER } from '@lattice/core';
+import { SLICE_FACTORY_MARKER } from '@lattice/core';
 
 // Define types locally
 type StateSubscriber<T> = (state: T) => void;
@@ -46,7 +45,7 @@ export class TestStore<TState> {
   }
 
   /**
-   * Execute a slice factory with proper resolution of select() markers
+   * Execute a slice factory
    */
   executeSlice<TResult>(sliceFactory: SliceFactory<TState, TResult>): TResult {
     // Check cache first
@@ -58,13 +57,10 @@ export class TestStore<TState> {
       // Execute the slice factory with the state
       const result = sliceFactory(this.state);
       
-      // Process the result to resolve any select markers
-      const resolvedResult = this.resolveSelectMarkers(result);
+      // Cache the result
+      this.sliceCache.set(sliceFactory, result);
       
-      // Cache the resolved result
-      this.sliceCache.set(sliceFactory, resolvedResult);
-      
-      return resolvedResult;
+      return result;
     } catch (error) {
       console.error('Error executing slice:', error);
       console.error('State:', this.state);
@@ -73,53 +69,6 @@ export class TestStore<TState> {
     }
   }
 
-  /**
-   * Recursively resolve select markers in a value
-   */
-  private resolveSelectMarkers<T>(value: T): T {
-    if (value === null || value === undefined) {
-      return value;
-    }
-
-    if (this.isSelectMarker(value)) {
-      // Get the marker value
-      const markerValue = (value as any)[SELECT_MARKER] as SelectMarkerValue<any, any, any>;
-      
-      // Execute the referenced slice
-      const sliceResult = this.executeSlice(markerValue.slice);
-      
-      // Check if there's a selector function to apply
-      if (markerValue.selector) {
-        const selectedValue = markerValue.selector(sliceResult);
-        return this.resolveSelectMarkers(selectedValue) as T;
-      }
-      
-      // No selector, return the full slice result
-      return this.resolveSelectMarkers(sliceResult) as T;
-    }
-
-    if (typeof value === 'object') {
-      // Handle arrays
-      if (Array.isArray(value)) {
-        return value.map(item => this.resolveSelectMarkers(item)) as T;
-      }
-
-      // Handle objects
-      const resolved: any = {};
-      for (const key in value) {
-        if (Object.prototype.hasOwnProperty.call(value, key)) {
-          resolved[key] = this.resolveSelectMarkers(value[key]);
-        }
-      }
-      return resolved;
-    }
-
-    return value;
-  }
-
-  private isSelectMarker(value: any): value is { [SELECT_MARKER]: SelectMarkerValue<any, any, any> } {
-    return value && typeof value === 'object' && SELECT_MARKER in value;
-  }
 
 
   /**

@@ -52,11 +52,10 @@ describe('compose with memory adapter', () => {
       };
     });
 
-    const adapter = createMemoryAdapter();
-    const store = adapter.executeComponent(component);
+    const adapter = createMemoryAdapter(component);
 
     // Get initial view
-    const button = store.views.button.get();
+    const button = adapter.views.button();
     expect(button.disabled).toBe(false);
     expect(button['aria-label']).toBe('Increment (Alice)');
     expect(typeof button.onClick).toBe('function');
@@ -64,26 +63,12 @@ describe('compose with memory adapter', () => {
     // Increment should work
     button.onClick();
 
-    // Check that count incremented (need to check through actions or a view that exposes count)
-    // Since we don't have a count view, let's add one
-    const componentWithCount = createComponent(() => {
-      const base = component();
-      return {
-        ...base,
-        views: {
-          ...base.views,
-          count: createSlice(base.model, (m) => ({ value: m.count })),
-        },
-      };
-    });
+    // Check the count through the adapter's getState
+    expect(adapter.getState().count).toBe(1);
 
-    const adapterWithCount = createMemoryAdapter();
-    const storeWithCount =
-      adapterWithCount.executeComponent(componentWithCount);
-    expect(storeWithCount.views.count.get().value).toBe(0);
-
-    storeWithCount.views.button.get().onClick();
-    expect(storeWithCount.views.count.get().value).toBe(1);
+    // Button view should still work
+    const button2 = adapter.views.button();
+    expect(button2['aria-label']).toBe('Increment (Alice)');
   });
 
   it('should handle reactive updates with composed slices', () => {
@@ -130,11 +115,10 @@ describe('compose with memory adapter', () => {
       };
     });
 
-    const adapter = createMemoryAdapter();
-    const store = adapter.executeComponent(component);
+    const adapter = createMemoryAdapter(component);
 
     // Initial state
-    let buttons = store.views.filterButtons.get();
+    let buttons = adapter.views.filterButtons();
     expect(buttons.all.active).toBe(true);
     expect(buttons.active.active).toBe(false);
     expect(buttons.completed.active).toBe(false);
@@ -143,13 +127,13 @@ describe('compose with memory adapter', () => {
     buttons.active.onClick();
 
     // Check reactive update
-    buttons = store.views.filterButtons.get();
+    buttons = adapter.views.filterButtons();
     expect(buttons.all.active).toBe(false);
     expect(buttons.active.active).toBe(true);
     expect(buttons.completed.active).toBe(false);
 
     // Verify state changed
-    expect(store.views.state.get().filter).toBe('active');
+    expect(adapter.views.state().filter).toBe('active');
   });
 
   it('should work with nested compose', () => {
@@ -201,15 +185,14 @@ describe('compose with memory adapter', () => {
       };
     });
 
-    const adapter = createMemoryAdapter();
-    const store = adapter.executeComponent(component);
+    const adapter = createMemoryAdapter(component);
 
     // Initial state (add)
-    expect(store.views.display.get().text).toBe('5 + 3 = 8');
+    expect(adapter.views.display().text).toBe('5 + 3 = 8');
 
     // Change operation
-    store.actions.get().setOp('multiply');
-    expect(store.views.display.get().text).toBe('5 × 3 = 15');
+    adapter.actions.setOp('multiply');
+    expect(adapter.views.display().text).toBe('5 × 3 = 15');
   });
 
   it('should handle complex composition patterns', () => {
@@ -286,24 +269,23 @@ describe('compose with memory adapter', () => {
       };
     });
 
-    const adapter = createMemoryAdapter();
-    const store = adapter.executeComponent(component);
+    const adapter = createMemoryAdapter(component);
 
     // Initial state
-    expect(store.views.stats.get().activeCount).toBe(2);
-    expect(store.views.stats.get().completedCount).toBe(1);
-    expect(store.views.summary.get().text).toBe('2 of 3 remaining');
-    expect(store.views.summary.get().className).toBe('in-progress');
+    expect(adapter.views.stats().activeCount).toBe(2);
+    expect(adapter.views.stats().completedCount).toBe(1);
+    expect(adapter.views.summary().text).toBe('2 of 3 remaining');
+    expect(adapter.views.summary().className).toBe('in-progress');
 
     // Toggle an item
-    store.actions.get().toggleItem(1);
-    expect(store.views.stats.get().activeCount).toBe(1);
-    expect(store.views.stats.get().completedCount).toBe(2);
-    expect(store.views.summary.get().text).toBe('1 of 3 remaining');
+    adapter.actions.toggleItem(1);
+    expect(adapter.views.stats().activeCount).toBe(1);
+    expect(adapter.views.stats().completedCount).toBe(2);
+    expect(adapter.views.summary().text).toBe('1 of 3 remaining');
 
     // Complete all
-    store.actions.get().toggleItem(3);
-    expect(store.views.stats.get().allCompleted).toBe(true);
-    expect(store.views.summary.get().className).toBe('all-done');
+    adapter.actions.toggleItem(3);
+    expect(adapter.views.stats().allCompleted).toBe(true);
+    expect(adapter.views.summary().className).toBe('all-done');
   });
 });

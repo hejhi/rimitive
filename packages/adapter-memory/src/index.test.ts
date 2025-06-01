@@ -1,80 +1,108 @@
+/**
+ * Tests for the memory adapter
+ */
+
 import { describe, it, expect } from 'vitest';
 import { createMemoryAdapter } from './index';
+import { createAdapterTestSuite, createComponent, createModel, createSlice } from '@lattice/core';
 
-describe('createMemoryAdapter', () => {
-  it('should export createMemoryAdapter function', () => {
-    expect(createMemoryAdapter).toBeDefined();
-    expect(typeof createMemoryAdapter).toBe('function');
+// Run the shared adapter test suite
+createAdapterTestSuite('Memory', createMemoryAdapter);
+
+// Additional memory-specific tests
+describe('Memory Adapter Specific Features', () => {
+  it('should provide getState() for testing', () => {
+    const counter = createComponent(() => {
+      const model = createModel<{ count: number; increment: () => void }>(
+        ({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 })
+        })
+      );
+
+      const actions = createSlice(model, m => ({
+        increment: m.increment
+      }));
+
+      const views = {
+        count: createSlice(model, m => ({ value: m.count }))
+      };
+
+      return { model, actions, views };
+    });
+
+    const adapter = createMemoryAdapter(counter);
+
+    // Test getState() method
+    expect(adapter.getState()).toEqual({ count: 0, increment: expect.any(Function) });
+    
+    adapter.actions.increment();
+    
+    expect(adapter.getState()).toEqual({ count: 1, increment: expect.any(Function) });
   });
 
-  it('should create an adapter with working primitives', () => {
-    interface CounterState {
-      count: number;
-      increment: () => void;
-      decrement: () => void;
-    }
+  it('should provide destroy() for cleanup', () => {
+    const component = createComponent(() => {
+      const model = createModel<{ value: string }>(
+        () => ({ value: 'test' })
+      );
 
-    // Create adapter and use primitives
-    const adapter = createMemoryAdapter();
-    const { primitives } = adapter;
-    
-    // Create store with initial state
-    const store = primitives.createStore<CounterState>({
-      count: 0,
-      increment: () => {
-        store.set(prev => ({ ...prev, count: prev.count + 1 }));
-      },
-      decrement: () => {
-        store.set(prev => ({ ...prev, count: prev.count - 1 }));
-      }
+      return {
+        model,
+        actions: createSlice(model, () => ({})),
+        views: {
+          value: createSlice(model, m => ({ text: m.value }))
+        }
+      };
     });
 
-    // Verify initial state
-    expect(store.get().count).toBe(0);
-
-    // Verify actions work
-    store.get().increment();
-    expect(store.get().count).toBe(1);
-
-    store.get().decrement();
-    expect(store.get().count).toBe(0);
+    const adapter = createMemoryAdapter(component);
+    
+    // Should work before destroy
+    expect(adapter.views.value().text).toBe('test');
+    
+    // Destroy the adapter
+    adapter.destroy();
+    
+    // After destroy, stores should still return values but subscriptions are cleaned up
+    expect(adapter.views.value().text).toBe('test');
   });
 
-  it('should support subscriptions to state changes', () => {
-    interface CounterState {
-      count: number;
-      increment: () => void;
-    }
+  it('should handle nested object updates correctly', () => {
+    const component = createComponent(() => {
+      const model = createModel<{
+        user: { name: string; email: string };
+        updateName: (name: string) => void;
+      }>(({ set, get }) => ({
+        user: { name: 'Alice', email: 'alice@example.com' },
+        updateName: (name: string) => set({ 
+          user: { ...get().user, name } 
+        })
+      }));
 
-    const adapter = createMemoryAdapter();
-    const { primitives } = adapter;
+      const actions = createSlice(model, m => ({
+        updateName: m.updateName
+      }));
+
+      const views = {
+        user: createSlice(model, m => m.user)
+      };
+
+      return { model, actions, views };
+    });
+
+    const adapter = createMemoryAdapter(component);
     
-    const store = primitives.createStore<CounterState>({
-      count: 0,
-      increment: () => {
-        store.set(prev => ({ ...prev, count: prev.count + 1 }));
-      }
+    expect(adapter.views.user()).toEqual({ 
+      name: 'Alice', 
+      email: 'alice@example.com' 
     });
-
-    let callCount = 0;
-    let lastState: CounterState | undefined;
-
-    // Subscribe to state changes
-    const unsubscribe = store.subscribe((state) => {
-      callCount++;
-      lastState = state;
+    
+    adapter.actions.updateName('Bob');
+    
+    expect(adapter.views.user()).toEqual({ 
+      name: 'Bob', 
+      email: 'alice@example.com' 
     });
-
-    // Trigger state change
-    store.get().increment();
-
-    // Verify subscription was called
-    expect(callCount).toBe(1);
-    expect(lastState?.count).toBe(1);
-
-    // Unsubscribe and verify no more calls
-    unsubscribe();
-    store.get().increment();
-    expect(callCount).toBe(1);
   });
 });

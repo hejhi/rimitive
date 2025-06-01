@@ -6,6 +6,7 @@
  */
 
 import type { ComponentSpec, SliceFactory } from './index';
+import { SLICE_FACTORY_MARKER } from './index';
 
 /**
  * View type helpers - transforms view definitions to their runtime signatures
@@ -79,7 +80,7 @@ export type TestAdapterFactory = <Model, Actions, Views>(
  */
 export function isSliceFactory<M, S>(value: unknown): value is SliceFactory<M, S> {
   return typeof value === 'function' && 
-    (value as any)[Symbol.for('lattice.sliceFactory')] === true;
+    (value as any)[SLICE_FACTORY_MARKER] === true;
 }
 
 /**
