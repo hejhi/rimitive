@@ -154,10 +154,10 @@ function executeComponent<Model, Actions, Views>(
   // Helper to execute a slice factory
   const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
     const state = modelStore.get();
-    let rawResult: any = factory(state);
+    let rawResult = factory(state);
 
     // If the result is itself a slice factory, execute it
-    if (isSliceFactory(rawResult)) {
+    if (isSliceFactory<Model, T>(rawResult)) {
       rawResult = executeSliceFactory(rawResult);
     }
 
