@@ -1,8 +1,8 @@
 /**
  * @lattice/test-utils
- * 
+ *
  * Test utilities for Lattice components that work WITH the architecture.
- * These utilities properly execute slice factories and resolve select() markers,
+ * These utilities properly execute slice factories,
  * making it easy to test Lattice components without fighting the framework.
  */
 

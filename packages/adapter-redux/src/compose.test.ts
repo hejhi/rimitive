@@ -35,14 +35,14 @@ describe('compose with redux adapter', () => {
     });
 
     const store = createReduxAdapter(component);
-    
+
     // Initial state
     expect(store.getState().count).toBe(0);
-    
+
     // Test action
     store.actions.increment();
     expect(store.getState().count).toBe(1);
-    
+
     // Another increment
     store.actions.increment();
     expect(store.getState().count).toBe(2);
@@ -71,7 +71,6 @@ describe('compose with redux adapter', () => {
         role: m.user.role,
       }));
 
-      // Use compose instead of select()
       const buttonSlice = createSlice(
         model,
         compose({ actions, userSlice }, (m, { actions, userSlice }) => ({
@@ -244,9 +243,7 @@ describe('compose with redux adapter', () => {
         toggleItem: (id) =>
           set({
             items: get().items.map((item) =>
-              item.id === id
-                ? { ...item, completed: !item.completed }
-                : item
+              item.id === id ? { ...item, completed: !item.completed } : item
             ),
           }),
         selectItem: (id) => set({ selectedId: id }),

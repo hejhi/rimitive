@@ -35,7 +35,6 @@ describe('compose with zustand adapter', () => {
         role: m.user.role,
       }));
 
-      // Use compose instead of select()
       const buttonSlice = createSlice(
         model,
         compose({ actions, userSlice }, (m, { actions, userSlice }) => ({

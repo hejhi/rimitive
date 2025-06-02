@@ -1,8 +1,7 @@
 /**
  * @fileoverview Compose utility for createSlice dependency injection
  *
- * Provides a clean way to compose slices with explicit dependencies,
- * eliminating the need for select() markers and recursive resolution.
+ * Provides a clean way to compose slices with explicit dependencies.
  *
  * This implementation uses a purely functional approach with multiple
  * function layers to encode composition data.

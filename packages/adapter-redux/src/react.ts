@@ -193,7 +193,7 @@ if (import.meta.vitest) {
       expect(firstActions.increment).toBe(secondActions.increment);
     });
 
-    it('should handle views with select() markers', async () => {
+    it('should handle views', async () => {
       const component = createTestComponent();
       const store = createReduxAdapter(component);
 
@@ -303,8 +303,7 @@ if (import.meta.vitest) {
         const statsView = itemsSlice((state) => ({
           count: state.items.length,
           sum: state.items.reduce((a, b) => a + b, 0),
-          average:
-            state.items.reduce((a, b) => a + b, 0) / state.items.length,
+          average: state.items.reduce((a, b) => a + b, 0) / state.items.length,
         }));
 
         return {

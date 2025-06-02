@@ -11,7 +11,6 @@ type StateSubscriber<T> = (state: T) => void;
 
 /**
  * Test store implementation that properly executes slice factories
- * and resolves select() markers
  */
 export class TestStore<TState> {
   private state: TState;
