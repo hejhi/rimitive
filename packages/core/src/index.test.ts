@@ -4,10 +4,9 @@ import {
   createModel,
   createSlice,
   compose,
-  COMPOSE_MARKER,
   isSliceFactory,
 } from './index';
-import type { ComposeSpecFactory, SliceFactory } from './index';
+import type { SliceFactory } from './index';
 
 // Simple test helper to execute slices with compose support
 function executeSlice<Model, T>(sliceFactory: SliceFactory<Model, T>, model: Model): T {

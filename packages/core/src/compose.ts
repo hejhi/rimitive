@@ -60,13 +60,12 @@ export function compose<
 ): (model: Model) => Result {
   // Return a regular selector function that resolves dependencies
   return (model: Model): Result => {
-    // Resolve all dependencies by executing slice factories
-    const resolvedDeps = {} as ResolveDeps<Deps>;
-
-    for (const [key, sliceFactory] of Object.entries(deps)) {
-      // Execute each slice factory with the model to get its value
-      resolvedDeps[key] = sliceFactory(model);
-    }
+    // Build resolved dependencies using Object.fromEntries for type safety
+    const entries = Object.entries(deps).map(([key, sliceFactory]) => [
+      key,
+      sliceFactory(model),
+    ]);
+    const resolvedDeps = Object.fromEntries(entries) as ResolveDeps<Deps>;
 
     // Call the selector with model and resolved dependencies
     return selector(model, resolvedDeps);
