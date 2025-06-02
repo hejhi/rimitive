@@ -185,15 +185,9 @@ function createSliceExecutor<Model>(
 
     const model = zustandStore.getState();
 
-    // Normal slice factory execution
-    let rawResult: any;
+    // Slice factory execution
     try {
-      rawResult = factory(model);
-
-      // If the result is itself a slice factory (from transform syntax), execute it
-      if (isSliceFactory(rawResult)) {
-        rawResult = executeSliceFactory(rawResult);
-      }
+      return factory(model);
     } catch (error) {
       throw new ZustandAdapterError('Slice factory execution failed', {
         operation: 'executeSliceFactory',
@@ -201,8 +195,6 @@ function createSliceExecutor<Model>(
         cause: error,
       });
     }
-
-    return rawResult;
   };
 
   return executeSliceFactory;
@@ -557,10 +549,13 @@ if (import.meta.vitest) {
           count: m.count,
         }));
 
-        const counterView = countSlice((state) => ({
-          'data-count': state.count,
-          className: state.count % 2 === 0 ? 'even' : 'odd',
-        }));
+        const counterView = createSlice(model, (m) => {
+          const state = countSlice(m);
+          return {
+            'data-count': state.count,
+            className: state.count % 2 === 0 ? 'even' : 'odd',
+          };
+        });
 
         const views = { counter: counterView };
 

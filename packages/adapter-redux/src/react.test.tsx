@@ -235,7 +235,8 @@ describe('Redux React Integration', () => {
         filter: m.filter,
       }));
 
-      const filteredItemsView = itemsSlice((state) => {
+      const filteredItemsView = createSlice(model, (m) => {
+        const state = itemsSlice(m);
         const filtered = state.filter
           ? state.items.filter((item) =>
               item.toLowerCase().includes(state.filter.toLowerCase())
@@ -301,7 +302,7 @@ describe('Redux React Integration', () => {
 
     // Create Redux store that syncs with our Lattice store
     const reduxStore = configureStore({
-      reducer: (state = store.getState(), action: any) => {
+      reducer: (state = store.getState(), action) => {
         if (action.type === 'SYNC') {
           return store.getState();
         }
@@ -319,9 +320,9 @@ describe('Redux React Integration', () => {
 
     const { result } = renderHook(
       () => ({
-        count: useSelector((state: any) => state.count),
-        disabled: useSelector((state: any) => state.disabled),
-        computed: useSelector((state: any) => ({
+        count: useSelector((state) => state.count),
+        disabled: useSelector((state) => state.disabled),
+        computed: useSelector((state) => ({
           doubled: state.count * 2,
           isPositive: state.count > 0,
         })),
@@ -398,44 +399,45 @@ describe('Redux React Integration', () => {
         sortBy: m.sortBy,
       }));
 
-      const filteredTodosView = todoStateSlice((state) => {
-          // Filter
-          let filtered =
-            state.filter === 'all'
-              ? state.todos
-              : state.todos.filter((t) =>
-                  state.filter === 'active' ? !t.completed : t.completed
-                );
+      const filteredTodosView = createSlice(model, (m) => {
+        const state = todoStateSlice(m);
+        // Filter
+        let filtered =
+          state.filter === 'all'
+            ? state.todos
+            : state.todos.filter((t) =>
+                state.filter === 'active' ? !t.completed : t.completed
+              );
 
-          // Sort
-          const priorityOrder = { high: 3, medium: 2, low: 1 };
-          filtered = [...filtered].sort((a, b) => {
-            switch (state.sortBy) {
-              case 'priority':
-                return priorityOrder[b.priority] - priorityOrder[a.priority];
-              case 'text':
-                return a.text.localeCompare(b.text);
-              case 'id':
-                return a.id - b.id;
-            }
-          });
-
-          // Stats
-          const total = state.todos.length;
-          const completed = state.todos.filter((t) => t.completed).length;
-          const active = total - completed;
-
-          return {
-            items: filtered,
-            stats: {
-              total,
-              active,
-              completed,
-              percentComplete:
-                total > 0 ? Math.round((completed / total) * 100) : 0,
-            },
-          };
+        // Sort
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        filtered = [...filtered].sort((a, b) => {
+          switch (state.sortBy) {
+            case 'priority':
+              return priorityOrder[b.priority] - priorityOrder[a.priority];
+            case 'text':
+              return a.text.localeCompare(b.text);
+            case 'id':
+              return a.id - b.id;
+          }
         });
+
+        // Stats
+        const total = state.todos.length;
+        const completed = state.todos.filter((t) => t.completed).length;
+        const active = total - completed;
+
+        return {
+          items: filtered,
+          stats: {
+            total,
+            active,
+            completed,
+            percentComplete:
+              total > 0 ? Math.round((completed / total) * 100) : 0,
+          },
+        };
+      });
 
       return {
         model,

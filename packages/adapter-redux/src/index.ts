@@ -158,15 +158,7 @@ export function createReduxAdapter<Model, Actions, Views>(
     const model = modelTools.get();
 
     // Execute the slice factory
-    let rawResult = factory(model);
-
-    // If the result is itself a slice factory (from transform syntax), execute it
-    if (isSliceFactory<Model, T>(rawResult)) {
-      rawResult = executeSliceFactory(rawResult);
-    }
-
-    // Return the result directly
-    return rawResult as T;
+    return factory(model);
   };
 
   // Create actions using the wrapper
@@ -404,7 +396,8 @@ if (import.meta.vitest) {
           filter: m.filter,
         }));
 
-        const filteredTodosView = todoState((state) => {
+        const filteredTodosView = createSlice(model, (m) => {
+          const state = todoState(m);
           const filtered =
             state.filter === 'all'
               ? state.todos

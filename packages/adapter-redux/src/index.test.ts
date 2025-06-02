@@ -319,7 +319,8 @@ describe('Redux Adapter', () => {
       }));
 
       // Computed view
-      const summaryView = cartSlice((cart) => {
+      const summaryView = createSlice(model, (m) => {
+        const cart = cartSlice(m);
         const subtotal = cart.items.reduce((sum, item) => sum + item.price, 0);
         const tax = subtotal * cart.taxRate;
         const total = subtotal + tax;

@@ -182,15 +182,7 @@ function executeComponent<Model, Actions, Views>(
   // Type-safe slice executor
   const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
     const state = modelStore.get();
-    const result = factory(state);
-
-    // Handle nested slice factories (from transform syntax)
-    if (isSliceFactory<Model, T>(result)) {
-      // TypeScript can't narrow the type here, but we know it's safe
-      return executeSliceFactory(result);
-    }
-
-    return result;
+    return factory(state);
   };
 
   // Execute actions slice

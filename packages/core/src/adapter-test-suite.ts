@@ -81,14 +81,20 @@ export function createAdapterTestSuite(
             setName: m.setName,
           }));
 
+          // Create a computed view slice that combines data
+          const fullNameSlice = createSlice(model, (m) => {
+            const state = nameSlice(m);
+            return {
+              display: `${state.first} ${state.last}`,
+              initials: `${state.first[0]}${state.last[0]}`,
+            };
+          });
+
           const views = {
             // Static view
             name: nameSlice,
-            // Transformed view (not wrapped in function)
-            fullName: nameSlice((state) => ({
-              display: `${state.first} ${state.last}`,
-              initials: `${state.first[0]}${state.last[0]}`,
-            })),
+            // Computed view as a slice
+            fullName: fullNameSlice,
           };
 
           return { model, actions, views };
@@ -207,8 +213,9 @@ export function createAdapterTestSuite(
           }));
 
           // Parameterized view factory
-          const createItemView = (itemId: number) =>
-            itemsSlice((state) => {
+          const createItemView = (itemId: number) => 
+            createSlice(model, (m) => {
+              const state = itemsSlice(m);
               const item = state.items.find((i: any) => i.id === itemId);
               return item ? {
                 name: item.name,
@@ -221,12 +228,17 @@ export function createAdapterTestSuite(
               };
             });
 
+          const selectedCountSlice = createSlice(model, (m) => {
+            const state = itemsSlice(m);
+            return {
+              count: state.items.filter((i: any) => i.selected).length,
+            };
+          });
+
           const views = {
             item1: createItemView(1),
             item2: createItemView(2),
-            selectedCount: itemsSlice((state) => ({
-              count: state.items.filter((i: any) => i.selected).length,
-            })),
+            selectedCount: selectedCountSlice,
           };
 
           return { model, actions, views };
@@ -357,14 +369,26 @@ export function createAdapterTestSuite(
             value: m.value,
           }));
 
+          // Create computed view slices
+          const doubledSlice = createSlice(model, (m) => {
+            const state = valueSlice(m);
+            return { result: state.value * 2 };
+          });
+
+          const tripledSlice = createSlice(model, (m) => {
+            const state = valueSlice(m);
+            return { result: state.value * 3 };
+          });
+
+          const formattedSlice = createSlice(model, (m) => {
+            const state = valueSlice(m);
+            return { display: `Value: ${state.value}` };
+          });
+
           const views = {
-            // Multiple transforms on same slice
-            doubled: valueSlice((state) => ({ result: state.value * 2 })),
-            tripled: valueSlice((state) => ({ result: state.value * 3 })),
-            // Nested transform
-            formatted: valueSlice((state) => ({ 
-              display: `Value: ${state.value}` 
-            })),
+            doubled: doubledSlice,
+            tripled: tripledSlice,
+            formatted: formattedSlice,
           };
 
           return { model, actions, views };

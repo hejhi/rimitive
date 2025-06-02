@@ -290,19 +290,22 @@ describe('Lattice Core', () => {
   });
 
   describe('Computed views', () => {
-    it('should support slice transform pattern from README counter example', () => {
+    it('should support computed views without transform syntax', () => {
       const modelFactory = createModel<{ count: number }>(() => ({ count: 5 }));
 
       const countSlice = createSlice(modelFactory, (m) => ({
         count: m.count,
       }));
 
-      // This is the exact pattern from README - should work but currently doesn't
-      const counter = () => countSlice((state) => ({
-        'data-count': state.count,
-        'aria-label': `Count is ${state.count}`,
-        className: state.count % 2 === 0 ? 'even' : 'odd',
-      }));
+      // Create a computed view slice
+      const counter = () => createSlice(modelFactory, (m) => {
+        const state = countSlice(m);
+        return {
+          'data-count': state.count,
+          'aria-label': `Count is ${state.count}`,
+          className: state.count % 2 === 0 ? 'even' : 'odd',
+        };
+      });
 
       // Test the computed view
       const computedView = counter();
@@ -323,12 +326,15 @@ describe('Lattice Core', () => {
         count: m.count,
       }));
 
-      // Using the proper slice transform pattern
-      const counter = () => countSlice((state) => ({
-        'data-count': state.count,
-        'aria-label': `Count is ${state.count}`,
-        className: state.count % 2 === 0 ? 'even' : 'odd',
-      }));
+      // Create a computed view slice
+      const counter = () => createSlice(modelFactory, (m) => {
+        const state = countSlice(m);
+        return {
+          'data-count': state.count,
+          'aria-label': `Count is ${state.count}`,
+          className: state.count % 2 === 0 ? 'even' : 'odd',
+        };
+      });
 
       // Test the computed view
       const computedView = counter();
@@ -359,18 +365,25 @@ describe('Lattice Core', () => {
         })
       );
 
-      // Shared computation using slice transform
-      const todoStats = () => todoState((state) => {
-        const active = state.todos.filter((t: Todo) => !t.completed);
-        const completed = state.todos.filter((t: Todo) => t.completed);
+      // Shared computation as a slice
+      const todoStats = () => createSlice(
+        createModel<{ todos: Todo[]; filter: string }>(() => ({
+          todos: [],
+          filter: 'all',
+        })),
+        (m) => {
+          const state = todoState(m);
+          const active = state.todos.filter((t: Todo) => !t.completed);
+          const completed = state.todos.filter((t: Todo) => t.completed);
 
-        return {
-          activeTodos: active,
-          activeCount: active.length,
-          completedCount: completed.length,
-          hasCompleted: completed.length > 0,
-        };
-      });
+          return {
+            activeTodos: active,
+            activeCount: active.length,
+            completedCount: completed.length,
+            hasCompleted: completed.length > 0,
+          };
+        }
+      );
 
       // Test the computation
       const stats = todoStats();
@@ -563,12 +576,15 @@ describe('Lattice Core', () => {
           model,
           actions,
           views: {
-            // Computed view using slice transform
-            counter: () => countSlice((state) => ({
-              'data-count': state.count,
-              'aria-label': `Count is ${state.count}`,
-              className: state.count % 2 === 0 ? 'even' : 'odd',
-            })),
+            // Computed view using slice
+            counter: () => createSlice(model, (m) => {
+              const state = countSlice(m);
+              return {
+                'data-count': state.count,
+                'aria-label': `Count is ${state.count}`,
+                className: state.count % 2 === 0 ? 'even' : 'odd',
+              };
+            }),
 
             // Static view - slice is the view
             incrementButton,
@@ -628,8 +644,9 @@ describe('Lattice Core', () => {
           filter: m.filter,
         }));
 
-        // Shared computation using slice transform
-        const todoStats = () => todoState((state) => {
+        // Shared computation using slice
+        const todoStats = () => createSlice(model, (m) => {
+          const state = todoState(m);
           const active = state.todos.filter((t: Todo) => !t.completed);
           const completed = state.todos.filter((t: Todo) => t.completed);
 
@@ -672,13 +689,13 @@ describe('Lattice Core', () => {
           model,
           actions,
           views: {
-            // Computed view using nested slice transform
-            summary: () => {
-              const stats = todoStats();
-              return stats((computed) => ({
-                textContent: `${computed.activeCount} active, ${computed.completedCount} completed`,
-              }));
-            },
+            // Computed view using nested slice
+            summary: () => createSlice(model, (m) => {
+              const stats = todoStats()(m);
+              return {
+                textContent: `${stats.activeCount} active, ${stats.completedCount} completed`,
+              };
+            }),
 
             // Parameterized slices as views
             allButton: createFilterButtonView('all'),
@@ -864,10 +881,13 @@ describe('Lattice Core', () => {
           views: {
             display: displaySlice,
             // Computed view that adds styling based on count
-            styledDisplay: () => displaySlice((state) => ({
-              count: state.count,
-              className: state.count === 0 ? 'zero' : state.count > 0 ? 'positive' : 'negative',
-            })),
+            styledDisplay: () => createSlice(model, (m) => {
+              const state = displaySlice(m);
+              return {
+                count: state.count,
+                className: state.count === 0 ? 'zero' : state.count > 0 ? 'positive' : 'negative',
+              };
+            }),
           },
         };
       });
@@ -939,11 +959,12 @@ describe('Lattice Core', () => {
 
       const modeSlice = createSlice(model, (m) => ({ mode: m.mode }));
 
-      const adaptiveView = () => modeSlice((state) => 
-        state.mode === 'light'
+      const adaptiveView = () => createSlice(model, (m) => {
+        const state = modeSlice(m);
+        return state.mode === 'light'
           ? { background: 'white', color: 'black' }
-          : { background: 'black', color: 'white', border: '1px solid gray' }
-      );
+          : { background: 'black', color: 'white', border: '1px solid gray' };
+      });
 
       const adaptiveSlice = adaptiveView();
       const lightView = adaptiveSlice({ mode: 'light' });

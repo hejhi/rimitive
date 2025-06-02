@@ -7,7 +7,12 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
+import {
+  createComponent,
+  createModel,
+  createSlice,
+  compose,
+} from '@lattice/core';
 import { createZustandAdapter } from './index.js';
 import { useViews, useView, useActions, useLattice } from './react.js';
 
@@ -541,13 +546,17 @@ describe('React hooks for Zustand adapter', () => {
           filter: m.filter,
         }));
 
-        const statsView = todosSlice((state) => ({
-          total: state.todos.length,
-          completed: state.todos.filter((t) => t.completed).length,
-          active: state.todos.filter((t) => !t.completed).length,
-        }));
+        const statsView = createSlice(model, (m) => {
+          const state = todosSlice(m);
+          return {
+            total: state.todos.length,
+            completed: state.todos.filter((t) => t.completed).length,
+            active: state.todos.filter((t) => !t.completed).length,
+          };
+        });
 
-        const filteredTodosView = todosSlice((state) => {
+        const filteredTodosView = createSlice(model, (m) => {
+          const state = todosSlice(m);
           const filtered =
             state.filter === 'all'
               ? state.todos
@@ -604,10 +613,13 @@ describe('React hooks for Zustand adapter', () => {
 
         const profileView = createSlice(
           model,
-          compose({ userSlice, prefsSlice }, (_, { userSlice, prefsSlice }) => ({
-            user: userSlice,
-            theme: prefsSlice.theme,
-          }))
+          compose(
+            { userSlice, prefsSlice },
+            (_, { userSlice, prefsSlice }) => ({
+              user: userSlice,
+              theme: prefsSlice.theme,
+            })
+          )
         );
 
         return {
@@ -695,16 +707,12 @@ describe('React hooks for Zustand adapter', () => {
 
       const store = createZustandAdapter(testComponent);
 
-      const { result: result1 } = renderHook(() =>
-        useView(store, 'tab1')
-      );
+      const { result: result1 } = renderHook(() => useView(store, 'tab1'));
 
       expect(result1.current.content).toBe('Content 1');
       expect(result1.current.isActive).toBe(true);
 
-      const { result: result2 } = renderHook(() =>
-        useView(store, 'tab2')
-      );
+      const { result: result2 } = renderHook(() => useView(store, 'tab2'));
 
       expect(result2.current.content).toBe('Content 2');
       expect(result2.current.isActive).toBe(false);
