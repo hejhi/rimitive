@@ -31,12 +31,13 @@ interface UpdateStateAction<Model> {
   payload: Partial<Model>;
 }
 
-export interface ReduxAdapterResult<Model, Actions, Views> extends AdapterResult<Model, Actions, Views> {
+export interface ReduxAdapterResult<Model, Actions, Views>
+  extends AdapterResult<Model, Actions, Views> {
   // Standard Redux store methods
   dispatch: (action: UpdateStateAction<Model>) => void;
   getState: () => Model;
   subscribe: (listener: () => void) => () => void;
-  
+
   // Cleanup method
   destroy: () => void;
 }
@@ -50,7 +51,7 @@ type StateProperties<T> = {
   [K in keyof T as T[K] extends Function ? never : K]: T[K];
 };
 
-// Type for extracting function properties  
+// Type for extracting function properties
 type ActionProperties<T> = {
   [K in keyof T as T[K] extends Function ? K : never]: T[K];
 };
@@ -76,7 +77,6 @@ function separateStateAndActions<T>(obj: T): {
   return { state, actions };
 }
 
-
 // ============================================================================
 // Main Adapter
 // ============================================================================
@@ -85,12 +85,15 @@ function separateStateAndActions<T>(obj: T): {
  * Creates a Redux store from a Lattice component
  */
 export function createReduxAdapter<Model, Actions, Views>(
-  componentOrFactory: ComponentSpec<Model, Actions, Views> | (() => ComponentSpec<Model, Actions, Views>)
+  componentOrFactory:
+    | ComponentSpec<Model, Actions, Views>
+    | (() => ComponentSpec<Model, Actions, Views>)
 ): ReduxAdapterResult<Model, Actions, Views> {
   // Get the component spec
-  const spec = typeof componentOrFactory === 'function' 
-    ? componentOrFactory() 
-    : componentOrFactory;
+  const spec =
+    typeof componentOrFactory === 'function'
+      ? componentOrFactory()
+      : componentOrFactory;
 
   // Create initial model state
   const initialModel = spec.model({
@@ -153,14 +156,13 @@ export function createReduxAdapter<Model, Actions, Views>(
     // because the underlying state may have changed
 
     const model = modelTools.get();
-    let rawResult: T | SliceFactory<Model, T>;
 
     // Execute the slice factory
-    rawResult = factory(model);
+    let rawResult = factory(model);
 
     // If the result is itself a slice factory (from transform syntax), execute it
-    if (isSliceFactory(rawResult)) {
-      rawResult = executeSliceFactory(rawResult as SliceFactory<Model, T>);
+    if (isSliceFactory<Model, T>(rawResult)) {
+      rawResult = executeSliceFactory(rawResult);
     }
 
     // Return the result directly
@@ -168,19 +170,22 @@ export function createReduxAdapter<Model, Actions, Views>(
   };
 
   // Create actions using the wrapper
-  const actionsFactory = spec.actions as SliceFactory<Model, Actions>;
-  const actions = executeSliceFactory(actionsFactory);
+  const actions = executeSliceFactory(spec.actions);
 
   // Process views
   const views = {} as ViewTypes<Model, Views>;
-  for (const [key, view] of Object.entries(spec.views as Record<string, unknown>)) {
+  for (const [key, view] of Object.entries(
+    spec.views as Record<string, unknown>
+  )) {
     if (isSliceFactory(view)) {
       // Static view: slice factory
       (views as Record<string, unknown>)[key] = () => {
         const value = executeSliceFactory(view);
         // Return a shallow copy to ensure fresh references
-        return typeof value === 'object' && value !== null 
-          ? Array.isArray(value) ? [...value] : { ...value }
+        return typeof value === 'object' && value !== null
+          ? Array.isArray(value)
+            ? [...value]
+            : { ...value }
           : value;
       };
     } else if (typeof view === 'function') {
@@ -199,7 +204,7 @@ export function createReduxAdapter<Model, Actions, Views>(
     views,
     destroy: () => {
       // Redux store doesn't need explicit cleanup, but we can add it for consistency
-    }
+    },
   };
 }
 
@@ -434,13 +439,17 @@ if (import.meta.vitest) {
       store.actions.setFilter('active');
       todos = store.views.filteredTodos();
       expect(todos.count).toBe(2);
-      expect(todos.items.every((t: { completed: boolean }) => !t.completed)).toBe(true);
+      expect(
+        todos.items.every((t: { completed: boolean }) => !t.completed)
+      ).toBe(true);
 
       // Filter completed
       store.actions.setFilter('completed');
       todos = store.views.filteredTodos();
       expect(todos.count).toBe(1);
-      expect(todos.items.every((t: { completed: boolean }) => t.completed)).toBe(true);
+      expect(
+        todos.items.every((t: { completed: boolean }) => t.completed)
+      ).toBe(true);
     });
   });
 }

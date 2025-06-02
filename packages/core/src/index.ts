@@ -20,7 +20,6 @@ export function createModel<T>(
   return factory;
 }
 
-
 // Overload for regular selectors (preserves inference)
 export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
@@ -32,7 +31,6 @@ export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
   selector: (model: Model) => Slice
 ): SliceFactory<Model, Slice> {
-
   // Create a function that can both execute the selector and accept transforms
   const sliceFactory = function <T>(
     modelOrTransform: Model | ((slice: Slice) => T)
@@ -49,7 +47,7 @@ export function createSlice<Model, Slice>(
 
     // Otherwise, it's a model - execute the selector
     return selector(modelOrTransform);
-  } as SliceFactory<Model, Slice>;
+  };
 
   // Brand the slice factory
   Object.defineProperty(sliceFactory, SLICE_FACTORY_MARKER, {
@@ -58,7 +56,7 @@ export function createSlice<Model, Slice>(
     configurable: false,
   });
 
-  return sliceFactory;
+  return sliceFactory as SliceFactory<Model, Slice>;
 }
 
 // Marker symbols

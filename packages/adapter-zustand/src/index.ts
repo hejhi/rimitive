@@ -86,11 +86,11 @@ export interface Store<T> {
  */
 type ViewTypes<Model, Views> = {
   [K in keyof Views]: Views[K] extends SliceFactory<Model, infer T>
-    ? () => T  // Static view: slice factory -> function returning attributes
+    ? () => T // Static view: slice factory -> function returning attributes
     : Views[K] extends () => SliceFactory<Model, infer T>
-      ? () => T  // Computed view: function returning slice factory -> function returning attributes
+      ? () => T // Computed view: function returning slice factory -> function returning attributes
       : Views[K] extends () => unknown
-        ? Views[K]  // Already a function, keep as-is
+        ? Views[K] // Already a function, keep as-is
         : never;
 };
 
@@ -160,7 +160,6 @@ type StoreWithSelector<T> = StoreApi<T> & {
   };
 };
 
-
 // ============================================================================
 // Primitive Implementations
 // ============================================================================
@@ -172,7 +171,6 @@ type StoreWithSelector<T> = StoreApi<T> & {
 // ============================================================================
 // Supporting Types and Functions
 // ============================================================================
-
 
 /**
  * Creates a wrapper for slice execution
@@ -219,14 +217,18 @@ function processViews<Model, Views>(
 ): ViewTypes<Model, Views> {
   const views = {} as ViewTypes<Model, Views>;
 
-  for (const [key, view] of Object.entries(spec.views as Record<string, unknown>)) {
+  for (const [key, view] of Object.entries(
+    spec.views as Record<string, unknown>
+  )) {
     if (isSliceFactory(view)) {
       // Static view: slice factory
       views[key as keyof ViewTypes<Model, Views>] = (() => {
         const value = executeSliceFactory(view);
         // Return a shallow copy to ensure fresh references
-        return typeof value === 'object' && value !== null 
-          ? Array.isArray(value) ? [...value] : { ...value }
+        return typeof value === 'object' && value !== null
+          ? Array.isArray(value)
+            ? [...value]
+            : { ...value }
           : value;
       }) as any;
     } else if (typeof view === 'function') {
@@ -258,12 +260,16 @@ function processViews<Model, Views>(
  * - Subscriptions work at the view level, not model level
  */
 export function createZustandAdapter<Model, Actions, Views>(
-  componentOrFactory: ComponentSpec<Model, Actions, Views> | ComponentFactory<Model, Actions, Views> | (() => ComponentSpec<Model, Actions, Views>)
+  componentOrFactory:
+    | ComponentSpec<Model, Actions, Views>
+    | ComponentFactory<Model, Actions, Views>
+    | (() => ComponentSpec<Model, Actions, Views>)
 ): ZustandAdapterResult<Model, Actions, Views> {
   // Get the component spec
-  const spec = typeof componentOrFactory === 'function' 
-    ? componentOrFactory() 
-    : componentOrFactory;
+  const spec =
+    typeof componentOrFactory === 'function'
+      ? componentOrFactory()
+      : componentOrFactory;
 
   // Create the Zustand store with subscribeWithSelector middleware
   const store: StoreWithSelector<Model> = createStore<Model>()(
@@ -289,7 +295,7 @@ export function createZustandAdapter<Model, Actions, Views>(
   // Process actions slice
   let actions: Actions;
   try {
-    actions = executeSliceFactory(spec.actions as SliceFactory<Model, Actions>);
+    actions = executeSliceFactory<Actions>(spec.actions);
   } catch (error) {
     throw new ZustandAdapterError('Actions slice creation failed', {
       operation: 'createZustandAdapter.actions',
@@ -728,11 +734,14 @@ if (import.meta.vitest) {
 
         const profileSlice = createSlice(
           model,
-          compose({ userSlice, postsSlice }, (_, { userSlice, postsSlice }) => ({
-            userName: userSlice.name,
-            postCount: postsSlice.length,
-            fullUser: userSlice,
-          }))
+          compose(
+            { userSlice, postsSlice },
+            (_, { userSlice, postsSlice }) => ({
+              userName: userSlice.name,
+              postCount: postsSlice.length,
+              fullUser: userSlice,
+            })
+          )
         );
 
         return {

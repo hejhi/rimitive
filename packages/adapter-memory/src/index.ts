@@ -12,7 +12,12 @@
  * - Read-only slices with proper error messages
  */
 
-import type { ComponentSpec, AdapterResult, SliceFactory, ViewTypes } from '@lattice/core';
+import type {
+  ComponentSpec,
+  AdapterResult,
+  SliceFactory,
+  ViewTypes,
+} from '@lattice/core';
 import { isSliceFactory } from '@lattice/core';
 
 // ============================================================================
@@ -180,9 +185,9 @@ function executeComponent<Model, Actions, Views>(
     const result = factory(state);
 
     // Handle nested slice factories (from transform syntax)
-    if (isSliceFactory(result)) {
+    if (isSliceFactory<Model, T>(result)) {
       // TypeScript can't narrow the type here, but we know it's safe
-      return executeSliceFactory(result as SliceFactory<Model, T>);
+      return executeSliceFactory(result);
     }
 
     return result;
@@ -195,27 +200,35 @@ function executeComponent<Model, Actions, Views>(
 
   // Process views - use a more direct approach
   const viewStores: Array<Store<unknown>> = [];
-  
+
   // Build the views object with proper typing
-  const views = Object.entries(spec.views as Record<string, unknown>).reduce((acc, [key, view]) => {
-    if (isSliceFactory(view)) {
-      // Static view: create a store and wrap in a function
-      const viewStore = createSlice(modelStore, () =>
-        executeSliceFactory(view as SliceFactory<Model, unknown>)
-      );
-      viewStores.push(viewStore);
-      
-      // Create the view function
-      acc[key as keyof ViewTypes<Model, Views>] = (() => 
-        shallowCopy(viewStore.get())
-      ) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
-    } else if (typeof view === 'function') {
-      // Function view: use as-is
-      acc[key as keyof ViewTypes<Model, Views>] = view as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
-    }
-    
-    return acc;
-  }, {} as ViewTypes<Model, Views>);
+  const views = Object.entries(spec.views as Record<string, unknown>).reduce(
+    (acc, [key, view]) => {
+      if (isSliceFactory(view)) {
+        // Static view: create a store and wrap in a function
+        const viewStore = createSlice<Model, unknown>(modelStore, () =>
+          executeSliceFactory(view)
+        );
+        viewStores.push(viewStore);
+
+        // Create the view function
+        acc[key as keyof ViewTypes<Model, Views>] = (() =>
+          shallowCopy(viewStore.get())) as ViewTypes<
+          Model,
+          Views
+        >[keyof ViewTypes<Model, Views>];
+      } else if (typeof view === 'function') {
+        // Function view: use as-is
+        acc[key as keyof ViewTypes<Model, Views>] = view as ViewTypes<
+          Model,
+          Views
+        >[keyof ViewTypes<Model, Views>];
+      }
+
+      return acc;
+    },
+    {} as ViewTypes<Model, Views>
+  );
 
   return {
     actions: actionsStore.get(),
