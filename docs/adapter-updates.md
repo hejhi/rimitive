@@ -312,25 +312,6 @@ describe('API parameter support', () => {
 });
 ```
 
-## Backward Compatibility
-
-If needed, adapters can support both old and new signatures during migration:
-
-```typescript
-const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
-  const model = getModel();
-  
-  // Check if factory expects api parameter
-  if (factory.length === 2) {
-    return factory(model, api);
-  } else {
-    // Legacy support
-    console.warn('SliceFactory without api parameter is deprecated');
-    return (factory as any)(model);
-  }
-};
-```
-
 ## Implementation Order
 
 1. **Update Core Types** - Define `AdapterAPI` interface
@@ -350,4 +331,4 @@ All adapters need to:
 4. Optionally add adapter-specific methods
 5. Support middleware enhancement of the API
 
-This update enables the powerful middleware patterns described in the middleware documentation while maintaining backward compatibility and type safety.
+This update enables the powerful middleware patterns described in the middleware documentation.

@@ -116,8 +116,8 @@ describe('createZustandAdapter', () => {
         multiplier: m.multiplier,
       }));
 
-      const doubledView = createSlice(model, (m) => {
-        const state = stateView(m);
+      const doubledView = createSlice(model, (_m, api) => {
+        const state = api.executeSlice(stateView);
         return {
           doubled: state.count * state.multiplier,
         };
@@ -268,8 +268,8 @@ describe('createZustandAdapter', () => {
         }));
 
         // Create a computed view slice
-        const counterView = createSlice(model, (m) => {
-          const state = countSlice(m);
+        const counterView = createSlice(model, (_m, api) => {
+          const state = api.executeSlice(countSlice);
           return {
             'data-count': state.count,
             className: state.count % 2 === 0 ? 'even' : 'odd',

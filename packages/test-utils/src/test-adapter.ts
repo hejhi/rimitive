@@ -3,16 +3,18 @@ import type {
   ModelFactory,
   ComponentFactory,
   ComponentSpec,
+  AdapterAPI,
 } from '@lattice/core';
-import { SLICE_FACTORY_MARKER } from '@lattice/core';
+import { SLICE_FACTORY_MARKER, isSliceFactory } from '@lattice/core';
 
 // Define types locally
 type StateSubscriber<T> = (state: T) => void;
 
 /**
- * Test store implementation that properly executes slice factories
+ * Test store implementation that properly executes slice factories.
+ * Can optionally implement AdapterAPI for slices that need it.
  */
-export class TestStore<TState> {
+export class TestStore<TState> implements AdapterAPI<TState> {
   private state: TState;
   private subscribers = new Set<StateSubscriber<TState>>();
   private sliceCache = new Map<SliceFactory<any, any>, any>();
@@ -44,7 +46,7 @@ export class TestStore<TState> {
   }
 
   /**
-   * Execute a slice factory
+   * Execute a slice factory with API support
    */
   executeSlice<TResult>(sliceFactory: SliceFactory<TState, TResult>): TResult {
     // Check cache first
@@ -53,8 +55,9 @@ export class TestStore<TState> {
     }
 
     try {
-      // Execute the slice factory with the state
-      const result = sliceFactory(this.state);
+      // Execute the slice factory with the state AND the API
+      // The slice factory signature now requires the API parameter
+      const result = sliceFactory(this.state, this);
 
       // Cache the result
       this.sliceCache.set(sliceFactory, result);
@@ -111,34 +114,29 @@ export function createTestAdapter<TModel>(
 /**
  * Create a test harness for a component factory
  */
-export function createComponentTest<Model = any, Actions = any, Views = any>(
+export function createComponentTest<Model, Actions, Views>(
   componentFactory: ComponentFactory<Model, Actions, Views>
 ): {
   store: TestStore<Model>;
+  api: AdapterAPI<Model>;
   component: ComponentSpec<Model, Actions, Views>;
   getState: () => Model;
   getActions: () => Actions;
   getSlice: <T>(sliceFactory: SliceFactory<Model, T>) => T;
-  getView: (viewName: keyof Views) => any;
+  getView: (viewName: keyof Views) => unknown;
 } {
   const component = componentFactory();
   const store = createTestAdapter(component.model);
 
   return {
     store,
+    api: store, // The store itself implements AdapterAPI
     component,
     getState: () => store.getState(),
     getActions: () => store.executeSlice(component.actions),
     getSlice: (sliceFactory) => store.executeSlice(sliceFactory),
     getView: (viewName) => {
       const view = component.views[viewName];
-
-      // Helper to check if something is a slice factory
-      const isSliceFactory = (
-        value: any
-      ): value is SliceFactory<Model, any> => {
-        return typeof value === 'function' && SLICE_FACTORY_MARKER in value;
-      };
 
       // If it's a slice factory, execute it
       if (isSliceFactory(view)) {
@@ -171,27 +169,110 @@ export function createComponentTest<Model = any, Actions = any, Views = any>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
+  const { createModel, createSlice, createComponent } = await import(
+    '@lattice/core'
+  );
 
   describe('TestStore', () => {
-    it('should execute slice factories', () => {
+    it('should execute slice factories with optional API parameter', () => {
       const store = new TestStore({ count: 0, name: 'test' });
 
-      const slice = ((state: { count: number; name: string }) => {
-        return { count: state.count };
-      }) as SliceFactory<{ count: number; name: string }, { count: number }>;
+      // Create a raw slice factory to test the basic functionality
+      const rawSlice: SliceFactory<
+        { count: number; name: string },
+        { count: number; hasApi: boolean; apiWorks: boolean }
+      > = (state, api) => {
+        return {
+          count: state.count,
+          hasApi: !!api,
+          apiWorks: api.getState() === state,
+        };
+      };
+      // Brand it as a slice factory
+      Object.defineProperty(rawSlice, SLICE_FACTORY_MARKER, { value: true });
 
-      const result = store.executeSlice(slice);
-      expect(result).toEqual({ count: 0 });
+      const result = store.executeSlice(rawSlice);
+      expect(result).toEqual({ count: 0, hasApi: true, apiWorks: true });
+    });
+
+    it('should work with slices created by createSlice', () => {
+      const store = new TestStore({ count: 5, name: 'test' });
+
+      // Test a simple slice without API usage
+      const simpleSlice = createSlice(
+        createModel<{ count: number; name: string }>(() => ({
+          count: 0,
+          name: '',
+        })),
+        (state) => ({ doubledCount: state.count * 2 })
+      );
+
+      const result1 = store.executeSlice(simpleSlice);
+      expect(result1).toEqual({ doubledCount: 10 });
+
+      // Test a slice that uses the API parameter
+      const apiSlice = createSlice(
+        createModel<{ count: number; name: string }>(() => ({
+          count: 0,
+          name: '',
+        })),
+        (state, api) => {
+          return {
+            hasApi: true,
+            stateCount: state.count,
+            apiStateCount: api.getState().count,
+          };
+        }
+      );
+
+      const result2 = store.executeSlice(apiSlice);
+      expect(result2).toEqual({
+        hasApi: true,
+        stateCount: 5,
+        apiStateCount: 5,
+      });
+    });
+
+    it('should allow slices to execute other slices via API', () => {
+      const store = new TestStore({ x: 10, y: 20 });
+
+      // Create simple slices that don't use API
+      const xSlice = createSlice(
+        createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 })),
+        (state) => state.x
+      );
+
+      const ySlice = createSlice(
+        createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 })),
+        (state) => state.y
+      );
+
+      // Create a slice that uses API to compose other slices
+      const sumSlice = createSlice(
+        createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 })),
+        (_state, api) => {
+          // Use the API to execute other slices
+          const x = api.executeSlice(xSlice);
+          const y = api.executeSlice(ySlice);
+          return x + y;
+        }
+      );
+
+      const result = store.executeSlice(sumSlice);
+      expect(result).toBe(30);
     });
 
     it('should cache slice results', () => {
       const store = new TestStore({ count: 0 });
       let executionCount = 0;
 
-      const slice = ((state: { count: number }) => {
-        executionCount++;
-        return { count: state.count };
-      }) as SliceFactory<{ count: number }, { count: number }>;
+      const slice = createSlice(
+        createModel<{ count: number }>(() => ({ count: 0 })),
+        (state) => {
+          executionCount++;
+          return { count: state.count };
+        }
+      );
 
       // Execute twice
       store.executeSlice(slice);
@@ -199,6 +280,30 @@ if (import.meta.vitest) {
 
       // Should only execute once due to caching
       expect(executionCount).toBe(1);
+    });
+
+    it('should clear cache on state change', () => {
+      const store = new TestStore({ count: 0 });
+      let executionCount = 0;
+
+      const slice = createSlice(
+        createModel<{ count: number }>(() => ({ count: 0 })),
+        (state) => {
+          executionCount++;
+          return { count: state.count };
+        }
+      );
+
+      // Execute once
+      store.executeSlice(slice);
+      expect(executionCount).toBe(1);
+
+      // Change state
+      store.setState({ count: 1 });
+
+      // Execute again - should not use cache
+      store.executeSlice(slice);
+      expect(executionCount).toBe(2);
     });
 
     it('should notify subscribers on state change', () => {
@@ -231,6 +336,61 @@ if (import.meta.vitest) {
       // Execute increment
       store.getState().increment();
       expect(store.getState().count).toBe(1);
+    });
+  });
+
+  describe('createComponentTest', () => {
+    it('should create a test harness with API support', () => {
+      const component = createComponent(() => ({
+        model: createModel<{ count: number }>(() => ({ count: 0 })),
+        actions: createSlice(
+          createModel<{ count: number }>(() => ({ count: 0 })),
+          (state) => ({
+            increment: () => state.count + 1,
+          })
+        ),
+        views: {
+          countView: createSlice(
+            createModel<{ count: number }>(() => ({ count: 0 })),
+            (state) => ({ value: state.count })
+          ),
+        },
+      }));
+
+      const test = createComponentTest(component);
+
+      expect(test.getState()).toEqual({ count: 0 });
+      expect(test.api).toBeDefined();
+      expect(test.api.getState()).toEqual({ count: 0 });
+    });
+
+    it('should support computed views that use API', () => {
+      const baseModel = createModel<{ items: string[] }>(() => ({
+        items: ['a', 'b', 'c'],
+      }));
+
+      const itemCountSlice = createSlice(
+        baseModel,
+        (state) => state.items.length
+      );
+
+      const component = createComponent(() => ({
+        model: baseModel,
+        actions: createSlice(baseModel, () => ({})),
+        views: {
+          // Computed view that uses API to execute another slice
+          summary: () =>
+            createSlice(baseModel, (_state, api) => {
+              const count = api.executeSlice(itemCountSlice);
+              return { itemCount: count, hasItems: count > 0 };
+            }),
+        },
+      }));
+
+      const test = createComponentTest(component);
+      const summary = test.getView('summary');
+
+      expect(summary).toEqual({ itemCount: 3, hasItems: true });
     });
   });
 }

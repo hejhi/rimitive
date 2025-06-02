@@ -300,8 +300,8 @@ if (import.meta.vitest) {
           items: m.items,
         }));
 
-        const statsView = createSlice(model, (m) => {
-          const state = itemsSlice(m);
+        const statsView = createSlice(model, (_m, api) => {
+          const state = api.executeSlice(itemsSlice);
           return {
             count: state.items.length,
             sum: state.items.reduce((a, b) => a + b, 0),

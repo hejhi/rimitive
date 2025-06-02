@@ -232,8 +232,8 @@ describe('Redux React Integration', () => {
         filter: m.filter,
       }));
 
-      const filteredItemsView = createSlice(model, (m) => {
-        const state = itemsSlice(m);
+      const filteredItemsView = createSlice(model, (_m, api) => {
+        const state = api.executeSlice(itemsSlice);
         const filtered = state.filter
           ? state.items.filter((item) =>
               item.toLowerCase().includes(state.filter.toLowerCase())
@@ -344,8 +344,8 @@ describe('Redux React Integration', () => {
         sortBy: m.sortBy,
       }));
 
-      const filteredTodosView = createSlice(model, (m) => {
-        const state = todoStateSlice(m);
+      const filteredTodosView = createSlice(model, (_m, api) => {
+        const state = api.executeSlice(todoStateSlice);
         // Filter
         let filtered =
           state.filter === 'all'

@@ -7,7 +7,7 @@
  */
 
 export {
-  // Test adapter
+  // Test adapter (now with built-in API support)
   TestStore,
   createTestAdapter,
   createComponentTest,
@@ -15,6 +15,7 @@ export {
 
 export {
   // Test helpers
+  createMockAPI,
   testSlice,
   testModel,
   testView,
@@ -28,4 +29,5 @@ export type {
   ModelFactory,
   ComponentFactory,
   ComponentSpec,
+  AdapterAPI,
 } from '@lattice/core';

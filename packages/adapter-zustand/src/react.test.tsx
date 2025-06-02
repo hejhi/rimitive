@@ -546,8 +546,8 @@ describe('React hooks for Zustand adapter', () => {
           filter: m.filter,
         }));
 
-        const statsView = createSlice(model, (m) => {
-          const state = todosSlice(m);
+        const statsView = createSlice(model, (_m, api) => {
+          const state = api.executeSlice(todosSlice);
           return {
             total: state.todos.length,
             completed: state.todos.filter((t) => t.completed).length,
@@ -555,8 +555,8 @@ describe('React hooks for Zustand adapter', () => {
           };
         });
 
-        const filteredTodosView = createSlice(model, (m) => {
-          const state = todosSlice(m);
+        const filteredTodosView = createSlice(model, (_m, api) => {
+          const state = api.executeSlice(todosSlice);
           const filtered =
             state.filter === 'all'
               ? state.todos

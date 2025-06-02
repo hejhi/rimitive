@@ -36,15 +36,21 @@ describe('@lattice/test-utils', () => {
           'aria-label': 'Increment counter',
         }));
 
+        // Create a computed view slice
+        const counterViewSlice = createSlice(model, (m) => {
+          const state = countSlice(m);
+          return {
+            'data-count': state.count,
+            'aria-label': `Count is ${state.count}`,
+            className: state.count % 2 === 0 ? 'even' : 'odd',
+          };
+        });
+
         return {
           model,
           actions,
           views: {
-            counter: () => countSlice((state) => ({
-              'data-count': state.count,
-              'aria-label': `Count is ${state.count}`,
-              className: state.count % 2 === 0 ? 'even' : 'odd',
-            })),
+            counter: counterViewSlice,
             incrementButton,
           },
         };
@@ -227,23 +233,27 @@ describe('@lattice/test-utils', () => {
           setFilter: m.setFilter,
         }));
 
+        // Create a computed view slice
+        const filteredTodosSlice = createSlice(model, (m) => {
+          const state = todoState(m);
+          const filtered = state.filter === 'all' 
+            ? state.todos
+            : state.filter === 'active'
+            ? state.todos.filter(t => !t.done)
+            : state.todos.filter(t => t.done);
+          
+          return {
+            items: filtered,
+            count: filtered.length,
+            filter: state.filter,
+          };
+        });
+
         return {
           model,
           actions,
           views: {
-            filteredTodos: () => todoState((state) => {
-              const filtered = state.filter === 'all' 
-                ? state.todos
-                : state.filter === 'active'
-                ? state.todos.filter(t => !t.done)
-                : state.todos.filter(t => t.done);
-              
-              return {
-                items: filtered,
-                count: filtered.length,
-                filter: state.filter,
-              };
-            }),
+            filteredTodos: filteredTodosSlice,
           },
         };
       });

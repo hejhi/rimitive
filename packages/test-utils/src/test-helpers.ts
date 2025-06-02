@@ -2,9 +2,18 @@ import type {
   ComponentFactory,
   SliceFactory,
   ModelFactory,
+  AdapterAPI,
 } from '@lattice/core';
 import { SLICE_FACTORY_MARKER } from '@lattice/core';
 import { createTestAdapter, TestStore } from './test-adapter.js';
+
+/**
+ * Creates a mock AdapterAPI for testing slices in isolation
+ */
+export function createMockAPI<Model>(initialState: Model): AdapterAPI<Model> {
+  const store = new TestStore(initialState);
+  return store;
+}
 
 /**
  * Helper to test a single slice in isolation

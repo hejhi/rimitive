@@ -17,6 +17,7 @@ import type {
   AdapterResult,
   SliceFactory,
   ViewTypes,
+  AdapterAPI,
 } from '@lattice/core';
 import { isSliceFactory } from '@lattice/core';
 
@@ -179,10 +180,19 @@ function executeComponent<Model, Actions, Views>(
   // Update model store with fully initialized model
   modelStore.set(model);
 
+  // Create the AdapterAPI implementation
+  const adapterApi: AdapterAPI<Model> = {
+    executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
+      const state = modelStore.get();
+      return slice(state, adapterApi);
+    },
+    getState: () => modelStore.get(),
+  };
+
   // Type-safe slice executor
   const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
     const state = modelStore.get();
-    return factory(state);
+    return factory(state, adapterApi);
   };
 
   // Execute actions slice
@@ -210,11 +220,20 @@ function executeComponent<Model, Actions, Views>(
           Views
         >[keyof ViewTypes<Model, Views>];
       } else if (typeof view === 'function') {
-        // Function view: use as-is
-        acc[key as keyof ViewTypes<Model, Views>] = view as ViewTypes<
-          Model,
-          Views
-        >[keyof ViewTypes<Model, Views>];
+        // Computed view: wrap to inject API as last parameter
+        acc[key as keyof ViewTypes<Model, Views>] = ((...args: unknown[]) => {
+          // Call the view function with user args + api as last argument
+          const result = view(...args, adapterApi);
+          
+          // If the result is a slice factory, execute it with the API
+          if (isSliceFactory(result)) {
+            const state = modelStore.get();
+            return result(state, adapterApi);
+          }
+          
+          // Otherwise return the result as-is
+          return result;
+        }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
       }
 
       return acc;
@@ -274,12 +293,12 @@ if (import.meta.vitest) {
           })
         );
 
-        const actions = createSlice(model, (m) => ({
+        const actions = createSlice(model, (m, _api) => ({
           increment: m.increment,
         }));
 
         const views = {
-          count: createSlice(model, (m) => ({ value: m.count })),
+          count: createSlice(model, (m, _api) => ({ value: m.count })),
         };
 
         return { model, actions, views };
@@ -306,11 +325,11 @@ if (import.meta.vitest) {
           theme: 'light',
         }));
 
-        const userSlice = createSlice(model, (m) => ({
+        const userSlice = createSlice(model, (m, _api) => ({
           name: m.user.name,
         }));
 
-        const themeSlice = createSlice(model, (m) => ({
+        const themeSlice = createSlice(model, (m, _api) => ({
           theme: m.theme,
         }));
 
@@ -318,7 +337,7 @@ if (import.meta.vitest) {
           model,
           compose(
             { userSlice, themeSlice },
-            (_, { userSlice, themeSlice }) => ({
+            (_, { userSlice, themeSlice }, _api) => ({
               userName: userSlice.name,
               theme: themeSlice.theme,
               title: `${userSlice.name} - ${themeSlice.theme}`,
@@ -328,7 +347,7 @@ if (import.meta.vitest) {
 
         return {
           model,
-          actions: createSlice(model, () => ({})),
+          actions: createSlice(model, (_m, _api) => ({})),
           views: {
             header: headerSlice,
           },
@@ -341,6 +360,123 @@ if (import.meta.vitest) {
       expect(header.userName).toBe('Alice');
       expect(header.theme).toBe('light');
       expect(header.title).toBe('Alice - light');
+    });
+
+    it('should pass API to slices that use it', () => {
+      const component = createComponent(() => {
+        const model = createModel<{ count: number; name: string }>(() => ({
+          count: 10,
+          name: 'test',
+        }));
+
+        // Create a slice that uses the API
+        const apiSlice = createSlice(model, (m, api) => ({
+          count: m.count,
+          hasApi: true,
+          stateCount: api.getState().count,
+          canExecuteSlices: typeof api.executeSlice === 'function',
+        }));
+
+        // Create another slice for the API to execute
+        const targetSlice = createSlice(model, (m, _api) => ({
+          doubled: m.count * 2,
+        }));
+
+        // Create a slice that uses API to execute another slice
+        const composingSlice = createSlice(model, (_m, api) => {
+          const target = api.executeSlice(targetSlice);
+          return {
+            fromTarget: target.doubled,
+            fromApi: api.getState().count,
+          };
+        });
+
+        return {
+          model,
+          actions: createSlice(model, (_m, _api) => ({})),
+          views: {
+            withApi: apiSlice,
+            composed: composingSlice,
+          },
+        };
+      });
+
+      const adapter = createMemoryAdapter(component);
+      
+      // Test the API-aware slice
+      const withApi = adapter.views.withApi();
+      expect(withApi.count).toBe(10);
+      expect(withApi.hasApi).toBe(true);
+      expect(withApi.stateCount).toBe(10);
+      expect(withApi.canExecuteSlices).toBe(true);
+
+      // Test the composing slice
+      const composed = adapter.views.composed();
+      expect(composed.fromTarget).toBe(20); // 10 * 2
+      expect(composed.fromApi).toBe(10);
+    });
+
+    it('should support computed views with API', () => {
+      const component = createComponent(() => {
+        const model = createModel<{ items: string[]; filter: string }>(() => ({
+          items: ['apple', 'banana', 'cherry'],
+          filter: 'a',
+        }));
+
+        // Base slice
+        const itemsSlice = createSlice(model, (m, _api) => m.items);
+
+        // Track if API was injected properly
+        let apiWasInjected = false;
+        let lastArgWasApi = false;
+
+        // Computed view that returns a slice factory
+        const filtered = function(this: any, ...args: any[]) {
+          // Check if last argument is the API
+          const lastArg = args[args.length - 1];
+          lastArgWasApi = !!(lastArg && typeof lastArg.executeSlice === 'function' && typeof lastArg.getState === 'function');
+          
+          // Get the prefix if provided (excluding API)
+          const prefix = lastArgWasApi && args.length > 1 ? args[0] : undefined;
+          
+          return createSlice(model, (m, sliceApi) => {
+            apiWasInjected = true;
+            // Use API to get items from another slice
+            const items = sliceApi.executeSlice(itemsSlice);
+            const filtered = items.filter(item => item.includes(m.filter));
+            return prefix ? filtered.map(item => prefix + item) : filtered;
+          });
+        };
+
+        return {
+          model,
+          actions: createSlice(model, (_m, _api) => ({})),
+          views: {
+            filtered: filtered as (prefix?: string) => any,
+            // Add a view to check if API was injected
+            apiCheck: () => ({ apiWasInjected, lastArgWasApi }),
+          },
+        };
+      });
+
+      const adapter = createMemoryAdapter(component);
+      
+      // Test without arguments
+      const filtered = (adapter.views as any).filtered();
+      expect(filtered).toEqual(['apple', 'banana']);
+      
+      // Check API was injected properly
+      const check1 = (adapter.views as any).apiCheck();
+      expect(check1.apiWasInjected).toBe(true);
+      expect(check1.lastArgWasApi).toBe(true);
+      
+      // Test with arguments - the API should be injected as last parameter
+      const prefixedFiltered = (adapter.views as any).filtered('fruit: ');
+      expect(prefixedFiltered).toEqual(['fruit: apple', 'fruit: banana']);
+      
+      // Check API was still injected as last arg
+      const check2 = (adapter.views as any).apiCheck();
+      expect(check2.lastArgWasApi).toBe(true);
     });
   });
 }

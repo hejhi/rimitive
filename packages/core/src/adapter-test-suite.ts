@@ -31,12 +31,12 @@ export function createAdapterTestSuite(
             increment: () => set({ count: get().count + 1 }),
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             increment: m.increment,
           }));
 
           const views = {
-            counter: createSlice(model, (m: any) => ({
+            counter: createSlice(model, (m, _api) => ({
               value: m.count,
             })),
           };
@@ -44,7 +44,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         
         // Actions should be directly accessible
         expect(typeof adapter.actions.increment).toBe('function');
@@ -72,18 +72,18 @@ export function createAdapterTestSuite(
             setName: (first: string, last: string) => set({ firstName: first, lastName: last }),
           }));
 
-          const nameSlice = createSlice(model, (m: any) => ({
+          const nameSlice = createSlice(model, (m, _api) => ({
             first: m.firstName,
             last: m.lastName,
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             setName: m.setName,
           }));
 
           // Create a computed view slice that combines data
-          const fullNameSlice = createSlice(model, (m) => {
-            const state = nameSlice(m);
+          const fullNameSlice = createSlice(model, (_m, api) => {
+            const state = api.executeSlice(nameSlice);
             return {
               display: `${state.first} ${state.last}`,
               initials: `${state.first[0]}${state.last[0]}`,
@@ -100,7 +100,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         
         // Static view
         const nameView = adapter.views.name();
@@ -136,18 +136,18 @@ export function createAdapterTestSuite(
             toggleTheme: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' }),
           }));
 
-          const userSlice = createSlice(model, (m: any) => ({
+          const userSlice = createSlice(model, (m, _api) => ({
             name: m.user.name,
             role: m.user.role,
             isAdmin: m.user.role === 'admin',
           }));
 
-          const themeSlice = createSlice(model, (m: any) => ({
+          const themeSlice = createSlice(model, (m, _api) => ({
             theme: m.theme,
             isDark: m.theme === 'dark',
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             toggleTheme: m.toggleTheme,
           }));
 
@@ -169,7 +169,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         
         const headerView = adapter.views.header();
         expect(headerView.userName).toBe('Alice');
@@ -204,19 +204,19 @@ export function createAdapterTestSuite(
             }),
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             toggleItem: m.toggleItem,
           }));
 
-          const itemsSlice = createSlice(model, (m: any) => ({
+          const itemsSlice = createSlice(model, (m, _api) => ({
             items: m.items,
           }));
 
           // Parameterized view factory
           const createItemView = (itemId: number) => 
-            createSlice(model, (m) => {
-              const state = itemsSlice(m);
-              const item = state.items.find((i: any) => i.id === itemId);
+            createSlice(model, (_m, api) => {
+              const state = api.executeSlice(itemsSlice);
+              const item = state.items.find((i) => i.id === itemId);
               return item ? {
                 name: item.name,
                 selected: item.selected,
@@ -228,10 +228,10 @@ export function createAdapterTestSuite(
               };
             });
 
-          const selectedCountSlice = createSlice(model, (m) => {
-            const state = itemsSlice(m);
+          const selectedCountSlice = createSlice(model, (_m, api) => {
+            const state = api.executeSlice(itemsSlice);
             return {
-              count: state.items.filter((i: any) => i.selected).length,
+              count: state.items.filter((i) => i.selected).length,
             };
           });
 
@@ -244,7 +244,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         
         // Check initial state
         const item1 = adapter.views.item1();
@@ -276,12 +276,12 @@ export function createAdapterTestSuite(
       it('should handle empty components', () => {
         const component = createComponent(() => {
           const model = createModel<{}>(() => ({}));
-          const actions = createSlice(model, () => ({}));
+          const actions = createSlice(model, (_m, _api) => ({}));
           const views = {};
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         expect(adapter.actions).toEqual({});
         expect(adapter.views).toEqual({});
       });
@@ -294,7 +294,7 @@ export function createAdapterTestSuite(
             doSomething: () => set({}),
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             doSomething: m.doSomething,
           }));
 
@@ -303,7 +303,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         expect(typeof adapter.actions.doSomething).toBe('function');
         expect(adapter.views).toEqual({});
       });
@@ -320,18 +320,18 @@ export function createAdapterTestSuite(
             increment: () => set({ counter: get().counter + 1 }),
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             increment: m.increment,
           }));
 
           const views = {
-            count: createSlice(model, (m: any) => ({ value: m.counter })),
+            count: createSlice(model, (m, _api) => ({ value: m.counter })),
           };
 
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         
         // Get initial view
         const view1 = adapter.views.count();
@@ -361,27 +361,27 @@ export function createAdapterTestSuite(
             multiply: (factor: number) => set({ value: get().value * factor }),
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             multiply: m.multiply,
           }));
 
-          const valueSlice = createSlice(model, (m: any) => ({
+          const valueSlice = createSlice(model, (m, _api) => ({
             value: m.value,
           }));
 
           // Create computed view slices
-          const doubledSlice = createSlice(model, (m) => {
-            const state = valueSlice(m);
+          const doubledSlice = createSlice(model, (_m, api) => {
+            const state = api.executeSlice(valueSlice);
             return { result: state.value * 2 };
           });
 
-          const tripledSlice = createSlice(model, (m) => {
-            const state = valueSlice(m);
+          const tripledSlice = createSlice(model, (_m, api) => {
+            const state = api.executeSlice(valueSlice);
             return { result: state.value * 3 };
           });
 
-          const formattedSlice = createSlice(model, (m) => {
-            const state = valueSlice(m);
+          const formattedSlice = createSlice(model, (_m, api) => {
+            const state = api.executeSlice(valueSlice);
             return { display: `Value: ${state.value}` };
           });
 
@@ -394,7 +394,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         
         // Check initial transforms
         expect(adapter.views.doubled().result).toBe(20);
@@ -424,19 +424,19 @@ export function createAdapterTestSuite(
             clearLog: () => set({ log: [] }),
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             addEntry: m.addEntry,
             clearLog: m.clearLog,
           }));
 
           const views = {
-            log: createSlice(model, (m: any) => ({ entries: m.log })),
+            log: createSlice(model, (m, _api) => ({ entries: m.log })),
           };
 
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         
         // Add entries
         adapter.actions.addEntry('First');
@@ -473,20 +473,20 @@ export function createAdapterTestSuite(
             },
           }));
 
-          const actions = createSlice(model, (m: any) => ({
+          const actions = createSlice(model, (m, _api) => ({
             setX: m.setX,
             setY: m.setY,
             setPoint: m.setPoint,
           }));
 
           const views = {
-            point: createSlice(model, (m: any) => ({ x: m.x, y: m.y })),
+            point: createSlice(model, (m, _api) => ({ x: m.x, y: m.y })),
           };
 
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component()) as any;
+        const adapter = createAdapter(component());
         
         // Set individual coordinates
         adapter.actions.setX(5);

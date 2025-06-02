@@ -4,7 +4,19 @@ import {
   createModel,
   createSlice,
   compose,
+  type AdapterAPI,
+  type SliceFactory,
 } from './index';
+
+// Helper to create a mock API for testing
+function createMockAPI<Model>(model: Model): AdapterAPI<Model> {
+  return {
+    executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
+      return slice(model, createMockAPI(model));
+    },
+    getState: () => model,
+  };
+}
 
 describe('Lattice Core', () => {
   describe('Model creation with state and mutations', () => {
@@ -58,7 +70,8 @@ describe('Lattice Core', () => {
 
       // Test slice execution
       const model = { count: 42, name: 'test' };
-      const sliceResult = countSlice(model);
+      const api = createMockAPI(model);
+      const sliceResult = countSlice(model, api);
       expect(sliceResult).toEqual({ count: 42 });
     });
 
@@ -81,7 +94,8 @@ describe('Lattice Core', () => {
         settings: { theme: 'dark' },
       };
 
-      expect(userSlice(model)).toEqual({
+      const api = createMockAPI(model);
+      expect(userSlice(model, api)).toEqual({
         userName: 'John',
         userAge: 30,
       });
@@ -114,7 +128,8 @@ describe('Lattice Core', () => {
         decrement: mockDecrement,
       };
 
-      const actionResult = actions(model);
+      const api = createMockAPI(model);
+      const actionResult = actions(model, api);
       expect(actionResult.increment).toBe(mockIncrement);
       expect(actionResult.decrement).toBe(mockDecrement);
     });
@@ -162,7 +177,8 @@ describe('Lattice Core', () => {
         setFilter: mockSetFilter,
       };
 
-      const actionResult = actions(model);
+      const api = createMockAPI(model);
+      const actionResult = actions(model, api);
       expect(actionResult.addTodo).toBe(mockAddTodo);
       expect(actionResult.toggleTodo).toBe(mockToggleTodo);
       expect(actionResult.setFilter).toBe(mockSetFilter);
@@ -203,7 +219,8 @@ describe('Lattice Core', () => {
         disabled: false,
       };
 
-      const buttonView = incrementButton(model);
+      const api = createMockAPI(model);
+      const buttonView = incrementButton(model, api);
 
       // Compose now returns a regular selector that resolves dependencies
       // So buttonView should have the expected properties
@@ -230,7 +247,9 @@ describe('Lattice Core', () => {
         }))
       );
 
-      const result = composedSlice({ value: 100 });
+      const model = { value: 100 };
+      const api = createMockAPI(model);
+      const result = composedSlice(model, api);
       
       // Compose now resolves dependencies and returns the actual result
       expect(result).toHaveProperty('fullSlice');
@@ -264,7 +283,8 @@ describe('Lattice Core', () => {
 
       // When using compose, the slice now executes directly
       const modelInstance = modelFactory({ set: vi.fn(), get: vi.fn() });
-      const buttonState = buttonSlice(modelInstance);
+      const api = createMockAPI(modelInstance);
+      const buttonState = buttonSlice(modelInstance, api);
       
       // Verify the composed slice returns the expected shape
       expect(buttonState).toHaveProperty('setFilter');
@@ -298,8 +318,8 @@ describe('Lattice Core', () => {
       }));
 
       // Create a computed view slice
-      const counter = () => createSlice(modelFactory, (m) => {
-        const state = countSlice(m);
+      const counter = () => createSlice(modelFactory, (m, api) => {
+        const state = countSlice(m, api);
         return {
           'data-count': state.count,
           'aria-label': `Count is ${state.count}`,
@@ -310,7 +330,8 @@ describe('Lattice Core', () => {
       // Test the computed view
       const computedView = counter();
       const model = { count: 5 };
-      const result = computedView(model);
+      const api = createMockAPI(model);
+      const result = computedView(model, api);
 
       expect(result).toEqual({
         'data-count': 5,
@@ -327,8 +348,8 @@ describe('Lattice Core', () => {
       }));
 
       // Create a computed view slice
-      const counter = () => createSlice(modelFactory, (m) => {
-        const state = countSlice(m);
+      const counter = () => createSlice(modelFactory, (m, api) => {
+        const state = countSlice(m, api);
         return {
           'data-count': state.count,
           'aria-label': `Count is ${state.count}`,
@@ -338,7 +359,9 @@ describe('Lattice Core', () => {
 
       // Test the computed view
       const computedView = counter();
-      const result = computedView({ count: 5 });
+      const model = { count: 5 };
+      const api = createMockAPI(model);
+      const result = computedView(model, api);
 
       expect(result).toEqual({
         'data-count': 5,
@@ -347,7 +370,9 @@ describe('Lattice Core', () => {
       });
 
       // Test with even number
-      const evenResult = computedView({ count: 4 });
+      const model2 = { count: 4 };
+      const api2 = createMockAPI(model2);
+      const evenResult = computedView(model2, api2);
       expect(evenResult.className).toBe('even');
     });
 
@@ -371,8 +396,8 @@ describe('Lattice Core', () => {
           todos: [],
           filter: 'all',
         })),
-        (m) => {
-          const state = todoState(m);
+        (m, api) => {
+          const state = todoState(m, api);
           const active = state.todos.filter((t: Todo) => !t.completed);
           const completed = state.todos.filter((t: Todo) => t.completed);
 
@@ -387,14 +412,16 @@ describe('Lattice Core', () => {
 
       // Test the computation
       const stats = todoStats();
-      const result = stats({
+      const model = {
         todos: [
           { id: 1, text: 'Task 1', completed: false },
           { id: 2, text: 'Task 2', completed: true },
           { id: 3, text: 'Task 3', completed: false },
         ],
         filter: 'all',
-      });
+      };
+      const api = createMockAPI(model);
+      const result = stats(model, api);
 
       expect(result.activeCount).toBe(2);
       expect(result.completedCount).toBe(1);
@@ -422,7 +449,7 @@ describe('Lattice Core', () => {
       };
 
       const summaryView = summary();
-      const result = summaryView({
+      const model = {
         todos: [
           { id: 1, text: 'Task 1', completed: false },
           { id: 2, text: 'Task 2', completed: true },
@@ -431,7 +458,8 @@ describe('Lattice Core', () => {
           { id: 5, text: 'Task 5', completed: true },
         ],
         filter: 'all',
-      });
+      };
+      const result = summaryView(model);
       expect(result.textContent).toBe('3 active, 2 completed');
     });
   });
@@ -478,7 +506,8 @@ describe('Lattice Core', () => {
         logout: mockLogout,
       };
 
-      const headerResult = headerSlice(model);
+      const api = createMockAPI(model);
+      const headerResult = headerSlice(model, api);
 
       // Compose now resolves dependencies and returns the actual result
       expect(headerResult).toHaveProperty('user', { name: 'John' });
@@ -525,7 +554,8 @@ describe('Lattice Core', () => {
         increment: mockIncrement,
       };
 
-      const result = composite(model);
+      const api = createMockAPI(model);
+      const result = composite(model, api);
       
       // Compose now resolves dependencies and returns the actual result
       expect(result).toHaveProperty('action', mockIncrement);
@@ -577,8 +607,8 @@ describe('Lattice Core', () => {
           actions,
           views: {
             // Computed view using slice
-            counter: () => createSlice(model, (m) => {
-              const state = countSlice(m);
+            counter: () => createSlice(model, (m, api) => {
+              const state = countSlice(m, api);
               return {
                 'data-count': state.count,
                 'aria-label': `Count is ${state.count}`,
@@ -645,8 +675,8 @@ describe('Lattice Core', () => {
         }));
 
         // Shared computation using slice
-        const todoStats = () => createSlice(model, (m) => {
-          const state = todoState(m);
+        const todoStats = () => createSlice(model, (m, api) => {
+          const state = todoState(m, api);
           const active = state.todos.filter((t: Todo) => !t.completed);
           const completed = state.todos.filter((t: Todo) => t.completed);
 
@@ -690,8 +720,8 @@ describe('Lattice Core', () => {
           actions,
           views: {
             // Computed view using nested slice
-            summary: () => createSlice(model, (m) => {
-              const stats = todoStats()(m);
+            summary: () => createSlice(model, (m, api) => {
+              const stats = todoStats()(m, api);
               return {
                 textContent: `${stats.activeCount} active, ${stats.completedCount} completed`,
               };
@@ -743,7 +773,8 @@ describe('Lattice Core', () => {
 
       // TypeScript should infer the correct return type when called with a model
       const modelInstance: ModelState = { count: 0, name: 'test', increment: () => {} };
-      const result = validSlice(modelInstance);
+      const api = createMockAPI(modelInstance);
+      const result = validSlice(modelInstance, api);
       
       // Verify the type
       const _typeCheck: typeof result = { count: 0, name: 'test' };
@@ -771,7 +802,8 @@ describe('Lattice Core', () => {
 
       // The type should flow through compose()
       const modelInstance = { value: 42 };
-      const result = slice2(modelInstance);
+      const api = createMockAPI(modelInstance);
+      const result = slice2(modelInstance, api);
       
       // Compose now resolves dependencies and returns the actual result
       expect(result).toHaveProperty('selected', 42);
@@ -807,7 +839,8 @@ describe('Lattice Core', () => {
       
       // Verify types work correctly
       const modelInstance = { count: 0 };
-      const actionsResult = spec.actions(modelInstance);
+      const api = createMockAPI(modelInstance);
+      const actionsResult = spec.actions(modelInstance, api);
       expect(actionsResult).toEqual({});
     });
   });
@@ -881,8 +914,8 @@ describe('Lattice Core', () => {
           views: {
             display: displaySlice,
             // Computed view that adds styling based on count
-            styledDisplay: () => createSlice(model, (m) => {
-              const state = displaySlice(m);
+            styledDisplay: () => createSlice(model, (m, api) => {
+              const state = displaySlice(m, api);
               return {
                 count: state.count,
                 className: state.count === 0 ? 'zero' : state.count > 0 ? 'positive' : 'negative',
@@ -912,7 +945,9 @@ describe('Lattice Core', () => {
 
       // Test the styled display view
       const styledSlice = enhanced.views.styledDisplay();
-      const styledView = styledSlice({ count: 5, increment: () => {}, decrement: () => {}, reset: () => {} });
+      const testModel = { count: 5, increment: () => {}, decrement: () => {}, reset: () => {} };
+      const testApi = createMockAPI(testModel);
+      const styledView = styledSlice(testModel, testApi);
       expect(styledView.count).toBe(5);
       expect(styledView.className).toBe('positive');
     });
@@ -924,7 +959,8 @@ describe('Lattice Core', () => {
       const model = createModel<{}>(() => ({}));
       const slice = createSlice(model, () => ({}));
 
-      expect(slice({})).toEqual({});
+      const api = createMockAPI({});
+      expect(slice({}, api)).toEqual({});
     });
 
     it('should handle deeply nested compose() calls', () => {
@@ -939,11 +975,12 @@ describe('Lattice Core', () => {
       );
       const slice3 = createSlice(
         model,
-        compose({ slice2 }, (_, { slice2 }) => ({ v3: (slice2 as unknown as { v2: number }).v2 }))
+        compose({ slice2 }, (_, { slice2 }) => ({ v3: slice2.v2 }))
       );
 
       const modelInstance = { value: 10 };
-      const result = slice3(modelInstance);
+      const api = createMockAPI(modelInstance);
+      const result = slice3(modelInstance, api);
       
       // Compose now resolves dependencies at each level
       // slice1: { v1: 10 }
@@ -959,18 +996,22 @@ describe('Lattice Core', () => {
 
       const modeSlice = createSlice(model, (m) => ({ mode: m.mode }));
 
-      const adaptiveView = () => createSlice(model, (m) => {
-        const state = modeSlice(m);
+      const adaptiveView = () => createSlice(model, (m, api) => {
+        const state = modeSlice(m, api);
         return state.mode === 'light'
           ? { background: 'white', color: 'black' }
           : { background: 'black', color: 'white', border: '1px solid gray' };
       });
 
       const adaptiveSlice = adaptiveView();
-      const lightView = adaptiveSlice({ mode: 'light' });
+      const lightModel = { mode: 'light' as const };
+      const lightApi = createMockAPI(lightModel);
+      const lightView = adaptiveSlice(lightModel, lightApi);
       expect(lightView).toEqual({ background: 'white', color: 'black' });
 
-      const darkView = adaptiveSlice({ mode: 'dark' });
+      const darkModel = { mode: 'dark' as const };
+      const darkApi = createMockAPI(darkModel);
+      const darkView = adaptiveSlice(darkModel, darkApi);
       expect(darkView).toEqual({
         background: 'black',
         color: 'white',

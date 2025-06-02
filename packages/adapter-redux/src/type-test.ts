@@ -11,13 +11,9 @@ const component = createComponent(() => {
     increment: () => set({ count: get().count + 1 }),
   }));
 
-  const countSlice = createSlice(model, (m) => ({
-    count: m.count,
-  }));
-
   // Transformed view
-  const doubledView = countSlice((state) => ({
-    doubled: state.count * 2,
+  const doubledView = createSlice(model, (m) => ({
+    doubled: m.count * 2,
   }));
 
   return {

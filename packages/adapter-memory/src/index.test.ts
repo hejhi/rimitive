@@ -20,12 +20,12 @@ describe('Memory Adapter Specific Features', () => {
         })
       );
 
-      const actions = createSlice(model, m => ({
+      const actions = createSlice(model, (m, _api) => ({
         increment: m.increment
       }));
 
       const views = {
-        count: createSlice(model, m => ({ value: m.count }))
+        count: createSlice(model, (m, _api) => ({ value: m.count }))
       };
 
       return { model, actions, views };
@@ -49,9 +49,9 @@ describe('Memory Adapter Specific Features', () => {
 
       return {
         model,
-        actions: createSlice(model, () => ({})),
+        actions: createSlice(model, (_m, _api) => ({})),
         views: {
-          value: createSlice(model, m => ({ text: m.value }))
+          value: createSlice(model, (m, _api) => ({ text: m.value }))
         }
       };
     });
@@ -80,12 +80,12 @@ describe('Memory Adapter Specific Features', () => {
         })
       }));
 
-      const actions = createSlice(model, m => ({
+      const actions = createSlice(model, (m, _api) => ({
         updateName: m.updateName
       }));
 
       const views = {
-        user: createSlice(model, m => m.user)
+        user: createSlice(model, (m, _api) => m.user)
       };
 
       return { model, actions, views };
