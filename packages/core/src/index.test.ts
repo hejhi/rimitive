@@ -4,37 +4,7 @@ import {
   createModel,
   createSlice,
   compose,
-  isSliceFactory,
 } from './index';
-import type { SliceFactory } from './index';
-
-// Simple test helper to execute slices with compose support
-function executeSlice<Model, T>(sliceFactory: SliceFactory<Model, T>, model: Model): T {
-  const result = sliceFactory(model);
-  
-  // Check if result has compose marker
-  if (result != null && typeof result === 'object' && COMPOSE_MARKER in result) {
-    const composeSpec = (result as any)[COMPOSE_MARKER] as ComposeSpecFactory<Model, any, T>;
-    const dependencies = composeSpec();
-    const resolvedDeps: any = {};
-    
-    // Recursively resolve dependencies
-    for (const [key, depFactory] of Object.entries(dependencies)) {
-      resolvedDeps[key] = executeSlice(depFactory as SliceFactory<Model, any>, model);
-    }
-    
-    // Get partially applied function and call with resolved deps
-    const partiallyApplied = composeSpec(model);
-    return partiallyApplied(resolvedDeps);
-  }
-  
-  // Check if result is itself a slice factory (transform result)
-  if (isSliceFactory(result)) {
-    return executeSlice(result as SliceFactory<Model, T>, model);
-  }
-  
-  return result as T;
-}
 
 describe('Lattice Core', () => {
   describe('Model creation with state and mutations', () => {
@@ -235,14 +205,11 @@ describe('Lattice Core', () => {
 
       const buttonView = incrementButton(model);
 
-      // In spec-only mode, compose returns a spec wrapper
-      expect(buttonView).toHaveProperty('__composeSpec');
-      expect(buttonView).toHaveProperty('__isComposeSpec', true);
-      
-      // Verify the spec structure
-      const spec = (buttonView as any).__composeSpec;
-      expect(spec.dependencies).toHaveProperty('actions', actions);
-      expect(typeof spec.selector).toBe('function');
+      // Compose now returns a regular selector that resolves dependencies
+      // So buttonView should have the expected properties
+      expect(buttonView).toHaveProperty('onClick', mockIncrement);
+      expect(buttonView).toHaveProperty('disabled', false);
+      expect(buttonView).toHaveProperty('aria-label', 'Increment counter');
     });
 
     it('should demonstrate slice composition with compose', () => {
@@ -265,13 +232,11 @@ describe('Lattice Core', () => {
 
       const result = composedSlice({ value: 100 });
       
-      // Verify the compose spec structure
-      expect(result).toHaveProperty('__composeSpec');
-      expect(result).toHaveProperty('__isComposeSpec', true);
-      
-      const spec = (result as any).__composeSpec;
-      expect(spec.dependencies).toHaveProperty('baseSlice', baseSlice);
-      expect(typeof spec.selector).toBe('function');
+      // Compose now resolves dependencies and returns the actual result
+      expect(result).toHaveProperty('fullSlice');
+      expect(result.fullSlice).toEqual({ val: 100 });
+      expect(result).toHaveProperty('selectedVal', 100);
+      expect(result).toHaveProperty('directValue', 100);
     });
 
     it('should support parameterized view factories from todoList example', () => {
@@ -297,9 +262,9 @@ describe('Lattice Core', () => {
         }))
       );
 
-      // When using compose, we need to execute the slice to test it
+      // When using compose, the slice now executes directly
       const modelInstance = modelFactory({ set: vi.fn(), get: vi.fn() });
-      const buttonState = executeSlice(buttonSlice, modelInstance) as unknown as { setFilter: (filter: Filter) => void; filter: Filter };
+      const buttonState = buttonSlice(modelInstance);
       
       // Verify the composed slice returns the expected shape
       expect(buttonState).toHaveProperty('setFilter');
@@ -502,14 +467,11 @@ describe('Lattice Core', () => {
 
       const headerResult = headerSlice(model);
 
-      // Verify the compose spec structure
-      expect(headerResult).toHaveProperty('__composeSpec');
-      expect(headerResult).toHaveProperty('__isComposeSpec', true);
-      
-      const spec = (headerResult as any).__composeSpec;
-      expect(spec.dependencies).toHaveProperty('userSlice', userSlice);
-      expect(spec.dependencies).toHaveProperty('themeSlice', themeSlice);
-      expect(typeof spec.selector).toBe('function');
+      // Compose now resolves dependencies and returns the actual result
+      expect(headerResult).toHaveProperty('user', { name: 'John' });
+      expect(headerResult).toHaveProperty('theme', 'dark');
+      expect(headerResult).toHaveProperty('onLogout', mockLogout);
+      expect(headerResult).toHaveProperty('displayName', 'John (dark mode)');
     });
 
     it('should support nested slice composition', () => {
@@ -552,14 +514,11 @@ describe('Lattice Core', () => {
 
       const result = composite(model);
       
-      // Verify the compose spec structure
-      expect(result).toHaveProperty('__composeSpec');
-      expect(result).toHaveProperty('__isComposeSpec', true);
-      
-      const spec = (result as any).__composeSpec;
-      expect(spec.dependencies).toHaveProperty('actions', actions);
-      expect(spec.dependencies).toHaveProperty('stateSlice', stateSlice);
-      expect(typeof spec.selector).toBe('function');
+      // Compose now resolves dependencies and returns the actual result
+      expect(result).toHaveProperty('action', mockIncrement);
+      expect(result).toHaveProperty('state');
+      expect(result.state).toEqual({ count: 10, user: 'test' });
+      expect(result).toHaveProperty('summary', 'test: 10');
     });
   });
 
@@ -797,13 +756,10 @@ describe('Lattice Core', () => {
       const modelInstance = { value: 42 };
       const result = slice2(modelInstance);
       
-      // Verify the compose spec structure
-      expect(result).toHaveProperty('__composeSpec');
-      expect(result).toHaveProperty('__isComposeSpec', true);
-      
-      const spec = (result as any).__composeSpec;
-      expect(spec.dependencies).toHaveProperty('slice1', slice1);
-      expect(typeof spec.selector).toBe('function');
+      // Compose now resolves dependencies and returns the actual result
+      expect(result).toHaveProperty('selected', 42);
+      expect(result).toHaveProperty('fromModel', 42);
+      expect(result).toHaveProperty('computed', 126); // 84 + 42
     });
 
     it('should enforce type constraints in component factories', () => {
@@ -969,17 +925,11 @@ describe('Lattice Core', () => {
       const modelInstance = { value: 10 };
       const result = slice3(modelInstance);
       
-      // Verify the compose marker structure for deeply nested case
-      expect(COMPOSE_MARKER in (result as any)).toBe(true);
-      expect(result).toHaveProperty('model', modelInstance);
-      
-      const composeSpec = (result as any)[COMPOSE_MARKER];
-      const dependencies = composeSpec();
-      expect(dependencies).toHaveProperty('slice2', slice2);
-      
-      // Test that nested composition resolves correctly with helper
-      const resolvedResult = executeSlice(slice3, modelInstance);
-      expect(resolvedResult).toEqual({ v3: 10 });
+      // Compose now resolves dependencies at each level
+      // slice1: { v1: 10 }
+      // slice2: { v2: 10 }
+      // slice3: { v3: 10 }
+      expect(result).toEqual({ v3: 10 });
     });
 
     it('should handle computed views returning different shapes', () => {
