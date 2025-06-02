@@ -41,7 +41,7 @@ export class TestStore<TState> {
   }
 
   private notifySubscribers(): void {
-    this.subscribers.forEach(listener => listener(this.state));
+    this.subscribers.forEach((listener) => listener(this.state));
   }
 
   /**
@@ -56,10 +56,10 @@ export class TestStore<TState> {
     try {
       // Execute the slice factory with the state
       const result = sliceFactory(this.state);
-      
+
       // Cache the result
       this.sliceCache.set(sliceFactory, result);
-      
+
       return result;
     } catch (error) {
       console.error('Error executing slice:', error);
@@ -68,8 +68,6 @@ export class TestStore<TState> {
       throw error;
     }
   }
-
-
 
   /**
    * Clear the slice cache (useful for testing)
@@ -87,13 +85,15 @@ export function createTestAdapter<TModel>(
 ): TestStore<TModel> {
   // Create a temporary store to bootstrap
   let tempState = {} as TModel;
-  
+
   // First pass: get initial state shape
   const initialModel = modelFactory({
-    set: (partial) => { tempState = { ...tempState, ...partial }; },
+    set: (partial) => {
+      tempState = { ...tempState, ...partial };
+    },
     get: () => tempState,
   });
-  
+
   // Create the test store with initial state
   const store = new TestStore<TModel>(initialModel);
 
@@ -112,11 +112,7 @@ export function createTestAdapter<TModel>(
 /**
  * Create a test harness for a component factory
  */
-export function createComponentTest<
-  Model = any,
-  Actions = any,
-  Views = any
->(
+export function createComponentTest<Model = any, Actions = any, Views = any>(
   componentFactory: ComponentFactory<Model, Actions, Views>
 ): {
   store: TestStore<Model>;
@@ -137,35 +133,37 @@ export function createComponentTest<
     getSlice: (sliceFactory) => store.executeSlice(sliceFactory),
     getView: (viewName) => {
       const view = component.views[viewName];
-      
+
       // Helper to check if something is a slice factory
-      const isSliceFactory = (value: any): value is SliceFactory<Model, any> => {
+      const isSliceFactory = (
+        value: any
+      ): value is SliceFactory<Model, any> => {
         return typeof value === 'function' && SLICE_FACTORY_MARKER in value;
       };
-      
+
       // If it's a slice factory, execute it
       if (isSliceFactory(view)) {
         return store.executeSlice(view);
       }
-      
+
       // If it's a function, it might be a computed view
       if (typeof view === 'function') {
         const viewResult = view();
-        
+
         // If the result is a slice factory, execute it
         if (isSliceFactory(viewResult)) {
           return store.executeSlice(viewResult);
         }
-        
+
         // If it's a function, it might be a selector
         if (typeof viewResult === 'function') {
           return viewResult(store.getState());
         }
-        
+
         // Otherwise return the result as-is
         return viewResult;
       }
-      
+
       // If we get here, we don't know what to do with the view
       throw new Error(`Unable to execute view: ${String(viewName)}`);
     },
@@ -178,7 +176,7 @@ if (import.meta.vitest) {
   describe('TestStore', () => {
     it('should execute slice factories', () => {
       const store = new TestStore({ count: 0, name: 'test' });
-      
+
       const slice = ((state: { count: number; name: string }) => {
         return { count: state.count };
       }) as SliceFactory<{ count: number; name: string }, { count: number }>;
@@ -190,7 +188,7 @@ if (import.meta.vitest) {
     it('should cache slice results', () => {
       const store = new TestStore({ count: 0 });
       let executionCount = 0;
-      
+
       const slice = ((state: { count: number }) => {
         executionCount++;
         return { count: state.count };
@@ -219,16 +217,18 @@ if (import.meta.vitest) {
 
   describe('createTestAdapter', () => {
     it('should create a store from a model factory', () => {
-      const modelFactory: ModelFactory<{ count: number; increment: () => void }> = 
-        ({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        });
+      const modelFactory: ModelFactory<{
+        count: number;
+        increment: () => void;
+      }> = ({ set, get }) => ({
+        count: 0,
+        increment: () => set({ count: get().count + 1 }),
+      });
 
       const store = createTestAdapter(modelFactory);
-      
+
       expect(store.getState().count).toBe(0);
-      
+
       // Execute increment
       store.getState().increment();
       expect(store.getState().count).toBe(1);

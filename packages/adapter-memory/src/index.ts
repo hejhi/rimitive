@@ -64,6 +64,7 @@ function createStore<T>(initial: T): Store<T> {
   };
 }
 
+
 /**
  * Creates a read-only slice that derives state from another store
  */
@@ -89,7 +90,8 @@ function createSlice<T, U>(
     get: () => {
       const state = store.get();
       if (!cache || cache.state !== state) {
-        cache = { value: selector(state), state };
+        const value = selector(state);
+        cache = { value, state };
       }
       return cache.value;
     },
@@ -151,8 +153,26 @@ function executeComponent<Model, Actions, Views>(
   // Initialize model store with factory result
   modelStore.set(model);
   
+  // Map to store executed slice results
+  const sliceCache = new Map<any, Store<any>>();
+  
+  // Helper to execute a slice factory
+  const executeSliceFactory = <T>(factory: any, state: Model): T => {
+    const rawResult = factory(state);
+    
+    // If the result is itself a slice factory, execute it
+    if (isSliceFactory(rawResult)) {
+      return executeSliceFactory(rawResult, state);
+    }
+    
+    return rawResult;
+  };
+  
   // Execute actions slice
-  const actionsStore = createSlice(modelStore, (state) => spec.actions(state));
+  const actionsStore = createSlice(
+    modelStore, 
+    (state) => executeSliceFactory(spec.actions, state)
+  );
   
   // Process views
   const views: any = {};
@@ -161,7 +181,10 @@ function executeComponent<Model, Actions, Views>(
   for (const [key, view] of Object.entries(spec.views as Record<string, unknown>)) {
     if (isSliceFactory(view)) {
       // Static view: slice factory
-      const viewStore = createSlice(modelStore, (state) => view(state));
+      const viewStore = createSlice(
+        modelStore, 
+        (state) => executeSliceFactory(view, state)
+      );
       viewStores.push(viewStore);
       
       // Wrap as function that returns current value

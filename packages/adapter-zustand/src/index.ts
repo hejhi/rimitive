@@ -160,18 +160,6 @@ type StoreWithSelector<T> = StoreApi<T> & {
   };
 };
 
-/**
- * Checks if a selector is a composed selector
- */
-function isComposedSelector(selector: unknown): selector is {
-  __composeDeps?: Record<string, SliceFactory<unknown, unknown>>;
-} {
-  return (
-    typeof selector === 'function' &&
-    '__composeDeps' in selector &&
-    selector.__composeDeps != null
-  );
-}
 
 // ============================================================================
 // Primitive Implementations
@@ -185,29 +173,9 @@ function isComposedSelector(selector: unknown): selector is {
 // Supporting Types and Functions
 // ============================================================================
 
-/**
- * Helper to execute a composed selector
- */
-function executeComposedSelector<Model, T>(
-  selector: any,
-  model: Model,
-  executeSliceFactory: <U>(factory: SliceFactory<Model, U>) => U
-): T {
-  const deps = selector.__composeDeps || {};
-  const resolvedDeps: any = {};
-
-  for (const [key, depFactory] of Object.entries(deps)) {
-    // Always re-execute dependencies to get fresh data
-    resolvedDeps[key] = executeSliceFactory(
-      depFactory as SliceFactory<Model, unknown>
-    );
-  }
-
-  return selector(model, resolvedDeps);
-}
 
 /**
- * Creates a wrapper for slice execution that handles composed selectors
+ * Creates a wrapper for slice execution
  */
 function createSliceExecutor<Model>(
   zustandStore: StoreWithSelector<Model>
@@ -218,21 +186,14 @@ function createSliceExecutor<Model>(
     // because the underlying state may have changed
 
     const model = zustandStore.getState();
-    let rawResult: any;
 
-    // Check if this is a slice factory created with compose()
-    // The compose() selector is stored in the factory's closure
+    // Normal slice factory execution
+    let rawResult: any;
     try {
-      // Try to execute as a normal slice factory first
       rawResult = factory(model);
 
-      // If the result is a function with __composeDeps, it's a composed selector
-      // This happens when createSlice is called with compose() directly
-      if (isComposedSelector(rawResult)) {
-        rawResult = executeComposedSelector(rawResult, model, executeSliceFactory);
-      }
       // If the result is itself a slice factory (from transform syntax), execute it
-      else if (isSliceFactory(rawResult)) {
+      if (isSliceFactory(rawResult)) {
         rawResult = executeSliceFactory(rawResult);
       }
     } catch (error) {
@@ -243,7 +204,6 @@ function createSliceExecutor<Model>(
       });
     }
 
-    // Return the result directly - no select markers to resolve
     return rawResult;
   };
 

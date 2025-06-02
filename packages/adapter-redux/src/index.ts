@@ -76,18 +76,6 @@ function separateStateAndActions<T>(obj: T): {
   return { state, actions };
 }
 
-/**
- * Checks if a selector is a composed selector
- */
-function isComposedSelector(selector: unknown): selector is {
-  __composeDeps?: Record<string, SliceFactory<unknown, unknown>>;
-} {
-  return (
-    typeof selector === 'function' &&
-    '__composeDeps' in selector &&
-    selector.__composeDeps != null
-  );
-}
 
 // ============================================================================
 // Main Adapter
@@ -159,63 +147,23 @@ export function createReduxAdapter<Model, Actions, Views>(
   // Update modelActions reference
   Object.assign(modelActions, boundActions);
 
-  // Type for composed selector with dependencies
-  interface ComposedSelectorWithDeps<M, D, R> {
-    (model: M, resolvedDeps: D): R;
-    __composeDeps?: Record<string, SliceFactory<M, unknown>>;
-  }
-
-  // Helper to execute a composed selector
-  const executeComposedSelector = <T>(
-    selector: ComposedSelectorWithDeps<Model, Record<string, unknown>, T>, 
-    model: Model
-  ): T => {
-    const deps = selector.__composeDeps || {};
-    const resolvedDeps: Record<string, unknown> = {};
-
-    for (const [key, depFactory] of Object.entries(deps)) {
-      // Always re-execute dependencies to get fresh data
-      resolvedDeps[key] = executeSliceFactory(
-        depFactory as SliceFactory<Model, unknown>
-      );
-    }
-
-    return selector(model, resolvedDeps);
-  };
-
-  // Create wrapper for slice execution that handles composed selectors
+  // Create wrapper for slice execution
   const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
     // Don't cache results - they need to be recomputed on each access
     // because the underlying state may have changed
 
     const model = modelTools.get();
-    let rawResult: T | ComposedSelectorWithDeps<Model, Record<string, unknown>, T> | SliceFactory<Model, T>;
+    let rawResult: T | SliceFactory<Model, T>;
 
-    // Check if this is a slice factory created with compose()
-    // The compose() selector is stored in the factory's closure
-    try {
-      // Try to execute as a normal slice factory first
-      rawResult = factory(model);
+    // Execute the slice factory
+    rawResult = factory(model);
 
-      // If the result is a function with __composeDeps, it's a composed selector
-      // This happens when createSlice is called with compose() directly
-      if (isComposedSelector(rawResult)) {
-        rawResult = executeComposedSelector(
-          rawResult as ComposedSelectorWithDeps<Model, Record<string, unknown>, T>, 
-          model
-        );
-      }
-      // If the result is itself a slice factory (from transform syntax), execute it
-      else if (isSliceFactory(rawResult)) {
-        rawResult = executeSliceFactory(rawResult as SliceFactory<Model, T>);
-      }
-    } catch (error) {
-      // If execution fails, it might be because the selector expects resolved deps
-      // This is a fallback, but shouldn't normally happen
-      throw error;
+    // If the result is itself a slice factory (from transform syntax), execute it
+    if (isSliceFactory(rawResult)) {
+      rawResult = executeSliceFactory(rawResult as SliceFactory<Model, T>);
     }
 
-    // Return the result directly - no select markers to resolve
+    // Return the result directly
     return rawResult as T;
   };
 

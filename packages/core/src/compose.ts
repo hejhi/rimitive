@@ -3,24 +3,26 @@
  *
  * Provides a clean way to compose slices with explicit dependencies,
  * eliminating the need for select() markers and recursive resolution.
+ *
+ * This implementation uses a purely functional approach with multiple
+ * function layers to encode composition data.
  */
 
 import type { SliceFactory } from './index';
 
 /**
- * Result of compose() - a selector function that has access to dependencies
+ * Type for resolved dependencies
  */
-export interface ComposedSelector<Model, Deps, Result> {
-  (model: Model): Result;
-  __composeDeps?: Deps; // Internal marker for tracking dependencies
-}
+type ResolveDeps<Deps extends Record<string, SliceFactory<any, any>>> = {
+  [K in keyof Deps]: Deps[K] extends SliceFactory<any, infer T> ? T : never;
+};
 
 /**
  * Compose function for dependency injection in createSlice
  *
  * @param deps - Object mapping dependency names to slice factories
  * @param selector - Function that receives model and resolved dependencies
- * @returns A selector function that can be passed to createSlice
+ * @returns A regular selector function that resolves dependencies internally
  *
  * @example
  * ```typescript
@@ -54,45 +56,22 @@ export function compose<
   Result,
 >(
   deps: Deps,
-  selector: (
-    model: Model,
-    resolvedDeps: {
-      [K in keyof Deps]: Deps[K] extends SliceFactory<Model, infer T>
-        ? T
-        : never;
-    }
-  ) => Result
-): ComposedSelector<Model, Deps, Result> {
-  // Type for resolved dependencies
-  type ResolvedDeps = {
-    [K in keyof Deps]: Deps[K] extends SliceFactory<Model, infer T>
-      ? T
-      : never;
-  };
+  selector: (model: Model, resolvedDeps: ResolveDeps<Deps>) => Result
+): (model: Model) => Result {
+  // Return a regular selector function that resolves dependencies
+  return (model: Model): Result => {
+    // Resolve all dependencies by executing slice factories
+    const resolvedDeps = {} as ResolveDeps<Deps>;
 
-  // Create the composed selector
-  const composedSelector = (model: Model): Result => {
-    // Build resolved dependencies object
-    // We need to use type assertions here because TypeScript cannot
-    // track the relationship between keys and values through dynamic property access
-    const entries = Object.entries(deps) as Array<[keyof Deps, Deps[keyof Deps]]>;
-    const resolvedDeps = entries.reduce((acc, [key, sliceFactory]) => {
-      return {
-        ...acc,
-        [key]: sliceFactory(model)
-      };
-    }, {} as ResolvedDeps);
+    for (const [key, sliceFactory] of Object.entries(deps)) {
+      // Execute each slice factory with the model to get its value
+      resolvedDeps[key] = sliceFactory(model);
+    }
 
     // Call the selector with model and resolved dependencies
     return selector(model, resolvedDeps);
   };
-
-  // Attach deps for potential adapter optimizations
-  composedSelector.__composeDeps = deps;
-
-  return composedSelector;
 }
-
 
 // In-source tests
 if (import.meta.vitest) {
@@ -100,6 +79,46 @@ if (import.meta.vitest) {
   const { createModel, createSlice } = await import('./index');
 
   describe('compose', () => {
+    it('should create a selector that resolves dependencies', () => {
+      const model = createModel<{ count: number }>(() => ({ count: 0 }));
+      const slice = createSlice(model, (m: { count: number }) => ({
+        value: m.count,
+      }));
+
+      const composedSelector = compose({ mySlice: slice }, (_, deps) => ({
+        doubled: deps.mySlice.value * 2,
+      }));
+
+      // Should be a regular function
+      expect(typeof composedSelector).toBe('function');
+
+      // When called with model, returns the result directly
+      const modelData = { count: 5 };
+      const result = composedSelector(modelData);
+      expect(result).toEqual({ doubled: 10 });
+    });
+
+    it('should work with multiple dependencies', () => {
+      const model = createModel<{ x: number; y: number }>(() => ({
+        x: 0,
+        y: 0,
+      }));
+      const xSlice = createSlice(model, (m: { x: number; y: number }) => ({
+        value: m.x,
+      }));
+      const ySlice = createSlice(model, (m: { x: number; y: number }) => ({
+        value: m.y,
+      }));
+
+      const composedSelector = compose({ x: xSlice, y: ySlice }, (_, deps) => ({
+        sum: deps.x.value + deps.y.value,
+      }));
+
+      // When called with model, resolves dependencies and returns result
+      const result = composedSelector({ x: 3, y: 4 });
+      expect(result).toEqual({ sum: 7 });
+    });
+
     it('should compose slices with dependencies', () => {
       const model = createModel<{
         count: number;
@@ -111,14 +130,28 @@ if (import.meta.vitest) {
         user: { name: 'Alice', email: 'alice@example.com' },
       }));
 
-      const actions = createSlice(model, (m) => ({
-        increment: m.increment,
-      }));
+      const actions = createSlice(
+        model,
+        (m: {
+          count: number;
+          increment: () => void;
+          user: { name: string; email: string };
+        }) => ({
+          increment: m.increment,
+        })
+      );
 
-      const userSlice = createSlice(model, (m) => ({
-        name: m.user.name,
-        email: m.user.email,
-      }));
+      const userSlice = createSlice(
+        model,
+        (m: {
+          count: number;
+          increment: () => void;
+          user: { name: string; email: string };
+        }) => ({
+          name: m.user.name,
+          email: m.user.email,
+        })
+      );
 
       const composed = createSlice(
         model,
@@ -137,9 +170,12 @@ if (import.meta.vitest) {
 
       const result = composed(modelData);
 
-      expect(result.onClick).toBe(modelData.increment);
-      expect(result.userName).toBe('Bob');
-      expect(result.count).toBe(5);
+      // Now compose returns a regular selector, so result is the actual object
+      expect(result).toEqual({
+        onClick: modelData.increment,
+        userName: 'Bob',
+        count: 5,
+      });
     });
 
     it('should handle multiple dependencies', () => {
@@ -157,14 +193,41 @@ if (import.meta.vitest) {
         sizes: { width: 100, height: 200 },
       }));
 
-      const positionSlice = createSlice(model, (m) => ({
-        x: m.x,
-        y: m.y,
-        z: m.z,
-      }));
+      const positionSlice = createSlice(
+        model,
+        (m: {
+          x: number;
+          y: number;
+          z: number;
+          colors: { primary: string; secondary: string };
+          sizes: { width: number; height: number };
+        }) => ({
+          x: m.x,
+          y: m.y,
+          z: m.z,
+        })
+      );
 
-      const colorSlice = createSlice(model, (m) => m.colors);
-      const sizeSlice = createSlice(model, (m) => m.sizes);
+      const colorSlice = createSlice(
+        model,
+        (m: {
+          x: number;
+          y: number;
+          z: number;
+          colors: { primary: string; secondary: string };
+          sizes: { width: number; height: number };
+        }) => m.colors
+      );
+      const sizeSlice = createSlice(
+        model,
+        (m: {
+          x: number;
+          y: number;
+          z: number;
+          colors: { primary: string; secondary: string };
+          sizes: { width: number; height: number };
+        }) => m.sizes
+      );
 
       const viewSlice = createSlice(
         model,
@@ -190,11 +253,14 @@ if (import.meta.vitest) {
 
       const result = viewSlice(modelData);
 
-      expect(result.transform).toBe('translate3d(10px, 20px, 30px)');
-      expect(result.backgroundColor).toBe('green');
-      expect(result.borderColor).toBe('yellow');
-      expect(result.width).toBe(300);
-      expect(result.height).toBe(400);
+      // Compose now returns a regular selector, so result is the actual object
+      expect(result).toEqual({
+        transform: 'translate3d(10px, 20px, 30px)',
+        backgroundColor: 'green',
+        borderColor: 'yellow',
+        width: 300,
+        height: 400,
+      });
     });
 
     it('should maintain type safety', () => {
@@ -208,9 +274,18 @@ if (import.meta.vitest) {
         bool: true,
       }));
 
-      const stringSlice = createSlice(model, (m) => ({ value: m.str }));
-      const numberSlice = createSlice(model, (m) => ({ value: m.num }));
-      const booleanSlice = createSlice(model, (m) => ({ value: m.bool }));
+      const stringSlice = createSlice(
+        model,
+        (m: { str: string; num: number; bool: boolean }) => ({ value: m.str })
+      );
+      const numberSlice = createSlice(
+        model,
+        (m: { str: string; num: number; bool: boolean }) => ({ value: m.num })
+      );
+      const booleanSlice = createSlice(
+        model,
+        (m: { str: string; num: number; bool: boolean }) => ({ value: m.bool })
+      );
 
       const composed = createSlice(
         model,
@@ -233,9 +308,12 @@ if (import.meta.vitest) {
 
       const result = composed({ str: 'test', num: 100, bool: false });
 
-      expect(result.concatenated).toBe(100);
-      expect(result.isEnabled).toBe(false);
-      expect(result.allValues).toEqual(['test', 100, false]);
+      // Verify the result matches expected shape
+      expect(result).toEqual({
+        concatenated: 100,
+        isEnabled: false,
+        allValues: ['test', 100, false],
+      });
     });
 
     it('should work with nested slice compositions', () => {
@@ -252,15 +330,39 @@ if (import.meta.vitest) {
       }));
 
       // Base slices
-      const aSlice = createSlice(model, (m) => ({ value: m.a }));
-      const bSlice = createSlice(model, (m) => ({ value: m.b }));
-      const cSlice = createSlice(model, (m) => ({ value: m.c }));
-      const opSlice = createSlice(model, (m) => ({ operation: m.op }));
+      const aSlice = createSlice(
+        model,
+        (m: { a: number; b: number; c: number; op: 'add' | 'multiply' }) => ({
+          value: m.a,
+        })
+      );
+      const bSlice = createSlice(
+        model,
+        (m: { a: number; b: number; c: number; op: 'add' | 'multiply' }) => ({
+          value: m.b,
+        })
+      );
+      const cSlice = createSlice(
+        model,
+        (m: { a: number; b: number; c: number; op: 'add' | 'multiply' }) => ({
+          value: m.c,
+        })
+      );
+      const opSlice = createSlice(
+        model,
+        (m: { a: number; b: number; c: number; op: 'add' | 'multiply' }) => ({
+          operation: m.op,
+        })
+      );
 
       // Intermediate composition
       const abSlice = createSlice(
         model,
-        compose({ a: aSlice, b: bSlice, op: opSlice }, (_, { a, b, op }) => ({
+        compose<
+          { a: number; b: number; c: number; op: 'add' | 'multiply' },
+          { a: typeof aSlice; b: typeof bSlice; op: typeof opSlice },
+          { result: number }
+        >({ a: aSlice, b: bSlice, op: opSlice }, (_, { a, b, op }) => ({
           result:
             op.operation === 'add' ? a.value + b.value : a.value * b.value,
         }))
@@ -275,10 +377,12 @@ if (import.meta.vitest) {
       );
 
       const addResult = finalSlice({ a: 5, b: 3, c: 2, op: 'add' });
-      expect(addResult.finalResult).toBe(10); // (5 + 3) + 2
+
+      // Verify nested composition works correctly
+      expect(addResult).toEqual({ finalResult: 10 }); // (5 + 3) + 2
 
       const multiplyResult = finalSlice({ a: 5, b: 3, c: 2, op: 'multiply' });
-      expect(multiplyResult.finalResult).toBe(17); // (5 * 3) + 2
+      expect(multiplyResult).toEqual({ finalResult: 17 }); // (5 * 3) + 2
     });
   });
 }

@@ -20,10 +20,19 @@ export function createModel<T>(
   return factory;
 }
 
+
+// Overload for regular selectors (preserves inference)
+export function createSlice<Model, Slice>(
+  _model: ModelFactory<Model>,
+  selector: (model: Model) => Slice
+): SliceFactory<Model, Slice>;
+
+// Implementation - now much simpler!
 export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
   selector: (model: Model) => Slice
 ): SliceFactory<Model, Slice> {
+
   // Create a function that can both execute the selector and accept transforms
   const sliceFactory = function <T>(
     modelOrTransform: Model | ((slice: Slice) => T)

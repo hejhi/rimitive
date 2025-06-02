@@ -31,12 +31,12 @@ export function createAdapterTestSuite(
             increment: () => set({ count: get().count + 1 }),
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             increment: m.increment,
           }));
 
           const views = {
-            counter: createSlice(model, (m) => ({
+            counter: createSlice(model, (m: any) => ({
               value: m.count,
             })),
           };
@@ -72,12 +72,12 @@ export function createAdapterTestSuite(
             setName: (first: string, last: string) => set({ firstName: first, lastName: last }),
           }));
 
-          const nameSlice = createSlice(model, (m) => ({
+          const nameSlice = createSlice(model, (m: any) => ({
             first: m.firstName,
             last: m.lastName,
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             setName: m.setName,
           }));
 
@@ -130,18 +130,18 @@ export function createAdapterTestSuite(
             toggleTheme: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' }),
           }));
 
-          const userSlice = createSlice(model, (m) => ({
+          const userSlice = createSlice(model, (m: any) => ({
             name: m.user.name,
             role: m.user.role,
             isAdmin: m.user.role === 'admin',
           }));
 
-          const themeSlice = createSlice(model, (m) => ({
+          const themeSlice = createSlice(model, (m: any) => ({
             theme: m.theme,
             isDark: m.theme === 'dark',
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             toggleTheme: m.toggleTheme,
           }));
 
@@ -198,18 +198,18 @@ export function createAdapterTestSuite(
             }),
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             toggleItem: m.toggleItem,
           }));
 
-          const itemsSlice = createSlice(model, (m) => ({
+          const itemsSlice = createSlice(model, (m: any) => ({
             items: m.items,
           }));
 
           // Parameterized view factory
           const createItemView = (itemId: number) =>
             itemsSlice((state) => {
-              const item = state.items.find(i => i.id === itemId);
+              const item = state.items.find((i: any) => i.id === itemId);
               return item ? {
                 name: item.name,
                 selected: item.selected,
@@ -225,7 +225,7 @@ export function createAdapterTestSuite(
             item1: createItemView(1),
             item2: createItemView(2),
             selectedCount: itemsSlice((state) => ({
-              count: state.items.filter(i => i.selected).length,
+              count: state.items.filter((i: any) => i.selected).length,
             })),
           };
 
@@ -282,7 +282,7 @@ export function createAdapterTestSuite(
             doSomething: () => set({}),
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             doSomething: m.doSomething,
           }));
 
@@ -308,12 +308,12 @@ export function createAdapterTestSuite(
             increment: () => set({ counter: get().counter + 1 }),
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             increment: m.increment,
           }));
 
           const views = {
-            count: createSlice(model, (m) => ({ value: m.counter })),
+            count: createSlice(model, (m: any) => ({ value: m.counter })),
           };
 
           return { model, actions, views };
@@ -349,11 +349,11 @@ export function createAdapterTestSuite(
             multiply: (factor: number) => set({ value: get().value * factor }),
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             multiply: m.multiply,
           }));
 
-          const valueSlice = createSlice(model, (m) => ({
+          const valueSlice = createSlice(model, (m: any) => ({
             value: m.value,
           }));
 
@@ -400,13 +400,13 @@ export function createAdapterTestSuite(
             clearLog: () => set({ log: [] }),
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             addEntry: m.addEntry,
             clearLog: m.clearLog,
           }));
 
           const views = {
-            log: createSlice(model, (m) => ({ entries: m.log })),
+            log: createSlice(model, (m: any) => ({ entries: m.log })),
           };
 
           return { model, actions, views };
@@ -449,14 +449,14 @@ export function createAdapterTestSuite(
             },
           }));
 
-          const actions = createSlice(model, (m) => ({
+          const actions = createSlice(model, (m: any) => ({
             setX: m.setX,
             setY: m.setY,
             setPoint: m.setPoint,
           }));
 
           const views = {
-            point: createSlice(model, (m) => ({ x: m.x, y: m.y })),
+            point: createSlice(model, (m: any) => ({ x: m.x, y: m.y })),
           };
 
           return { model, actions, views };
