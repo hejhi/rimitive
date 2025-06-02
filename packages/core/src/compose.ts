@@ -80,20 +80,21 @@ if (import.meta.vitest) {
   describe('compose', () => {
     it('should create a selector that resolves dependencies', () => {
       const model = createModel<{ count: number }>(() => ({ count: 0 }));
-      const slice = createSlice(model, (m: { count: number }) => ({
+      const slice = createSlice(model, (m) => ({
         value: m.count,
       }));
 
-      const composedSelector = compose({ mySlice: slice }, (_, deps) => ({
-        doubled: deps.mySlice.value * 2,
-      }));
+      // Use compose within createSlice as intended
+      const composedSlice = createSlice(
+        model,
+        compose({ mySlice: slice }, (_, deps) => ({
+          doubled: deps.mySlice.value * 2,
+        }))
+      );
 
-      // Should be a regular function
-      expect(typeof composedSelector).toBe('function');
-
-      // When called with model, returns the result directly
+      // Test the composed slice
       const modelData = { count: 5 };
-      const result = composedSelector(modelData);
+      const result = composedSlice(modelData);
       expect(result).toEqual({ doubled: 10 });
     });
 
@@ -102,19 +103,23 @@ if (import.meta.vitest) {
         x: 0,
         y: 0,
       }));
-      const xSlice = createSlice(model, (m: { x: number; y: number }) => ({
+      const xSlice = createSlice(model, (m) => ({
         value: m.x,
       }));
-      const ySlice = createSlice(model, (m: { x: number; y: number }) => ({
+      const ySlice = createSlice(model, (m) => ({
         value: m.y,
       }));
 
-      const composedSelector = compose({ x: xSlice, y: ySlice }, (_, deps) => ({
-        sum: deps.x.value + deps.y.value,
-      }));
+      // Use compose within createSlice
+      const composedSlice = createSlice(
+        model,
+        compose({ x: xSlice, y: ySlice }, (_, deps) => ({
+          sum: deps.x.value + deps.y.value,
+        }))
+      );
 
-      // When called with model, resolves dependencies and returns result
-      const result = composedSelector({ x: 3, y: 4 });
+      // Test the composed slice
+      const result = composedSlice({ x: 3, y: 4 });
       expect(result).toEqual({ sum: 7 });
     });
 

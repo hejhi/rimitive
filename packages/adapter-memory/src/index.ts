@@ -153,9 +153,6 @@ function executeComponent<Model, Actions, Views>(
   // Initialize model store with factory result
   modelStore.set(model);
   
-  // Map to store executed slice results
-  const sliceCache = new Map<any, Store<any>>();
-  
   // Helper to execute a slice factory
   const executeSliceFactory = <T>(factory: any, state: Model): T => {
     const rawResult = factory(state);
@@ -171,7 +168,7 @@ function executeComponent<Model, Actions, Views>(
   // Execute actions slice
   const actionsStore = createSlice(
     modelStore, 
-    (state) => executeSliceFactory(spec.actions, state)
+    (state) => executeSliceFactory<Actions>(spec.actions, state)
   );
   
   // Process views
