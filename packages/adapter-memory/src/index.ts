@@ -12,7 +12,7 @@
  * - Read-only slices with proper error messages
  */
 
-import type { ComponentSpec, AdapterResult, SliceFactory } from '@lattice/core';
+import type { ComponentSpec, AdapterResult, SliceFactory, ViewTypes } from '@lattice/core';
 import { isSliceFactory } from '@lattice/core';
 
 // ============================================================================
@@ -131,15 +131,38 @@ export interface MemoryAdapterResult<Model, Actions, Views>
 // ============================================================================
 
 /**
+ * Creates a shallow copy of a value to ensure fresh references
+ */
+function shallowCopy<T>(value: T): T {
+  if (typeof value !== 'object' || value === null) {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return [...value] as T;
+  }
+  return { ...value };
+}
+
+/**
  * Executes a component specification with memory stores
  */
 function executeComponent<Model, Actions, Views>(
   spec: ComponentSpec<Model, Actions, Views>
 ): MemoryAdapterResult<Model, Actions, Views> {
-  // Create model store
-  const modelStore = createStore<Model>({} as Model);
+  // Execute model factory to get initial state
+  const initialModel = spec.model({
+    get: (): Model => {
+      throw new Error('Cannot call get() during model initialization');
+    },
+    set: (): void => {
+      throw new Error('Cannot call set() during model initialization');
+    },
+  });
 
-  // Execute model factory with store tools
+  // Create model store with proper initial state
+  const modelStore = createStore<Model>(initialModel);
+
+  // Re-execute model factory with real store tools
   const model = spec.model({
     get: () => modelStore.get(),
     set: (updates) => {
@@ -148,20 +171,21 @@ function executeComponent<Model, Actions, Views>(
     },
   });
 
-  // Initialize model store with factory result
+  // Update model store with fully initialized model
   modelStore.set(model);
 
-  // Helper to execute a slice factory
+  // Type-safe slice executor
   const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
     const state = modelStore.get();
-    let rawResult = factory(state);
+    const result = factory(state);
 
-    // If the result is itself a slice factory, execute it
-    if (isSliceFactory<Model, T>(rawResult)) {
-      rawResult = executeSliceFactory(rawResult);
+    // Handle nested slice factories (from transform syntax)
+    if (isSliceFactory(result)) {
+      // TypeScript can't narrow the type here, but we know it's safe
+      return executeSliceFactory(result as SliceFactory<Model, T>);
     }
 
-    return rawResult;
+    return result;
   };
 
   // Execute actions slice
@@ -169,36 +193,29 @@ function executeComponent<Model, Actions, Views>(
     executeSliceFactory(spec.actions)
   );
 
-  // Process views
-  const views: any = {};
-  const viewStores: Store<any>[] = [];
-
-  for (const [key, view] of Object.entries(
-    spec.views as Record<string, unknown>
-  )) {
+  // Process views - use a more direct approach
+  const viewStores: Array<Store<unknown>> = [];
+  
+  // Build the views object with proper typing
+  const views = Object.entries(spec.views as Record<string, unknown>).reduce((acc, [key, view]) => {
     if (isSliceFactory(view)) {
-      // Static view: slice factory
+      // Static view: create a store and wrap in a function
       const viewStore = createSlice(modelStore, () =>
-        executeSliceFactory(view)
+        executeSliceFactory(view as SliceFactory<Model, unknown>)
       );
       viewStores.push(viewStore);
-
-      // Wrap as function that returns current value
-      // Always return a new object to ensure fresh references
-      views[key] = () => {
-        const value = viewStore.get();
-        // Return a shallow copy to ensure different object references
-        return typeof value === 'object' && value !== null
-          ? Array.isArray(value)
-            ? [...value]
-            : { ...value }
-          : value;
-      };
+      
+      // Create the view function
+      acc[key as keyof ViewTypes<Model, Views>] = (() => 
+        shallowCopy(viewStore.get())
+      ) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     } else if (typeof view === 'function') {
-      // Already a function, use as-is
-      views[key] = view;
+      // Function view: use as-is
+      acc[key as keyof ViewTypes<Model, Views>] = view as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     }
-  }
+    
+    return acc;
+  }, {} as ViewTypes<Model, Views>);
 
   return {
     actions: actionsStore.get(),
