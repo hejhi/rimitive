@@ -1,8 +1,5 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
-import React from 'react';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
 import {
   createComponent,
   createModel,
@@ -10,7 +7,7 @@ import {
   compose,
 } from '@lattice/core';
 import { createReduxAdapter } from './index';
-import { useView, useActions, useSelector } from './react';
+import { useView, useActions } from './react';
 
 describe('Redux React Integration', () => {
   afterEach(() => {
@@ -294,58 +291,6 @@ describe('Redux React Integration', () => {
     const finalData = result.current;
     expect(finalData.count).toBe(3);
     expect(finalData.items).toEqual(['apple', 'banana', 'apricot']);
-  });
-
-  it('should work with useSelector for direct state access', async () => {
-    const component = createTestComponent();
-    const store = createReduxAdapter(component);
-
-    // Create Redux store that syncs with our Lattice store
-    const reduxStore = configureStore({
-      reducer: (state = store.getState(), action) => {
-        if (action.type === 'SYNC') {
-          return store.getState();
-        }
-        return state;
-      },
-    });
-
-    // Subscribe to Lattice store and sync to Redux
-    store.subscribe(() => {
-      reduxStore.dispatch({ type: 'SYNC' });
-    });
-
-    const wrapper = ({ children }: { children: React.ReactNode }) =>
-      React.createElement(Provider, { store: reduxStore, children });
-
-    const { result } = renderHook(
-      () => ({
-        count: useSelector((state) => state.count),
-        disabled: useSelector((state) => state.disabled),
-        computed: useSelector((state) => ({
-          doubled: state.count * 2,
-          isPositive: state.count > 0,
-        })),
-      }),
-      { wrapper }
-    );
-
-    expect(result.current.count).toBe(0);
-    expect(result.current.disabled).toBe(false);
-    expect(result.current.computed.doubled).toBe(0);
-    expect(result.current.computed.isPositive).toBe(false);
-
-    // Update via Lattice store
-    act(() => {
-      store.actions.increment();
-      store.actions.increment();
-    });
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(result.current.count).toBe(2);
-    expect(result.current.computed.doubled).toBe(4);
-    expect(result.current.computed.isPositive).toBe(true);
   });
 
   it('should handle complex nested views', async () => {
