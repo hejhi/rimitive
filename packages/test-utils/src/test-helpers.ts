@@ -202,11 +202,11 @@ if (import.meta.vitest) {
           increment: () => set({ count: get().count + 1 }),
         }));
 
-        const actions = createSlice(model, (m) => ({
+        const actions = createSlice(model, (m, _api) => ({
           increment: m.increment,
         }));
 
-        const counterView = createSlice(model, (m) => ({
+        const counterView = createSlice(model, (m, _api) => ({
           value: m.count,
           className: m.count > 5 ? 'high' : 'low',
         }));

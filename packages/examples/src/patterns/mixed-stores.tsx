@@ -28,7 +28,7 @@ function UserProfileWidget() {
   const actions = userStore.actions;
 
   return (
-    <div {...profile}>
+    <div {...(profile as React.HTMLAttributes<HTMLDivElement>)}>
       <button onClick={() => actions.logout()}>Logout</button>
     </div>
   );

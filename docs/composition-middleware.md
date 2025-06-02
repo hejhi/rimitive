@@ -64,7 +64,7 @@ const buttonSlice = createSlice(
     className: 'btn-default', 
     disabled: false 
   })(
-    (m) => ({
+    (m, api) => ({
       onClick: m.handleClick,
       label: m.buttonText
     })
@@ -95,7 +95,7 @@ const adminPanelSlice = createSlice(
   )(
     compose(
       { adminData, adminActions },
-      (m, { adminData, adminActions }) => ({
+      (m, { adminData, adminActions }, api) => ({
         stats: adminData.stats,
         onRefresh: adminActions.refresh
       })
@@ -128,7 +128,7 @@ function memoized<T>(selector: Selector<T>): Selector<T> {
 const expensiveSlice = createSlice(
   model,
   memoized(
-    (m) => ({
+    (m, api) => ({
       // Expensive computation
       sortedItems: [...m.items].sort((a, b) => b.priority - a.priority),
       stats: calculateComplexStats(m.items)
@@ -167,7 +167,7 @@ const slice = createSlice(
   )(
     compose(
       { actions },
-      (m, { actions }) => ({
+      (m, { actions }, api) => ({
         onClick: actions.increment,
         count: m.count
       })
@@ -309,7 +309,7 @@ const userSlice = createSlice(
     (user) => user.id && user.name,
     { id: 0, name: 'Unknown', role: 'guest' }
   )(
-    (m) => m.currentUser
+    (m, api) => m.currentUser
   )
 );
 ```
@@ -331,7 +331,7 @@ const slice = createSlice(
     itemCount: items.length,
     hasItems: items.length > 0
   }))(
-    (m) => ({
+    (m, api) => ({
       items: m.todos,
       filter: m.filter
     })

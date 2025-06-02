@@ -25,12 +25,12 @@ type ResolveDeps<Deps extends Record<string, SliceFactory<any, any>>> = {
  *
  * @example
  * ```typescript
- * const actions = createSlice(model, (m) => ({
+ * const actions = createSlice(model, (m, api) => ({
  *   increment: m.increment,
  *   decrement: m.decrement
  * }));
  *
- * const userSlice = createSlice(model, (m) => ({
+ * const userSlice = createSlice(model, (m, api) => ({
  *   name: m.user.name,
  *   email: m.user.email
  * }));
@@ -40,7 +40,7 @@ type ResolveDeps<Deps extends Record<string, SliceFactory<any, any>>> = {
  *   model,
  *   compose(
  *     { actions, userSlice },
- *     (m, { actions, userSlice }) => ({
+ *     (m, { actions, userSlice }, api) => ({
  *       onClick: actions.increment,
  *       userName: userSlice.name,
  *       disabled: m.disabled

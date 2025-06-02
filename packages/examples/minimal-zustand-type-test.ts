@@ -11,14 +11,14 @@ const minimalCounter = createComponent(() => {
     increment: () => set({ count: get().count + 1 }),
   }));
 
-  const countView = createSlice(model, (m) => ({
+  const countView = createSlice(model, (m, api) => ({
     value: m.count,
     onClick: m.increment,
   }));
 
   return {
     model,
-    actions: createSlice(model, (m) => ({
+    actions: createSlice(model, (m, api) => ({
       increment: m.increment,
     })),
     views: {

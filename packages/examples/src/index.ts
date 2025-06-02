@@ -14,6 +14,10 @@ export * from './slices';
 export { MixedStoresApp } from './patterns/mixed-stores';
 export { default as DashboardPage } from './patterns/ssr';
 export { MigrationDashboard } from './patterns/migration';
+export { APIBasicsExample } from './patterns/api-basics';
+export { DebuggingExample } from './patterns/api-logging';
+export { MiddlewareCompositionExample } from './patterns/middleware-composition';
+export { AdapterAPIExample } from './patterns/adapter-api-zustand';
 
 // Example of how you might structure a real app
 export const ExampleStructure = `

@@ -1,10 +1,11 @@
 /**
- * @fileoverview Complete Todo App Example
+ * @fileoverview Complete Todo App Example - Updated for API Parameter
  *
  * This demonstrates building a full application with Lattice, showing:
  * - Multiple related components working together
  * - Complex state interactions
  * - Real-world UI patterns
+ * - API parameter usage for debugging and performance tracking
  */
 
 import React from 'react';
@@ -17,6 +18,9 @@ import {
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useViews, useActions } from '@lattice/adapter-zustand/react';
 import './todo-app.css';
+
+// For browser compatibility with process.env
+declare const process: { env: { NODE_ENV: string } } | undefined;
 
 // ============================================================================
 // Todo App Behavior Specification
@@ -117,73 +121,95 @@ const todoAppComponent = createComponent(() => {
   }));
 
   // Actions slice
-  const actions = createSlice(model, (m) => ({
-    addTodo: m.addTodo,
+  const actions = createSlice(model, (m, api) => ({
+    addTodo: (text: string) => {
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+        console.log('[TodoApp] Adding todo:', text);
+      }
+      m.addTodo(text);
+    },
     toggleTodo: m.toggleTodo,
     deleteTodo: m.deleteTodo,
     editTodo: m.editTodo,
-    clearCompleted: m.clearCompleted,
+    clearCompleted: () => {
+      // Example: Log clear action with current state
+      const state = api.getState();
+      const completedCount = state.todos.filter(t => t.completed).length;
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+        console.log('[TodoApp] Clearing completed todos:', {
+          completedCount,
+          totalBeforeClear: state.todos.length,
+        });
+      }
+      m.clearCompleted();
+    },
     toggleAll: m.toggleAll,
     setFilter: m.setFilter,
     setSearchQuery: m.setSearchQuery,
     setSortBy: m.setSortBy,
   }));
 
-  // State slices
-  const todosSlice = createSlice(model, (m) => ({
-    todos: m.todos,
-    filter: m.filter,
-    searchQuery: m.searchQuery,
-    sortBy: m.sortBy,
-  }));
+  // Computed views that process todos
+  const todosProcessor = createSlice(model, (m, _api) => {
+    // Return an object with computed values
+    const filtered = (() => {
+      let result = m.todos;
 
-  const uiSlice = createSlice(model, (m) => ({
-    filter: m.filter,
-    searchQuery: m.searchQuery,
-    sortBy: m.sortBy,
-  }));
-
-  // Computed todos view
-  const filteredTodosView = todosSlice((state) => {
-    let filtered = state.todos;
-
-    // Apply search filter
-    if (state.searchQuery) {
-      filtered = filtered.filter((todo) =>
-        todo.text.toLowerCase().includes(state.searchQuery)
-      );
-    }
-
-    // Apply status filter
-    if (state.filter !== 'all') {
-      filtered = filtered.filter((todo) =>
-        state.filter === 'active' ? !todo.completed : todo.completed
-      );
-    }
-
-    // Apply sorting
-    filtered = [...filtered].sort((a, b) => {
-      if (state.sortBy === 'alphabetical') {
-        return a.text.localeCompare(b.text);
+      // Log filtering operations in development
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+        console.log('[TodoApp] Processing todos:', {
+          totalCount: m.todos.length,
+          filter: m.filter,
+          searchQuery: m.searchQuery,
+          sortBy: m.sortBy,
+        });
       }
-      return b.createdAt - a.createdAt; // Newest first
-    });
 
-    return filtered;
-  });
+      // Apply search filter
+      if (m.searchQuery) {
+        result = result.filter((todo) =>
+          todo.text.toLowerCase().includes(m.searchQuery)
+        );
+      }
 
-  // Stats view
-  const statsView = todosSlice((state) => {
-    const total = state.todos.length;
-    const completed = state.todos.filter((t) => t.completed).length;
+      // Apply status filter
+      if (m.filter !== 'all') {
+        result = result.filter((todo) =>
+          m.filter === 'active' ? !todo.completed : todo.completed
+        );
+      }
+
+      // Apply sorting
+      result = [...result].sort((a, b) => {
+        if (m.sortBy === 'alphabetical') {
+          return a.text.localeCompare(b.text);
+        }
+        return b.createdAt - a.createdAt; // Newest first
+      });
+
+      return result;
+    })();
+
+    // Calculate stats with performance tracking
+    const startTime = performance.now();
+    const total = m.todos.length;
+    const completed = m.todos.filter((t) => t.completed).length;
     const active = total - completed;
 
+    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+      const endTime = performance.now();
+      console.log(`[TodoApp] Stats calculation took ${(endTime - startTime).toFixed(2)}ms`);
+    }
+
     return {
-      total,
-      active,
-      completed,
-      hasCompleted: completed > 0,
-      allCompleted: total > 0 && active === 0,
+      filteredTodos: filtered,
+      stats: {
+        total,
+        active,
+        completed,
+        hasCompleted: completed > 0,
+        allCompleted: total > 0 && active === 0,
+      },
     };
   });
 
@@ -191,10 +217,10 @@ const todoAppComponent = createComponent(() => {
   const createFilterButton = (filterType: 'all' | 'active' | 'completed') =>
     createSlice(
       model,
-      compose({ actions, ui: uiSlice }, (_, { actions, ui }) => ({
+      compose({ actions, processor: todosProcessor }, (m, { actions }, _api) => ({
         onClick: () => actions.setFilter(filterType),
-        className: ui.filter === filterType ? 'selected' : '',
-        'aria-pressed': ui.filter === filterType,
+        className: m.filter === filterType ? 'selected' : '',
+        'aria-pressed': m.filter === filterType,
         children: filterType.charAt(0).toUpperCase() + filterType.slice(1),
       }))
     );
@@ -203,31 +229,31 @@ const todoAppComponent = createComponent(() => {
     model,
     actions,
     views: {
-      filteredTodos: filteredTodosView,
-      stats: statsView,
+      // Direct access to processor results
+      processor: todosProcessor,
 
-      // Individual filter buttons
-      filterButtonAll: createFilterButton('all'),
-      filterButtonActive: createFilterButton('active'),
-      filterButtonCompleted: createFilterButton('completed'),
+      // Individual filter buttons - wrapped in functions as required by views
+      filterButtonAll: () => createFilterButton('all'),
+      filterButtonActive: () => createFilterButton('active'),
+      filterButtonCompleted: () => createFilterButton('completed'),
 
       // Clear button
-      clearButton: createSlice(
+      clearButton: () => createSlice(
         model,
-        compose({ actions, stats: statsView }, (_, { actions, stats }) => ({
-          onClick: actions.clearCompleted,
-          disabled: !stats.hasCompleted,
-          children: `Clear completed (${stats.completed})`,
+        compose({ actions, processor: todosProcessor }, (_, { actions, processor }, _api) => ({
+          onClick: () => actions.clearCompleted(),
+          disabled: !processor.stats.hasCompleted,
+          children: `Clear completed (${processor.stats.completed})`,
         }))
       ),
 
       // Toggle all checkbox
-      toggleAllCheckbox: createSlice(
+      toggleAllCheckbox: () => createSlice(
         model,
-        compose({ actions, stats: statsView }, (_, { actions, stats }) => ({
-          onChange: actions.toggleAll,
-          checked: stats.allCompleted,
-          disabled: stats.total === 0,
+        compose({ actions, processor: todosProcessor }, (_, { actions, processor }, _api) => ({
+          onChange: () => actions.toggleAll(),
+          checked: processor.stats.allCompleted,
+          disabled: processor.stats.total === 0,
           'aria-label': 'Toggle all todos',
         }))
       ),
@@ -293,7 +319,7 @@ function TodoItem({ todo }: { todo: TodoItemType }) {
 }
 
 function TodoList() {
-  const todos = useViews(todoStore, (views) => views.filteredTodos());
+  const todos = useViews(todoStore, (views) => views.processor().filteredTodos);
 
   if (!todos || todos.length === 0) {
     return <p className="empty">No todos found</p>;
@@ -343,16 +369,16 @@ function TodoFilters() {
 
   return (
     <div className="filters">
-      <button {...allButton} />
-      <button {...activeButton} />
-      <button {...completedButton} />
+      <button {...(allButton as React.ButtonHTMLAttributes<HTMLButtonElement>)} />
+      <button {...(activeButton as React.ButtonHTMLAttributes<HTMLButtonElement>)} />
+      <button {...(completedButton as React.ButtonHTMLAttributes<HTMLButtonElement>)} />
     </div>
   );
 }
 
 function TodoStats() {
   const { stats, clearButton, toggleAll } = useViews(todoStore, (views) => ({
-    stats: views.stats(),
+    stats: views.processor().stats,
     clearButton: views.clearButton(),
     toggleAll: views.toggleAllCheckbox(),
   }));
@@ -364,7 +390,7 @@ function TodoStats() {
         <span>{stats.active} items left</span>
       </label>
 
-      <button {...clearButton} />
+      <button {...(clearButton as React.ButtonHTMLAttributes<HTMLButtonElement>)} />
     </div>
   );
 }
