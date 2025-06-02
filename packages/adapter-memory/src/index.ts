@@ -12,10 +12,7 @@
  * - Read-only slices with proper error messages
  */
 
-import type { 
-  ComponentSpec, 
-  AdapterResult
-} from '@lattice/core';
+import type { ComponentSpec, AdapterResult, SliceFactory } from '@lattice/core';
 import { isSliceFactory } from '@lattice/core';
 
 // ============================================================================
@@ -46,12 +43,11 @@ function createStore<T>(initial: T): Store<T> {
   return {
     get: () => state,
     set: (value: T | ((prev: T) => T)) => {
-      const newValue = typeof value === 'function' 
-        ? (value as (prev: T) => T)(state) 
-        : value;
+      const newValue =
+        typeof value === 'function' ? (value as (prev: T) => T)(state) : value;
       if (newValue !== state) {
         state = newValue;
-        listeners.forEach(listener => listener(state));
+        listeners.forEach((listener) => listener(state));
       }
     },
     subscribe: (listener: (value: T) => void) => {
@@ -63,7 +59,6 @@ function createStore<T>(initial: T): Store<T> {
     },
   };
 }
-
 
 /**
  * Creates a read-only slice that derives state from another store
@@ -78,11 +73,11 @@ function createSlice<T, U>(
   // Subscribe to parent store
   const unsubscribe = store.subscribe((state) => {
     const newValue = selector(state);
-    
+
     // Only notify if value changed
     if (!cache || cache.value !== newValue) {
       cache = { value: newValue, state };
-      listeners.forEach(listener => listener(newValue));
+      listeners.forEach((listener) => listener(newValue));
     }
   });
 
@@ -96,7 +91,9 @@ function createSlice<T, U>(
       return cache.value;
     },
     set: () => {
-      throw new Error('Cannot set value on a slice - slices are read-only projections');
+      throw new Error(
+        'Cannot set value on a slice - slices are read-only projections'
+      );
     },
     subscribe: (listener: (value: U) => void) => {
       listeners.add(listener);
@@ -116,12 +113,13 @@ function createSlice<T, U>(
 /**
  * The result returned by the memory adapter
  */
-export interface MemoryAdapterResult<Model, Actions, Views> extends AdapterResult<Model, Actions, Views> {
+export interface MemoryAdapterResult<Model, Actions, Views>
+  extends AdapterResult<Model, Actions, Views> {
   /**
    * Get the current state (for testing)
    */
   getState: () => Model;
-  
+
   /**
    * Destroy all stores and clean up subscriptions
    */
@@ -140,57 +138,60 @@ function executeComponent<Model, Actions, Views>(
 ): MemoryAdapterResult<Model, Actions, Views> {
   // Create model store
   const modelStore = createStore<Model>({} as Model);
-  
+
   // Execute model factory with store tools
   const model = spec.model({
     get: () => modelStore.get(),
     set: (updates) => {
       const current = modelStore.get();
       modelStore.set({ ...current, ...updates });
-    }
+    },
   });
-  
+
   // Initialize model store with factory result
   modelStore.set(model);
-  
+
   // Helper to execute a slice factory
-  const executeSliceFactory = <T>(factory: any, state: Model): T => {
-    const rawResult = factory(state);
-    
+  const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
+    const state = modelStore.get();
+    let rawResult: any = factory(state);
+
     // If the result is itself a slice factory, execute it
     if (isSliceFactory(rawResult)) {
-      return executeSliceFactory(rawResult, state);
+      rawResult = executeSliceFactory(rawResult);
     }
-    
+
     return rawResult;
   };
-  
+
   // Execute actions slice
-  const actionsStore = createSlice(
-    modelStore, 
-    (state) => executeSliceFactory<Actions>(spec.actions, state)
+  const actionsStore = createSlice(modelStore, () =>
+    executeSliceFactory(spec.actions)
   );
-  
+
   // Process views
   const views: any = {};
   const viewStores: Store<any>[] = [];
-  
-  for (const [key, view] of Object.entries(spec.views as Record<string, unknown>)) {
+
+  for (const [key, view] of Object.entries(
+    spec.views as Record<string, unknown>
+  )) {
     if (isSliceFactory(view)) {
       // Static view: slice factory
-      const viewStore = createSlice(
-        modelStore, 
-        (state) => executeSliceFactory(view, state)
+      const viewStore = createSlice(modelStore, () =>
+        executeSliceFactory(view)
       );
       viewStores.push(viewStore);
-      
+
       // Wrap as function that returns current value
       // Always return a new object to ensure fresh references
       views[key] = () => {
         const value = viewStore.get();
         // Return a shallow copy to ensure different object references
-        return typeof value === 'object' && value !== null 
-          ? Array.isArray(value) ? [...value] : { ...value }
+        return typeof value === 'object' && value !== null
+          ? Array.isArray(value)
+            ? [...value]
+            : { ...value }
           : value;
       };
     } else if (typeof view === 'function') {
@@ -198,7 +199,7 @@ function executeComponent<Model, Actions, Views>(
       views[key] = view;
     }
   }
-  
+
   return {
     actions: actionsStore.get(),
     views,
@@ -206,8 +207,8 @@ function executeComponent<Model, Actions, Views>(
     destroy: () => {
       modelStore.destroy?.();
       actionsStore.destroy?.();
-      viewStores.forEach(store => store.destroy?.());
-    }
+      viewStores.forEach((store) => store.destroy?.());
+    },
   };
 }
 
@@ -219,12 +220,15 @@ function executeComponent<Model, Actions, Views>(
  * Creates a memory adapter for Lattice components
  */
 export function createMemoryAdapter<Model, Actions, Views>(
-  componentOrFactory: ComponentSpec<Model, Actions, Views> | (() => ComponentSpec<Model, Actions, Views>)
+  componentOrFactory:
+    | ComponentSpec<Model, Actions, Views>
+    | (() => ComponentSpec<Model, Actions, Views>)
 ): MemoryAdapterResult<Model, Actions, Views> {
-  const spec = typeof componentOrFactory === 'function' 
-    ? componentOrFactory() 
-    : componentOrFactory;
-    
+  const spec =
+    typeof componentOrFactory === 'function'
+      ? componentOrFactory()
+      : componentOrFactory;
+
   return executeComponent(spec);
 }
 
@@ -234,7 +238,9 @@ export function createMemoryAdapter<Model, Actions, Views>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createComponent, createModel, createSlice, compose } = await import('@lattice/core');
+  const { createComponent, createModel, createSlice, compose } = await import(
+    '@lattice/core'
+  );
 
   describe('Memory Adapter', () => {
     it('should execute a basic component', () => {
@@ -242,16 +248,16 @@ if (import.meta.vitest) {
         const model = createModel<{ count: number; increment: () => void }>(
           ({ set, get }) => ({
             count: 0,
-            increment: () => set({ count: get().count + 1 })
+            increment: () => set({ count: get().count + 1 }),
           })
         );
 
-        const actions = createSlice(model, m => ({
-          increment: m.increment
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
         }));
 
         const views = {
-          count: createSlice(model, m => ({ value: m.count }))
+          count: createSlice(model, (m) => ({ value: m.count })),
         };
 
         return { model, actions, views };
@@ -275,32 +281,35 @@ if (import.meta.vitest) {
           theme: string;
         }>(() => ({
           user: { name: 'Alice' },
-          theme: 'light'
+          theme: 'light',
         }));
 
-        const userSlice = createSlice(model, m => ({
-          name: m.user.name
+        const userSlice = createSlice(model, (m) => ({
+          name: m.user.name,
         }));
 
-        const themeSlice = createSlice(model, m => ({
-          theme: m.theme
+        const themeSlice = createSlice(model, (m) => ({
+          theme: m.theme,
         }));
 
         const headerSlice = createSlice(
           model,
-          compose({ userSlice, themeSlice }, (_, { userSlice, themeSlice }) => ({
-            userName: userSlice.name,
-            theme: themeSlice.theme,
-            title: `${userSlice.name} - ${themeSlice.theme}`
-          }))
+          compose(
+            { userSlice, themeSlice },
+            (_, { userSlice, themeSlice }) => ({
+              userName: userSlice.name,
+              theme: themeSlice.theme,
+              title: `${userSlice.name} - ${themeSlice.theme}`,
+            })
+          )
         );
 
         return {
           model,
           actions: createSlice(model, () => ({})),
           views: {
-            header: headerSlice
-          }
+            header: headerSlice,
+          },
         };
       });
 
