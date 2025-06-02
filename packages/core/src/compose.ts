@@ -357,11 +357,7 @@ if (import.meta.vitest) {
       // Intermediate composition
       const abSlice = createSlice(
         model,
-        compose<
-          { a: number; b: number; c: number; op: 'add' | 'multiply' },
-          { a: typeof aSlice; b: typeof bSlice; op: typeof opSlice },
-          { result: number }
-        >({ a: aSlice, b: bSlice, op: opSlice }, (_, { a, b, op }) => ({
+        compose({ a: aSlice, b: bSlice, op: opSlice }, (_, { a, b, op }) => ({
           result:
             op.operation === 'add' ? a.value + b.value : a.value * b.value,
         }))
