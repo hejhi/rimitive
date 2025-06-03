@@ -35,10 +35,8 @@ interface AdapterAPI<Model> {
   // Execute a slice and get its current value
   executeSlice: <T>(sliceFactory: SliceFactory<Model, T>) => T;
   
-  // Get the current model state
-  getState: () => Model;
-  
-  // Optional extensions that adapters might provide
+  // Note: getState() has been removed - use the model parameter instead
+  // Optional extensions that adapters might provide (not part of core API)
   log?: (message: string, data?: any) => void;
   metrics?: {
     recordTiming: (name: string, duration: number) => void;
@@ -134,8 +132,7 @@ Adapters must detect computed views and inject the API:
 ```typescript
 // In adapter implementation
 const api: AdapterAPI<Model> = {
-  executeSlice: (sliceFactory) => executeSliceFactory(sliceFactory),
-  getState: () => store.getState()
+  executeSlice: (sliceFactory) => executeSliceFactory(sliceFactory)
 };
 
 // Process views
@@ -431,8 +428,7 @@ function withLogging<Model>(api: AdapterAPI<Model>): AdapterAPI<Model> {
 
 // In adapter implementation
 const baseApi: AdapterAPI<Model> = {
-  executeSlice: (sliceFactory) => executeSliceFactory(sliceFactory),
-  getState: () => store.getState()
+  executeSlice: (sliceFactory) => executeSliceFactory(sliceFactory)
 };
 
 // Apply middleware
