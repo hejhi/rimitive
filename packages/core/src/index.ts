@@ -10,14 +10,14 @@ export interface ModelTools<T> {
  * Base API interface that all adapters must provide to slices.
  * Adapters should NOT extend this interface with adapter-specific functionality
  * to maintain component portability across adapters.
- * 
+ *
  * @template Model - The model type for type-safe state access
  */
 export interface AdapterAPI<Model> {
   /**
    * Execute any slice factory and get its result.
    * This allows slices to compose and call other slices dynamically.
-   * 
+   *
    * @param slice - The slice factory to execute
    * @returns The result of executing the slice with current state
    */
@@ -29,7 +29,7 @@ export type ModelFactory<T = unknown> = (tools: ModelTools<T>) => T;
 /**
  * A factory function that creates slices from the model state.
  * Requires AdapterAPI parameter for slice execution.
- * 
+ *
  * @template Model - The model type
  * @template Slice - The slice return type
  */
@@ -144,13 +144,13 @@ if (import.meta.vitest) {
 
   it('SliceFactory should execute selectors', () => {
     const model = createModel<{ count: number }>(() => ({ count: 5 }));
-    const slice = createSlice(model, (m, _api) => ({ value: m.count }));
+    const slice = createSlice(model, (m) => ({ value: m.count }));
 
     // Mock API
     const mockApi: AdapterAPI<{ count: number }> = {
       executeSlice: <T>(_slice: SliceFactory<{ count: number }, T>): T => {
         return {} as T;
-      }
+      },
     };
 
     // Direct execution with required API
@@ -160,13 +160,15 @@ if (import.meta.vitest) {
 
   it('SliceFactory should maintain type safety', () => {
     const model = createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 }));
-    const pointSlice = createSlice(model, (m, _api) => ({ x: m.x, y: m.y }));
+    const pointSlice = createSlice(model, (m) => ({ x: m.x, y: m.y }));
 
     // Mock API
     const mockApi: AdapterAPI<{ x: number; y: number }> = {
-      executeSlice: <T>(_slice: SliceFactory<{ x: number; y: number }, T>): T => {
+      executeSlice: <T>(
+        _slice: SliceFactory<{ x: number; y: number }, T>
+      ): T => {
         return {} as T;
-      }
+      },
     };
 
     const result = pointSlice({ x: 3, y: 4 }, mockApi);
@@ -175,12 +177,12 @@ if (import.meta.vitest) {
 
   it('SliceFactory should support required api parameter', () => {
     const model = createModel<{ count: number }>(() => ({ count: 5 }));
-    const sliceWithApi = createSlice(model, (m, _api) => {
+    const sliceWithApi = createSlice(model, (m) => {
       // API is now always available
-      return { 
-        value: m.count, 
+      return {
+        value: m.count,
         hasApi: true,
-        stateFromModel: m.count
+        stateFromModel: m.count,
       };
     });
 
@@ -188,14 +190,14 @@ if (import.meta.vitest) {
     const mockApi: AdapterAPI<{ count: number }> = {
       executeSlice: <T>(_slice: SliceFactory<{ count: number }, T>): T => {
         return {} as T;
-      }
+      },
     };
-    
+
     const result = sliceWithApi({ count: 10 }, mockApi);
-    expect(result).toEqual({ 
-      value: 10, 
+    expect(result).toEqual({
+      value: 10,
       hasApi: true,
-      stateFromModel: 10
+      stateFromModel: 10,
     });
   });
 }

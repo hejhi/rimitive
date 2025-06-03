@@ -53,13 +53,13 @@ export const userComponent = createComponent(() => {
     },
   }));
 
-  const actions = createSlice(model, (m, _api) => ({
+  const actions = createSlice(model, (m) => ({
     login: m.login,
     logout: m.logout,
     updateProfile: m.updateProfile,
   }));
 
-  createSlice(model, (m, _api) => ({
+  createSlice(model, (m) => ({
     user: m.user,
     isLoggedIn: m.user !== null,
     isLoading: m.isLoading,
@@ -73,14 +73,17 @@ export const userComponent = createComponent(() => {
       loginButton: createSlice(model, (m, api) => ({
         onClick: async () => {
           // Example: Log login attempts
-          console.log('[User] Login attempt for:', api.getState().user?.email || 'unknown');
+          console.log(
+            '[User] Login attempt for:',
+            api.getState().user?.email || 'unknown'
+          );
           await m.login('user@example.com', 'password');
         },
         disabled: m.isLoading,
         children: m.isLoading ? 'Logging in...' : 'Login',
       })),
 
-      userProfile: createSlice(model, (m, _api) => ({
+      userProfile: createSlice(model, (m) => ({
         // Example: Use API to access additional context
         'data-last-update': new Date().toISOString(),
         className: m.user !== null ? 'profile-active' : 'profile-inactive',
@@ -138,14 +141,14 @@ export const cartComponent = createComponent(() => {
     clear: () => set({ items: [] }),
   }));
 
-  const actions = createSlice(model, (m, _api) => ({
+  const actions = createSlice(model, (m) => ({
     addItem: m.addItem,
     removeItem: m.removeItem,
     updateQuantity: m.updateQuantity,
     clear: m.clear,
   }));
 
-  const cartSlice = createSlice(model, (m, _api) => ({
+  const cartSlice = createSlice(model, (m) => ({
     items: m.items,
     itemCount: m.items.reduce((sum, item) => sum + item.quantity, 0),
     total: m.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -155,7 +158,7 @@ export const cartComponent = createComponent(() => {
   const cartSummary = createSlice(model, (_m, api) => {
     // Example: Use API to access computed values
     const data = api.executeSlice(cartSlice);
-    
+
     return {
       className: data.itemCount === 0 ? 'cart-empty' : 'cart-has-items',
       'data-item-count': data.itemCount,
@@ -197,13 +200,13 @@ export const themeComponent = createComponent(() => {
     toggleReducedMotion: () => set({ reducedMotion: !get().reducedMotion }),
   }));
 
-  const actions = createSlice(model, (m, _api) => ({
+  const actions = createSlice(model, (m) => ({
     setTheme: m.setTheme,
     setFontSize: m.setFontSize,
     toggleReducedMotion: m.toggleReducedMotion,
   }));
 
-  createSlice(model, (m, _api) => ({
+  createSlice(model, (m) => ({
     theme: m.theme,
     fontSize: m.fontSize,
     reducedMotion: m.reducedMotion,
@@ -293,19 +296,19 @@ export const dashboardComponent = createComponent(() => {
     model,
     compose(
       {
-        userSlice: createSlice(model, (m, _api) => ({
+        userSlice: createSlice(model, (m) => ({
           user: m.user,
           isLoading: m.isLoading,
           error: m.error,
         })),
-        cartSlice: createSlice(model, (m, _api) => ({ items: m.items })),
-        themeSlice: createSlice(model, (m, _api) => ({
+        cartSlice: createSlice(model, (m) => ({ items: m.items })),
+        themeSlice: createSlice(model, (m) => ({
           theme: m.theme,
           fontSize: m.fontSize,
           reducedMotion: m.reducedMotion,
         })),
       },
-      (m, { userSlice, cartSlice, themeSlice }, _api) => ({
+      (m, { userSlice, cartSlice, themeSlice }) => ({
         // Example: Use API for cross-component data access
         isLoggedIn: userSlice.user !== null,
         userName: userSlice.user?.name || 'Guest',
@@ -319,7 +322,7 @@ export const dashboardComponent = createComponent(() => {
 
   return {
     model,
-    actions: createSlice(model, (m, _api) => ({
+    actions: createSlice(model, (m) => ({
       // User actions
       login: m.login,
       logout: m.logout,
@@ -333,17 +336,17 @@ export const dashboardComponent = createComponent(() => {
       setActiveTab: m.setActiveTab,
     })),
     views: {
-      header: createSlice(model, (_m, _api) => {
-        const dashboardData = _api.executeSlice(dashboardSlice);
+      header: createSlice(model, (_m, api) => {
+        const dashboardData = api.executeSlice(dashboardSlice);
         return {
-        // Example: Use API to include real-time data
-        className: `header ${dashboardData.currentTheme}`,
-        'data-sidebar-open': dashboardData.sidebarOpen,
-        children: `${dashboardData.userName} - ${dashboardData.cartItemCount} items in cart`,
+          // Example: Use API to include real-time data
+          className: `header ${dashboardData.currentTheme}`,
+          'data-sidebar-open': dashboardData.sidebarOpen,
+          children: `${dashboardData.userName} - ${dashboardData.cartItemCount} items in cart`,
         };
       }),
 
-      navigation: createSlice(model, (m, _api) => ({
+      navigation: createSlice(model, (m) => ({
         // Example: Use API to track navigation events
         tabs: ['overview', 'orders', 'settings'].map((tab) => ({
           name: tab,

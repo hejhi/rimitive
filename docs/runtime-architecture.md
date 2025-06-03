@@ -132,7 +132,7 @@ createReduxAdapter(component, (createStore, reducer) =>
 Already implemented - slices receive the API parameter:
 
 ```typescript
-const actions = createSlice(model, (m, _api) => ({
+const actions = createSlice(model, (m) => ({
   logAndIncrement: () => {
     console.log('Current count:', m.count);
     m.increment();

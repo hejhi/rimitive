@@ -244,7 +244,7 @@ export const middlewareComponent = createComponent(() => {
   const filteredItemsSlice = withErrorBoundary(
     withPerformanceMonitoring(
       withCaching(
-        createSlice(model, (m, _api) => {
+        createSlice(model, (m) => {
           let items = m.items;
 
           // Apply search filter
@@ -319,7 +319,7 @@ export const middlewareComponent = createComponent(() => {
   );
 
   // Actions with middleware
-  const actions = createSlice(model, (m, _api) => ({
+  const actions = createSlice(model, (m) => ({
     addItem: (item: Parameters<typeof m.addItem>[0]) => {
       // Validate item before adding
       if (!item.name || item.price < 0) {

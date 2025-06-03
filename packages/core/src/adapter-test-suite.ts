@@ -1,6 +1,6 @@
 /**
  * @fileoverview Shared test suite for Lattice adapters
- * 
+ *
  * This module provides a comprehensive test suite that all Lattice adapters
  * should pass to ensure consistent behavior across different implementations.
  */
@@ -11,7 +11,7 @@ import { createComponent, createModel, createSlice, compose } from './index';
 
 /**
  * Creates a comprehensive test suite for a Lattice adapter
- * 
+ *
  * @param adapterName - Name of the adapter being tested
  * @param createAdapter - The adapter factory function
  */
@@ -31,12 +31,12 @@ export function createAdapterTestSuite(
             increment: () => set({ count: get().count + 1 }),
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             increment: m.increment,
           }));
 
           const views = {
-            counter: createSlice(model, (m, _api) => ({
+            counter: createSlice(model, (m) => ({
               value: m.count,
             })),
           };
@@ -45,15 +45,15 @@ export function createAdapterTestSuite(
         });
 
         const adapter = createAdapter(component());
-        
+
         // Actions should be directly accessible
         expect(typeof adapter.actions.increment).toBe('function');
-        
+
         // Views should be functions that return current state
         expect(typeof adapter.views.counter).toBe('function');
         const counterView = adapter.views.counter();
         expect(counterView.value).toBe(0);
-        
+
         // Actions should update state
         adapter.actions.increment();
         const updatedView = adapter.views.counter();
@@ -69,15 +69,16 @@ export function createAdapterTestSuite(
           }>(({ set }) => ({
             firstName: 'John',
             lastName: 'Doe',
-            setName: (first: string, last: string) => set({ firstName: first, lastName: last }),
+            setName: (first: string, last: string) =>
+              set({ firstName: first, lastName: last }),
           }));
 
-          const nameSlice = createSlice(model, (m, _api) => ({
+          const nameSlice = createSlice(model, (m) => ({
             first: m.firstName,
             last: m.lastName,
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             setName: m.setName,
           }));
 
@@ -101,24 +102,24 @@ export function createAdapterTestSuite(
         });
 
         const adapter = createAdapter(component());
-        
+
         // Static view
         const nameView = adapter.views.name();
         expect(nameView.first).toBe('John');
         expect(nameView.last).toBe('Doe');
-        
+
         // Computed view
         const fullNameView = adapter.views.fullName();
         expect(fullNameView.display).toBe('John Doe');
         expect(fullNameView.initials).toBe('JD');
-        
+
         // Update and verify
         adapter.actions.setName('Jane', 'Smith');
-        
+
         const updatedName = adapter.views.name();
         expect(updatedName.first).toBe('Jane');
         expect(updatedName.last).toBe('Smith');
-        
+
         const updatedFullName = adapter.views.fullName();
         expect(updatedFullName.display).toBe('Jane Smith');
         expect(updatedFullName.initials).toBe('JS');
@@ -133,33 +134,37 @@ export function createAdapterTestSuite(
           }>(({ set, get }) => ({
             user: { name: 'Alice', role: 'admin' },
             theme: 'light',
-            toggleTheme: () => set({ theme: get().theme === 'light' ? 'dark' : 'light' }),
+            toggleTheme: () =>
+              set({ theme: get().theme === 'light' ? 'dark' : 'light' }),
           }));
 
-          const userSlice = createSlice(model, (m, _api) => ({
+          const userSlice = createSlice(model, (m) => ({
             name: m.user.name,
             role: m.user.role,
             isAdmin: m.user.role === 'admin',
           }));
 
-          const themeSlice = createSlice(model, (m, _api) => ({
+          const themeSlice = createSlice(model, (m) => ({
             theme: m.theme,
             isDark: m.theme === 'dark',
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             toggleTheme: m.toggleTheme,
           }));
 
           const headerSlice = createSlice(
             model,
-            compose({ userSlice, themeSlice, actions }, (_, { userSlice, themeSlice, actions }) => ({
-              userName: userSlice.name,
-              userRole: userSlice.role,
-              theme: themeSlice.theme,
-              onToggleTheme: actions.toggleTheme,
-              title: `${userSlice.name} - ${themeSlice.theme} mode`,
-            }))
+            compose(
+              { userSlice, themeSlice, actions },
+              (_, { userSlice, themeSlice, actions }) => ({
+                userName: userSlice.name,
+                userRole: userSlice.role,
+                theme: themeSlice.theme,
+                onToggleTheme: actions.toggleTheme,
+                title: `${userSlice.name} - ${themeSlice.theme} mode`,
+              })
+            )
           );
 
           const views = {
@@ -170,17 +175,17 @@ export function createAdapterTestSuite(
         });
 
         const adapter = createAdapter(component());
-        
+
         const headerView = adapter.views.header();
         expect(headerView.userName).toBe('Alice');
         expect(headerView.userRole).toBe('admin');
         expect(headerView.theme).toBe('light');
         expect(headerView.title).toBe('Alice - light mode');
         expect(typeof headerView.onToggleTheme).toBe('function');
-        
+
         // Toggle theme
         adapter.actions.toggleTheme();
-        
+
         const updatedHeader = adapter.views.header();
         expect(updatedHeader.theme).toBe('dark');
         expect(updatedHeader.title).toBe('Alice - dark mode');
@@ -197,35 +202,38 @@ export function createAdapterTestSuite(
               { id: 2, name: 'Item 2', selected: true },
               { id: 3, name: 'Item 3', selected: false },
             ],
-            toggleItem: (id: number) => set({
-              items: get().items.map(item =>
-                item.id === id ? { ...item, selected: !item.selected } : item
-              )
-            }),
+            toggleItem: (id: number) =>
+              set({
+                items: get().items.map((item) =>
+                  item.id === id ? { ...item, selected: !item.selected } : item
+                ),
+              }),
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             toggleItem: m.toggleItem,
           }));
 
-          const itemsSlice = createSlice(model, (m, _api) => ({
+          const itemsSlice = createSlice(model, (m) => ({
             items: m.items,
           }));
 
           // Parameterized view factory
-          const createItemView = (itemId: number) => 
+          const createItemView = (itemId: number) =>
             createSlice(model, (_m, api) => {
               const state = api.executeSlice(itemsSlice);
               const item = state.items.find((i) => i.id === itemId);
-              return item ? {
-                name: item.name,
-                selected: item.selected,
-                className: item.selected ? 'selected' : '',
-              } : {
-                name: 'Not found',
-                selected: false,
-                className: 'error',
-              };
+              return item
+                ? {
+                    name: item.name,
+                    selected: item.selected,
+                    className: item.selected ? 'selected' : '',
+                  }
+                : {
+                    name: 'Not found',
+                    selected: false,
+                    className: 'error',
+                  };
             });
 
           const selectedCountSlice = createSlice(model, (_m, api) => {
@@ -245,28 +253,28 @@ export function createAdapterTestSuite(
         });
 
         const adapter = createAdapter(component());
-        
+
         // Check initial state
         const item1 = adapter.views.item1();
         expect(item1.name).toBe('Item 1');
         expect(item1.selected).toBe(false);
         expect(item1.className).toBe('');
-        
+
         const item2 = adapter.views.item2();
         expect(item2.name).toBe('Item 2');
         expect(item2.selected).toBe(true);
         expect(item2.className).toBe('selected');
-        
+
         const count = adapter.views.selectedCount();
         expect(count.count).toBe(1);
-        
+
         // Toggle item 1
         adapter.actions.toggleItem(1);
-        
+
         const updatedItem1 = adapter.views.item1();
         expect(updatedItem1.selected).toBe(true);
         expect(updatedItem1.className).toBe('selected');
-        
+
         const updatedCount = adapter.views.selectedCount();
         expect(updatedCount.count).toBe(2);
       });
@@ -276,7 +284,7 @@ export function createAdapterTestSuite(
       it('should handle empty components', () => {
         const component = createComponent(() => {
           const model = createModel<{}>(() => ({}));
-          const actions = createSlice(model, (_m, _api) => ({}));
+          const actions = createSlice(model, (_m) => ({}));
           const views = {};
           return { model, actions, views };
         });
@@ -294,7 +302,7 @@ export function createAdapterTestSuite(
             doSomething: () => set({}),
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             doSomething: m.doSomething,
           }));
 
@@ -320,31 +328,31 @@ export function createAdapterTestSuite(
             increment: () => set({ counter: get().counter + 1 }),
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             increment: m.increment,
           }));
 
           const views = {
-            count: createSlice(model, (m, _api) => ({ value: m.counter })),
+            count: createSlice(model, (m) => ({ value: m.counter })),
           };
 
           return { model, actions, views };
         });
 
         const adapter = createAdapter(component());
-        
+
         // Get initial view
         const view1 = adapter.views.count();
         expect(view1.value).toBe(0);
-        
+
         // Increment
         adapter.actions.increment();
-        
+
         // View should not be cached - should return fresh data
         const view2 = adapter.views.count();
         expect(view2.value).toBe(1);
         expect(view2).not.toBe(view1); // Different objects
-        
+
         // Call view again without state change
         const view3 = adapter.views.count();
         expect(view3.value).toBe(1);
@@ -361,11 +369,11 @@ export function createAdapterTestSuite(
             multiply: (factor: number) => set({ value: get().value * factor }),
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             multiply: m.multiply,
           }));
 
-          const valueSlice = createSlice(model, (m, _api) => ({
+          const valueSlice = createSlice(model, (m) => ({
             value: m.value,
           }));
 
@@ -395,15 +403,15 @@ export function createAdapterTestSuite(
         });
 
         const adapter = createAdapter(component());
-        
+
         // Check initial transforms
         expect(adapter.views.doubled().result).toBe(20);
         expect(adapter.views.tripled().result).toBe(30);
         expect(adapter.views.formatted().display).toBe('Value: 10');
-        
+
         // Update state
         adapter.actions.multiply(5);
-        
+
         // All transforms should reflect new state
         expect(adapter.views.doubled().result).toBe(100);
         expect(adapter.views.tripled().result).toBe(150);
@@ -424,31 +432,31 @@ export function createAdapterTestSuite(
             clearLog: () => set({ log: [] }),
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             addEntry: m.addEntry,
             clearLog: m.clearLog,
           }));
 
           const views = {
-            log: createSlice(model, (m, _api) => ({ entries: m.log })),
+            log: createSlice(model, (m) => ({ entries: m.log })),
           };
 
           return { model, actions, views };
         });
 
         const adapter = createAdapter(component());
-        
+
         // Add entries
         adapter.actions.addEntry('First');
         adapter.actions.addEntry('Second');
         adapter.actions.addEntry('Third');
-        
+
         let log = adapter.views.log();
         expect(log.entries).toEqual(['First', 'Second', 'Third']);
-        
+
         // Clear log
         adapter.actions.clearLog();
-        
+
         log = adapter.views.log();
         expect(log.entries).toEqual([]);
       });
@@ -473,31 +481,31 @@ export function createAdapterTestSuite(
             },
           }));
 
-          const actions = createSlice(model, (m, _api) => ({
+          const actions = createSlice(model, (m) => ({
             setX: m.setX,
             setY: m.setY,
             setPoint: m.setPoint,
           }));
 
           const views = {
-            point: createSlice(model, (m, _api) => ({ x: m.x, y: m.y })),
+            point: createSlice(model, (m) => ({ x: m.x, y: m.y })),
           };
 
           return { model, actions, views };
         });
 
         const adapter = createAdapter(component());
-        
+
         // Set individual coordinates
         adapter.actions.setX(5);
         adapter.actions.setY(10);
-        
+
         let point = adapter.views.point();
         expect(point).toEqual({ x: 5, y: 10 });
-        
+
         // Set both at once
         adapter.actions.setPoint(20, 30);
-        
+
         point = adapter.views.point();
         expect(point).toEqual({ x: 20, y: 30 });
       });

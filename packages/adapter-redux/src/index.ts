@@ -201,12 +201,12 @@ export function createReduxAdapter<Model, Actions, Views>(
       (views as Record<string, unknown>)[key] = (...args: unknown[]) => {
         // Call the view function with user args + api as last argument
         const result = view(...args, adapterApi);
-        
+
         // If the result is a slice factory, execute it with the API
         if (isSliceFactory(result)) {
           return executeSliceFactory(result);
         }
-        
+
         // Otherwise return the result as-is
         return result;
       };
@@ -249,7 +249,7 @@ if (import.meta.vitest) {
           decrement: () => set({ count: get().count - 1 }),
         }));
 
-        const actions = createSlice(model, (m, _api) => ({
+        const actions = createSlice(model, (m) => ({
           increment: m.increment,
           decrement: m.decrement,
         }));
@@ -473,7 +473,7 @@ if (import.meta.vitest) {
 
     it('should provide Redux-specific dispatch and getReduxState methods in API', () => {
       let capturedApi: any;
-      
+
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -511,8 +511,11 @@ if (import.meta.vitest) {
       expect(initialState.count).toBe(0);
 
       // Dispatch an action to update state
-      capturedApi.dispatch({ type: 'lattice/updateState', payload: { count: 5 } });
-      
+      capturedApi.dispatch({
+        type: 'lattice/updateState',
+        payload: { count: 5 },
+      });
+
       const updatedState = capturedApi.getReduxState();
       expect(updatedState.count).toBe(5);
 
@@ -538,26 +541,40 @@ if (import.meta.vitest) {
         const itemsSlice = createSlice(model, (m) => m.items);
 
         // Computed view that takes arguments and receives API as last parameter
-        const filteredView = function(this: any, ...args: any[]) {
+        const filteredView = function (this: any, ...args: any[]) {
           // Check if last argument is the API
           const lastArg = args[args.length - 1];
-          const api = lastArg && typeof lastArg.executeSlice === 'function' && typeof lastArg.getState === 'function' ? lastArg : undefined;
-          
+          const api =
+            lastArg &&
+            typeof lastArg.executeSlice === 'function' &&
+            typeof lastArg.getState === 'function'
+              ? lastArg
+              : undefined;
+
           // Get the prefix if provided (excluding API)
-          const prefix = api && args.length > 1 ? args[0] : (!api && args.length > 0 ? args[0] : undefined);
-          
+          const prefix =
+            api && args.length > 1
+              ? args[0]
+              : !api && args.length > 0
+                ? args[0]
+                : undefined;
+
           // If API is provided, use it to execute other slices
           if (api) {
             const items = api.executeSlice(itemsSlice);
             const filter = api.getState().filter;
-            const filtered = items.filter((item: string) => item.includes(filter));
+            const filtered = items.filter((item: string) =>
+              item.includes(filter)
+            );
             return {
-              items: prefix ? filtered.map((item: string) => prefix + item) : filtered,
+              items: prefix
+                ? filtered.map((item: string) => prefix + item)
+                : filtered,
               count: filtered.length,
               hasApi: true,
             };
           }
-          
+
           // Fallback if no API
           return {
             items: [],
@@ -588,7 +605,11 @@ if (import.meta.vitest) {
       // Test with arguments - API should be injected as last parameter
       result = (store.views as any).filtered('fruit: ');
       expect(result.hasApi).toBe(true);
-      expect(result.items).toEqual(['fruit: apple', 'fruit: banana', 'fruit: apricot']);
+      expect(result.items).toEqual([
+        'fruit: apple',
+        'fruit: banana',
+        'fruit: apricot',
+      ]);
       expect(result.count).toBe(3);
 
       // Change filter and verify it works
@@ -600,7 +621,7 @@ if (import.meta.vitest) {
 
     it('should provide dispatch and getReduxState methods in API for computed views', () => {
       let capturedApi: any;
-      
+
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -620,14 +641,18 @@ if (import.meta.vitest) {
         }));
 
         // Computed view that captures the API and uses Redux-specific methods
-        const computedView = function(this: any, ...args: any[]) {
+        const computedView = function (this: any, ...args: any[]) {
           const api = args[args.length - 1];
           capturedApi = api;
-          
-          if (api && typeof api.dispatch === 'function' && typeof api.getReduxState === 'function') {
+
+          if (
+            api &&
+            typeof api.dispatch === 'function' &&
+            typeof api.getReduxState === 'function'
+          ) {
             // Get the Redux state (without actions)
             const reduxState = api.getReduxState();
-            
+
             return {
               hasReduxMethods: true,
               count: reduxState.count,
@@ -637,7 +662,7 @@ if (import.meta.vitest) {
               reduxHasActions: typeof reduxState.increment === 'function',
             };
           }
-          
+
           return { hasReduxMethods: false };
         };
 
@@ -654,7 +679,7 @@ if (import.meta.vitest) {
 
       // Call the computed view
       const result = (store.views as any).status();
-      
+
       // Verify the API was passed and has Redux-specific methods
       expect(capturedApi).toBeDefined();
       expect(typeof capturedApi.dispatch).toBe('function');
@@ -666,8 +691,11 @@ if (import.meta.vitest) {
       expect(result.reduxHasActions).toBe(false); // getReduxState excludes actions
 
       // Test that dispatch works from within the view
-      capturedApi.dispatch({ type: 'lattice/updateState', payload: { count: 10, message: 'updated' } });
-      
+      capturedApi.dispatch({
+        type: 'lattice/updateState',
+        payload: { count: 10, message: 'updated' },
+      });
+
       const updatedResult = (store.views as any).status();
       expect(updatedResult.count).toBe(10);
       expect(updatedResult.message).toBe('updated');

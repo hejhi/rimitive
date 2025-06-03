@@ -38,9 +38,7 @@ export function testSlice<TState, TResult>(
 /**
  * Helper to test a model factory
  */
-export function testModel<TModel>(
-  modelFactory: ModelFactory<TModel>
-): {
+export function testModel<TModel>(modelFactory: ModelFactory<TModel>): {
   store: TestStore<TModel>;
   model: TModel;
   setState: (partial: Partial<TModel>) => void;
@@ -73,35 +71,37 @@ export function testView<Model, Actions, Views>(
     store,
     getViewOutput: () => {
       const view = component.views[viewName];
-      
+
       // Helper to check if something is a slice factory
-      const isSliceFactory = (value: any): value is SliceFactory<Model, any> => {
+      const isSliceFactory = (
+        value: any
+      ): value is SliceFactory<Model, any> => {
         return typeof value === 'function' && SLICE_FACTORY_MARKER in value;
       };
-      
+
       // If it's a slice factory, execute it
       if (isSliceFactory(view)) {
         return store.executeSlice(view);
       }
-      
+
       // If it's a function, it might be a computed view
       if (typeof view === 'function') {
         const viewResult = view();
-        
+
         // If the result is a slice factory, execute it
         if (isSliceFactory(viewResult)) {
           return store.executeSlice(viewResult);
         }
-        
+
         // If it's a function, it might be a selector
         if (typeof viewResult === 'function') {
           return viewResult(store.getState());
         }
-        
+
         // Otherwise return the result as-is
         return viewResult;
       }
-      
+
       // If we get here, we don't know what to do with the view
       throw new Error(`Unable to execute view: ${String(viewName)}`);
     },
@@ -132,7 +132,6 @@ export async function waitForState<TState>(
   timeout = 1000
 ): Promise<TState> {
   return new Promise((resolve, reject) => {
-    
     // Check immediately
     if (predicate(store.getState())) {
       resolve(store.getState());
@@ -158,7 +157,9 @@ export async function waitForState<TState>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createComponent, createModel, createSlice } = await import('@lattice/core');
+  const { createComponent, createModel, createSlice } = await import(
+    '@lattice/core'
+  );
 
   describe('testSlice', () => {
     it('should test a slice in isolation', () => {
@@ -179,16 +180,18 @@ if (import.meta.vitest) {
 
   describe('testModel', () => {
     it('should test a model factory', () => {
-      const modelFactory: ModelFactory<{ count: number; increment: () => void }> = 
-        ({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        });
+      const modelFactory: ModelFactory<{
+        count: number;
+        increment: () => void;
+      }> = ({ set, get }) => ({
+        count: 0,
+        increment: () => set({ count: get().count + 1 }),
+      });
 
       const { model, store } = testModel(modelFactory);
 
       expect(model.count).toBe(0);
-      
+
       model.increment();
       expect(store.getState().count).toBe(1);
     });
@@ -197,16 +200,18 @@ if (import.meta.vitest) {
   describe('testView', () => {
     it('should test view outputs', () => {
       const counter = createComponent(() => {
-        const model = createModel<{ count: number; increment: () => void }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
+        const model = createModel<{ count: number; increment: () => void }>(
+          ({ set, get }) => ({
+            count: 0,
+            increment: () => set({ count: get().count + 1 }),
+          })
+        );
 
-        const actions = createSlice(model, (m, _api) => ({
+        const actions = createSlice(model, (m) => ({
           increment: m.increment,
         }));
 
-        const counterView = createSlice(model, (m, _api) => ({
+        const counterView = createSlice(model, (m) => ({
           value: m.count,
           className: m.count > 5 ? 'high' : 'low',
         }));

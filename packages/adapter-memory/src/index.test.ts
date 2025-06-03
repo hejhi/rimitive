@@ -4,7 +4,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { createMemoryAdapter } from './index';
-import { createAdapterTestSuite, createComponent, createModel, createSlice } from '@lattice/core';
+import {
+  createAdapterTestSuite,
+  createComponent,
+  createModel,
+  createSlice,
+} from '@lattice/core';
 
 // Run the shared adapter test suite
 createAdapterTestSuite('Memory', createMemoryAdapter);
@@ -16,16 +21,16 @@ describe('Memory Adapter Specific Features', () => {
       const model = createModel<{ count: number; increment: () => void }>(
         ({ set, get }) => ({
           count: 0,
-          increment: () => set({ count: get().count + 1 })
+          increment: () => set({ count: get().count + 1 }),
         })
       );
 
-      const actions = createSlice(model, (m, _api) => ({
-        increment: m.increment
+      const actions = createSlice(model, (m) => ({
+        increment: m.increment,
       }));
 
       const views = {
-        count: createSlice(model, (m, _api) => ({ value: m.count }))
+        count: createSlice(model, (m) => ({ value: m.count })),
       };
 
       return { model, actions, views };
@@ -34,36 +39,40 @@ describe('Memory Adapter Specific Features', () => {
     const adapter = createMemoryAdapter(counter);
 
     // Test getState() method
-    expect(adapter.getState()).toEqual({ count: 0, increment: expect.any(Function) });
-    
+    expect(adapter.getState()).toEqual({
+      count: 0,
+      increment: expect.any(Function),
+    });
+
     adapter.actions.increment();
-    
-    expect(adapter.getState()).toEqual({ count: 1, increment: expect.any(Function) });
+
+    expect(adapter.getState()).toEqual({
+      count: 1,
+      increment: expect.any(Function),
+    });
   });
 
   it('should provide destroy() for cleanup', () => {
     const component = createComponent(() => {
-      const model = createModel<{ value: string }>(
-        () => ({ value: 'test' })
-      );
+      const model = createModel<{ value: string }>(() => ({ value: 'test' }));
 
       return {
         model,
-        actions: createSlice(model, (_m, _api) => ({})),
+        actions: createSlice(model, (_m) => ({})),
         views: {
-          value: createSlice(model, (m, _api) => ({ text: m.value }))
-        }
+          value: createSlice(model, (m) => ({ text: m.value })),
+        },
       };
     });
 
     const adapter = createMemoryAdapter(component);
-    
+
     // Should work before destroy
     expect(adapter.views.value().text).toBe('test');
-    
+
     // Destroy the adapter
     adapter.destroy();
-    
+
     // After destroy, stores should still return values but subscriptions are cleaned up
     expect(adapter.views.value().text).toBe('test');
   });
@@ -75,34 +84,35 @@ describe('Memory Adapter Specific Features', () => {
         updateName: (name: string) => void;
       }>(({ set, get }) => ({
         user: { name: 'Alice', email: 'alice@example.com' },
-        updateName: (name: string) => set({ 
-          user: { ...get().user, name } 
-        })
+        updateName: (name: string) =>
+          set({
+            user: { ...get().user, name },
+          }),
       }));
 
-      const actions = createSlice(model, (m, _api) => ({
-        updateName: m.updateName
+      const actions = createSlice(model, (m) => ({
+        updateName: m.updateName,
       }));
 
       const views = {
-        user: createSlice(model, (m, _api) => m.user)
+        user: createSlice(model, (m) => m.user),
       };
 
       return { model, actions, views };
     });
 
     const adapter = createMemoryAdapter(component);
-    
-    expect(adapter.views.user()).toEqual({ 
-      name: 'Alice', 
-      email: 'alice@example.com' 
+
+    expect(adapter.views.user()).toEqual({
+      name: 'Alice',
+      email: 'alice@example.com',
     });
-    
+
     adapter.actions.updateName('Bob');
-    
-    expect(adapter.views.user()).toEqual({ 
-      name: 'Bob', 
-      email: 'alice@example.com' 
+
+    expect(adapter.views.user()).toEqual({
+      name: 'Bob',
+      email: 'alice@example.com',
     });
   });
 });

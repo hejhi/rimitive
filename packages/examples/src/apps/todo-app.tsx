@@ -156,7 +156,7 @@ const todoAppComponent = createComponent(() => {
   }));
 
   // Computed views that process todos
-  const todosProcessor = createSlice(model, (m, _api) => {
+  const todosProcessor = createSlice(model, (m) => {
     // Return an object with computed values
     const filtered = (() => {
       let result = m.todos;
@@ -231,15 +231,12 @@ const todoAppComponent = createComponent(() => {
   const createFilterButton = (filterType: 'all' | 'active' | 'completed') =>
     createSlice(
       model,
-      compose(
-        { actions, processor: todosProcessor },
-        (m, { actions }, _api) => ({
-          onClick: () => actions.setFilter(filterType),
-          className: m.filter === filterType ? 'selected' : '',
-          'aria-pressed': m.filter === filterType,
-          children: filterType.charAt(0).toUpperCase() + filterType.slice(1),
-        })
-      )
+      compose({ actions, processor: todosProcessor }, (m, { actions }) => ({
+        onClick: () => actions.setFilter(filterType),
+        className: m.filter === filterType ? 'selected' : '',
+        'aria-pressed': m.filter === filterType,
+        children: filterType.charAt(0).toUpperCase() + filterType.slice(1),
+      }))
     );
 
   return {
@@ -259,7 +256,7 @@ const todoAppComponent = createComponent(() => {
         model,
         compose(
           { actions, processor: todosProcessor },
-          (_, { actions, processor }, _api) => ({
+          (_, { actions, processor }) => ({
             onClick: () => actions.clearCompleted(),
             disabled: !processor.stats.hasCompleted,
             children: `Clear completed (${processor.stats.completed})`,
@@ -272,7 +269,7 @@ const todoAppComponent = createComponent(() => {
         model,
         compose(
           { actions, processor: todosProcessor },
-          (_, { actions, processor }, _api) => ({
+          (_, { actions, processor }) => ({
             onChange: () => actions.toggleAll(),
             checked: processor.stats.allCompleted,
             disabled: processor.stats.total === 0,

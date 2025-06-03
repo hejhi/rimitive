@@ -410,11 +410,11 @@ if (import.meta.vitest) {
           increment: () => set({ count: get().count + 1 }),
         }));
 
-        const actions = createSlice(model, (m, _api) => ({
+        const actions = createSlice(model, (m) => ({
           increment: m.increment,
         }));
 
-        const stateView = createSlice(model, (m, _api) => ({
+        const stateView = createSlice(model, (m) => ({
           count: m.count,
           multiplier: m.multiplier,
           total: m.count * m.multiplier,
@@ -444,12 +444,12 @@ if (import.meta.vitest) {
           decrement: () => set({ count: get().count - 1 }),
         }));
 
-        const actions = createSlice(model, (m, _api) => ({
+        const actions = createSlice(model, (m) => ({
           increment: m.increment,
           decrement: m.decrement,
         }));
 
-        const countView = createSlice(model, (m, _api) => ({
+        const countView = createSlice(model, (m) => ({
           count: m.count,
         }));
 
@@ -491,11 +491,11 @@ if (import.meta.vitest) {
           update: (data) => set({ ...get(), ...data }),
         }));
 
-        const actions = createSlice(model, (m, _api) => ({
+        const actions = createSlice(model, (m) => ({
           update: m.update,
         }));
 
-        const stateSlice = createSlice(model, (m, _api) => ({
+        const stateSlice = createSlice(model, (m) => ({
           store: m.store,
           actions: m.actions,
           views: m.views,
@@ -537,14 +537,14 @@ if (import.meta.vitest) {
           disabled: false,
         }));
 
-        const displaySlice = createSlice(model, (m, _api) => ({
+        const displaySlice = createSlice(model, (m) => ({
           value: m.count,
           isDisabled: m.disabled,
         }));
 
         return {
           model,
-          actions: createSlice(model, (_m, _api) => ({})),
+          actions: createSlice(model, (_m) => ({})),
           views: { display: displaySlice },
         };
       });
@@ -563,7 +563,7 @@ if (import.meta.vitest) {
       const component = createComponent(() => {
         const model = createModel<{ count: number }>(() => ({ count: 5 }));
 
-        const countSlice = createSlice(model, (m, _api) => ({
+        const countSlice = createSlice(model, (m) => ({
           count: m.count,
         }));
 
@@ -579,7 +579,7 @@ if (import.meta.vitest) {
 
         return {
           model,
-          actions: createSlice(model, (_m, _api) => ({})),
+          actions: createSlice(model, (_m) => ({})),
           views,
         };
       });
@@ -606,12 +606,12 @@ if (import.meta.vitest) {
           increment: () => set({ count: get().count + 1 }),
         }));
 
-        const countSlice = createSlice(model, (m, _api) => ({
+        const countSlice = createSlice(model, (m) => ({
           value: m.count,
           doubled: m.count * 2,
         }));
 
-        const actions = createSlice(model, (m, _api) => ({
+        const actions = createSlice(model, (m) => ({
           increment: m.increment,
         }));
 

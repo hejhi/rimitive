@@ -107,8 +107,8 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Basic slices
-        const usersSlice = createSlice(model, (m, _api) => m.users);
-        const productsSlice = createSlice(model, (m, _api) => m.products);
+        const usersSlice = createSlice(model, (m) => m.users);
+        const productsSlice = createSlice(model, (m) => m.products);
 
         // Slice that uses API to compose data from other slices
         const summarySlice = createSlice(model, (_m, api) => {
@@ -125,7 +125,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (_m, _api) => ({})),
+          actions: createSlice(model, (_m) => ({})),
           views: {
             summary: summarySlice,
           },
@@ -163,7 +163,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({
+          actions: createSlice(model, (m) => ({
             increment: m.increment,
           })),
           views: {
@@ -202,7 +202,7 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Base data slice
-        const dataSlice = createSlice(model, (m, _api) => m.data);
+        const dataSlice = createSlice(model, (m) => m.data);
 
         // Adaptive view that changes behavior based on mode
         const adaptiveViewSlice = createSlice(model, (m, api) => {
@@ -222,7 +222,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ setMode: m.setMode })),
+          actions: createSlice(model, (m) => ({ setMode: m.setMode })),
           views: {
             adaptive: adaptiveViewSlice,
           },
@@ -273,7 +273,7 @@ describe('API Parameter Functionality', () => {
 
         // Create filter-specific slices dynamically
         const createFilteredItemsSlice = (filters: string[]) =>
-          createSlice(model, (m, _api) => {
+          createSlice(model, (m) => {
             if (filters.length === 0) return m.items;
             return m.items.filter((item) =>
               filters.every((filter) => item.tags.includes(filter))
@@ -295,7 +295,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({
+          actions: createSlice(model, (m) => ({
             toggleFilter: m.toggleFilter,
           })),
           views: {
@@ -357,9 +357,9 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Individual domain slices
-        const userSlice = createSlice(model, (m, _api) => m.user);
-        const postsSlice = createSlice(model, (m, _api) => m.posts);
-        const commentsSlice = createSlice(model, (m, _api) => m.comments);
+        const userSlice = createSlice(model, (m) => m.user);
+        const postsSlice = createSlice(model, (m) => m.posts);
+        const commentsSlice = createSlice(model, (m) => m.comments);
 
         // Stats slice that aggregates data
         const statsSlice = createSlice(model, (_m, api) => {
@@ -400,7 +400,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (_m, _api) => ({})),
+          actions: createSlice(model, (_m) => ({})),
           views: {
             dashboard: dashboardSlice,
           },
@@ -472,7 +472,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (_m, _api) => ({})),
+          actions: createSlice(model, (_m) => ({})),
           views: {
             tree: treeSlice,
           },
@@ -511,8 +511,8 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Team slices
-        const teamASlice = createSlice(model, (m, _api) => m.teamA);
-        const teamBSlice = createSlice(model, (m, _api) => m.teamB);
+        const teamASlice = createSlice(model, (m) => m.teamA);
+        const teamBSlice = createSlice(model, (m) => m.teamB);
 
         // Comparison slice that depends on both teams
         const comparisonSlice = createSlice(model, (_m, api) => {
@@ -549,7 +549,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({
+          actions: createSlice(model, (m) => ({
             updateScore: m.updateScore,
           })),
           views: {
@@ -592,7 +592,7 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Slice that might throw
-        const riskySlice = createSlice(model, (m, _api) => {
+        const riskySlice = createSlice(model, (m) => {
           if (m.errorMode) {
             throw new Error('Intentional error');
           }
@@ -619,7 +619,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({
+          actions: createSlice(model, (m) => ({
             toggleError: m.toggleError,
           })),
           views: {
@@ -681,10 +681,10 @@ describe('API Parameter Functionality', () => {
           });
 
         // Base slices
-        const valueSlice = createSlice(model, (m, _api) => ({
+        const valueSlice = createSlice(model, (m) => ({
           value: m.value,
         }));
-        const doubleSlice = createSlice(model, (m, _api) => ({
+        const doubleSlice = createSlice(model, (m) => ({
           double: m.value * 2,
         }));
 
@@ -708,7 +708,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({
+          actions: createSlice(model, (m) => ({
             increment: m.increment,
           })),
           views: {
@@ -764,7 +764,7 @@ describe('API Parameter Functionality', () => {
         };
 
         // Expensive computation slice
-        const expensiveSlice = createSlice(model, (m, _api) => {
+        const expensiveSlice = createSlice(model, (m) => {
           computationCount++;
           // Simulate expensive computation
           let result = m.input;
@@ -796,7 +796,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ setInput: m.setInput })),
+          actions: createSlice(model, (m) => ({ setInput: m.setInput })),
           views: {
             multiUse: multiUseSlice,
           },
@@ -855,16 +855,16 @@ describe('API Parameter Functionality', () => {
           });
 
         // Various slices with different complexities
-        const simpleSlice = createSlice(model, (m, _api) => ({
+        const simpleSlice = createSlice(model, (m) => ({
           count: m.data.length,
         }));
 
-        const moderateSlice = createSlice(model, (m, _api) => ({
+        const moderateSlice = createSlice(model, (m) => ({
           sum: m.data.reduce((a, b) => a + b, 0),
           avg: m.data.reduce((a, b) => a + b, 0) / m.data.length,
         }));
 
-        const complexSlice = createSlice(model, (m, _api) => ({
+        const complexSlice = createSlice(model, (m) => ({
           sorted: [...m.data].sort((a, b) => a - b),
           unique: [...new Set(m.data)],
           stats: {
@@ -914,7 +914,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ addData: m.addData })),
+          actions: createSlice(model, (m) => ({ addData: m.addData })),
           views: {
             dashboard: performanceDashboard,
           },
@@ -1024,14 +1024,14 @@ describe('API Parameter Functionality', () => {
           });
 
         // Form data slice
-        const formDataSlice = createSlice(model, (m, _api) => m.formData);
+        const formDataSlice = createSlice(model, (m) => m.formData);
 
         // Validated form slice
         const validatedFormSlice = withValidation(formDataSlice);
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({
+          actions: createSlice(model, (m) => ({
             updateField: m.updateField,
           })),
           views: {
@@ -1126,7 +1126,7 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Product catalog slice
-        const catalogSlice = createSlice(model, (m, _api) => m.products);
+        const catalogSlice = createSlice(model, (m) => m.products);
 
         // Cart items with product details
         const cartDetailsSlice = createSlice(model, (m, api) => {
@@ -1170,7 +1170,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({
+          actions: createSlice(model, (m) => ({
             addToCart: m.addToCart,
             removeFromCart: m.removeFromCart,
             updateQuantity: m.updateQuantity,
@@ -1272,7 +1272,7 @@ describe('API Parameter Functionality', () => {
 
         // Permission checker slice factory
         const createPermissionChecker = (requiredPermissions: string[]) =>
-          createSlice(model, (m, _api) => {
+          createSlice(model, (m) => {
             const hasAll = requiredPermissions.every((perm) =>
               m.user.permissions.includes(perm)
             );
@@ -1330,7 +1330,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({
+          actions: createSlice(model, (m) => ({
             updateUserRole: m.updateUserRole,
             toggleFeature: m.toggleFeature,
           })),
