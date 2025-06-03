@@ -14,22 +14,17 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'LatticeAdapterMemory',
-      formats: ['es'],
+      name: 'LatticeRuntime',
       fileName: 'index',
+      formats: ['es']
     },
     rollupOptions: {
-      external: ['@lattice/core', '@lattice/runtime'],
+      external: ['@lattice/core'],
       output: {
-        globals: {
-          '@lattice/core': 'LatticeCore',
-        },
-      },
+        preserveModules: false
+      }
     },
     sourcemap: true,
-    minify: false,
-  },
-  define: {
-    'import.meta.vitest': 'undefined',
-  },
+    target: 'es2022' // Support for top-level await
+  }
 });

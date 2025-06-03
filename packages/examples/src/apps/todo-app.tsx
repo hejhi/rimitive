@@ -123,7 +123,10 @@ const todoAppComponent = createComponent(() => {
   // Actions slice
   const actions = createSlice(model, (m, api) => ({
     addTodo: (text: string) => {
-      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+      if (
+        typeof process !== 'undefined' &&
+        process.env?.NODE_ENV === 'development'
+      ) {
         console.log('[TodoApp] Adding todo:', text);
       }
       m.addTodo(text);
@@ -134,8 +137,11 @@ const todoAppComponent = createComponent(() => {
     clearCompleted: () => {
       // Example: Log clear action with current state
       const state = api.getState();
-      const completedCount = state.todos.filter(t => t.completed).length;
-      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+      const completedCount = state.todos.filter((t) => t.completed).length;
+      if (
+        typeof process !== 'undefined' &&
+        process.env?.NODE_ENV === 'development'
+      ) {
         console.log('[TodoApp] Clearing completed todos:', {
           completedCount,
           totalBeforeClear: state.todos.length,
@@ -156,7 +162,10 @@ const todoAppComponent = createComponent(() => {
       let result = m.todos;
 
       // Log filtering operations in development
-      if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+      if (
+        typeof process !== 'undefined' &&
+        process.env?.NODE_ENV === 'development'
+      ) {
         console.log('[TodoApp] Processing todos:', {
           totalCount: m.todos.length,
           filter: m.filter,
@@ -196,9 +205,14 @@ const todoAppComponent = createComponent(() => {
     const completed = m.todos.filter((t) => t.completed).length;
     const active = total - completed;
 
-    if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
+    if (
+      typeof process !== 'undefined' &&
+      process.env?.NODE_ENV === 'development'
+    ) {
       const endTime = performance.now();
-      console.log(`[TodoApp] Stats calculation took ${(endTime - startTime).toFixed(2)}ms`);
+      console.log(
+        `[TodoApp] Stats calculation took ${(endTime - startTime).toFixed(2)}ms`
+      );
     }
 
     return {
@@ -217,12 +231,15 @@ const todoAppComponent = createComponent(() => {
   const createFilterButton = (filterType: 'all' | 'active' | 'completed') =>
     createSlice(
       model,
-      compose({ actions, processor: todosProcessor }, (m, { actions }, _api) => ({
-        onClick: () => actions.setFilter(filterType),
-        className: m.filter === filterType ? 'selected' : '',
-        'aria-pressed': m.filter === filterType,
-        children: filterType.charAt(0).toUpperCase() + filterType.slice(1),
-      }))
+      compose(
+        { actions, processor: todosProcessor },
+        (m, { actions }, _api) => ({
+          onClick: () => actions.setFilter(filterType),
+          className: m.filter === filterType ? 'selected' : '',
+          'aria-pressed': m.filter === filterType,
+          children: filterType.charAt(0).toUpperCase() + filterType.slice(1),
+        })
+      )
     );
 
   return {
@@ -233,29 +250,35 @@ const todoAppComponent = createComponent(() => {
       processor: todosProcessor,
 
       // Individual filter buttons - wrapped in functions as required by views
-      filterButtonAll: () => createFilterButton('all'),
-      filterButtonActive: () => createFilterButton('active'),
-      filterButtonCompleted: () => createFilterButton('completed'),
+      filterButtonAll: createFilterButton('all'),
+      filterButtonActive: createFilterButton('active'),
+      filterButtonCompleted: createFilterButton('completed'),
 
       // Clear button
-      clearButton: () => createSlice(
+      clearButton: createSlice(
         model,
-        compose({ actions, processor: todosProcessor }, (_, { actions, processor }, _api) => ({
-          onClick: () => actions.clearCompleted(),
-          disabled: !processor.stats.hasCompleted,
-          children: `Clear completed (${processor.stats.completed})`,
-        }))
+        compose(
+          { actions, processor: todosProcessor },
+          (_, { actions, processor }, _api) => ({
+            onClick: () => actions.clearCompleted(),
+            disabled: !processor.stats.hasCompleted,
+            children: `Clear completed (${processor.stats.completed})`,
+          })
+        )
       ),
 
       // Toggle all checkbox
-      toggleAllCheckbox: () => createSlice(
+      toggleAllCheckbox: createSlice(
         model,
-        compose({ actions, processor: todosProcessor }, (_, { actions, processor }, _api) => ({
-          onChange: () => actions.toggleAll(),
-          checked: processor.stats.allCompleted,
-          disabled: processor.stats.total === 0,
-          'aria-label': 'Toggle all todos',
-        }))
+        compose(
+          { actions, processor: todosProcessor },
+          (_, { actions, processor }, _api) => ({
+            onChange: () => actions.toggleAll(),
+            checked: processor.stats.allCompleted,
+            disabled: processor.stats.total === 0,
+            'aria-label': 'Toggle all todos',
+          })
+        )
       ),
     },
   };
@@ -369,9 +392,9 @@ function TodoFilters() {
 
   return (
     <div className="filters">
-      <button {...(allButton as React.ButtonHTMLAttributes<HTMLButtonElement>)} />
-      <button {...(activeButton as React.ButtonHTMLAttributes<HTMLButtonElement>)} />
-      <button {...(completedButton as React.ButtonHTMLAttributes<HTMLButtonElement>)} />
+      <button {...allButton} />
+      <button {...activeButton} />
+      <button {...completedButton} />
     </div>
   );
 }
@@ -390,7 +413,7 @@ function TodoStats() {
         <span>{stats.active} items left</span>
       </label>
 
-      <button {...(clearButton as React.ButtonHTMLAttributes<HTMLButtonElement>)} />
+      <button {...clearButton} />
     </div>
   );
 }

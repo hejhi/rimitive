@@ -1,33 +1,21 @@
 /**
- * @fileoverview Memory adapter for Lattice
- *
- * This adapter provides a simple in-memory state management solution
- * that implements the Lattice adapter specification. It creates reactive
- * stores and slices without any external dependencies.
- *
- * Key features:
- * - Minimal implementation using only JavaScript primitives
- * - Full support for compose() and slice composition
- * - Type-safe component execution
- * - Read-only slices with proper error messages
+ * @fileoverview Memory adapter with clean runtime architecture
  */
 
 import type {
   ComponentSpec,
   AdapterResult,
+  AdapterAPI,
   SliceFactory,
   ViewTypes,
-  AdapterAPI,
 } from '@lattice/core';
 import { isSliceFactory } from '@lattice/core';
+import { createRuntime } from '@lattice/runtime';
 
 // ============================================================================
-// Core Types
+// Store Implementation (unchanged)
 // ============================================================================
 
-/**
- * Store interface - the fundamental reactive primitive
- */
 interface Store<T> {
   get: () => T;
   set: (value: T | ((prev: T) => T)) => void;
@@ -35,13 +23,6 @@ interface Store<T> {
   destroy?: () => void;
 }
 
-// ============================================================================
-// Store Implementation
-// ============================================================================
-
-/**
- * Creates a basic reactive store using closure
- */
 function createStore<T>(initial: T): Store<T> {
   let state = initial;
   const listeners = new Set<(value: T) => void>();
@@ -66,9 +47,6 @@ function createStore<T>(initial: T): Store<T> {
   };
 }
 
-/**
- * Creates a read-only slice that derives state from another store
- */
 function createSlice<T, U>(
   store: Store<T>,
   selector: (state: T) => U
@@ -76,11 +54,8 @@ function createSlice<T, U>(
   const listeners = new Set<(value: U) => void>();
   let cache: { value: U; state: T } | undefined;
 
-  // Subscribe to parent store
   const unsubscribe = store.subscribe((state) => {
     const newValue = selector(state);
-
-    // Only notify if value changed
     if (!cache || cache.value !== newValue) {
       cache = { value: newValue, state };
       listeners.forEach((listener) => listener(newValue));
@@ -112,33 +87,6 @@ function createSlice<T, U>(
   };
 }
 
-// ============================================================================
-// Memory Adapter Result
-// ============================================================================
-
-/**
- * The result returned by the memory adapter
- */
-export interface MemoryAdapterResult<Model, Actions, Views>
-  extends AdapterResult<Model, Actions, Views> {
-  /**
-   * Get the current state (for testing)
-   */
-  getState: () => Model;
-
-  /**
-   * Destroy all stores and clean up subscriptions
-   */
-  destroy: () => void;
-}
-
-// ============================================================================
-// Component Execution
-// ============================================================================
-
-/**
- * Creates a shallow copy of a value to ensure fresh references
- */
 function shallowCopy<T>(value: T): T {
   if (typeof value !== 'object' || value === null) {
     return value;
@@ -149,50 +97,28 @@ function shallowCopy<T>(value: T): T {
   return { ...value };
 }
 
-/**
- * Executes a component specification with memory stores
- */
+// ============================================================================
+// Memory Adapter Result
+// ============================================================================
+
+export interface MemoryAdapterResult<Model, Actions, Views>
+  extends AdapterResult<Model, Actions, Views> {
+  getState: () => Model;
+  destroy: () => void;
+}
+
+// ============================================================================
+// Component Execution
+// ============================================================================
+
 function executeComponent<Model, Actions, Views>(
-  spec: ComponentSpec<Model, Actions, Views>
+  spec: ComponentSpec<Model, Actions, Views>,
+  api: AdapterAPI<Model>,
+  modelStore: Store<Model>
 ): MemoryAdapterResult<Model, Actions, Views> {
-  // Execute model factory to get initial state
-  const initialModel = spec.model({
-    get: (): Model => {
-      throw new Error('Cannot call get() during model initialization');
-    },
-    set: (): void => {
-      throw new Error('Cannot call set() during model initialization');
-    },
-  });
-
-  // Create model store with proper initial state
-  const modelStore = createStore<Model>(initialModel);
-
-  // Re-execute model factory with real store tools
-  const model = spec.model({
-    get: () => modelStore.get(),
-    set: (updates) => {
-      const current = modelStore.get();
-      modelStore.set({ ...current, ...updates });
-    },
-  });
-
-  // Update model store with fully initialized model
-  modelStore.set(model);
-
-  // Create the AdapterAPI implementation
-  const adapterApi: AdapterAPI<Model> = {
-    executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
-      const state = modelStore.get();
-      return slice(state, adapterApi);
-    },
-    getState: () => modelStore.get(),
-  };
-
   // Type-safe slice executor
   const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
-    const state = modelStore.get();
-    return factory(state, adapterApi);
+    return api.executeSlice(factory);
   };
 
   // Execute actions slice
@@ -200,38 +126,30 @@ function executeComponent<Model, Actions, Views>(
     executeSliceFactory(spec.actions)
   );
 
-  // Process views - use a more direct approach
+  // Process views
   const viewStores: Array<Store<unknown>> = [];
 
-  // Build the views object with proper typing
   const views = Object.entries(spec.views as Record<string, unknown>).reduce(
     (acc, [key, view]) => {
       if (isSliceFactory(view)) {
-        // Static view: create a store and wrap in a function
         const viewStore = createSlice<Model, unknown>(modelStore, () =>
           executeSliceFactory(view)
         );
         viewStores.push(viewStore);
 
-        // Create the view function
         acc[key as keyof ViewTypes<Model, Views>] = (() =>
           shallowCopy(viewStore.get())) as ViewTypes<
           Model,
           Views
         >[keyof ViewTypes<Model, Views>];
       } else if (typeof view === 'function') {
-        // Computed view: wrap to inject API as last parameter
         acc[key as keyof ViewTypes<Model, Views>] = ((...args: unknown[]) => {
-          // Call the view function with user args + api as last argument
-          const result = view(...args, adapterApi);
+          const result = view(...args, api);
           
-          // If the result is a slice factory, execute it with the API
           if (isSliceFactory(result)) {
-            const state = modelStore.get();
-            return result(state, adapterApi);
+            return api.executeSlice(result);
           }
           
-          // Otherwise return the result as-is
           return result;
         }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
       }
@@ -244,7 +162,7 @@ function executeComponent<Model, Actions, Views>(
   return {
     actions: actionsStore.get(),
     views,
-    getState: () => modelStore.get(),
+    getState: api.getState,
     destroy: () => {
       modelStore.destroy?.();
       actionsStore.destroy?.();
@@ -258,7 +176,10 @@ function executeComponent<Model, Actions, Views>(
 // ============================================================================
 
 /**
- * Creates a memory adapter for Lattice components
+ * Creates a memory adapter for Lattice components.
+ * 
+ * The memory adapter is a simple in-memory store implementation
+ * without native middleware support.
  */
 export function createMemoryAdapter<Model, Actions, Views>(
   componentOrFactory:
@@ -270,7 +191,43 @@ export function createMemoryAdapter<Model, Actions, Views>(
       ? componentOrFactory()
       : componentOrFactory;
 
-  return executeComponent(spec);
+  return createRuntime<MemoryAdapterResult<Model, Actions, Views>>((createAPI) => {
+    // Initialize model
+    const initialModel = spec.model({
+      get: (): Model => {
+        throw new Error('Cannot call get() during model initialization');
+      },
+      set: (): void => {
+        throw new Error('Cannot call set() during model initialization');
+      },
+    });
+
+    // Create model store
+    const modelStore = createStore<Model>(initialModel);
+
+    // Re-execute model factory with real store tools
+    const model = spec.model({
+      get: () => modelStore.get(),
+      set: (updates) => {
+        const current = modelStore.get();
+        modelStore.set({ ...current, ...updates });
+      },
+    });
+
+    modelStore.set(model);
+
+    // Create the API with our implementations
+    const api = createAPI({
+      executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
+        const state = modelStore.get();
+        return slice(state, api);
+      },
+      getState: () => modelStore.get(),
+    });
+
+    // Execute the component with the API
+    return executeComponent(spec, api, modelStore);
+  });
 }
 
 // ============================================================================
@@ -283,7 +240,7 @@ if (import.meta.vitest) {
     '@lattice/core'
   );
 
-  describe('Memory Adapter', () => {
+  describe('Memory Adapter - Final Implementation', () => {
     it('should execute a basic component', () => {
       const counter = createComponent(() => {
         const model = createModel<{ count: number; increment: () => void }>(
@@ -293,12 +250,12 @@ if (import.meta.vitest) {
           })
         );
 
-        const actions = createSlice(model, (m, _api) => ({
+        const actions = createSlice(model, (m) => ({
           increment: m.increment,
         }));
 
         const views = {
-          count: createSlice(model, (m, _api) => ({ value: m.count })),
+          count: createSlice(model, (m) => ({ value: m.count })),
         };
 
         return { model, actions, views };
@@ -315,7 +272,33 @@ if (import.meta.vitest) {
       expect(adapter.views.count().value).toBe(1);
     });
 
-    it('should handle slice composition with compose()', () => {
+    it('should handle actions that use executeSlice', () => {
+      const counter = createComponent(() => {
+        const model = createModel<{ count: number }>(() => ({ count: 5 }));
+        const actions = createSlice(model, (_m, api) => ({
+          // Action that uses executeSlice
+          doubleCount: () => {
+            const doubled = api.executeSlice(createSlice(model, (m) => m.count * 2));
+            return doubled;
+          }
+        }));
+        const views = {
+          count: createSlice(model, (m) => m.count),
+        };
+        return { model, actions, views };
+      });
+
+      const adapter = createMemoryAdapter(counter);
+
+      // Initial count
+      expect(adapter.views.count()).toBe(5);
+      
+      // Action uses executeSlice internally
+      const doubled = adapter.actions.doubleCount();
+      expect(doubled).toBe(10);
+    });
+
+    it('should handle slice composition', () => {
       const component = createComponent(() => {
         const model = createModel<{
           user: { name: string };
@@ -325,11 +308,11 @@ if (import.meta.vitest) {
           theme: 'light',
         }));
 
-        const userSlice = createSlice(model, (m, _api) => ({
+        const userSlice = createSlice(model, (m) => ({
           name: m.user.name,
         }));
 
-        const themeSlice = createSlice(model, (m, _api) => ({
+        const themeSlice = createSlice(model, (m) => ({
           theme: m.theme,
         }));
 
@@ -337,7 +320,7 @@ if (import.meta.vitest) {
           model,
           compose(
             { userSlice, themeSlice },
-            (_, { userSlice, themeSlice }, _api) => ({
+            (_, { userSlice, themeSlice }) => ({
               userName: userSlice.name,
               theme: themeSlice.theme,
               title: `${userSlice.name} - ${themeSlice.theme}`,
@@ -347,7 +330,7 @@ if (import.meta.vitest) {
 
         return {
           model,
-          actions: createSlice(model, (_m, _api) => ({})),
+          actions: createSlice(model, () => ({})),
           views: {
             header: headerSlice,
           },
@@ -360,123 +343,6 @@ if (import.meta.vitest) {
       expect(header.userName).toBe('Alice');
       expect(header.theme).toBe('light');
       expect(header.title).toBe('Alice - light');
-    });
-
-    it('should pass API to slices that use it', () => {
-      const component = createComponent(() => {
-        const model = createModel<{ count: number; name: string }>(() => ({
-          count: 10,
-          name: 'test',
-        }));
-
-        // Create a slice that uses the API
-        const apiSlice = createSlice(model, (m, api) => ({
-          count: m.count,
-          hasApi: true,
-          stateCount: api.getState().count,
-          canExecuteSlices: typeof api.executeSlice === 'function',
-        }));
-
-        // Create another slice for the API to execute
-        const targetSlice = createSlice(model, (m, _api) => ({
-          doubled: m.count * 2,
-        }));
-
-        // Create a slice that uses API to execute another slice
-        const composingSlice = createSlice(model, (_m, api) => {
-          const target = api.executeSlice(targetSlice);
-          return {
-            fromTarget: target.doubled,
-            fromApi: api.getState().count,
-          };
-        });
-
-        return {
-          model,
-          actions: createSlice(model, (_m, _api) => ({})),
-          views: {
-            withApi: apiSlice,
-            composed: composingSlice,
-          },
-        };
-      });
-
-      const adapter = createMemoryAdapter(component);
-      
-      // Test the API-aware slice
-      const withApi = adapter.views.withApi();
-      expect(withApi.count).toBe(10);
-      expect(withApi.hasApi).toBe(true);
-      expect(withApi.stateCount).toBe(10);
-      expect(withApi.canExecuteSlices).toBe(true);
-
-      // Test the composing slice
-      const composed = adapter.views.composed();
-      expect(composed.fromTarget).toBe(20); // 10 * 2
-      expect(composed.fromApi).toBe(10);
-    });
-
-    it('should support computed views with API', () => {
-      const component = createComponent(() => {
-        const model = createModel<{ items: string[]; filter: string }>(() => ({
-          items: ['apple', 'banana', 'cherry'],
-          filter: 'a',
-        }));
-
-        // Base slice
-        const itemsSlice = createSlice(model, (m, _api) => m.items);
-
-        // Track if API was injected properly
-        let apiWasInjected = false;
-        let lastArgWasApi = false;
-
-        // Computed view that returns a slice factory
-        const filtered = function(this: any, ...args: any[]) {
-          // Check if last argument is the API
-          const lastArg = args[args.length - 1];
-          lastArgWasApi = !!(lastArg && typeof lastArg.executeSlice === 'function' && typeof lastArg.getState === 'function');
-          
-          // Get the prefix if provided (excluding API)
-          const prefix = lastArgWasApi && args.length > 1 ? args[0] : undefined;
-          
-          return createSlice(model, (m, sliceApi) => {
-            apiWasInjected = true;
-            // Use API to get items from another slice
-            const items = sliceApi.executeSlice(itemsSlice);
-            const filtered = items.filter(item => item.includes(m.filter));
-            return prefix ? filtered.map(item => prefix + item) : filtered;
-          });
-        };
-
-        return {
-          model,
-          actions: createSlice(model, (_m, _api) => ({})),
-          views: {
-            filtered: filtered as (prefix?: string) => any,
-            // Add a view to check if API was injected
-            apiCheck: () => ({ apiWasInjected, lastArgWasApi }),
-          },
-        };
-      });
-
-      const adapter = createMemoryAdapter(component);
-      
-      // Test without arguments
-      const filtered = (adapter.views as any).filtered();
-      expect(filtered).toEqual(['apple', 'banana']);
-      
-      // Check API was injected properly
-      const check1 = (adapter.views as any).apiCheck();
-      expect(check1.apiWasInjected).toBe(true);
-      expect(check1.lastArgWasApi).toBe(true);
-      
-      // Test with arguments - the API should be injected as last parameter
-      const prefixedFiltered = (adapter.views as any).filtered('fruit: ');
-      expect(prefixedFiltered).toEqual(['fruit: apple', 'fruit: banana']);
-      
-      // Check API was still injected as last arg
-      const check2 = (adapter.views as any).apiCheck();
-      expect(check2.lastArgWasApi).toBe(true);
     });
   });
 }

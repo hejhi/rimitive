@@ -1,6 +1,9 @@
 {
-  "name": "@lattice/adapter-memory",
+  "name": "@lattice/runtime",
   "version": "0.0.1",
+  "description": "Runtime architecture for Lattice - provides universal execution engine and middleware system",
+  "author": "Lattice Team",
+  "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -11,26 +14,30 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
-    "test": "vitest run",
+    "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "test": "vitest run"
   },
   "dependencies": {
-    "@lattice/core": "workspace:*",
-    "@lattice/runtime": "workspace:*"
+    "@lattice/core": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.5.4",
+    "rimraf": "^6.0.1",
     "typescript": "^5.8.3",
     "vite": "^6.3.2",
     "vite-plugin-dts": "^4.5.4",
-    "vitest": "^2.1.8"
+    "vitest": "^3.1.1"
   },
-  "files": [
-    "dist"
-  ],
-  "sideEffects": false
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
 }
