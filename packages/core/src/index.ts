@@ -8,7 +8,8 @@ export interface ModelTools<T> {
 
 /**
  * Base API interface that all adapters must provide to slices.
- * Adapters can extend this interface with adapter-specific functionality.
+ * Adapters should NOT extend this interface with adapter-specific functionality
+ * to maintain component portability across adapters.
  * 
  * @template Model - The model type for type-safe state access
  */
@@ -21,13 +22,6 @@ export interface AdapterAPI<Model> {
    * @returns The result of executing the slice with current state
    */
   executeSlice<T>(slice: SliceFactory<Model, T>): T;
-  
-  /**
-   * Get the current model state.
-   * 
-   * @returns The current state of the model
-   */
-  getState(): Model;
 }
 
 export type ModelFactory<T = unknown> = (tools: ModelTools<T>) => T;
@@ -156,8 +150,7 @@ if (import.meta.vitest) {
     const mockApi: AdapterAPI<{ count: number }> = {
       executeSlice: <T>(_slice: SliceFactory<{ count: number }, T>): T => {
         return {} as T;
-      },
-      getState: () => ({ count: 10 })
+      }
     };
 
     // Direct execution with required API
@@ -173,8 +166,7 @@ if (import.meta.vitest) {
     const mockApi: AdapterAPI<{ x: number; y: number }> = {
       executeSlice: <T>(_slice: SliceFactory<{ x: number; y: number }, T>): T => {
         return {} as T;
-      },
-      getState: () => ({ x: 3, y: 4 })
+      }
     };
 
     const result = pointSlice({ x: 3, y: 4 }, mockApi);
@@ -183,12 +175,12 @@ if (import.meta.vitest) {
 
   it('SliceFactory should support required api parameter', () => {
     const model = createModel<{ count: number }>(() => ({ count: 5 }));
-    const sliceWithApi = createSlice(model, (m, api) => {
+    const sliceWithApi = createSlice(model, (m, _api) => {
       // API is now always available
       return { 
         value: m.count, 
         hasApi: true,
-        stateFromApi: api.getState().count
+        stateFromModel: m.count
       };
     });
 
@@ -196,15 +188,14 @@ if (import.meta.vitest) {
     const mockApi: AdapterAPI<{ count: number }> = {
       executeSlice: <T>(_slice: SliceFactory<{ count: number }, T>): T => {
         return {} as T;
-      },
-      getState: () => ({ count: 15 })
+      }
     };
     
     const result = sliceWithApi({ count: 10 }, mockApi);
     expect(result).toEqual({ 
       value: 10, 
       hasApi: true,
-      stateFromApi: 15
+      stateFromModel: 10
     });
   });
 }

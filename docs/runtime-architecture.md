@@ -94,14 +94,8 @@ Every adapter creates an API object that slices receive:
 
 ```typescript
 interface AdapterAPI<Model> {
-  // Core methods (required)
+  // Core method (required)
   executeSlice<T>(slice: SliceFactory<Model, T>): T;
-  getState(): Model;
-  
-  // Adapter-specific extensions
-  // Zustand might add: subscribe
-  // Redux might add: dispatch
-  // etc.
 }
 ```
 
@@ -111,8 +105,7 @@ The API can reference itself, enabling slices to call other slices:
 
 ```typescript
 const api = createApi({
-  executeSlice: (slice) => slice(store.getState(), api), // api references itself
-  getState: () => store.getState()
+  executeSlice: (slice) => slice(store.getState(), api) // api references itself
 });
 ```
 
@@ -206,10 +199,8 @@ export function createMyAdapter<Model, Actions, Views>(
 
 ```typescript
     const api = createApi({
-      executeSlice: (slice) => slice(getCurrentState(), api),
-      getState: () => getCurrentState(),
-      // Add adapter-specific methods
-      customMethod: () => { /* ... */ }
+      executeSlice: (slice) => slice(getCurrentState(), api)
+      // Do NOT add adapter-specific methods to maintain portability
     });
 ```
 
@@ -260,8 +251,7 @@ const api = createApi({
       console.error('Slice execution failed:', error);
       throw error;
     }
-  },
-  getState: () => store.getState()
+  }
 });
 ```
 
@@ -278,8 +268,7 @@ const api = createApi({
     const result = slice(store.getState(), api);
     cache.set(slice, result);
     return result;
-  },
-  getState: () => store.getState()
+  }
 });
 ```
 
@@ -289,7 +278,6 @@ const api = createApi({
 // Add dev-only methods
 const api = createApi({
   executeSlice: (slice) => slice(store.getState(), api),
-  getState: () => store.getState(),
   ...(process.env.NODE_ENV === 'development' && {
     _inspect: () => ({ store, component })
   })

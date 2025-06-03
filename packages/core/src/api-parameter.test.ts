@@ -1,6 +1,6 @@
 /**
  * @fileoverview Comprehensive test suite for API parameter functionality
- * 
+ *
  * This test suite demonstrates and validates the usage of the AdapterAPI
  * parameter that slices receive, including:
  * - Basic API usage (executeSlice, getState)
@@ -11,19 +11,31 @@
 
 import { describe, it, expect } from 'vitest';
 import { createComponent, createModel, createSlice, compose } from './index';
-import type { SliceFactory, AdapterAPI, ComponentSpec, AdapterResult, ViewTypes } from './index';
+import type {
+  SliceFactory,
+  AdapterAPI,
+  ComponentSpec,
+  AdapterResult,
+  ViewTypes,
+} from './index';
 import { isSliceFactory } from './adapter-contract';
 
 // Minimal test adapter for API parameter testing
-interface TestAdapterResult<Model, Actions, Views> extends AdapterResult<Model, Actions, Views> {
+interface TestAdapterResult<Model, Actions, Views>
+  extends AdapterResult<Model, Actions, Views> {
   getState: () => Model;
 }
 
 function createTestAdapter<Model, Actions, Views>(
-  componentOrFactory: ComponentSpec<Model, Actions, Views> | (() => ComponentSpec<Model, Actions, Views>)
+  componentOrFactory:
+    | ComponentSpec<Model, Actions, Views>
+    | (() => ComponentSpec<Model, Actions, Views>)
 ): TestAdapterResult<Model, Actions, Views> {
-  const spec = typeof componentOrFactory === 'function' ? componentOrFactory() : componentOrFactory;
-  
+  const spec =
+    typeof componentOrFactory === 'function'
+      ? componentOrFactory()
+      : componentOrFactory;
+
   // Initialize model
   let state: Model;
   const modelTools = {
@@ -32,28 +44,29 @@ function createTestAdapter<Model, Actions, Views>(
       state = { ...state, ...updates };
     },
   };
-  
+
   // Initialize state
   state = spec.model(modelTools);
-  
+
   // Create API
   const api: AdapterAPI<Model> = {
     executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
       return slice(state, api);
     },
-    getState: () => state,
   };
-  
+
   // Execute actions
   const actions = spec.actions(state, api);
-  
+
   // Process views
   const views = Object.entries(spec.views as Record<string, unknown>).reduce(
     (acc, [key, view]) => {
       if (isSliceFactory(view)) {
-        acc[key as keyof ViewTypes<Model, Views>] = (() => 
-          view(state, api)
-        ) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
+        acc[key as keyof ViewTypes<Model, Views>] = (() =>
+          view(state, api)) as ViewTypes<Model, Views>[keyof ViewTypes<
+          Model,
+          Views
+        >];
       } else if (typeof view === 'function') {
         acc[key as keyof ViewTypes<Model, Views>] = (() => {
           const result = view();
@@ -67,7 +80,7 @@ function createTestAdapter<Model, Actions, Views>(
     },
     {} as ViewTypes<Model, Views>
   );
-  
+
   return {
     actions,
     views,
@@ -105,7 +118,7 @@ describe('API Parameter Functionality', () => {
           return {
             userCount: users.length,
             productCount: products.length,
-            adminCount: users.filter(u => u.role === 'admin').length,
+            adminCount: users.filter((u) => u.role === 'admin').length,
             totalValue: products.reduce((sum, p) => sum + p.price, 0),
           };
         });
@@ -138,20 +151,21 @@ describe('API Parameter Functionality', () => {
           increment: () => set({ counter: get().counter + 1 }),
         }));
 
-        // Slice that directly uses getState
-        const stateInspectorSlice = createSlice(model, (m, api) => {
-          const currentState = api.getState();
+        // Slice that inspects state through model parameter
+        const stateInspectorSlice = createSlice(model, (m) => {
           return {
             fromParameter: m.counter,
-            fromApi: currentState.counter,
-            statesMatch: m.counter === currentState.counter,
-            hasIncrementFunction: typeof currentState.increment === 'function',
+            fromModel: m.counter,
+            statesMatch: true, // m is always the current state
+            hasIncrementFunction: typeof m.increment === 'function',
           };
         });
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ increment: m.increment })),
+          actions: createSlice(model, (m, _api) => ({
+            increment: m.increment,
+          })),
           views: {
             inspector: stateInspectorSlice,
           },
@@ -162,7 +176,7 @@ describe('API Parameter Functionality', () => {
       const inspector = adapter.views.inspector();
 
       expect(inspector.fromParameter).toBe(0);
-      expect(inspector.fromApi).toBe(0);
+      expect(inspector.fromModel).toBe(0);
       expect(inspector.statesMatch).toBe(true);
       expect(inspector.hasIncrementFunction).toBe(true);
 
@@ -171,7 +185,7 @@ describe('API Parameter Functionality', () => {
       const updatedInspector = adapter.views.inspector();
 
       expect(updatedInspector.fromParameter).toBe(1);
-      expect(updatedInspector.fromApi).toBe(1);
+      expect(updatedInspector.fromModel).toBe(1);
       expect(updatedInspector.statesMatch).toBe(true);
     });
 
@@ -197,11 +211,10 @@ describe('API Parameter Functionality', () => {
           } else {
             // In detailed mode, use API to get additional info
             const data = api.executeSlice(dataSlice);
-            const state = api.getState();
             return {
               value: data.value,
               metadata: data.metadata,
-              mode: state.mode,
+              mode: m.mode,
               timestamp: Date.now(),
             };
           }
@@ -217,7 +230,7 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Simple mode
       const simpleView = adapter.views.adaptive();
       expect(simpleView).toHaveProperty('value', 42);
@@ -251,7 +264,7 @@ describe('API Parameter Functionality', () => {
             const current = get().activeFilters;
             const index = current.indexOf(filter);
             if (index >= 0) {
-              set({ activeFilters: current.filter(f => f !== filter) });
+              set({ activeFilters: current.filter((f) => f !== filter) });
             } else {
               set({ activeFilters: [...current, filter] });
             }
@@ -262,8 +275,8 @@ describe('API Parameter Functionality', () => {
         const createFilteredItemsSlice = (filters: string[]) =>
           createSlice(model, (m, _api) => {
             if (filters.length === 0) return m.items;
-            return m.items.filter(item =>
-              filters.every(filter => item.tags.includes(filter))
+            return m.items.filter((item) =>
+              filters.every((filter) => item.tags.includes(filter))
             );
           });
 
@@ -272,7 +285,7 @@ describe('API Parameter Functionality', () => {
           createSlice(model, (m, api) => {
             const filterSlice = createFilteredItemsSlice(m.activeFilters);
             const filtered = api.executeSlice(filterSlice);
-            
+
             return {
               items: filtered,
               activeFilters: m.activeFilters,
@@ -282,7 +295,9 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ toggleFilter: m.toggleFilter })),
+          actions: createSlice(model, (m, _api) => ({
+            toggleFilter: m.toggleFilter,
+          })),
           views: {
             filtered: filteredView,
           },
@@ -290,7 +305,7 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // No filters
       let view = adapter.views.filtered();
       expect(view).toHaveProperty('count', 3);
@@ -302,7 +317,10 @@ describe('API Parameter Functionality', () => {
       view = adapter.views.filtered();
       expect(view).toHaveProperty('count', 2);
       expect(view).toHaveProperty('items');
-      expect((view as any).items.map((i: any) => i.name)).toEqual(['Item A', 'Item C']);
+      expect((view as any).items.map((i: any) => i.name)).toEqual([
+        'Item A',
+        'Item C',
+      ]);
 
       // Add 'small' filter
       adapter.actions.toggleFilter('small');
@@ -314,7 +332,11 @@ describe('API Parameter Functionality', () => {
     it('should compose multiple slices to create complex views', () => {
       const component = createComponent(() => {
         const model = createModel<{
-          user: { id: number; name: string; preferences: { theme: string; language: string } };
+          user: {
+            id: number;
+            name: string;
+            preferences: { theme: string; language: string };
+          };
           posts: { id: number; userId: number; title: string; likes: number }[];
           comments: { id: number; postId: number; text: string }[];
         }>(() => ({
@@ -356,10 +378,8 @@ describe('API Parameter Functionality', () => {
         const dashboardSlice = createSlice(
           model,
           compose(
-            { userSlice, statsSlice },
-            (_m, { userSlice: user, statsSlice: stats }, api) => {
-              const posts = api.executeSlice(postsSlice);
-              
+            { userSlice, statsSlice, postsSlice },
+            (_m, { userSlice: user, statsSlice: stats, postsSlice: posts }) => {
               return {
                 welcome: `Welcome, ${user.name}!`,
                 theme: user.preferences.theme,
@@ -369,7 +389,7 @@ describe('API Parameter Functionality', () => {
                   comments: stats.totalComments,
                   engagement: stats.avgCommentsPerPost,
                 },
-                recentPosts: posts.slice(0, 5).map(p => ({
+                recentPosts: posts.slice(0, 5).map((p: any) => ({
                   title: p.title,
                   likes: p.likes,
                 })),
@@ -418,15 +438,19 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Recursive slice factory - fix model type
-        type NodeModel = { nodes: { id: number; name: string; parentId: number | null }[] };
-        const createNodeTreeSlice = (nodeId: number): SliceFactory<NodeModel, any> =>
+        type NodeModel = {
+          nodes: { id: number; name: string; parentId: number | null }[];
+        };
+        const createNodeTreeSlice = (
+          nodeId: number
+        ): SliceFactory<NodeModel, any> =>
           createSlice(model, (m, api) => {
-            const node = m.nodes.find(n => n.id === nodeId);
+            const node = m.nodes.find((n) => n.id === nodeId);
             if (!node) return null;
 
             const children = m.nodes
-              .filter(n => n.parentId === nodeId)
-              .map(child => api.executeSlice(createNodeTreeSlice(child.id)))
+              .filter((n) => n.parentId === nodeId)
+              .map((child) => api.executeSlice(createNodeTreeSlice(child.id)))
               .filter(Boolean);
 
             return {
@@ -437,10 +461,12 @@ describe('API Parameter Functionality', () => {
           });
 
         // Tree view starting from root
-        const treeSlice = createSlice(model, (_m, api) => {
-          const rootNodes = api.getState().nodes.filter(n => n.parentId === null);
+        const treeSlice = createSlice(model, (m, api) => {
+          const rootNodes = m.nodes.filter((n) => n.parentId === null);
           return {
-            tree: rootNodes.map(root => api.executeSlice(createNodeTreeSlice(root.id))),
+            tree: rootNodes.map((root) =>
+              api.executeSlice(createNodeTreeSlice(root.id))
+            ),
           };
         });
 
@@ -461,7 +487,9 @@ describe('API Parameter Functionality', () => {
       expect(treeView.tree[0].children).toHaveLength(2);
       expect(treeView.tree[0].children[0].name).toBe('Child 1');
       expect(treeView.tree[0].children[0].children).toHaveLength(1);
-      expect(treeView.tree[0].children[0].children[0].name).toBe('Grandchild 1');
+      expect(treeView.tree[0].children[0].children[0].name).toBe(
+        'Grandchild 1'
+      );
     });
 
     it('should handle cross-slice dependencies and circular references safely', () => {
@@ -492,8 +520,12 @@ describe('API Parameter Functionality', () => {
           const teamB = api.executeSlice(teamBSlice);
 
           return {
-            leader: teamA.score > teamB.score ? teamA.name : 
-                    teamB.score > teamA.score ? teamB.name : 'Tie',
+            leader:
+              teamA.score > teamB.score
+                ? teamA.name
+                : teamB.score > teamA.score
+                  ? teamB.name
+                  : 'Tie',
             difference: Math.abs(teamA.score - teamB.score),
             total: teamA.score + teamB.score,
           };
@@ -507,14 +539,19 @@ describe('API Parameter Functionality', () => {
 
           return {
             teams: [teamA, teamB],
-            status: comparison.leader === 'Tie' ? 'Draw' : `${comparison.leader} winning by ${comparison.difference}`,
+            status:
+              comparison.leader === 'Tie'
+                ? 'Draw'
+                : `${comparison.leader} winning by ${comparison.difference}`,
             totalPoints: comparison.total,
           };
         });
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ updateScore: m.updateScore })),
+          actions: createSlice(model, (m, _api) => ({
+            updateScore: m.updateScore,
+          })),
           views: {
             match: matchSlice,
             comparison: comparisonSlice,
@@ -523,7 +560,7 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Initial state
       let match = adapter.views.match();
       expect(match.status).toBe('Draw');
@@ -582,7 +619,9 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ toggleError: m.toggleError })),
+          actions: createSlice(model, (m, _api) => ({
+            toggleError: m.toggleError,
+          })),
           views: {
             safeWrapper: safeWrapperSlice,
           },
@@ -590,7 +629,7 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Safe mode
       let view = adapter.views.safeWrapper();
       expect(view.success).toBe(true);
@@ -609,7 +648,7 @@ describe('API Parameter Functionality', () => {
   describe('Middleware Patterns', () => {
     it('should implement logging middleware pattern', () => {
       const logs: string[] = [];
-      
+
       const component = createComponent(() => {
         const model = createModel<{
           value: number;
@@ -620,7 +659,7 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Create a logging wrapper for slices
-        type LogModel = { value: number; increment: () => void; };
+        type LogModel = { value: number; increment: () => void };
         const withLogging = <T>(
           name: string,
           slice: SliceFactory<LogModel, T>
@@ -628,7 +667,7 @@ describe('API Parameter Functionality', () => {
           createSlice(model, (_m, api) => {
             logs.push(`[${name}] Executing...`);
             const start = Date.now();
-            
+
             try {
               const result = api.executeSlice(slice);
               const duration = Date.now() - start;
@@ -642,15 +681,20 @@ describe('API Parameter Functionality', () => {
           });
 
         // Base slices
-        const valueSlice = createSlice(model, (m, _api) => ({ value: m.value }));
-        const doubleSlice = createSlice(model, (m, _api) => ({ double: m.value * 2 }));
+        const valueSlice = createSlice(model, (m, _api) => ({
+          value: m.value,
+        }));
+        const doubleSlice = createSlice(model, (m, _api) => ({
+          double: m.value * 2,
+        }));
 
         // Wrapped slices with logging
         const loggedValueSlice = withLogging('value', valueSlice);
         const loggedDoubleSlice = withLogging('double', doubleSlice);
 
         // Composite slice that uses logged slices
-        const compositeSlice = withLogging('composite',
+        const compositeSlice = withLogging(
+          'composite',
           createSlice(model, (_m, api) => {
             const value = api.executeSlice(loggedValueSlice);
             const double = api.executeSlice(loggedDoubleSlice);
@@ -664,7 +708,9 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ increment: m.increment })),
+          actions: createSlice(model, (m, _api) => ({
+            increment: m.increment,
+          })),
           views: {
             composite: compositeSlice,
           },
@@ -672,21 +718,21 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Clear logs and execute
       logs.length = 0;
       const view = adapter.views.composite();
-      
+
       expect(view).toEqual({ value: 0, double: 0, sum: 0 });
       expect(logs).toContain('[composite] Executing...');
       expect(logs).toContain('[value] Executing...');
       expect(logs).toContain('[double] Executing...');
-      expect(logs.filter(log => log.includes('Success')).length).toBe(3);
+      expect(logs.filter((log) => log.includes('Success')).length).toBe(3);
     });
 
     it('should implement caching middleware pattern', () => {
       let computationCount = 0;
-      
+
       const component = createComponent(() => {
         const model = createModel<{
           input: number;
@@ -697,20 +743,20 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Create a caching wrapper
-        type CacheModel = { input: number; setInput: (value: number) => void; };
+        type CacheModel = { input: number; setInput: (value: number) => void };
         const withCache = <T>(
           slice: SliceFactory<CacheModel, T>,
           keyFn: (m: any) => string
         ): SliceFactory<CacheModel, T> => {
           const cache = new Map<string, T>();
-          
+
           return createSlice(model, (m, api) => {
             const key = keyFn(m);
-            
+
             if (cache.has(key)) {
               return cache.get(key)!;
             }
-            
+
             const result = api.executeSlice(slice);
             cache.set(key, result);
             return result;
@@ -739,9 +785,11 @@ describe('API Parameter Functionality', () => {
           const result1 = api.executeSlice(cachedExpensiveSlice);
           const result2 = api.executeSlice(cachedExpensiveSlice);
           const result3 = api.executeSlice(cachedExpensiveSlice);
-          
+
           return {
-            allEqual: result1.result === result2.result && result2.result === result3.result,
+            allEqual:
+              result1.result === result2.result &&
+              result2.result === result3.result,
             computations: result1.computations,
           };
         });
@@ -756,19 +804,19 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Reset counter
       computationCount = 0;
-      
+
       // First execution - should compute once
       let view = adapter.views.multiUse();
       expect(view.allEqual).toBe(true);
       expect(view.computations).toBe(1);
-      
+
       // Second execution with same input - should use cache
       view = adapter.views.multiUse();
       expect(view.computations).toBe(1); // Still 1, not recomputed
-      
+
       // Change input - should compute again
       adapter.actions.setInput(2);
       view = adapter.views.multiUse();
@@ -777,7 +825,7 @@ describe('API Parameter Functionality', () => {
 
     it('should implement performance tracking middleware', () => {
       const performanceData: { [key: string]: number[] } = {};
-      
+
       const component = createComponent(() => {
         const model = createModel<{
           data: number[];
@@ -788,7 +836,7 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Performance tracking wrapper
-        type PerfModel = { data: number[]; addData: (value: number) => void; };
+        type PerfModel = { data: number[]; addData: (value: number) => void };
         const withPerformanceTracking = <T>(
           name: string,
           slice: SliceFactory<PerfModel, T>
@@ -797,12 +845,12 @@ describe('API Parameter Functionality', () => {
             const start = performance.now();
             const result = api.executeSlice(slice);
             const duration = performance.now() - start;
-            
+
             if (!performanceData[name]) {
               performanceData[name] = [];
             }
             performanceData[name].push(duration);
-            
+
             return result;
           });
 
@@ -825,14 +873,19 @@ describe('API Parameter Functionality', () => {
             median: (() => {
               const sorted = [...m.data].sort((a, b) => a - b);
               const mid = Math.floor(sorted.length / 2);
-              return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+              return sorted.length % 2
+                ? sorted[mid]!
+                : (sorted[mid - 1]! + sorted[mid]!) / 2;
             })(),
           },
         }));
 
         // Tracked versions
         const trackedSimple = withPerformanceTracking('simple', simpleSlice);
-        const trackedModerate = withPerformanceTracking('moderate', moderateSlice);
+        const trackedModerate = withPerformanceTracking(
+          'moderate',
+          moderateSlice
+        );
         const trackedComplex = withPerformanceTracking('complex', complexSlice);
 
         // Dashboard that uses all tracked slices
@@ -840,19 +893,22 @@ describe('API Parameter Functionality', () => {
           const simple = api.executeSlice(trackedSimple);
           const moderate = api.executeSlice(trackedModerate);
           const complex = api.executeSlice(trackedComplex);
-          
+
           return {
             simple,
             moderate,
             complex,
-            performance: Object.entries(performanceData).reduce((acc, [key, times]) => {
-              acc[key] = {
-                calls: times.length,
-                avgTime: times.reduce((a, b) => a + b, 0) / times.length,
-                totalTime: times.reduce((a, b) => a + b, 0),
-              };
-              return acc;
-            }, {} as any),
+            performance: Object.entries(performanceData).reduce(
+              (acc, [key, times]) => {
+                acc[key] = {
+                  calls: times.length,
+                  avgTime: times.reduce((a, b) => a + b, 0) / times.length,
+                  totalTime: times.reduce((a, b) => a + b, 0),
+                };
+                return acc;
+              },
+              {} as any
+            ),
           };
         });
 
@@ -866,19 +922,19 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Execute multiple times to gather performance data
       for (let i = 0; i < 5; i++) {
         adapter.views.dashboard();
       }
-      
+
       const finalDashboard = adapter.views.dashboard();
-      
+
       // Verify performance tracking
       expect(finalDashboard.performance.simple.calls).toBe(6); // 5 + 1
       expect(finalDashboard.performance.moderate.calls).toBe(6);
       expect(finalDashboard.performance.complex.calls).toBe(6);
-      
+
       // Performance characteristics (complex should generally take longer)
       expect(finalDashboard.performance.simple.avgTime).toBeDefined();
       expect(finalDashboard.performance.moderate.avgTime).toBeDefined();
@@ -922,9 +978,12 @@ describe('API Parameter Functionality', () => {
             return null;
           },
           username: (value: string) => {
-            if (value.length < 3) return 'Username must be at least 3 characters';
-            if (value.length > 20) return 'Username must be at most 20 characters';
-            if (!/^[a-zA-Z0-9_]+$/.test(value)) return 'Username can only contain letters, numbers, and underscores';
+            if (value.length < 3)
+              return 'Username must be at least 3 characters';
+            if (value.length > 20)
+              return 'Username must be at most 20 characters';
+            if (!/^[a-zA-Z0-9_]+$/.test(value))
+              return 'Username can only contain letters, numbers, and underscores';
             return null;
           },
         };
@@ -940,20 +999,23 @@ describe('API Parameter Functionality', () => {
         };
         const withValidation = <T extends { [key: string]: any }>(
           slice: SliceFactory<ValidModel, T>
-        ): SliceFactory<ValidModel, T & { validation: { [key: string]: string | null }; isValid: boolean }> =>
+        ): SliceFactory<
+          ValidModel,
+          T & { validation: { [key: string]: string | null }; isValid: boolean }
+        > =>
           createSlice(model, (_m, api) => {
             const data = api.executeSlice(slice);
             const validation: { [key: string]: string | null } = {};
-            
+
             // Validate each field
             Object.entries(data).forEach(([field, value]) => {
               if (field in validators) {
                 validation[field] = (validators as any)[field](value);
               }
             });
-            
-            const isValid = Object.values(validation).every(v => v === null);
-            
+
+            const isValid = Object.values(validation).every((v) => v === null);
+
             return {
               ...data,
               validation,
@@ -969,7 +1031,9 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m, _api) => ({ updateField: m.updateField })),
+          actions: createSlice(model, (m, _api) => ({
+            updateField: m.updateField,
+          })),
           views: {
             form: validatedFormSlice,
           },
@@ -977,24 +1041,26 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Initial state - all invalid
       let form = adapter.views.form();
       expect(form.isValid).toBe(false);
       expect(form.validation.email).toBe('Invalid email format');
-      expect(form.validation.username).toBe('Username must be at least 3 characters');
-      
+      expect(form.validation.username).toBe(
+        'Username must be at least 3 characters'
+      );
+
       // Update to valid values
       adapter.actions.updateField('email', 'user@example.com');
       adapter.actions.updateField('age', 25);
       adapter.actions.updateField('username', 'john_doe');
-      
+
       form = adapter.views.form();
       expect(form.isValid).toBe(true);
       expect(form.validation.email).toBe(null);
       expect(form.validation.age).toBe(null);
       expect(form.validation.username).toBe(null);
-      
+
       // Invalid updates
       adapter.actions.updateField('age', 200);
       form = adapter.views.form();
@@ -1007,7 +1073,12 @@ describe('API Parameter Functionality', () => {
     it('should handle a shopping cart with computed totals', () => {
       const component = createComponent(() => {
         const model = createModel<{
-          products: { id: number; name: string; price: number; stock: number }[];
+          products: {
+            id: number;
+            name: string;
+            price: number;
+            stock: number;
+          }[];
           cart: { productId: number; quantity: number }[];
           addToCart: (productId: number, quantity: number) => void;
           removeFromCart: (productId: number) => void;
@@ -1021,10 +1092,12 @@ describe('API Parameter Functionality', () => {
           cart: [],
           addToCart: (productId, quantity) => {
             const current = get();
-            const existing = current.cart.find(item => item.productId === productId);
+            const existing = current.cart.find(
+              (item) => item.productId === productId
+            );
             if (existing) {
               set({
-                cart: current.cart.map(item =>
+                cart: current.cart.map((item) =>
                   item.productId === productId
                     ? { ...item, quantity: item.quantity + quantity }
                     : item
@@ -1035,14 +1108,16 @@ describe('API Parameter Functionality', () => {
             }
           },
           removeFromCart: (productId) => {
-            set({ cart: get().cart.filter(item => item.productId !== productId) });
+            set({
+              cart: get().cart.filter((item) => item.productId !== productId),
+            });
           },
           updateQuantity: (productId, quantity) => {
             if (quantity <= 0) {
               get().removeFromCart(productId);
             } else {
               set({
-                cart: get().cart.map(item =>
+                cart: get().cart.map((item) =>
                   item.productId === productId ? { ...item, quantity } : item
                 ),
               });
@@ -1056,30 +1131,32 @@ describe('API Parameter Functionality', () => {
         // Cart items with product details
         const cartDetailsSlice = createSlice(model, (m, api) => {
           const products = api.executeSlice(catalogSlice);
-          
-          return m.cart.map(cartItem => {
-            const product = products.find(p => p.id === cartItem.productId);
-            if (!product) return null;
-            
-            return {
-              ...product,
-              quantity: cartItem.quantity,
-              subtotal: product.price * cartItem.quantity,
-              inStock: product.stock >= cartItem.quantity,
-            };
-          }).filter((item): item is NonNullable<typeof item> => item !== null);
+
+          return m.cart
+            .map((cartItem) => {
+              const product = products.find((p) => p.id === cartItem.productId);
+              if (!product) return null;
+
+              return {
+                ...product,
+                quantity: cartItem.quantity,
+                subtotal: product.price * cartItem.quantity,
+                inStock: product.stock >= cartItem.quantity,
+              };
+            })
+            .filter((item): item is NonNullable<typeof item> => item !== null);
         });
 
         // Cart summary
         const cartSummarySlice = createSlice(model, (_m, api) => {
           const items = api.executeSlice(cartDetailsSlice);
-          
+
           const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
           const taxRate = 0.08; // 8% tax
           const tax = subtotal * taxRate;
           const shipping = subtotal > 100 ? 0 : 10; // Free shipping over $100
           const total = subtotal + tax + shipping;
-          
+
           return {
             itemCount: items.reduce((sum, item) => sum + item.quantity, 0),
             subtotal: Math.round(subtotal * 100) / 100,
@@ -1087,7 +1164,7 @@ describe('API Parameter Functionality', () => {
             shipping,
             total: Math.round(total * 100) / 100,
             freeShippingEligible: subtotal > 100,
-            allInStock: items.every(item => item.inStock),
+            allInStock: items.every((item) => item.inStock),
           };
         });
 
@@ -1106,26 +1183,26 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Add items to cart
       adapter.actions.addToCart(1, 1); // 1 laptop
       adapter.actions.addToCart(2, 2); // 2 mice
-      
+
       let details = adapter.views.cartDetails();
       expect(details).toHaveLength(2);
       expect(details[0]?.name).toBe('Laptop');
       expect(details[0]?.quantity).toBe(1);
       expect(details[0]?.subtotal).toBe(999.99);
-      
+
       let summary = adapter.views.summary();
       expect(summary.itemCount).toBe(3);
       expect(summary.subtotal).toBe(1059.97);
       expect(summary.freeShippingEligible).toBe(true);
       expect(summary.shipping).toBe(0);
-      
+
       // Update quantity
       adapter.actions.updateQuantity(1, 2); // 2 laptops
-      
+
       summary = adapter.views.summary();
       expect(summary.itemCount).toBe(4);
       expect(summary.subtotal).toBe(2059.96);
@@ -1161,8 +1238,8 @@ describe('API Parameter Functionality', () => {
             const current = get();
             const roles = add
               ? [...current.user.roles, role]
-              : current.user.roles.filter(r => r !== role);
-            
+              : current.user.roles.filter((r) => r !== role);
+
             // Update permissions based on roles
             const permissions = new Set(['read']); // Base permission
             if (roles.includes('admin')) {
@@ -1174,7 +1251,7 @@ describe('API Parameter Functionality', () => {
               permissions.add('write');
               permissions.add('moderate');
             }
-            
+
             set({
               user: {
                 ...current.user,
@@ -1196,27 +1273,36 @@ describe('API Parameter Functionality', () => {
         // Permission checker slice factory
         const createPermissionChecker = (requiredPermissions: string[]) =>
           createSlice(model, (m, _api) => {
-            const hasAll = requiredPermissions.every(perm =>
+            const hasAll = requiredPermissions.every((perm) =>
               m.user.permissions.includes(perm)
             );
-            const hasAny = requiredPermissions.some(perm =>
+            const hasAny = requiredPermissions.some((perm) =>
               m.user.permissions.includes(perm)
             );
-            
-            return { hasAll, hasAny, missing: requiredPermissions.filter(
-              perm => !m.user.permissions.includes(perm)
-            )};
+
+            return {
+              hasAll,
+              hasAny,
+              missing: requiredPermissions.filter(
+                (perm) => !m.user.permissions.includes(perm)
+              ),
+            };
           });
 
         // Feature availability slice
         const featureAvailabilitySlice = createSlice(model, (m, api) => {
           const canWrite = api.executeSlice(createPermissionChecker(['write']));
-          const canAdmin = api.executeSlice(createPermissionChecker(['manage_users']));
-          
+          const canAdmin = api.executeSlice(
+            createPermissionChecker(['manage_users'])
+          );
+
           return {
             canUseDarkMode: m.featureFlags.darkMode,
-            canUseBetaFeatures: m.featureFlags.betaFeatures && m.user.roles.includes('beta_tester'),
-            canUseAdvancedAnalytics: m.featureFlags.advancedAnalytics && canAdmin.hasAll,
+            canUseBetaFeatures:
+              m.featureFlags.betaFeatures &&
+              m.user.roles.includes('beta_tester'),
+            canUseAdvancedAnalytics:
+              m.featureFlags.advancedAnalytics && canAdmin.hasAll,
             canEditContent: canWrite.hasAll,
             canManageUsers: canAdmin.hasAll,
           };
@@ -1225,12 +1311,13 @@ describe('API Parameter Functionality', () => {
         // User dashboard slice
         const userDashboardSlice = createSlice(model, (m, api) => {
           const features = api.executeSlice(featureAvailabilitySlice);
-          
+
           const availableActions = [];
           if (features.canEditContent) availableActions.push('Edit');
           if (features.canManageUsers) availableActions.push('Manage Users');
-          if (m.user.permissions.includes('moderate')) availableActions.push('Moderate');
-          
+          if (m.user.permissions.includes('moderate'))
+            availableActions.push('Moderate');
+
           return {
             greeting: `Welcome, ${m.user.name}!`,
             role: m.user.roles.join(', '),
@@ -1255,24 +1342,24 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      
+
       // Initial state - basic user
       let dashboard = adapter.views.dashboard();
       expect(dashboard.role).toBe('user');
       expect(dashboard.availableActions).toEqual([]);
       expect(dashboard.enabledFeatures).toContain('canUseDarkMode');
-      
+
       // Add moderator role
       adapter.actions.updateUserRole('moderator', true);
       dashboard = adapter.views.dashboard();
       expect(dashboard.availableActions).toContain('Edit');
       expect(dashboard.availableActions).toContain('Moderate');
-      
+
       // Add admin role
       adapter.actions.updateUserRole('admin', true);
       dashboard = adapter.views.dashboard();
       expect(dashboard.availableActions).toContain('Manage Users');
-      
+
       // Enable advanced analytics
       adapter.actions.toggleFeature('advancedAnalytics');
       let features = adapter.views.features();

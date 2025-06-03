@@ -162,23 +162,16 @@ type StoreWithSelector<T> = StoreApi<T> & {
 };
 
 // ============================================================================
-// Primitive Implementations
-// ============================================================================
-
-// The createZustandSlice function has been removed as it's no longer needed
-// with the new compose() approach. The functionality is now handled directly
-// in the createSliceExecutor function.
-
-// ============================================================================
 // Supporting Types and Functions
 // ============================================================================
 
 /**
  * Creates a wrapper for slice execution with AdapterAPI
  */
-function createSliceExecutor<Model>(
-  zustandStore: StoreWithSelector<Model>
-): { executeSliceFactory: <T>(factory: SliceFactory<Model, T>) => T; api: AdapterAPI<Model> } {
+function createSliceExecutor<Model>(zustandStore: StoreWithSelector<Model>): {
+  executeSliceFactory: <T>(factory: SliceFactory<Model, T>) => T;
+  api: AdapterAPI<Model>;
+} {
   // Create the AdapterAPI implementation with Zustand-specific extensions
   const api: AdapterAPI<Model> & {
     subscribe: typeof zustandStore.subscribe;
@@ -243,12 +236,12 @@ function processViews<Model, Views>(
       views[key as keyof ViewTypes<Model, Views>] = ((...args: unknown[]) => {
         // Call the view function with user args + api as last argument
         const result = view(...args, api);
-        
+
         // If the result is a slice factory, execute it with the API
         if (isSliceFactory(result)) {
           return executeSliceFactory(result);
         }
-        
+
         // Otherwise return the result as-is
         return result;
       }) as any;
@@ -882,7 +875,7 @@ if (import.meta.vitest) {
 
     it('should provide Zustand-specific subscribe method in API', () => {
       let capturedApi: any;
-      
+
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -945,26 +938,40 @@ if (import.meta.vitest) {
         const itemsSlice = createSlice(model, (m) => m.items);
 
         // Computed view that takes arguments and receives API as last parameter
-        const filteredView = function(this: any, ...args: any[]) {
+        const filteredView = function (this: any, ...args: any[]) {
           // Check if last argument is the API
           const lastArg = args[args.length - 1];
-          const api = lastArg && typeof lastArg.executeSlice === 'function' && typeof lastArg.getState === 'function' ? lastArg : undefined;
-          
+          const api =
+            lastArg &&
+            typeof lastArg.executeSlice === 'function' &&
+            typeof lastArg.getState === 'function'
+              ? lastArg
+              : undefined;
+
           // Get the prefix if provided (excluding API)
-          const prefix = api && args.length > 1 ? args[0] : (!api && args.length > 0 ? args[0] : undefined);
-          
+          const prefix =
+            api && args.length > 1
+              ? args[0]
+              : !api && args.length > 0
+                ? args[0]
+                : undefined;
+
           // If API is provided, use it to execute other slices
           if (api) {
             const items = api.executeSlice(itemsSlice);
             const filter = api.getState().filter;
-            const filtered = items.filter((item: string) => item.includes(filter));
+            const filtered = items.filter((item: string) =>
+              item.includes(filter)
+            );
             return {
-              items: prefix ? filtered.map((item: string) => prefix + item) : filtered,
+              items: prefix
+                ? filtered.map((item: string) => prefix + item)
+                : filtered,
               count: filtered.length,
               hasApi: true,
             };
           }
-          
+
           // Fallback if no API
           return {
             items: [],
@@ -995,7 +1002,11 @@ if (import.meta.vitest) {
       // Test with arguments - API should be injected as last parameter
       result = (store.views as any).filtered('fruit: ');
       expect(result.hasApi).toBe(true);
-      expect(result.items).toEqual(['fruit: apple', 'fruit: banana', 'fruit: apricot']);
+      expect(result.items).toEqual([
+        'fruit: apple',
+        'fruit: banana',
+        'fruit: apricot',
+      ]);
       expect(result.count).toBe(3);
 
       // Change filter and verify it works
@@ -1007,7 +1018,7 @@ if (import.meta.vitest) {
 
     it('should provide subscribe method in API for computed views', () => {
       let capturedApi: any;
-      
+
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -1022,17 +1033,17 @@ if (import.meta.vitest) {
         }));
 
         // Computed view that captures the API
-        const computedView = function(this: any, ...args: any[]) {
+        const computedView = function (this: any, ...args: any[]) {
           const api = args[args.length - 1];
           capturedApi = api;
-          
+
           if (api && typeof api.subscribe === 'function') {
             return {
               hasSubscribe: true,
               count: api.getState().count,
             };
           }
-          
+
           return { hasSubscribe: false, count: 0 };
         };
 
@@ -1049,7 +1060,7 @@ if (import.meta.vitest) {
 
       // Call the computed view
       const result = (store.views as any).status();
-      
+
       // Verify the API was passed and has the subscribe method
       expect(capturedApi).toBeDefined();
       expect(typeof capturedApi.subscribe).toBe('function');

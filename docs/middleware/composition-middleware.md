@@ -189,20 +189,18 @@ function enhancedCompose(deps, selector) {
   );
 }
 
-// The selector inside compose receives the api parameter
+// The selector inside compose receives resolved dependencies
 const slice = createSlice(
   model,
   enhancedCompose(
     { actions, data },
-    (model, { actions, data }, api) => {
-      // api is available here!
-      api.log?.('Creating slice with data:', data);
-      
+    (model, { actions, data }) => {
+      // Dependencies are resolved and available
       return {
         onClick: () => {
-          api.trackEvent?.('button.click');
           actions.increment();
-        }
+        },
+        data: data.value
       };
     }
   )
@@ -351,18 +349,11 @@ const slice = createSlice(
     memoized(
       compose(
         { userData, userActions },
-        // This function receives api from the adapter
-        (model, { userData, userActions }, api) => {
-          // Use slice middleware features
-          api.log?.('Composing user slice');
-          
+        // This function receives resolved dependencies
+        (model, { userData, userActions }) => {
           return {
             name: userData.name,
-            onUpdate: (name: string) => {
-              // Slice middleware in action
-              api.trackEvent?.('user.update', { name });
-              userActions.updateName(name);
-            }
+            onUpdate: userActions.updateName
           };
         }
       )

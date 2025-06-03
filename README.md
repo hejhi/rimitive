@@ -50,24 +50,23 @@ Every slice in Lattice receives two parameters: the `model` and the `api`. The A
 
 ```typescript
 interface AdapterAPI<Model> {
-  // Get the current state
-  getState: () => Model;
-  
   // Execute another slice to get its result
   executeSlice: <T>(sliceFactory: SliceFactory<Model, T>) => T;
   
-  // Adapter-specific extensions...
+  // Note: getState() has been removed - use the model parameter instead
+  // Adapters should NOT add adapter-specific methods
 }
 ```
 
 ### Basic API Usage
 
 ```typescript
-// Access current state
+// Access current state through model parameter
 const debugSlice = createSlice(model, (m, api) => ({
   modelValue: m.count,
-  currentValue: api.getState().count,
-  valuesMatch: m.count === api.getState().count
+  // m is already the current state - no need for getState
+  currentValue: m.count,
+  valuesMatch: true // Always true since m is the current state
 }));
 
 // Execute other slices
@@ -87,7 +86,7 @@ const composedSlice = createSlice(model, (m, api) => {
 // Enhanced actions with logging
 const actions = createSlice(model, (m, api) => ({
   updateWithLog: (value: string) => {
-    console.log('Previous:', api.getState().value);
+    console.log('Previous:', m.value);
     m.setValue(value);
     // Note: State won't be updated until after this returns
   }
@@ -96,10 +95,10 @@ const actions = createSlice(model, (m, api) => ({
 
 ### Why the API Parameter?
 
-1. **State Access**: Get current state without closure dependencies
-2. **Slice Composition**: Execute other slices to build complex behaviors
-3. **Cross-Cutting Concerns**: Logging, metrics, debugging
-4. **Adapter Extensions**: Access adapter-specific features (subscriptions, devtools, etc.)
+1. **Slice Composition**: Execute other slices to build complex behaviors
+2. **Dynamic Execution**: Run slices based on runtime conditions
+3. **Cross-Cutting Concerns**: Could be extended for logging, metrics, debugging
+4. **Component Portability**: By limiting to executeSlice, components work across all adapters
 
 ## How It Works
 
@@ -111,9 +110,9 @@ When you write Lattice code, you're creating a blueprint:
 // This doesn't execute anything - it's a specification
 const actions = createSlice(model, (m, api) => ({
   increment: m.increment,
-  // Use api to access current state or execute other slices
+  // Use api to execute other slices
   loggedIncrement: () => {
-    console.log('Current count:', api.getState().count);
+    console.log('Current count:', m.count);
     m.increment();
   }
 }));
@@ -123,7 +122,7 @@ const button = createSlice(
   model,
   compose(
     { actions },  // Dependencies
-    (m, { actions }, api) => ({  // Selector receives model + resolved dependencies + api
+    (m, { actions }) => ({  // Selector receives model + resolved dependencies
       onClick: actions.increment,
       disabled: m.disabled
     })
@@ -158,7 +157,7 @@ The `compose()` function provides dependency injection for slices. It takes depe
 // ✅ Correct: Use compose with dependencies
 compose(
   { actions, userSlice },  // Dependencies object
-  (model, { actions, userSlice }, api) => ({  // Selector receives model + resolved deps + api
+  (model, { actions, userSlice }) => ({  // Selector receives model + resolved deps
     onClick: actions.increment,
     userName: userSlice.name
   })
@@ -199,9 +198,9 @@ const counter = createComponent(() => {
   const actions = createSlice(model, (m, api) => ({
     increment: m.increment,
     decrement: m.decrement,
-    // Use API to log current state
+    // Log current state
     incrementWithLog: () => {
-      console.log('Before:', api.getState().count);
+      console.log('Before:', m.count);
       m.increment();
     }
   }));
@@ -209,8 +208,8 @@ const counter = createComponent(() => {
   // State slice for display
   const countSlice = createSlice(model, (m, api) => ({
     count: m.count,
-    // Use API to check other state
-    isDisabled: api.getState().disabled
+    // Access model directly
+    isDisabled: m.disabled
   }));
   
   // Composite slice: Combines state and actions
@@ -218,7 +217,7 @@ const counter = createComponent(() => {
     model,
     compose(
       { actions },  // Declare dependencies
-      (m, { actions }, api) => ({  // Use resolved dependencies + api
+      (m, { actions }) => ({  // Use resolved dependencies
         onClick: actions.increment,
         disabled: m.disabled,
         'aria-label': 'Increment counter'
@@ -276,7 +275,7 @@ const store = createZustandAdapter(counter);
 
 // What you get back is a working store:
 store.actions.increment(); // Now this actually works!
-console.log(store.getState().count); // 1
+// Access state through views or adapter-specific methods
 ```
 
 ### Step 4: Testing Your Specifications
@@ -289,14 +288,14 @@ describe('counter', () => {
     // Test utilities execute your specification with a test adapter
     const test = createComponentTest(counter);
     
-    // Initial state
-    expect(test.store.getState().count).toBe(0);
+    // Initial state - access through views
+    expect(test.views.counter()['data-count']).toBe(0);
     
     // Call the action - test utils resolve compose() dependencies
     await test.store.actions.increment();
     
     // Verify state changed
-    expect(test.store.getState().count).toBe(1);
+    expect(test.views.counter()['data-count']).toBe(1);
     
     // Test computed views
     const viewAttrs = test.views.counter();
@@ -313,7 +312,9 @@ describe('counter', () => {
     // The onClick is now a real function thanks to dependency resolution
     await button.onClick();
     
-    expect(test.store.getState().count).toBe(1);
+    // Verify through views
+    const counterView = test.views.counter();
+    expect(counterView['data-count']).toBe(1);
   });
 });
 ```
@@ -352,8 +353,8 @@ const todoList = createComponent(() => {
   const todoState = createSlice(model, (m, api) => ({
     todos: m.todos,
     filter: m.filter,
-    // Use API to derive additional state
-    isEmpty: api.getState().todos.length === 0
+    // Derive from model directly
+    isEmpty: m.todos.length === 0
   }));
   
   // Shared computation - memoized automatically
@@ -376,9 +377,9 @@ const todoList = createComponent(() => {
     setFilter: m.setFilter,
     // Use API to execute other slices
     clearCompleted: () => {
-      const stats = api.executeSlice(todoState);
-      console.log(`Clearing ${stats.todos.filter(t => t.completed).length} completed todos`);
-      m.set({ todos: api.getState().todos.filter(t => !t.completed) });
+      const completedCount = m.todos.filter(t => t.completed).length;
+      console.log(`Clearing ${completedCount} completed todos`);
+      m.set({ todos: m.todos.filter(t => !t.completed) });
     }
   }));
 
@@ -386,7 +387,7 @@ const todoList = createComponent(() => {
     model,
     compose(
       { actions },  // Declare actions dependency
-      (m, { actions }, api) => ({  // Receive model + resolved actions + api
+      (m, { actions }) => ({  // Receive model + resolved actions
         setFilter: actions.setFilter,
         filter: m.filter,
       })
@@ -435,15 +436,15 @@ Slices can compose other slices for complex behaviors. Here's how it works:
 const userSlice = createSlice(model, (m, api) => ({
   user: m.user,
   isLoggedIn: m.isLoggedIn,
-  // Use API to get related data
-  sessionTime: Date.now() - api.getState().loginTime
+  // Access model directly
+  sessionTime: Date.now() - m.loginTime
 }));
 
 const themeSlice = createSlice(model, (m, api) => ({
   theme: m.theme,
   toggleTheme: m.toggleTheme,
-  // Use API to check user preferences
-  isSystemTheme: api.getState().theme === 'system'
+  // Check from model directly
+  isSystemTheme: m.theme === 'system'
 }));
 
 // Step 2: Compose slices using compose() for dependency injection
@@ -451,7 +452,7 @@ const headerSlice = createSlice(
   model,
   compose(
     { userSlice, themeSlice },  // Declare dependencies
-    (m, { userSlice, themeSlice }, api) => ({  // Receive resolved slices + api
+    (m, { userSlice, themeSlice }) => ({  // Receive resolved slices
       user: userSlice.user,
       theme: themeSlice.theme,
       onLogout: m.logout  // Direct model reference
@@ -495,7 +496,7 @@ it('should compose slices correctly', async () => {
   
   // onLogout is a real function
   await headerView.onLogout();
-  expect(test.store.getState().isLoggedIn).toBe(false);
+  // Check logout effect through appropriate view
 });
 ```
 
@@ -580,10 +581,9 @@ Slices are the universal primitive - actions, views, and complex behaviors are a
 // Actions are slices of methods with API access
 const actions = createSlice(model, (m, api) => ({
   increment: m.increment,
-  // Use API for enhanced functionality
+  // Enhanced functionality using model
   smartIncrement: () => {
-    const state = api.getState();
-    if (state.count < state.maxCount) {
+    if (m.count < m.maxCount) {
       m.increment();
     }
   }
@@ -606,7 +606,7 @@ const composite = createSlice(
   model,
   compose(
     { actions, button },  // Multiple dependencies
-    (m, { actions, button }, api) => ({
+    (m, { actions, button }) => ({
       action: actions.increment,
       state: button.disabled
     })
@@ -618,7 +618,7 @@ const composite = createSlice(
 
 ```typescript
 // During composition (what Lattice Core does):
-compose({ actions }, (m, { actions }, api) => ({ onClick: actions.increment }))
+compose({ actions }, (m, { actions }) => ({ onClick: actions.increment }))
 // Returns a selector function with __composeDeps = { actions }
 
 // During runtime (what adapters do):
@@ -709,7 +709,7 @@ const test = createComponentTest(component);
 
 // All markers are resolved, everything works:
 await test.views.button().onClick();
-expect(test.store.getState().count).toBe(1);
+// Verify through views
 ```
 
 ## The Power of One Primitive

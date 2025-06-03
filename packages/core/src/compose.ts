@@ -20,7 +20,7 @@ type ResolveDeps<Deps extends Record<string, SliceFactory<any, any>>> = {
  * Compose function for dependency injection in createSlice
  *
  * @param deps - Object mapping dependency names to slice factories
- * @param selector - Function that receives model, resolved dependencies, and required api
+ * @param selector - Function that receives model and resolved dependencies
  * @returns A selector function that resolves dependencies internally and accepts required api parameter
  *
  * @example
@@ -40,7 +40,7 @@ type ResolveDeps<Deps extends Record<string, SliceFactory<any, any>>> = {
  *   model,
  *   compose(
  *     { actions, userSlice },
- *     (m, { actions, userSlice }, api) => ({
+ *     (m, { actions, userSlice }) => ({
  *       onClick: actions.increment,
  *       userName: userSlice.name,
  *       disabled: m.disabled
@@ -55,7 +55,7 @@ export function compose<
   Result,
 >(
   deps: Deps,
-  selector: (model: Model, resolvedDeps: ResolveDeps<Deps>, api: AdapterAPI<Model>) => Result
+  selector: (model: Model, resolvedDeps: ResolveDeps<Deps>) => Result
 ): (model: Model, api: AdapterAPI<Model>) => Result {
   // Return a selector function that resolves dependencies and accepts required api parameter
   return (model: Model, api: AdapterAPI<Model>): Result => {
@@ -67,8 +67,8 @@ export function compose<
     ]);
     const resolvedDeps = Object.fromEntries(entries) as ResolveDeps<Deps>;
 
-    // Call the selector with model, resolved dependencies, and required api
-    return selector(model, resolvedDeps, api);
+    // Call the selector with model and resolved dependencies
+    return selector(model, resolvedDeps);
   };
 }
 
@@ -87,7 +87,7 @@ if (import.meta.vitest) {
       // Use compose within createSlice as intended
       const composedSlice = createSlice(
         model,
-        compose({ mySlice: slice }, (_, deps, _api) => ({
+        compose({ mySlice: slice }, (_, deps) => ({
           doubled: deps.mySlice.value * 2,
         }))
       );
@@ -96,8 +96,7 @@ if (import.meta.vitest) {
       const mockApi: AdapterAPI<{ count: number }> = {
         executeSlice: <T>(_slice: SliceFactory<{ count: number }, T>): T => {
           return {} as T;
-        },
-        getState: () => ({ count: 5 })
+        }
       };
 
       // Test the composed slice
@@ -121,7 +120,7 @@ if (import.meta.vitest) {
       // Use compose within createSlice
       const composedSlice = createSlice(
         model,
-        compose({ x: xSlice, y: ySlice }, (_, deps, _api) => ({
+        compose({ x: xSlice, y: ySlice }, (_, deps) => ({
           sum: deps.x.value + deps.y.value,
         }))
       );
@@ -130,8 +129,7 @@ if (import.meta.vitest) {
       const mockApi: AdapterAPI<{ x: number; y: number }> = {
         executeSlice: <T>(_slice: SliceFactory<{ x: number; y: number }, T>): T => {
           return {} as T;
-        },
-        getState: () => ({ x: 3, y: 4 })
+        }
       };
 
       // Test the composed slice
@@ -175,7 +173,7 @@ if (import.meta.vitest) {
 
       const composed = createSlice(
         model,
-        compose({ actions, userSlice }, (m, { actions, userSlice }, _api) => ({
+        compose({ actions, userSlice }, (m, { actions, userSlice }) => ({
           onClick: actions.increment,
           userName: userSlice.name,
           count: m.count,
@@ -192,8 +190,7 @@ if (import.meta.vitest) {
       const mockApi: AdapterAPI<typeof modelData> = {
         executeSlice: <T>(_slice: SliceFactory<typeof modelData, T>): T => {
           return {} as T;
-        },
-        getState: () => modelData
+        }
       };
 
       const result = composed(modelData, mockApi);
@@ -261,7 +258,7 @@ if (import.meta.vitest) {
         model,
         compose(
           { position: positionSlice, colors: colorSlice, sizes: sizeSlice },
-          (_, { position, colors, sizes }, _api) => ({
+          (_, { position, colors, sizes }) => ({
             transform: `translate3d(${position.x}px, ${position.y}px, ${position.z}px)`,
             backgroundColor: colors.primary,
             borderColor: colors.secondary,
@@ -283,8 +280,7 @@ if (import.meta.vitest) {
       const mockApi: AdapterAPI<typeof modelData> = {
         executeSlice: <T>(_slice: SliceFactory<typeof modelData, T>): T => {
           return {} as T;
-        },
-        getState: () => modelData
+        }
       };
 
       const result = viewSlice(modelData, mockApi);
@@ -327,7 +323,7 @@ if (import.meta.vitest) {
         model,
         compose(
           { str: stringSlice, num: numberSlice, bool: booleanSlice },
-          (m, deps, _api) => {
+          (m, deps) => {
             // TypeScript should know the types
             const strVal: string = deps.str.value;
             const numVal: number = deps.num.value;
@@ -346,8 +342,7 @@ if (import.meta.vitest) {
       const mockApi: AdapterAPI<{ str: string; num: number; bool: boolean }> = {
         executeSlice: <T>(_slice: SliceFactory<{ str: string; num: number; bool: boolean }, T>): T => {
           return {} as T;
-        },
-        getState: () => ({ str: 'test', num: 100, bool: false })
+        }
       };
 
       const result = composed({ str: 'test', num: 100, bool: false }, mockApi);
@@ -402,7 +397,7 @@ if (import.meta.vitest) {
       // Intermediate composition
       const abSlice = createSlice(
         model,
-        compose({ a: aSlice, b: bSlice, op: opSlice }, (_, { a, b, op }, _api) => ({
+        compose({ a: aSlice, b: bSlice, op: opSlice }, (_, { a, b, op }) => ({
           result:
             op.operation === 'add' ? a.value + b.value : a.value * b.value,
         }))
@@ -411,7 +406,7 @@ if (import.meta.vitest) {
       // Final composition using intermediate
       const finalSlice = createSlice(
         model,
-        compose({ ab: abSlice, c: cSlice }, (_, { ab, c }, _api) => ({
+        compose({ ab: abSlice, c: cSlice }, (_, { ab, c }) => ({
           finalResult: ab.result + c.value,
         }))
       );
@@ -420,8 +415,7 @@ if (import.meta.vitest) {
       const mockApi: AdapterAPI<{ a: number; b: number; c: number; op: 'add' | 'multiply' }> = {
         executeSlice: <T>(_slice: SliceFactory<{ a: number; b: number; c: number; op: 'add' | 'multiply' }, T>): T => {
           return {} as T;
-        },
-        getState: () => ({ a: 5, b: 3, c: 2, op: 'add' })
+        }
       };
 
       const addResult = finalSlice({ a: 5, b: 3, c: 2, op: 'add' }, mockApi);
@@ -437,19 +431,19 @@ if (import.meta.vitest) {
       const model = createModel<{ value: number }>(() => ({ value: 10 }));
       
       // Create a slice that uses the api parameter
-      const apiAwareSlice = createSlice(model, (m, api) => ({
+      const apiAwareSlice = createSlice(model, (m, _api) => ({
         value: m.value,
         hasApi: true,
-        stateFromApi: api.getState().value
+        stateFromModel: m.value
       }));
 
       // Create a composed slice that depends on the api-aware slice
       const composedSlice = createSlice(
         model,
-        compose({ dep: apiAwareSlice }, (m, { dep }, _api) => ({
+        compose({ dep: apiAwareSlice }, (m, { dep }) => ({
           depValue: dep.value,
           depHasApi: dep.hasApi,
-          depStateFromApi: dep.stateFromApi,
+          depStateFromModel: dep.stateFromModel,
           composerHasApi: true,
           directValue: m.value
         }))
@@ -459,32 +453,30 @@ if (import.meta.vitest) {
       const mockApi1: AdapterAPI<{ value: number }> = {
         executeSlice: <T>(_slice: SliceFactory<{ value: number }, T>): T => {
           return {} as T;
-        },
-        getState: () => ({ value: 20 })
+        }
       };
       
       const resultWithApi1 = composedSlice({ value: 20 }, mockApi1);
       expect(resultWithApi1).toEqual({
         depValue: 20,
         depHasApi: true,
-        depStateFromApi: 20,
+        depStateFromModel: 20,
         composerHasApi: true,
         directValue: 20
       });
 
-      // Test with different API state
+      // Test with different API
       const mockApi2: AdapterAPI<{ value: number }> = {
         executeSlice: <T>(_slice: SliceFactory<{ value: number }, T>): T => {
           return {} as T;
-        },
-        getState: () => ({ value: 30 })
+        }
       };
       
       const resultWithApi2 = composedSlice({ value: 20 }, mockApi2);
       expect(resultWithApi2).toEqual({
         depValue: 20,
         depHasApi: true,
-        depStateFromApi: 30,
+        depStateFromModel: 20,
         composerHasApi: true,
         directValue: 20
       });
@@ -493,18 +485,18 @@ if (import.meta.vitest) {
     it('should pass api through nested compose calls', () => {
       const model = createModel<{ x: number; y: number }>(() => ({ x: 1, y: 2 }));
       
-      // Base slice that uses api
-      const baseSlice = createSlice(model, (m, api) => ({
+      // Base slice
+      const baseSlice = createSlice(model, (m, _api) => ({
         x: m.x,
-        fromApi: api.getState().x
+        fromModel: m.x
       }));
 
       // First level of composition
       const level1 = createSlice(
         model,
-        compose({ base: baseSlice }, (m, { base }, _api) => ({
+        compose({ base: baseSlice }, (m, { base }) => ({
           baseX: base.x,
-          baseFromApi: base.fromApi,
+          baseFromModel: base.fromModel,
           y: m.y,
           level1HasApi: true
         }))
@@ -513,7 +505,7 @@ if (import.meta.vitest) {
       // Second level of composition
       const level2 = createSlice(
         model,
-        compose({ l1: level1 }, (_, { l1 }, _api) => ({
+        compose({ l1: level1 }, (_, { l1 }) => ({
           l1Data: l1,
           sum: l1.baseX + l1.y,
           level2HasApi: true
@@ -525,13 +517,12 @@ if (import.meta.vitest) {
         executeSlice: <T>(_slice: SliceFactory<{ x: number; y: number }, T>): T => {
           // For testing, just return a dummy value
           return {} as T;
-        },
-        getState: () => ({ x: 100, y: 200 })
+        }
       };
 
       const result = level2({ x: 5, y: 10 }, mockApi);
       expect(result.l1Data.baseX).toBe(5);
-      expect(result.l1Data.baseFromApi).toBe(100); // From api.getState()
+      expect(result.l1Data.baseFromModel).toBe(5); // From model
       expect(result.l1Data.y).toBe(10);
       expect(result.l1Data.level1HasApi).toBe(true);
       expect(result.sum).toBe(15); // 5 + 10
@@ -564,7 +555,7 @@ if (import.meta.vitest) {
       // Compose with required api parameter
       const composedSlice = createSlice(
         model,
-        compose({ count: countSlice, user: userSlice }, (m, { count, user }, _api) => ({
+        compose({ count: countSlice, user: userSlice }, (m, { count, user }) => ({
           // All selectors now require api parameter
           total: count.value,
           doubledTotal: count.doubled,
@@ -586,8 +577,7 @@ if (import.meta.vitest) {
       const mockApi: AdapterAPI<typeof modelData> = {
         executeSlice: <T>(_slice: SliceFactory<typeof modelData, T>): T => {
           return {} as T;
-        },
-        getState: () => modelData
+        }
       };
       
       const result = composedSlice(modelData, mockApi);
@@ -612,8 +602,7 @@ if (import.meta.vitest) {
       const adminMockApi: AdapterAPI<typeof adminData> = {
         executeSlice: <T>(_slice: SliceFactory<typeof adminData, T>): T => {
           return {} as T;
-        },
-        getState: () => adminData
+        }
       };
       
       const adminResult = composedSlice(adminData, adminMockApi);

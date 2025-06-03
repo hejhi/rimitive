@@ -13,8 +13,7 @@ function createMockAPI<Model>(model: Model): AdapterAPI<Model> {
   return {
     executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
       return slice(model, createMockAPI(model));
-    },
-    getState: () => model,
+    }
   };
 }
 
