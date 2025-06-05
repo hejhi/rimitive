@@ -9,10 +9,9 @@
  */
 
 import { bench, describe } from 'vitest';
-import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { createComponent, createModel, createSlice, compose } from '@lattice/core';
-import { useLattice, createReactAdapter } from '@lattice/store-react';
+import { useLattice } from '@lattice/store-react';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 
 // Shared test component
@@ -94,13 +93,15 @@ describe('React Adapter Performance', () => {
     bench('React adapter - create store in hook (100 items)', () => {
       const component = createTestComponent(100);
       const { result } = renderHook(() => useLattice(component));
-      return result.current;
+      // Access to prevent optimization
+      result.current.actions;
     });
 
     bench('React adapter - create store in hook (1000 items)', () => {
       const component = createTestComponent(1000);
       const { result } = renderHook(() => useLattice(component));
-      return result.current;
+      // Access to prevent optimization
+      result.current.actions;
     });
 
     bench('React vs Zustand - store creation comparison', () => {
@@ -116,11 +117,14 @@ describe('React Adapter Performance', () => {
       const zustandStore = createZustandAdapter(component);
       const zustandEnd = performance.now();
       
-      return {
-        react: reactEnd - reactStart,
-        zustand: zustandEnd - zustandStart,
-        ratio: (reactEnd - reactStart) / (zustandEnd - zustandStart)
-      };
+      // Access to prevent optimization
+      result.current.actions;
+      zustandStore.actions;
+      
+      const ratio = (reactEnd - reactStart) / (zustandEnd - zustandStart);
+      if (ratio > 100) {
+        // Prevent optimization
+      }
     });
   });
 
@@ -201,7 +205,10 @@ describe('React Adapter Performance', () => {
       const items = result.current.views.items();
       const stats = result.current.views.stats();
       
-      return { itemCount: items.length, ...stats };
+      // Use the values to prevent optimization
+      if (items.length + stats.totalItems === 0) {
+        // Prevent optimization
+      }
     });
   });
 
@@ -236,8 +243,8 @@ describe('React Adapter Performance', () => {
         renderCount++;
         
         // Simulate component using the store
-        const stats = store.views.stats();
-        const items = store.views.items();
+        store.views.stats();
+        store.views.items();
         
         return null;
       };
@@ -249,7 +256,10 @@ describe('React Adapter Performance', () => {
         rerender();
       }
       
-      return renderCount;
+      // Use renderCount to prevent optimization
+      if (renderCount === 0) {
+        // Prevent optimization
+      }
     });
   });
 
