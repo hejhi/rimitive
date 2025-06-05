@@ -75,9 +75,8 @@ export class ReactAdapterError extends Error {
 interface ReactStore<Model> {
   state: Model;
   listeners: Set<() => void>;
-  // We use 'any' here because the store needs to hold listeners of different types
-  // This is internal and doesn't affect the public API's type safety
-  selectiveListeners: Set<SelectiveListener<any>>;
+  // Using unknown for type-safe internal storage of heterogeneous listeners
+  selectiveListeners: Set<SelectiveListener<unknown>>;
   subscribe: (listener: () => void) => () => void;
   getSnapshot: () => Model;
 }
@@ -148,7 +147,7 @@ export function useLattice<Model, Actions, Views>(
   // Initialize the store once
   if (!storeRef.current) {
     const listeners = new Set<() => void>();
-    const selectiveListeners = new Set<SelectiveListener<any>>();
+    const selectiveListeners = new Set<SelectiveListener<unknown>>();
     let currentState: Model;
 
     // Initialize with temporary model tools
@@ -320,11 +319,11 @@ export function useLattice<Model, Actions, Views>(
           };
 
           // Add to selective listeners
-          store.selectiveListeners.add(selectiveListener);
+          store.selectiveListeners.add(selectiveListener as SelectiveListener<unknown>);
 
           // Return unsubscribe function
           return () => {
-            store.selectiveListeners.delete(selectiveListener);
+            store.selectiveListeners.delete(selectiveListener as SelectiveListener<unknown>);
           };
         },
 

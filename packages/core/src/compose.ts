@@ -54,7 +54,7 @@ type ResolveDeps<Deps> = {
  */
 export function compose<
   Model,
-  Deps extends Record<string, SliceFactory<Model, any>>,
+  Deps extends Record<string, SliceFactory<Model, unknown>>,
   Result,
 >(
   deps: Deps,

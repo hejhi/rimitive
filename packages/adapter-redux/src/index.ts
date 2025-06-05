@@ -215,7 +215,12 @@ export function createReduxAdapter<Model, Actions, Views>(
       actions,
       views,
       destroy: () => {
-        // Redux store doesn't need explicit cleanup, but we can add it for consistency
+        // Clear the store state to release memory
+        store.dispatch(slice.actions.updateState({}));
+        
+        // Note: Redux stores don't have a built-in destroy method.
+        // Subscriptions will be garbage collected when their references are released.
+        // If using Redux DevTools, the store will remain visible until the page is refreshed.
       },
     };
   });

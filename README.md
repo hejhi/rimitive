@@ -83,63 +83,44 @@ Lattice provides official adapters for popular frameworks and state management l
 - **For existing Redux apps**: Use `@lattice/adapter-redux` for seamless migration
 - **For global state needs**: Use `@lattice/adapter-zustand` for simplicity
 
-## The API Parameter
+## Slice Composition with `compose()`
 
-Every slice in Lattice receives two parameters: the `model` and the `api`. The API parameter provides powerful capabilities:
+Lattice provides the `compose()` function for dependency injection between slices. This enables powerful composition patterns while maintaining type safety.
 
-### Core API Methods
-
-```typescript
-interface AdapterAPI<Model> {
-  // Execute another slice to get its result
-  executeSlice: <T>(sliceFactory: SliceFactory<Model, T>) => T;
-  
-  // Note: getState() has been removed - use the model parameter instead
-  // Adapters should NOT add adapter-specific methods
-}
-```
-
-### Basic API Usage
+### Basic Composition
 
 ```typescript
-// Access current state through model parameter
-const debugSlice = createSlice(model, (m) => ({
-  modelValue: m.count,
-  // m is already the current state - no need for getState
-  currentValue: m.count,
-  valuesMatch: true // Always true since m is the current state
+// Define base slices
+const userSlice = createSlice(model, (m) => ({
+  name: m.user.name,
+  email: m.user.email
 }));
 
-// Execute other slices
-const composedSlice = createSlice(model, (m) => {
-  const userState = api.executeSlice(userSlice);
-  const themeState = api.executeSlice(themeSlice);
-  
-  return {
-    greeting: `Hello ${userState.name} (${themeState.theme} theme)`,
-    preferences: {
-      user: userState,
-      theme: themeState
-    }
-  };
-});
-
-// Enhanced actions with logging
 const actions = createSlice(model, (m) => ({
-  updateWithLog: (value: string) => {
-    console.log('Previous:', m.value);
-    m.setValue(value);
-    // Note: State won't be updated until after this returns
-  }
+  updateUser: m.updateUser,
+  logout: m.logout
 }));
+
+// Compose slices together
+const headerSlice = createSlice(
+  model,
+  compose(
+    { userSlice, actions },  // Dependencies
+    (m, { userSlice, actions }) => ({  // Selector receives model + resolved dependencies
+      userName: userSlice.name,
+      onLogout: actions.logout,
+      isAdmin: m.user.role === 'admin'
+    })
+  )
+);
 ```
 
-### Why the API Parameter?
+### Why Use Composition?
 
-1. **Slice Composition**: Execute other slices to build complex behaviors
-2. **Dynamic Execution**: Run slices based on runtime conditions
-3. **Cross-Cutting Concerns**: Could be extended for logging, metrics, debugging
-4. **Component Portability**: By limiting to executeSlice, components work across all adapters
+1. **Explicit Dependencies**: All dependencies are declared upfront
+2. **Type Safety**: TypeScript knows the exact shape of resolved dependencies
+3. **Clean Resolution**: Dependencies are resolved before your selector runs
+4. **Reusability**: Compose complex behaviors from simple building blocks
 
 ## How It Works
 
@@ -151,7 +132,6 @@ When you write Lattice code, you're creating a blueprint:
 // This doesn't execute anything - it's a specification
 const actions = createSlice(model, (m) => ({
   increment: m.increment,
-  // Use api to execute other slices
   loggedIncrement: () => {
     console.log('Current count:', m.count);
     m.increment();
@@ -169,10 +149,6 @@ const button = createSlice(
     })
   )
 );
-
-// Why use compose()?
-// The compose pattern provides explicit dependency injection, ensuring type safety
-// and making dependencies clear at the composition point.
 ```
 
 ### 2. **Adapters Execute Specifications**
@@ -411,12 +387,11 @@ const todoList = createComponent(() => {
     };
   });
   
-  // Actions slice with API usage
+  // Actions slice
   const actions = createSlice(model, (m) => ({
     addTodo: m.addTodo,
     toggleTodo: m.toggleTodo,
     setFilter: m.setFilter,
-    // Use API to execute other slices
     clearCompleted: () => {
       const completedCount = m.todos.filter(t => t.completed).length;
       console.log(`Clearing ${completedCount} completed todos`);
@@ -475,7 +450,7 @@ const todoList = createComponent(() => {
 Slices can compose other slices for complex behaviors. Here's how it works:
 
 ```typescript
-// Step 1: Define base slices with API parameter
+// Step 1: Define base slices
 const userSlice = createSlice(model, (m) => ({
   user: m.user,
   isLoggedIn: m.isLoggedIn,
@@ -621,7 +596,7 @@ const model = createModel(({ set, get }) => ({
 Slices are the universal primitive - actions, views, and complex behaviors are all slices:
 
 ```typescript
-// Actions are slices of methods with API access
+// Actions are slices of methods
 const actions = createSlice(model, (m) => ({
   increment: m.increment,
   // Enhanced functionality using model

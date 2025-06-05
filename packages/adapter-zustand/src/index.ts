@@ -319,8 +319,14 @@ export function createZustandAdapter<Model, Actions, Views>(
       },
 
       destroy: () => {
-        // how to properly destroy a zustand store?
-        store.setState({});
+        // Clear all subscriptions by replacing with empty state
+        // This will trigger all listeners one last time, then they should unsubscribe
+        store.setState({} as Model);
+        
+        // Zustand stores don't have a built-in destroy method, but clearing state
+        // and letting subscriptions naturally unsubscribe when components unmount
+        // is the recommended approach. The store object itself will be garbage
+        // collected when all references are released.
       },
     };
   });

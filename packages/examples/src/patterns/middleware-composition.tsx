@@ -34,7 +34,7 @@ function withPerformanceMonitoring<M, T>(
     const result = slice(model);
     const endTime = performance.now();
 
-    if (typeof window !== 'undefined' && (window as any).__PERF_MONITORING) {
+    if (typeof window !== 'undefined' && (window as Window & { __PERF_MONITORING?: boolean }).__PERF_MONITORING) {
       console.log(`[Perf] ${name} took ${(endTime - startTime).toFixed(2)}ms`);
     }
 
@@ -43,7 +43,7 @@ function withPerformanceMonitoring<M, T>(
 }
 
 // Caching middleware
-const cache = new Map<string, { value: any; timestamp: number }>();
+const cache = new Map<string, { value: unknown; timestamp: number }>();
 const CACHE_TTL = 5000; // 5 seconds
 
 function withCaching<M, T>(
@@ -56,7 +56,7 @@ function withCaching<M, T>(
 
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       console.log(`[Cache] Hit for key: ${key}`);
-      return cached.value;
+      return cached.value as T;
     }
 
     const result = slice(model);

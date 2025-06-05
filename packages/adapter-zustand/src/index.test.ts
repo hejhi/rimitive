@@ -80,7 +80,7 @@ describe('createZustandAdapter', () => {
     const store = createZustandAdapter(counter);
 
     // Track view changes
-    const states: any[] = [];
+    const states: Array<{ count: number }> = [];
     const unsubscribe = store.subscribe(
       (views) => views.count(),
       (state) => states.push(state)
@@ -91,8 +91,8 @@ describe('createZustandAdapter', () => {
     store.actions.increment();
 
     expect(states.length).toBe(2);
-    expect(states[0].count).toBe(1);
-    expect(states[1].count).toBe(2);
+    expect(states[0]!.count).toBe(1);
+    expect(states[1]!.count).toBe(2);
 
     unsubscribe();
   });
@@ -576,7 +576,7 @@ describe('createZustandAdapter', () => {
       // This is the key difference from React - you manage subscriptions yourself
 
       // Track view changes
-      const stateChanges: any[] = [];
+      const stateChanges: Array<{ todoCount: number; active: number }> = [];
       const unsubscribeState = store.subscribe(
         (views) => views.stats(),
         (stats) => {
@@ -588,7 +588,7 @@ describe('createZustandAdapter', () => {
       );
 
       // Track filtered todos changes
-      const viewChanges: any[] = [];
+      const viewChanges: number[] = [];
       const unsubscribeView = store.subscribe(
         (views) => views.filteredTodos(),
         (todos) => {
@@ -610,7 +610,7 @@ describe('createZustandAdapter', () => {
       const getActiveTodoTexts = () => {
         const todos = store.views.filteredTodos();
         // When filter is 'all', we need to filter manually
-        return todos.filter((t: any) => !t.done).map((t: any) => t.text);
+        return todos.filter((t) => !t.done).map((t) => t.text);
       };
 
       const activeTodoTexts = getActiveTodoTexts();
@@ -677,7 +677,12 @@ describe('createZustandAdapter', () => {
       const store = createZustandAdapter(counter);
 
       // Simulate a simple UI update function
-      const renderedStates: any[] = [];
+      const renderedStates: Array<{
+        countText: string;
+        className: string;
+        incrementDisabled: boolean;
+        decrementDisabled: boolean;
+      }> = [];
       const renderUI = () => {
         const attrs = store.views.buttonAttrs();
 
@@ -708,23 +713,23 @@ describe('createZustandAdapter', () => {
 
       // Simulate button clicks
       store.actions.increment();
-      expect(renderedStates[1].countText).toBe('Count: 1');
-      expect(renderedStates[1].className).toBe('positive');
+      expect(renderedStates[1]!.countText).toBe('Count: 1');
+      expect(renderedStates[1]!.className).toBe('positive');
 
       store.actions.increment();
       store.actions.increment();
-      expect(renderedStates[3].countText).toBe('Count: 3');
+      expect(renderedStates[3]!.countText).toBe('Count: 3');
 
       // Test boundary
       for (let i = 0; i < 7; i++) store.actions.increment(); // Total: 10
-      expect(renderedStates[10].countText).toBe('Count: 10');
-      expect(renderedStates[10].incrementDisabled).toBe(true);
-      expect(renderedStates[10].decrementDisabled).toBe(false);
+      expect(renderedStates[10]!.countText).toBe('Count: 10');
+      expect(renderedStates[10]!.incrementDisabled).toBe(true);
+      expect(renderedStates[10]!.decrementDisabled).toBe(false);
 
       // Decrement
       store.actions.decrement();
-      expect(renderedStates[11].countText).toBe('Count: 9');
-      expect(renderedStates[11].incrementDisabled).toBe(false);
+      expect(renderedStates[11]!.countText).toBe('Count: 9');
+      expect(renderedStates[11]!.incrementDisabled).toBe(false);
 
       // Cleanup
       unsubscribe();

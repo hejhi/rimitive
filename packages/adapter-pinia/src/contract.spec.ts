@@ -18,6 +18,5 @@ beforeEach(() => {
 // The type constraint difference is due to Pinia requiring object constraint on Model
 createAdapterTestSuite(
   'Pinia',
-  (component: any, storeId?: string) =>
-    createPiniaAdapter(component, storeId) as any
+  createPiniaAdapter as Parameters<typeof createAdapterTestSuite>[1]
 );
