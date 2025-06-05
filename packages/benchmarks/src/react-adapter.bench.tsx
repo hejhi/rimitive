@@ -230,22 +230,24 @@ describe('React Adapter Performance', () => {
       const { result } = renderHook(() => useLattice(createTestComponent()));
       const unsubscribes: Array<() => void> = [];
 
-      // Create 50 subscriptions
-      for (let i = 0; i < 50; i++) {
-        const unsub = result.current.subscribe(
-          (views) => views.stats(),
-          () => {} // No-op callback
-        );
-        unsubscribes.push(unsub);
-      }
-
-      // Trigger an update
       act(() => {
+        // Create 50 subscriptions inside act
+        for (let i = 0; i < 50; i++) {
+          const unsub = result.current.subscribe(
+            (views) => views.stats(),
+            () => {} // No-op callback
+          );
+          unsubscribes.push(unsub);
+        }
+
+        // Trigger an update
         result.current.actions.selectItem(0);
       });
 
-      // Cleanup
-      unsubscribes.forEach((unsub) => unsub());
+      // Cleanup inside act
+      act(() => {
+        unsubscribes.forEach((unsub) => unsub());
+      });
     });
 
     bench('React adapter - subscription with React re-renders', () => {
@@ -262,12 +264,14 @@ describe('React Adapter Performance', () => {
         return null;
       };
 
-      const { rerender } = renderHook(() => <TestComponent />);
+      const { rerender } = renderHook(() => TestComponent());
 
-      // Force re-renders
-      for (let i = 0; i < 10; i++) {
-        rerender();
-      }
+      // Force re-renders inside act
+      act(() => {
+        for (let i = 0; i < 10; i++) {
+          rerender();
+        }
+      });
 
       // Use renderCount to prevent optimization
       if (renderCount === 0) {
@@ -297,24 +301,26 @@ describe('React Adapter Performance', () => {
     bench('React adapter - subscription cleanup', () => {
       const { result } = renderHook(() => useLattice(createTestComponent()));
 
-      // Create and immediately clean up subscriptions
-      for (let i = 0; i < 100; i++) {
-        const unsub = result.current.subscribe(
-          (views) => views.stats(),
-          () => {}
-        );
-        unsub(); // Immediate cleanup
-      }
+      act(() => {
+        // Create and immediately clean up subscriptions
+        for (let i = 0; i < 100; i++) {
+          const unsub = result.current.subscribe(
+            (views) => views.stats(),
+            () => {}
+          );
+          unsub(); // Immediate cleanup
+        }
+      });
     });
   });
 
   describe('React-Specific Patterns', () => {
-    bench('React adapter - concurrent updates', () => {
+    bench('React adapter - concurrent updates', async () => {
       const { result } = renderHook(() => useLattice(createTestComponent(100)));
 
-      act(() => {
+      await act(async () => {
         // Simulate concurrent React updates
-        Promise.all([
+        await Promise.all([
           Promise.resolve().then(() => result.current.actions.selectItem(1)),
           Promise.resolve().then(() => result.current.actions.selectItem(2)),
           Promise.resolve().then(() =>
