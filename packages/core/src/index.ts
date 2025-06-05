@@ -101,6 +101,9 @@ export function createComponent<Model, Actions, Views>(
 // Export compose utilities
 export { compose } from './compose';
 
+// Export memoization utilities
+export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
+
 // Export adapter contract types
 export type {
   AdapterResult,
