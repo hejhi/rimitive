@@ -170,13 +170,7 @@ function processViews<Model, Views>(
     if (isSliceFactory(view)) {
       // Static view: slice factory
       views[key as keyof ViewTypes<Model, Views>] = (() => {
-        const value = executeSliceFactory(view);
-        // Return a shallow copy to ensure fresh references
-        return typeof value === 'object' && value !== null
-          ? Array.isArray(value)
-            ? [...value]
-            : { ...value }
-          : value;
+        return executeSliceFactory(view);
       }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     } else if (typeof view === 'function') {
       // Computed view - may accept parameters
@@ -322,7 +316,7 @@ export function createZustandAdapter<Model, Actions, Views>(
         // Clear all subscriptions by replacing with empty state
         // This will trigger all listeners one last time, then they should unsubscribe
         store.setState({} as Model);
-        
+
         // Zustand stores don't have a built-in destroy method, but clearing state
         // and letting subscriptions naturally unsubscribe when components unmount
         // is the recommended approach. The store object itself will be garbage

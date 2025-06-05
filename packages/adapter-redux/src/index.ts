@@ -161,13 +161,7 @@ export function createReduxAdapter<Model, Actions, Views>(
       if (isSliceFactory(view)) {
         // Static view: slice factory
         (views as Record<string, unknown>)[key] = () => {
-          const value = executeSliceFactory(view);
-          // Return a shallow copy to ensure fresh references
-          return typeof value === 'object' && value !== null
-            ? Array.isArray(value)
-              ? [...value]
-              : { ...value }
-            : value;
+          return executeSliceFactory(view);
         };
       } else if (typeof view === 'function') {
         // Computed view - may accept parameters
@@ -218,7 +212,7 @@ export function createReduxAdapter<Model, Actions, Views>(
       destroy: () => {
         // Clear the store state to release memory
         store.dispatch(slice.actions.updateState({}));
-        
+
         // Note: Redux stores don't have a built-in destroy method.
         // Subscriptions will be garbage collected when their references are released.
         // If using Redux DevTools, the store will remain visible until the page is refreshed.
