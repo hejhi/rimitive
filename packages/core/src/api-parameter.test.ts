@@ -13,7 +13,6 @@ import { describe, it, expect } from 'vitest';
 import { createComponent, createModel, createSlice, compose } from './index';
 import type {
   SliceFactory,
-  AdapterAPI,
   ComponentSpec,
   AdapterResult,
   ViewTypes,
@@ -25,6 +24,12 @@ interface TestAdapterResult<Model, Actions, Views>
   extends AdapterResult<Model, Actions, Views> {
   getState: () => Model;
 }
+
+// Note: This test adapter implementation exposes type issues in TypeScript:
+// 1. Dynamic object building with reduce doesn't preserve type relationships
+// 2. String indexing of typed objects requires type assertions
+// 3. The ViewTypes transformation can't be built incrementally
+// These are fundamental TypeScript limitations, not issues with the test scenarios
 
 function createTestAdapter<Model, Actions, Views>(
   componentOrFactory:
@@ -48,22 +53,18 @@ function createTestAdapter<Model, Actions, Views>(
   // Initialize state
   state = spec.model(modelTools);
 
-  // Create API
-  const api: AdapterAPI<Model> = {
-    executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
-      return slice(state, api);
-    },
-  };
-
   // Execute actions
-  const actions = spec.actions(state, api);
+  const actions = spec.actions(state);
 
   // Process views
+  // TypeScript limitation: Cannot incrementally build ViewTypes<Model, Views> with reduce
+  // The type system doesn't understand that we're transforming each view correctly
   const views = Object.entries(spec.views as Record<string, unknown>).reduce(
     (acc, [key, view]) => {
       if (isSliceFactory(view)) {
+        // TypeScript limitation: Dynamic key assignment loses type relationship
         acc[key as keyof ViewTypes<Model, Views>] = (() =>
-          view(state, api)) as ViewTypes<Model, Views>[keyof ViewTypes<
+          view(state)) as ViewTypes<Model, Views>[keyof ViewTypes<
           Model,
           Views
         >];
@@ -71,7 +72,7 @@ function createTestAdapter<Model, Actions, Views>(
         acc[key as keyof ViewTypes<Model, Views>] = (() => {
           const result = view();
           if (isSliceFactory(result)) {
-            return result(state, api);
+            return result(state);
           }
           return result;
         }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
@@ -85,6 +86,8 @@ function createTestAdapter<Model, Actions, Views>(
     actions,
     views,
     getState: () => state,
+    destroy: () => {},
+    subscribe: () => ({}) as any,
   };
 }
 
@@ -111,9 +114,9 @@ describe('API Parameter Functionality', () => {
         const productsSlice = createSlice(model, (m) => m.products);
 
         // Slice that uses API to compose data from other slices
-        const summarySlice = createSlice(model, (_m, api) => {
-          const users = api.executeSlice(usersSlice);
-          const products = api.executeSlice(productsSlice);
+        const summarySlice = createSlice(model, (m) => {
+          const users = usersSlice(m);
+          const products = productsSlice(m);
 
           return {
             userCount: users.length,
@@ -205,12 +208,12 @@ describe('API Parameter Functionality', () => {
         const dataSlice = createSlice(model, (m) => m.data);
 
         // Adaptive view that changes behavior based on mode
-        const adaptiveViewSlice = createSlice(model, (m, api) => {
+        const adaptiveViewSlice = createSlice(model, (m) => {
           if (m.mode === 'simple') {
             return { value: m.data.value };
           } else {
             // In detailed mode, use API to get additional info
-            const data = api.executeSlice(dataSlice);
+            const data = dataSlice(m);
             return {
               value: data.value,
               metadata: data.metadata,
@@ -282,9 +285,9 @@ describe('API Parameter Functionality', () => {
 
         // Computed view that creates dynamic slices based on active filters
         const filteredView = () =>
-          createSlice(model, (m, api) => {
+          createSlice(model, (m) => {
             const filterSlice = createFilteredItemsSlice(m.activeFilters);
-            const filtered = api.executeSlice(filterSlice);
+            const filtered = filterSlice(m);
 
             return {
               items: filtered,
@@ -299,7 +302,7 @@ describe('API Parameter Functionality', () => {
             toggleFilter: m.toggleFilter,
           })),
           views: {
-            filtered: filteredView,
+            filtered: filteredView(),
           },
         };
       });
@@ -310,23 +313,21 @@ describe('API Parameter Functionality', () => {
       let view = adapter.views.filtered();
       expect(view).toHaveProperty('count', 3);
       expect(view).toHaveProperty('activeFilters');
-      expect((view as any).activeFilters).toEqual([]);
+      expect(view.activeFilters).toEqual([]);
 
       // Add 'red' filter
       adapter.actions.toggleFilter('red');
       view = adapter.views.filtered();
       expect(view).toHaveProperty('count', 2);
       expect(view).toHaveProperty('items');
-      expect((view as any).items.map((i: any) => i.name)).toEqual([
-        'Item A',
-        'Item C',
-      ]);
+      expect(view.items.map((i) => i.name)).toEqual(['Item A', 'Item C']);
 
       // Add 'small' filter
       adapter.actions.toggleFilter('small');
       view = adapter.views.filtered();
       expect(view).toHaveProperty('count', 1);
-      expect((view as any).items[0].name).toBe('Item C');
+      expect(view).toHaveProperty('items');
+      expect(view.items[0]?.name).toBe('Item C');
     });
 
     it('should compose multiple slices to create complex views', () => {
@@ -362,9 +363,9 @@ describe('API Parameter Functionality', () => {
         const commentsSlice = createSlice(model, (m) => m.comments);
 
         // Stats slice that aggregates data
-        const statsSlice = createSlice(model, (_m, api) => {
-          const posts = api.executeSlice(postsSlice);
-          const comments = api.executeSlice(commentsSlice);
+        const statsSlice = createSlice(model, (m) => {
+          const posts = postsSlice(m);
+          const comments = commentsSlice(m);
 
           return {
             totalPosts: posts.length,
@@ -379,17 +380,17 @@ describe('API Parameter Functionality', () => {
           model,
           compose(
             { userSlice, statsSlice, postsSlice },
-            (_m, { userSlice: user, statsSlice: stats, postsSlice: posts }) => {
+            (_m, { userSlice, statsSlice, postsSlice }) => {
               return {
-                welcome: `Welcome, ${user.name}!`,
-                theme: user.preferences.theme,
+                welcome: `Welcome, ${userSlice.name}!`,
+                theme: userSlice.preferences.theme,
                 stats: {
-                  posts: stats.totalPosts,
-                  likes: stats.totalLikes,
-                  comments: stats.totalComments,
-                  engagement: stats.avgCommentsPerPost,
+                  posts: statsSlice.totalPosts,
+                  likes: statsSlice.totalLikes,
+                  comments: statsSlice.totalComments,
+                  engagement: statsSlice.avgCommentsPerPost,
                 },
-                recentPosts: posts.slice(0, 5).map((p: any) => ({
+                recentPosts: postsSlice.slice(0, 5).map((p) => ({
                   title: p.title,
                   likes: p.likes,
                 })),
@@ -441,17 +442,22 @@ describe('API Parameter Functionality', () => {
         type NodeModel = {
           nodes: { id: number; name: string; parentId: number | null }[];
         };
+        type TreeNode = {
+          id: number;
+          name: string;
+          children: TreeNode[];
+        };
         const createNodeTreeSlice = (
           nodeId: number
-        ): SliceFactory<NodeModel, any> =>
-          createSlice(model, (m, api) => {
+        ): SliceFactory<NodeModel, TreeNode | null> =>
+          createSlice(model, (m) => {
             const node = m.nodes.find((n) => n.id === nodeId);
             if (!node) return null;
 
             const children = m.nodes
               .filter((n) => n.parentId === nodeId)
-              .map((child) => api.executeSlice(createNodeTreeSlice(child.id)))
-              .filter(Boolean);
+              .map((child) => createNodeTreeSlice(child.id)(m))
+              .filter((child): child is TreeNode => child !== null);
 
             return {
               id: node.id,
@@ -461,12 +467,12 @@ describe('API Parameter Functionality', () => {
           });
 
         // Tree view starting from root
-        const treeSlice = createSlice(model, (m, api) => {
+        const treeSlice = createSlice(model, (m) => {
           const rootNodes = m.nodes.filter((n) => n.parentId === null);
           return {
-            tree: rootNodes.map((root) =>
-              api.executeSlice(createNodeTreeSlice(root.id))
-            ),
+            tree: rootNodes
+              .map((root) => createNodeTreeSlice(root.id)(m))
+              .filter((node): node is TreeNode => node !== null),
           };
         });
 
@@ -480,14 +486,26 @@ describe('API Parameter Functionality', () => {
       });
 
       const adapter = createTestAdapter(component);
-      const treeView = adapter.views.tree();
+
+      type TreeNodeType = {
+        id: number;
+        name: string;
+        children: TreeNodeType[];
+      };
+
+      // TypeScript limitation: Generic view types don't preserve specific return types
+      // The adapter returns ViewTypes which transforms all views to functions,
+      // but doesn't preserve the specific return type of each view
+      const treeView = adapter.views.tree() as {
+        tree: TreeNodeType[];
+      };
 
       expect(treeView.tree).toHaveLength(1);
-      expect(treeView.tree[0].name).toBe('Root');
-      expect(treeView.tree[0].children).toHaveLength(2);
-      expect(treeView.tree[0].children[0].name).toBe('Child 1');
-      expect(treeView.tree[0].children[0].children).toHaveLength(1);
-      expect(treeView.tree[0].children[0].children[0].name).toBe(
+      expect(treeView.tree[0]?.name).toBe('Root');
+      expect(treeView.tree[0]?.children).toHaveLength(2);
+      expect(treeView.tree[0]?.children[0]?.name).toBe('Child 1');
+      expect(treeView.tree[0]?.children[0]?.children).toHaveLength(1);
+      expect(treeView.tree[0]?.children[0]?.children[0]?.name).toBe(
         'Grandchild 1'
       );
     });
@@ -515,9 +533,9 @@ describe('API Parameter Functionality', () => {
         const teamBSlice = createSlice(model, (m) => m.teamB);
 
         // Comparison slice that depends on both teams
-        const comparisonSlice = createSlice(model, (_m, api) => {
-          const teamA = api.executeSlice(teamASlice);
-          const teamB = api.executeSlice(teamBSlice);
+        const comparisonSlice = createSlice(model, (m) => {
+          const teamA = teamASlice(m);
+          const teamB = teamBSlice(m);
 
           return {
             leader:
@@ -532,10 +550,10 @@ describe('API Parameter Functionality', () => {
         });
 
         // Match slice that uses comparison
-        const matchSlice = createSlice(model, (_m, api) => {
-          const comparison = api.executeSlice(comparisonSlice);
-          const teamA = api.executeSlice(teamASlice);
-          const teamB = api.executeSlice(teamBSlice);
+        const matchSlice = createSlice(model, (m) => {
+          const comparison = comparisonSlice(m);
+          const teamA = teamASlice(m);
+          const teamB = teamBSlice(m);
 
           return {
             teams: [teamA, teamB],
@@ -582,7 +600,7 @@ describe('API Parameter Functionality', () => {
     it('should handle error scenarios gracefully', () => {
       const component = createComponent(() => {
         const model = createModel<{
-          data: { [key: string]: any };
+          data: { [key: string]: unknown };
           errorMode: boolean;
           toggleError: () => void;
         }>(({ set, get }) => ({
@@ -600,9 +618,9 @@ describe('API Parameter Functionality', () => {
         });
 
         // Slice that safely handles errors from other slices
-        const safeWrapperSlice = createSlice(model, (_m, api) => {
+        const safeWrapperSlice = createSlice(model, (m) => {
           try {
-            const result = api.executeSlice(riskySlice);
+            const result = riskySlice(m);
             return {
               success: true,
               data: result,
@@ -664,12 +682,12 @@ describe('API Parameter Functionality', () => {
           name: string,
           slice: SliceFactory<LogModel, T>
         ): SliceFactory<LogModel, T> =>
-          createSlice(model, (_m, api) => {
+          createSlice(model, (m) => {
             logs.push(`[${name}] Executing...`);
             const start = Date.now();
 
             try {
-              const result = api.executeSlice(slice);
+              const result = slice(m);
               const duration = Date.now() - start;
               logs.push(`[${name}] Success (${duration}ms)`);
               return result;
@@ -695,9 +713,9 @@ describe('API Parameter Functionality', () => {
         // Composite slice that uses logged slices
         const compositeSlice = withLogging(
           'composite',
-          createSlice(model, (_m, api) => {
-            const value = api.executeSlice(loggedValueSlice);
-            const double = api.executeSlice(loggedDoubleSlice);
+          createSlice(model, (m) => {
+            const value = loggedValueSlice(m);
+            const double = loggedDoubleSlice(m);
             return {
               value: value.value,
               double: double.double,
@@ -746,18 +764,18 @@ describe('API Parameter Functionality', () => {
         type CacheModel = { input: number; setInput: (value: number) => void };
         const withCache = <T>(
           slice: SliceFactory<CacheModel, T>,
-          keyFn: (m: any) => string
+          keyFn: (m: CacheModel) => string
         ): SliceFactory<CacheModel, T> => {
           const cache = new Map<string, T>();
 
-          return createSlice(model, (m, api) => {
+          return createSlice(model, (m) => {
             const key = keyFn(m);
 
             if (cache.has(key)) {
               return cache.get(key)!;
             }
 
-            const result = api.executeSlice(slice);
+            const result = slice(m);
             cache.set(key, result);
             return result;
           });
@@ -781,10 +799,10 @@ describe('API Parameter Functionality', () => {
         );
 
         // View that uses cached slice multiple times
-        const multiUseSlice = createSlice(model, (_m, api) => {
-          const result1 = api.executeSlice(cachedExpensiveSlice);
-          const result2 = api.executeSlice(cachedExpensiveSlice);
-          const result3 = api.executeSlice(cachedExpensiveSlice);
+        const multiUseSlice = createSlice(model, (m) => {
+          const result1 = cachedExpensiveSlice(m);
+          const result2 = cachedExpensiveSlice(m);
+          const result3 = cachedExpensiveSlice(m);
 
           return {
             allEqual:
@@ -841,9 +859,9 @@ describe('API Parameter Functionality', () => {
           name: string,
           slice: SliceFactory<PerfModel, T>
         ): SliceFactory<PerfModel, T> =>
-          createSlice(model, (_m, api) => {
+          createSlice(model, (m) => {
             const start = performance.now();
-            const result = api.executeSlice(slice);
+            const result = slice(m);
             const duration = performance.now() - start;
 
             if (!performanceData[name]) {
@@ -889,10 +907,10 @@ describe('API Parameter Functionality', () => {
         const trackedComplex = withPerformanceTracking('complex', complexSlice);
 
         // Dashboard that uses all tracked slices
-        const performanceDashboard = createSlice(model, (_m, api) => {
-          const simple = api.executeSlice(trackedSimple);
-          const moderate = api.executeSlice(trackedModerate);
-          const complex = api.executeSlice(trackedComplex);
+        const performanceDashboard = createSlice(model, (m) => {
+          const simple = trackedSimple(m);
+          const moderate = trackedModerate(m);
+          const complex = trackedComplex(m);
 
           return {
             simple,
@@ -907,7 +925,10 @@ describe('API Parameter Functionality', () => {
                 };
                 return acc;
               },
-              {} as any
+              {} as Record<
+                string,
+                { calls: number; avgTime: number; totalTime: number }
+              >
             ),
           };
         });
@@ -931,14 +952,17 @@ describe('API Parameter Functionality', () => {
       const finalDashboard = adapter.views.dashboard();
 
       // Verify performance tracking
-      expect(finalDashboard.performance.simple.calls).toBe(6); // 5 + 1
-      expect(finalDashboard.performance.moderate.calls).toBe(6);
-      expect(finalDashboard.performance.complex.calls).toBe(6);
+      expect(finalDashboard.performance.simple).toBeDefined();
+      expect(finalDashboard.performance.simple!.calls).toBe(6); // 5 + 1
+      expect(finalDashboard.performance.moderate).toBeDefined();
+      expect(finalDashboard.performance.moderate!.calls).toBe(6);
+      expect(finalDashboard.performance.complex).toBeDefined();
+      expect(finalDashboard.performance.complex!.calls).toBe(6);
 
       // Performance characteristics (complex should generally take longer)
-      expect(finalDashboard.performance.simple.avgTime).toBeDefined();
-      expect(finalDashboard.performance.moderate.avgTime).toBeDefined();
-      expect(finalDashboard.performance.complex.avgTime).toBeDefined();
+      expect(finalDashboard.performance.simple!.avgTime).toBeDefined();
+      expect(finalDashboard.performance.moderate!.avgTime).toBeDefined();
+      expect(finalDashboard.performance.complex!.avgTime).toBeDefined();
     });
 
     it('should demonstrate validation middleware pattern', () => {
@@ -949,7 +973,7 @@ describe('API Parameter Functionality', () => {
             age: number;
             username: string;
           };
-          updateField: (field: string, value: any) => void;
+          updateField: (field: string, value: unknown) => void;
         }>(({ set, get }) => ({
           formData: {
             email: '',
@@ -988,29 +1012,40 @@ describe('API Parameter Functionality', () => {
           },
         };
 
-        // Validation wrapper
-        type ValidModel = {
+        // Validation wrapper - moved inside component factory to access model
+        type FormModel = {
           formData: {
             email: string;
             age: number;
             username: string;
           };
-          updateField: (field: string, value: any) => void;
+          updateField: (field: string, value: unknown) => void;
         };
-        const withValidation = <T extends { [key: string]: any }>(
-          slice: SliceFactory<ValidModel, T>
+
+        const withValidation = <T extends { [key: string]: unknown }>(
+          slice: SliceFactory<FormModel, T>
         ): SliceFactory<
-          ValidModel,
+          FormModel,
           T & { validation: { [key: string]: string | null }; isValid: boolean }
         > =>
-          createSlice(model, (_m, api) => {
-            const data = api.executeSlice(slice);
+          createSlice(model, (m) => {
+            const data = slice(m);
             const validation: { [key: string]: string | null } = {};
 
             // Validate each field
             Object.entries(data).forEach(([field, value]) => {
               if (field in validators) {
-                validation[field] = (validators as any)[field](value);
+                // TypeScript limitation: Object.entries returns string keys,
+                // not the specific literal types of the object keys
+                const validator = (
+                  validators as Record<
+                    string,
+                    (value: unknown) => string | null
+                  >
+                )[field];
+                if (validator) {
+                  validation[field] = validator(value);
+                }
               }
             });
 
@@ -1129,8 +1164,8 @@ describe('API Parameter Functionality', () => {
         const catalogSlice = createSlice(model, (m) => m.products);
 
         // Cart items with product details
-        const cartDetailsSlice = createSlice(model, (m, api) => {
-          const products = api.executeSlice(catalogSlice);
+        const cartDetailsSlice = createSlice(model, (m) => {
+          const products = catalogSlice(m);
 
           return m.cart
             .map((cartItem) => {
@@ -1148,8 +1183,8 @@ describe('API Parameter Functionality', () => {
         });
 
         // Cart summary
-        const cartSummarySlice = createSlice(model, (_m, api) => {
-          const items = api.executeSlice(cartDetailsSlice);
+        const cartSummarySlice = createSlice(model, (m) => {
+          const items = cartDetailsSlice(m);
 
           const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
           const taxRate = 0.08; // 8% tax
@@ -1290,11 +1325,9 @@ describe('API Parameter Functionality', () => {
           });
 
         // Feature availability slice
-        const featureAvailabilitySlice = createSlice(model, (m, api) => {
-          const canWrite = api.executeSlice(createPermissionChecker(['write']));
-          const canAdmin = api.executeSlice(
-            createPermissionChecker(['manage_users'])
-          );
+        const featureAvailabilitySlice = createSlice(model, (m) => {
+          const canWrite = createPermissionChecker(['write'])(m);
+          const canAdmin = createPermissionChecker(['manage_users'])(m);
 
           return {
             canUseDarkMode: m.featureFlags.darkMode,
@@ -1309,8 +1342,8 @@ describe('API Parameter Functionality', () => {
         });
 
         // User dashboard slice
-        const userDashboardSlice = createSlice(model, (m, api) => {
-          const features = api.executeSlice(featureAvailabilitySlice);
+        const userDashboardSlice = createSlice(model, (m) => {
+          const features = featureAvailabilitySlice(m);
 
           const availableActions = [];
           if (features.canEditContent) availableActions.push('Edit');

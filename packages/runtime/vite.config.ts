@@ -13,15 +13,18 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'LatticeRuntime',
-      fileName: 'index',
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        react: resolve(__dirname, 'src/react.ts'),
+        vue: resolve(__dirname, 'src/vue.ts')
+      },
       formats: ['es']
     },
     rollupOptions: {
-      external: ['@lattice/core'],
+      external: ['@lattice/core', 'react', 'vue'],
       output: {
-        preserveModules: false
+        preserveModules: false,
+        entryFileNames: '[name].js'
       }
     },
     sourcemap: true,

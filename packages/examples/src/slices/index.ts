@@ -70,13 +70,10 @@ export const userComponent = createComponent(() => {
     model,
     actions,
     views: {
-      loginButton: createSlice(model, (m, api) => ({
+      loginButton: createSlice(model, (m) => ({
         onClick: async () => {
           // Example: Log login attempts
-          console.log(
-            '[User] Login attempt for:',
-            api.getState().user?.email || 'unknown'
-          );
+          console.log('[User] Login attempt for:', m.user?.email || 'unknown');
           await m.login('user@example.com', 'password');
         },
         disabled: m.isLoading,
@@ -155,9 +152,9 @@ export const cartComponent = createComponent(() => {
   }));
 
   // Computed view for cart summary with API
-  const cartSummary = createSlice(model, (_m, api) => {
+  const cartSummary = createSlice(model, (m) => {
     // Example: Use API to access computed values
-    const data = api.executeSlice(cartSlice);
+    const data = cartSlice(m);
 
     return {
       className: data.itemCount === 0 ? 'cart-empty' : 'cart-has-items',
@@ -173,8 +170,8 @@ export const cartComponent = createComponent(() => {
     views: {
       cartSummary,
 
-      // For dynamic item views, we'll need to create them outside of the views object
-      // since views must be SliceFactory or () => SliceFactory
+      // Note: Computed views can accept parameters and return either
+      // data directly or a SliceFactory that will be executed
     },
   };
 });
@@ -216,10 +213,10 @@ export const themeComponent = createComponent(() => {
     model,
     actions,
     views: {
-      themeToggle: createSlice(model, (m, api) => ({
+      themeToggle: createSlice(model, (m) => ({
         // Example: Use API to log theme changes
         onThemeChange: (theme: 'light' | 'dark' | 'system') => {
-          const oldTheme = api.getState().theme;
+          const oldTheme = m.theme;
           console.log(`[Theme] Changing from ${oldTheme} to ${theme}`);
           m.setTheme(theme);
         },
@@ -336,8 +333,8 @@ export const dashboardComponent = createComponent(() => {
       setActiveTab: m.setActiveTab,
     })),
     views: {
-      header: createSlice(model, (_m, api) => {
-        const dashboardData = api.executeSlice(dashboardSlice);
+      header: createSlice(model, (m) => {
+        const dashboardData = dashboardSlice(m);
         return {
           // Example: Use API to include real-time data
           className: `header ${dashboardData.currentTheme}`,
@@ -348,11 +345,10 @@ export const dashboardComponent = createComponent(() => {
 
       navigation: createSlice(model, (m) => ({
         // Example: Use API to track navigation events
-        tabs: ['overview', 'orders', 'settings'].map((tab) => ({
+        tabs: (['overview', 'orders', 'settings'] as const).map((tab) => ({
           name: tab,
           active: m.activeTab === tab,
-          onClick: () =>
-            m.setActiveTab(tab as 'overview' | 'orders' | 'settings'),
+          onClick: () => m.setActiveTab(tab),
         })),
       })),
     },

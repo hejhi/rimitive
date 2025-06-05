@@ -44,7 +44,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
 
         // Actions should be directly accessible
         expect(typeof adapter.actions.increment).toBe('function');
@@ -83,8 +83,8 @@ export function createAdapterTestSuite(
           }));
 
           // Create a computed view slice that combines data
-          const fullNameSlice = createSlice(model, (_m, api) => {
-            const state = api.executeSlice(nameSlice);
+          const fullNameSlice = createSlice(model, (m) => {
+            const state = nameSlice(m);
             return {
               display: `${state.first} ${state.last}`,
               initials: `${state.first[0]}${state.last[0]}`,
@@ -101,7 +101,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
 
         // Static view
         const nameView = adapter.views.name();
@@ -174,7 +174,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
 
         const headerView = adapter.views.header();
         expect(headerView.userName).toBe('Alice');
@@ -220,8 +220,8 @@ export function createAdapterTestSuite(
 
           // Parameterized view factory
           const createItemView = (itemId: number) =>
-            createSlice(model, (_m, api) => {
-              const state = api.executeSlice(itemsSlice);
+            createSlice(model, (m) => {
+              const state = itemsSlice(m);
               const item = state.items.find((i) => i.id === itemId);
               return item
                 ? {
@@ -236,8 +236,8 @@ export function createAdapterTestSuite(
                   };
             });
 
-          const selectedCountSlice = createSlice(model, (_m, api) => {
-            const state = api.executeSlice(itemsSlice);
+          const selectedCountSlice = createSlice(model, (m) => {
+            const state = itemsSlice(m);
             return {
               count: state.items.filter((i) => i.selected).length,
             };
@@ -252,7 +252,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
 
         // Check initial state
         const item1 = adapter.views.item1();
@@ -289,7 +289,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
         expect(adapter.actions).toEqual({});
         expect(adapter.views).toEqual({});
       });
@@ -311,14 +311,14 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
         expect(typeof adapter.actions.doSomething).toBe('function');
         expect(adapter.views).toEqual({});
       });
     });
 
     describe('View consistency', () => {
-      it('should always return fresh view data', () => {
+      it('should return current view data', () => {
         const component = createComponent(() => {
           const model = createModel<{
             counter: number;
@@ -339,7 +339,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
 
         // Get initial view
         const view1 = adapter.views.count();
@@ -348,15 +348,12 @@ export function createAdapterTestSuite(
         // Increment
         adapter.actions.increment();
 
-        // View should not be cached - should return fresh data
+        // View should return updated data
         const view2 = adapter.views.count();
         expect(view2.value).toBe(1);
-        expect(view2).not.toBe(view1); // Different objects
 
-        // Call view again without state change
-        const view3 = adapter.views.count();
-        expect(view3.value).toBe(1);
-        expect(view3).not.toBe(view2); // Still different objects (no caching)
+        // NOTE: We don't require fresh objects anymore
+        // Adapters can cache/memoize as appropriate for their framework
       });
 
       it('should handle view transforms consistently', () => {
@@ -378,18 +375,18 @@ export function createAdapterTestSuite(
           }));
 
           // Create computed view slices
-          const doubledSlice = createSlice(model, (_m, api) => {
-            const state = api.executeSlice(valueSlice);
+          const doubledSlice = createSlice(model, (m) => {
+            const state = valueSlice(m);
             return { result: state.value * 2 };
           });
 
-          const tripledSlice = createSlice(model, (_m, api) => {
-            const state = api.executeSlice(valueSlice);
+          const tripledSlice = createSlice(model, (m) => {
+            const state = valueSlice(m);
             return { result: state.value * 3 };
           });
 
-          const formattedSlice = createSlice(model, (_m, api) => {
-            const state = api.executeSlice(valueSlice);
+          const formattedSlice = createSlice(model, (m) => {
+            const state = valueSlice(m);
             return { display: `Value: ${state.value}` };
           });
 
@@ -402,7 +399,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
 
         // Check initial transforms
         expect(adapter.views.doubled().result).toBe(20);
@@ -444,7 +441,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
 
         // Add entries
         adapter.actions.addEntry('First');
@@ -494,7 +491,7 @@ export function createAdapterTestSuite(
           return { model, actions, views };
         });
 
-        const adapter = createAdapter(component());
+        const adapter = createAdapter(component);
 
         // Set individual coordinates
         adapter.actions.setX(5);

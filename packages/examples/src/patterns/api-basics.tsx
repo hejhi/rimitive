@@ -8,7 +8,7 @@
 import React from 'react';
 import { createComponent, createModel, createSlice } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { useViews, useActions } from '@lattice/adapter-zustand/react';
+import { useViews } from '@lattice/runtime/react';
 
 // ============================================================================
 // Basic API Usage Example
@@ -66,50 +66,32 @@ export const apiBasicsComponent = createComponent(() => {
     message: m.message,
   }));
 
-  // Slice using getState from API
-  const debugSlice = createSlice(model, (m, api) => {
-    const state = api.getState();
-    return {
-      modelCount: m.count,
-      apiCount: state.count,
-      statesMatch: m.count === state.count,
-      fullState: state,
-    };
-  });
-
   // Slice using executeSlice to compose data
-  const summarySlice = createSlice(model, (_m, api) => {
-    const basicState = api.executeSlice(stateSlice);
-    const debugInfo = api.executeSlice(debugSlice);
+  const summarySlice = createSlice(model, (m) => {
+    const basicState = stateSlice(m);
 
     return {
       summary: `Count: ${basicState.count}, Message: "${basicState.message}"`,
-      isDebugging: debugInfo.statesMatch,
-      historyLength: api.getState().history.length,
     };
   });
 
   // Actions with API usage for logging
-  const actions = createSlice(model, (m, api) => ({
+  const actions = createSlice(model, (m) => ({
     increment: () => {
-      console.log('[API] Before increment:', api.getState().count);
       m.increment();
       // Note: State won't be updated until after this function returns
     },
 
     decrement: () => {
-      console.log('[API] Before decrement:', api.getState().count);
       m.decrement();
     },
 
     updateMessage: (msg: string) => {
-      const oldMessage = api.getState().message;
-      console.log('[API] Message change:', oldMessage, '→', msg);
       m.updateMessage(msg);
     },
 
     reset: () => {
-      const summary = api.executeSlice(summarySlice);
+      const summary = summarySlice(m);
       console.log('[API] Resetting from state:', summary.summary);
       m.reset();
     },
@@ -136,7 +118,6 @@ export const apiBasicsComponent = createComponent(() => {
     actions,
     views: {
       state: stateSlice,
-      debug: debugSlice,
       summary: summarySlice,
       history: historySlice,
     },
@@ -165,27 +146,6 @@ function StateDisplay() {
   );
 }
 
-function DebugInfo() {
-  const debug = useViews(apiBasicsStore, (views) => views.debug());
-
-  return (
-    <div
-      style={{ background: '#e0e0ff', padding: '10px', borderRadius: '5px' }}
-    >
-      <h3>Debug Information</h3>
-      <p>Model Count: {debug.modelCount}</p>
-      <p>API Count: {debug.apiCount}</p>
-      <p>States Match: {debug.statesMatch ? '✅' : '❌'}</p>
-      <details>
-        <summary>Full State</summary>
-        <pre style={{ fontSize: '0.8em' }}>
-          {JSON.stringify(debug.fullState, null, 2)}
-        </pre>
-      </details>
-    </div>
-  );
-}
-
 function Summary() {
   const summary = useViews(apiBasicsStore, (views) => views.summary());
 
@@ -195,7 +155,6 @@ function Summary() {
     >
       <h3>Summary (Composed)</h3>
       <p>{summary.summary}</p>
-      <p>History Length: {summary.historyLength}</p>
     </div>
   );
 }
@@ -225,7 +184,7 @@ function History() {
 }
 
 function Controls() {
-  const actions = useActions(apiBasicsStore);
+  const actions = apiBasicsStore.actions;
   const [message, setMessage] = React.useState('');
 
   return (
@@ -285,7 +244,6 @@ export function APIBasicsExample() {
         style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}
       >
         <StateDisplay />
-        <DebugInfo />
         <Summary />
         <History />
       </div>

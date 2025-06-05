@@ -42,9 +42,7 @@ describe('createZustandAdapter', () => {
     expect(store.actions).toBeDefined();
     expect(store.views).toBeDefined();
 
-    // Should NOT expose Zustand internals
-    // @ts-expect-error
-    expect(store.getState).toBeUndefined();
+    // Should NOT expose internals
     // @ts-expect-error
     expect(store.setState).toBeUndefined();
     // @ts-expect-error
@@ -116,8 +114,8 @@ describe('createZustandAdapter', () => {
         multiplier: m.multiplier,
       }));
 
-      const doubledView = createSlice(model, (_m, api) => {
-        const state = api.executeSlice(stateView);
+      const doubledView = createSlice(model, (m) => {
+        const state = stateView(m);
         return {
           doubled: state.count * state.multiplier,
         };
@@ -268,8 +266,8 @@ describe('createZustandAdapter', () => {
         }));
 
         // Create a computed view slice
-        const counterView = createSlice(model, (_m, api) => {
-          const state = api.executeSlice(countSlice);
+        const counterView = createSlice(model, (m) => {
+          const state = countSlice(m);
           return {
             'data-count': state.count,
             className: state.count % 2 === 0 ? 'even' : 'odd',
@@ -867,9 +865,7 @@ describe('createZustandAdapter', () => {
       expect(typeof store.actions.update).toBe('function');
       expect(typeof store.views.state).toBe('function');
 
-      // Should NOT expose Zustand internals
-      // @ts-expect-error
-      expect(store.getState).toBeUndefined();
+      // Should NOT expose internals
       // @ts-expect-error
       expect(store.setState).toBeUndefined();
       // @ts-expect-error

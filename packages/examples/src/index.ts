@@ -1,6 +1,6 @@
 /**
  * @fileoverview Lattice Examples Package
- * 
+ *
  * This package demonstrates various usage patterns for Lattice, showing how
  * to build applications with reusable behavior specifications that work
  * with any state management library or UI framework.
@@ -12,7 +12,6 @@ export * from './slices';
 // Export example patterns (note: these are .tsx files for demonstration)
 // In a real app, you'd import these components individually
 export { MixedStoresApp } from './patterns/mixed-stores';
-export { default as DashboardPage } from './patterns/ssr';
 export { MigrationDashboard } from './patterns/migration';
 export { APIBasicsExample } from './patterns/api-basics';
 export { DebuggingExample } from './patterns/api-logging';

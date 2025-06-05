@@ -9,8 +9,7 @@
 import { useState } from 'react';
 import { createReduxAdapter } from '@lattice/adapter-redux';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { useView as useReduxView } from '@lattice/adapter-redux/react';
-import { useView as useZustandView } from '@lattice/adapter-zustand/react';
+import { useViews } from '@lattice/runtime/react';
 
 import { userComponent, cartComponent, themeComponent } from '../slices';
 
@@ -22,17 +21,17 @@ const legacyCartStore = createReduxAdapter(cartComponent);
 const legacyThemeStore = createReduxAdapter(themeComponent);
 
 export function LegacyApp() {
-  const userProfile = useReduxView(
+  const userProfile = useViews(
     legacyUserStore,
-    (views) => views.userProfile
+    (views) => views.userProfile()
   );
-  const cartSummary = useReduxView(
+  const cartSummary = useViews(
     legacyCartStore,
-    (views) => views.cartSummary
+    (views) => views.cartSummary()
   );
-  const themeToggle = useReduxView(
+  const themeToggle = useViews(
     legacyThemeStore,
-    (views) => views.themeToggle
+    (views) => views.themeToggle()
   );
 
   return (
@@ -69,17 +68,17 @@ const modernThemeStore = createZustandAdapter(themeComponent);
 
 export function PhaseTwo() {
   // Still using Redux for user and cart
-  const userProfile = useReduxView(
+  const userProfile = useViews(
     legacyUserStore,
-    (views) => views.userProfile
+    (views) => views.userProfile()
   );
-  const cartSummary = useReduxView(
+  const cartSummary = useViews(
     legacyCartStore,
-    (views) => views.cartSummary
+    (views) => views.cartSummary()
   );
 
   // But theme is now in Zustand!
-  const themeToggle = useZustandView(modernThemeStore, 'themeToggle');
+  const themeToggle = useViews(modernThemeStore, (views) => views.themeToggle());
 
   return (
     <div className="app-phase-2">
@@ -121,11 +120,11 @@ export function FeatureFlagMigration() {
   const [useNewUserStore, setUseNewUserStore] = useState(false);
 
   // Always call both hooks to respect React's rules
-  const reduxUserProfile = useReduxView(
+  const reduxUserProfile = useViews(
     legacyUserStore,
-    (views) => views.userProfile
+    (views) => views.userProfile()
   );
-  const zustandUserProfile = useZustandView(modernUserStore, 'userProfile');
+  const zustandUserProfile = useViews(modernUserStore, (views) => views.userProfile());
 
   // Select which one to use based on feature flag
   const userProfile = useNewUserStore ? zustandUserProfile : reduxUserProfile;
@@ -158,9 +157,9 @@ const modernCartStore = createZustandAdapter(cartComponent);
 
 export function CompleteMigration() {
   // All stores are now Zustand
-  const userProfile = useZustandView(modernUserStore, 'userProfile');
-  const cartSummary = useZustandView(modernCartStore, 'cartSummary');
-  const themeToggle = useZustandView(modernThemeStore, 'themeToggle');
+  const userProfile = useViews(modernUserStore, (views) => views.userProfile());
+  const cartSummary = useViews(modernCartStore, (views) => views.cartSummary());
+  const themeToggle = useViews(modernThemeStore, (views) => views.themeToggle());
 
   return (
     <div className="app-phase-4">

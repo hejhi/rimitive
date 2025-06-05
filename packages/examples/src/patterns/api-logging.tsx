@@ -7,7 +7,7 @@
 
 import { createComponent, createModel, createSlice } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { useViews, useActions } from '@lattice/adapter-zustand/react';
+import { useViews } from '@lattice/runtime/react';
 
 // ============================================================================
 // Logging Utilities
@@ -146,31 +146,13 @@ export const debuggingComponent = createComponent(() => {
   }));
 
   // Actions slice with logging
-  const actions = createSlice(model, (m, api) => ({
+  const actions = createSlice(model, (m) => ({
     login: (username: string) => {
-      const startTime = performance.now();
       m.login(username);
-      const endTime = performance.now();
-
-      if (api.getState().debugMode) {
-        logger.debug('Action performance', {
-          action: 'login',
-          duration: `${(endTime - startTime).toFixed(2)}ms`,
-          resultState: api.getState().user,
-        });
-      }
     },
 
     logout: () => {
-      const hadUser = api.getState().user !== null;
       m.logout();
-
-      if (api.getState().debugMode && hadUser) {
-        logger.debug('Post-logout state check', {
-          userCleared: api.getState().user === null,
-          notificationsCleared: api.getState().notifications.length === 0,
-        });
-      }
     },
 
     markNotificationRead: m.markNotificationRead,
@@ -179,29 +161,13 @@ export const debuggingComponent = createComponent(() => {
   }));
 
   // State slice with debugging info
-  const stateSlice = createSlice(model, (m, api) => {
+  const stateSlice = createSlice(model, (m) => {
     const baseState = {
       user: m.user,
       notifications: m.notifications,
       settings: m.settings,
       debugMode: m.debugMode,
     };
-
-    // In debug mode, add extra diagnostic information
-    if (m.debugMode) {
-      return {
-        ...baseState,
-        _debug: {
-          stateSize: JSON.stringify(api.getState()).length,
-          notificationStats: {
-            total: m.notifications.length,
-            unread: m.notifications.filter((n) => !n.read).length,
-          },
-          renderCount: (globalThis.__debugRenderCount =
-            (globalThis.__debugRenderCount || 0) + 1),
-        },
-      };
-    }
 
     return baseState;
   });
@@ -232,43 +198,23 @@ export const debuggingComponent = createComponent(() => {
   });
 
   // Settings view with change detection
-  const settingsView = createSlice(model, (m, api) => ({
+  const settingsView = createSlice(model, (m) => ({
     ...m.settings,
 
     // Helper to update with logging
     updateWithLogging: (updates: Partial<typeof m.settings>) => {
-      const oldSettings = api.getState().settings;
-      const changes = Object.entries(updates).filter(
-        ([key, value]) => oldSettings[key as keyof typeof oldSettings] !== value
-      );
-
-      if (changes.length > 0) {
-        logger.info('Settings changes detected', {
-          changes: Object.fromEntries(changes),
-          old: oldSettings,
-          new: { ...oldSettings, ...updates },
-        });
-      }
-
-      api.executeSlice(actions).updateSettings(updates);
+      actions(m).updateSettings(updates);
     },
   }));
 
   // Debug panel view
-  const debugView = createSlice(model, (m, api) => {
+  const debugView = createSlice(model, (m) => {
     if (!m.debugMode) return null;
 
     const logs = logStore.slice(-20); // Last 20 log entries
-    const state = api.getState();
 
     return {
       logs,
-      stateSnapshot: {
-        user: state.user,
-        notificationCount: state.notifications.length,
-        settings: state.settings,
-        debugMode: state.debugMode,
-      },
       stats: {
         totalLogs: logStore.length,
         errorCount: logStore.filter((l) => l.level === 'error').length,
@@ -324,11 +270,6 @@ function DebugPanel() {
       <h4>Debug Panel</h4>
 
       <details>
-        <summary>State Snapshot</summary>
-        <pre>{JSON.stringify(debug.stateSnapshot, null, 2)}</pre>
-      </details>
-
-      <details>
         <summary>
           Stats (Total: {debug.stats.totalLogs}, Errors:{' '}
           {debug.stats.errorCount}, Warnings: {debug.stats.warnCount})
@@ -375,7 +316,7 @@ function NotificationList() {
       : null,
   }));
 
-  const storeActions = useActions(debugStore);
+  const storeActions = debugStore.actions;
 
   return (
     <div>
@@ -422,7 +363,7 @@ export function DebuggingExample() {
     state: views.state(),
     settings: views.settings(),
   }));
-  const actions = useActions(debugStore);
+  const actions = debugStore.actions;
 
   return (
     <div style={{ padding: '20px' }}>

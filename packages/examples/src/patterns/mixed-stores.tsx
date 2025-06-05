@@ -11,8 +11,7 @@
 import React from 'react';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { createReduxAdapter } from '@lattice/adapter-redux';
-import { useView as useZustandView } from '@lattice/adapter-zustand/react';
-import { useView as useReduxView } from '@lattice/adapter-redux/react';
+import { useViews } from '@lattice/runtime/react';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 
@@ -24,7 +23,7 @@ import { userComponent, cartComponent, themeComponent } from '../slices';
 const userStore = createZustandAdapter(userComponent);
 
 function UserProfileWidget() {
-  const profile = useZustandView(userStore, 'userProfile');
+  const profile = useViews(userStore, (views) => views.userProfile());
   const actions = userStore.actions;
 
   return (
@@ -53,12 +52,15 @@ const reduxStore = configureStore({
     }),
 });
 
-cartStore.subscribe(() => {
-  reduxStore.dispatch({ type: 'SYNC' });
-});
+cartStore.subscribe(
+  (views) => views.cartSummary(),
+  () => {
+    reduxStore.dispatch({ type: 'SYNC' });
+  }
+);
 
 function ShoppingCart() {
-  const summary = useReduxView(cartStore, ({ cartSummary }) => cartSummary);
+  const summary = useViews(cartStore, (views) => views.cartSummary());
   const actions = cartStore.actions;
 
   return (
@@ -115,7 +117,7 @@ if (typeof window !== 'undefined') {
 }
 
 function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const rootAttrs = useZustandView(themeStore, 'documentRoot');
+  const rootAttrs = useViews(themeStore, (views) => views.documentRoot());
 
   React.useEffect(() => {
     Object.entries(rootAttrs).forEach(([key, value]) => {
@@ -135,9 +137,9 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 // ============================================================================
 function HybridDashboard() {
   // Different stores for different concerns
-  const userProfile = useZustandView(userStore, 'userProfile');
-  const cartSummary = useReduxView(cartStore, ({ cartSummary }) => cartSummary);
-  const themeToggle = useZustandView(themeStore, 'themeToggle');
+  const userProfile = useViews(userStore, (views) => views.userProfile());
+  const cartSummary = useViews(cartStore, (views) => views.cartSummary());
+  const themeToggle = useViews(themeStore, (views) => views.themeToggle());
 
   return (
     <div className="dashboard">

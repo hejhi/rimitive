@@ -22,6 +22,12 @@ export interface AdapterAPI<Model> {
    * @returns The result of executing the slice with current state
    */
   executeSlice<T>(slice: SliceFactory<Model, T>): T;
+  /**
+   * Get the current underlying model state.
+   *
+   * @returns The current state of the model
+   */
+  getState(): Model;
 }
 
 export type ModelFactory<T = unknown> = (tools: ModelTools<T>) => T;
@@ -34,7 +40,7 @@ export type ModelFactory<T = unknown> = (tools: ModelTools<T>) => T;
  * @template Slice - The slice return type
  */
 export interface SliceFactory<Model = unknown, Slice = unknown> {
-  (model: Model, api: AdapterAPI<Model>): Slice;
+  (model: Model): Slice;
   [SLICE_FACTORY_MARKER]?: true;
 }
 
@@ -48,17 +54,17 @@ export function createModel<T>(
 // Overload for regular selectors (preserves inference)
 export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
-  selector: (model: Model, api: AdapterAPI<Model>) => Slice
+  selector: (model: Model) => Slice
 ): SliceFactory<Model, Slice>;
 
 // Implementation - simplified without transform support
 export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
-  selector: (model: Model, api: AdapterAPI<Model>) => Slice
+  selector: (model: Model) => Slice
 ): SliceFactory<Model, Slice> {
   // Create a function that executes the selector with required api
-  const sliceFactory = function (model: Model, api: AdapterAPI<Model>): Slice {
-    return selector(model, api);
+  const sliceFactory = function (model: Model): Slice {
+    return selector(model);
   };
 
   // Brand the slice factory
@@ -146,15 +152,8 @@ if (import.meta.vitest) {
     const model = createModel<{ count: number }>(() => ({ count: 5 }));
     const slice = createSlice(model, (m) => ({ value: m.count }));
 
-    // Mock API
-    const mockApi: AdapterAPI<{ count: number }> = {
-      executeSlice: <T>(_slice: SliceFactory<{ count: number }, T>): T => {
-        return {} as T;
-      },
-    };
-
     // Direct execution with required API
-    const result = slice({ count: 10 }, mockApi);
+    const result = slice({ count: 10 });
     expect(result).toEqual({ value: 10 });
   });
 
@@ -162,16 +161,7 @@ if (import.meta.vitest) {
     const model = createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 }));
     const pointSlice = createSlice(model, (m) => ({ x: m.x, y: m.y }));
 
-    // Mock API
-    const mockApi: AdapterAPI<{ x: number; y: number }> = {
-      executeSlice: <T>(
-        _slice: SliceFactory<{ x: number; y: number }, T>
-      ): T => {
-        return {} as T;
-      },
-    };
-
-    const result = pointSlice({ x: 3, y: 4 }, mockApi);
+    const result = pointSlice({ x: 3, y: 4 });
     expect(result).toEqual({ x: 3, y: 4 });
   });
 
@@ -186,14 +176,7 @@ if (import.meta.vitest) {
       };
     });
 
-    // Mock API
-    const mockApi: AdapterAPI<{ count: number }> = {
-      executeSlice: <T>(_slice: SliceFactory<{ count: number }, T>): T => {
-        return {} as T;
-      },
-    };
-
-    const result = sliceWithApi({ count: 10 }, mockApi);
+    const result = sliceWithApi({ count: 10 });
     expect(result).toEqual({
       value: 10,
       hasApi: true,

@@ -60,8 +60,8 @@ export function testView<Model, Actions, Views>(
   viewName: keyof Views
 ): {
   store: TestStore<Model>;
-  getViewOutput: () => any;
-  executeAction: (actionName: keyof Actions, ...args: any[]) => void;
+  getViewOutput: () => unknown;
+  executeAction: (actionName: keyof Actions, ...args: unknown[]) => void;
   setState: (partial: Partial<Model>) => void;
 } {
   const component = componentFactory();
@@ -74,8 +74,8 @@ export function testView<Model, Actions, Views>(
 
       // Helper to check if something is a slice factory
       const isSliceFactory = (
-        value: any
-      ): value is SliceFactory<Model, any> => {
+        value: unknown
+      ): value is SliceFactory<Model, unknown> => {
         return typeof value === 'function' && SLICE_FACTORY_MARKER in value;
       };
 
@@ -105,11 +105,11 @@ export function testView<Model, Actions, Views>(
       // If we get here, we don't know what to do with the view
       throw new Error(`Unable to execute view: ${String(viewName)}`);
     },
-    executeAction: (actionName: keyof Actions, ...args: any[]) => {
+    executeAction: (actionName: keyof Actions, ...args: unknown[]) => {
       const actions = store.executeSlice(component.actions);
       const action = actions[actionName];
       if (typeof action === 'function') {
-        (action as any)(...args);
+        (action as (...args: unknown[]) => void)(...args);
       }
     },
     setState: (partial) => store.setState(partial),

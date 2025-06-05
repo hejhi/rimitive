@@ -7,41 +7,23 @@
  */
 
 import {
-  configureStore,
+  configureStore as reduxConfigureStore,
   createSlice as createReduxSlice,
 } from '@reduxjs/toolkit';
+import type { Reducer, UnknownAction, Middleware } from 'redux';
 import type {
-  ComponentSpec,
   SliceFactory,
   AdapterResult,
   ViewTypes,
-  AdapterAPI,
+  ComponentFactory,
 } from '@lattice/core';
 import { isSliceFactory } from '@lattice/core';
+import { createRuntime } from '@lattice/runtime';
+import type { Store } from 'redux';
 
 // ============================================================================
 // Types
 // ============================================================================
-
-/**
- * Redux adapter result that implements the standard AdapterResult interface
- */
-// Redux action type for state updates
-interface UpdateStateAction<Model> {
-  type: 'lattice/updateState';
-  payload: Partial<Model>;
-}
-
-export interface ReduxAdapterResult<Model, Actions, Views>
-  extends AdapterResult<Model, Actions, Views> {
-  // Standard Redux store methods
-  dispatch: (action: UpdateStateAction<Model>) => void;
-  getState: () => Model;
-  subscribe: (listener: () => void) => () => void;
-
-  // Cleanup method
-  destroy: () => void;
-}
 
 // ============================================================================
 // Helpers
@@ -84,146 +66,159 @@ function separateStateAndActions<T>(obj: T): {
 
 /**
  * Creates a Redux store from a Lattice component
+ *
+ * @param componentFactory - The Lattice component factory
+ * @param middleware - Optional function to apply Redux middleware
+ * @returns An adapter result with Redux integration
  */
 export function createReduxAdapter<Model, Actions, Views>(
-  componentOrFactory:
-    | ComponentSpec<Model, Actions, Views>
-    | (() => ComponentSpec<Model, Actions, Views>)
-): ReduxAdapterResult<Model, Actions, Views> {
-  // Get the component spec
-  const spec =
-    typeof componentOrFactory === 'function'
-      ? componentOrFactory()
-      : componentOrFactory;
+  componentFactory: ComponentFactory<Model, Actions, Views>,
+  middleware?: (
+    configureStore: typeof reduxConfigureStore,
+    reducer: Reducer<StateProperties<Model>, UnknownAction>
+  ) => Store<StateProperties<Model>>
+): AdapterResult<Model, Actions, Views> {
+  return createRuntime(() => {
+    // Get the component spec
+    const spec = componentFactory();
 
-  // Create initial model state
-  const initialModel = spec.model({
-    get: () => ({}) as Model, // Temporary getter
-    set: () => {}, // Temporary setter
-  });
+    // Create initial model state
+    const initialModel = spec.model({
+      get: () => ({}) as Model, // Temporary getter
+      set: () => {}, // Temporary setter
+    });
 
-  // Separate state from actions
-  const { state: initialState, actions: modelActions } =
-    separateStateAndActions(initialModel);
+    // Separate state from actions
+    const { state: initialState, actions: modelActions } =
+      separateStateAndActions(initialModel);
 
-  // Create Redux slice for state only
-  const slice = createReduxSlice({
-    name: 'lattice',
-    initialState,
-    reducers: {
-      updateState: (state, action) => {
-        // Apply partial updates
-        Object.assign(state, action.payload);
+    // Create Redux slice for state only
+    const slice = createReduxSlice({
+      name: 'lattice',
+      initialState,
+      reducers: {
+        updateState: (state, action) => {
+          // Apply partial updates
+          Object.assign(state, action.payload);
+        },
       },
-    },
-  });
+    });
 
-  // Create Redux store with middleware disabled for non-serializable checks
-  const store = configureStore({
-    reducer: slice.reducer,
-    middleware: (getDefaultMiddleware) =>
-      getDefaultMiddleware({
-        serializableCheck: false,
-      }),
-  });
+    // Create Redux store with optional middleware
+    const store = middleware
+      ? middleware(reduxConfigureStore, slice.reducer)
+      : reduxConfigureStore({
+          reducer: slice.reducer,
+          middleware: (getDefaultMiddleware) =>
+            getDefaultMiddleware({
+              serializableCheck: false,
+            }),
+        });
 
-  // Create model tools that work with Redux
-  const modelTools = {
-    get: () => {
-      // Return combined state and actions
-      return { ...store.getState(), ...modelActions } as Model;
-    },
-    set: (updates: Partial<Model>) => {
-      // Filter out functions from updates
-      const { state: stateUpdates } = separateStateAndActions(updates);
-      if (Object.keys(stateUpdates).length > 0) {
-        store.dispatch(slice.actions.updateState(stateUpdates));
-      }
-    },
-  };
-
-  // Re-execute the model factory with proper tools to bind actions correctly
-  const boundModel = spec.model(modelTools);
-
-  // Extract the bound actions
-  const { actions: boundActions } = separateStateAndActions(boundModel);
-
-  // Update modelActions reference
-  Object.assign(modelActions, boundActions);
-
-  // Create the AdapterAPI implementation with Redux-specific extensions
-  const adapterApi: AdapterAPI<Model> & {
-    dispatch: typeof store.dispatch;
-    getReduxState: typeof store.getState;
-  } = {
-    executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
-      const model = modelTools.get();
-      return slice(model, adapterApi);
-    },
-    getState: () => modelTools.get(),
-    // Redux-specific methods
-    dispatch: store.dispatch,
-    getReduxState: store.getState, // Direct access to Redux store state (without model actions)
-  };
-
-  // Create wrapper for slice execution
-  const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
-    // Don't cache results - they need to be recomputed on each access
-    // because the underlying state may have changed
-
-    const model = modelTools.get();
-
-    // Execute the slice factory with API
-    return factory(model, adapterApi);
-  };
-
-  // Create actions using the wrapper
-  const actions = executeSliceFactory(spec.actions);
-
-  // Process views
-  const views = {} as ViewTypes<Model, Views>;
-  for (const [key, view] of Object.entries(
-    spec.views as Record<string, unknown>
-  )) {
-    if (isSliceFactory(view)) {
-      // Static view: slice factory
-      (views as Record<string, unknown>)[key] = () => {
-        const value = executeSliceFactory(view);
-        // Return a shallow copy to ensure fresh references
-        return typeof value === 'object' && value !== null
-          ? Array.isArray(value)
-            ? [...value]
-            : { ...value }
-          : value;
-      };
-    } else if (typeof view === 'function') {
-      // Computed view - wrap to inject API as last parameter
-      (views as Record<string, unknown>)[key] = (...args: unknown[]) => {
-        // Call the view function with user args + api as last argument
-        const result = view(...args, adapterApi);
-
-        // If the result is a slice factory, execute it with the API
-        if (isSliceFactory(result)) {
-          return executeSliceFactory(result);
+    // Create model tools that work with Redux
+    const modelTools = {
+      get: () => {
+        // Return combined state and actions
+        return { ...store.getState(), ...modelActions } as Model;
+      },
+      set: (updates: Partial<Model>) => {
+        // Filter out functions from updates
+        const { state: stateUpdates } = separateStateAndActions(updates);
+        if (Object.keys(stateUpdates).length > 0) {
+          store.dispatch(slice.actions.updateState(stateUpdates));
         }
+      },
+    };
 
-        // Otherwise return the result as-is
-        return result;
-      };
+    // Re-execute the model factory with proper tools to bind actions correctly
+    const boundModel = spec.model(modelTools);
+
+    // Extract the bound actions
+    const { actions: boundActions } = separateStateAndActions(boundModel);
+
+    // Update modelActions reference
+    Object.assign(modelActions, boundActions);
+
+    // Create wrapper for slice execution
+    const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
+      // Don't cache results - they need to be recomputed on each access
+      // because the underlying state may have changed
+
+      const model = modelTools.get();
+
+      // Execute the slice factory with API
+      return factory(model);
+    };
+
+    // Create actions using the wrapper
+    const actions = executeSliceFactory(spec.actions);
+
+    // Process views
+    const views = {} as ViewTypes<Model, Views>;
+    for (const [key, view] of Object.entries(
+      spec.views as Record<string, unknown>
+    )) {
+      if (isSliceFactory(view)) {
+        // Static view: slice factory
+        (views as Record<string, unknown>)[key] = () => {
+          const value = executeSliceFactory(view);
+          // Return a shallow copy to ensure fresh references
+          return typeof value === 'object' && value !== null
+            ? Array.isArray(value)
+              ? [...value]
+              : { ...value }
+            : value;
+        };
+      } else if (typeof view === 'function') {
+        // Computed view - may accept parameters
+        (views as Record<string, unknown>)[key] = (...args: unknown[]) => {
+          // Call the view function with any provided args
+          const result = view(...args);
+
+          // If the result is a slice factory, execute it
+          if (isSliceFactory(result)) {
+            return executeSliceFactory(result);
+          }
+
+          // Otherwise return the result as-is
+          return result;
+        };
+      }
     }
-  }
 
-  // Return enhanced Redux store
-  return {
-    dispatch: store.dispatch,
-    getState: () => modelTools.get(),
-    subscribe: store.subscribe,
-    actions,
-    views,
-    destroy: () => {
-      // Redux store doesn't need explicit cleanup, but we can add it for consistency
-    },
-  };
+    // Create view-based subscribe that matches AdapterResult interface
+    const subscribe = <Selected>(
+      selector: (views: ViewTypes<Model, Views>) => Selected,
+      callback: (value: Selected) => void
+    ): (() => void) => {
+      let previousSelected: Selected | undefined;
+
+      return store.subscribe(() => {
+        try {
+          const currentSelected = selector(views);
+
+          // Use Object.is for equality check (handles NaN, +0/-0 correctly)
+          if (!Object.is(currentSelected, previousSelected)) {
+            previousSelected = currentSelected;
+            callback(currentSelected);
+          }
+        } catch (error) {
+          console.error('Error in subscribe selector:', error);
+        }
+      });
+    };
+
+    // Return enhanced Redux store
+    return {
+      getState: () => modelTools.get(),
+      subscribe,
+      actions,
+      views,
+      destroy: () => {
+        // Redux store doesn't need explicit cleanup, but we can add it for consistency
+      },
+    };
+  });
 }
 
 // ============================================================================
@@ -332,22 +327,31 @@ if (import.meta.vitest) {
         return {
           model,
           actions: createSlice(model, (m) => ({ increment: m.increment })),
-          views: {},
+          views: {
+            count: createSlice(model, (m) => ({ value: m.count })),
+          },
         };
       });
 
       const store = createReduxAdapter(counter);
       let callCount = 0;
+      const values: number[] = [];
 
-      const unsubscribe = store.subscribe(() => {
-        callCount++;
-      });
+      const unsubscribe = store.subscribe(
+        (views) => views.count().value,
+        (value) => {
+          callCount++;
+          values.push(value);
+        }
+      );
 
       store.actions.increment();
       expect(callCount).toBe(1);
+      expect(values[0]).toBe(1);
 
       store.actions.increment();
       expect(callCount).toBe(2);
+      expect(values[1]).toBe(2);
 
       unsubscribe();
       store.actions.increment();
@@ -422,8 +426,8 @@ if (import.meta.vitest) {
           filter: m.filter,
         }));
 
-        const filteredTodosView = createSlice(model, (_m, api) => {
-          const state = api.executeSlice(todoState);
+        const filteredTodosView = createSlice(model, (m) => {
+          const state = todoState(m);
           const filtered =
             state.filter === 'all'
               ? state.todos
@@ -471,157 +475,7 @@ if (import.meta.vitest) {
       ).toBe(true);
     });
 
-    it('should provide Redux-specific dispatch and getReduxState methods in API', () => {
-      let capturedApi: any;
-
-      const component = createComponent(() => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
-
-        const actions = createSlice(model, (m, api) => {
-          capturedApi = api;
-          return {
-            increment: m.increment,
-          };
-        });
-
-        return {
-          model,
-          actions,
-          views: {},
-        };
-      });
-
-      createReduxAdapter(component);
-
-      // Verify API was captured and has Redux-specific methods
-      expect(capturedApi).toBeDefined();
-      expect(typeof capturedApi.dispatch).toBe('function');
-      expect(typeof capturedApi.getReduxState).toBe('function');
-      expect(typeof capturedApi.executeSlice).toBe('function');
-      expect(typeof capturedApi.getState).toBe('function');
-
-      // Test that dispatch works
-      const initialState = capturedApi.getReduxState();
-      expect(initialState.count).toBe(0);
-
-      // Dispatch an action to update state
-      capturedApi.dispatch({
-        type: 'lattice/updateState',
-        payload: { count: 5 },
-      });
-
-      const updatedState = capturedApi.getReduxState();
-      expect(updatedState.count).toBe(5);
-
-      // Verify getState returns the full model (state + actions)
-      const fullModel = capturedApi.getState();
-      expect(fullModel.count).toBe(5);
-      expect(typeof fullModel.increment).toBe('function');
-    });
-
-    it('should inject API as last parameter to computed views', () => {
-      const component = createComponent(() => {
-        const model = createModel<{
-          items: string[];
-          filter: string;
-          setFilter: (filter: string) => void;
-        }>(({ set }) => ({
-          items: ['apple', 'banana', 'cherry', 'apricot'],
-          filter: 'a',
-          setFilter: (filter) => set({ filter }),
-        }));
-
-        // Base slice to access items
-        const itemsSlice = createSlice(model, (m) => m.items);
-
-        // Computed view that takes arguments and receives API as last parameter
-        const filteredView = function (this: any, ...args: any[]) {
-          // Check if last argument is the API
-          const lastArg = args[args.length - 1];
-          const api =
-            lastArg &&
-            typeof lastArg.executeSlice === 'function' &&
-            typeof lastArg.getState === 'function'
-              ? lastArg
-              : undefined;
-
-          // Get the prefix if provided (excluding API)
-          const prefix =
-            api && args.length > 1
-              ? args[0]
-              : !api && args.length > 0
-                ? args[0]
-                : undefined;
-
-          // If API is provided, use it to execute other slices
-          if (api) {
-            const items = api.executeSlice(itemsSlice);
-            const filter = api.getState().filter;
-            const filtered = items.filter((item: string) =>
-              item.includes(filter)
-            );
-            return {
-              items: prefix
-                ? filtered.map((item: string) => prefix + item)
-                : filtered,
-              count: filtered.length,
-              hasApi: true,
-            };
-          }
-
-          // Fallback if no API
-          return {
-            items: [],
-            count: 0,
-            hasApi: false,
-          };
-        };
-
-        return {
-          model,
-          actions: createSlice(model, (m) => ({
-            setFilter: m.setFilter,
-          })),
-          views: {
-            filtered: filteredView as (prefix?: string) => any,
-          },
-        };
-      });
-
-      const store = createReduxAdapter(component);
-
-      // Test without arguments - API should still be injected
-      let result = (store.views as any).filtered();
-      expect(result.hasApi).toBe(true);
-      expect(result.items).toEqual(['apple', 'banana', 'apricot']);
-      expect(result.count).toBe(3);
-
-      // Test with arguments - API should be injected as last parameter
-      result = (store.views as any).filtered('fruit: ');
-      expect(result.hasApi).toBe(true);
-      expect(result.items).toEqual([
-        'fruit: apple',
-        'fruit: banana',
-        'fruit: apricot',
-      ]);
-      expect(result.count).toBe(3);
-
-      // Change filter and verify it works
-      store.actions.setFilter('ban');
-      result = (store.views as any).filtered();
-      expect(result.items).toEqual(['banana']);
-      expect(result.count).toBe(1);
-    });
-
-    it('should provide dispatch and getReduxState methods in API for computed views', () => {
-      let capturedApi: any;
-
+    it('should handle views that use API through composition', () => {
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -640,65 +494,141 @@ if (import.meta.vitest) {
           setMessage: m.setMessage,
         }));
 
-        // Computed view that captures the API and uses Redux-specific methods
-        const computedView = function (this: any, ...args: any[]) {
-          const api = args[args.length - 1];
-          capturedApi = api;
+        // Slice that uses API to compose data
+        const statusSlice = createSlice(model, (m) => {
+          // Can use API within slices
+          const stateSlice = createSlice(model, (m) => ({
+            count: m.count,
+            message: m.message,
+          }));
+          const state = stateSlice(m);
 
-          if (
-            api &&
-            typeof api.dispatch === 'function' &&
-            typeof api.getReduxState === 'function'
-          ) {
-            // Get the Redux state (without actions)
-            const reduxState = api.getReduxState();
-
-            return {
-              hasReduxMethods: true,
-              count: reduxState.count,
-              message: reduxState.message,
-              // Verify getState includes actions while getReduxState doesn't
-              hasActions: typeof api.getState().increment === 'function',
-              reduxHasActions: typeof reduxState.increment === 'function',
-            };
-          }
-
-          return { hasReduxMethods: false };
-        };
+          return {
+            count: state.count,
+            message: state.message,
+            combined: `${state.message} (${state.count})`,
+          };
+        });
 
         return {
           model,
           actions,
           views: {
-            status: computedView as () => any,
+            status: statusSlice,
           },
         };
       });
 
       const store = createReduxAdapter(component);
 
-      // Call the computed view
-      const result = (store.views as any).status();
-
-      // Verify the API was passed and has Redux-specific methods
-      expect(capturedApi).toBeDefined();
-      expect(typeof capturedApi.dispatch).toBe('function');
-      expect(typeof capturedApi.getReduxState).toBe('function');
-      expect(result.hasReduxMethods).toBe(true);
+      // Call the view
+      const result = store.views.status();
       expect(result.count).toBe(0);
       expect(result.message).toBe('hello');
-      expect(result.hasActions).toBe(true); // getState includes actions
-      expect(result.reduxHasActions).toBe(false); // getReduxState excludes actions
+      expect(result.combined).toBe('hello (0)');
 
-      // Test that dispatch works from within the view
-      capturedApi.dispatch({
-        type: 'lattice/updateState',
-        payload: { count: 10, message: 'updated' },
+      // Update state via store actions
+      store.actions.increment();
+      store.actions.setMessage('updated');
+
+      const updatedResult = store.views.status();
+      expect(updatedResult.count).toBe(1);
+      expect(updatedResult.message).toBe('updated');
+      expect(updatedResult.combined).toBe('updated (1)');
+    });
+
+    it('should accept and apply Redux middleware', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          lastAction: string;
+          increment: () => void;
+          decrement: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          lastAction: 'none',
+          increment: () =>
+            set({ count: get().count + 1, lastAction: 'increment' }),
+          decrement: () =>
+            set({ count: get().count - 1, lastAction: 'decrement' }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+          decrement: m.decrement,
+        }));
+
+        const views = {
+          state: createSlice(model, (m) => ({
+            count: m.count,
+            lastAction: m.lastAction,
+          })),
+        };
+
+        return { model, actions, views };
       });
 
-      const updatedResult = (store.views as any).status();
-      expect(updatedResult.count).toBe(10);
-      expect(updatedResult.message).toBe('updated');
+      // Track middleware application
+      let middlewareApplied = false;
+      let loggedActions: string[] = [];
+
+      // Custom middleware that adds logging
+      const customMiddleware = (
+        configureStore: typeof reduxConfigureStore,
+        reducer: Reducer<
+          StateProperties<{
+            count: number;
+            lastAction: string;
+            increment: () => void;
+            decrement: () => void;
+          }>,
+          UnknownAction
+        >
+      ) => {
+        middlewareApplied = true;
+
+        // Create a simple logging middleware with proper Redux types
+        const loggingMiddleware: Middleware = () => (next) => (action) => {
+          if (
+            typeof action === 'object' &&
+            action !== null &&
+            'type' in action &&
+            typeof action.type === 'string'
+          ) {
+            loggedActions.push(action.type);
+          }
+          return next(action);
+        };
+
+        return configureStore({
+          reducer,
+          middleware: (getDefaultMiddleware) =>
+            getDefaultMiddleware({ serializableCheck: false }).concat(
+              loggingMiddleware
+            ),
+        });
+      };
+
+      const store = createReduxAdapter(component, customMiddleware);
+
+      // Verify middleware was applied
+      expect(middlewareApplied).toBe(true);
+
+      // Verify the store still works correctly
+      expect(store.views.state().count).toBe(0);
+
+      // Perform actions
+      store.actions.increment();
+      expect(store.views.state().count).toBe(1);
+      expect(store.views.state().lastAction).toBe('increment');
+
+      store.actions.decrement();
+      expect(store.views.state().count).toBe(0);
+      expect(store.views.state().lastAction).toBe('decrement');
+
+      // Verify middleware logged the actions
+      expect(loggedActions).toContain('lattice/updateState');
+      expect(loggedActions.length).toBeGreaterThan(0);
     });
   });
 }

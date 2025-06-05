@@ -7,13 +7,16 @@
  * function layers to encode composition data.
  */
 
-import type { SliceFactory, AdapterAPI } from './index';
+import type { SliceFactory } from './index';
 
 /**
  * Type for resolved dependencies
+ * Extract the slice result type from each SliceFactory in Deps
  */
-type ResolveDeps<Deps extends Record<string, SliceFactory<any, any>>> = {
-  [K in keyof Deps]: Deps[K] extends SliceFactory<any, infer T> ? T : never;
+type ResolveDeps<Deps> = {
+  [K in keyof Deps]: Deps[K] extends SliceFactory<infer _Model, infer Slice>
+    ? Slice
+    : never;
 };
 
 /**
@@ -25,12 +28,12 @@ type ResolveDeps<Deps extends Record<string, SliceFactory<any, any>>> = {
  *
  * @example
  * ```typescript
- * const actions = createSlice(model, (m, api) => ({
+ * const actions = createSlice(model, (m) => ({
  *   increment: m.increment,
  *   decrement: m.decrement
  * }));
  *
- * const userSlice = createSlice(model, (m, api) => ({
+ * const userSlice = createSlice(model, (m) => ({
  *   name: m.user.name,
  *   email: m.user.email
  * }));
@@ -51,19 +54,19 @@ type ResolveDeps<Deps extends Record<string, SliceFactory<any, any>>> = {
  */
 export function compose<
   Model,
-  Deps extends Record<string, SliceFactory<Model, unknown>>,
+  Deps extends Record<string, SliceFactory<Model, any>>,
   Result,
 >(
   deps: Deps,
   selector: (model: Model, resolvedDeps: ResolveDeps<Deps>) => Result
-): (model: Model, api: AdapterAPI<Model>) => Result {
+): (model: Model) => Result {
   // Return a selector function that resolves dependencies and accepts required api parameter
-  return (model: Model, api: AdapterAPI<Model>): Result => {
+  return (model: Model): Result => {
     // Build resolved dependencies using Object.fromEntries for type safety
     // Pass both model and api to each dependency slice
     const entries = Object.entries(deps).map(([key, sliceFactory]) => [
       key,
-      sliceFactory(model, api),
+      sliceFactory(model),
     ]);
     const resolvedDeps = Object.fromEntries(entries) as ResolveDeps<Deps>;
 
@@ -92,16 +95,9 @@ if (import.meta.vitest) {
         }))
       );
 
-      // Mock API
-      const mockApi: AdapterAPI<{ count: number }> = {
-        executeSlice: <T>(_slice: SliceFactory<{ count: number }, T>): T => {
-          return {} as T;
-        },
-      };
-
       // Test the composed slice
       const modelData = { count: 5 };
-      const result = composedSlice(modelData, mockApi);
+      const result = composedSlice(modelData);
       expect(result).toEqual({ doubled: 10 });
     });
 
@@ -125,17 +121,8 @@ if (import.meta.vitest) {
         }))
       );
 
-      // Mock API
-      const mockApi: AdapterAPI<{ x: number; y: number }> = {
-        executeSlice: <T>(
-          _slice: SliceFactory<{ x: number; y: number }, T>
-        ): T => {
-          return {} as T;
-        },
-      };
-
       // Test the composed slice
-      const result = composedSlice({ x: 3, y: 4 }, mockApi);
+      const result = composedSlice({ x: 3, y: 4 });
       expect(result).toEqual({ sum: 7 });
     });
 
@@ -188,14 +175,7 @@ if (import.meta.vitest) {
         user: { name: 'Bob', email: 'bob@example.com' },
       };
 
-      // Mock API
-      const mockApi: AdapterAPI<typeof modelData> = {
-        executeSlice: <T>(_slice: SliceFactory<typeof modelData, T>): T => {
-          return {} as T;
-        },
-      };
-
-      const result = composed(modelData, mockApi);
+      const result = composed(modelData);
 
       // Now compose returns a regular selector, so result is the actual object
       expect(result).toEqual({
@@ -278,14 +258,7 @@ if (import.meta.vitest) {
         sizes: { width: 300, height: 400 },
       };
 
-      // Mock API
-      const mockApi: AdapterAPI<typeof modelData> = {
-        executeSlice: <T>(_slice: SliceFactory<typeof modelData, T>): T => {
-          return {} as T;
-        },
-      };
-
-      const result = viewSlice(modelData, mockApi);
+      const result = viewSlice(modelData);
 
       // Compose now returns a regular selector, so result is the actual object
       expect(result).toEqual({
@@ -340,16 +313,7 @@ if (import.meta.vitest) {
         )
       );
 
-      // Mock API
-      const mockApi: AdapterAPI<{ str: string; num: number; bool: boolean }> = {
-        executeSlice: <T>(
-          _slice: SliceFactory<{ str: string; num: number; bool: boolean }, T>
-        ): T => {
-          return {} as T;
-        },
-      };
-
-      const result = composed({ str: 'test', num: 100, bool: false }, mockApi);
+      const result = composed({ str: 'test', num: 100, bool: false });
 
       // Verify the result matches expected shape
       expect(result).toEqual({
@@ -415,32 +379,12 @@ if (import.meta.vitest) {
         }))
       );
 
-      // Mock API
-      const mockApi: AdapterAPI<{
-        a: number;
-        b: number;
-        c: number;
-        op: 'add' | 'multiply';
-      }> = {
-        executeSlice: <T>(
-          _slice: SliceFactory<
-            { a: number; b: number; c: number; op: 'add' | 'multiply' },
-            T
-          >
-        ): T => {
-          return {} as T;
-        },
-      };
-
-      const addResult = finalSlice({ a: 5, b: 3, c: 2, op: 'add' }, mockApi);
+      const addResult = finalSlice({ a: 5, b: 3, c: 2, op: 'add' });
 
       // Verify nested composition works correctly
       expect(addResult).toEqual({ finalResult: 10 }); // (5 + 3) + 2
 
-      const multiplyResult = finalSlice(
-        { a: 5, b: 3, c: 2, op: 'multiply' },
-        mockApi
-      );
+      const multiplyResult = finalSlice({ a: 5, b: 3, c: 2, op: 'multiply' });
       expect(multiplyResult).toEqual({ finalResult: 17 }); // (5 * 3) + 2
     });
 
@@ -466,14 +410,7 @@ if (import.meta.vitest) {
         }))
       );
 
-      // Test with first API
-      const mockApi1: AdapterAPI<{ value: number }> = {
-        executeSlice: <T>(_slice: SliceFactory<{ value: number }, T>): T => {
-          return {} as T;
-        },
-      };
-
-      const resultWithApi1 = composedSlice({ value: 20 }, mockApi1);
+      const resultWithApi1 = composedSlice({ value: 20 });
       expect(resultWithApi1).toEqual({
         depValue: 20,
         depHasApi: true,
@@ -482,14 +419,7 @@ if (import.meta.vitest) {
         directValue: 20,
       });
 
-      // Test with different API
-      const mockApi2: AdapterAPI<{ value: number }> = {
-        executeSlice: <T>(_slice: SliceFactory<{ value: number }, T>): T => {
-          return {} as T;
-        },
-      };
-
-      const resultWithApi2 = composedSlice({ value: 20 }, mockApi2);
+      const resultWithApi2 = composedSlice({ value: 20 });
       expect(resultWithApi2).toEqual({
         depValue: 20,
         depHasApi: true,
@@ -532,17 +462,7 @@ if (import.meta.vitest) {
         }))
       );
 
-      // Test with API
-      const mockApi: AdapterAPI<{ x: number; y: number }> = {
-        executeSlice: <T>(
-          _slice: SliceFactory<{ x: number; y: number }, T>
-        ): T => {
-          // For testing, just return a dummy value
-          return {} as T;
-        },
-      };
-
-      const result = level2({ x: 5, y: 10 }, mockApi);
+      const result = level2({ x: 5, y: 10 });
       expect(result.l1Data.baseX).toBe(5);
       expect(result.l1Data.baseFromModel).toBe(5); // From model
       expect(result.l1Data.y).toBe(10);
@@ -598,14 +518,7 @@ if (import.meta.vitest) {
         settings: { theme: 'dark', notifications: false },
       };
 
-      // Mock API
-      const mockApi: AdapterAPI<typeof modelData> = {
-        executeSlice: <T>(_slice: SliceFactory<typeof modelData, T>): T => {
-          return {} as T;
-        },
-      };
-
-      const result = composedSlice(modelData, mockApi);
+      const result = composedSlice(modelData);
 
       expect(result).toEqual({
         total: 5,
@@ -623,14 +536,7 @@ if (import.meta.vitest) {
         settings: { theme: 'light', notifications: true },
       };
 
-      // Mock API for admin test
-      const adminMockApi: AdapterAPI<typeof adminData> = {
-        executeSlice: <T>(_slice: SliceFactory<typeof adminData, T>): T => {
-          return {} as T;
-        },
-      };
-
-      const adminResult = composedSlice(adminData, adminMockApi);
+      const adminResult = composedSlice(adminData);
 
       expect(adminResult).toEqual({
         total: 3,
@@ -643,7 +549,7 @@ if (import.meta.vitest) {
 
       // Verify that api parameter is always required
       // The result should be the same with the same model data
-      const resultWithSameApi = composedSlice(modelData, mockApi);
+      const resultWithSameApi = composedSlice(modelData);
       expect(resultWithSameApi).toEqual(result);
     });
   });

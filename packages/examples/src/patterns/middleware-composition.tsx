@@ -18,7 +18,7 @@ import {
   type SliceFactory,
 } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { useViews, useActions } from '@lattice/adapter-zustand/react';
+import { useViews } from '@lattice/runtime/react';
 
 // ============================================================================
 // Middleware Utilities
@@ -29,9 +29,9 @@ function withPerformanceMonitoring<M, T>(
   slice: SliceFactory<M, T>,
   name: string
 ): SliceFactory<M, T> {
-  return (model, api) => {
+  return (model) => {
     const startTime = performance.now();
-    const result = slice(model, api);
+    const result = slice(model);
     const endTime = performance.now();
 
     if (typeof window !== 'undefined' && (window as any).__PERF_MONITORING) {
@@ -50,7 +50,7 @@ function withCaching<M, T>(
   slice: SliceFactory<M, T>,
   getCacheKey: (model: M) => string
 ): SliceFactory<M, T> {
-  return (model, api) => {
+  return (model) => {
     const key = getCacheKey(model);
     const cached = cache.get(key);
 
@@ -59,7 +59,7 @@ function withCaching<M, T>(
       return cached.value;
     }
 
-    const result = slice(model, api);
+    const result = slice(model);
     cache.set(key, { value: result, timestamp: Date.now() });
     console.log(`[Cache] Miss for key: ${key}, caching result`);
 
@@ -72,8 +72,8 @@ function withValidation<M, T>(
   slice: SliceFactory<M, T>,
   validator: (result: T) => { valid: boolean; errors?: string[] }
 ): SliceFactory<M, T> {
-  return (model, api) => {
-    const result = slice(model, api);
+  return (model) => {
+    const result = slice(model);
     const validation = validator(result);
 
     if (!validation.valid) {
@@ -91,9 +91,9 @@ function withErrorBoundary<M, T>(
   fallback: T,
   onError?: (error: Error) => void
 ): SliceFactory<M, T> {
-  return (model, api) => {
+  return (model) => {
     try {
-      return slice(model, api);
+      return slice(model);
     } catch (error) {
       console.error('[ErrorBoundary] Caught error:', error);
       onError?.(error as Error);
@@ -294,8 +294,8 @@ export const middlewareComponent = createComponent(() => {
 
   // Stats with validation
   const statsSlice = withValidation(
-    createSlice(model, (m, api) => {
-      const filteredItems = api.executeSlice(filteredItemsSlice);
+    createSlice(model, (m) => {
+      const filteredItems = filteredItemsSlice(m);
 
       return {
         totalItems: m.items.length,
@@ -411,7 +411,7 @@ function ItemList() {
 
 function Filters() {
   const filters = useViews(middlewareStore, (views) => views.filters());
-  const actions = useActions(middlewareStore);
+  const actions = middlewareStore.actions;
 
   return (
     <div style={{ marginBottom: '20px' }}>
@@ -487,7 +487,7 @@ function Stats() {
 
 function History() {
   const history = useViews(middlewareStore, (views) => views.history());
-  const actions = useActions(middlewareStore);
+  const actions = middlewareStore.actions;
 
   return (
     <div style={{ marginTop: '20px' }}>
@@ -523,7 +523,7 @@ function History() {
 }
 
 export function MiddlewareCompositionExample() {
-  const actions = useActions(middlewareStore);
+  const actions = middlewareStore.actions;
   const [perfMonitoring, setPerfMonitoring] = React.useState(false);
 
   React.useEffect(() => {

@@ -8,21 +8,28 @@ export default defineConfig({
       insertTypesEntry: true,
       outDir: 'dist',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts']
-    })
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts'],
+    }),
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'LatticeAdapterMemory',
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+      },
+      name: 'LatticeAdapterReact',
       formats: ['es'],
-      fileName: 'index',
     },
     rollupOptions: {
-      external: ['@lattice/core', '@lattice/runtime'],
+      external: [
+        '@lattice/core',
+        '@lattice/runtime',
+        'react',
+      ],
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
+          '@lattice/runtime': 'LatticeRuntime',
+          react: 'React',
         },
       },
     },

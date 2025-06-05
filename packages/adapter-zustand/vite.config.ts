@@ -8,27 +8,34 @@ export default defineConfig({
       insertTypesEntry: true,
       outDir: 'dist',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts']
-    })
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts'],
+    }),
   ],
   build: {
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        react: resolve(__dirname, 'src/react.ts'),
       },
       name: 'LatticeAdapterZustand',
       formats: ['es'],
     },
     rollupOptions: {
-      external: ['@lattice/core', 'zustand', 'zustand/vanilla', 'zustand/react', 'react'],
+      external: [
+        '@lattice/core',
+        '@lattice/runtime',
+        'zustand',
+        'zustand/vanilla',
+        'zustand/react',
+        'react',
+      ],
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
-          'zustand': 'zustand',
+          '@lattice/runtime': 'LatticeRuntime',
+          zustand: 'zustand',
           'zustand/vanilla': 'zustandVanilla',
           'zustand/react': 'zustandReact',
-          'react': 'React',
+          react: 'React',
         },
       },
     },

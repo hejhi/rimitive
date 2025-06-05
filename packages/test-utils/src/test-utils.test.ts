@@ -1,9 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
-import { 
-  createComponentTest, 
-  testSlice, 
-  testModel, 
+import {
+  createComponent,
+  createModel,
+  createSlice,
+  compose,
+} from '@lattice/core';
+import {
+  createComponentTest,
+  testSlice,
+  testModel,
   testView,
   createSnapshot,
   waitForState,
@@ -14,7 +19,12 @@ describe('@lattice/test-utils', () => {
   describe('integration with real Lattice components', () => {
     it('should properly test a counter component', () => {
       const counter = createComponent(() => {
-        const model = createModel(({ set, get }) => ({
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+          decrement: () => void;
+          disabled: boolean;
+        }>(({ set, get }) => ({
           count: 0,
           increment: () => set({ count: get().count + 1 }),
           decrement: () => set({ count: get().count - 1 }),
@@ -77,7 +87,7 @@ describe('@lattice/test-utils', () => {
 
       // Execute the action from the button
       buttonView.onClick();
-      
+
       // Verify state changed
       expect(test.getState().count).toBe(1);
 
@@ -92,7 +102,11 @@ describe('@lattice/test-utils', () => {
 
     it('should handle complex slice composition', () => {
       const app = createComponent(() => {
-        const model = createModel(({ set, get }) => ({
+        const model = createModel<{
+          user: { name: string; role: string };
+          theme: string;
+          logout: () => void;
+        }>(({ set }) => ({
           user: { name: 'John', role: 'admin' },
           theme: 'light',
           logout: () => set({ user: { name: '', role: 'guest' } }),
@@ -111,7 +125,7 @@ describe('@lattice/test-utils', () => {
           // We need to execute the slices and combine their results
           const userData = userSlice(m);
           const themeData = themeSlice(m);
-          
+
           return {
             user: userData.user,
             theme: themeData.theme,
@@ -147,10 +161,12 @@ describe('@lattice/test-utils', () => {
 
   describe('testSlice helper', () => {
     it('should test slices with compose()', () => {
-      const model = createModel<{ user: { name: string }; status: string }>(({ set }) => ({
-        user: { name: 'Test' },
-        status: 'active',
-      }));
+      const model = createModel<{ user: { name: string }; status: string }>(
+        () => ({
+          user: { name: 'Test' },
+          status: 'active',
+        })
+      );
 
       const userSlice = createSlice(model, (m) => ({ user: m.user }));
 
@@ -165,11 +181,11 @@ describe('@lattice/test-utils', () => {
 
       // Test with proper state structure
       const { getResult } = testSlice(
-        { 
+        {
           user: { name: 'Alice' },
-          status: 'active'
+          status: 'active',
         },
-        compositeSlice as any
+        compositeSlice
       );
 
       expect(getResult().userName).toBe('Alice');
@@ -179,15 +195,19 @@ describe('@lattice/test-utils', () => {
 
   describe('testModel helper', () => {
     it('should test models with complex mutations', () => {
-      const todoModel = createModel(({ set, get }) => ({
-        todos: [] as Array<{ id: number; text: string; done: boolean }>,
-        addTodo: (text: string) => {
+      const todoModel = createModel<{
+        todos: { id: number; text: string; done: boolean }[];
+        addTodo: (text: string) => void;
+        toggleTodo: (id: number) => void;
+      }>(({ set, get }) => ({
+        todos: [],
+        addTodo: (text) => {
           const newTodo = { id: Date.now(), text, done: false };
           set({ todos: [...get().todos, newTodo] });
         },
-        toggleTodo: (id: number) => {
+        toggleTodo: (id) => {
           set({
-            todos: get().todos.map(todo =>
+            todos: get().todos.map((todo) =>
               todo.id === id ? { ...todo, done: !todo.done } : todo
             ),
           });
@@ -201,19 +221,23 @@ describe('@lattice/test-utils', () => {
       // Add a todo
       model.addTodo('Test todo');
       expect(store.getState().todos).toHaveLength(1);
-      expect(store.getState().todos[0].text).toBe('Test todo');
+      expect(store.getState().todos[0]?.text).toBe('Test todo');
 
       // Toggle it
-      const todoId = store.getState().todos[0].id;
-      model.toggleTodo(todoId);
-      expect(store.getState().todos[0].done).toBe(true);
+      const todoId = store.getState().todos[0]?.id;
+      todoId && model.toggleTodo(todoId);
+      expect(store.getState().todos[0]?.done).toBe(true);
     });
   });
 
   describe('testView helper', () => {
     it('should test computed views with parameters', () => {
       const todoList = createComponent(() => {
-        const model = createModel(({ set, get }) => ({
+        const model = createModel<{
+          todos: { id: number; text: string; done: boolean }[];
+          filter: 'all' | 'active' | 'completed';
+          setFilter: (filter: 'all' | 'active' | 'completed') => void;
+        }>(({ set }) => ({
           todos: [
             { id: 1, text: 'Task 1', done: false },
             { id: 2, text: 'Task 2', done: true },
@@ -236,12 +260,13 @@ describe('@lattice/test-utils', () => {
         // Create a computed view slice
         const filteredTodosSlice = createSlice(model, (m) => {
           const state = todoState(m);
-          const filtered = state.filter === 'all' 
-            ? state.todos
-            : state.filter === 'active'
-            ? state.todos.filter(t => !t.done)
-            : state.todos.filter(t => t.done);
-          
+          const filtered =
+            state.filter === 'all'
+              ? state.todos
+              : state.filter === 'active'
+                ? state.todos.filter((t) => !t.done)
+                : state.todos.filter((t) => t.done);
+
           return {
             items: filtered,
             count: filtered.length,
@@ -258,7 +283,10 @@ describe('@lattice/test-utils', () => {
         };
       });
 
-      const { getViewOutput, executeAction } = testView(todoList, 'filteredTodos');
+      const { getViewOutput, executeAction } = testView(
+        todoList,
+        'filteredTodos'
+      );
 
       // Test initial state
       let output = getViewOutput();
@@ -287,7 +315,7 @@ describe('@lattice/test-utils', () => {
       };
 
       const snapshot = createSnapshot(data);
-      
+
       expect(snapshot).toBe(`{
   "user": {
     "id": 1,
@@ -304,13 +332,16 @@ describe('@lattice/test-utils', () => {
   describe('waitForState', () => {
     it('should handle immediate state matches', async () => {
       const store = new TestStore({ ready: true });
-      
+
       const state = await waitForState(store, (s) => s.ready === true);
       expect(state.ready).toBe(true);
     });
 
     it('should handle async state updates', async () => {
-      const store = new TestStore({ loading: true, data: null as string | null });
+      const store = new TestStore({
+        loading: true,
+        data: null as string | null,
+      });
 
       // Simulate async data loading
       setTimeout(() => {
@@ -318,7 +349,7 @@ describe('@lattice/test-utils', () => {
       }, 100);
 
       const state = await waitForState(
-        store, 
+        store,
         (s) => s.loading === false && s.data !== null
       );
 
@@ -331,7 +362,7 @@ describe('@lattice/test-utils', () => {
     it('should handle components with no views', () => {
       const minimal = createComponent(() => {
         const model = createModel(() => ({ value: 42 }));
-        
+
         return {
           model,
           actions: createSlice(model, () => ({})),
@@ -345,7 +376,10 @@ describe('@lattice/test-utils', () => {
 
     it('should handle slice composition with compose()', () => {
       const component = createComponent(() => {
-        const model = createModel(({ set, get }) => ({
+        const model = createModel<{
+          user: { id: number; name: string; email: string };
+          posts: { id: number; title: string; authorId: number }[];
+        }>(() => ({
           user: { id: 1, name: 'Alice', email: 'alice@example.com' },
           posts: [
             { id: 1, title: 'First Post', authorId: 1 },
@@ -359,14 +393,17 @@ describe('@lattice/test-utils', () => {
         // Create a composite slice that uses compose()
         const profileSlice = createSlice(
           model,
-          compose({ userSlice, postsSlice }, (m, { userSlice, postsSlice }) => ({
-            // Select only name from user slice
-            userName: userSlice.name,
-            // Select only post count from posts slice
-            postCount: postsSlice.length,
-            // Select full user object
-            fullUser: userSlice,
-          }))
+          compose(
+            { userSlice, postsSlice },
+            (m, { userSlice, postsSlice }) => ({
+              // Select only name from user slice
+              userName: userSlice.name,
+              // Select only post count from posts slice
+              postCount: postsSlice.length,
+              // Select full user object
+              fullUser: userSlice,
+            })
+          )
         );
 
         return {
@@ -384,7 +421,7 @@ describe('@lattice/test-utils', () => {
       // Verify composed values
       expect(profileView.userName).toBe('Alice');
       expect(profileView.postCount).toBe(2);
-      
+
       // Verify full user object
       expect(profileView.fullUser).toEqual({
         id: 1,
@@ -395,7 +432,7 @@ describe('@lattice/test-utils', () => {
 
     it('should handle deeply nested slice composition', () => {
       const nested = createComponent(() => {
-        const model = createModel(() => ({
+        const model = createModel<{ a: { b: { c: string } } }>(() => ({
           a: { b: { c: 'deep' } },
         }));
 

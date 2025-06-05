@@ -16,7 +16,7 @@ import {
   compose,
 } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { useViews, useActions } from '@lattice/adapter-zustand/react';
+import { useViews } from '@lattice/runtime/react';
 import './todo-app.css';
 
 // For browser compatibility with process.env
@@ -121,7 +121,7 @@ const todoAppComponent = createComponent(() => {
   }));
 
   // Actions slice
-  const actions = createSlice(model, (m, api) => ({
+  const actions = createSlice(model, (m) => ({
     addTodo: (text: string) => {
       if (
         typeof process !== 'undefined' &&
@@ -135,18 +135,6 @@ const todoAppComponent = createComponent(() => {
     deleteTodo: m.deleteTodo,
     editTodo: m.editTodo,
     clearCompleted: () => {
-      // Example: Log clear action with current state
-      const state = api.getState();
-      const completedCount = state.todos.filter((t) => t.completed).length;
-      if (
-        typeof process !== 'undefined' &&
-        process.env?.NODE_ENV === 'development'
-      ) {
-        console.log('[TodoApp] Clearing completed todos:', {
-          completedCount,
-          totalBeforeClear: state.todos.length,
-        });
-      }
       m.clearCompleted();
     },
     toggleAll: m.toggleAll,
@@ -227,17 +215,36 @@ const todoAppComponent = createComponent(() => {
     };
   });
 
-  // Filter button factory
-  const createFilterButton = (filterType: 'all' | 'active' | 'completed') =>
-    createSlice(
-      model,
-      compose({ actions, processor: todosProcessor }, (m, { actions }) => ({
-        onClick: () => actions.setFilter(filterType),
-        className: m.filter === filterType ? 'selected' : '',
-        'aria-pressed': m.filter === filterType,
-        children: filterType.charAt(0).toUpperCase() + filterType.slice(1),
-      }))
-    );
+  // Filter button slices
+  const allFilterButton = createSlice(
+    model,
+    compose({ actions, processor: todosProcessor }, (m, { actions }) => ({
+      onClick: () => actions.setFilter('all'),
+      className: m.filter === 'all' ? 'selected' : '',
+      'aria-pressed': m.filter === 'all',
+      children: 'All',
+    }))
+  );
+
+  const activeFilterButton = createSlice(
+    model,
+    compose({ actions, processor: todosProcessor }, (m, { actions }) => ({
+      onClick: () => actions.setFilter('active'),
+      className: m.filter === 'active' ? 'selected' : '',
+      'aria-pressed': m.filter === 'active',
+      children: 'Active',
+    }))
+  );
+
+  const completedFilterButton = createSlice(
+    model,
+    compose({ actions, processor: todosProcessor }, (m, { actions }) => ({
+      onClick: () => actions.setFilter('completed'),
+      className: m.filter === 'completed' ? 'selected' : '',
+      'aria-pressed': m.filter === 'completed',
+      children: 'Completed',
+    }))
+  );
 
   return {
     model,
@@ -246,10 +253,10 @@ const todoAppComponent = createComponent(() => {
       // Direct access to processor results
       processor: todosProcessor,
 
-      // Individual filter buttons - wrapped in functions as required by views
-      filterButtonAll: createFilterButton('all'),
-      filterButtonActive: createFilterButton('active'),
-      filterButtonCompleted: createFilterButton('completed'),
+      // Individual filter buttons
+      filterButtonAll: allFilterButton,
+      filterButtonActive: activeFilterButton,
+      filterButtonCompleted: completedFilterButton,
 
       // Clear button
       clearButton: createSlice(
@@ -299,7 +306,7 @@ interface TodoItemType {
 function TodoItem({ todo }: { todo: TodoItemType }) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editText, setEditText] = React.useState(todo.text);
-  const actions = useActions(todoStore);
+  const actions = todoStore.actions;
 
   const handleSubmit = () => {
     actions.editTodo(todo.id, editText);
@@ -356,7 +363,7 @@ function TodoList() {
 
 function TodoInput() {
   const [input, setInput] = React.useState('');
-  const actions = useActions(todoStore);
+  const actions = todoStore.actions;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -416,7 +423,7 @@ function TodoStats() {
 }
 
 function SearchBar() {
-  const actions = useActions(todoStore);
+  const actions = todoStore.actions;
 
   return (
     <input

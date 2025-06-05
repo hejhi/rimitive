@@ -15,14 +15,18 @@
 
 import type {
   ComponentFactory,
-  ComponentSpec,
   SliceFactory,
   AdapterResult,
-  AdapterAPI,
+  ViewTypes,
 } from '@lattice/core';
 import { isSliceFactory } from '@lattice/core';
-import { createStore, StoreApi } from 'zustand/vanilla';
+import {
+  createStore as zustandCreateStore,
+  StoreApi,
+  StateCreator,
+} from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { createRuntime } from '@lattice/runtime';
 
 // ============================================================================
 // Error Handling
@@ -80,20 +84,6 @@ export interface Store<T> {
   subscribe: (listener: (value: T) => void) => () => void;
   destroy?: () => void;
 }
-
-/**
- * Maps view types from slice factories to functions that return view attributes
- * This must match the ViewTypes from adapter-contract.ts
- */
-type ViewTypes<Model, Views> = {
-  [K in keyof Views]: Views[K] extends SliceFactory<Model, infer T>
-    ? () => T // Static view: slice factory -> function returning attributes
-    : Views[K] extends () => SliceFactory<Model, infer T>
-      ? () => T // Computed view: function returning slice factory -> function returning attributes
-      : Views[K] extends () => unknown
-        ? Views[K] // Already a function, keep as-is
-        : never;
-};
 
 /**
  * Subscription callback type
@@ -166,54 +156,11 @@ type StoreWithSelector<T> = StoreApi<T> & {
 // ============================================================================
 
 /**
- * Creates a wrapper for slice execution with AdapterAPI
- */
-function createSliceExecutor<Model>(zustandStore: StoreWithSelector<Model>): {
-  executeSliceFactory: <T>(factory: SliceFactory<Model, T>) => T;
-  api: AdapterAPI<Model>;
-} {
-  // Create the AdapterAPI implementation with Zustand-specific extensions
-  const api: AdapterAPI<Model> & {
-    subscribe: typeof zustandStore.subscribe;
-  } = {
-    executeSlice: <T>(slice: SliceFactory<Model, T>): T => {
-      const model = zustandStore.getState();
-      return slice(model, api);
-    },
-    getState: () => zustandStore.getState(),
-    // Zustand-specific method: direct access to store subscription
-    subscribe: zustandStore.subscribe,
-  };
-
-  // Create the executeSliceFactory function
-  const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
-    // Don't cache results - they need to be recomputed on each access
-    // because the underlying state may have changed
-
-    const model = zustandStore.getState();
-
-    // Slice factory execution with API
-    try {
-      return factory(model, api);
-    } catch (error) {
-      throw new ZustandAdapterError('Slice factory execution failed', {
-        operation: 'executeSliceFactory',
-        details: { sliceFactory: factory.name || 'anonymous' },
-        cause: error,
-      });
-    }
-  };
-
-  return { executeSliceFactory, api };
-}
-
-/**
  * Processes views into functions that return view attributes
  */
 function processViews<Model, Views>(
   spec: { views: Views },
-  executeSliceFactory: <T>(factory: SliceFactory<Model, T>) => T,
-  api: AdapterAPI<Model>
+  executeSliceFactory: <T>(factory: SliceFactory<Model, T>) => T
 ): ViewTypes<Model, Views> {
   const views = {} as ViewTypes<Model, Views>;
 
@@ -230,21 +177,21 @@ function processViews<Model, Views>(
             ? [...value]
             : { ...value }
           : value;
-      }) as any;
+      }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     } else if (typeof view === 'function') {
-      // Computed view - wrap to inject API as last parameter
+      // Computed view - may accept parameters
       views[key as keyof ViewTypes<Model, Views>] = ((...args: unknown[]) => {
-        // Call the view function with user args + api as last argument
-        const result = view(...args, api);
+        // Call the view function with any provided args
+        const result = view(...args);
 
-        // If the result is a slice factory, execute it with the API
+        // If the result is a slice factory, execute it
         if (isSliceFactory(result)) {
           return executeSliceFactory(result);
         }
 
         // Otherwise return the result as-is
         return result;
-      }) as any;
+      }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     }
   }
 
@@ -261,6 +208,7 @@ function processViews<Model, Views>(
  * - `subscribe`: View-based subscriptions for reactive updates
  *
  * @param componentOrFactory - The Lattice component spec or factory
+ * @param middleware - Optional function to apply Zustand middleware
  * @returns An adapter result with actions, views, and subscribe
  *
  * @remarks
@@ -270,20 +218,18 @@ function processViews<Model, Views>(
  * - Subscriptions work at the view level, not model level
  */
 export function createZustandAdapter<Model, Actions, Views>(
-  componentOrFactory:
-    | ComponentSpec<Model, Actions, Views>
-    | ComponentFactory<Model, Actions, Views>
-    | (() => ComponentSpec<Model, Actions, Views>)
+  componentFactory: ComponentFactory<Model, Actions, Views>,
+  middleware?: (
+    createStore: typeof zustandCreateStore,
+    stateCreator: StateCreator<Model, [], [], Model>
+  ) => StoreApi<Model>
 ): ZustandAdapterResult<Model, Actions, Views> {
-  // Get the component spec
-  const spec =
-    typeof componentOrFactory === 'function'
-      ? componentOrFactory()
-      : componentOrFactory;
+  return createRuntime(() => {
+    // Get the component spec
+    const spec = componentFactory();
 
-  // Create the Zustand store with subscribeWithSelector middleware
-  const store: StoreWithSelector<Model> = createStore<Model>()(
-    subscribeWithSelector((set, get) => {
+    // Create the base state creator
+    const baseStateCreator: StateCreator<Model, [], [], Model> = (set, get) => {
       // Execute the model factory with Zustand's set/get
       let model: Model;
       try {
@@ -296,62 +242,88 @@ export function createZustandAdapter<Model, Actions, Views>(
       }
 
       return model;
-    })
-  );
+    };
 
-  // Create slice executor with API
-  const { executeSliceFactory, api } = createSliceExecutor(store);
+    // Apply subscribeWithSelector middleware
+    const stateCreator = subscribeWithSelector(baseStateCreator);
 
-  // Process actions slice
-  let actions: Actions;
-  try {
-    actions = executeSliceFactory<Actions>(spec.actions);
-  } catch (error) {
-    throw new ZustandAdapterError('Actions slice creation failed', {
-      operation: 'createZustandAdapter.actions',
-      cause: error,
-    });
-  }
+    // Create the store with optional middleware
+    const store: StoreWithSelector<Model> = middleware
+      ? middleware(zustandCreateStore, baseStateCreator)
+      : zustandCreateStore<Model>()(stateCreator);
 
-  // Process views
-  let views: ViewTypes<Model, Views>;
-  try {
-    views = processViews<Model, Views>(spec, executeSliceFactory, api);
-  } catch (error) {
-    throw new ZustandAdapterError('Views processing failed', {
-      operation: 'createZustandAdapter.views',
-      cause: error,
-    });
-  }
+    // Create slice executor helper
+    const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
+      const model = store.getState();
+      try {
+        return factory(model);
+      } catch (error) {
+        throw new ZustandAdapterError('Slice factory execution failed', {
+          operation: 'executeSliceFactory',
+          details: { sliceFactory: factory.name || 'anonymous' },
+          cause: error,
+        });
+      }
+    };
 
-  // Create the unified API
-  return {
-    // Clean actions API - just the actions object
-    actions,
+    // Process actions slice
+    let actions: Actions;
+    try {
+      actions = executeSliceFactory<Actions>(spec.actions);
+    } catch (error) {
+      throw new ZustandAdapterError('Actions slice creation failed', {
+        operation: 'createZustandAdapter.actions',
+        cause: error,
+      });
+    }
 
-    // Views API - functions that return view attributes
-    views,
+    // Process views
+    let views: ViewTypes<Model, Views>;
+    try {
+      views = processViews<Model, Views>(spec, executeSliceFactory);
+    } catch (error) {
+      throw new ZustandAdapterError('Views processing failed', {
+        operation: 'createZustandAdapter.views',
+        cause: error,
+      });
+    }
 
-    // View-based subscription API
-    subscribe: <Selected>(
-      selector: (views: ViewTypes<Model, Views>) => Selected,
-      callback: SubscribeCallback<Selected>
-    ) => {
-      // Create a selector that passes views directly
-      // JavaScript's lazy evaluation means only the views accessed
-      // by the selector will be computed. For example:
-      // - selector: views => views.counter() - only computes counter
-      // - selector: views => ({ a: views.a(), b: views.b() }) - only computes a and b
-      const viewSelector = (_state: Model) => selector(views);
+    // Create the unified API
+    return {
+      // Clean actions API - just the actions object
+      actions,
 
-      // Use zustand's subscribeWithSelector
-      // It will:
-      // 1. Run the selector (which calls only needed view functions)
-      // 2. Compare the result with the previous result
-      // 3. Only call the callback if the result changed
-      return store.subscribe(viewSelector, callback);
-    },
-  };
+      // Views API - functions that return view attributes
+      views,
+
+      getState: () => store.getState(),
+
+      // View-based subscription API
+      subscribe: <Selected>(
+        selector: (views: ViewTypes<Model, Views>) => Selected,
+        callback: SubscribeCallback<Selected>
+      ) => {
+        // Create a selector that passes views directly
+        // JavaScript's lazy evaluation means only the views accessed
+        // by the selector will be computed. For example:
+        // - selector: views => views.counter() - only computes counter
+        // - selector: views => ({ a: views.a(), b: views.b() }) - only computes a and b
+        const viewSelector = (_state: Model) => selector(views);
+
+        // Use zustand's subscribeWithSelector
+        // It will:
+        // 1. Run the selector (which calls only needed view functions)
+        // 2. Compare the result with the previous result
+        // 3. Only call the callback if the result changed
+        return store.subscribe(viewSelector, callback);
+      },
+
+      destroy: () => {
+        // how to properly destroy a zustand store?
+        store.setState({});
+      },
+    };
+  });
 }
 
 // ============================================================================
@@ -390,8 +362,6 @@ if (import.meta.vitest) {
       expect(store.views).toBeDefined();
 
       // Should not expose internal store methods
-      // @ts-expect-error
-      expect(store.getState).toBeUndefined();
       // @ts-expect-error
       expect(store.setState).toBeUndefined();
       // @ts-expect-error
@@ -567,8 +537,8 @@ if (import.meta.vitest) {
           count: m.count,
         }));
 
-        const counterView = createSlice(model, (_m, api) => {
-          const state = api!.executeSlice(countSlice);
+        const counterView = createSlice(model, (m) => {
+          const state = countSlice(m);
           return {
             'data-count': state.count,
             className: state.count % 2 === 0 ? 'even' : 'odd',
@@ -873,152 +843,7 @@ if (import.meta.vitest) {
       expect(storeWithViews.views.state().loading).toBe(false);
     });
 
-    it('should provide Zustand-specific subscribe method in API', () => {
-      let capturedApi: any;
-
-      const component = createComponent(() => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
-
-        const actions = createSlice(model, (m, api) => {
-          capturedApi = api;
-          return {
-            increment: m.increment,
-          };
-        });
-
-        return {
-          model,
-          actions,
-          views: {},
-        };
-      });
-
-      const store = createZustandAdapter(component);
-
-      // Verify API was captured and has Zustand-specific subscribe method
-      expect(capturedApi).toBeDefined();
-      expect(typeof capturedApi.subscribe).toBe('function');
-      expect(typeof capturedApi.executeSlice).toBe('function');
-      expect(typeof capturedApi.getState).toBe('function');
-
-      // Test that the subscribe method works
-      let subscribeCallCount = 0;
-      const unsubscribe = capturedApi.subscribe(() => {
-        subscribeCallCount++;
-      });
-
-      store.actions.increment();
-      expect(subscribeCallCount).toBe(1);
-
-      store.actions.increment();
-      expect(subscribeCallCount).toBe(2);
-
-      unsubscribe();
-    });
-
-    it('should inject API as last parameter to computed views', () => {
-      const component = createComponent(() => {
-        const model = createModel<{
-          items: string[];
-          filter: string;
-          setFilter: (filter: string) => void;
-        }>(({ set }) => ({
-          items: ['apple', 'banana', 'cherry', 'apricot'],
-          filter: 'a',
-          setFilter: (filter) => set({ filter }),
-        }));
-
-        // Base slice to access items
-        const itemsSlice = createSlice(model, (m) => m.items);
-
-        // Computed view that takes arguments and receives API as last parameter
-        const filteredView = function (this: any, ...args: any[]) {
-          // Check if last argument is the API
-          const lastArg = args[args.length - 1];
-          const api =
-            lastArg &&
-            typeof lastArg.executeSlice === 'function' &&
-            typeof lastArg.getState === 'function'
-              ? lastArg
-              : undefined;
-
-          // Get the prefix if provided (excluding API)
-          const prefix =
-            api && args.length > 1
-              ? args[0]
-              : !api && args.length > 0
-                ? args[0]
-                : undefined;
-
-          // If API is provided, use it to execute other slices
-          if (api) {
-            const items = api.executeSlice(itemsSlice);
-            const filter = api.getState().filter;
-            const filtered = items.filter((item: string) =>
-              item.includes(filter)
-            );
-            return {
-              items: prefix
-                ? filtered.map((item: string) => prefix + item)
-                : filtered,
-              count: filtered.length,
-              hasApi: true,
-            };
-          }
-
-          // Fallback if no API
-          return {
-            items: [],
-            count: 0,
-            hasApi: false,
-          };
-        };
-
-        return {
-          model,
-          actions: createSlice(model, (m) => ({
-            setFilter: m.setFilter,
-          })),
-          views: {
-            filtered: filteredView as (prefix?: string) => any,
-          },
-        };
-      });
-
-      const store = createZustandAdapter(component);
-
-      // Test without arguments - API should still be injected
-      let result = (store.views as any).filtered();
-      expect(result.hasApi).toBe(true);
-      expect(result.items).toEqual(['apple', 'banana', 'apricot']);
-      expect(result.count).toBe(3);
-
-      // Test with arguments - API should be injected as last parameter
-      result = (store.views as any).filtered('fruit: ');
-      expect(result.hasApi).toBe(true);
-      expect(result.items).toEqual([
-        'fruit: apple',
-        'fruit: banana',
-        'fruit: apricot',
-      ]);
-      expect(result.count).toBe(3);
-
-      // Change filter and verify it works
-      store.actions.setFilter('ban');
-      result = (store.views as any).filtered();
-      expect(result.items).toEqual(['banana']);
-      expect(result.count).toBe(1);
-    });
-
-    it('should provide subscribe method in API for computed views', () => {
-      let capturedApi: any;
-
+    it('should accept and apply Zustand middleware', () => {
       const component = createComponent(() => {
         const model = createModel<{
           count: number;
@@ -1032,52 +857,97 @@ if (import.meta.vitest) {
           increment: m.increment,
         }));
 
-        // Computed view that captures the API
-        const computedView = function (this: any, ...args: any[]) {
-          const api = args[args.length - 1];
-          capturedApi = api;
-
-          if (api && typeof api.subscribe === 'function') {
-            return {
-              hasSubscribe: true,
-              count: api.getState().count,
-            };
-          }
-
-          return { hasSubscribe: false, count: 0 };
+        const views = {
+          count: createSlice(model, (m) => ({ value: m.count })),
         };
+
+        return { model, actions, views };
+      });
+
+      // Track middleware application
+      let middlewareApplied = false;
+      let capturedStateCreator: unknown;
+
+      // Custom middleware that adds logging
+      const customMiddleware = <T>(
+        createStore: typeof zustandCreateStore,
+        stateCreator: StateCreator<T, [], [], T>
+      ) => {
+        middlewareApplied = true;
+        capturedStateCreator = stateCreator;
+
+        // Apply a simple logging middleware by wrapping the set function
+        const loggedStateCreator: StateCreator<T, [], [], T> = (
+          set,
+          get,
+          api
+        ) => {
+          const state = stateCreator(set, get, api);
+          return state;
+        };
+
+        return createStore<T>()(loggedStateCreator);
+      };
+
+      const store = createZustandAdapter(component, customMiddleware);
+
+      // Verify middleware was applied
+      expect(middlewareApplied).toBe(true);
+      expect(capturedStateCreator).toBeDefined();
+
+      // Verify the store still works correctly
+      expect(store.views.count().value).toBe(0);
+      store.actions.increment();
+      expect(store.views.count().value).toBe(1);
+    });
+
+    it('should handle views that use API through composition', () => {
+      const component = createComponent(() => {
+        const model = createModel<{
+          count: number;
+          increment: () => void;
+        }>(({ set, get }) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          increment: m.increment,
+        }));
+
+        // Slice that uses API to compose data
+        const statusSlice = createSlice(model, (m) => {
+          // Can use API within slices
+          const countSlice = createSlice(model, (m) => ({ count: m.count }));
+          const state = countSlice(m);
+
+          return {
+            count: state.count,
+            doubled: state.count * 2,
+          };
+        });
 
         return {
           model,
           actions,
           views: {
-            status: computedView as () => any,
+            status: statusSlice,
           },
         };
       });
 
       const store = createZustandAdapter(component);
 
-      // Call the computed view
-      const result = (store.views as any).status();
-
-      // Verify the API was passed and has the subscribe method
-      expect(capturedApi).toBeDefined();
-      expect(typeof capturedApi.subscribe).toBe('function');
-      expect(result.hasSubscribe).toBe(true);
+      // Call the view
+      const result = store.views.status();
       expect(result.count).toBe(0);
+      expect(result.doubled).toBe(0);
 
-      // Test that subscribe works
-      let callCount = 0;
-      const unsubscribe = capturedApi.subscribe(
-        (state: any) => state.count,
-        () => callCount++
-      );
-
+      // Update state and verify
       store.actions.increment();
-      expect(callCount).toBe(1);
-
-      unsubscribe();
+      const updatedResult = store.views.status();
+      expect(updatedResult.count).toBe(1);
+      expect(updatedResult.doubled).toBe(2);
     });
   });
 }

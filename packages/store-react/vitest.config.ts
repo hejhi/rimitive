@@ -3,7 +3,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   test: {
-    environment: 'node',
+    environment: 'happy-dom',
     includeSource: ['src/**/*.{js,ts}'],
     coverage: {
       provider: 'v8',

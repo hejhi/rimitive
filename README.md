@@ -15,8 +15,9 @@ const counter = createComponent(() => ({
 }));
 
 // Adapters execute it with real infrastructure
-const store = createZustandAdapter(counter);  // Or Redux, MobX, etc.
-const Component = createReactComponent(counter);     // Or Vue, Svelte, etc.
+const store = createZustandAdapter(counter);         // Or Redux, etc.
+const ReactComponent = useLattice(counter);          // React hook
+const vueStore = createVueAdapter(counter);         // Vue composable
 ```
 
 **Key insight**: Behavior patterns (selection, filtering, pagination) are universal. The infrastructure (React vs Vue, Redux vs Zustand) is an implementation detail.
@@ -34,13 +35,53 @@ Lattice cleanly separates **composition** (defining behavior) from **execution**
 ### Core Primitives
 
 - **`createSlice`**: The universal building block for selecting and composing state
-- **API Parameter**: Every slice receives `(model, api)` - enabling powerful composition
+- **API Parameter**: Every slice receives `(model)` - enabling powerful composition
 
 ### What Slices Create
 
 - **Model**: The source of truth - state and mutations
 - **Actions**: Slices that select methods from the model
 - **Views**: Slices or functions that generate UI attributes
+
+## Available Adapters
+
+Lattice provides official adapters for popular frameworks and state management libraries:
+
+### UI Framework Adapters
+
+- **[@lattice/store-react](./packages/store-react)** - Pure React implementation with zero dependencies
+  - Component-scoped stores with automatic cleanup
+  - React 18+ concurrent features and automatic batching
+  - Works with React Native
+  
+- **[@lattice/store-vue](./packages/store-vue)** - Vue 3 Composition API integration
+  - Native Vue reactivity with automatic dependency tracking
+  - Computed caching and fine-grained updates
+  - Vue DevTools support
+
+### State Management Adapters
+
+- **[@lattice/adapter-zustand](./packages/adapter-zustand)** - Zustand integration
+  - Global state management
+  - Redux DevTools support
+  - Middleware capabilities
+  
+- **[@lattice/adapter-redux](./packages/adapter-redux)** - Redux Toolkit integration
+  - Time-travel debugging
+  - Redux DevTools integration
+  - Middleware ecosystem
+  
+- **[@lattice/adapter-pinia](./packages/adapter-pinia)** - Pinia integration for Vue
+  - Vue's official state management
+  - Vue DevTools integration
+  - Plugin ecosystem
+
+### Choosing an Adapter
+
+- **For new React/React Native apps**: Use `@lattice/store-react` for zero dependencies
+- **For Vue 3 apps**: Use `@lattice/store-vue` for native Vue integration or `@lattice/adapter-pinia` for Pinia features
+- **For existing Redux apps**: Use `@lattice/adapter-redux` for seamless migration
+- **For global state needs**: Use `@lattice/adapter-zustand` for simplicity
 
 ## The API Parameter
 
@@ -62,7 +103,7 @@ interface AdapterAPI<Model> {
 
 ```typescript
 // Access current state through model parameter
-const debugSlice = createSlice(model, (m, api) => ({
+const debugSlice = createSlice(model, (m) => ({
   modelValue: m.count,
   // m is already the current state - no need for getState
   currentValue: m.count,
@@ -70,7 +111,7 @@ const debugSlice = createSlice(model, (m, api) => ({
 }));
 
 // Execute other slices
-const composedSlice = createSlice(model, (m, api) => {
+const composedSlice = createSlice(model, (m) => {
   const userState = api.executeSlice(userSlice);
   const themeState = api.executeSlice(themeSlice);
   
@@ -84,7 +125,7 @@ const composedSlice = createSlice(model, (m, api) => {
 });
 
 // Enhanced actions with logging
-const actions = createSlice(model, (m, api) => ({
+const actions = createSlice(model, (m) => ({
   updateWithLog: (value: string) => {
     console.log('Previous:', m.value);
     m.setValue(value);
@@ -108,7 +149,7 @@ Lattice Core creates **behavior specifications**, not implementations. Here's th
 When you write Lattice code, you're creating a blueprint:
 ```typescript
 // This doesn't execute anything - it's a specification
-const actions = createSlice(model, (m, api) => ({
+const actions = createSlice(model, (m) => ({
   increment: m.increment,
   // Use api to execute other slices
   loggedIncrement: () => {
@@ -195,7 +236,7 @@ const counter = createComponent(() => {
   }));
 
   // Actions: Slice that selects methods
-  const actions = createSlice(model, (m, api) => ({
+  const actions = createSlice(model, (m) => ({
     increment: m.increment,
     decrement: m.decrement,
     // Log current state
@@ -206,7 +247,7 @@ const counter = createComponent(() => {
   }));
 
   // State slice for display
-  const countSlice = createSlice(model, (m, api) => ({
+  const countSlice = createSlice(model, (m) => ({
     count: m.count,
     // Access model directly
     isDisabled: m.disabled
@@ -350,7 +391,7 @@ const todoList = createComponent(() => {
   }));
 
   // State slice for computations
-  const todoState = createSlice(model, (m, api) => ({
+  const todoState = createSlice(model, (m) => ({
     todos: m.todos,
     filter: m.filter,
     // Derive from model directly
@@ -371,7 +412,7 @@ const todoList = createComponent(() => {
   });
   
   // Actions slice with API usage
-  const actions = createSlice(model, (m, api) => ({
+  const actions = createSlice(model, (m) => ({
     addTodo: m.addTodo,
     toggleTodo: m.toggleTodo,
     setFilter: m.setFilter,
@@ -411,6 +452,8 @@ const todoList = createComponent(() => {
     actions,
     views: {
       // Computed view
+      // the function itself is stable here, as it's declared at the component level.
+      // however, todoStats() runs on every execution.
       summary: () => {
         const stats = todoStats();
         return {
@@ -433,14 +476,14 @@ Slices can compose other slices for complex behaviors. Here's how it works:
 
 ```typescript
 // Step 1: Define base slices with API parameter
-const userSlice = createSlice(model, (m, api) => ({
+const userSlice = createSlice(model, (m) => ({
   user: m.user,
   isLoggedIn: m.isLoggedIn,
   // Access model directly
   sessionTime: Date.now() - m.loginTime
 }));
 
-const themeSlice = createSlice(model, (m, api) => ({
+const themeSlice = createSlice(model, (m) => ({
   theme: m.theme,
   toggleTheme: m.toggleTheme,
   // Check from model directly
@@ -528,7 +571,7 @@ const persistentCounter = createComponent(() => {
   }));
   
   // Create a slice for save status
-  const saveSlice = createSlice(model, (m, api) => ({
+  const saveSlice = createSlice(model, (m) => ({
     lastSaved: m.lastSaved
   }));
   
@@ -579,7 +622,7 @@ Slices are the universal primitive - actions, views, and complex behaviors are a
 
 ```typescript
 // Actions are slices of methods with API access
-const actions = createSlice(model, (m, api) => ({
+const actions = createSlice(model, (m) => ({
   increment: m.increment,
   // Enhanced functionality using model
   smartIncrement: () => {
@@ -594,7 +637,7 @@ const button = createSlice(
   model,
   compose(
     { actions },  // Dependencies
-    (m, { actions }, api) => ({
+    (m, { actions }) => ({
       onClick: actions.increment,
       disabled: m.isLoading
     })
@@ -658,7 +701,7 @@ TypeScript ensures contracts are satisfied at every level:
 
 ```typescript
 // Type error if model doesn't provide required properties
-const slice = createSlice(model, (m, api) => ({
+const slice = createSlice(model, (m) => ({
   count: m.count,  // ✅ TypeScript knows this exists
   invalid: m.foo   // ❌ Type error
 }));
@@ -675,7 +718,7 @@ const button = createSlice(
   model,
   compose(
     { actions },  // Dependencies declared upfront
-    (m, { actions }, api) => ({
+    (m, { actions }) => ({
       onClick: actions.increment,  // Use resolved dependency
       disabled: m.disabled         // Direct model reference  
     })

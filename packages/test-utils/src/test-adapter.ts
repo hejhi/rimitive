@@ -5,7 +5,7 @@ import type {
   ComponentSpec,
   AdapterAPI,
 } from '@lattice/core';
-import { SLICE_FACTORY_MARKER, isSliceFactory } from '@lattice/core';
+import { isSliceFactory } from '@lattice/core';
 
 // Define types locally
 type StateSubscriber<T> = (state: T) => void;
@@ -17,7 +17,7 @@ type StateSubscriber<T> = (state: T) => void;
 export class TestStore<TState> implements AdapterAPI<TState> {
   private state: TState;
   private subscribers = new Set<StateSubscriber<TState>>();
-  private sliceCache = new Map<SliceFactory<any, any>, any>();
+  private sliceCache = new Map<SliceFactory<TState, unknown>, unknown>();
 
   constructor(initialState: TState) {
     this.state = initialState;
@@ -51,13 +51,13 @@ export class TestStore<TState> implements AdapterAPI<TState> {
   executeSlice<TResult>(sliceFactory: SliceFactory<TState, TResult>): TResult {
     // Check cache first
     if (this.sliceCache.has(sliceFactory)) {
-      return this.sliceCache.get(sliceFactory);
+      return this.sliceCache.get(sliceFactory) as TResult;
     }
 
     try {
       // Execute the slice factory with the state AND the API
       // The slice factory signature now requires the API parameter
-      const result = sliceFactory(this.state, this);
+      const result = sliceFactory(this.state);
 
       // Cache the result
       this.sliceCache.set(sliceFactory, result);
@@ -174,27 +174,6 @@ if (import.meta.vitest) {
   );
 
   describe('TestStore', () => {
-    it('should execute slice factories with optional API parameter', () => {
-      const store = new TestStore({ count: 0, name: 'test' });
-
-      // Create a raw slice factory to test the basic functionality
-      const rawSlice: SliceFactory<
-        { count: number; name: string },
-        { count: number; hasApi: boolean; apiWorks: boolean }
-      > = (state, api) => {
-        return {
-          count: state.count,
-          hasApi: !!api,
-          apiWorks: api.getState() === state,
-        };
-      };
-      // Brand it as a slice factory
-      Object.defineProperty(rawSlice, SLICE_FACTORY_MARKER, { value: true });
-
-      const result = store.executeSlice(rawSlice);
-      expect(result).toEqual({ count: 0, hasApi: true, apiWorks: true });
-    });
-
     it('should work with slices created by createSlice', () => {
       const store = new TestStore({ count: 5, name: 'test' });
 
@@ -216,11 +195,10 @@ if (import.meta.vitest) {
           count: 0,
           name: '',
         })),
-        (state, api) => {
+        (state) => {
           return {
             hasApi: true,
             stateCount: state.count,
-            apiStateCount: api.getState().count,
           };
         }
       );
@@ -229,7 +207,6 @@ if (import.meta.vitest) {
       expect(result2).toEqual({
         hasApi: true,
         stateCount: 5,
-        apiStateCount: 5,
       });
     });
 
@@ -250,10 +227,10 @@ if (import.meta.vitest) {
       // Create a slice that uses API to compose other slices
       const sumSlice = createSlice(
         createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 })),
-        (_state, api) => {
+        (m) => {
           // Use the API to execute other slices
-          const x = api.executeSlice(xSlice);
-          const y = api.executeSlice(ySlice);
+          const x = xSlice(m);
+          const y = ySlice(m);
           return x + y;
         }
       );
@@ -361,7 +338,6 @@ if (import.meta.vitest) {
 
       expect(test.getState()).toEqual({ count: 0 });
       expect(test.api).toBeDefined();
-      expect(test.api.getState()).toEqual({ count: 0 });
     });
 
     it('should support computed views that use API', () => {
@@ -380,8 +356,8 @@ if (import.meta.vitest) {
         views: {
           // Computed view that uses API to execute another slice
           summary: () =>
-            createSlice(baseModel, (_state, api) => {
-              const count = api.executeSlice(itemCountSlice);
+            createSlice(baseModel, (m) => {
+              const count = itemCountSlice(m);
               return { itemCount: count, hasItems: count > 0 };
             }),
         },

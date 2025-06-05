@@ -202,7 +202,9 @@ describe('Redux Adapter', () => {
       return {
         model,
         actions: createSlice(model, (m) => ({ increment: m.increment })),
-        views: {},
+        views: {
+          count: createSlice(model, (m) => ({ value: m.count })),
+        },
       };
     });
 
@@ -210,10 +212,13 @@ describe('Redux Adapter', () => {
     let callCount = 0;
     const values: number[] = [];
 
-    const unsubscribe = store.subscribe(() => {
-      callCount++;
-      values.push(store.getState().count);
-    });
+    const unsubscribe = store.subscribe(
+      (views) => views.count().value,
+      (value) => {
+        callCount++;
+        values.push(value);
+      }
+    );
 
     store.actions.increment();
     store.actions.increment();
@@ -319,8 +324,8 @@ describe('Redux Adapter', () => {
       }));
 
       // Computed view
-      const summaryView = createSlice(model, (_m, api) => {
-        const cart = api.executeSlice(cartSlice);
+      const summaryView = createSlice(model, (m) => {
+        const cart = cartSlice(m);
         const subtotal = cart.items.reduce((sum, item) => sum + item.price, 0);
         const tax = subtotal * cart.taxRate;
         const total = subtotal + tax;

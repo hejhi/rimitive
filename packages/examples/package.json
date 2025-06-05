@@ -8,10 +8,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@lattice/adapter-memory": "workspace:*",
     "@lattice/adapter-redux": "workspace:*",
     "@lattice/adapter-zustand": "workspace:*",
     "@lattice/core": "workspace:*",
+    "@lattice/runtime": "workspace:*",
     "@lattice/test-utils": "workspace:*",
     "@reduxjs/toolkit": "^2.5.0",
     "@types/react": "^18.3.22",
