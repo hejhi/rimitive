@@ -64,10 +64,14 @@ export class TestStore<TState> implements AdapterAPI<TState> {
 
       return result;
     } catch (error) {
-      console.error('Error executing slice:', error);
-      console.error('State:', this.state);
-      console.error('SliceFactory:', sliceFactory);
-      throw error;
+      // Re-throw with additional context for debugging
+      const enhancedError = new Error(
+        `Failed to execute slice factory: ${error instanceof Error ? error.message : String(error)}`
+      );
+      (enhancedError as any).cause = error;
+      (enhancedError as any).state = this.state;
+      (enhancedError as any).sliceFactory = sliceFactory;
+      throw enhancedError;
     }
   }
 

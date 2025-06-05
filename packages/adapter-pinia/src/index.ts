@@ -203,13 +203,8 @@ function createSubscriptionManager(scope: ReturnType<typeof effectScope>) {
             try {
               callback(newValue);
             } catch (error) {
-              // Provide better error context while protecting other subscriptions
-              const errorContext = {
-                message: 'Subscription callback execution failed',
-                error: error instanceof Error ? error.message : String(error),
-                stack: error instanceof Error ? error.stack : undefined,
-              };
-              console.error('[Pinia Adapter]', errorContext);
+              // Silently ignore callback errors to prevent breaking other subscriptions
+              // Callbacks should handle their own errors
             }
           },
           {

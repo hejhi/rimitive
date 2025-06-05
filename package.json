@@ -13,7 +13,10 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "typecheck": "lerna run typecheck",
     "check": "lerna run check",
-    "test": "lerna run test"
+    "test": "lerna run test",
+    "bench": "pnpm --filter @lattice/benchmarks bench",
+    "bench:ci": "pnpm --filter @lattice/benchmarks bench:ci",
+    "bench:compare": "pnpm --filter @lattice/benchmarks bench:compare"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

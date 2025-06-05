@@ -217,7 +217,8 @@ export function useLattice<Model, Actions, Views>(
                 listener.callback(currentValue);
               }
             } catch (error) {
-              console.error('Error in selective listener:', error);
+              // Silently ignore selector errors to prevent breaking other listeners
+              // Selectors should handle their own errors
             }
           });
         }

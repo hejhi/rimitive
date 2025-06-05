@@ -203,7 +203,8 @@ export function createReduxAdapter<Model, Actions, Views>(
             callback(currentSelected);
           }
         } catch (error) {
-          console.error('Error in subscribe selector:', error);
+          // Silently ignore selector errors to prevent breaking other subscriptions
+          // In production, the selector should handle its own errors
         }
       });
     };
