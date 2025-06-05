@@ -32,6 +32,7 @@
     "dev": "vite build --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
+    "check": "pnpm typecheck && pnpm test",
     "test": "vitest run"
   },
   "dependencies": {

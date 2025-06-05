@@ -5,7 +5,8 @@
   "description": "Example usage patterns for Lattice",
   "main": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm typecheck"
   },
   "dependencies": {
     "@lattice/adapter-redux": "workspace:*",

@@ -17,6 +17,7 @@
     "dev": "vite build --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "check": "pnpm typecheck && pnpm test",
     "clean": "rm -rf dist"
   },
   "dependencies": {
