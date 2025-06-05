@@ -9,17 +9,17 @@
  */
 
 import { bench, describe } from 'vitest';
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
+import { createComponent, createModel, createSlice, compose, type SliceFactory } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 
 describe('Memory Usage Patterns', () => {
   // Helper to create many slices
   const createManySlices = (count: number) => {
-    const model = createModel<{ data: Record<string, number> }>(({ set, get }) => ({
+    const model = createModel<{ data: Record<string, number> }>(() => ({
       data: {},
     }));
 
-    const slices: Array<ReturnType<typeof createSlice>> = [];
+    const slices: Array<SliceFactory<{ data: Record<string, number> }, { value: number; exists: boolean; }>> = [];
     
     for (let i = 0; i < count; i++) {
       const slice = createSlice(model, (m) => ({
@@ -37,7 +37,7 @@ describe('Memory Usage Patterns', () => {
   });
 
   bench('Create 1000 composed slices (1 level)', () => {
-    const model = createModel<{ values: number[] }>(({ set, get }) => ({
+    const model = createModel<{ values: number[] }>(() => ({
       values: Array(100).fill(0),
     }));
 
@@ -46,13 +46,13 @@ describe('Memory Usage Patterns', () => {
     );
 
     // Create 1000 slices that compose the base slices
-    const composedSlices = Array.from({ length: 1000 }, (_, i) => {
+    Array.from({ length: 1000 }, (_, i) => {
       const baseIndex = i % 100;
       return createSlice(
         model,
         compose(
           { base: baseSlices[baseIndex]! },
-          (m, { base }) => ({
+          (_, { base }) => ({
             doubled: base * 2,
             tripled: base * 3,
             original: base,
@@ -61,30 +61,31 @@ describe('Memory Usage Patterns', () => {
       );
     });
 
-    return composedSlices;
+    // Return nothing for benchmark
   });
 
   bench('Create deep compose chain (10 levels)', () => {
-    const model = createModel<{ value: number }>(({ set, get }) => ({
+    const model = createModel<{ value: number }>(() => ({
       value: 42,
     }));
 
-    let currentSlice = createSlice(model, (m) => m.value);
+    let currentSlice: SliceFactory<{ value: number }, any> = createSlice(model, (m) => m.value);
     
     // Create a chain of 10 composed slices
     for (let i = 0; i < 10; i++) {
       const prevSlice = currentSlice;
       currentSlice = createSlice(
         model,
-        compose({ prev: prevSlice }, (m, { prev }) => ({
+        compose({ prev: prevSlice }, (_, { prev }) => ({
           level: i + 1,
-          value: prev * (i + 1),
+          value: typeof prev === 'number' ? prev * (i + 1) : prev.value * (i + 1),
           accumulated: prev,
         }))
       );
     }
     
-    return currentSlice;
+    // Execute the final slice for benchmark
+    currentSlice({ value: 42 });
   });
 
   bench('Store with 100 subscriptions - creation and cleanup', () => {
@@ -150,7 +151,7 @@ describe('Memory Usage Patterns', () => {
     const model = createModel<{
       data: typeof largeArray;
       summary: { total: number; average: number };
-    }>(({ set, get }) => ({
+    }>(() => ({
       data: largeArray,
       summary: { total: 0, average: 0 },
     }));

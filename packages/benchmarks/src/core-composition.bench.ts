@@ -85,7 +85,7 @@ describe('Core Composition Performance', () => {
     
     const composed = createSlice(
       largeModel,
-      compose({ base: baseSlice }, (m, { base }) => ({
+      compose({ base: baseSlice }, (_, { base }) => ({
         itemCount: base.items.length,
         hasFilter: base.filter.length > 0,
         firstItem: base.items[0],
@@ -117,7 +117,7 @@ describe('Core Composition Performance', () => {
       largeModel,
       compose(
         { items: itemsSlice, filter: filterSlice, sort: sortSlice },
-        (m, { items, filter, sort }) => {
+        (_, { items, filter, sort }) => {
           const filtered = items.filter((item) =>
             item.name.includes(filter)
           );
@@ -152,7 +152,7 @@ describe('Core Composition Performance', () => {
     
     const level2 = createSlice(
       largeModel,
-      compose({ l1: level1 }, (m, { l1 }) => ({
+      compose({ l1: level1 }, (_, { l1 }) => ({
         doubled: l1.count * 2,
         original: l1.count,
       }))
@@ -160,7 +160,7 @@ describe('Core Composition Performance', () => {
     
     const level3 = createSlice(
       largeModel,
-      compose({ l2: level2 }, (m, { l2 }) => ({
+      compose({ l2: level2 }, (_, { l2 }) => ({
         quadrupled: l2.doubled * 2,
         summary: `Count: ${l2.original}, Doubled: ${l2.doubled}`,
       }))
@@ -222,7 +222,7 @@ describe('Core Composition Performance', () => {
 
       const filterButtons = createSlice(
         model,
-        compose({ actions }, (m, { actions }) => ({
+        compose({ actions }, (m, _deps) => ({
           all: { active: m.filter === 'all' },
           active: { active: m.filter === 'active' },
           completed: { active: m.filter === 'completed' },
@@ -264,7 +264,7 @@ describe('Core Composition Performance', () => {
     const base = createSlice(largeModel, (m) => ({ value: m.count }));
     const composed = createSlice(
       largeModel,
-      compose({ base }, (m, { base }) => ({
+      compose({ base }, (_, { base }) => ({
         doubled: base.value * 2,
       }))
     );

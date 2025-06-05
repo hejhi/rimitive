@@ -7,11 +7,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bench": "vitest bench",
+    "bench": "vitest bench --run",
     "bench:ci": "vitest bench --reporter=default --reporter=json --outputFile=bench-results.json",
     "bench:compare": "node scripts/compare-benchmarks.js",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm test"
+    "check": "pnpm typecheck"
   },
   "devDependencies": {
     "@lattice/core": "workspace:*",

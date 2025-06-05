@@ -125,7 +125,7 @@ describe('Real-World Application Performance', () => {
       // Cart details with product info
       const cartDetails = createSlice(
         model,
-        compose({ filtered: filteredProducts }, (m, deps) => {
+        compose({ filtered: filteredProducts }, (m, _deps) => {
           const items = m.cart.map((item) => {
             const product = m.products.find((p) => p.id === item.productId);
             return product
@@ -156,7 +156,7 @@ describe('Real-World Application Performance', () => {
       // Inventory warnings
       const inventoryWarnings = createSlice(
         model,
-        compose({ cart: cartDetails }, (m, { cart }) => {
+        compose({ cart: cartDetails }, (_, { cart }) => {
           const warnings: Array<{ productId: string; message: string }> = [];
 
           cart.items.forEach((item) => {
@@ -349,7 +349,7 @@ describe('Real-World Application Performance', () => {
             });
           });
 
-          const alerts = filtered.filter((m) => m.value > m.alertThreshold);
+          const alerts = filtered.filter((metric) => metric.value > m.alertThreshold);
 
           return {
             totalMetrics: filtered.length,
@@ -415,7 +415,7 @@ describe('Real-World Application Performance', () => {
       let stats3 = store.views.stats();
 
       // Access metrics view
-      const metrics = store.views.metrics();
+      store.views.metrics();
       
       // Simulate using the data
       if (stats1.totalMetrics + stats2.totalMetrics + stats3.totalMetrics > 0) {
