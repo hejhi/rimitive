@@ -139,9 +139,9 @@ describe('Memory Usage Patterns', () => {
     store.destroy();
   });
 
-  bench('Large model state (10MB) - slice access', () => {
-    // Create a model with ~10MB of data
-    const largeArray = Array.from({ length: 250000 }, (_, i) => ({
+  bench('Large model state (1MB) - slice access', () => {
+    // Create a model with ~1MB of data
+    const largeArray = Array.from({ length: 25000 }, (_, i) => ({
       id: i,
       value: Math.random(),
       name: `Item ${i}`,

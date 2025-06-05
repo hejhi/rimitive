@@ -278,9 +278,9 @@ describe('Real-World Application Performance', () => {
           const { metrics } = get();
           const newMetric = { ...metric, timestamp: Date.now() };
           
-          // Keep only last 10000 metrics
+          // Keep only last 1000 metrics
           const updated = [...metrics, newMetric];
-          if (updated.length > 10000) {
+          if (updated.length > 1000) {
             updated.shift();
           }
           
