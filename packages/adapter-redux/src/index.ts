@@ -17,7 +17,7 @@ import type {
   ViewTypes,
   ComponentFactory,
 } from '@lattice/core';
-import { isSliceFactory } from '@lattice/core';
+import { isSliceFactory, memoizeParameterizedView } from '@lattice/core';
 import { createRuntime } from '@lattice/runtime';
 import type { Store } from 'redux';
 
@@ -165,7 +165,7 @@ export function createReduxAdapter<Model, Actions, Views>(
         };
       } else if (typeof view === 'function') {
         // Computed view - may accept parameters
-        (views as Record<string, unknown>)[key] = (...args: unknown[]) => {
+        const viewFunction = (...args: unknown[]) => {
           // Call the view function with any provided args
           const result = view(...args);
 
@@ -177,6 +177,12 @@ export function createReduxAdapter<Model, Actions, Views>(
           // Otherwise return the result as-is
           return result;
         };
+        
+        // Apply memoization unless disabled for benchmarks
+        (views as Record<string, unknown>)[key] = 
+          process.env.LATTICE_DISABLE_MEMOIZATION === 'true'
+            ? viewFunction
+            : memoizeParameterizedView(viewFunction);
       }
     }
 

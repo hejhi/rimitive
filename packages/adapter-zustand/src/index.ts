@@ -19,7 +19,7 @@ import type {
   AdapterResult,
   ViewTypes,
 } from '@lattice/core';
-import { isSliceFactory } from '@lattice/core';
+import { isSliceFactory, memoizeParameterizedView } from '@lattice/core';
 import {
   createStore as zustandCreateStore,
   StoreApi,
@@ -174,7 +174,7 @@ function processViews<Model, Views>(
       }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     } else if (typeof view === 'function') {
       // Computed view - may accept parameters
-      views[key as keyof ViewTypes<Model, Views>] = ((...args: unknown[]) => {
+      const viewFunction = (...args: unknown[]) => {
         // Call the view function with any provided args
         const result = view(...args);
 
@@ -185,7 +185,14 @@ function processViews<Model, Views>(
 
         // Otherwise return the result as-is
         return result;
-      }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
+      };
+      
+      // Apply memoization unless disabled for benchmarks
+      views[key as keyof ViewTypes<Model, Views>] = (
+        process.env.LATTICE_DISABLE_MEMOIZATION === 'true'
+          ? viewFunction
+          : memoizeParameterizedView(viewFunction)
+      ) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     }
   }
 
