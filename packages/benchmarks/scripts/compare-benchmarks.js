@@ -4,9 +4,15 @@
  * @fileoverview Compare benchmark results between runs
  * 
  * Usage:
- *   node scripts/compare-benchmarks.js [baseline.json] [current.json]
+ *   node scripts/compare-benchmarks.js [results.json] [baseline.json]
  * 
+ * If only one file is specified, uses it as the results file and looks for baseline
  * If no files are specified, compares bench-results.json with bench-baseline.json
+ * 
+ * Examples:
+ *   node scripts/compare-benchmarks.js                    # Uses defaults
+ *   node scripts/compare-benchmarks.js bench-results-raw.json  # Raw mode
+ *   node scripts/compare-benchmarks.js bench-results-real.json # Real mode
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -149,10 +155,24 @@ function compareBenchmarks(baseline, current) {
 
 // Main
 const args = process.argv.slice(2);
-const baselineFile = args[0] || 'bench-baseline.json';
-const currentFile = args[1] || 'bench-results.json';
 
-console.log(`Comparing ${baselineFile} vs ${currentFile}`);
+let currentFile, baselineFile;
+
+if (args.length === 0) {
+  // No args: use defaults
+  currentFile = 'bench-results.json';
+  baselineFile = 'bench-baseline.json';
+} else if (args.length === 1) {
+  // One arg: use it as current file, derive baseline name
+  currentFile = args[0];
+  baselineFile = currentFile.replace('-results', '-baseline');
+} else {
+  // Two args: use as provided
+  currentFile = args[0];
+  baselineFile = args[1];
+}
+
+console.log(`Comparing ${currentFile} vs ${baselineFile}`);
 
 const baseline = loadResults(baselineFile);
 const current = loadResults(currentFile);

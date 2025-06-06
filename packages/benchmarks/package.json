@@ -7,9 +7,15 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bench": "LATTICE_DISABLE_MEMOIZATION=true NODE_OPTIONS=--max-old-space-size=4096 vitest bench --run",
-    "bench:ci": "LATTICE_DISABLE_MEMOIZATION=true NODE_OPTIONS=--max-old-space-size=4096 vitest bench --reporter=default --reporter=json --outputFile=bench-results.json",
+    "bench": "pnpm bench:raw && pnpm bench:real",
+    "bench:raw": "LATTICE_DISABLE_MEMOIZATION=true NODE_OPTIONS=--max-old-space-size=4096 vitest bench --run",
+    "bench:real": "NODE_OPTIONS=--max-old-space-size=4096 vitest bench --run",
+    "bench:ci": "pnpm bench:ci:raw && pnpm bench:ci:real",
+    "bench:ci:raw": "LATTICE_DISABLE_MEMOIZATION=true NODE_OPTIONS=--max-old-space-size=4096 vitest bench --reporter=default --reporter=json --outputFile=bench-results-raw.json",
+    "bench:ci:real": "NODE_OPTIONS=--max-old-space-size=4096 vitest bench --reporter=default --reporter=json --outputFile=bench-results-real.json",
     "bench:compare": "node scripts/compare-benchmarks.js",
+    "bench:compare:raw": "node scripts/compare-benchmarks.js bench-results-raw.json",
+    "bench:compare:real": "node scripts/compare-benchmarks.js bench-results-real.json",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck"
   },

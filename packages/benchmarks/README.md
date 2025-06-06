@@ -2,20 +2,37 @@
 
 Comprehensive performance benchmarks for the Lattice framework, measuring core composition patterns, adapter performance, and memory usage.
 
+## Benchmark Modes
+
+Lattice provides two benchmark modes to measure different aspects of performance:
+
+- **Raw Mode**: Disables memoization to measure pure computational performance
+- **Real Mode**: Enables memoization to measure real-world cached performance
+
+See [BENCHMARKING.md](./BENCHMARKING.md) for detailed information about the two modes.
+
 ## Running Benchmarks
 
 ```bash
-# Run all benchmarks
+# Run all benchmarks (both raw and real modes)
 pnpm --filter @lattice/benchmarks bench
+
+# Run raw performance benchmarks (no caching)
+pnpm --filter @lattice/benchmarks bench:raw
+
+# Run real-world benchmarks (with caching)
+pnpm --filter @lattice/benchmarks bench:real
 
 # Run specific benchmark file
 pnpm --filter @lattice/benchmarks bench core-composition
 
-# Generate JSON report for CI
+# Generate JSON reports for CI
 pnpm --filter @lattice/benchmarks bench:ci
 
 # Compare against baseline
 pnpm --filter @lattice/benchmarks bench:compare
+pnpm --filter @lattice/benchmarks bench:compare:raw   # Compare raw results
+pnpm --filter @lattice/benchmarks bench:compare:real  # Compare real results
 ```
 
 ## Benchmark Categories
@@ -40,6 +57,13 @@ Measures memory efficiency:
 - **Compose chains**: Memory impact of deep composition
 - **Large state handling**: Performance with megabytes of data
 - **Subscription lifecycle**: Memory cleanup effectiveness
+
+### 4. Cache Performance (`cache-performance.bench.ts`)
+Measures memoization effectiveness:
+- **Cache hit rates**: Repeated parameter access patterns
+- **Hot path optimization**: 80/20 access pattern simulation
+- **Cache memory pressure**: Behavior with many unique parameters
+- **Performance gains**: Expensive computation caching benefits
 
 ## Performance Targets
 
