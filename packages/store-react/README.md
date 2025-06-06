@@ -71,10 +71,10 @@ function Counter() {
 ### Using Context Provider Pattern
 
 ```tsx
-import { LatticeProvider, useLatticeStore, useLattice } from '@lattice/adapter-react';
+import { LatticeProvider, useLatticeStore, useLattice } from '@lattice/store-react';
 import { useViews } from '@lattice/runtime/react';
 
-// With React adapter (component-scoped)
+// With React lattice hooks (component-scoped)
 function App() {
   const store = useLattice(todoComponent);
   return (
@@ -123,7 +123,7 @@ function TodoList() {
 
 ### Component-Scoped Stores
 
-Unlike Zustand or Redux adapters that create global stores, the React adapter creates stores that are scoped to your component lifecycle:
+Unlike Zustand or Redux, which create global stores, React Lattice creates stores that are scoped to your component lifecycle, perfect for passing to context, but with all the fine-grained benefits of zustand, without the default rendering behavior of context:
 
 ```tsx
 function MyComponent() {
