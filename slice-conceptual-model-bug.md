@@ -2,9 +2,10 @@
 
 ## Description
 
-Lattice's current implementation has a fundamental conceptual bug where **slices are executing computational logic at definition time** instead of being pure shape declarations/selector blueprints. This breaks the original design's separation between:
-1. **Composition Time**: Declaring what state to select (shape)
-2. **Execution Time**: Computing derived values from that state
+Lattice's current implementation has a fundamental conceptual bug where **slices are executing computational logic** instead of being pure shape declarations. This breaks the original design's clear separation of concerns:
+
+1. **Slices**: Shape definition and composition only (no computation)
+2. **Views**: All computation happens here (via slice execution)
 
 ## Understanding Lattice's Mental Model
 
@@ -13,16 +14,16 @@ Lattice's current implementation has a fundamental conceptual bug where **slices
 Lattice was designed with a clear separation of concerns across three phases:
 
 #### 1. **Composition Phase** (Design Time)
-When you write `createComponent()`, you're creating blueprints for a component, consisting of a private model and exposed views and actions (as slice/selector definitions):
+When you write `createComponent()`, you're creating blueprints:
 ```typescript
 const component = createComponent(() => {
   const model = createModel(...);  // Blueprint for state shape
-  const actions = createSlice(...); // Blueprint for actions
-  const views = { ... };           // Blueprint for views
+  const actions = createSlice(...); // Blueprint for actions  
+  const views = { ... };           // Blueprint for computed views
   return { model, actions, views };
 });
 ```
-**Slices do not execute here** - you're just describing the component structure.
+**No execution happens here** - you're just describing the component structure.
 
 #### 2. **Store Creation Phase** (Adapter Time)
 When an adapter creates a store:
@@ -30,9 +31,9 @@ When an adapter creates a store:
 const store = createZustandAdapter(component);
 ```
 The adapter:
-- Executes the model factory to create initial state and underlying store
-- Wires up the state management
-- Prepares slices for execution
+- Executes the model factory to create initial state
+- Creates the underlying state management store
+- Prepares slices and views for runtime execution
 
 #### 3. **Runtime Phase** (Usage Time)
 When the application runs:
@@ -43,7 +44,10 @@ store.actions.addTodo('New item');          // Executes state mutation
 
 ### The Conceptual Problem
 
-The current implementation **conflates slice definition with slice execution**.
+The current implementation **conflates three distinct concepts**:
+1. Slice definition (shape declaration)
+2. Slice composition (combining shapes)  
+3. View computation (deriving values from state)
 
 ## Current (Incorrect) Behavior
 
@@ -104,93 +108,96 @@ const enhancedSlice = createSlice(
 // Still no execution! Just building a mapping specification
 ```
 
-### Phase 3: Execution Time (Actual Computation)
+### Phase 3: View Definition and Execution (Actual Computation)
+
+Views are where ALL computation happens. They execute slices to get shaped data, then compute derived values.
 
 ```typescript
-// NOW we can compute with real state (and computed views can support parameters as well, what we call parameterized computed views)
-const computedView = (arg1: string) => enhancedSlice((state) => {
-  console.log(arg1);
-  // state.todoItems is the actual Todo[] array
-  return {
+// Component views - ALL views must be functions (even non-parameterized ones)
+const views = {
+  // Non-parameterized view (still needs to be a function)
+  summary: () => enhancedSlice((state) => ({
+    // state.todoItems is the actual Todo[] array
     visibleTodos: state.todoItems.filter(todo => {
       if (state.activeFilter === 'completed') return todo.completed;
       if (state.activeFilter === 'active') return !todo.completed;
       return true;
     }),
     count: state.todoItems.length,
-    onClear: () => state.clearFn()
-  };
-});
-```
-
-### Executing Other Slices During Computation
-
-During execution phase, calling other slices should work:
-
-```typescript
-const computedView = () => todoSlice((state) => {
-  // ✅ This is fine - we're in execution phase with real state
-  // the only _requirement_ is that the state is correctly typed for `otherSlice`
-  // this should be performant as well, as executing a slice is just selecting off the model, and we should
-  // be memoizing slice execution
-  const otherData = otherSlice(state);
+    isEmpty: state.todoItems.length === 0
+  })),
   
-  return {
-    count: state.items.length,
-    combined: state.items.length + otherData.count
-  };
-});
+  // Parameterized view
+  filtered: (threshold: number) => enhancedSlice((state) => ({
+    aboveThreshold: state.todoItems.length > threshold,
+    label: `Count ${state.todoItems.length} is ${state.todoItems.length > threshold ? 'above' : 'below'} ${threshold}`
+  })),
+  
+  // View with multiple parameters
+  search: (query: string, caseSensitive: boolean) => enhancedSlice((state) => ({
+    results: state.todoItems.filter(item => {
+      const searchIn = caseSensitive ? item.text : item.text.toLowerCase();
+      const searchFor = caseSensitive ? query : query.toLowerCase();
+      return searchIn.includes(searchFor);
+    }),
+    resultCount: state.todoItems.filter(item => {
+      const searchIn = caseSensitive ? item.text : item.text.toLowerCase();
+      const searchFor = caseSensitive ? query : query.toLowerCase();
+      return searchIn.includes(searchFor);
+    }).length
+  }))
+};
 ```
 
-This works because:
-- We have real state, not mappings
-- Both slices expect the same state shape
-- We're computing, not defining
+### Important: No Slice Execution Within Slices
 
-Note that this SHOULD NOT work, as returning `createSlice` is NOT the same as executing the slice, as see above:
+**You cannot execute slices within other slice executions**. This maintains a clear separation:
 
 ```typescript
-// ❌ Invalid: this would return a SLICE DEFINITION to the runtime because it's not getting live state
-const badAttemptAtComputedView = () => createSlice(model, (m) => ({
-  name: count.items
-  // ...
-}));
-
-// ❌ Invalid: mixes up composition time and runtime. createSlice does NOT provide `state` in its callback.
-// the user likely either wants to use `compose`, or call `otherSlice` in the EXECUTION phase of this slice
-// when creating a VALID computed view.
-const badAttemptAtComputedView = (val: string) => createSlice(model, (state) => {
-  const otherSliceState = otherSlice(state);
-  return {
-    nameLength: state.items.length,
-    onClick: () => otherSliceState.onClick(val)
-    // ...
-  }
+// ❌ WRONG: Cannot execute slices within slice execution
+const badView = () => todoSlice((state) => {
+  const otherData = otherSlice(state); // NOT ALLOWED! otherSlice DOESN'T take state, it takes a selector function
+  return { combined: state.count + otherData.count };
 });
 
-// ✅ This is fine: a correct example of `compose` inside of `createSlice`
-const enhancedSlice = createSlice(
+// ✅ CORRECT: Use compose to combine slice shapes at definition time
+const combinedSlice = createSlice(
   model,
   compose(
-    { someSlice: otherSlice },
-    (m, { someSlice }) => ({
-      myItems: someSlice.items,
-      count: m.count,
-      // ...
+    { todo: todoSlice, other: otherSlice },
+    (m, { todo, other }) => ({
+      todoCount: todo.count,
+      otherCount: other.count,
+      // Just mapping, no computation
     })
   )
 );
 
-// ✅ This is fine: a correct example of a composed, computed view using correct slice execution
-const computedView = (val: string) => todoSlice((state) => {
-  const otherData = otherSlice(state);
-  
-  return {
-    count: state.items.length,
-    combined: state.items.length + otherData.count,
-    derivedVal: `${otherData.someVal}: ${val}`
-  };
-});
+// Then compute in the view
+const goodView = () => combinedSlice((state) => ({
+  combined: state.todoCount + state.otherCount // Now we can compute!
+}));
+```
+
+### Common Patterns and Anti-Patterns
+
+```typescript
+// ❌ WRONG: Returning a slice factory from a view
+const badView = () => createSlice(model, (m) => ({
+  // This returns a SLICE DEFINITION, not computed values!
+}));
+
+// ❌ WRONG: View defined without function wrapper
+const views = {
+  // This executes at definition time, not runtime!
+  badView: todoSlice((state) => ({ ... }))
+};
+
+// ✅ CORRECT: All views are functions
+const views = {
+  goodView: () => todoSlice((state) => ({ ... })),
+  paramView: (arg: string) => todoSlice((state) => ({ ... }))
+};
 ```
 
 ## Implementation Challenges & Solutions
@@ -246,20 +253,55 @@ const view = () => good((state) => ({
 
 ## Benefits of Fixing This
 
-1. **Clear Mental Model**: Slices = shape, Views = computation
-2. **Better Performance**: Only compute what's needed
-3. **True Reusability**: Slices become pure data contracts
-4. **Zustand Alignment**: Matches expected slice behavior
-5. **Type Safety**: Can't accidentally compute in definitions
+1. **Clear Mental Model**: 
+   - Slices = Shape definition and composition only
+   - Views = All computation and derivation
+   - compose() = The only way to combine slices (at definition time)
+
+2. **Better Performance**: 
+   - Slices don't compute unnecessarily
+   - Views only compute what they need
+   - Clear optimization boundaries
+
+3. **True Reusability**: 
+   - Slices are pure shape contracts
+   - Can be composed without side effects
+   - Views handle all context-specific computation
+
+4. **Conceptual Alignment**: 
+   - Matches the original Zustand-inspired design
+   - No confusion about when computation happens
+   - Clear separation of concerns
+
+5. **Type Safety**: 
+   - Can't accidentally compute in slice definitions
+   - Mapped types make the phases explicit
+   - Errors caught at compile time, not runtime
 
 ## Migration Path
 
-This is an unreleased library, so we DO NOT need to worry about backwards compatibility. we should update one or two tests to FAIL, let them fail, then run them until they're green. This in turn should cause many other tests to fail, which will allow us to update them to match the implementation.
+This is an unreleased library, so we DO NOT need to worry about backwards compatibility. We should:
+
+1. Update core slice implementation to return mapping tokens instead of executing selectors
+2. Update compose to work with mapping tokens
+3. Change slice execution to require computation callbacks
+4. Ensure all views are functions (even non-parameterized ones)
+5. Update tests to match the new conceptual model
+
+Start by making one or two tests fail with the new expected behavior, then fix the implementation until they pass.
 
 ## Summary
 
-The core issue is that we tricked TypeScript (and ourselves) into thinking slice definitions had access to real state. This led to an implementation where slices are simultaneously:
-- Shape selectors (what they should be)
-- Computed views (what they shouldn't be)
+The core issue is that we conflated three distinct concepts:
 
-Fixing this would restore the original conceptual clarity and make Lattice's mental model much easier to understand and use correctly.
+1. **Slice Definition**: Should only declare shape (what to select)
+2. **Slice Composition**: Should only combine shapes (via compose)
+3. **View Computation**: Should be the only place for deriving values
+
+Currently, slices do all three, which breaks the mental model. The fix is to enforce strict boundaries:
+
+- **Slices**: Pure shape mapping (no computation)
+- **Compose**: Pure shape combination (no computation)
+- **Views**: All computation happens here (and only here)
+
+This creates a clean, predictable architecture where each part has a single, well-defined responsibility.
