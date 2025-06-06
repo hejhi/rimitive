@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>State Management Performance Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .chart-container { position: relative; height: 300px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Header -->
+    <header class="mb-12 text-center">
+      <h1 class="text-4xl font-bold mb-4">State Management Performance Dashboard</h1>
+      <p class="text-xl text-gray-600 mb-2">Choose the right state manager based on your performance needs</p>
+      <div class="inline-flex items-center gap-2 text-sm bg-amber-100 text-amber-800 px-4 py-2 rounded-full">
+        <span class="font-semibold">Raw Performance</span>
+        <span>(without memoization)</span>
+      </div>
+    </header>
+
+    <!-- Overall Winner -->
+    <section class="mb-12">
+      <div class="bg-white rounded-xl shadow-lg p-8">
+        <h2 class="text-2xl font-bold mb-6 text-center">Overall Performance Leader</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          <div class="text-center transform scale-110">
+            <div class="inline-block p-6 rounded-full mb-4" style="background-color: #10b98120">
+              <div class="text-4xl font-bold" style="color: #10b981">
+                🏆
+              </div>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Lattice</h3>
+            <p class="text-3xl font-bold mb-1" style="color: #10b981">67%</p>
+            <p class="text-sm text-gray-600">win rate</p>
+            <p class="text-xs text-gray-500 mt-2">4 wins / 6 tests</p>
+          </div>
+              
+          <div class="text-center ">
+            <div class="inline-block p-6 rounded-full mb-4" style="background-color: #3b82f620">
+              <div class="text-4xl font-bold" style="color: #3b82f6">
+                🥈
+              </div>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Zustand</h3>
+            <p class="text-3xl font-bold mb-1" style="color: #3b82f6">38%</p>
+            <p class="text-sm text-gray-600">win rate</p>
+            <p class="text-xs text-gray-500 mt-2">3 wins / 8 tests</p>
+          </div>
+              
+          <div class="text-center ">
+            <div class="inline-block p-6 rounded-full mb-4" style="background-color: #8b5cf620">
+              <div class="text-4xl font-bold" style="color: #8b5cf6">
+                🥉
+              </div>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Redux</h3>
+            <p class="text-3xl font-bold mb-1" style="color: #8b5cf6">13%</p>
+            <p class="text-sm text-gray-600">win rate</p>
+            <p class="text-xs text-gray-500 mt-2">1 wins / 8 tests</p>
+          </div>
+              
+          <div class="text-center ">
+            <div class="inline-block p-6 rounded-full mb-4" style="background-color: #6b728020">
+              <div class="text-4xl font-bold" style="color: #6b7280">
+                🥉
+              </div>
+            </div>
+            <h3 class="text-xl font-bold mb-2">Other</h3>
+            <p class="text-3xl font-bold mb-1" style="color: #6b7280">0%</p>
+            <p class="text-sm text-gray-600">win rate</p>
+            <p class="text-xs text-gray-500 mt-2">0 wins / 0 tests</p>
+          </div>
+              
+        </div>
+      </div>
+    </section>
+
+    <!-- Performance by Scenario -->
+    <section class="mb-12">
+      <h2 class="text-3xl font-bold mb-8">Performance by Use Case</h2>
+      <div class="grid gap-8">
+        
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h3 class="text-2xl font-bold mb-2">Single Item Updates</h3>
+          <p class="text-gray-600 mb-6">Performance when updating individual items</p>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Chart -->
+            <div class="chart-container">
+              <canvas id="chart-single-updates"></canvas>
+            </div>
+            
+            <!-- Detailed Results -->
+            <div class="space-y-4">
+              
+              <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">
+                  100 sequential updates
+                  (sequential)
+                </h4>
+                <div class="space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥇</span>
+                      <span class="font-medium">Lattice</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">208.9μs</span>
+                      
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥈</span>
+                      <span class="font-medium">Zustand</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">482.1μs</span>
+                      <span class="text-xs text-gray-500 ml-2">(2.3x slower)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥉</span>
+                      <span class="font-medium">Redux</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">3.5ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(16.7x slower)</span>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+                
+            </div>
+          </div>
+          
+          <!-- Scenario Winner -->
+          <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p class="text-sm">
+              <span class="font-semibold">Best for single item updates:</span>
+              <span style="color: #10b981" class="font-bold">Lattice</span>
+            </p>
+          </div>
+        </div>
+        
+        <script>
+          // Render chart for single-updates
+          (function() {
+            const ctx = document.getElementById('chart-single-updates').getContext('2d');
+            const data = {"labels":["100 sequential updates (sequential)"],"lattice":[0.20890599707601887],"zustand":[0.48212908765325907],"redux":[3.4978595454545443]};
+            
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: data.labels,
+                datasets: [
+                  {
+                    label: 'Lattice',
+                    data: data.lattice,
+                    backgroundColor: 'rgb(16, 185, 129)',
+                  },
+                  {
+                    label: 'Zustand',
+                    data: data.zustand,
+                    backgroundColor: 'rgb(59, 130, 246)',
+                  },
+                  {
+                    label: 'Redux',
+                    data: data.redux,
+                    backgroundColor: 'rgb(139, 92, 246)',
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Time (lower is better)'
+                    }
+                  }
+                },
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        const value = context.parsed.y;
+                        if (value < 0.001) return context.dataset.label + ': ' + (value * 1000000).toFixed(0) + 'ns';
+                        if (value < 1) return context.dataset.label + ': ' + (value * 1000).toFixed(1) + 'μs';
+                        return context.dataset.label + ': ' + value.toFixed(1) + 'ms';
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          })();
+        </script>
+          
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h3 class="text-2xl font-bold mb-2">Bulk Operations</h3>
+          <p class="text-gray-600 mb-6">How well does it handle updating many items at once?</p>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Chart -->
+            <div class="chart-container">
+              <canvas id="chart-bulk-operations"></canvas>
+            </div>
+            
+            <!-- Detailed Results -->
+            <div class="space-y-4">
+              
+              <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">
+                  bulk update 100 items
+                  (bulk)
+                </h4>
+                <div class="space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥇</span>
+                      <span class="font-medium">Lattice</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">153.9μs</span>
+                      
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥈</span>
+                      <span class="font-medium">Zustand</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">184.1μs</span>
+                      <span class="text-xs text-gray-500 ml-2">(1.2x slower)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥉</span>
+                      <span class="font-medium">Redux</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">2.3ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(14.8x slower)</span>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+                
+            </div>
+          </div>
+          
+          <!-- Scenario Winner -->
+          <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p class="text-sm">
+              <span class="font-semibold">Best for bulk operations:</span>
+              <span style="color: #10b981" class="font-bold">Lattice</span>
+            </p>
+          </div>
+        </div>
+        
+        <script>
+          // Render chart for bulk-operations
+          (function() {
+            const ctx = document.getElementById('chart-bulk-operations').getContext('2d');
+            const data = {"labels":["bulk update 100 items (bulk)"],"lattice":[0.15385160996617592],"zustand":[0.18413961869975617],"redux":[2.283322086757918]};
+            
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: data.labels,
+                datasets: [
+                  {
+                    label: 'Lattice',
+                    data: data.lattice,
+                    backgroundColor: 'rgb(16, 185, 129)',
+                  },
+                  {
+                    label: 'Zustand',
+                    data: data.zustand,
+                    backgroundColor: 'rgb(59, 130, 246)',
+                  },
+                  {
+                    label: 'Redux',
+                    data: data.redux,
+                    backgroundColor: 'rgb(139, 92, 246)',
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Time (lower is better)'
+                    }
+                  }
+                },
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        const value = context.parsed.y;
+                        if (value < 0.001) return context.dataset.label + ': ' + (value * 1000000).toFixed(0) + 'ns';
+                        if (value < 1) return context.dataset.label + ': ' + (value * 1000).toFixed(1) + 'μs';
+                        return context.dataset.label + ': ' + value.toFixed(1) + 'ms';
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          })();
+        </script>
+          
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h3 class="text-2xl font-bold mb-2">Computed Values</h3>
+          <p class="text-gray-600 mb-6">Performance of derived state and filtered views</p>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Chart -->
+            <div class="chart-container">
+              <canvas id="chart-computed-values"></canvas>
+            </div>
+            
+            <!-- Detailed Results -->
+            <div class="space-y-4">
+              
+              <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">
+                  compute filtered view
+                  (filter)
+                </h4>
+                <div class="space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥇</span>
+                      <span class="font-medium">Zustand</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">631.0μs</span>
+                      
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥈</span>
+                      <span class="font-medium">Lattice</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">762.7μs</span>
+                      <span class="text-xs text-gray-500 ml-2">(1.2x slower)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥉</span>
+                      <span class="font-medium">Redux</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">3.0ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(4.7x slower)</span>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+                
+              <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">
+                  compute stats view
+                  (aggregation)
+                </h4>
+                <div class="space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥇</span>
+                      <span class="font-medium">Lattice</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">377.2μs</span>
+                      
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥈</span>
+                      <span class="font-medium">Redux</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">1.6ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(4.2x slower)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥉</span>
+                      <span class="font-medium">Zustand</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">1.6ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(4.4x slower)</span>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+                
+              <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">
+                  compute filtered view
+                  (computation)
+                </h4>
+                <div class="space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥇</span>
+                      <span class="font-medium">Zustand</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">631.0μs</span>
+                      
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥈</span>
+                      <span class="font-medium">Lattice</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">762.7μs</span>
+                      <span class="text-xs text-gray-500 ml-2">(1.2x slower)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥉</span>
+                      <span class="font-medium">Redux</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">3.0ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(4.7x slower)</span>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+                
+              <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">
+                  compute stats view
+                  (computation)
+                </h4>
+                <div class="space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥇</span>
+                      <span class="font-medium">Lattice</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">377.2μs</span>
+                      
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥈</span>
+                      <span class="font-medium">Redux</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">1.6ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(4.2x slower)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥉</span>
+                      <span class="font-medium">Zustand</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">1.6ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(4.4x slower)</span>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+                
+            </div>
+          </div>
+          
+          <!-- Scenario Winner -->
+          <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p class="text-sm">
+              <span class="font-semibold">Best for computed values:</span>
+              <span style="color: #3b82f6" class="font-bold">Zustand</span>
+            </p>
+          </div>
+        </div>
+        
+        <script>
+          // Render chart for computed-values
+          (function() {
+            const ctx = document.getElementById('chart-computed-values').getContext('2d');
+            const data = {"labels":["compute filtered view (filter)","compute stats view (aggregation)","compute filtered view (computation)","compute stats view (computation)"],"lattice":[0.7626533765244015,0.37720284238307883,0.7626533765244015,0.37720284238307883],"zustand":[0.6310258245192961,1.6422625737705485,0.6310258245192961,1.6422625737705485],"redux":[2.9809516547619577,1.5951381528663955,2.9809516547619577,1.5951381528663955]};
+            
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: data.labels,
+                datasets: [
+                  {
+                    label: 'Lattice',
+                    data: data.lattice,
+                    backgroundColor: 'rgb(16, 185, 129)',
+                  },
+                  {
+                    label: 'Zustand',
+                    data: data.zustand,
+                    backgroundColor: 'rgb(59, 130, 246)',
+                  },
+                  {
+                    label: 'Redux',
+                    data: data.redux,
+                    backgroundColor: 'rgb(139, 92, 246)',
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Time (lower is better)'
+                    }
+                  }
+                },
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        const value = context.parsed.y;
+                        if (value < 0.001) return context.dataset.label + ': ' + (value * 1000000).toFixed(0) + 'ns';
+                        if (value < 1) return context.dataset.label + ': ' + (value * 1000).toFixed(1) + 'μs';
+                        return context.dataset.label + ': ' + value.toFixed(1) + 'ms';
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          })();
+        </script>
+          
+        <div class="bg-white rounded-xl shadow-lg p-8">
+          <h3 class="text-2xl font-bold mb-2">Subscription Overhead</h3>
+          <p class="text-gray-600 mb-6">How does performance scale with many subscribers?</p>
+          
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Chart -->
+            <div class="chart-container">
+              <canvas id="chart-subscriptions"></canvas>
+            </div>
+            
+            <!-- Detailed Results -->
+            <div class="space-y-4">
+              
+              <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">
+                  100 subscriptions
+                  (multiple)
+                </h4>
+                <div class="space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥇</span>
+                      <span class="font-medium">Zustand</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">402.0μs</span>
+                      
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥈</span>
+                      <span class="font-medium">Redux</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">1.8ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(4.5x slower)</span>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+                
+              <div class="border rounded-lg p-4">
+                <h4 class="font-semibold mb-2">
+                  subscription with complex selector
+                  (complex)
+                </h4>
+                <div class="space-y-2">
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥇</span>
+                      <span class="font-medium">Redux</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">395.4μs</span>
+                      
+                    </div>
+                  </div>
+                  
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <span class="text-lg">🥈</span>
+                      <span class="font-medium">Zustand</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="font-mono text-sm">4.8ms</span>
+                      <span class="text-xs text-gray-500 ml-2">(12.3x slower)</span>
+                    </div>
+                  </div>
+                  
+                </div>
+              </div>
+                
+            </div>
+          </div>
+          
+          <!-- Scenario Winner -->
+          <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <p class="text-sm">
+              <span class="font-semibold">Best for subscription overhead:</span>
+              <span style="color: #3b82f6" class="font-bold">Zustand</span>
+            </p>
+          </div>
+        </div>
+        
+        <script>
+          // Render chart for subscriptions
+          (function() {
+            const ctx = document.getElementById('chart-subscriptions').getContext('2d');
+            const data = {"labels":["100 subscriptions (multiple)","subscription with complex selector (complex)"],"lattice":[null,null],"zustand":[0.4019923898714118,4.848325523364467],"redux":[1.796968083892694,0.39540979446646385]};
+            
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: data.labels,
+                datasets: [
+                  {
+                    label: 'Lattice',
+                    data: data.lattice,
+                    backgroundColor: 'rgb(16, 185, 129)',
+                  },
+                  {
+                    label: 'Zustand',
+                    data: data.zustand,
+                    backgroundColor: 'rgb(59, 130, 246)',
+                  },
+                  {
+                    label: 'Redux',
+                    data: data.redux,
+                    backgroundColor: 'rgb(139, 92, 246)',
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    title: {
+                      display: true,
+                      text: 'Time (lower is better)'
+                    }
+                  }
+                },
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        const value = context.parsed.y;
+                        if (value < 0.001) return context.dataset.label + ': ' + (value * 1000000).toFixed(0) + 'ns';
+                        if (value < 1) return context.dataset.label + ': ' + (value * 1000).toFixed(1) + 'μs';
+                        return context.dataset.label + ': ' + value.toFixed(1) + 'ms';
+                      }
+                    }
+                  }
+                }
+              }
+            });
+          })();
+        </script>
+          
+      </div>
+    </section>
+
+    <!-- Recommendations -->
+    <section class="mb-12">
+      <h2 class="text-3xl font-bold mb-8">Recommendations</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold mb-2" style="color: #3b82f6">
+            Use Zustand when:
+          </h3>
+          <ul class="space-y-2">
+            
+            <li class="flex items-start gap-2">
+              <span class="text-green-500 mt-0.5">✓</span>
+              <span class="text-gray-700">You need fast store initialization</span>
+            </li>
+            
+            <li class="flex items-start gap-2">
+              <span class="text-green-500 mt-0.5">✓</span>
+              <span class="text-gray-700">You're building typical web applications</span>
+            </li>
+            
+          </ul>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold mb-2" style="color: #8b5cf6">
+            Use Redux when:
+          </h3>
+          <ul class="space-y-2">
+            
+            <li class="flex items-start gap-2">
+              <span class="text-green-500 mt-0.5">✓</span>
+              <span class="text-gray-700">You need fast store initialization</span>
+            </li>
+            
+          </ul>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+          <h3 class="text-lg font-semibold mb-2" style="color: #10b981">
+            Use Lattice when:
+          </h3>
+          <ul class="space-y-2">
+            
+            <li class="flex items-start gap-2">
+              <span class="text-green-500 mt-0.5">✓</span>
+              <span class="text-gray-700">You need fast store initialization</span>
+            </li>
+            
+            <li class="flex items-start gap-2">
+              <span class="text-green-500 mt-0.5">✓</span>
+              <span class="text-gray-700">Your app has frequent individual state changes</span>
+            </li>
+            
+            <li class="flex items-start gap-2">
+              <span class="text-green-500 mt-0.5">✓</span>
+              <span class="text-gray-700">You often update many items at once</span>
+            </li>
+            
+            <li class="flex items-start gap-2">
+              <span class="text-green-500 mt-0.5">✓</span>
+              <span class="text-gray-700">You have many components subscribing to state</span>
+            </li>
+            
+          </ul>
+        </div>
+        
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="mt-16 pt-8 border-t text-center text-gray-600">
+      <p>Performance data from 42 benchmarks</p>
+      <p class="text-sm mt-2">Lower times are better. Results may vary based on hardware and use case.</p>
+    </footer>
+  </div>
+</body>
+</html>
