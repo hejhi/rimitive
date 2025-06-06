@@ -26,6 +26,25 @@ function formatOpsPerSecond(hz) {
   return `${hz.toFixed(2)} ops/s`;
 }
 
+function getFramework(testName) {
+  if (testName.toLowerCase().includes('zustand')) return 'Zustand';
+  if (testName.toLowerCase().includes('redux')) return 'Redux';
+  if (testName.toLowerCase().includes('react adapter') || testName.toLowerCase().includes('lattice')) return 'Lattice';
+  if (testName.toLowerCase().includes('core') || testName.toLowerCase().includes('compose') || testName.toLowerCase().includes('createslice')) return 'Lattice Core';
+  return 'Other';
+}
+
+function getFrameworkColor(framework) {
+  const colors = {
+    'Lattice': '#10b981', // Green
+    'Lattice Core': '#10b981', // Green
+    'Zustand': '#3b82f6', // Blue
+    'Redux': '#8b5cf6', // Purple
+    'Other': '#6b7280' // Gray
+  };
+  return colors[framework] || colors.Other;
+}
+
 function generateHTML(results, filename) {
   const timestamp = new Date().toISOString();
   const testGroups = new Map();
@@ -48,7 +67,8 @@ function generateHTML(results, filename) {
           mean: bench.mean,
           hz: bench.hz,
           samples: bench.sampleCount,
-          rme: bench.rme
+          rme: bench.rme,
+          framework: getFramework(bench.name)
         });
       });
     });
@@ -68,9 +88,12 @@ function generateHTML(results, filename) {
       --text-secondary: #666666;
       --border: #e0e0e0;
       --accent: #007bff;
-      --success: #28a745;
-      --warning: #ffc107;
-      --danger: #dc3545;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --lattice: #10b981;
+      --zustand: #3b82f6;
+      --redux: #8b5cf6;
     }
     
     @media (prefers-color-scheme: dark) {
@@ -203,6 +226,33 @@ function generateHTML(results, filename) {
       font-size: 0.9em;
     }
     
+    .rank {
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.1em;
+    }
+    
+    .rank-1 { color: var(--success); }
+    .rank-2 { color: #22c55e; }
+    .rank-3 { color: #84cc16; }
+    .rank-fastest { background-color: rgba(16, 185, 129, 0.1); }
+    .rank-slowest { background-color: rgba(239, 68, 68, 0.1); }
+    
+    .framework-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8em;
+      font-weight: 500;
+      margin-left: 8px;
+      color: white;
+    }
+    
+    .framework-lattice { background-color: var(--lattice); }
+    .framework-zustand { background-color: var(--zustand); }
+    .framework-redux { background-color: var(--redux); }
+    .framework-other { background-color: var(--text-secondary); }
+    
     .footer {
       margin-top: 60px;
       padding-top: 20px;
@@ -229,6 +279,39 @@ function generateHTML(results, filename) {
     .mode-real {
       background-color: var(--success);
       color: #fff;
+    }
+    
+    .legend {
+      margin-bottom: 20px;
+      padding: 15px;
+      background-color: var(--bg-secondary);
+      border-radius: 8px;
+    }
+    
+    .legend-title {
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+    
+    .legend-items {
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .comparison-note {
+      margin-top: 10px;
+      padding: 10px 15px;
+      background-color: rgba(59, 130, 246, 0.1);
+      border-left: 4px solid var(--accent);
+      border-radius: 4px;
+      font-size: 0.9em;
     }
   </style>
 </head>
@@ -258,17 +341,65 @@ function generateHTML(results, filename) {
         <div class="value">${(totalDuration / 1000).toFixed(2)}s</div>
       </div>
     </div>
+
+    <div class="legend">
+      <div class="legend-title">Framework Legend</div>
+      <div class="legend-items">
+        <div class="legend-item">
+          <span class="framework-badge framework-lattice">Lattice</span>
+          <span>Lattice Framework (store-react & core)</span>
+        </div>
+        <div class="legend-item">
+          <span class="framework-badge framework-zustand">Zustand</span>
+          <span>Zustand Adapter</span>
+        </div>
+        <div class="legend-item">
+          <span class="framework-badge framework-redux">Redux</span>
+          <span>Redux Adapter</span>
+        </div>
+      </div>
+    </div>
 `;
 
   // Generate table for each suite
   testGroups.forEach((tests, suiteName) => {
+    // Sort tests by mean duration (fastest first) and add ranking
+    const sortedTests = [...tests].sort((a, b) => a.mean - b.mean);
+    sortedTests.forEach((test, index) => {
+      test.rank = index + 1;
+    });
+    
+    // Find tests that are comparable (similar operations)
+    const comparableGroups = new Map();
+    tests.forEach(test => {
+      // Extract operation type from test name
+      const operation = test.name.replace(/^(Zustand|Redux|React adapter|Lattice) - /, '');
+      if (!comparableGroups.has(operation)) {
+        comparableGroups.set(operation, []);
+      }
+      comparableGroups.get(operation).push(test);
+    });
+    
     html += `
     <div class="suite">
-      <h2>${suiteName}</h2>
+      <h2>${suiteName}</h2>`;
+    
+    // Add comparison note if there are comparable tests
+    const hasComparisons = Array.from(comparableGroups.values()).some(group => group.length > 1);
+    if (hasComparisons) {
+      html += `
+      <div class="comparison-note">
+        💡 Tests with similar names are comparable across frameworks. Rankings show relative performance.
+      </div>`;
+    }
+    
+    html += `
       <table>
         <thead>
           <tr>
+            <th style="text-align: center">Rank</th>
             <th>Test Name</th>
+            <th>Framework</th>
             <th style="text-align: right">Mean Duration</th>
             <th style="text-align: right">Operations/sec</th>
             <th style="text-align: right">Samples</th>
@@ -277,10 +408,19 @@ function generateHTML(results, filename) {
         </thead>
         <tbody>`;
     
-    tests.sort((a, b) => a.name.localeCompare(b.name)).forEach(test => {
+    sortedTests.forEach(test => {
+      const isFirstRank = test.rank === 1;
+      const isLastRank = test.rank === sortedTests.length;
+      const rankClass = test.rank <= 3 ? `rank-${test.rank}` : '';
+      const rowClass = isFirstRank ? 'rank-fastest' : (isLastRank ? 'rank-slowest' : '');
+      
       html += `
-          <tr>
+          <tr class="${rowClass}">
+            <td class="rank ${rankClass}">${test.rank}</td>
             <td class="test-name">${test.name}</td>
+            <td>
+              <span class="framework-badge framework-${test.framework.toLowerCase().replace(' ', '-')}">${test.framework}</span>
+            </td>
             <td class="duration">${formatDuration(test.mean)}</td>
             <td class="ops-per-second">${formatOpsPerSecond(test.hz)}</td>
             <td class="samples">${test.samples.toLocaleString()}</td>
@@ -290,7 +430,51 @@ function generateHTML(results, filename) {
     
     html += `
         </tbody>
-      </table>
+      </table>`;
+    
+    // Add framework performance summary for this suite
+    const frameworkStats = new Map();
+    tests.forEach(test => {
+      if (!frameworkStats.has(test.framework)) {
+        frameworkStats.set(test.framework, {
+          count: 0,
+          totalRank: 0,
+          tests: []
+        });
+      }
+      const stats = frameworkStats.get(test.framework);
+      stats.count++;
+      stats.totalRank += test.rank;
+      stats.tests.push(test);
+    });
+    
+    if (frameworkStats.size > 1) {
+      html += `
+      <div style="margin-top: 20px; padding: 15px; background-color: var(--bg-secondary); border-radius: 8px;">
+        <h4 style="margin-top: 0;">Framework Performance Summary</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">`;
+      
+      Array.from(frameworkStats.entries())
+        .sort((a, b) => (a[1].totalRank / a[1].count) - (b[1].totalRank / b[1].count))
+        .forEach(([framework, stats]) => {
+          const avgRank = stats.totalRank / stats.count;
+          const bestTest = stats.tests.reduce((best, test) => test.rank < best.rank ? test : best);
+          html += `
+          <div style="padding: 10px; background-color: var(--bg-primary); border-radius: 4px; border: 2px solid ${getFrameworkColor(framework)};">
+            <div style="font-weight: 600; color: ${getFrameworkColor(framework)};">${framework}</div>
+            <div style="font-size: 0.9em; color: var(--text-secondary); margin-top: 5px;">
+              Avg Rank: ${avgRank.toFixed(1)} | Tests: ${stats.count}<br>
+              Best: #${bestTest.rank} - ${formatDuration(bestTest.mean)}
+            </div>
+          </div>`;
+        });
+      
+      html += `
+        </div>
+      </div>`;
+    }
+    
+    html += `
     </div>`;
   });
 
