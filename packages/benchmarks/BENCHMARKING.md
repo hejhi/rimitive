@@ -66,6 +66,19 @@ pnpm bench:raw
 pnpm bench:real
 ```
 
+### Generating Reports
+```bash
+# Run benchmarks and generate all reports (HTML + Markdown)
+pnpm bench:report      # Both modes
+pnpm bench:report:raw  # Raw mode only
+pnpm bench:report:real # Real mode only
+
+# Generate reports from existing JSON files
+pnpm report:html [file.json]  # Generate HTML report
+pnpm report:md [file.json]    # Generate Markdown report
+pnpm report:all               # Generate all reports for all JSON files
+```
+
 ### Comparing Results
 ```bash
 # Compare any benchmark results
@@ -139,13 +152,43 @@ The benchmark suite automatically detects performance regressions:
 - `LATTICE_DISABLE_MEMOIZATION=true` - Disables view memoization
 - `NODE_OPTIONS=--max-old-space-size=4096` - Increases heap for large benchmarks
 
+## Report Formats
+
+### HTML Reports
+Interactive web-based reports with:
+- Summary statistics and performance metrics
+- Sortable tables with operations per second
+- Dark mode support
+- Mobile-responsive design
+- Test suite grouping
+
+### Markdown Reports
+Text-based reports ideal for:
+- GitHub comments and PRs
+- Documentation inclusion
+- Version control tracking
+- CI/CD pipeline output
+- Detailed statistics in collapsible sections
+
+### JSON Output
+Raw data format for:
+- Programmatic analysis
+- Custom visualizations
+- Historical tracking
+- API integration
+
 ## Continuous Integration
 
-CI runs output JSON results for tracking:
+CI runs output multiple formats:
 - `bench-results-raw.json` - Raw performance data
 - `bench-results-real.json` - Cached performance data
+- `bench-results-raw.html` - Interactive raw performance report
+- `bench-results-real.html` - Interactive cached performance report
+- `bench-results-raw.md` - Markdown raw performance report
+- `bench-results-real.md` - Markdown cached performance report
 
 Use these for:
 - Performance tracking over time
 - Regression detection in PR checks
 - Performance dashboards
+- Stakeholder reporting

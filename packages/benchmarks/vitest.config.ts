@@ -8,6 +8,9 @@ export default defineConfig({
     benchmark: {
       // Include benchmark files
       include: ['src/**/*.bench.{ts,tsx}'],
+      // Output JSON results when specified via CLI
+      // outputJson: 'bench-results.json', // Can be overridden via CLI
+      // reporters: ['default', 'json'], // Available reporters
     },
     // Pool options for benchmarks
     pool: 'forks',

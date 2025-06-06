@@ -1,0 +1,9 @@
+# Benchmark results
+bench-results*.json
+bench-results*.html
+bench-results*.md
+bench-baseline*.json
+
+# Temporary files
+*.tmp
+*.log

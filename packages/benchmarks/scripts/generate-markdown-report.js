@@ -1,0 +1,162 @@
+#!/usr/bin/env node
+
+/**
+ * @fileoverview Generate Markdown report from Vitest benchmark JSON results
+ * 
+ * Usage:
+ *   node scripts/generate-markdown-report.js [input.json] [output.md]
+ * 
+ * If no files specified, uses bench-results.json and bench-report.md
+ */
+
+import { readFileSync, writeFileSync } from 'fs';
+import { basename } from 'path';
+
+function formatDuration(ms) {
+  const ns = ms * 1000000; // Vitest gives ms, convert to ns for consistency
+  if (ns < 1000) return `${ns.toFixed(2)}ns`;
+  if (ns < 1000000) return `${(ns / 1000).toFixed(2)}μs`;
+  if (ns < 1000000000) return `${(ns / 1000000).toFixed(2)}ms`;
+  return `${(ns / 1000000000).toFixed(2)}s`;
+}
+
+function formatOpsPerSecond(hz) {
+  if (hz > 1000000) return `${(hz / 1000000).toFixed(2)}M ops/s`;
+  if (hz > 1000) return `${(hz / 1000).toFixed(2)}K ops/s`;
+  return `${hz.toFixed(2)} ops/s`;
+}
+
+function generateMarkdown(results, filename) {
+  const timestamp = new Date().toISOString();
+  const testGroups = new Map();
+  let totalTests = 0;
+  let totalDuration = 0;
+  const allBenchmarks = [];
+  
+  // Process Vitest benchmark JSON format
+  results.files.forEach(file => {
+    file.groups.forEach(group => {
+      const suiteName = group.fullName.split(' > ').slice(1).join(' > ');
+      if (!testGroups.has(suiteName)) {
+        testGroups.set(suiteName, []);
+      }
+      
+      group.benchmarks.forEach(bench => {
+        totalTests++;
+        totalDuration += bench.totalTime;
+        const benchData = {
+          name: bench.name,
+          suiteName: suiteName,
+          mean: bench.mean,
+          hz: bench.hz,
+          samples: bench.sampleCount,
+          rme: bench.rme,
+          min: bench.min,
+          max: bench.max,
+          p75: bench.p75,
+          p99: bench.p99,
+          p995: bench.p995,
+          p999: bench.p999
+        };
+        testGroups.get(suiteName).push(benchData);
+        allBenchmarks.push(benchData);
+      });
+    });
+  });
+  
+  let md = `# Lattice Benchmark Report\n\n`;
+  
+  // Add mode badge if applicable
+  if (filename.includes('raw')) {
+    md += `> 🏷️ **RAW MODE** - Memoization disabled, measuring pure computation performance\n\n`;
+  } else if (filename.includes('real')) {
+    md += `> 🏷️ **REAL MODE** - Memoization enabled, measuring cached performance\n\n`;
+  }
+  
+  md += `**Generated:** ${new Date(timestamp).toLocaleString()}  \n`;
+  md += `**File:** \`${filename}\`\n\n`;
+  
+  // Summary section
+  md += `## Summary\n\n`;
+  md += `| Metric | Value |\n`;
+  md += `|--------|-------|\n`;
+  md += `| Total Tests | ${totalTests} |\n`;
+  md += `| Test Suites | ${testGroups.size} |\n`;
+  md += `| Total Duration | ${(totalDuration / 1000).toFixed(2)}s |\n\n`;
+  
+  // Generate tables for each suite
+  testGroups.forEach((tests, suiteName) => {
+    md += `## ${suiteName}\n\n`;
+    
+    // Main results table
+    md += `| Test Name | Mean | Ops/sec | Samples | RME |\n`;
+    md += `|-----------|------|---------|--------:|----:|\n`;
+    
+    tests.sort((a, b) => a.name.localeCompare(b.name)).forEach(test => {
+      const name = test.name.replace(/\|/g, '\\|'); // Escape pipes in test names
+      md += `| ${name} | ${formatDuration(test.mean)} | ${formatOpsPerSecond(test.hz)} | ${test.samples.toLocaleString()} | ±${test.rme.toFixed(2)}% |\n`;
+    });
+    
+    md += '\n';
+    
+    // Add detailed statistics for each test
+    md += `<details>\n<summary>Detailed Statistics</summary>\n\n`;
+    
+    tests.forEach(test => {
+      md += `### ${test.name}\n\n`;
+      md += `- **Mean:** ${formatDuration(test.mean)}\n`;
+      md += `- **Min:** ${formatDuration(test.min)}\n`;
+      md += `- **Max:** ${formatDuration(test.max)}\n`;
+      md += `- **Percentiles:**\n`;
+      md += `  - P75: ${formatDuration(test.p75)}\n`;
+      md += `  - P99: ${formatDuration(test.p99)}\n`;
+      md += `  - P99.5: ${formatDuration(test.p995)}\n`;
+      md += `  - P99.9: ${formatDuration(test.p999)}\n`;
+      md += `- **Samples:** ${test.samples.toLocaleString()}\n`;
+      md += `- **Operations/sec:** ${formatOpsPerSecond(test.hz)}\n\n`;
+    });
+    
+    md += `</details>\n\n`;
+  });
+  
+  // Performance insights section
+  md += `## Performance Insights\n\n`;
+  
+  // Find fastest and slowest tests
+  const sortedBySpeed = [...allBenchmarks].sort((a, b) => a.mean - b.mean);
+  
+  if (sortedBySpeed.length > 0) {
+    md += `### Fastest Operations\n\n`;
+    sortedBySpeed.slice(0, 5).forEach((test, i) => {
+      md += `${i + 1}. **${test.name}** - ${formatDuration(test.mean)} (${formatOpsPerSecond(test.hz)})\n`;
+    });
+    
+    md += `\n### Slowest Operations\n\n`;
+    sortedBySpeed.slice(-5).reverse().forEach((test, i) => {
+      md += `${i + 1}. **${test.name}** - ${formatDuration(test.mean)} (${formatOpsPerSecond(test.hz)})\n`;
+    });
+  }
+  
+  // Footer
+  md += `\n---\n\n`;
+  md += `*Generated by Lattice Benchmark Suite*\n`;
+  
+  return md;
+}
+
+// Main
+const args = process.argv.slice(2);
+const inputFile = args[0] || 'bench-results.json';
+const outputFile = args[1] || inputFile.replace('.json', '.md');
+
+console.log(`Generating Markdown report from ${inputFile}`);
+
+try {
+  const results = JSON.parse(readFileSync(inputFile, 'utf-8'));
+  const markdown = generateMarkdown(results, inputFile);
+  writeFileSync(outputFile, markdown);
+  console.log(`✅ Markdown report generated: ${outputFile}`);
+} catch (error) {
+  console.error(`❌ Failed to generate report: ${error.message}`);
+  process.exit(1);
+}
