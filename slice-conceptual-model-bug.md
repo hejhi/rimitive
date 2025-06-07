@@ -73,3 +73,32 @@ views: {
 2. **Performance Issues**: Unnecessary recomputation of unused values
 3. **Conceptual Confusion**: Slices are both selectors AND computed views
 4. **Compose Confusion**: `compose()` seems redundant when slices already compute
+
+
+## Options
+
+Go all in on the zustand-style pattern, and ensure that createSlice only runs on store creation:
+
+```ts
+// ...
+stats: createSlice(model, (m) => ({
+  ...subSlice(m),
+  total: () => m().todos.length,
+  active: () => m().todos.filter((t) => !t.done).length,
+  completed: () => m().todos.filter((t) => t.done).length,
+})),
+// ...
+
+views: {
+  view1: someSlice,
+  // Computed view - function that returns UI attributes
+  counter: () => countSlice((state) => ({
+    'data-count': state.count,
+    'aria-label': `Count is ${state.count}`,
+    className: state.count % 2 === 0 ? 'even' : 'odd'
+  })),
+  
+  // Static view - slice is the view
+  incrementButton
+}
+```
