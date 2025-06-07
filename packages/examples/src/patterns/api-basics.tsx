@@ -62,8 +62,8 @@ export const apiBasicsComponent = () => {
 
   // Basic slice - no API usage
   const stateSlice = createSlice(model, (m) => ({
-    count: m.count,
-    message: m.message,
+    count: m().count,
+    message: m().message,
   }));
 
   // Slice using executeSlice to compose data
@@ -78,38 +78,38 @@ export const apiBasicsComponent = () => {
   // Actions with API usage for logging
   const actions = createSlice(model, (m) => ({
     increment: () => {
-      m.increment();
+      m().increment();
       // Note: State won't be updated until after this function returns
     },
 
     decrement: () => {
-      m.decrement();
+      m().decrement();
     },
 
     updateMessage: (msg: string) => {
-      m.updateMessage(msg);
+      m().updateMessage(msg);
     },
 
     reset: () => {
       const summary = summarySlice(m);
       console.log('[API] Resetting from state:', summary.summary);
-      m.reset();
+      m().reset();
     },
   }));
 
   // History slice with filtering
   const historySlice = createSlice(model, (m) => ({
-    allHistory: m.history,
-    recentHistory: m.history.slice(-5),
-    historyWithTimestamps: m.history.map((entry, index) => ({
+    allHistory: m().history,
+    recentHistory: m().history.slice(-5),
+    historyWithTimestamps: m().history.map((entry, index) => ({
       id: index,
       message: entry,
       timestamp: new Date().toISOString(),
     })),
     stats: {
-      totalActions: m.history.length,
-      incrementCount: m.history.filter((h) => h.includes('Incremented')).length,
-      decrementCount: m.history.filter((h) => h.includes('Decremented')).length,
+      totalActions: m().history.length,
+      incrementCount: m().history.filter((h) => h.includes('Incremented')).length,
+      decrementCount: m().history.filter((h) => h.includes('Decremented')).length,
     },
   }));
 

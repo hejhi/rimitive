@@ -157,10 +157,10 @@ describe('API Parameter Functionality', () => {
         // Slice that inspects state through model parameter
         const stateInspectorSlice = createSlice(model, (m) => {
           return {
-            fromParameter: m.counter,
-            fromModel: m.counter,
+            fromParameter: m().counter,
+            fromModel: m().counter,
             statesMatch: true, // m is always the current state
-            hasIncrementFunction: typeof m.increment === 'function',
+            hasIncrementFunction: typeof m().increment === 'function',
           };
         });
 
@@ -358,18 +358,18 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Individual domain slices
-        const userSlice = createSlice(model, (m) => m.user);
-        const postsSlice = createSlice(model, (m) => m.posts);
-        const commentsSlice = createSlice(model, (m) => m.comments);
+        const userSlice = createSlice(model, (m) => m().user);
+        const postsSlice = createSlice(model, (m) => m().posts);
+        const commentsSlice = createSlice(model, (m) => m().comments);
 
         // Stats slice that aggregates data
         const statsSlice = createSlice(model, (m) => {
-          const posts = postsSlice(() => m);
-          const comments = commentsSlice(() => m);
+          const posts = postsSlice(m);
+          const comments = commentsSlice(m);
 
           return {
             totalPosts: posts.length,
-            totalLikes: posts.reduce((sum, p) => sum + p.likes, 0),
+            totalLikes: posts.reduce((sum: number, p: any) => sum + p.likes, 0),
             totalComments: comments.length,
             avgCommentsPerPost: comments.length / posts.length,
           };
@@ -390,7 +390,7 @@ describe('API Parameter Functionality', () => {
                   comments: statsSlice.totalComments,
                   engagement: statsSlice.avgCommentsPerPost,
                 },
-                recentPosts: postsSlice.slice(0, 5).map((p) => ({
+                recentPosts: postsSlice.slice(0, 5).map((p: any) => ({
                   title: p.title,
                   likes: p.likes,
                 })),
@@ -451,13 +451,13 @@ describe('API Parameter Functionality', () => {
           nodeId: number
         ): SliceFactory<NodeModel, TreeNode | null> =>
           createSlice(model, (m) => {
-            const node = m.nodes.find((n) => n.id === nodeId);
+            const node = m().nodes.find((n: any) => n.id === nodeId);
             if (!node) return null;
 
-            const children = m.nodes
-              .filter((n) => n.parentId === nodeId)
-              .map((child) => createNodeTreeSlice(child.id)(() => m))
-              .filter((child): child is TreeNode => child !== null);
+            const children = m().nodes
+              .filter((n: any) => n.parentId === nodeId)
+              .map((child: any) => createNodeTreeSlice(child.id)(m))
+              .filter((child: any): child is TreeNode => child !== null);
 
             return {
               id: node.id,
@@ -468,11 +468,11 @@ describe('API Parameter Functionality', () => {
 
         // Tree view starting from root
         const treeSlice = createSlice(model, (m) => {
-          const rootNodes = m.nodes.filter((n) => n.parentId === null);
+          const rootNodes = m().nodes.filter((n: any) => n.parentId === null);
           return {
             tree: rootNodes
-              .map((root) => createNodeTreeSlice(root.id)(() => m))
-              .filter((node): node is TreeNode => node !== null),
+              .map((root: any) => createNodeTreeSlice(root.id)(m))
+              .filter((node: any): node is TreeNode => node !== null),
           };
         });
 
@@ -529,13 +529,13 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Team slices
-        const teamASlice = createSlice(model, (m) => m.teamA);
-        const teamBSlice = createSlice(model, (m) => m.teamB);
+        const teamASlice = createSlice(model, (m) => m().teamA);
+        const teamBSlice = createSlice(model, (m) => m().teamB);
 
         // Comparison slice that depends on both teams
         const comparisonSlice = createSlice(model, (m) => {
-          const teamA = teamASlice(() => m);
-          const teamB = teamBSlice(() => m);
+          const teamA = teamASlice(m);
+          const teamB = teamBSlice(m);
 
           return {
             leader:
@@ -551,9 +551,9 @@ describe('API Parameter Functionality', () => {
 
         // Match slice that uses comparison
         const matchSlice = createSlice(model, (m) => {
-          const comparison = comparisonSlice(() => m);
-          const teamA = teamASlice(() => m);
-          const teamB = teamBSlice(() => m);
+          const comparison = comparisonSlice(m);
+          const teamA = teamASlice(m);
+          const teamB = teamBSlice(m);
 
           return {
             teams: [teamA, teamB],

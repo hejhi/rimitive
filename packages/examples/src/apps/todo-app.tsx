@@ -124,25 +124,25 @@ const todoAppComponent = () => {
       ) {
         console.log('[TodoApp] Adding todo:', text);
       }
-      m.addTodo(text);
+      m().addTodo(text);
     },
-    toggleTodo: m.toggleTodo,
-    deleteTodo: m.deleteTodo,
-    editTodo: m.editTodo,
+    toggleTodo: m().toggleTodo,
+    deleteTodo: m().deleteTodo,
+    editTodo: m().editTodo,
     clearCompleted: () => {
-      m.clearCompleted();
+      m().clearCompleted();
     },
-    toggleAll: m.toggleAll,
-    setFilter: m.setFilter,
-    setSearchQuery: m.setSearchQuery,
-    setSortBy: m.setSortBy,
+    toggleAll: m().toggleAll,
+    setFilter: m().setFilter,
+    setSearchQuery: m().setSearchQuery,
+    setSortBy: m().setSortBy,
   }));
 
   // Computed views that process todos
   const todosProcessor = createSlice(model, (m) => {
     // Return an object with computed values
     const filtered = (() => {
-      let result = m.todos;
+      let result = m().todos;
 
       // Log filtering operations in development
       if (
@@ -150,30 +150,30 @@ const todoAppComponent = () => {
         process.env?.NODE_ENV === 'development'
       ) {
         console.log('[TodoApp] Processing todos:', {
-          totalCount: m.todos.length,
-          filter: m.filter,
-          searchQuery: m.searchQuery,
-          sortBy: m.sortBy,
+          totalCount: m().todos.length,
+          filter: m().filter,
+          searchQuery: m().searchQuery,
+          sortBy: m().sortBy,
         });
       }
 
       // Apply search filter
-      if (m.searchQuery) {
+      if (m().searchQuery) {
         result = result.filter((todo) =>
-          todo.text.toLowerCase().includes(m.searchQuery)
+          todo.text.toLowerCase().includes(m().searchQuery)
         );
       }
 
       // Apply status filter
-      if (m.filter !== 'all') {
+      if (m().filter !== 'all') {
         result = result.filter((todo) =>
-          m.filter === 'active' ? !todo.completed : todo.completed
+          m().filter === 'active' ? !todo.completed : todo.completed
         );
       }
 
       // Apply sorting
       result = [...result].sort((a, b) => {
-        if (m.sortBy === 'alphabetical') {
+        if (m().sortBy === 'alphabetical') {
           return a.text.localeCompare(b.text);
         }
         return b.createdAt - a.createdAt; // Newest first
@@ -184,8 +184,8 @@ const todoAppComponent = () => {
 
     // Calculate stats with performance tracking
     const startTime = performance.now();
-    const total = m.todos.length;
-    const completed = m.todos.filter((t) => t.completed).length;
+    const total = m().todos.length;
+    const completed = m().todos.filter((t) => t.completed).length;
     const active = total - completed;
 
     if (
@@ -215,8 +215,8 @@ const todoAppComponent = () => {
     model,
     compose({ actions, processor: todosProcessor }, (m, { actions }) => ({
       onClick: () => actions.setFilter('all'),
-      className: m.filter === 'all' ? 'selected' : '',
-      'aria-pressed': m.filter === 'all',
+      className: m().filter === 'all' ? 'selected' : '',
+      'aria-pressed': m().filter === 'all',
       children: 'All',
     }))
   );
@@ -225,8 +225,8 @@ const todoAppComponent = () => {
     model,
     compose({ actions, processor: todosProcessor }, (m, { actions }) => ({
       onClick: () => actions.setFilter('active'),
-      className: m.filter === 'active' ? 'selected' : '',
-      'aria-pressed': m.filter === 'active',
+      className: m().filter === 'active' ? 'selected' : '',
+      'aria-pressed': m().filter === 'active',
       children: 'Active',
     }))
   );
@@ -235,8 +235,8 @@ const todoAppComponent = () => {
     model,
     compose({ actions, processor: todosProcessor }, (m, { actions }) => ({
       onClick: () => actions.setFilter('completed'),
-      className: m.filter === 'completed' ? 'selected' : '',
-      'aria-pressed': m.filter === 'completed',
+      className: m().filter === 'completed' ? 'selected' : '',
+      'aria-pressed': m().filter === 'completed',
       children: 'Completed',
     }))
   );

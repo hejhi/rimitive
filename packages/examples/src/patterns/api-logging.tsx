@@ -148,25 +148,25 @@ export const debuggingComponent = () => {
   // Actions slice with logging
   const actions = createSlice(model, (m) => ({
     login: (username: string) => {
-      m.login(username);
+      m().login(username);
     },
 
     logout: () => {
-      m.logout();
+      m().logout();
     },
 
-    markNotificationRead: m.markNotificationRead,
-    updateSettings: m.updateSettings,
-    toggleDebugMode: m.toggleDebugMode,
+    markNotificationRead: m().markNotificationRead,
+    updateSettings: m().updateSettings,
+    toggleDebugMode: m().toggleDebugMode,
   }));
 
   // State slice with debugging info
   const stateSlice = createSlice(model, (m) => {
     const baseState = {
-      user: m.user,
-      notifications: m.notifications,
-      settings: m.settings,
-      debugMode: m.debugMode,
+      user: m().user,
+      notifications: m().notifications,
+      settings: m().settings,
+      debugMode: m().debugMode,
     };
 
     return baseState;
@@ -176,14 +176,14 @@ export const debuggingComponent = () => {
   const notificationViews = createSlice(model, (m) => {
     const startTime = performance.now();
 
-    const unreadNotifications = m.notifications.filter((n) => !n.read);
-    const readNotifications = m.notifications.filter((n) => n.read);
+    const unreadNotifications = m().notifications.filter((n) => !n.read);
+    const readNotifications = m().notifications.filter((n) => n.read);
 
-    if (m.debugMode) {
+    if (m().debugMode) {
       const endTime = performance.now();
       logger.debug('Notification filtering', {
         duration: `${(endTime - startTime).toFixed(2)}ms`,
-        totalCount: m.notifications.length,
+        totalCount: m().notifications.length,
         unreadCount: unreadNotifications.length,
         readCount: readNotifications.length,
       });
@@ -199,17 +199,17 @@ export const debuggingComponent = () => {
 
   // Settings view with change detection
   const settingsView = createSlice(model, (m) => ({
-    ...m.settings,
+    ...m().settings,
 
     // Helper to update with logging
-    updateWithLogging: (updates: Partial<typeof m.settings>) => {
+    updateWithLogging: (updates: Partial<typeof m().settings>) => {
       actions(m).updateSettings(updates);
     },
   }));
 
   // Debug panel view
   const debugView = createSlice(model, (m) => {
-    if (!m.debugMode) return null;
+    if (!m().debugMode) return null;
 
     const logs = logStore.slice(-20); // Last 20 log entries
 

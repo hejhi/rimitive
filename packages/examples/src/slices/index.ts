@@ -49,16 +49,16 @@ export const userComponent = () => {
   }));
 
   const actions = createSlice(model, (m) => ({
-    login: m.login,
-    logout: m.logout,
-    updateProfile: m.updateProfile,
-  }));
+    login: m().login,
+    logout: m().logout,
+    updateProfile: m().updateProfile,
+  }))
 
   createSlice(model, (m) => ({
-    user: m.user,
-    isLoggedIn: m.user !== null,
-    isLoading: m.isLoading,
-    error: m.error,
+    user: m().user,
+    isLoggedIn: m().user !== null,
+    isLoading: m().isLoading,
+    error: m().error,
   }));
 
   return {
@@ -68,19 +68,19 @@ export const userComponent = () => {
       loginButton: createSlice(model, (m) => ({
         onClick: async () => {
           // Example: Log login attempts
-          console.log('[User] Login attempt for:', m.user?.email || 'unknown');
-          await m.login('user@example.com', 'password');
+          console.log('[User] Login attempt for:', m().user?.email || 'unknown');
+          await m().login('user@example.com', 'password');
         },
-        disabled: m.isLoading,
-        children: m.isLoading ? 'Logging in...' : 'Login',
+        disabled: m().isLoading,
+        children: m().isLoading ? 'Logging in...' : 'Login',
       })),
 
       userProfile: createSlice(model, (m) => ({
         // Example: Use API to access additional context
         'data-last-update': new Date().toISOString(),
-        className: m.user !== null ? 'profile-active' : 'profile-inactive',
-        'data-user-id': m.user?.id || '',
-        children: m.user ? `Welcome, ${m.user.name}` : 'Not logged in',
+        className: m().user !== null ? 'profile-active' : 'profile-inactive',
+        'data-user-id': m().user?.id || '',
+        children: m().user ? `Welcome, ${m().user.name}` : 'Not logged in',
       })),
     },
   };
@@ -134,16 +134,16 @@ export const cartComponent = () => {
   }));
 
   const actions = createSlice(model, (m) => ({
-    addItem: m.addItem,
-    removeItem: m.removeItem,
-    updateQuantity: m.updateQuantity,
-    clear: m.clear,
+    addItem: m().addItem,
+    removeItem: m().removeItem,
+    updateQuantity: m().updateQuantity,
+    clear: m().clear,
   }));
 
   const cartSlice = createSlice(model, (m) => ({
-    items: m.items,
-    itemCount: m.items.reduce((sum, item) => sum + item.quantity, 0),
-    total: m.items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    items: m().items,
+    itemCount: m().items.reduce((sum, item) => sum + item.quantity, 0),
+    total: m().items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   }));
 
   // Computed view for cart summary with API
@@ -193,15 +193,15 @@ export const themeComponent = () => {
   }));
 
   const actions = createSlice(model, (m) => ({
-    setTheme: m.setTheme,
-    setFontSize: m.setFontSize,
-    toggleReducedMotion: m.toggleReducedMotion,
+    setTheme: m().setTheme,
+    setFontSize: m().setFontSize,
+    toggleReducedMotion: m().toggleReducedMotion,
   }));
 
   createSlice(model, (m) => ({
-    theme: m.theme,
-    fontSize: m.fontSize,
-    reducedMotion: m.reducedMotion,
+    theme: m().theme,
+    fontSize: m().fontSize,
+    reducedMotion: m().reducedMotion,
   }));
 
   return {
@@ -211,25 +211,25 @@ export const themeComponent = () => {
       themeToggle: createSlice(model, (m) => ({
         // Example: Use API to log theme changes
         onThemeChange: (theme: 'light' | 'dark' | 'system') => {
-          const oldTheme = m.theme;
+          const oldTheme = m().theme;
           console.log(`[Theme] Changing from ${oldTheme} to ${theme}`);
-          m.setTheme(theme);
+          m().setTheme(theme);
         },
-        currentTheme: m.theme,
-        'aria-pressed': m.theme === 'dark',
-        className: `theme-${m.theme}`,
+        currentTheme: m().theme,
+        'aria-pressed': m().theme === 'dark',
+        className: `theme-${m().theme}`,
       })),
 
       documentRoot: createSlice(model, (m) => ({
         className: [
-          `theme-${m.theme}`,
-          `font-${m.fontSize}`,
-          m.reducedMotion ? 'reduced-motion' : '',
+          `theme-${m().theme}`,
+          `font-${m().fontSize}`,
+          m().reducedMotion ? 'reduced-motion' : '',
         ]
           .filter(Boolean)
           .join(' '),
-        'data-theme': m.theme,
-        'data-font-size': m.fontSize,
+        'data-theme': m().theme,
+        'data-font-size': m().fontSize,
       })),
     },
   };
@@ -289,15 +289,15 @@ export const dashboardComponent = () => {
     compose(
       {
         userSlice: createSlice(model, (m) => ({
-          user: m.user,
-          isLoading: m.isLoading,
-          error: m.error,
+          user: m().user,
+          isLoading: m().isLoading,
+          error: m().error,
         })),
-        cartSlice: createSlice(model, (m) => ({ items: m.items })),
+        cartSlice: createSlice(model, (m) => ({ items: m().items })),
         themeSlice: createSlice(model, (m) => ({
-          theme: m.theme,
-          fontSize: m.fontSize,
-          reducedMotion: m.reducedMotion,
+          theme: m().theme,
+          fontSize: m().fontSize,
+          reducedMotion: m().reducedMotion,
         })),
       },
       (m, { userSlice, cartSlice, themeSlice }) => ({
@@ -306,8 +306,8 @@ export const dashboardComponent = () => {
         userName: userSlice.user?.name || 'Guest',
         cartItemCount: cartSlice.items.length,
         currentTheme: themeSlice.theme,
-        sidebarOpen: m.sidebarOpen,
-        activeTab: m.activeTab,
+        sidebarOpen: m().sidebarOpen,
+        activeTab: m().activeTab,
       })
     )
   );
@@ -316,16 +316,16 @@ export const dashboardComponent = () => {
     model,
     actions: createSlice(model, (m) => ({
       // User actions
-      login: m.login,
-      logout: m.logout,
+      login: m().login,
+      logout: m().logout,
       // Cart actions
-      addToCart: m.addItem,
-      clearCart: m.clear,
+      addToCart: m().addItem,
+      clearCart: m().clear,
       // Theme actions
-      setTheme: m.setTheme,
+      setTheme: m().setTheme,
       // Dashboard actions
-      toggleSidebar: m.toggleSidebar,
-      setActiveTab: m.setActiveTab,
+      toggleSidebar: m().toggleSidebar,
+      setActiveTab: m().setActiveTab,
     })),
     views: {
       header: createSlice(model, (m) => {
@@ -342,8 +342,8 @@ export const dashboardComponent = () => {
         // Example: Use API to track navigation events
         tabs: (['overview', 'orders', 'settings'] as const).map((tab) => ({
           name: tab,
-          active: m.activeTab === tab,
-          onClick: () => m.setActiveTab(tab),
+          active: m().activeTab === tab,
+          onClick: () => m().setActiveTab(tab),
         })),
       })),
     },

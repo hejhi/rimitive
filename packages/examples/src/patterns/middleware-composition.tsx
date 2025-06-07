@@ -235,39 +235,39 @@ export const middlewareComponent = () => {
   }));
 
   // Basic slices
-  const itemsSlice = createSlice(model, (m) => m.items);
-  const filtersSlice = createSlice(model, (m) => m.filters);
+  const itemsSlice = createSlice(model, (m) => m().items);
+  const filtersSlice = createSlice(model, (m) => m().filters);
 
   // Filtered items with multiple middleware layers
   const filteredItemsSlice = withErrorBoundary(
     withPerformanceMonitoring(
       withCaching(
         createSlice(model, (m) => {
-          let items = m.items;
+          let items = m().items;
 
           // Apply search filter
-          if (m.filters.search) {
+          if (m().filters.search) {
             items = items.filter((item) =>
-              item.name.toLowerCase().includes(m.filters.search.toLowerCase())
+              item.name.toLowerCase().includes(m().filters.search.toLowerCase())
             );
           }
 
           // Apply tag filters
-          if (m.filters.tags.length > 0) {
+          if (m().filters.tags.length > 0) {
             items = items.filter((item) =>
-              m.filters.tags.some((tag) => item.tags.includes(tag))
+              m().filters.tags.some((tag) => item.tags.includes(tag))
             );
           }
 
           // Apply price range filter
-          const [minPrice, maxPrice] = m.filters.priceRange;
+          const [minPrice, maxPrice] = m().filters.priceRange;
           items = items.filter(
             (item) => item.price >= minPrice && item.price <= maxPrice
           );
 
           // Apply sorting
           items = [...items].sort((a, b) => {
-            switch (m.sortBy) {
+            switch (m().sortBy) {
               case 'name':
                 return a.name.localeCompare(b.name);
               case 'price':
@@ -282,7 +282,7 @@ export const middlewareComponent = () => {
           return items;
         }),
         (model) =>
-          `${model.filters.search}-${model.filters.tags.join(',')}-${model.filters.priceRange.join('-')}-${model.sortBy}`
+          `${model().filters.search}-${model().filters.tags.join(',')}-${model().filters.priceRange.join('-')}-${model().sortBy}`
       ),
       'filteredItems'
     ),
@@ -296,7 +296,7 @@ export const middlewareComponent = () => {
       const filteredItems = filteredItemsSlice(m);
 
       return {
-        totalItems: m.items.length,
+        totalItems: m().items.length,
         filteredItems: filteredItems.length,
         totalValue: filteredItems.reduce((sum, item) => sum + item.price, 0),
         averagePrice:
@@ -304,7 +304,7 @@ export const middlewareComponent = () => {
             ? filteredItems.reduce((sum, item) => sum + item.price, 0) /
               filteredItems.length
             : 0,
-        tags: Array.from(new Set(m.items.flatMap((item) => item.tags))),
+        tags: Array.from(new Set(m().items.flatMap((item) => item.tags))),
       };
     }),
     (stats) => ({
@@ -318,7 +318,7 @@ export const middlewareComponent = () => {
 
   // Actions with middleware
   const actions = createSlice(model, (m) => ({
-    addItem: (item: Parameters<typeof m.addItem>[0]) => {
+    addItem: (item: Parameters<typeof m().addItem>[0]) => {
       // Validate item before adding
       if (!item.name || item.price < 0) {
         console.error('[Actions] Invalid item:', item);
@@ -326,7 +326,7 @@ export const middlewareComponent = () => {
       }
 
       console.log('[Actions] Adding item:', item);
-      m.addItem(item);
+      m().addItem(item);
 
       // Clear cache after mutation
       cache.clear();
@@ -334,24 +334,24 @@ export const middlewareComponent = () => {
 
     removeItem: (id: string) => {
       console.log('[Actions] Removing item:', id);
-      m.removeItem(id);
+      m().removeItem(id);
 
       // Clear cache after mutation
       cache.clear();
     },
 
-    updateFilters: m.updateFilters,
-    setSortBy: m.setSortBy,
-    undo: m.undo,
-    redo: m.redo,
+    updateFilters: m().updateFilters,
+    setSortBy: m().setSortBy,
+    undo: m().undo,
+    redo: m().redo,
   }));
 
   // History view
   const historyView = createSlice(model, (m) => ({
-    entries: m.history,
-    currentIndex: m.historyIndex,
-    canUndo: m.historyIndex >= 0,
-    canRedo: m.historyIndex < m.history.length - 1,
+    entries: m().history,
+    currentIndex: m().historyIndex,
+    canUndo: m().historyIndex >= 0,
+    canRedo: m().historyIndex < m().history.length - 1,
   }));
 
   return {

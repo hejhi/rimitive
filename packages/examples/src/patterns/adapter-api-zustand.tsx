@@ -118,24 +118,24 @@ const analyticsComponent = () => {
 
   // Basic view slice
   const dashboardSlice = createSlice(model, (m) => ({
-    pageViews: m.pageViews,
-    clickEvents: m.clickEvents,
-    sessionDuration: Date.now() - m.sessionStart,
-    lastActivityAgo: Date.now() - m.lastActivity,
-    metrics: m.metrics,
-    featuresUsed: Array.from(m.featuresUsed),
+    pageViews: m().pageViews,
+    clickEvents: m().clickEvents,
+    sessionDuration: Date.now() - m().sessionStart,
+    lastActivityAgo: Date.now() - m().lastActivity,
+    metrics: m().metrics,
+    featuresUsed: Array.from(m().featuresUsed),
   }));
 
   // Demonstrating proper slice composition with compose()
   const realtimeMetricsSlice = createSlice(
     model,
     compose({ dashboard: dashboardSlice }, (m, { dashboard }) => ({
-      renderCount: m.metrics.renderCount,
-      stateUpdates: m.metrics.stateUpdates,
+      renderCount: m().metrics.renderCount,
+      stateUpdates: m().metrics.stateUpdates,
       updateRate:
-        m.metrics.stateUpdates > 0
+        m().metrics.stateUpdates > 0
           ? (
-              m.metrics.stateUpdates /
+              m().metrics.stateUpdates /
               (dashboard.sessionDuration / 1000)
             ).toFixed(2)
           : '0',
@@ -159,29 +159,29 @@ const analyticsComponent = () => {
   );
 
   const featureTrackingSlice = createSlice(model, (m) => ({
-    featuresUsed: Array.from(m.featuresUsed),
-    featureCount: m.featuresUsed.size,
-    mostRecentFeature: Array.from(m.featuresUsed).pop() || 'None',
+    featuresUsed: Array.from(m().featuresUsed),
+    featureCount: m().featuresUsed.size,
+    mostRecentFeature: Array.from(m().featuresUsed).pop() || 'None',
   }));
 
   // Actions slice - only uses universal API features
   const actions = createSlice(model, (m) => ({
     trackPageView: () => {
-      m.trackPageView();
-      m.trackFeatureUsage('page-navigation');
+      m().trackPageView();
+      m().trackFeatureUsage('page-navigation');
     },
 
     trackClick: (element: string) => {
-      m.trackClick(element);
-      m.trackFeatureUsage(`click-${element}`);
+      m().trackClick(element);
+      m().trackFeatureUsage(`click-${element}`);
     },
 
     resetSession: () => {
-      m.resetSession();
+      m().resetSession();
     },
 
     incrementRenderCount: () => {
-      m.incrementRenderCount();
+      m().incrementRenderCount();
     },
   }));
 

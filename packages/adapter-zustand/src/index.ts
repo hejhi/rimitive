@@ -269,9 +269,7 @@ export function createZustandAdapter<Model, Actions, Views>(
     // Process actions slice
     let actions: Actions;
     try {
-      const lazyActions = executeSliceFactory<Actions>(spec.actions);
-      // For actions, we use resolveLazySlice which preserves functions
-      actions = resolveLazySlice(lazyActions);
+      actions = executeSliceFactory<Actions>(spec.actions);
     } catch (error) {
       throw new ZustandAdapterError('Actions slice creation failed', {
         operation: 'createZustandAdapter.actions',
