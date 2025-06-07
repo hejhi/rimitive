@@ -87,7 +87,7 @@ const todoDataSlice = createSlice(model, (m) => ({
 }));
 
 // TypeScript would see:
-// todoDataSlice: SliceDefinition<{ items: Mapped<Todo[]>, filter: Mapped<string> }>
+// todoDataSlice: SliceFactory<Model, { items: Todo[], filter: string }>
 ```
 
 ### Phase 2: Slice Composition (Still Just Shape)
@@ -98,7 +98,7 @@ const enhancedSlice = createSlice(
   compose(
     { myComposedSlice: todoDataSlice },
     (m, { myComposedSlice }) => ({
-      todoItems: myComposedSlice.items,     // Remapping: todoItems → myComposedSlice.items → m.todos. end type would be `todoItems: Mapped<Todo[]>`
+      todoItems: myComposedSlice.items,     // Remapping: todoItems → myComposedSlice.items → m.todos
       activeFilter: myComposedSlice.filter,  // Remapping: activeFilter → myComposedSlice.filter → m.filter
       clearFn: m.clearTodos      // Direct mapping: clearFn → m.clearTodos
     })
@@ -110,31 +110,30 @@ const enhancedSlice = createSlice(
 
 ### Phase 3: View Definition and Execution (Actual Computation)
 
-Views are where ALL computation happens. They execute slices to get shaped data, then compute derived values.
+Views are where ALL computation happens. They execute slices to get shaped data, then compute derived values. Views should use the `compute` function to make their role explicit.
 
 ```typescript
-// Component views - ALL views must be functions (even non-parameterized ones)
-const views = {
-  // Non-parameterized view (still needs to be a function)
-  summary: () => enhancedSlice((state) => ({
-    // state.todoItems is the actual Todo[] array
-    visibleTodos: state.todoItems.filter(todo => {
-      if (state.activeFilter === 'completed') return todo.completed;
-      if (state.activeFilter === 'active') return !todo.completed;
-      return true;
-    }),
-    count: state.todoItems.length,
-    isEmpty: state.todoItems.length === 0
-  })),
-  
-  // Parameterized view
-  filtered: (threshold: number) => enhancedSlice((state) => ({
-    aboveThreshold: state.todoItems.length > threshold,
-    label: `Count ${state.todoItems.length} is ${state.todoItems.length > threshold ? 'above' : 'below'} ${threshold}`
-  })),
-  
-  // View with multiple parameters
-  search: (query: string, caseSensitive: boolean) => enhancedSlice((state) => ({
+// Computed views using the compute function
+export const summary = compute(() => enhancedSlice((state) => ({
+  // state.todoItems is the actual Todo[] array
+  visibleTodos: state.todoItems.filter(todo => {
+    if (state.activeFilter === 'completed') return todo.completed;
+    if (state.activeFilter === 'active') return !todo.completed;
+    return true;
+  }),
+  count: state.todoItems.length,
+  isEmpty: state.todoItems.length === 0
+})));
+
+// Parameterized computed view
+export const filtered = compute((threshold: number) => enhancedSlice((state) => ({
+  aboveThreshold: state.todoItems.length > threshold,
+  label: `Count ${state.todoItems.length} is ${state.todoItems.length > threshold ? 'above' : 'below'} ${threshold}`
+})));
+
+// Computed view with multiple parameters
+export const search = compute((query: string, caseSensitive: boolean) => 
+  enhancedSlice((state) => ({
     results: state.todoItems.filter(item => {
       const searchIn = caseSensitive ? item.text : item.text.toLowerCase();
       const searchFor = caseSensitive ? query : query.toLowerCase();
@@ -146,7 +145,7 @@ const views = {
       return searchIn.includes(searchFor);
     }).length
   }))
-};
+);
 ```
 
 ### Important: No Slice Execution Within Slices
@@ -174,47 +173,71 @@ const combinedSlice = createSlice(
 );
 
 // Then compute in the view
-const goodView = () => combinedSlice((state) => ({
+const goodView = compute(() => combinedSlice((state) => ({
   combined: state.todoCount + state.otherCount // Now we can compute!
-}));
+})));
 ```
 
 ### Common Patterns and Anti-Patterns
 
 ```typescript
 // ❌ WRONG: Returning a slice factory from a view
-const badView = () => createSlice(model, (m) => ({
+const badView = compute(() => createSlice(model, (m) => ({
   // This returns a SLICE DEFINITION, not computed values!
-}));
+})));
 
-// ❌ WRONG: View defined without function wrapper
-const views = {
-  // This executes at definition time, not runtime!
-  badView: todoSlice((state) => ({ ... }))
-};
+// ❌ WRONG: Missing compute wrapper
+const badView = () => todoSlice((state) => ({ ... }));
 
-// ✅ CORRECT: All views are functions
-const views = {
-  goodView: () => todoSlice((state) => ({ ... })),
-  paramView: (arg: string) => todoSlice((state) => ({ ... }))
-};
+// ❌ WRONG: Not wrapping in `compute`
+const badView = todoSlice((state) => ({ ... }));
+
+// ✅ CORRECT: Using compute for all views
+const goodView = compute(() => todoSlice((state) => ({ ... })));
+const paramView = compute((arg: string) => todoSlice((state) => ({ ... })));
 ```
 
 ## Implementation Challenges & Solutions
 
 ### Challenge 1: Type System
 
-**Problem**: TypeScript thinks `m.todos` returns `Todo[]`, not a mapping.
+**Problem**: TypeScript thinks `m.todos` returns `Todo[]`, not a shape declaration.
 
-**Solution**: Use explicit mapping types:
+**Solution**: Use a simple `SliceDefinition<T>` wrapper that carries the final type:
 ```typescript
-type Mapped<T> = { _mapped: true; _type: T };
+// The SliceDefinition type just wraps the shape being selected
+type SliceDefinition<T> = { _shape: T };
 
-// During definition
-const slice = createSlice(model, (m: MappingProxy<Model>) => ({
-  items: m.todos  // Returns Mapped<Todo[]>, not Todo[]
+// During slice creation, properties return SliceDefinition types
+const todoSlice = createSlice(model, (m) => ({
+  items: m.todos,      // Type: SliceDefinition<Todo[]>
+  filter: m.filter     // Type: SliceDefinition<string>
 }));
+// todoSlice type: SliceFactory<Model, { items: Todo[], filter: string }>
+
+// When composing, types flow naturally
+const dashboardSlice = createSlice(
+  model,
+  compose(
+    { todo: todoSlice },
+    (m, { todo }) => ({
+      todoItems: todo.items,    // Type: SliceDefinition<Todo[]>
+      activeFilter: todo.filter  // Type: SliceDefinition<string>
+    })
+  )
+);
+// dashboardSlice type: SliceFactory<Model, { todoItems: Todo[], activeFilter: string }>
+
+// At execution time, SliceDefinition is unwrapped to actual values
+const view = compute(() => dashboardSlice((state) => ({
+  // state.todoItems is Todo[], not SliceDefinition<Todo[]>
+  count: state.todoItems.length,
+  // state.activeFilter is string, not SliceDefinition<string>
+  label: `Filter: ${state.activeFilter}`
+})));
 ```
+
+The key insight: `SliceDefinition<T>` carries the **final type** through all compositions without complex transformations.
 
 ### Challenge 2: Breaking Changes
 
@@ -222,7 +245,7 @@ const slice = createSlice(model, (m: MappingProxy<Model>) => ({
 
 **Solution**: We might salvage current slice syntax for the execution phase:
 ```typescript
-// Current syntax could become execution syntax
+// Current syntax below could become execution syntax (just wrapped in `compute`)
 const view = () => todoSlice((state) => ({
   // This syntax is already perfect for execution!
   filtered: state.todos.filter(t => !t.completed)
@@ -246,32 +269,139 @@ const good = createSlice(model, (m) => ({
 }));
 
 // Then in execution:
-const view = () => good((state) => ({
+const view = compute(() => good((state) => ({
   profileName: state.user.profile.name  // Can traverse real objects
+})));
+```
+
+## Module-Based Component Architecture
+
+With the corrected model, components naturally become modules rather than factory functions:
+
+```typescript
+// counter.ts - Module-based component
+import { createModel, createSlice, compose, compute } from '@lattice/core';
+
+// Model definition
+export const model = createModel<{
+  count: number;
+  increment: () => void;
+  decrement: () => void;
+}>(({ set, get }) => ({
+  count: 0,
+  increment: () => set({ count: get().count + 1 }),
+  decrement: () => set({ count: get().count - 1 })
 }));
+
+// Public slices (can be composed by other modules)
+export const countSlice = createSlice(model, (m) => ({
+  count: m.count
+}));
+
+// Private slices (internal use only)
+const internalSlice = createSlice(model, (m) => ({
+  // Internal shape not exposed
+}));
+
+// Actions slice
+export const actions = createSlice(model, (m) => ({
+  increment: m.increment,
+  decrement: m.decrement  
+}));
+
+// Computed views
+export const display = compute(() => countSlice((state) => ({
+  value: state.count,
+  label: `Count: ${state.count}`
+})));
+
+export const threshold = compute((min: number) => countSlice((state) => ({
+  isAbove: state.count > min,
+  message: state.count > min ? 'Above threshold' : 'Below threshold'
+})));
+```
+
+### Composing Module-Based Components
+
+```typescript
+// persistent-counter.ts
+import * as counter from './counter';
+import { createModel, createSlice, compose, compute } from '@lattice/core';
+
+// Extend the model
+export const model = createModel<{
+  count: number;
+  increment: () => void;
+  decrement: () => void;
+  lastSaved: number;
+  save: () => void;
+}>(({ set, get }) => ({
+  ...counter.model({ set, get }), // Execute base model
+  lastSaved: Date.now(),
+  save: () => {
+    localStorage.setItem('count', String(get().count));
+    set({ lastSaved: Date.now() });
+  }
+}));
+
+// Reuse base slices - they still work with extended model!
+export { countSlice, actionsSlice } from './counter';
+
+// New slices for extended functionality
+export const saveSlice = createSlice(model, (m) => ({
+  lastSaved: m.lastSaved
+}));
+
+// Compose slices
+export const dashboardSlice = createSlice(
+  model,
+  compose(
+    { count: counter.countSlice, save: saveSlice },
+    (m, { count, save }) => ({
+      currentCount: count.count,
+      lastSaved: save.lastSaved,
+    })
+  )
+);
+
+// Actions
+export const actions = createSlice(model, compose({ actionsSlice }, (m, { actionsSlice }) => ({
+  ...actionsSlice,
+  save: m.save
+})));
+
+// Computed views - compose by importing
+export { display, threshold } from './counter';
+
+export const saveIndicator = compute(() => saveSlice((state) => ({
+  className: Date.now() - state.lastSaved > 60000 ? 'warning' : 'success',
+  textContent: Date.now() - state.lastSaved > 60000 ? 'unsaved' : 'saved'
+})));
 ```
 
 ## Benefits of Fixing This
 
 1. **Clear Mental Model**: 
-   - Slices = Shape definition and composition only
-   - Views = All computation and derivation
-   - compose() = The only way to combine slices (at definition time)
+   - `createModel` = State structure definition
+   - `createSlice` = Shape mapping (with `compose` for combining)
+   - `compute` = Value derivation and transformation
+   - Each function has ONE clear purpose
 
 2. **Better Performance**: 
    - Slices don't compute unnecessarily
    - Views only compute what they need
    - Clear optimization boundaries
 
-3. **True Reusability**: 
-   - Slices are pure shape contracts
-   - Can be composed without side effects
-   - Views handle all context-specific computation
+3. **Natural Module Composition**: 
+   - Standard ES6 imports/exports
+   - Selective exposure (public vs private)
+   - Explicit dependencies
+   - No factory function overhead
 
 4. **Conceptual Alignment**: 
    - Matches the original Zustand-inspired design
-   - No confusion about when computation happens
-   - Clear separation of concerns
+   - Clear separation between structure and computation
+   - Predictable execution model
 
 5. **Type Safety**: 
    - Can't accidentally compute in slice definitions
@@ -282,11 +412,13 @@ const view = () => good((state) => ({
 
 This is an unreleased library, so we DO NOT need to worry about backwards compatibility. We should:
 
-1. Update core slice implementation to return mapping tokens instead of executing selectors
-2. Update compose to work with mapping tokens
-3. Change slice execution to require computation callbacks
-4. Ensure all views are functions (even non-parameterized ones)
-5. Update tests to match the new conceptual model
+1. Add the `compute` function to core exports
+2. Update slice implementation to return mapping tokens instead of executing selectors
+3. Update compose to work with mapping tokens
+4. Change slice execution to require computation callbacks
+5. Remove createComponent in favor of module-based composition
+6. Update all examples to use the module pattern
+7. Update tests to match the new conceptual model
 
 Start by making one or two tests fail with the new expected behavior, then fix the implementation until they pass.
 
@@ -300,8 +432,16 @@ The core issue is that we conflated three distinct concepts:
 
 Currently, slices do all three, which breaks the mental model. The fix is to enforce strict boundaries:
 
-- **Slices**: Pure shape mapping (no computation)
-- **Compose**: Pure shape combination (no computation)
-- **Views**: All computation happens here (and only here)
+```typescript
+// Clear separation of concerns
+createModel()  // → Define state structure
+createSlice()  // → Map state shape (no computation)
+compose()      // → Combine slice shapes (no computation)
+compute()      // → Derive values from state (all computation)
+```
 
-This creates a clean, predictable architecture where each part has a single, well-defined responsibility.
+This creates a clean, predictable architecture where:
+- Each function has a single, well-defined purpose
+- Components are modules, not factory functions
+- Composition happens naturally through ES6 imports
+- The execution model is clear and predictable
