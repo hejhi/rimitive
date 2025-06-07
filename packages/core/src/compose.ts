@@ -66,7 +66,7 @@ export function compose<
     // Pass both model and api to each dependency slice
     const entries = Object.entries(deps).map(([key, sliceFactory]) => [
       key,
-      sliceFactory(model),
+      sliceFactory(() => model),
     ]);
     const resolvedDeps = Object.fromEntries(entries) as ResolveDeps<Deps>;
 
@@ -97,7 +97,7 @@ if (import.meta.vitest) {
 
       // Test the composed slice
       const modelData = { count: 5 };
-      const result = composedSlice(modelData);
+      const result = composedSlice(() => modelData);
       expect(result).toEqual({ doubled: 10 });
     });
 
@@ -122,7 +122,7 @@ if (import.meta.vitest) {
       );
 
       // Test the composed slice
-      const result = composedSlice({ x: 3, y: 4 });
+      const result = composedSlice(() => ({ x: 3, y: 4 }));
       expect(result).toEqual({ sum: 7 });
     });
 
@@ -175,7 +175,7 @@ if (import.meta.vitest) {
         user: { name: 'Bob', email: 'bob@example.com' },
       };
 
-      const result = composed(modelData);
+      const result = composed(() => modelData);
 
       // Now compose returns a regular selector, so result is the actual object
       expect(result).toEqual({
@@ -258,7 +258,7 @@ if (import.meta.vitest) {
         sizes: { width: 300, height: 400 },
       };
 
-      const result = viewSlice(modelData);
+      const result = viewSlice(() => modelData);
 
       // Compose now returns a regular selector, so result is the actual object
       expect(result).toEqual({
@@ -313,7 +313,7 @@ if (import.meta.vitest) {
         )
       );
 
-      const result = composed({ str: 'test', num: 100, bool: false });
+      const result = composed(() => ({ str: 'test', num: 100, bool: false }));
 
       // Verify the result matches expected shape
       expect(result).toEqual({
@@ -379,12 +379,12 @@ if (import.meta.vitest) {
         }))
       );
 
-      const addResult = finalSlice({ a: 5, b: 3, c: 2, op: 'add' });
+      const addResult = finalSlice(() => ({ a: 5, b: 3, c: 2, op: 'add' }));
 
       // Verify nested composition works correctly
       expect(addResult).toEqual({ finalResult: 10 }); // (5 + 3) + 2
 
-      const multiplyResult = finalSlice({ a: 5, b: 3, c: 2, op: 'multiply' });
+      const multiplyResult = finalSlice(() => ({ a: 5, b: 3, c: 2, op: 'multiply' }));
       expect(multiplyResult).toEqual({ finalResult: 17 }); // (5 * 3) + 2
     });
 
@@ -410,7 +410,7 @@ if (import.meta.vitest) {
         }))
       );
 
-      const resultWithApi1 = composedSlice({ value: 20 });
+      const resultWithApi1 = composedSlice(() => ({ value: 20 }));
       expect(resultWithApi1).toEqual({
         depValue: 20,
         depHasApi: true,
@@ -419,7 +419,7 @@ if (import.meta.vitest) {
         directValue: 20,
       });
 
-      const resultWithApi2 = composedSlice({ value: 20 });
+      const resultWithApi2 = composedSlice(() => ({ value: 20 }));
       expect(resultWithApi2).toEqual({
         depValue: 20,
         depHasApi: true,
@@ -462,7 +462,7 @@ if (import.meta.vitest) {
         }))
       );
 
-      const result = level2({ x: 5, y: 10 });
+      const result = level2(() => ({ x: 5, y: 10 }));
       expect(result.l1Data.baseX).toBe(5);
       expect(result.l1Data.baseFromModel).toBe(5); // From model
       expect(result.l1Data.y).toBe(10);
@@ -518,7 +518,7 @@ if (import.meta.vitest) {
         settings: { theme: 'dark', notifications: false },
       };
 
-      const result = composedSlice(modelData);
+      const result = composedSlice(() => modelData);
 
       expect(result).toEqual({
         total: 5,
@@ -536,7 +536,7 @@ if (import.meta.vitest) {
         settings: { theme: 'light', notifications: true },
       };
 
-      const adminResult = composedSlice(adminData);
+      const adminResult = composedSlice(() => adminData);
 
       expect(adminResult).toEqual({
         total: 3,
@@ -549,7 +549,7 @@ if (import.meta.vitest) {
 
       // Verify that api parameter is always required
       // The result should be the same with the same model data
-      const resultWithSameApi = composedSlice(modelData);
+      const resultWithSameApi = composedSlice(() => modelData);
       expect(resultWithSameApi).toEqual(result);
     });
   });

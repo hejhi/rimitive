@@ -63,8 +63,8 @@ export function createSlice<Model, Slice>(
   selector: (model: Model) => Slice
 ): SliceFactory<Model, Slice> {
   // Create a function that executes the selector with required api
-  const sliceFactory = function (model: Model): Slice {
-    return selector(model);
+  const sliceFactory = function (getModel: () => Model): Slice {
+    return selector(getModel());
   };
 
   // Brand the slice factory
@@ -150,7 +150,7 @@ if (import.meta.vitest) {
     const slice = createSlice(model, (m) => ({ value: m.count }));
 
     // Direct execution with required API
-    const result = slice({ count: 10 });
+    const result = slice(() => ({ count: 10 }));
     expect(result).toEqual({ value: 10 });
   });
 
@@ -158,7 +158,7 @@ if (import.meta.vitest) {
     const model = createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 }));
     const pointSlice = createSlice(model, (m) => ({ x: m.x, y: m.y }));
 
-    const result = pointSlice({ x: 3, y: 4 });
+    const result = pointSlice(() => ({ x: 3, y: 4 }));
     expect(result).toEqual({ x: 3, y: 4 });
   });
 
@@ -173,7 +173,7 @@ if (import.meta.vitest) {
       };
     });
 
-    const result = sliceWithApi({ count: 10 });
+    const result = sliceWithApi(() => ({ count: 10 }));
     expect(result).toEqual({
       value: 10,
       hasApi: true,

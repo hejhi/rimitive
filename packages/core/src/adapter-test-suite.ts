@@ -84,7 +84,7 @@ export function createAdapterTestSuite(
 
           // Create a computed view slice that combines data
           const fullNameSlice = createSlice(model, (m) => {
-            const state = nameSlice(m);
+            const state = nameSlice(() => m);
             return {
               display: `${state.first} ${state.last}`,
               initials: `${state.first[0]}${state.last[0]}`,
@@ -221,7 +221,7 @@ export function createAdapterTestSuite(
           // Parameterized view factory
           const createItemView = (itemId: number) =>
             createSlice(model, (m) => {
-              const state = itemsSlice(m);
+              const state = itemsSlice(() => m);
               const item = state.items.find((i) => i.id === itemId);
               return item
                 ? {
@@ -237,7 +237,7 @@ export function createAdapterTestSuite(
             });
 
           const selectedCountSlice = createSlice(model, (m) => {
-            const state = itemsSlice(m);
+            const state = itemsSlice(() => m);
             return {
               count: state.items.filter((i) => i.selected).length,
             };
@@ -376,17 +376,17 @@ export function createAdapterTestSuite(
 
           // Create computed view slices
           const doubledSlice = createSlice(model, (m) => {
-            const state = valueSlice(m);
+            const state = valueSlice(() => m);
             return { result: state.value * 2 };
           });
 
           const tripledSlice = createSlice(model, (m) => {
-            const state = valueSlice(m);
+            const state = valueSlice(() => m);
             return { result: state.value * 3 };
           });
 
           const formattedSlice = createSlice(model, (m) => {
-            const state = valueSlice(m);
+            const state = valueSlice(() => m);
             return { display: `Value: ${state.value}` };
           });
 

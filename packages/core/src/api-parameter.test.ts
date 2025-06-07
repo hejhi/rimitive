@@ -54,7 +54,7 @@ function createTestAdapter<Model, Actions, Views>(
   state = spec.model(modelTools);
 
   // Execute actions
-  const actions = spec.actions(state);
+  const actions = spec.actions(() => state);
 
   // Process views
   // TypeScript limitation: Cannot incrementally build ViewTypes<Model, Views> with reduce
@@ -64,7 +64,7 @@ function createTestAdapter<Model, Actions, Views>(
       if (isSliceFactory(view)) {
         // TypeScript limitation: Dynamic key assignment loses type relationship
         acc[key as keyof ViewTypes<Model, Views>] = (() =>
-          view(state)) as ViewTypes<Model, Views>[keyof ViewTypes<
+          view(() => state)) as ViewTypes<Model, Views>[keyof ViewTypes<
           Model,
           Views
         >];
@@ -72,7 +72,7 @@ function createTestAdapter<Model, Actions, Views>(
         acc[key as keyof ViewTypes<Model, Views>] = (() => {
           const result = view();
           if (isSliceFactory(result)) {
-            return result(state);
+            return result(() => state);
           }
           return result;
         }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
@@ -115,8 +115,8 @@ describe('API Parameter Functionality', () => {
 
         // Slice that uses API to compose data from other slices
         const summarySlice = createSlice(model, (m) => {
-          const users = usersSlice(m);
-          const products = productsSlice(m);
+          const users = usersSlice(() => m);
+          const products = productsSlice(() => m);
 
           return {
             userCount: users.length,
@@ -213,7 +213,7 @@ describe('API Parameter Functionality', () => {
             return { value: m.data.value };
           } else {
             // In detailed mode, use API to get additional info
-            const data = dataSlice(m);
+            const data = dataSlice(() => m);
             return {
               value: data.value,
               metadata: data.metadata,
@@ -287,7 +287,7 @@ describe('API Parameter Functionality', () => {
         const filteredView = () =>
           createSlice(model, (m) => {
             const filterSlice = createFilteredItemsSlice(m.activeFilters);
-            const filtered = filterSlice(m);
+            const filtered = filterSlice(() => m);
 
             return {
               items: filtered,
@@ -364,8 +364,8 @@ describe('API Parameter Functionality', () => {
 
         // Stats slice that aggregates data
         const statsSlice = createSlice(model, (m) => {
-          const posts = postsSlice(m);
-          const comments = commentsSlice(m);
+          const posts = postsSlice(() => m);
+          const comments = commentsSlice(() => m);
 
           return {
             totalPosts: posts.length,
@@ -456,7 +456,7 @@ describe('API Parameter Functionality', () => {
 
             const children = m.nodes
               .filter((n) => n.parentId === nodeId)
-              .map((child) => createNodeTreeSlice(child.id)(m))
+              .map((child) => createNodeTreeSlice(child.id)(() => m))
               .filter((child): child is TreeNode => child !== null);
 
             return {
@@ -471,7 +471,7 @@ describe('API Parameter Functionality', () => {
           const rootNodes = m.nodes.filter((n) => n.parentId === null);
           return {
             tree: rootNodes
-              .map((root) => createNodeTreeSlice(root.id)(m))
+              .map((root) => createNodeTreeSlice(root.id)(() => m))
               .filter((node): node is TreeNode => node !== null),
           };
         });
@@ -534,8 +534,8 @@ describe('API Parameter Functionality', () => {
 
         // Comparison slice that depends on both teams
         const comparisonSlice = createSlice(model, (m) => {
-          const teamA = teamASlice(m);
-          const teamB = teamBSlice(m);
+          const teamA = teamASlice(() => m);
+          const teamB = teamBSlice(() => m);
 
           return {
             leader:
@@ -551,9 +551,9 @@ describe('API Parameter Functionality', () => {
 
         // Match slice that uses comparison
         const matchSlice = createSlice(model, (m) => {
-          const comparison = comparisonSlice(m);
-          const teamA = teamASlice(m);
-          const teamB = teamBSlice(m);
+          const comparison = comparisonSlice(() => m);
+          const teamA = teamASlice(() => m);
+          const teamB = teamBSlice(() => m);
 
           return {
             teams: [teamA, teamB],
@@ -620,7 +620,7 @@ describe('API Parameter Functionality', () => {
         // Slice that safely handles errors from other slices
         const safeWrapperSlice = createSlice(model, (m) => {
           try {
-            const result = riskySlice(m);
+            const result = riskySlice(() => m);
             return {
               success: true,
               data: result,
@@ -687,7 +687,7 @@ describe('API Parameter Functionality', () => {
             const start = Date.now();
 
             try {
-              const result = slice(m);
+              const result = slice(() => m);
               const duration = Date.now() - start;
               logs.push(`[${name}] Success (${duration}ms)`);
               return result;
@@ -714,8 +714,8 @@ describe('API Parameter Functionality', () => {
         const compositeSlice = withLogging(
           'composite',
           createSlice(model, (m) => {
-            const value = loggedValueSlice(m);
-            const double = loggedDoubleSlice(m);
+            const value = loggedValueSlice(() => m);
+            const double = loggedDoubleSlice(() => m);
             return {
               value: value.value,
               double: double.double,
@@ -775,7 +775,7 @@ describe('API Parameter Functionality', () => {
               return cache.get(key)!;
             }
 
-            const result = slice(m);
+            const result = slice(() => m);
             cache.set(key, result);
             return result;
           });
@@ -800,9 +800,9 @@ describe('API Parameter Functionality', () => {
 
         // View that uses cached slice multiple times
         const multiUseSlice = createSlice(model, (m) => {
-          const result1 = cachedExpensiveSlice(m);
-          const result2 = cachedExpensiveSlice(m);
-          const result3 = cachedExpensiveSlice(m);
+          const result1 = cachedExpensiveSlice(() => m);
+          const result2 = cachedExpensiveSlice(() => m);
+          const result3 = cachedExpensiveSlice(() => m);
 
           return {
             allEqual:
@@ -861,7 +861,7 @@ describe('API Parameter Functionality', () => {
         ): SliceFactory<PerfModel, T> =>
           createSlice(model, (m) => {
             const start = performance.now();
-            const result = slice(m);
+            const result = slice(() => m);
             const duration = performance.now() - start;
 
             if (!performanceData[name]) {
@@ -908,9 +908,9 @@ describe('API Parameter Functionality', () => {
 
         // Dashboard that uses all tracked slices
         const performanceDashboard = createSlice(model, (m) => {
-          const simple = trackedSimple(m);
-          const moderate = trackedModerate(m);
-          const complex = trackedComplex(m);
+          const simple = trackedSimple(() => m);
+          const moderate = trackedModerate(() => m);
+          const complex = trackedComplex(() => m);
 
           return {
             simple,
@@ -1029,7 +1029,7 @@ describe('API Parameter Functionality', () => {
           T & { validation: { [key: string]: string | null }; isValid: boolean }
         > =>
           createSlice(model, (m) => {
-            const data = slice(m);
+            const data = slice(() => m);
             const validation: { [key: string]: string | null } = {};
 
             // Validate each field
@@ -1165,7 +1165,7 @@ describe('API Parameter Functionality', () => {
 
         // Cart items with product details
         const cartDetailsSlice = createSlice(model, (m) => {
-          const products = catalogSlice(m);
+          const products = catalogSlice(() => m);
 
           return m.cart
             .map((cartItem) => {
@@ -1184,7 +1184,7 @@ describe('API Parameter Functionality', () => {
 
         // Cart summary
         const cartSummarySlice = createSlice(model, (m) => {
-          const items = cartDetailsSlice(m);
+          const items = cartDetailsSlice(() => m);
 
           const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
           const taxRate = 0.08; // 8% tax
@@ -1326,8 +1326,8 @@ describe('API Parameter Functionality', () => {
 
         // Feature availability slice
         const featureAvailabilitySlice = createSlice(model, (m) => {
-          const canWrite = createPermissionChecker(['write'])(m);
-          const canAdmin = createPermissionChecker(['manage_users'])(m);
+          const canWrite = createPermissionChecker(['write'])(() => m);
+          const canAdmin = createPermissionChecker(['manage_users'])(() => m);
 
           return {
             canUseDarkMode: m.featureFlags.darkMode,
@@ -1343,7 +1343,7 @@ describe('API Parameter Functionality', () => {
 
         // User dashboard slice
         const userDashboardSlice = createSlice(model, (m) => {
-          const features = featureAvailabilitySlice(m);
+          const features = featureAvailabilitySlice(() => m);
 
           const availableActions = [];
           if (features.canEditContent) availableActions.push('Edit');
