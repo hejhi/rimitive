@@ -40,9 +40,21 @@ export type ModelFactory<T = unknown> = (tools: ModelTools<T>) => T;
  * @template Slice - The slice return type
  */
 export interface SliceFactory<Model = unknown, Slice = unknown> {
-  (getModel: () => Model): Slice;
+  (getModel: () => Model): LazySlice<Slice>;
   [SLICE_FACTORY_MARKER]?: true;
 }
+
+/**
+ * A value that can be either static or a lazy getter function
+ */
+export type SliceValue<T> = T | (() => T);
+
+/**
+ * Transforms a type to allow any property to be a lazy getter
+ */
+export type LazySlice<T> = {
+  [K in keyof T]: SliceValue<T[K]>;
+};
 
 // Implementation
 export function createModel<T>(
@@ -54,16 +66,16 @@ export function createModel<T>(
 // Overload for regular selectors (preserves inference)
 export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
-  selector: (model: Model) => Slice
+  selector: (model: Model) => LazySlice<Slice>
 ): SliceFactory<Model, Slice>;
 
 // Implementation - simplified without transform support
 export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
-  selector: (model: Model) => Slice
+  selector: (model: Model) => LazySlice<Slice>
 ): SliceFactory<Model, Slice> {
   // Create a function that executes the selector with required api
-  const sliceFactory = function (getModel: () => Model): Slice {
+  const sliceFactory = function (getModel: () => Model): LazySlice<Slice> {
     return selector(getModel());
   };
 

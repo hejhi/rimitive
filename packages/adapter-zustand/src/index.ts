@@ -255,9 +255,8 @@ export function createZustandAdapter<Model, Actions, Views>(
 
     // Create slice executor helper
     const executeSliceFactory = <T>(factory: SliceFactory<Model, T>): T => {
-      const model = store.getState();
       try {
-        return factory(model);
+        return factory(() => store.getState());
       } catch (error) {
         throw new ZustandAdapterError('Slice factory execution failed', {
           operation: 'executeSliceFactory',
@@ -389,11 +388,13 @@ if (import.meta.vitest) {
           increment: m.increment,
         }));
 
-        const stateView = createSlice(model, (m) => ({
-          count: m.count,
-          multiplier: m.multiplier,
-          total: m.count * m.multiplier,
-        }));
+        const stateView = createSlice(model, (m) => {
+          return {
+            count: m.count,
+            multiplier: m.multiplier,
+            total: m.count * m.multiplier,
+          };
+        });
 
         return { model, actions, views: { state: stateView } };
       };
@@ -470,12 +471,14 @@ if (import.meta.vitest) {
           update: m.update,
         }));
 
-        const stateSlice = createSlice(model, (m) => ({
-          store: m.store,
-          actions: m.actions,
-          views: m.views,
-          subscribe: m.subscribe,
-        }));
+        const stateSlice = createSlice(model, (m) => {
+          return {
+            store: m.store,
+            actions: m.actions,
+            views: m.views,
+            subscribe: m.subscribe,
+          };
+        });
 
         return { model, actions, views: { state: stateSlice } };
       };
@@ -519,7 +522,7 @@ if (import.meta.vitest) {
 
         return {
           model,
-          actions: createSlice(model, (_m) => ({})),
+          actions: createSlice(model, (_getModel) => ({})),
           views: { display: displaySlice },
         };
       };
@@ -543,7 +546,7 @@ if (import.meta.vitest) {
         }));
 
         const counterView = createSlice(model, (m) => {
-          const state = countSlice(m);
+          const state = countSlice(() => m);
           return {
             'data-count': state.count,
             className: state.count % 2 === 0 ? 'even' : 'odd',
@@ -554,7 +557,7 @@ if (import.meta.vitest) {
 
         return {
           model,
-          actions: createSlice(model, (_m) => ({})),
+          actions: createSlice(model, (_getModel) => ({})),
           views,
         };
       };
@@ -581,10 +584,12 @@ if (import.meta.vitest) {
           increment: () => set({ count: get().count + 1 }),
         }));
 
-        const countSlice = createSlice(model, (m) => ({
-          value: m.count,
-          doubled: m.count * 2,
-        }));
+        const countSlice = createSlice(model, (m) => {
+          return {
+            value: m.count,
+            doubled: m.count * 2,
+          };
+        });
 
         const actions = createSlice(model, (m) => ({
           increment: m.increment,
@@ -923,8 +928,8 @@ if (import.meta.vitest) {
         // Slice that uses API to compose data
         const statusSlice = createSlice(model, (m) => {
           // Can use API within slices
-          const countSlice = createSlice(model, (m) => ({ count: m.count }));
-          const state = countSlice(m);
+          const countSlice = createSlice(model, (gm) => ({ count: gm.count }));
+          const state = countSlice(() => m);
 
           return {
             count: state.count,

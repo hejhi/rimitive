@@ -110,7 +110,7 @@ describe('createZustandAdapter', () => {
       }));
 
       const doubledView = createSlice(model, (m) => {
-        const state = stateView(m);
+        const state = stateView(() => m);
         return {
           doubled: state.count * state.multiplier,
         };
@@ -262,7 +262,7 @@ describe('createZustandAdapter', () => {
 
         // Create a computed view slice
         const counterView = createSlice(model, (m) => {
-          const state = countSlice(m);
+          const state = countSlice(() => m);
           return {
             'data-count': state.count,
             className: state.count % 2 === 0 ? 'even' : 'odd',
