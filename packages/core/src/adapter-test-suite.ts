@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { AdapterFactory } from './adapter-contract';
-import { createModel, createSlice, compose } from './index';
+import { createModel, createSlice, compose, lazy } from './index';
 
 /**
  * Creates a comprehensive test suite for a Lattice adapter
@@ -37,7 +37,7 @@ export function createAdapterTestSuite(
 
           const views = {
             counter: createSlice(model, (m) => ({
-              value: m.count,
+              value: lazy(() => m.count),
             })),
           };
 
@@ -74,8 +74,8 @@ export function createAdapterTestSuite(
           }));
 
           const nameSlice = createSlice(model, (m) => ({
-            first: m.firstName,
-            last: m.lastName,
+            first: lazy(() => m.firstName),
+            last: lazy(() => m.lastName),
           }));
 
           const actions = createSlice(model, (m) => ({
@@ -139,13 +139,13 @@ export function createAdapterTestSuite(
           }));
 
           const userSlice = createSlice(model, (m) => ({
-            name: m.user.name,
-            role: m.user.role,
+            name: lazy(() => m.user.name),
+            role: lazy(() => m.user.role),
             isAdmin: m.user.role === 'admin',
           }));
 
           const themeSlice = createSlice(model, (m) => ({
-            theme: m.theme,
+            theme: lazy(() => m.theme),
             isDark: m.theme === 'dark',
           }));
 
@@ -215,7 +215,7 @@ export function createAdapterTestSuite(
           }));
 
           const itemsSlice = createSlice(model, (m) => ({
-            items: m.items,
+            items: lazy(() => m.items),
           }));
 
           // Parameterized view factory
@@ -371,7 +371,7 @@ export function createAdapterTestSuite(
           }));
 
           const valueSlice = createSlice(model, (m) => ({
-            value: m.value,
+            value: lazy(() => m.value),
           }));
 
           // Create computed view slices
@@ -435,7 +435,7 @@ export function createAdapterTestSuite(
           }));
 
           const views = {
-            log: createSlice(model, (m) => ({ entries: m.log })),
+            log: createSlice(model, (m) => ({ entries: lazy(() => m.log) })),
           };
 
           return { model, actions, views };
@@ -485,7 +485,7 @@ export function createAdapterTestSuite(
           }));
 
           const views = {
-            point: createSlice(model, (m) => ({ x: m.x, y: m.y })),
+            point: createSlice(model, (m) => ({ x: lazy(() => m.x), y: lazy(() => m.y) })),
           };
 
           return { model, actions, views };
