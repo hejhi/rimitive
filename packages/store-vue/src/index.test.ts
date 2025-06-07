@@ -15,12 +15,12 @@ import {
   provideLattice,
   useLatticeStore,
 } from './index';
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 
 describe('Vue Adapter', () => {
   describe('useLattice composable', () => {
     it('should create a reactive store', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -42,7 +42,7 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -82,7 +82,7 @@ describe('Vue Adapter', () => {
     });
 
     it('should handle complex state with arrays', async () => {
-      const todoApp = createComponent(() => {
+      const todoApp = () => {
         let nextId = 1;
         const model = createModel<{
           todos: Array<{ id: number; text: string; done: boolean }>;
@@ -115,7 +115,7 @@ describe('Vue Adapter', () => {
 
         const views = {
           todos: createSlice(model, (m) => m.todos),
-          activeTodos: createSlice(model, (m) => 
+          activeTodos: createSlice(model, (m) =>
             m.todos.filter((t) => !t.done)
           ),
           completedTodos: createSlice(model, (m) =>
@@ -129,7 +129,7 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -174,14 +174,14 @@ describe('Vue Adapter', () => {
       if (firstTodo) {
         store.actions.toggleTodo(firstTodo.id);
         await nextTick();
-        
+
         expect(wrapper.find('.stats').text()).toContain('Active: 1');
         expect(wrapper.find('.stats').text()).toContain('Completed: 1');
       }
     });
 
     it('should work with watchers', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -199,7 +199,7 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const watchedValues: number[] = [];
       const effectValues: number[] = [];
@@ -249,7 +249,7 @@ describe('Vue Adapter', () => {
     });
 
     it('should handle compose() in views', async () => {
-      const app = createComponent(() => {
+      const app = () => {
         const model = createModel<{
           user: { name: string; role: string };
           permissions: string[];
@@ -258,9 +258,8 @@ describe('Vue Adapter', () => {
           user: { name: 'John', role: 'user' },
           permissions: ['read'],
           updateUser: (user) => {
-            const perms = user.role === 'admin' 
-              ? ['read', 'write', 'delete']
-              : ['read'];
+            const perms =
+              user.role === 'admin' ? ['read', 'write', 'delete'] : ['read'];
             set({ user, permissions: perms });
           },
         }));
@@ -274,16 +273,13 @@ describe('Vue Adapter', () => {
 
         const profileView = createSlice(
           model,
-          compose(
-            { userSlice, permSlice },
-            (_m, { userSlice, permSlice }) => ({
-              name: userSlice.name,
-              role: userSlice.role,
-              canWrite: permSlice.includes('write'),
-              canDelete: permSlice.includes('delete'),
-              summary: `${userSlice.name} (${userSlice.role})`,
-            })
-          )
+          compose({ userSlice, permSlice }, (_m, { userSlice, permSlice }) => ({
+            name: userSlice.name,
+            role: userSlice.role,
+            canWrite: permSlice.includes('write'),
+            canDelete: permSlice.includes('delete'),
+            summary: `${userSlice.name} (${userSlice.role})`,
+          }))
         );
 
         return {
@@ -291,7 +287,7 @@ describe('Vue Adapter', () => {
           actions,
           views: { profile: profileView },
         };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -328,7 +324,7 @@ describe('Vue Adapter', () => {
 
   describe('provide/inject pattern', () => {
     it('should work with provideLattice and useLatticeStore', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -346,11 +342,15 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const ChildComponent = defineComponent({
         setup() {
-          const store = useLatticeStore<any, any, { count: () => { value: number } }>();
+          const store = useLatticeStore<
+            any,
+            any,
+            { count: () => { value: number } }
+          >();
           const count = computed(() => store.views.count().value);
 
           return { store, count };
@@ -407,7 +407,7 @@ describe('Vue Adapter', () => {
     it('should work with custom injection keys', async () => {
       const customKey = Symbol('custom-store');
 
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{ count: number }>(() => ({
           count: 42,
         }));
@@ -421,11 +421,15 @@ describe('Vue Adapter', () => {
           actions: createSlice(model, () => ({})),
           views,
         };
-      });
+      };
 
       const ChildComponent = defineComponent({
         setup() {
-          const store = useLatticeStore<{ count: number }, any, { count: () => { value: number } }>(customKey);
+          const store = useLatticeStore<
+            { count: number },
+            any,
+            { count: () => { value: number } }
+          >(customKey);
           const count = computed(() => store.views.count().value);
 
           return { count };
@@ -448,7 +452,7 @@ describe('Vue Adapter', () => {
 
   describe('createVueAdapter (global stores)', () => {
     it('should create a global store', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -466,7 +470,7 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const store = createVueAdapter(counter);
 
@@ -477,7 +481,7 @@ describe('Vue Adapter', () => {
     });
 
     it('should work across multiple components', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -495,7 +499,7 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       // Create global store
       const globalStore = createVueAdapter(counter);
@@ -548,7 +552,7 @@ describe('Vue Adapter', () => {
 
   describe('subscriptions', () => {
     it('should handle subscribe/unsubscribe', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -566,7 +570,7 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -611,7 +615,7 @@ describe('Vue Adapter', () => {
     });
 
     it('should only call subscribers when values change', async () => {
-      const app = createComponent(() => {
+      const app = () => {
         const model = createModel<{
           count: number;
           name: string;
@@ -635,7 +639,7 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const countUpdates: number[] = [];
       const nameUpdates: string[] = [];
@@ -689,7 +693,7 @@ describe('Vue Adapter', () => {
 
   describe('cleanup', () => {
     it('should cleanup on component unmount', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -707,7 +711,7 @@ describe('Vue Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       let cleanupCalled = false;
       const originalDestroy = vi.fn();
@@ -715,7 +719,7 @@ describe('Vue Adapter', () => {
       const TestComponent = defineComponent({
         setup() {
           const store = useLattice(counter);
-          
+
           // Spy on destroy
           store.destroy = () => {
             cleanupCalled = true;
@@ -730,11 +734,11 @@ describe('Vue Adapter', () => {
       });
 
       const wrapper = mount(TestComponent);
-      
+
       expect(cleanupCalled).toBe(false);
-      
+
       wrapper.unmount();
-      
+
       // Vue should call destroy on unmount via effectScope
       // Note: effectScope cleanup happens after unmount
       await nextTick();

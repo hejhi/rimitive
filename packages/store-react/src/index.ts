@@ -16,7 +16,13 @@
  * - React 18 automatic batching with startTransition for optimal performance
  */
 
-import React, { useEffect, useMemo, useRef, useState, startTransition } from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  startTransition,
+} from 'react';
 import type {
   ComponentFactory,
   ComponentSpec,
@@ -194,7 +200,7 @@ export function useLattice<Model, Actions, Views>(
         // Check which keys changed for fine-grained updates
         const changedKeys = Object.keys(updates) as (keyof Model)[];
         const hasChanges = changedKeys.some(
-          key => !Object.is(previousState[key], store.state[key])
+          (key) => !Object.is(previousState[key], store.state[key])
         );
 
         if (hasChanges) {
@@ -277,12 +283,14 @@ export function useLattice<Model, Actions, Views>(
       )) {
         if (isSliceFactory(view)) {
           // Static view: slice factory
-          views[key as keyof ViewTypes<Model, Views>] = (() => 
-            executeSliceFactory(view)
-          ) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
+          views[key as keyof ViewTypes<Model, Views>] = (() =>
+            executeSliceFactory(view)) as ViewTypes<
+            Model,
+            Views
+          >[keyof ViewTypes<Model, Views>];
         } else if (typeof view === 'function') {
           // Computed view - may accept parameters
-          const viewFunction = ((...args: unknown[]) => {
+          const viewFunction = (...args: unknown[]) => {
             // Call the view function with any provided args
             const result = view(...args);
 
@@ -293,12 +301,12 @@ export function useLattice<Model, Actions, Views>(
 
             // Otherwise return the result as-is
             return result;
-          });
-          
+          };
+
           // Apply memoization unless disabled for benchmarks
           views[key as keyof ViewTypes<Model, Views>] = (
-            process.env.LATTICE_DISABLE_MEMOIZATION === 'true' 
-              ? viewFunction 
+            process.env.LATTICE_DISABLE_MEMOIZATION === 'true'
+              ? viewFunction
               : memoizeParameterizedView(viewFunction)
           ) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
         }
@@ -316,20 +324,24 @@ export function useLattice<Model, Actions, Views>(
         ) => {
           // Initialize with current value to avoid initial trigger
           const initialValue = selector(views);
-          
+
           // Create a selective listener for fine-grained updates
           const selectiveListener: SelectiveListener<Selected> = {
             selector: () => selector(views),
             callback,
-            previousValue: initialValue
+            previousValue: initialValue,
           };
 
           // Add to selective listeners
-          store.selectiveListeners.add(selectiveListener as SelectiveListener<unknown>);
+          store.selectiveListeners.add(
+            selectiveListener as SelectiveListener<unknown>
+          );
 
           // Return unsubscribe function
           return () => {
-            store.selectiveListeners.delete(selectiveListener as SelectiveListener<unknown>);
+            store.selectiveListeners.delete(
+              selectiveListener as SelectiveListener<unknown>
+            );
           };
         },
 
@@ -365,12 +377,20 @@ import { createContext, useContext, type ReactNode } from 'react';
 /**
  * Context for providing Lattice stores to child components
  */
-const LatticeContext = createContext<AdapterResult<unknown, unknown, unknown> | null>(null);
+const LatticeContext = createContext<AdapterResult<
+  unknown,
+  unknown,
+  unknown
+> | null>(null);
 
 /**
  * Props for the Lattice provider component
  */
-export interface LatticeProviderProps<Model = unknown, Actions = unknown, Views = unknown> {
+export interface LatticeProviderProps<
+  Model = unknown,
+  Actions = unknown,
+  Views = unknown,
+> {
   store: AdapterResult<Model, Actions, Views>;
   children: ReactNode;
 }
@@ -390,7 +410,7 @@ export interface LatticeProviderProps<Model = unknown, Actions = unknown, Views 
  *     </LatticeProvider>
  *   );
  * }
- * 
+ *
  * // With any adapter
  * function App() {
  *   return (
@@ -450,13 +470,11 @@ export { useLattice as createReactAdapter }; // Alias for consistency with other
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
   const { renderHook, act } = await import('@testing-library/react');
-  const { createComponent, createModel, createSlice } = await import(
-    '@lattice/core'
-  );
+  const { createModel, createSlice } = await import('@lattice/core');
 
   describe('useLattice', () => {
     it('should create a store with actions and views', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -474,7 +492,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const { result } = renderHook(() => useLattice(counter));
 
@@ -486,7 +504,7 @@ if (import.meta.vitest) {
     });
 
     it('should update state when actions are called', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -504,7 +522,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const { result } = renderHook(() => useLattice(counter));
 
@@ -524,7 +542,7 @@ if (import.meta.vitest) {
     });
 
     it('should support subscriptions', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -542,7 +560,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const { result } = renderHook(() => useLattice(counter));
 
@@ -568,7 +586,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle complex models', () => {
-      const todoApp = createComponent(() => {
+      const todoApp = () => {
         const model = createModel<{
           todos: Array<{ id: number; text: string; done: boolean }>;
           filter: 'all' | 'active' | 'completed';
@@ -621,7 +639,7 @@ if (import.meta.vitest) {
           actions,
           views: { todos: todosView },
         };
-      });
+      };
 
       const { result } = renderHook(() => useLattice(todoApp));
 

@@ -177,9 +177,9 @@ export function createReduxAdapter<Model, Actions, Views>(
           // Otherwise return the result as-is
           return result;
         };
-        
+
         // Apply memoization unless disabled for benchmarks
-        (views as Record<string, unknown>)[key] = 
+        (views as Record<string, unknown>)[key] =
           process.env.LATTICE_DISABLE_MEMOIZATION === 'true'
             ? viewFunction
             : memoizeParameterizedView(viewFunction);
@@ -233,13 +233,11 @@ export function createReduxAdapter<Model, Actions, Views>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createComponent, createModel, createSlice, compose } = await import(
-    '@lattice/core'
-  );
+  const { createModel, createSlice, compose } = await import('@lattice/core');
 
   describe('createReduxAdapter', () => {
     it('should create a Redux store from a Lattice component', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -260,7 +258,7 @@ if (import.meta.vitest) {
           actions,
           views: {},
         };
-      });
+      };
 
       const store = createReduxAdapter(counter);
 
@@ -276,7 +274,7 @@ if (import.meta.vitest) {
     });
 
     it('should support views with state derivation', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           firstName: string;
           lastName: string;
@@ -304,7 +302,7 @@ if (import.meta.vitest) {
             display: displaySlice,
           },
         };
-      });
+      };
 
       const store = createReduxAdapter(component);
 
@@ -321,7 +319,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle subscriptions', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -337,7 +335,7 @@ if (import.meta.vitest) {
             count: createSlice(model, (m) => ({ value: m.count })),
           },
         };
-      });
+      };
 
       const store = createReduxAdapter(counter);
       let callCount = 0;
@@ -365,7 +363,7 @@ if (import.meta.vitest) {
     });
 
     it('should support views with compose()', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -396,7 +394,7 @@ if (import.meta.vitest) {
             button: buttonSlice,
           },
         };
-      });
+      };
 
       const store = createReduxAdapter(component);
       const button = store.views.button();
@@ -412,7 +410,7 @@ if (import.meta.vitest) {
     });
 
     it('should support computed views', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           todos: Array<{ id: number; text: string; completed: boolean }>;
           filter: 'all' | 'active' | 'completed';
@@ -456,7 +454,7 @@ if (import.meta.vitest) {
             filteredTodos: filteredTodosView,
           },
         };
-      });
+      };
 
       const store = createReduxAdapter(component);
 
@@ -482,7 +480,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle views that use API through composition', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           message: string;
@@ -523,7 +521,7 @@ if (import.meta.vitest) {
             status: statusSlice,
           },
         };
-      });
+      };
 
       const store = createReduxAdapter(component);
 
@@ -544,7 +542,7 @@ if (import.meta.vitest) {
     });
 
     it('should accept and apply Redux middleware', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           lastAction: string;
@@ -572,7 +570,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       // Track middleware application
       let middlewareApplied = false;

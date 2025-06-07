@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createReduxAdapter } from './index';
 import {
-  createComponent,
   createModel,
   createSlice,
   compose,
@@ -15,7 +14,7 @@ describe('Redux Adapter', () => {
   });
 
   it('should create a working Redux store with basic counter', () => {
-    const counter = createComponent(() => {
+    const counter = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -36,7 +35,7 @@ describe('Redux Adapter', () => {
         actions,
         views: {},
       };
-    });
+    };
 
     const store = createReduxAdapter(counter);
 
@@ -65,7 +64,7 @@ describe('Redux Adapter', () => {
       completed: boolean;
     }
 
-    const todoApp = createComponent(() => {
+    const todoApp = () => {
       const model = createModel<{
         todos: Todo[];
         filter: 'all' | 'active' | 'completed';
@@ -104,7 +103,7 @@ describe('Redux Adapter', () => {
         actions,
         views: {},
       };
-    });
+    };
 
     const store = createReduxAdapter(todoApp);
 
@@ -130,7 +129,7 @@ describe('Redux Adapter', () => {
   });
 
   it('should handle views correctly', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         firstName: string;
         lastName: string;
@@ -165,7 +164,7 @@ describe('Redux Adapter', () => {
           personalInfo: personalInfoSlice,
         },
       };
-    });
+    };
 
     const store = createReduxAdapter(component);
 
@@ -190,7 +189,7 @@ describe('Redux Adapter', () => {
   });
 
   it('should support subscriptions with proper cleanup', () => {
-    const counter = createComponent(() => {
+    const counter = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -206,7 +205,7 @@ describe('Redux Adapter', () => {
           count: createSlice(model, (m) => ({ value: m.count })),
         },
       };
-    });
+    };
 
     const store = createReduxAdapter(counter);
     let callCount = 0;
@@ -236,7 +235,7 @@ describe('Redux Adapter', () => {
   });
 
   it('should handle compose() in views', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -279,7 +278,7 @@ describe('Redux Adapter', () => {
           count: countSlice,
         },
       };
-    });
+    };
 
     const store = createReduxAdapter(component);
     const controls = store.views.controls();
@@ -302,7 +301,7 @@ describe('Redux Adapter', () => {
   });
 
   it('should support computed views with transformations', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         items: Array<{ id: number; name: string; price: number }>;
         taxRate: number;
@@ -349,7 +348,7 @@ describe('Redux Adapter', () => {
           summary: summaryView,
         },
       };
-    });
+    };
 
     const store = createReduxAdapter(component);
 

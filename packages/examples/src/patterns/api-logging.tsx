@@ -5,7 +5,7 @@
  * logging, debugging, and observability in your Lattice applications.
  */
 
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useViews } from '@lattice/runtime/react';
 
@@ -74,7 +74,7 @@ function createLogger(source: string) {
 // ============================================================================
 // Debugging Component with Comprehensive Logging
 // ============================================================================
-export const debuggingComponent = createComponent(() => {
+export const debuggingComponent = () => {
   const logger = createLogger('DebugApp');
 
   const model = createModel<{
@@ -233,7 +233,7 @@ export const debuggingComponent = createComponent(() => {
       debug: debugView,
     },
   };
-});
+};
 
 // ============================================================================
 // Create Store

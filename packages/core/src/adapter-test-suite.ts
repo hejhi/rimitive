@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { AdapterFactory } from './adapter-contract';
-import { createComponent, createModel, createSlice, compose } from './index';
+import { createModel, createSlice, compose } from './index';
 
 /**
  * Creates a comprehensive test suite for a Lattice adapter
@@ -22,7 +22,7 @@ export function createAdapterTestSuite(
   describe(`${adapterName} Adapter Contract Tests`, () => {
     describe('Basic functionality', () => {
       it('should execute model factories with proper tools', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             count: number;
             increment: () => void;
@@ -42,7 +42,7 @@ export function createAdapterTestSuite(
           };
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
 
@@ -61,7 +61,7 @@ export function createAdapterTestSuite(
       });
 
       it('should support computed views', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             firstName: string;
             lastName: string;
@@ -99,7 +99,7 @@ export function createAdapterTestSuite(
           };
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
 
@@ -126,7 +126,7 @@ export function createAdapterTestSuite(
       });
 
       it('should handle slice composition with compose()', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             user: { name: string; role: string };
             theme: 'light' | 'dark';
@@ -172,7 +172,7 @@ export function createAdapterTestSuite(
           };
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
 
@@ -192,7 +192,7 @@ export function createAdapterTestSuite(
       });
 
       it('should handle parameterized view factories', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             items: Array<{ id: number; name: string; selected: boolean }>;
             toggleItem: (id: number) => void;
@@ -250,7 +250,7 @@ export function createAdapterTestSuite(
           };
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
 
@@ -282,12 +282,12 @@ export function createAdapterTestSuite(
 
     describe('Error handling', () => {
       it('should handle empty components', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{}>(() => ({}));
           const actions = createSlice(model, (_m) => ({}));
           const views = {};
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
         expect(adapter.actions).toEqual({});
@@ -295,7 +295,7 @@ export function createAdapterTestSuite(
       });
 
       it('should handle components with only actions', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             doSomething: () => void;
           }>(({ set }) => ({
@@ -309,7 +309,7 @@ export function createAdapterTestSuite(
           const views = {};
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
         expect(typeof adapter.actions.doSomething).toBe('function');
@@ -319,7 +319,7 @@ export function createAdapterTestSuite(
 
     describe('View consistency', () => {
       it('should return current view data', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             counter: number;
             increment: () => void;
@@ -337,7 +337,7 @@ export function createAdapterTestSuite(
           };
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
 
@@ -357,7 +357,7 @@ export function createAdapterTestSuite(
       });
 
       it('should handle view transforms consistently', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             value: number;
             multiply: (factor: number) => void;
@@ -397,7 +397,7 @@ export function createAdapterTestSuite(
           };
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
 
@@ -418,7 +418,7 @@ export function createAdapterTestSuite(
 
     describe('Action behavior', () => {
       it('should handle synchronous actions', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             log: string[];
             addEntry: (entry: string) => void;
@@ -439,7 +439,7 @@ export function createAdapterTestSuite(
           };
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
 
@@ -459,7 +459,7 @@ export function createAdapterTestSuite(
       });
 
       it('should handle actions that call other actions', () => {
-        const component = createComponent(() => {
+        const component = () => {
           const model = createModel<{
             x: number;
             y: number;
@@ -489,7 +489,7 @@ export function createAdapterTestSuite(
           };
 
           return { model, actions, views };
-        });
+        };
 
         const adapter = createAdapter(component);
 

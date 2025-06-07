@@ -1,8 +1,8 @@
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 import { createReduxAdapter } from './index';
 
 // Test computed view type inference
-const component = createComponent(() => {
+const component = () => {
   const model = createModel<{
     count: number;
     increment: () => void;
@@ -25,7 +25,7 @@ const component = createComponent(() => {
       doubled: doubledView,
     },
   };
-});
+};
 
 const store = createReduxAdapter(component);
 

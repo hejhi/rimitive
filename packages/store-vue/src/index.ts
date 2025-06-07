@@ -20,7 +20,7 @@ import {
   shallowRef,
   triggerRef,
   unref,
-  effectScope
+  effectScope,
 } from 'vue';
 import type {
   ComponentFactory,
@@ -85,19 +85,19 @@ type SubscribeCallback<T> = (value: T) => void;
 
 /**
  * Shallow equality check for comparing values in subscriptions.
- * This is necessary because Vue's computed properties return new object 
+ * This is necessary because Vue's computed properties return new object
  * references even when the underlying values haven't changed.
- * 
+ *
  * We use shallow equality because views typically return simple objects
  * like { value: primitive } or arrays of objects.
  */
 function isEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
-  
+
   if (a == null || b == null) return false;
-  
+
   if (typeof a !== 'object' || typeof b !== 'object') return false;
-  
+
   // Handle arrays
   if (Array.isArray(a) && Array.isArray(b)) {
     if (a.length !== b.length) return false;
@@ -106,22 +106,20 @@ function isEqual(a: unknown, b: unknown): boolean {
     }
     return true;
   }
-  
+
   // Handle objects (shallow comparison)
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
-  
+
   if (keysA.length !== keysB.length) return false;
-  
+
   for (const key of keysA) {
     if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
     if (!Object.is((a as any)[key], (b as any)[key])) return false;
   }
-  
+
   return true;
 }
-
-
 
 // ============================================================================
 // Main Composable Implementation
@@ -239,9 +237,8 @@ export function useLattice<Model, Actions, Views>(
             return executeSliceFactory(view);
           });
 
-          views[key as keyof ViewTypes<Model, Views>] = (() => 
-            unref(computedView)
-          ) as ViewTypes<Model, Views>[keyof ViewTypes<
+          views[key as keyof ViewTypes<Model, Views>] = (() =>
+            unref(computedView)) as ViewTypes<Model, Views>[keyof ViewTypes<
             Model,
             Views
           >];
@@ -280,7 +277,7 @@ export function useLattice<Model, Actions, Views>(
         ): (() => void) => {
           // Store the previous value for comparison
           let previousValue = selector(views);
-          
+
           // Watch the state ref for changes
           const stopHandle = watch(
             stateRef,
@@ -294,10 +291,10 @@ export function useLattice<Model, Actions, Views>(
                 callback(newValue);
               }
             },
-            { 
+            {
               flush: 'sync', // Ensure synchronous execution
               immediate: false, // Don't run on initial setup
-              deep: false // We're using shallow ref, no need for deep watching
+              deep: false, // We're using shallow ref, no need for deep watching
             }
           );
 
@@ -360,7 +357,7 @@ export const LatticePlugin = {
  * ```vue
  * <script setup>
  * import { useLatticeStore } from '@lattice/adapter-vue';
- * 
+ *
  * const store = useLatticeStore();
  * const todos = computed(() => store.views.todos());
  * </script>
@@ -369,7 +366,7 @@ export const LatticePlugin = {
 export function useLatticeStore<
   Model = unknown,
   Actions = unknown,
-  Views = unknown
+  Views = unknown,
 >(
   key: InjectionKey<AdapterResult<Model, Actions, Views>> = LatticeKey as any
 ): AdapterResult<Model, Actions, Views> {
@@ -390,7 +387,7 @@ export function useLatticeStore<
  * <script setup>
  * import { provideLattice } from '@lattice/adapter-vue';
  * import { todoComponent } from './todo-component';
- * 
+ *
  * const store = provideLattice(todoComponent);
  * </script>
  * ```
@@ -448,7 +445,6 @@ export function createVueAdapter<Model, Actions, Views>(
 
 export { useLattice as createVueComposable }; // Alias for consistency
 
-
 // ============================================================================
 // In-source tests
 // ============================================================================
@@ -456,14 +452,12 @@ export { useLattice as createVueComposable }; // Alias for consistency
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
   const { mount } = await import('@vue/test-utils');
-  const { createComponent, createModel, createSlice } = await import(
-    '@lattice/core'
-  );
+  const { createModel, createSlice } = await import('@lattice/core');
   const { defineComponent, h, nextTick } = await import('vue');
 
   describe('useLattice', () => {
     it('should create a store with actions and views', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -481,7 +475,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -504,7 +498,7 @@ if (import.meta.vitest) {
     });
 
     it('should update state reactively', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -522,7 +516,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -551,7 +545,7 @@ if (import.meta.vitest) {
     });
 
     it('should support subscriptions', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -569,14 +563,14 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const updates: Array<{ value: number }> = [];
 
       const TestComponent = defineComponent({
         setup() {
           const store = useLattice(counter);
-          
+
           const unsubscribe = store.subscribe(
             (views) => views.count(),
             (count) => updates.push(count)
@@ -609,7 +603,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle computed views', async () => {
-      const todoApp = createComponent(() => {
+      const todoApp = () => {
         const model = createModel<{
           todos: Array<{ id: number; text: string; done: boolean }>;
           filter: 'all' | 'active' | 'completed';
@@ -637,8 +631,8 @@ if (import.meta.vitest) {
             m.filter === 'all'
               ? m.todos
               : m.filter === 'active'
-              ? m.todos.filter((t) => !t.done)
-              : m.todos.filter((t) => t.done);
+                ? m.todos.filter((t) => !t.done)
+                : m.todos.filter((t) => t.done);
 
           return {
             todos,
@@ -652,7 +646,7 @@ if (import.meta.vitest) {
           actions,
           views: { todos: todosView },
         };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -677,7 +671,7 @@ if (import.meta.vitest) {
     });
 
     it('should work with provide/inject', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -695,7 +689,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const ParentComponent = defineComponent({
         setup() {

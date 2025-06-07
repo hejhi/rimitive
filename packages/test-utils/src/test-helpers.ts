@@ -157,9 +157,7 @@ export async function waitForState<TState>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createComponent, createModel, createSlice } = await import(
-    '@lattice/core'
-  );
+  const { createModel, createSlice } = await import('@lattice/core');
 
   describe('testSlice', () => {
     it('should test a slice in isolation', () => {
@@ -199,7 +197,7 @@ if (import.meta.vitest) {
 
   describe('testView', () => {
     it('should test view outputs', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{ count: number; increment: () => void }>(
           ({ set, get }) => ({
             count: 0,
@@ -223,7 +221,7 @@ if (import.meta.vitest) {
             counter: counterView,
           },
         };
-      });
+      };
 
       const { getViewOutput, executeAction } = testView(counter, 'counter');
 

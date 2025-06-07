@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createComponent, createModel, createSlice, compose } from './index';
+import { createModel, createSlice, compose } from './index';
 import type {
   SliceFactory,
   ComponentSpec,
@@ -94,7 +94,7 @@ function createTestAdapter<Model, Actions, Views>(
 describe('API Parameter Functionality', () => {
   describe('Basic API Usage', () => {
     it('should provide executeSlice to call other slices', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           users: { id: number; name: string; role: string }[];
           products: { id: number; name: string; price: number }[];
@@ -133,7 +133,7 @@ describe('API Parameter Functionality', () => {
             summary: summarySlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
       const summary = adapter.views.summary();
@@ -145,7 +145,7 @@ describe('API Parameter Functionality', () => {
     });
 
     it('should provide getState to access current model state', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           counter: number;
           increment: () => void;
@@ -173,7 +173,7 @@ describe('API Parameter Functionality', () => {
             inspector: stateInspectorSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
       const inspector = adapter.views.inspector();
@@ -193,7 +193,7 @@ describe('API Parameter Functionality', () => {
     });
 
     it('should support slices that conditionally use API', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           mode: 'simple' | 'detailed';
           data: { value: number; metadata: string };
@@ -230,7 +230,7 @@ describe('API Parameter Functionality', () => {
             adaptive: adaptiveViewSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -251,7 +251,7 @@ describe('API Parameter Functionality', () => {
 
   describe('Computed Views with API', () => {
     it('should support dynamic view creation based on state', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           activeFilters: string[];
           items: { id: number; name: string; tags: string[] }[];
@@ -305,7 +305,7 @@ describe('API Parameter Functionality', () => {
             filtered: filteredView(),
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -331,7 +331,7 @@ describe('API Parameter Functionality', () => {
     });
 
     it('should compose multiple slices to create complex views', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           user: {
             id: number;
@@ -406,7 +406,7 @@ describe('API Parameter Functionality', () => {
             dashboard: dashboardSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
       const dashboard = adapter.views.dashboard();
@@ -425,7 +425,7 @@ describe('API Parameter Functionality', () => {
 
   describe('Advanced Patterns', () => {
     it('should support recursive slice execution', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           nodes: { id: number; name: string; parentId: number | null }[];
         }>(() => ({
@@ -483,7 +483,7 @@ describe('API Parameter Functionality', () => {
             tree: treeSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -511,7 +511,7 @@ describe('API Parameter Functionality', () => {
     });
 
     it('should handle cross-slice dependencies and circular references safely', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           teamA: { name: string; score: number };
           teamB: { name: string; score: number };
@@ -575,7 +575,7 @@ describe('API Parameter Functionality', () => {
             comparison: comparisonSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -598,7 +598,7 @@ describe('API Parameter Functionality', () => {
     });
 
     it('should handle error scenarios gracefully', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           data: { [key: string]: unknown };
           errorMode: boolean;
@@ -644,7 +644,7 @@ describe('API Parameter Functionality', () => {
             safeWrapper: safeWrapperSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -667,7 +667,7 @@ describe('API Parameter Functionality', () => {
     it('should implement logging middleware pattern', () => {
       const logs: string[] = [];
 
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           value: number;
           increment: () => void;
@@ -733,7 +733,7 @@ describe('API Parameter Functionality', () => {
             composite: compositeSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -751,7 +751,7 @@ describe('API Parameter Functionality', () => {
     it('should implement caching middleware pattern', () => {
       let computationCount = 0;
 
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           input: number;
           setInput: (value: number) => void;
@@ -819,7 +819,7 @@ describe('API Parameter Functionality', () => {
             multiUse: multiUseSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -844,7 +844,7 @@ describe('API Parameter Functionality', () => {
     it('should implement performance tracking middleware', () => {
       const performanceData: { [key: string]: number[] } = {};
 
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           data: number[];
           addData: (value: number) => void;
@@ -940,7 +940,7 @@ describe('API Parameter Functionality', () => {
             dashboard: performanceDashboard,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -966,7 +966,7 @@ describe('API Parameter Functionality', () => {
     });
 
     it('should demonstrate validation middleware pattern', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           formData: {
             email: string;
@@ -1073,7 +1073,7 @@ describe('API Parameter Functionality', () => {
             form: validatedFormSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -1106,7 +1106,7 @@ describe('API Parameter Functionality', () => {
 
   describe('Real-world Scenarios', () => {
     it('should handle a shopping cart with computed totals', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           products: {
             id: number;
@@ -1215,7 +1215,7 @@ describe('API Parameter Functionality', () => {
             summary: cartSummarySlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 
@@ -1244,7 +1244,7 @@ describe('API Parameter Functionality', () => {
     });
 
     it('should handle user permissions and feature flags', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           user: {
             id: number;
@@ -1372,7 +1372,7 @@ describe('API Parameter Functionality', () => {
             dashboard: userDashboardSlice,
           },
         };
-      });
+      };
 
       const adapter = createTestAdapter(component);
 

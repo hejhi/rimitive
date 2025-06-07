@@ -3,18 +3,13 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  createComponent,
-  createModel,
-  createSlice,
-  compose,
-} from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 import { createReduxAdapter } from './index';
 
 describe('compose with redux adapter', () => {
   it('should work with basic state updates first', () => {
     // Simpler test to isolate the issue
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -32,7 +27,7 @@ describe('compose with redux adapter', () => {
         actions,
         views: {},
       };
-    });
+    };
 
     const store = createReduxAdapter(component);
 
@@ -49,7 +44,7 @@ describe('compose with redux adapter', () => {
   });
 
   it('should work with composed slices', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -85,7 +80,7 @@ describe('compose with redux adapter', () => {
         actions,
         views: { button: buttonSlice },
       };
-    });
+    };
 
     const store = createReduxAdapter(component);
 
@@ -103,7 +98,7 @@ describe('compose with redux adapter', () => {
   });
 
   it('should handle reactive updates with composed slices', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         filter: 'all' | 'active' | 'completed';
         setFilter: (filter: 'all' | 'active' | 'completed') => void;
@@ -144,7 +139,7 @@ describe('compose with redux adapter', () => {
         actions,
         views: { filterButtons, state: stateSlice },
       };
-    });
+    };
 
     const store = createReduxAdapter(component);
 
@@ -168,7 +163,7 @@ describe('compose with redux adapter', () => {
   });
 
   it('should work with nested compose', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         x: number;
         y: number;
@@ -214,7 +209,7 @@ describe('compose with redux adapter', () => {
         actions: createSlice(model, (m) => ({ setOp: m.setOp })),
         views: { display: displaySlice },
       };
-    });
+    };
 
     const store = createReduxAdapter(component);
 
@@ -227,7 +222,7 @@ describe('compose with redux adapter', () => {
   });
 
   it('should handle complex composition patterns', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         items: Array<{ id: number; name: string; completed: boolean }>;
         selectedId: number | null;
@@ -298,7 +293,7 @@ describe('compose with redux adapter', () => {
           summary: summarySlice,
         },
       };
-    });
+    };
 
     const store = createReduxAdapter(component);
 

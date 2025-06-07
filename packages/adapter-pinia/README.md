@@ -39,10 +39,10 @@ app.mount('#app');
 
 ```ts
 import { createPiniaAdapter } from '@lattice/adapter-pinia';
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 
 // Define your component
-const counterComponent = createComponent(() => {
+const counterComponent = () => {
   const model = createModel(({ set, get }) => ({
     count: 0,
     increment: () => set({ count: get().count + 1 }),
@@ -60,7 +60,7 @@ const counterComponent = createComponent(() => {
   };
 
   return { model, actions, views };
-});
+};
 
 // Create a Pinia store
 export const useCounterStore = createPiniaAdapter(counterComponent, 'counter');

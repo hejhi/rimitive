@@ -11,12 +11,7 @@
  */
 
 import React from 'react';
-import {
-  createComponent,
-  createModel,
-  createSlice,
-  type SliceFactory,
-} from '@lattice/core';
+import { createModel, createSlice, type SliceFactory } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useViews } from '@lattice/runtime/react';
 
@@ -34,7 +29,10 @@ function withPerformanceMonitoring<M, T>(
     const result = slice(model);
     const endTime = performance.now();
 
-    if (typeof window !== 'undefined' && (window as Window & { __PERF_MONITORING?: boolean }).__PERF_MONITORING) {
+    if (
+      typeof window !== 'undefined' &&
+      (window as Window & { __PERF_MONITORING?: boolean }).__PERF_MONITORING
+    ) {
       console.log(`[Perf] ${name} took ${(endTime - startTime).toFixed(2)}ms`);
     }
 
@@ -111,7 +109,7 @@ interface HistoryEntry<T> {
   action: string;
 }
 
-export const middlewareComponent = createComponent(() => {
+export const middlewareComponent = () => {
   type ModelType = {
     // Domain state
     items: Array<{ id: string; name: string; price: number; tags: string[] }>;
@@ -367,7 +365,7 @@ export const middlewareComponent = createComponent(() => {
       history: historyView,
     },
   };
-});
+};
 
 // ============================================================================
 // Create Store

@@ -464,7 +464,6 @@ export function createPiniaAdapter<Model extends object, Actions, Views>(
 
 export { createPiniaAdapter as createAdapter }; // Alias for consistency
 
-
 // ============================================================================
 // In-source tests
 // ============================================================================
@@ -472,9 +471,7 @@ export { createPiniaAdapter as createAdapter }; // Alias for consistency
 if (import.meta.vitest) {
   const { describe, it, expect, beforeEach } = import.meta.vitest;
   const { createPinia, setActivePinia } = await import('pinia');
-  const { createComponent, createModel, createSlice, compose } = await import(
-    '@lattice/core'
-  );
+  const { createModel, createSlice, compose } = await import('@lattice/core');
 
   describe('createPiniaAdapter', () => {
     beforeEach(() => {
@@ -483,7 +480,7 @@ if (import.meta.vitest) {
     });
 
     it('should create a store with actions and views', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -501,7 +498,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const store = createPiniaAdapter(counter, 'counter');
 
@@ -513,7 +510,7 @@ if (import.meta.vitest) {
     });
 
     it('should update state when actions are called', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -531,7 +528,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const store = createPiniaAdapter(counter, 'counter2');
 
@@ -545,7 +542,7 @@ if (import.meta.vitest) {
     });
 
     it('should support subscriptions', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -563,7 +560,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const store = createPiniaAdapter(counter, 'counter3');
 
@@ -585,7 +582,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle compose() in views', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -616,7 +613,7 @@ if (import.meta.vitest) {
             button: buttonSlice,
           },
         };
-      });
+      };
 
       const store = createPiniaAdapter(component, 'compose-test');
       const button = store.views.button();
@@ -632,7 +629,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle multiple instances', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -650,7 +647,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const store1 = createPiniaAdapter(counter, 'counter-instance-1');
       const store2 = createPiniaAdapter(counter, 'counter-instance-2');

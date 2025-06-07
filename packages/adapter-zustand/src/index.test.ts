@@ -1,11 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createZustandAdapter } from './index';
-import {
-  createComponent,
-  createModel,
-  createSlice,
-  compose,
-} from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 
 describe('createZustandAdapter', () => {
   it('should export createZustandAdapter function', () => {
@@ -14,7 +9,7 @@ describe('createZustandAdapter', () => {
   });
 
   it('should return unified API with actions, views, and subscribe', () => {
-    const counter = createComponent(() => {
+    const counter = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -32,7 +27,7 @@ describe('createZustandAdapter', () => {
       }));
 
       return { model, actions, views: { count: countView } };
-    });
+    };
 
     const store = createZustandAdapter(counter);
 
@@ -57,7 +52,7 @@ describe('createZustandAdapter', () => {
   });
 
   it('should support view-based subscriptions', () => {
-    const counter = createComponent(() => {
+    const counter = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -75,7 +70,7 @@ describe('createZustandAdapter', () => {
         actions: createSlice(model, (m) => ({ increment: m.increment })),
         views: { count: countView },
       };
-    });
+    };
 
     const store = createZustandAdapter(counter);
 
@@ -98,7 +93,7 @@ describe('createZustandAdapter', () => {
   });
 
   it('should handle vanilla JS usage pattern', () => {
-    const counter = createComponent(() => {
+    const counter = () => {
       const model = createModel<{
         count: number;
         multiplier: number;
@@ -129,7 +124,7 @@ describe('createZustandAdapter', () => {
           doubled: doubledView,
         },
       };
-    });
+    };
 
     const store = createZustandAdapter(counter);
 
@@ -148,7 +143,7 @@ describe('createZustandAdapter', () => {
   });
 
   it('should work with React-style usage', () => {
-    const counter = createComponent(() => {
+    const counter = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -166,7 +161,7 @@ describe('createZustandAdapter', () => {
         actions: createSlice(model, (m) => ({ increment: m.increment })),
         views: { count: countView },
       };
-    });
+    };
 
     const store = createZustandAdapter(counter);
 
@@ -180,7 +175,7 @@ describe('createZustandAdapter', () => {
   });
 
   it('should handle async actions properly', async () => {
-    const counter = createComponent(() => {
+    const counter = () => {
       const model = createModel<{
         count: number;
         loading: boolean;
@@ -207,7 +202,7 @@ describe('createZustandAdapter', () => {
         })),
         views: { state: stateView },
       };
-    });
+    };
 
     const store = createZustandAdapter(counter);
 
@@ -226,7 +221,7 @@ describe('createZustandAdapter', () => {
 
   describe('views', () => {
     it('should handle static slice views', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           disabled: boolean;
@@ -245,7 +240,7 @@ describe('createZustandAdapter', () => {
           actions: createSlice(model, () => ({})),
           views: { display: displaySlice },
         };
-      });
+      };
 
       const componentStore = createZustandAdapter(component);
 
@@ -258,7 +253,7 @@ describe('createZustandAdapter', () => {
     });
 
     it('should handle computed view functions', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{ count: number }>(() => ({ count: 5 }));
 
         const countSlice = createSlice(model, (m) => ({
@@ -282,7 +277,7 @@ describe('createZustandAdapter', () => {
           actions: createSlice(model, () => ({})),
           views,
         };
-      });
+      };
 
       const componentStore = createZustandAdapter(component);
 
@@ -298,7 +293,7 @@ describe('createZustandAdapter', () => {
     });
 
     it('should update views reactively when model changes', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -322,7 +317,7 @@ describe('createZustandAdapter', () => {
           actions,
           views: { display: countSlice },
         };
-      });
+      };
 
       const componentStore = createZustandAdapter(component);
 
@@ -354,7 +349,7 @@ describe('createZustandAdapter', () => {
     });
 
     it('should handle views with compose()', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -385,7 +380,7 @@ describe('createZustandAdapter', () => {
           actions,
           views: { button: buttonSlice },
         };
-      });
+      };
 
       const componentStore = createZustandAdapter(component);
 
@@ -411,7 +406,7 @@ describe('createZustandAdapter', () => {
     });
 
     it('should handle nested compose()', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           user: { id: number; name: string; role: string };
           permissions: { canEdit: boolean; canDelete: boolean };
@@ -452,7 +447,7 @@ describe('createZustandAdapter', () => {
           actions: actionsSlice,
           views: { dashboard: dashboardSlice },
         };
-      });
+      };
 
       const componentStore = createZustandAdapter(component);
 
@@ -480,7 +475,7 @@ describe('createZustandAdapter', () => {
       // Key difference: In React, hooks handle subscriptions automatically
       // In vanilla JS, you manage subscriptions manually for reactivity
 
-      const todoApp = createComponent(() => {
+      const todoApp = () => {
         const model = createModel<{
           todos: Array<{ id: number; text: string; done: boolean }>;
           filter: 'all' | 'active' | 'completed';
@@ -543,7 +538,7 @@ describe('createZustandAdapter', () => {
             stats: statsSlice,
           },
         };
-      });
+      };
 
       const store = createZustandAdapter(todoApp);
 
@@ -646,7 +641,7 @@ describe('createZustandAdapter', () => {
     it('should show practical vanilla JS UI update pattern', () => {
       // This example shows a realistic pattern for updating UI in vanilla JS
 
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -672,7 +667,7 @@ describe('createZustandAdapter', () => {
         }));
 
         return { model, actions, views: { buttonAttrs } };
-      });
+      };
 
       const store = createZustandAdapter(counter);
 
@@ -745,7 +740,7 @@ describe('createZustandAdapter', () => {
     it('should demonstrate view subscriptions separate from state subscriptions', () => {
       // This shows how views have their own subscription mechanism
 
-      const app = createComponent(() => {
+      const app = () => {
         const model = createModel<{
           user: { name: string; role: string };
           theme: 'light' | 'dark';
@@ -773,7 +768,7 @@ describe('createZustandAdapter', () => {
           })),
           views: { user: userView },
         };
-      });
+      };
 
       const store = createZustandAdapter(app);
 
@@ -832,7 +827,7 @@ describe('createZustandAdapter', () => {
 
   describe('namespace collision avoidance', () => {
     it('should handle models with properties named store, actions, or views', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           store: string;
           actions: number;
@@ -861,7 +856,7 @@ describe('createZustandAdapter', () => {
         }));
 
         return { model, actions, views: { state: stateSlice } };
-      });
+      };
 
       const store = createZustandAdapter(component);
 

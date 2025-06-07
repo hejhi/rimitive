@@ -1,15 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { mount } from '@vue/test-utils';
-import {
-  defineComponent,
-  h,
-  nextTick,
-  computed,
-  ref,
-} from 'vue';
+import { defineComponent, h, nextTick, computed, ref } from 'vue';
 import { createPinia, setActivePinia } from 'pinia';
 import { createPiniaAdapter } from './index';
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 
 describe('Pinia Adapter', () => {
   beforeEach(() => {
@@ -19,7 +13,7 @@ describe('Pinia Adapter', () => {
 
   describe('createPiniaAdapter', () => {
     it('should create a reactive store', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -41,7 +35,7 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -81,7 +75,7 @@ describe('Pinia Adapter', () => {
     });
 
     it('should handle complex state with arrays', async () => {
-      const todoApp = createComponent(() => {
+      const todoApp = () => {
         let nextId = 1;
         const model = createModel<{
           todos: Array<{ id: number; text: string; done: boolean }>;
@@ -114,7 +108,7 @@ describe('Pinia Adapter', () => {
 
         const views = {
           todos: createSlice(model, (m) => m.todos),
-          activeTodos: createSlice(model, (m) => 
+          activeTodos: createSlice(model, (m) =>
             m.todos.filter((t) => !t.done)
           ),
           completedTodos: createSlice(model, (m) =>
@@ -128,7 +122,7 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -173,14 +167,14 @@ describe('Pinia Adapter', () => {
       if (firstTodo) {
         store.actions.toggleTodo(firstTodo.id);
         await nextTick();
-        
+
         expect(wrapper.find('.stats').text()).toContain('Active: 1');
         expect(wrapper.find('.stats').text()).toContain('Completed: 1');
       }
     });
 
     it('should handle compose() in views', async () => {
-      const app = createComponent(() => {
+      const app = () => {
         const model = createModel<{
           user: { name: string; role: string };
           permissions: string[];
@@ -189,9 +183,8 @@ describe('Pinia Adapter', () => {
           user: { name: 'John', role: 'user' },
           permissions: ['read'],
           updateUser: (user) => {
-            const perms = user.role === 'admin' 
-              ? ['read', 'write', 'delete']
-              : ['read'];
+            const perms =
+              user.role === 'admin' ? ['read', 'write', 'delete'] : ['read'];
             set({ user, permissions: perms });
           },
         }));
@@ -205,16 +198,13 @@ describe('Pinia Adapter', () => {
 
         const profileView = createSlice(
           model,
-          compose(
-            { userSlice, permSlice },
-            (_m, { userSlice, permSlice }) => ({
-              name: userSlice.name,
-              role: userSlice.role,
-              canWrite: permSlice.includes('write'),
-              canDelete: permSlice.includes('delete'),
-              summary: `${userSlice.name} (${userSlice.role})`,
-            })
-          )
+          compose({ userSlice, permSlice }, (_m, { userSlice, permSlice }) => ({
+            name: userSlice.name,
+            role: userSlice.role,
+            canWrite: permSlice.includes('write'),
+            canDelete: permSlice.includes('delete'),
+            summary: `${userSlice.name} (${userSlice.role})`,
+          }))
         );
 
         return {
@@ -222,7 +212,7 @@ describe('Pinia Adapter', () => {
           actions,
           views: { profile: profileView },
         };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -259,7 +249,7 @@ describe('Pinia Adapter', () => {
 
   describe('global stores', () => {
     it('should work across multiple components', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -277,7 +267,7 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       // Create global store - Pinia handles singleton behavior
 
@@ -331,7 +321,7 @@ describe('Pinia Adapter', () => {
 
   describe('subscriptions', () => {
     it('should handle subscribe/unsubscribe', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -349,7 +339,7 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const TestComponent = defineComponent({
         setup() {
@@ -394,7 +384,7 @@ describe('Pinia Adapter', () => {
     });
 
     it('should only call subscribers when values change', async () => {
-      const app = createComponent(() => {
+      const app = () => {
         const model = createModel<{
           count: number;
           name: string;
@@ -418,7 +408,7 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const countUpdates: number[] = [];
       const nameUpdates: string[] = [];
@@ -472,7 +462,7 @@ describe('Pinia Adapter', () => {
 
   describe('Pinia integration', () => {
     it('should work with Pinia DevTools', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -490,7 +480,7 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const store = createPiniaAdapter(counter, 'devtools-test');
 
@@ -502,7 +492,7 @@ describe('Pinia Adapter', () => {
     });
 
     it('should support HMR through Pinia', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -520,11 +510,11 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       // Pinia automatically handles HMR if configured
       const store = createPiniaAdapter(counter, 'hmr-test');
-      
+
       // Store should be properly set up for HMR
       expect(store).toBeDefined();
       expect(store.actions).toBeDefined();
@@ -533,11 +523,13 @@ describe('Pinia Adapter', () => {
 
   describe('store behavior', () => {
     it('should reuse store instances with same ID', () => {
-      const counter = createComponent(() => {
-        const model = createModel<{ count: number; increment: () => void }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
+      const counter = () => {
+        const model = createModel<{ count: number; increment: () => void }>(
+          ({ set, get }) => ({
+            count: 0,
+            increment: () => set({ count: get().count + 1 }),
+          })
+        );
 
         const actions = createSlice(model, (m) => ({
           increment: m.increment,
@@ -548,29 +540,31 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       // Create first store
       const store1 = createPiniaAdapter(counter, 'cache-test-reuse');
       store1.actions.increment();
-      
+
       // Create second store with same ID
       const store2 = createPiniaAdapter(counter, 'cache-test-reuse');
-      
+
       // Should share the same state (Pinia ensures singleton behavior)
       expect(store2.views.count().value).toBe(1);
-      
+
       // Actions should affect both stores
       store2.actions.increment();
       expect(store1.views.count().value).toBe(2);
     });
 
     it('should support multiple stores from the same component', () => {
-      const counter = createComponent(() => {
-        const model = createModel<{ count: number; increment: () => void }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
+      const counter = () => {
+        const model = createModel<{ count: number; increment: () => void }>(
+          ({ set, get }) => ({
+            count: 0,
+            increment: () => set({ count: get().count + 1 }),
+          })
+        );
 
         const actions = createSlice(model, (m) => ({
           increment: m.increment,
@@ -581,17 +575,17 @@ describe('Pinia Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       // Create two stores from the same component with different IDs
       const store1 = createPiniaAdapter(counter, 'counter-1');
       const store2 = createPiniaAdapter(counter, 'counter-2');
-      
+
       // They should have independent state
       store1.actions.increment();
       expect(store1.views.count().value).toBe(1);
       expect(store2.views.count().value).toBe(0);
-      
+
       store2.actions.increment();
       store2.actions.increment();
       expect(store1.views.count().value).toBe(1);
@@ -601,23 +595,24 @@ describe('Pinia Adapter', () => {
 
   describe('error handling', () => {
     it('should throw an error for invalid view types', () => {
-      const invalidComponent = createComponent(() => {
+      const invalidComponent = () => {
         const model = createModel<{ count: number }>(() => ({
           count: 0,
         }));
 
         const actions = createSlice(model, () => ({}));
-        
+
         const views = {
           // This is invalid - views must be SliceFactory or function
           invalidView: 'not a valid view' as any,
         };
 
         return { model, actions, views };
-      });
+      };
 
-      expect(() => createPiniaAdapter(invalidComponent, 'invalid-view-test'))
-        .toThrowError(/Invalid view type/);
+      expect(() =>
+        createPiniaAdapter(invalidComponent, 'invalid-view-test')
+      ).toThrowError(/Invalid view type/);
     });
   });
 });

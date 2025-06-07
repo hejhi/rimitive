@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createComponent, createModel, createSlice, compose } from './index';
+import { createModel, createSlice, compose } from './index';
 
 describe('Lattice Core', () => {
   describe('Model creation with state and mutations', () => {
@@ -540,7 +540,7 @@ describe('Lattice Core', () => {
 
   describe('Component creation', () => {
     it('should create components with proper structure from counter example', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         // Model: Pure state + mutations
         const model = createModel<{
           count: number;
@@ -594,7 +594,7 @@ describe('Lattice Core', () => {
             incrementButton,
           },
         };
-      });
+      };
 
       // Test component structure
       const component = counter();
@@ -614,7 +614,7 @@ describe('Lattice Core', () => {
       type Todo = { id: number; text: string; completed: boolean };
       type Filter = 'all' | 'active' | 'completed';
 
-      const todoList = createComponent(() => {
+      const todoList = () => {
         const model = createModel<{
           todos: Todo[];
           filter: Filter;
@@ -710,7 +710,7 @@ describe('Lattice Core', () => {
             completedButton: createFilterButtonView('completed'),
           },
         };
-      });
+      };
 
       const component = todoList();
 
@@ -791,7 +791,7 @@ describe('Lattice Core', () => {
     });
 
     it('should enforce type constraints in component factories', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{ count: number }>(() => ({
           count: 0,
         }));
@@ -807,7 +807,7 @@ describe('Lattice Core', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const spec = component();
 
@@ -826,7 +826,7 @@ describe('Lattice Core', () => {
   describe('Component composition', () => {
     it('should support component composition', () => {
       // Base counter
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -850,10 +850,10 @@ describe('Lattice Core', () => {
             display: countSlice,
           },
         };
-      });
+      };
 
       // Enhanced counter with additional functionality
-      const enhancedCounter = createComponent(() => {
+      const enhancedCounter = () => {
         const base = counter();
 
         // Extend the model
@@ -907,7 +907,7 @@ describe('Lattice Core', () => {
               }),
           },
         };
-      });
+      };
 
       const enhanced = enhancedCounter();
 

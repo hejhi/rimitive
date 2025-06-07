@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  createComponent,
-  createModel,
-  createSlice,
-  compose,
-} from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 import {
   createComponentTest,
   testSlice,
@@ -18,7 +13,7 @@ import {
 describe('@lattice/test-utils', () => {
   describe('integration with real Lattice components', () => {
     it('should properly test a counter component', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -64,7 +59,7 @@ describe('@lattice/test-utils', () => {
             incrementButton,
           },
         };
-      });
+      };
 
       const test = createComponentTest(counter);
 
@@ -101,7 +96,7 @@ describe('@lattice/test-utils', () => {
     });
 
     it('should handle complex slice composition', () => {
-      const app = createComponent(() => {
+      const app = () => {
         const model = createModel<{
           user: { name: string; role: string };
           theme: string;
@@ -142,7 +137,7 @@ describe('@lattice/test-utils', () => {
             header: headerSlice,
           },
         };
-      });
+      };
 
       const test = createComponentTest(app);
       const headerView = test.getView('header');
@@ -232,7 +227,7 @@ describe('@lattice/test-utils', () => {
 
   describe('testView helper', () => {
     it('should test computed views with parameters', () => {
-      const todoList = createComponent(() => {
+      const todoList = () => {
         const model = createModel<{
           todos: { id: number; text: string; done: boolean }[];
           filter: 'all' | 'active' | 'completed';
@@ -281,7 +276,7 @@ describe('@lattice/test-utils', () => {
             filteredTodos: filteredTodosSlice,
           },
         };
-      });
+      };
 
       const { getViewOutput, executeAction } = testView(
         todoList,
@@ -360,7 +355,7 @@ describe('@lattice/test-utils', () => {
 
   describe('edge cases', () => {
     it('should handle components with no views', () => {
-      const minimal = createComponent(() => {
+      const minimal = () => {
         const model = createModel(() => ({ value: 42 }));
 
         return {
@@ -368,14 +363,14 @@ describe('@lattice/test-utils', () => {
           actions: createSlice(model, () => ({})),
           views: {},
         };
-      });
+      };
 
       const test = createComponentTest(minimal);
       expect(test.getState().value).toBe(42);
     });
 
     it('should handle slice composition with compose()', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           user: { id: number; name: string; email: string };
           posts: { id: number; title: string; authorId: number }[];
@@ -413,7 +408,7 @@ describe('@lattice/test-utils', () => {
             profile: profileSlice,
           },
         };
-      });
+      };
 
       const test = createComponentTest(component);
       const profileView = test.getView('profile');
@@ -431,7 +426,7 @@ describe('@lattice/test-utils', () => {
     });
 
     it('should handle deeply nested slice composition', () => {
-      const nested = createComponent(() => {
+      const nested = () => {
         const model = createModel<{ a: { b: { c: string } } }>(() => ({
           a: { b: { c: 'deep' } },
         }));
@@ -461,7 +456,7 @@ describe('@lattice/test-utils', () => {
             deep: slice3,
           },
         };
-      });
+      };
 
       const test = createComponentTest(nested);
       expect(test.getView('deep')).toEqual({ c: 'deep' });

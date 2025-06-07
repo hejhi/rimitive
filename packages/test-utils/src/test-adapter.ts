@@ -173,9 +173,7 @@ export function createComponentTest<Model, Actions, Views>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createModel, createSlice, createComponent } = await import(
-    '@lattice/core'
-  );
+  const { createModel, createSlice } = await import('@lattice/core');
 
   describe('TestStore', () => {
     it('should work with slices created by createSlice', () => {
@@ -320,9 +318,9 @@ if (import.meta.vitest) {
     });
   });
 
-  describe('createComponentTest', () => {
+  describe('Test', () => {
     it('should create a test harness with API support', () => {
-      const component = createComponent(() => ({
+      const component = () => ({
         model: createModel<{ count: number }>(() => ({ count: 0 })),
         actions: createSlice(
           createModel<{ count: number }>(() => ({ count: 0 })),
@@ -336,7 +334,7 @@ if (import.meta.vitest) {
             (state) => ({ value: state.count })
           ),
         },
-      }));
+      });
 
       const test = createComponentTest(component);
 
@@ -354,7 +352,7 @@ if (import.meta.vitest) {
         (state) => state.items.length
       );
 
-      const component = createComponent(() => ({
+      const component = () => ({
         model: baseModel,
         actions: createSlice(baseModel, () => ({})),
         views: {
@@ -365,7 +363,7 @@ if (import.meta.vitest) {
               return { itemCount: count, hasItems: count > 0 };
             }),
         },
-      }));
+      });
 
       const test = createComponentTest(component);
       const summary = test.getView('summary');

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Vue composables for Lattice runtime
- * 
+ *
  * Provides standardized Vue composables that work with any adapter implementing
  * the subscribe pattern. These composables handle reactive subscriptions,
  * computed views, and side effects with proper cleanup.
@@ -23,13 +23,13 @@ export interface SubscribableStore<Views> {
 /**
  * Composable for selecting reactive views with automatic subscriptions.
  * Best for static views and simple selectors.
- * 
+ *
  * @example
  * ```vue
  * <script setup>
  * import { useViews } from '@lattice/runtime/vue';
  * import { todoStore } from './stores';
- * 
+ *
  * const { todos, filter } = useViews(todoStore, views => ({
  *   todos: views.todoList(),
  *   filter: views.currentFilter()
@@ -43,38 +43,38 @@ export function useViews<Views, Selected>(
 ): ComputedRef<Selected> {
   // Use a ref to track updates and trigger recomputation
   const updateTrigger = shallowRef(0);
-  
+
   // Create computed that depends on updateTrigger
   const result = computed(() => {
     // Access trigger to create dependency
     updateTrigger.value;
     return selector(store.views);
   });
-  
+
   // Set up subscription for updates
   const unsubscribe = store.subscribe(selector, () => {
     // Increment trigger to force recomputation
     updateTrigger.value++;
   });
-  
+
   // Clean up on component unmount
   onUnmounted(() => {
     unsubscribe();
   });
-  
+
   return result;
 }
 
 /**
  * Composable for expensive computed views.
  * Only recomputes when the store changes, not on every render.
- * 
+ *
  * @example
  * ```vue
  * <script setup>
  * import { useComputedView } from '@lattice/runtime/vue';
  * import { analyticsStore } from './stores';
- * 
+ *
  * const summary = useComputedView(
  *   analyticsStore,
  *   views => views.expensiveSummary()
@@ -88,14 +88,14 @@ export function useComputedView<Views, Result>(
 ): ComputedRef<Result> {
   // Track store version to detect changes
   const storeVersion = shallowRef(0);
-  
+
   // Create computed that depends on store version
   const computedResult = computed(() => {
     // Access version to create dependency
     storeVersion.value;
     return computation(store.views);
   });
-  
+
   // Subscribe to any store change
   const unsubscribe = store.subscribe(
     () => ({}), // Subscribe to any change
@@ -104,24 +104,24 @@ export function useComputedView<Views, Result>(
       storeVersion.value++;
     }
   );
-  
+
   // Clean up on component unmount
   onUnmounted(() => {
     unsubscribe();
   });
-  
+
   return computedResult;
 }
 
 /**
  * Low-level composable for custom subscription patterns and side effects.
- * 
+ *
  * @example
  * ```vue
  * <script setup>
  * import { useSubscribe } from '@lattice/runtime/vue';
  * import { todoStore } from './stores';
- * 
+ *
  * useSubscribe(
  *   todoStore,
  *   views => views.todoCount(),
@@ -140,10 +140,10 @@ export function useSubscribe<Views, Selected>(
   // Call callback with initial value
   const initialValue = selector(store.views);
   callback(initialValue);
-  
+
   // Set up subscription
   const unsubscribe = store.subscribe(selector, callback);
-  
+
   // Clean up on component unmount
   onUnmounted(() => {
     unsubscribe();
@@ -157,13 +157,13 @@ export function useSubscribe<Views, Selected>(
 /**
  * Composable that returns a single view as a computed ref.
  * Shorthand for selecting a single view.
- * 
+ *
  * @example
  * ```vue
  * <script setup>
  * import { useView } from '@lattice/runtime/vue';
  * import { todoStore } from './stores';
- * 
+ *
  * const todos = useView(todoStore, 'todoList');
  * </script>
  * ```
@@ -172,7 +172,7 @@ export function useView<Views, K extends keyof Views>(
   store: SubscribableStore<Views>,
   viewName: K
 ): Views[K] extends (...args: never[]) => infer R ? ComputedRef<R> : never {
-  return useViews(store, views => {
+  return useViews(store, (views) => {
     const view = views[viewName];
     if (typeof view === 'function') {
       return view();
@@ -184,20 +184,20 @@ export function useView<Views, K extends keyof Views>(
 /**
  * Composable for using store actions.
  * Returns the actions object directly (non-reactive).
- * 
+ *
  * @example
  * ```vue
  * <script setup>
  * import { useActions } from '@lattice/runtime/vue';
  * import { todoStore } from './stores';
- * 
+ *
  * const { addTodo, removeTodo } = useActions(todoStore);
  * </script>
  * ```
  */
-export function useActions<Actions>(
-  store: { actions: Actions }
-): Readonly<Actions> {
+export function useActions<Actions>(store: {
+  actions: Actions;
+}): Readonly<Actions> {
   // Actions are already bound and don't need reactivity
   return store.actions;
 }
@@ -205,16 +205,16 @@ export function useActions<Actions>(
 /**
  * Composable that combines views and actions for convenience.
  * Useful when you need both in a component.
- * 
+ *
  * @example
  * ```vue
  * <script setup>
  * import { useStore } from '@lattice/runtime/vue';
  * import { todoStore } from './stores';
- * 
+ *
  * const { views, actions } = useStore(todoStore);
  * const todos = computed(() => views.todoList());
- * 
+ *
  * function handleAdd() {
  *   actions.addTodo('New todo');
  * }
@@ -231,7 +231,7 @@ export function useStore<Model, Actions, Views>(
   return {
     views: store.views,
     actions: store.actions,
-    subscribe: store.subscribe
+    subscribe: store.subscribe,
   };
 }
 
@@ -276,41 +276,41 @@ export function isVueAdapterResult<Model, Actions, Views>(
 
 if (import.meta.vitest) {
   const { describe, it, expect, vi } = import.meta.vitest;
-  const { createComponent, createModel, createSlice } = await import('@lattice/core');
+  const { createModel, createSlice } = await import('@lattice/core');
   const { mount } = await import('@vue/test-utils');
   const { defineComponent, h, nextTick } = await import('vue');
 
   describe('Vue runtime composables', () => {
     const createTestComponentFactory = () => {
-      return createComponent(() => {
+      return () => {
         const model = createModel<TestModel>(({ set, get }) => ({
           count: 0,
           name: 'Test',
           items: [],
           increment: () => set({ count: get().count + 1 }),
           setName: (name) => set({ name }),
-          addItem: (item) => set({ items: [...get().items, item] })
+          addItem: (item) => set({ items: [...get().items, item] }),
         }));
 
-        const actions = createSlice(model, m => ({
+        const actions = createSlice(model, (m) => ({
           increment: m.increment,
           setName: m.setName,
-          addItem: m.addItem
+          addItem: m.addItem,
         }));
 
         const views = {
-          count: createSlice(model, m => ({ value: m.count })),
-          name: createSlice(model, m => ({ text: m.name })),
-          items: createSlice(model, m => ({ list: m.items })),
-          summary: createSlice(model, m => ({
+          count: createSlice(model, (m) => ({ value: m.count })),
+          name: createSlice(model, (m) => ({ text: m.name })),
+          items: createSlice(model, (m) => ({ list: m.items })),
+          summary: createSlice(model, (m) => ({
             total: m.count,
             itemCount: m.items.length,
-            description: `${m.name}: ${m.count} (${m.items.length} items)`
-          }))
+            description: `${m.name}: ${m.count} (${m.items.length} items)`,
+          })),
         };
 
         return { model, actions, views };
-      });
+      };
     };
 
     // Define types for the test component
@@ -341,32 +341,40 @@ if (import.meta.vitest) {
     };
 
     // Create a test adapter that implements the required interface
-    const createTestAdapter = (): AdapterResult<TestModel, TestActions, TestViews> => {
+    const createTestAdapter = (): AdapterResult<
+      TestModel,
+      TestActions,
+      TestViews
+    > => {
       const componentFactory = createTestComponentFactory();
       const componentSpec = componentFactory();
-      const { model: modelFactory, actions: actionsSlice, views: viewsSpec } = componentSpec;
-      
+      const {
+        model: modelFactory,
+        actions: actionsSlice,
+        views: viewsSpec,
+      } = componentSpec;
+
       // Create a simple state container
       let state: TestModel;
       const subscribers = new Set<() => void>();
-      
+
       // Initialize the model
       const modelTools: ModelTools<TestModel> = {
         get: () => state,
         set: (updates) => {
           state = { ...state, ...updates };
-          subscribers.forEach(sub => sub());
-        }
+          subscribers.forEach((sub) => sub());
+        },
       };
-      
+
       state = modelFactory(modelTools);
-      
+
       // Create properly typed view functions that always read current state
       const viewFunctions: TestViews = {
         count: () => viewsSpec.count(state),
         name: () => viewsSpec.name(state),
         items: () => viewsSpec.items(state),
-        summary: () => viewsSpec.summary(state)
+        summary: () => viewsSpec.summary(state),
       };
 
       return {
@@ -381,16 +389,16 @@ if (import.meta.vitest) {
             // Re-evaluate selector with fresh views
             const freshViews: TestViews = {
               count: () => viewsSpec.count(state),
-              name: () => viewsSpec.name(state), 
+              name: () => viewsSpec.name(state),
               items: () => viewsSpec.items(state),
-              summary: () => viewsSpec.summary(state)
+              summary: () => viewsSpec.summary(state),
             };
             const result = selector(freshViews);
             callback(result);
           };
-          
+
           subscribers.add(handler);
-          
+
           return () => {
             subscribers.delete(handler);
           };
@@ -399,7 +407,7 @@ if (import.meta.vitest) {
         destroy: () => {
           subscribers.clear();
         },
-        getState: () => state
+        getState: () => state,
       };
     };
 
@@ -408,16 +416,16 @@ if (import.meta.vitest) {
         const TestComponent = defineComponent({
           setup() {
             const store = createTestAdapter();
-            const selected = useViews(store, views => ({
+            const selected = useViews(store, (views) => ({
               count: views.count(),
-              name: views.name()
+              name: views.name(),
             }));
             return { store, selected };
           },
           render() {
             const { count, name } = this.selected;
             return h('div', `${name.text}: ${count.value}`);
-          }
+          },
         });
 
         const wrapper = mount(TestComponent);
@@ -437,11 +445,11 @@ if (import.meta.vitest) {
         const TestComponent = defineComponent({
           setup() {
             const store = createTestAdapter();
-            const data = useViews(store, views => {
+            const data = useViews(store, (views) => {
               const summary = views.summary();
               return {
                 description: summary.description,
-                hasItems: summary.itemCount > 0
+                hasItems: summary.itemCount > 0,
               };
             });
             return { store, data };
@@ -449,9 +457,9 @@ if (import.meta.vitest) {
           render() {
             return h('div', [
               h('p', this.data.description),
-              h('p', this.data.hasItems ? 'Has items' : 'No items')
+              h('p', this.data.hasItems ? 'Has items' : 'No items'),
             ]);
-          }
+          },
         });
 
         const wrapper = mount(TestComponent);
@@ -469,25 +477,25 @@ if (import.meta.vitest) {
     describe('useComputedView', () => {
       it('should compute expensive views efficiently', async () => {
         let computeCount = 0;
-        
+
         const TestComponent = defineComponent({
           setup() {
             const store = createTestAdapter();
-            const summary = useComputedView(store, views => {
+            const summary = useComputedView(store, (views) => {
               computeCount++;
               const s = views.summary();
               // Simulate expensive computation
               return {
                 ...s,
                 computed: true,
-                computeCount
+                computeCount,
               };
             });
             return { store, summary };
           },
           render() {
             return h('div', `Computed ${this.summary.computeCount} times`);
-          }
+          },
         });
 
         const wrapper = mount(TestComponent);
@@ -517,8 +525,8 @@ if (import.meta.vitest) {
             const store = createTestAdapter();
             useSubscribe(
               store,
-              views => views.count(),
-              count => {
+              (views) => views.count(),
+              (count) => {
                 if (count.value > 0) {
                   sideEffect(count.value);
                 }
@@ -528,12 +536,12 @@ if (import.meta.vitest) {
           },
           render() {
             return h('div');
-          }
+          },
         });
 
         const wrapper = mount(TestComponent);
         const { store } = wrapper.vm as any;
-        
+
         expect(sideEffect).not.toHaveBeenCalled();
 
         store.actions.increment();
@@ -551,16 +559,16 @@ if (import.meta.vitest) {
         const TestComponent = defineComponent({
           setup() {
             const store = createTestAdapter();
-            useSubscribe(store, views => views.name(), callback);
+            useSubscribe(store, (views) => views.name(), callback);
             return {};
           },
           render() {
             return h('div');
-          }
+          },
         });
 
         mount(TestComponent);
-        
+
         expect(callback).toHaveBeenCalledWith({ text: 'Test' });
       });
     });
@@ -575,7 +583,7 @@ if (import.meta.vitest) {
           },
           render() {
             return h('div', `Count: ${this.count.value}`);
-          }
+          },
         });
 
         const wrapper = mount(TestComponent);
@@ -596,16 +604,20 @@ if (import.meta.vitest) {
             const { increment, setName } = useActions(store);
             const count = useView(store, 'count');
             const name = useView(store, 'name');
-            
+
             return { increment, setName, count, name };
           },
           render() {
             return h('div', [
               h('p', `${this.name.text}: ${this.count.value}`),
               h('button', { onClick: this.increment }, 'Increment'),
-              h('button', { onClick: () => this.setName('Clicked') }, 'Set Name')
+              h(
+                'button',
+                { onClick: () => this.setName('Clicked') },
+                'Set Name'
+              ),
             ]);
-          }
+          },
         });
 
         const wrapper = mount(TestComponent);
@@ -628,18 +640,18 @@ if (import.meta.vitest) {
           setup() {
             const store = createTestAdapter();
             const { actions } = useStore(store);
-            
+
             // Use our reactive composable instead of direct access
             const count = useView(store, 'count');
-            
+
             return { actions, count };
           },
           render() {
             return h('div', [
               h('p', `Count: ${this.count.value}`),
-              h('button', { onClick: this.actions.increment }, 'Increment')
+              h('button', { onClick: this.actions.increment }, 'Increment'),
             ]);
-          }
+          },
         });
 
         const wrapper = mount(TestComponent);

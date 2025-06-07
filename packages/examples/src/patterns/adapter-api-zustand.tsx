@@ -17,19 +17,14 @@
  */
 
 import React from 'react';
-import {
-  createComponent,
-  createModel,
-  createSlice,
-  compose,
-} from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useViews } from '@lattice/runtime/react';
 
 // ============================================================================
 // Analytics Component - Completely adapter-agnostic
 // ============================================================================
-const analyticsComponent = createComponent(() => {
+const analyticsComponent = () => {
   const model = createModel<{
     // User activity
     pageViews: number;
@@ -200,7 +195,7 @@ const analyticsComponent = createComponent(() => {
       summary: summarySlice,
     },
   };
-});
+};
 
 // ============================================================================
 // Create Store - This is where adapter-specific features are used

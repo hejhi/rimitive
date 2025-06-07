@@ -27,10 +27,10 @@ pnpm add @lattice/store-react
 ```tsx
 import { useLattice } from '@lattice/store-react';
 import { useViews } from '@lattice/runtime/react';
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 
 // Define your component
-const counterComponent = createComponent(() => {
+const counterComponent = () => {
   const model = createModel<{
     count: number;
     increment: () => void;
@@ -51,7 +51,7 @@ const counterComponent = createComponent(() => {
   };
 
   return { model, actions, views };
-});
+};
 
 // Use in your React component
 function Counter() {
@@ -226,10 +226,10 @@ import React from 'react';
 import { View, Text, Button, FlatList, Switch } from 'react-native';
 import { useLattice } from '@lattice/store-react';
 import { useViews } from '@lattice/runtime/react';
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 
 // Define a todo component
-const todoComponent = createComponent(() => {
+const todoComponent = () => {
   const model = createModel<{
     todos: Array<{ id: string; text: string; done: boolean }>;
     addTodo: (text: string) => void;
@@ -273,7 +273,7 @@ const todoComponent = createComponent(() => {
   };
 
   return { model, actions, views };
-});
+};
 
 // React Native component
 export function TodoApp() {

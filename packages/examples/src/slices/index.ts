@@ -6,17 +6,12 @@
  * UI framework. These specifications can then be used with any adapter.
  */
 
-import {
-  createComponent,
-  createModel,
-  createSlice,
-  compose,
-} from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 
 // ============================================================================
 // Shared User Component
 // ============================================================================
-export const userComponent = createComponent(() => {
+export const userComponent = () => {
   const model = createModel<{
     user: { id: string; name: string; email: string } | null;
     isLoading: boolean;
@@ -89,12 +84,12 @@ export const userComponent = createComponent(() => {
       })),
     },
   };
-});
+};
 
 // ============================================================================
 // Shopping Cart Component
 // ============================================================================
-export const cartComponent = createComponent(() => {
+export const cartComponent = () => {
   const model = createModel<{
     items: Array<{ id: string; name: string; price: number; quantity: number }>;
     addItem: (item: { id: string; name: string; price: number }) => void;
@@ -174,12 +169,12 @@ export const cartComponent = createComponent(() => {
       // data directly or a SliceFactory that will be executed
     },
   };
-});
+};
 
 // ============================================================================
 // Theme Component (UI Settings)
 // ============================================================================
-export const themeComponent = createComponent(() => {
+export const themeComponent = () => {
   const model = createModel<{
     theme: 'light' | 'dark' | 'system';
     fontSize: 'small' | 'medium' | 'large';
@@ -238,12 +233,12 @@ export const themeComponent = createComponent(() => {
       })),
     },
   };
-});
+};
 
 // ============================================================================
 // Composite Dashboard Component
 // ============================================================================
-export const dashboardComponent = createComponent(() => {
+export const dashboardComponent = () => {
   // Compose behaviors from other components
   const user = userComponent();
   const cart = cartComponent();
@@ -353,4 +348,4 @@ export const dashboardComponent = createComponent(() => {
       })),
     },
   };
-});
+};

@@ -3,17 +3,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  createComponent,
-  createModel,
-  createSlice,
-  compose,
-} from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 import { createZustandAdapter } from './index';
 
 describe('compose with zustand adapter', () => {
   it('should work with composed slices', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         count: number;
         increment: () => void;
@@ -49,7 +44,7 @@ describe('compose with zustand adapter', () => {
         actions,
         views: { button: buttonSlice },
       };
-    });
+    };
 
     const store = createZustandAdapter(component);
 
@@ -64,7 +59,7 @@ describe('compose with zustand adapter', () => {
 
     // Check that count incremented (need to check through actions or a view that exposes count)
     // Since we don't have a count view, let's add one
-    const componentWithCount = createComponent(() => {
+    const componentWithCount = () => {
       const base = component();
       return {
         ...base,
@@ -73,7 +68,7 @@ describe('compose with zustand adapter', () => {
           count: createSlice(base.model, (m) => ({ value: m.count })),
         },
       };
-    });
+    };
 
     const storeWithCount = createZustandAdapter(componentWithCount);
     expect(storeWithCount.views.count().value).toBe(0);
@@ -83,7 +78,7 @@ describe('compose with zustand adapter', () => {
   });
 
   it('should handle reactive updates with composed slices', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         filter: 'all' | 'active' | 'completed';
         setFilter: (filter: 'all' | 'active' | 'completed') => void;
@@ -124,7 +119,7 @@ describe('compose with zustand adapter', () => {
         actions,
         views: { filterButtons, state: stateSlice },
       };
-    });
+    };
 
     const store = createZustandAdapter(component);
 
@@ -148,7 +143,7 @@ describe('compose with zustand adapter', () => {
   });
 
   it('should work with nested compose', () => {
-    const component = createComponent(() => {
+    const component = () => {
       const model = createModel<{
         x: number;
         y: number;
@@ -194,7 +189,7 @@ describe('compose with zustand adapter', () => {
         actions: createSlice(model, (m) => ({ setOp: m.setOp })),
         views: { display: displaySlice },
       };
-    });
+    };
 
     const store = createZustandAdapter(component);
 

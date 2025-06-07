@@ -186,7 +186,7 @@ function processViews<Model, Views>(
         // Otherwise return the result as-is
         return result;
       };
-      
+
       // Apply memoization unless disabled for benchmarks
       views[key as keyof ViewTypes<Model, Views>] = (
         process.env.LATTICE_DISABLE_MEMOIZATION === 'true'
@@ -339,13 +339,11 @@ export function createZustandAdapter<Model, Actions, Views>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createComponent, createModel, createSlice, compose } = await import(
-    '@lattice/core'
-  );
+  const { createModel, createSlice, compose } = await import('@lattice/core');
 
   describe('createZustandAdapter - unified API', () => {
     it('should return actions, views, and subscribe', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -359,7 +357,7 @@ if (import.meta.vitest) {
         }));
 
         return { model, actions, views: {} };
-      });
+      };
 
       const store = createZustandAdapter(counter);
 
@@ -376,7 +374,7 @@ if (import.meta.vitest) {
     });
 
     it('should access state through views', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           multiplier: number;
@@ -398,7 +396,7 @@ if (import.meta.vitest) {
         }));
 
         return { model, actions, views: { state: stateView } };
-      });
+      };
 
       const store = createZustandAdapter(counter);
 
@@ -410,7 +408,7 @@ if (import.meta.vitest) {
     });
 
     it('should provide direct action access', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -431,7 +429,7 @@ if (import.meta.vitest) {
         }));
 
         return { model, actions, views: { count: countView } };
-      });
+      };
 
       const store = createZustandAdapter(counter);
 
@@ -448,7 +446,7 @@ if (import.meta.vitest) {
     });
 
     it('should avoid namespace collision', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           store: string; // Model has a 'store' property
           actions: string; // Model has an 'actions' property
@@ -480,7 +478,7 @@ if (import.meta.vitest) {
         }));
 
         return { model, actions, views: { state: stateSlice } };
-      });
+      };
 
       const store = createZustandAdapter(component);
 
@@ -505,7 +503,7 @@ if (import.meta.vitest) {
 
   describe('createZustandAdapter - views', () => {
     it('should handle static slice views', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           disabled: boolean;
@@ -524,7 +522,7 @@ if (import.meta.vitest) {
           actions: createSlice(model, (_m) => ({})),
           views: { display: displaySlice },
         };
-      });
+      };
 
       const store = createZustandAdapter(component);
 
@@ -537,7 +535,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle computed view functions', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{ count: number }>(() => ({ count: 5 }));
 
         const countSlice = createSlice(model, (m) => ({
@@ -559,7 +557,7 @@ if (import.meta.vitest) {
           actions: createSlice(model, (_m) => ({})),
           views,
         };
-      });
+      };
 
       const store = createZustandAdapter(component);
 
@@ -574,7 +572,7 @@ if (import.meta.vitest) {
     });
 
     it('should update views reactively', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -597,7 +595,7 @@ if (import.meta.vitest) {
           actions,
           views: { display: countSlice },
         };
-      });
+      };
 
       const store = createZustandAdapter(component);
 
@@ -613,7 +611,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle view with compose()', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -640,7 +638,7 @@ if (import.meta.vitest) {
           actions,
           views: { button: buttonSlice },
         };
-      });
+      };
 
       const store = createZustandAdapter(component);
 
@@ -662,7 +660,7 @@ if (import.meta.vitest) {
 
   describe('createZustandAdapter - compose() resolution', () => {
     it('should handle compose() in slices', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -688,7 +686,7 @@ if (import.meta.vitest) {
           actions,
           views: { button: buttonSlice },
         };
-      });
+      };
 
       const store = createZustandAdapter(component);
 
@@ -707,7 +705,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle compose() with multiple dependencies', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           user: { id: number; name: string; email: string };
           posts: Array<{ id: number; title: string; authorId: number }>;
@@ -739,7 +737,7 @@ if (import.meta.vitest) {
           actions: createSlice(model, () => ({})),
           views: { profile: profileSlice },
         };
-      });
+      };
 
       const store = createZustandAdapter(component);
 
@@ -758,7 +756,7 @@ if (import.meta.vitest) {
   describe('createZustandAdapter - reactivity', () => {
     it('should work with zustand subscriptions', () => {
       // Create a component with a count view
-      const componentWithView = createComponent(() => {
+      const componentWithView = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -774,7 +772,7 @@ if (import.meta.vitest) {
             count: createSlice(model, (m) => ({ count: m.count })),
           },
         };
-      });
+      };
 
       const store = createZustandAdapter(componentWithView);
 
@@ -797,7 +795,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle async actions properly', async () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           loading: boolean;
@@ -819,10 +817,10 @@ if (import.meta.vitest) {
           })),
           views: {},
         };
-      });
+      };
 
       // Need to add views to check state
-      const componentWithViews = createComponent(() => {
+      const componentWithViews = () => {
         const base = component();
         return {
           ...base,
@@ -833,7 +831,7 @@ if (import.meta.vitest) {
             })),
           },
         };
-      });
+      };
 
       const storeWithViews = createZustandAdapter(componentWithViews);
 
@@ -851,7 +849,7 @@ if (import.meta.vitest) {
     });
 
     it('should accept and apply Zustand middleware', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -869,7 +867,7 @@ if (import.meta.vitest) {
         };
 
         return { model, actions, views };
-      });
+      };
 
       // Track middleware application
       let middlewareApplied = false;
@@ -909,7 +907,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle views that use API through composition', () => {
-      const component = createComponent(() => {
+      const component = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -941,7 +939,7 @@ if (import.meta.vitest) {
             status: statusSlice,
           },
         };
-      });
+      };
 
       const store = createZustandAdapter(component);
 

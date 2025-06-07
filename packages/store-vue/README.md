@@ -27,11 +27,11 @@ pnpm add @lattice/store-vue
 ```vue
 <script setup>
 import { useLattice } from '@lattice/store-vue';
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 import { computed } from 'vue';
 
 // Define your component
-const counterComponent = createComponent(() => {
+const counterComponent = () => {
   const model = createModel(({ set, get }) => ({
     count: 0,
     increment: () => set({ count: get().count + 1 }),
@@ -48,7 +48,7 @@ const counterComponent = createComponent(() => {
   };
 
   return { model, actions, views };
-});
+};
 
 // Use in your Vue component
 const store = useLattice(counterComponent);
@@ -111,9 +111,9 @@ const todos = computed(() => store.views.todos());
 ```ts
 // stores/todo.ts
 import { createVueAdapter } from '@lattice/store-vue';
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 
-const todoComponent = createComponent(() => {
+const todoComponent = () => {
   const model = createModel(({ set, get }) => ({
     todos: [],
     addTodo: (text) => {
@@ -145,7 +145,7 @@ const todoComponent = createComponent(() => {
   };
 
   return { model, actions, views };
-});
+};
 
 // Export global store
 export const todoStore = createVueAdapter(todoComponent);

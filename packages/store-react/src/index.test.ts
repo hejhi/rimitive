@@ -5,13 +5,13 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useLattice, LatticeProvider, useLatticeStore } from './index';
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 import React from 'react';
 
 describe('React Adapter', () => {
   describe('useLattice hook', () => {
     it('should create a store with actions and views', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -29,7 +29,7 @@ describe('React Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const { result } = renderHook(() => useLattice(counter));
 
@@ -41,7 +41,7 @@ describe('React Adapter', () => {
     });
 
     it('should update state when actions are called', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -59,7 +59,7 @@ describe('React Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const { result } = renderHook(() => useLattice(counter));
 
@@ -78,9 +78,8 @@ describe('React Adapter', () => {
       expect(result.current.views.count().value).toBe(2);
     });
 
-
     it('should support subscriptions', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -98,7 +97,7 @@ describe('React Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       const { result } = renderHook(() => useLattice(counter));
 
@@ -124,7 +123,7 @@ describe('React Adapter', () => {
     });
 
     it('should clean up on unmount', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
         }>(() => ({
@@ -136,7 +135,7 @@ describe('React Adapter', () => {
           actions: createSlice(model, () => ({})),
           views: {},
         };
-      });
+      };
 
       const { result, unmount } = renderHook(() => useLattice(counter));
 
@@ -156,7 +155,7 @@ describe('React Adapter', () => {
 
   describe('LatticeProvider and useLatticeStore', () => {
     it('should provide store to child components', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -174,22 +173,26 @@ describe('React Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
       // Need to create a wrapper component that uses the hook
       const StoreWrapper = ({ children }: { children: React.ReactNode }) => {
         const store = useLattice(counter);
         return React.createElement(LatticeProvider as any, { store }, children);
       };
-      
-      const wrapper = ({ children }: { children: React.ReactNode }) => 
+
+      const wrapper = ({ children }: { children: React.ReactNode }) =>
         React.createElement(StoreWrapper, { children });
 
-      const { result } = renderHook(() => useLatticeStore<
-        { count: number; increment: () => void },
-        { increment: () => void },
-        { count: () => { value: number } }
-      >(), { wrapper });
+      const { result } = renderHook(
+        () =>
+          useLatticeStore<
+            { count: number; increment: () => void },
+            { increment: () => void },
+            { count: () => { value: number } }
+          >(),
+        { wrapper }
+      );
 
       expect(result.current.actions).toBeDefined();
       expect(result.current.views).toBeDefined();
@@ -209,7 +212,7 @@ describe('React Adapter', () => {
     });
 
     it('should support store prop pattern', () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           increment: () => void;
@@ -227,23 +230,26 @@ describe('React Adapter', () => {
         };
 
         return { model, actions, views };
-      });
+      };
 
-      
       // Need to create a wrapper component that uses the hook
       const StoreWrapper = ({ children }: { children: React.ReactNode }) => {
         const store = useLattice(counter);
         return React.createElement(LatticeProvider as any, { store }, children);
       };
-      
-      const wrapper = ({ children }: { children: React.ReactNode }) => 
+
+      const wrapper = ({ children }: { children: React.ReactNode }) =>
         React.createElement(StoreWrapper, { children });
 
-      const { result } = renderHook(() => useLatticeStore<
-        { count: number; increment: () => void },
-        { increment: () => void },
-        { count: () => { value: number } }
-      >(), { wrapper });
+      const { result } = renderHook(
+        () =>
+          useLatticeStore<
+            { count: number; increment: () => void },
+            { increment: () => void },
+            { count: () => { value: number } }
+          >(),
+        { wrapper }
+      );
 
       expect(result.current.actions).toBeDefined();
       expect(result.current.views).toBeDefined();
@@ -261,13 +267,11 @@ describe('React Adapter', () => {
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createComponent, createModel, createSlice } = await import(
-    '@lattice/core'
-  );
+  const { createModel, createSlice } = await import('@lattice/core');
 
   describe('React Adapter - in-source tests', () => {
     it('should handle complex models with multiple slices', () => {
-      const todoApp = createComponent(() => {
+      const todoApp = () => {
         const model = createModel<{
           todos: Array<{ id: number; text: string; done: boolean }>;
           filter: 'all' | 'active' | 'completed';
@@ -301,11 +305,12 @@ if (import.meta.vitest) {
         }));
 
         const todosView = createSlice(model, (m) => {
-          const todos = m.filter === 'all'
-            ? m.todos
-            : m.filter === 'active'
-            ? m.todos.filter((t) => !t.done)
-            : m.todos.filter((t) => t.done);
+          const todos =
+            m.filter === 'all'
+              ? m.todos
+              : m.filter === 'active'
+                ? m.todos.filter((t) => !t.done)
+                : m.todos.filter((t) => t.done);
 
           return {
             todos,
@@ -319,7 +324,7 @@ if (import.meta.vitest) {
           actions,
           views: { todos: todosView },
         };
-      });
+      };
 
       // This would be used in a React component
       // const store = useLattice(todoApp);
@@ -329,7 +334,7 @@ if (import.meta.vitest) {
     });
 
     it('should support fine-grained updates with selective listeners', async () => {
-      const counter = createComponent(() => {
+      const counter = () => {
         const model = createModel<{
           count: number;
           name: string;
@@ -360,7 +365,7 @@ if (import.meta.vitest) {
           actions,
           views: { count: countView, name: nameView },
         };
-      });
+      };
 
       const { result } = renderHook(() => useLattice(counter));
 
@@ -371,13 +376,17 @@ if (import.meta.vitest) {
       // Subscribe to count changes only
       const unsubscribeCount = result.current.subscribe(
         (views) => views.count().count,
-        () => { countSubscriberCalls++; }
+        () => {
+          countSubscriberCalls++;
+        }
       );
 
       // Subscribe to name changes only
       const unsubscribeName = result.current.subscribe(
         (views) => views.name().name,
-        () => { nameSubscriberCalls++; }
+        () => {
+          nameSubscriberCalls++;
+        }
       );
 
       // Change count - should only trigger count subscriber

@@ -8,7 +8,7 @@ Traditional component libraries couple behavior to specific frameworks and state
 
 ```typescript
 // Define behavior specification
-const counter = createComponent(() => ({
+const counter = () => ({
   model: createModel(/* state and mutations */),
   actions: /* slice selecting methods */,
   views: /* slices or computed views */
@@ -200,9 +200,9 @@ Let's build a counter step-by-step to understand the patterns:
 ### Step 1: Define the Specification
 
 ```typescript
-import { createComponent, createModel, createSlice, compose } from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 
-const counter = createComponent(() => {
+const counter = () => {
   // Model: Pure state + mutations
   const model = createModel(({ set, get }) => ({
     count: 0,
@@ -257,7 +257,7 @@ const counter = createComponent(() => {
       incrementButton
     }
   };
-});
+};
 ```
 
 ### Step 2: What Actually Happens
@@ -343,7 +343,7 @@ describe('counter', () => {
 When multiple views need the same derived values, create reusable computations:
 
 ```typescript
-const todoList = createComponent(() => {
+const todoList = () => {
   const model = createModel(({ set, get }) => ({
     todos: [],
     filter: 'all', // 'all' | 'active' | 'completed'
@@ -442,7 +442,7 @@ const todoList = createComponent(() => {
       completedButton: createFilterButtonView('completed')
     }
   };
-});
+};
 ```
 
 ### Slice Composition Patterns
@@ -524,12 +524,12 @@ Build complex behaviors from simple ones:
 
 ```typescript
 // Base counter from above
-const counter = createComponent(() => {
+const counter = () => {
   // ... implementation
-});
+};
 
 // Enhance with persistence
-const persistentCounter = createComponent(() => {
+const persistentCounter = () => {
   const base = counter();
   
   // Extend the model
@@ -572,7 +572,7 @@ const persistentCounter = createComponent(() => {
       })
     }
   };
-});
+};
 ```
 
 ## Key Principles

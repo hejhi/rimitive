@@ -6,14 +6,14 @@
  */
 
 import React from 'react';
-import { createComponent, createModel, createSlice } from '@lattice/core';
+import { createModel, createSlice } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useViews } from '@lattice/runtime/react';
 
 // ============================================================================
 // Basic API Usage Example
 // ============================================================================
-export const apiBasicsComponent = createComponent(() => {
+export const apiBasicsComponent = () => {
   const model = createModel<{
     count: number;
     message: string;
@@ -122,7 +122,7 @@ export const apiBasicsComponent = createComponent(() => {
       history: historySlice,
     },
   };
-});
+};
 
 // ============================================================================
 // Create Store

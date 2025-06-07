@@ -14,14 +14,13 @@ Lattice's current implementation has a fundamental conceptual bug where **slices
 Lattice was designed with a clear separation of concerns across three phases:
 
 #### 1. **Composition Phase** (Design Time)
-When you write `createComponent()`, you're creating blueprints:
 ```typescript
-const component = createComponent(() => {
+const component = () => {
   const model = createModel(...);  // Blueprint for state shape
   const actions = createSlice(...); // Blueprint for actions  
   const views = { ... };           // Blueprint for computed views
   return { model, actions, views };
-});
+};
 ```
 **No execution happens here** - you're just describing the component structure.
 
@@ -416,9 +415,8 @@ This is an unreleased library, so we DO NOT need to worry about backwards compat
 2. Update slice implementation to return mapping tokens instead of executing selectors
 3. Update compose to work with mapping tokens
 4. Change slice execution to require computation callbacks
-5. Remove createComponent in favor of module-based composition
-6. Update all examples to use the module pattern
-7. Update tests to match the new conceptual model
+5. Update all examples to use the module pattern
+6. Update tests to match the new conceptual model
 
 Start by making one or two tests fail with the new expected behavior, then fix the implementation until they pass.
 

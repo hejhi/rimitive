@@ -46,9 +46,9 @@ export const ExampleStructure = `
 export const ReusableSliceExample = `
 // @acme/user-slices
 export const createUserSlice = (config?: UserConfig) => 
-  createComponent(() => {
+  () => {
     // ... behavior specification
-  });
+  };
 
 // Then in any app:
 import { createUserSlice } from '@acme/user-slices';

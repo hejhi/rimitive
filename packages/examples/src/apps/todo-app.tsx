@@ -9,12 +9,7 @@
  */
 
 import React from 'react';
-import {
-  createComponent,
-  createModel,
-  createSlice,
-  compose,
-} from '@lattice/core';
+import { createModel, createSlice, compose } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { useViews } from '@lattice/runtime/react';
 import './todo-app.css';
@@ -32,7 +27,7 @@ interface Todo {
   createdAt: number;
 }
 
-const todoAppComponent = createComponent(() => {
+const todoAppComponent = () => {
   const model = createModel<{
     // State
     todos: Todo[];
@@ -286,7 +281,7 @@ const todoAppComponent = createComponent(() => {
       ),
     },
   };
-});
+};
 
 // ============================================================================
 // Create the store

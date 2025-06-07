@@ -92,12 +92,6 @@ export type ComponentFactory<Model, Actions, Views> = () => ComponentSpec<
   Views
 >;
 
-export function createComponent<Model, Actions, Views>(
-  factory: () => ComponentSpec<Model, Actions, Views>
-): ComponentFactory<Model, Actions, Views> {
-  return factory;
-}
-
 // Export compose utilities
 export { compose } from './compose';
 
