@@ -18,8 +18,9 @@ import type {
   SliceFactory,
   AdapterResult,
   ViewTypes,
+  LazySlice,
 } from '@lattice/core';
-import { isSliceFactory, memoizeParameterizedView } from '@lattice/core';
+import { isSliceFactory, memoizeParameterizedView, resolveLazySlice } from '@lattice/core';
 import {
   createStore as zustandCreateStore,
   StoreApi,
@@ -170,7 +171,8 @@ function processViews<Model, Views>(
     if (isSliceFactory(view)) {
       // Static view: slice factory
       views[key as keyof ViewTypes<Model, Views>] = (() => {
-        return executeSliceFactory(view);
+        const lazyResult = executeSliceFactory(view);
+        return resolveLazySlice(lazyResult);
       }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     } else if (typeof view === 'function') {
       // Computed view - may accept parameters
@@ -178,9 +180,10 @@ function processViews<Model, Views>(
         // Call the view function with any provided args
         const result = view(...args);
 
-        // If the result is a slice factory, execute it
+        // If the result is a slice factory, execute it and resolve lazy values
         if (isSliceFactory(result)) {
-          return executeSliceFactory(result);
+          const lazyResult = executeSliceFactory(result);
+          return resolveLazySlice(lazyResult);
         }
 
         // Otherwise return the result as-is
@@ -269,7 +272,9 @@ export function createZustandAdapter<Model, Actions, Views>(
     // Process actions slice
     let actions: Actions;
     try {
-      actions = executeSliceFactory<Actions>(spec.actions);
+      const lazyActions = executeSliceFactory<Actions>(spec.actions);
+      // For actions, we use resolveLazySlice which preserves functions
+      actions = resolveLazySlice(lazyActions);
     } catch (error) {
       throw new ZustandAdapterError('Actions slice creation failed', {
         operation: 'createZustandAdapter.actions',
