@@ -64,7 +64,7 @@ export type LazySlice<T> = {
 };
 
 export interface SliceFactory<Model = unknown, Slice = unknown> {
-  (getModel: () => Model): LazySlice<Slice>;
+  (getModel: () => Model): Slice;
   [SLICE_FACTORY_MARKER]?: true;
 }
 
@@ -78,17 +78,17 @@ export function createModel<T>(
 // Overload for regular selectors (preserves inference)
 export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
-  selector: (model: Model) => LazySlice<Slice>
+  selector: (getModel: () => Model) => Slice
 ): SliceFactory<Model, Slice>;
 
 // Implementation - simplified without transform support
 export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
-  selector: (model: Model) => LazySlice<Slice>
+  selector: (getModel: () => Model) => Slice
 ): SliceFactory<Model, Slice> {
   // Create a function that executes the selector with required api
-  const sliceFactory = function (getModel: () => Model): LazySlice<Slice> {
-    return selector(getModel());
+  const sliceFactory = function (getModel: () => Model): Slice {
+    return selector(getModel);
   };
 
   // Brand the slice factory
