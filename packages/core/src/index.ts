@@ -50,10 +50,13 @@ export interface SliceFactory<Model = unknown, Slice = unknown> {
 export type SliceValue<T> = T | (() => T);
 
 /**
- * Transforms a type to allow any property to be a lazy getter
+ * Transforms a type to allow non-function properties to be lazy getters
+ * Functions (like actions) are kept as-is since they're already lazy by nature
  */
 export type LazySlice<T> = {
-  [K in keyof T]: SliceValue<T[K]>;
+  [K in keyof T]: T[K] extends (...args: any[]) => any
+    ? T[K] // Keep functions (actions) as-is
+    : SliceValue<T[K]>; // Other values can be static or lazy getters
 };
 
 // Implementation

@@ -5,7 +5,7 @@
  * Adapters are responsible for executing component specifications with real infrastructure.
  */
 
-import type { ComponentFactory, ComponentSpec, SliceFactory } from './index';
+import type { ComponentFactory, ComponentSpec, SliceFactory, LazySlice } from './index';
 import { SLICE_FACTORY_MARKER } from './index';
 
 /**
@@ -13,9 +13,9 @@ import { SLICE_FACTORY_MARKER } from './index';
  */
 export type ViewTypes<Model, Views> = {
   [K in keyof Views]: Views[K] extends SliceFactory<Model, infer T>
-    ? () => T // Static views become functions that return current state
+    ? () => T // Static views become functions that return current state (unwrapped from LazySlice)
     : Views[K] extends () => SliceFactory<Model, infer T>
-      ? () => T // Computed views (no params) also become functions that return current state
+      ? () => T // Computed views (no params) also become functions that return current state (unwrapped from LazySlice)
       : Views[K] extends () => unknown
         ? Views[K] // Computed views (with or without params) - keep as-is
         : never;
