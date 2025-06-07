@@ -59,19 +59,19 @@ export function compose<
 >(
   deps: Deps,
   selector: (model: Model, resolvedDeps: ResolveDeps<Deps>) => Result
-): (model: Model) => Result {
+): (getModel: () => Model) => Result {
   // Return a selector function that resolves dependencies and accepts required api parameter
-  return (model: Model): Result => {
+  return (getModel: () => Model): Result => {
     // Build resolved dependencies using Object.fromEntries for type safety
     // Pass both model and api to each dependency slice
     const entries = Object.entries(deps).map(([key, sliceFactory]) => [
       key,
-      sliceFactory(() => model),
+      sliceFactory(getModel),
     ]);
     const resolvedDeps = Object.fromEntries(entries) as ResolveDeps<Deps>;
 
     // Call the selector with model and resolved dependencies
-    return selector(model, resolvedDeps);
+    return selector(getModel(), resolvedDeps);
   };
 }
 

@@ -110,19 +110,19 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Basic slices
-        const usersSlice = createSlice(model, (m) => m.users);
-        const productsSlice = createSlice(model, (m) => m.products);
+        const usersSlice = createSlice(model, (m) => m().users);
+        const productsSlice = createSlice(model, (m) => m().products);
 
         // Slice that uses API to compose data from other slices
         const summarySlice = createSlice(model, (m) => {
-          const users = usersSlice(() => m);
-          const products = productsSlice(() => m);
+          const users = usersSlice(m);
+          const products = productsSlice(m);
 
           return {
             userCount: users.length,
             productCount: products.length,
-            adminCount: users.filter((u) => u.role === 'admin').length,
-            totalValue: products.reduce((sum, p) => sum + p.price, 0),
+            adminCount: users.filter((u: any) => u.role === 'admin').length,
+            totalValue: products.reduce((sum: any, p: any) => sum + p.price, 0),
           };
         });
 
@@ -167,7 +167,7 @@ describe('API Parameter Functionality', () => {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            increment: m.increment,
+            increment: m().increment,
           })),
           views: {
             inspector: stateInspectorSlice,
@@ -205,19 +205,19 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Base data slice
-        const dataSlice = createSlice(model, (m) => m.data);
+        const dataSlice = createSlice(model, (m) => m().data);
 
         // Adaptive view that changes behavior based on mode
         const adaptiveViewSlice = createSlice(model, (m) => {
-          if (m.mode === 'simple') {
-            return { value: m.data.value };
+          if (m().mode === 'simple') {
+            return { value: m().data.value };
           } else {
             // In detailed mode, use API to get additional info
-            const data = dataSlice(() => m);
+            const data = dataSlice(m);
             return {
               value: data.value,
               metadata: data.metadata,
-              mode: m.mode,
+              mode: m().mode,
               timestamp: Date.now(),
             };
           }
@@ -225,7 +225,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m) => ({ setMode: m.setMode })),
+          actions: createSlice(model, (m) => ({ setMode: m().setMode })),
           views: {
             adaptive: adaptiveViewSlice,
           },
@@ -277,8 +277,8 @@ describe('API Parameter Functionality', () => {
         // Create filter-specific slices dynamically
         const createFilteredItemsSlice = (filters: string[]) =>
           createSlice(model, (m) => {
-            if (filters.length === 0) return m.items;
-            return m.items.filter((item) =>
+            if (filters.length === 0) return m().items;
+            return m().items.filter((item: any) =>
               filters.every((filter) => item.tags.includes(filter))
             );
           });
@@ -286,12 +286,12 @@ describe('API Parameter Functionality', () => {
         // Computed view that creates dynamic slices based on active filters
         const filteredView = () =>
           createSlice(model, (m) => {
-            const filterSlice = createFilteredItemsSlice(m.activeFilters);
-            const filtered = filterSlice(() => m);
+            const filterSlice = createFilteredItemsSlice(m().activeFilters);
+            const filtered = filterSlice(m);
 
             return {
               items: filtered,
-              activeFilters: m.activeFilters,
+              activeFilters: m().activeFilters,
               count: filtered.length,
             };
           });
@@ -299,7 +299,7 @@ describe('API Parameter Functionality', () => {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            toggleFilter: m.toggleFilter,
+            toggleFilter: m().toggleFilter,
           })),
           views: {
             filtered: filteredView(),

@@ -75,7 +75,7 @@ views: {
 4. **Compose Confusion**: `compose()` seems redundant when slices already compute
 
 
-## Options
+## Implementation
 
 Go all in on the zustand-style pattern, and ensure that createSlice only runs on store creation:
 

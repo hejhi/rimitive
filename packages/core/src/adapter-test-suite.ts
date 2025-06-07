@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { AdapterFactory } from './adapter-contract';
-import { createModel, createSlice, compose, lazy } from './index';
+import { createModel, createSlice, compose } from './index';
 
 /**
  * Creates a comprehensive test suite for a Lattice adapter
@@ -32,12 +32,12 @@ export function createAdapterTestSuite(
           }));
 
           const actions = createSlice(model, (m) => ({
-            increment: m.increment,
+            increment: m().increment,
           }));
 
           const views = {
             counter: createSlice(model, (m) => ({
-              value: lazy(() => m.count),
+              value: m().count,
             })),
           };
 
@@ -74,17 +74,17 @@ export function createAdapterTestSuite(
           }));
 
           const nameSlice = createSlice(model, (m) => ({
-            first: lazy(() => m.firstName),
-            last: lazy(() => m.lastName),
+            first: m().firstName,
+            last: m().lastName,
           }));
 
           const actions = createSlice(model, (m) => ({
-            setName: m.setName,
+            setName: m().setName,
           }));
 
           // Create a computed view slice that combines data
           const fullNameSlice = createSlice(model, (m) => {
-            const state = nameSlice(() => m);
+            const state = nameSlice(m);
             return {
               display: `${state.first} ${state.last}`,
               initials: `${state.first[0]}${state.last[0]}`,
@@ -139,18 +139,18 @@ export function createAdapterTestSuite(
           }));
 
           const userSlice = createSlice(model, (m) => ({
-            name: lazy(() => m.user.name),
-            role: lazy(() => m.user.role),
-            isAdmin: m.user.role === 'admin',
+            name: m().user.name,
+            role: m().user.role,
+            isAdmin: m().user.role === 'admin',
           }));
 
           const themeSlice = createSlice(model, (m) => ({
-            theme: lazy(() => m.theme),
-            isDark: m.theme === 'dark',
+            theme: m().theme,
+            isDark: m().theme === 'dark',
           }));
 
           const actions = createSlice(model, (m) => ({
-            toggleTheme: m.toggleTheme,
+            toggleTheme: m().toggleTheme,
           }));
 
           const headerSlice = createSlice(
@@ -211,17 +211,17 @@ export function createAdapterTestSuite(
           }));
 
           const actions = createSlice(model, (m) => ({
-            toggleItem: m.toggleItem,
+            toggleItem: m().toggleItem,
           }));
 
           const itemsSlice = createSlice(model, (m) => ({
-            items: lazy(() => m.items),
+            items: m().items,
           }));
 
           // Parameterized view factory
           const createItemView = (itemId: number) =>
             createSlice(model, (m) => {
-              const state = itemsSlice(() => m);
+              const state = itemsSlice(m);
               const item = state.items.find((i) => i.id === itemId);
               return item
                 ? {
@@ -237,9 +237,9 @@ export function createAdapterTestSuite(
             });
 
           const selectedCountSlice = createSlice(model, (m) => {
-            const state = itemsSlice(() => m);
+            const state = itemsSlice(m);
             return {
-              count: state.items.filter((i) => i.selected).length,
+              count: state.items.filter((i: any) => i.selected).length,
             };
           });
 
@@ -303,7 +303,7 @@ export function createAdapterTestSuite(
           }));
 
           const actions = createSlice(model, (m) => ({
-            doSomething: m.doSomething,
+            doSomething: m().doSomething,
           }));
 
           const views = {};
@@ -329,11 +329,11 @@ export function createAdapterTestSuite(
           }));
 
           const actions = createSlice(model, (m) => ({
-            increment: m.increment,
+            increment: m().increment,
           }));
 
           const views = {
-            count: createSlice(model, (m) => ({ value: m.counter })),
+            count: createSlice(model, (m) => ({ value: m().counter })),
           };
 
           return { model, actions, views };
@@ -367,26 +367,26 @@ export function createAdapterTestSuite(
           }));
 
           const actions = createSlice(model, (m) => ({
-            multiply: m.multiply,
+            multiply: m().multiply,
           }));
 
           const valueSlice = createSlice(model, (m) => ({
-            value: lazy(() => m.value),
+            value: m().value,
           }));
 
           // Create computed view slices
           const doubledSlice = createSlice(model, (m) => {
-            const state = valueSlice(() => m);
+            const state = valueSlice(m);
             return { result: state.value * 2 };
           });
 
           const tripledSlice = createSlice(model, (m) => {
-            const state = valueSlice(() => m);
+            const state = valueSlice(m);
             return { result: state.value * 3 };
           });
 
           const formattedSlice = createSlice(model, (m) => {
-            const state = valueSlice(() => m);
+            const state = valueSlice(m);
             return { display: `Value: ${state.value}` };
           });
 
@@ -430,12 +430,12 @@ export function createAdapterTestSuite(
           }));
 
           const actions = createSlice(model, (m) => ({
-            addEntry: m.addEntry,
-            clearLog: m.clearLog,
+            addEntry: m().addEntry,
+            clearLog: m().clearLog,
           }));
 
           const views = {
-            log: createSlice(model, (m) => ({ entries: lazy(() => m.log) })),
+            log: createSlice(model, (m) => ({ entries: m().log })),
           };
 
           return { model, actions, views };
@@ -479,13 +479,13 @@ export function createAdapterTestSuite(
           }));
 
           const actions = createSlice(model, (m) => ({
-            setX: m.setX,
-            setY: m.setY,
-            setPoint: m.setPoint,
+            setX: m().setX,
+            setY: m().setY,
+            setPoint: m().setPoint,
           }));
 
           const views = {
-            point: createSlice(model, (m) => ({ x: lazy(() => m.x), y: lazy(() => m.y) })),
+            point: createSlice(model, (m) => ({ x: m().x, y: m().y })),
           };
 
           return { model, actions, views };

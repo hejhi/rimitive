@@ -5,7 +5,7 @@
  * Adapters are responsible for executing component specifications with real infrastructure.
  */
 
-import type { ComponentFactory, ComponentSpec, SliceFactory, LazySlice } from './index';
+import type { ComponentFactory, ComponentSpec, SliceFactory } from './index';
 import { SLICE_FACTORY_MARKER } from './index';
 
 /**

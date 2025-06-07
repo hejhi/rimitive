@@ -2,7 +2,6 @@
 
 // Marker symbols - defined first to avoid forward reference issues
 export const SLICE_FACTORY_MARKER = Symbol('lattice.sliceFactory');
-export const LAZY_GETTER_MARKER = Symbol('lattice.lazyGetter');
 
 // Core types
 export interface ModelTools<T> {
@@ -43,25 +42,6 @@ export type ModelFactory<T = unknown> = (tools: ModelTools<T>) => T;
  * @template Model - The model type
  * @template Slice - The slice return type
  */
-/**
- * Type for a branded lazy getter function
- */
-export type LazyGetter<T> = (() => T) & { [LAZY_GETTER_MARKER]: true };
-
-/**
- * A value that can be either static or a lazy getter function
- */
-export type SliceValue<T> = T | LazyGetter<T>;
-
-/**
- * Transforms a type to allow non-function properties to be lazy getters
- * Functions (like actions) are kept as-is since they're already lazy by nature
- */
-export type LazySlice<T> = {
-  [K in keyof T]: T[K] extends (...args: any[]) => any
-    ? T[K] // Keep functions (actions) as-is
-    : SliceValue<T[K]>; // Other values can be static or lazy getters
-};
 
 export interface SliceFactory<Model = unknown, Slice = unknown> {
   (getModel: () => Model): Slice;
@@ -101,49 +81,6 @@ export function createSlice<Model, Slice>(
   return sliceFactory as SliceFactory<Model, Slice>;
 }
 
-/**
- * Creates a lazy getter function that will be called when the value is needed
- * @param getter - Function that returns the value
- * @returns A branded lazy getter function
- */
-export function lazy<T>(getter: () => T): LazyGetter<T> {
-  const branded = getter as LazyGetter<T>;
-  branded[LAZY_GETTER_MARKER] = true;
-  return branded;
-}
-
-/**
- * Type guard to check if a value is a lazy getter
- */
-export function isLazyGetter(value: unknown): value is LazyGetter<any> {
-  return typeof value === 'function' && LAZY_GETTER_MARKER in value;
-}
-
-/**
- * Resolves a potentially lazy value by calling it if it's a lazy getter
- * @param value - The value that might be a lazy getter
- * @returns The resolved value
- */
-export function resolveLazyValue<T>(value: SliceValue<T>): T {
-  return isLazyGetter(value) ? value() : value as T;
-}
-
-/**
- * Resolves all lazy values in an object
- * @param obj - Object with potentially lazy values
- * @returns Object with all lazy values resolved
- */
-export function resolveLazySlice<T extends Record<string, any>>(
-  obj: LazySlice<T>
-): T {
-  const result = {} as T;
-  for (const key in obj) {
-    const value = obj[key];
-    // Use the branded check instead of arity detection
-    result[key] = isLazyGetter(value) ? value() : value as T[typeof key];
-  }
-  return result;
-}
 
 export interface ComponentSpec<Model, Actions, Views> {
   model: ModelFactory<Model>;

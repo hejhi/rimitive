@@ -18,9 +18,8 @@ import type {
   SliceFactory,
   AdapterResult,
   ViewTypes,
-  LazySlice,
 } from '@lattice/core';
-import { isSliceFactory, memoizeParameterizedView, resolveLazySlice } from '@lattice/core';
+import { isSliceFactory, memoizeParameterizedView } from '@lattice/core';
 import {
   createStore as zustandCreateStore,
   StoreApi,
@@ -171,8 +170,7 @@ function processViews<Model, Views>(
     if (isSliceFactory(view)) {
       // Static view: slice factory
       views[key as keyof ViewTypes<Model, Views>] = (() => {
-        const lazyResult = executeSliceFactory(view);
-        return resolveLazySlice(lazyResult);
+        return executeSliceFactory(view);
       }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     } else if (typeof view === 'function') {
       // Computed view - may accept parameters
@@ -180,10 +178,9 @@ function processViews<Model, Views>(
         // Call the view function with any provided args
         const result = view(...args);
 
-        // If the result is a slice factory, execute it and resolve lazy values
+        // If the result is a slice factory, execute it
         if (isSliceFactory(result)) {
-          const lazyResult = executeSliceFactory(result);
-          return resolveLazySlice(lazyResult);
+          return executeSliceFactory(result);
         }
 
         // Otherwise return the result as-is
