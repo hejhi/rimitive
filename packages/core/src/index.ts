@@ -40,7 +40,7 @@ export type ModelFactory<T = unknown> = (tools: ModelTools<T>) => T;
  * @template Slice - The slice return type
  */
 export interface SliceFactory<Model = unknown, Slice = unknown> {
-  (model: Model): Slice;
+  (getModel: () => Model): Slice;
   [SLICE_FACTORY_MARKER]?: true;
 }
 
