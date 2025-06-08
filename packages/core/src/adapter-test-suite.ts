@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { AdapterFactory } from './adapter-contract';
-import { createModel, createSlice, compose } from './index';
+import { createModel, createSlice, compose, compute } from './index';
 
 /**
  * Creates a comprehensive test suite for a Lattice adapter
@@ -277,6 +277,136 @@ export function createAdapterTestSuite(
 
         const updatedCount = adapter.views.selectedCount();
         expect(updatedCount.count).toBe(2);
+      });
+
+      it('should handle computed views created with compute()', () => {
+        const component = () => {
+          const model = createModel<{
+            count: number;
+            total: number;
+            increment: () => void;
+          }>(({ set, get }) => ({
+            count: 5,
+            total: 100,
+            increment: () => set({ count: get().count + 1 }),
+          }));
+
+          const counterSlice = createSlice(model, (m) => ({
+            count: () => m().count,
+            total: () => m().total,
+          }));
+
+          const actions = createSlice(model, (m) => ({
+            increment: m().increment,
+          }));
+
+          // Create computed view using compute
+          const multipliedCounter = compute(
+            { counter: counterSlice },
+            ({ counter }) => (multiplier: number) => ({
+              value: counter.count() * multiplier,
+              label: `×${multiplier}: ${counter.count()}`,
+              percentage: (counter.count() * multiplier * 100) / counter.total(),
+            })
+          );
+
+          const views = {
+            // Regular static view
+            counter: counterSlice,
+            // Computed view from compute
+            multiplied: multipliedCounter,
+          };
+
+          return { model, actions, views };
+        };
+
+        const adapter = createAdapter(component);
+
+        // Test static view
+        const counter = adapter.views.counter();
+        expect(counter.count).toBe(5);
+        expect(counter.total).toBe(100);
+
+        // Test computed view - it should be a function
+        expect(typeof adapter.views.multiplied).toBe('function');
+        const multipliedView = adapter.views.multiplied();
+        expect(typeof multipliedView).toBe('function');
+
+        // Apply parameters
+        const doubled = multipliedView(2);
+        expect(doubled.value).toBe(10);
+        expect(doubled.label).toBe('×2: 5');
+        expect(doubled.percentage).toBe(10);
+
+        const tripled = multipliedView(3);
+        expect(tripled.value).toBe(15);
+        expect(tripled.label).toBe('×3: 5');
+        expect(tripled.percentage).toBe(15);
+
+        // Update state and verify computed views update
+        adapter.actions.increment();
+
+        // Get fresh views after state update
+        const updatedCounter = adapter.views.counter();
+        expect(updatedCounter.count).toBe(6);
+
+        const updatedMultipliedView = adapter.views.multiplied();
+        const updatedDoubled = updatedMultipliedView(2);
+        expect(updatedDoubled.value).toBe(12);
+        expect(updatedDoubled.label).toBe('×2: 6');
+        expect(updatedDoubled.percentage).toBe(12);
+      });
+
+      it('should memoize computed views from compute()', () => {
+        const component = () => {
+          const model = createModel<{ value: number }>(() => ({ value: 42 }));
+
+          const valueSlice = createSlice(model, (m) => ({
+            get: () => m().value,
+          }));
+
+          const actions = createSlice(model, (_m) => ({}));
+
+          let viewCallCount = 0;
+          const expensiveView = compute(
+            { value: valueSlice },
+            ({ value }) => {
+              // This should only be called once per adapter creation
+              viewCallCount++;
+              return (multiplier: number) => ({
+                result: value.get() * multiplier,
+                callCount: viewCallCount,
+              });
+            }
+          );
+
+          const views = {
+            expensive: expensiveView,
+          };
+
+          return { model, actions, views };
+        };
+
+        const adapter = createAdapter(component);
+
+        // First call
+        const view1 = adapter.views.expensive();
+        const result1a = view1(2);
+        expect(result1a.result).toBe(84);
+        expect(result1a.callCount).toBe(1);
+
+        // Same parameter - should be memoized
+        const result1b = view1(2);
+        expect(result1b).toBe(result1a); // Same object reference
+
+        // Different parameter
+        const result2 = view1(3);
+        expect(result2.result).toBe(126);
+        expect(result2.callCount).toBe(1); // Factory only called once
+
+        // Getting the view again should return the same memoized function
+        const view2 = adapter.views.expensive();
+        expect(view2).toBe(view1);
       });
     });
 

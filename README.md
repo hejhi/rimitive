@@ -148,12 +148,12 @@ You can also create computed views using `compute`:
 export const multipliedCounter = compute(
   // Slice dependencies
   { counter: counterSlice },
-  // any arguments
-  (multiplier: number) =>
-    // unwrapped slice
-    ({ counter }) => ({
-      value: () => counter.count() * multiplier,
-      label: () => `×${multiplier}: ${counter.count()}`
+  // Factory function that receives resolved dependencies
+  ({ counter }) => 
+    // Returns a parameterized view function
+    (multiplier: number) => ({
+      value: counter.count() * multiplier,
+      label: `×${multiplier}: ${counter.count()}`
     })
 );
 
@@ -169,6 +169,10 @@ const component = () => ({
     multiplied: multipliedCounter
   }
 });
+
+// When used by an adapter:
+// const view = store.views.multiplied();  // Get the parameterized function
+// const doubled = view(2);                // Apply parameters
 ```
 
 ## **Adapters Execute Specifications**
