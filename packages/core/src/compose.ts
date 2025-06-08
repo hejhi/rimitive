@@ -84,21 +84,26 @@ if (import.meta.vitest) {
     it('should create a selector that resolves dependencies', () => {
       const model = createModel<{ count: number }>(() => ({ count: 0 }));
       const slice = createSlice(model, (m) => ({
-        value: m().count,
+        value: () => m().count,  // Getter function
       }));
 
       // Use compose within createSlice as intended
       const composedSlice = createSlice(
         model,
         compose({ mySlice: slice }, (_, deps) => ({
-          doubled: deps.mySlice.value * 2,
+          doubled: () => deps.mySlice.value() * 2,  // Call getter, wrap in new getter
         }))
       );
 
-      // Test the composed slice
+      // Test the composed slice with initial data
       const modelData = { count: 5 };
       const result = composedSlice(() => modelData);
-      expect(result).toEqual({ doubled: 10 });
+      expect(result.doubled()).toBe(10);
+      
+      // Test that it reflects updated data
+      const modelData2 = { count: 7 };
+      const result2 = composedSlice(() => modelData2);
+      expect(result2.doubled()).toBe(14);
     });
 
     it('should work with multiple dependencies', () => {
@@ -107,23 +112,27 @@ if (import.meta.vitest) {
         y: 0,
       }));
       const xSlice = createSlice(model, (m) => ({
-        value: m().x,
+        value: () => m().x,  // Getter function
       }));
       const ySlice = createSlice(model, (m) => ({
-        value: m().y,
+        value: () => m().y,  // Getter function
       }));
 
       // Use compose within createSlice
       const composedSlice = createSlice(
         model,
         compose({ x: xSlice, y: ySlice }, (_, deps) => ({
-          sum: deps.x.value + deps.y.value,
+          sum: () => deps.x.value() + deps.y.value(),  // Call getters, wrap result
         }))
       );
 
       // Test the composed slice
       const result = composedSlice(() => ({ x: 3, y: 4 }));
-      expect(result).toEqual({ sum: 7 });
+      expect(result.sum()).toBe(7);
+      
+      // Test with different values
+      const result2 = composedSlice(() => ({ x: 10, y: 20 }));
+      expect(result2.sum()).toBe(30);
     });
 
     it('should compose slices with dependencies', () => {
@@ -140,24 +149,24 @@ if (import.meta.vitest) {
       const actions = createSlice(
         model,
         (m) => ({
-          increment: m().increment,
+          increment: m().increment,  // Action stays as-is
         })
       );
 
       const userSlice = createSlice(
         model,
         (m) => ({
-          name: m().user.name,
-          email: m().user.email,
+          name: () => m().user.name,    // Getter function
+          email: () => m().user.email,  // Getter function
         })
       );
 
       const composed = createSlice(
         model,
         compose({ actions, userSlice }, (m, { actions, userSlice }) => ({
-          onClick: actions.increment,
-          userName: userSlice.name,
-          count: m.count,
+          onClick: actions.increment,                // Action stays as-is
+          userName: () => userSlice.name(),         // Call getter, wrap in new getter
+          count: () => m.count,                     // Wrap in getter
         }))
       );
 
@@ -169,12 +178,21 @@ if (import.meta.vitest) {
 
       const result = composed(() => modelData);
 
-      // Now compose returns a regular selector, so result is the actual object
-      expect(result).toEqual({
-        onClick: modelData.increment,
-        userName: 'Bob',
-        count: 5,
-      });
+      // Test initial values
+      expect(result.onClick).toBe(modelData.increment);
+      expect(result.userName()).toBe('Bob');
+      expect(result.count()).toBe(5);
+      
+      // Test with different data
+      const modelData2 = {
+        count: 10,
+        increment: () => {},
+        user: { name: 'Charlie', email: 'charlie@example.com' },
+      };
+      
+      const result2 = composed(() => modelData2);
+      expect(result2.userName()).toBe('Charlie');
+      expect(result2.count()).toBe(10);
     });
 
     it('should handle multiple dependencies', () => {
@@ -195,19 +213,25 @@ if (import.meta.vitest) {
       const positionSlice = createSlice(
         model,
         (m) => ({
-          x: m().x,
-          y: m().y,
-          z: m().z,
+          x: () => m().x,
+          y: () => m().y,
+          z: () => m().z,
         })
       );
 
       const colorSlice = createSlice(
         model,
-        (m) => m().colors
+        (m) => ({
+          primary: () => m().colors.primary,
+          secondary: () => m().colors.secondary,
+        })
       );
       const sizeSlice = createSlice(
         model,
-        (m) => m().sizes
+        (m) => ({
+          width: () => m().sizes.width,
+          height: () => m().sizes.height,
+        })
       );
 
       const viewSlice = createSlice(
@@ -215,11 +239,11 @@ if (import.meta.vitest) {
         compose(
           { position: positionSlice, colors: colorSlice, sizes: sizeSlice },
           (_, { position, colors, sizes }) => ({
-            transform: `translate3d(${position.x}px, ${position.y}px, ${position.z}px)`,
-            backgroundColor: colors.primary,
-            borderColor: colors.secondary,
-            width: sizes.width,
-            height: sizes.height,
+            transform: () => `translate3d(${position.x()}px, ${position.y()}px, ${position.z()}px)`,
+            backgroundColor: () => colors.primary(),
+            borderColor: () => colors.secondary(),
+            width: () => sizes.width(),
+            height: () => sizes.height(),
           })
         )
       );
@@ -234,14 +258,28 @@ if (import.meta.vitest) {
 
       const result = viewSlice(() => modelData);
 
-      // Compose now returns a regular selector, so result is the actual object
-      expect(result).toEqual({
-        transform: 'translate3d(10px, 20px, 30px)',
-        backgroundColor: 'green',
-        borderColor: 'yellow',
-        width: 300,
-        height: 400,
-      });
+      // Test getter functions
+      expect(result.transform()).toBe('translate3d(10px, 20px, 30px)');
+      expect(result.backgroundColor()).toBe('green');
+      expect(result.borderColor()).toBe('yellow');
+      expect(result.width()).toBe(300);
+      expect(result.height()).toBe(400);
+      
+      // Test with different data
+      const modelData2 = {
+        x: 50,
+        y: 60,
+        z: 70,
+        colors: { primary: 'purple', secondary: 'orange' },
+        sizes: { width: 500, height: 600 },
+      };
+      
+      const result2 = viewSlice(() => modelData2);
+      expect(result2.transform()).toBe('translate3d(50px, 60px, 70px)');
+      expect(result2.backgroundColor()).toBe('purple');
+      expect(result2.borderColor()).toBe('orange');
+      expect(result2.width()).toBe(500);
+      expect(result2.height()).toBe(600);
     });
 
     it('should maintain type safety', () => {
