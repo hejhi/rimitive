@@ -205,9 +205,9 @@ function processViews<Model, Views>(
     spec.views as Record<string, unknown>
   )) {
     if (isSliceFactory(view)) {
-      // Static view: slice factory
+      // Static view: slice factory - execute once and store result
+      const result = executeSliceFactory(view);
       views[key as keyof ViewTypes<Model, Views>] = (() => {
-        const result = executeSliceFactory(view);
         return resolveGetters(result);
       }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     } else if (typeof view === 'function') {
