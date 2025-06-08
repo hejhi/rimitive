@@ -156,6 +156,36 @@ type StoreWithSelector<T> = StoreApi<T> & {
 // ============================================================================
 
 /**
+ * Recursively resolves getter functions (zero-argument functions) in an object
+ */
+function resolveGetters<T>(obj: T): T {
+  // If it's a zero-argument function, call it and resolve the result
+  if (typeof obj === 'function' && obj.length === 0) {
+    const result = obj();
+    // Recursively resolve the result in case it contains more getters
+    return resolveGetters(result) as T;
+  }
+  
+  // If it's not an object, return as-is
+  if (typeof obj !== 'object' || obj === null) {
+    return obj;
+  }
+  
+  // If it's an array, resolve each element
+  if (Array.isArray(obj)) {
+    return obj.map(item => resolveGetters(item)) as T;
+  }
+  
+  // For objects, recursively resolve each property
+  const resolved: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    resolved[key] = resolveGetters(value);
+  }
+  
+  return resolved as T;
+}
+
+/**
  * Processes views into functions that return view attributes
  */
 function processViews<Model, Views>(
@@ -170,7 +200,8 @@ function processViews<Model, Views>(
     if (isSliceFactory(view)) {
       // Static view: slice factory
       views[key as keyof ViewTypes<Model, Views>] = (() => {
-        return executeSliceFactory(view);
+        const result = executeSliceFactory(view);
+        return resolveGetters(result);
       }) as ViewTypes<Model, Views>[keyof ViewTypes<Model, Views>];
     } else if (typeof view === 'function') {
       // Computed view - may accept parameters
@@ -180,11 +211,12 @@ function processViews<Model, Views>(
 
         // If the result is a slice factory, execute it
         if (isSliceFactory(result)) {
-          return executeSliceFactory(result);
+          const sliceResult = executeSliceFactory(result);
+          return resolveGetters(sliceResult);
         }
 
-        // Otherwise return the result as-is
-        return result;
+        // Otherwise resolve any getters in the result
+        return resolveGetters(result);
       };
 
       // Apply memoization unless disabled for benchmarks

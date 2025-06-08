@@ -889,4 +889,119 @@ describe('createZustandAdapter', () => {
       expect(updatedView.nested).toBe('value'); // Unchanged
     });
   });
+
+  describe('lazy getters', () => {
+    it('should resolve zero-argument functions as getters', () => {
+      const component = () => {
+        const model = createModel<{
+          todos: Array<{ id: number; text: string; done: boolean }>;
+          filter: 'all' | 'active' | 'completed';
+          addTodo: (text: string) => void;
+          setFilter: (filter: 'all' | 'active' | 'completed') => void;
+        }>(({ set, get }) => ({
+          todos: [
+            { id: 1, text: 'First todo', done: false },
+            { id: 2, text: 'Second todo', done: true },
+            { id: 3, text: 'Third todo', done: false },
+          ],
+          filter: 'all',
+          addTodo: (text) => set({ 
+            todos: [...get().todos, { id: Date.now(), text, done: false }] 
+          }),
+          setFilter: (filter) => set({ filter }),
+        }));
+
+        // Slice with lazy getters
+        const statsSlice = createSlice(model, (m) => ({
+          // Static value
+          filter: m().filter,
+          // Lazy getters (zero-argument functions)
+          total: () => m().todos.length,
+          active: () => m().todos.filter(t => !t.done).length,
+          completed: () => m().todos.filter(t => t.done).length,
+          // Nested lazy getter
+          summary: () => ({
+            text: () => `${m().todos.filter(t => !t.done).length} of ${m().todos.length} remaining`,
+            percentage: () => {
+              const total = m().todos.length;
+              const completed = m().todos.filter(t => t.done).length;
+              return total > 0 ? Math.round((completed / total) * 100) : 0;
+            }
+          })
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, (m) => ({
+            addTodo: m().addTodo,
+            setFilter: m().setFilter,
+          })),
+          views: { stats: statsSlice },
+        };
+      };
+
+      const store = createZustandAdapter(component);
+
+      // Get initial stats
+      const stats = store.views.stats();
+      
+      // Static value should be resolved directly
+      expect(stats.filter).toBe('all');
+      
+      // Lazy getters should be resolved to their values
+      expect(stats.total).toBe(3);
+      expect(stats.active).toBe(2);
+      expect(stats.completed).toBe(1);
+      
+      // Nested lazy getters should also be resolved
+      expect(stats.summary.text).toBe('2 of 3 remaining');
+      expect(stats.summary.percentage).toBe(33);
+
+      // Add a new todo and verify stats update
+      store.actions.addTodo('Fourth todo');
+      
+      const newStats = store.views.stats();
+      expect(newStats.total).toBe(4);
+      expect(newStats.active).toBe(3);
+      expect(newStats.completed).toBe(1);
+      expect(newStats.summary.text).toBe('3 of 4 remaining');
+      expect(newStats.summary.percentage).toBe(25);
+    });
+
+    it('should handle arrays with lazy getters', () => {
+      const component = () => {
+        const model = createModel<{
+          items: string[];
+        }>(({ set }) => ({
+          items: ['a', 'b', 'c'],
+        }));
+
+        const viewSlice = createSlice(model, (m) => ({
+          // Array of lazy getters
+          itemGetters: [
+            () => m().items[0],
+            () => m().items[1], 
+            () => m().items[2],
+          ],
+          // Lazy getter returning an array
+          reversed: () => [...m().items].reverse(),
+        }));
+
+        return {
+          model,
+          actions: createSlice(model, (_m) => ({})),
+          views: { items: viewSlice },
+        };
+      };
+
+      const store = createZustandAdapter(component);
+      const view = store.views.items();
+
+      // Array of getters should be resolved
+      expect(view.itemGetters).toEqual(['a', 'b', 'c']);
+      
+      // Getter returning array should be resolved
+      expect(view.reversed).toEqual(['c', 'b', 'a']);
+    });
+  });
 });
