@@ -45,7 +45,7 @@ describe('Lattice Core', () => {
       }));
 
       const countSlice = createSlice(modelFactory, (m) => ({
-        count: m.count,
+        count: m().count,
       }));
 
       // Verify slice is a factory function
@@ -67,8 +67,8 @@ describe('Lattice Core', () => {
       }));
 
       const userSlice = createSlice(modelFactory, (m) => ({
-        userName: m.user.name,
-        userAge: m.user.age,
+        userName: m().user.name,
+        userAge: m().user.age,
       }));
 
       const model = {
@@ -96,8 +96,8 @@ describe('Lattice Core', () => {
       }));
 
       const actions = createSlice(modelFactory, (m) => ({
-        increment: m.increment,
-        decrement: m.decrement,
+        increment: m().increment,
+        decrement: m().decrement,
       }));
 
       // Test with a mock model
@@ -139,9 +139,9 @@ describe('Lattice Core', () => {
       }));
 
       const actions = createSlice(modelFactory, (m) => ({
-        addTodo: m.addTodo,
-        toggleTodo: m.toggleTodo,
-        setFilter: m.setFilter,
+        addTodo: m().addTodo,
+        toggleTodo: m().toggleTodo,
+        setFilter: m().setFilter,
       }));
 
       // Test selection
@@ -177,7 +177,7 @@ describe('Lattice Core', () => {
       }));
 
       const actions = createSlice(modelFactory, (m) => ({
-        increment: m.increment,
+        increment: m().increment,
       }));
 
       // Using compose for dependency injection
@@ -212,7 +212,7 @@ describe('Lattice Core', () => {
         value: 42,
       }));
 
-      const baseSlice = createSlice(modelFactory, (m) => ({ val: m.value }));
+      const baseSlice = createSlice(modelFactory, (m) => ({ val: m().value }));
 
       // When we compose slices with compose()
       const composedSlice = createSlice(
@@ -249,7 +249,7 @@ describe('Lattice Core', () => {
       }));
 
       const actions = createSlice(modelFactory, (m) => ({
-        setFilter: m.setFilter,
+        setFilter: m().setFilter,
       }));
 
       const buttonSlice = createSlice(
@@ -292,12 +292,12 @@ describe('Lattice Core', () => {
       const modelFactory = createModel<{ count: number }>(() => ({ count: 5 }));
 
       const countSlice = createSlice(modelFactory, (m) => ({
-        count: m.count,
+        count: m().count,
       }));
 
       // Create a computed view slice
       const counter = createSlice(modelFactory, (m) => {
-        const state = countSlice(() => m);
+        const state = countSlice(m);
         return {
           'data-count': state.count,
           'aria-label': `Count is ${state.count}`,
@@ -320,13 +320,13 @@ describe('Lattice Core', () => {
       const modelFactory = createModel<{ count: number }>(() => ({ count: 5 }));
 
       const countSlice = createSlice(modelFactory, (m) => ({
-        count: m.count,
+        count: m().count,
       }));
 
       // Create a computed view slice
       const counter = () =>
         createSlice(modelFactory, (m) => {
-          const state = countSlice(() => m);
+          const state = countSlice(m);
           return {
             'data-count': state.count,
             'aria-label': `Count is ${state.count}`,
@@ -360,8 +360,8 @@ describe('Lattice Core', () => {
           filter: 'all',
         })),
         (m) => ({
-          todos: m.todos,
-          filter: m.filter,
+          todos: m().todos,
+          filter: m().filter,
         })
       );
 
@@ -373,7 +373,7 @@ describe('Lattice Core', () => {
             filter: 'all',
           })),
           (m) => {
-            const state = todoState(() => m);
+            const state = todoState(m);
             const active = state.todos.filter((t: Todo) => !t.completed);
             const completed = state.todos.filter((t: Todo) => t.completed);
 
@@ -452,13 +452,13 @@ describe('Lattice Core', () => {
       }));
 
       const userSlice = createSlice(modelFactory, (m) => ({
-        user: m.user,
-        isLoggedIn: m.user.name !== '',
+        user: m().user,
+        isLoggedIn: m().user.name !== '',
       }));
 
       const themeSlice = createSlice(modelFactory, (m) => ({
-        theme: m.theme,
-        isDark: m.theme === 'dark',
+        theme: m().theme,
+        isDark: m().theme === 'dark',
       }));
 
       // Composite slice using compose
@@ -502,12 +502,12 @@ describe('Lattice Core', () => {
       }));
 
       const actions = createSlice(modelFactory, (m) => ({
-        increment: m.increment,
+        increment: m().increment,
       }));
 
       const stateSlice = createSlice(modelFactory, (m) => ({
-        count: m.count,
-        user: m.user,
+        count: m().count,
+        user: m().user,
       }));
 
       // Nested composition using compose
@@ -556,13 +556,13 @@ describe('Lattice Core', () => {
 
         // Actions: Slice that selects methods
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-          decrement: m.decrement,
+          increment: m().increment,
+          decrement: m().decrement,
         }));
 
         // State slice for display
         const countSlice = createSlice(model, (m) => ({
-          count: m.count,
+          count: m().count,
         }));
 
         // Composite slice: Combines state and actions
@@ -582,7 +582,7 @@ describe('Lattice Core', () => {
             // Computed view using slice
             counter: (someCount: number) =>
               createSlice(model, (m) => {
-                const state = countSlice(() => m);
+                const state = countSlice(m);
                 return {
                   'data-count': state.count,
                   'aria-label': `Count is ${state.count}`,
@@ -645,14 +645,14 @@ describe('Lattice Core', () => {
 
         // State slice for computations
         const todoState = createSlice(model, (m) => ({
-          todos: m.todos,
-          filter: m.filter,
+          todos: m().todos,
+          filter: m().filter,
         }));
 
         // Shared computation using slice
         const todoStats = () =>
           createSlice(model, (m) => {
-            const state = todoState(() => m);
+            const state = todoState(m);
             const active = state.todos.filter((t: Todo) => !t.completed);
             const completed = state.todos.filter((t: Todo) => t.completed);
 
@@ -666,9 +666,9 @@ describe('Lattice Core', () => {
 
         // Actions slice
         const actions = createSlice(model, (m) => ({
-          addTodo: m.addTodo,
-          toggleTodo: m.toggleTodo,
-          setFilter: m.setFilter,
+          addTodo: m().addTodo,
+          toggleTodo: m().toggleTodo,
+          setFilter: m().setFilter,
         }));
 
         const buttonSlice = createSlice(
@@ -698,7 +698,7 @@ describe('Lattice Core', () => {
             // Computed view using nested slice
             summary: () =>
               createSlice(model, (m) => {
-                const stats = todoStats()(() => m);
+                const stats = todoStats()(m);
                 return {
                   textContent: `${stats.activeCount} active, ${stats.completedCount} completed`,
                 };
@@ -744,8 +744,8 @@ describe('Lattice Core', () => {
 
       // This should compile with correct types
       const validSlice = createSlice(modelFactory, (m) => ({
-        count: m.count,
-        name: m.name,
+        count: m().count,
+        name: m().name,
       }));
 
       // TypeScript should infer the correct return type when called with a model
@@ -767,8 +767,8 @@ describe('Lattice Core', () => {
       }));
 
       const slice1 = createSlice(modelFactory, (m) => ({
-        value: m.value,
-        doubled: m.value * 2,
+        value: m().value,
+        doubled: m().value * 2,
       }));
 
       const slice2 = createSlice(
@@ -802,7 +802,7 @@ describe('Lattice Core', () => {
 
         const views = {
           display: createSlice(model, (m) => ({
-            count: m.count,
+            count: m().count,
           })),
         };
 
@@ -836,11 +836,11 @@ describe('Lattice Core', () => {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         const countSlice = createSlice(model, (m) => ({
-          count: m.count,
+          count: m().count,
         }));
 
         return {
@@ -877,13 +877,13 @@ describe('Lattice Core', () => {
         });
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-          decrement: m.decrement,
-          reset: m.reset,
+          increment: m().increment,
+          decrement: m().decrement,
+          reset: m().reset,
         }));
 
         const displaySlice = createSlice(model, (m) => ({
-          count: m.count,
+          count: m().count,
         }));
 
         return {
@@ -894,7 +894,7 @@ describe('Lattice Core', () => {
             // Computed view that adds styling based on count
             styledDisplay: () =>
               createSlice(model, (m) => {
-                const state = displaySlice(() => m);
+                const state = displaySlice(m);
                 return {
                   count: state.count,
                   className:
@@ -959,7 +959,7 @@ describe('Lattice Core', () => {
         value: 1,
       }));
 
-      const slice1 = createSlice(model, (m) => ({ v1: m.value }));
+      const slice1 = createSlice(model, (m) => ({ v1: m().value }));
       const slice2 = createSlice(
         model,
         compose({ slice1 }, (_, { slice1 }) => ({ v2: slice1.v1 }))
@@ -984,11 +984,11 @@ describe('Lattice Core', () => {
         mode: 'light',
       }));
 
-      const modeSlice = createSlice(model, (m) => ({ mode: m.mode }));
+      const modeSlice = createSlice(model, (m) => ({ mode: m().mode }));
 
       const adaptiveView = () =>
         createSlice(model, (m) => {
-          const state = modeSlice(() => m);
+          const state = modeSlice(m);
           return state.mode === 'light'
             ? { background: 'white', color: 'black' }
             : { background: 'black', color: 'white', border: '1px solid gray' };

@@ -149,7 +149,7 @@ if (import.meta.vitest) {
 
   it('SliceFactory should execute selectors', () => {
     const model = createModel<{ count: number }>(() => ({ count: 5 }));
-    const slice = createSlice(model, (m) => ({ value: m.count }));
+    const slice = createSlice(model, (m) => ({ value: m().count }));
 
     // Direct execution with required API
     const result = slice(() => ({ count: 10 }));
@@ -158,7 +158,7 @@ if (import.meta.vitest) {
 
   it('SliceFactory should maintain type safety', () => {
     const model = createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 }));
-    const pointSlice = createSlice(model, (m) => ({ x: m.x, y: m.y }));
+    const pointSlice = createSlice(model, (m) => ({ x: m().x, y: m().y }));
 
     const result = pointSlice(() => ({ x: 3, y: 4 }));
     expect(result).toEqual({ x: 3, y: 4 });
@@ -169,9 +169,9 @@ if (import.meta.vitest) {
     const sliceWithApi = createSlice(model, (m) => {
       // API is now always available
       return {
-        value: m.count,
+        value: m().count,
         hasApi: true,
-        stateFromModel: m.count,
+        stateFromModel: m().count,
       };
     });
 

@@ -29,13 +29,13 @@ type ResolveDeps<Deps> = {
  * @example
  * ```typescript
  * const actions = createSlice(model, (m) => ({
- *   increment: m.increment,
- *   decrement: m.decrement
+ *   increment: m().increment,
+ *   decrement: m().decrement
  * }));
  *
  * const userSlice = createSlice(model, (m) => ({
- *   name: m.user.name,
- *   email: m.user.email
+ *   name: m().user.name,
+ *   email: m().user.email
  * }));
  *
  * // Compose with dependencies
@@ -84,7 +84,7 @@ if (import.meta.vitest) {
     it('should create a selector that resolves dependencies', () => {
       const model = createModel<{ count: number }>(() => ({ count: 0 }));
       const slice = createSlice(model, (m) => ({
-        value: m.count,
+        value: m().count,
       }));
 
       // Use compose within createSlice as intended
@@ -107,10 +107,10 @@ if (import.meta.vitest) {
         y: 0,
       }));
       const xSlice = createSlice(model, (m) => ({
-        value: m.x,
+        value: m().x,
       }));
       const ySlice = createSlice(model, (m) => ({
-        value: m.y,
+        value: m().y,
       }));
 
       // Use compose within createSlice
@@ -139,24 +139,16 @@ if (import.meta.vitest) {
 
       const actions = createSlice(
         model,
-        (m: {
-          count: number;
-          increment: () => void;
-          user: { name: string; email: string };
-        }) => ({
-          increment: m.increment,
+        (m) => ({
+          increment: m().increment,
         })
       );
 
       const userSlice = createSlice(
         model,
-        (m: {
-          count: number;
-          increment: () => void;
-          user: { name: string; email: string };
-        }) => ({
-          name: m.user.name,
-          email: m.user.email,
+        (m) => ({
+          name: m().user.name,
+          email: m().user.email,
         })
       );
 
@@ -202,38 +194,20 @@ if (import.meta.vitest) {
 
       const positionSlice = createSlice(
         model,
-        (m: {
-          x: number;
-          y: number;
-          z: number;
-          colors: { primary: string; secondary: string };
-          sizes: { width: number; height: number };
-        }) => ({
-          x: m.x,
-          y: m.y,
-          z: m.z,
+        (m) => ({
+          x: m().x,
+          y: m().y,
+          z: m().z,
         })
       );
 
       const colorSlice = createSlice(
         model,
-        (m: {
-          x: number;
-          y: number;
-          z: number;
-          colors: { primary: string; secondary: string };
-          sizes: { width: number; height: number };
-        }) => m.colors
+        (m) => m().colors
       );
       const sizeSlice = createSlice(
         model,
-        (m: {
-          x: number;
-          y: number;
-          z: number;
-          colors: { primary: string; secondary: string };
-          sizes: { width: number; height: number };
-        }) => m.sizes
+        (m) => m().sizes
       );
 
       const viewSlice = createSlice(
@@ -283,15 +257,15 @@ if (import.meta.vitest) {
 
       const stringSlice = createSlice(
         model,
-        (m: { str: string; num: number; bool: boolean }) => ({ value: m.str })
+        (m) => ({ value: m().str })
       );
       const numberSlice = createSlice(
         model,
-        (m: { str: string; num: number; bool: boolean }) => ({ value: m.num })
+        (m) => ({ value: m().num })
       );
       const booleanSlice = createSlice(
         model,
-        (m: { str: string; num: number; bool: boolean }) => ({ value: m.bool })
+        (m) => ({ value: m().bool })
       );
 
       const composed = createSlice(
@@ -339,26 +313,26 @@ if (import.meta.vitest) {
       // Base slices
       const aSlice = createSlice(
         model,
-        (m: { a: number; b: number; c: number; op: 'add' | 'multiply' }) => ({
-          value: m.a,
+        (m) => ({
+          value: m().a,
         })
       );
       const bSlice = createSlice(
         model,
-        (m: { a: number; b: number; c: number; op: 'add' | 'multiply' }) => ({
-          value: m.b,
+        (m) => ({
+          value: m().b,
         })
       );
       const cSlice = createSlice(
         model,
-        (m: { a: number; b: number; c: number; op: 'add' | 'multiply' }) => ({
-          value: m.c,
+        (m) => ({
+          value: m().c,
         })
       );
       const opSlice = createSlice(
         model,
-        (m: { a: number; b: number; c: number; op: 'add' | 'multiply' }) => ({
-          operation: m.op,
+        (m) => ({
+          operation: m().op,
         })
       );
 
@@ -393,9 +367,9 @@ if (import.meta.vitest) {
 
       // Create a slice that uses the api parameter
       const apiAwareSlice = createSlice(model, (m) => ({
-        value: m.value,
+        value: m().value,
         hasApi: true,
-        stateFromModel: m.value,
+        stateFromModel: m().value,
       }));
 
       // Create a composed slice that depends on the api-aware slice
@@ -437,8 +411,8 @@ if (import.meta.vitest) {
 
       // Base slice
       const baseSlice = createSlice(model, (m) => ({
-        x: m.x,
-        fromModel: m.x,
+        x: m().x,
+        fromModel: m().x,
       }));
 
       // First level of composition
@@ -484,14 +458,14 @@ if (import.meta.vitest) {
 
       // Create slices that require api parameter
       const countSlice = createSlice(model, (m) => ({
-        value: m.count,
-        doubled: m.count * 2,
+        value: m().count,
+        doubled: m().count * 2,
       }));
 
       const userSlice = createSlice(model, (m) => ({
-        name: m.user.name,
-        role: m.user.role,
-        isAdmin: m.user.role === 'admin',
+        name: m().user.name,
+        role: m().user.role,
+        isAdmin: m().user.role === 'admin',
       }));
 
       // Compose with required api parameter

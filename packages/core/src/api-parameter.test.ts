@@ -568,7 +568,7 @@ describe('API Parameter Functionality', () => {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            updateScore: m.updateScore,
+            updateScore: m().updateScore,
           })),
           views: {
             match: matchSlice,
@@ -611,16 +611,16 @@ describe('API Parameter Functionality', () => {
 
         // Slice that might throw
         const riskySlice = createSlice(model, (m) => {
-          if (m.errorMode) {
+          if (m().errorMode) {
             throw new Error('Intentional error');
           }
-          return { safe: true, data: m.data };
+          return { safe: true, data: m().data };
         });
 
         // Slice that safely handles errors from other slices
         const safeWrapperSlice = createSlice(model, (m) => {
           try {
-            const result = riskySlice(() => m);
+            const result = riskySlice(m);
             return {
               success: true,
               data: result,
@@ -638,7 +638,7 @@ describe('API Parameter Functionality', () => {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            toggleError: m.toggleError,
+            toggleError: m().toggleError,
           })),
           views: {
             safeWrapper: safeWrapperSlice,
@@ -687,7 +687,7 @@ describe('API Parameter Functionality', () => {
             const start = Date.now();
 
             try {
-              const result = slice(() => m);
+              const result = slice(m);
               const duration = Date.now() - start;
               logs.push(`[${name}] Success (${duration}ms)`);
               return result;
@@ -700,10 +700,10 @@ describe('API Parameter Functionality', () => {
 
         // Base slices
         const valueSlice = createSlice(model, (m) => ({
-          value: m.value,
+          value: m().value,
         }));
         const doubleSlice = createSlice(model, (m) => ({
-          double: m.value * 2,
+          double: m().value * 2,
         }));
 
         // Wrapped slices with logging
@@ -714,8 +714,8 @@ describe('API Parameter Functionality', () => {
         const compositeSlice = withLogging(
           'composite',
           createSlice(model, (m) => {
-            const value = loggedValueSlice(() => m);
-            const double = loggedDoubleSlice(() => m);
+            const value = loggedValueSlice(m);
+            const double = loggedDoubleSlice(m);
             return {
               value: value.value,
               double: double.double,
@@ -727,7 +727,7 @@ describe('API Parameter Functionality', () => {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            increment: m.increment,
+            increment: m().increment,
           })),
           views: {
             composite: compositeSlice,
@@ -769,13 +769,13 @@ describe('API Parameter Functionality', () => {
           const cache = new Map<string, T>();
 
           return createSlice(model, (m) => {
-            const key = keyFn(m);
+            const key = keyFn(m());
 
             if (cache.has(key)) {
               return cache.get(key)!;
             }
 
-            const result = slice(() => m);
+            const result = slice(m);
             cache.set(key, result);
             return result;
           });
@@ -785,7 +785,7 @@ describe('API Parameter Functionality', () => {
         const expensiveSlice = createSlice(model, (m) => {
           computationCount++;
           // Simulate expensive computation
-          let result = m.input;
+          let result = m().input;
           for (let i = 0; i < 1000; i++) {
             result = Math.sin(result) * Math.cos(result);
           }
@@ -800,9 +800,9 @@ describe('API Parameter Functionality', () => {
 
         // View that uses cached slice multiple times
         const multiUseSlice = createSlice(model, (m) => {
-          const result1 = cachedExpensiveSlice(() => m);
-          const result2 = cachedExpensiveSlice(() => m);
-          const result3 = cachedExpensiveSlice(() => m);
+          const result1 = cachedExpensiveSlice(m);
+          const result2 = cachedExpensiveSlice(m);
+          const result3 = cachedExpensiveSlice(m);
 
           return {
             allEqual:
@@ -814,7 +814,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m) => ({ setInput: m.setInput })),
+          actions: createSlice(model, (m) => ({ setInput: m().setInput })),
           views: {
             multiUse: multiUseSlice,
           },
@@ -861,7 +861,7 @@ describe('API Parameter Functionality', () => {
         ): SliceFactory<PerfModel, T> =>
           createSlice(model, (m) => {
             const start = performance.now();
-            const result = slice(() => m);
+            const result = slice(m);
             const duration = performance.now() - start;
 
             if (!performanceData[name]) {
@@ -874,22 +874,22 @@ describe('API Parameter Functionality', () => {
 
         // Various slices with different complexities
         const simpleSlice = createSlice(model, (m) => ({
-          count: m.data.length,
+          count: m().data.length,
         }));
 
         const moderateSlice = createSlice(model, (m) => ({
-          sum: m.data.reduce((a, b) => a + b, 0),
-          avg: m.data.reduce((a, b) => a + b, 0) / m.data.length,
+          sum: m().data.reduce((a: number, b: number) => a + b, 0),
+          avg: m().data.reduce((a: number, b: number) => a + b, 0) / m().data.length,
         }));
 
         const complexSlice = createSlice(model, (m) => ({
-          sorted: [...m.data].sort((a, b) => a - b),
-          unique: [...new Set(m.data)],
+          sorted: [...m().data].sort((a, b) => a - b),
+          unique: [...new Set(m().data)],
           stats: {
-            min: Math.min(...m.data),
-            max: Math.max(...m.data),
+            min: Math.min(...m().data),
+            max: Math.max(...m().data),
             median: (() => {
-              const sorted = [...m.data].sort((a, b) => a - b);
+              const sorted = [...m().data].sort((a, b) => a - b);
               const mid = Math.floor(sorted.length / 2);
               return sorted.length % 2
                 ? sorted[mid]!
@@ -908,9 +908,9 @@ describe('API Parameter Functionality', () => {
 
         // Dashboard that uses all tracked slices
         const performanceDashboard = createSlice(model, (m) => {
-          const simple = trackedSimple(() => m);
-          const moderate = trackedModerate(() => m);
-          const complex = trackedComplex(() => m);
+          const simple = trackedSimple(m);
+          const moderate = trackedModerate(m);
+          const complex = trackedComplex(m);
 
           return {
             simple,
@@ -935,7 +935,7 @@ describe('API Parameter Functionality', () => {
 
         return {
           model,
-          actions: createSlice(model, (m) => ({ addData: m.addData })),
+          actions: createSlice(model, (m) => ({ addData: m().addData })),
           views: {
             dashboard: performanceDashboard,
           },
@@ -1029,7 +1029,7 @@ describe('API Parameter Functionality', () => {
           T & { validation: { [key: string]: string | null }; isValid: boolean }
         > =>
           createSlice(model, (m) => {
-            const data = slice(() => m);
+            const data = slice(m);
             const validation: { [key: string]: string | null } = {};
 
             // Validate each field
@@ -1059,7 +1059,7 @@ describe('API Parameter Functionality', () => {
           });
 
         // Form data slice
-        const formDataSlice = createSlice(model, (m) => m.formData);
+        const formDataSlice = createSlice(model, (m) => m().formData);
 
         // Validated form slice
         const validatedFormSlice = withValidation(formDataSlice);
@@ -1067,7 +1067,7 @@ describe('API Parameter Functionality', () => {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            updateField: m.updateField,
+            updateField: m().updateField,
           })),
           views: {
             form: validatedFormSlice,
@@ -1161,13 +1161,13 @@ describe('API Parameter Functionality', () => {
         }));
 
         // Product catalog slice
-        const catalogSlice = createSlice(model, (m) => m.products);
+        const catalogSlice = createSlice(model, (m) => m().products);
 
         // Cart items with product details
         const cartDetailsSlice = createSlice(model, (m) => {
-          const products = catalogSlice(() => m);
+          const products = catalogSlice(m);
 
-          return m.cart
+          return m().cart
             .map((cartItem) => {
               const product = products.find((p) => p.id === cartItem.productId);
               if (!product) return null;
@@ -1184,7 +1184,7 @@ describe('API Parameter Functionality', () => {
 
         // Cart summary
         const cartSummarySlice = createSlice(model, (m) => {
-          const items = cartDetailsSlice(() => m);
+          const items = cartDetailsSlice(m);
 
           const subtotal = items.reduce((sum, item) => sum + item.subtotal, 0);
           const taxRate = 0.08; // 8% tax
@@ -1206,9 +1206,9 @@ describe('API Parameter Functionality', () => {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            addToCart: m.addToCart,
-            removeFromCart: m.removeFromCart,
-            updateQuantity: m.updateQuantity,
+            addToCart: m().addToCart,
+            removeFromCart: m().removeFromCart,
+            updateQuantity: m().updateQuantity,
           })),
           views: {
             cartDetails: cartDetailsSlice,
@@ -1309,33 +1309,33 @@ describe('API Parameter Functionality', () => {
         const createPermissionChecker = (requiredPermissions: string[]) =>
           createSlice(model, (m) => {
             const hasAll = requiredPermissions.every((perm) =>
-              m.user.permissions.includes(perm)
+              m().user.permissions.includes(perm)
             );
             const hasAny = requiredPermissions.some((perm) =>
-              m.user.permissions.includes(perm)
+              m().user.permissions.includes(perm)
             );
 
             return {
               hasAll,
               hasAny,
               missing: requiredPermissions.filter(
-                (perm) => !m.user.permissions.includes(perm)
+                (perm) => !m().user.permissions.includes(perm)
               ),
             };
           });
 
         // Feature availability slice
         const featureAvailabilitySlice = createSlice(model, (m) => {
-          const canWrite = createPermissionChecker(['write'])(() => m);
-          const canAdmin = createPermissionChecker(['manage_users'])(() => m);
+          const canWrite = createPermissionChecker(['write'])(m);
+          const canAdmin = createPermissionChecker(['manage_users'])(m);
 
           return {
-            canUseDarkMode: m.featureFlags.darkMode,
+            canUseDarkMode: m().featureFlags.darkMode,
             canUseBetaFeatures:
-              m.featureFlags.betaFeatures &&
-              m.user.roles.includes('beta_tester'),
+              m().featureFlags.betaFeatures &&
+              m().user.roles.includes('beta_tester'),
             canUseAdvancedAnalytics:
-              m.featureFlags.advancedAnalytics && canAdmin.hasAll,
+              m().featureFlags.advancedAnalytics && canAdmin.hasAll,
             canEditContent: canWrite.hasAll,
             canManageUsers: canAdmin.hasAll,
           };
@@ -1343,17 +1343,17 @@ describe('API Parameter Functionality', () => {
 
         // User dashboard slice
         const userDashboardSlice = createSlice(model, (m) => {
-          const features = featureAvailabilitySlice(() => m);
+          const features = featureAvailabilitySlice(m);
 
           const availableActions = [];
           if (features.canEditContent) availableActions.push('Edit');
           if (features.canManageUsers) availableActions.push('Manage Users');
-          if (m.user.permissions.includes('moderate'))
+          if (m().user.permissions.includes('moderate'))
             availableActions.push('Moderate');
 
           return {
-            greeting: `Welcome, ${m.user.name}!`,
-            role: m.user.roles.join(', '),
+            greeting: `Welcome, ${m().user.name}!`,
+            role: m().user.roles.join(', '),
             availableActions,
             enabledFeatures: Object.entries(features)
               .filter(([_, enabled]) => enabled)
@@ -1364,8 +1364,8 @@ describe('API Parameter Functionality', () => {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            updateUserRole: m.updateUserRole,
-            toggleFeature: m.toggleFeature,
+            updateUserRole: m().updateUserRole,
+            toggleFeature: m().toggleFeature,
           })),
           views: {
             features: featureAvailabilitySlice,
