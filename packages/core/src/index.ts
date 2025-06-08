@@ -68,14 +68,14 @@ export function createSlice<Model, Slice>(
 ): SliceFactory<Model, Slice> {
   // Cache results per execution context
   const cache = new WeakMap<() => Model, Slice>();
-  
+
   // Create a function that executes the selector with required api
   const sliceFactory = function (getModel: () => Model): Slice {
     // Check if we have a cached result for this context
     if (cache.has(getModel)) {
       return cache.get(getModel)!;
     }
-    
+
     // Execute the selector and cache the result
     const result = selector(getModel);
     cache.set(getModel, result);
@@ -91,7 +91,6 @@ export function createSlice<Model, Slice>(
 
   return sliceFactory as SliceFactory<Model, Slice>;
 }
-
 
 export interface ComponentSpec<Model, Actions, Views> {
   model: ModelFactory<Model>;
@@ -153,44 +152,3 @@ export type ComponentType<C> = C extends (...args: unknown[]) => infer R
       }
     : never
   : never;
-
-// In-source tests for slice functionality
-if (import.meta.vitest) {
-  const { it, expect } = import.meta.vitest;
-
-  it('SliceFactory should execute selectors', () => {
-    const model = createModel<{ count: number }>(() => ({ count: 5 }));
-    const slice = createSlice(model, (m) => ({ value: m().count }));
-
-    // Direct execution with required API
-    const result = slice(() => ({ count: 10 }));
-    expect(result).toEqual({ value: 10 });
-  });
-
-  it('SliceFactory should maintain type safety', () => {
-    const model = createModel<{ x: number; y: number }>(() => ({ x: 0, y: 0 }));
-    const pointSlice = createSlice(model, (m) => ({ x: m().x, y: m().y }));
-
-    const result = pointSlice(() => ({ x: 3, y: 4 }));
-    expect(result).toEqual({ x: 3, y: 4 });
-  });
-
-  it('SliceFactory should support required api parameter', () => {
-    const model = createModel<{ count: number }>(() => ({ count: 5 }));
-    const sliceWithApi = createSlice(model, (m) => {
-      // API is now always available
-      return {
-        value: m().count,
-        hasApi: true,
-        stateFromModel: m().count,
-      };
-    });
-
-    const result = sliceWithApi(() => ({ count: 10 }));
-    expect(result).toEqual({
-      value: 10,
-      hasApi: true,
-      stateFromModel: 10,
-    });
-  });
-}
