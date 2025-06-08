@@ -66,9 +66,20 @@ export function createSlice<Model, Slice>(
   _model: ModelFactory<Model>,
   selector: (getModel: () => Model) => Slice
 ): SliceFactory<Model, Slice> {
+  // Cache results per execution context
+  const cache = new WeakMap<() => Model, Slice>();
+  
   // Create a function that executes the selector with required api
   const sliceFactory = function (getModel: () => Model): Slice {
-    return selector(getModel);
+    // Check if we have a cached result for this context
+    if (cache.has(getModel)) {
+      return cache.get(getModel)!;
+    }
+    
+    // Execute the selector and cache the result
+    const result = selector(getModel);
+    cache.set(getModel, result);
+    return result;
   };
 
   // Brand the slice factory
