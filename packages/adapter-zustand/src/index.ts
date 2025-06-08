@@ -352,7 +352,7 @@ if (import.meta.vitest) {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         return { model, actions, views: {} };
@@ -385,7 +385,7 @@ if (import.meta.vitest) {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         const stateView = createSlice(model, (m) => {
@@ -592,7 +592,7 @@ if (import.meta.vitest) {
         });
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         return {
@@ -626,7 +626,7 @@ if (import.meta.vitest) {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         const buttonSlice = createSlice(
@@ -675,7 +675,7 @@ if (import.meta.vitest) {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         const buttonSlice = createSlice(
@@ -864,7 +864,7 @@ if (import.meta.vitest) {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         const views = {
@@ -922,7 +922,7 @@ if (import.meta.vitest) {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         // Slice that uses API to compose data

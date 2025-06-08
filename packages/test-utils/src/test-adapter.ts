@@ -55,9 +55,8 @@ export class TestStore<TState> implements AdapterAPI<TState> {
     }
 
     try {
-      // Execute the slice factory with the state AND the API
-      // The slice factory signature now requires the API parameter
-      const result = sliceFactory(this.state);
+      // Execute the slice factory with a getter function
+      const result = sliceFactory(() => this.state);
 
       // Cache the result
       this.sliceCache.set(sliceFactory, result);
