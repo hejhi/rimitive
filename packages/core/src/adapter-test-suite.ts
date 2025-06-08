@@ -37,7 +37,7 @@ export function createAdapterTestSuite(
 
           const views = {
             counter: createSlice(model, (m) => ({
-              value: m().count,
+              value: () => m().count,
             })),
           };
 
@@ -74,8 +74,8 @@ export function createAdapterTestSuite(
           }));
 
           const nameSlice = createSlice(model, (m) => ({
-            first: m().firstName,
-            last: m().lastName,
+            first: () => m().firstName,
+            last: () => m().lastName,
           }));
 
           const actions = createSlice(model, (m) => ({
