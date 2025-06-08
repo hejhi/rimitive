@@ -29,7 +29,7 @@ Behavior patterns (selection, filtering, pagination) are universal. The infrastr
 Lattice cleanly separates **composition** (defining behavior) from **execution** (running with real infrastructure):
 
 1. **Composition**: Define behavior specifications as data
-2. **Transformation**: Lattice transforms rich specifications to simple primitives
+2. **Initialization**: During store creation, Lattice produces a component that can be provided to any number of state managament adapters, and initializes your views, actions, and model a single time during store creation
 3. **Execution**: Adapters provide minimal primitives to execute specifications
 
 ### Core Primitives
@@ -39,9 +39,9 @@ Lattice cleanly separates **composition** (defining behavior) from **execution**
 
 ### What Slices Create
 
-- **Model**: The source of truth - state and mutations
-- **Actions**: Slices that select methods from the model
-- **Views**: Slices or functions that generate UI attributes
+Slices are ways to "slice" up your model into different state designs:
+- **Actions**: Slices that select mutation methods from the model
+- **Views**: Slices or functions that expose or compute UI attributes
 
 ## Available Adapters
 
