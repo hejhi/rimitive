@@ -127,7 +127,29 @@ const headerSlice = createSlice(
 );
 ```
 
-### **Adapters Execute Specifications**
+## Static and Computed Views
+
+You can create static views:
+
+```ts
+const counterSlice = createSlice(model, (m) => ({
+  count: () => m().count,
+}));
+
+// export the slice directly, as a "view" of a model data
+export const counterView = counterSlice;
+```
+
+You can also create computed views:
+
+```ts
+// execute the slice to access the state
+export const computedCounterView = (addToCount: number) => counterSlice((state) => ({
+  computedCount: state + addToCount
+}))
+```
+
+## **Adapters Execute Specifications**
 Adapters take your model, actions and slices, and wires them up to popular state management libraries, which generate and manage the underlying store, mutations, and selectors:
 ```typescript
 // Adapter processes the specification with actual state management
