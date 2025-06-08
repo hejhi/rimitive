@@ -19,11 +19,11 @@ describe('createZustandAdapter', () => {
       }));
 
       const actions = createSlice(model, (m) => ({
-        increment: m.increment,
+        increment: m().increment,
       }));
 
       const countView = createSlice(model, (m) => ({
-        count: m.count,
+        count: m().count,
       }));
 
       return { model, actions, views: { count: countView } };
@@ -62,12 +62,12 @@ describe('createZustandAdapter', () => {
       }));
 
       const countView = createSlice(model, (m) => ({
-        count: m.count,
+        count: m().count,
       }));
 
       return {
         model,
-        actions: createSlice(model, (m) => ({ increment: m.increment })),
+        actions: createSlice(model, (m) => ({ increment: m().increment })),
         views: { count: countView },
       };
     };
@@ -105,12 +105,12 @@ describe('createZustandAdapter', () => {
       }));
 
       const stateView = createSlice(model, (m) => ({
-        count: m.count,
-        multiplier: m.multiplier,
+        count: m().count,
+        multiplier: m().multiplier,
       }));
 
       const doubledView = createSlice(model, (m) => {
-        const state = stateView(() => m);
+        const state = stateView(m);
         return {
           doubled: state.count * state.multiplier,
         };
@@ -118,7 +118,7 @@ describe('createZustandAdapter', () => {
 
       return {
         model,
-        actions: createSlice(model, (m) => ({ increment: m.increment })),
+        actions: createSlice(model, (m) => ({ increment: m().increment })),
         views: {
           state: stateView,
           doubled: doubledView,
@@ -153,12 +153,12 @@ describe('createZustandAdapter', () => {
       }));
 
       const countView = createSlice(model, (m) => ({
-        count: m.count,
+        count: m().count,
       }));
 
       return {
         model,
-        actions: createSlice(model, (m) => ({ increment: m.increment })),
+        actions: createSlice(model, (m) => ({ increment: m().increment })),
         views: { count: countView },
       };
     };
@@ -191,14 +191,14 @@ describe('createZustandAdapter', () => {
       }));
 
       const stateView = createSlice(model, (m) => ({
-        count: m.count,
-        loading: m.loading,
+        count: m().count,
+        loading: m().loading,
       }));
 
       return {
         model,
         actions: createSlice(model, (m) => ({
-          incrementAsync: m.incrementAsync,
+          incrementAsync: m().incrementAsync,
         })),
         views: { state: stateView },
       };
@@ -231,8 +231,8 @@ describe('createZustandAdapter', () => {
         }));
 
         const displaySlice = createSlice(model, (m) => ({
-          value: m.count,
-          isDisabled: m.disabled,
+          value: m().count,
+          isDisabled: m().disabled,
         }));
 
         return {
@@ -257,12 +257,12 @@ describe('createZustandAdapter', () => {
         const model = createModel<{ count: number }>(() => ({ count: 5 }));
 
         const countSlice = createSlice(model, (m) => ({
-          count: m.count,
+          count: m().count,
         }));
 
         // Create a computed view slice
         const counterView = createSlice(model, (m) => {
-          const state = countSlice(() => m);
+          const state = countSlice(m);
           return {
             'data-count': state.count,
             className: state.count % 2 === 0 ? 'even' : 'odd',
@@ -303,13 +303,13 @@ describe('createZustandAdapter', () => {
         }));
 
         const countSlice = createSlice(model, (m) => ({
-          value: m.count,
-          doubled: m.count * 2,
-          isEven: m.count % 2 === 0,
+          value: m().count,
+          doubled: m().count * 2,
+          isEven: m().count % 2 === 0,
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
+          increment: m().increment,
         }));
 
         return {
@@ -361,8 +361,8 @@ describe('createZustandAdapter', () => {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-          decrement: m.decrement,
+          increment: m().increment,
+          decrement: m().decrement,
         }));
 
         const buttonSlice = createSlice(
@@ -422,10 +422,10 @@ describe('createZustandAdapter', () => {
             }),
         }));
 
-        const userSlice = createSlice(model, (m) => m.user);
-        const permissionsSlice = createSlice(model, (m) => m.permissions);
+        const userSlice = createSlice(model, (m) => m().user);
+        const permissionsSlice = createSlice(model, (m) => m().permissions);
         const actionsSlice = createSlice(model, (m) => ({
-          updatePermissions: m.updatePermissions,
+          updatePermissions: m().updatePermissions,
         }));
 
         const dashboardSlice = createSlice(
@@ -503,15 +503,15 @@ describe('createZustandAdapter', () => {
         }));
 
         const actions = createSlice(model, (m) => ({
-          addTodo: m.addTodo,
-          toggleTodo: m.toggleTodo,
-          setFilter: m.setFilter,
+          addTodo: m().addTodo,
+          toggleTodo: m().toggleTodo,
+          setFilter: m().setFilter,
         }));
 
         // View that computes filtered todos
         const filteredTodosSlice = createSlice(model, (m) => {
-          const todos = m.todos;
-          const filter = m.filter;
+          const todos = m().todos;
+          const filter = m().filter;
 
           switch (filter) {
             case 'active':
@@ -525,9 +525,9 @@ describe('createZustandAdapter', () => {
 
         // View that computes stats
         const statsSlice = createSlice(model, (m) => ({
-          total: m.todos.length,
-          active: m.todos.filter((t) => !t.done).length,
-          completed: m.todos.filter((t) => t.done).length,
+          total: m().todos.length,
+          active: m().todos.filter((t) => !t.done).length,
+          completed: m().todos.filter((t) => t.done).length,
         }));
 
         return {
@@ -653,17 +653,17 @@ describe('createZustandAdapter', () => {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-          decrement: m.decrement,
+          increment: m().increment,
+          decrement: m().decrement,
         }));
 
         // View for button attributes
         const buttonAttrs = createSlice(model, (m) => ({
-          incrementDisabled: m.count >= 10,
-          decrementDisabled: m.count <= -10,
-          countText: `Count: ${m.count}`,
+          incrementDisabled: m().count >= 10,
+          decrementDisabled: m().count <= -10,
+          countText: `Count: ${m().count}`,
           className:
-            m.count === 0 ? 'zero' : m.count > 0 ? 'positive' : 'negative',
+            m().count === 0 ? 'zero' : m().count > 0 ? 'positive' : 'negative',
         }));
 
         return { model, actions, views: { buttonAttrs } };
@@ -755,16 +755,16 @@ describe('createZustandAdapter', () => {
         }));
 
         const userView = createSlice(model, (m) => ({
-          displayName: `${m.user.name} (${m.user.role})`,
-          isAdmin: m.user.role === 'admin',
-          themeClass: `theme-${m.theme}`,
+          displayName: `${m().user.name} (${m().user.role})`,
+          isAdmin: m().user.role === 'admin',
+          themeClass: `theme-${m().theme}`,
         }));
 
         return {
           model,
           actions: createSlice(model, (m) => ({
-            updateUser: m.updateUser,
-            toggleTheme: m.toggleTheme,
+            updateUser: m().updateUser,
+            toggleTheme: m().toggleTheme,
           })),
           views: { user: userView },
         };
@@ -845,14 +845,14 @@ describe('createZustandAdapter', () => {
         }));
 
         const actions = createSlice(model, (m) => ({
-          update: m.update,
+          update: m().update,
         }));
 
         const stateSlice = createSlice(model, (m) => ({
-          store: m.store,
-          actions: m.actions,
-          views: m.views,
-          nested: m.data.nested,
+          store: m().store,
+          actions: m().actions,
+          views: m().views,
+          nested: m().data.nested,
         }));
 
         return { model, actions, views: { state: stateSlice } };
@@ -954,8 +954,8 @@ describe('createZustandAdapter', () => {
       expect(stats.completed).toBe(1);
       
       // Nested lazy getters should also be resolved
-      expect(stats.summary.text).toBe('2 of 3 remaining');
-      expect(stats.summary.percentage).toBe(33);
+      expect((stats.summary as any).text).toBe('2 of 3 remaining');
+      expect((stats.summary as any).percentage).toBe(33);
 
       // Add a new todo and verify stats update
       store.actions.addTodo('Fourth todo');
@@ -964,15 +964,15 @@ describe('createZustandAdapter', () => {
       expect(newStats.total).toBe(4);
       expect(newStats.active).toBe(3);
       expect(newStats.completed).toBe(1);
-      expect(newStats.summary.text).toBe('3 of 4 remaining');
-      expect(newStats.summary.percentage).toBe(25);
+      expect((newStats.summary as any).text).toBe('3 of 4 remaining');
+      expect((newStats.summary as any).percentage).toBe(25);
     });
 
     it('should handle arrays with lazy getters', () => {
       const component = () => {
         const model = createModel<{
           items: string[];
-        }>(({ set }) => ({
+        }>(() => ({
           items: ['a', 'b', 'c'],
         }));
 

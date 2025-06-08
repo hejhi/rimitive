@@ -22,12 +22,12 @@ describe('compose with zustand adapter', () => {
       }));
 
       const actions = createSlice(model, (m) => ({
-        increment: m.increment,
+        increment: m().increment,
       }));
 
       const userSlice = createSlice(model, (m) => ({
-        name: m.user.name,
-        role: m.user.role,
+        name: m().user.name,
+        role: m().user.role,
       }));
 
       const buttonSlice = createSlice(
@@ -65,7 +65,7 @@ describe('compose with zustand adapter', () => {
         ...base,
         views: {
           ...base.views,
-          count: createSlice(base.model, (m) => ({ value: m.count })),
+          count: createSlice(base.model, (m) => ({ value: m().count })),
         },
       };
     };
@@ -88,11 +88,11 @@ describe('compose with zustand adapter', () => {
       }));
 
       const actions = createSlice(model, (m) => ({
-        setFilter: m.setFilter,
+        setFilter: m().setFilter,
       }));
 
       const stateSlice = createSlice(model, (m) => ({
-        filter: m.filter,
+        filter: m().filter,
       }));
 
       // Compose to create filter buttons
@@ -157,12 +157,12 @@ describe('compose with zustand adapter', () => {
       }));
 
       const xySlice = createSlice(model, (m) => ({
-        x: m.x,
-        y: m.y,
+        x: m().x,
+        y: m().y,
       }));
 
       const opSlice = createSlice(model, (m) => ({
-        operation: m.op,
+        operation: m().op,
       }));
 
       // First level compose
@@ -186,7 +186,7 @@ describe('compose with zustand adapter', () => {
 
       return {
         model,
-        actions: createSlice(model, (m) => ({ setOp: m.setOp })),
+        actions: createSlice(model, (m) => ({ setOp: m().setOp })),
         views: { display: displaySlice },
       };
     };

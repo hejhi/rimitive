@@ -157,10 +157,17 @@ type StoreWithSelector<T> = StoreApi<T> & {
 
 /**
  * Recursively resolves getter functions (zero-argument functions) in an object
+ * Skips functions that are likely actions (based on common action property names)
  */
-function resolveGetters<T>(obj: T): T {
-  // If it's a zero-argument function, call it and resolve the result
+function resolveGetters<T>(obj: T, key?: string): T {
+  // If it's a zero-argument function
   if (typeof obj === 'function' && obj.length === 0) {
+    // Skip if the key suggests it's an action/event handler
+    const actionKeys = ['on', 'handle', 'toggle', 'set', 'update', 'add', 'remove', 'delete', 'create', 'increment', 'decrement'];
+    if (key && actionKeys.some(prefix => key.toLowerCase().startsWith(prefix))) {
+      return obj;
+    }
+    
     const result = obj();
     // Recursively resolve the result in case it contains more getters
     return resolveGetters(result) as T;
@@ -179,7 +186,7 @@ function resolveGetters<T>(obj: T): T {
   // For objects, recursively resolve each property
   const resolved: any = {};
   for (const [key, value] of Object.entries(obj)) {
-    resolved[key] = resolveGetters(value);
+    resolved[key] = resolveGetters(value, key);
   }
   
   return resolved as T;
@@ -422,9 +429,9 @@ if (import.meta.vitest) {
 
         const stateView = createSlice(model, (m) => {
           return {
-            count: m.count,
-            multiplier: m.multiplier,
-            total: m.count * m.multiplier,
+            count: m().count,
+            multiplier: m().multiplier,
+            total: m().count * m().multiplier,
           };
         });
 
@@ -453,12 +460,12 @@ if (import.meta.vitest) {
         }));
 
         const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-          decrement: m.decrement,
+          increment: m().increment,
+          decrement: m().decrement,
         }));
 
         const countView = createSlice(model, (m) => ({
-          count: m.count,
+          count: m().count,
         }));
 
         return { model, actions, views: { count: countView } };
@@ -500,15 +507,15 @@ if (import.meta.vitest) {
         }));
 
         const actions = createSlice(model, (m) => ({
-          update: m.update,
+          update: m().update,
         }));
 
         const stateSlice = createSlice(model, (m) => {
           return {
-            store: m.store,
-            actions: m.actions,
-            views: m.views,
-            subscribe: m.subscribe,
+            store: m().store,
+            actions: m().actions,
+            views: m().views,
+            subscribe: m().subscribe,
           };
         });
 
@@ -548,8 +555,8 @@ if (import.meta.vitest) {
         }));
 
         const displaySlice = createSlice(model, (m) => ({
-          value: m.count,
-          isDisabled: m.disabled,
+          value: m().count,
+          isDisabled: m().disabled,
         }));
 
         return {
@@ -574,11 +581,11 @@ if (import.meta.vitest) {
         const model = createModel<{ count: number }>(() => ({ count: 5 }));
 
         const countSlice = createSlice(model, (m) => ({
-          count: m.count,
+          count: m().count,
         }));
 
         const counterView = createSlice(model, (m) => {
-          const state = countSlice(() => m);
+          const state = countSlice(m);
           return {
             'data-count': state.count,
             className: state.count % 2 === 0 ? 'even' : 'odd',
@@ -618,8 +625,8 @@ if (import.meta.vitest) {
 
         const countSlice = createSlice(model, (m) => {
           return {
-            value: m.count,
-            doubled: m.count * 2,
+            value: m().count,
+            doubled: m().count * 2,
           };
         });
 
@@ -754,8 +761,8 @@ if (import.meta.vitest) {
           ],
         }));
 
-        const userSlice = createSlice(model, (m) => m.user);
-        const postsSlice = createSlice(model, (m) => m.posts);
+        const userSlice = createSlice(model, (m) => m().user);
+        const postsSlice = createSlice(model, (m) => m().posts);
 
         const profileSlice = createSlice(
           model,
@@ -804,9 +811,9 @@ if (import.meta.vitest) {
 
         return {
           model,
-          actions: createSlice(model, (m) => ({ increment: m.increment })),
+          actions: createSlice(model, (m) => ({ increment: m().increment })),
           views: {
-            count: createSlice(model, (m) => ({ count: m.count })),
+            count: createSlice(model, (m) => ({ count: m().count })),
           },
         };
       };
@@ -850,7 +857,7 @@ if (import.meta.vitest) {
         return {
           model,
           actions: createSlice(model, (m) => ({
-            incrementAsync: m.incrementAsync,
+            incrementAsync: m().incrementAsync,
           })),
           views: {},
         };
@@ -863,8 +870,8 @@ if (import.meta.vitest) {
           ...base,
           views: {
             state: createSlice(base.model, (m) => ({
-              count: m.count,
-              loading: m.loading,
+              count: m().count,
+              loading: m().loading,
             })),
           },
         };
@@ -900,7 +907,7 @@ if (import.meta.vitest) {
         }));
 
         const views = {
-          count: createSlice(model, (m) => ({ value: m.count })),
+          count: createSlice(model, (m) => ({ value: m().count })),
         };
 
         return { model, actions, views };
@@ -960,8 +967,8 @@ if (import.meta.vitest) {
         // Slice that uses API to compose data
         const statusSlice = createSlice(model, (m) => {
           // Can use API within slices
-          const countSlice = createSlice(model, (gm) => ({ count: gm.count }));
-          const state = countSlice(() => m);
+          const countSlice = createSlice(model, (gm) => ({ count: gm().count }));
+          const state = countSlice(m);
 
           return {
             count: state.count,
