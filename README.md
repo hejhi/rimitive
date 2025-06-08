@@ -118,9 +118,9 @@ const headerSlice = createSlice(
   compose(
     { userSlice, actions },  // Slice dependencies
     (m, { userSlice, actions }) => ({
-      // access userSlice().name directly
-      userName: () => userSlice().name,
-      onLogout: () => actions().logout,
+      // Access resolved slice properties
+      userName: () => userSlice.name(),
+      onLogout: actions.logout,  // Already a function
       isAdmin: () => m().user.role === 'admin'
     })
   )
@@ -134,19 +134,41 @@ You can create static views:
 ```ts
 const counterSlice = createSlice(model, (m) => ({
   count: () => m().count,
+  total: () => m().total
 }));
 
-// export the slice directly, as a "view" of a model data
+// Export the slice directly as a static view
 export const counterView = counterSlice;
 ```
 
-You can also create computed views:
+You can also create computed views using `compute`:
 
 ```ts
-// execute the slice to access the state
-export const computedCounterView = (addToCount: number) => counterSlice((state) => ({
-  computedCount: state + addToCount
-}))
+// Define parameterized views that depend on slices
+export const multipliedCounter = compute(
+  // Slice dependencies
+  { counter: counterSlice },
+  // any arguments
+  (multiplier: number) =>
+    // unwrapped slice
+    ({ counter }) => ({
+      value: () => counter.count() * multiplier,
+      label: () => `×${multiplier}: ${counter.count()}`
+    })
+);
+
+// Use it in your component spec
+const component = () => ({
+  model,
+  actions,
+  views: {
+    // Static view
+    counter: counterView,
+    
+    // Computed view with parameters
+    multiplied: multipliedCounter
+  }
+});
 ```
 
 ## **Adapters Execute Specifications**
