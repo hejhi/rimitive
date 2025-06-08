@@ -538,6 +538,42 @@ describe('Lattice Core', () => {
     });
   });
 
+  describe('Slice spreading with getter functions', () => {
+    it('should support spreading slices with getter functions', () => {
+      const model = createModel<{ count: number; name: string }>(() => ({
+        count: 0,
+        name: 'test'
+      }));
+
+      const baseSlice = createSlice(model, (m) => ({
+        count: () => m().count,
+        doubled: () => m().count * 2,
+      }));
+
+      const extendedSlice = createSlice(model, (m) => ({
+        ...baseSlice(m),
+        name: () => m().name,
+        tripled: () => m().count * 3,
+      }));
+
+      // Test it
+      const testModel = { count: 5, name: 'foo' };
+      const result = extendedSlice(() => testModel);
+
+      // All functions should be present
+      expect(typeof result.count).toBe('function');
+      expect(typeof result.doubled).toBe('function');
+      expect(typeof result.name).toBe('function');
+      expect(typeof result.tripled).toBe('function');
+
+      // Functions should return correct values
+      expect(result.count()).toBe(5);
+      expect(result.doubled()).toBe(10);
+      expect(result.name()).toBe('foo');
+      expect(result.tripled()).toBe(15);
+    });
+  });
+
   describe('Component creation', () => {
     it('should create components with proper structure from counter example', () => {
       const counter = () => {

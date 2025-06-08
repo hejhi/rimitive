@@ -86,8 +86,8 @@ export function createAdapterTestSuite(
           const fullNameSlice = createSlice(model, (m) => {
             const state = nameSlice(m);
             return {
-              display: `${state.first} ${state.last}`,
-              initials: `${state.first[0]}${state.last[0]}`,
+              display: () => `${state.first()} ${state.last()}`,
+              initials: () => `${state.first()[0]}${state.last()[0]}`,
             };
           });
 
