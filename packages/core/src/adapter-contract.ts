@@ -1,34 +1,28 @@
 /**
  * @fileoverview Minimal adapter contract for Lattice framework
  *
- * This module defines the minimal interface that adapters need to implement.
- * The runtime handles all the complexity of executing components.
+ * This module defines the minimal interface that all Lattice adapters must implement.
+ * Adapters are now just thin wrappers that provide store primitives.
+ * All component execution is handled by the Lattice runtime.
  */
 
 /**
  * Minimal adapter interface - adapters only need to provide store primitives
- * 
- * Adapters are responsible for:
- * - Managing state storage
- * - Providing state access
- * - Managing subscriptions
- * 
- * The Lattice runtime handles:
- * - Component execution
- * - View resolution
- * - Action binding
+ *
+ * The adapter's only responsibility is to bridge between Lattice and the
+ * underlying state management system's get/set/subscribe primitives.
  */
 export interface StoreAdapter<Model> {
   /**
    * Get the current state
    */
   getState: () => Model;
-  
+
   /**
    * Update the state with partial updates
    */
   setState: (updates: Partial<Model>) => void;
-  
+
   /**
    * Subscribe to state changes
    * @returns Unsubscribe function
@@ -37,63 +31,19 @@ export interface StoreAdapter<Model> {
 }
 
 /**
- * Type helper to extract view function types from component views
- * 
- * All views must be created with resolve() and will be functions:
- * - Non-parameterized: () => Result
- * - Parameterized: (params) => Result
+ * Type guard to check if a value is a store adapter
  */
-export type ViewFunctionTypes<Views> = {
-  [K in keyof Views]: Views[K] extends (...args: infer Args) => infer Result
-    ? (...args: Args) => Result
-    : never;
-};
-
-/**
- * Result of adapter execution - what users interact with
- */
-export interface AdapterResult<Model, Actions, Views> {
-  /**
-   * Actions object with all mutation methods
-   */
-  actions: Actions;
-  
-  /**
-   * Views object with all view functions
-   */
-  views: ViewFunctionTypes<Views>;
-  
-  /**
-   * Subscribe to state changes
-   */
-  subscribe: (listener: () => void) => () => void;
-  
-  /**
-   * Get current state (for debugging/testing)
-   */
-  getState: () => Model;
-  
-  /**
-   * Optional cleanup method
-   */
-  destroy?: () => void;
+export function isStoreAdapter<Model>(
+  value: unknown
+): value is StoreAdapter<Model> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'getState' in value &&
+    'setState' in value &&
+    'subscribe' in value &&
+    typeof (value as any).getState === 'function' &&
+    typeof (value as any).setState === 'function' &&
+    typeof (value as any).subscribe === 'function'
+  );
 }
-
-/**
- * Adapter factory function type
- * 
- * Adapters should use createLatticeStore from runtime:
- * ```typescript
- * export function createMyAdapter(component) {
- *   const adapter: StoreAdapter<Model> = {
- *     getState: () => myStore.getState(),
- *     setState: (updates) => myStore.setState(updates),
- *     subscribe: (listener) => myStore.subscribe(listener)
- *   };
- *   return createLatticeStore(component, adapter);
- * }
- * ```
- */
-export type AdapterFactory = <Model, Actions, Views>(
-  component: () => { model: any; actions: any; views: any }
-) => AdapterResult<Model, Actions, Views>;

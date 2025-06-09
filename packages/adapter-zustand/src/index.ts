@@ -1,202 +1,98 @@
 /**
  * @fileoverview Zustand adapter for Lattice
  *
- * This adapter provides integration with Zustand for state management,
- * implementing the Lattice adapter specification. It creates reactive
- * stores and slices using Zustand's powerful state management capabilities.
- *
- * Key features:
- * - Minimal bridge between Lattice specs and Zustand
- * - Direct execution of component specifications
- * - Clean separation between model state and adapter API
+ * This adapter provides integration with Zustand for state management.
+ * Following the minimal adapter pattern, it only provides store primitives.
+ * All component execution is handled by the Lattice runtime.
  */
 
-import type {
-  ComponentFactory,
-  SliceFactory,
-  AdapterResult,
-  ViewTypes,
-} from '@lattice/core';
-import { isSliceFactory } from '@lattice/core';
-import {
-  createStore as zustandCreateStore,
-  StoreApi,
-  StateCreator,
-} from 'zustand/vanilla';
-import { subscribeWithSelector } from 'zustand/middleware';
-import { createRuntime } from '@lattice/runtime';
-
-// ============================================================================
-// Core Types
-// ============================================================================
-
-/**
- * Subscription callback type
- */
-type SubscribeCallback<T> = (value: T) => void;
-
-/**
- * View subscription function type
- */
-type ViewSubscribe<Views> = <Selected>(
-  selector: (views: Views) => Selected,
-  callback: SubscribeCallback<Selected>
-) => () => void;
-
-/**
- * Result of executing a component with the zustand adapter
- */
-export interface ZustandAdapterResult<Model, Actions, Views>
-  extends AdapterResult<Model, Actions, Views> {
-  /**
-   * Subscribe to view changes
-   * @example
-   * const unsub = store.subscribe(
-   *   views => ({ button: views.button(), count: views.counter() }),
-   *   state => console.log('Views changed:', state)
-   * );
-   */
-  subscribe: ViewSubscribe<ViewTypes<Model, Views>>;
-
-  /**
-   * Actions object with all action methods
-   * @example
-   * store.actions.increment();
-   * store.actions.decrement();
-   */
-  actions: Actions;
-
-  /**
-   * View functions - each returns the view attributes
-   * @example
-   * const attrs = store.views.display(); // Returns view attributes
-   * const buttonAttrs = store.views.button(); // Returns UI attributes
-   */
-  views: ViewTypes<Model, Views>;
-}
-
-// ============================================================================
-// Type Helpers
-// ============================================================================
-
-/**
- * Type for a Zustand store enhanced with subscribeWithSelector middleware
- */
-type StoreWithSelector<T> = StoreApi<T> & {
-  subscribe: {
-    (listener: (state: T, prevState: T) => void): () => void;
-    <U>(
-      selector: (state: T) => U,
-      listener: (state: U, prevState: U) => void,
-      options?: {
-        equalityFn?: (a: U, b: U) => boolean;
-        fireImmediately?: boolean;
-      }
-    ): () => void;
-  };
-};
+import { createStore as zustandCreateStore, StoreApi } from 'zustand/vanilla';
+import type { StoreAdapter, ComponentFactory } from '@lattice/core';
+import { createLatticeStore } from '@lattice/core';
 
 /**
  * Creates a Zustand adapter for a Lattice component.
  *
- * The adapter's role is minimal - it executes the component specification
- * with Zustand as the state management infrastructure.
+ * This is the primary way to use Lattice with Zustand. It combines
+ * a component specification with Zustand's state management.
  *
  * @param componentFactory - The Lattice component spec factory
- * @param middleware - Optional Zustand middleware
- * @returns An adapter result with actions, views, and subscribe
+ * @returns A Lattice store backed by Zustand
+ * 
+ * @example
+ * ```typescript
+ * const counter = () => ({
+ *   model: createModel(...),
+ *   actions: createSlice(...),
+ *   views: { ... }
+ * });
+ * 
+ * const store = createZustandAdapter(counter);
+ * store.actions.increment();
+ * const view = store.views.display();
+ * ```
  */
 export function createZustandAdapter<Model, Actions, Views>(
-  componentFactory: ComponentFactory<Model, Actions, Views>,
-  middleware?: (
-    createStore: typeof zustandCreateStore,
-    stateCreator: StateCreator<Model, [], [], Model>
-  ) => StoreApi<Model>
-): ZustandAdapterResult<Model, Actions, Views> {
-  return createRuntime(() => {
-    // Get the component spec
-    const spec = componentFactory();
-
-    // Create the base state creator
-    const baseStateCreator: StateCreator<Model, [], [], Model> = (set, get) => {
-      // Execute the model factory with Zustand's set/get
-      return spec.model({ set, get });
-    };
-
-    // Apply subscribeWithSelector middleware
-    const stateCreator = subscribeWithSelector(baseStateCreator);
-
-    // Create the store with optional middleware
-    const store: StoreWithSelector<Model> = middleware
-      ? middleware(zustandCreateStore, baseStateCreator)
-      : zustandCreateStore<Model>()(stateCreator);
-
-    // Helper to execute slice factories
-    const executeSlice = <T>(factory: SliceFactory<Model, T>): T => {
-      return factory(() => store.getState());
-    };
-
-    // Process actions - just execute the slice
-    const actions = executeSlice(spec.actions);
-
-    // Process views - each view is a function that returns current data
-    const views = {} as ViewTypes<Model, Views>;
-
-    for (const [key, view] of Object.entries(
-      spec.views as Record<string, unknown>
-    )) {
-      if (isSliceFactory(view)) {
-        // It's a slice factory - execute it to get the result
-        const sliceResult = executeSlice(view);
-
-        // The result might be:
-        // 1. An object with getters (regular slice)
-        // 2. A function (parameterized view from resolve())
-
-        if (typeof sliceResult === 'function') {
-          // It's already a view function (e.g., from resolve())
-          views[key as keyof ViewTypes<Model, Views>] =
-            sliceResult as ViewTypes<Model, Views>[keyof ViewTypes<
-              Model,
-              Views
-            >];
-        } else {
-          // It's a regular slice result - wrap it in a function
-          views[key as keyof ViewTypes<Model, Views>] = (() =>
-            sliceResult) as ViewTypes<Model, Views>[keyof ViewTypes<
-            Model,
-            Views
-          >];
-        }
-      } else if (typeof view === 'function') {
-        // It's already a function (computed view) - use it directly
-        views[key as keyof ViewTypes<Model, Views>] = view as ViewTypes<
-          Model,
-          Views
-        >[keyof ViewTypes<Model, Views>];
-      }
-    }
-
-    // Return the adapter result
-    return {
-      actions,
-      views,
-      getState: () => store.getState(),
-      subscribe: <Selected>(
-        selector: (views: ViewTypes<Model, Views>) => Selected,
-        callback: SubscribeCallback<Selected>
-      ) => {
-        // Subscribe using the view selector
-        const viewSelector = (_state: Model) => selector(views);
-        return store.subscribe(viewSelector, callback);
-      },
-      destroy: () => {
-        // Clear state to trigger final updates
-        store.setState({} as Model);
-      },
-    };
-  });
+  componentFactory: ComponentFactory<Model, Actions, Views>
+) {
+  // Create a minimal Zustand adapter
+  const adapter = createMinimalZustandAdapter<Model>();
+  
+  // Use the runtime to create the store
+  return createLatticeStore(componentFactory, adapter);
 }
+
+/**
+ * Creates a minimal Zustand adapter
+ * 
+ * This creates a new Zustand store with minimal wrapping.
+ * Used internally by createZustandAdapter.
+ * 
+ * @param initialState - Optional initial state
+ * @returns A minimal store adapter
+ */
+export function createMinimalZustandAdapter<Model>(
+  initialState?: Partial<Model>
+): StoreAdapter<Model> {
+  // Create the Zustand store with a simple state container
+  const store = zustandCreateStore<Model>(() => ({
+    ...initialState
+  } as Model));
+  
+  return {
+    getState: () => store.getState(),
+    setState: (updates) => store.setState(updates, false),
+    subscribe: (listener) => store.subscribe(listener)
+  };
+}
+
+/**
+ * Wraps an existing Zustand store as a minimal adapter
+ * 
+ * This allows you to use an existing Zustand store with Lattice.
+ * 
+ * @param store - An existing Zustand store
+ * @returns A minimal store adapter
+ * 
+ * @example
+ * ```typescript
+ * const zustandStore = createStore<Model>(...);
+ * const adapter = wrapZustandStore(zustandStore);
+ * const store = createLatticeStore(component, adapter);
+ * ```
+ */
+export function wrapZustandStore<Model>(
+  store: StoreApi<Model>
+): StoreAdapter<Model> {
+  return {
+    getState: () => store.getState(),
+    setState: (updates) => store.setState(updates, false),
+    subscribe: (listener) => store.subscribe(listener)
+  };
+}
+
+// Re-export types for convenience
+export type { StoreAdapter } from '@lattice/core';
 
 // ============================================================================
 // In-source tests
@@ -204,10 +100,10 @@ export function createZustandAdapter<Model, Actions, Views>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { createModel, createSlice } = await import('@lattice/core');
+  const { createModel, createSlice, resolve } = await import('@lattice/core');
 
   describe('createZustandAdapter - minimal implementation', () => {
-    it('should execute specs and provide adapter API', () => {
+    it('should work with the minimal adapter pattern', () => {
       const counter = () => {
         const model = createModel<{
           count: number;
@@ -221,9 +117,17 @@ if (import.meta.vitest) {
           increment: m().increment,
         }));
 
+        // Create a base slice for views
+        const counterSlice = createSlice(model, (m) => ({
+          count: () => m().count,
+        }));
+
+        // Views use resolve
+        const resolveViews = resolve({ counter: counterSlice });
         const views = {
-          counter: createSlice(model, (m) => ({
-            value: () => m().count,
+          display: resolveViews(({ counter }) => () => ({
+            value: counter.count(),
+            label: `Count: ${counter.count()}`
           })),
         };
 
@@ -232,18 +136,67 @@ if (import.meta.vitest) {
 
       const store = createZustandAdapter(counter);
 
-      // Test basic functionality
-      expect(typeof store.actions.increment).toBe('function');
-      expect(typeof store.views.counter).toBe('function');
+      // Test initial state
+      const view = store.views.display();
+      expect(view.value).toBe(0);
+      expect(view.label).toBe('Count: 0');
 
-      const view = store.views.counter();
-      expect(typeof view.value).toBe('function');
-      expect(view.value()).toBe(0);
-
+      // Test actions
       store.actions.increment();
 
-      const updatedView = store.views.counter();
-      expect(updatedView.value()).toBe(1);
+      // Test updated view
+      const updatedView = store.views.display();
+      expect(updatedView.value).toBe(1);
+      expect(updatedView.label).toBe('Count: 1');
+    });
+
+    it('should support subscriptions', () => {
+      const component = () => {
+        const model = createModel<{
+          value: number;
+          setValue: (v: number) => void;
+        }>(({ set }) => ({
+          value: 0,
+          setValue: (v: number) => set({ value: v }),
+        }));
+
+        const actions = createSlice(model, (m) => ({
+          setValue: m().setValue,
+        }));
+
+        const valueSlice = createSlice(model, (m) => ({
+          get: () => m().value,
+        }));
+
+        const resolveViews = resolve({ value: valueSlice });
+        const views = {
+          current: resolveViews(({ value }) => () => ({ value: value.get() })),
+        };
+
+        return { model, actions, views };
+      };
+
+      const store = createZustandAdapter(component);
+
+      // Track subscription calls
+      let callCount = 0;
+      const unsubscribe = store.subscribe(() => {
+        callCount++;
+      });
+
+      // Initial state
+      expect(store.views.current().value).toBe(0);
+      expect(callCount).toBe(0);
+
+      // Update state
+      store.actions.setValue(42);
+      expect(store.views.current().value).toBe(42);
+      expect(callCount).toBe(1);
+
+      // Unsubscribe
+      unsubscribe();
+      store.actions.setValue(100);
+      expect(callCount).toBe(1); // No more calls
     });
   });
 }
