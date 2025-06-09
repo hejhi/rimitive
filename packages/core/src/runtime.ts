@@ -5,7 +5,8 @@
  * using minimal adapters that only provide store primitives.
  */
 
-import type { ComponentFactory, ComponentSpec, ModelTools } from './index';
+import type { ComponentFactory, ComponentSpec, ModelTools, SliceFactory } from './index';
+import type { ViewFunctionTypes } from './adapter-contract';
 
 /**
  * Minimal adapter interface - adapters only need to provide store primitives
@@ -17,13 +18,26 @@ export interface StoreAdapter<Model> {
 }
 
 /**
+ * Type to extract the result type from view slice factories
+ */
+type ExtractViewType<T> = T extends SliceFactory<any, infer R> ? R : never;
+
+/**
+ * Transform component views (SliceFactories) to their executed types
+ */
+type ExecutedViews<Views> = {
+  [K in keyof Views]: ExtractViewType<Views[K]>
+};
+
+/**
  * Runtime result - what the runtime returns after executing a component
  */
 export interface RuntimeResult<Model, Actions, Views> {
   actions: Actions;
-  views: Views;
+  views: ExecutedViews<Views>;
   subscribe: (listener: () => void) => () => void;
   getState: () => Model;
+  destroy?: () => void;
 }
 
 /**
@@ -62,14 +76,12 @@ export function createLatticeStore<Model, Actions, Views>(
   
   // Views are already slice factories from resolve()
   // We need to execute each one with the getState function
-  const views = {} as Views;
+  const views = {} as ExecutedViews<Views>;
   
   for (const [key, viewSliceFactory] of Object.entries(component.views as Record<string, any>)) {
     // Each view is a SliceFactory that returns a function
-    console.log(`[Runtime] Executing view slice factory for "${key}"`);
     const viewFunction = viewSliceFactory(() => adapter.getState());
-    console.log(`[Runtime] View function type: ${typeof viewFunction}`);
-    views[key as keyof Views] = viewFunction;
+    views[key as keyof ExecutedViews<Views>] = viewFunction;
   }
   
   return {

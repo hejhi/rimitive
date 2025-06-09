@@ -1,116 +1,99 @@
 /**
- * @fileoverview Shared adapter contract for Lattice framework
+ * @fileoverview Minimal adapter contract for Lattice framework
  *
- * This module defines the common interface that all Lattice adapters must implement.
- * Adapters are responsible for executing component specifications with real infrastructure.
+ * This module defines the minimal interface that adapters need to implement.
+ * The runtime handles all the complexity of executing components.
  */
-
-import type { ComponentFactory, ComponentSpec, SliceFactory } from './index';
-import { SLICE_FACTORY_MARKER } from './index';
 
 /**
- * View type helpers - transforms view definitions to their runtime signatures
+ * Minimal adapter interface - adapters only need to provide store primitives
+ * 
+ * Adapters are responsible for:
+ * - Managing state storage
+ * - Providing state access
+ * - Managing subscriptions
+ * 
+ * The Lattice runtime handles:
+ * - Component execution
+ * - View resolution
+ * - Action binding
  */
-export type ViewTypes<Model, Views> = {
-  [K in keyof Views]: Views[K] extends SliceFactory<Model, infer T>
-    ? () => T // Static views become functions that return current state (unwrapped from LazySlice)
-    : Views[K] extends () => SliceFactory<Model, infer T>
-      ? () => T // Computed views (no params) also become functions that return current state (unwrapped from LazySlice)
-      : Views[K] extends () => unknown
-        ? Views[K] // Computed views (with or without params) - keep as-is
-        : never;
+export interface StoreAdapter<Model> {
+  /**
+   * Get the current state
+   */
+  getState: () => Model;
+  
+  /**
+   * Update the state with partial updates
+   */
+  setState: (updates: Partial<Model>) => void;
+  
+  /**
+   * Subscribe to state changes
+   * @returns Unsubscribe function
+   */
+  subscribe: (listener: () => void) => () => void;
+}
+
+/**
+ * Type helper to extract view function types from component views
+ * 
+ * All views must be created with resolve() and will be functions:
+ * - Non-parameterized: () => Result
+ * - Parameterized: (params) => Result
+ */
+export type ViewFunctionTypes<Views> = {
+  [K in keyof Views]: Views[K] extends (...args: infer Args) => infer Result
+    ? (...args: Args) => Result
+    : never;
 };
 
 /**
- * Subscription callback type
- */
-type SubscribeCallback<T> = (value: T) => void;
-
-/**
- * View subscription function type
- */
-type ViewSubscribe<Views> = <Selected>(
-  selector: (views: Views) => Selected,
-  callback: SubscribeCallback<Selected>
-) => () => void;
-
-/**
- * Core adapter result that all adapters must provide
- *
- * @template Model - The model type from the component
- * @template Actions - The actions type from the component
- * @template Views - The views type from the component
+ * Result of adapter execution - what users interact with
  */
 export interface AdapterResult<Model, Actions, Views> {
   /**
-   * Actions object containing all action methods
-   * These are directly callable without any additional wrapping
+   * Actions object with all mutation methods
    */
   actions: Actions;
-
+  
   /**
-   * Views object where each view is a function that returns current attributes
-   * - Static views: () => attributes based on current state
-   * - Computed views: () => computed attributes based on current state
+   * Views object with all view functions
    */
-  views: ViewTypes<Model, Views>;
+  views: ViewFunctionTypes<Views>;
+  
   /**
-   * Subscribe to view changes
-   * @example
-   * const unsub = store.subscribe(
-   *   views => ({ button: views.button(), count: views.counter() }),
-   *   state => console.log('Views changed:', state)
-   * );
+   * Subscribe to state changes
    */
-  subscribe: ViewSubscribe<ViewTypes<Model, Views>>;
-  destroy: () => void;
+  subscribe: (listener: () => void) => () => void;
+  
+  /**
+   * Get current state (for debugging/testing)
+   */
   getState: () => Model;
+  
+  /**
+   * Optional cleanup method
+   */
+  destroy?: () => void;
 }
 
 /**
- * Extended adapter result with state access (for testing/debugging)
- * Note: Production adapters should NOT expose direct state access
- */
-export interface TestAdapterResult<Model, Actions, Views>
-  extends AdapterResult<Model, Actions, Views> {
-  /**
-   * Get the current model state (for testing only)
-   */
-  getState: () => Model;
-
-  /**
-   * Execute a slice factory with current state (for testing only)
-   */
-  getSlice: <T>(sliceFactory: SliceFactory<Model, T>) => T;
-}
-
-/**
- * Adapter factory function signature
- *
- * All adapters should export a function with this signature
+ * Adapter factory function type
+ * 
+ * Adapters should use createLatticeStore from runtime:
+ * ```typescript
+ * export function createMyAdapter(component) {
+ *   const adapter: StoreAdapter<Model> = {
+ *     getState: () => myStore.getState(),
+ *     setState: (updates) => myStore.setState(updates),
+ *     subscribe: (listener) => myStore.subscribe(listener)
+ *   };
+ *   return createLatticeStore(component, adapter);
+ * }
+ * ```
  */
 export type AdapterFactory = <Model, Actions, Views>(
-  component: ComponentFactory<Model, Actions, Views>
+  component: () => { model: any; actions: any; views: any }
 ) => AdapterResult<Model, Actions, Views>;
-
-/**
- * Test adapter factory function signature
- */
-export type TestAdapterFactory = <Model, Actions, Views>(
-  component:
-    | ComponentSpec<Model, Actions, Views>
-    | (() => ComponentSpec<Model, Actions, Views>)
-) => TestAdapterResult<Model, Actions, Views>;
-
-/**
- * Type guard to check if a value is a slice factory
- */
-export function isSliceFactory<M, S>(
-  value: unknown
-): value is SliceFactory<M, S> {
-  return (
-    typeof value === 'function' &&
-    SLICE_FACTORY_MARKER in value &&
-    (value as Record<symbol, unknown>)[SLICE_FACTORY_MARKER] === true
-  );
-}

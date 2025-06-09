@@ -123,13 +123,20 @@ export {
 // Export adapter contract types
 export type {
   AdapterResult,
-  TestAdapterResult,
   AdapterFactory,
-  TestAdapterFactory,
-  ViewTypes,
+  ViewFunctionTypes,
 } from './adapter-contract';
 
-export { isSliceFactory } from './adapter-contract';
+// Type guards
+export function isSliceFactory<Model = any, Slice = any>(
+  value: unknown
+): value is SliceFactory<Model, Slice> {
+  return (
+    typeof value === 'function' &&
+    SLICE_FACTORY_MARKER in value &&
+    value[SLICE_FACTORY_MARKER] === true
+  );
+}
 
 // Export adapter test suite
 export { createAdapterTestSuite } from './adapter-test-suite';

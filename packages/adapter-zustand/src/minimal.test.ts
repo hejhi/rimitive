@@ -66,7 +66,7 @@ describe('Minimal Zustand Adapter', () => {
     expect(store.getState().count).toBe(0);
     
     // Test view - views are always functions
-    const view = store.views.display();  // This returns a function
+    const view = store.views.display();
     expect(view.value).toBe(0);
     expect(view.label).toBe('Count: 0');
     expect(view.positive).toBe(false);
@@ -180,14 +180,11 @@ describe('Minimal Zustand Adapter', () => {
     const store = createLatticeStore(component, adapter);
 
     // Test parameterized view
-    const view = store.views.multiplied;
-    expect(typeof view).toBe('function');
-    
-    const doubled = view(2);
+    const doubled = store.views.multiplied(2) as any;  // TODO: Fix type inference
     expect(doubled.result).toBe(20);
     expect(doubled.label).toBe('10 × 2 = 20');
     
-    const tripled = view(3);
+    const tripled = store.views.multiplied(3) as any;  // TODO: Fix type inference
     expect(tripled.result).toBe(30);
     expect(tripled.label).toBe('10 × 3 = 30');
   });
