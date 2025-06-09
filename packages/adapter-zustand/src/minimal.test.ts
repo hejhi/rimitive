@@ -52,8 +52,12 @@ describe('Minimal Zustand Adapter', () => {
       return { model, actions, views };
     };
 
-    // Create the minimal adapter
-    const adapter = createMinimalZustandAdapter<{ count: number }>();
+    // Create the minimal adapter with the full model type
+    const adapter = createMinimalZustandAdapter<{
+      count: number;
+      increment: () => void;
+      decrement: () => void;
+    }>();
     
     // Create the store using the runtime
     const store = createLatticeStore(counter, adapter);
@@ -61,8 +65,8 @@ describe('Minimal Zustand Adapter', () => {
     // Test initial state
     expect(store.getState().count).toBe(0);
     
-    // Test view
-    const view = store.views.display();
+    // Test view - views are always functions
+    const view = store.views.display();  // This returns a function
     expect(view.value).toBe(0);
     expect(view.label).toBe('Count: 0');
     expect(view.positive).toBe(false);

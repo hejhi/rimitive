@@ -1,10 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { resolve } from './resolve';
-import {
-  createModel,
-  createSlice,
-  type ModelFactory,
-} from './index';
+import { createModel, createSlice } from './index';
 
 describe('resolve', () => {
   it('should create views that resolve dependencies fresh on each call', () => {
@@ -35,14 +31,11 @@ describe('resolve', () => {
     });
 
     // Create views
-    const multipliedView = compute(
-      ({ counter }) =>
-        (multiplier: number) => ({
-          value: counter.count() * multiplier,
-          label: `×${multiplier}: ${counter.count()}`,
-          percentage: (counter.count() * multiplier * 100) / counter.total(),
-        })
-    );
+    const multipliedView = compute(({ counter }) => (multiplier: number) => ({
+      value: counter.count() * multiplier,
+      label: `×${multiplier}: ${counter.count()}`,
+      percentage: (counter.count() * multiplier * 100) / counter.total(),
+    }));
 
     const summaryView = compute(({ counter, stats }) => () => ({
       total: counter.total(),
@@ -73,11 +66,11 @@ describe('resolve', () => {
 
     // Update state and verify views see fresh data
     state = { count: 20, total: 100, increment: vi.fn() };
-    
+
     const newDoubled = multiplied(2);
     expect(newDoubled.value).toBe(40);
     expect(newDoubled.label).toBe('×2: 20');
-    
+
     const newSummary = summary();
     expect(newSummary.count).toBe(20);
   });
@@ -196,20 +189,18 @@ describe('resolve', () => {
     // Without memoization, these are different objects
     expect(result1).not.toBe(result2);
     expect(result1.transformed).not.toBe(result2.transformed);
-    
+
     // But they have the same values
     expect(result1).toEqual(result2);
   });
 
   it('should access fresh state through getter functions', () => {
-    const model = createModel<{ a: number; b: number }>(
-      ({ set, get }) => ({
-        a: 1,
-        b: 2,
-        setA: (val: number) => set({ a: val }),
-        setB: (val: number) => set({ b: val }),
-      })
-    );
+    const model = createModel<{ a: number; b: number }>(({ set }) => ({
+      a: 1,
+      b: 2,
+      setA: (val: number) => set({ a: val }),
+      setB: (val: number) => set({ b: val }),
+    }));
 
     const aSlice = createSlice(model, (m) => ({
       value: () => m().a,
@@ -223,18 +214,16 @@ describe('resolve', () => {
 
     const compute = resolve(model, { a: aSlice, b: bSlice });
 
-    const sumView = compute(
-      ({ a, b }) => () => ({
-        sum: a.value() + b.value(),
-        computed: a.doubled() + b.tripled(),
-      })
-    );
+    const sumView = compute(({ a, b }) => () => ({
+      sum: a.value() + b.value(),
+      computed: a.doubled() + b.tripled(),
+    }));
 
     let state = { a: 1, b: 2, setA: vi.fn(), setB: vi.fn() };
     const getState = () => state;
-    
+
     const view = sumView(getState);
-    
+
     // First call
     const result1 = view();
     expect(result1.sum).toBe(3);
@@ -242,7 +231,7 @@ describe('resolve', () => {
 
     // Update state
     state = { a: 5, b: 10, setA: vi.fn(), setB: vi.fn() };
-    
+
     // Second call - getter functions should see fresh state
     const result2 = view();
     expect(result2.sum).toBe(15);
