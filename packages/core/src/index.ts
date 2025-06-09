@@ -107,6 +107,9 @@ export type ComponentFactory<Model, Actions, Views> = () => ComponentSpec<
 // Export compose utilities
 export { compose } from './compose';
 
+// Export select utility for bound computed views
+export { select } from './select';
+
 // Export memoization utilities
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
