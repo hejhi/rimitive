@@ -8,8 +8,8 @@
  * - Return memoized parameterized functions
  */
 
-import type { SliceFactory } from './index';
-import { createSlice, createModel } from './index';
+import type { SliceFactory, ModelFactory } from './index';
+import { createSlice } from './index';
 import { compose } from './compose';
 import { memoizeParameterizedView } from './utils/memoize';
 
@@ -22,6 +22,12 @@ type ResolveDeps<Deps> = {
     ? Slice
     : never;
 };
+
+/**
+ * Extract the Model type from a set of dependencies
+ * All dependencies must have the same Model type
+ */
+type ExtractModel<Deps> = Deps extends Record<string, SliceFactory<infer M, any>> ? M : never;
 
 /**
  * Create a parameterized computed view with dependencies.
@@ -56,10 +62,10 @@ type ResolveDeps<Deps> = {
  * ```
  */
 export function compute<
-  Model,
-  Deps extends Record<string, SliceFactory<Model, unknown>>,
-  Args extends readonly unknown[],
-  Result
+  Deps extends Record<string, SliceFactory<any, unknown>>,
+  Model extends ExtractModel<Deps> = ExtractModel<Deps>,
+  Args extends readonly unknown[] = any[],
+  Result = any
 >(
   deps: Deps,
   factory: (resolvedDeps: ResolveDeps<Deps>) => (...args: Args) => Result
@@ -68,19 +74,25 @@ export function compute<
   // Since all deps should have the same Model type, we can use any of them
   const depsArray = Object.values(deps);
   if (depsArray.length === 0) {
-    // No dependencies - create a slice with an empty model
+    // No dependencies - create a slice with a generic model
+    // We need to create a dummy model factory to satisfy createSlice's type requirements
+    const dummyModelFactory = (() => {}) as unknown as ModelFactory<Model>;
     return createSlice(
-      createModel(() => ({} as Model)),
-      compose({}, (_model, _resolvedDeps) => {
+      dummyModelFactory,
+      (_getModel: () => Model) => {
         const parameterizedView = factory({} as ResolveDeps<Deps>);
         return memoizeParameterizedView(parameterizedView);
-      })
+      }
     );
   }
 
+  // Create a dummy model factory that preserves the Model type
+  // The actual model isn't used since compose handles dependency resolution
+  const dummyModelFactory = (() => {}) as unknown as ModelFactory<Model>;
+  
   // Use compose to resolve dependencies and create the parameterized view
   return createSlice(
-    {} as any, // The model is not used directly since compose handles dependency resolution
+    dummyModelFactory,
     compose(deps, (_model, resolvedDeps) => {
       // Get the parameterized view function from the factory
       const parameterizedView = factory(resolvedDeps);
