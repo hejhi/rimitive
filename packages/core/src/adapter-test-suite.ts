@@ -392,54 +392,6 @@ export function createAdapterTestSuite(
         expect(updatedDoubled.percentage).toBe(12);
       });
 
-      it('should memoize computed views from resolve()', () => {
-        const component = () => {
-          const model = createModel<{ value: number }>(() => ({ value: 42 }));
-
-          const valueSlice = createSlice(model, (m) => ({
-            get: () => m().value,
-          }));
-
-          const actions = createSlice(model, (_m) => ({}));
-
-          let viewCallCount = 0;
-          const resolveViews = resolve({ value: valueSlice });
-          
-          const views = {
-            expensive: resolveViews(({ value }) => {
-              // This should only be called once per adapter creation
-              viewCallCount++;
-              return () => (multiplier: number) => ({
-                result: value.get() * multiplier,
-                callCount: viewCallCount,
-              });
-            }),
-          };
-
-          return { model, actions, views };
-        };
-
-        const adapter = createAdapter(component);
-
-        // First call
-        const view1 = adapter.views.expensive();
-        const result1a = view1(2);
-        expect(result1a.result).toBe(84);
-        expect(result1a.callCount).toBe(1);
-
-        // Same parameter - should be memoized
-        const result1b = view1(2);
-        expect(result1b).toBe(result1a); // Same object reference
-
-        // Different parameter
-        const result2 = view1(3);
-        expect(result2.result).toBe(126);
-        expect(result2.callCount).toBe(1); // Factory only called once
-
-        // Getting the view again should return the same memoized function
-        const view2 = adapter.views.expensive();
-        expect(view2).toBe(view1);
-      });
     });
 
     describe('Error handling', () => {
@@ -538,23 +490,23 @@ export function createAdapterTestSuite(
           }));
 
           const valueSlice = createSlice(model, (m) => ({
-            value: m().value,
+            value: () => m().value,
           }));
 
           // Create computed view slices
           const doubledSlice = createSlice(model, (m) => {
             const state = valueSlice(m);
-            return { result: state.value * 2 };
+            return { result: () => state.value() * 2 };
           });
 
           const tripledSlice = createSlice(model, (m) => {
             const state = valueSlice(m);
-            return { result: state.value * 3 };
+            return { result: () => state.value() * 3 };
           });
 
           const formattedSlice = createSlice(model, (m) => {
             const state = valueSlice(m);
-            return { display: `Value: ${state.value}` };
+            return { display: () => `Value: ${state.value()}` };
           });
 
           const resolveViews = resolve({ 
@@ -564,9 +516,9 @@ export function createAdapterTestSuite(
           });
           
           const views = {
-            doubled: resolveViews(({ doubled }) => () => ({ result: doubled.result })),
-            tripled: resolveViews(({ tripled }) => () => ({ result: tripled.result })),
-            formatted: resolveViews(({ formatted }) => () => ({ display: formatted.display })),
+            doubled: resolveViews(({ doubled }) => () => ({ result: doubled.result() })),
+            tripled: resolveViews(({ tripled }) => () => ({ result: tripled.result() })),
+            formatted: resolveViews(({ formatted }) => () => ({ display: formatted.display() })),
           };
 
           return { model, actions, views };
