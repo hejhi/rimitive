@@ -77,15 +77,22 @@ export function createLatticeStore<Model, Actions, Views>(
   // We need to execute each one with the getState function
   const views = {} as ExecutedViews<Views>;
 
+  // Cache for view functions to ensure same instance is returned
+  const viewCache = new Map<string, any>();
+
   for (const [key, viewSliceFactory] of Object.entries(
     component.views as Record<string, any>
   )) {
-    // Wrap the view so it re-executes the slice factory on each access
-    // This ensures views always return fresh data
-    views[key as keyof ExecutedViews<Views>] = (() => {
-      // Execute the slice factory with current state
-      return viewSliceFactory(() => adapter.getState());
-    }) as any;
+    // Execute the view factory once and cache the result
+    const viewFunction = viewSliceFactory(() => adapter.getState());
+    viewCache.set(key, viewFunction);
+
+    // Create a getter that returns the cached view function
+    Object.defineProperty(views, key, {
+      get: () => viewCache.get(key),
+      enumerable: true,
+      configurable: true,
+    });
   }
 
   return {
