@@ -141,23 +141,33 @@ const counterSlice = createSlice(model, (m) => ({
 export const counterView = counterSlice;
 ```
 
-You can also create computed views using `compute`:
+You can also create computed views using `select`:
 
 ```ts
-// Define parameterized views that depend on slices
+// First, bind slices to a model (type-checked)
+const compute = select(model, { 
+  counter: counterSlice,
+  stats: statsSlice 
+});
+
+// Then create parameterized computed views
 export const multipliedCounter = compute(
-  // Slice dependencies
-  { counter: counterSlice },
-  // Factory function that receives resolved dependencies
-  ({ counter }) => 
-    // Returns a parameterized view function
-    (multiplier: number) => ({
-      value: counter.count() * multiplier,
-      label: `×${multiplier}: ${counter.count()}`
-    })
+  ({ counter }) => (multiplier: number) => ({
+    value: counter.count() * multiplier,
+    label: `×${multiplier}: ${counter.count()}`
+  })
 );
 
-// Use it in your component spec
+// Can reuse the same compute for multiple views
+export const summary = compute(
+  ({ counter, stats }) => () => ({
+    total: counter.count() + stats.total(),
+    average: stats.average(),
+    description: `Count: ${counter.count()}, Total: ${stats.total()}`
+  })
+);
+
+// Use in your component spec
 const component = () => ({
   model,
   actions,
@@ -165,14 +175,17 @@ const component = () => ({
     // Static view
     counter: counterView,
     
-    // Computed view with parameters
-    multiplied: multipliedCounter
+    // Computed views
+    multiplied: multipliedCounter,
+    summary: summary
   }
 });
 
 // When used by an adapter:
 // const view = store.views.multiplied();  // Get the parameterized function
 // const doubled = view(2);                // Apply parameters
+// const summaryView = store.views.summary();
+// const currentSummary = summaryView();   // No parameters
 ```
 
 ## **Adapters Execute Specifications**
