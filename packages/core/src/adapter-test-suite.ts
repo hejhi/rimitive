@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { AdapterFactory } from './adapter-contract';
+import type { ComponentFactory, RuntimeResult } from './index';
 import { createModel, createSlice, compose, resolve } from './index';
 
 /**
@@ -15,6 +15,11 @@ import { createModel, createSlice, compose, resolve } from './index';
  * @param adapterName - Name of the adapter being tested
  * @param createAdapter - The adapter factory function
  */
+// Type for adapter factory functions that create stores from components
+type AdapterFactory = <Model, Actions, Views>(
+  component: ComponentFactory<Model, Actions, Views>
+) => RuntimeResult<Model, Actions, Views>;
+
 export function createAdapterTestSuite(
   adapterName: string,
   createAdapter: AdapterFactory
@@ -35,9 +40,14 @@ export function createAdapterTestSuite(
             increment: m().increment,
           }));
 
+          const counterSlice = createSlice(model, (m) => ({
+            count: () => m().count,
+          }));
+
+          const resolveViews = resolve({ counter: counterSlice });
           const views = {
-            counter: createSlice(model, (m) => ({
-              value: () => m().count,
+            counter: resolveViews(({ counter }) => () => ({
+              value: counter.count(),
             })),
           };
 
@@ -91,11 +101,18 @@ export function createAdapterTestSuite(
             };
           });
 
+          const resolveViews = resolve({ name: nameSlice, fullName: fullNameSlice });
           const views = {
             // Static view
-            name: nameSlice,
+            name: resolveViews(({ name }) => () => ({
+              first: name.first(),
+              last: name.last(),
+            })),
             // Computed view as a slice
-            fullName: fullNameSlice,
+            fullName: resolveViews(({ fullName }) => () => ({
+              display: fullName.display(),
+              initials: fullName.initials(),
+            })),
           };
 
           return { model, actions, views };
@@ -167,8 +184,15 @@ export function createAdapterTestSuite(
             )
           );
 
+          const resolveViews = resolve({ header: headerSlice });
           const views = {
-            header: headerSlice,
+            header: resolveViews(({ header }) => () => ({
+              userName: header.userName(),
+              userRole: header.userRole(),
+              theme: header.theme(),
+              onToggleTheme: header.onToggleTheme,
+              title: header.title(),
+            })),
           };
 
           return { model, actions, views };
@@ -235,10 +259,29 @@ export function createAdapterTestSuite(
             count: () => m().items.filter((i: any) => i.selected).length,
           }));
 
+          const item1Slice = createItemView(1);
+          const item2Slice = createItemView(2);
+
+          const resolveViews = resolve({ 
+            item1: item1Slice, 
+            item2: item2Slice, 
+            selectedCount: selectedCountSlice 
+          });
+          
           const views = {
-            item1: createItemView(1),
-            item2: createItemView(2),
-            selectedCount: selectedCountSlice,
+            item1: resolveViews(({ item1 }) => () => ({
+              name: item1.name(),
+              selected: item1.selected(),
+              className: item1.className(),
+            })),
+            item2: resolveViews(({ item2 }) => () => ({
+              name: item2.name(),
+              selected: item2.selected(),
+              className: item2.className(),
+            })),
+            selectedCount: resolveViews(({ selectedCount }) => () => ({
+              count: selectedCount.count(),
+            })),
           };
 
           return { model, actions, views };
@@ -292,23 +335,21 @@ export function createAdapterTestSuite(
             increment: m().increment,
           }));
 
-          // Create computed view using resolve
-          const compute = resolve(model, { counter: counterSlice });
-          const multipliedCounter = compute(
-            ({ counter }) =>
-              (multiplier: number) => ({
-                value: counter.count() * multiplier,
-                label: `×${multiplier}: ${counter.count()}`,
-                percentage:
-                  (counter.count() * multiplier * 100) / counter.total(),
-              })
-          );
-
+          // Create views using resolve
+          const resolveViews = resolve({ counter: counterSlice });
+          
           const views = {
             // Regular static view
-            counter: counterSlice,
-            // Computed view from resolve
-            multiplied: multipliedCounter,
+            counter: resolveViews(({ counter }) => () => ({
+              count: counter.count(),
+              total: counter.total(),
+            })),
+            // Parameterized computed view
+            multiplied: resolveViews(({ counter }) => () => (multiplier: number) => ({
+              value: counter.count() * multiplier,
+              label: `×${multiplier}: ${counter.count()}`,
+              percentage: (counter.count() * multiplier * 100) / counter.total(),
+            })),
           };
 
           return { model, actions, views };
@@ -362,18 +403,17 @@ export function createAdapterTestSuite(
           const actions = createSlice(model, (_m) => ({}));
 
           let viewCallCount = 0;
-          const compute = resolve(model, { value: valueSlice });
-          const expensiveView = compute(({ value }) => {
-            // This should only be called once per adapter creation
-            viewCallCount++;
-            return (multiplier: number) => ({
-              result: value.get() * multiplier,
-              callCount: viewCallCount,
-            });
-          });
-
+          const resolveViews = resolve({ value: valueSlice });
+          
           const views = {
-            expensive: expensiveView,
+            expensive: resolveViews(({ value }) => {
+              // This should only be called once per adapter creation
+              viewCallCount++;
+              return () => (multiplier: number) => ({
+                result: value.get() * multiplier,
+                callCount: viewCallCount,
+              });
+            }),
           };
 
           return { model, actions, views };
@@ -454,8 +494,13 @@ export function createAdapterTestSuite(
             increment: m().increment,
           }));
 
+          const countSlice = createSlice(model, (m) => ({
+            counter: () => m().counter,
+          }));
+
+          const resolveViews = resolve({ count: countSlice });
           const views = {
-            count: createSlice(model, (m) => ({ value: m().counter })),
+            count: resolveViews(({ count }) => () => ({ value: count.counter() })),
           };
 
           return { model, actions, views };
@@ -512,10 +557,16 @@ export function createAdapterTestSuite(
             return { display: `Value: ${state.value}` };
           });
 
+          const resolveViews = resolve({ 
+            doubled: doubledSlice, 
+            tripled: tripledSlice, 
+            formatted: formattedSlice 
+          });
+          
           const views = {
-            doubled: doubledSlice,
-            tripled: tripledSlice,
-            formatted: formattedSlice,
+            doubled: resolveViews(({ doubled }) => () => ({ result: doubled.result })),
+            tripled: resolveViews(({ tripled }) => () => ({ result: tripled.result })),
+            formatted: resolveViews(({ formatted }) => () => ({ display: formatted.display })),
           };
 
           return { model, actions, views };
@@ -556,8 +607,13 @@ export function createAdapterTestSuite(
             clearLog: m().clearLog,
           }));
 
+          const logSlice = createSlice(model, (m) => ({
+            log: () => m().log,
+          }));
+
+          const resolveViews = resolve({ log: logSlice });
           const views = {
-            log: createSlice(model, (m) => ({ entries: m().log })),
+            log: resolveViews(({ log }) => () => ({ entries: log.log() })),
           };
 
           return { model, actions, views };
@@ -606,8 +662,14 @@ export function createAdapterTestSuite(
             setPoint: m().setPoint,
           }));
 
+          const pointSlice = createSlice(model, (m) => ({
+            x: () => m().x,
+            y: () => m().y,
+          }));
+
+          const resolveViews = resolve({ point: pointSlice });
           const views = {
-            point: createSlice(model, (m) => ({ x: m().x, y: m().y })),
+            point: resolveViews(({ point }) => () => ({ x: point.x(), y: point.y() })),
           };
 
           return { model, actions, views };

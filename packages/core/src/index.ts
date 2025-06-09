@@ -114,18 +114,11 @@ export { resolve } from './resolve';
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
 // Export runtime
-export { 
-  createLatticeStore, 
-  type StoreAdapter, 
-  type RuntimeResult 
+export {
+  createLatticeStore,
+  type StoreAdapter,
+  type RuntimeResult,
 } from './runtime';
-
-// Export adapter contract types
-export type {
-  AdapterResult,
-  AdapterFactory,
-  ViewFunctionTypes,
-} from './adapter-contract';
 
 // Type guards
 export function isSliceFactory<Model = any, Slice = any>(

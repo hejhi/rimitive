@@ -18,7 +18,7 @@ import { createLatticeStore } from '@lattice/core';
  *
  * @param componentFactory - The Lattice component spec factory
  * @returns A Lattice store backed by Zustand
- * 
+ *
  * @example
  * ```typescript
  * const counter = () => ({
@@ -26,7 +26,7 @@ import { createLatticeStore } from '@lattice/core';
  *   actions: createSlice(...),
  *   views: { ... }
  * });
- * 
+ *
  * const store = createZustandAdapter(counter);
  * store.actions.increment();
  * const view = store.views.display();
@@ -35,45 +35,45 @@ import { createLatticeStore } from '@lattice/core';
 export function createZustandAdapter<Model, Actions, Views>(
   componentFactory: ComponentFactory<Model, Actions, Views>
 ) {
-  // Create a minimal Zustand adapter
-  const adapter = createMinimalZustandAdapter<Model>();
-  
   // Use the runtime to create the store
-  return createLatticeStore(componentFactory, adapter);
+  return createLatticeStore(componentFactory, createStoreAdapter<Model>());
 }
 
 /**
  * Creates a minimal Zustand adapter
- * 
+ *
  * This creates a new Zustand store with minimal wrapping.
  * Used internally by createZustandAdapter.
- * 
+ *
  * @param initialState - Optional initial state
  * @returns A minimal store adapter
  */
-export function createMinimalZustandAdapter<Model>(
-  initialState?: Partial<Model>
+export function createStoreAdapter<Model>(
+  initialState?: Model
 ): StoreAdapter<Model> {
   // Create the Zustand store with a simple state container
-  const store = zustandCreateStore<Model>(() => ({
-    ...initialState
-  } as Model));
-  
+  const store = zustandCreateStore<Model>(
+    () =>
+      ({
+        ...initialState,
+      }) as Model
+  );
+
   return {
     getState: () => store.getState(),
     setState: (updates) => store.setState(updates, false),
-    subscribe: (listener) => store.subscribe(listener)
+    subscribe: (listener) => store.subscribe(listener),
   };
 }
 
 /**
  * Wraps an existing Zustand store as a minimal adapter
- * 
+ *
  * This allows you to use an existing Zustand store with Lattice.
- * 
+ *
  * @param store - An existing Zustand store
  * @returns A minimal store adapter
- * 
+ *
  * @example
  * ```typescript
  * const zustandStore = createStore<Model>(...);
@@ -87,7 +87,7 @@ export function wrapZustandStore<Model>(
   return {
     getState: () => store.getState(),
     setState: (updates) => store.setState(updates, false),
-    subscribe: (listener) => store.subscribe(listener)
+    subscribe: (listener) => store.subscribe(listener),
   };
 }
 
@@ -127,7 +127,7 @@ if (import.meta.vitest) {
         const views = {
           display: resolveViews(({ counter }) => () => ({
             value: counter.count(),
-            label: `Count: ${counter.count()}`
+            label: `Count: ${counter.count()}`,
           })),
         };
 
