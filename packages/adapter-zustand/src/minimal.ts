@@ -18,7 +18,7 @@ export function createMinimalZustandAdapter<Model>(
   initialState?: Partial<Model>
 ): StoreAdapter<Model> {
   // Create the Zustand store with a simple state container
-  const store = createStore<Model>((set) => ({
+  const store = createStore<Model>(() => ({
     ...initialState
   } as Model));
   

@@ -39,12 +39,7 @@ describe('Minimal Zustand Adapter', () => {
 
       const views = {
         display: resolveViews(({ counter }) => {
-          console.log('resolve factory called, creating view function');
           return () => {
-            console.log(
-              'display view called, counter.count():',
-              counter.count()
-            );
             return {
               value: counter.count(),
               label: `Count: ${counter.count()}`,
@@ -58,7 +53,7 @@ describe('Minimal Zustand Adapter', () => {
       return { model, actions, views };
     };
 
-    // Create the minimal adapter with the full model type
+    // Create the minimal adapter
     const adapter = createMinimalZustandAdapter<{
       count: number;
       increment: () => void;
@@ -79,9 +74,7 @@ describe('Minimal Zustand Adapter', () => {
     expect(view.negative).toBe(false);
 
     // Test actions
-    console.log('Before increment:', store.getState());
     store.actions.increment();
-    console.log('After increment:', store.getState());
 
     // Test updated view
     const updatedView = store.views.display();
@@ -125,7 +118,10 @@ describe('Minimal Zustand Adapter', () => {
       return { model, actions, views };
     };
 
-    const adapter = createMinimalZustandAdapter<{ value: number }>();
+    const adapter = createMinimalZustandAdapter<{
+      value: number;
+      setValue: (v: number) => void;
+    }>();
     const store = createLatticeStore(counter, adapter);
 
     // Track subscription calls
@@ -184,7 +180,10 @@ describe('Minimal Zustand Adapter', () => {
       return { model, actions, views };
     };
 
-    const adapter = createMinimalZustandAdapter<{ base: number }>();
+    const adapter = createMinimalZustandAdapter<{
+      base: number;
+      multiply: (factor: number) => void;
+    }>();
     const store = createLatticeStore(component, adapter);
 
     // Test parameterized view
