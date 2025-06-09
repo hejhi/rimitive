@@ -10,7 +10,7 @@ Traditional component libraries couple behavior to specific frameworks and state
 // Define behavior specification
 const counter = () => ({
   model: createModel(/* state and mutations */),
-  actions: /* resolved action functions */,
+  actions: /* slice selecting methods */,
   views: /* resolved UI-ready data */
 });
 
@@ -40,11 +40,11 @@ Lattice cleanly separates **composition** (defining behavior) from **execution**
 
 ### The Lattice Pattern
 
-Lattice follows a consistent pattern: slices are lazy, views and actions are resolved:
+Lattice follows a consistent pattern of separation:
 
 - **Slices**: Always return getter functions for lazy composition
+- **Actions**: Simple slices that select mutation methods (logic-less)
 - **Views**: Resolved slices that return UI-ready data
-- **Actions**: Resolved slices that return executable functions
 
 ## Available Adapters
 
@@ -130,9 +130,25 @@ const headerSlice = createSlice(
 );
 ```
 
-## Creating Views and Actions
+## Creating Actions and Views
 
-Views and actions are resolved slices that return eager values:
+### Actions: Logic-less Method Selection
+
+Actions are simple slices that select mutation methods from the model:
+
+```typescript
+// Actions are direct method selectors - no logic, no getters
+const actions = createSlice(model, (m) => ({
+  increment: m().increment,
+  decrement: m().decrement,
+  setName: m().setName,
+  reset: m().reset
+}));
+```
+
+### Views: UI-Ready Data with `resolve`
+
+Views transform lazy slices into eager, UI-ready values:
 
 ```typescript
 // Bind slices to a model for resolution
@@ -156,19 +172,6 @@ export const multipliedCounter = resolve(
     value: counter.count() * multiplier,
     label: `×${multiplier}: ${counter.count()}`,
     percentage: (counter.count() * multiplier * 100) / counter.total()
-  })
-);
-
-// Create action sets
-export const counterActions = resolve(
-  ({ counter }) => () => ({
-    increment: counter.increment(),  // Resolved function
-    // Can add logic around actions
-    incrementIfAllowed: () => {
-      if (counter.count() < counter.total()) {
-        counter.increment()();
-      }
-    }
   })
 );
 ```
@@ -230,14 +233,11 @@ const counter = () => {
     })
   );
 
-  // Resolve actions
-  const actions = resolve(
-    ({ counter }) => () => ({
-      increment: counter.increment(),
-      decrement: counter.decrement(),
-      reset: () => counter.increment().set({ count: 0 })
-    })
-  );
+  // Actions are simple method selectors
+  const actions = createSlice(model, (m) => ({
+    increment: m().increment,
+    decrement: m().decrement
+  }));
 
   return {
     model,
