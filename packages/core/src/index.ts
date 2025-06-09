@@ -113,6 +113,13 @@ export { resolve } from './resolve';
 // Export memoization utilities
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
+// Export runtime
+export { 
+  createLatticeStore, 
+  type StoreAdapter, 
+  type RuntimeResult 
+} from './runtime';
+
 // Export adapter contract types
 export type {
   AdapterResult,

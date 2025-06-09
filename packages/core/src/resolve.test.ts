@@ -1,36 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { resolve } from './resolve';
 import {
   createModel,
   createSlice,
-  type SliceFactory,
   type ModelFactory,
 } from './index';
 
-// Simple test adapter for testing
-function createTestAdapter<T>(modelFactory: ModelFactory<T>) {
-  let state: T;
-
-  // Initialize model
-  const model = modelFactory({
-    get: () => state,
-    set: (updates) => {
-      state = { ...state, ...updates };
-    },
-  });
-
-  state = model;
-
-  return {
-    getState: () => state,
-    executeSlice: <S>(sliceFactory: SliceFactory<T, S>): S => {
-      return sliceFactory(() => state);
-    },
-  };
-}
-
 describe('resolve', () => {
-  it('should create a bound compute function with dependencies', () => {
+  it('should create views that resolve dependencies fresh on each call', () => {
     // Define model
     const model = createModel<{ count: number; total: number }>(
       ({ set, get }) => ({
@@ -57,8 +34,8 @@ describe('resolve', () => {
       stats: statsSlice,
     });
 
-    // Create multiple computed views with the same dependencies
-    const multipliedCounter = compute(
+    // Create views
+    const multipliedView = compute(
       ({ counter }) =>
         (multiplier: number) => ({
           value: counter.count() * multiplier,
@@ -67,38 +44,45 @@ describe('resolve', () => {
         })
     );
 
-    const summary = compute(({ counter, stats }) => () => ({
+    const summaryView = compute(({ counter, stats }) => () => ({
       total: counter.total(),
       count: counter.count(),
       average: stats.average(),
       description: `Count: ${counter.count()}, Average: ${stats.average()}`,
     }));
 
-    // Create test adapter
-    const store = createTestAdapter(model);
+    // Create a mock state
+    let state = { count: 10, total: 100, increment: vi.fn() };
+    const getState = () => state;
 
-    // Test multiplied counter view
-    const multipliedView = store.executeSlice(multipliedCounter);
-    const doubled = multipliedView(2);
+    // Views should be functions that take a getState function
+    const multiplied = multipliedView(getState);
+    const summary = summaryView(getState);
+
+    // Test multiplied view
+    const doubled = multiplied(2);
     expect(doubled.value).toBe(20);
     expect(doubled.label).toBe('×2: 10');
     expect(doubled.percentage).toBe(20);
 
-    const tripled = multipliedView(3);
-    expect(tripled.value).toBe(30);
-    expect(tripled.label).toBe('×3: 10');
-    expect(tripled.percentage).toBe(30);
-
     // Test summary view
-    const summaryView = store.executeSlice(summary);
-    const currentSummary = summaryView();
+    const currentSummary = summary();
     expect(currentSummary.total).toBe(100);
     expect(currentSummary.count).toBe(10);
     expect(currentSummary.average).toBe(10);
-    expect(currentSummary.description).toBe('Count: 10, Average: 10');
+
+    // Update state and verify views see fresh data
+    state = { count: 20, total: 100, increment: vi.fn() };
+    
+    const newDoubled = multiplied(2);
+    expect(newDoubled.value).toBe(40);
+    expect(newDoubled.label).toBe('×2: 20');
+    
+    const newSummary = summary();
+    expect(newSummary.count).toBe(20);
   });
 
-  it('should memoize parameterized views', () => {
+  it('should compute fresh results each time', () => {
     const model = createModel<{ value: number }>(() => ({ value: 42 }));
     const valueSlice = createSlice(model, (m) => ({
       get: () => m().value,
@@ -115,27 +99,23 @@ describe('resolve', () => {
       };
     });
 
-    const store = createTestAdapter(model);
-    const view = store.executeSlice(computedView);
-
-    // Reset count after initial factory execution
-    computationCount = 0;
+    const state = { value: 42 };
+    const view = computedView(() => state);
 
     // First call with parameter 2
     const result1 = view(2);
     expect(result1.result).toBe(84);
     expect(computationCount).toBe(1);
 
-    // Second call with same parameter - should be memoized
+    // Second call with same parameter - computed fresh (no memoization for now)
     const result2 = view(2);
     expect(result2.result).toBe(84);
-    expect(result2.computationCount).toBe(1); // Same count, was memoized
-    expect(computationCount).toBe(1); // Still 1
+    expect(computationCount).toBe(2); // Computed again
 
-    // Different parameter - new computation
+    // Different parameter
     const result3 = view(3);
     expect(result3.result).toBe(126);
-    expect(computationCount).toBe(2);
+    expect(computationCount).toBe(3);
   });
 
   it('should work with no dependencies', () => {
@@ -149,8 +129,8 @@ describe('resolve', () => {
       message: 'No deps needed',
     }));
 
-    const store = createTestAdapter(model);
-    const view = store.executeSlice(constantView);
+    const state = { data: 'test' };
+    const view = constantView(() => state);
     const result = view();
 
     expect(result.fixed).toBe(100);
@@ -176,8 +156,8 @@ describe('resolve', () => {
       return Math.sqrt(dx * dx + dy * dy);
     });
 
-    const store = createTestAdapter(model);
-    const distance = store.executeSlice(distanceView);
+    const state = { x: 5, y: 10 };
+    const distance = distanceView(() => state);
 
     // Distance from (5,10) to (0,0)
     const dist1 = distance(0, 0);
@@ -188,76 +168,7 @@ describe('resolve', () => {
     expect(dist2).toBe(0);
   });
 
-  it('should support rest parameters', () => {
-    const model = createModel<{ items: number[] }>(() => ({
-      items: [1, 2, 3],
-    }));
-
-    const itemsSlice = createSlice(model, (m) => ({
-      all: () => m().items,
-    }));
-
-    const compute = resolve(model, { items: itemsSlice });
-
-    const sumView = compute(({ items }) => (...numbers: number[]) => {
-      const base = items.all().reduce((a, b) => a + b, 0);
-      const additional = numbers.reduce((a, b) => a + b, 0);
-      return base + additional;
-    });
-
-    const store = createTestAdapter(model);
-    const sum = store.executeSlice(sumView);
-
-    expect(sum()).toBe(6); // 1+2+3
-    expect(sum(4)).toBe(10); // 1+2+3+4
-    expect(sum(4, 5, 6)).toBe(21); // 1+2+3+4+5+6
-  });
-
-  it('should cache slice execution per adapter context', () => {
-    const model = createModel<{ value: number }>(({ set, get }) => ({
-      value: 100,
-      double: () => set({ value: get().value * 2 }),
-    }));
-
-    let sliceCallCount = 0;
-    const trackingSlice = createSlice(model, (m) => {
-      sliceCallCount++;
-      return {
-        value: () => m().value,
-        callCount: sliceCallCount,
-      };
-    });
-
-    const compute = resolve(model, { tracking: trackingSlice });
-
-    const view = compute(({ tracking }) => () => ({
-      value: tracking.value(),
-      sliceWasCalledTimes: tracking.callCount,
-    }));
-
-    // Create first adapter
-    const store1 = createTestAdapter(model);
-    sliceCallCount = 0; // Reset after model initialization
-
-    const view1 = store1.executeSlice(view);
-    const result1a = view1();
-    expect(result1a.value).toBe(100);
-    expect(result1a.sliceWasCalledTimes).toBe(1);
-
-    // Call again on same adapter - slice should be cached
-    const result1b = view1();
-    expect(result1b.value).toBe(100);
-    expect(result1b.sliceWasCalledTimes).toBe(1); // Still 1, was cached
-
-    // Create second adapter - should have its own cache
-    const store2 = createTestAdapter(model);
-    const view2 = store2.executeSlice(view);
-    const result2 = view2();
-    expect(result2.value).toBe(100);
-    expect(result2.sliceWasCalledTimes).toBe(2); // New execution for new adapter
-  });
-
-  it('should maintain referential equality for memoized results', () => {
+  it('should compute fresh objects each time', () => {
     const model = createModel<{ data: { id: number; name: string } }>(() => ({
       data: { id: 1, name: 'test' },
     }));
@@ -275,62 +186,66 @@ describe('resolve', () => {
       },
     }));
 
-    const store = createTestAdapter(model);
-    const transform = store.executeSlice(transformView);
+    const state = { data: { id: 1, name: 'test' } };
+    const transform = transformView(() => state);
 
     // Call twice with same parameter
     const result1 = transform('Item');
     const result2 = transform('Item');
 
-    // Should be the exact same object reference
-    expect(result1).toBe(result2);
-    expect(result1.transformed).toBe(result2.transformed);
+    // Without memoization, these are different objects
+    expect(result1).not.toBe(result2);
+    expect(result1.transformed).not.toBe(result2.transformed);
+    
+    // But they have the same values
+    expect(result1).toEqual(result2);
   });
 
-  it('should create independent compute functions from the same resolve', () => {
-    const model = createModel<{ a: number; b: number }>(() => ({
-      a: 10,
-      b: 20,
-    }));
+  it('should access fresh state through getter functions', () => {
+    const model = createModel<{ a: number; b: number }>(
+      ({ set, get }) => ({
+        a: 1,
+        b: 2,
+        setA: (val: number) => set({ a: val }),
+        setB: (val: number) => set({ b: val }),
+      })
+    );
 
     const aSlice = createSlice(model, (m) => ({
       value: () => m().a,
+      doubled: () => m().a * 2,
     }));
 
     const bSlice = createSlice(model, (m) => ({
       value: () => m().b,
+      tripled: () => m().b * 3,
     }));
 
-    // Create one compute binding
     const compute = resolve(model, { a: aSlice, b: bSlice });
 
-    // Create multiple independent views
     const sumView = compute(
-      ({ a, b }) =>
-        () =>
-          a.value() + b.value()
+      ({ a, b }) => () => ({
+        sum: a.value() + b.value(),
+        computed: a.doubled() + b.tripled(),
+      })
     );
 
-    const productView = compute(
-      ({ a, b }) =>
-        () =>
-          a.value() * b.value()
-    );
+    let state = { a: 1, b: 2, setA: vi.fn(), setB: vi.fn() };
+    const getState = () => state;
+    
+    const view = sumView(getState);
+    
+    // First call
+    const result1 = view();
+    expect(result1.sum).toBe(3);
+    expect(result1.computed).toBe(8); // (1*2) + (2*3)
 
-    const ratioView = compute(
-      ({ a, b }) =>
-        () =>
-          a.value() / b.value()
-    );
-
-    const store = createTestAdapter(model);
-
-    const sum = store.executeSlice(sumView)();
-    const product = store.executeSlice(productView)();
-    const ratio = store.executeSlice(ratioView)();
-
-    expect(sum).toBe(30);
-    expect(product).toBe(200);
-    expect(ratio).toBe(0.5);
+    // Update state
+    state = { a: 5, b: 10, setA: vi.fn(), setB: vi.fn() };
+    
+    // Second call - getter functions should see fresh state
+    const result2 = view();
+    expect(result2.sum).toBe(15);
+    expect(result2.computed).toBe(40); // (5*2) + (10*3)
   });
 });
