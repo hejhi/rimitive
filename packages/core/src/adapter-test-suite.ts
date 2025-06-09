@@ -7,7 +7,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { AdapterFactory } from './adapter-contract';
-import { createModel, createSlice, compose, compute } from './index';
+import { createModel, createSlice, compose, select } from './index';
 
 /**
  * Creates a comprehensive test suite for a Lattice adapter
@@ -300,9 +300,9 @@ export function createAdapterTestSuite(
             increment: m().increment,
           }));
 
-          // Create computed view using compute
+          // Create computed view using select
+          const compute = select(model, { counter: counterSlice });
           const multipliedCounter = compute(
-            { counter: counterSlice },
             ({ counter }) => (multiplier: number) => ({
               value: counter.count() * multiplier,
               label: `×${multiplier}: ${counter.count()}`,
@@ -313,7 +313,7 @@ export function createAdapterTestSuite(
           const views = {
             // Regular static view
             counter: counterSlice,
-            // Computed view from compute
+            // Computed view from select
             multiplied: multipliedCounter,
           };
 
@@ -357,7 +357,7 @@ export function createAdapterTestSuite(
         expect(updatedDoubled.percentage).toBe(12);
       });
 
-      it('should memoize computed views from compute()', () => {
+      it('should memoize computed views from select()', () => {
         const component = () => {
           const model = createModel<{ value: number }>(() => ({ value: 42 }));
 
@@ -368,8 +368,8 @@ export function createAdapterTestSuite(
           const actions = createSlice(model, (_m) => ({}));
 
           let viewCallCount = 0;
+          const compute = select(model, { value: valueSlice });
           const expensiveView = compute(
-            { value: valueSlice },
             ({ value }) => {
               // This should only be called once per adapter creation
               viewCallCount++;
