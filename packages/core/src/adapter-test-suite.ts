@@ -84,10 +84,10 @@ export function createAdapterTestSuite(
 
           // Create a computed view slice that combines data
           const fullNameSlice = createSlice(model, (m) => {
-            const state = nameSlice(m);
             return {
-              display: () => `${state.first()} ${state.last()}`,
-              initials: () => `${state.first()[0]}${state.last()[0]}`,
+              display: () => `${nameSlice(m).first()} ${nameSlice(m).last()}`,
+              initials: () =>
+                `${nameSlice(m).first()[0]}${nameSlice(m).last()[0]}`,
             };
           });
 
@@ -139,14 +139,14 @@ export function createAdapterTestSuite(
           }));
 
           const userSlice = createSlice(model, (m) => ({
-            name: m().user.name,
-            role: m().user.role,
-            isAdmin: m().user.role === 'admin',
+            name: () => m().user.name,
+            role: () => m().user.role,
+            isAdmin: () => m().user.role === 'admin',
           }));
 
           const themeSlice = createSlice(model, (m) => ({
-            theme: m().theme,
-            isDark: m().theme === 'dark',
+            theme: () => m().theme,
+            isDark: () => m().theme === 'dark',
           }));
 
           const actions = createSlice(model, (m) => ({
@@ -158,11 +158,11 @@ export function createAdapterTestSuite(
             compose(
               { userSlice, themeSlice, actions },
               (_, { userSlice, themeSlice, actions }) => ({
-                userName: userSlice.name,
-                userRole: userSlice.role,
-                theme: themeSlice.theme,
+                userName: () => userSlice.name(),
+                userRole: () => userSlice.role(),
+                theme: () => themeSlice.theme(),
                 onToggleTheme: actions.toggleTheme,
-                title: `${userSlice.name} - ${themeSlice.theme} mode`,
+                title: () => `${userSlice.name()} - ${themeSlice.theme()} mode`,
               })
             )
           );
@@ -214,34 +214,26 @@ export function createAdapterTestSuite(
             toggleItem: m().toggleItem,
           }));
 
-          const itemsSlice = createSlice(model, (m) => ({
-            items: m().items,
-          }));
-
           // Parameterized view factory
           const createItemView = (itemId: number) =>
-            createSlice(model, (m) => {
-              const state = itemsSlice(m);
-              const item = state.items.find((i) => i.id === itemId);
-              return item
-                ? {
-                    name: item.name,
-                    selected: item.selected,
-                    className: item.selected ? 'selected' : '',
-                  }
-                : {
-                    name: 'Not found',
-                    selected: false,
-                    className: 'error',
-                  };
-            });
+            createSlice(model, (m) => ({
+              name: () => {
+                const item = m().items.find((i) => i.id === itemId);
+                return item ? item.name : 'Not found';
+              },
+              selected: () => {
+                const item = m().items.find((i) => i.id === itemId);
+                return item ? item.selected : false;
+              },
+              className: () => {
+                const item = m().items.find((i) => i.id === itemId);
+                return item ? (item.selected ? 'selected' : '') : 'error';
+              },
+            }));
 
-          const selectedCountSlice = createSlice(model, (m) => {
-            const state = itemsSlice(m);
-            return {
-              count: state.items.filter((i: any) => i.selected).length,
-            };
-          });
+          const selectedCountSlice = createSlice(model, (m) => ({
+            count: () => m().items.filter((i: any) => i.selected).length,
+          }));
 
           const views = {
             item1: createItemView(1),
@@ -303,11 +295,13 @@ export function createAdapterTestSuite(
           // Create computed view using select
           const compute = select(model, { counter: counterSlice });
           const multipliedCounter = compute(
-            ({ counter }) => (multiplier: number) => ({
-              value: counter.count() * multiplier,
-              label: `×${multiplier}: ${counter.count()}`,
-              percentage: (counter.count() * multiplier * 100) / counter.total(),
-            })
+            ({ counter }) =>
+              (multiplier: number) => ({
+                value: counter.count() * multiplier,
+                label: `×${multiplier}: ${counter.count()}`,
+                percentage:
+                  (counter.count() * multiplier * 100) / counter.total(),
+              })
           );
 
           const views = {
@@ -369,16 +363,14 @@ export function createAdapterTestSuite(
 
           let viewCallCount = 0;
           const compute = select(model, { value: valueSlice });
-          const expensiveView = compute(
-            ({ value }) => {
-              // This should only be called once per adapter creation
-              viewCallCount++;
-              return (multiplier: number) => ({
-                result: value.get() * multiplier,
-                callCount: viewCallCount,
-              });
-            }
-          );
+          const expensiveView = compute(({ value }) => {
+            // This should only be called once per adapter creation
+            viewCallCount++;
+            return (multiplier: number) => ({
+              result: value.get() * multiplier,
+              callCount: viewCallCount,
+            });
+          });
 
           const views = {
             expensive: expensiveView,
