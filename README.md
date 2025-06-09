@@ -151,14 +151,14 @@ const actions = createSlice(model, (m) => ({
 Views transform lazy slices into eager, UI-ready values:
 
 ```typescript
-// Bind slices to a model for resolution
-const resolve = resolve(model, { 
+// Bind slices together for resolution (model type is inferred)
+const compute = resolve({ 
   counter: counterSlice,
   stats: statsSlice 
 });
 
 // Create UI-ready views
-export const counterView = resolve(
+export const counterView = compute(
   ({ counter }) => () => ({
     value: counter.count(),              // Resolved value
     label: `Count: ${counter.count()}`,  // Resolved string
@@ -167,7 +167,7 @@ export const counterView = resolve(
 );
 
 // Create parameterized views
-export const multipliedCounter = resolve(
+export const multipliedCounter = compute(
   ({ counter }) => (multiplier: number) => ({
     value: counter.count() * multiplier,
     label: `×${multiplier}: ${counter.count()}`,
@@ -206,9 +206,9 @@ const counter = () => {
   }));
 
   // Resolve views
-  const resolve = resolve(model, { counter: counterSlice });
+  const compute = resolve({ counter: counterSlice });
   
-  const display = resolve(
+  const display = compute(
     ({ counter }) => () => ({
       value: counter.count(),
       max: counter.limit(),
@@ -218,7 +218,7 @@ const counter = () => {
     })
   );
 
-  const controls = resolve(
+  const controls = compute(
     ({ counter }) => () => ({
       increment: {
         onClick: counter.increment(),
@@ -260,7 +260,9 @@ store.views.display();  // { value: 1, max: 10, percentage: 10, ... }
 Views can return complex nested structures:
 
 ```typescript
-const dashboardView = resolve(
+const compute = resolve({ user: userSlice, stats: statsSlice, settings: settingsSlice });
+
+const dashboardView = compute(
   ({ user, stats, settings }) => () => ({
     header: {
       title: `Welcome, ${user.name()}`,
@@ -290,7 +292,9 @@ const dashboardView = resolve(
 Views can conditionally resolve different structures:
 
 ```typescript
-const userView = resolve(
+const compute = resolve({ user: userSlice, auth: authSlice });
+
+const userView = compute(
   ({ user, auth }) => () => {
     if (!auth.isAuthenticated()) {
       return { 

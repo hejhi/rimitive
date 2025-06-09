@@ -35,7 +35,7 @@ describe('Minimal Zustand Adapter', () => {
       }));
 
       // Views use resolve for UI-ready data
-      const resolveViews = resolve(model, { counter: counterSlice });
+      const resolveViews = resolve({ counter: counterSlice });
 
       const views = {
         display: resolveViews(({ counter }) => {
@@ -117,7 +117,7 @@ describe('Minimal Zustand Adapter', () => {
         get: () => m().value,
       }));
 
-      const resolveViews = resolve(model, { value: valueSlice });
+      const resolveViews = resolve({ value: valueSlice });
       const views = {
         current: resolveViews(({ value }) => () => ({ value: value.get() })),
       };
@@ -172,7 +172,7 @@ describe('Minimal Zustand Adapter', () => {
         value: () => m().base,
       }));
 
-      const resolveViews = resolve(model, { base: baseSlice });
+      const resolveViews = resolve({ base: baseSlice });
 
       const views = {
         multiplied: resolveViews(({ base }) => (factor: number) => ({

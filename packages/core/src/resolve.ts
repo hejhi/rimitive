@@ -8,7 +8,13 @@
  * - Type-safe with full inference
  */
 
-import type { SliceFactory, ModelFactory } from './index';
+import type { SliceFactory } from './index';
+
+/**
+ * Infer the Model type from a record of slices (uses the first slice's model)
+ */
+type InferModel<Deps extends Record<string, SliceFactory<any, any>>> =
+  Deps[keyof Deps] extends SliceFactory<infer M, any> ? M : never;
 
 /**
  * Type for resolved dependencies
@@ -21,10 +27,10 @@ type ResolveDeps<Deps> = {
 };
 
 /**
- * Validate that all dependencies have the same Model type as the provided model
+ * Ensure all slices in Deps have the same Model type
  */
-type ValidateDeps<Model, Deps> =
-  Deps extends Record<string, SliceFactory<Model, any>> ? Deps : never;
+type ValidateDeps<Deps extends Record<string, SliceFactory<any, any>>> = Deps &
+  Record<string, SliceFactory<InferModel<Deps>, any>>;
 
 /**
  * Type for a view factory that takes a getState function
@@ -37,18 +43,17 @@ type ViewFactory<Model, Args extends readonly unknown[], Result> = (
  * Create a bound compute function with pre-configured dependencies.
  *
  * This allows you to:
- * 1. Bind slices to a model once
+ * 1. Bind slices together once
  * 2. Create multiple computed views using those dependencies
  * 3. Dependencies are resolved fresh on each view call
  *
- * @param model - The model factory that all dependencies must match
  * @param deps - Object mapping dependency names to SliceFactories
  * @returns A bound compute function for creating parameterized views
  *
  * @example
  * ```typescript
- * // First, bind slices to a model
- * const compute = resolve(model, {
+ * // Bind slices together (model type is inferred from slices)
+ * const compute = resolve({
  *   counter: counterSlice,
  *   stats: statsSlice
  * });
@@ -66,21 +71,17 @@ type ViewFactory<Model, Args extends readonly unknown[], Result> = (
  * const doubled = view(2); // { value: 20, label: '×2: 10' }
  * ```
  */
-export function resolve<
-  Model,
-  Deps extends Record<string, SliceFactory<Model, any>>,
->(
-  _model: ModelFactory<Model>,
-  deps: ValidateDeps<Model, Deps>
+export function resolve<Deps extends Record<string, SliceFactory<any, any>>>(
+  deps: ValidateDeps<Deps>
 ): <Args extends readonly unknown[], Result>(
   factory: (resolvedDeps: ResolveDeps<Deps>) => (...args: Args) => Result
-) => ViewFactory<Model, Args, Result> {
+) => ViewFactory<InferModel<Deps>, Args, Result> {
   // Return the bound compute function
   return function boundCompute<Args extends readonly unknown[], Result>(
     factory: (resolvedDeps: ResolveDeps<Deps>) => (...args: Args) => Result
-  ): ViewFactory<Model, Args, Result> {
+  ): ViewFactory<InferModel<Deps>, Args, Result> {
     // Return a function that takes getState and returns the view
-    return (getState: () => Model) => {
+    return (getState: () => InferModel<Deps>) => {
       // Execute slices once to get the getter objects
       const resolvedDeps = {} as ResolveDeps<Deps>;
       for (const [key, sliceFactory] of Object.entries(deps)) {

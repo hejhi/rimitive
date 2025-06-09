@@ -25,7 +25,7 @@ describe('resolve', () => {
     }));
 
     // Bind slices to model
-    const compute = resolve(model, {
+    const compute = resolve({
       counter: counterSlice,
       stats: statsSlice,
     });
@@ -82,7 +82,7 @@ describe('resolve', () => {
     }));
 
     let computationCount = 0;
-    const compute = resolve(model, { value: valueSlice });
+    const compute = resolve({ value: valueSlice });
 
     const computedView = compute(({ value }) => (multiplier: number) => {
       computationCount++;
@@ -112,10 +112,8 @@ describe('resolve', () => {
   });
 
   it('should work with no dependencies', () => {
-    const model = createModel<{ data: string }>(() => ({ data: 'test' }));
-
     // Create compute with empty dependencies
-    const compute = resolve(model, {});
+    const compute = resolve({});
 
     const constantView = compute(() => () => ({
       fixed: 100,
@@ -141,7 +139,7 @@ describe('resolve', () => {
       y: () => m().y,
     }));
 
-    const compute = resolve(model, { coord: coordSlice });
+    const compute = resolve({ coord: coordSlice });
 
     const distanceView = compute(({ coord }) => (x2: number, y2: number) => {
       const dx = coord.x() - x2;
@@ -170,7 +168,7 @@ describe('resolve', () => {
       get: () => m().data,
     }));
 
-    const compute = resolve(model, { data: dataSlice });
+    const compute = resolve({ data: dataSlice });
 
     const transformView = compute(({ data }) => (prefix: string) => ({
       transformed: {
@@ -212,7 +210,7 @@ describe('resolve', () => {
       tripled: () => m().b * 3,
     }));
 
-    const compute = resolve(model, { a: aSlice, b: bSlice });
+    const compute = resolve({ a: aSlice, b: bSlice });
 
     const sumView = compute(({ a, b }) => () => ({
       sum: a.value() + b.value(),
