@@ -70,7 +70,7 @@ export function resolve<
   Model,
   Deps extends Record<string, SliceFactory<Model, any>>,
 >(
-  model: ModelFactory<Model>,
+  _model: ModelFactory<Model>,
   deps: ValidateDeps<Model, Deps>
 ): <Args extends readonly unknown[], Result>(
   factory: (resolvedDeps: ResolveDeps<Deps>) => (...args: Args) => Result
@@ -86,10 +86,10 @@ export function resolve<
       for (const [key, sliceFactory] of Object.entries(deps)) {
         resolvedDeps[key as keyof Deps] = sliceFactory(getState) as any;
       }
-      
+
       // Create the view function with resolved dependencies
       const viewFn = factory(resolvedDeps);
-      
+
       // Return the view function
       return viewFn;
     };
