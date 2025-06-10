@@ -1,46 +1,49 @@
 /**
- * @fileoverview Compose utility for createSlice dependency injection
+ * @fileoverview Compose utility for dependency injection between slices
  *
  * Provides a clean way to compose slices with explicit dependencies.
- *
- * This implementation uses a purely functional approach with multiple
- * function layers to encode composition data.
+ * For use with the new createStore API.
  */
 
-import type { SliceFactory } from './index';
+import type { StoreTools } from './index';
 
 /**
- * Type for resolved dependencies
- * Extract the slice result type from each SliceFactory in Deps
- */
-type ResolveDeps<Deps> = {
-  [K in keyof Deps]: Deps[K] extends SliceFactory<infer _Model, infer Slice>
-    ? Slice
-    : never;
-};
-
-/**
- * Compose function for dependency injection in createSlice
+ * Compose function for dependency injection with createStore pattern.
+ * 
+ * @param deps - Object mapping names to slice instances
+ * @param factory - Function that receives tools and resolved dependencies
+ * @returns A factory function compatible with createSlice
+ * 
+ * @example
+ * ```typescript
+ * const createSlice = createStore({ count: 0 });
+ * 
+ * const counter = createSlice(({ get, set }) => ({
+ *   increment: () => set({ count: get().count + 1 })
+ * }));
+ * 
+ * const actions = createSlice(
+ *   compose(
+ *     { counter },
+ *     ({ get, set }, { counter }) => ({
+ *       incrementTwice: () => {
+ *         counter.increment();
+ *         counter.increment();
+ *       }
+ *     })
+ *   )
+ * );
+ * ```
  */
 export function compose<
-  Model,
-  Deps extends Record<string, SliceFactory<Model, unknown>>,
-  Result,
+  State,
+  Deps extends Record<string, unknown>,
+  Result
 >(
   deps: Deps,
-  selector: (model: Model, resolvedDeps: ResolveDeps<Deps>) => Result
-): (getModel: () => Model) => Result {
-  // Return a selector function that resolves dependencies and accepts required api parameter
-  return (getModel: () => Model): Result => {
-    // Build resolved dependencies using Object.fromEntries for type safety
-    // Pass both model and api to each dependency slice
-    const entries = Object.entries(deps).map(([key, sliceFactory]) => [
-      key,
-      sliceFactory(getModel),
-    ]);
-    const resolvedDeps = Object.fromEntries(entries) as ResolveDeps<Deps>;
-
-    // Call the selector with model and resolved dependencies
-    return selector(getModel(), resolvedDeps);
+  factory: (tools: StoreTools<State>, resolvedDeps: Deps) => Result
+): (tools: StoreTools<State>) => Result {
+  return (tools: StoreTools<State>): Result => {
+    return factory(tools, deps);
   };
 }
