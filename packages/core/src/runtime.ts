@@ -1,114 +1,118 @@
 /**
- * @fileoverview Lattice runtime - the core execution engine
+ * @fileoverview Lattice runtime - connects apps to adapters
  *
- * The runtime is responsible for executing component specifications
- * using minimal adapters that only provide store primitives.
+ * The runtime provides adapter-backed versions of createStore to apps,
+ * enabling persistence and subscription capabilities.
  */
 
-import type { ComponentFactory, ModelTools, SliceFactory } from './index';
+import type { StoreTools, StoreSliceFactory } from './index';
 
 /**
  * Minimal adapter interface - adapters only need to provide store primitives
  */
-export interface StoreAdapter<Model> {
-  getState: () => Model;
-  setState: (updates: Partial<Model>) => void;
+export interface StoreAdapter<State> {
+  getState: () => State;
+  setState: (updates: Partial<State>) => void;
   subscribe: (listener: () => void) => () => void;
 }
 
 /**
- * Type to extract the result type from view slice factories
+ * Function that creates a store - can be provided by runtime or imported from core
  */
-type ExtractViewType<T> = T extends SliceFactory<any, infer R> ? R : never;
+export type CreateStore = <State>(initialState: State) => StoreSliceFactory<State>;
 
 /**
- * Transform component views (SliceFactories) to their executed types
+ * App factory receives createStore and returns the app's slices
  */
-type ExecutedViews<Views> = {
-  [K in keyof Views]: ExtractViewType<Views[K]>;
+export type AppFactory<App> = (createStore: CreateStore) => App;
+
+/**
+ * Runtime result - the app with subscription capability
+ */
+export type RuntimeResult<App> = App & {
+  subscribe: (listener: () => void) => () => void;
+  destroy?: () => void;
 };
 
 /**
- * Runtime result - what the runtime returns after executing a component
+ * Creates an adapter-backed version of createStore
+ * 
+ * @param initialState - The initial state shape
+ * @param adapter - The adapter providing persistence
+ * @returns A createSlice factory connected to the adapter
  */
-export interface RuntimeResult<Model, Actions, Views> {
-  actions: Actions;
-  views: ExecutedViews<Views>;
-  subscribe: (listener: () => void) => () => void;
-  getState: () => Model;
-  destroy?: () => void;
-}
-
-/**
- * Creates a Lattice store by combining a component with an adapter
- *
- * The runtime handles:
- * - Model initialization
- * - Action execution (simple method selection)
- * - View execution (all views must be from resolve())
- *
- * @param componentFactory - The component specification factory
- * @param adapter - Minimal store adapter providing get/set/subscribe
- * @returns Runtime result with actions, views, and subscribe
- */
-export function createLatticeStore<Model, Actions, Views>(
-  componentFactory: ComponentFactory<Model, Actions, Views>,
-  adapter: StoreAdapter<Model>
-): RuntimeResult<Model, Actions, Views> {
-  // Execute the component factory to get the specification
-  const component = componentFactory();
-
-  // Create model tools that use the adapter
-  const modelTools: ModelTools<Model> = {
+function createAdapterStore<State>(
+  initialState: State,
+  adapter: StoreAdapter<State>
+): StoreSliceFactory<State> {
+  // Initialize adapter with the initial state
+  adapter.setState(initialState);
+  
+  // Create tools that use the adapter
+  const tools: StoreTools<State> = {
     get: adapter.getState,
     set: adapter.setState,
   };
-
-  // Initialize the model with the adapter's tools
-  const initialState = component.model(modelTools);
-
-  // Set the initial state in the adapter
-  adapter.setState(initialState);
-
-  // Execute the actions slice with a getter bound to the adapter
-  const actions = component.actions(() => adapter.getState());
-
-  // Views are already slice factories from resolve()
-  // We need to execute each one with the getState function
-  const views = {} as ExecutedViews<Views>;
-
-  // Cache for view functions to ensure same instance is returned
-  const viewCache = new Map<string, any>();
-
-  for (const [key, viewSliceFactory] of Object.entries(
-    component.views as Record<string, any>
-  )) {
-    // Execute the view factory once and cache the result
-    const viewFunction = viewSliceFactory(() => adapter.getState());
-    viewCache.set(key, viewFunction);
-
-    // Create a getter that returns the cached view function
-    Object.defineProperty(views, key, {
-      get: () => viewCache.get(key),
-      enumerable: true,
-      configurable: true,
-    });
-  }
-
-  return {
-    actions,
-    views,
-    subscribe: adapter.subscribe,
-    getState: adapter.getState,
+  
+  // Return the slice factory function
+  return function createSlice<Methods>(
+    factory: (tools: StoreTools<State>) => Methods
+  ): Methods {
+    return factory(tools);
   };
+}
+
+/**
+ * Creates a Lattice store by connecting an app to an adapter
+ *
+ * @param appFactory - Function that creates the app, receives createStore
+ * @param adapter - Store adapter providing persistence and subscriptions
+ * @returns The app with subscription capabilities
+ * 
+ * @example
+ * ```typescript
+ * const createApp = (createStore: CreateStore) => {
+ *   const createSlice = createStore({ count: 0 });
+ *   
+ *   const counter = createSlice(({ get, set }) => ({
+ *     count: () => get().count,
+ *     increment: () => set({ count: get().count + 1 })
+ *   }));
+ *   
+ *   return { counter };
+ * };
+ * 
+ * const store = createLatticeStore(createApp, reduxAdapter);
+ * store.counter.increment();
+ * ```
+ */
+export function createLatticeStore<State, App>(
+  appFactory: AppFactory<App>,
+  adapter: StoreAdapter<State>
+): RuntimeResult<App> {
+  // Create an adapter-backed createStore function
+  const createStore: CreateStore = <S>(initialState: S) => {
+    // For now, we assume single store per app
+    // Cast is safe because app factory defines the state type
+    return createAdapterStore(initialState, adapter as unknown as StoreAdapter<S>);
+  };
+  
+  // Create the app with the adapter-backed createStore
+  const app = appFactory(createStore);
+  
+  // Return the app with subscription capability
+  return {
+    ...app,
+    subscribe: adapter.subscribe,
+  } as RuntimeResult<App>;
 }
 
 /**
  * Type guard to check if a value is a store adapter
  */
-export function isStoreAdapter<Model>(
+export function isStoreAdapter<State>(
   value: unknown
-): value is StoreAdapter<Model> {
+): value is StoreAdapter<State> {
   return (
     typeof value === 'object' &&
     value !== null &&

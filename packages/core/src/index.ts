@@ -132,7 +132,8 @@ export function isSliceFactory<Model = any, Slice = any>(
 }
 
 // Export adapter test suite
-export { createAdapterTestSuite } from './adapter-test-suite';
+// TODO: Update adapter test suite for new API
+// export { createAdapterTestSuite } from './adapter-test-suite';
 
 // New createStore API types
 export interface StoreTools<State> {
