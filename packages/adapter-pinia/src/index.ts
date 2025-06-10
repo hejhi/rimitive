@@ -31,7 +31,7 @@ import { createLatticeStore } from '@lattice/core';
  * const view = store.views.display();
  * ```
  */
-export function createPiniaAdapter<Model extends Record<string, unknown>, Actions, Views>(
+export function createPiniaAdapter<Model, Actions, Views>(
   componentFactory: ComponentFactory<Model, Actions, Views>
 ) {
   // Use the runtime to create the store
@@ -44,31 +44,54 @@ export function createPiniaAdapter<Model extends Record<string, unknown>, Action
  * @param initialState - Optional initial state
  * @returns A minimal store adapter
  */
-export function createStoreAdapter<Model extends Record<string, unknown>>(
+export function createStoreAdapter<Model>(
   initialState?: Partial<Model>
 ): StoreAdapter<Model> {
   // Create a unique store ID to ensure isolation
   const storeId = `lattice-pinia-${Date.now()}-${Math.random()}`;
   
-  // Define the Pinia store with initial state
+  // Pinia requires state to be an object. For non-object models,
+  // we wrap them in a container object.
+  type StateContainer = Model extends object ? Model : { value: Model };
+  const isObjectModel = (v: unknown): v is object => 
+    typeof v === 'object' && v !== null && !Array.isArray(v);
+  
+  // Define the Pinia store with proper state handling
   const useStore = defineStore(storeId, {
-    state: () => ({
-      ...initialState
-    } as Model)
+    state: (): StateContainer => {
+      if (isObjectModel(initialState)) {
+        return { ...initialState } as StateContainer;
+      }
+      // For primitives, arrays, or null/undefined, wrap in container
+      return { value: initialState } as StateContainer;
+    }
   });
   
   // Create the store instance
   const store = useStore();
   
+  // Determine if we need to wrap/unwrap values
+  const needsWrapping = !isObjectModel(initialState);
+  
   return {
-    getState: () => store.$state as Model,
-    setState: (updates) => {
-      // Pinia's $patch expects _DeepPartial<UnwrapRef<S>> but we have Partial<Model>
-      // The type mismatch is due to Vue's ref unwrapping system
-      // We need to cast through unknown to avoid excessive stack depth errors
-      store.$patch(updates as unknown as Parameters<typeof store.$patch>[0]);
+    getState: (): Model => {
+      if (needsWrapping) {
+        return (store.$state as any).value as Model;
+      }
+      return store.$state as Model;
     },
-    subscribe: (listener) => {
+    setState: (updates: Partial<Model>) => {
+      if (needsWrapping) {
+        // For wrapped values, update the container
+        const patchData = { value: updates };
+        (store as any).$patch(patchData);
+      } else {
+        // For object models, patch directly
+        // Use any cast to avoid Vue's deep type recursion
+        (store as any).$patch(updates);
+      }
+    },
+    subscribe: (listener: () => void) => {
       // Pinia's $subscribe returns an unsubscribe function
       return store.$subscribe(() => listener());
     }
