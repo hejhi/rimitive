@@ -12,11 +12,13 @@ export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 // Export runtime
 export {
   createLatticeStore,
-  type StoreAdapter,
   type RuntimeResult,
   type AppFactory,
   type CreateStore,
 } from './runtime';
+
+// Export adapter contract
+export { type StoreAdapter, isStoreAdapter } from './adapter-contract';
 
 // New createStore API types
 export interface StoreTools<State> {
@@ -29,8 +31,17 @@ export type StoreSliceFactory<State> = <Methods>(
 ) => Methods;
 
 /**
+ * Factory function that creates a slice factory when provided with tools.
+ * This is used internally by the runtime to create adapter-backed stores.
+ */
+export type StoreFactory<State> = (tools: StoreTools<State>) => StoreSliceFactory<State>;
+
+/**
  * Creates a store with pure serializable state and returns a slice factory.
  * This is the new primary API that separates state from behaviors.
+ * 
+ * Note: This creates an isolated state container. For production use,
+ * prefer using createLatticeStore with an adapter for proper state management.
  * 
  * @param initialState - The initial state (must be serializable)
  * @returns A factory function for creating slices with behaviors

@@ -1,25 +1,19 @@
 /**
  * @fileoverview Lattice runtime - connects apps to adapters
  *
- * The runtime provides adapter-backed versions of createStore to apps,
- * enabling persistence and subscription capabilities.
+ * The runtime enforces the single store pattern by providing a unified
+ * createStore function that manages all state through a single adapter.
  */
 
 import type { StoreTools, StoreSliceFactory } from './index';
+import { type StoreAdapter, isStoreAdapter } from './adapter-contract';
 
 /**
- * Minimal adapter interface - adapters only need to provide store primitives
+ * Function that creates a store - provided by runtime to enforce single store
  */
-export interface StoreAdapter<State> {
-  getState: () => State;
-  setState: (updates: Partial<State>) => void;
-  subscribe: (listener: () => void) => () => void;
-}
-
-/**
- * Function that creates a store - can be provided by runtime or imported from core
- */
-export type CreateStore = <State>(initialState: State) => StoreSliceFactory<State>;
+export type CreateStore = <State>(
+  initialState: State
+) => StoreSliceFactory<State>;
 
 /**
  * App factory receives createStore and returns the app's slices
@@ -35,53 +29,29 @@ export type RuntimeResult<App> = App & {
 };
 
 /**
- * Creates an adapter-backed version of createStore
- * 
- * @param initialState - The initial state shape
- * @param adapter - The adapter providing persistence
- * @returns A createSlice factory connected to the adapter
- */
-function createAdapterStore<State>(
-  initialState: State,
-  adapter: StoreAdapter<State>
-): StoreSliceFactory<State> {
-  // Initialize adapter with the initial state
-  adapter.setState(initialState);
-  
-  // Create tools that use the adapter
-  const tools: StoreTools<State> = {
-    get: adapter.getState,
-    set: adapter.setState,
-  };
-  
-  // Return the slice factory function
-  return function createSlice<Methods>(
-    factory: (tools: StoreTools<State>) => Methods
-  ): Methods {
-    return factory(tools);
-  };
-}
-
-/**
  * Creates a Lattice store by connecting an app to an adapter
+ *
+ * This enforces the single store pattern by ensuring all state goes through
+ * a single adapter instance. The createStore function provided to the app
+ * factory ensures that all slices share the same state container.
  *
  * @param appFactory - Function that creates the app, receives createStore
  * @param adapter - Store adapter providing persistence and subscriptions
  * @returns The app with subscription capabilities
- * 
+ *
  * @example
  * ```typescript
  * const createApp = (createStore: CreateStore) => {
  *   const createSlice = createStore({ count: 0 });
- *   
+ *
  *   const counter = createSlice(({ get, set }) => ({
  *     count: () => get().count,
  *     increment: () => set({ count: get().count + 1 })
  *   }));
- *   
+ *
  *   return { counter };
  * };
- * 
+ *
  * const store = createLatticeStore(createApp, reduxAdapter);
  * store.counter.increment();
  * ```
@@ -90,37 +60,55 @@ export function createLatticeStore<State, App>(
   appFactory: AppFactory<App>,
   adapter: StoreAdapter<State>
 ): RuntimeResult<App> {
-  // Create an adapter-backed createStore function
+  // Track if createStore has been called to enforce single store
+  let storeCreated = false;
+  let sliceFactory: StoreSliceFactory<State> | null = null;
+
+  // Create a createStore function that enforces single store pattern
   const createStore: CreateStore = <S>(initialState: S) => {
-    // For now, we assume single store per app
-    // Cast is safe because app factory defines the state type
-    return createAdapterStore(initialState, adapter as unknown as StoreAdapter<S>);
+    if (storeCreated) {
+      throw new Error(
+        'createStore can only be called once per app. ' +
+        'All slices must share the same state container.'
+      );
+    }
+    
+    storeCreated = true;
+    
+    // Type assertion is safe here because the app factory defines the state shape
+    // and the adapter is typed accordingly
+    const typedInitialState = initialState as unknown as State;
+    const typedAdapter = adapter;
+    
+    // Initialize adapter with the initial state
+    typedAdapter.setState(typedInitialState);
+
+    // Create tools that use the adapter
+    const tools: StoreTools<State> = {
+      get: typedAdapter.getState,
+      set: typedAdapter.setState,
+    };
+
+    // Create and store the slice factory
+    sliceFactory = function createSlice<Methods>(
+      factory: (tools: StoreTools<State>) => Methods
+    ): Methods {
+      return factory(tools);
+    };
+    
+    // Return the slice factory with the original type
+    return sliceFactory as unknown as StoreSliceFactory<S>;
   };
-  
+
   // Create the app with the adapter-backed createStore
   const app = appFactory(createStore);
-  
+
   // Return the app with subscription capability
   return {
     ...app,
     subscribe: adapter.subscribe,
-  } as RuntimeResult<App>;
+  };
 }
 
-/**
- * Type guard to check if a value is a store adapter
- */
-export function isStoreAdapter<State>(
-  value: unknown
-): value is StoreAdapter<State> {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'getState' in value &&
-    'setState' in value &&
-    'subscribe' in value &&
-    typeof (value as any).getState === 'function' &&
-    typeof (value as any).setState === 'function' &&
-    typeof (value as any).subscribe === 'function'
-  );
-}
+// Re-export for convenience
+export { type StoreAdapter, isStoreAdapter };

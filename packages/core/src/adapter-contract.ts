@@ -12,16 +12,16 @@
  * The adapter's only responsibility is to bridge between Lattice and the
  * underlying state management system's get/set/subscribe primitives.
  */
-export interface StoreAdapter<Model> {
+export interface StoreAdapter<State> {
   /**
    * Get the current state
    */
-  getState: () => Model;
+  getState: () => State;
 
   /**
    * Update the state with partial updates
    */
-  setState: (updates: Partial<Model>) => void;
+  setState: (updates: Partial<State>) => void;
 
   /**
    * Subscribe to state changes
@@ -33,17 +33,17 @@ export interface StoreAdapter<Model> {
 /**
  * Type guard to check if a value is a store adapter
  */
-export function isStoreAdapter<Model>(
+export function isStoreAdapter<State>(
   value: unknown
-): value is StoreAdapter<Model> {
+): value is StoreAdapter<State> {
   return (
     typeof value === 'object' &&
     value !== null &&
     'getState' in value &&
     'setState' in value &&
     'subscribe' in value &&
-    typeof (value as any).getState === 'function' &&
-    typeof (value as any).setState === 'function' &&
-    typeof (value as any).subscribe === 'function'
+    typeof value.getState === 'function' &&
+    typeof value.setState === 'function' &&
+    typeof value.subscribe === 'function'
   );
 }
