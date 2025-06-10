@@ -185,7 +185,7 @@ const settings = createSlice(({ get }) => ({
 }));
 
 // Step 1: Create a selector factory with dependencies
-const select = resolve({ counter, settings });
+const select = resolve({ counter, settings, display });
 
 // Step 2: Use the selector factory
 
