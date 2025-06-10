@@ -6,9 +6,9 @@ import {
   resolve,
   createLatticeStore,
 } from '@lattice/core';
-import { createMinimalPiniaAdapter } from './minimal';
+import { createStoreAdapter } from './index';
 
-describe('Minimal Pinia Adapter', () => {
+describe('Pinia Adapter', () => {
   beforeEach(() => {
     // Create a fresh Pinia instance for each test
     setActivePinia(createPinia());
@@ -60,7 +60,7 @@ describe('Minimal Pinia Adapter', () => {
     };
 
     // Create the minimal adapter
-    const adapter = createMinimalPiniaAdapter<{
+    const adapter = createStoreAdapter<{
       count: number;
       increment: () => void;
       decrement: () => void;
@@ -124,7 +124,7 @@ describe('Minimal Pinia Adapter', () => {
       return { model, actions, views };
     };
 
-    const adapter = createMinimalPiniaAdapter<{
+    const adapter = createStoreAdapter<{
       value: number;
       setValue: (v: number) => void;
     }>();
@@ -186,7 +186,7 @@ describe('Minimal Pinia Adapter', () => {
       return { model, actions, views };
     };
 
-    const adapter = createMinimalPiniaAdapter<{
+    const adapter = createStoreAdapter<{
       base: number;
       multiply: (factor: number) => void;
     }>();
