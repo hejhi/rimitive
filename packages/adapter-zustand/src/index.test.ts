@@ -187,11 +187,11 @@ describe('Minimal Zustand Adapter', () => {
     const store = createLatticeStore(component, adapter);
 
     // Test parameterized view
-    const doubled = store.views.multiplied(2) as any; // TODO: Fix type inference
+    const doubled = store.views.multiplied(2);
     expect(doubled.result).toBe(20);
     expect(doubled.label).toBe('10 × 2 = 20');
 
-    const tripled = store.views.multiplied(3) as any; // TODO: Fix type inference
+    const tripled = store.views.multiplied(3);
     expect(tripled.result).toBe(30);
     expect(tripled.label).toBe('10 × 3 = 30');
   });
