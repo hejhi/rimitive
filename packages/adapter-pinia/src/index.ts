@@ -41,58 +41,68 @@ export function createPiniaAdapter<Model, Actions, Views>(
 /**
  * Creates a minimal Pinia adapter
  * 
+ * Pinia requires state to be an object. To support any model type (including
+ * primitives and arrays), we wrap all models in a container object.
+ * 
  * @param initialState - Optional initial state
  * @returns A minimal store adapter
  */
 export function createStoreAdapter<Model>(
-  initialState?: Partial<Model>
+  _initialState?: Partial<Model>
 ): StoreAdapter<Model> {
   // Create a unique store ID to ensure isolation
   const storeId = `lattice-pinia-${Date.now()}-${Math.random()}`;
   
-  // Pinia requires state to be an object. For non-object models,
-  // we wrap them in a container object.
-  type StateContainer = Model extends object ? Model : { value: Model };
-  const isObjectModel = (v: unknown): v is object => 
-    typeof v === 'object' && v !== null && !Array.isArray(v);
+  // Pinia requires object state, so we wrap the model
+  interface StateContainer {
+    model: Model;
+  }
   
-  // Define the Pinia store with proper state handling
-  const useStore = defineStore(storeId, {
-    state: (): StateContainer => {
-      if (isObjectModel(initialState)) {
-        return { ...initialState } as StateContainer;
-      }
-      // For primitives, arrays, or null/undefined, wrap in container
-      return { value: initialState } as StateContainer;
-    }
+  // Define the Pinia store
+  const useStore = defineStore<string, StateContainer>(storeId, {
+    state: (): StateContainer => ({
+      // Initialize with empty object, will be replaced by runtime
+      model: {} as Model
+    })
   });
   
   // Create the store instance
   const store = useStore();
   
-  // Determine if we need to wrap/unwrap values
-  const needsWrapping = !isObjectModel(initialState);
+  // Track initialization to handle the runtime's initial setState call
+  let initialized = false;
   
   return {
-    getState: (): Model => {
-      if (needsWrapping) {
-        return (store.$state as any).value as Model;
+    getState: (): Model => store.$state.model as Model,
+    
+    setState: (updates: Partial<Model>): void => {
+      // First call from runtime provides full initial state
+      if (!initialized) {
+        initialized = true;
+        store.$patch({ model: updates as Model });
+        return;
       }
-      return store.$state as Model;
-    },
-    setState: (updates: Partial<Model>) => {
-      if (needsWrapping) {
-        // For wrapped values, update the container
-        const patchData = { value: updates };
-        (store as any).$patch(patchData);
+      
+      // Determine update strategy based on model type
+      const currentModel = store.$state.model;
+      const isObject = typeof currentModel === 'object' && 
+                      currentModel !== null && 
+                      !Array.isArray(currentModel);
+      
+      if (isObject && typeof updates === 'object' && updates !== null) {
+        // For objects: merge updates
+        store.$patch({
+          model: { ...currentModel, ...updates }
+        });
       } else {
-        // For object models, patch directly
-        // Use any cast to avoid Vue's deep type recursion
-        (store as any).$patch(updates);
+        // For primitives/arrays: replace entirely
+        store.$patch({
+          model: updates as Model
+        });
       }
     },
-    subscribe: (listener: () => void) => {
-      // Pinia's $subscribe returns an unsubscribe function
+    
+    subscribe: (listener: () => void): (() => void) => {
       return store.$subscribe(() => listener());
     }
   };

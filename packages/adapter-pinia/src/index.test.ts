@@ -219,7 +219,7 @@ describe('Pinia Adapter', () => {
 
     const adapter = createStoreAdapter<number>(42);
     const store = createLatticeStore(primitiveComponent, adapter);
-    
+
     expect(store.getState()).toBe(42);
     expect(store.views.current().value).toBe(42);
 
@@ -233,9 +233,9 @@ describe('Pinia Adapter', () => {
       }));
       const resolveViews = resolve({ array: arraySlice });
       const views = {
-        list: resolveViews(({ array }) => () => ({ 
+        list: resolveViews(({ array }) => () => ({
           items: array.items(),
-          count: array.length()
+          count: array.length(),
         })),
       };
       return { model, actions, views };
@@ -243,7 +243,7 @@ describe('Pinia Adapter', () => {
 
     const arrayAdapter = createStoreAdapter<number[]>([1, 2, 3]);
     const arrayStore = createLatticeStore(arrayComponent, arrayAdapter);
-    
+
     expect(arrayStore.getState()).toEqual([1, 2, 3]);
     expect(arrayStore.views.list().items).toEqual([1, 2, 3]);
     expect(arrayStore.views.list().count).toBe(3);
