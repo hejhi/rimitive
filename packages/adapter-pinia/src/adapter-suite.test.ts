@@ -1,15 +1,19 @@
-import { describe, beforeEach } from 'vitest';
+/**
+ * @fileoverview Adapter test suite for Pinia adapter
+ * 
+ * Ensures the Pinia adapter conforms to the Lattice adapter contract
+ */
+
+import { beforeEach } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { createPiniaAdapter } from './index';
+import { createStoreAdapter } from './index';
 import { createAdapterTestSuite } from '@lattice/core';
 
-describe('Pinia Adapter Contract Tests', () => {
-  beforeEach(() => {
-    // Create a fresh Pinia instance for each test
-    setActivePinia(createPinia());
-  });
-
-  // Run the shared adapter test suite
-  // Cast to handle the Model constraint difference
-  createAdapterTestSuite('Pinia', createPiniaAdapter as any);
+// Setup Pinia before running tests
+beforeEach(() => {
+  // Create a fresh Pinia instance for each test
+  setActivePinia(createPinia());
 });
+
+// Run the shared adapter test suite
+createAdapterTestSuite('Pinia', createStoreAdapter);

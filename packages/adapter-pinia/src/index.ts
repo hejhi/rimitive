@@ -62,13 +62,56 @@ export function createStoreAdapter<Model extends Record<string, unknown>>(
   // Create the store instance
   const store = useStore();
 
+  // Track listeners to handle edge cases
+  const listeners = new Set<() => void>();
+  let isNotifying = false;
+  const pendingUnsubscribes = new Set<() => void>();
+
+  // Notify all listeners with error handling
+  const notifyListeners = () => {
+    isNotifying = true;
+    const currentListeners = Array.from(listeners);
+    
+    for (const listener of currentListeners) {
+      try {
+        listener();
+      } catch (error) {
+        // Silently catch errors to ensure other listeners are called
+        console.error('Error in store listener:', error);
+      }
+    }
+    
+    isNotifying = false;
+    
+    // Process pending unsubscribes
+    for (const listener of pendingUnsubscribes) {
+      listeners.delete(listener);
+    }
+    pendingUnsubscribes.clear();
+  };
+
+  // Subscribe to Pinia store to handle all notifications
+  store.$subscribe(notifyListeners);
+
   return {
-    getState: () => store.$state as Model,
+    getState: () => {
+      // Return a deep copy to prevent mutation of the original state
+      return JSON.parse(JSON.stringify(store.$state)) as Model;
+    },
     setState: (updates) => {
       store.$patch(updates);
     },
     subscribe: (listener) => {
-      return store.$subscribe(() => listener());
+      listeners.add(listener);
+      
+      return () => {
+        if (isNotifying) {
+          // Defer unsubscribe until after current notification cycle
+          pendingUnsubscribes.add(listener);
+        } else {
+          listeners.delete(listener);
+        }
+      };
     },
   };
 }

@@ -59,10 +59,57 @@ export function createStoreAdapter<Model>(
       }) as Model
   );
 
+  // Track active listeners to handle edge cases
+  const listeners = new Set<() => void>();
+  let isNotifying = false;
+  const pendingUnsubscribes = new Set<() => void>();
+
+  // Notify all listeners with error handling
+  const notifyListeners = () => {
+    isNotifying = true;
+    // Take a snapshot of listeners at the start of notification
+    const currentListeners = Array.from(listeners);
+    
+    for (const listener of currentListeners) {
+      // Don't skip listeners that were unsubscribed during this notification cycle
+      // They should still be called in this cycle
+      try {
+        listener();
+      } catch (error) {
+        // Silently catch errors to ensure other listeners are called
+        console.error('Error in store listener:', error);
+      }
+    }
+    
+    isNotifying = false;
+    
+    // Process pending unsubscribes after all listeners have been called
+    for (const listener of pendingUnsubscribes) {
+      listeners.delete(listener);
+    }
+    pendingUnsubscribes.clear();
+  };
+
+  // Subscribe to Zustand store once to handle all notifications
+  store.subscribe(notifyListeners);
+
   return {
     getState: () => store.getState(),
-    setState: (updates) => store.setState(updates, false),
-    subscribe: (listener) => store.subscribe(listener),
+    setState: (updates) => {
+      store.setState(updates, false);
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      
+      return () => {
+        if (isNotifying) {
+          // Defer unsubscribe until after current notification cycle
+          pendingUnsubscribes.add(listener);
+        } else {
+          listeners.delete(listener);
+        }
+      };
+    },
   };
 }
 
@@ -99,42 +146,30 @@ export type { StoreAdapter } from '@lattice/core';
 // ============================================================================
 
 if (import.meta.vitest) {
-  const { describe, it, expect } = import.meta.vitest;
-  const { createModel, createSlice, resolve } = await import('@lattice/core');
+  const { describe, it, expect, vi } = import.meta.vitest;
+  const { createStore, compose, resolve } = await import('@lattice/core');
 
   describe('createZustandAdapter - minimal implementation', () => {
     it('should work with the minimal adapter pattern', () => {
-      const counter = () => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
-          count: 0,
+      const createApp = (createStore: any) => {
+        const createSlice = createStore({ count: 0 });
+        
+        const counter = createSlice(({ get, set }) => ({
+          count: () => get().count,
           increment: () => set({ count: get().count + 1 }),
         }));
-
-        const actions = createSlice(model, (m) => ({
-          increment: m().increment,
+        
+        const views = createSlice(({ get }) => ({
+          display: () => ({
+            value: get().count,
+            label: `Count: ${get().count}`,
+          }),
         }));
-
-        // Create a base slice for views
-        const counterSlice = createSlice(model, (m) => ({
-          count: () => m().count,
-        }));
-
-        // Views use resolve
-        const resolveViews = resolve({ counter: counterSlice });
-        const views = {
-          display: resolveViews(({ counter }) => () => ({
-            value: counter.count(),
-            label: `Count: ${counter.count()}`,
-          })),
-        };
-
-        return { model, actions, views };
+        
+        return { counter, views };
       };
 
-      const store = createZustandAdapter(counter);
+      const store = createZustandAdapter(createApp);
 
       // Test initial state
       const view = store.views.display();
@@ -142,7 +177,7 @@ if (import.meta.vitest) {
       expect(view.label).toBe('Count: 0');
 
       // Test actions
-      store.actions.increment();
+      store.counter.increment();
 
       // Test updated view
       const updatedView = store.views.display();
@@ -151,32 +186,21 @@ if (import.meta.vitest) {
     });
 
     it('should support subscriptions', () => {
-      const component = () => {
-        const model = createModel<{
-          value: number;
-          setValue: (v: number) => void;
-        }>(({ set }) => ({
-          value: 0,
+      const createApp = (createStore: any) => {
+        const createSlice = createStore({ value: 0 });
+        
+        const actions = createSlice(({ get, set }) => ({
           setValue: (v: number) => set({ value: v }),
         }));
-
-        const actions = createSlice(model, (m) => ({
-          setValue: m().setValue,
+        
+        const queries = createSlice(({ get }) => ({
+          current: () => ({ value: get().value }),
         }));
-
-        const valueSlice = createSlice(model, (m) => ({
-          get: () => m().value,
-        }));
-
-        const resolveViews = resolve({ value: valueSlice });
-        const views = {
-          current: resolveViews(({ value }) => () => ({ value: value.get() })),
-        };
-
-        return { model, actions, views };
+        
+        return { actions, queries };
       };
 
-      const store = createZustandAdapter(component);
+      const store = createZustandAdapter(createApp);
 
       // Track subscription calls
       let callCount = 0;
@@ -185,12 +209,12 @@ if (import.meta.vitest) {
       });
 
       // Initial state
-      expect(store.views.current().value).toBe(0);
+      expect(store.queries.current().value).toBe(0);
       expect(callCount).toBe(0);
 
       // Update state
       store.actions.setValue(42);
-      expect(store.views.current().value).toBe(42);
+      expect(store.queries.current().value).toBe(42);
       expect(callCount).toBe(1);
 
       // Unsubscribe

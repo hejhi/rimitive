@@ -5,7 +5,7 @@
  */
 
 import { createAdapterTestSuite } from '@lattice/core';
-import { createZustandAdapter } from './index';
+import { createStoreAdapter } from './index';
 
 // Run the shared adapter test suite
-createAdapterTestSuite('Zustand', createZustandAdapter);
+createAdapterTestSuite('Zustand', createStoreAdapter);

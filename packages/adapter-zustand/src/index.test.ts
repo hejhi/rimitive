@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import type { CreateStore } from '@lattice/core';
 import {
-  createModel,
-  createSlice,
+  compose,
   resolve,
   createLatticeStore,
 } from '@lattice/core';
@@ -10,28 +10,20 @@ import { createStoreAdapter } from '.';
 describe('Minimal Zustand Adapter', () => {
   it('should work with the runtime', () => {
     // Define a simple counter component
-    const counter = () => {
-      const model = createModel<{
-        count: number;
-        increment: () => void;
-        decrement: () => void;
-      }>(({ set, get }) => ({
-        count: 0,
+    const createApp = (createStore: CreateStore) => {
+      const createSlice = createStore({ count: 0 });
+
+      // Actions slice
+      const actions = createSlice(({ get, set }) => ({
         increment: () => set({ count: get().count + 1 }),
         decrement: () => set({ count: get().count - 1 }),
       }));
 
-      // Actions are simple method selectors
-      const actions = createSlice(model, (m) => ({
-        increment: m().increment,
-        decrement: m().decrement,
-      }));
-
-      // Create a base slice for views
-      const counterSlice = createSlice(model, (m) => ({
-        count: () => m().count,
-        isPositive: () => m().count > 0,
-        isNegative: () => m().count < 0,
+      // Create a counter slice for views
+      const counterSlice = createSlice(({ get }) => ({
+        count: () => get().count,
+        isPositive: () => get().count > 0,
+        isNegative: () => get().count < 0,
       }));
 
       // Views use resolve for UI-ready data
@@ -50,18 +42,14 @@ describe('Minimal Zustand Adapter', () => {
         }),
       };
 
-      return { model, actions, views };
+      return { actions, views, getState: () => createSlice(({ get }) => get()) };
     };
 
     // Create the minimal adapter
-    const adapter = createStoreAdapter<{
-      count: number;
-      increment: () => void;
-      decrement: () => void;
-    }>();
+    const adapter = createStoreAdapter<{ count: number }>();
 
     // Create the store using the runtime
-    const store = createLatticeStore(counter, adapter);
+    const store = createLatticeStore(createApp, adapter);
 
     // Test initial state
     expect(store.getState().count).toBe(0);
@@ -93,21 +81,15 @@ describe('Minimal Zustand Adapter', () => {
   });
 
   it('should support subscriptions', () => {
-    const counter = () => {
-      const model = createModel<{
-        value: number;
-        setValue: (v: number) => void;
-      }>(({ set }) => ({
-        value: 0,
+    const createApp = (createStore: CreateStore) => {
+      const createSlice = createStore({ value: 0 });
+
+      const actions = createSlice(({ get, set }) => ({
         setValue: (v: number) => set({ value: v }),
       }));
 
-      const actions = createSlice(model, (m) => ({
-        setValue: m().setValue,
-      }));
-
-      const valueSlice = createSlice(model, (m) => ({
-        get: () => m().value,
+      const valueSlice = createSlice(({ get }) => ({
+        get: () => get().value,
       }));
 
       const resolveViews = resolve({ value: valueSlice });
@@ -115,14 +97,11 @@ describe('Minimal Zustand Adapter', () => {
         current: resolveViews(({ value }) => () => ({ value: value.get() })),
       };
 
-      return { model, actions, views };
+      return { actions, views };
     };
 
-    const adapter = createStoreAdapter<{
-      value: number;
-      setValue: (v: number) => void;
-    }>();
-    const store = createLatticeStore(counter, adapter);
+    const adapter = createStoreAdapter<{ value: number }>();
+    const store = createLatticeStore(createApp, adapter);
 
     // Track subscription calls
     let callCount = 0;
@@ -151,21 +130,15 @@ describe('Minimal Zustand Adapter', () => {
   });
 
   it('should handle parameterized views', () => {
-    const component = () => {
-      const model = createModel<{
-        base: number;
-        multiply: (factor: number) => void;
-      }>(({ set, get }) => ({
-        base: 10,
+    const createApp = (createStore: CreateStore) => {
+      const createSlice = createStore({ base: 10 });
+
+      const actions = createSlice(({ get, set }) => ({
         multiply: (factor: number) => set({ base: get().base * factor }),
       }));
 
-      const actions = createSlice(model, (m) => ({
-        multiply: m().multiply,
-      }));
-
-      const baseSlice = createSlice(model, (m) => ({
-        value: () => m().base,
+      const baseSlice = createSlice(({ get }) => ({
+        value: () => get().base,
       }));
 
       const resolveViews = resolve({ base: baseSlice });
@@ -177,14 +150,11 @@ describe('Minimal Zustand Adapter', () => {
         })),
       };
 
-      return { model, actions, views };
+      return { actions, views };
     };
 
-    const adapter = createStoreAdapter<{
-      base: number;
-      multiply: (factor: number) => void;
-    }>();
-    const store = createLatticeStore(component, adapter);
+    const adapter = createStoreAdapter<{ base: number }>();
+    const store = createLatticeStore(createApp, adapter);
 
     // Test parameterized view
     const doubled = store.views.multiplied(2);

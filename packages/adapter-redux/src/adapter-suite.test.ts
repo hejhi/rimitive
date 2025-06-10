@@ -1,7 +1,11 @@
-import { describe } from 'vitest';
-import { createAdapterTestSuite } from '@lattice/core';
-import { createReduxAdapter } from './index';
+/**
+ * @fileoverview Adapter test suite for Redux adapter
+ * 
+ * Ensures the Redux adapter conforms to the Lattice adapter contract
+ */
 
-describe('Redux Adapter', () => {
-  createAdapterTestSuite('Redux', createReduxAdapter);
-});
+import { createAdapterTestSuite } from '@lattice/core';
+import { createStoreAdapter } from './index';
+
+// Run the shared adapter test suite
+createAdapterTestSuite('Redux', createStoreAdapter);
