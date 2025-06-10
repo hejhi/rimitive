@@ -31,7 +31,7 @@ import { createLatticeStore } from '@lattice/core';
  * const view = store.views.display();
  * ```
  */
-export function createPiniaAdapter<Model, Actions, Views>(
+export function createPiniaAdapter<Model extends Record<string, unknown>, Actions, Views>(
   componentFactory: ComponentFactory<Model, Actions, Views>
 ) {
   // Use the runtime to create the store
@@ -63,9 +63,10 @@ export function createStoreAdapter<Model extends Record<string, unknown>>(
   return {
     getState: () => store.$state as Model,
     setState: (updates) => {
-      // Pinia's $patch expects a partial state object
-      // We need to ensure type compatibility
-      store.$patch(updates as Record<string, unknown>);
+      // Pinia's $patch expects _DeepPartial<UnwrapRef<S>> but we have Partial<Model>
+      // The type mismatch is due to Vue's ref unwrapping system
+      // We need to cast through unknown to avoid excessive stack depth errors
+      store.$patch(updates as unknown as Parameters<typeof store.$patch>[0]);
     },
     subscribe: (listener) => {
       // Pinia's $subscribe returns an unsubscribe function

@@ -229,13 +229,13 @@ describe('Pinia Adapter', () => {
     };
 
     // Create two separate adapters/stores
-    const adapter1 = createMinimalPiniaAdapter<{
+    const adapter1 = createStoreAdapter<{
       value: number;
       setValue: (v: number) => void;
     }>();
     const store1 = createLatticeStore(component, adapter1);
 
-    const adapter2 = createMinimalPiniaAdapter<{
+    const adapter2 = createStoreAdapter<{
       value: number;
       setValue: (v: number) => void;
     }>();
