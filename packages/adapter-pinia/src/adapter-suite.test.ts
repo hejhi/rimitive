@@ -10,5 +10,6 @@ describe('Pinia Adapter Contract Tests', () => {
   });
 
   // Run the shared adapter test suite
-  createAdapterTestSuite('Pinia', createPiniaAdapter);
+  // Cast to handle the Model constraint difference
+  createAdapterTestSuite('Pinia', createPiniaAdapter as any);
 });

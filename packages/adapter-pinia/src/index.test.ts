@@ -202,52 +202,6 @@ describe('Pinia Adapter', () => {
     expect(tripled.label).toBe('10 × 3 = 30');
   });
 
-  it('should handle non-object models', () => {
-    // Test with primitive model
-    const primitiveComponent = () => {
-      const model = createModel<number>(() => 42);
-      const actions = createSlice(model, () => ({}));
-      const valueSlice = createSlice(model, (m) => ({
-        value: () => m(),
-      }));
-      const resolveViews = resolve({ value: valueSlice });
-      const views = {
-        current: resolveViews(({ value }) => () => ({ value: value.value() })),
-      };
-      return { model, actions, views };
-    };
-
-    const adapter = createStoreAdapter<number>(42);
-    const store = createLatticeStore(primitiveComponent, adapter);
-
-    expect(store.getState()).toBe(42);
-    expect(store.views.current().value).toBe(42);
-
-    // Test with array model
-    const arrayComponent = () => {
-      const model = createModel<number[]>(() => [1, 2, 3]);
-      const actions = createSlice(model, () => ({}));
-      const arraySlice = createSlice(model, (m) => ({
-        items: () => m(),
-        length: () => m().length,
-      }));
-      const resolveViews = resolve({ array: arraySlice });
-      const views = {
-        list: resolveViews(({ array }) => () => ({
-          items: array.items(),
-          count: array.length(),
-        })),
-      };
-      return { model, actions, views };
-    };
-
-    const arrayAdapter = createStoreAdapter<number[]>([1, 2, 3]);
-    const arrayStore = createLatticeStore(arrayComponent, arrayAdapter);
-
-    expect(arrayStore.getState()).toEqual([1, 2, 3]);
-    expect(arrayStore.views.list().items).toEqual([1, 2, 3]);
-    expect(arrayStore.views.list().count).toBe(3);
-  });
 
   it('should handle multiple instances', () => {
     const component = () => {

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Pinia adapter for Lattice
- * 
+ *
  * This adapter provides integration with Pinia, Vue's official state
  * management library, following the minimal adapter pattern.
  */
@@ -31,80 +31,45 @@ import { createLatticeStore } from '@lattice/core';
  * const view = store.views.display();
  * ```
  */
-export function createPiniaAdapter<Model, Actions, Views>(
-  componentFactory: ComponentFactory<Model, Actions, Views>
-) {
+export function createPiniaAdapter<
+  Model extends Record<string, unknown>,
+  Actions,
+  Views,
+>(componentFactory: ComponentFactory<Model, Actions, Views>) {
   // Use the runtime to create the store
   return createLatticeStore(componentFactory, createStoreAdapter<Model>());
 }
 
 /**
  * Creates a minimal Pinia adapter
- * 
- * Pinia requires state to be an object. To support any model type (including
- * primitives and arrays), we wrap all models in a container object.
- * 
+ *
  * @param initialState - Optional initial state
  * @returns A minimal store adapter
  */
-export function createStoreAdapter<Model>(
-  _initialState?: Partial<Model>
+export function createStoreAdapter<Model extends Record<string, unknown>>(
+  initialState?: Partial<Model>
 ): StoreAdapter<Model> {
   // Create a unique store ID to ensure isolation
   const storeId = `lattice-pinia-${Date.now()}-${Math.random()}`;
-  
-  // Pinia requires object state, so we wrap the model
-  interface StateContainer {
-    model: Model;
-  }
-  
+
   // Define the Pinia store
-  const useStore = defineStore<string, StateContainer>(storeId, {
-    state: (): StateContainer => ({
-      // Initialize with empty object, will be replaced by runtime
-      model: {} as Model
-    })
+  const useStore = defineStore(storeId, {
+    state: () => ({
+      ...initialState,
+    }),
   });
-  
+
   // Create the store instance
   const store = useStore();
-  
-  // Track initialization to handle the runtime's initial setState call
-  let initialized = false;
-  
+
   return {
-    getState: (): Model => store.$state.model as Model,
-    
-    setState: (updates: Partial<Model>): void => {
-      // First call from runtime provides full initial state
-      if (!initialized) {
-        initialized = true;
-        store.$patch({ model: updates as Model });
-        return;
-      }
-      
-      // Determine update strategy based on model type
-      const currentModel = store.$state.model;
-      const isObject = typeof currentModel === 'object' && 
-                      currentModel !== null && 
-                      !Array.isArray(currentModel);
-      
-      if (isObject && typeof updates === 'object' && updates !== null) {
-        // For objects: merge updates
-        store.$patch({
-          model: { ...currentModel, ...updates }
-        });
-      } else {
-        // For primitives/arrays: replace entirely
-        store.$patch({
-          model: updates as Model
-        });
-      }
+    getState: () => store.$state as Model,
+    setState: (updates) => {
+      store.$patch(updates);
     },
-    
-    subscribe: (listener: () => void): (() => void) => {
+    subscribe: (listener) => {
       return store.$subscribe(() => listener());
-    }
+    },
   };
 }
 
