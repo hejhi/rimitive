@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createReduxAdapter } from './index';
-import {
-  createModel,
-  createSlice,
-  createAdapterTestSuite,
-} from '@lattice/core';
+import { createReduxAdapter, createStoreAdapter } from './index';
+import { createAdapterTestSuite } from '@lattice/core';
 
 describe('Redux Adapter', () => {
   it('should export createReduxAdapter function', () => {
@@ -13,47 +9,36 @@ describe('Redux Adapter', () => {
   });
 
   it('should create a working Redux store with basic counter', () => {
-    const counter = () => {
-      const model = createModel<{
-        count: number;
-        increment: () => void;
-        decrement: () => void;
-      }>(({ set, get }) => ({
-        count: 0,
+    const createApp = (createStore: any) => {
+      const createSlice = createStore({ count: 0 });
+
+      const counter = createSlice(({ get, set }: any) => ({
+        count: () => get().count,
         increment: () => set({ count: get().count + 1 }),
         decrement: () => set({ count: get().count - 1 }),
       }));
 
-      const actions = createSlice(model, (m) => ({
-        increment: m().increment,
-        decrement: m().decrement,
-      }));
-
-      return {
-        model,
-        actions,
-        views: {},
-      };
+      return { counter };
     };
 
-    const store = createReduxAdapter(counter);
+    const store = createReduxAdapter(createApp);
 
     // Verify initial state
-    expect(store.getState().count).toBe(0);
+    expect(store.counter.count()).toBe(0);
 
     // Test increment
-    store.actions.increment();
-    expect(store.getState().count).toBe(1);
+    store.counter.increment();
+    expect(store.counter.count()).toBe(1);
 
     // Test decrement
-    store.actions.decrement();
-    expect(store.getState().count).toBe(0);
+    store.counter.decrement();
+    expect(store.counter.count()).toBe(0);
 
     // Multiple operations
-    store.actions.increment();
-    store.actions.increment();
-    store.actions.increment();
-    expect(store.getState().count).toBe(3);
+    store.counter.increment();
+    store.counter.increment();
+    store.counter.increment();
+    expect(store.counter.count()).toBe(3);
   });
 
   it('should support complex state updates', () => {
@@ -63,70 +48,68 @@ describe('Redux Adapter', () => {
       completed: boolean;
     }
 
-    const todoApp = () => {
-      const model = createModel<{
-        todos: Todo[];
-        filter: 'all' | 'active' | 'completed';
-        addTodo: (text: string) => void;
-        toggleTodo: (id: number) => void;
-        setFilter: (filter: 'all' | 'active' | 'completed') => void;
-      }>(({ set, get }) => ({
-        todos: [],
-        filter: 'all',
-        addTodo: (text) => {
+
+    const createApp = (createStore: any) => {
+      const createSlice = createStore({
+        todos: [] as Todo[],
+        filter: 'all' as 'all' | 'active' | 'completed',
+      });
+
+      let nextId = 1;
+      const actions = createSlice(({ get, set }: any) => ({
+        addTodo: (text: string) => {
           const newTodo: Todo = {
-            id: Date.now(),
+            id: nextId++,
             text,
             completed: false,
           };
           set({ todos: [...get().todos, newTodo] });
         },
-        toggleTodo: (id) => {
+        toggleTodo: (id: number) => {
           set({
-            todos: get().todos.map((todo) =>
+            todos: get().todos.map((todo: Todo) =>
               todo.id === id ? { ...todo, completed: !todo.completed } : todo
             ),
           });
         },
-        setFilter: (filter) => set({ filter }),
+        setFilter: (filter: 'all' | 'active' | 'completed') => set({ filter }),
       }));
 
-      const actions = createSlice(model, (m) => ({
-        addTodo: m().addTodo,
-        toggleTodo: m().toggleTodo,
-        setFilter: m().setFilter,
+      const queries = createSlice(({ get }: any) => ({
+        todos: () => get().todos,
+        filter: () => get().filter,
+        activeTodos: () => get().todos.filter((t: Todo) => !t.completed),
+        completedTodos: () => get().todos.filter((t: Todo) => t.completed),
       }));
 
-      return {
-        model,
-        actions,
-        views: {},
-      };
+      return { actions, queries };
     };
 
-    const store = createReduxAdapter(todoApp);
+    const store = createReduxAdapter(createApp);
 
     // Add todos
     store.actions.addTodo('First todo');
     store.actions.addTodo('Second todo');
 
-    expect(store.getState().todos.length).toBe(2);
-    expect(store.getState().todos[0]?.text).toBe('First todo');
-    expect(store.getState().todos[0]?.completed).toBe(false);
+    expect(store.queries.todos().length).toBe(2);
+    expect(store.queries.todos()[0]?.text).toBe('First todo');
+    expect(store.queries.todos()[0]?.completed).toBe(false);
 
     // Toggle todo
-    const firstTodoId = store.getState().todos[0]?.id;
+    const firstTodoId = store.queries.todos()[0]?.id;
     if (firstTodoId !== undefined) {
       store.actions.toggleTodo(firstTodoId);
     }
 
-    expect(store.getState().todos[0]?.completed).toBe(true);
+    expect(store.queries.todos()[0]?.completed).toBe(true);
+    expect(store.queries.completedTodos().length).toBe(1);
+    expect(store.queries.activeTodos().length).toBe(1);
 
     // Set filter
     store.actions.setFilter('completed');
-    expect(store.getState().filter).toBe('completed');
+    expect(store.queries.filter()).toBe('completed');
   });
 });
 
 // Run the shared adapter test suite
-createAdapterTestSuite('Redux', createReduxAdapter);
+createAdapterTestSuite('Redux', createStoreAdapter);
