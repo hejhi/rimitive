@@ -12,6 +12,7 @@ import {
   type EnhancedStore,
   type ConfigureStoreOptions,
   type Middleware,
+  type Slice,
 } from '@reduxjs/toolkit';
 import type { StoreAdapter, CreateStore } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
@@ -147,66 +148,8 @@ export function createStoreAdapter<Model>(
     ? enhancer(defaultConfig)
     : configureStore(defaultConfig);
 
-  // Track active listeners to handle edge cases
-  const listeners = new Set<() => void>();
-  let isNotifying = false;
-  const pendingUnsubscribes = new Set<() => void>();
-
-  // Use provided error handler or default to console.error
-  const handleError =
-    options?.onError ??
-    ((error) => {
-      console.error('Error in store listener:', error);
-    });
-
-  // Notify all listeners with error handling
-  const notifyListeners = () => {
-    isNotifying = true;
-    // Take a snapshot of listeners at the start of notification
-    const currentListeners = Array.from(listeners);
-
-    for (const listener of currentListeners) {
-      // Don't skip listeners that were unsubscribed during this notification cycle
-      // They should still be called in this cycle
-      try {
-        listener();
-      } catch (error) {
-        // Handle errors to ensure other listeners are called
-        handleError(error);
-      }
-    }
-
-    isNotifying = false;
-
-    // Process pending unsubscribes after all listeners have been called
-    for (const listener of pendingUnsubscribes) {
-      listeners.delete(listener);
-    }
-    pendingUnsubscribes.clear();
-  };
-
-  // Subscribe to Redux store once to handle all notifications
-  store.subscribe(notifyListeners);
-
-  return {
-    getState: () => store.getState() as Model,
-    setState: (updates) => {
-      // Always use updateState since Redux Toolkit's createSlice handles merging with Immer
-      store.dispatch(slice.actions.updateState(updates));
-    },
-    subscribe: (listener) => {
-      listeners.add(listener);
-
-      return () => {
-        if (isNotifying) {
-          // Defer unsubscribe until after current notification cycle
-          pendingUnsubscribes.add(listener);
-        } else {
-          listeners.delete(listener);
-        }
-      };
-    },
-  };
+  // Use wrapReduxStore to handle all the subscription management
+  return wrapReduxStore(store, options, slice);
 }
 
 /**
@@ -218,6 +161,7 @@ export function createStoreAdapter<Model>(
  *
  * @param store - An existing Redux store
  * @param options - Optional configuration for the adapter
+ * @param slice - Optional slice for state updates (created if not provided)
  * @returns A minimal store adapter with proper subscription management
  *
  * @example
@@ -229,10 +173,11 @@ export function createStoreAdapter<Model>(
  */
 export function wrapReduxStore<Model>(
   store: EnhancedStore<Model>,
-  options?: AdapterOptions
+  options?: AdapterOptions,
+  slice?: Slice<Model>
 ): StoreAdapter<Model> {
-  // Create a slice for state updates
-  const slice = createReduxSlice({
+  // Create a slice for state updates if not provided
+  const stateSlice = slice ?? createReduxSlice({
     name: 'lattice',
     initialState: store.getState(),
     reducers: {
@@ -286,7 +231,7 @@ export function wrapReduxStore<Model>(
   return {
     getState: () => store.getState() as Model,
     setState: (updates) => {
-      store.dispatch(slice.actions.updateState(updates));
+      store.dispatch(stateSlice.actions.updateState(updates));
     },
     subscribe: (listener) => {
       listeners.add(listener);
