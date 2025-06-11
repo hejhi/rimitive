@@ -5,165 +5,211 @@ import type { CreateStore, StoreAdapter } from './runtime';
 
 describe('runtime with new createStore API', () => {
   it('should connect an app to an adapter', () => {
-    // Create a mock adapter
-    const mockState = { count: 0 };
-    const mockAdapter: StoreAdapter<typeof mockState> = {
-      getState: vi.fn(() => mockState),
-      setState: vi.fn((updates) => Object.assign(mockState, updates)),
-      subscribe: vi.fn(() => () => {}),
+    // Track what happens during adapter creation
+    let capturedInitialState: any;
+    let mockState: any;
+
+    // Create adapter factory that captures initial state
+    const adapterFactory = (initialState: any) => {
+      capturedInitialState = initialState;
+      mockState = { ...initialState };
+
+      const mockAdapter: StoreAdapter<typeof initialState> = {
+        getState: vi.fn(() => mockState),
+        setState: vi.fn((updates) => Object.assign(mockState, updates)),
+        subscribe: vi.fn(() => () => {}),
+      };
+
+      return mockAdapter;
     };
 
     // Create an app factory
-    const createApp = (createStore: CreateStore) => {
+    const createApp = (createStore: CreateStore<{ count: number }>) => {
       const createSlice = createStore({ count: 0 });
-      
+
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
         increment: () => set({ count: get().count + 1 }),
-        decrement: () => set({ count: get().count - 1 })
+        decrement: () => set({ count: get().count - 1 }),
       }));
-      
+
       return { counter };
     };
 
-    // Create the store with runtime
-    const store = createLatticeStore(createApp, mockAdapter);
+    // Create the store with runtime using factory
+    const store = createLatticeStore(createApp, adapterFactory);
 
-    // Verify initial state was set
-    expect(mockAdapter.setState).toHaveBeenCalledWith({ count: 0 });
+    // Verify factory was called with initial state
+    expect(capturedInitialState).toEqual({ count: 0 });
 
     // Test the counter slice
     expect(store.counter.count()).toBe(0);
-    
+
     // Test increment
     store.counter.increment();
-    expect(mockAdapter.setState).toHaveBeenCalledWith({ count: 1 });
-    expect(store.counter.count()).toBe(1);
+    expect(mockState.count).toBe(1);
 
     // Test decrement
     store.counter.decrement();
-    expect(mockAdapter.setState).toHaveBeenCalledWith({ count: 0 });
+    store.counter.decrement();
+    expect(mockState.count).toBe(-1);
   });
 
   it('should work with composed slices', () => {
-    const mockState = { count: 0, multiplier: 2 };
-    const mockAdapter: StoreAdapter<typeof mockState> = {
-      getState: vi.fn(() => mockState),
-      setState: vi.fn((updates) => Object.assign(mockState, updates)),
-      subscribe: vi.fn(() => () => {}),
+    let mockState: any;
+
+    const adapterFactory = (initialState: any) => {
+      mockState = { ...initialState };
+
+      const mockAdapter: StoreAdapter<typeof initialState> = {
+        getState: () => mockState,
+        setState: (updates) => Object.assign(mockState, updates),
+        subscribe: vi.fn(() => () => {}),
+      };
+
+      return mockAdapter;
     };
 
-    const createApp = (createStore: CreateStore) => {
+    const createApp = (
+      createStore: CreateStore<{ count: number; multiplier: number }>
+    ) => {
       const createSlice = createStore({ count: 0, multiplier: 2 });
-      
+
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
-        increment: () => set({ count: get().count + 1 })
+        increment: () => set({ count: get().count + 1 }),
+        multiply: () => set({ count: get().count * get().multiplier }),
       }));
-      
-      const settings = createSlice(({ get, set }) => ({
+
+      const config = createSlice(({ get, set }) => ({
         multiplier: () => get().multiplier,
-        setMultiplier: (value: number) => set({ multiplier: value })
+        setMultiplier: (value: number) => set({ multiplier: value }),
       }));
-      
-      return { counter, settings };
+
+      return { counter, config };
     };
 
-    const store = createLatticeStore(createApp, mockAdapter);
-    
+    const store = createLatticeStore(createApp, adapterFactory);
+
     expect(store.counter.count()).toBe(0);
-    expect(store.settings.multiplier()).toBe(2);
-    
-    store.settings.setMultiplier(3);
-    expect(mockAdapter.setState).toHaveBeenCalledWith({ multiplier: 3 });
-    expect(store.settings.multiplier()).toBe(3);
+    expect(store.config.multiplier()).toBe(2);
+
+    store.counter.increment();
+    expect(store.counter.count()).toBe(1);
+
+    store.counter.multiply();
+    expect(store.counter.count()).toBe(2);
+
+    store.config.setMultiplier(3);
+    store.counter.multiply();
+    expect(store.counter.count()).toBe(6);
   });
 
   it('should expose subscription capability', () => {
     const mockAdapter: StoreAdapter<any> = {
-      getState: vi.fn(() => ({ count: 0 })),
-      setState: vi.fn(),
+      getState: () => ({}),
+      setState: () => {},
       subscribe: vi.fn(() => () => {}),
     };
 
-    const createApp = (createStore: CreateStore) => {
-      const createSlice = createStore({ count: 0 });
-      return { createSlice };
+    const createApp = (createStore: CreateStore<any>) => {
+      createStore({});
+      return {};
     };
 
-    const store = createLatticeStore(createApp, mockAdapter);
-    
-    const listener = vi.fn();
-    store.subscribe(listener);
-    
-    expect(mockAdapter.subscribe).toHaveBeenCalledWith(listener);
+    const store = createLatticeStore(createApp, () => mockAdapter);
+
+    expect(typeof store.subscribe).toBe('function');
+    expect(store.subscribe).toBe(mockAdapter.subscribe);
+
+    // Test that subscription works
+    const unsubscribe = store.subscribe(() => {});
+    expect(mockAdapter.subscribe).toHaveBeenCalled();
+    expect(typeof unsubscribe).toBe('function');
   });
 
   it('should work with standalone createStore for comparison', () => {
-    // Show that the same app can work without runtime
-    const createSlice = createStore({ count: 0 });
-    
+    // This demonstrates how the new createStore works independently
+    const createSlice = createStore({ count: 0, name: 'test' });
+
     const counter = createSlice(({ get, set }) => ({
       count: () => get().count,
-      increment: () => set({ count: get().count + 1 })
+      increment: () => set({ count: get().count + 1 }),
     }));
-    
+
+    const editor = createSlice(({ get, set }) => ({
+      name: () => get().name,
+      setName: (name: string) => set({ name }),
+    }));
+
     expect(counter.count()).toBe(0);
+    expect(editor.name()).toBe('test');
+
     counter.increment();
     expect(counter.count()).toBe(1);
+
+    editor.setName('updated');
+    expect(editor.name()).toBe('updated');
   });
 
   it('should enforce single store pattern', () => {
     const mockAdapter: StoreAdapter<any> = {
-      getState: vi.fn(() => ({ count: 0 })),
-      setState: vi.fn(),
-      subscribe: vi.fn(() => () => {}),
+      getState: () => ({}),
+      setState: () => {},
+      subscribe: () => () => {},
     };
 
-    const createApp = (createStore: CreateStore) => {
-      // First createStore call should succeed
-      const createSlice1 = createStore({ count: 0, name: 'test' });
-      
-      // Second createStore call should throw
-      expect(() => {
-        createStore({ value: 42 });
-      }).toThrow('createStore can only be called once per app');
-      
-      return { createSlice1 };
+    const createApp = (createStore: CreateStore<any>) => {
+      // First call should work
+      createStore({ value: 1 });
+
+      // Second call should throw
+      expect(() => createStore({ value: 2 })).toThrow(
+        'createStore can only be called once'
+      );
+
+      return {};
     };
 
-    const store = createLatticeStore(createApp, mockAdapter);
-    expect(store.createSlice1).toBeDefined();
+    // This should not throw because the error is caught in the test
+    createLatticeStore(createApp, () => mockAdapter);
   });
 
   it('should properly type the state through the adapter', () => {
-    type AppState = { count: number; name: string };
-    
-    const mockAdapter: StoreAdapter<AppState> = {
-      getState: vi.fn(() => ({ count: 0, name: 'test' })),
-      setState: vi.fn(),
-      subscribe: vi.fn(() => () => {}),
+    interface AppState {
+      count: number;
+      name: string;
+    }
+
+    let mockState: AppState = { name: 'test', count: 0 };
+
+    const adapterFactory = (initialState: AppState) => {
+      mockState = { ...initialState };
+
+      const mockAdapter: StoreAdapter<AppState> = {
+        getState: vi.fn(() => mockState),
+        setState: vi.fn((updates) => Object.assign(mockState, updates)),
+        subscribe: vi.fn(() => () => {}),
+      };
+
+      return mockAdapter;
     };
 
-    const createApp = (createStore: CreateStore) => {
-      // The createStore call defines the state shape
-      const createSlice = createStore<AppState>({ count: 0, name: 'test' });
-      
+    const createApp = (createStore: CreateStore<AppState>) => {
+      const createSlice = createStore({ count: 0, name: 'test' });
+
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
-        increment: () => set({ count: get().count + 1 })
+        increment: () => set({ count: get().count + 1 }),
       }));
-      
+
       return { counter };
     };
 
-    const store = createLatticeStore(createApp, mockAdapter);
-    
-    // Verify that initial state was set correctly
-    expect(mockAdapter.setState).toHaveBeenCalledWith({ count: 0, name: 'test' });
-    
+    const store = createLatticeStore(createApp, adapterFactory);
+
     // Test operations
     store.counter.increment();
-    expect(mockAdapter.setState).toHaveBeenCalledWith({ count: 1 });
+    expect(mockState.count).toBe(1);
   });
 });

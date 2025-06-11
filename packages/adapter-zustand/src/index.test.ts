@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { CreateStore } from '@lattice/core';
-import { compose, createLatticeStore } from '@lattice/core';
-import { createStoreAdapter, createZustandAdapter } from '.';
+import { compose } from '@lattice/core';
+import { createZustandAdapter } from '.';
 
 describe('Zustand Adapter - New Architecture', () => {
   it('should demonstrate basic store creation and slice patterns', () => {
     // Define a simple counter app using the new API
-    const createApp = (createStore: CreateStore) => {
+    const createApp = (createStore: CreateStore<{ count: number }>) => {
       // Step 1: Create store returns a slice factory
       const createSlice = createStore({ count: 0 });
 
@@ -56,9 +56,8 @@ describe('Zustand Adapter - New Architecture', () => {
       };
     };
 
-    // Create the adapter and store
-    const adapter = createStoreAdapter<{ count: number }>();
-    const store = createLatticeStore(createApp, adapter);
+    // Create the store using createZustandAdapter
+    const store = createZustandAdapter(createApp);
 
     // Test initial state through queries
     expect(store.queries.count()).toBe(0);
@@ -105,10 +104,15 @@ describe('Zustand Adapter - New Architecture', () => {
   });
 
   it('should demonstrate slice composition with compose', () => {
-    const createApp = (createStore: CreateStore) => {
+    const createApp = (
+      createStore: CreateStore<{
+        todos: { id: string; text: string; done: boolean }[];
+        filter: 'all' | 'active' | 'completed';
+      }>
+    ) => {
       const createSlice = createStore({
-        todos: [] as Array<{ id: string; text: string; done: boolean }>,
-        filter: 'all' as 'all' | 'active' | 'completed',
+        todos: [],
+        filter: 'all',
       });
 
       // Base slices
@@ -196,8 +200,7 @@ describe('Zustand Adapter - New Architecture', () => {
       };
     };
 
-    const adapter = createStoreAdapter<any>();
-    const store = createLatticeStore(createApp, adapter);
+    const store = createZustandAdapter(createApp);
 
     // Test initial state
     expect(store.views.filteredTodos()).toEqual([]);
@@ -240,10 +243,12 @@ describe('Zustand Adapter - New Architecture', () => {
   });
 
   it('should support subscriptions and demonstrate reactivity', () => {
-    const createApp = (createStore: CreateStore) => {
+    const createApp = (
+      createStore: CreateStore<{ value: number; history: number[] }>
+    ) => {
       const createSlice = createStore({
         value: 0,
-        history: [] as number[],
+        history: [],
       });
 
       const actions = createSlice(({ get, set }) => ({
@@ -278,8 +283,7 @@ describe('Zustand Adapter - New Architecture', () => {
       return { actions, queries };
     };
 
-    const adapter = createStoreAdapter<{ value: number; history: number[] }>();
-    const store = createLatticeStore(createApp, adapter);
+    const store = createZustandAdapter(createApp);
 
     // Track subscription calls
     const listener = vi.fn();
@@ -327,7 +331,18 @@ describe('Zustand Adapter - New Architecture', () => {
   });
 
   it('should demonstrate parameterized selectors and mixed patterns', () => {
-    const createApp = (createStore: CreateStore) => {
+    const createApp = (
+      createStore: CreateStore<{
+        products: {
+          id: string;
+          name: string;
+          price: number;
+          category: string;
+        }[];
+        taxRate: number;
+        discount: number;
+      }>
+    ) => {
       const createSlice = createStore({
         products: [
           { id: '1', name: 'Laptop', price: 999, category: 'electronics' },
@@ -406,8 +421,7 @@ describe('Zustand Adapter - New Architecture', () => {
       return { products, pricing, catalog };
     };
 
-    const adapter = createStoreAdapter<any>();
-    const store = createLatticeStore(createApp, adapter);
+    const store = createZustandAdapter(createApp);
 
     // Test direct computed values
     expect(store.catalog.totalProducts()).toBe(4);
@@ -435,7 +449,7 @@ describe('Zustand Adapter - New Architecture', () => {
 
   it('should work with createZustandAdapter convenience function', () => {
     // Define a component factory directly
-    const counterApp = (createStore: CreateStore) => {
+    const counterApp = (createStore: CreateStore<{ count: number }>) => {
       const createSlice = createStore({ count: 0 });
 
       const api = createSlice(({ get, set }) => ({
