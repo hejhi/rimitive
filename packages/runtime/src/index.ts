@@ -1,5 +1,7 @@
-// Core runtime export
-export { createRuntime } from './runtime.js';
-
-// Type exports
-export type { RuntimeFactory } from './types.js';
+// Export React hooks
+export {
+  useSliceSelector,
+  useSlice,
+  useSliceValues,
+  useLattice
+} from './react';
