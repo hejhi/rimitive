@@ -5,7 +5,7 @@
  */
 
 import { beforeEach } from 'vitest';
-import { createPinia, setActivePinia } from 'pinia';
+import { createPinia, setActivePinia, defineStore } from 'pinia';
 import { createStoreAdapter } from './index';
 import { createAdapterTestSuite } from '@lattice/core';
 
@@ -15,5 +15,18 @@ beforeEach(() => {
   setActivePinia(createPinia());
 });
 
+// Create adapter factory that matches the test suite expectations
+const createTestAdapter = (initialState?: any) => {
+  const pinia = createPinia();
+  const storeId = `test-${Date.now()}-${Math.random()}`;
+  
+  const useStore = defineStore(storeId, {
+    state: () => initialState || {},
+  });
+  
+  const store = useStore(pinia);
+  return createStoreAdapter(store as any);
+};
+
 // Run the shared adapter test suite
-createAdapterTestSuite('Pinia', createStoreAdapter);
+createAdapterTestSuite('Pinia', createTestAdapter);

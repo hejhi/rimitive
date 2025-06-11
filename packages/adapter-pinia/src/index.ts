@@ -1,74 +1,148 @@
 /**
  * @fileoverview Pinia adapter for Lattice
  *
- * This adapter provides integration with Pinia, Vue's official state
- * management library, following the minimal adapter pattern.
+ * This adapter provides integration with Pinia for state management.
+ * Following the minimal adapter pattern, it only provides store primitives.
+ * All component execution is handled by the Lattice runtime.
  */
 
-import { defineStore } from 'pinia';
-import type { StoreAdapter, ComponentFactory } from '@lattice/core';
+import { createPinia, defineStore, type Pinia, type Store } from 'pinia';
+import type { StoreAdapter, AppFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 
 /**
- * Creates a Pinia adapter for a Lattice component.
+ * Configuration options for Pinia adapters
+ */
+export interface AdapterOptions {
+  /**
+   * Custom error handler for listener errors.
+   * Default: logs to console.error
+   */
+  onError?: (error: unknown) => void;
+}
+
+/**
+ * Store enhancer function that allows plugin composition
  *
- * This follows the minimal adapter pattern where adapters only provide
- * get/set/subscribe primitives, and the runtime handles all complexity.
+ * @param stateCreator - Function that returns the initial state
+ * @param pinia - The Pinia instance to enhance
+ * @param storeId - The unique store ID
+ * @returns Enhanced Pinia store instance
+ */
+export type StoreEnhancer<State extends Record<string, any>> = (
+  stateCreator: () => State,
+  pinia: Pinia,
+  storeId: string
+) => Store<string, State>;
+
+/**
+ * Creates a Pinia adapter for a Lattice app.
  *
- * @param componentFactory - The Lattice component spec factory
+ * This is the primary way to use Lattice with Pinia. It combines
+ * an app factory with Pinia's state management.
+ *
+ * @param appFactory - The Lattice app factory
+ * @param enhancer - Optional store enhancer for plugins
+ * @param options - Optional configuration for the adapter
  * @returns A Lattice store backed by Pinia
  *
  * @example
  * ```typescript
- * const counter = () => ({
- *   model: createModel(...),
- *   actions: createSlice(...),
- *   views: { ... }
- * });
+ * const createApp = (createStore: CreateStore) => {
+ *   const createSlice = createStore({ count: 0 });
  *
- * const store = createPiniaAdapter(counter);
- * store.actions.increment();
- * const view = store.views.display();
+ *   const counter = createSlice(({ get, set }) => ({
+ *     count: () => get().count,
+ *     increment: () => set({ count: get().count + 1 })
+ *   }));
+ *
+ *   return { counter };
+ * };
+ *
+ * const store = createPiniaAdapter(createApp);
+ * store.counter.increment();
+ * ```
+ *
+ * @example With plugins
+ * ```typescript
+ * import { createPersistedState } from 'pinia-plugin-persistedstate';
+ *
+ * const store = createPiniaAdapter(createApp, (stateCreator, pinia, storeId) => {
+ *   pinia.use(createPersistedState({
+ *     key: id => `__persisted__${id}`,
+ *     storage: localStorage,
+ *   }));
+ *   
+ *   const useStore = defineStore(storeId, {
+ *     state: stateCreator
+ *   });
+ *   
+ *   return useStore(pinia);
+ * });
  * ```
  */
-export function createPiniaAdapter<
-  Model extends Record<string, unknown>,
-  Actions,
-  Views,
->(componentFactory: ComponentFactory<Model, Actions, Views>) {
-  // Use the runtime to create the store
-  return createLatticeStore(componentFactory, createStoreAdapter<Model>());
+export function createPiniaAdapter<App, State extends Record<string, any> = any>(
+  appFactory: AppFactory<App, State>,
+  enhancer?: StoreEnhancer<State>,
+  options?: AdapterOptions
+) {
+  // Create an adapter factory that will be called with initial state
+  const adapterFactory = (initialState: State): StoreAdapter<State> => {
+    const pinia = createPinia();
+    const storeId = `lattice-${Date.now()}-${Math.random()}`;
+    
+    // Create store with or without enhancer
+    const store = enhancer
+      ? enhancer(() => initialState, pinia, storeId)
+      : createDefaultStore(() => initialState, pinia, storeId);
+      
+    return createStoreAdapter(store, options);
+  };
+
+  return createLatticeStore(appFactory, adapterFactory);
 }
 
 /**
- * Creates a minimal Pinia adapter
+ * Creates a default Pinia store
+ */
+function createDefaultStore<State extends Record<string, any>>(
+  stateCreator: () => State,
+  pinia: Pinia,
+  storeId: string
+): Store<string, State> {
+  const useStore = defineStore(storeId, {
+    state: stateCreator,
+  });
+  
+  return useStore(pinia);
+}
+
+/**
+ * Creates a minimal adapter from a Pinia store
  *
- * @param initialState - Optional initial state
+ * This wraps a Pinia store with minimal adapter interface.
+ * Handles edge cases like unsubscribe during notification.
+ *
+ * @param store - The Pinia store to wrap
+ * @param options - Optional configuration for the adapter
  * @returns A minimal store adapter
  */
-export function createStoreAdapter<Model extends Record<string, unknown>>(
-  initialState?: Partial<Model>
-): StoreAdapter<Model> {
-  // Create a unique store ID to ensure isolation
-  const storeId = `lattice-pinia-${Date.now()}-${Math.random()}`;
-
-  // Define the Pinia store
-  const useStore = defineStore(storeId, {
-    state: () => ({
-      ...initialState,
-    }),
-  });
-
-  // Create the store instance
-  const store = useStore();
-
-  // Track listeners to handle edge cases
+export function createStoreAdapter<State extends Record<string, any>>(
+  store: Store<string, State>,
+  options?: AdapterOptions
+): StoreAdapter<State> {
+  // Track listeners for edge case handling
   const listeners = new Set<() => void>();
   let isNotifying = false;
   const pendingUnsubscribes = new Set<() => void>();
 
-  // Notify all listeners with error handling
-  const notifyListeners = () => {
+  // For error handling
+  const handleError = options?.onError ?? ((error) => {
+    console.error('Error in store listener:', error);
+  });
+
+  // Subscribe to Pinia and forward to our listeners
+  store.$subscribe(() => {
     isNotifying = true;
     const currentListeners = Array.from(listeners);
     
@@ -76,8 +150,7 @@ export function createStoreAdapter<Model extends Record<string, unknown>>(
       try {
         listener();
       } catch (error) {
-        // Silently catch errors to ensure other listeners are called
-        console.error('Error in store listener:', error);
+        handleError(error);
       }
     }
     
@@ -88,25 +161,26 @@ export function createStoreAdapter<Model extends Record<string, unknown>>(
       listeners.delete(listener);
     }
     pendingUnsubscribes.clear();
-  };
-
-  // Subscribe to Pinia store to handle all notifications
-  store.$subscribe(notifyListeners);
+  });
 
   return {
     getState: () => {
       // Return a deep copy to prevent mutation of the original state
-      return JSON.parse(JSON.stringify(store.$state)) as Model;
+      // Pinia's state is reactive, so we need to ensure we return plain objects
+      return JSON.parse(JSON.stringify(store.$state)) as State;
     },
     setState: (updates) => {
-      store.$patch(updates);
+      // Pinia's $patch expects the updates to be compatible with UnwrapRef<State>
+      // We use a function to avoid type issues with Vue's reactivity system
+      store.$patch((state) => {
+        Object.assign(state as any, updates);
+      });
     },
     subscribe: (listener) => {
       listeners.add(listener);
       
       return () => {
         if (isNotifying) {
-          // Defer unsubscribe until after current notification cycle
           pendingUnsubscribes.add(listener);
         } else {
           listeners.delete(listener);
@@ -116,5 +190,226 @@ export function createStoreAdapter<Model extends Record<string, unknown>>(
   };
 }
 
+/**
+ * Wraps an existing Pinia store as a minimal adapter
+ *
+ * This allows you to use an existing Pinia store with Lattice.
+ * Uses the same sophisticated subscription management as createStoreAdapter
+ * to handle edge cases like unsubscribe during notification.
+ *
+ * @param store - An existing Pinia store
+ * @param options - Optional configuration for the adapter
+ * @returns A minimal store adapter with proper subscription management
+ *
+ * @example
+ * ```typescript
+ * const piniaStore = useCounterStore();
+ * const adapter = wrapPiniaStore(piniaStore);
+ * const store = createLatticeStore(appFactory, adapter);
+ * ```
+ */
+export function wrapPiniaStore<State extends Record<string, any>>(
+  store: Store<string, State>,
+  options?: AdapterOptions
+): StoreAdapter<State> {
+  return createStoreAdapter(store, options);
+}
+
 // Re-export types for convenience
 export type { StoreAdapter } from '@lattice/core';
+
+// Note: React hooks are available via '@lattice/adapter-pinia/react'
+// For Vue integration, use Vue's composition API with the store directly
+
+// ============================================================================
+// In-source tests
+// ============================================================================
+
+if (import.meta.vitest) {
+  const { describe, it, expect, beforeEach } = import.meta.vitest;
+  const { compose } = await import('@lattice/core');
+  type CreateStore = import('@lattice/core').CreateStore<any>;
+  
+  describe('createPiniaAdapter - in-source tests', () => {
+    beforeEach(() => {
+      // Reset Pinia between tests
+      const pinia = createPinia();
+      (pinia as any)._s.clear();
+    });
+
+    it('should demonstrate the new API with resolve for selectors', () => {
+      const createApp = (createStore: CreateStore) => {
+        const createSlice = createStore({ count: 0, multiplier: 2 });
+
+        // Actions that mutate state
+        const actions = createSlice(({ get, set }: { get: () => any, set: (updates: any) => void }) => ({
+          increment: () => set({ count: get().count + 1 }),
+          decrement: () => set({ count: get().count - 1 }),
+          setMultiplier: (m: number) => set({ multiplier: m }),
+        }));
+
+        // Queries that read state
+        const queries = createSlice(({ get }: { get: () => any }) => ({
+          count: () => get().count,
+          multiplier: () => get().multiplier,
+        }));
+
+        // Create computed views
+        const computed = createSlice(({ get }: { get: () => any }) => ({
+          value: () => get().count,
+          doubled: () => get().count * 2,
+          multiplied: () => get().count * get().multiplier,
+          label: () =>
+            `Count: ${get().count} (×${get().multiplier} = ${get().count * get().multiplier})`,
+        }));
+
+        return { actions, queries, computed };
+      };
+
+      const store = createPiniaAdapter(createApp);
+
+      // Test initial state
+      expect(store.computed.value()).toBe(0);
+      expect(store.computed.doubled()).toBe(0);
+      expect(store.computed.multiplied()).toBe(0);
+      expect(store.computed.label()).toBe('Count: 0 (×2 = 0)');
+
+      // Test actions
+      store.actions.increment();
+      expect(store.computed.value()).toBe(1);
+      expect(store.computed.doubled()).toBe(2);
+      expect(store.computed.multiplied()).toBe(2);
+      expect(store.computed.label()).toBe('Count: 1 (×2 = 2)');
+
+      // Change multiplier
+      store.actions.setMultiplier(3);
+      store.actions.increment();
+      expect(store.computed.value()).toBe(2);
+      expect(store.computed.multiplied()).toBe(6);
+      expect(store.computed.label()).toBe('Count: 2 (×3 = 6)');
+    });
+
+    it('should work with compose for slice dependencies', () => {
+      const createApp = (createStore: CreateStore) => {
+        const createSlice = createStore({
+          value: 0,
+          min: 0,
+          max: 100,
+        });
+
+        // Base slices
+        const valueQueries = createSlice(({ get }: { get: () => any }) => ({
+          current: () => get().value,
+          isMin: () => get().value === get().min,
+          isMax: () => get().value === get().max,
+        }));
+
+        const limitsQueries = createSlice(({ get }: { get: () => any }) => ({
+          min: () => get().min,
+          max: () => get().max,
+          range: () => get().max - get().min,
+        }));
+
+        // Compose slices for complex actions
+        const actions = createSlice(
+          compose(
+            { value: valueQueries, limits: limitsQueries },
+            ({ set }, { value, limits }) => ({
+              increment: () => {
+                if (!value.isMax()) {
+                  set({ value: Math.min(value.current() + 1, limits.max()) });
+                }
+              },
+              decrement: () => {
+                if (!value.isMin()) {
+                  set({ value: Math.max(value.current() - 1, limits.min()) });
+                }
+              },
+              setValue: (v: number) => {
+                const clamped = Math.max(
+                  limits.min(),
+                  Math.min(v, limits.max())
+                );
+                set({ value: clamped });
+              },
+              setRange: (min: number, max: number) => {
+                set({ min, max });
+                // Clamp current value to new range
+                const current = value.current();
+                if (current < min) set({ value: min });
+                if (current > max) set({ value: max });
+              },
+            })
+          )
+        );
+
+        return { actions, value: valueQueries, limits: limitsQueries };
+      };
+
+      const store = createPiniaAdapter(createApp);
+
+      // Test initial state
+      expect(store.value.current()).toBe(0);
+      expect(store.value.isMin()).toBe(true);
+      expect(store.value.isMax()).toBe(false);
+      expect(store.limits.range()).toBe(100);
+
+      // Test bounded increment
+      store.actions.increment();
+      expect(store.value.current()).toBe(1);
+
+      // Test setValue with clamping
+      store.actions.setValue(150);
+      expect(store.value.current()).toBe(100); // Clamped to max
+      expect(store.value.isMax()).toBe(true);
+
+      store.actions.setValue(-10);
+      expect(store.value.current()).toBe(0); // Clamped to min
+
+      // Test range change
+      store.actions.setValue(50);
+      store.actions.setRange(10, 40);
+      expect(store.value.current()).toBe(40); // Clamped to new max
+      expect(store.limits.min()).toBe(10);
+      expect(store.limits.max()).toBe(40);
+      expect(store.limits.range()).toBe(30);
+    });
+
+    it('should support enhancer for plugins', () => {
+      let enhancerCalled = false;
+      let storeIdUsed = '';
+      
+      const createApp = (createStore: CreateStore) => {
+        const createSlice = createStore({ value: 0 });
+        
+        const counter = createSlice(({ get, set }: { get: () => any, set: (updates: any) => void }) => ({
+          value: () => get().value,
+          increment: () => set({ value: get().value + 1 }),
+        }));
+        
+        return { counter };
+      };
+      
+      const store = createPiniaAdapter(createApp, (stateCreator, pinia, storeId) => {
+        enhancerCalled = true;
+        storeIdUsed = storeId;
+        
+        // Here we could add plugins, e.g.:
+        // pinia.use(myPlugin);
+        
+        const useStore = defineStore(storeId, {
+          state: stateCreator,
+        });
+        
+        return useStore(pinia);
+      });
+      
+      expect(enhancerCalled).toBe(true);
+      expect(storeIdUsed).toMatch(/^lattice-/);
+      expect(store.counter.value()).toBe(0);
+      
+      store.counter.increment();
+      expect(store.counter.value()).toBe(1);
+    });
+  });
+}
