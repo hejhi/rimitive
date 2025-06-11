@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "./",
     "declaration": true,
     "declarationMap": true,
     "noImplicitAny": true,
@@ -13,11 +13,14 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
     "composite": true,
+    "jsx": "react",
     "types": [
       "vitest/importMeta"
     ]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "examples/**/*.tsx"
   ],
 }
