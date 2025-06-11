@@ -18,10 +18,23 @@ export {
 } from './runtime';
 
 // Export adapter contract
-export { type StoreAdapter, isStoreAdapter } from './adapter-contract';
+export { 
+  type StoreAdapter, 
+  type AdapterFactory,
+  isStoreAdapter,
+  isAdapterFactory 
+} from './adapter-contract';
 
 // Export adapter test suite
 export { createAdapterTestSuite } from './adapter-contract-tests';
+
+// Export subscription utilities
+export { 
+  subscribeToSlices,
+  shallowEqual,
+  type SubscribableStore,
+  type SubscribeOptions
+} from './subscribe';
 
 // New createStore API types
 export interface StoreTools<State> {
