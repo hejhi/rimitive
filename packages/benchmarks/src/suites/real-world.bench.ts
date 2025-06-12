@@ -11,9 +11,20 @@ import { createStoreReactAdapter } from '@lattice/adapter-store-react';
 import { compose } from '@lattice/core';
 import type { CreateStore } from '@lattice/core';
 
+type EcommerceState = {
+  cart: Array<{ id: string; name: string; price: number; quantity: number }>;
+  user: { id: string; name: string; email: string } | null;
+  products: Array<{ id: string; name: string; price: number; stock: number }>;
+  ui: {
+    isLoading: boolean;
+    cartOpen: boolean;
+    selectedProduct: string | null;
+  };
+};
+
 describe('Real-World Scenarios', () => {
   describe('E-commerce Cart Simulation', () => {
-    const createEcommerceApp = (createStore: CreateStore) => {
+    const createEcommerceApp = (createStore: CreateStore<EcommerceState>) => {
       const createSlice = createStore({
         cart: [] as Array<{ id: string; name: string; price: number; quantity: number }>,
         user: null as { id: string; name: string; email: string } | null,
@@ -25,7 +36,7 @@ describe('Real-World Scenarios', () => {
         }
       });
 
-      const cart = createSlice(({ get, set }) => ({
+      const cart = createSlice(({ get, set }: { get: () => EcommerceState; set: (updates: Partial<EcommerceState>) => void }) => ({
         addItem: (productId: string, quantity: number = 1) => {
           const products = get().products;
           const product = products.find(p => p.id === productId);
@@ -78,8 +89,8 @@ describe('Real-World Scenarios', () => {
         clearCart: () => set({ cart: [] })
       }));
 
-      const products = createSlice(({ get, set }) => ({
-        loadProducts: (productList: typeof get.products) => {
+      const products = createSlice(({ get, set }: { get: () => EcommerceState; set: (updates: Partial<EcommerceState>) => void }) => ({
+        loadProducts: (productList: EcommerceState['products']) => {
           set({ products: productList });
         },
         updateStock: (productId: string, stock: number) => {
@@ -92,7 +103,7 @@ describe('Real-World Scenarios', () => {
         getProduct: (id: string) => get().products.find(p => p.id === id)
       }));
 
-      const user = createSlice(({ get, set }) => ({
+      const user = createSlice(({ get, set }: { get: () => EcommerceState; set: (updates: Partial<EcommerceState>) => void }) => ({
         login: (userData: { id: string; name: string; email: string }) => {
           set({ user: userData });
         },
@@ -103,7 +114,7 @@ describe('Real-World Scenarios', () => {
         getCurrentUser: () => get().user
       }));
 
-      const ui = createSlice(({ get, set }) => ({
+      const ui = createSlice(({ get, set }: { get: () => EcommerceState; set: (updates: Partial<EcommerceState>) => void }) => ({
         setLoading: (isLoading: boolean) => {
           set({ ui: { ...get().ui, isLoading } });
         },
@@ -119,7 +130,7 @@ describe('Real-World Scenarios', () => {
       const checkout = createSlice(
         compose(
           { cart, user },
-          ({ get }, { cart, user }) => ({
+          (_, { cart, user }) => ({
             canCheckout: () => {
               return user.isLoggedIn() && cart.getItemCount() > 0;
             },
@@ -182,10 +193,6 @@ describe('Real-World Scenarios', () => {
         store.checkout.processCheckout();
       }
 
-      return {
-        cartTotal: store.cart.getTotal(),
-        itemCount: store.cart.getItemCount()
-      };
     });
 
     bench('redux - ecommerce simulation', () => {
@@ -227,10 +234,6 @@ describe('Real-World Scenarios', () => {
         store.checkout.processCheckout();
       }
 
-      return {
-        cartTotal: store.cart.getTotal(),
-        itemCount: store.cart.getItemCount()
-      };
     });
 
     bench('store-react - ecommerce simulation', () => {
@@ -272,15 +275,18 @@ describe('Real-World Scenarios', () => {
         store.checkout.processCheckout();
       }
 
-      return {
-        cartTotal: store.cart.getTotal(),
-        itemCount: store.cart.getItemCount()
-      };
     });
   });
 
+  type TodoState = {
+    todos: Array<{ id: string; text: string; completed: boolean; tags: string[] }>;
+    filter: 'all' | 'active' | 'completed';
+    searchTerm: string;
+    selectedTags: string[];
+  };
+
   describe('Todo App with Filtering', () => {
-    const createTodoApp = (createStore: CreateStore) => {
+    const createTodoApp = (createStore: CreateStore<TodoState>) => {
       const createSlice = createStore({
         todos: [] as Array<{ id: string; text: string; completed: boolean; tags: string[] }>,
         filter: 'all' as 'all' | 'active' | 'completed',
@@ -288,7 +294,7 @@ describe('Real-World Scenarios', () => {
         selectedTags: [] as string[]
       });
 
-      const todos = createSlice(({ get, set }) => ({
+      const todos = createSlice(({ get, set }: { get: () => TodoState; set: (updates: Partial<TodoState>) => void }) => ({
         addTodo: (text: string, tags: string[] = []) => {
           set({
             todos: [...get().todos, {
@@ -325,7 +331,7 @@ describe('Real-World Scenarios', () => {
         }
       }));
 
-      const filters = createSlice(({ get, set }) => ({
+      const filters = createSlice(({ get, set }: { get: () => TodoState; set: (updates: Partial<TodoState>) => void }) => ({
         setFilter: (filter: 'all' | 'active' | 'completed') => {
           set({ filter });
         },
@@ -345,7 +351,7 @@ describe('Real-World Scenarios', () => {
         }
       }));
 
-      const queries = createSlice(({ get }) => ({
+      const queries = createSlice(({ get }: { get: () => TodoState }) => ({
         getFilteredTodos: () => {
           let todos = get().todos;
           
@@ -408,26 +414,20 @@ describe('Real-World Scenarios', () => {
 
       // Apply filters and get results
       store.filters.setFilter('active');
-      let filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
       
       store.filters.setSearchTerm('item 1');
-      filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
       
       store.filters.toggleTag('tag1');
       store.filters.toggleTag('priority0');
-      filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
 
       // Get stats
-      const stats = store.queries.getStats();
+      store.queries.getStats();
       
       // Clear completed
       store.todos.clearCompleted();
-
-      return {
-        remaining: store.queries.getStats().active,
-        filtered: filtered.length,
-        tags: store.queries.getAllTags().length
-      };
     });
 
     bench('redux - todo app simulation', () => {
@@ -446,26 +446,20 @@ describe('Real-World Scenarios', () => {
 
       // Apply filters and get results
       store.filters.setFilter('active');
-      let filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
       
       store.filters.setSearchTerm('item 1');
-      filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
       
       store.filters.toggleTag('tag1');
       store.filters.toggleTag('priority0');
-      filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
 
       // Get stats
-      const stats = store.queries.getStats();
+      store.queries.getStats();
       
       // Clear completed
       store.todos.clearCompleted();
-
-      return {
-        remaining: store.queries.getStats().active,
-        filtered: filtered.length,
-        tags: store.queries.getAllTags().length
-      };
     });
 
     bench('store-react - todo app simulation', () => {
@@ -484,26 +478,20 @@ describe('Real-World Scenarios', () => {
 
       // Apply filters and get results
       store.filters.setFilter('active');
-      let filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
       
       store.filters.setSearchTerm('item 1');
-      filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
       
       store.filters.toggleTag('tag1');
       store.filters.toggleTag('priority0');
-      filtered = store.queries.getFilteredTodos();
+      store.queries.getFilteredTodos();
 
       // Get stats
-      const stats = store.queries.getStats();
+      store.queries.getStats();
       
       // Clear completed
       store.todos.clearCompleted();
-
-      return {
-        remaining: store.queries.getStats().active,
-        filtered: filtered.length,
-        tags: store.queries.getAllTags().length
-      };
     });
   });
 });

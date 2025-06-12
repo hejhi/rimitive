@@ -24,11 +24,10 @@ describe('Adapter Overhead', () => {
         store.setState({ count: i });
       }
       
-      return store.getState().count;
     });
 
     bench('zustand + lattice - state updates', () => {
-      const createApp = (createStore: CreateStore) => {
+      const createApp = (createStore: CreateStore<{ count: number }>) => {
         const createSlice = createStore({ count: 0 });
         const counter = createSlice(({ get, set }) => ({
           increment: () => set({ count: get().count + 1 }),
@@ -43,7 +42,6 @@ describe('Adapter Overhead', () => {
         store.counter.increment();
       }
       
-      return store.counter.getCount();
     });
 
     bench('raw zustand - subscriptions', () => {
@@ -63,7 +61,7 @@ describe('Adapter Overhead', () => {
     });
 
     bench('zustand + lattice - subscriptions', () => {
-      const createApp = (createStore: CreateStore) => {
+      const createApp = (createStore: CreateStore<{ count: number }>) => {
         const createSlice = createStore({ count: 0 });
         const counter = createSlice(({ get, set }) => ({
           increment: () => set({ count: get().count + 1 })
@@ -102,7 +100,7 @@ describe('Adapter Overhead', () => {
       const store = configureStore({
         reducer: { [slice.name]: (state = slice.initialState, action: any) => {
           if (action.type === 'counter/increment') {
-            return { count: state.count + 1 };
+            return { count: (state as any).count + 1 };
           }
           return state;
         }}
@@ -112,11 +110,10 @@ describe('Adapter Overhead', () => {
         store.dispatch({ type: 'counter/increment' });
       }
       
-      return store.getState().counter.count;
     });
 
     bench('redux + lattice - state updates', () => {
-      const createApp = (createStore: CreateStore) => {
+      const createApp = (createStore: CreateStore<{ count: number }>) => {
         const createSlice = createStore({ count: 0 });
         const counter = createSlice(({ get, set }) => ({
           increment: () => set({ count: get().count + 1 }),
@@ -131,7 +128,6 @@ describe('Adapter Overhead', () => {
         store.counter.increment();
       }
       
-      return store.counter.getCount();
     });
   });
 
@@ -143,7 +139,6 @@ describe('Adapter Overhead', () => {
         stores.push(createZustandStore(() => ({ value: i })));
       }
       
-      return stores.length;
     });
 
     bench('zustand + lattice - store creation', () => {
@@ -151,7 +146,7 @@ describe('Adapter Overhead', () => {
       
       for (let i = 0; i < 1000; i++) {
         const value = i;
-        const createApp = (createStore: CreateStore) => {
+        const createApp = (createStore: CreateStore<{ value: number }>) => {
           const createSlice = createStore({ value });
           const slice = createSlice(({ get }) => ({
             getValue: () => get().value
@@ -162,7 +157,6 @@ describe('Adapter Overhead', () => {
         stores.push(createZustandAdapter(createApp));
       }
       
-      return stores.length;
     });
   });
 });

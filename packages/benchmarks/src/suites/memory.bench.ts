@@ -12,7 +12,7 @@ import type { CreateStore } from '@lattice/core';
 
 describe('Memory Usage Patterns', () => {
   describe('Large State Trees', () => {
-    const createLargeStateApp = (size: number) => (createStore: CreateStore) => {
+    const createLargeStateApp = (size: number) => (createStore: CreateStore<any>) => {
       // Create initial state with nested structure
       const initialState: any = {
         users: {},
@@ -91,7 +91,6 @@ describe('Memory Usage Patterns', () => {
         store.posts.updatePost(`post-${i}`, { title: `Updated Post ${i}` });
       }
       
-      return true;
     });
 
     bench('redux - large state (1000 items)', () => {
@@ -103,7 +102,6 @@ describe('Memory Usage Patterns', () => {
         store.posts.updatePost(`post-${i}`, { title: `Updated Post ${i}` });
       }
       
-      return true;
     });
 
     bench('store-react - large state (1000 items)', () => {
@@ -115,23 +113,22 @@ describe('Memory Usage Patterns', () => {
         store.posts.updatePost(`post-${i}`, { title: `Updated Post ${i}` });
       }
       
-      return true;
     });
   });
 
   describe('Subscription Memory Leaks', () => {
     bench('zustand - subscription cleanup', () => {
-      const createApp = (createStore: CreateStore) => {
+      const createApp = (createStore: CreateStore<{ value: number }>) => {
         const createSlice = createStore({ value: 0 });
-        const slice = createSlice(({ get, set }) => ({
+        const slice = createSlice(({ get, set }: any) => ({
           increment: () => set({ value: get().value + 1 }),
           getValue: () => get().value
         }));
         return { slice };
       };
 
-      const stores = [];
-      const allUnsubscribers = [];
+      const stores: any[] = [];
+      const allUnsubscribers: (() => void)[][] = [];
 
       // Create many stores with subscriptions
       for (let i = 0; i < 100; i++) {
@@ -139,7 +136,7 @@ describe('Memory Usage Patterns', () => {
         stores.push(store);
 
         // Add subscriptions to each store
-        const unsubscribers = [];
+        const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
           unsubscribers.push(store.subscribe(() => {}));
         }
@@ -155,25 +152,24 @@ describe('Memory Usage Patterns', () => {
       });
 
       // Destroy stores if possible
-      stores.forEach(store => {
+      stores.forEach((store: any) => {
         if (store.destroy) store.destroy();
       });
 
-      return stores.length;
     });
 
     bench('redux - subscription cleanup', () => {
-      const createApp = (createStore: CreateStore) => {
+      const createApp = (createStore: CreateStore<{ value: number }>) => {
         const createSlice = createStore({ value: 0 });
-        const slice = createSlice(({ get, set }) => ({
+        const slice = createSlice(({ get, set }: any) => ({
           increment: () => set({ value: get().value + 1 }),
           getValue: () => get().value
         }));
         return { slice };
       };
 
-      const stores = [];
-      const allUnsubscribers = [];
+      const stores: any[] = [];
+      const allUnsubscribers: (() => void)[][] = [];
 
       // Create many stores with subscriptions
       for (let i = 0; i < 100; i++) {
@@ -181,7 +177,7 @@ describe('Memory Usage Patterns', () => {
         stores.push(store);
 
         // Add subscriptions to each store
-        const unsubscribers = [];
+        const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
           unsubscribers.push(store.subscribe(() => {}));
         }
@@ -197,25 +193,24 @@ describe('Memory Usage Patterns', () => {
       });
 
       // Destroy stores if possible
-      stores.forEach(store => {
+      stores.forEach((store: any) => {
         if (store.destroy) store.destroy();
       });
 
-      return stores.length;
     });
 
     bench('store-react - subscription cleanup', () => {
-      const createApp = (createStore: CreateStore) => {
+      const createApp = (createStore: CreateStore<{ value: number }>) => {
         const createSlice = createStore({ value: 0 });
-        const slice = createSlice(({ get, set }) => ({
+        const slice = createSlice(({ get, set }: any) => ({
           increment: () => set({ value: get().value + 1 }),
           getValue: () => get().value
         }));
         return { slice };
       };
 
-      const stores = [];
-      const allUnsubscribers = [];
+      const stores: any[] = [];
+      const allUnsubscribers: (() => void)[][] = [];
 
       // Create many stores with subscriptions
       for (let i = 0; i < 100; i++) {
@@ -223,7 +218,7 @@ describe('Memory Usage Patterns', () => {
         stores.push(store);
 
         // Add subscriptions to each store
-        const unsubscribers = [];
+        const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
           unsubscribers.push(store.subscribe(() => {}));
         }
@@ -239,19 +234,18 @@ describe('Memory Usage Patterns', () => {
       });
 
       // Destroy stores if possible
-      stores.forEach(store => {
+      stores.forEach((store: any) => {
         if (store.destroy) store.destroy();
       });
 
-      return stores.length;
     });
   });
 
   describe('Rapid Store Creation/Destruction', () => {
     bench('zustand - rapid lifecycle', () => {
-      const createApp = (value: number) => (createStore: CreateStore) => {
+      const createApp = (value: number) => (createStore: CreateStore<{ value: number; history: number[] }>) => {
         const createSlice = createStore({ value, history: [] as number[] });
-        const slice = createSlice(({ get, set }) => ({
+        const slice = createSlice(({ get, set }: any) => ({
           update: (newValue: number) => {
             const history = [...get().history, get().value];
             set({ value: newValue, history });
@@ -277,16 +271,15 @@ describe('Memory Usage Patterns', () => {
         unsub();
 
         // Destroy if possible
-        if (store.destroy) store.destroy();
+        if ((store as any).destroy) (store as any).destroy();
       }
 
-      return totalValue;
     });
 
     bench('redux - rapid lifecycle', () => {
-      const createApp = (value: number) => (createStore: CreateStore) => {
+      const createApp = (value: number) => (createStore: CreateStore<{ value: number; history: number[] }>) => {
         const createSlice = createStore({ value, history: [] as number[] });
-        const slice = createSlice(({ get, set }) => ({
+        const slice = createSlice(({ get, set }: any) => ({
           update: (newValue: number) => {
             const history = [...get().history, get().value];
             set({ value: newValue, history });
@@ -312,16 +305,15 @@ describe('Memory Usage Patterns', () => {
         unsub();
 
         // Destroy if possible
-        if (store.destroy) store.destroy();
+        if ((store as any).destroy) (store as any).destroy();
       }
 
-      return totalValue;
     });
 
     bench('store-react - rapid lifecycle', () => {
-      const createApp = (value: number) => (createStore: CreateStore) => {
+      const createApp = (value: number) => (createStore: CreateStore<{ value: number; history: number[] }>) => {
         const createSlice = createStore({ value, history: [] as number[] });
-        const slice = createSlice(({ get, set }) => ({
+        const slice = createSlice(({ get, set }: any) => ({
           update: (newValue: number) => {
             const history = [...get().history, get().value];
             set({ value: newValue, history });
@@ -347,10 +339,9 @@ describe('Memory Usage Patterns', () => {
         unsub();
 
         // Destroy if possible
-        if (store.destroy) store.destroy();
+        if ((store as any).destroy) (store as any).destroy();
       }
 
-      return totalValue;
     });
   });
 });

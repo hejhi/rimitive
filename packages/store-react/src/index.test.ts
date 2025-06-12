@@ -12,6 +12,7 @@ import {
   createStoreContext,
   createStoreProvider,
   shallowEqual,
+  StoreApi,
 } from './index';
 
 describe('store-react', () => {
@@ -36,7 +37,7 @@ describe('store-react', () => {
         count: number;
         increment: () => void;
       }
-      
+
       const { result } = renderHook(() =>
         useStore<CounterStore>((set, get) => ({
           count: 0,
@@ -120,7 +121,8 @@ describe('store-react', () => {
               ),
             });
           },
-          setFilter: (filter: 'all' | 'active' | 'completed') => set({ filter }),
+          setFilter: (filter: 'all' | 'active' | 'completed') =>
+            set({ filter }),
         }))
       );
 
@@ -186,11 +188,11 @@ describe('store-react', () => {
       );
 
       const { result: countResult } = renderHook(() =>
-        useStoreSelector(storeResult.current, s => s.count)
+        useStoreSelector(storeResult.current, (s) => s.count)
       );
 
       const { result: nameResult } = renderHook(() =>
-        useStoreSelector(storeResult.current, s => s.name)
+        useStoreSelector(storeResult.current, (s) => s.name)
       );
 
       expect(countResult.current).toBe(0);
@@ -231,7 +233,7 @@ describe('store-react', () => {
       let countRenders = 0;
       renderHook(() => {
         countRenders++;
-        return useStoreSelector(storeResult.current, s => s.count);
+        return useStoreSelector(storeResult.current, (s) => s.count);
       });
 
       const initialCountRenders = countRenders;
@@ -272,7 +274,7 @@ describe('store-react', () => {
         renders++;
         return useStoreSelector(
           storeResult.current,
-          s => s.user,
+          (s) => s.user,
           shallowEqual
         );
       });
@@ -312,10 +314,7 @@ describe('store-react', () => {
       );
 
       const { result: computedResult } = renderHook(() =>
-        useStoreSelector(
-          storeResult.current,
-          s => s.count * s.multiplier
-        )
+        useStoreSelector(storeResult.current, (s) => s.count * s.multiplier)
       );
 
       expect(computedResult.current).toBe(0);
@@ -350,9 +349,7 @@ describe('store-react', () => {
 
       const callback = vi.fn();
 
-      renderHook(() =>
-        useStoreSubscribe(storeResult.current, callback)
-      );
+      renderHook(() => useStoreSubscribe(storeResult.current, callback));
 
       // Should be called immediately
       expect(callback).toHaveBeenCalledTimes(1);
@@ -433,7 +430,7 @@ describe('store-react', () => {
 
       // Render the component tree
       renderHook(() => null, {
-        wrapper: Parent
+        wrapper: Parent,
       });
 
       expect(childStore).not.toBeNull();
@@ -469,7 +466,8 @@ describe('store-react', () => {
         logout: () => void;
       }
 
-      const { StoreProvider, useStore: useAppStore } = createStoreProvider<AppStore>();
+      const { StoreProvider, useStore: useAppStore } =
+        createStoreProvider<AppStore>();
 
       let profileStore: AppStore | null = null;
 
@@ -485,15 +483,15 @@ describe('store-react', () => {
           logout: () => set({ user: null }),
         }));
 
-        return React.createElement(
-          StoreProvider,
-          { store, children: React.createElement(UserProfile) }
-        );
+        return React.createElement(StoreProvider, {
+          store,
+          children: React.createElement(UserProfile),
+        });
       }
 
       // Render the component tree
       renderHook(() => null, {
-        wrapper: App
+        wrapper: App,
       });
 
       expect(profileStore).not.toBeNull();
@@ -539,17 +537,14 @@ describe('store-react', () => {
     });
 
     it('should return false for deep changes', () => {
-      expect(shallowEqual(
-        { a: { b: 1 } },
-        { a: { b: 1 } }
-      )).toBe(false); // Different object references
+      expect(shallowEqual({ a: { b: 1 } }, { a: { b: 1 } })).toBe(false); // Different object references
     });
   });
 
   describe('Performance', () => {
     it('should maintain stable API references across renders', () => {
       const apiRefs: StoreApi<{ count: number }>[] = [];
-      
+
       const { rerender } = renderHook(() => {
         const store = useStore(() => ({ count: 0 }));
         apiRefs.push({
@@ -578,7 +573,7 @@ describe('store-react', () => {
 
     it('should not create new result objects when state has not changed', () => {
       const results: any[] = [];
-      
+
       const { result, rerender } = renderHook(() => {
         const store = useStore(() => ({ count: 0, name: 'test' }));
         results.push(store);
@@ -588,17 +583,17 @@ describe('store-react', () => {
       // Force re-renders without state changes
       rerender();
       rerender();
-      
+
       // All results should be the same object reference
       expect(results.length).toBe(3);
       expect(results[1]).toBe(results[0]);
       expect(results[2]).toBe(results[0]);
-      
+
       // Change state
       act(() => {
         result.current.setState({ count: 1 });
       });
-      
+
       // New object should be created after state change
       expect(results.length).toBe(4);
       expect(results[3]).not.toBe(results[0]);
@@ -614,48 +609,46 @@ describe('store-react', () => {
       );
 
       const startTime = performance.now();
-      
+
       // Perform 1000 increments
       act(() => {
         for (let i = 0; i < 1000; i++) {
           result.current.increment();
         }
       });
-      
+
       const endTime = performance.now();
-      
+
       expect(result.current.count).toBe(1000);
       // Should complete in under 50ms (typically ~5-10ms)
       expect(endTime - startTime).toBeLessThan(50);
     });
 
     it('should efficiently handle many subscribers', () => {
-      const { result } = renderHook(() =>
-        useStore(() => ({ count: 0 }))
-      );
+      const { result } = renderHook(() => useStore(() => ({ count: 0 })));
 
       const callbacks: (() => void)[] = [];
       const unsubscribes: (() => void)[] = [];
-      
+
       // Add 100 subscribers
       for (let i = 0; i < 100; i++) {
         const callback = vi.fn();
         callbacks.push(callback);
         unsubscribes.push(result.current.subscribe(callback));
       }
-      
+
       // Update state
       act(() => {
         result.current.setState({ count: 1 });
       });
-      
+
       // All callbacks should be called once
-      callbacks.forEach(callback => {
+      callbacks.forEach((callback) => {
         expect(callback).toHaveBeenCalledTimes(1);
       });
-      
+
       // Clean up
-      unsubscribes.forEach(unsub => unsub());
+      unsubscribes.forEach((unsub) => unsub());
     });
   });
 });
