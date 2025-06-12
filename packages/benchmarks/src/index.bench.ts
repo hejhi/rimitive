@@ -16,6 +16,8 @@ import './suites/head-to-head.bench';
 import './suites/adapter-rankings.bench';
 import './suites/real-world.bench';
 import './suites/memory.bench';
+import './suites/react-transitions.bench';
+import './suites/context-vs-store.bench';
 
 describe('Lattice Benchmarks', () => {
   bench('warmup', () => {
