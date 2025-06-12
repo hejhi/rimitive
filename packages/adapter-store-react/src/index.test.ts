@@ -191,7 +191,9 @@ describe('store-react adapter', () => {
         setState: (updates) => {
           const partial = typeof updates === 'function' ? updates(state) : updates;
           state = { ...state, ...partial };
-          listeners.forEach(l => l());
+          // Use Array.from to handle concurrent modifications
+          const currentListeners = Array.from(listeners);
+          currentListeners.forEach(l => l());
         },
         subscribe: (listener) => {
           listeners.add(listener);
