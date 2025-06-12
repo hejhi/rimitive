@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@lattice/core": "workspace:*",
+    "@lattice/runtime": "workspace:*",
     "@lattice/adapter-zustand": "workspace:*",
     "@lattice/adapter-redux": "workspace:*",
     "@lattice/adapter-pinia": "workspace:*",

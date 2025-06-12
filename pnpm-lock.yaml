@@ -277,6 +277,9 @@ importers:
       '@lattice/core':
         specifier: workspace:*
         version: link:../core
+      '@lattice/runtime':
+        specifier: workspace:*
+        version: link:../runtime
       '@lattice/store-react':
         specifier: workspace:*
         version: link:../store-react

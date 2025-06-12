@@ -11,7 +11,7 @@
  * - Optimized re-renders based on slice method results
  */
 
-import { useRef, useCallback, useSyncExternalStore } from 'react';
+import { useRef, useCallback, useSyncExternalStore, startTransition } from 'react';
 import { subscribeToSlices, shallowEqual, type SubscribableStore } from '@lattice/core';
 
 // Performance monitoring for development warnings
@@ -45,7 +45,8 @@ const PERF_WARNING_WINDOW = 100; // Within 100ms
 export function useSliceSelector<App, Selected>(
   store: App & SubscribableStore,
   selector: (slices: App) => Selected,
-  equalityFn?: (a: Selected, b: Selected) => boolean
+  equalityFn?: (a: Selected, b: Selected) => boolean,
+  useTransitions = false
 ): Selected {
   // Track store creation in development for performance warnings
   if (process.env.NODE_ENV !== 'production') {
@@ -95,14 +96,20 @@ export function useSliceSelector<App, Selected>(
           
         if (!isEqual) {
           selectedValueRef.current = nextValue;
-          onStoreChange();
+          if (useTransitions) {
+            startTransition(() => {
+              onStoreChange();
+            });
+          } else {
+            onStoreChange();
+          }
         }
         return nextValue;
       },
       () => {}, // Empty callback since we handle the change detection above
       { fireImmediately: false }
     );
-  }, [store]);
+  }, [store, useTransitions]);
   
   const getSnapshot = useCallback(() => selectedValueRef.current!, []);
   const getServerSnapshot = useCallback(() => selectorRef.current(store), [store]);
@@ -169,9 +176,10 @@ export function useSlice<App, K extends keyof App>(
  */
 export function useSliceValues<App, Selected extends Record<string, unknown>>(
   store: App & SubscribableStore,
-  selector: (slices: App) => Selected
+  selector: (slices: App) => Selected,
+  useTransitions = false
 ): Selected {
-  return useSliceSelector(store, selector, shallowEqual);
+  return useSliceSelector(store, selector, shallowEqual, useTransitions);
 }
 
 /**
@@ -207,12 +215,13 @@ export function useSliceValues<App, Selected extends Record<string, unknown>>(
 export function useLattice<App, Selected>(
   store: App & SubscribableStore,
   selector: (slices: App) => Selected,
-  equalityFn?: (a: Selected, b: Selected) => boolean
+  equalityFn?: (a: Selected, b: Selected) => boolean,
+  useTransitions = false
 ): {
   values: Selected;
   slices: App;
 } {
-  const values = useSliceSelector(store, selector, equalityFn);
+  const values = useSliceSelector(store, selector, equalityFn, useTransitions);
   
   // Stable reference optimization - only create new object when values change
   const resultRef = useRef<{ values: Selected; slices: App }>();

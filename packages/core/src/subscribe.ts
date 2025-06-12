@@ -35,6 +35,13 @@ export interface SubscribeOptions<T> {
    * Defaults to false
    */
   fireImmediately?: boolean;
+  
+  /**
+   * Whether to use React transitions for updates (React 18+).
+   * When true, updates will be marked as non-urgent using startTransition.
+   * Defaults to false
+   */
+  useTransition?: boolean;
 }
 
 /**
@@ -64,6 +71,15 @@ export interface SubscribeOptions<T> {
  * );
  * ```
  */
+// Import startTransition if available (React 18+)
+let startTransition: ((callback: () => void) => void) | undefined;
+try {
+  const React = require('react');
+  startTransition = React.startTransition;
+} catch {
+  // React not available or version < 18
+}
+
 export function subscribeToSlices<App, Selected>(
   store: App & SubscribableStore,
   selector: (slices: App) => Selected,
@@ -72,11 +88,21 @@ export function subscribeToSlices<App, Selected>(
 ): () => void {
   const { 
     equalityFn = Object.is,
-    fireImmediately = false 
+    fireImmediately = false,
+    useTransition = false 
   } = options;
   
   let prevSelected: Selected | undefined;
   let isFirstRun = true;
+  
+  // Wrap callback in transition if requested and available
+  const wrappedCallback = useTransition && startTransition
+    ? (selected: Selected, prevSelected: Selected | undefined) => {
+        startTransition(() => {
+          callback(selected, prevSelected);
+        });
+      }
+    : callback;
   
   // Run selector and check for changes
   const checkForUpdates = () => {
@@ -88,7 +114,7 @@ export function subscribeToSlices<App, Selected>(
         isFirstRun = false;
         prevSelected = nextSelected;
         if (fireImmediately) {
-          callback(nextSelected, undefined);
+          wrappedCallback(nextSelected, undefined);
         }
         return;
       }
@@ -99,7 +125,7 @@ export function subscribeToSlices<App, Selected>(
       if (!isEqual) {
         const oldSelected = prevSelected;
         prevSelected = nextSelected;
-        callback(nextSelected, oldSelected);
+        wrappedCallback(nextSelected, oldSelected);
       }
     } catch (error) {
       // If selector throws, we should handle it gracefully
