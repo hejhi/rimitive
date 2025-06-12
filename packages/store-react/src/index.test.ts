@@ -2,412 +2,547 @@
  * @vitest-environment happy-dom
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useLattice, LatticeProvider, useLatticeStore } from './index';
-import { createModel, createSlice } from '@lattice/core';
 import React from 'react';
+import {
+  useStore,
+  useStoreSelector,
+  useStoreSubscribe,
+  createStoreContext,
+  createStoreProvider,
+  shallowEqual,
+} from './index';
 
-describe('React Adapter', () => {
-  describe('useLattice hook', () => {
-    it('should create a store with actions and views', () => {
-      const counter = () => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
+describe('store-react', () => {
+  describe('useStore', () => {
+    it('should create a store with initial state', () => {
+      const { result } = renderHook(() =>
+        useStore(() => ({
           count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
-
-        const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-        }));
-
-        const views = {
-          count: createSlice(model, (m) => ({ value: m.count })),
-        };
-
-        return { model, actions, views };
-      };
-
-      const { result } = renderHook(() => useLattice(counter));
-
-      expect(result.current.actions).toBeDefined();
-      expect(result.current.views).toBeDefined();
-      expect(typeof result.current.subscribe).toBe('function');
-      expect(typeof result.current.actions.increment).toBe('function');
-      expect(typeof result.current.views.count).toBe('function');
-    });
-
-    it('should update state when actions are called', () => {
-      const counter = () => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
-
-        const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-        }));
-
-        const views = {
-          count: createSlice(model, (m) => ({ value: m.count })),
-        };
-
-        return { model, actions, views };
-      };
-
-      const { result } = renderHook(() => useLattice(counter));
-
-      expect(result.current.views.count().value).toBe(0);
-
-      act(() => {
-        result.current.actions.increment();
-      });
-
-      expect(result.current.views.count().value).toBe(1);
-
-      act(() => {
-        result.current.actions.increment();
-      });
-
-      expect(result.current.views.count().value).toBe(2);
-    });
-
-    it('should support subscriptions', () => {
-      const counter = () => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
-        }));
-
-        const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-        }));
-
-        const views = {
-          count: createSlice(model, (m) => ({ value: m.count })),
-        };
-
-        return { model, actions, views };
-      };
-
-      const { result } = renderHook(() => useLattice(counter));
-
-      const updates: Array<{ value: number }> = [];
-      const unsubscribe = result.current.subscribe(
-        (views) => views.count(),
-        (count) => updates.push(count)
+          name: 'test',
+        }))
       );
 
-      act(() => {
-        result.current.actions.increment();
-      });
-
-      act(() => {
-        result.current.actions.increment();
-      });
-
-      expect(updates).toHaveLength(2);
-      expect(updates[0]).toEqual({ value: 1 });
-      expect(updates[1]).toEqual({ value: 2 });
-
-      unsubscribe();
+      expect(result.current.count).toBe(0);
+      expect(result.current.name).toBe('test');
+      expect(typeof result.current.getState).toBe('function');
+      expect(typeof result.current.setState).toBe('function');
+      expect(typeof result.current.subscribe).toBe('function');
     });
 
-    it('should clean up on unmount', () => {
-      const counter = () => {
-        const model = createModel<{
-          count: number;
-        }>(() => ({
+    it('should update state with setState', () => {
+      interface CounterStore {
+        count: number;
+        increment: () => void;
+      }
+      
+      const { result } = renderHook(() =>
+        useStore<CounterStore>((set, get) => ({
           count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }))
+      );
+
+      expect(result.current.count).toBe(0);
+
+      act(() => {
+        result.current.increment();
+      });
+
+      expect(result.current.count).toBe(1);
+
+      act(() => {
+        result.current.setState({ count: 10 });
+      });
+
+      expect(result.current.count).toBe(10);
+    });
+
+    it('should not re-render if state does not change', () => {
+      let renderCount = 0;
+
+      interface CountStore {
+        count: number;
+        setCount: (count: number) => void;
+      }
+
+      const { result } = renderHook(() => {
+        renderCount++;
+        return useStore<CountStore>((set) => ({
+          count: 0,
+          setCount: (count: number) => set({ count }),
         }));
+      });
 
-        return {
-          model,
-          actions: createSlice(model, () => ({})),
-          views: {},
-        };
-      };
+      const initialRenderCount = renderCount;
 
-      const { result, unmount } = renderHook(() => useLattice(counter));
+      act(() => {
+        result.current.setCount(0); // Same value
+      });
+
+      expect(renderCount).toBe(initialRenderCount);
+
+      act(() => {
+        result.current.setCount(1); // Different value
+      });
+
+      expect(renderCount).toBe(initialRenderCount + 1);
+    });
+
+    it('should support complex state updates', () => {
+      interface Todo {
+        id: number;
+        text: string;
+        done: boolean;
+      }
+
+      interface TodoStore {
+        todos: Todo[];
+        filter: 'all' | 'active' | 'completed';
+        addTodo: (text: string) => void;
+        toggleTodo: (id: number) => void;
+        setFilter: (filter: 'all' | 'active' | 'completed') => void;
+      }
+
+      const { result } = renderHook(() =>
+        useStore<TodoStore>((set, get) => ({
+          todos: [] as Todo[],
+          filter: 'all' as 'all' | 'active' | 'completed',
+          addTodo: (text: string) => {
+            const todo: Todo = { id: Date.now(), text, done: false };
+            set({ todos: [...get().todos, todo] });
+          },
+          toggleTodo: (id: number) => {
+            set({
+              todos: get().todos.map((t: Todo) =>
+                t.id === id ? { ...t, done: !t.done } : t
+              ),
+            });
+          },
+          setFilter: (filter: 'all' | 'active' | 'completed') => set({ filter }),
+        }))
+      );
+
+      expect(result.current.todos).toHaveLength(0);
+
+      act(() => {
+        result.current.addTodo('Test todo');
+      });
+
+      expect(result.current.todos).toHaveLength(1);
+      expect(result.current.todos[0]?.text).toBe('Test todo');
+      expect(result.current.todos[0]?.done).toBe(false);
+
+      const todoId = result.current.todos[0]?.id ?? 0;
+
+      act(() => {
+        result.current.toggleTodo(todoId);
+      });
+
+      expect(result.current.todos[0]?.done).toBe(true);
+
+      act(() => {
+        result.current.setFilter('completed');
+      });
+
+      expect(result.current.filter).toBe('completed');
+    });
+
+    it('should cleanup on unmount', () => {
+      const { result, unmount } = renderHook(() =>
+        useStore(() => ({
+          count: 0,
+        }))
+      );
 
       const store = result.current;
-      let updateCount = 0;
-      const unsubscribe = store.subscribe(
-        () => ({}),
-        () => updateCount++
-      );
+      const listener = vi.fn();
+      const unsubscribe = store.subscribe(listener);
 
       unmount();
 
-      // Subscription should still work after unmount since it's external
+      // Should not throw
       expect(() => unsubscribe()).not.toThrow();
     });
   });
 
-  describe('LatticeProvider and useLatticeStore', () => {
-    it('should provide store to child components', () => {
-      const counter = () => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
+  describe('useStoreSelector', () => {
+    it('should select values from store', () => {
+      interface TestStore {
+        count: number;
+        name: string;
+        increment: () => void;
+        setName: (name: string) => void;
+      }
+
+      const { result: storeResult } = renderHook(() =>
+        useStore<TestStore>((set, get) => ({
+          count: 0,
+          name: 'test',
+          increment: () => set({ count: get().count + 1 }),
+          setName: (name: string) => set({ name }),
+        }))
+      );
+
+      const { result: countResult } = renderHook(() =>
+        useStoreSelector(storeResult.current, s => s.count)
+      );
+
+      const { result: nameResult } = renderHook(() =>
+        useStoreSelector(storeResult.current, s => s.name)
+      );
+
+      expect(countResult.current).toBe(0);
+      expect(nameResult.current).toBe('test');
+
+      act(() => {
+        storeResult.current.increment();
+      });
+
+      expect(countResult.current).toBe(1);
+      expect(nameResult.current).toBe('test');
+
+      act(() => {
+        storeResult.current.setName('new name');
+      });
+
+      expect(countResult.current).toBe(1);
+      expect(nameResult.current).toBe('new name');
+    });
+
+    it('should only re-render when selected value changes', () => {
+      interface TestStore {
+        count: number;
+        name: string;
+        increment: () => void;
+        setName: (name: string) => void;
+      }
+
+      const { result: storeResult } = renderHook(() =>
+        useStore<TestStore>((set, get) => ({
+          count: 0,
+          name: 'test',
+          increment: () => set({ count: get().count + 1 }),
+          setName: (name: string) => set({ name }),
+        }))
+      );
+
+      let countRenders = 0;
+      renderHook(() => {
+        countRenders++;
+        return useStoreSelector(storeResult.current, s => s.count);
+      });
+
+      const initialCountRenders = countRenders;
+
+      act(() => {
+        storeResult.current.setName('new name'); // Should not trigger re-render
+      });
+
+      expect(countRenders).toBe(initialCountRenders);
+
+      act(() => {
+        storeResult.current.increment(); // Should trigger re-render
+      });
+
+      expect(countRenders).toBe(initialCountRenders + 1);
+    });
+
+    it('should use custom equality function', () => {
+      interface User {
+        id: number;
+        name: string;
+      }
+
+      interface UserStore {
+        user: User;
+        setUser: (user: User) => void;
+      }
+
+      const { result: storeResult } = renderHook(() =>
+        useStore<UserStore>((set) => ({
+          user: { id: 1, name: 'test' },
+          setUser: (user: User) => set({ user }),
+        }))
+      );
+
+      let renders = 0;
+      renderHook(() => {
+        renders++;
+        return useStoreSelector(
+          storeResult.current,
+          s => s.user,
+          shallowEqual
+        );
+      });
+
+      const initialRenders = renders;
+
+      act(() => {
+        // Same values, should not re-render with shallow equality
+        storeResult.current.setUser({ id: 1, name: 'test' });
+      });
+
+      expect(renders).toBe(initialRenders);
+
+      act(() => {
+        // Different values, should re-render
+        storeResult.current.setUser({ id: 2, name: 'test' });
+      });
+
+      expect(renders).toBe(initialRenders + 1);
+    });
+
+    it('should support computed selectors', () => {
+      interface ComputedStore {
+        count: number;
+        multiplier: number;
+        increment: () => void;
+        setMultiplier: (m: number) => void;
+      }
+
+      const { result: storeResult } = renderHook(() =>
+        useStore<ComputedStore>((set, get) => ({
+          count: 0,
+          multiplier: 2,
+          increment: () => set({ count: get().count + 1 }),
+          setMultiplier: (m: number) => set({ multiplier: m }),
+        }))
+      );
+
+      const { result: computedResult } = renderHook(() =>
+        useStoreSelector(
+          storeResult.current,
+          s => s.count * s.multiplier
+        )
+      );
+
+      expect(computedResult.current).toBe(0);
+
+      act(() => {
+        storeResult.current.increment();
+      });
+
+      expect(computedResult.current).toBe(2);
+
+      act(() => {
+        storeResult.current.setMultiplier(3);
+      });
+
+      expect(computedResult.current).toBe(3);
+    });
+  });
+
+  describe('useStoreSubscribe', () => {
+    it('should call callback on store changes', () => {
+      interface CounterStore {
+        count: number;
+        increment: () => void;
+      }
+
+      const { result: storeResult } = renderHook(() =>
+        useStore<CounterStore>((set, get) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }))
+      );
+
+      const callback = vi.fn();
+
+      renderHook(() =>
+        useStoreSubscribe(storeResult.current, callback)
+      );
+
+      // Should be called immediately
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(
+        expect.objectContaining({ count: 0 })
+      );
+
+      act(() => {
+        storeResult.current.increment();
+      });
+
+      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenLastCalledWith(
+        expect.objectContaining({ count: 1 })
+      );
+    });
+
+    it('should cleanup on unmount', () => {
+      interface CounterStore {
+        count: number;
+        increment: () => void;
+      }
+
+      const { result: storeResult } = renderHook(() =>
+        useStore<CounterStore>((set, get) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }))
+      );
+
+      const callback = vi.fn();
+
+      const { unmount } = renderHook(() =>
+        useStoreSubscribe(storeResult.current, callback)
+      );
+
+      callback.mockClear();
+
+      unmount();
+
+      act(() => {
+        storeResult.current.increment();
+      });
+
+      // Should not be called after unmount
+      expect(callback).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createStoreContext', () => {
+    it('should provide store to children', () => {
+      interface CounterStore {
+        count: number;
+        increment: () => void;
+      }
+
+      const CounterContext = createStoreContext<CounterStore>();
+
+      let childStore: CounterStore | null = null;
+
+      function Child() {
+        childStore = CounterContext.useStore();
+        return null;
+      }
+
+      function Parent() {
+        const store = useStore<CounterStore>((set, get) => ({
           count: 0,
           increment: () => set({ count: get().count + 1 }),
         }));
 
-        const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-        }));
+        return React.createElement(
+          CounterContext.Provider,
+          { value: store },
+          React.createElement(Child)
+        );
+      }
 
-        const views = {
-          count: createSlice(model, (m) => ({ value: m.count })),
-        };
+      // Render the component tree
+      renderHook(() => null, {
+        wrapper: Parent
+      });
 
-        return { model, actions, views };
-      };
+      expect(childStore).not.toBeNull();
+      expect(childStore!.count).toBe(0);
 
-      // Need to create a wrapper component that uses the hook
-      const StoreWrapper = ({ children }: { children: React.ReactNode }) => {
-        const store = useLattice(counter);
-        return React.createElement(LatticeProvider as any, { store }, children);
-      };
+      act(() => {
+        childStore!.increment();
+      });
 
-      const wrapper = ({ children }: { children: React.ReactNode }) =>
-        React.createElement(StoreWrapper, { children });
-
-      const { result } = renderHook(
-        () =>
-          useLatticeStore<
-            { count: number; increment: () => void },
-            { increment: () => void },
-            { count: () => { value: number } }
-          >(),
-        { wrapper }
-      );
-
-      expect(result.current.actions).toBeDefined();
-      expect(result.current.views).toBeDefined();
-      expect(typeof result.current.actions.increment).toBe('function');
+      expect(childStore!.count).toBe(1);
     });
 
-    it('should throw error when used outside provider', () => {
+    it('should throw when used outside provider', () => {
+      const Context = createStoreContext();
+
       // Suppress console.error for this test
       const originalError = console.error;
       console.error = () => {};
 
       expect(() => {
-        renderHook(() => useLatticeStore());
-      }).toThrow('useLatticeStore must be used within a LatticeProvider');
+        renderHook(() => Context.useStore());
+      }).toThrow('useStore must be used within a Provider');
 
       console.error = originalError;
     });
+  });
 
-    it('should support store prop pattern', () => {
-      const counter = () => {
-        const model = createModel<{
-          count: number;
-          increment: () => void;
-        }>(({ set, get }) => ({
-          count: 0,
-          increment: () => set({ count: get().count + 1 }),
+  describe('createStoreProvider', () => {
+    it('should create provider and hook', () => {
+      interface AppStore {
+        user: string | null;
+        login: (user: string) => void;
+        logout: () => void;
+      }
+
+      const { StoreProvider, useStore: useAppStore } = createStoreProvider<AppStore>();
+
+      let profileStore: AppStore | null = null;
+
+      function UserProfile() {
+        profileStore = useAppStore();
+        return null;
+      }
+
+      function App() {
+        const store = useStore<AppStore>((set) => ({
+          user: null as string | null,
+          login: (user: string) => set({ user }),
+          logout: () => set({ user: null }),
         }));
 
-        const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-        }));
+        return React.createElement(
+          StoreProvider,
+          { store, children: React.createElement(UserProfile) }
+        );
+      }
 
-        const views = {
-          count: createSlice(model, (m) => ({ value: m.count })),
-        };
-
-        return { model, actions, views };
-      };
-
-      // Need to create a wrapper component that uses the hook
-      const StoreWrapper = ({ children }: { children: React.ReactNode }) => {
-        const store = useLattice(counter);
-        return React.createElement(LatticeProvider as any, { store }, children);
-      };
-
-      const wrapper = ({ children }: { children: React.ReactNode }) =>
-        React.createElement(StoreWrapper, { children });
-
-      const { result } = renderHook(
-        () =>
-          useLatticeStore<
-            { count: number; increment: () => void },
-            { increment: () => void },
-            { count: () => { value: number } }
-          >(),
-        { wrapper }
-      );
-
-      expect(result.current.actions).toBeDefined();
-      expect(result.current.views).toBeDefined();
-      expect(typeof result.current.actions.increment).toBe('function');
-
-      // Test that actions work
-      act(() => {
-        result.current.actions.increment();
+      // Render the component tree
+      renderHook(() => null, {
+        wrapper: App
       });
 
-      expect(result.current.views.count().value).toBe(1);
+      expect(profileStore).not.toBeNull();
+      expect(profileStore!.user).toBeNull();
+
+      act(() => {
+        profileStore!.login('test-user');
+      });
+
+      expect(profileStore!.user).toBe('test-user');
+
+      act(() => {
+        profileStore!.logout();
+      });
+
+      expect(profileStore!.user).toBeNull();
+    });
+  });
+
+  describe('shallowEqual', () => {
+    it('should return true for identical values', () => {
+      const obj = { a: 1 };
+      expect(shallowEqual(obj, obj)).toBe(true);
+      expect(shallowEqual(1, 1)).toBe(true);
+      expect(shallowEqual('test', 'test')).toBe(true);
+      expect(shallowEqual(null, null)).toBe(true);
+      expect(shallowEqual(undefined, undefined)).toBe(true);
+    });
+
+    it('should return true for shallow equal objects', () => {
+      expect(shallowEqual({ a: 1, b: 2 }, { a: 1, b: 2 })).toBe(true);
+      expect(shallowEqual({}, {})).toBe(true);
+    });
+
+    it('should return false for different values', () => {
+      expect(shallowEqual({ a: 1 }, { a: 2 })).toBe(false);
+      expect(shallowEqual({ a: 1 }, { b: 1 })).toBe(false);
+      expect(shallowEqual({ a: 1 }, { a: 1, b: 2 })).toBe(false);
+      expect(shallowEqual(1, 2)).toBe(false);
+      expect(shallowEqual('a', 'b')).toBe(false);
+      expect(shallowEqual(null, undefined)).toBe(false);
+      expect(shallowEqual({}, null)).toBe(false);
+    });
+
+    it('should return false for deep changes', () => {
+      expect(shallowEqual(
+        { a: { b: 1 } },
+        { a: { b: 1 } }
+      )).toBe(false); // Different object references
     });
   });
 });
-
-if (import.meta.vitest) {
-  const { describe, it, expect } = import.meta.vitest;
-  const { createModel, createSlice } = await import('@lattice/core');
-
-  describe('React Adapter - in-source tests', () => {
-    it('should handle complex models with multiple slices', () => {
-      const todoApp = () => {
-        const model = createModel<{
-          todos: Array<{ id: number; text: string; done: boolean }>;
-          filter: 'all' | 'active' | 'completed';
-          addTodo: (text: string) => void;
-          toggleTodo: (id: number) => void;
-          setFilter: (filter: 'all' | 'active' | 'completed') => void;
-        }>(({ set, get }) => ({
-          todos: [],
-          filter: 'all',
-          addTodo: (text) => {
-            const { todos } = get();
-            set({
-              todos: [...todos, { id: Date.now(), text, done: false }],
-            });
-          },
-          toggleTodo: (id) => {
-            const { todos } = get();
-            set({
-              todos: todos.map((todo) =>
-                todo.id === id ? { ...todo, done: !todo.done } : todo
-              ),
-            });
-          },
-          setFilter: (filter) => set({ filter }),
-        }));
-
-        const actions = createSlice(model, (m) => ({
-          addTodo: m.addTodo,
-          toggleTodo: m.toggleTodo,
-          setFilter: m.setFilter,
-        }));
-
-        const todosView = createSlice(model, (m) => {
-          const todos =
-            m.filter === 'all'
-              ? m.todos
-              : m.filter === 'active'
-                ? m.todos.filter((t) => !t.done)
-                : m.todos.filter((t) => t.done);
-
-          return {
-            todos,
-            count: todos.length,
-            filter: m.filter,
-          };
-        });
-
-        return {
-          model,
-          actions,
-          views: { todos: todosView },
-        };
-      };
-
-      // This would be used in a React component
-      // const store = useLattice(todoApp);
-      // Since we're in a non-React context, we can't test the hook directly
-      // but we've verified the types compile correctly
-      expect(todoApp).toBeDefined();
-    });
-
-    it('should support fine-grained updates with selective listeners', async () => {
-      const counter = () => {
-        const model = createModel<{
-          count: number;
-          name: string;
-          increment: () => void;
-          setName: (name: string) => void;
-        }>(({ set, get }) => ({
-          count: 0,
-          name: 'Test',
-          increment: () => set({ count: get().count + 1 }),
-          setName: (name: string) => set({ name }),
-        }));
-
-        const actions = createSlice(model, (m) => ({
-          increment: m.increment,
-          setName: m.setName,
-        }));
-
-        const countView = createSlice(model, (m) => ({
-          count: m.count,
-        }));
-
-        const nameView = createSlice(model, (m) => ({
-          name: m.name,
-        }));
-
-        return {
-          model,
-          actions,
-          views: { count: countView, name: nameView },
-        };
-      };
-
-      const { result } = renderHook(() => useLattice(counter));
-
-      // Track calls to subscribers
-      let countSubscriberCalls = 0;
-      let nameSubscriberCalls = 0;
-
-      // Subscribe to count changes only
-      const unsubscribeCount = result.current.subscribe(
-        (views) => views.count().count,
-        () => {
-          countSubscriberCalls++;
-        }
-      );
-
-      // Subscribe to name changes only
-      const unsubscribeName = result.current.subscribe(
-        (views) => views.name().name,
-        () => {
-          nameSubscriberCalls++;
-        }
-      );
-
-      // Change count - should only trigger count subscriber
-      await act(async () => {
-        result.current.actions.increment();
-      });
-
-      expect(countSubscriberCalls).toBe(1);
-      expect(nameSubscriberCalls).toBe(0);
-
-      // Change name - should only trigger name subscriber
-      await act(async () => {
-        result.current.actions.setName('New Name');
-      });
-
-      expect(countSubscriberCalls).toBe(1);
-      expect(nameSubscriberCalls).toBe(1);
-
-      // Cleanup
-      unsubscribeCount();
-      unsubscribeName();
-    });
-  });
-}

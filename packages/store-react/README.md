@@ -1,115 +1,92 @@
 # @lattice/store-react
 
-Lightweight state store for React - create reactive stores using only React hooks, with zero external dependencies.
+Lightweight, component-scoped state management for React. Zero dependencies, full TypeScript support, and automatic cleanup.
 
 ## Features
 
-- 🚀 **Zero dependencies** - Uses only React's built-in hooks
-- 🎯 **Component-scoped stores** - Automatic cleanup on unmount
-- 🔄 **Full reactivity** - Compatible with `useViews`, `useComputedView`, and `useSubscribe`
-- 📦 **Type-safe** - Full TypeScript support with type inference
-- ⚛️ **React 18+ ready** - Works with concurrent features and automatic batching
-- 🎨 **Fine-grained updates** - Subscribers only re-run when their selected values change
-- ⚡ **Optimized performance** - Uses React 18's `startTransition` for non-blocking updates
+- 🚀 **Zero dependencies** - Just React, nothing else
+- 🎯 **Component-scoped** - State lives and dies with your components
+- 🧹 **Automatic cleanup** - No memory leaks, no manual cleanup needed
+- 📦 **Tiny bundle** - Under 2KB gzipped
+- 🔍 **Full TypeScript** - Complete type inference and safety
+- ⚛️ **React 18+ optimized** - Built for concurrent features
+- 🎨 **Fine-grained updates** - Only re-render what changes
 
 ## Installation
 
 ```bash
 npm install @lattice/store-react
 # or
+yarn add @lattice/store-react
+# or
 pnpm add @lattice/store-react
 ```
 
-## Basic Usage
+## Quick Start
 
-### Using the `useLattice` hook
+### Basic Counter
 
 ```tsx
-import { useLattice } from '@lattice/store-react';
-import { useViews } from '@lattice/runtime/react';
-import { createModel, createSlice } from '@lattice/core';
+import { useStore } from '@lattice/store-react';
 
-// Define your component
-const counterComponent = () => {
-  const model = createModel<{
-    count: number;
-    increment: () => void;
-    decrement: () => void;
-  }>(({ set, get }) => ({
+function Counter() {
+  const store = useStore((set, get) => ({
     count: 0,
     increment: () => set({ count: get().count + 1 }),
     decrement: () => set({ count: get().count - 1 }),
+    reset: () => set({ count: 0 })
   }));
-
-  const actions = createSlice(model, m => ({
-    increment: m.increment,
-    decrement: m.decrement,
-  }));
-
-  const views = {
-    count: createSlice(model, m => ({ value: m.count })),
-  };
-
-  return { model, actions, views };
-};
-
-// Use in your React component
-function Counter() {
-  const store = useLattice(counterComponent);
-  const { value } = useViews(store, v => v.count());
 
   return (
     <div>
-      <h1>Count: {value}</h1>
-      <button onClick={store.actions.increment}>+</button>
-      <button onClick={store.actions.decrement}>-</button>
+      <h1>{store.count}</h1>
+      <button onClick={store.increment}>+</button>
+      <button onClick={store.decrement}>-</button>
+      <button onClick={store.reset}>Reset</button>
     </div>
   );
 }
 ```
 
-### Using Context Provider Pattern
+### With Selectors
 
 ```tsx
-import { LatticeProvider, useLatticeStore, useLattice } from '@lattice/store-react';
-import { useViews } from '@lattice/runtime/react';
+import { useStore, useStoreSelector } from '@lattice/store-react';
 
-// With React lattice hooks (component-scoped)
-function App() {
-  const store = useLattice(todoComponent);
-  return (
-    <LatticeProvider store={store}>
-      <TodoList />
-      <AddTodoForm />
-    </LatticeProvider>
-  );
+function TodoApp() {
+  const store = useStore((set, get) => ({
+    todos: [],
+    filter: 'all',
+    addTodo: (text) => set({ 
+      todos: [...get().todos, { id: Date.now(), text, done: false }] 
+    }),
+    toggleTodo: (id) => set({
+      todos: get().todos.map(t => 
+        t.id === id ? { ...t, done: !t.done } : t
+      )
+    }),
+    setFilter: (filter) => set({ filter })
+  }));
+
+  return <TodoList store={store} />;
 }
 
-// With any adapter
-import { createZustandAdapter } from '@lattice/adapter-zustand';
-
-function App() {
-  return (
-    <LatticeProvider store={createZustandAdapter(todoComponent)}>
-      <TodoList />
-      <AddTodoForm />
-    </LatticeProvider>
-  );
-}
-
-// Access the store in child components
-function TodoList() {
-  const store = useLatticeStore();
-  const { todos } = useViews(store, v => v.todoList());
+function TodoList({ store }) {
+  // Only re-renders when filtered todos change
+  const todos = useStoreSelector(store, (s) => {
+    if (s.filter === 'all') return s.todos;
+    if (s.filter === 'active') return s.todos.filter(t => !t.done);
+    return s.todos.filter(t => t.done);
+  });
 
   return (
     <ul>
       {todos.map(todo => (
         <li key={todo.id}>
-          <input
-            type="checkbox"
+          <input 
+            type="checkbox" 
             checked={todo.done}
-            onChange={() => store.actions.toggleTodo(todo.id)}
+            onChange={() => store.toggleTodo(todo.id)}
           />
           {todo.text}
         </li>
@@ -119,289 +96,317 @@ function TodoList() {
 }
 ```
 
-## Key Differences from Other Adapters
-
-### Component-Scoped Stores
-
-Unlike Zustand or Redux, which create global stores, React Lattice creates stores that are scoped to your component lifecycle, perfect for passing to context, but with all the fine-grained benefits of zustand, without the default rendering behavior of context:
+### With Context
 
 ```tsx
-function MyComponent() {
-  // Store is created when component mounts
-  const store = useLattice(myComponent);
-  
-  // Store is automatically cleaned up when component unmounts
-  // No manual destroy() needed!
-}
-```
+import { useStore, createStoreContext } from '@lattice/store-react';
 
-### No External Dependencies
+// Create typed context
+const AppStoreContext = createStoreContext();
 
-The React adapter uses only React's built-in hooks:
-- `useState` for state management
-- `useRef` for stable references
-- `useMemo` for performance optimization
-
-This makes it perfect for:
-- React Native projects
-- Lightweight applications
-- Projects with strict dependency requirements
-
-## Advanced Patterns
-
-### Multiple Component Instances
-
-Each component instance gets its own isolated store:
-
-```tsx
-function TodoApp() {
-  // Each list has its own independent state
-  const workTodos = useLattice(todoComponent);
-  const personalTodos = useLattice(todoComponent);
-
-  return (
-    <div>
-      <section>
-        <h2>Work</h2>
-        <TodoList store={workTodos} />
-      </section>
-      <section>
-        <h2>Personal</h2>
-        <TodoList store={personalTodos} />
-      </section>
-    </div>
-  );
-}
-```
-
-### Custom Hooks
-
-Create custom hooks for your components:
-
-```tsx
-function useTodoStore() {
-  const store = useLattice(todoComponent);
-  const todos = useViews(store, v => v.filteredTodos());
-  const stats = useComputedView(store, v => v.statistics());
-
-  return {
-    todos,
-    stats,
-    actions: store.actions,
-  };
-}
-```
-
-## Fine-Grained Updates
-
-The React adapter implements fine-grained updates to optimize performance. When you subscribe to specific values, the subscription callback only runs when those specific values change:
-
-```tsx
-function TodoStats() {
-  const store = useLattice(todoComponent);
-  
-  // Only re-runs when the count changes, not when todos are reordered
-  const todoCount = useViews(store, v => v.stats().count);
-  
-  // Only re-runs when completed status changes
-  const completedCount = useViews(store, v => v.stats().completed);
-  
-  return (
-    <div>
-      <p>Total: {todoCount}</p>
-      <p>Completed: {completedCount}</p>
-    </div>
-  );
-}
-```
-
-This ensures optimal performance by preventing unnecessary re-renders when unrelated state changes.
-
-## React Native Support
-
-The React adapter works perfectly with React Native since it uses only React's built-in hooks. Here's a complete example:
-
-```tsx
-import React from 'react';
-import { View, Text, Button, FlatList, Switch } from 'react-native';
-import { useLattice } from '@lattice/store-react';
-import { useViews } from '@lattice/runtime/react';
-import { createModel, createSlice } from '@lattice/core';
-
-// Define a todo component
-const todoComponent = () => {
-  const model = createModel<{
-    todos: Array<{ id: string; text: string; done: boolean }>;
-    addTodo: (text: string) => void;
-    toggleTodo: (id: string) => void;
-    clearCompleted: () => void;
-  }>(({ set, get }) => ({
-    todos: [],
-    addTodo: (text) => {
-      const newTodo = {
-        id: Date.now().toString(),
-        text,
-        done: false,
-      };
-      set({ todos: [...get().todos, newTodo] });
-    },
-    toggleTodo: (id) => {
-      set({
-        todos: get().todos.map(todo =>
-          todo.id === id ? { ...todo, done: !todo.done } : todo
-        ),
-      });
-    },
-    clearCompleted: () => {
-      set({ todos: get().todos.filter(todo => !todo.done) });
-    },
+function App() {
+  const store = useStore((set, get) => ({
+    user: null,
+    theme: 'light',
+    login: (user) => set({ user }),
+    logout: () => set({ user: null }),
+    toggleTheme: () => set({ 
+      theme: get().theme === 'light' ? 'dark' : 'light' 
+    })
   }));
 
-  const actions = createSlice(model, m => ({
-    addTodo: m.addTodo,
-    toggleTodo: m.toggleTodo,
-    clearCompleted: m.clearCompleted,
-  }));
-
-  const views = {
-    todos: createSlice(model, m => m.todos),
-    stats: createSlice(model, m => ({
-      total: m.todos.length,
-      completed: m.todos.filter(t => t.done).length,
-      hasCompleted: m.todos.some(t => t.done),
-    })),
-  };
-
-  return { model, actions, views };
-};
-
-// React Native component
-export function TodoApp() {
-  const store = useLattice(todoComponent);
-  const todos = useViews(store, v => v.todos());
-  const stats = useViews(store, v => v.stats());
-
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      <Text style={{ fontSize: 24, marginBottom: 20 }}>
-        Todo List ({stats.completed}/{stats.total})
-      </Text>
-      
-      <Button
-        title="Add Todo"
-        onPress={() => store.actions.addTodo(`Task ${Date.now()}`)}
-      />
-      
-      <FlatList
-        data={todos}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <View style={{ flexDirection: 'row', padding: 10 }}>
-            <Switch
-              value={item.done}
-              onValueChange={() => store.actions.toggleTodo(item.id)}
-            />
-            <Text style={{
-              marginLeft: 10,
-              textDecorationLine: item.done ? 'line-through' : 'none'
-            }}>
-              {item.text}
-            </Text>
-          </View>
-        )}
-      />
-      
-      {stats.hasCompleted && (
-        <Button
-          title="Clear Completed"
-          onPress={store.actions.clearCompleted}
-          color="red"
-        />
+    <AppStoreContext.Provider value={store}>
+      <Header />
+      <Main />
+    </AppStoreContext.Provider>
+  );
+}
+
+function Header() {
+  const store = AppStoreContext.useStore();
+  const user = useStoreSelector(store, s => s.user);
+  
+  return (
+    <header>
+      {user ? (
+        <>
+          <span>Welcome, {user.name}</span>
+          <button onClick={store.logout}>Logout</button>
+        </>
+      ) : (
+        <button onClick={() => store.login({ name: 'Guest' })}>
+          Login
+        </button>
       )}
-    </View>
-  );
-}
-```
-
-### React Native Navigation Example
-
-When using React Navigation, each screen can have its own scoped store:
-
-```tsx
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-
-const Stack = createStackNavigator();
-
-function HomeScreen() {
-  // This store is scoped to HomeScreen
-  const store = useLattice(homeComponent);
-  // Store is automatically cleaned up when navigating away
-  
-  return <HomeContent store={store} />;
-}
-
-function DetailsScreen() {
-  // This store is independent from HomeScreen's store
-  const store = useLattice(detailsComponent);
-  
-  return <DetailsContent store={store} />;
-}
-
-export function App() {
-  return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Home" component={HomeScreen} />
-        <Stack.Screen name="Details" component={DetailsScreen} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    </header>
   );
 }
 ```
 
 ## API Reference
 
-### `useLattice(component)`
+### `useStore(creator)`
 
-Creates a component-scoped Lattice store using React hooks.
+Creates a component-scoped store.
+
+```tsx
+const store = useStore((set, get) => ({
+  // State
+  count: 0,
+  
+  // Actions
+  increment: () => set({ count: get().count + 1 })
+}));
+```
 
 **Parameters:**
-- `component`: A Lattice component spec or factory
+- `creator: (set, get) => Store` - Function that creates your store
+  - `set: (updates: Partial<State>) => void` - Update state
+  - `get: () => State` - Get current state
 
-**Returns:**
-- `AdapterResult` with `actions`, `views`, `subscribe`, and `getState`
+**Returns:** Store instance with state, actions, and API methods:
+- `getState()` - Get current state
+- `setState(updates)` - Update state
+- `subscribe(listener)` - Subscribe to changes
+- `destroy()` - Cleanup (called automatically)
 
+### `useStoreSelector(store, selector, equalityFn?)`
 
-### `LatticeProvider`
+Subscribe to specific parts of the store.
 
-Context provider for sharing a store across components.
+```tsx
+const count = useStoreSelector(store, s => s.count);
+const todos = useStoreSelector(
+  store, 
+  s => s.todos.filter(t => !t.done),
+  shallowEqual // Optional custom equality
+);
+```
 
-**Props:**
-- `store`: A Lattice store instance (from any adapter)
-- `children`: React nodes
+**Parameters:**
+- `store` - Store instance from `useStore`
+- `selector` - Function to select value from state
+- `equalityFn` - Optional equality function (default: `Object.is`)
 
-### `useLatticeStore()`
+### `useStoreSubscribe(store, callback)`
 
-Hook to access the store from context. Must be used within a `LatticeProvider`.
+Subscribe to all store changes. Useful for side effects.
 
-**Returns:**
-- The store instance from context
+```tsx
+useStoreSubscribe(store, (state) => {
+  console.log('State changed:', state);
+  localStorage.setItem('app-state', JSON.stringify(state));
+});
+```
 
-## When to Use This Adapter
+### `createStoreContext<Store>()`
 
-✅ **Use when:**
-- You want stores scoped to component lifecycle
-- You need automatic cleanup on unmount
-- You're building React Native apps
-- You want zero external dependencies
-- You need multiple isolated instances
+Create a typed context for your store.
 
-❌ **Don't use when:**
-- You need global state persistence
-- You want Redux DevTools integration
-- You need middleware capabilities
-- You're migrating from Redux/Zustand
+```tsx
+const MyStoreContext = createStoreContext<MyStore>();
+
+// Returns:
+// - Provider: Context.Provider component
+// - Consumer: Context.Consumer component  
+// - useStore: Hook to access store from context
+```
+
+### `createStoreProvider<Store>()`
+
+Create a provider component and hook pair.
+
+```tsx
+const { StoreProvider, useStore } = createStoreProvider<MyStore>();
+```
+
+### `shallowEqual(a, b)`
+
+Shallow equality helper for use with `useStoreSelector`.
+
+```tsx
+const selection = useStoreSelector(
+  store,
+  s => ({ count: s.count, name: s.name }),
+  shallowEqual
+);
+```
+
+## Patterns & Best Practices
+
+### Organizing Complex Stores
+
+```tsx
+// Separate concerns with multiple stores
+function useAuthStore() {
+  return useStore((set, get) => ({
+    user: null,
+    token: null,
+    login: async (credentials) => {
+      const response = await api.login(credentials);
+      set({ user: response.user, token: response.token });
+    },
+    logout: () => set({ user: null, token: null })
+  }));
+}
+
+function useUIStore() {
+  return useStore((set, get) => ({
+    sidebarOpen: false,
+    modal: null,
+    toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
+    openModal: (modal) => set({ modal }),
+    closeModal: () => set({ modal: null })
+  }));
+}
+```
+
+### Computed Values
+
+```tsx
+const store = useStore((set, get) => ({
+  items: [],
+  filter: '',
+  
+  // Actions
+  addItem: (item) => set({ items: [...get().items, item] }),
+  setFilter: (filter) => set({ filter }),
+  
+  // Computed values as getters
+  get filteredItems() {
+    const { items, filter } = get();
+    return items.filter(item => 
+      item.name.toLowerCase().includes(filter.toLowerCase())
+    );
+  },
+  
+  get itemCount() {
+    return get().items.length;
+  }
+}));
+```
+
+### Async Actions
+
+```tsx
+const store = useStore((set, get) => ({
+  data: null,
+  loading: false,
+  error: null,
+  
+  fetchData: async () => {
+    set({ loading: true, error: null });
+    try {
+      const data = await api.getData();
+      set({ data, loading: false });
+    } catch (error) {
+      set({ error: error.message, loading: false });
+    }
+  }
+}));
+```
+
+### Middleware Pattern
+
+```tsx
+function createStoreWithLogger(creator) {
+  return (set, get) => {
+    const setState = (updates) => {
+      console.log('State update:', updates);
+      set(updates);
+    };
+    
+    return creator(setState, get);
+  };
+}
+
+const store = useStore(
+  createStoreWithLogger((set, get) => ({
+    count: 0,
+    increment: () => set({ count: get().count + 1 })
+  }))
+);
+```
+
+## React Native
+
+Works perfectly with React Native out of the box:
+
+```tsx
+import { useStore } from '@lattice/store-react';
+import { View, Text, Button } from 'react-native';
+
+function CounterApp() {
+  const store = useStore((set, get) => ({
+    count: 0,
+    increment: () => set({ count: get().count + 1 })
+  }));
+
+  return (
+    <View>
+      <Text>Count: {store.count}</Text>
+      <Button title="Increment" onPress={store.increment} />
+    </View>
+  );
+}
+```
+
+## Comparison with Other Libraries
+
+### vs Zustand
+- **store-react**: Component-scoped, automatic cleanup, zero deps
+- **Zustand**: Global stores, manual cleanup, requires zustand dep
+
+### vs Redux
+- **store-react**: No boilerplate, no providers required, component-scoped
+- **Redux**: Global state, actions/reducers pattern, requires setup
+
+### vs Context API
+- **store-react**: No re-render issues, fine-grained updates, better performance
+- **Context**: Can cause unnecessary re-renders, no built-in optimizations
+
+## TypeScript
+
+Full TypeScript support with automatic type inference:
+
+```tsx
+interface Todo {
+  id: number;
+  text: string;
+  done: boolean;
+}
+
+interface TodoStore {
+  todos: Todo[];
+  addTodo: (text: string) => void;
+  toggleTodo: (id: number) => void;
+  removeTodo: (id: number) => void;
+}
+
+const store = useStore<TodoStore>((set, get) => ({
+  todos: [],
+  addTodo: (text) => set({ 
+    todos: [...get().todos, { id: Date.now(), text, done: false }] 
+  }),
+  toggleTodo: (id) => set({
+    todos: get().todos.map(t => 
+      t.id === id ? { ...t, done: !t.done } : t
+    )
+  }),
+  removeTodo: (id) => set({
+    todos: get().todos.filter(t => t.id !== id)
+  })
+}));
+```
+
+## Performance Tips
+
+1. **Use selectors** for fine-grained subscriptions
+2. **Use `shallowEqual`** when selecting objects
+3. **Memoize complex selectors** with `useMemo`
+4. **Split large stores** into smaller, focused ones
+5. **Avoid inline selectors** in hot paths
 
 ## License
 

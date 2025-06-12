@@ -1,7 +1,7 @@
 {
   "name": "@lattice/store-react",
   "version": "0.0.1",
-  "description": "Lightweight state store for React - create reactive stores using only React hooks",
+  "description": "Lightweight, component-scoped state management for React - zero dependencies, TypeScript first",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -20,10 +20,7 @@
     "check": "pnpm typecheck && pnpm test",
     "clean": "rm -rf dist"
   },
-  "dependencies": {
-    "@lattice/core": "workspace:*",
-    "@lattice/runtime": "workspace:*"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "react": ">=16.8.0"
   },
