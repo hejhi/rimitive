@@ -21,6 +21,16 @@ const DEV = process.env.NODE_ENV !== 'production';
 // Constants for better performance
 const EMPTY_DEPS: readonly [] = [];
 
+// WeakMap cache for selector results across all components
+// This enables sharing computed values between components using the same selector
+const selectorCache = new WeakMap<StoreApi<any>, Map<Function, { value: any; state: any }>>();
+
+// Global subscription deduplication
+const subscriptionMap = new WeakMap<StoreApi<any>, {
+  listeners: Set<() => void>;
+  unsubscribe?: () => void;
+}>();
+
 // ============================================================================
 // Core Types
 // ============================================================================
@@ -43,7 +53,8 @@ export interface StoreApi<T> {
 // ============================================================================
 
 // React 18+ automatically batches updates, so we don't need manual batching
-// This improves compatibility with testing libraries
+// For React 16/17 users, consider wrapping multiple setState calls in 
+// ReactDOM.unstable_batchedUpdates() for better performance
 
 // ============================================================================
 // Main Hook
@@ -192,7 +203,30 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
     };
   }, EMPTY_DEPS); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Cleanup caches on unmount
+  useEffect(() => {
+    return () => {
+      // Clean up selector cache for this store
+      const cache = selectorCache.get(store.api);
+      if (cache) {
+        cache.clear();
+        selectorCache.delete(store.api);
+      }
+      
+      // Clean up subscription manager
+      const subManager = subscriptionMap.get(store.api);
+      if (subManager) {
+        subManager.listeners.clear();
+        if (subManager.unsubscribe) {
+          subManager.unsubscribe();
+        }
+        subscriptionMap.delete(store.api);
+      }
+    };
+  }, [store.api]);
+
   // Return merged object with stable API
+  // Performance: Object.assign is faster than spread for this use case
   return Object.assign({}, currentState, store.api) as T & StoreApi<T>;
 }
 
@@ -224,18 +258,41 @@ export function useStoreSelector<Store, Selected>(
   selector: (state: Store) => Selected,
   equalityFn: (a: Selected, b: Selected) => boolean = Object.is
 ): Selected {
+  // Get or create cache for this store
+  let storeCache = selectorCache.get(store);
+  if (!storeCache) {
+    storeCache = new Map();
+    selectorCache.set(store, storeCache);
+  }
+
   // Use ref for mutable selector state to avoid recreating functions
   const selectorRef = useRef<{
     selector: (state: Store) => Selected;
     equalityFn: (a: Selected, b: Selected) => boolean;
     value: Selected;
+    cacheEntry?: { value: any; state: any };
   }>();
 
   if (!selectorRef.current) {
+    // Check cache first
+    const cachedEntry = storeCache.get(selector);
+    const currentState = store.getState();
+    
+    let initialValue: Selected;
+    if (cachedEntry && cachedEntry.state === currentState) {
+      // Use cached value if state hasn't changed
+      initialValue = cachedEntry.value;
+    } else {
+      // Compute new value and cache it
+      initialValue = selector(currentState);
+      storeCache.set(selector, { value: initialValue, state: currentState });
+    }
+
     selectorRef.current = {
       selector,
       equalityFn,
-      value: selector(store.getState()),
+      value: initialValue,
+      cacheEntry: storeCache.get(selector),
     };
   }
 
@@ -243,10 +300,25 @@ export function useStoreSelector<Store, Selected>(
   selectorRef.current.selector = selector;
   selectorRef.current.equalityFn = equalityFn;
 
-  // Stable getSnapshot function
+  // Stable getSnapshot function with caching
   const getSnapshot = useCallback(() => {
     const state = store.getState();
+    const cache = selectorCache.get(store);
+    const cachedEntry = cache?.get(selector);
+    
+    // Check if we can reuse cached value
+    if (cachedEntry && cachedEntry.state === state) {
+      selectorRef.current!.value = cachedEntry.value;
+      return cachedEntry.value;
+    }
+    
+    // Compute new value
     const newValue = selectorRef.current!.selector(state);
+    
+    // Update cache
+    if (cache) {
+      cache.set(selector, { value: newValue, state });
+    }
     
     // Memoize selector result
     if (!selectorRef.current!.equalityFn(selectorRef.current!.value, newValue)) {
@@ -254,22 +326,77 @@ export function useStoreSelector<Store, Selected>(
     }
     
     return selectorRef.current!.value;
-  }, [store]);
+  }, [store, selector]);
 
   // Stable subscribe function with equality checks
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      return store.subscribe(() => {
+      // Check for existing subscription manager
+      let subManager = subscriptionMap.get(store);
+      
+      if (!subManager) {
+        // Create new subscription manager
+        subManager = {
+          listeners: new Set(),
+          unsubscribe: undefined,
+        };
+        subscriptionMap.set(store, subManager);
+      }
+      
+      // Add our listener
+      const wrappedListener = () => {
         const state = store.getState();
+        const cache = selectorCache.get(store);
+        const cachedEntry = cache?.get(selector);
+        
+        // Skip if value is already cached for this state
+        if (cachedEntry && cachedEntry.state === state) {
+          if (!selectorRef.current!.equalityFn(selectorRef.current!.value, cachedEntry.value)) {
+            selectorRef.current!.value = cachedEntry.value;
+            onStoreChange();
+          }
+          return;
+        }
+        
         const newValue = selectorRef.current!.selector(state);
+        
+        // Update cache
+        if (cache) {
+          cache.set(selector, { value: newValue, state });
+        }
         
         if (!selectorRef.current!.equalityFn(selectorRef.current!.value, newValue)) {
           selectorRef.current!.value = newValue;
           onStoreChange();
         }
-      });
+      };
+      
+      subManager.listeners.add(wrappedListener);
+      
+      // Create shared subscription if needed
+      if (!subManager.unsubscribe) {
+        subManager.unsubscribe = store.subscribe(() => {
+          // Notify all deduplicated listeners
+          const listeners = Array.from(subManager!.listeners);
+          for (const listener of listeners) {
+            listener();
+          }
+        });
+      }
+      
+      // Return cleanup function
+      return () => {
+        subManager!.listeners.delete(wrappedListener);
+        
+        // Clean up shared subscription if no more listeners
+        if (subManager!.listeners.size === 0 && subManager!.unsubscribe) {
+          subManager!.unsubscribe();
+          subManager!.unsubscribe = undefined;
+          subscriptionMap.delete(store);
+        }
+      };
     },
-    [store]
+    [store, selector, equalityFn]
   );
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
@@ -364,10 +491,18 @@ export function createStoreProvider<Store>() {
 /**
  * Optimized shallow equality function for object comparison.
  * Useful with useStoreSelector for object selections.
+ * 
+ * Performance optimizations:
+ * - Early exit on reference equality
+ * - Fast path for different types
+ * - Optimized key iteration
+ * - Avoid repeated property access
  */
 export function shallowEqual<T>(a: T, b: T): boolean {
+  // Fast path: same reference
   if (Object.is(a, b)) return true;
 
+  // Fast path: different types or null/undefined
   if (
     typeof a !== 'object' ||
     a === null ||
@@ -380,16 +515,17 @@ export function shallowEqual<T>(a: T, b: T): boolean {
   const aObj = a as Record<string, unknown>;
   const bObj = b as Record<string, unknown>;
   
-  // Get keys and compare lengths first
+  // Cache key arrays to avoid multiple calls
   const keysA = Object.keys(aObj);
-  const keysB = Object.keys(bObj);
   
-  if (keysA.length !== keysB.length) return false;
+  // Fast path: different number of keys
+  if (keysA.length !== Object.keys(bObj).length) return false;
 
-  // Compare all properties (optimized loop)
-  for (let i = 0; i < keysA.length; i++) {
-    const key = keysA[i]!;
-    if (!Object.prototype.hasOwnProperty.call(bObj, key) || !Object.is(aObj[key], bObj[key])) {
+  // Optimized property comparison
+  // Using for-of is slightly faster than indexed loop in modern JS engines
+  for (const key of keysA) {
+    // Single lookup and comparison
+    if (!(key in bObj) || !Object.is(aObj[key], bObj[key])) {
       return false;
     }
   }
