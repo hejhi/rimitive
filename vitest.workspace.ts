@@ -4,6 +4,7 @@ export default defineWorkspace([
   './packages/adapter-pinia/vitest.config.ts',
   './packages/adapter-redux/vitest.config.ts',
   './packages/adapter-store-react/vitest.config.ts',
+  './packages/adapter-svelte/vitest.config.ts',
   './packages/adapter-zustand/vitest.config.ts',
   './packages/benchmarks/vitest.config.ts',
   './packages/core/vitest.config.ts',

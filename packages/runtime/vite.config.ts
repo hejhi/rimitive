@@ -16,12 +16,13 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         react: resolve(__dirname, 'src/react.ts'),
-        vue: resolve(__dirname, 'src/vue.ts')
+        vue: resolve(__dirname, 'src/vue.ts'),
+        svelte: resolve(__dirname, 'src/svelte.ts')
       },
       formats: ['es']
     },
     rollupOptions: {
-      external: ['@lattice/core', 'react', 'vue'],
+      external: ['@lattice/core', 'react', 'vue', 'svelte', 'svelte/store'],
       output: {
         preserveModules: false,
         entryFileNames: '[name].js'

@@ -5,7 +5,7 @@
  * These utilities help integrate Lattice stores with Svelte's reactivity system.
  */
 
-import { derived, readable, type Readable } from 'svelte/store';
+import { readable, type Readable } from 'svelte/store';
 import type { SubscribableStore } from '@lattice/core';
 
 /**

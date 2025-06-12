@@ -20,6 +20,10 @@
     "./vue": {
       "import": "./dist/vue.js",
       "types": "./dist/vue.d.ts"
+    },
+    "./svelte": {
+      "import": "./dist/svelte.js",
+      "types": "./dist/svelte.d.ts"
     }
   },
   "files": [
@@ -40,13 +44,17 @@
   },
   "peerDependencies": {
     "react": "^18.0.0",
-    "vue": "^3.3.0"
+    "vue": "^3.3.0",
+    "svelte": "^4.0.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
       "optional": true
     },
     "vue": {
+      "optional": true
+    },
+    "svelte": {
       "optional": true
     }
   },
@@ -62,7 +70,8 @@
     "vite": "^6.3.2",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^3.1.1",
-    "vue": "^3.4.0"
+    "vue": "^3.4.0",
+    "svelte": "^5.0.0"
   },
   "sideEffects": false,
   "publishConfig": {
