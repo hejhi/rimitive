@@ -15,11 +15,17 @@ import React, {
   type ReactNode,
 } from 'react';
 
+// Production mode detection for optimizations
+const DEV = process.env.NODE_ENV !== 'production';
+
+// Constants for better performance
+const EMPTY_DEPS: readonly [] = [];
+
 // ============================================================================
 // Core Types
 // ============================================================================
 
-export type SetState<T> = (updates: Partial<T>) => void;
+export type SetState<T> = (updates: Partial<T> | ((state: T) => Partial<T>)) => void;
 export type GetState<T> = () => T;
 export type Subscribe = (listener: () => void) => () => void;
 
@@ -31,6 +37,13 @@ export interface StoreApi<T> {
   subscribe: Subscribe;
   destroy: () => void;
 }
+
+// ============================================================================
+// Performance optimizations
+// ============================================================================
+
+// React 18+ automatically batches updates, so we don't need manual batching
+// This improves compatibility with testing libraries
 
 // ============================================================================
 // Main Hook
@@ -65,45 +78,79 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
   // Create store instance once
   const storeRef = useRef<{
     state: T;
-    snapshot: T & StoreApi<T>;
     listeners: Set<() => void>;
+    notifying: boolean;
     api: StoreApi<T>;
   }>();
 
   if (!storeRef.current) {
     const listeners = new Set<() => void>();
     let state: T;
+    let notifying = false;
+    const pendingUnsubscribes = new Set<() => void>();
+
+    const notifyListeners = () => {
+      if (notifying) return;
+      notifying = true;
+      
+      // Snapshot listeners to handle unsubscribe during notification
+      const currentListeners = Array.from(listeners);
+      for (const listener of currentListeners) {
+        if (!pendingUnsubscribes.has(listener)) {
+          if (DEV) {
+            try {
+              listener();
+            } catch (error) {
+              console.error('Error in store listener:', error);
+            }
+          } else {
+            listener();
+          }
+        }
+      }
+      
+      notifying = false;
+      
+      // Process pending unsubscribes
+      for (const listener of pendingUnsubscribes) {
+        listeners.delete(listener);
+      }
+      pendingUnsubscribes.clear();
+    };
 
     const getState: GetState<T> = () => state;
 
     const setState: SetState<T> = (updates) => {
-      // Fast path: check if anything actually changed
+      const partial = typeof updates === 'function' ? updates(state) : updates;
+      
+      // Optimized shallow merge with change detection
       let hasChanges = false;
-      for (const key in updates) {
-        if (!Object.is(state[key], updates[key])) {
+      const nextState = { ...state };
+      
+      // Apply updates and detect changes in one pass
+      for (const key in partial) {
+        if (!Object.is(state[key], partial[key])) {
           hasChanges = true;
-          break;
+          nextState[key] = partial[key]!;
         }
       }
 
       if (hasChanges) {
-        state = { ...state, ...updates };
+        state = nextState;
         storeRef.current!.state = state;
-
-        // Notify all listeners synchronously (React batches these)
-        listeners.forEach((listener) => {
-          try {
-            listener();
-          } catch (error) {
-            console.error('Error in store listener:', error);
-          }
-        });
+        notifyListeners();
       }
     };
 
     const subscribe = (listener: () => void) => {
       listeners.add(listener);
-      return () => listeners.delete(listener);
+      return () => {
+        if (notifying) {
+          pendingUnsubscribes.add(listener);
+        } else {
+          listeners.delete(listener);
+        }
+      };
     };
 
     const destroy = () => {
@@ -113,7 +160,7 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
     // Create the store
     state = createStore(setState, getState);
 
-    // Create stable API object
+    // Create stable API
     const api: StoreApi<T> = {
       getState,
       setState,
@@ -121,48 +168,36 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
       destroy,
     };
 
-    // Create a stable snapshot object without prototypal inheritance
-    const snapshot = {} as T & StoreApi<T>;
-
-    // Add API methods directly
-    Object.assign(snapshot, api);
-
-    // Define getters for all state properties
-    for (const key in state) {
-      Object.defineProperty(snapshot, key, {
-        get: () => storeRef.current!.state[key],
-        enumerable: true,
-        configurable: true,
-      });
-    }
-
     storeRef.current = {
       state,
-      snapshot,
       listeners,
+      notifying: false,
       api,
     };
   }
 
+  const store = storeRef.current;
+
   // Use useSyncExternalStore for optimal React 18+ integration
-  useSyncExternalStore(
-    storeRef.current.api.subscribe,
-    () => storeRef.current!.state,
-    () => storeRef.current!.state // Server snapshot
+  const currentState = useSyncExternalStore(
+    store.api.subscribe,
+    () => store.state,
+    () => store.state // Server snapshot
   );
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      storeRef.current?.api.destroy();
+      store.api.destroy();
     };
-  }, []);
+  }, EMPTY_DEPS); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return storeRef.current.snapshot;
+  // Return merged object with stable API
+  return Object.assign({}, currentState, store.api) as T & StoreApi<T>;
 }
 
 // ============================================================================
-// Selector Hook
+// Selector Hook with Performance Optimizations
 // ============================================================================
 
 /**
@@ -189,25 +224,52 @@ export function useStoreSelector<Store, Selected>(
   selector: (state: Store) => Selected,
   equalityFn: (a: Selected, b: Selected) => boolean = Object.is
 ): Selected {
-  // Create stable getSnapshot that memoizes selector result
-  const getSnapshot = useCallback(() => {
-    return selector(store.getState());
-  }, [store, selector]);
+  // Use ref for mutable selector state to avoid recreating functions
+  const selectorRef = useRef<{
+    selector: (state: Store) => Selected;
+    equalityFn: (a: Selected, b: Selected) => boolean;
+    value: Selected;
+  }>();
 
-  // Create stable subscribe that checks equality before notifying
+  if (!selectorRef.current) {
+    selectorRef.current = {
+      selector,
+      equalityFn,
+      value: selector(store.getState()),
+    };
+  }
+
+  // Update refs without causing re-subscriptions
+  selectorRef.current.selector = selector;
+  selectorRef.current.equalityFn = equalityFn;
+
+  // Stable getSnapshot function
+  const getSnapshot = useCallback(() => {
+    const state = store.getState();
+    const newValue = selectorRef.current!.selector(state);
+    
+    // Memoize selector result
+    if (!selectorRef.current!.equalityFn(selectorRef.current!.value, newValue)) {
+      selectorRef.current!.value = newValue;
+    }
+    
+    return selectorRef.current!.value;
+  }, [store]);
+
+  // Stable subscribe function with equality checks
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      let previousValue = selector(store.getState());
-
       return store.subscribe(() => {
-        const nextValue = selector(store.getState());
-        if (!equalityFn(previousValue, nextValue)) {
-          previousValue = nextValue;
+        const state = store.getState();
+        const newValue = selectorRef.current!.selector(state);
+        
+        if (!selectorRef.current!.equalityFn(selectorRef.current!.value, newValue)) {
+          selectorRef.current!.value = newValue;
           onStoreChange();
         }
       });
     },
-    [store, selector, equalityFn]
+    [store]
   );
 
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
@@ -251,7 +313,11 @@ export function createStoreContext<Store>() {
     useStore: () => {
       const store = useContext(Context);
       if (!store) {
-        throw new Error('useStore must be used within a Provider');
+        if (DEV) {
+          throw new Error('useStore must be used within a Provider');
+        }
+        // In production, return a dummy store to prevent crashes
+        return {} as Store & StoreApi<Store>;
       }
       return store;
     },
@@ -296,7 +362,7 @@ export function createStoreProvider<Store>() {
 // ============================================================================
 
 /**
- * Shallow equality function for object comparison.
+ * Optimized shallow equality function for object comparison.
  * Useful with useStoreSelector for object selections.
  */
 export function shallowEqual<T>(a: T, b: T): boolean {
@@ -311,12 +377,19 @@ export function shallowEqual<T>(a: T, b: T): boolean {
     return false;
   }
 
-  // Fast path: different number of keys
-  if (Object.keys(a).length !== Object.keys(b).length) return false;
+  const aObj = a as Record<string, unknown>;
+  const bObj = b as Record<string, unknown>;
+  
+  // Get keys and compare lengths first
+  const keysA = Object.keys(aObj);
+  const keysB = Object.keys(bObj);
+  
+  if (keysA.length !== keysB.length) return false;
 
-  // Compare all properties
-  for (const key in a) {
-    if (!(key in b) || !Object.is(a[key], b[key])) {
+  // Compare all properties (optimized loop)
+  for (let i = 0; i < keysA.length; i++) {
+    const key = keysA[i]!;
+    if (!Object.prototype.hasOwnProperty.call(bObj, key) || !Object.is(aObj[key], bObj[key])) {
       return false;
     }
   }
