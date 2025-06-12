@@ -66,25 +66,153 @@ export function createStoreReactAdapter<App, State>(
   enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ) {
-  // Create an adapter factory that will be called with initial state
-  const adapterFactory = (initialState: State): StoreAdapter<State> => {
-    // Create a store creator function that returns the initial state
-    const stateCreator: StoreCreator<State> = () => initialState;
-    
-    // Create the store using our custom creation function
-    const store = createStoreReactStore(stateCreator, enhancer);
-    
-    return wrapStoreReact(store, options);
-  };
+  // Create an optimized adapter factory
+  const adapterFactory = enhancer
+    ? (initialState: State): StoreAdapter<State> => {
+        const stateCreator: StoreCreator<State> = () => initialState;
+        const store = createStoreReactStore(stateCreator, enhancer);
+        return createOptimizedAdapter(store, options);
+      }
+    : (initialState: State): StoreAdapter<State> => {
+        // Fast path: no enhancer, create minimal adapter directly
+        return createFastAdapter(initialState, options);
+      };
 
   return createLatticeStore(appFactory, adapterFactory);
 }
 
 /**
+ * Creates a fast adapter for the common case (no enhancer)
+ * This combines store creation and adapter in one step for better performance
+ */
+function createFastAdapter<State>(
+  initialState: State,
+  options?: AdapterOptions
+): StoreAdapter<State> {
+  // Direct implementation without intermediate layers
+  const listeners = new Set<() => void>();
+  let state = initialState;
+  let isNotifying = false;
+  const pendingUnsubscribes = new Set<() => void>();
+  
+  // Pre-bind error handler for performance
+  const handleError = options?.onError || (
+    process.env.NODE_ENV !== 'production' 
+      ? (error: unknown) => console.error('Error in store listener:', error)
+      : () => {} // No-op in production
+  );
+
+  return {
+    getState: () => state,
+    setState: (updates) => {
+      const partial = typeof updates === 'function' ? updates(state) : updates;
+      
+      // Always update and notify (store-react pattern)
+      state = { ...state, ...partial };
+      
+      // Optimized notification
+      if (listeners.size > 0 && !isNotifying) {
+        isNotifying = true;
+        
+        // Direct iteration over Set - safe because we defer removals
+        for (const listener of listeners) {
+          try {
+            listener();
+          } catch (error) {
+            handleError(error);
+          }
+        }
+        
+        isNotifying = false;
+        
+        // Process deferred unsubscribes
+        if (pendingUnsubscribes.size > 0) {
+          for (const listener of pendingUnsubscribes) {
+            listeners.delete(listener);
+          }
+          pendingUnsubscribes.clear();
+        }
+      }
+    },
+    subscribe: (listener) => {
+      listeners.add(listener);
+      // Return optimized unsubscribe function
+      return () => {
+        if (isNotifying) {
+          // Defer unsubscribe until after notification
+          pendingUnsubscribes.add(listener);
+        } else {
+          listeners.delete(listener);
+        }
+      };
+    }
+  };
+}
+
+/**
+ * Creates an optimized adapter from an existing store-react store
+ * Used when enhancers are present
+ */
+function createOptimizedAdapter<State>(
+  store: StoreReactApi<State>,
+  options?: AdapterOptions
+): StoreAdapter<State> {
+  // Subscribe once to the store and forward all notifications
+  const listeners = new Set<() => void>();
+  let isNotifying = false;
+  const pendingUnsubscribes = new Set<() => void>();
+  
+  const handleError = options?.onError || (
+    process.env.NODE_ENV !== 'production' 
+      ? (error: unknown) => console.error('Error in store listener:', error)
+      : () => {}
+  );
+  
+  // Subscribe to the underlying store once
+  store.subscribe(() => {
+    if (listeners.size > 0 && !isNotifying) {
+      isNotifying = true;
+      
+      for (const listener of listeners) {
+        try {
+          listener();
+        } catch (error) {
+          handleError(error);
+        }
+      }
+      
+      isNotifying = false;
+      
+      // Process deferred unsubscribes
+      if (pendingUnsubscribes.size > 0) {
+        for (const listener of pendingUnsubscribes) {
+          listeners.delete(listener);
+        }
+        pendingUnsubscribes.clear();
+      }
+    }
+  });
+
+  return {
+    getState: store.getState,
+    setState: store.setState,
+    subscribe: (listener) => {
+      listeners.add(listener);
+      return () => {
+        if (isNotifying) {
+          // Defer unsubscribe until after notification
+          pendingUnsubscribes.add(listener);
+        } else {
+          listeners.delete(listener);
+        }
+      };
+    }
+  };
+}
+
+/**
  * Creates a store-react store outside of React components
- * 
- * Since store-react is designed for component-scoped state, we need to
- * create a store manually using its internal API structure.
+ * Only used when enhancers are present
  *
  * @param stateCreator - Function that creates the initial state
  * @param enhancer - Optional store enhancer
@@ -102,35 +230,20 @@ function createStoreReactStore<State>(
   const api: StoreReactApi<State> = {
     getState: () => state,
     setState: (updates) => {
-      const currentState = state;
-      const partial = typeof updates === 'function' ? updates(currentState) : updates;
+      const partial = typeof updates === 'function' ? updates(state) : updates;
       
-      // Optimized shallow merge with change detection
-      let hasChanges = false;
+      // Always update state and notify (store-react pattern)
+      state = { ...state, ...partial };
       
-      // Check for changes first
-      for (const key in partial) {
-        if (!Object.is(currentState[key], partial[key])) {
-          hasChanges = true;
-          break;
-        }
-      }
-
-      if (hasChanges) {
-        // Create new state object
-        state = { ...currentState, ...partial };
-        
-        // Notify all listeners
-        listeners.forEach(listener => {
-          try {
-            listener();
-          } catch (error) {
-            // In production, errors are silent to avoid breaking other listeners
-            if (process.env.NODE_ENV !== 'production') {
-              console.error('Error in store listener:', error);
-            }
+      // Notify all listeners
+      for (const listener of listeners) {
+        try {
+          listener();
+        } catch (error) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('Error in store listener:', error);
           }
-        });
+        }
       }
     },
     subscribe: (listener: () => void) => {
@@ -166,11 +279,10 @@ function createStoreReactStore<State>(
  * Wraps an existing store-react store as a minimal adapter
  *
  * This allows you to use an existing store-react store with Lattice.
- * Handles edge cases like unsubscribe during notification.
  *
  * @param store - An existing store-react store
  * @param options - Optional configuration for the adapter
- * @returns A minimal store adapter with proper subscription management
+ * @returns A minimal store adapter
  *
  * @example
  * ```typescript
@@ -183,78 +295,7 @@ export function wrapStoreReact<State>(
   store: StoreReactApi<State>,
   options?: AdapterOptions
 ): StoreAdapter<State> {
-  // Track active listeners to handle edge cases
-  const listeners = new Set<() => void>();
-  let isNotifying = false;
-  const pendingUnsubscribes = new Set<() => void>();
-
-  // Use provided error handler or default to console.error
-  const handleError =
-    options?.onError ??
-    ((error) => {
-      console.error('Error in store listener:', error);
-    });
-
-  // Notify all listeners with error handling
-  const notifyListeners = () => {
-    isNotifying = true;
-    // Take a snapshot of listeners at the start of notification
-    const currentListeners = Array.from(listeners);
-
-    for (const listener of currentListeners) {
-      // Don't skip listeners that were unsubscribed during this notification cycle
-      // They should still be called in this cycle
-      try {
-        listener();
-      } catch (error) {
-        // Handle errors to ensure other listeners are called
-        handleError(error);
-      }
-    }
-
-    isNotifying = false;
-
-    // Process pending unsubscribes after all listeners have been called
-    for (const listener of pendingUnsubscribes) {
-      listeners.delete(listener);
-    }
-    pendingUnsubscribes.clear();
-  };
-
-  // Don't subscribe to the store - we'll handle notifications manually
-  // to ensure we notify on every setState call as per adapter contract
-
-  // Return the adapter with cleanup support
-  const adapter: StoreAdapter<State> & { destroy?: () => void } = {
-    getState: () => store.getState(),
-    setState: (updates) => {
-      // Always notify listeners when setState is called, even if the state doesn't change
-      // This matches the adapter contract expectations
-      store.setState(updates);
-      notifyListeners();
-    },
-    subscribe: (listener) => {
-      listeners.add(listener);
-
-      return () => {
-        if (isNotifying) {
-          // Defer unsubscribe until after current notification cycle
-          pendingUnsubscribes.add(listener);
-        } else {
-          listeners.delete(listener);
-        }
-      };
-    },
-    destroy: () => {
-      listeners.clear();
-      pendingUnsubscribes.clear();
-      if (store.destroy) {
-        store.destroy();
-      }
-    }
-  };
-
-  return adapter;
+  return createOptimizedAdapter(store, options);
 }
 
 /**
@@ -269,11 +310,7 @@ export function wrapStoreReact<State>(
 export function createStoreAdapter<State>(
   options?: AdapterOptions
 ): (initialState: State) => StoreAdapter<State> {
-  return (initialState: State) => {
-    const stateCreator: StoreCreator<State> = () => initialState;
-    const store = createStoreReactStore(stateCreator);
-    return wrapStoreReact(store, options);
-  };
+  return (initialState: State) => createFastAdapter(initialState, options);
 }
 
 // Re-export types for convenience
