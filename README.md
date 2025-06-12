@@ -188,9 +188,10 @@ npm install @lattice/core
 npm install @lattice/adapter-redux    # For Redux
 npm install @lattice/adapter-zustand   # For Zustand
 npm install @lattice/adapter-pinia     # For Pinia
+npm install @lattice/adapter-svelte    # For Svelte
 
 # Framework integration (optional)
-npm install @lattice/runtime          # For React/Vue hooks
+npm install @lattice/runtime          # For React/Vue/Svelte hooks
 ```
 
 ## Quick Start
@@ -221,6 +222,31 @@ function TodoList() {
   return <ul>{todos.map(todo => <li>{todo.text}</li>)}</ul>;
 }
 ```
+
+## Native Middleware Support
+
+Lattice adapters are thin wrappers that preserve full compatibility with native middleware. Use your favorite tools like Redux DevTools or Zustand persist without any changes, and full type awareness:
+
+```typescript
+// Redux with DevTools
+const store = createReduxAdapter(createComponent, (config) => 
+  configureStore({
+    ...config,
+    devTools: { name: 'My App' }
+  })
+);
+
+// Zustand with persist
+import { persist } from 'zustand/middleware';
+
+const store = createZustandAdapter(
+  createComponent,
+  (stateCreator, createStore) => 
+    createStore(persist(stateCreator, { name: 'app-storage' }))
+);
+```
+
+Your business logic stays portable while you keep using the middleware you already know and love.
 
 ## Documentation
 

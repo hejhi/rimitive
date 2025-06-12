@@ -25,7 +25,6 @@
     "@lattice/core": "workspace:*",
     "@lattice/runtime": "workspace:*",
     "@lattice/store-react": "workspace:*",
-    "@lattice/store-vue": "workspace:*",
     "@reduxjs/toolkit": "^2.8.2",
     "@testing-library/react": "^14.0.0",
     "@types/node": "^20.0.0",
