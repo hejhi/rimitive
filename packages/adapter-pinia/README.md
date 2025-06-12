@@ -105,9 +105,47 @@ const unsubscribe = store.subscribe(() => {
 unsubscribe();
 ```
 
-### Vue Composition API Integration
+### Vue Composables
 
-For reactive Vue components, use Vue's composition API:
+The adapter includes Vue composables that integrate seamlessly with Vue's reactivity system:
+
+```vue
+<script setup>
+import { useSliceSelector, useSliceValues } from '@lattice/runtime/vue';
+import { store } from './store';
+
+// Subscribe to a single value
+const count = useSliceSelector(store.counter, c => c.count());
+
+// Subscribe to multiple values
+const { user, isLoggedIn } = useSliceValues(store.auth, a => ({
+  user: a.currentUser(),
+  isLoggedIn: a.isAuthenticated()
+}));
+
+// Get both slice methods and reactive values
+const [counter, { count: countRef, doubled }] = useLattice(
+  store.counter,
+  c => ({ count: c.count(), doubled: c.doubled() })
+);
+</script>
+
+<template>
+  <div>
+    <p>Count: {{ count }}</p>
+    <p>Doubled: {{ doubled }}</p>
+    <button @click="counter.increment">+</button>
+    
+    <div v-if="isLoggedIn">
+      Welcome, {{ user.name }}!
+    </div>
+  </div>
+</template>
+```
+
+### Direct Composition API Usage
+
+You can also use Vue's built-in composition API directly:
 
 ```vue
 <script setup>
@@ -116,26 +154,11 @@ import { store } from './store';
 
 // Reactive computed values
 const count = computed(() => store.counter.count());
-const doubled = computed(() => count.value * 2);
 
 // Watch for changes
 watchEffect(() => {
   console.log('Count changed:', count.value);
 });
-</script>
-```
-
-### Using with Pinia's Built-in Composables
-
-Since this creates a real Pinia store, you can use Pinia's composables:
-
-```vue
-<script setup>
-import { storeToRefs } from 'pinia';
-import { store } from './store';
-
-// Note: This requires internal access to the Pinia store
-// For most use cases, use computed() as shown above
 </script>
 ```
 
@@ -189,6 +212,17 @@ A minimal store adapter
 ### `createStoreAdapter(store, options?)`
 
 Creates a minimal adapter from a Pinia store (internal utility).
+
+### Vue Composables
+
+Vue composables are provided by `@lattice/runtime/vue` and work with any Lattice adapter:
+
+- `useSliceSelector` - Subscribe to specific values with reactive updates
+- `useSlice` - Access a single slice directly
+- `useSliceValues` - Subscribe to multiple values with destructuring support
+- `useLattice` - Get both slice methods and reactive values
+
+See the [@lattice/runtime documentation](https://github.com/hivvy/lattice/tree/main/packages/runtime#vue-composables) for full API details.
 
 ## TypeScript
 

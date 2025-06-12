@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./",
+    "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
     "noImplicitAny": true,
@@ -20,7 +20,6 @@
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx",
-    "examples/**/*.tsx"
+    "src/**/*.tsx"
   ],
 }

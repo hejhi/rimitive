@@ -217,9 +217,10 @@ export function wrapPiniaStore<State extends Record<string, any>>(
 
 // Re-export types for convenience
 export type { StoreAdapter } from '@lattice/core';
+export type { SubscribableStore } from '@lattice/core';
 
-// Note: React hooks are available via '@lattice/adapter-pinia/react'
-// For Vue integration, use Vue's composition API with the store directly
+// Note: Vue composables are available from '@lattice/runtime/vue'
+// They work with any adapter including this Pinia adapter
 
 // ============================================================================
 // In-source tests
