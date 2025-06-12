@@ -106,6 +106,61 @@ const computed = select(({ counter, settings }) => ({
 }));
 ```
 
+## Type Safety Examples
+
+Lattice provides full TypeScript inference throughout your application:
+
+```typescript
+// Type-safe state definition
+type AppState = {
+  user: { id: string; name: string } | null;
+  items: Array<{ id: string; price: number }>;
+  settings: { theme: 'light' | 'dark' };
+};
+
+const createComponent = (createStore: CreateStore<AppState>) => {
+  // TypeScript infers state shape automatically
+  const createSlice = createStore({
+    user: null,
+    items: [],
+    settings: { theme: 'light' }
+  });
+
+  // Methods are fully typed with parameter and return types
+  const user = createSlice(({ get, set }) => ({
+    current: () => get().user, // Return type: { id: string; name: string } | null
+    login: (id: string, name: string) => set({ user: { id, name } }),
+    logout: () => set({ user: null })
+  }));
+
+  // TypeScript catches errors at compile time
+  const cart = createSlice(({ get, set }) => ({
+    addItem: (id: string, price: number) => {
+      // TypeScript knows 'items' is an array of { id: string; price: number }
+      set({ items: [...get().items, { id, price }] });
+    },
+    // This would cause a TypeScript error:
+    // set({ items: [...get().items, { id, cost: price }] }); // Error: 'cost' doesn't exist
+  }));
+
+  return { user, cart };
+};
+
+// Type inference flows through to React components
+function UserProfile() {
+  // TypeScript knows todos is an array of { id: string; price: number }
+  const items = useSliceSelector(store, s => s.cart.items());
+  
+  // TypeScript knows user is { id: string; name: string } | null
+  const user = useSliceSelector(store, s => s.user.current());
+  
+  if (!user) return <div>Please log in</div>;
+  
+  // TypeScript knows user is non-null here
+  return <div>Welcome, {user.name}!</div>;
+}
+```
+
 ## Architecture
 
 ```
