@@ -11,8 +11,13 @@
  * - Optimized re-renders based on slice method results
  */
 
-import { useEffect, useState, useRef } from 'react';
+import { useRef, useCallback, useSyncExternalStore } from 'react';
 import { subscribeToSlices, shallowEqual, type SubscribableStore } from '@lattice/core';
+
+// Performance monitoring for development warnings
+let storeCreationTimestamps: number[] = [];
+const PERF_WARNING_THRESHOLD = 20; // Warn if more than 20 stores
+const PERF_WARNING_WINDOW = 100; // Within 100ms
 
 /**
  * React hook for subscribing to specific slice method results.
@@ -42,31 +47,67 @@ export function useSliceSelector<App, Selected>(
   selector: (slices: App) => Selected,
   equalityFn?: (a: Selected, b: Selected) => boolean
 ): Selected {
-  // Initialize state with current selector result
-  const [state, setState] = useState<Selected>(() => selector(store));
+  // Track store creation in development for performance warnings
+  if (process.env.NODE_ENV !== 'production') {
+    const now = Date.now();
+    storeCreationTimestamps.push(now);
+    
+    // Clean up old timestamps outside the warning window
+    storeCreationTimestamps = storeCreationTimestamps.filter(
+      timestamp => now - timestamp <= PERF_WARNING_WINDOW
+    );
+    
+    // Warn if too many stores are being created rapidly
+    if (storeCreationTimestamps.length > PERF_WARNING_THRESHOLD) {
+      console.warn(
+        `[Lattice Performance Warning] ${storeCreationTimestamps.length} stores created in ${PERF_WARNING_WINDOW}ms. ` +
+        'Consider using shared stores instead of creating many component-scoped stores. ' +
+        'See: https://lattice.dev/docs/performance#shared-stores'
+      );
+    }
+  }
   
-  // Store the selector in a ref to avoid re-subscribing on every render
+  // Store the selector and equality function in refs
   const selectorRef = useRef(selector);
   selectorRef.current = selector;
   
-  // Store equality function in a ref
   const equalityFnRef = useRef(equalityFn);
   equalityFnRef.current = equalityFn;
   
-  useEffect(() => {
-    // Subscribe using the ref'd selector
+  // Store the current selected value to ensure stable snapshots
+  const selectedValueRef = useRef<Selected>();
+  
+  // Initialize the selected value if not set
+  if (selectedValueRef.current === undefined) {
+    selectedValueRef.current = selector(store);
+  }
+  
+  // Create stable callbacks for useSyncExternalStore
+  const subscribe = useCallback((onStoreChange: () => void) => {
     return subscribeToSlices(
       store,
-      (slices) => selectorRef.current(slices),
-      (newState) => setState(newState),
-      { 
-        equalityFn: equalityFnRef.current,
-        fireImmediately: true 
-      }
+      (slices) => {
+        const nextValue = selectorRef.current(slices);
+        const currentValue = selectedValueRef.current!;
+        const isEqual = equalityFnRef.current 
+          ? equalityFnRef.current(currentValue, nextValue)
+          : Object.is(currentValue, nextValue);
+          
+        if (!isEqual) {
+          selectedValueRef.current = nextValue;
+          onStoreChange();
+        }
+        return nextValue;
+      },
+      () => {}, // Empty callback since we handle the change detection above
+      { fireImmediately: false }
     );
-  }, [store]); // Only re-subscribe if store changes
+  }, [store]);
   
-  return state;
+  const getSnapshot = useCallback(() => selectedValueRef.current!, []);
+  const getServerSnapshot = useCallback(() => selectorRef.current(store), [store]);
+  
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 /**
@@ -172,7 +213,17 @@ export function useLattice<App, Selected>(
   slices: App;
 } {
   const values = useSliceSelector(store, selector, equalityFn);
-  return { values, slices: store };
+  
+  // Stable reference optimization - only create new object when values change
+  const resultRef = useRef<{ values: Selected; slices: App }>();
+  const prevValuesRef = useRef<Selected>();
+  
+  if (!resultRef.current || prevValuesRef.current !== values) {
+    resultRef.current = { values, slices: store };
+    prevValuesRef.current = values;
+  }
+  
+  return resultRef.current;
 }
 
 // ============================================================================
