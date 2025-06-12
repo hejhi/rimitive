@@ -1,22 +1,21 @@
 # Lattice
 
-A **compositional framework** for building reusable UI behavior specifications. Lattice separates behavior definition from state management and rendering, enabling true write-once, use-anywhere components.
+A framework that separates business logic from state management implementation, making your behavior specifications portable across any state manager or UI framework.
 
-## What is Lattice?
+## The Core Problem: Architectural Lock-in
 
-Lattice provides a universal abstraction layer that unifies React, Vue, and your favorite state management library. Define your behavior as **composable specifications** that adapters can execute with any infrastructure.
+When you write business logic using Redux patterns, migrating to Zustand means rewriting everything. When your Vue team wants to share logic with your React team, you duplicate code. Every state management solution locks you into its specific patterns - Redux requires actions and reducers, Zustand uses hooks, MobX uses observables.
 
-### The Problem
+Lattice solves this by treating **business logic as a portable specification**, not an implementation detail.
 
-Modern applications often need to:
-- Support multiple frameworks (React for web, Vue for another team, etc.)
-- Migrate between state management solutions without rewriting business logic
-- Share state logic between different parts of an application using different tools
-- Maintain consistent patterns across diverse tech stacks
+## What Lattice Does
 
-### The Solution
+Lattice creates a thin abstraction layer that makes your state manager choice irrelevant to your business logic. Think of it like:
+- How SQL abstracts over database implementations
+- How the DOM API abstracts over browser engines
+- How POSIX abstracts over operating systems
 
-Behavior patterns (selection, filtering, pagination) are universal. The infrastructure (React vs Vue, Redux vs Zustand) is an implementation detail. Lattice lets you define behavior once and run it anywhere:
+Your business logic becomes a specification that can run with any state management infrastructure:
 
 ```typescript
 // Define behavior specification once
@@ -35,45 +34,93 @@ const createComponent = (createStore) => {
 const store = createReduxAdapter(createComponent);      // Redux
 const store = createZustandAdapter(createComponent);    // Zustand  
 const store = createPiniaAdapter(createComponent);      // Pinia
-const store = createStoreReactAdapter(createComponent); // react-store
+const store = createStoreReactAdapter(createComponent); // store-react
 ```
+
+## Key Benefits
+
+### Minimal Overhead
+Adapters are incredibly thin - they only provide `get`, `set`, and `subscribe`. There's virtually no runtime overhead compared to using the state manager directly. In many cases, state managers have _improved_ performance, due to the Lattice composition and selection model!
+
+### Evolution Protection
+The JavaScript ecosystem evolves rapidly. Lattice protects your business logic from framework churn. When the next state management solution arrives, you'll only need a new adapter.
+
+### True Testability
+Test your business logic without mocking state management internals. Since behavior is just a specification, you can verify it works correctly in isolation.
+
+### Cross-Team Collaboration
+Different teams using different frameworks can share the same business logic specifications. Your React team and Vue team can _literally_ share the same state specifications across the app, and re-compose state shapes surgically without needing to inherit or break anything.
+
+## Real-World Use Cases
+
+**Simple Migrations**: Gradually migrate from Redux to Zustand by changing adapters, not rewriting business logic.
+
+**Multi-Framework Portability**: Share business logic and state between React, Vue, and other framework teams.
+
+**Micro-Frontend Architecture**: Different micro-frontends using different state managers can share behavioral specifications.
+
+**Library Authors**: Write state management once, ship to all frameworks with appropriate adapters; create and ship _truly headless_ components as part of your design system.
 
 ## Core Concepts
 
-### The Architecture
+### Behavior as Specification
+Instead of writing Redux actions or Zustand hooks, you write behavior specifications using simple primitives:
 
-Lattice cleanly separates **composition** (defining behavior) from **execution** (running with real infrastructure):
+```typescript
+const createSlice = createStore({ count: 0 });
 
-1. **Composition**: Define behavior specifications as data structures
-2. **Resolution**: Transform lazy specifications into eager, UI-ready values  
-3. **Execution**: Adapters provide minimal primitives to execute specifications
+// slice up your store any way you'd like, using Zustand-inspired patterns
+const counter = createSlice(({ get, set }) => ({
+  value: () => get().count,
+  increment: () => set({ count: get().count + 1 })
+}));
+```
 
-### Key Components
+### Composition Without Coupling
+The `compose` utility enables clean dependency injection between slices:
 
-**Slices**: Composable units that always return getter functions for lazy composition. They manage portions of your component's functionality without executing until needed.
+```typescript
+const actions = createSlice(
+  compose(
+    { counter, user },
+    ({ get, set }, { counter, user }) => ({
+      incrementIfLoggedIn: () => {
+        if (user.isAuthenticated()) {
+          counter.increment();
+        }
+      }
+    })
+  )
+);
+```
 
-**Adapters**: Thin bridges between Lattice and existing state management libraries (Redux, Zustand, Pinia). They handle integration details so your behavior specifications remain portable.
+### Resolution for Computed Values
+The `resolve` utility creates efficient, computed values from your slices:
 
-**Runtime**: Framework-specific hooks and utilities that work with any adapter, enabling reactive UI updates in React, Vue, and other frameworks.
+```typescript
+const select = resolve({ counter, settings });
 
-**Composition**: The `compose` utility enables slices to depend on each other, building complex behaviors from simple pieces without tight coupling.
+const computed = select(({ counter, settings }) => ({
+  total: counter.value() * settings.multiplier(),
+  label: `Count: ${counter.value()}`
+}));
+```
 
 ## Architecture
 
 ```
-+------------------+     +--------------+     +---------------+
-|   Your Component |---->|   Lattice    |---->|   Adapters    |
-|  (Behavior       |     |   Core       |     |  (Redux,      |
-|   Specifications)|     |              |     |   Zustand,    |
-+------------------+     +--------------+     |   Pinia...)   |
-                               |              +---------------+
-                               |                      |
-                               v                      v
-                        +--------------+      +---------------+
-                        |   Runtime    |      |  Framework    |
-                        |  (React/Vue  |<-----|  (React/Vue)  |
-                        |   Hooks)     |      |               |
-                        +--------------+      +---------------+
+┌─────────────────────┐     ┌──────────────┐     ┌─────────────────┐
+│ Behavior Specs      │────▶│ Lattice Core │────▶│ Adapters        │
+│ (Your Business      │     │ (Thin        │     │ (Redux,         │
+│  Logic)             │     │  Abstraction)│     │  Zustand, etc)  │
+└─────────────────────┘     └──────────────┘     └─────────────────┘
+                                    │                      │
+                                    ▼                      ▼
+                            ┌──────────────┐     ┌─────────────────┐
+                            │ Runtime      │◀────│ UI Framework    │
+                            │ (React/Vue   │     │ (React/Vue)     │
+                            │  Hooks)      │     │                 │
+                            └──────────────┘     └─────────────────┘
 ```
 
 ## Installation
@@ -129,11 +176,22 @@ function TodoList() {
 
 ## Why Lattice?
 
-- **Write Once, Use Everywhere**: Your business logic isn't tied to any specific state library
-- **Gradual Migration**: Migrate from Redux to Zustand (or vice versa) without touching component code
+Lattice fills several gaps in the current ecosystem:
+
+### The Portability Gap
+There's no standard way to write state logic that works across different state managers. Every solution locks you into its patterns. Lattice provides that standard.
+
+### The Evolution Protection Gap
+JavaScript frameworks and libraries change rapidly. Your business logic shouldn't need to be rewritten every time you adopt a new state management solution.
+
+### The Testing Gap
+By separating specification from execution, you can test behaviors in isolation without complex mocking of state management internals.
+
+### Technical Benefits
 - **Type Safety**: Full TypeScript support with excellent inference
 - **Performance**: Minimal overhead - adapters are thin wrappers around native APIs
 - **Framework Agnostic**: Same patterns work in React, Vue, and vanilla JavaScript
+- **Gradual Migration**: Switch state managers by changing adapters, not rewriting logic
 
 ## Contributing
 
