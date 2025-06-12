@@ -545,4 +545,117 @@ describe('store-react', () => {
       )).toBe(false); // Different object references
     });
   });
+
+  describe('Performance', () => {
+    it('should maintain stable API references across renders', () => {
+      const apiRefs: StoreApi<{ count: number }>[] = [];
+      
+      const { rerender } = renderHook(() => {
+        const store = useStore(() => ({ count: 0 }));
+        apiRefs.push({
+          getState: store.getState,
+          setState: store.setState,
+          subscribe: store.subscribe,
+          destroy: store.destroy,
+        });
+        return store;
+      });
+
+      // Force multiple re-renders
+      rerender();
+      rerender();
+      rerender();
+
+      // All API references should be the same
+      expect(apiRefs.length).toBe(4);
+      for (let i = 1; i < apiRefs.length; i++) {
+        expect(apiRefs[i]!.getState).toBe(apiRefs[0]!.getState);
+        expect(apiRefs[i]!.setState).toBe(apiRefs[0]!.setState);
+        expect(apiRefs[i]!.subscribe).toBe(apiRefs[0]!.subscribe);
+        expect(apiRefs[i]!.destroy).toBe(apiRefs[0]!.destroy);
+      }
+    });
+
+    it('should not create new result objects when state has not changed', () => {
+      const results: any[] = [];
+      
+      const { result, rerender } = renderHook(() => {
+        const store = useStore(() => ({ count: 0, name: 'test' }));
+        results.push(store);
+        return store;
+      });
+
+      // Force re-renders without state changes
+      rerender();
+      rerender();
+      
+      // All results should be the same object reference
+      expect(results.length).toBe(3);
+      expect(results[1]).toBe(results[0]);
+      expect(results[2]).toBe(results[0]);
+      
+      // Change state
+      act(() => {
+        result.current.setState({ count: 1 });
+      });
+      
+      // New object should be created after state change
+      expect(results.length).toBe(4);
+      expect(results[3]).not.toBe(results[0]);
+      expect(results[3]!.count).toBe(1);
+    });
+
+    it('should handle rapid state updates efficiently', () => {
+      const { result } = renderHook(() =>
+        useStore<{ count: number; increment: () => void }>((set, get) => ({
+          count: 0,
+          increment: () => set({ count: get().count + 1 }),
+        }))
+      );
+
+      const startTime = performance.now();
+      
+      // Perform 1000 increments
+      act(() => {
+        for (let i = 0; i < 1000; i++) {
+          result.current.increment();
+        }
+      });
+      
+      const endTime = performance.now();
+      
+      expect(result.current.count).toBe(1000);
+      // Should complete in under 50ms (typically ~5-10ms)
+      expect(endTime - startTime).toBeLessThan(50);
+    });
+
+    it('should efficiently handle many subscribers', () => {
+      const { result } = renderHook(() =>
+        useStore(() => ({ count: 0 }))
+      );
+
+      const callbacks: (() => void)[] = [];
+      const unsubscribes: (() => void)[] = [];
+      
+      // Add 100 subscribers
+      for (let i = 0; i < 100; i++) {
+        const callback = vi.fn();
+        callbacks.push(callback);
+        unsubscribes.push(result.current.subscribe(callback));
+      }
+      
+      // Update state
+      act(() => {
+        result.current.setState({ count: 1 });
+      });
+      
+      // All callbacks should be called once
+      callbacks.forEach(callback => {
+        expect(callback).toHaveBeenCalledTimes(1);
+      });
+      
+      // Clean up
+      unsubscribes.forEach(unsub => unsub());
+    });
+  });
 });

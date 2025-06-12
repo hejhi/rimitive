@@ -73,62 +73,55 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
     const listeners = new Set<() => void>();
     let state: T;
 
-    const getState: GetState<T> = () => state;
-
-    const setState: SetState<T> = (updates) => {
-      const partial = typeof updates === 'function' ? updates(state) : updates;
-      
-      // Optimized shallow merge with change detection
-      let hasChanges = false;
-      
-      // Check for changes first
-      for (const key in partial) {
-        if (!Object.is(state[key], partial[key])) {
-          hasChanges = true;
-          break;
-        }
-      }
-
-      if (hasChanges) {
-        // Create new state object
-        state = { ...state, ...partial };
-        storeRef.current!.state = state;
+    // Create stable API functions that will persist across renders
+    const api: StoreApi<T> = {
+      getState: () => storeRef.current!.state,
+      setState: (updates) => {
+        const state = storeRef.current!.state;
+        const partial = typeof updates === 'function' ? updates(state) : updates;
         
-        // Notify all listeners
-        listeners.forEach(listener => {
-          try {
-            listener();
-          } catch (error) {
-            // In production, errors are silent to avoid breaking other listeners
-            if (process.env.NODE_ENV !== 'production') {
-              console.error('Error in store listener:', error);
-            }
+        // Optimized shallow merge with change detection
+        let hasChanges = false;
+        
+        // Check for changes first
+        for (const key in partial) {
+          if (!Object.is(state[key], partial[key])) {
+            hasChanges = true;
+            break;
           }
-        });
+        }
+
+        if (hasChanges) {
+          // Create new state object
+          const newState = { ...state, ...partial };
+          storeRef.current!.state = newState;
+          
+          // Notify all listeners
+          listeners.forEach(listener => {
+            try {
+              listener();
+            } catch (error) {
+              // In production, errors are silent to avoid breaking other listeners
+              if (process.env.NODE_ENV !== 'production') {
+                console.error('Error in store listener:', error);
+              }
+            }
+          });
+        }
+      },
+      subscribe: (listener: () => void) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
+      destroy: () => {
+        listeners.clear();
       }
-    };
-
-    const subscribe = (listener: () => void) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    };
-
-    const destroy = () => {
-      listeners.clear();
     };
 
     // Create the store
-    state = createStore(setState, getState);
-
-    // Create stable API
-    const api: StoreApi<T> = {
-      getState,
-      setState,
-      subscribe,
-      destroy,
-    };
+    state = createStore(api.setState, api.getState);
 
     storeRef.current = {
       state,
@@ -153,14 +146,13 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Return merged object with stable reference
-  // We cache this to avoid creating new objects on every render
+  // Create stable merged result - only recreate when state actually changes
   const resultRef = useRef<T & StoreApi<T>>();
-  if (!resultRef.current) {
+  const prevStateRef = useRef<T>();
+  
+  if (!resultRef.current || prevStateRef.current !== currentState) {
     resultRef.current = { ...currentState, ...store.api };
-  } else {
-    // Update the cached result with new state values
-    Object.assign(resultRef.current, currentState);
+    prevStateRef.current = currentState;
   }
   
   return resultRef.current;
