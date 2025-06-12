@@ -32,7 +32,6 @@ describe('Head-to-Head Comparisons', () => {
           result.current.increment();
         }
       });
-
     });
 
     bench('zustand - hook creation and updates', () => {
@@ -53,10 +52,9 @@ describe('Head-to-Head Comparisons', () => {
           result.current.increment();
         }
       });
-
     });
 
-    bench('store-react - multiple hooks same store', () => {
+    bench('store-react - multiple hooks multiple stores', () => {
       const hooks: any[] = [];
 
       for (let i = 0; i < HOOK_COUNT; i++) {
@@ -74,10 +72,9 @@ describe('Head-to-Head Comparisons', () => {
           hook.current.update(idx * 2);
         });
       });
-
     });
 
-    bench('zustand - multiple hooks same store', () => {
+    bench('zustand - multiple hooks multiple stores', () => {
       const hooks: any[] = [];
 
       for (let i = 0; i < HOOK_COUNT; i++) {
@@ -98,7 +95,6 @@ describe('Head-to-Head Comparisons', () => {
           hook.current.update(idx * 2);
         });
       });
-
     });
 
     bench('store-react - subscription performance', () => {
@@ -167,7 +163,6 @@ describe('Head-to-Head Comparisons', () => {
       for (let i = 0; i < ITERATIONS; i++) {
         store.setState({ count: i });
       }
-
     });
 
     bench('zustand vanilla - state updates', () => {
@@ -178,7 +173,6 @@ describe('Head-to-Head Comparisons', () => {
       for (let i = 0; i < ITERATIONS; i++) {
         store.setState({ count: i });
       }
-
     });
   });
 });
