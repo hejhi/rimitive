@@ -104,18 +104,25 @@ export function createStoreAdapter<State>(
   store: StoreApi<State>,
   options?: AdapterOptions
 ): StoreAdapter<State> {
-  // Track listeners for edge case handling
-  const listeners = new Set<() => void>();
-  let isNotifying = false;
-  const pendingUnsubscribes = new Set<() => void>();
-
   // For error handling
   const handleError = options?.onError ?? ((error) => {
     console.error('Error in store listener:', error);
   });
 
-  // Subscribe to Zustand and forward to our listeners
+  // Performance optimization: Direct listener management without double subscription
+  const listeners = new Set<() => void>();
+  let isNotifying = false;
+  const pendingUnsubscribes = new Set<() => void>();
+  
+  // Cache for getState to avoid repeated calls
+  let cachedState = store.getState();
+  
+  // Subscribe to Zustand store once
   store.subscribe(() => {
+    // Update cached state
+    cachedState = store.getState();
+    
+    // Notify all listeners
     isNotifying = true;
     const currentListeners = Array.from(listeners);
     
@@ -137,7 +144,7 @@ export function createStoreAdapter<State>(
   });
 
   return {
-    getState: () => store.getState(),
+    getState: () => cachedState,
     setState: (updates) => store.setState(updates),
     subscribe: (listener) => {
       listeners.add(listener);
