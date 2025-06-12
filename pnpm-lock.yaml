@@ -268,6 +268,9 @@ importers:
       '@lattice/adapter-redux':
         specifier: workspace:*
         version: link:../adapter-redux
+      '@lattice/adapter-store-react':
+        specifier: workspace:*
+        version: link:../adapter-store-react
       '@lattice/adapter-zustand':
         specifier: workspace:*
         version: link:../adapter-zustand

@@ -29,6 +29,7 @@
     "@lattice/adapter-zustand": "workspace:*",
     "@lattice/adapter-redux": "workspace:*",
     "@lattice/adapter-pinia": "workspace:*",
+    "@lattice/adapter-store-react": "workspace:*",
     "@lattice/store-react": "workspace:*",
     "@lattice/store-vue": "workspace:*",
     "@types/node": "^20.0.0",
