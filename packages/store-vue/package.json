@@ -33,7 +33,6 @@
     "vue": "^3.3.0"
   },
   "devDependencies": {
-    "@lattice/test-utils": "workspace:*",
     "@testing-library/vue": "^8.0.0",
     "@types/node": "^20.14.10",
     "@vitejs/plugin-vue": "^5.0.0",
