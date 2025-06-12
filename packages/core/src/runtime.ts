@@ -1,5 +1,5 @@
 /**
- * @fileoverview Lattice runtime - connects apps to adapters
+ * @fileoverview Lattice runtime - connects components to adapters
  *
  * The runtime enforces the single store pattern by providing a unified
  * createStore function that manages all state through a single adapter.
@@ -20,32 +20,34 @@ export type CreateStore<State> = (
 ) => StoreSliceFactory<State>;
 
 /**
- * App factory receives createStore and returns the app's slices
+ * Component factory receives createStore and returns the component's slices
  */
-export type AppFactory<App, State> = (createStore: CreateStore<State>) => App;
+export type ComponentFactory<Component, State> = (
+  createStore: CreateStore<State>
+) => Component;
 
 /**
- * Runtime result - the app with subscription capability
+ * Runtime result - the component with subscription capability
  */
-export type RuntimeResult<App> = App & {
+export type RuntimeResult<Component> = Component & {
   subscribe: (listener: () => void) => () => void;
   destroy?: () => void;
 };
 
 /**
- * Creates a Lattice store by connecting an app to an adapter
+ * Creates a Lattice store by connecting an component to an adapter
  *
  * This enforces the single store pattern by ensuring all state goes through
- * a single adapter instance. The createStore function provided to the app
+ * a single adapter instance. The createStore function provided to the component
  * factory ensures that all slices share the same state container.
  *
- * @param appFactory - Function that creates the app, receives createStore
+ * @param componentFactory - Function that creates the component, receives createStore
  * @param adapterFactory - Store adapter factory providing persistence and subscriptions
- * @returns The app with subscription capabilities
+ * @returns The component with subscription capabilities
  *
  * @example
  * ```typescript
- * const createApp = (createStore: CreateStore) => {
+ * const createComponent = (createStore: CreateStore) => {
  *   const createSlice = createStore({ count: 0 });
  *
  *   const counter = createSlice(({ get, set }) => ({
@@ -56,14 +58,14 @@ export type RuntimeResult<App> = App & {
  *   return { counter };
  * };
  *
- * const store = createLatticeStore(createApp, (initialState) => reduxAdapter);
+ * const store = createLatticeStore(createComponent, (initialState) => reduxAdapter);
  * store.counter.increment();
  * ```
  */
-export function createLatticeStore<State, App>(
-  appFactory: AppFactory<App, State>,
+export function createLatticeStore<State, Component>(
+  componentFactory: ComponentFactory<Component, State>,
   adapterFactory: AdapterFactory<State>
-): RuntimeResult<App> {
+): RuntimeResult<Component> {
   // Track if createStore has been called to enforce single store
   let storeCreated = false;
   let sliceFactory: StoreSliceFactory<State> | null = null;
@@ -73,14 +75,14 @@ export function createLatticeStore<State, App>(
   const createStore: CreateStore<any> = <S>(initialState: S) => {
     if (storeCreated) {
       throw new Error(
-        'createStore can only be called once per app. ' +
+        'createStore can only be called once per component. ' +
           'All slices must share the same state container.'
       );
     }
 
     storeCreated = true;
 
-    // Type assertion is safe here because the app factory defines the state shape
+    // Type assertion is safe here because the component factory defines the state shape
     // and the adapter is typed accordingly
     const typedInitialState = initialState as unknown as State;
 
@@ -104,8 +106,8 @@ export function createLatticeStore<State, App>(
     return sliceFactory as unknown as StoreSliceFactory<S>;
   };
 
-  // Create the app with the adapter-backed createStore
-  const app = appFactory(createStore);
+  // Create the component with the adapter-backed createStore
+  const component = componentFactory(createStore);
 
   // Ensure adapter was created
   if (!adapter) {
@@ -115,9 +117,9 @@ export function createLatticeStore<State, App>(
   // Now TypeScript knows adapter is non-null
   const finalAdapter = adapter;
 
-  // Return the app with subscription capability
+  // Return the component with subscription capability
   return {
-    ...app,
+    ...component,
     subscribe: finalAdapter.subscribe,
   };
 }

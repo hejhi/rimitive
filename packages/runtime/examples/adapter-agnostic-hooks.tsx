@@ -9,8 +9,8 @@ import React from 'react';
 import { CreateStore } from '@lattice/core';
 import { useSliceSelector, useSliceValues } from '@lattice/runtime';
 
-// Example app that works with any adapter
-const createApp = (
+// Example component that works with any adapter
+const createComponent = (
   createStore: CreateStore<{
     count: number;
     user: { name: string; role: string };
@@ -40,7 +40,7 @@ const createApp = (
 
 // Component that works with any adapter
 function UniversalCounter<
-  T extends ReturnType<typeof createApp> & { subscribe: any },
+  T extends ReturnType<typeof createComponent> & { subscribe: any },
 >({ store }: { store: T }) {
   // These hooks work regardless of which adapter created the store
   const count = useSliceSelector(store, (s) => s.counter.value());
@@ -55,11 +55,9 @@ function UniversalCounter<
 }
 
 // Another component showing multiple values
-function UserInfo<T extends ReturnType<typeof createApp> & { subscribe: any }>({
-  store,
-}: {
-  store: T;
-}) {
+function UserInfo<
+  T extends ReturnType<typeof createComponent> & { subscribe: any },
+>({ store }: { store: T }) {
   // useSliceValues with shallow equality works with any adapter
   const { name, role } = useSliceValues(store, (s) => ({
     name: s.user.name(),
@@ -80,15 +78,15 @@ function UserInfo<T extends ReturnType<typeof createApp> & { subscribe: any }>({
 }
 
 // Example usage with different adapters
-export function App() {
+export function Component() {
   // In real usage, you'd use actual adapters:
-  // const zustandStore = createZustandAdapter(createApp);
-  // const reduxStore = createReduxAdapter(createApp);
-  // const jotaiStore = createJotaiAdapter(createApp);
+  // const zustandStore = createZustandAdapter(createComponent);
+  // const reduxStore = createReduxAdapter(createComponent);
+  // const jotaiStore = createJotaiAdapter(createComponent);
 
   // For this example, we'll simulate stores from different adapters
   const mockStore = (() => {
-    const app = createApp((initialState) => {
+    const component = createComponent((initialState) => {
       let state = initialState;
       return (factory) =>
         factory({
@@ -100,7 +98,7 @@ export function App() {
     });
 
     return {
-      ...app,
+      ...component,
       subscribe: (_listener: () => void) => {
         // Mock subscription
         return () => {};
@@ -123,10 +121,10 @@ export function App() {
       <div style={{ marginTop: '2rem', fontSize: '0.9em', color: '#666' }}>
         <p>These same components would work identically with:</p>
         <ul>
-          <li>createZustandAdapter(createApp)</li>
-          <li>createReduxAdapter(createApp)</li>
-          <li>createJotaiAdapter(createApp)</li>
-          <li>createValtioAdapter(createApp)</li>
+          <li>createZustandAdapter(createComponent)</li>
+          <li>createReduxAdapter(createComponent)</li>
+          <li>createJotaiAdapter(createComponent)</li>
+          <li>createValtioAdapter(createComponent)</li>
           <li>...or any other Lattice adapter</li>
         </ul>
       </div>

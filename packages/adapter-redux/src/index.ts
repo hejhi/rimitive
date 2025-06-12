@@ -36,19 +36,19 @@ export type StoreEnhancer<State> = (
 ) => EnhancedStore<State>;
 
 /**
- * Creates a Redux adapter for a Lattice app.
+ * Creates a Redux adapter for a Lattice component.
  *
  * This is the primary way to use Lattice with Redux. It combines
- * an app factory with Redux's state management.
+ * an component factory with Redux's state management.
  *
- * @param appFactory - The Lattice app factory
+ * @param componentFactory - The Lattice component factory
  * @param enhancer - Optional store enhancer for middleware
  * @param options - Optional configuration for the adapter
  * @returns A Lattice store backed by Redux
  *
  * @example
  * ```typescript
- * const createApp = (createStore: CreateStore) => {
+ * const createComponent = (createStore: CreateStore) => {
  *   const createSlice = createStore({ count: 0 });
  *
  *   const counter = createSlice(({ get, set }) => ({
@@ -59,17 +59,17 @@ export type StoreEnhancer<State> = (
  *   return { counter };
  * };
  *
- * const store = createReduxAdapter(createApp);
+ * const store = createReduxAdapter(createComponent);
  * store.counter.increment();
  * ```
  */
-export function createReduxAdapter<App>(
-  appFactory: (createStore: CreateStore<any>) => App,
+export function createReduxAdapter<Component>(
+  componentFactory: (createStore: CreateStore<any>) => Component,
   enhancer?: StoreEnhancer<any>,
   options?: AdapterOptions
-): App & { subscribe: (listener: () => void) => () => void } {
+): Component & { subscribe: (listener: () => void) => () => void } {
   // Use the runtime to create the store with inferred state type
-  return createLatticeStore(appFactory, (initialState) => {
+  return createLatticeStore(componentFactory, (initialState) => {
     // Create adapter with the initial state
     const adapter = createStoreAdapter(initialState, options);
 
@@ -89,7 +89,7 @@ export function createReduxAdapter<App>(
  *
  * This creates a new Redux store with minimal wrapping.
  * When used via createReduxAdapter, the initial state comes from
- * the app factory's createStore call, not this parameter.
+ * the component factory's createStore call, not this parameter.
  *
  * ## Notification Behavior
  *
@@ -168,7 +168,7 @@ export function createStoreAdapter<Model>(
  * ```typescript
  * const reduxStore = configureStore({ reducer: rootReducer });
  * const adapter = wrapReduxStore(reduxStore);
- * const store = createLatticeStore(appFactory, adapter);
+ * const store = createLatticeStore(componentFactory, adapter);
  * ```
  */
 export function wrapReduxStore<Model>(
@@ -177,15 +177,17 @@ export function wrapReduxStore<Model>(
   slice?: Slice<Model>
 ): StoreAdapter<Model> {
   // Create a slice for state updates if not provided
-  const stateSlice = slice ?? createReduxSlice({
-    name: 'lattice',
-    initialState: store.getState(),
-    reducers: {
-      updateState: (state, action) => {
-        Object.assign(state as any, action.payload);
+  const stateSlice =
+    slice ??
+    createReduxSlice({
+      name: 'lattice',
+      initialState: store.getState(),
+      reducers: {
+        updateState: (state, action) => {
+          Object.assign(state as any, action.payload);
+        },
       },
-    },
-  });
+    });
 
   // Track active listeners to handle edge cases
   const listeners = new Set<() => void>();
@@ -262,7 +264,7 @@ if (import.meta.vitest) {
 
   describe('createReduxAdapter - in-source tests', () => {
     it('should demonstrate the new API with resolve for selectors', () => {
-      const createApp = (
+      const createComponent = (
         createStore: CreateStore<{ count: number; multiplier: number }>
       ) => {
         const createSlice = createStore({ count: 0, multiplier: 2 });
@@ -292,7 +294,7 @@ if (import.meta.vitest) {
         return { actions, queries, computed };
       };
 
-      const store = createReduxAdapter(createApp);
+      const store = createReduxAdapter(createComponent);
 
       // Test initial state
       expect(store.computed.value()).toBe(0);
@@ -316,7 +318,7 @@ if (import.meta.vitest) {
     });
 
     it('should work with compose for slice dependencies', () => {
-      const createApp = (
+      const createComponent = (
         createStore: CreateStore<{ value: number; min: number; max: number }>
       ) => {
         const createSlice = createStore({
@@ -374,7 +376,7 @@ if (import.meta.vitest) {
         return { actions, value: valueQueries, limits: limitsQueries };
       };
 
-      const store = createReduxAdapter(createApp);
+      const store = createReduxAdapter(createComponent);
 
       // Test initial state
       expect(store.value.current()).toBe(0);
@@ -412,7 +414,7 @@ if (import.meta.vitest) {
         return next(action);
       };
 
-      const createApp = (createStore: CreateStore<{ count: number }>) => {
+      const createComponent = (createStore: CreateStore<{ count: number }>) => {
         const createSlice = createStore({ count: 0 });
 
         const counter = createSlice(({ get, set }) => ({
@@ -423,7 +425,7 @@ if (import.meta.vitest) {
         return { counter };
       };
 
-      const store = createReduxAdapter(createApp, (config) => {
+      const store = createReduxAdapter(createComponent, (config) => {
         return configureStore({
           ...config,
           middleware: (getDefaultMiddleware) =>
@@ -443,7 +445,7 @@ if (import.meta.vitest) {
 
     it('should demonstrate Redux DevTools integration pattern', () => {
       // This test shows the pattern, but DevTools won't be active in test environment
-      const createApp = (
+      const createComponent = (
         createStore: CreateStore<{ count: number; name: string }>
       ) => {
         const createSlice = createStore({
@@ -451,34 +453,34 @@ if (import.meta.vitest) {
           name: 'Redux DevTools Demo',
         });
 
-        const app = createSlice(({ get, set }) => ({
+        const component = createSlice(({ get, set }) => ({
           count: () => get().count,
           name: () => get().name,
           increment: () => set({ count: get().count + 1 }),
           setName: (name: string) => set({ name }),
         }));
 
-        return { app };
+        return { component };
       };
 
       // Example of how to use with Redux DevTools
-      const store = createReduxAdapter(createApp, (config) => {
+      const store = createReduxAdapter(createComponent, (config) => {
         return configureStore({
           ...config,
           devTools: process.env.NODE_ENV !== 'production' && {
-            name: 'My Lattice App',
+            name: 'My Lattice Component',
             trace: true,
           },
         });
       });
 
       // Verify store works correctly
-      expect(store.app.count()).toBe(0);
-      store.app.increment();
-      expect(store.app.count()).toBe(1);
+      expect(store.component.count()).toBe(0);
+      store.component.increment();
+      expect(store.component.count()).toBe(1);
 
-      store.app.setName('Updated Name');
-      expect(store.app.name()).toBe('Updated Name');
+      store.component.setName('Updated Name');
+      expect(store.component.name()).toBe('Updated Name');
     });
   });
 }

@@ -22,8 +22,8 @@ type CountSlice = {
   };
 };
 
-// Standard app factory for all adapters
-const createStandardApp = (createStore: CreateStore<CountSlice>) => {
+// Standard component factory for all adapters
+const createStandardComponent = (createStore: CreateStore<CountSlice>) => {
   const createSlice = createStore({
     count: 0,
     items: [] as string[],
@@ -68,7 +68,7 @@ const createStandardApp = (createStore: CreateStore<CountSlice>) => {
 describe('Adapter Performance Rankings', () => {
   describe('State Update Performance', () => {
     bench('zustand adapter - updates', () => {
-      const store = createZustandAdapter(createStandardApp);
+      const store = createZustandAdapter(createStandardComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
         store.counter.increment();
@@ -82,7 +82,7 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - updates', () => {
-      const store = createReduxAdapter(createStandardApp);
+      const store = createReduxAdapter(createStandardComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
         store.counter.increment();
@@ -96,7 +96,7 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('store-react adapter - updates', () => {
-      const store = createStoreReactAdapter(createStandardApp);
+      const store = createStoreReactAdapter(createStandardComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
         store.counter.increment();
@@ -112,7 +112,7 @@ describe('Adapter Performance Rankings', () => {
 
   describe('Complex State Operations', () => {
     bench('zustand adapter - complex operations', () => {
-      const store = createZustandAdapter(createStandardApp);
+      const store = createZustandAdapter(createStandardComponent);
 
       // Add items
       for (let i = 0; i < 100; i++) {
@@ -127,11 +127,10 @@ describe('Adapter Performance Rankings', () => {
         }
         store.metadata.incrementVersion();
       }
-
     });
 
     bench('redux adapter - complex operations', () => {
-      const store = createReduxAdapter(createStandardApp);
+      const store = createReduxAdapter(createStandardComponent);
 
       // Add items
       for (let i = 0; i < 100; i++) {
@@ -146,11 +145,10 @@ describe('Adapter Performance Rankings', () => {
         }
         store.metadata.incrementVersion();
       }
-
     });
 
     bench('store-react adapter - complex operations', () => {
-      const store = createStoreReactAdapter(createStandardApp);
+      const store = createStoreReactAdapter(createStandardComponent);
 
       // Add items
       for (let i = 0; i < 100; i++) {
@@ -165,13 +163,12 @@ describe('Adapter Performance Rankings', () => {
         }
         store.metadata.incrementVersion();
       }
-
     });
   });
 
   describe('Subscription Performance', () => {
     bench('zustand adapter - subscriptions', () => {
-      const store = createZustandAdapter(createStandardApp);
+      const store = createZustandAdapter(createStandardComponent);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
 
@@ -191,11 +188,10 @@ describe('Adapter Performance Rankings', () => {
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
-
     });
 
     bench('redux adapter - subscriptions', () => {
-      const store = createReduxAdapter(createStandardApp);
+      const store = createReduxAdapter(createStandardComponent);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
 
@@ -215,11 +211,10 @@ describe('Adapter Performance Rankings', () => {
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
-
     });
 
     bench('store-react adapter - subscriptions', () => {
-      const store = createStoreReactAdapter(createStandardApp);
+      const store = createStoreReactAdapter(createStandardComponent);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
 
@@ -239,7 +234,6 @@ describe('Adapter Performance Rankings', () => {
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
-
     });
   });
 
@@ -248,27 +242,24 @@ describe('Adapter Performance Rankings', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        stores.push(createZustandAdapter(createStandardApp));
+        stores.push(createZustandAdapter(createStandardComponent));
       }
-
     });
 
     bench('redux adapter - store creation', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        stores.push(createReduxAdapter(createStandardApp));
+        stores.push(createReduxAdapter(createStandardComponent));
       }
-
     });
 
     bench('store-react adapter - store creation', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        stores.push(createStoreReactAdapter(createStandardApp));
+        stores.push(createStoreReactAdapter(createStandardComponent));
       }
-
     });
   });
 });

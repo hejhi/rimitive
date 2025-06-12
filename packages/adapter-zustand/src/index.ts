@@ -7,7 +7,11 @@
  */
 
 import { createStore as zustandCreateStore, StoreApi } from 'zustand/vanilla';
-import type { StoreAdapter, AppFactory, CreateStore } from '@lattice/core';
+import type {
+  StoreAdapter,
+  ComponentFactory,
+  CreateStore,
+} from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 
 /**
@@ -34,19 +38,19 @@ export type StoreEnhancer<State> = (
 ) => StoreApi<State>;
 
 /**
- * Creates a Zustand adapter for a Lattice app.
+ * Creates a Zustand adapter for a Lattice component.
  *
  * This is the primary way to use Lattice with Zustand. It combines
- * an app factory with Zustand's state management.
+ * an component factory with Zustand's state management.
  *
- * @param appFactory - The Lattice app factory
+ * @param componentFactory - The Lattice component factory
  * @param enhancer - Optional store enhancer for middleware
  * @param options - Optional configuration for the adapter
  * @returns A Lattice store backed by Zustand
  *
  * @example
  * ```typescript
- * const createApp = (createStore: CreateStore) => {
+ * const createComponent = (createStore: CreateStore) => {
  *   const createSlice = createStore({ count: 0 });
  *
  *   const counter = createSlice(({ get, set }) => ({
@@ -57,7 +61,7 @@ export type StoreEnhancer<State> = (
  *   return { counter };
  * };
  *
- * const store = createZustandAdapter(createApp);
+ * const store = createZustandAdapter(createComponent);
  * store.counter.increment();
  * ```
  *
@@ -65,13 +69,13 @@ export type StoreEnhancer<State> = (
  * ```typescript
  * import { persist } from 'zustand/middleware';
  *
- * const store = createZustandAdapter(createApp, (stateCreator, createStore) =>
- *   createStore(persist(stateCreator, { name: 'app-storage' }))
+ * const store = createZustandAdapter(createComponent, (stateCreator, createStore) =>
+ *   createStore(persist(stateCreator, { name: 'component-storage' }))
  * );
  * ```
  */
-export function createZustandAdapter<App, State>(
-  appFactory: AppFactory<App, State>,
+export function createZustandAdapter<Component, State>(
+  componentFactory: ComponentFactory<Component, State>,
   enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ) {
@@ -85,7 +89,7 @@ export function createZustandAdapter<App, State>(
     return createStoreAdapter(store, options);
   };
 
-  return createLatticeStore(appFactory, adapterFactory);
+  return createLatticeStore(componentFactory, adapterFactory);
 }
 
 /**
@@ -105,27 +109,29 @@ export function createStoreAdapter<State>(
   options?: AdapterOptions
 ): StoreAdapter<State> {
   // For error handling
-  const handleError = options?.onError ?? ((error) => {
-    console.error('Error in store listener:', error);
-  });
+  const handleError =
+    options?.onError ??
+    ((error) => {
+      console.error('Error in store listener:', error);
+    });
 
   // Performance optimization: Direct listener management without double subscription
   const listeners = new Set<() => void>();
   let isNotifying = false;
   const pendingUnsubscribes = new Set<() => void>();
-  
+
   // Cache for getState to avoid repeated calls
   let cachedState = store.getState();
-  
+
   // Subscribe to Zustand store once
   store.subscribe(() => {
     // Update cached state
     cachedState = store.getState();
-    
+
     // Notify all listeners
     isNotifying = true;
     const currentListeners = Array.from(listeners);
-    
+
     for (const listener of currentListeners) {
       try {
         listener();
@@ -133,9 +139,9 @@ export function createStoreAdapter<State>(
         handleError(error);
       }
     }
-    
+
     isNotifying = false;
-    
+
     // Process pending unsubscribes
     for (const listener of pendingUnsubscribes) {
       listeners.delete(listener);
@@ -148,7 +154,7 @@ export function createStoreAdapter<State>(
     setState: (updates) => store.setState(updates),
     subscribe: (listener) => {
       listeners.add(listener);
-      
+
       return () => {
         if (isNotifying) {
           pendingUnsubscribes.add(listener);
@@ -201,7 +207,7 @@ if (import.meta.vitest) {
 
   describe('createZustandAdapter - in-source tests', () => {
     it('should demonstrate the new API with resolve for selectors', () => {
-      const createApp = (
+      const createComponent = (
         createStore: CreateStore<{ count: number; multiplier: number }>
       ) => {
         const createSlice = createStore({ count: 0, multiplier: 2 });
@@ -231,7 +237,7 @@ if (import.meta.vitest) {
         return { actions, queries, computed };
       };
 
-      const store = createZustandAdapter(createApp);
+      const store = createZustandAdapter(createComponent);
 
       // Test initial state
       expect(store.computed.value()).toBe(0);
@@ -255,7 +261,7 @@ if (import.meta.vitest) {
     });
 
     it('should work with compose for slice dependencies', () => {
-      const createApp = (
+      const createComponent = (
         createStore: CreateStore<{ value: number; min: number; max: number }>
       ) => {
         const createSlice = createStore({
@@ -313,7 +319,7 @@ if (import.meta.vitest) {
         return { actions, value: valueQueries, limits: limitsQueries };
       };
 
-      const store = createZustandAdapter(createApp);
+      const store = createZustandAdapter(createComponent);
 
       // Test initial state
       expect(store.value.current()).toBe(0);
@@ -347,25 +353,28 @@ if (import.meta.vitest) {
       const middlewareCalls: string[] = [];
 
       // Simple logging middleware that demonstrates the enhancer pattern
-      const loggingMiddleware = (config: any) => (set: any, get: any, api: any) => {
-        middlewareCalls.push('middleware:init');
-        
-        const wrappedSet = (...args: any[]) => {
-          middlewareCalls.push('middleware:setState');
-          const prevState = get();
-          set(...args);
-          const nextState = get();
-          middlewareCalls.push(`state:${JSON.stringify(prevState)}->${JSON.stringify(nextState)}`);
-        };
-        
-        // Critical: mutate api.setState so external calls use the wrapped version
-        api.setState = wrappedSet;
-        
-        return config(wrappedSet, get, api);
-      };
+      const loggingMiddleware =
+        (config: any) => (set: any, get: any, api: any) => {
+          middlewareCalls.push('middleware:init');
 
-      // Create app
-      const createApp = (
+          const wrappedSet = (...args: any[]) => {
+            middlewareCalls.push('middleware:setState');
+            const prevState = get();
+            set(...args);
+            const nextState = get();
+            middlewareCalls.push(
+              `state:${JSON.stringify(prevState)}->${JSON.stringify(nextState)}`
+            );
+          };
+
+          // Critical: mutate api.setState so external calls use the wrapped version
+          api.setState = wrappedSet;
+
+          return config(wrappedSet, get, api);
+        };
+
+      // Create component
+      const createComponent = (
         createStore: CreateStore<{ count: number; name: string }>
       ) => {
         const createSlice = createStore({ count: 0, name: 'test' });
@@ -387,7 +396,7 @@ if (import.meta.vitest) {
 
       // Create store with middleware enhancer
       const store = createZustandAdapter(
-        createApp,
+        createComponent,
         (stateCreator, createStore) =>
           createStore(loggingMiddleware(stateCreator))
       );
@@ -405,18 +414,24 @@ if (import.meta.vitest) {
       // Make some changes
       store.actions.increment();
       expect(middlewareCalls.slice(initCalls)).toContain('middleware:setState');
-      
+
       store.actions.setName('updated');
       expect(store.queries.name()).toBe('updated');
 
       // Verify middleware intercepted all setState calls
-      const setStateCalls = middlewareCalls.filter(call => call === 'middleware:setState').length;
+      const setStateCalls = middlewareCalls.filter(
+        (call) => call === 'middleware:setState'
+      ).length;
       expect(setStateCalls).toBeGreaterThan(0);
 
       // Verify state changes were logged
-      const stateChanges = middlewareCalls.filter(call => call.startsWith('state:'));
+      const stateChanges = middlewareCalls.filter((call) =>
+        call.startsWith('state:')
+      );
       expect(stateChanges.length).toBeGreaterThan(0);
-      expect(stateChanges.some(change => change.includes('"count":1'))).toBe(true);
+      expect(stateChanges.some((change) => change.includes('"count":1'))).toBe(
+        true
+      );
 
       // Test subscriptions still work with middleware
       let notificationCount = 0;

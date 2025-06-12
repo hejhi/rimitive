@@ -16,8 +16,8 @@ npm install @lattice/adapter-store-react @lattice/store-react
 import { createStoreReactAdapter } from '@lattice/adapter-store-react';
 import type { CreateStore } from '@lattice/core';
 
-// Define your app factory
-const createApp = (createStore: CreateStore) => {
+// Define your component factory
+const createComponent = (createStore: CreateStore) => {
   const createSlice = createStore({ count: 0 });
 
   const counter = createSlice(({ get, set }) => ({
@@ -30,7 +30,7 @@ const createApp = (createStore: CreateStore) => {
 };
 
 // Create the store
-const store = createStoreReactAdapter(createApp);
+const store = createStoreReactAdapter(createComponent);
 
 // Use the store
 console.log(store.counter.count()); // 0
@@ -41,7 +41,7 @@ console.log(store.counter.count()); // 1
 ### With Custom Error Handling
 
 ```typescript
-const store = createStoreReactAdapter(createApp, undefined, {
+const store = createStoreReactAdapter(createComponent, undefined, {
   onError: (error) => {
     console.error('Store error:', error);
     // Send to error tracking service
@@ -61,7 +61,7 @@ const loggingEnhancer = (stateCreator, createStore) => {
   });
 };
 
-const store = createStoreReactAdapter(createApp, loggingEnhancer);
+const store = createStoreReactAdapter(createComponent, loggingEnhancer);
 ```
 
 ### Wrapping Existing store-react Stores
@@ -80,7 +80,7 @@ const existingStore = useStore((set, get) => ({
 
 // Wrap for Lattice
 const adapter = wrapStoreReact(existingStore);
-const latticeStore = createLatticeStore(myApp, adapter);
+const latticeStore = createLatticeStore(myComponent, adapter);
 ```
 
 ## Features
@@ -88,16 +88,16 @@ const latticeStore = createLatticeStore(myApp, adapter);
 - **Minimal overhead**: Thin wrapper around store-react's API
 - **Error isolation**: Errors in one listener don't affect others
 - **Edge case handling**: Proper cleanup during unmount and subscription management
-- **TypeScript support**: Full type inference from app factory to store usage
+- **TypeScript support**: Full type inference from component factory to store usage
 - **Enhancer pattern**: Extensible store creation for advanced use cases
 
 ## API
 
-### `createStoreReactAdapter(appFactory, enhancer?, options?)`
+### `createStoreReactAdapter(componentFactory, enhancer?, options?)`
 
 Creates a Lattice store backed by store-react.
 
-- `appFactory`: Function that creates your app structure
+- `componentFactory`: Function that creates your component structure
 - `enhancer`: Optional store enhancer for customization
 - `options`: Optional configuration
   - `onError`: Custom error handler for listener errors

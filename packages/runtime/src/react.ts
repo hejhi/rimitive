@@ -46,9 +46,9 @@ import {
  * }
  * ```
  */
-export function useSliceSelector<App, Selected>(
-  store: App & SubscribableStore,
-  selector: (slices: App) => Selected,
+export function useSliceSelector<Component, Selected>(
+  store: Component & SubscribableStore,
+  selector: (slices: Component) => Selected,
   equalityFn?: (a: Selected, b: Selected) => boolean,
   useTransitions = false
 ): Selected {
@@ -135,10 +135,10 @@ export function useSliceSelector<App, Selected>(
  * }
  * ```
  */
-export function useSlice<App, K extends keyof App>(
-  store: App & SubscribableStore,
+export function useSlice<Component, K extends keyof Component>(
+  store: Component & SubscribableStore,
   sliceName: K
-): App[K] {
+): Component[K] {
   // For a single slice, we can just return it directly since
   // slice objects themselves are stable
   return store[sliceName];
@@ -169,9 +169,12 @@ export function useSlice<App, K extends keyof App>(
  * }
  * ```
  */
-export function useSliceValues<App, Selected extends Record<string, unknown>>(
-  store: App & SubscribableStore,
-  selector: (slices: App) => Selected,
+export function useSliceValues<
+  Component,
+  Selected extends Record<string, unknown>,
+>(
+  store: Component & SubscribableStore,
+  selector: (slices: Component) => Selected,
   useTransitions = false
 ): Selected {
   return useSliceSelector(store, selector, shallowEqual, useTransitions);
@@ -207,19 +210,19 @@ export function useSliceValues<App, Selected extends Record<string, unknown>>(
  * }
  * ```
  */
-export function useLattice<App, Selected>(
-  store: App & SubscribableStore,
-  selector: (slices: App) => Selected,
+export function useLattice<Component, Selected>(
+  store: Component & SubscribableStore,
+  selector: (slices: Component) => Selected,
   equalityFn?: (a: Selected, b: Selected) => boolean,
   useTransitions = false
 ): {
   values: Selected;
-  slices: App;
+  slices: Component;
 } {
   const values = useSliceSelector(store, selector, equalityFn, useTransitions);
 
   // Use a single ref for the result object and update it only when values change
-  const resultRef = useRef<{ values: Selected; slices: App }>();
+  const resultRef = useRef<{ values: Selected; slices: Component }>();
 
   // Lazy initialization for the result object
   if (!resultRef.current) {

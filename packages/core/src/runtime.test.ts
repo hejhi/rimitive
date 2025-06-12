@@ -4,7 +4,7 @@ import { createStore } from './index';
 import type { CreateStore, StoreAdapter } from './runtime';
 
 describe('runtime with new createStore API', () => {
-  it('should connect an app to an adapter', () => {
+  it('should connect an component to an adapter', () => {
     // Track what happens during adapter creation
     let capturedInitialState: any;
     let mockState: any;
@@ -23,8 +23,8 @@ describe('runtime with new createStore API', () => {
       return mockAdapter;
     };
 
-    // Create an app factory
-    const createApp = (createStore: CreateStore<{ count: number }>) => {
+    // Create an component factory
+    const createComponent = (createStore: CreateStore<{ count: number }>) => {
       const createSlice = createStore({ count: 0 });
 
       const counter = createSlice(({ get, set }) => ({
@@ -37,7 +37,7 @@ describe('runtime with new createStore API', () => {
     };
 
     // Create the store with runtime using factory
-    const store = createLatticeStore(createApp, adapterFactory);
+    const store = createLatticeStore(createComponent, adapterFactory);
 
     // Verify factory was called with initial state
     expect(capturedInitialState).toEqual({ count: 0 });
@@ -70,7 +70,7 @@ describe('runtime with new createStore API', () => {
       return mockAdapter;
     };
 
-    const createApp = (
+    const createComponent = (
       createStore: CreateStore<{ count: number; multiplier: number }>
     ) => {
       const createSlice = createStore({ count: 0, multiplier: 2 });
@@ -89,7 +89,7 @@ describe('runtime with new createStore API', () => {
       return { counter, config };
     };
 
-    const store = createLatticeStore(createApp, adapterFactory);
+    const store = createLatticeStore(createComponent, adapterFactory);
 
     expect(store.counter.count()).toBe(0);
     expect(store.config.multiplier()).toBe(2);
@@ -112,12 +112,12 @@ describe('runtime with new createStore API', () => {
       subscribe: vi.fn(() => () => {}),
     };
 
-    const createApp = (createStore: CreateStore<any>) => {
+    const createComponent = (createStore: CreateStore<any>) => {
       createStore({});
       return {};
     };
 
-    const store = createLatticeStore(createApp, () => mockAdapter);
+    const store = createLatticeStore(createComponent, () => mockAdapter);
 
     expect(typeof store.subscribe).toBe('function');
     expect(store.subscribe).toBe(mockAdapter.subscribe);
@@ -159,7 +159,7 @@ describe('runtime with new createStore API', () => {
       subscribe: () => () => {},
     };
 
-    const createApp = (createStore: CreateStore<any>) => {
+    const createComponent = (createStore: CreateStore<any>) => {
       // First call should work
       createStore({ value: 1 });
 
@@ -172,21 +172,21 @@ describe('runtime with new createStore API', () => {
     };
 
     // This should not throw because the error is caught in the test
-    createLatticeStore(createApp, () => mockAdapter);
+    createLatticeStore(createComponent, () => mockAdapter);
   });
 
   it('should properly type the state through the adapter', () => {
-    interface AppState {
+    interface ComponentState {
       count: number;
       name: string;
     }
 
-    let mockState: AppState = { name: 'test', count: 0 };
+    let mockState: ComponentState = { name: 'test', count: 0 };
 
-    const adapterFactory = (initialState: AppState) => {
+    const adapterFactory = (initialState: ComponentState) => {
       mockState = { ...initialState };
 
-      const mockAdapter: StoreAdapter<AppState> = {
+      const mockAdapter: StoreAdapter<ComponentState> = {
         getState: vi.fn(() => mockState),
         setState: vi.fn((updates) => Object.assign(mockState, updates)),
         subscribe: vi.fn(() => () => {}),
@@ -195,7 +195,7 @@ describe('runtime with new createStore API', () => {
       return mockAdapter;
     };
 
-    const createApp = (createStore: CreateStore<AppState>) => {
+    const createComponent = (createStore: CreateStore<ComponentState>) => {
       const createSlice = createStore({ count: 0, name: 'test' });
 
       const counter = createSlice(({ get, set }) => ({
@@ -206,7 +206,7 @@ describe('runtime with new createStore API', () => {
       return { counter };
     };
 
-    const store = createLatticeStore(createApp, adapterFactory);
+    const store = createLatticeStore(createComponent, adapterFactory);
 
     // Test operations
     store.counter.increment();

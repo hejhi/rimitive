@@ -460,24 +460,24 @@ describe('store-react', () => {
 
   describe('createStoreProvider', () => {
     it('should create provider and hook', () => {
-      interface AppStore {
+      interface ComponentStore {
         user: string | null;
         login: (user: string) => void;
         logout: () => void;
       }
 
-      const { StoreProvider, useStore: useAppStore } =
-        createStoreProvider<AppStore>();
+      const { StoreProvider, useStore: useComponentStore } =
+        createStoreProvider<ComponentStore>();
 
-      let profileStore: AppStore | null = null;
+      let profileStore: ComponentStore | null = null;
 
       function UserProfile() {
-        profileStore = useAppStore();
+        profileStore = useComponentStore();
         return null;
       }
 
-      function App() {
-        const store = useStore<AppStore>((set) => ({
+      function Component() {
+        const store = useStore<ComponentStore>((set) => ({
           user: null as string | null,
           login: (user: string) => set({ user }),
           logout: () => set({ user: null }),
@@ -491,7 +491,7 @@ describe('store-react', () => {
 
       // Render the component tree
       renderHook(() => null, {
-        wrapper: App,
+        wrapper: Component,
       });
 
       expect(profileStore).not.toBeNull();

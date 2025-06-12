@@ -6,8 +6,15 @@
  * All component execution is handled by the Lattice runtime.
  */
 
-import type { StoreApi as StoreReactApi, StoreCreator } from '@lattice/store-react';
-import type { StoreAdapter, AppFactory, CreateStore } from '@lattice/core';
+import type {
+  StoreApi as StoreReactApi,
+  StoreCreator,
+} from '@lattice/store-react';
+import type {
+  StoreAdapter,
+  ComponentFactory,
+  CreateStore,
+} from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 
 /**
@@ -34,19 +41,19 @@ export type StoreEnhancer<State> = (
 ) => StoreReactApi<State>;
 
 /**
- * Creates a store-react adapter for a Lattice app.
+ * Creates a store-react adapter for a Lattice component.
  *
  * This is the primary way to use Lattice with store-react. It combines
- * an app factory with store-react's state management.
+ * an component factory with store-react's state management.
  *
- * @param appFactory - The Lattice app factory
+ * @param componentFactory - The Lattice component factory
  * @param enhancer - Optional store enhancer for customization
  * @param options - Optional configuration for the adapter
  * @returns A Lattice store backed by store-react
  *
  * @example
  * ```typescript
- * const createApp = (createStore: CreateStore) => {
+ * const createComponent = (createStore: CreateStore) => {
  *   const createSlice = createStore({ count: 0 });
  *
  *   const counter = createSlice(({ get, set }) => ({
@@ -57,12 +64,12 @@ export type StoreEnhancer<State> = (
  *   return { counter };
  * };
  *
- * const store = createStoreReactAdapter(createApp);
+ * const store = createStoreReactAdapter(createComponent);
  * store.counter.increment();
  * ```
  */
-export function createStoreReactAdapter<App, State>(
-  appFactory: AppFactory<App, State>,
+export function createStoreReactAdapter<Component, State>(
+  componentFactory: ComponentFactory<Component, State>,
   enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ) {
@@ -70,20 +77,19 @@ export function createStoreReactAdapter<App, State>(
   const adapterFactory = (initialState: State): StoreAdapter<State> => {
     // Create a store creator function that returns the initial state
     const stateCreator: StoreCreator<State> = () => initialState;
-    
+
     // Create the store using our custom creation function
     const store = createStoreReactStore(stateCreator, enhancer);
-    
+
     return wrapStoreReact(store, options);
   };
 
-  return createLatticeStore(appFactory, adapterFactory);
+  return createLatticeStore(componentFactory, adapterFactory);
 }
-
 
 /**
  * Creates a store-react store outside of React components
- * 
+ *
  * Since store-react is designed for component-scoped state, we need to
  * create a store manually using its internal API structure.
  *
@@ -98,16 +104,16 @@ function createStoreReactStore<State>(
   // Create the basic store structure
   const listeners = new Set<() => void>();
   let state: State;
-  
+
   // Create the store API
   const api: StoreReactApi<State> = {
     getState: () => state,
     setState: (updates) => {
       const partial = typeof updates === 'function' ? updates(state) : updates;
-      
+
       // Always update state and notify (store-react pattern)
       state = { ...state, ...partial };
-      
+
       // Notify all listeners - use Array.from to handle concurrent modifications
       const currentListeners = Array.from(listeners);
       for (const listener of currentListeners) {
@@ -129,12 +135,12 @@ function createStoreReactStore<State>(
     },
     destroy: () => {
       listeners.clear();
-    }
+    },
   };
-  
+
   // Initialize the state using the creator function
   state = stateCreator(api.setState, api.getState);
-  
+
   // Apply enhancer if provided
   if (enhancer) {
     const createStore = (creator: StoreCreator<State>) => {
@@ -143,10 +149,10 @@ function createStoreReactStore<State>(
       state = newState;
       return newApi;
     };
-    
+
     return enhancer(stateCreator, createStore);
   }
-  
+
   return api;
 }
 
@@ -172,7 +178,7 @@ export function wrapStoreReact<State>(
 ): StoreAdapter<State> {
   // Simple pass-through adapter
   // The store already handles all the notification logic
-  
+
   if (options?.onError) {
     // Only wrap if custom error handler is provided
     return {
@@ -187,15 +193,15 @@ export function wrapStoreReact<State>(
           }
         };
         return store.subscribe(wrappedListener);
-      }
+      },
     };
   }
-  
+
   // Direct pass-through when no error handler
   return {
     getState: store.getState,
     setState: store.setState,
-    subscribe: store.subscribe
+    subscribe: store.subscribe,
   };
 }
 
@@ -231,7 +237,9 @@ if (import.meta.vitest) {
 
   describe('createStoreReactAdapter - in-source tests', () => {
     it('should demonstrate the new API with resolve for selectors', () => {
-      const createApp = (createStore: CreateStore<{ count: number; multiplier: number }>) => {
+      const createComponent = (
+        createStore: CreateStore<{ count: number; multiplier: number }>
+      ) => {
         const createSlice = createStore({ count: 0, multiplier: 2 });
 
         // Actions that mutate state
@@ -259,7 +267,7 @@ if (import.meta.vitest) {
         return { actions, queries, computed };
       };
 
-      const store = createStoreReactAdapter(createApp);
+      const store = createStoreReactAdapter(createComponent);
 
       // Test initial state
       expect(store.computed.value()).toBe(0);
@@ -283,7 +291,9 @@ if (import.meta.vitest) {
     });
 
     it('should work with compose for slice dependencies', () => {
-      const createApp = (createStore: CreateStore<{ value: number; min: number; max: number }>) => {
+      const createComponent = (
+        createStore: CreateStore<{ value: number; min: number; max: number }>
+      ) => {
         const createSlice = createStore({
           value: 0,
           min: 0,
@@ -339,7 +349,7 @@ if (import.meta.vitest) {
         return { actions, value: valueQueries, limits: limitsQueries };
       };
 
-      const store = createStoreReactAdapter(createApp);
+      const store = createStoreReactAdapter(createComponent);
 
       // Test initial state
       expect(store.value.current()).toBe(0);
@@ -369,7 +379,7 @@ if (import.meta.vitest) {
     });
 
     it('should handle subscriptions and cleanup properly', () => {
-      const createApp = (createStore: CreateStore<{ value: number }>) => {
+      const createComponent = (createStore: CreateStore<{ value: number }>) => {
         const createSlice = createStore({ value: 0 });
 
         const actions = createSlice(({ get, set }) => ({
@@ -383,7 +393,7 @@ if (import.meta.vitest) {
         return { actions, queries };
       };
 
-      const store = createStoreReactAdapter(createApp);
+      const store = createStoreReactAdapter(createComponent);
 
       let notifyCount = 0;
       const unsubscribe = store.subscribe(() => {

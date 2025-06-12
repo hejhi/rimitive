@@ -304,9 +304,10 @@ export function createAdapterTestSuite(
     describe('Runtime Integration', () => {
       it('should work with createLatticeStore', () => {
         // Create an adapter factory for the runtime
-        const adapterFactory = (initialState: TestState) => createAdapter(initialState);
+        const adapterFactory = (initialState: TestState) =>
+          createAdapter(initialState);
 
-        const createApp = (createStore: CreateStore<TestState>) => {
+        const createComponent = (createStore: CreateStore<TestState>) => {
           const createSlice = createStore(createInitialState());
 
           const counter = createSlice(({ get, set }) => ({
@@ -324,7 +325,7 @@ export function createAdapterTestSuite(
           return { counter, textEditor };
         };
 
-        const store = createLatticeStore(createApp, adapterFactory);
+        const store = createLatticeStore(createComponent, adapterFactory);
 
         // Test initial state
         expect(store.counter.count()).toBe(0);
@@ -354,9 +355,10 @@ export function createAdapterTestSuite(
 
       it('should maintain state consistency across slices', () => {
         // Create an adapter factory for the runtime
-        const adapterFactory = (initialState: TestState) => createAdapter(initialState);
+        const adapterFactory = (initialState: TestState) =>
+          createAdapter(initialState);
 
-        const createApp = (createStore: CreateStore<TestState>) => {
+        const createComponent = (createStore: CreateStore<TestState>) => {
           const createSlice = createStore(createInitialState());
 
           const reader = createSlice(({ get }) => ({
@@ -374,7 +376,7 @@ export function createAdapterTestSuite(
           return { reader, writer };
         };
 
-        const store = createLatticeStore(createApp, adapterFactory);
+        const store = createLatticeStore(createComponent, adapterFactory);
 
         // Modify through writer
         store.writer.setCount(10);

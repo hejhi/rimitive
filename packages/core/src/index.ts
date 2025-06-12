@@ -13,27 +13,27 @@ export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 export {
   createLatticeStore,
   type RuntimeResult,
-  type AppFactory,
+  type ComponentFactory,
   type CreateStore,
 } from './runtime';
 
 // Export adapter contract
-export { 
-  type StoreAdapter, 
+export {
+  type StoreAdapter,
   type AdapterFactory,
   isStoreAdapter,
-  isAdapterFactory 
+  isAdapterFactory,
 } from './adapter-contract';
 
 // Export adapter test suite
 export { createAdapterTestSuite } from './adapter-contract-tests';
 
 // Export subscription utilities
-export { 
+export {
   subscribeToSlices,
   shallowEqual,
   type SubscribableStore,
-  type SubscribeOptions
+  type SubscribeOptions,
 } from './subscribe';
 
 // New createStore API types

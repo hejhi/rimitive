@@ -12,20 +12,22 @@ describe('Pinia Adapter', () => {
   });
 
   it('should create a store with the new API', () => {
-    const createApp = (createStore: any) => {
+    const createComponent = (createStore: any) => {
       const createSlice = createStore({ count: 0 });
 
-      const counter = createSlice(({ get, set }: StoreTools<{ count: number }>) => ({
-        count: () => get().count,
-        increment: () => set({ count: get().count + 1 }),
-        decrement: () => set({ count: get().count - 1 }),
-        reset: () => set({ count: 0 }),
-      }));
+      const counter = createSlice(
+        ({ get, set }: StoreTools<{ count: number }>) => ({
+          count: () => get().count,
+          increment: () => set({ count: get().count + 1 }),
+          decrement: () => set({ count: get().count - 1 }),
+          reset: () => set({ count: 0 }),
+        })
+      );
 
       return { counter };
     };
 
-    const store = createPiniaAdapter(createApp);
+    const store = createPiniaAdapter(createComponent);
 
     // Test initial state
     expect(store.counter.count()).toBe(0);
@@ -45,18 +47,20 @@ describe('Pinia Adapter', () => {
   });
 
   it('should support subscriptions', () => {
-    const createApp = (createStore: any) => {
+    const createComponent = (createStore: any) => {
       const createSlice = createStore({ value: 0 });
 
-      const state = createSlice(({ get, set }: StoreTools<{ value: number }>) => ({
-        value: () => get().value,
-        setValue: (v: number) => set({ value: v }),
-      }));
+      const state = createSlice(
+        ({ get, set }: StoreTools<{ value: number }>) => ({
+          value: () => get().value,
+          setValue: (v: number) => set({ value: v }),
+        })
+      );
 
       return { state };
     };
 
-    const store = createPiniaAdapter(createApp);
+    const store = createPiniaAdapter(createComponent);
 
     // Track subscription calls
     let callCount = 0;
@@ -85,7 +89,7 @@ describe('Pinia Adapter', () => {
   });
 
   it('should handle multiple slices sharing state', async () => {
-    const createApp = (createStore: any) => {
+    const createComponent = (createStore: any) => {
       const createSlice = createStore({
         todos: [] as Array<{ id: number; text: string; done: boolean }>,
         filter: 'all' as 'all' | 'active' | 'completed',
@@ -133,7 +137,7 @@ describe('Pinia Adapter', () => {
       return { actions, queries };
     };
 
-    const store = createPiniaAdapter(createApp);
+    const store = createPiniaAdapter(createComponent);
 
     // Test initial state
     expect(store.queries.allTodos()).toEqual([]);
@@ -142,13 +146,13 @@ describe('Pinia Adapter', () => {
     // Add todos with a small delay to ensure different IDs
     store.actions.addTodo('Learn Lattice');
     // Wait a millisecond to ensure Date.now() returns different values
-    await new Promise(resolve => setTimeout(resolve, 1));
-    store.actions.addTodo('Build an app');
+    await new Promise((resolve) => setTimeout(resolve, 1));
+    store.actions.addTodo('Build a component');
 
     const todos = store.queries.allTodos();
     expect(todos).toHaveLength(2);
     expect(todos[0].text).toBe('Learn Lattice');
-    expect(todos[1].text).toBe('Build an app');
+    expect(todos[1].text).toBe('Build a component');
 
     // Toggle todo
     const firstTodoId = todos[0].id;
@@ -160,7 +164,7 @@ describe('Pinia Adapter', () => {
     // Test filtering
     store.actions.setFilter('active');
     expect(store.queries.visibleTodos()).toHaveLength(1);
-    expect(store.queries.visibleTodos()[0].text).toBe('Build an app');
+    expect(store.queries.visibleTodos()[0].text).toBe('Build a component');
 
     store.actions.setFilter('completed');
     expect(store.queries.visibleTodos()).toHaveLength(1);
@@ -169,13 +173,13 @@ describe('Pinia Adapter', () => {
 
   it('should work with enhancer for plugins', () => {
     let enhancerCalled = false;
-    
-    const createApp = (createStore: any) => {
-      const createSlice = createStore({ 
+
+    const createComponent = (createStore: any) => {
+      const createSlice = createStore({
         user: null as { name: string; email: string } | null,
-        isLoggedIn: false 
+        isLoggedIn: false,
       });
-      
+
       const auth = createSlice(({ get, set }: StoreTools<any>) => ({
         login: (name: string, email: string) => {
           set({ user: { name, email }, isLoggedIn: true });
@@ -186,72 +190,80 @@ describe('Pinia Adapter', () => {
         currentUser: () => get().user,
         isAuthenticated: () => get().isLoggedIn,
       }));
-      
+
       return { auth };
     };
-    
-    const store = createPiniaAdapter(createApp, (stateCreator, pinia, storeId) => {
-      enhancerCalled = true;
-      
-      // Could add plugins here, e.g.:
-      // pinia.use(createPersistedState({ key: id => `__persisted__${id}` }));
-      
-      const useStore = defineStore(storeId, {
-        state: stateCreator,
-      });
-      
-      return useStore(pinia);
-    });
-    
+
+    const store = createPiniaAdapter(
+      createComponent,
+      (stateCreator, pinia, storeId) => {
+        enhancerCalled = true;
+
+        // Could add plugins here, e.g.:
+        // pinia.use(createPersistedState({ key: id => `__persisted__${id}` }));
+
+        const useStore = defineStore(storeId, {
+          state: stateCreator,
+        });
+
+        return useStore(pinia);
+      }
+    );
+
     // Enhancer should have been called
     expect(enhancerCalled).toBe(true);
-    
+
     // Store should work normally
     expect(store.auth.isAuthenticated()).toBe(false);
     expect(store.auth.currentUser()).toBeNull();
-    
+
     store.auth.login('Alice', 'alice@example.com');
     expect(store.auth.isAuthenticated()).toBe(true);
-    expect(store.auth.currentUser()).toEqual({ name: 'Alice', email: 'alice@example.com' });
+    expect(store.auth.currentUser()).toEqual({
+      name: 'Alice',
+      email: 'alice@example.com',
+    });
   });
 
   it('should handle errors in listeners gracefully', () => {
     const errors: unknown[] = [];
-    
-    const createApp = (createStore: any) => {
+
+    const createComponent = (createStore: any) => {
       const createSlice = createStore({ value: 0 });
-      
-      const counter = createSlice(({ get, set }: StoreTools<{ value: number }>) => ({
-        value: () => get().value,
-        increment: () => set({ value: get().value + 1 }),
-      }));
-      
+
+      const counter = createSlice(
+        ({ get, set }: StoreTools<{ value: number }>) => ({
+          value: () => get().value,
+          increment: () => set({ value: get().value + 1 }),
+        })
+      );
+
       return { counter };
     };
-    
-    const store = createPiniaAdapter(createApp, undefined, {
+
+    const store = createPiniaAdapter(createComponent, undefined, {
       onError: (error) => errors.push(error),
     });
-    
+
     // Add a listener that throws
     store.subscribe(() => {
       throw new Error('Listener error');
     });
-    
+
     // Add a normal listener
     let normalListenerCalled = false;
     store.subscribe(() => {
       normalListenerCalled = true;
     });
-    
+
     // Trigger an update
     store.counter.increment();
-    
+
     // Error should be captured
     expect(errors).toHaveLength(1);
     expect(errors[0]).toBeInstanceOf(Error);
     expect((errors[0] as Error).message).toBe('Listener error');
-    
+
     // Normal listener should still be called
     expect(normalListenerCalled).toBe(true);
   });
@@ -261,27 +273,27 @@ describe('Pinia Adapter', () => {
     const useManualStore = defineStore('manual', {
       state: () => ({ count: 10 }),
     });
-    
+
     const piniaStore = useManualStore();
-    
+
     // Wrap it as an adapter
     const adapter = wrapPiniaStore(piniaStore);
-    
+
     // Test adapter interface
     expect(adapter.getState()).toEqual({ count: 10 });
-    
+
     adapter.setState({ count: 20 });
     expect(adapter.getState()).toEqual({ count: 20 });
-    
+
     // Test subscriptions
     let callCount = 0;
     const unsubscribe = adapter.subscribe(() => {
       callCount++;
     });
-    
+
     adapter.setState({ count: 30 });
     expect(callCount).toBe(1);
-    
+
     unsubscribe();
     adapter.setState({ count: 40 });
     expect(callCount).toBe(1); // No more calls

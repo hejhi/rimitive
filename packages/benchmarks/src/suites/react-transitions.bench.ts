@@ -22,7 +22,7 @@ type TestState = {
 };
 
 describe('React Transitions Performance', () => {
-  const createTestApp = (createStore: CreateStore<TestState>) => {
+  const createTestComponent = (createStore: CreateStore<TestState>) => {
     const createSlice = createStore({
       count: 0,
       items: [] as string[],
@@ -57,7 +57,7 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createZustandAdapter(createTestApp);
+        const store = createZustandAdapter(createTestComponent);
         const { result } = renderHook(
           () =>
             useSliceSelector(
@@ -87,7 +87,7 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createReduxAdapter(createTestApp);
+        const store = createReduxAdapter(createTestComponent);
         const { result } = renderHook(
           () =>
             useSliceSelector(
@@ -117,7 +117,7 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createStoreReactAdapter(createTestApp);
+        const store = createStoreReactAdapter(createTestComponent);
         const { result } = renderHook(
           () =>
             useSliceSelector(
@@ -149,7 +149,7 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createZustandAdapter(createTestApp);
+        const store = createZustandAdapter(createTestComponent);
         const { result } = renderHook(
           () =>
             useSliceSelector(
@@ -179,7 +179,7 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createReduxAdapter(createTestApp);
+        const store = createReduxAdapter(createTestComponent);
         const { result } = renderHook(
           () =>
             useSliceSelector(
@@ -209,7 +209,7 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createStoreReactAdapter(createTestApp);
+        const store = createStoreReactAdapter(createTestComponent);
         const { result } = renderHook(
           () =>
             useSliceSelector(
@@ -237,7 +237,7 @@ describe('React Transitions Performance', () => {
 
   describe('Rapid updates', () => {
     bench('zustand - rapid updates without transitions', () => {
-      const store = createZustandAdapter(createTestApp);
+      const store = createZustandAdapter(createTestComponent);
       renderHook(() =>
         useSliceSelector(store, (s) => s.counter.value(), undefined, false)
       );
@@ -250,7 +250,7 @@ describe('React Transitions Performance', () => {
     });
 
     bench('zustand - rapid updates with transitions', () => {
-      const store = createZustandAdapter(createTestApp);
+      const store = createZustandAdapter(createTestComponent);
       renderHook(() =>
         useSliceSelector(store, (s) => s.counter.value(), undefined, true)
       );
@@ -263,7 +263,7 @@ describe('React Transitions Performance', () => {
     });
 
     bench('store-react - rapid updates without transitions', () => {
-      const store = createStoreReactAdapter(createTestApp);
+      const store = createStoreReactAdapter(createTestComponent);
       renderHook(() =>
         useSliceSelector(store, (s) => s.counter.value(), undefined, false)
       );
@@ -276,7 +276,7 @@ describe('React Transitions Performance', () => {
     });
 
     bench('store-react - rapid updates with transitions', () => {
-      const store = createStoreReactAdapter(createTestApp);
+      const store = createStoreReactAdapter(createTestComponent);
       renderHook(() =>
         useSliceSelector(store, (s) => s.counter.value(), undefined, true)
       );

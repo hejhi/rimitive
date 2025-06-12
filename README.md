@@ -20,7 +20,7 @@ Behavior patterns (selection, filtering, pagination) are universal. The infrastr
 
 ```typescript
 // Define behavior specification once
-const createApp = (createStore) => {
+const createComponent = (createStore) => {
   const createSlice = createStore({ count: 0 });
   
   const counter = createSlice(({ get, set }) => ({
@@ -32,10 +32,10 @@ const createApp = (createStore) => {
 };
 
 // Execute with any infrastructure
-const store = createReduxAdapter(createApp);     // Redux
-const store = createZustandAdapter(createApp);   // Zustand  
-const store = createPiniaAdapter(createApp);     // Pinia
-const ReactComponent = useStore(createApp);      // React (no adapter needed)
+const store = createReduxAdapter(createComponent);      // Redux
+const store = createZustandAdapter(createComponent);    // Zustand  
+const store = createPiniaAdapter(createComponent);      // Pinia
+const store = createStoreReactAdapter(createComponent); // react-store
 ```
 
 ## Core Concepts
@@ -50,7 +50,7 @@ Lattice cleanly separates **composition** (defining behavior) from **execution**
 
 ### Key Components
 
-**Slices**: Composable units that always return getter functions for lazy composition. They manage portions of your app's functionality without executing until needed.
+**Slices**: Composable units that always return getter functions for lazy composition. They manage portions of your component's functionality without executing until needed.
 
 **Adapters**: Thin bridges between Lattice and existing state management libraries (Redux, Zustand, Pinia). They handle integration details so your behavior specifications remain portable.
 
@@ -62,7 +62,7 @@ Lattice cleanly separates **composition** (defining behavior) from **execution**
 
 ```
 +------------------+     +--------------+     +---------------+
-|   Your App       |---->|   Lattice    |---->|   Adapters    |
+|   Your Component |---->|   Lattice    |---->|   Adapters    |
 |  (Behavior       |     |   Core       |     |  (Redux,      |
 |   Specifications)|     |              |     |   Zustand,    |
 +------------------+     +--------------+     |   Pinia...)   |
@@ -94,10 +94,10 @@ npm install @lattice/runtime          # For React/Vue hooks
 ## Quick Start
 
 ```typescript
-// 1. Define your app
+// 1. Define your component
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 
-const createApp = (createStore) => {
+const createComponent = (createStore) => {
   const createSlice = createStore({ todos: [] });
   
   const todos = createSlice(({ get, set }) => ({
@@ -109,7 +109,7 @@ const createApp = (createStore) => {
 };
 
 // 2. Create your store
-const store = createZustandAdapter(createApp);
+const store = createZustandAdapter(createComponent);
 
 // 3. Use in React
 import { useSliceSelector } from '@lattice/runtime/react';

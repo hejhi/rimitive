@@ -19,7 +19,9 @@ import React, {
 // Core Types
 // ============================================================================
 
-export type SetState<T> = (updates: Partial<T> | ((state: T) => Partial<T>)) => void;
+export type SetState<T> = (
+  updates: Partial<T> | ((state: T) => Partial<T>)
+) => void;
 export type GetState<T> = () => T;
 export type Subscribe = (listener: () => void) => () => void;
 
@@ -78,11 +80,12 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
       getState: () => storeRef.current!.state,
       setState: (updates) => {
         const state = storeRef.current!.state;
-        const partial = typeof updates === 'function' ? updates(state) : updates;
-        
+        const partial =
+          typeof updates === 'function' ? updates(state) : updates;
+
         // Optimized shallow merge with change detection
         let hasChanges = false;
-        
+
         // Check for changes first
         for (const key in partial) {
           if (!Object.is(state[key], partial[key])) {
@@ -95,9 +98,9 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
           // Create new state object
           const newState = { ...state, ...partial };
           storeRef.current!.state = newState;
-          
+
           // Notify all listeners
-          listeners.forEach(listener => {
+          listeners.forEach((listener) => {
             try {
               listener();
             } catch (error) {
@@ -117,7 +120,7 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
       },
       destroy: () => {
         listeners.clear();
-      }
+      },
     };
 
     // Create the store
@@ -149,12 +152,12 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
   // Create stable merged result - only recreate when state actually changes
   const resultRef = useRef<T & StoreApi<T>>();
   const prevStateRef = useRef<T>();
-  
+
   if (!resultRef.current || prevStateRef.current !== currentState) {
     resultRef.current = { ...currentState, ...store.api };
     prevStateRef.current = currentState;
   }
-  
+
   return resultRef.current;
 }
 
@@ -195,7 +198,7 @@ export function useStoreSelector<Store, Selected>(
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
       let currentValue = selector(store.getState());
-      
+
       return store.subscribe(() => {
         const nextValue = selector(store.getState());
         if (!equalityFn(currentValue, nextValue)) {
@@ -221,7 +224,7 @@ export function useStoreSelector<Store, Selected>(
  * ```tsx
  * const TodoStoreContext = createStoreContext<TodoStore>();
  *
- * function App() {
+ * function Component() {
  *   const store = useStore(createTodoStore);
  *   return (
  *     <TodoStoreContext.Provider value={store}>
@@ -260,11 +263,11 @@ export function createStoreContext<Store>() {
  *
  * @example
  * ```tsx
- * function App() {
- *   const store = useStore(createAppStore);
+ * function Component() {
+ *   const store = useStore(createComponentStore);
  *   return (
  *     <StoreProvider store={store}>
- *       <AppContent />
+ *       <ComponentContent />
  *     </StoreProvider>
  *   );
  * }
@@ -310,7 +313,7 @@ export function shallowEqual<T>(a: T, b: T): boolean {
 
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
-  
+
   if (keysA.length !== keysB.length) return false;
 
   for (let i = 0; i < keysA.length; i++) {

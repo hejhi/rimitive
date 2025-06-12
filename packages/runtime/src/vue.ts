@@ -11,14 +11,7 @@
  * - Optimized reactivity using Vue's ref and reactive
  */
 
-import {
-  ref,
-  reactive,
-  toRefs,
-  onUnmounted,
-  type Ref,
-  type ToRefs,
-} from 'vue';
+import { ref, reactive, toRefs, onUnmounted, type Ref, type ToRefs } from 'vue';
 import {
   subscribeToSlices,
   shallowEqual,
@@ -50,9 +43,9 @@ import {
  * </template>
  * ```
  */
-export function useSliceSelector<App, Selected>(
-  store: App & SubscribableStore,
-  selector: (slices: App) => Selected,
+export function useSliceSelector<Component, Selected>(
+  store: Component & SubscribableStore,
+  selector: (slices: Component) => Selected,
   equalityFn?: (a: Selected, b: Selected) => boolean
 ): Ref<Selected> {
   // Initialize reactive state with current selector result
@@ -101,10 +94,10 @@ export function useSliceSelector<App, Selected>(
  * </template>
  * ```
  */
-export function useSlice<App, K extends keyof App>(
-  store: App & SubscribableStore,
+export function useSlice<Component, K extends keyof Component>(
+  store: Component & SubscribableStore,
   sliceName: K
-): App[K] {
+): Component[K] {
   // For a single slice, we can just return it directly since
   // slice objects themselves are stable
   return store[sliceName];
@@ -137,9 +130,12 @@ export function useSlice<App, K extends keyof App>(
  * </template>
  * ```
  */
-export function useSliceValues<App, Selected extends Record<string, unknown>>(
-  store: App & SubscribableStore,
-  selector: (slices: App) => Selected
+export function useSliceValues<
+  Component,
+  Selected extends Record<string, unknown>,
+>(
+  store: Component & SubscribableStore,
+  selector: (slices: Component) => Selected
 ): ToRefs<Selected> {
   // Use reactive for object state
   const state = reactive(selector(store)) as Selected;
@@ -194,13 +190,13 @@ export function useSliceValues<App, Selected extends Record<string, unknown>>(
  * </template>
  * ```
  */
-export function useLattice<App, Selected>(
-  store: App & SubscribableStore,
-  selector: (slices: App) => Selected,
+export function useLattice<Component, Selected>(
+  store: Component & SubscribableStore,
+  selector: (slices: Component) => Selected,
   equalityFn?: (a: Selected, b: Selected) => boolean
 ): {
   values: Ref<Selected>;
-  slices: App;
+  slices: Component;
 } {
   const values = useSliceSelector(store, selector, equalityFn);
   return { values, slices: store };

@@ -5,8 +5,8 @@ import { createZustandAdapter } from '.';
 
 describe('Zustand Adapter - New Architecture', () => {
   it('should demonstrate basic store creation and slice patterns', () => {
-    // Define a simple counter app using the new API
-    const createApp = (createStore: CreateStore<{ count: number }>) => {
+    // Define a simple counter component using the new API
+    const createComponent = (createStore: CreateStore<{ count: number }>) => {
       // Step 1: Create store returns a slice factory
       const createSlice = createStore({ count: 0 });
 
@@ -57,7 +57,7 @@ describe('Zustand Adapter - New Architecture', () => {
     };
 
     // Create the store using createZustandAdapter
-    const store = createZustandAdapter(createApp);
+    const store = createZustandAdapter(createComponent);
 
     // Test initial state through queries
     expect(store.queries.count()).toBe(0);
@@ -104,7 +104,7 @@ describe('Zustand Adapter - New Architecture', () => {
   });
 
   it('should demonstrate slice composition with compose', () => {
-    const createApp = (
+    const createComponent = (
       createStore: CreateStore<{
         todos: { id: string; text: string; done: boolean }[];
         filter: 'all' | 'active' | 'completed';
@@ -200,7 +200,7 @@ describe('Zustand Adapter - New Architecture', () => {
       };
     };
 
-    const store = createZustandAdapter(createApp);
+    const store = createZustandAdapter(createComponent);
 
     // Test initial state
     expect(store.views.filteredTodos()).toEqual([]);
@@ -208,7 +208,7 @@ describe('Zustand Adapter - New Architecture', () => {
 
     // Add todos
     store.actions.addTodo('Learn Lattice');
-    store.actions.addTodo('Build an app');
+    store.actions.addTodo('Build a component');
 
     expect(store.views.stats().total).toBe(2);
     expect(store.views.stats().active).toBe(2);
@@ -229,7 +229,7 @@ describe('Zustand Adapter - New Architecture', () => {
     store.actions.setFilter('active');
     const activeItems = store.views.filteredTodos();
     expect(activeItems.length).toBe(1);
-    expect(activeItems[0]?.text).toBe('Build an app');
+    expect(activeItems[0]?.text).toBe('Build a component');
 
     store.actions.setFilter('completed');
     const completedItems = store.views.filteredTodos();
@@ -243,7 +243,7 @@ describe('Zustand Adapter - New Architecture', () => {
   });
 
   it('should support subscriptions and demonstrate reactivity', () => {
-    const createApp = (
+    const createComponent = (
       createStore: CreateStore<{ value: number; history: number[] }>
     ) => {
       const createSlice = createStore({
@@ -283,7 +283,7 @@ describe('Zustand Adapter - New Architecture', () => {
       return { actions, queries };
     };
 
-    const store = createZustandAdapter(createApp);
+    const store = createZustandAdapter(createComponent);
 
     // Track subscription calls
     const listener = vi.fn();
@@ -331,7 +331,7 @@ describe('Zustand Adapter - New Architecture', () => {
   });
 
   it('should demonstrate parameterized selectors and mixed patterns', () => {
-    const createApp = (
+    const createComponent = (
       createStore: CreateStore<{
         products: {
           id: string;
@@ -421,7 +421,7 @@ describe('Zustand Adapter - New Architecture', () => {
       return { products, pricing, catalog };
     };
 
-    const store = createZustandAdapter(createApp);
+    const store = createZustandAdapter(createComponent);
 
     // Test direct computed values
     expect(store.catalog.totalProducts()).toBe(4);
@@ -449,7 +449,7 @@ describe('Zustand Adapter - New Architecture', () => {
 
   it('should work with createZustandAdapter convenience function', () => {
     // Define a component factory directly
-    const counterApp = (createStore: CreateStore<{ count: number }>) => {
+    const counterComponent = (createStore: CreateStore<{ count: number }>) => {
       const createSlice = createStore({ count: 0 });
 
       const api = createSlice(({ get, set }) => ({
@@ -464,7 +464,7 @@ describe('Zustand Adapter - New Architecture', () => {
     };
 
     // Use the convenience function
-    const store = createZustandAdapter(counterApp);
+    const store = createZustandAdapter(counterComponent);
 
     // Test the API
     expect(store.count()).toBe(0);

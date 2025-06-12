@@ -24,8 +24,8 @@ pnpm add @lattice/adapter-pinia @lattice/core pinia
 ```ts
 import { createPiniaAdapter } from '@lattice/adapter-pinia';
 
-// Define your app
-const createApp = (createStore) => {
+// Define your component
+const createComponent = (createStore) => {
   const createSlice = createStore({ count: 0 });
 
   const counter = createSlice(({ get, set }) => ({
@@ -39,7 +39,7 @@ const createApp = (createStore) => {
 };
 
 // Create a Lattice store backed by Pinia
-const store = createPiniaAdapter(createApp);
+const store = createPiniaAdapter(createComponent);
 
 // Use the store
 console.log(store.counter.count()); // 0
@@ -77,7 +77,7 @@ Use the enhancer parameter to add Pinia plugins:
 import { createPiniaAdapter } from '@lattice/adapter-pinia';
 import { createPersistedState } from 'pinia-plugin-persistedstate';
 
-const store = createPiniaAdapter(createApp, (stateCreator, pinia, storeId) => {
+const store = createPiniaAdapter(createComponent, (stateCreator, pinia, storeId) => {
   // Add plugins to the Pinia instance
   pinia.use(createPersistedState({
     key: id => `__persisted__${id}`,
@@ -180,17 +180,17 @@ const adapter = wrapPiniaStore(piniaStore);
 
 // Use with createLatticeStore from core
 import { createLatticeStore } from '@lattice/core';
-const store = createLatticeStore(createApp, adapter);
+const store = createLatticeStore(createComponent, adapter);
 ```
 
 ## API Reference
 
-### `createPiniaAdapter(appFactory, enhancer?, options?)`
+### `createPiniaAdapter(componentFactory, enhancer?, options?)`
 
-Creates a Pinia adapter for a Lattice app.
+Creates a Pinia adapter for a Lattice component.
 
 #### Parameters
-- `appFactory`: Function that creates your app using Lattice patterns
+- `componentFactory`: Function that creates your component using Lattice patterns
 - `enhancer?`: Optional function to enhance store creation with plugins
 - `options?`: Optional configuration
   - `onError?`: Custom error handler for listener errors
@@ -229,7 +229,7 @@ See the [@lattice/runtime documentation](https://github.com/hivvy/lattice/tree/m
 Full TypeScript support with automatic type inference:
 
 ```ts
-const createApp = (createStore) => {
+const createComponent = (createStore) => {
   const createSlice = createStore({ 
     user: null as { name: string; email: string } | null,
     isLoggedIn: false 
@@ -249,7 +249,7 @@ const createApp = (createStore) => {
   return { auth };
 };
 
-const store = createPiniaAdapter(createApp);
+const store = createPiniaAdapter(createComponent);
 // TypeScript knows all the types!
 ```
 
@@ -260,32 +260,6 @@ All Lattice stores created with the Pinia adapter automatically appear in Vue De
 - Action tracking
 - Time-travel debugging
 - State export/import
-
-## Cross-Framework Support
-
-### React Support
-
-While Pinia is Vue-specific, you can still use Lattice stores created with this adapter in React applications via the React hooks from `@lattice/runtime/react`:
-
-```tsx
-// In a separate file that imports the React hooks
-import { useSlice, useSliceSelector } from '@lattice/runtime/react';
-import { store } from './store';
-
-function Counter() {
-  const counter = useSlice(store.counter);
-  const count = useSliceSelector(store.counter, c => c.count());
-  
-  return (
-    <div>
-      <p>Count: {count}</p>
-      <button onClick={counter.increment}>+</button>
-    </div>
-  );
-}
-```
-
-**Note**: This creates a Pinia instance even in React apps. For React-only projects, consider using `@lattice/adapter-zustand` or `@lattice/adapter-redux` instead.
 
 ## License
 

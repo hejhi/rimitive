@@ -9,7 +9,7 @@ describe('Redux Adapter', () => {
   });
 
   it('should create a working Redux store with basic counter', () => {
-    const createApp = (createStore: any) => {
+    const createComponent = (createStore: any) => {
       const createSlice = createStore({ count: 0 });
 
       const counter = createSlice(({ get, set }: any) => ({
@@ -21,7 +21,7 @@ describe('Redux Adapter', () => {
       return { counter };
     };
 
-    const store = createReduxAdapter(createApp);
+    const store = createReduxAdapter(createComponent);
 
     // Verify initial state
     expect(store.counter.count()).toBe(0);
@@ -48,8 +48,7 @@ describe('Redux Adapter', () => {
       completed: boolean;
     }
 
-
-    const createApp = (createStore: any) => {
+    const createComponent = (createStore: any) => {
       const createSlice = createStore({
         todos: [] as Todo[],
         filter: 'all' as 'all' | 'active' | 'completed',
@@ -85,7 +84,7 @@ describe('Redux Adapter', () => {
       return { actions, queries };
     };
 
-    const store = createReduxAdapter(createApp);
+    const store = createReduxAdapter(createComponent);
 
     // Add todos
     store.actions.addTodo('First todo');
