@@ -3,10 +3,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createSvelteAdapter, wrapSvelteStore } from './index';
+import { createSvelteAdapter } from './index';
 import { compose } from '@lattice/core';
 import type { CreateStore } from '@lattice/core';
-import { writable, get } from 'svelte/store';
 
 describe('Svelte Adapter', () => {
   it('should create a working adapter with basic store operations', () => {
@@ -188,60 +187,6 @@ describe('Svelte Adapter', () => {
     
     unsub2();
   });
-  
-  it('should wrap existing Svelte stores', () => {
-    // Create a custom Svelte store with initial state
-    const svelteStore = writable({ 
-      count: 5, 
-      message: 'Hello',
-      items: ['a', 'b', 'c']
-    });
-    
-    // Wrap it as a Lattice adapter
-    const adapter = wrapSvelteStore(svelteStore);
-    
-    // Test getState
-    expect(adapter.getState()).toEqual({
-      count: 5,
-      message: 'Hello',
-      items: ['a', 'b', 'c']
-    });
-    
-    // Test setState
-    adapter.setState({ count: 10 });
-    expect(adapter.getState()).toEqual({
-      count: 10,
-      message: 'Hello',
-      items: ['a', 'b', 'c']
-    });
-    
-    // Test partial updates
-    adapter.setState({ message: 'World' });
-    expect(adapter.getState()).toEqual({
-      count: 10,
-      message: 'World',
-      items: ['a', 'b', 'c']
-    });
-    
-    // Test subscriptions
-    let notificationCount = 0;
-    const unsub = adapter.subscribe(() => {
-      notificationCount++;
-    });
-    
-    adapter.setState({ count: 20 });
-    expect(notificationCount).toBe(1);
-    
-    // Verify the Svelte store also updated
-    expect(get(svelteStore)).toEqual({
-      count: 20,
-      message: 'World',
-      items: ['a', 'b', 'c']
-    });
-    
-    unsub();
-  });
-  
   it('should handle errors in listeners', () => {
     const errors: unknown[] = [];
     
@@ -253,7 +198,7 @@ describe('Svelte Adapter', () => {
       return { actions };
     };
     
-    const store = createSvelteAdapter(createComponent, undefined, {
+    const store = createSvelteAdapter(createComponent, {
       onError: (error) => errors.push(error)
     });
     
