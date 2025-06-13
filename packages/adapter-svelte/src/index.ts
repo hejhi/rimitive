@@ -6,7 +6,7 @@
  * across both versions.
  */
 
-import { writable, get, type Writable } from 'svelte/store';
+import { writable, get, type Writable, type Readable } from 'svelte/store';
 import type {
   StoreAdapter,
   ComponentFactory,
@@ -107,9 +107,10 @@ export function createSvelteAdapter<Component, State>(
 
   const store = createLatticeStore(componentFactory, adapterFactory);
 
-  // Add destroy method to the store for cleanup
+  // Add destroy and toSvelteStore methods to the store for cleanup and Svelte compatibility
   return Object.assign(store, {
-    destroy: () => adapter?.destroy()
+    destroy: () => adapter?.destroy(),
+    toSvelteStore: () => adapter?.toSvelteStore() || ({ subscribe: () => () => {} } as Readable<State>)
   });
 }
 
@@ -121,6 +122,11 @@ export interface SvelteStoreAdapter<State> extends StoreAdapter<State> {
    * Cleanup function to prevent memory leaks
    */
   destroy(): void;
+  
+  /**
+   * Convert to a Svelte-compatible store for use in components
+   */
+  toSvelteStore(): Readable<State>;
 }
 
 /**
@@ -139,94 +145,90 @@ export function createStoreAdapter<State>(
   enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ): SvelteStoreAdapter<State> {
-  // Create the Svelte store
-  let store: Writable<State> = writable(initialState);
-  
-  // Apply enhancer if provided
-  if (enhancer) {
-    store = enhancer(store);
-  }
+  // Direct state management without Svelte store wrapper
+  let state = initialState;
+  const listeners = new Set<() => void>();
   
   // For error handling
   const handleError = options?.onError ?? ((error) => {
     console.error('Error in store listener:', error);
   });
 
-  // Cache for getState to avoid repeated calls
-  let cachedState = initialState;
-
-  // Track listeners for proper cleanup and error handling
-  const listeners = new Set<() => void>();
-  let isNotifying = false;
-  const pendingUnsubscribes = new Set<() => void>();
-
-  // Subscribe to the Svelte store once - IMPORTANT: Store the cleanup function
-  const storeUnsubscribe = store.subscribe((state) => {
-    // Update cached state
-    cachedState = state;
-    
-    // Skip notification if no listeners
-    if (listeners.size === 0) return;
-    
-    isNotifying = true;
-
-    // Iterate directly over the Set to avoid array allocation
-    for (const listener of listeners) {
-      try {
-        listener();
-      } catch (error) {
-        handleError(error);
-      }
-    }
-
-    isNotifying = false;
-
-    // Process pending unsubscribes
-    if (pendingUnsubscribes.size > 0) {
-      for (const listener of pendingUnsubscribes) {
-        listeners.delete(listener);
-      }
-      pendingUnsubscribes.clear();
-    }
-  });
-
-  return {
-    getState: () => cachedState,
+  // Create the adapter with minimal overhead
+  const adapter: SvelteStoreAdapter<State> = {
+    getState: () => state,
     setState: (updates) => {
-      try {
-        // Skip update entirely if updates is empty
-        const updateKeys = Object.keys(updates);
-        if (updateKeys.length === 0) return;
+      // Skip update entirely if updates is empty
+      const updateKeys = Object.keys(updates);
+      if (updateKeys.length === 0) return;
+      
+      // Check for actual changes
+      let hasChanges = false;
+      for (const key in updates) {
+        if (!Object.is(state[key as keyof State], updates[key as keyof Partial<State>])) {
+          hasChanges = true;
+          break;
+        }
+      }
+      
+      if (hasChanges) {
+        // Update state
+        state = { ...state, ...updates };
         
-        // For Svelte, we can use set() instead of update() when replacing all properties
-        // This is more efficient than spreading
-        store.set({ ...cachedState, ...updates });
-      } catch (error) {
-        handleError(error);
-        throw error; // Re-throw to maintain consistency with other adapters
+        // Notify listeners directly
+        listeners.forEach(listener => {
+          try {
+            listener();
+          } catch (error) {
+            handleError(error);
+          }
+        });
       }
     },
     subscribe: (listener) => {
       listeners.add(listener);
-
-      // Return unsubscribe function
-      return () => {
-        if (isNotifying) {
-          // Defer unsubscribe to avoid modifying set during iteration
-          pendingUnsubscribes.add(listener);
-        } else {
-          listeners.delete(listener);
-        }
-      };
+      return () => listeners.delete(listener);
     },
     destroy: () => {
-      // Clean up the Svelte store subscription to prevent memory leaks
-      storeUnsubscribe();
-      // Clear all listeners
       listeners.clear();
-      pendingUnsubscribes.clear();
-    }
+    },
+    // Add Svelte store compatibility
+    toSvelteStore: () => ({
+      subscribe: (run: (value: State) => void) => {
+        // Call immediately with current value
+        run(state);
+        // Subscribe to changes
+        const unsubscribe = adapter.subscribe(() => run(state));
+        return unsubscribe;
+      }
+    })
   };
+
+  // Apply enhancer if provided (for Svelte store compatibility)
+  if (enhancer) {
+    const svelteStore = adapter.toSvelteStore() as Writable<State>;
+    const enhanced = enhancer(svelteStore);
+    // If enhancer returns a different store, we need to sync it
+    if (enhanced !== svelteStore) {
+      const cleanup = enhanced.subscribe((newState) => {
+        state = newState;
+        listeners.forEach(listener => {
+          try {
+            listener();
+          } catch (error) {
+            handleError(error);
+          }
+        });
+      });
+      const originalDestroy = adapter.destroy;
+      adapter.destroy = () => {
+        cleanup();
+        originalDestroy();
+      };
+    }
+  }
+  
+  return adapter;
 }
 
 /**
@@ -278,75 +280,59 @@ export function wrapSvelteStore<State>(
     console.error('Error in store listener:', error);
   });
 
-  // Cache for getState optimization
-  let cachedState = get(enhancedStore);
-
+  // Direct state management
+  let state = get(enhancedStore);
   const listeners = new Set<() => void>();
-  let isNotifying = false;
-  const pendingUnsubscribes = new Set<() => void>();
 
-  // Subscribe to the provided store - IMPORTANT: Store the cleanup function
-  const storeUnsubscribe = enhancedStore.subscribe((state) => {
-    // Update cached state
-    cachedState = state;
-    
-    // Skip notification if no listeners
-    if (listeners.size === 0) return;
-    
-    isNotifying = true;
-
-    // Iterate directly over the Set to avoid array allocation
-    for (const listener of listeners) {
-      try {
-        listener();
-      } catch (error) {
-        handleError(error);
-      }
-    }
-
-    isNotifying = false;
-
-    if (pendingUnsubscribes.size > 0) {
-      for (const listener of pendingUnsubscribes) {
-        listeners.delete(listener);
-      }
-      pendingUnsubscribes.clear();
+  // Subscribe to the provided store
+  const storeUnsubscribe = enhancedStore.subscribe((newState) => {
+    // Check if state actually changed
+    if (state !== newState) {
+      state = newState;
+      
+      // Notify listeners directly
+      listeners.forEach(listener => {
+        try {
+          listener();
+        } catch (error) {
+          handleError(error);
+        }
+      });
     }
   });
 
   return {
-    getState: () => cachedState,
+    getState: () => state,
     setState: (updates) => {
-      try {
-        // Skip update entirely if updates is empty
-        const updateKeys = Object.keys(updates);
-        if (updateKeys.length === 0) return;
-        
-        // Use set() instead of update() for better performance
-        enhancedStore.set({ ...cachedState, ...updates });
-      } catch (error) {
-        handleError(error);
-        throw error; // Re-throw to maintain consistency
+      // Skip update entirely if updates is empty
+      const updateKeys = Object.keys(updates);
+      if (updateKeys.length === 0) return;
+      
+      // Check for actual changes
+      let hasChanges = false;
+      for (const key in updates) {
+        if (!Object.is(state[key as keyof State], updates[key as keyof Partial<State>])) {
+          hasChanges = true;
+          break;
+        }
+      }
+      
+      if (hasChanges) {
+        // Use set() for better performance
+        enhancedStore.set({ ...state, ...updates });
       }
     },
     subscribe: (listener) => {
       listeners.add(listener);
-
-      return () => {
-        if (isNotifying) {
-          pendingUnsubscribes.add(listener);
-        } else {
-          listeners.delete(listener);
-        }
-      };
+      return () => listeners.delete(listener);
     },
     destroy: () => {
       // Clean up the Svelte store subscription
       storeUnsubscribe();
       // Clear all listeners
       listeners.clear();
-      pendingUnsubscribes.clear();
-    }
+    },
+    toSvelteStore: () => enhancedStore as Readable<State>
   };
 }
 
