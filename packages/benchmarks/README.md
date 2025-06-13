@@ -8,6 +8,7 @@ Performance benchmarks for the Lattice framework, focusing on runtime characteri
 Measures the performance impact of using Lattice wrappers around native state management libraries:
 - Raw Zustand vs Zustand + Lattice
 - Raw Redux vs Redux + Lattice
+- Raw Svelte stores vs Svelte + Lattice
 - State updates, subscriptions, and store creation
 
 ### 2. Head-to-Head Comparisons
@@ -130,6 +131,7 @@ Each benchmark suite includes a warmup phase to ensure JIT optimization.
 1. **Zustand**: Generally fastest due to minimal abstraction
 2. **Redux**: Slower due to immutability and middleware
 3. **store-react**: Optimized for React, competitive with Zustand
+4. **Svelte**: Expected to perform well due to compile-time optimizations and native reactivity
 
 ### Red Flags
 

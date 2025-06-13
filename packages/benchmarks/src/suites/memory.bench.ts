@@ -8,6 +8,7 @@ import { describe, bench } from 'vitest';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { createReduxAdapter } from '@lattice/adapter-redux';
 import { createStoreReactAdapter } from '@lattice/adapter-store-react';
+import { createSvelteAdapter } from '@lattice/adapter-svelte';
 import type { CreateStore } from '@lattice/core';
 
 describe('Memory Usage Patterns', () => {
@@ -108,6 +109,16 @@ describe('Memory Usage Patterns', () => {
 
     bench('store-react - large state (1000 items)', () => {
       const store = createStoreReactAdapter(createLargeStateComponent(1000));
+
+      // Perform updates
+      for (let i = 0; i < 100; i++) {
+        store.users.updateUser(`user-${i}`, { name: `Updated User ${i}` });
+        store.posts.updatePost(`post-${i}`, { title: `Updated Post ${i}` });
+      }
+    });
+
+    bench('svelte - large state (1000 items)', () => {
+      const store = createSvelteAdapter(createLargeStateComponent(1000));
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
@@ -237,6 +248,46 @@ describe('Memory Usage Patterns', () => {
         if (store.destroy) store.destroy();
       });
     });
+
+    bench('svelte - subscription cleanup', () => {
+      const createComponent = (createStore: CreateStore<{ value: number }>) => {
+        const createSlice = createStore({ value: 0 });
+        const slice = createSlice(({ get, set }: any) => ({
+          increment: () => set({ value: get().value + 1 }),
+          getValue: () => get().value,
+        }));
+        return { slice };
+      };
+
+      const stores: any[] = [];
+      const allUnsubscribers: (() => void)[][] = [];
+
+      // Create many stores with subscriptions
+      for (let i = 0; i < 100; i++) {
+        const store = createSvelteAdapter(createComponent);
+        stores.push(store);
+
+        // Add subscriptions to each store
+        const unsubscribers: (() => void)[] = [];
+        for (let j = 0; j < 10; j++) {
+          unsubscribers.push(store.subscribe(() => {}));
+        }
+        allUnsubscribers.push(unsubscribers);
+
+        // Trigger some updates
+        store.slice.increment();
+      }
+
+      // Cleanup all subscriptions
+      allUnsubscribers.forEach((unsubscribers) => {
+        unsubscribers.forEach((unsub) => unsub());
+      });
+
+      // Destroy stores - Svelte adapter has destroy method
+      stores.forEach((store: any) => {
+        if (store.destroy) store.destroy();
+      });
+    });
   });
 
   describe('Rapid Store Creation/Destruction', () => {
@@ -342,6 +393,43 @@ describe('Memory Usage Patterns', () => {
 
         // Destroy if possible
         if ((store as any).destroy) (store as any).destroy();
+      }
+    });
+
+    bench('svelte - rapid lifecycle', () => {
+      const createComponent =
+        (value: number) =>
+        (createStore: CreateStore<{ value: number; history: number[] }>) => {
+          const createSlice = createStore({ value, history: [] as number[] });
+          const slice = createSlice(({ get, set }: any) => ({
+            update: (newValue: number) => {
+              const history = [...get().history, get().value];
+              set({ value: newValue, history });
+            },
+            getValue: () => get().value,
+          }));
+          return { slice };
+        };
+
+      let totalValue = 0;
+
+      // Rapidly create and destroy stores
+      for (let i = 0; i < 1000; i++) {
+        const store = createSvelteAdapter(createComponent(i));
+
+        // Do some work
+        store.slice.update(i * 2);
+        store.slice.update(i * 3);
+        totalValue += store.slice.getValue();
+
+        // Add and remove subscription
+        const unsub = store.subscribe(() => {});
+        unsub();
+
+        // Always destroy Svelte stores to clean up
+        if ('destroy' in store && typeof store.destroy === 'function') {
+          store.destroy();
+        }
       }
     });
   });

@@ -21,6 +21,7 @@
     "@lattice/adapter-pinia": "workspace:*",
     "@lattice/adapter-redux": "workspace:*",
     "@lattice/adapter-store-react": "workspace:*",
+    "@lattice/adapter-svelte": "workspace:*",
     "@lattice/adapter-zustand": "workspace:*",
     "@lattice/core": "workspace:*",
     "@lattice/runtime": "workspace:*",
@@ -34,6 +35,7 @@
     "pinia": "^2.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "svelte": "^5.0.0",
     "vitest": "^3.1.1",
     "vue": "^3.5.0",
     "zustand": "^5.0.3"

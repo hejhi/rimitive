@@ -8,6 +8,7 @@ import { describe, bench } from 'vitest';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { createReduxAdapter } from '@lattice/adapter-redux';
 import { createStoreReactAdapter } from '@lattice/adapter-store-react';
+import { createSvelteAdapter } from '@lattice/adapter-svelte';
 import { compose } from '@lattice/core';
 import type { CreateStore } from '@lattice/core';
 
@@ -276,6 +277,47 @@ describe('Real-World Scenarios', () => {
       }
 
     });
+
+    bench('svelte - ecommerce simulation', () => {
+      const store = createSvelteAdapter(createEcommerceApp);
+      
+      // Load products
+      const productList = Array.from({ length: 100 }, (_, i) => ({
+        id: `prod-${i}`,
+        name: `Product ${i}`,
+        price: Math.random() * 100,
+        stock: Math.floor(Math.random() * 50)
+      }));
+      store.products.loadProducts(productList);
+
+      // Simulate user session
+      store.user.login({ id: 'user-1', name: 'Test User', email: 'test@example.com' });
+
+      // Simulate shopping behavior
+      for (let i = 0; i < 50; i++) {
+        const productId = `prod-${Math.floor(Math.random() * 100)}`;
+        store.ui.selectProduct(productId);
+        store.cart.addItem(productId, Math.floor(Math.random() * 3) + 1);
+        
+        if (i % 10 === 0) {
+          store.ui.toggleCart();
+        }
+        
+        if (i % 5 === 0 && store.cart.getItemCount() > 0) {
+          const cartItems = store.cart.getItemCount();
+          if (cartItems > 10) {
+            // Remove some items
+            store.cart.removeItem(`prod-${Math.floor(Math.random() * 100)}`);
+          }
+        }
+      }
+
+      // Checkout if possible
+      if (store.checkout.canCheckout()) {
+        store.checkout.processCheckout();
+      }
+
+    });
   });
 
   type TodoState = {
@@ -464,6 +506,38 @@ describe('Real-World Scenarios', () => {
 
     bench('store-react - todo app simulation', () => {
       const store = createStoreReactAdapter(createTodoApp);
+      
+      // Add todos
+      for (let i = 0; i < 100; i++) {
+        const tags = [`tag${i % 5}`, `priority${i % 3}`];
+        store.todos.addTodo(`Todo item ${i}`, tags);
+      }
+
+      // Toggle some todos
+      for (let i = 0; i < 50; i++) {
+        store.todos.toggleTodo(`todo-${Date.now() - i * 1000}`);
+      }
+
+      // Apply filters and get results
+      store.filters.setFilter('active');
+      store.queries.getFilteredTodos();
+      
+      store.filters.setSearchTerm('item 1');
+      store.queries.getFilteredTodos();
+      
+      store.filters.toggleTag('tag1');
+      store.filters.toggleTag('priority0');
+      store.queries.getFilteredTodos();
+
+      // Get stats
+      store.queries.getStats();
+      
+      // Clear completed
+      store.todos.clearCompleted();
+    });
+
+    bench('svelte - todo app simulation', () => {
+      const store = createSvelteAdapter(createTodoApp);
       
       // Add todos
       for (let i = 0; i < 100; i++) {

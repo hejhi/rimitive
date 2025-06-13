@@ -8,6 +8,7 @@ import { describe, bench } from 'vitest';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { createReduxAdapter } from '@lattice/adapter-redux';
 import { createStoreReactAdapter } from '@lattice/adapter-store-react';
+import { createSvelteAdapter } from '@lattice/adapter-svelte';
 import type { CreateStore } from '@lattice/core';
 
 const ITERATIONS = 10000;
@@ -108,6 +109,20 @@ describe('Adapter Performance Rankings', () => {
         }
       }
     });
+
+    bench('svelte adapter - updates', () => {
+      const store = createSvelteAdapter(createStandardComponent);
+
+      for (let i = 0; i < ITERATIONS; i++) {
+        store.counter.increment();
+        if (i % 10 === 0) {
+          store.items.addItem(`item-${i}`);
+        }
+        if (i % 100 === 0) {
+          store.metadata.updateTimestamp();
+        }
+      }
+    });
   });
 
   describe('Complex State Operations', () => {
@@ -149,6 +164,24 @@ describe('Adapter Performance Rankings', () => {
 
     bench('store-react adapter - complex operations', () => {
       const store = createStoreReactAdapter(createStandardComponent);
+
+      // Add items
+      for (let i = 0; i < 100; i++) {
+        store.items.addItem(`item-${i}`);
+      }
+
+      // Update counter while removing items
+      for (let i = 99; i >= 0; i--) {
+        store.counter.increment();
+        if (i % 2 === 0) {
+          store.items.removeItem(0);
+        }
+        store.metadata.incrementVersion();
+      }
+    });
+
+    bench('svelte adapter - complex operations', () => {
+      const store = createSvelteAdapter(createStandardComponent);
 
       // Add items
       for (let i = 0; i < 100; i++) {
@@ -235,6 +268,32 @@ describe('Adapter Performance Rankings', () => {
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
     });
+
+    bench('svelte adapter - subscriptions', () => {
+      const store = createSvelteAdapter(createStandardComponent);
+      const unsubscribers: (() => void)[] = [];
+      let notificationCount = 0;
+
+      // Add subscriptions
+      for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
+        unsubscribers.push(
+          store.subscribe(() => {
+            notificationCount++;
+          })
+        );
+      }
+
+      // Trigger updates
+      for (let i = 0; i < 100; i++) {
+        store.counter.increment();
+      }
+
+      // Cleanup
+      unsubscribers.forEach((unsub) => unsub());
+      if ('destroy' in store && typeof store.destroy === 'function') {
+        store.destroy();
+      }
+    });
   });
 
   describe('Store Creation Performance', () => {
@@ -260,6 +319,21 @@ describe('Adapter Performance Rankings', () => {
       for (let i = 0; i < 100; i++) {
         stores.push(createStoreReactAdapter(createStandardComponent));
       }
+    });
+
+    bench('svelte adapter - store creation', () => {
+      const stores = [];
+
+      for (let i = 0; i < 100; i++) {
+        stores.push(createSvelteAdapter(createStandardComponent));
+      }
+      
+      // Clean up to prevent memory leaks
+      stores.forEach(store => {
+        if ('destroy' in store && typeof store.destroy === 'function') {
+          store.destroy();
+        }
+      });
     });
   });
 });

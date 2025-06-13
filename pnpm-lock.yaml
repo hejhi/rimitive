@@ -308,6 +308,9 @@ importers:
       '@lattice/adapter-store-react':
         specifier: workspace:*
         version: link:../adapter-store-react
+      '@lattice/adapter-svelte':
+        specifier: workspace:*
+        version: link:../adapter-svelte
       '@lattice/adapter-zustand':
         specifier: workspace:*
         version: link:../adapter-zustand
@@ -347,6 +350,9 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
+      svelte:
+        specifier: ^5.0.0
+        version: 5.34.1
       vitest:
         specifier: ^3.1.1
         version: 3.1.4(@types/node@20.17.52)(happy-dom@17.5.6)(jsdom@25.0.1)(tsx@4.19.4)(yaml@2.7.1)

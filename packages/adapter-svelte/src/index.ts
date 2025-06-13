@@ -165,10 +165,13 @@ export function createStoreAdapter<State>(
     // Update cached state
     cachedState = state;
     
+    // Skip notification if no listeners
+    if (listeners.size === 0) return;
+    
     isNotifying = true;
-    const currentListeners = Array.from(listeners);
 
-    for (const listener of currentListeners) {
+    // Iterate directly over the Set to avoid array allocation
+    for (const listener of listeners) {
       try {
         listener();
       } catch (error) {
@@ -179,17 +182,25 @@ export function createStoreAdapter<State>(
     isNotifying = false;
 
     // Process pending unsubscribes
-    for (const listener of pendingUnsubscribes) {
-      listeners.delete(listener);
+    if (pendingUnsubscribes.size > 0) {
+      for (const listener of pendingUnsubscribes) {
+        listeners.delete(listener);
+      }
+      pendingUnsubscribes.clear();
     }
-    pendingUnsubscribes.clear();
   });
 
   return {
     getState: () => cachedState,
     setState: (updates) => {
       try {
-        store.update(state => ({ ...state, ...updates }));
+        // Skip update entirely if updates is empty
+        const updateKeys = Object.keys(updates);
+        if (updateKeys.length === 0) return;
+        
+        // For Svelte, we can use set() instead of update() when replacing all properties
+        // This is more efficient than spreading
+        store.set({ ...cachedState, ...updates });
       } catch (error) {
         handleError(error);
         throw error; // Re-throw to maintain consistency with other adapters
@@ -279,10 +290,13 @@ export function wrapSvelteStore<State>(
     // Update cached state
     cachedState = state;
     
+    // Skip notification if no listeners
+    if (listeners.size === 0) return;
+    
     isNotifying = true;
-    const currentListeners = Array.from(listeners);
 
-    for (const listener of currentListeners) {
+    // Iterate directly over the Set to avoid array allocation
+    for (const listener of listeners) {
       try {
         listener();
       } catch (error) {
@@ -292,17 +306,24 @@ export function wrapSvelteStore<State>(
 
     isNotifying = false;
 
-    for (const listener of pendingUnsubscribes) {
-      listeners.delete(listener);
+    if (pendingUnsubscribes.size > 0) {
+      for (const listener of pendingUnsubscribes) {
+        listeners.delete(listener);
+      }
+      pendingUnsubscribes.clear();
     }
-    pendingUnsubscribes.clear();
   });
 
   return {
     getState: () => cachedState,
     setState: (updates) => {
       try {
-        enhancedStore.update(state => ({ ...state, ...updates }));
+        // Skip update entirely if updates is empty
+        const updateKeys = Object.keys(updates);
+        if (updateKeys.length === 0) return;
+        
+        // Use set() instead of update() for better performance
+        enhancedStore.set({ ...cachedState, ...updates });
       } catch (error) {
         handleError(error);
         throw error; // Re-throw to maintain consistency
