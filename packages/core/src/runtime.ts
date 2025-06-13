@@ -68,11 +68,9 @@ export function createLatticeStore<State, Component>(
 ): RuntimeResult<Component> {
   // Track if createStore has been called to enforce single store
   let storeCreated = false;
-  let sliceFactory: StoreSliceFactory<State> | null = null;
-  let adapter: StoreAdapter<State> | undefined;
 
   // Create a createStore function that enforces single store pattern
-  const createStore: CreateStore<any> = <S>(initialState: S) => {
+  const createStore: CreateStore<any> = (initialState: State) => {
     if (storeCreated) {
       throw new Error(
         'createStore can only be called once per component. ' +
@@ -81,13 +79,8 @@ export function createLatticeStore<State, Component>(
     }
 
     storeCreated = true;
-
-    // Type assertion is safe here because the component factory defines the state shape
-    // and the adapter is typed accordingly
-    const typedInitialState = initialState as unknown as State;
-
     // Create the adapter with initial state
-    adapter = adapterFactory(typedInitialState);
+    const adapter = adapterFactory(initialState);
 
     // Create tools that use the adapter
     const tools: StoreTools<State> = {
@@ -95,33 +88,29 @@ export function createLatticeStore<State, Component>(
       set: adapter.setState,
     };
 
-    // Create and store the slice factory
-    sliceFactory = function createSlice<Methods>(
-      factory: (tools: StoreTools<State>) => Methods
-    ): Methods {
-      return factory(tools);
-    };
+    function composeSlice(
+      adapter: StoreAdapter<State>,
+      tools: StoreTools<State>
+    ) {
+      // Create and store the slice factory
+      return function createSlice<Methods>(
+        factory: (tools: StoreTools<State>) => Methods
+      ) {
+        return {
+          selector: factory(tools),
+          subscribe: adapter.subscribe,
+          compose: composeSlice,
+          adapter,
+        };
+      };
+    }
 
     // Return the slice factory with the original type
-    return sliceFactory as unknown as StoreSliceFactory<S>;
+    return composeSlice(adapter, tools);
   };
-
-  // Create the component with the adapter-backed createStore
-  const component = componentFactory(createStore);
-
-  // Ensure adapter was created
-  if (!adapter) {
-    throw new Error('Store not initialized. Call createStore first.');
-  }
-
-  // Now TypeScript knows adapter is non-null
-  const finalAdapter = adapter;
 
   // Return the component with subscription capability
-  return {
-    ...component,
-    subscribe: finalAdapter.subscribe,
-  };
+  return componentFactory(createStore);
 }
 
 // Re-export for convenience

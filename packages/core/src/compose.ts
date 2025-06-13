@@ -9,19 +9,19 @@ import type { StoreTools } from './index';
 
 /**
  * Compose function for dependency injection with createStore pattern.
- * 
+ *
  * @param deps - Object mapping names to slice instances
  * @param factory - Function that receives tools and resolved dependencies
  * @returns A factory function compatible with createSlice
- * 
+ *
  * @example
  * ```typescript
  * const createSlice = createStore({ count: 0 });
- * 
+ *
  * const counter = createSlice(({ get, set }) => ({
  *   increment: () => set({ count: get().count + 1 })
  * }));
- * 
+ *
  * const actions = createSlice(
  *   compose(
  *     { counter },
@@ -35,15 +35,16 @@ import type { StoreTools } from './index';
  * );
  * ```
  */
-export function compose<
-  State,
-  Deps extends Record<string, unknown>,
-  Result
->(
+export function compose<State, Deps extends Record<string, unknown>, Result>(
   deps: Deps,
   factory: (tools: StoreTools<State>, resolvedDeps: Deps) => Result
 ): (tools: StoreTools<State>) => Result {
   return (tools: StoreTools<State>): Result => {
-    return factory(tools, deps);
+    const remappedDeps = Object.entries(deps).map(([sliceKey, slice]) => [
+      sliceKey,
+      slice.compose(tools),
+    ]);
+
+    return factory(tools, Object.fromEntries(remappedDeps) as Deps);
   };
 }

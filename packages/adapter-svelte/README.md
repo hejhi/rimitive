@@ -249,7 +249,7 @@ The runtime utilities work seamlessly with Svelte 5. For advanced use cases, you
 </script>
 
 <button onclick={() => store.counter.increment()}>
-  Count: {$count} × {localMultiplier} = {multiplied}
+  Count: {$count} * {localMultiplier} = {multiplied}
 </button>
 
 <input type="number" bind:value={localMultiplier} />

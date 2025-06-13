@@ -29,6 +29,7 @@
     "svelte": "^5.0.0"
   },
   "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@testing-library/svelte": "^5.0.0",
     "@types/node": "^22.5.4",
     "happy-dom": "^17.5.6",

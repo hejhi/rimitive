@@ -117,22 +117,16 @@ export function createStoreAdapter<State>(
 
   // Performance optimization: Direct listener management without double subscription
   const listeners = new Set<() => void>();
-  let isNotifying = false;
   const pendingUnsubscribes = new Set<() => void>();
-
-  // Cache for getState to avoid repeated calls
-  let cachedState = store.getState();
+  let isNotifying = false;
 
   // Subscribe to Zustand store once
   store.subscribe(() => {
-    // Update cached state
-    cachedState = store.getState();
-
     // Notify all listeners
     isNotifying = true;
-    const currentListeners = Array.from(listeners);
 
-    for (const listener of currentListeners) {
+    // Use for...of directly on the Set to avoid array allocation
+    for (const listener of listeners) {
       try {
         listener();
       } catch (error) {
@@ -150,7 +144,7 @@ export function createStoreAdapter<State>(
   });
 
   return {
-    getState: () => cachedState,
+    getState: () => store.getState(),
     setState: (updates) => store.setState(updates),
     subscribe: (listener) => {
       listeners.add(listener);
@@ -231,7 +225,7 @@ if (import.meta.vitest) {
           doubled: () => get().count * 2,
           multiplied: () => get().count * get().multiplier,
           label: () =>
-            `Count: ${get().count} (×${get().multiplier} = ${get().count * get().multiplier})`,
+            `Count: ${get().count} (*${get().multiplier} = ${get().count * get().multiplier})`,
         }));
 
         return { actions, queries, computed };
@@ -243,21 +237,21 @@ if (import.meta.vitest) {
       expect(store.computed.value()).toBe(0);
       expect(store.computed.doubled()).toBe(0);
       expect(store.computed.multiplied()).toBe(0);
-      expect(store.computed.label()).toBe('Count: 0 (×2 = 0)');
+      expect(store.computed.label()).toBe('Count: 0 (*2 = 0)');
 
       // Test actions
       store.actions.increment();
       expect(store.computed.value()).toBe(1);
       expect(store.computed.doubled()).toBe(2);
       expect(store.computed.multiplied()).toBe(2);
-      expect(store.computed.label()).toBe('Count: 1 (×2 = 2)');
+      expect(store.computed.label()).toBe('Count: 1 (*2 = 2)');
 
       // Change multiplier
       store.actions.setMultiplier(3);
       store.actions.increment();
       expect(store.computed.value()).toBe(2);
       expect(store.computed.multiplied()).toBe(6);
-      expect(store.computed.label()).toBe('Count: 2 (×3 = 6)');
+      expect(store.computed.label()).toBe('Count: 2 (*3 = 6)');
     });
 
     it('should work with compose for slice dependencies', () => {

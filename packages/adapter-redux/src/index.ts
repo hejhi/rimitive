@@ -288,7 +288,7 @@ if (import.meta.vitest) {
           doubled: () => get().count * 2,
           multiplied: () => get().count * get().multiplier,
           label: () =>
-            `Count: ${get().count} (×${get().multiplier} = ${get().count * get().multiplier})`,
+            `Count: ${get().count} (*${get().multiplier} = ${get().count * get().multiplier})`,
         }));
 
         return { actions, queries, computed };
@@ -300,21 +300,21 @@ if (import.meta.vitest) {
       expect(store.computed.value()).toBe(0);
       expect(store.computed.doubled()).toBe(0);
       expect(store.computed.multiplied()).toBe(0);
-      expect(store.computed.label()).toBe('Count: 0 (×2 = 0)');
+      expect(store.computed.label()).toBe('Count: 0 (*2 = 0)');
 
       // Test actions
       store.actions.increment();
       expect(store.computed.value()).toBe(1);
       expect(store.computed.doubled()).toBe(2);
       expect(store.computed.multiplied()).toBe(2);
-      expect(store.computed.label()).toBe('Count: 1 (×2 = 2)');
+      expect(store.computed.label()).toBe('Count: 1 (*2 = 2)');
 
       // Change multiplier
       store.actions.setMultiplier(3);
       store.actions.increment();
       expect(store.computed.value()).toBe(2);
       expect(store.computed.multiplied()).toBe(6);
-      expect(store.computed.label()).toBe('Count: 2 (×3 = 6)');
+      expect(store.computed.label()).toBe('Count: 2 (*3 = 6)');
     });
 
     it('should work with compose for slice dependencies', () => {

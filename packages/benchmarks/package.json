@@ -7,9 +7,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bench": "pnpm bench:raw && pnpm bench:real",
-    "bench:raw": "LATTICE_DISABLE_MEMOIZATION=true NODE_OPTIONS=--max-old-space-size=4096 vitest bench --run",
-    "bench:real": "NODE_OPTIONS=--max-old-space-size=4096 vitest bench --run",
+    "bench": "pnpm bench:report:real",
     "bench:report:raw": "LATTICE_DISABLE_MEMOIZATION=true node scripts/run-chunked-benchmarks.js raw",
     "bench:report:real": "node scripts/run-chunked-benchmarks.js real",
     "bench:merge": "node scripts/merge-benchmark-results.js",

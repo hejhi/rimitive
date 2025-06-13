@@ -132,7 +132,7 @@
           on:change={() => store.todos.toggle(todo.id)}
         />
         <span>{todo.text}</span>
-        <button on:click={() => store.todos.remove(todo.id)}>×</button>
+        <button on:click={() => store.todos.remove(todo.id)}>*</button>
       </li>
     {/each}
   </ul>
