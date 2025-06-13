@@ -10,6 +10,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./enhancers": {
+      "import": "./dist/enhancers.js",
+      "types": "./dist/enhancers.d.ts"
     }
   },
   "scripts": {

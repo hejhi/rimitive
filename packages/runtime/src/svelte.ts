@@ -5,7 +5,7 @@
  * These utilities help integrate Lattice stores with Svelte's reactivity system.
  */
 
-import { readable, type Readable } from 'svelte/store';
+import { readable, derived, type Readable } from 'svelte/store';
 import type { SubscribableStore } from '@lattice/core';
 
 /**
@@ -100,7 +100,8 @@ export function sliceValues<
  * Creates a derived Svelte store from multiple slice selectors.
  * 
  * This is useful when you need to combine multiple slice values into a single
- * reactive value, similar to Svelte's `derived` store.
+ * reactive value. It uses Svelte's native `derived` store for optimal performance
+ * and proper memoization.
  * 
  * @param store - A Lattice store with slices and subscribe method
  * @param selector - Function that selects and combines values from slices
@@ -126,7 +127,19 @@ export function derivedSlice<Component, Derived>(
   store: Component & SubscribableStore,
   selector: (slices: Component) => Derived
 ): Readable<Derived> {
-  return sliceValue(store, selector);
+  // Create a trigger store that updates when Lattice store changes
+  const trigger = readable(0, (set) => {
+    let count = 0;
+    const unsubscribe = store.subscribe(() => {
+      set(++count);
+    });
+    return unsubscribe;
+  });
+  
+  // Use Svelte's derived for efficient computation
+  // This ensures the selector only runs when the store actually changes
+  // and provides proper memoization
+  return derived(trigger, () => selector(store));
 }
 
 /**

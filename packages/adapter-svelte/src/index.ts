@@ -26,12 +26,21 @@ export interface AdapterOptions {
 }
 
 /**
+ * Store enhancer function that allows middleware composition
+ *
+ * @param store - The Svelte writable store
+ * @returns Enhanced store instance
+ */
+export type StoreEnhancer<State> = (store: Writable<State>) => Writable<State>;
+
+/**
  * Creates a Svelte stores adapter for a Lattice component.
  *
  * This is the primary way to use Lattice with Svelte. It combines
  * a component factory with Svelte's built-in stores.
  *
  * @param componentFactory - The Lattice component factory
+ * @param enhancer - Optional store enhancer for middleware
  * @param options - Optional configuration for the adapter
  * @returns A Lattice store backed by Svelte stores
  *
@@ -52,6 +61,23 @@ export interface AdapterOptions {
  * store.counter.increment();
  * ```
  *
+ * @example With middleware enhancer
+ * ```typescript
+ * const withLogging: StoreEnhancer<State> = (store) => {
+ *   const { subscribe, set, update } = store;
+ *   return {
+ *     subscribe,
+ *     set: (value) => {
+ *       console.log('State update:', value);
+ *       set(value);
+ *     },
+ *     update
+ *   };
+ * };
+ * 
+ * const store = createSvelteAdapter(createComponent, withLogging);
+ * ```
+ * 
  * @example In a Svelte component with runtime utilities
  * ```svelte
  * <script>
@@ -68,13 +94,14 @@ export interface AdapterOptions {
  */
 export function createSvelteAdapter<Component, State>(
   componentFactory: ComponentFactory<Component, State>,
+  enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ) {
   let adapter: SvelteStoreAdapter<State> | undefined;
 
   // Create an adapter factory that will be called with initial state
   const adapterFactory = (initialState: State): StoreAdapter<State> => {
-    adapter = createStoreAdapter(initialState, options);
+    adapter = createStoreAdapter(initialState, enhancer, options);
     return adapter;
   };
 
@@ -103,15 +130,22 @@ export interface SvelteStoreAdapter<State> extends StoreAdapter<State> {
  * It provides proper error handling and efficient subscription management.
  *
  * @param initialState - The initial state
+ * @param enhancer - Optional store enhancer for middleware
  * @param options - Optional configuration for the adapter
  * @returns A minimal store adapter with cleanup
  */
 export function createStoreAdapter<State>(
   initialState: State,
+  enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ): SvelteStoreAdapter<State> {
   // Create the Svelte store
-  const store: Writable<State> = writable(initialState);
+  let store: Writable<State> = writable(initialState);
+  
+  // Apply enhancer if provided
+  if (enhancer) {
+    store = enhancer(store);
+  }
   
   // For error handling
   const handleError = options?.onError ?? ((error) => {
@@ -192,6 +226,7 @@ export function createStoreAdapter<State>(
  * or custom stores with additional functionality.
  *
  * @param store - An existing Svelte writable store
+ * @param enhancer - Optional store enhancer for middleware
  * @param options - Optional configuration for the adapter
  * @returns A minimal store adapter with cleanup
  *
@@ -207,24 +242,40 @@ export function createStoreAdapter<State>(
  * const adapter = wrapSvelteStore(persistedStore);
  * const store = createLatticeStore(component, () => adapter);
  * ```
+ * 
+ * @example With enhancer
+ * ```typescript
+ * const withDevtools: StoreEnhancer<State> = (store) => {
+ *   // Add devtools integration
+ *   return store;
+ * };
+ * 
+ * const adapter = wrapSvelteStore(myStore, withDevtools);
+ * ```
  */
 export function wrapSvelteStore<State>(
   store: Writable<State>,
+  enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ): SvelteStoreAdapter<State> {
+  // Apply enhancer if provided
+  let enhancedStore = store;
+  if (enhancer) {
+    enhancedStore = enhancer(store);
+  }
   const handleError = options?.onError ?? ((error) => {
     console.error('Error in store listener:', error);
   });
 
   // Cache for getState optimization
-  let cachedState = get(store);
+  let cachedState = get(enhancedStore);
 
   const listeners = new Set<() => void>();
   let isNotifying = false;
   const pendingUnsubscribes = new Set<() => void>();
 
   // Subscribe to the provided store - IMPORTANT: Store the cleanup function
-  const storeUnsubscribe = store.subscribe((state) => {
+  const storeUnsubscribe = enhancedStore.subscribe((state) => {
     // Update cached state
     cachedState = state;
     
@@ -251,7 +302,7 @@ export function wrapSvelteStore<State>(
     getState: () => cachedState,
     setState: (updates) => {
       try {
-        store.update(state => ({ ...state, ...updates }));
+        enhancedStore.update(state => ({ ...state, ...updates }));
       } catch (error) {
         handleError(error);
         throw error; // Re-throw to maintain consistency
@@ -454,7 +505,7 @@ if (import.meta.vitest) {
         return { actions };
       };
 
-      const store = createSvelteAdapter(createComponent, {
+      const store = createSvelteAdapter(createComponent, undefined, {
         onError: (error) => errors.push(error),
       });
 
@@ -516,7 +567,7 @@ if (import.meta.vitest) {
         update: () => { throw new Error('Store is readonly'); }
       } as any;
       
-      const adapter = wrapSvelteStore(readonlyStore, {
+      const adapter = wrapSvelteStore(readonlyStore, undefined, {
         onError: (error) => errors.push(error)
       });
       
@@ -591,6 +642,157 @@ if (import.meta.vitest) {
       
       // Clean up
       store.destroy();
+    });
+
+    it('should work with store enhancer', () => {
+      const createComponent = (createStore: CreateStore<{ count: number; name: string }>) => {
+        const createSlice = createStore({ count: 0, name: 'test' });
+        const actions = createSlice(({ get, set }) => ({
+          increment: () => set({ count: get().count + 1 }),
+          setName: (name: string) => set({ name })
+        }));
+        const queries = createSlice(({ get }) => ({
+          count: () => get().count,
+          name: () => get().name
+        }));
+        return { actions, queries };
+      };
+
+      // Track enhancer calls
+      const enhancerCalls: string[] = [];
+      
+      // Create logging enhancer
+      const withLogging: StoreEnhancer<{ count: number; name: string }> = (store) => {
+        enhancerCalls.push('enhancer:init');
+        const { subscribe, set, update } = store;
+        
+        return {
+          subscribe,
+          set: (value) => {
+            enhancerCalls.push(`set:${JSON.stringify(value)}`);
+            set(value);
+          },
+          update: (updater) => {
+            enhancerCalls.push('update:called');
+            update(updater);
+          }
+        };
+      };
+
+      const store = createSvelteAdapter(createComponent, withLogging);
+
+      // Verify enhancer was initialized
+      expect(enhancerCalls).toContain('enhancer:init');
+
+      // Test that actions go through enhancer
+      store.actions.increment();
+      expect(enhancerCalls).toContain('update:called');
+      expect(store.queries.count()).toBe(1);
+
+      store.actions.setName('enhanced');
+      expect(store.queries.name()).toBe('enhanced');
+
+      // Clean up
+      store.destroy();
+    });
+
+    it('should leverage Svelte\'s automatic batching', async () => {
+      const { tick } = await import('svelte');
+      
+      const createComponent = (createStore: CreateStore<{ count: number; name: string; flag: boolean }>) => {
+        const createSlice = createStore({ count: 0, name: 'test', flag: false });
+        const actions = createSlice(({ get, set }) => ({
+          increment: () => set({ count: get().count + 1 }),
+          setName: (name: string) => set({ name }),
+          toggleFlag: () => set({ flag: !get().flag }),
+          batchUpdate: () => {
+            // Multiple synchronous updates are automatically batched by Svelte
+            set({ count: get().count + 1 });
+            set({ name: 'batched' });
+            set({ flag: !get().flag });
+          }
+        }));
+        const queries = createSlice(({ get }) => ({
+          getAll: () => ({ count: get().count, name: get().name, flag: get().flag })
+        }));
+        return { actions, queries };
+      };
+
+      // Track subscription notifications
+      let notificationCount = 0;
+      const store = createSvelteAdapter(createComponent);
+
+      const unsubscribe = store.subscribe(() => {
+        notificationCount++;
+      });
+
+      // Multiple synchronous updates
+      store.actions.increment();
+      store.actions.setName('updated');
+      store.actions.toggleFlag();
+
+      // Svelte batches these automatically, but we need to wait for the update cycle
+      await tick();
+
+      // Verify all updates were applied
+      const state = store.queries.getAll();
+      expect(state).toEqual({
+        count: 1,
+        name: 'updated',
+        flag: true
+      });
+
+      // Test the explicit batch method
+      notificationCount = 0;
+      store.actions.batchUpdate();
+      await tick();
+
+      expect(store.queries.getAll()).toEqual({
+        count: 2,
+        name: 'batched',
+        flag: false
+      });
+
+      unsubscribe();
+      store.destroy();
+    });
+
+    it('should work with enhancer on wrapped stores', () => {
+      const baseStore = writable({ value: 10, active: true });
+      
+      // Track enhancer activity
+      const logs: string[] = [];
+      
+      const debugEnhancer: StoreEnhancer<{ value: number; active: boolean }> = (store) => {
+        const { subscribe, set, update } = store;
+        logs.push('enhancer:wrap');
+        
+        return {
+          subscribe: (run, invalidate?) => {
+            logs.push('subscribe:wrapped');
+            return subscribe(run, invalidate);
+          },
+          set: (value) => {
+            logs.push(`set:${JSON.stringify(value)}`);
+            set(value);
+          },
+          update: (updater) => {
+            logs.push('update:wrapped');
+            update(updater);
+          }
+        };
+      };
+
+      const adapter = wrapSvelteStore(baseStore, debugEnhancer);
+      
+      expect(logs).toContain('enhancer:wrap');
+      expect(logs).toContain('subscribe:wrapped');
+
+      adapter.setState({ value: 20 });
+      expect(logs).toContain('update:wrapped');
+      expect(adapter.getState()).toEqual({ value: 20, active: true });
+
+      adapter.destroy();
     });
   });
 }

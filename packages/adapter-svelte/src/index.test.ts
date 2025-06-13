@@ -253,7 +253,7 @@ describe('Svelte Adapter', () => {
       return { actions };
     };
     
-    const store = createSvelteAdapter(createComponent, {
+    const store = createSvelteAdapter(createComponent, undefined, {
       onError: (error) => errors.push(error)
     });
     

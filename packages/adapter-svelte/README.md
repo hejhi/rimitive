@@ -152,7 +152,7 @@ const adapter = wrapSvelteStore(persistedStore);
 
 ### Memory Management
 
-The adapter now includes proper cleanup to prevent memory leaks:
+The adapter includes proper cleanup to prevent memory leaks:
 
 ```typescript
 // When using createSvelteAdapter
@@ -162,6 +162,67 @@ const store = createSvelteAdapter(createComponent);
 onDestroy(() => {
   store.destroy();
 });
+```
+
+### Store Enhancers
+
+Create middleware-like functionality with store enhancers:
+
+```typescript
+import { createSvelteAdapter } from '@lattice/adapter-svelte';
+import { withLogging, withTimeTravel, withDevtools, composeEnhancers } from '@lattice/adapter-svelte/enhancers';
+
+// Single enhancer
+const store = createSvelteAdapter(createComponent, withLogging());
+
+// Compose multiple enhancers
+const store = createSvelteAdapter(
+  createComponent,
+  composeEnhancers(
+    withLogging({ collapsed: true }),
+    withTimeTravel({ maxHistory: 100 }),
+    withDevtools({ name: 'My App' })
+  )
+);
+
+// Access time-travel features
+(store as any).__timeTravel.undo();
+(store as any).__timeTravel.redo();
+```
+
+### Creating Custom Enhancers
+
+Build your own enhancers for custom functionality:
+
+```typescript
+import type { StoreEnhancer } from '@lattice/adapter-svelte';
+
+const withPersistence: StoreEnhancer<State> = (store) => {
+  const { subscribe, set, update } = store;
+  
+  // Load from localStorage on init
+  const savedState = localStorage.getItem('app-state');
+  if (savedState) {
+    set(JSON.parse(savedState));
+  }
+  
+  return {
+    subscribe,
+    set: (value) => {
+      set(value);
+      localStorage.setItem('app-state', JSON.stringify(value));
+    },
+    update: (updater) => {
+      update((state) => {
+        const newState = updater(state);
+        localStorage.setItem('app-state', JSON.stringify(newState));
+        return newState;
+      });
+    }
+  };
+};
+
+const store = createSvelteAdapter(createComponent, withPersistence);
 ```
 
 ## Svelte 5 Compatibility
@@ -255,10 +316,33 @@ const todos = sliceValue(store, s => s.todos.filtered()); // Type: Readable<Todo
 
 The adapter is optimized for Svelte's reactivity model:
 - Thin wrapper around native Svelte stores
+- Leverages Svelte's automatic batching for synchronous updates
 - State caching to minimize `get()` calls
 - Efficient subscription management with proper cleanup
 - No additional re-renders - works with Svelte's fine-grained reactivity
 - Memory leak prevention with destroy() lifecycle method
+
+### Automatic Batching
+
+Svelte automatically batches synchronous state updates, unlike React which requires manual batching:
+
+```typescript
+// Multiple updates in the same tick are automatically batched
+store.actions.increment();
+store.actions.setName('updated');
+store.actions.toggleFlag();
+// Only triggers one reactive update cycle
+
+// For async operations, use Svelte's tick() if needed
+import { tick } from 'svelte';
+
+async function handleComplexUpdate() {
+  store.actions.updatePartOne();
+  await someAsyncOperation();
+  store.actions.updatePartTwo();
+  await tick(); // Ensures all updates are flushed
+}
+```
 
 ## License
 
