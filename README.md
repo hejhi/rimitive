@@ -274,36 +274,6 @@ By separating specification from execution, you can test behaviors in isolation 
 - **Framework Agnostic**: Same patterns work in React, Vue, and vanilla JavaScript
 - **Gradual Migration**: Switch state managers by changing adapters, not rewriting logic
 
-## Roadmap
-
-### Lattice Atoms (Future)
-
-We're exploring **Lattice Atoms** - a revolutionary approach that lets you define state atomically but execute it anywhere:
-
-```typescript
-// Define state structure with atoms
-const defineUserState = (atoms: AtomTools) => ({
-  user: atoms.primitive({ name: '', role: 'user' }),
-  isAdmin: atoms.computed(({ get }) => get(atoms.user).role === 'admin'),
-  updateRole: atoms.action(({ get, set }, role: string) => {
-    set(atoms.user, { ...get(atoms.user), role });
-  })
-});
-
-// Execute as atoms (Jotai) for fine-grained reactivity
-const atoms = createJotaiAtoms(defineUserState);
-
-// OR execute as store (Zustand) for bulk operations
-const store = createZustandAdapter(createStoreFromAtoms(defineUserState));
-```
-
-This would enable:
-- Define once with atoms, run with ANY state manager (atomic or store-based)
-- Use Jotai's fine-grained reactivity OR Zustand's store patterns with the same code
-- Bridge between atomic and store paradigms seamlessly
-
-See [lattice-atoms-spec.md](./lattice-atoms-spec.md) for the full specification.
-
 ## Contributing
 
 Lattice is designed to be extensible. Create adapters for your favorite state management library or contribute improvements to existing ones.

@@ -52,13 +52,13 @@ export interface AdapterOptions {
  * store.counter.increment();
  * ```
  *
- * @example In a Svelte component
+ * @example In a Svelte component with runtime utilities
  * ```svelte
  * <script>
- *   import { derived } from 'svelte/store';
+ *   import { sliceValue } from '@lattice/runtime/svelte';
  *   
- *   // Create a derived store for reactive values
- *   const count = derived(store, $store => store.counter.count());
+ *   // Use the idiomatic Svelte runtime utilities
+ *   const count = sliceValue(store, s => s.counter.count());
  * </script>
  * 
  * <button on:click={store.counter.increment}>
@@ -70,12 +70,30 @@ export function createSvelteAdapter<Component, State>(
   componentFactory: ComponentFactory<Component, State>,
   options?: AdapterOptions
 ) {
+  let adapter: SvelteStoreAdapter<State> | undefined;
+
   // Create an adapter factory that will be called with initial state
   const adapterFactory = (initialState: State): StoreAdapter<State> => {
-    return createStoreAdapter(initialState, options);
+    adapter = createStoreAdapter(initialState, options);
+    return adapter;
   };
 
-  return createLatticeStore(componentFactory, adapterFactory);
+  const store = createLatticeStore(componentFactory, adapterFactory);
+
+  // Add destroy method to the store for cleanup
+  return Object.assign(store, {
+    destroy: () => adapter?.destroy()
+  });
+}
+
+/**
+ * Extended adapter interface with lifecycle management
+ */
+export interface SvelteStoreAdapter<State> extends StoreAdapter<State> {
+  /**
+   * Cleanup function to prevent memory leaks
+   */
+  destroy(): void;
 }
 
 /**
@@ -86,12 +104,12 @@ export function createSvelteAdapter<Component, State>(
  *
  * @param initialState - The initial state
  * @param options - Optional configuration for the adapter
- * @returns A minimal store adapter
+ * @returns A minimal store adapter with cleanup
  */
 export function createStoreAdapter<State>(
   initialState: State,
   options?: AdapterOptions
-): StoreAdapter<State> {
+): SvelteStoreAdapter<State> {
   // Create the Svelte store
   const store: Writable<State> = writable(initialState);
   
@@ -100,13 +118,19 @@ export function createStoreAdapter<State>(
     console.error('Error in store listener:', error);
   });
 
+  // Cache for getState to avoid repeated calls
+  let cachedState = initialState;
+
   // Track listeners for proper cleanup and error handling
   const listeners = new Set<() => void>();
   let isNotifying = false;
   const pendingUnsubscribes = new Set<() => void>();
 
-  // Subscribe to the Svelte store once
-  store.subscribe(() => {
+  // Subscribe to the Svelte store once - IMPORTANT: Store the cleanup function
+  const storeUnsubscribe = store.subscribe((state) => {
+    // Update cached state
+    cachedState = state;
+    
     isNotifying = true;
     const currentListeners = Array.from(listeners);
 
@@ -128,9 +152,14 @@ export function createStoreAdapter<State>(
   });
 
   return {
-    getState: () => get(store),
+    getState: () => cachedState,
     setState: (updates) => {
-      store.update(state => ({ ...state, ...updates }));
+      try {
+        store.update(state => ({ ...state, ...updates }));
+      } catch (error) {
+        handleError(error);
+        throw error; // Re-throw to maintain consistency with other adapters
+      }
     },
     subscribe: (listener) => {
       listeners.add(listener);
@@ -144,6 +173,13 @@ export function createStoreAdapter<State>(
           listeners.delete(listener);
         }
       };
+    },
+    destroy: () => {
+      // Clean up the Svelte store subscription to prevent memory leaks
+      storeUnsubscribe();
+      // Clear all listeners
+      listeners.clear();
+      pendingUnsubscribes.clear();
     }
   };
 }
@@ -157,7 +193,7 @@ export function createStoreAdapter<State>(
  *
  * @param store - An existing Svelte writable store
  * @param options - Optional configuration for the adapter
- * @returns A minimal store adapter
+ * @returns A minimal store adapter with cleanup
  *
  * @example
  * ```typescript
@@ -175,17 +211,23 @@ export function createStoreAdapter<State>(
 export function wrapSvelteStore<State>(
   store: Writable<State>,
   options?: AdapterOptions
-): StoreAdapter<State> {
+): SvelteStoreAdapter<State> {
   const handleError = options?.onError ?? ((error) => {
     console.error('Error in store listener:', error);
   });
+
+  // Cache for getState optimization
+  let cachedState = get(store);
 
   const listeners = new Set<() => void>();
   let isNotifying = false;
   const pendingUnsubscribes = new Set<() => void>();
 
-  // Subscribe to the provided store
-  store.subscribe(() => {
+  // Subscribe to the provided store - IMPORTANT: Store the cleanup function
+  const storeUnsubscribe = store.subscribe((state) => {
+    // Update cached state
+    cachedState = state;
+    
     isNotifying = true;
     const currentListeners = Array.from(listeners);
 
@@ -206,9 +248,14 @@ export function wrapSvelteStore<State>(
   });
 
   return {
-    getState: () => get(store),
+    getState: () => cachedState,
     setState: (updates) => {
-      store.update(state => ({ ...state, ...updates }));
+      try {
+        store.update(state => ({ ...state, ...updates }));
+      } catch (error) {
+        handleError(error);
+        throw error; // Re-throw to maintain consistency
+      }
     },
     subscribe: (listener) => {
       listeners.add(listener);
@@ -220,6 +267,13 @@ export function wrapSvelteStore<State>(
           listeners.delete(listener);
         }
       };
+    },
+    destroy: () => {
+      // Clean up the Svelte store subscription
+      storeUnsubscribe();
+      // Clear all listeners
+      listeners.clear();
+      pendingUnsubscribes.clear();
     }
   };
 }
@@ -416,6 +470,63 @@ if (import.meta.vitest) {
       expect((errors[0] as Error).message).toBe('Listener error');
 
       unsubscribe();
+      store.destroy();
+    });
+    
+    it('should properly clean up with destroy method', () => {
+      const createComponent = (createStore: CreateStore<{ value: number }>) => {
+        const createSlice = createStore({ value: 0 });
+        const actions = createSlice(({ get, set }) => ({
+          increment: () => set({ value: get().value + 1 }),
+          value: () => get().value
+        }));
+        return { actions };
+      };
+      
+      const store = createSvelteAdapter(createComponent);
+      
+      // Subscribe to track notifications
+      let notificationCount = 0;
+      const unsub = store.subscribe(() => {
+        notificationCount++;
+      });
+      
+      // Verify subscription works
+      store.actions.increment();
+      expect(notificationCount).toBe(1);
+      
+      // Destroy the store
+      store.destroy();
+      
+      // Further mutations should not trigger notifications
+      store.actions.increment();
+      expect(notificationCount).toBe(1); // Should still be 1
+      
+      // Cleanup shouldn't throw
+      expect(() => unsub()).not.toThrow();
+    });
+    
+    it('should handle setState errors gracefully', () => {
+      const errors: unknown[] = [];
+      
+      // Create a readonly store that will throw on update
+      const readonlyStore = {
+        subscribe: writable({}).subscribe,
+        set: () => { throw new Error('Store is readonly'); },
+        update: () => { throw new Error('Store is readonly'); }
+      } as any;
+      
+      const adapter = wrapSvelteStore(readonlyStore, {
+        onError: (error) => errors.push(error)
+      });
+      
+      // setState should throw but also call error handler
+      expect(() => adapter.setState({ value: 123 })).toThrow('Store is readonly');
+      expect(errors).toHaveLength(1);
+      expect((errors[0] as Error).message).toBe('Store is readonly');
+      
+      // Clean up
+      adapter.destroy();
     });
 
     it('should wrap existing Svelte stores', () => {
@@ -442,6 +553,44 @@ if (import.meta.vitest) {
       expect(adapter.getState()).toEqual({ count: 20, name: 'updated' });
       
       unsub();
+      
+      // Clean up adapter
+      adapter.destroy();
+    });
+    
+    it('should optimize with cached state', () => {
+      const createComponent = (createStore: CreateStore<{ value: number; name: string }>) => {
+        const createSlice = createStore({ value: 0, name: 'test' });
+        const queries = createSlice(({ get }) => ({
+          value: () => get().value,
+          name: () => get().name
+        }));
+        const actions = createSlice(({ get, set }) => ({
+          increment: () => set({ value: get().value + 1 })
+        }));
+        return { queries, actions };
+      };
+      
+      const store = createSvelteAdapter(createComponent);
+      
+      // The cached state optimization happens transparently
+      // Multiple getState calls don't hit the Svelte store each time
+      const value1 = store.queries.value();
+      const value2 = store.queries.value();
+      const value3 = store.queries.value();
+      
+      expect(value1).toBe(0);
+      expect(value2).toBe(0);
+      expect(value3).toBe(0);
+      
+      // After mutation, cache is automatically updated
+      store.actions.increment();
+      
+      const value4 = store.queries.value();
+      expect(value4).toBe(1);
+      
+      // Clean up
+      store.destroy();
     });
   });
 }

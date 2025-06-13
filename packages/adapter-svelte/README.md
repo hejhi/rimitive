@@ -40,16 +40,26 @@ const store = createSvelteAdapter(createComponent);
 
 ### Using in Svelte Components
 
+The recommended approach is to use the runtime utilities from `@lattice/runtime/svelte` for idiomatic Svelte patterns:
+
 ```svelte
 <script>
-  import { derived } from 'svelte/store';
+  import { sliceValue, sliceValues } from '@lattice/runtime/svelte';
   import { store } from './store';
   
-  // Create reactive derived stores for values
-  const count = derived(store, $store => store.counter.value());
-  const user = derived(store, $store => store.auth.user());
+  // Use sliceValue for single values - creates reactive Svelte stores
+  const count = sliceValue(store, s => s.counter.value());
+  const user = sliceValue(store, s => s.auth.user());
+  
+  // Or use sliceValues for multiple values at once
+  const values = sliceValues(store, {
+    count: s => s.counter.value(),
+    user: s => s.auth.user(),
+    isLoggedIn: s => !!s.auth.user()
+  });
 </script>
 
+<!-- Using individual stores -->
 {#if $user}
   <p>Welcome, {$user.name}!</p>
   <button on:click={store.auth.logout}>Logout</button>
@@ -64,25 +74,39 @@ const store = createSvelteAdapter(createComponent);
   <button on:click={store.counter.increment}>+</button>
   <button on:click={store.counter.decrement}>-</button>
 </div>
+
+<!-- Or using the values object -->
+<div>
+  <p>Count: {$values.count}</p>
+  {#if $values.isLoggedIn}
+    <p>Logged in as: {$values.user.name}</p>
+  {/if}
+</div>
 ```
 
-### Alternative: Direct Subscription Pattern
+### Complex Selectors with Derived Values
 
-For simple cases, you can also use Svelte's reactive statements:
+For computed values that combine multiple slices, use `derivedSlice`:
 
 ```svelte
 <script>
+  import { derivedSlice } from '@lattice/runtime/svelte';
   import { store } from './store';
   
-  let count = store.counter.value();
-  let user = store.auth.user();
-  
-  // Subscribe to changes
-  store.subscribe(() => {
-    count = store.counter.value();
-    user = store.auth.user();
-  });
+  // Create derived values that update automatically
+  const summary = derivedSlice(store, s => ({
+    itemCount: s.cart.items().length,
+    totalPrice: s.cart.total(),
+    userName: s.auth.user()?.name ?? 'Guest',
+    formattedTotal: `$${s.cart.total().toFixed(2)}`
+  }));
 </script>
+
+<div class="cart-summary">
+  <h3>{$summary.userName}'s Cart</h3>
+  <p>{$summary.itemCount} items</p>
+  <p>Total: {$summary.formattedTotal}</p>
+</div>
 ```
 
 ## Integration with Svelte Stores
@@ -93,7 +117,7 @@ You can wrap existing Svelte stores to use with Lattice:
 
 ```typescript
 import { writable } from 'svelte/store';
-import { wrapSvelteStore } from '@lattice/adapter-svelte';
+import { wrapSvelteStore, createLatticeStore } from '@lattice/adapter-svelte';
 
 // Existing Svelte store
 const myStore = writable({ count: 0, theme: 'light' });
@@ -101,6 +125,11 @@ const myStore = writable({ count: 0, theme: 'light' });
 // Wrap for Lattice
 const adapter = wrapSvelteStore(myStore);
 const store = createLatticeStore(createComponent, () => adapter);
+
+// Important: Clean up when done to prevent memory leaks
+onDestroy(() => {
+  adapter.destroy();
+});
 ```
 
 ### Using with Persisted Stores
@@ -116,6 +145,23 @@ const persistedStore = persisted('app-state', { count: 0 });
 
 // Use with Lattice
 const adapter = wrapSvelteStore(persistedStore);
+
+// The persisted store continues to work as expected
+// State is automatically saved to localStorage
+```
+
+### Memory Management
+
+The adapter now includes proper cleanup to prevent memory leaks:
+
+```typescript
+// When using createSvelteAdapter
+const store = createSvelteAdapter(createComponent);
+
+// Clean up when component is destroyed
+onDestroy(() => {
+  store.destroy();
+});
 ```
 
 ## Svelte 5 Compatibility
@@ -124,28 +170,28 @@ This adapter uses Svelte's stable stores API, which works across both Svelte 4 a
 
 ### Using with Svelte 5 Runes
 
-You can combine Lattice stores with Svelte 5's rune syntax:
+The runtime utilities work seamlessly with Svelte 5. For advanced use cases, you can combine runes with Lattice stores:
 
 ```svelte
 <script>
+  import { sliceValue } from '@lattice/runtime/svelte';
   import { store } from './store';
   
-  // Use $state rune with Lattice values
-  let count = $state(store.counter.value());
-  let user = $state(store.auth.user());
+  // Runtime utilities work perfectly with Svelte 5
+  const count = sliceValue(store, s => s.counter.value());
   
-  // Update local state when store changes
-  $effect(() => {
-    store.subscribe(() => {
-      count = store.counter.value();
-      user = store.auth.user();
-    });
-  });
+  // You can still use runes for local state
+  let localMultiplier = $state(2);
+  
+  // Combine store state with local state
+  const multiplied = $derived($count * localMultiplier);
 </script>
 
 <button onclick={() => store.counter.increment()}>
-  Count: {count}
+  Count: {$count} × {localMultiplier} = {multiplied}
 </button>
+
+<input type="number" bind:value={localMultiplier} />
 ```
 
 ## TypeScript Support
@@ -153,6 +199,12 @@ You can combine Lattice stores with Svelte 5's rune syntax:
 Full TypeScript support with type inference:
 
 ```typescript
+interface Todo {
+  id: number;
+  text: string;
+  done: boolean;
+}
+
 const createComponent = (createStore: CreateStore<{
   todos: Todo[];
   filter: 'all' | 'active' | 'completed';
@@ -185,6 +237,10 @@ const createComponent = (createStore: CreateStore<{
   
   return { todos };
 };
+
+// Usage in Svelte with full type safety
+const store = createSvelteAdapter(createComponent);
+const todos = sliceValue(store, s => s.todos.filtered()); // Type: Readable<Todo[]>
 ```
 
 ## Why Use This Adapter?
@@ -197,10 +253,12 @@ const createComponent = (createStore: CreateStore<{
 
 ## Performance
 
-The adapter adds minimal overhead:
+The adapter is optimized for Svelte's reactivity model:
 - Thin wrapper around native Svelte stores
-- Efficient subscription management
-- No additional re-renders
+- State caching to minimize `get()` calls
+- Efficient subscription management with proper cleanup
+- No additional re-renders - works with Svelte's fine-grained reactivity
+- Memory leak prevention with destroy() lifecycle method
 
 ## License
 

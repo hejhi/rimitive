@@ -218,20 +218,38 @@ if (import.meta.vitest) {
         const store = createTestStore();
         const count = sliceValue(store, s => s.counter.value());
         
+        // Subscribe to ensure the store is active
+        const values: number[] = [];
+        const unsubscribe = count.subscribe(v => values.push(v));
+        
+        expect(values[0]).toBe(0);
         expect(get(count)).toBe(0);
         
         store.counter.increment();
+        
+        expect(values[1]).toBe(1);
         expect(get(count)).toBe(1);
+        
+        unsubscribe();
       });
       
       it('should update when store changes', () => {
         const store = createTestStore();
         const name = sliceValue(store, s => s.user.name());
         
+        // Subscribe to ensure the store is active
+        const values: string[] = [];
+        const unsubscribe = name.subscribe(v => values.push(v));
+        
+        expect(values[0]).toBe('test');
         expect(get(name)).toBe('test');
         
         store.user.setName('Alice');
+        
+        expect(values[1]).toBe('Alice');
         expect(get(name)).toBe('Alice');
+        
+        unsubscribe();
       });
       
       it('should handle complex selectors', () => {
@@ -242,7 +260,11 @@ if (import.meta.vitest) {
           name: s.user.name(),
         }));
         
-        expect(get(summary)).toEqual({
+        // Subscribe to ensure the store is active
+        const values: any[] = [];
+        const unsubscribe = summary.subscribe(v => values.push(v));
+        
+        expect(values[0]).toEqual({
           count: 0,
           doubled: 0,
           name: 'test',
@@ -251,11 +273,18 @@ if (import.meta.vitest) {
         store.counter.increment();
         store.user.setName('Bob');
         
+        expect(values[values.length - 1]).toEqual({
+          count: 1,
+          doubled: 2,
+          name: 'Bob',
+        });
         expect(get(summary)).toEqual({
           count: 1,
           doubled: 2,
           name: 'Bob',
         });
+        
+        unsubscribe();
       });
     });
     
@@ -268,15 +297,29 @@ if (import.meta.vitest) {
           name: s => s.user.name(),
         });
         
-        expect(get(values.count)).toBe(0);
-        expect(get(values.doubled)).toBe(0);
-        expect(get(values.name)).toBe('test');
+        // Subscribe to all stores to ensure they are active
+        const results: any = { count: [], doubled: [], name: [] };
+        const unsubscribes = [
+          values.count.subscribe(v => results.count.push(v)),
+          values.doubled.subscribe(v => results.doubled.push(v)),
+          values.name.subscribe(v => results.name.push(v))
+        ];
+        
+        expect(results.count[0]).toBe(0);
+        expect(results.doubled[0]).toBe(0);
+        expect(results.name[0]).toBe('test');
         
         store.counter.increment();
+        
+        expect(results.count[1]).toBe(1);
+        expect(results.doubled[1]).toBe(2);
+        expect(results.name.length).toBe(1); // Name didn't change
         
         expect(get(values.count)).toBe(1);
         expect(get(values.doubled)).toBe(2);
         expect(get(values.name)).toBe('test');
+        
+        unsubscribes.forEach(u => u());
       });
     });
     
@@ -287,13 +330,22 @@ if (import.meta.vitest) {
           `${s.user.name()}: ${s.counter.value()}`
         );
         
+        // Subscribe to ensure the store is active
+        const values: string[] = [];
+        const unsubscribe = label.subscribe(v => values.push(v));
+        
+        expect(values[0]).toBe('test: 0');
         expect(get(label)).toBe('test: 0');
         
         store.counter.increment();
+        expect(values[1]).toBe('test: 1');
         expect(get(label)).toBe('test: 1');
         
         store.user.setName('Alice');
+        expect(values[2]).toBe('Alice: 1');
         expect(get(label)).toBe('Alice: 1');
+        
+        unsubscribe();
       });
     });
     
