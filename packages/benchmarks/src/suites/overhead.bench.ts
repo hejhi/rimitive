@@ -44,7 +44,7 @@ describe('Adapter Overhead', () => {
 
     bench('zustand + lattice - state updates', () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        zAdapter.counter.setCount(i);
+        zAdapter.counter.selector.setCount(i);
       }
     });
 
@@ -78,11 +78,11 @@ describe('Adapter Overhead', () => {
 
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(store.subscribe(() => {}));
+        unsubscribers.push(store.counter.subscribe(() => {}));
       }
 
       // Update state
-      store.counter.setCount(1);
+      store.counter.selector.setCount(1);
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
@@ -130,7 +130,7 @@ describe('Adapter Overhead', () => {
       const store = createReduxAdapter(createComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
       }
     });
   });
@@ -157,7 +157,7 @@ describe('Adapter Overhead', () => {
       const store = createSvelteAdapter(createComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
       }
     });
 
@@ -191,11 +191,11 @@ describe('Adapter Overhead', () => {
 
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(store.subscribe(() => {}));
+        unsubscribers.push(store.counter.subscribe(() => {}));
       }
 
       // Update state
-      store.counter.increment();
+      store.counter.selector.increment();
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
@@ -217,7 +217,7 @@ describe('Adapter Overhead', () => {
       const store = createSvelteStoreAdapter(createComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
       }
     });
 
@@ -235,11 +235,11 @@ describe('Adapter Overhead', () => {
 
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(store.subscribe(() => {}));
+        unsubscribers.push(store.counter.subscribe(() => {}));
       }
 
       // Update state
-      store.counter.increment();
+      store.counter.selector.increment();
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());

@@ -277,24 +277,24 @@ if (import.meta.vitest) {
       const store = createPiniaAdapter(createComponent);
 
       // Test initial state
-      expect(store.computed.value()).toBe(0);
-      expect(store.computed.doubled()).toBe(0);
-      expect(store.computed.multiplied()).toBe(0);
-      expect(store.computed.label()).toBe('Count: 0 (*2 = 0)');
+      expect(store.computed.selector.value()).toBe(0);
+      expect(store.computed.selector.doubled()).toBe(0);
+      expect(store.computed.selector.multiplied()).toBe(0);
+      expect(store.computed.selector.label()).toBe('Count: 0 (*2 = 0)');
 
       // Test actions
-      store.actions.increment();
-      expect(store.computed.value()).toBe(1);
-      expect(store.computed.doubled()).toBe(2);
-      expect(store.computed.multiplied()).toBe(2);
-      expect(store.computed.label()).toBe('Count: 1 (*2 = 2)');
+      store.actions.selector.increment();
+      expect(store.computed.selector.value()).toBe(1);
+      expect(store.computed.selector.doubled()).toBe(2);
+      expect(store.computed.selector.multiplied()).toBe(2);
+      expect(store.computed.selector.label()).toBe('Count: 1 (*2 = 2)');
 
       // Change multiplier
-      store.actions.setMultiplier(3);
-      store.actions.increment();
-      expect(store.computed.value()).toBe(2);
-      expect(store.computed.multiplied()).toBe(6);
-      expect(store.computed.label()).toBe('Count: 2 (*3 = 6)');
+      store.actions.selector.setMultiplier(3);
+      store.actions.selector.increment();
+      expect(store.computed.selector.value()).toBe(2);
+      expect(store.computed.selector.multiplied()).toBe(6);
+      expect(store.computed.selector.label()).toBe('Count: 2 (*3 = 6)');
     });
 
     it('should work with compose for slice dependencies', () => {
@@ -357,30 +357,30 @@ if (import.meta.vitest) {
       const store = createPiniaAdapter(createComponent);
 
       // Test initial state
-      expect(store.value.current()).toBe(0);
-      expect(store.value.isMin()).toBe(true);
-      expect(store.value.isMax()).toBe(false);
-      expect(store.limits.range()).toBe(100);
+      expect(store.value.selector.current()).toBe(0);
+      expect(store.value.selector.isMin()).toBe(true);
+      expect(store.value.selector.isMax()).toBe(false);
+      expect(store.limits.selector.range()).toBe(100);
 
       // Test bounded increment
-      store.actions.increment();
-      expect(store.value.current()).toBe(1);
+      store.actions.selector.increment();
+      expect(store.value.selector.current()).toBe(1);
 
       // Test setValue with clamping
-      store.actions.setValue(150);
-      expect(store.value.current()).toBe(100); // Clamped to max
-      expect(store.value.isMax()).toBe(true);
+      store.actions.selector.setValue(150);
+      expect(store.value.selector.current()).toBe(100); // Clamped to max
+      expect(store.value.selector.isMax()).toBe(true);
 
-      store.actions.setValue(-10);
-      expect(store.value.current()).toBe(0); // Clamped to min
+      store.actions.selector.setValue(-10);
+      expect(store.value.selector.current()).toBe(0); // Clamped to min
 
       // Test range change
-      store.actions.setValue(50);
-      store.actions.setRange(10, 40);
-      expect(store.value.current()).toBe(40); // Clamped to new max
-      expect(store.limits.min()).toBe(10);
-      expect(store.limits.max()).toBe(40);
-      expect(store.limits.range()).toBe(30);
+      store.actions.selector.setValue(50);
+      store.actions.selector.setRange(10, 40);
+      expect(store.value.selector.current()).toBe(40); // Clamped to new max
+      expect(store.limits.selector.min()).toBe(10);
+      expect(store.limits.selector.max()).toBe(40);
+      expect(store.limits.selector.range()).toBe(30);
     });
 
     it('should support enhancer for plugins', () => {
@@ -419,10 +419,10 @@ if (import.meta.vitest) {
 
       expect(enhancerCalled).toBe(true);
       expect(storeIdUsed).toMatch(/^lattice-/);
-      expect(store.counter.value()).toBe(0);
+      expect(store.counter.selector.value()).toBe(0);
 
-      store.counter.increment();
-      expect(store.counter.value()).toBe(1);
+      store.counter.selector.increment();
+      expect(store.counter.selector.value()).toBe(1);
     });
   });
 }

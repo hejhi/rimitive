@@ -5,7 +5,7 @@
  * createStore function that manages all state through a single adapter.
  */
 
-import type { StoreTools, StoreSliceFactory } from './index';
+import type { StoreTools, RuntimeSliceFactory, LatticeSlice } from './index';
 import {
   type StoreAdapter,
   type AdapterFactory,
@@ -17,7 +17,7 @@ import {
  */
 export type CreateStore<State> = (
   initialState: State
-) => StoreSliceFactory<State>;
+) => RuntimeSliceFactory<State>;
 
 /**
  * Component factory receives createStore and returns the component's slices
@@ -27,12 +27,9 @@ export type ComponentFactory<Component, State> = (
 ) => Component;
 
 /**
- * Runtime result - the component with subscription capability
+ * Runtime result - the component
  */
-export type RuntimeResult<Component> = Component & {
-  subscribe: (listener: () => void) => () => void;
-  destroy?: () => void;
-};
+export type RuntimeResult<Component> = Component;
 
 /**
  * Creates a Lattice store by connecting an component to an adapter
@@ -59,7 +56,7 @@ export type RuntimeResult<Component> = Component & {
  * };
  *
  * const store = createLatticeStore(createComponent, (initialState) => reduxAdapter);
- * store.counter.increment();
+ * store.counter.selector.increment();
  * ```
  */
 export function createLatticeStore<State, Component>(
@@ -91,15 +88,20 @@ export function createLatticeStore<State, Component>(
     function composeSlice(
       adapter: StoreAdapter<State>,
       tools: StoreTools<State>
-    ) {
+    ): RuntimeSliceFactory<State> {
       // Create and store the slice factory
       return function createSlice<Methods>(
         factory: (tools: StoreTools<State>) => Methods
-      ) {
+      ): LatticeSlice<Methods, State> {
+        const methods = factory(tools);
         return {
-          selector: factory(tools),
+          selector: methods,
           subscribe: adapter.subscribe,
-          compose: composeSlice,
+          compose: (newTools: StoreTools<State>) => {
+            // Create a new slice with the new tools
+            const newSlice = composeSlice(adapter, newTools);
+            return newSlice(factory);
+          },
           adapter,
         };
       };

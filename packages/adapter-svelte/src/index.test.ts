@@ -31,27 +31,27 @@ describe('Svelte Adapter', () => {
     const store = createSvelteAdapter(createComponent);
     
     // Test initial state
-    expect(store.counter.value()).toBe(0);
-    expect(store.auth.user()).toBe(null);
+    expect(store.counter.selector.value()).toBe(0);
+    expect(store.auth.selector.user()).toBe(null);
     
     // Test mutations
-    store.counter.increment();
-    expect(store.counter.value()).toBe(1);
+    store.counter.selector.increment();
+    expect(store.counter.selector.value()).toBe(1);
     
-    store.auth.login('Alice');
-    expect(store.auth.user()).toBe('Alice');
+    store.auth.selector.login('Alice');
+    expect(store.auth.selector.user()).toBe('Alice');
     
     // Test multiple mutations
-    store.counter.increment();
-    store.counter.increment();
-    expect(store.counter.value()).toBe(3);
+    store.counter.selector.increment();
+    store.counter.selector.increment();
+    expect(store.counter.selector.value()).toBe(3);
     
     // Test reset
-    store.counter.reset();
-    expect(store.counter.value()).toBe(0);
+    store.counter.selector.reset();
+    expect(store.counter.selector.value()).toBe(0);
     
-    store.auth.logout();
-    expect(store.auth.user()).toBe(null);
+    store.auth.selector.logout();
+    expect(store.auth.selector.user()).toBe(null);
   });
   
   it('should work with compose for slice dependencies', () => {
@@ -99,22 +99,22 @@ describe('Svelte Adapter', () => {
     const store = createSvelteAdapter(createComponent);
     
     // Add items
-    store.cart.addItem('Book', 20);
-    store.cart.addItem('Pen', 5);
+    store.cart.selector.addItem('Book', 20);
+    store.cart.selector.addItem('Pen', 5);
     
-    expect(store.checkout.subtotal()).toBe(25);
-    expect(store.checkout.total()).toBe(25);
+    expect(store.checkout.selector.subtotal()).toBe(25);
+    expect(store.checkout.selector.total()).toBe(25);
     
     // Apply discount
-    store.pricing.setDiscount(10);
-    expect(store.checkout.discountAmount()).toBe(2.5);
-    expect(store.checkout.total()).toBe(22.5);
+    store.pricing.selector.setDiscount(10);
+    expect(store.checkout.selector.discountAmount()).toBe(2.5);
+    expect(store.checkout.selector.total()).toBe(22.5);
     
     // Add more items
-    store.cart.addItem('Notebook', 15);
-    expect(store.checkout.subtotal()).toBe(40);
-    expect(store.checkout.discountAmount()).toBe(4);
-    expect(store.checkout.total()).toBe(36);
+    store.cart.selector.addItem('Notebook', 15);
+    expect(store.checkout.selector.subtotal()).toBe(40);
+    expect(store.checkout.selector.discountAmount()).toBe(4);
+    expect(store.checkout.selector.total()).toBe(36);
   });
   
   it('should support subscriptions', () => {
@@ -134,23 +134,23 @@ describe('Svelte Adapter', () => {
     
     // Track notifications
     const notifications: number[] = [];
-    const unsubscribe = store.subscribe(() => {
-      notifications.push(store.state.value());
+    const unsubscribe = store.state.subscribe(() => {
+      notifications.push(store.state.selector.value());
     });
     
     // Mutations should trigger subscriptions
-    store.state.increment();
+    store.state.selector.increment();
     expect(notifications).toEqual([1]);
     
-    store.state.set(10);
+    store.state.selector.set(10);
     expect(notifications).toEqual([1, 10]);
     
-    store.state.increment();
+    store.state.selector.increment();
     expect(notifications).toEqual([1, 10, 11]);
     
     // Unsubscribe
     unsubscribe();
-    store.state.increment();
+    store.state.selector.increment();
     expect(notifications).toEqual([1, 10, 11]); // No new notification
   });
   
@@ -172,16 +172,16 @@ describe('Svelte Adapter', () => {
     let count1 = 0;
     let count2 = 0;
     
-    const unsub1 = store.subscribe(() => { count1++; });
-    const unsub2 = store.subscribe(() => { count2++; });
+    const unsub1 = store.counter.subscribe(() => { count1++; });
+    const unsub2 = store.counter.subscribe(() => { count2++; });
     
-    store.counter.increment();
+    store.counter.selector.increment();
     expect(count1).toBe(1);
     expect(count2).toBe(1);
     
     // Unsubscribe one
     unsub1();
-    store.counter.increment();
+    store.counter.selector.increment();
     expect(count1).toBe(1); // No change
     expect(count2).toBe(2); // Still notified
     
@@ -203,18 +203,18 @@ describe('Svelte Adapter', () => {
     });
     
     // Subscribe with a throwing listener
-    const unsub1 = store.subscribe(() => {
+    const unsub1 = store.actions.subscribe(() => {
       throw new Error('Listener 1 error');
     });
     
     // Subscribe with a normal listener
     let count = 0;
-    const unsub2 = store.subscribe(() => {
+    const unsub2 = store.actions.subscribe(() => {
       count++;
     });
     
     // Trigger update
-    store.actions.increment();
+    store.actions.selector.increment();
     
     // Should have caught the error
     expect(errors).toHaveLength(1);

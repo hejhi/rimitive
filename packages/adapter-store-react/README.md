@@ -33,9 +33,9 @@ const createComponent = (createStore: CreateStore) => {
 const store = createStoreReactAdapter(createComponent);
 
 // Use the store
-console.log(store.counter.count()); // 0
-store.counter.increment();
-console.log(store.counter.count()); // 1
+console.log(store.counter.selector.count()); // 0
+store.counter.selector.increment();
+console.log(store.counter.selector.count()); // 1
 ```
 
 ### With Custom Error Handling

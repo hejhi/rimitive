@@ -60,47 +60,47 @@ describe('Zustand Adapter - New Architecture', () => {
     const store = createZustandAdapter(createComponent);
 
     // Test initial state through queries
-    expect(store.queries.count()).toBe(0);
-    expect(store.queries.isZero()).toBe(true);
-    expect(store.queries.isPositive()).toBe(false);
-    expect(store.queries.isNegative()).toBe(false);
+    expect(store.queries.selector.count()).toBe(0);
+    expect(store.queries.selector.isZero()).toBe(true);
+    expect(store.queries.selector.isPositive()).toBe(false);
+    expect(store.queries.selector.isNegative()).toBe(false);
 
     // Test computed values (they're methods that return fresh data)
-    const computed = store.views.computed();
+    const computed = store.views.selector.computed();
     expect(computed.value).toBe(0);
     expect(computed.label).toBe('Count: 0');
     expect(computed.sign).toBe('zero');
 
     // Test parameterized views
-    expect(store.views.display('short')).toBe('0');
-    expect(store.views.display('long')).toBe('The current count is 0 (zero)');
+    expect(store.views.selector.display('short')).toBe('0');
+    expect(store.views.selector.display('long')).toBe('The current count is 0 (zero)');
 
     // Test actions
-    store.actions.increment();
-    expect(store.queries.count()).toBe(1);
+    store.actions.selector.increment();
+    expect(store.queries.selector.count()).toBe(1);
 
     // Get fresh computed values
-    const updated = store.views.computed();
+    const updated = store.views.selector.computed();
     expect(updated.value).toBe(1);
     expect(updated.sign).toBe('positive');
-    expect(store.views.display('short')).toBe('1');
+    expect(store.views.selector.display('short')).toBe('1');
 
     // Test multiple operations
-    store.actions.increment();
-    store.actions.increment();
-    expect(store.queries.count()).toBe(3);
+    store.actions.selector.increment();
+    store.actions.selector.increment();
+    expect(store.queries.selector.count()).toBe(3);
 
-    store.actions.decrement();
-    expect(store.queries.count()).toBe(2);
+    store.actions.selector.decrement();
+    expect(store.queries.selector.count()).toBe(2);
 
-    store.actions.reset();
-    expect(store.queries.count()).toBe(0);
-    expect(store.queries.isZero()).toBe(true);
+    store.actions.selector.reset();
+    expect(store.queries.selector.count()).toBe(0);
+    expect(store.queries.selector.isZero()).toBe(true);
 
-    store.actions.setCount(-5);
-    expect(store.queries.count()).toBe(-5);
-    expect(store.queries.isNegative()).toBe(true);
-    expect(store.views.computed().sign).toBe('negative');
+    store.actions.selector.setCount(-5);
+    expect(store.queries.selector.count()).toBe(-5);
+    expect(store.queries.selector.isNegative()).toBe(true);
+    expect(store.views.selector.computed().sign).toBe('negative');
   });
 
   it('should demonstrate slice composition with compose', () => {
@@ -194,8 +194,10 @@ describe('Zustand Adapter - New Architecture', () => {
       }));
 
       return {
-        actions: { ...todoActions, ...filterActions },
-        queries: { ...todoQueries, ...filterQueries },
+        todoActions,
+        filterActions,
+        todoQueries,
+        filterQueries,
         views,
       };
     };
@@ -203,43 +205,43 @@ describe('Zustand Adapter - New Architecture', () => {
     const store = createZustandAdapter(createComponent);
 
     // Test initial state
-    expect(store.views.filteredTodos()).toEqual([]);
-    expect(store.views.stats().total).toBe(0);
+    expect(store.views.selector.filteredTodos()).toEqual([]);
+    expect(store.views.selector.stats().total).toBe(0);
 
     // Add todos
-    store.actions.addTodo('Learn Lattice');
-    store.actions.addTodo('Build a component');
+    store.todoActions.selector.addTodo('Learn Lattice');
+    store.todoActions.selector.addTodo('Build a component');
 
-    expect(store.views.stats().total).toBe(2);
-    expect(store.views.stats().active).toBe(2);
-    expect(store.views.stats().completed).toBe(0);
-    expect(store.views.summary()).toBe('2 active, 0 completed');
+    expect(store.views.selector.stats().total).toBe(2);
+    expect(store.views.selector.stats().active).toBe(2);
+    expect(store.views.selector.stats().completed).toBe(0);
+    expect(store.views.selector.summary()).toBe('2 active, 0 completed');
 
     // Toggle a todo
-    const todos = store.queries.allTodos();
-    store.actions.toggleTodo(todos[0]!.id);
+    const todos = store.todoQueries.selector.allTodos();
+    store.todoActions.selector.toggleTodo(todos[0]!.id);
 
     // Check the state after toggle
-    const stats = store.views.stats();
+    const stats = store.views.selector.stats();
     expect(stats.total).toBe(2);
     expect(stats.active).toBe(1);
     expect(stats.completed).toBe(1);
 
     // Test filtering
-    store.actions.setFilter('active');
-    const activeItems = store.views.filteredTodos();
+    store.filterActions.selector.setFilter('active');
+    const activeItems = store.views.selector.filteredTodos();
     expect(activeItems.length).toBe(1);
     expect(activeItems[0]?.text).toBe('Build a component');
 
-    store.actions.setFilter('completed');
-    const completedItems = store.views.filteredTodos();
+    store.filterActions.selector.setFilter('completed');
+    const completedItems = store.views.selector.filteredTodos();
     expect(completedItems.length).toBe(1);
     expect(completedItems[0]?.text).toBe('Learn Lattice');
 
     // Clear completed
-    store.actions.clearCompleted();
-    expect(store.views.stats().total).toBe(1);
-    expect(store.views.stats().completed).toBe(0);
+    store.todoActions.selector.clearCompleted();
+    expect(store.views.selector.stats().total).toBe(1);
+    expect(store.views.selector.stats().completed).toBe(0);
   });
 
   it('should support subscriptions and demonstrate reactivity', () => {
@@ -287,40 +289,40 @@ describe('Zustand Adapter - New Architecture', () => {
 
     // Track subscription calls
     const listener = vi.fn();
-    const unsubscribe = store.subscribe(listener);
+    const unsubscribe = store.actions.subscribe(listener);
 
     // Initial state
-    expect(store.queries.current()).toBe(0);
-    expect(store.queries.hasHistory()).toBe(false);
+    expect(store.queries.selector.current()).toBe(0);
+    expect(store.queries.selector.hasHistory()).toBe(false);
     expect(listener).not.toHaveBeenCalled();
 
     // Update state
-    store.actions.setValue(42);
-    expect(store.queries.current()).toBe(42);
-    expect(store.queries.history()).toEqual([42]);
+    store.actions.selector.setValue(42);
+    expect(store.queries.selector.current()).toBe(42);
+    expect(store.queries.selector.history()).toEqual([42]);
     expect(listener).toHaveBeenCalledTimes(1);
 
     // Another update
-    store.actions.increment();
-    expect(store.queries.current()).toBe(43);
-    expect(store.queries.history()).toEqual([42, 43]);
-    expect(store.queries.lastValue()).toBe(42);
+    store.actions.selector.increment();
+    expect(store.queries.selector.current()).toBe(43);
+    expect(store.queries.selector.history()).toEqual([42, 43]);
+    expect(store.queries.selector.lastValue()).toBe(42);
     expect(listener).toHaveBeenCalledTimes(2);
 
     // Multiple listeners
     const listener2 = vi.fn();
     const listener3 = vi.fn();
-    const unsub2 = store.subscribe(listener2);
-    const unsub3 = store.subscribe(listener3);
+    const unsub2 = store.actions.subscribe(listener2);
+    const unsub3 = store.actions.subscribe(listener3);
 
-    store.actions.setValue(100);
+    store.actions.selector.setValue(100);
     expect(listener).toHaveBeenCalledTimes(3);
     expect(listener2).toHaveBeenCalledTimes(1);
     expect(listener3).toHaveBeenCalledTimes(1);
 
     // Unsubscribe first listener
     unsubscribe();
-    store.actions.reset();
+    store.actions.selector.reset();
     expect(listener).toHaveBeenCalledTimes(3); // No more calls
     expect(listener2).toHaveBeenCalledTimes(2);
     expect(listener3).toHaveBeenCalledTimes(2);
@@ -424,11 +426,11 @@ describe('Zustand Adapter - New Architecture', () => {
     const store = createZustandAdapter(createComponent);
 
     // Test direct computed values
-    expect(store.catalog.totalProducts()).toBe(4);
-    expect(store.catalog.categories()).toEqual(['electronics', 'furniture']);
+    expect(store.catalog.selector.totalProducts()).toBe(4);
+    expect(store.catalog.selector.categories()).toEqual(['electronics', 'furniture']);
 
     // Test parameterized product details
-    const laptop = store.catalog.getProductDetails('1');
+    const laptop = store.catalog.selector.getProductDetails('1');
     expect(laptop).not.toBeNull();
     expect(laptop!.name).toBe('Laptop');
     expect(laptop!.price).toBe(999);
@@ -437,12 +439,12 @@ describe('Zustand Adapter - New Architecture', () => {
     expect(laptop!.tax).toBeCloseTo(71.93, 2);
 
     // Test category summaries
-    const electronics = store.catalog.getCategorySummary('electronics');
+    const electronics = store.catalog.selector.getCategorySummary('electronics');
     expect(electronics.itemCount).toBe(2);
     expect(electronics.category).toBe('electronics');
     expect(electronics.totalBasePrice).toBe(1028);
 
-    const furniture = store.catalog.getCategorySummary('furniture');
+    const furniture = store.catalog.selector.getCategorySummary('furniture');
     expect(furniture.itemCount).toBe(2);
     expect(furniture.totalBasePrice).toBe(498);
   });
@@ -467,28 +469,28 @@ describe('Zustand Adapter - New Architecture', () => {
     const store = createZustandAdapter(counterComponent);
 
     // Test the API
-    expect(store.count()).toBe(0);
+    expect(store.selector.count()).toBe(0);
 
-    store.increment();
-    expect(store.count()).toBe(1);
+    store.selector.increment();
+    expect(store.selector.count()).toBe(1);
 
-    store.double();
-    expect(store.count()).toBe(2);
+    store.selector.double();
+    expect(store.selector.count()).toBe(2);
 
-    store.double();
-    expect(store.count()).toBe(4);
+    store.selector.double();
+    expect(store.selector.count()).toBe(4);
 
-    store.decrement();
-    expect(store.count()).toBe(3);
+    store.selector.decrement();
+    expect(store.selector.count()).toBe(3);
 
-    store.reset();
-    expect(store.count()).toBe(0);
+    store.selector.reset();
+    expect(store.selector.count()).toBe(0);
 
     // Test subscriptions work
     const listener = vi.fn();
     const unsub = store.subscribe(listener);
 
-    store.increment();
+    store.selector.increment();
     expect(listener).toHaveBeenCalledTimes(1);
 
     unsub();

@@ -42,9 +42,9 @@ const createComponent = (createStore) => {
 const store = createPiniaAdapter(createComponent);
 
 // Use the store
-console.log(store.counter.count()); // 0
-store.counter.increment();
-console.log(store.counter.count()); // 1
+console.log(store.counter.selector.count()); // 0
+store.counter.selector.increment();
+console.log(store.counter.selector.count()); // 1
 ```
 
 ## Using in Vue Components
@@ -54,15 +54,15 @@ console.log(store.counter.count()); // 1
 import { computed } from 'vue';
 import { store } from './store';
 
-const count = computed(() => store.counter.count());
+const count = computed(() => store.counter.selector.count());
 </script>
 
 <template>
   <div>
     <p>Count: {{ count }}</p>
-    <button @click="store.counter.increment">+</button>
-    <button @click="store.counter.decrement">-</button>
-    <button @click="store.counter.reset">Reset</button>
+    <button @click="store.counter.selector.increment">+</button>
+    <button @click="store.counter.selector.decrement">-</button>
+    <button @click="store.counter.selector.reset">Reset</button>
   </div>
 </template>
 ```
@@ -115,18 +115,18 @@ import { useSliceSelector, useSliceValues } from '@lattice/runtime/vue';
 import { store } from './store';
 
 // Subscribe to a single value
-const count = useSliceSelector(store.counter, c => c.count());
+const count = useSliceSelector(store.counter, c => c.selector.count());
 
 // Subscribe to multiple values
 const { user, isLoggedIn } = useSliceValues(store.auth, a => ({
-  user: a.currentUser(),
-  isLoggedIn: a.isAuthenticated()
+  user: a.selector.currentUser(),
+  isLoggedIn: a.selector.isAuthenticated()
 }));
 
 // Get both slice methods and reactive values
 const [counter, { count: countRef, doubled }] = useLattice(
   store.counter,
-  c => ({ count: c.count(), doubled: c.doubled() })
+  c => ({ count: c.selector.count(), doubled: c.selector.doubled() })
 );
 </script>
 
@@ -134,7 +134,7 @@ const [counter, { count: countRef, doubled }] = useLattice(
   <div>
     <p>Count: {{ count }}</p>
     <p>Doubled: {{ doubled }}</p>
-    <button @click="counter.increment">+</button>
+    <button @click="counter.selector.increment">+</button>
     
     <div v-if="isLoggedIn">
       Welcome, {{ user.name }}!
@@ -153,7 +153,7 @@ import { computed, watchEffect } from 'vue';
 import { store } from './store';
 
 // Reactive computed values
-const count = computed(() => store.counter.count());
+const count = computed(() => store.counter.selector.count());
 
 // Watch for changes
 watchEffect(() => {

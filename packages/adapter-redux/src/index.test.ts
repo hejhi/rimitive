@@ -24,21 +24,21 @@ describe('Redux Adapter', () => {
     const store = createReduxAdapter(createComponent);
 
     // Verify initial state
-    expect(store.counter.count()).toBe(0);
+    expect(store.counter.selector.count()).toBe(0);
 
     // Test increment
-    store.counter.increment();
-    expect(store.counter.count()).toBe(1);
+    store.counter.selector.increment();
+    expect(store.counter.selector.count()).toBe(1);
 
     // Test decrement
-    store.counter.decrement();
-    expect(store.counter.count()).toBe(0);
+    store.counter.selector.decrement();
+    expect(store.counter.selector.count()).toBe(0);
 
     // Multiple operations
-    store.counter.increment();
-    store.counter.increment();
-    store.counter.increment();
-    expect(store.counter.count()).toBe(3);
+    store.counter.selector.increment();
+    store.counter.selector.increment();
+    store.counter.selector.increment();
+    expect(store.counter.selector.count()).toBe(3);
   });
 
   it('should support complex state updates', () => {
@@ -87,26 +87,26 @@ describe('Redux Adapter', () => {
     const store = createReduxAdapter(createComponent);
 
     // Add todos
-    store.actions.addTodo('First todo');
-    store.actions.addTodo('Second todo');
+    store.actions.selector.addTodo('First todo');
+    store.actions.selector.addTodo('Second todo');
 
-    expect(store.queries.todos().length).toBe(2);
-    expect(store.queries.todos()[0]?.text).toBe('First todo');
-    expect(store.queries.todos()[0]?.completed).toBe(false);
+    expect(store.queries.selector.todos().length).toBe(2);
+    expect(store.queries.selector.todos()[0]?.text).toBe('First todo');
+    expect(store.queries.selector.todos()[0]?.completed).toBe(false);
 
     // Toggle todo
-    const firstTodoId = store.queries.todos()[0]?.id;
+    const firstTodoId = store.queries.selector.todos()[0]?.id;
     if (firstTodoId !== undefined) {
-      store.actions.toggleTodo(firstTodoId);
+      store.actions.selector.toggleTodo(firstTodoId);
     }
 
-    expect(store.queries.todos()[0]?.completed).toBe(true);
-    expect(store.queries.completedTodos().length).toBe(1);
-    expect(store.queries.activeTodos().length).toBe(1);
+    expect(store.queries.selector.todos()[0]?.completed).toBe(true);
+    expect(store.queries.selector.completedTodos().length).toBe(1);
+    expect(store.queries.selector.activeTodos().length).toBe(1);
 
     // Set filter
-    store.actions.setFilter('completed');
-    expect(store.queries.filter()).toBe('completed');
+    store.actions.selector.setFilter('completed');
+    expect(store.queries.selector.filter()).toBe('completed');
   });
 });
 

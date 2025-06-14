@@ -5,10 +5,11 @@
  */
 
 import { describe, bench } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { useStore as useStoreReact } from '@lattice/store-react';
 import { create as createZustand } from 'zustand';
 import { createStore as createZustandVanilla } from 'zustand/vanilla';
+import { act } from 'react';
 
 const ITERATIONS = 1000;
 const HOOK_COUNT = 100;

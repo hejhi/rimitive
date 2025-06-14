@@ -92,8 +92,12 @@ describe('Memory Usage Patterns', () => {
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
-        store.users.updateUser(`user-${i}`, { name: `Updated User ${i}` });
-        store.posts.updatePost(`post-${i}`, { title: `Updated Post ${i}` });
+        store.users.selector.updateUser(`user-${i}`, {
+          name: `Updated User ${i}`,
+        });
+        store.posts.selector.updatePost(`post-${i}`, {
+          title: `Updated Post ${i}`,
+        });
       }
     });
 
@@ -102,8 +106,12 @@ describe('Memory Usage Patterns', () => {
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
-        store.users.updateUser(`user-${i}`, { name: `Updated User ${i}` });
-        store.posts.updatePost(`post-${i}`, { title: `Updated Post ${i}` });
+        store.users.selector.updateUser(`user-${i}`, {
+          name: `Updated User ${i}`,
+        });
+        store.posts.selector.updatePost(`post-${i}`, {
+          title: `Updated Post ${i}`,
+        });
       }
     });
 
@@ -112,8 +120,12 @@ describe('Memory Usage Patterns', () => {
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
-        store.users.updateUser(`user-${i}`, { name: `Updated User ${i}` });
-        store.posts.updatePost(`post-${i}`, { title: `Updated Post ${i}` });
+        store.users.selector.updateUser(`user-${i}`, {
+          name: `Updated User ${i}`,
+        });
+        store.posts.selector.updatePost(`post-${i}`, {
+          title: `Updated Post ${i}`,
+        });
       }
     });
 
@@ -122,8 +134,12 @@ describe('Memory Usage Patterns', () => {
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
-        store.users.updateUser(`user-${i}`, { name: `Updated User ${i}` });
-        store.posts.updatePost(`post-${i}`, { title: `Updated Post ${i}` });
+        store.users.selector.updateUser(`user-${i}`, {
+          name: `Updated User ${i}`,
+        });
+        store.posts.selector.updatePost(`post-${i}`, {
+          title: `Updated Post ${i}`,
+        });
       }
     });
   });
@@ -150,12 +166,12 @@ describe('Memory Usage Patterns', () => {
         // Add subscriptions to each store
         const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
-          unsubscribers.push(store.subscribe(() => {}));
+          unsubscribers.push(store.slice.subscribe(() => {}));
         }
         allUnsubscribers.push(unsubscribers);
 
         // Trigger some updates
-        store.slice.increment();
+        store.slice.selector.increment();
       }
 
       // Cleanup all subscriptions
@@ -190,12 +206,12 @@ describe('Memory Usage Patterns', () => {
         // Add subscriptions to each store
         const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
-          unsubscribers.push(store.subscribe(() => {}));
+          unsubscribers.push(store.slice.subscribe(() => {}));
         }
         allUnsubscribers.push(unsubscribers);
 
         // Trigger some updates
-        store.slice.increment();
+        store.slice.selector.increment();
       }
 
       // Cleanup all subscriptions
@@ -230,12 +246,12 @@ describe('Memory Usage Patterns', () => {
         // Add subscriptions to each store
         const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
-          unsubscribers.push(store.subscribe(() => {}));
+          unsubscribers.push(store.slice.subscribe(() => {}));
         }
         allUnsubscribers.push(unsubscribers);
 
         // Trigger some updates
-        store.slice.increment();
+        store.slice.selector.increment();
       }
 
       // Cleanup all subscriptions
@@ -270,12 +286,12 @@ describe('Memory Usage Patterns', () => {
         // Add subscriptions to each store
         const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
-          unsubscribers.push(store.subscribe(() => {}));
+          unsubscribers.push(store.slice.subscribe(() => {}));
         }
         allUnsubscribers.push(unsubscribers);
 
         // Trigger some updates
-        store.slice.increment();
+        store.slice.selector.increment();
       }
 
       // Cleanup all subscriptions
@@ -313,12 +329,12 @@ describe('Memory Usage Patterns', () => {
         const store = createZustandAdapter(createComponent(i));
 
         // Do some work
-        store.slice.update(i * 2);
-        store.slice.update(i * 3);
-        totalValue += store.slice.getValue();
+        store.slice.selector.update(i * 2);
+        store.slice.selector.update(i * 3);
+        totalValue += store.slice.selector.getValue();
 
         // Add and remove subscription
-        const unsub = store.subscribe(() => {});
+        const unsub = store.slice.subscribe(() => {});
         unsub();
 
         // Destroy if possible
@@ -348,12 +364,12 @@ describe('Memory Usage Patterns', () => {
         const store = createReduxAdapter(createComponent(i));
 
         // Do some work
-        store.slice.update(i * 2);
-        store.slice.update(i * 3);
-        totalValue += store.slice.getValue();
+        store.slice.selector.update(i * 2);
+        store.slice.selector.update(i * 3);
+        totalValue += store.slice.selector.getValue();
 
         // Add and remove subscription
-        const unsub = store.subscribe(() => {});
+        const unsub = store.slice.subscribe(() => {});
         unsub();
 
         // Destroy if possible
@@ -383,12 +399,12 @@ describe('Memory Usage Patterns', () => {
         const store = createStoreReactAdapter(createComponent(i));
 
         // Do some work
-        store.slice.update(i * 2);
-        store.slice.update(i * 3);
-        totalValue += store.slice.getValue();
+        store.slice.selector.update(i * 2);
+        store.slice.selector.update(i * 3);
+        totalValue += store.slice.selector.getValue();
 
         // Add and remove subscription
-        const unsub = store.subscribe(() => {});
+        const unsub = store.slice.subscribe(() => {});
         unsub();
 
         // Destroy if possible
@@ -418,12 +434,12 @@ describe('Memory Usage Patterns', () => {
         const store = createSvelteAdapter(createComponent(i));
 
         // Do some work
-        store.slice.update(i * 2);
-        store.slice.update(i * 3);
-        totalValue += store.slice.getValue();
+        store.slice.selector.update(i * 2);
+        store.slice.selector.update(i * 3);
+        totalValue += store.slice.selector.getValue();
 
         // Add and remove subscription
-        const unsub = store.subscribe(() => {});
+        const unsub = store.slice.subscribe(() => {});
         unsub();
 
         // Always destroy Svelte stores to clean up

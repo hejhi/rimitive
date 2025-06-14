@@ -1,12 +1,19 @@
 /**
  * @fileoverview React Context vs store-react performance comparison
- * 
+ *
  * Tests rendering performance differences between React Context (which re-renders
  * all consumers on any update) vs store-react (which only re-renders components
  * subscribed to changed data)
  */
 
-import React, { createContext, useContext, useState, useCallback, memo, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  memo,
+  useRef,
+} from 'react';
 import { describe, bench } from 'vitest';
 import { renderToString } from 'react-dom/server';
 import { createStoreReactAdapter } from '@lattice/adapter-store-react';
@@ -30,7 +37,11 @@ type DashboardState = {
     segment: string;
     product: string | null;
   };
-  notifications: Array<{ id: string; message: string; type: 'info' | 'warning' | 'error' }>;
+  notifications: Array<{
+    id: string;
+    message: string;
+    type: 'info' | 'warning' | 'error';
+  }>;
   ui: {
     sidebarOpen: boolean;
     activeTab: string;
@@ -44,35 +55,35 @@ const createInitialState = (): DashboardState => ({
     revenue: 125000,
     users: 5000,
     conversions: 250,
-    pageViews: 50000
+    pageViews: 50000,
   },
   charts: {
     revenueHistory: Array.from({ length: 30 }, (_, i) => ({
       date: `2024-01-${i + 1}`,
-      value: 100000 + Math.random() * 50000
+      value: 100000 + Math.random() * 50000,
     })),
     userGrowth: Array.from({ length: 30 }, (_, i) => ({
       date: `2024-01-${i + 1}`,
-      value: 4000 + Math.random() * 2000
+      value: 4000 + Math.random() * 2000,
     })),
     conversionFunnel: [
       { stage: 'Visits', value: 10000 },
       { stage: 'Signups', value: 2000 },
       { stage: 'Active', value: 1500 },
-      { stage: 'Paid', value: 500 }
-    ]
+      { stage: 'Paid', value: 500 },
+    ],
   },
   filters: {
     dateRange: { start: '2024-01-01', end: '2024-01-31' },
     segment: 'all',
-    product: null
+    product: null,
   },
   notifications: [],
   ui: {
     sidebarOpen: true,
     activeTab: 'overview',
-    refreshing: false
-  }
+    refreshing: false,
+  },
 });
 
 // Track render counts for performance measurement
@@ -86,46 +97,66 @@ const incrementRenderCount = (component: string) => {
 // === REACT CONTEXT IMPLEMENTATION ===
 const DashboardContext = createContext<{
   state: DashboardState;
-  updateMetric: (metric: keyof DashboardState['metrics'], value: number) => void;
+  updateMetric: (
+    metric: keyof DashboardState['metrics'],
+    value: number
+  ) => void;
   updateFilter: (filter: keyof DashboardState['filters'], value: any) => void;
   toggleSidebar: () => void;
-  addNotification: (message: string, type: 'info' | 'warning' | 'error') => void;
+  addNotification: (
+    message: string,
+    type: 'info' | 'warning' | 'error'
+  ) => void;
   refreshData: () => void;
 } | null>(null);
 
-const DashboardContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const DashboardContextProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [state, setState] = useState<DashboardState>(createInitialState);
 
-  const updateMetric = useCallback((metric: keyof DashboardState['metrics'], value: number) => {
-    setState(prev => ({
-      ...prev,
-      metrics: { ...prev.metrics, [metric]: value }
-    }));
-  }, []);
+  const updateMetric = useCallback(
+    (metric: keyof DashboardState['metrics'], value: number) => {
+      setState((prev) => ({
+        ...prev,
+        metrics: { ...prev.metrics, [metric]: value },
+      }));
+    },
+    []
+  );
 
-  const updateFilter = useCallback((filter: keyof DashboardState['filters'], value: any) => {
-    setState(prev => ({
-      ...prev,
-      filters: { ...prev.filters, [filter]: value }
-    }));
-  }, []);
+  const updateFilter = useCallback(
+    (filter: keyof DashboardState['filters'], value: any) => {
+      setState((prev) => ({
+        ...prev,
+        filters: { ...prev.filters, [filter]: value },
+      }));
+    },
+    []
+  );
 
   const toggleSidebar = useCallback(() => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      ui: { ...prev.ui, sidebarOpen: !prev.ui.sidebarOpen }
+      ui: { ...prev.ui, sidebarOpen: !prev.ui.sidebarOpen },
     }));
   }, []);
 
-  const addNotification = useCallback((message: string, type: 'info' | 'warning' | 'error') => {
-    setState(prev => ({
-      ...prev,
-      notifications: [...prev.notifications, { id: Date.now().toString(), message, type }]
-    }));
-  }, []);
+  const addNotification = useCallback(
+    (message: string, type: 'info' | 'warning' | 'error') => {
+      setState((prev) => ({
+        ...prev,
+        notifications: [
+          ...prev.notifications,
+          { id: Date.now().toString(), message, type },
+        ],
+      }));
+    },
+    []
+  );
 
   const refreshData = useCallback(() => {
-    setState(prev => {
+    setState((prev) => {
       // Simulate data refresh
       return {
         ...prev,
@@ -133,18 +164,29 @@ const DashboardContextProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         metrics: {
           revenue: prev.metrics.revenue + Math.random() * 10000 - 5000,
           users: prev.metrics.users + Math.floor(Math.random() * 100 - 50),
-          conversions: prev.metrics.conversions + Math.floor(Math.random() * 20 - 10),
-          pageViews: prev.metrics.pageViews + Math.floor(Math.random() * 1000 - 500)
-        }
+          conversions:
+            prev.metrics.conversions + Math.floor(Math.random() * 20 - 10),
+          pageViews:
+            prev.metrics.pageViews + Math.floor(Math.random() * 1000 - 500),
+        },
       };
     });
     setTimeout(() => {
-      setState(prev => ({ ...prev, ui: { ...prev.ui, refreshing: false } }));
+      setState((prev) => ({ ...prev, ui: { ...prev.ui, refreshing: false } }));
     }, 100);
   }, []);
 
   return (
-    <DashboardContext.Provider value={{ state, updateMetric, updateFilter, toggleSidebar, addNotification, refreshData }}>
+    <DashboardContext.Provider
+      value={{
+        state,
+        updateMetric,
+        updateFilter,
+        toggleSidebar,
+        addNotification,
+        refreshData,
+      }}
+    >
       {children}
     </DashboardContext.Provider>
   );
@@ -176,7 +218,9 @@ const ContextPageViewWidget = memo(() => {
   incrementRenderCount('ContextPageViewWidget');
   const context = useContext(DashboardContext);
   if (!context) return null;
-  return <div>Page Views: {context.state.metrics.pageViews.toLocaleString()}</div>;
+  return (
+    <div>Page Views: {context.state.metrics.pageViews.toLocaleString()}</div>
+  );
 });
 
 const ContextSidebar = memo(() => {
@@ -204,7 +248,9 @@ const ContextChartSection = memo(() => {
   incrementRenderCount('ContextChartSection');
   const context = useContext(DashboardContext);
   if (!context) return null;
-  return <div>Charts: {context.state.charts.revenueHistory.length} data points</div>;
+  return (
+    <div>Charts: {context.state.charts.revenueHistory.length} data points</div>
+  );
 });
 
 // === STORE-REACT IMPLEMENTATION ===
@@ -214,51 +260,54 @@ const createDashboardStore = (createStore: CreateStore<DashboardState>) => {
   const metrics = createSlice(({ get, set }) => ({
     updateMetric: (metric: keyof DashboardState['metrics'], value: number) => {
       set({
-        metrics: { ...get().metrics, [metric]: value }
+        metrics: { ...get().metrics, [metric]: value },
       });
     },
     getRevenue: () => get().metrics.revenue,
     getUsers: () => get().metrics.users,
     getConversions: () => get().metrics.conversions,
-    getPageViews: () => get().metrics.pageViews
+    getPageViews: () => get().metrics.pageViews,
   }));
 
   const filters = createSlice(({ get, set }) => ({
     updateFilter: (filter: keyof DashboardState['filters'], value: any) => {
       set({
-        filters: { ...get().filters, [filter]: value }
+        filters: { ...get().filters, [filter]: value },
       });
     },
     getSegment: () => get().filters.segment,
     getDateRange: () => get().filters.dateRange,
-    getProduct: () => get().filters.product
+    getProduct: () => get().filters.product,
   }));
 
   const ui = createSlice(({ get, set }) => ({
     toggleSidebar: () => {
       set({
-        ui: { ...get().ui, sidebarOpen: !get().ui.sidebarOpen }
+        ui: { ...get().ui, sidebarOpen: !get().ui.sidebarOpen },
       });
     },
     getSidebarOpen: () => get().ui.sidebarOpen,
     getActiveTab: () => get().ui.activeTab,
-    isRefreshing: () => get().ui.refreshing
+    isRefreshing: () => get().ui.refreshing,
   }));
 
   const notifications = createSlice(({ get, set }) => ({
     addNotification: (message: string, type: 'info' | 'warning' | 'error') => {
       set({
-        notifications: [...get().notifications, { id: Date.now().toString(), message, type }]
+        notifications: [
+          ...get().notifications,
+          { id: Date.now().toString(), message, type },
+        ],
       });
     },
     getNotifications: () => get().notifications,
-    getNotificationCount: () => get().notifications.length
+    getNotificationCount: () => get().notifications.length,
   }));
 
   const charts = createSlice(({ get }) => ({
     getRevenueHistory: () => get().charts.revenueHistory,
     getUserGrowth: () => get().charts.userGrowth,
-    getConversionFunnel: () => get().charts.conversionFunnel
+    getConversionFunnel: () => get().charts.conversionFunnel,
   }));
 
   const actions = createSlice(({ get, set }) => ({
@@ -268,67 +317,85 @@ const createDashboardStore = (createStore: CreateStore<DashboardState>) => {
         metrics: {
           revenue: get().metrics.revenue + Math.random() * 10000 - 5000,
           users: get().metrics.users + Math.floor(Math.random() * 100 - 50),
-          conversions: get().metrics.conversions + Math.floor(Math.random() * 20 - 10),
-          pageViews: get().metrics.pageViews + Math.floor(Math.random() * 1000 - 500)
-        }
+          conversions:
+            get().metrics.conversions + Math.floor(Math.random() * 20 - 10),
+          pageViews:
+            get().metrics.pageViews + Math.floor(Math.random() * 1000 - 500),
+        },
       });
       setTimeout(() => {
         set({ ui: { ...get().ui, refreshing: false } });
       }, 100);
-    }
+    },
   }));
 
   return { metrics, filters, ui, notifications, charts, actions };
 };
 
 // Store-react based components (only re-render when their specific data changes)
-const StoreRevenueWidget = memo(({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
-  incrementRenderCount('StoreRevenueWidget');
-  const revenue = store.metrics.getRevenue();
-  return <div>Revenue: ${revenue.toLocaleString()}</div>;
-});
+const StoreRevenueWidget = memo(
+  ({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
+    incrementRenderCount('StoreRevenueWidget');
+    const revenue = store.metrics.selector.getRevenue();
+    return <div>Revenue: ${revenue.toLocaleString()}</div>;
+  }
+);
 
-const StoreUserWidget = memo(({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
-  incrementRenderCount('StoreUserWidget');
-  const users = store.metrics.getUsers();
-  return <div>Users: {users.toLocaleString()}</div>;
-});
+const StoreUserWidget = memo(
+  ({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
+    incrementRenderCount('StoreUserWidget');
+    const users = store.metrics.selector.getUsers();
+    return <div>Users: {users.toLocaleString()}</div>;
+  }
+);
 
-const StoreConversionWidget = memo(({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
-  incrementRenderCount('StoreConversionWidget');
-  const conversions = store.metrics.getConversions();
-  return <div>Conversions: {conversions}</div>;
-});
+const StoreConversionWidget = memo(
+  ({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
+    incrementRenderCount('StoreConversionWidget');
+    const conversions = store.metrics.selector.getConversions();
+    return <div>Conversions: {conversions}</div>;
+  }
+);
 
-const StorePageViewWidget = memo(({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
-  incrementRenderCount('StorePageViewWidget');
-  const pageViews = store.metrics.getPageViews();
-  return <div>Page Views: {pageViews.toLocaleString()}</div>;
-});
+const StorePageViewWidget = memo(
+  ({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
+    incrementRenderCount('StorePageViewWidget');
+    const pageViews = store.metrics.selector.getPageViews();
+    return <div>Page Views: {pageViews.toLocaleString()}</div>;
+  }
+);
 
-const StoreSidebar = memo(({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
-  incrementRenderCount('StoreSidebar');
-  const isOpen = store.ui.getSidebarOpen();
-  return <div>Sidebar: {isOpen ? 'Open' : 'Closed'}</div>;
-});
+const StoreSidebar = memo(
+  ({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
+    incrementRenderCount('StoreSidebar');
+    const isOpen = store.ui.selector.getSidebarOpen();
+    return <div>Sidebar: {isOpen ? 'Open' : 'Closed'}</div>;
+  }
+);
 
-const StoreFilterBar = memo(({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
-  incrementRenderCount('StoreFilterBar');
-  const segment = store.filters.getSegment();
-  return <div>Segment: {segment}</div>;
-});
+const StoreFilterBar = memo(
+  ({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
+    incrementRenderCount('StoreFilterBar');
+    const segment = store.filters.selector.getSegment();
+    return <div>Segment: {segment}</div>;
+  }
+);
 
-const StoreNotificationList = memo(({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
-  incrementRenderCount('StoreNotificationList');
-  const count = store.notifications.getNotificationCount();
-  return <div>Notifications: {count}</div>;
-});
+const StoreNotificationList = memo(
+  ({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
+    incrementRenderCount('StoreNotificationList');
+    const count = store.notifications.selector.getNotificationCount();
+    return <div>Notifications: {count}</div>;
+  }
+);
 
-const StoreChartSection = memo(({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
-  incrementRenderCount('StoreChartSection');
-  const history = store.charts.getRevenueHistory();
-  return <div>Charts: {history.length} data points</div>;
-});
+const StoreChartSection = memo(
+  ({ store }: { store: ReturnType<typeof createDashboardStore> }) => {
+    incrementRenderCount('StoreChartSection');
+    const history = store.charts.selector.getRevenueHistory();
+    return <div>Charts: {history.length} data points</div>;
+  }
+);
 
 // Dashboard apps
 const ContextDashboard: React.FC = () => {
@@ -350,7 +417,9 @@ const ContextDashboard: React.FC = () => {
   );
 };
 
-const StoreDashboard: React.FC<{ store: ReturnType<typeof createDashboardStore> }> = ({ store }) => {
+const StoreDashboard: React.FC<{
+  store: ReturnType<typeof createDashboardStore>;
+}> = ({ store }) => {
   return (
     <div>
       <StoreSidebar store={store} />
@@ -371,7 +440,7 @@ describe('React Context vs store-react Performance', () => {
   describe('Isolated metric update (only revenue changes)', () => {
     bench('React Context - update single metric', () => {
       resetRenderCounts();
-      
+
       // Create a test wrapper that updates revenue
       const TestApp = () => {
         const [, forceRender] = useState(0);
@@ -385,40 +454,44 @@ describe('React Context vs store-react Performance', () => {
                 return <ContextDashboard />;
               }}
             </DashboardContext.Consumer>
-            <button onClick={() => {
-              if (contextRef.current) {
-                contextRef.current.updateMetric('revenue', 150000);
-                forceRender(prev => prev + 1);
-              }
-            }}>Update</button>
+            <button
+              onClick={() => {
+                if (contextRef.current) {
+                  contextRef.current.updateMetric('revenue', 150000);
+                  forceRender((prev) => prev + 1);
+                }
+              }}
+            >
+              Update
+            </button>
           </DashboardContextProvider>
         );
       };
 
       // Initial render
       renderToString(<TestApp />);
-      
+
       // Simulate revenue update
       const wrapper = document.createElement('div');
       wrapper.innerHTML = renderToString(<TestApp />);
       wrapper.querySelector('button')?.click();
-      
+
       // All components re-render with Context
     });
 
     bench('store-react - update single metric', () => {
       resetRenderCounts();
       const store = createStoreReactAdapter(createDashboardStore);
-      
+
       // Initial render
       renderToString(<StoreDashboard store={store} />);
-      
+
       // Update only revenue
-      store.metrics.updateMetric('revenue', 150000);
-      
+      store.metrics.selector.updateMetric('revenue', 150000);
+
       // Force re-render to measure
       renderToString(<StoreDashboard store={store} />);
-      
+
       // Only RevenueWidget should re-render
     });
   });
@@ -426,7 +499,7 @@ describe('React Context vs store-react Performance', () => {
   describe('UI state change (sidebar toggle)', () => {
     bench('React Context - toggle sidebar', () => {
       resetRenderCounts();
-      
+
       const TestApp = () => {
         const [, forceRender] = useState(0);
         const contextRef = useRef<any>(null);
@@ -439,12 +512,16 @@ describe('React Context vs store-react Performance', () => {
                 return <ContextDashboard />;
               }}
             </DashboardContext.Consumer>
-            <button onClick={() => {
-              if (contextRef.current) {
-                contextRef.current.toggleSidebar();
-                forceRender(prev => prev + 1);
-              }
-            }}>Toggle</button>
+            <button
+              onClick={() => {
+                if (contextRef.current) {
+                  contextRef.current.toggleSidebar();
+                  forceRender((prev) => prev + 1);
+                }
+              }}
+            >
+              Toggle
+            </button>
           </DashboardContextProvider>
         );
       };
@@ -458,9 +535,9 @@ describe('React Context vs store-react Performance', () => {
     bench('store-react - toggle sidebar', () => {
       resetRenderCounts();
       const store = createStoreReactAdapter(createDashboardStore);
-      
+
       renderToString(<StoreDashboard store={store} />);
-      store.ui.toggleSidebar();
+      store.ui.selector.toggleSidebar();
       renderToString(<StoreDashboard store={store} />);
     });
   });
@@ -494,14 +571,14 @@ describe('React Context vs store-react Performance', () => {
 
     bench('store-react - multiple rapid updates', () => {
       const store = createStoreReactAdapter(createDashboardStore);
-      
+
       for (let i = 0; i < 10; i++) {
-        store.metrics.updateMetric('revenue', 125000 + i * 1000);
-        store.metrics.updateMetric('users', 5000 + i * 10);
-        store.ui.toggleSidebar();
-        store.notifications.addNotification(`Update ${i}`, 'info');
+        store.metrics.selector.updateMetric('revenue', 125000 + i * 1000);
+        store.metrics.selector.updateMetric('users', 5000 + i * 10);
+        store.ui.selector.toggleSidebar();
+        store.notifications.selector.addNotification(`Update ${i}`, 'info');
       }
-      
+
       // Only components subscribed to changed data re-render
     });
   });
@@ -529,9 +606,9 @@ describe('React Context vs store-react Performance', () => {
 
     bench('store-react - refresh all data', () => {
       const store = createStoreReactAdapter(createDashboardStore);
-      
+
       renderToString(<StoreDashboard store={store} />);
-      store.actions.refreshData();
+      store.actions.selector.refreshData();
       // Only metric widgets re-render, not UI components
     });
   });
@@ -547,7 +624,10 @@ describe('React Context vs store-react Performance', () => {
       );
     };
 
-    const NestedStoreDashboard: React.FC<{ store: any; depth: number }> = ({ store, depth }) => {
+    const NestedStoreDashboard: React.FC<{ store: any; depth: number }> = ({
+      store,
+      depth,
+    }) => {
       if (depth === 0) return <StoreDashboard store={store} />;
       return (
         <div>
@@ -568,9 +648,9 @@ describe('React Context vs store-react Performance', () => {
 
     bench('store-react - deep tree update', () => {
       const store = createStoreReactAdapter(createDashboardStore);
-      
+
       renderToString(<NestedStoreDashboard store={store} depth={5} />);
-      store.metrics.updateMetric('revenue', 200000);
+      store.metrics.selector.updateMetric('revenue', 200000);
       // Only revenue widgets at all depths re-render
     });
   });

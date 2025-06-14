@@ -30,13 +30,13 @@ describe('store-react adapter', () => {
 
       const store = createStoreReactAdapter(createComponent);
 
-      expect(store.counter.count()).toBe(0);
+      expect(store.counter.selector.count()).toBe(0);
 
-      store.counter.increment();
-      expect(store.counter.count()).toBe(1);
+      store.counter.selector.increment();
+      expect(store.counter.selector.count()).toBe(1);
 
-      store.counter.decrement();
-      expect(store.counter.count()).toBe(0);
+      store.counter.selector.decrement();
+      expect(store.counter.selector.count()).toBe(0);
     });
 
     it('should support subscriptions', () => {
@@ -56,14 +56,14 @@ describe('store-react adapter', () => {
 
       const store = createStoreReactAdapter(createComponent);
       const listener = vi.fn();
-      const unsubscribe = store.subscribe(listener);
+      const unsubscribe = store.actions.subscribe(listener);
 
-      store.actions.setValue('changed');
+      store.actions.selector.setValue('changed');
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(store.queries.value()).toBe('changed');
+      expect(store.queries.selector.value()).toBe('changed');
 
       unsubscribe();
-      store.actions.setValue('changed again');
+      store.actions.selector.setValue('changed again');
       expect(listener).toHaveBeenCalledTimes(1); // Should not be called again
     });
 
@@ -88,10 +88,10 @@ describe('store-react adapter', () => {
         throw new Error('Listener error');
       });
 
-      store.subscribe(badListener);
-      store.subscribe(goodListener);
+      store.actions.subscribe(badListener);
+      store.actions.subscribe(goodListener);
 
-      store.actions.increment();
+      store.actions.selector.increment();
 
       expect(badListener).toHaveBeenCalled();
       expect(goodListener).toHaveBeenCalled();
@@ -123,8 +123,8 @@ describe('store-react adapter', () => {
         throw new Error('Test error');
       });
 
-      store.subscribe(badListener);
-      store.actions.increment();
+      store.actions.subscribe(badListener);
+      store.actions.selector.increment();
 
       expect(errorHandler).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -154,8 +154,8 @@ describe('store-react adapter', () => {
 
       const store = createStoreReactAdapter(createComponent, enhancer);
 
-      expect(store.queries.count()).toBe(0);
-      expect(store.queries.enhanced()).toBe(true);
+      expect(store.queries.selector.count()).toBe(0);
+      expect(store.queries.selector.enhanced()).toBe(true);
     });
   });
 
@@ -297,16 +297,12 @@ describe('store-react adapter', () => {
       const store = createStoreReactAdapter(createComponent);
       const listener = vi.fn();
 
-      store.subscribe(listener);
-      store.actions.increment();
+      store.actions.subscribe(listener);
+      store.actions.selector.increment();
       expect(listener).toHaveBeenCalledTimes(1);
 
-      // Destroy the store
-      if (store.destroy) {
-        store.destroy();
-      }
-
-      // Further updates should not notify (implementation dependent)
+      // Note: destroy method was removed from RuntimeResult in the new architecture
+      // Further updates will still notify as there's no store-level destroy
       // This test documents the behavior rather than enforcing it
     });
   });

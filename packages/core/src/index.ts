@@ -36,12 +36,31 @@ export {
   type SubscribeOptions,
 } from './subscribe';
 
+// Import types needed for interfaces
+import type { StoreAdapter as Adapter } from './adapter-contract';
+
 // New createStore API types
 export interface StoreTools<State> {
   get: () => State;
   set: (updates: Partial<State>) => void;
 }
 
+/**
+ * A Lattice slice with methods, subscription, and composition capabilities
+ */
+export interface LatticeSlice<Methods, State> {
+  selector: Methods;
+  subscribe: (listener: () => void) => () => void;
+  compose: (tools: StoreTools<State>) => LatticeSlice<Methods, State>;
+  adapter: Adapter<State>;
+}
+
+// Type for runtime slice factory that returns full LatticeSlice
+export type RuntimeSliceFactory<State> = <Methods>(
+  factory: (tools: StoreTools<State>) => Methods
+) => LatticeSlice<Methods, State>;
+
+// Type for standalone slice factory that returns just methods
 export type StoreSliceFactory<State> = <Methods>(
   factory: (tools: StoreTools<State>) => Methods
 ) => Methods;
@@ -77,14 +96,11 @@ export type StoreFactory<State> = (
 export function createStore<State>(
   initialState: State
 ): StoreSliceFactory<State> {
-  // Create a mutable state container
-  let state = { ...initialState };
-
   // Create tools that will be shared across all slices
   const tools: StoreTools<State> = {
-    get: () => state,
+    get: () => initialState,
     set: (updates: Partial<State>) => {
-      state = { ...state, ...updates };
+      initialState = { ...initialState, ...updates };
     },
   };
 

@@ -62,8 +62,8 @@ export interface SubscribeOptions<T> {
  * const unsubscribe = subscribeToSlices(
  *   store,
  *   (slices) => ({
- *     count: slices.counter.value(),
- *     userName: slices.user.name()
+ *     count: slices.counter.selector.value(),
+ *     userName: slices.user.selector.name()
  *   }),
  *   ({ count, userName }) => {
  *     console.log('Values changed:', { count, userName });
@@ -158,8 +158,8 @@ export function subscribeToSlices<Component, Selected>(
  * subscribeToSlices(
  *   store,
  *   (slices) => ({
- *     count: slices.counter.value(),
- *     name: slices.user.name()
+ *     count: slices.counter.selector.value(),
+ *     name: slices.user.selector.name()
  *   }),
  *   callback,
  *   { equalityFn: shallowEqual }

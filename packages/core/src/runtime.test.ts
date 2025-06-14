@@ -43,15 +43,15 @@ describe('runtime with new createStore API', () => {
     expect(capturedInitialState).toEqual({ count: 0 });
 
     // Test the counter slice
-    expect(store.counter.count()).toBe(0);
+    expect(store.counter.selector.count()).toBe(0);
 
     // Test increment
-    store.counter.increment();
+    store.counter.selector.increment();
     expect(mockState.count).toBe(1);
 
     // Test decrement
-    store.counter.decrement();
-    store.counter.decrement();
+    store.counter.selector.decrement();
+    store.counter.selector.decrement();
     expect(mockState.count).toBe(-1);
   });
 
@@ -91,39 +91,45 @@ describe('runtime with new createStore API', () => {
 
     const store = createLatticeStore(createComponent, adapterFactory);
 
-    expect(store.counter.count()).toBe(0);
-    expect(store.config.multiplier()).toBe(2);
+    expect(store.counter.selector.count()).toBe(0);
+    expect(store.config.selector.multiplier()).toBe(2);
 
-    store.counter.increment();
-    expect(store.counter.count()).toBe(1);
+    store.counter.selector.increment();
+    expect(store.counter.selector.count()).toBe(1);
 
-    store.counter.multiply();
-    expect(store.counter.count()).toBe(2);
+    store.counter.selector.multiply();
+    expect(store.counter.selector.count()).toBe(2);
 
-    store.config.setMultiplier(3);
-    store.counter.multiply();
-    expect(store.counter.count()).toBe(6);
+    store.config.selector.setMultiplier(3);
+    store.counter.selector.multiply();
+    expect(store.counter.selector.count()).toBe(6);
   });
 
-  it('should expose subscription capability', () => {
+  it('should expose subscription capability on slices', () => {
     const mockAdapter: StoreAdapter<any> = {
-      getState: () => ({}),
+      getState: () => ({ count: 0 }),
       setState: () => {},
       subscribe: vi.fn(() => () => {}),
     };
 
-    const createComponent = (createStore: CreateStore<any>) => {
-      createStore({});
-      return {};
+    const createComponent = (createStore: CreateStore<{ count: number }>) => {
+      const createSlice = createStore({ count: 0 });
+      
+      const counter = createSlice(({ get, set }) => ({
+        count: () => get().count,
+        increment: () => set({ count: get().count + 1 }),
+      }));
+      
+      return { counter };
     };
 
     const store = createLatticeStore(createComponent, () => mockAdapter);
 
-    expect(typeof store.subscribe).toBe('function');
-    expect(store.subscribe).toBe(mockAdapter.subscribe);
+    expect(typeof store.counter.subscribe).toBe('function');
+    expect(store.counter.subscribe).toBe(mockAdapter.subscribe);
 
     // Test that subscription works
-    const unsubscribe = store.subscribe(() => {});
+    const unsubscribe = store.counter.subscribe(() => {});
     expect(mockAdapter.subscribe).toHaveBeenCalled();
     expect(typeof unsubscribe).toBe('function');
   });
@@ -209,7 +215,7 @@ describe('runtime with new createStore API', () => {
     const store = createLatticeStore(createComponent, adapterFactory);
 
     // Test operations
-    store.counter.increment();
+    store.counter.selector.increment();
     expect(mockState.count).toBe(1);
   });
 });

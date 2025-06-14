@@ -328,28 +328,28 @@ export function createAdapterTestSuite(
         const store = createLatticeStore(createComponent, adapterFactory);
 
         // Test initial state
-        expect(store.counter.count()).toBe(0);
-        expect(store.textEditor.text()).toBe('hello');
+        expect(store.counter.selector.count()).toBe(0);
+        expect(store.textEditor.selector.text()).toBe('hello');
 
         // Test mutations
-        store.counter.increment();
-        expect(store.counter.count()).toBe(1);
+        store.counter.selector.increment();
+        expect(store.counter.selector.count()).toBe(1);
 
-        store.textEditor.setText('goodbye');
-        expect(store.textEditor.text()).toBe('goodbye');
+        store.textEditor.selector.setText('goodbye');
+        expect(store.textEditor.selector.text()).toBe('goodbye');
 
-        store.textEditor.append(' world');
-        expect(store.textEditor.text()).toBe('goodbye world');
+        store.textEditor.selector.append(' world');
+        expect(store.textEditor.selector.text()).toBe('goodbye world');
 
         // Test subscriptions
         const listener = vi.fn();
-        const unsubscribe = store.subscribe(listener);
+        const unsubscribe = store.counter.subscribe(listener);
 
-        store.counter.increment();
+        store.counter.selector.increment();
         expect(listener).toHaveBeenCalledTimes(1);
 
         unsubscribe();
-        store.counter.increment();
+        store.counter.selector.increment();
         expect(listener).toHaveBeenCalledTimes(1); // No additional calls
       });
 
@@ -379,14 +379,14 @@ export function createAdapterTestSuite(
         const store = createLatticeStore(createComponent, adapterFactory);
 
         // Modify through writer
-        store.writer.setCount(10);
-        store.writer.setText('modified');
+        store.writer.selector.setCount(10);
+        store.writer.selector.setText('modified');
 
         // Read through reader - should see updates
-        expect(store.reader.getCount()).toBe(10);
-        expect(store.reader.getText()).toBe('modified');
+        expect(store.reader.selector.getCount()).toBe(10);
+        expect(store.reader.selector.getText()).toBe('modified');
 
-        const fullState = store.reader.getAll();
+        const fullState = store.reader.selector.getAll();
         expect(fullState.count).toBe(10);
         expect(fullState.text).toBe('modified');
         expect(fullState.nested).toEqual({ value: 42, flag: true });

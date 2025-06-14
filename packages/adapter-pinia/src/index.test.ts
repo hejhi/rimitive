@@ -30,20 +30,20 @@ describe('Pinia Adapter', () => {
     const store = createPiniaAdapter(createComponent);
 
     // Test initial state
-    expect(store.counter.count()).toBe(0);
+    expect(store.counter.selector.count()).toBe(0);
 
     // Test increment
-    store.counter.increment();
-    expect(store.counter.count()).toBe(1);
+    store.counter.selector.increment();
+    expect(store.counter.selector.count()).toBe(1);
 
     // Test decrement
-    store.counter.decrement();
-    store.counter.decrement();
-    expect(store.counter.count()).toBe(-1);
+    store.counter.selector.decrement();
+    store.counter.selector.decrement();
+    expect(store.counter.selector.count()).toBe(-1);
 
     // Test reset
-    store.counter.reset();
-    expect(store.counter.count()).toBe(0);
+    store.counter.selector.reset();
+    expect(store.counter.selector.count()).toBe(0);
   });
 
   it('should support subscriptions', () => {
@@ -64,27 +64,27 @@ describe('Pinia Adapter', () => {
 
     // Track subscription calls
     let callCount = 0;
-    const unsubscribe = store.subscribe(() => {
+    const unsubscribe = store.state.subscribe(() => {
       callCount++;
     });
 
     // Initial state
-    expect(store.state.value()).toBe(0);
+    expect(store.state.selector.value()).toBe(0);
     expect(callCount).toBe(0);
 
     // Update state
-    store.state.setValue(42);
-    expect(store.state.value()).toBe(42);
+    store.state.selector.setValue(42);
+    expect(store.state.selector.value()).toBe(42);
     expect(callCount).toBe(1);
 
     // Another update
-    store.state.setValue(100);
-    expect(store.state.value()).toBe(100);
+    store.state.selector.setValue(100);
+    expect(store.state.selector.value()).toBe(100);
     expect(callCount).toBe(2);
 
     // Unsubscribe
     unsubscribe();
-    store.state.setValue(200);
+    store.state.selector.setValue(200);
     expect(callCount).toBe(2); // No more calls
   });
 
@@ -140,35 +140,35 @@ describe('Pinia Adapter', () => {
     const store = createPiniaAdapter(createComponent);
 
     // Test initial state
-    expect(store.queries.allTodos()).toEqual([]);
-    expect(store.queries.currentFilter()).toBe('all');
+    expect(store.queries.selector.allTodos()).toEqual([]);
+    expect(store.queries.selector.currentFilter()).toBe('all');
 
     // Add todos with a small delay to ensure different IDs
-    store.actions.addTodo('Learn Lattice');
+    store.actions.selector.addTodo('Learn Lattice');
     // Wait a millisecond to ensure Date.now() returns different values
     await new Promise((resolve) => setTimeout(resolve, 1));
-    store.actions.addTodo('Build a component');
+    store.actions.selector.addTodo('Build a component');
 
-    const todos = store.queries.allTodos();
+    const todos = store.queries.selector.allTodos();
     expect(todos).toHaveLength(2);
     expect(todos[0].text).toBe('Learn Lattice');
     expect(todos[1].text).toBe('Build a component');
 
     // Toggle todo
     const firstTodoId = todos[0].id;
-    store.actions.toggleTodo(firstTodoId);
+    store.actions.selector.toggleTodo(firstTodoId);
 
-    expect(store.queries.activeTodos()).toHaveLength(1);
-    expect(store.queries.completedTodos()).toHaveLength(1);
+    expect(store.queries.selector.activeTodos()).toHaveLength(1);
+    expect(store.queries.selector.completedTodos()).toHaveLength(1);
 
     // Test filtering
-    store.actions.setFilter('active');
-    expect(store.queries.visibleTodos()).toHaveLength(1);
-    expect(store.queries.visibleTodos()[0].text).toBe('Build a component');
+    store.actions.selector.setFilter('active');
+    expect(store.queries.selector.visibleTodos()).toHaveLength(1);
+    expect(store.queries.selector.visibleTodos()[0].text).toBe('Build a component');
 
-    store.actions.setFilter('completed');
-    expect(store.queries.visibleTodos()).toHaveLength(1);
-    expect(store.queries.visibleTodos()[0].text).toBe('Learn Lattice');
+    store.actions.selector.setFilter('completed');
+    expect(store.queries.selector.visibleTodos()).toHaveLength(1);
+    expect(store.queries.selector.visibleTodos()[0].text).toBe('Learn Lattice');
   });
 
   it('should work with enhancer for plugins', () => {
@@ -214,12 +214,12 @@ describe('Pinia Adapter', () => {
     expect(enhancerCalled).toBe(true);
 
     // Store should work normally
-    expect(store.auth.isAuthenticated()).toBe(false);
-    expect(store.auth.currentUser()).toBeNull();
+    expect(store.auth.selector.isAuthenticated()).toBe(false);
+    expect(store.auth.selector.currentUser()).toBeNull();
 
-    store.auth.login('Alice', 'alice@example.com');
-    expect(store.auth.isAuthenticated()).toBe(true);
-    expect(store.auth.currentUser()).toEqual({
+    store.auth.selector.login('Alice', 'alice@example.com');
+    expect(store.auth.selector.isAuthenticated()).toBe(true);
+    expect(store.auth.selector.currentUser()).toEqual({
       name: 'Alice',
       email: 'alice@example.com',
     });
@@ -246,18 +246,18 @@ describe('Pinia Adapter', () => {
     });
 
     // Add a listener that throws
-    store.subscribe(() => {
+    store.counter.subscribe(() => {
       throw new Error('Listener error');
     });
 
     // Add a normal listener
     let normalListenerCalled = false;
-    store.subscribe(() => {
+    store.counter.subscribe(() => {
       normalListenerCalled = true;
     });
 
     // Trigger an update
-    store.counter.increment();
+    store.counter.selector.increment();
 
     // Error should be captured
     expect(errors).toHaveLength(1);

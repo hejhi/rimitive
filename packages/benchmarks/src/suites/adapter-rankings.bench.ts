@@ -72,12 +72,12 @@ describe('Adapter Performance Rankings', () => {
       const store = createZustandAdapter(createStandardComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
         if (i % 10 === 0) {
-          store.items.addItem(`item-${i}`);
+          store.items.selector.addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          store.metadata.updateTimestamp();
+          store.metadata.selector.updateTimestamp();
         }
       }
     });
@@ -86,12 +86,12 @@ describe('Adapter Performance Rankings', () => {
       const store = createReduxAdapter(createStandardComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
         if (i % 10 === 0) {
-          store.items.addItem(`item-${i}`);
+          store.items.selector.addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          store.metadata.updateTimestamp();
+          store.metadata.selector.updateTimestamp();
         }
       }
     });
@@ -100,12 +100,12 @@ describe('Adapter Performance Rankings', () => {
       const store = createStoreReactAdapter(createStandardComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
         if (i % 10 === 0) {
-          store.items.addItem(`item-${i}`);
+          store.items.selector.addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          store.metadata.updateTimestamp();
+          store.metadata.selector.updateTimestamp();
         }
       }
     });
@@ -114,12 +114,12 @@ describe('Adapter Performance Rankings', () => {
       const store = createSvelteAdapter(createStandardComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
         if (i % 10 === 0) {
-          store.items.addItem(`item-${i}`);
+          store.items.selector.addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          store.metadata.updateTimestamp();
+          store.metadata.selector.updateTimestamp();
         }
       }
     });
@@ -131,16 +131,16 @@ describe('Adapter Performance Rankings', () => {
 
       // Add items
       for (let i = 0; i < 100; i++) {
-        store.items.addItem(`item-${i}`);
+        store.items.selector.addItem(`item-${i}`);
       }
 
       // Update counter while removing items
       for (let i = 99; i >= 0; i--) {
-        store.counter.increment();
+        store.counter.selector.increment();
         if (i % 2 === 0) {
-          store.items.removeItem(0);
+          store.items.selector.removeItem(0);
         }
-        store.metadata.incrementVersion();
+        store.metadata.selector.incrementVersion();
       }
     });
 
@@ -149,16 +149,16 @@ describe('Adapter Performance Rankings', () => {
 
       // Add items
       for (let i = 0; i < 100; i++) {
-        store.items.addItem(`item-${i}`);
+        store.items.selector.addItem(`item-${i}`);
       }
 
       // Update counter while removing items
       for (let i = 99; i >= 0; i--) {
-        store.counter.increment();
+        store.counter.selector.increment();
         if (i % 2 === 0) {
-          store.items.removeItem(0);
+          store.items.selector.removeItem(0);
         }
-        store.metadata.incrementVersion();
+        store.metadata.selector.incrementVersion();
       }
     });
 
@@ -167,16 +167,16 @@ describe('Adapter Performance Rankings', () => {
 
       // Add items
       for (let i = 0; i < 100; i++) {
-        store.items.addItem(`item-${i}`);
+        store.items.selector.addItem(`item-${i}`);
       }
 
       // Update counter while removing items
       for (let i = 99; i >= 0; i--) {
-        store.counter.increment();
+        store.counter.selector.increment();
         if (i % 2 === 0) {
-          store.items.removeItem(0);
+          store.items.selector.removeItem(0);
         }
-        store.metadata.incrementVersion();
+        store.metadata.selector.incrementVersion();
       }
     });
 
@@ -185,16 +185,16 @@ describe('Adapter Performance Rankings', () => {
 
       // Add items
       for (let i = 0; i < 100; i++) {
-        store.items.addItem(`item-${i}`);
+        store.items.selector.addItem(`item-${i}`);
       }
 
       // Update counter while removing items
       for (let i = 99; i >= 0; i--) {
-        store.counter.increment();
+        store.counter.selector.increment();
         if (i % 2 === 0) {
-          store.items.removeItem(0);
+          store.items.selector.removeItem(0);
         }
-        store.metadata.incrementVersion();
+        store.metadata.selector.incrementVersion();
       }
     });
   });
@@ -208,7 +208,7 @@ describe('Adapter Performance Rankings', () => {
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
         unsubscribers.push(
-          store.subscribe(() => {
+          store.counter.subscribe(() => {
             notificationCount++;
           })
         );
@@ -216,7 +216,7 @@ describe('Adapter Performance Rankings', () => {
 
       // Trigger updates
       for (let i = 0; i < 100; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
       }
 
       // Cleanup
@@ -231,7 +231,7 @@ describe('Adapter Performance Rankings', () => {
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
         unsubscribers.push(
-          store.subscribe(() => {
+          store.counter.subscribe(() => {
             notificationCount++;
           })
         );
@@ -239,7 +239,7 @@ describe('Adapter Performance Rankings', () => {
 
       // Trigger updates
       for (let i = 0; i < 100; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
       }
 
       // Cleanup
@@ -254,7 +254,7 @@ describe('Adapter Performance Rankings', () => {
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
         unsubscribers.push(
-          store.subscribe(() => {
+          store.counter.subscribe(() => {
             notificationCount++;
           })
         );
@@ -262,7 +262,7 @@ describe('Adapter Performance Rankings', () => {
 
       // Trigger updates
       for (let i = 0; i < 100; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
       }
 
       // Cleanup
@@ -277,7 +277,7 @@ describe('Adapter Performance Rankings', () => {
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
         unsubscribers.push(
-          store.subscribe(() => {
+          store.counter.subscribe(() => {
             notificationCount++;
           })
         );
@@ -285,7 +285,7 @@ describe('Adapter Performance Rankings', () => {
 
       // Trigger updates
       for (let i = 0; i < 100; i++) {
-        store.counter.increment();
+        store.counter.selector.increment();
       }
 
       // Cleanup
@@ -327,9 +327,9 @@ describe('Adapter Performance Rankings', () => {
       for (let i = 0; i < 100; i++) {
         stores.push(createSvelteAdapter(createStandardComponent));
       }
-      
+
       // Clean up to prevent memory leaks
-      stores.forEach(store => {
+      stores.forEach((store) => {
         if ('destroy' in store && typeof store.destroy === 'function') {
           store.destroy();
         }

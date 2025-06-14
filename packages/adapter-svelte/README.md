@@ -48,31 +48,31 @@ The recommended approach is to use the runtime utilities from `@lattice/runtime/
   import { store } from './store';
   
   // Use sliceValue for single values - creates reactive Svelte stores
-  const count = sliceValue(store, s => s.counter.value());
-  const user = sliceValue(store, s => s.auth.user());
+  const count = sliceValue(store, s => s.counter.selector.value());
+  const user = sliceValue(store, s => s.auth.selector.user());
   
   // Or use sliceValues for multiple values at once
   const values = sliceValues(store, {
-    count: s => s.counter.value(),
-    user: s => s.auth.user(),
-    isLoggedIn: s => !!s.auth.user()
+    count: s => s.counter.selector.value(),
+    user: s => s.auth.selector.user(),
+    isLoggedIn: s => !!s.auth.selector.user()
   });
 </script>
 
 <!-- Using individual stores -->
 {#if $user}
   <p>Welcome, {$user.name}!</p>
-  <button on:click={store.auth.logout}>Logout</button>
+  <button on:click={store.auth.selector.logout}>Logout</button>
 {:else}
-  <button on:click={() => store.auth.login({ name: 'Alice' })}>
+  <button on:click={() => store.auth.selector.login({ name: 'Alice' })}>
     Login as Alice
   </button>
 {/if}
 
 <div>
   <p>Count: {$count}</p>
-  <button on:click={store.counter.increment}>+</button>
-  <button on:click={store.counter.decrement}>-</button>
+  <button on:click={store.counter.selector.increment}>+</button>
+  <button on:click={store.counter.selector.decrement}>-</button>
 </div>
 
 <!-- Or using the values object -->
@@ -95,10 +95,10 @@ For computed values that combine multiple slices, use `derivedSlice`:
   
   // Create derived values that update automatically
   const summary = derivedSlice(store, s => ({
-    itemCount: s.cart.items().length,
-    totalPrice: s.cart.total(),
-    userName: s.auth.user()?.name ?? 'Guest',
-    formattedTotal: `$${s.cart.total().toFixed(2)}`
+    itemCount: s.cart.selector.items().length,
+    totalPrice: s.cart.selector.total(),
+    userName: s.auth.selector.user()?.name ?? 'Guest',
+    formattedTotal: `$${s.cart.selector.total().toFixed(2)}`
   }));
 </script>
 
@@ -239,7 +239,7 @@ The runtime utilities work seamlessly with Svelte 5. For advanced use cases, you
   import { store } from './store';
   
   // Runtime utilities work perfectly with Svelte 5
-  const count = sliceValue(store, s => s.counter.value());
+  const count = sliceValue(store, s => s.counter.selector.value());
   
   // You can still use runes for local state
   let localMultiplier = $state(2);
@@ -248,7 +248,7 @@ The runtime utilities work seamlessly with Svelte 5. For advanced use cases, you
   const multiplied = $derived($count * localMultiplier);
 </script>
 
-<button onclick={() => store.counter.increment()}>
+<button onclick={() => store.counter.selector.increment()}>
   Count: {$count} * {localMultiplier} = {multiplied}
 </button>
 
@@ -301,7 +301,7 @@ const createComponent = (createStore: CreateStore<{
 
 // Usage in Svelte with full type safety
 const store = createSvelteAdapter(createComponent);
-const todos = sliceValue(store, s => s.todos.filtered()); // Type: Readable<Todo[]>
+const todos = sliceValue(store, s => s.todos.selector.filtered()); // Type: Readable<Todo[]>
 ```
 
 ## Why Use This Adapter?
@@ -328,18 +328,18 @@ Svelte automatically batches synchronous state updates, unlike React which requi
 
 ```typescript
 // Multiple updates in the same tick are automatically batched
-store.actions.increment();
-store.actions.setName('updated');
-store.actions.toggleFlag();
+store.actions.selector.increment();
+store.actions.selector.setName('updated');
+store.actions.selector.toggleFlag();
 // Only triggers one reactive update cycle
 
 // For async operations, use Svelte's tick() if needed
 import { tick } from 'svelte';
 
 async function handleComplexUpdate() {
-  store.actions.updatePartOne();
+  store.actions.selector.updatePartOne();
   await someAsyncOperation();
-  store.actions.updatePartTwo();
+  store.actions.selector.updatePartTwo();
   await tick(); // Ensures all updates are flushed
 }
 ```

@@ -241,7 +241,8 @@ export function useLattice<Component, Selected>(
 
 if (import.meta.vitest) {
   const { describe, it, expect } = import.meta.vitest;
-  const { renderHook, act } = await import('@testing-library/react');
+  const { renderHook } = await import('@testing-library/react');
+  const { act } = await import('react');
   const { createStore } = await import('@lattice/core');
 
   describe('React hooks', () => {

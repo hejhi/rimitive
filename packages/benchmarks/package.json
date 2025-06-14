@@ -12,6 +12,7 @@
     "bench:report:real": "node scripts/run-chunked-benchmarks.js real",
     "bench:merge": "node scripts/merge-benchmark-results.js",
     "bench:split": "node scripts/split-benchmark-results.js",
+    "dashboard": "vite --config vite.config.dashboard.ts",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck"
   },
