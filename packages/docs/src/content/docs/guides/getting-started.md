@@ -105,7 +105,7 @@ Now use your counter in any framework:
 <Tabs>
   <TabItem label="React">
     ```tsx
-    import { useSliceValues } from '@lattice/runtime';
+    import { useSliceValues } from '@lattice/runtime/react';
     import { counterStore } from './store';
 
     function Counter() {
@@ -125,7 +125,7 @@ Now use your counter in any framework:
   <TabItem label="Vue">
     ```vue
     <script setup>
-    import { useSliceValues } from '@lattice/runtime';
+    import { useSliceValues } from '@lattice/runtime/vue';
     import { counterStore } from './store';
 
     const { count, increment, decrement, reset } = useSliceValues(counterStore);
@@ -144,7 +144,7 @@ Now use your counter in any framework:
   <TabItem label="Svelte">
     ```svelte
     <script>
-    import { sliceValues } from '@lattice/runtime';
+    import { sliceValues } from '@lattice/runtime/svelte';
     import { counterStore } from './store';
 
     const { count, increment, decrement, reset } = sliceValues(counterStore);

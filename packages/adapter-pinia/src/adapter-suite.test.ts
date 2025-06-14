@@ -7,7 +7,7 @@
 import { beforeEach } from 'vitest';
 import { createPinia, setActivePinia, defineStore } from 'pinia';
 import { createStoreAdapter } from './index';
-import { createAdapterTestSuite } from '@lattice/core';
+import { createAdapterTestSuite } from '@lattice/core/testing';
 
 // Setup Pinia before running tests
 beforeEach(() => {

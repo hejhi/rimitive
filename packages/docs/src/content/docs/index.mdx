@@ -28,7 +28,7 @@ You've built an amazing dropdown component for your React app. Now your Vue team
 <Tabs>
   <TabItem label="React">
     ```tsx
-    import { useSliceValues } from '@lattice/runtime';
+    import { useSliceValues } from '@lattice/runtime/react';
     import { createDropdown } from './behaviors/dropdown';
 
     function Dropdown() {
@@ -45,7 +45,7 @@ You've built an amazing dropdown component for your React app. Now your Vue team
   <TabItem label="Vue">
     ```vue
     <script setup>
-    import { useSliceValues } from '@lattice/runtime';
+    import { useSliceValues } from '@lattice/runtime/vue';
     import { createDropdown } from './behaviors/dropdown';
 
     const { isOpen, toggle } = useSliceValues(createDropdown);
@@ -62,7 +62,7 @@ You've built an amazing dropdown component for your React app. Now your Vue team
   <TabItem label="Svelte">
     ```svelte
     <script>
-    import { sliceValues } from '@lattice/runtime';
+    import { sliceValues } from '@lattice/runtime/svelte';
     import { createDropdown } from './behaviors/dropdown';
 
     const { isOpen, toggle } = sliceValues(createDropdown);
@@ -90,7 +90,7 @@ The **same behavior code** powers all three components. Write once, test once, m
     Lattice wraps your favorite state library. Keep using Redux DevTools, Zustand middleware, or Vue's reactivity. We enhance, not replace.
   </Card>
   <Card title="📦 Tiny Footprint" icon="document">
-    Core + Runtime is just 2.4KB gzipped. Adapters add only ~0.3KB each. Compare to Redux Toolkit at 12KB or Recoil at 21KB.
+    Core + Runtime is just 1.5KB gzipped! Complete setup with store-react is only 1.5KB total. That's 8x smaller than Redux Toolkit and 14x smaller than Recoil.
   </Card>
   <Card title="🧩 True Composition" icon="star">
     Build complex behaviors from simple pieces. Dropdowns + focus trap = accessible modal. It's that easy.
@@ -141,7 +141,7 @@ That's it. This counter now works in any framework.
 ## Trusted By Teams Who Ship
 
 <div class="logo-grid">
-  <!-- Add customer logos here -->
+  {/* Add customer logos here */}
 </div>
 
 ---

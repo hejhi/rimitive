@@ -13,15 +13,17 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'LatticeCore',
-      fileName: 'index',
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        testing: resolve(__dirname, 'src/testing.ts')
+      },
       formats: ['es']
     },
     rollupOptions: {
-      external: [],
+      external: ['vitest'],
       output: {
-        preserveModules: false
+        preserveModules: false,
+        entryFileNames: '[name].js'
       }
     },
     sourcemap: true,

@@ -93,7 +93,7 @@ Now let's use this dropdown in different frameworks:
 <Tabs>
   <TabItem label="React">
     ```tsx
-    import { useSliceValues } from '@lattice/runtime';
+    import { useSliceValues } from '@lattice/runtime/react';
     import { createDropdown } from './dropdown';
 
     function SelectMenu({ items, onSelect }) {
@@ -133,7 +133,7 @@ Now let's use this dropdown in different frameworks:
   <TabItem label="Vue">
     ```vue
     <script setup>
-    import { useSliceValues, useStore } from '@lattice/runtime';
+    import { useSliceValues, useStore } from '@lattice/runtime/vue';
     import { createDropdown } from './dropdown';
 
     const props = defineProps(['items', 'onSelect']);
@@ -167,7 +167,7 @@ Now let's use this dropdown in different frameworks:
   <TabItem label="Svelte">
     ```svelte
     <script>
-    import { sliceValues, createStore } from '@lattice/runtime';
+    import { sliceValues, createStore } from '@lattice/runtime/svelte';
     import { createDropdown } from './dropdown';
     
     export let items;

@@ -25,13 +25,11 @@ export {
   isAdapterFactory,
 } from './adapter-contract';
 
-// Export adapter test suite
-export { createAdapterTestSuite } from './adapter-contract-tests';
-
 // Export subscription utilities
 export {
   subscribeToSlices,
   shallowEqual,
+  injectStartTransition,
   type SubscribableStore,
   type SubscribeOptions,
 } from './subscribe';

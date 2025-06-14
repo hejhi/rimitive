@@ -1,15 +1,11 @@
-// Export React hooks
-export {
-  useSliceSelector,
-  useSlice,
-  useSliceValues,
-  useLattice
-} from './react';
+// Runtime package main entry point
+// Framework-specific exports are available via subpath exports:
+// - @lattice/runtime/react
+// - @lattice/runtime/vue  
+// - @lattice/runtime/svelte
 
-// Export Svelte utilities
-export {
-  sliceValue,
-  sliceValues,
-  derivedSlice,
-  asReadable
-} from './svelte';
+// Re-export core utilities that are framework-agnostic
+export { createLatticeStore } from '@lattice/core';
+
+// Type exports that might be useful across frameworks
+export type { RuntimeResult, ComponentFactory, CreateStore } from '@lattice/core';

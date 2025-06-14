@@ -71,13 +71,16 @@ export interface SubscribeOptions<T> {
  * );
  * ```
  */
-// Import startTransition if available (React 18+)
+// startTransition will be injected by the React runtime if available
 let startTransition: ((callback: () => void) => void) | undefined;
-try {
-  const React = require('react');
-  startTransition = React.startTransition;
-} catch {
-  // React not available or version < 18
+
+/**
+ * Inject React's startTransition for use in subscriptions.
+ * This avoids bundling React in the core package.
+ * @internal
+ */
+export function injectStartTransition(fn: (callback: () => void) => void) {
+  startTransition = fn;
 }
 
 export function subscribeToSlices<Component, Selected>(
@@ -99,7 +102,7 @@ export function subscribeToSlices<Component, Selected>(
   const wrappedCallback =
     useTransition && startTransition
       ? (selected: Selected, prevSelected: Selected | undefined) => {
-          startTransition(() => {
+          startTransition?.(() => {
             callback(selected, prevSelected);
           });
         }

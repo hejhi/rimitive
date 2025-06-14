@@ -4,7 +4,7 @@
  * Ensures the Redux adapter conforms to the Lattice adapter contract
  */
 
-import { createAdapterTestSuite } from '@lattice/core';
+import { createAdapterTestSuite } from '@lattice/core/testing';
 import { createStoreAdapter } from './index';
 
 // Run the shared adapter test suite

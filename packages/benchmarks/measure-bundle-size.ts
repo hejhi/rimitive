@@ -32,7 +32,17 @@ async function measureBundle(name: string, code: string): Promise<BundleResult> 
           formats: ['es'],
         },
         rollupOptions: {
-          external: ['react', 'react-dom', 'vue', 'svelte'],
+          external: [
+            'react', 
+            'react-dom', 
+            'vue', 
+            'svelte',
+            '@reduxjs/toolkit',
+            'redux',
+            'zustand',
+            'pinia',
+            'svelte/store'
+          ],
         },
       },
       logLevel: 'silent',

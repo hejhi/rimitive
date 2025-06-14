@@ -4,7 +4,7 @@
  * Ensures the store-react adapter conforms to the Lattice adapter contract
  */
 
-import { createAdapterTestSuite } from '@lattice/core';
+import { createAdapterTestSuite } from '@lattice/core/testing';
 import { createStoreAdapter } from './index';
 
 // Create a factory that matches the expected signature

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createReduxAdapter, createStoreAdapter } from './index';
-import { createAdapterTestSuite } from '@lattice/core';
+import { createAdapterTestSuite } from '@lattice/core/testing';
 
 describe('Redux Adapter', () => {
   it('should export createReduxAdapter function', () => {
