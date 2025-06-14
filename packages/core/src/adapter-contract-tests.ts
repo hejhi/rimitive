@@ -45,7 +45,9 @@ function createInitialState(): TestState {
 /**
  * Type for adapter factory functions that matches our new architecture
  */
-type TestAdapterFactory = <State>(initialState?: State) => StoreAdapter<State>;
+export type TestAdapterFactory = <State>(
+  initialState?: State
+) => StoreAdapter<State>;
 
 /**
  * Creates a comprehensive test suite for StoreAdapter implementations
@@ -538,44 +540,6 @@ export function createAdapterTestSuite(
         expect(state.obj.nested).toBe(2);
         expect(state.arr).toEqual(['x', 'y', 'z']);
       });
-    });
-  });
-}
-
-// ============================================================================
-// In-source tests for the test suite itself
-// ============================================================================
-
-if (import.meta.vitest) {
-  const { describe, it, expect } = import.meta.vitest;
-
-  describe('createAdapterTestSuite', () => {
-    it('should validate a minimal mock adapter', () => {
-      // Create a minimal mock adapter factory
-      const createMockAdapter: TestAdapterFactory = <State>(
-        initialState?: State
-      ) => {
-        let state = initialState || ({} as State);
-        const listeners = new Set<() => void>();
-
-        return {
-          getState: () => state,
-          setState: (updates: Partial<State>) => {
-            state = { ...state, ...updates };
-            listeners.forEach((listener) => listener());
-          },
-          subscribe: (listener: () => void) => {
-            listeners.add(listener);
-            return () => listeners.delete(listener);
-          },
-        };
-      };
-
-      // The test suite should pass for this valid implementation
-      // We're not running the full suite here, just verifying it compiles
-      expect(() =>
-        createAdapterTestSuite('Mock', createMockAdapter)
-      ).not.toThrow();
     });
   });
 }

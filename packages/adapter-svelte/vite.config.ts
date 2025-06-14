@@ -22,12 +22,7 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: [
-        '@lattice/core',
-        '@lattice/runtime',
-        'svelte',
-        'svelte/store',
-      ],
+      external: ['@lattice/core', '@lattice/runtime', 'svelte', 'svelte/store'],
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
@@ -38,8 +33,5 @@ export default defineConfig({
       },
     },
     sourcemap: true,
-  },
-  define: {
-    'import.meta.vitest': 'undefined',
   },
 });

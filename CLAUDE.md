@@ -34,18 +34,6 @@
 - Focus on real scenarios that matter to users
 - Verify actual behavior, not mocked interactions
 
-### In-Source Testing with Vitest
-```typescript
-// Use import.meta.vitest for in-source tests
-if (import.meta.vitest) {
-  const { test, expect } = import.meta.vitest
-  
-  test('actual behavior description', async () => {
-    // Test real implementation
-  })
-}
-```
-
 ### Mocking Guidelines
 - **Default: No mocks** - Test the actual implementation
 - **Exception: External boundaries only** - Mock APIs, databases, file systems

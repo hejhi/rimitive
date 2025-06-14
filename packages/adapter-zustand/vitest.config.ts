@@ -9,15 +9,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.{js,ts}'],
-      exclude: ['**/*.test.ts', '**/*.spec.ts', '**/test-utils/**']
-    }
+      exclude: ['**/*.test.ts', '**/*.spec.ts', '**/test-utils/**'],
+    },
   },
   resolve: {
     alias: {
-      '@lattice/core': resolve(__dirname, '../core/src')
-    }
+      '@lattice/core': resolve(__dirname, '../core/src'),
+    },
   },
-  define: {
-    'import.meta.vitest': 'undefined'
-  }
 });

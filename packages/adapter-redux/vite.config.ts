@@ -41,7 +41,4 @@ export default defineConfig({
     },
     sourcemap: true,
   },
-  define: {
-    'import.meta.vitest': 'undefined',
-  },
 });

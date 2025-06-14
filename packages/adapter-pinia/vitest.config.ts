@@ -7,14 +7,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    includeSource: ['src/**/*.{js,ts}']
+    includeSource: ['src/**/*.{js,ts}'],
   },
   resolve: {
     alias: {
-      '@lattice/core': resolve(__dirname, '../core/src')
-    }
+      '@lattice/core': resolve(__dirname, '../core/src'),
+    },
   },
-  define: {
-    'import.meta.vitest': 'undefined'
-  }
 });

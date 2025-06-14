@@ -20,11 +20,7 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: [
-        '@lattice/core',
-        '@lattice/runtime',
-        'react',
-      ],
+      external: ['@lattice/core', '@lattice/runtime', 'react'],
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
@@ -34,8 +30,5 @@ export default defineConfig({
       },
     },
     sourcemap: true,
-  },
-  define: {
-    'import.meta.vitest': 'undefined',
   },
 });
