@@ -1,109 +1,174 @@
 # Lattice
 
-A framework that separates business logic from state management implementation, making your behavior specifications portable across any state manager or UI framework.
+A framework for building composable, headless UI components that work across any JavaScript framework.
 
-## The Core Problem: Architectural Lock-in
+## The Core Problem: Reusable UI Behavior
 
-When you write business logic using Redux patterns, migrating to Zustand means rewriting everything. When your Vue team wants to share logic with your React team, you duplicate code. Every state management solution locks you into its specific patterns - Redux requires actions and reducers, Zustand uses hooks, MobX uses observables.
+Building truly reusable UI components is hard. When you create a dropdown component, you're actually building two things: the behavior (keyboard navigation, focus management, state) and the visual presentation. Current solutions force you to either:
 
-Lattice solves this by treating **business logic as a portable specification**, not an implementation detail.
+- **Choose a framework** and lock out other users
+- **Write vanilla JavaScript** and lose reactivity  
+- **Maintain multiple versions** for different frameworks
+- **Use inheritance** which creates fragile base classes and doesn't compose well
+
+This gets worse when you want to share behavior across components. The same focus trap logic needed for a modal is also needed for a dropdown and a popover, but there's no good way to share this without coupling to a specific framework or using complex inheritance patterns.
 
 ## What Lattice Does
 
-Lattice creates a thin abstraction layer that makes your state manager choice irrelevant to your business logic. Think of it like:
-- How SQL abstracts over database implementations
-- How the DOM API abstracts over browser engines
-- How POSIX abstracts over operating systems
+Lattice lets you write UI behavior as composable functions that work with any framework. Instead of inheriting from base classes or coupling to specific frameworks, you compose behaviors from simple primitives: `get`, `set`, and `subscribe`.
 
-Your business logic becomes a specification that can run with any state management infrastructure:
+This enables you to:
+- Write a modal's focus trap behavior once and use it in React, Vue, Svelte, or vanilla JS
+- Compose complex behaviors from simpler ones (combine keyboard navigation + focus management + animations)
+- Share behavioral patterns across different components without inheritance
+- Keep behaviors framework-agnostic while maintaining full type safety
 
 ```typescript
-// Define behavior specification once
-const createComponent = (createStore) => {
-  const createSlice = createStore({ count: 0 });
+// Define a headless dropdown behavior
+const createDropdown = (createStore) => {
+  const createSlice = createStore({ 
+    isOpen: false,
+    selectedIndex: -1,
+    items: []
+  });
   
-  const counter = createSlice(({ get, set }) => ({
-    value: () => get().count,
-    increment: () => set({ count: get().count + 1 })
+  const dropdown = createSlice(({ get, set }) => ({
+    // State
+    isOpen: () => get().isOpen,
+    selectedIndex: () => get().selectedIndex,
+    
+    // Actions
+    open: () => set({ isOpen: true }),
+    close: () => set({ isOpen: false, selectedIndex: -1 }),
+    toggle: () => set({ isOpen: !get().isOpen }),
+    
+    // Keyboard navigation
+    selectNext: () => {
+      const { selectedIndex, items } = get();
+      set({ selectedIndex: Math.min(selectedIndex + 1, items.length - 1) });
+    },
+    selectPrevious: () => {
+      const { selectedIndex } = get();
+      set({ selectedIndex: Math.max(selectedIndex - 1, -1) });
+    },
+    
+    // Item management
+    setItems: (items) => set({ items }),
+    selectItem: (index) => {
+      set({ selectedIndex: index, isOpen: false });
+      // Trigger selection callback if needed
+    }
   }));
   
-  return { counter };
+  return { dropdown };
 };
 
-// Execute with any infrastructure
-const store = createReduxAdapter(createComponent);      // Redux
-const store = createZustandAdapter(createComponent);    // Zustand  
-const store = createPiniaAdapter(createComponent);      // Pinia
-const store = createStoreReactAdapter(createComponent); // store-react
+// Use the same behavior across different frameworks
+const reactStore = createStoreReactAdapter(createDropdown);   // For React components
+const vueStore = createPiniaAdapter(createDropdown);           // For Vue components
+const svelteStore = createSvelteAdapter(createDropdown);       // For Svelte components
 ```
 
 ## Key Benefits
 
-### Minimal Overhead
-Adapters are incredibly thin - they only provide `get`, `set`, and `subscribe`. There's virtually no runtime overhead compared to using the state manager directly. In many cases, state managers have _improved_ performance, due to the Lattice composition and selection model!
-
-### Evolution Protection
-The JavaScript ecosystem evolves rapidly. Lattice protects your business logic from framework churn. When the next state management solution arrives, you'll only need a new adapter.
-
-### True Testability
-Test your business logic without mocking state management internals. Since behavior is just a specification, you can verify it works correctly in isolation.
-
-### Cross-Team Collaboration
-Different teams using different frameworks can share the same business logic specifications. Your React team and Vue team can _literally_ share the same state specifications across the app, and re-compose state shapes surgically without needing to inherit or break anything.
-
-## Real-World Use Cases
-
-**Simple Migrations**: Gradually migrate from Redux to Zustand by changing adapters, not rewriting business logic.
-
-**Multi-Framework Portability**: Share business logic and state between React, Vue, and other framework teams.
-
-**Micro-Frontend Architecture**: Different micro-frontends using different state managers can share behavioral specifications.
-
-**Library Authors**: Write state management once, ship to all frameworks with appropriate adapters; create and ship _truly headless_ components as part of your design system.
-
-## Core Concepts
-
-### Behavior as Specification
-Instead of writing Redux actions or Zustand hooks, you write behavior specifications using simple primitives:
+### True Behavioral Composition
+Unlike class-based inheritance, Lattice enables functional composition of behaviors. You can combine keyboard navigation from one package, focus management from another, and your custom logic - all without worrying about inheritance chains or method overrides.
 
 ```typescript
-const createSlice = createStore({ count: 0 });
-
-// slice up your store any way you'd like, using Zustand-inspired patterns
-const counter = createSlice(({ get, set }) => ({
-  value: () => get().count,
-  increment: () => set({ count: get().count + 1 })
-}));
-```
-
-### Composition Without Coupling
-The `compose` utility enables clean dependency injection between slices:
-
-```typescript
-const actions = createSlice(
-  compose(
-    { counter, user },
-    ({ get, set }, { counter, user }) => ({
-      incrementIfLoggedIn: () => {
-        if (user.isAuthenticated()) {
-          counter.increment();
-        }
+// Compose behaviors without inheritance issues
+const accessibleDropdown = createSlice(
+  compose({ dropdown, focusTrap, announcements }, 
+    (tools, { dropdown, focusTrap, announcements }) => ({
+      open: () => {
+        dropdown.open();
+        focusTrap.activate();
+        announcements.announce('Dropdown opened');
       }
     })
   )
 );
 ```
 
-### Resolution for Computed Values
-The `resolve` utility creates efficient, computed values from your slices:
+### Context-Scoped State Without Performance Issues
+Unlike React Context (which triggers re-renders for all consumers) or global stores (which don't provide isolation), Lattice gives you tree-scoped state with surgical updates. Perfect for headless components that need isolated instances.
+
+### Write Once, Use Anywhere
+Write your dropdown behavior once and use it in:
+- React with hooks
+- Vue with composition API  
+- Svelte with stores
+- Vanilla JS with direct subscriptions
+- Web Components
+- Even server-rendered frameworks with appropriate adapters
+
+### Can't Lose Essential Behavior
+When composing behaviors, you explicitly include what you need. Unlike inheritance where overriding methods can accidentally break functionality, composition ensures essential behaviors remain intact.
+
+## Real-World Use Cases
+
+**Headless Component Libraries**: Build truly framework-agnostic UI components. Write the behavior for modals, dropdowns, and tooltips once, ship to all frameworks.
+
+**Design System Components**: Share the same behavioral specifications across your React web app, React Native mobile app, and Vue marketing site.
+
+**Accessibility Patterns**: Create reusable accessibility behaviors (focus trapping, screen reader announcements, keyboard navigation) that can be composed into any component.
+
+**Complex UI Interactions**: Build sophisticated behaviors like drag-and-drop, infinite scrolling, or data grids as composable units that work everywhere.
+
+**Cross-Team Collaboration**: Frontend teams using different frameworks can share and compose behavioral components without coordination overhead.
+
+## Core Concepts
+
+### Behavior as Specification
+Behaviors are defined as pure functions that receive `get` and `set` primitives. This simple contract works with any reactive system:
 
 ```typescript
-const select = resolve({ counter, settings });
-
-const computed = select(({ counter, settings }) => ({
-  total: counter.value() * settings.multiplier(),
-  label: `Count: ${counter.value()}`
+const dropdown = createSlice(({ get, set }) => ({
+  // Pure functions that describe behavior
+  isOpen: () => get().isOpen,
+  open: () => set({ isOpen: true }),
+  close: () => set({ isOpen: false }),
+  toggle: () => set({ isOpen: !get().isOpen })
 }));
+```
+
+### Composition Over Inheritance
+Instead of extending base classes, you compose behaviors functionally:
+
+```typescript
+// Don't do this - fragile inheritance
+class AccessibleDropdown extends Dropdown {
+  open() {
+    super.open(); // What if parent changes?
+    this.focusTrap.activate();
+  }
+}
+
+// Do this - explicit composition
+const accessibleDropdown = createSlice(
+  compose({ dropdown, focusTrap }, (tools, deps) => ({
+    open: () => {
+      deps.dropdown.open();
+      deps.focusTrap.activate();
+    }
+  }))
+);
+```
+
+### Behavioral Building Blocks
+Complex components are built by composing simple, focused behaviors:
+
+```typescript
+// Composable behavioral units
+const toggleable = createSlice(/* toggle behavior */);
+const selectable = createSlice(/* selection behavior */);
+const navigable = createSlice(/* keyboard navigation */);
+const focusable = createSlice(/* focus management */);
+
+// Compose into a full dropdown
+const dropdown = createSlice(
+  compose({ toggleable, selectable, navigable, focusable }, 
+    /* combine behaviors */)
+);
 ```
 
 ## Type Safety Examples
@@ -165,17 +230,25 @@ function UserProfile() {
 
 ```
 ┌─────────────────────┐     ┌──────────────┐     ┌─────────────────┐
-│ Behavior Specs      │────▶│ Lattice Core │────▶│ Adapters        │
-│ (Your Business      │     │ (Thin        │     │ (Redux,         │
-│  Logic)             │     │  Abstraction)│     │  Zustand, etc)  │
+│ Headless Components │────▶│ Lattice Core │────▶│ Adapters        │
+│ (Behavioral Specs)  │     │ (get, set,   │     │ (React, Vue,    │
+│                     │     │  subscribe)  │     │  Svelte, etc)   │
 └─────────────────────┘     └──────────────┘     └─────────────────┘
-                                    │                      │
-                                    ▼                      ▼
-                            ┌──────────────┐     ┌─────────────────┐
-                            │ Runtime      │◀────│ UI Framework    │
-                            │ (React/Vue   │     │ (React/Vue)     │
-                            │  Hooks)      │     │                 │
-                            └──────────────┘     └─────────────────┘
+         │                          │                     │
+         │                          │                     ▼
+         │                          │            ┌──────────────────┐
+         │                          │            │ UI Frameworks    │
+         ▼                          │            │ • React hooks    │
+┌─────────────────────┐             │            │ • Vue composable │
+│ Composition         │             │            │ • Svelte stores  │
+│ • Keyboard nav      │             │            │ • Vanilla JS     │
+│ • Focus management  │             │            └──────────────────┘
+│ • Accessibility     │             │
+│ • Custom behaviors  │             │
+└─────────────────────┘             │
+         │                          │
+         └──────────────────────────┘
+                  compose()
 ```
 
 ## Installation
@@ -197,30 +270,66 @@ npm install @lattice/runtime          # For React/Vue/Svelte hooks
 ## Quick Start
 
 ```typescript
-// 1. Define your component
-import { createZustandAdapter } from '@lattice/adapter-zustand';
-
-const createComponent = (createStore) => {
-  const createSlice = createStore({ todos: [] });
-  
-  const todos = createSlice(({ get, set }) => ({
-    items: () => get().todos,
-    add: (text) => set({ todos: [...get().todos, { text, done: false }] })
-  }));
-  
-  return { todos };
-};
-
-// 2. Create your store
-const store = createZustandAdapter(createComponent);
-
-// 3. Use in React
+// 1. Define a headless modal behavior
+import { compose } from '@lattice/core';
+import { createStoreReactAdapter } from '@lattice/adapter-store-react';
 import { useSliceSelector } from '@lattice/runtime/react';
 
-function TodoList() {
-  const todos = useSliceSelector(store, s => s.todos.items());
-  return <ul>{todos.map(todo => <li>{todo.text}</li>)}</ul>;
+const createModal = (createStore) => {
+  const createSlice = createStore({ 
+    isOpen: false,
+    content: null,
+    trapped: false 
+  });
+  
+  const modal = createSlice(({ get, set }) => ({
+    // State
+    isOpen: () => get().isOpen,
+    content: () => get().content,
+    
+    // Actions
+    open: (content = null) => set({ isOpen: true, content }),
+    close: () => set({ isOpen: false, content: null })
+  }));
+  
+  // Compose with focus trap behavior
+  const focusTrap = createSlice(({ get, set }) => ({
+    trapped: () => get().trapped,
+    trap: () => set({ trapped: true }), /* focus trap implementation */
+    release: () => set({ trapped: false }) /* release implementation */
+  }));
+  
+  // Combine behaviors
+  const accessibleModal = createSlice(
+    compose({ modal, focusTrap }, (_, { modal, focusTrap }) => ({
+      open: (content) => {
+        modal.open(content);
+        focusTrap.trap();
+      },
+      close: () => {
+        focusTrap.release();
+        modal.close();
+      }
+    }))
+  );
+  
+  return { modal: accessibleModal };
+};
+
+// 2. Use the same behavior in React
+const store = createStoreReactAdapter(createModal);
+
+function Modal() {
+  const isOpen = useSliceSelector(store, s => s.modal.isOpen());
+  const close = () => store.modal.selector.close();
+  
+  if (!isOpen) return null;
+  return <div role="dialog">...</div>;
 }
+
+// 3. Or use it in Vue with a different adapter
+const vueStore = createPiniaAdapter(createModal);
+// Now use with Vue's composition API
 ```
 
 ## Native Middleware Support
@@ -246,7 +355,7 @@ const store = createZustandAdapter(
 );
 ```
 
-Your business logic stays portable while you keep using the middleware you already know and love.
+Your behavioral components stay portable while keeping full access to the underlying state management features.
 
 ## Documentation
 
@@ -257,22 +366,29 @@ Your business logic stays portable while you keep using the middleware you alrea
 
 ## Why Lattice?
 
-Lattice fills several gaps in the current ecosystem:
+### The Problem with Current Headless Component Solutions
 
-### The Portability Gap
-There's no standard way to write state logic that works across different state managers. Every solution locks you into its patterns. Lattice provides that standard.
+Building truly reusable UI components requires separating behavior from presentation. Current approaches fall short:
 
-### The Evolution Protection Gap
-JavaScript frameworks and libraries change rapidly. Your business logic shouldn't need to be rewritten every time you adopt a new state management solution.
+- **Class-based inheritance** creates fragile hierarchies where overriding methods can break essential functionality
+- **Framework-specific solutions** lock you into React hooks, Vue composables, or Svelte stores
+- **Vanilla JavaScript** loses the benefits of reactivity and requires manual subscription management
+- **Multiple implementations** means maintaining the same logic across different frameworks
 
-### The Testing Gap
-By separating specification from execution, you can test behaviors in isolation without complex mocking of state management internals.
+### How Lattice Solves This
+
+Lattice provides a minimal abstraction (`get`, `set`, `subscribe`) that maps to any reactive system. This enables:
+
+- **Functional composition** instead of inheritance - combine behaviors without worrying about method overrides
+- **True portability** - the same behavior specification works in any JavaScript environment
+- **Explicit dependencies** - composed behaviors declare what they need, preventing accidental breakage
+- **Tree-scoped state** - unlike global stores, components get isolated instances with surgical updates
 
 ### Technical Benefits
-- **Type Safety**: Full TypeScript support with excellent inference
-- **Performance**: Minimal overhead - adapters are thin wrappers around native APIs
-- **Framework Agnostic**: Same patterns work in React, Vue, and vanilla JavaScript
-- **Gradual Migration**: Switch state managers by changing adapters, not rewriting logic
+- **Type Safety**: Full TypeScript inference from behavior definition to UI usage
+- **Performance**: More efficient than React Context, with surgical updates only where needed
+- **Testability**: Test behaviors in isolation without framework-specific testing utilities
+- **Extensibility**: Compose third-party behaviors with your own without modification
 
 ## Contributing
 

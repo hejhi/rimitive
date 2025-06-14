@@ -1,0 +1,223 @@
+---
+title: Getting Started in 5 Minutes
+description: Build your first portable UI behavior with Lattice in just 5 minutes.
+---
+
+import { Tabs, TabItem, Steps, Card, Aside } from '@astrojs/starlight/components';
+
+Let's build a counter that works in **any** JavaScript framework. By the end of this guide, you'll understand how Lattice lets you write UI behaviors once and use them everywhere.
+
+## Installation
+
+<Tabs>
+  <TabItem label="npm">
+    ```bash
+    npm install @lattice/core @lattice/runtime
+    ```
+  </TabItem>
+  <TabItem label="yarn">
+    ```bash
+    yarn add @lattice/core @lattice/runtime
+    ```
+  </TabItem>
+  <TabItem label="pnpm">
+    ```bash
+    pnpm add @lattice/core @lattice/runtime
+    ```
+  </TabItem>
+</Tabs>
+
+## Step 1: Create Your First Behavior (1 minute)
+
+Create a file called `counter.ts`:
+
+```typescript
+import { createSlice } from '@lattice/core';
+
+// Define your state shape
+interface CounterState {
+  count: number;
+}
+
+// Create a behavior slice
+export const createCounter = createSlice<CounterState>(({ get, set }) => ({
+  // Getters return current values
+  count: () => get().count || 0,
+  
+  // Actions update state
+  increment: () => set({ count: (get().count || 0) + 1 }),
+  decrement: () => set({ count: (get().count || 0) - 1 }),
+  reset: () => set({ count: 0 })
+}));
+```
+
+<Aside type="tip">
+  That's it! You've just created a portable counter behavior. This same code will work in React, Vue, Svelte, and vanilla JavaScript.
+</Aside>
+
+## Step 2: Choose Your Adapter (1 minute)
+
+Lattice works with your existing state management library. Pick the one you're already using:
+
+<Tabs>
+  <TabItem label="Zustand">
+    ```bash
+    npm install @lattice/adapter-zustand zustand
+    ```
+    ```typescript
+    import { createZustandAdapter } from '@lattice/adapter-zustand';
+    import { createCounter } from './counter';
+
+    export const counterStore = createZustandAdapter(createCounter);
+    ```
+  </TabItem>
+  <TabItem label="Redux">
+    ```bash
+    npm install @lattice/adapter-redux @reduxjs/toolkit
+    ```
+    ```typescript
+    import { createReduxAdapter } from '@lattice/adapter-redux';
+    import { createCounter } from './counter';
+
+    export const counterStore = createReduxAdapter(createCounter);
+    ```
+  </TabItem>
+  <TabItem label="Store-React">
+    ```bash
+    npm install @lattice/adapter-store-react
+    ```
+    ```typescript
+    import { createStoreReactAdapter } from '@lattice/adapter-store-react';
+    import { createCounter } from './counter';
+
+    export const counterStore = createStoreReactAdapter(createCounter);
+    ```
+    <Aside type="tip">
+      Store-React is our fastest adapter - 110x faster than Redux!
+    </Aside>
+  </TabItem>
+</Tabs>
+
+## Step 3: Use in Your Framework (3 minutes)
+
+Now use your counter in any framework:
+
+<Tabs>
+  <TabItem label="React">
+    ```tsx
+    import { useSliceValues } from '@lattice/runtime';
+    import { counterStore } from './store';
+
+    function Counter() {
+      const { count, increment, decrement, reset } = useSliceValues(counterStore);
+      
+      return (
+        <div>
+          <h1>Count: {count()}</h1>
+          <button onClick={increment}>+</button>
+          <button onClick={decrement}>-</button>
+          <button onClick={reset}>Reset</button>
+        </div>
+      );
+    }
+    ```
+  </TabItem>
+  <TabItem label="Vue">
+    ```vue
+    <script setup>
+    import { useSliceValues } from '@lattice/runtime';
+    import { counterStore } from './store';
+
+    const { count, increment, decrement, reset } = useSliceValues(counterStore);
+    </script>
+
+    <template>
+      <div>
+        <h1>Count: {{ count() }}</h1>
+        <button @click="increment">+</button>
+        <button @click="decrement">-</button>
+        <button @click="reset">Reset</button>
+      </div>
+    </template>
+    ```
+  </TabItem>
+  <TabItem label="Svelte">
+    ```svelte
+    <script>
+    import { sliceValues } from '@lattice/runtime';
+    import { counterStore } from './store';
+
+    const { count, increment, decrement, reset } = sliceValues(counterStore);
+    </script>
+
+    <div>
+      <h1>Count: {$count}</h1>
+      <button on:click={increment}>+</button>
+      <button on:click={decrement}>-</button>
+      <button on:click={reset}>Reset</button>
+    </div>
+    ```
+  </TabItem>
+  <TabItem label="Vanilla JS">
+    ```javascript
+    import { counterStore } from './store';
+
+    const counter = counterStore.create({ count: 0 });
+    const { count, increment, decrement, reset } = counter.actions;
+
+    // Get current value
+    console.log(count()); // 0
+
+    // Update state
+    increment();
+    console.log(count()); // 1
+
+    // Subscribe to changes
+    const unsubscribe = counter.subscribe(() => {
+      console.log('Count changed:', count());
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+## You Did It! 🎉
+
+You've just created a portable counter that works in any framework. The **same behavior code** powers all implementations.
+
+## What Makes This Powerful?
+
+<Card title="🧪 Test Once" icon="test-tube">
+  Write tests for your behavior once. They pass everywhere.
+</Card>
+
+<Card title="🐛 Fix Bugs Once" icon="bug">
+  When you fix a bug in the behavior, it's fixed in all frameworks.
+</Card>
+
+<Card title="🚀 Ship Features Faster" icon="rocket">
+  Add a new feature to the behavior, and every framework gets it instantly.
+</Card>
+
+## Next Steps
+
+<Steps>
+1. **Build Something Real**  
+   Check out our [dropdown example](/examples/dropdown) or [form validation example](/examples/form-validation)
+
+2. **Learn Composition**  
+   See how to [compose behaviors](/guides/composition) to build complex UI patterns
+
+3. **Explore Adapters**  
+   Learn about [choosing the right adapter](/guides/adapters) for your needs
+
+4. **Join the Community**  
+   Get help and share what you build in our [Discord](https://discord.gg/lattice)
+</Steps>
+
+<Aside type="tip" title="Pro Tip">
+  Start small. Convert one shared component to Lattice and see the benefits before migrating everything.
+</Aside>
+
+---
+
+**Ready for more?** Learn how to [compose behaviors](/guides/composition) to build complex UI patterns like modals, forms, and data tables.
