@@ -16,29 +16,27 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
       },
-      name: 'LatticeAdapterZustand',
+      name: 'LatticeAdapterStoreReact',
       formats: ['es'],
     },
     rollupOptions: {
       external: [
         '@lattice/core',
         '@lattice/runtime',
-        'zustand',
-        'zustand/vanilla',
-        'zustand/react',
+        '@lattice/store-react',
         'react',
       ],
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
           '@lattice/runtime': 'LatticeRuntime',
-          zustand: 'zustand',
-          'zustand/vanilla': 'zustandVanilla',
-          'zustand/react': 'zustandReact',
+          '@lattice/store-react': 'LatticeStoreReact',
           react: 'React',
         },
       },
     },
     sourcemap: true,
+    minify: 'terser',
+    target: 'esnext',
   },
 });

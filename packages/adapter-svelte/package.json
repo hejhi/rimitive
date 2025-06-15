@@ -22,8 +22,7 @@
   },
   "dependencies": {
     "@lattice/core": "workspace:*",
-    "@lattice/runtime": "workspace:*",
-    "svelte": "^5.0.0"
+    "@lattice/runtime": "workspace:*"
   },
   "peerDependencies": {
     "svelte": "^5.0.0"

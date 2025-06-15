@@ -22,11 +22,11 @@
   },
   "dependencies": {
     "@lattice/core": "workspace:*",
-    "@lattice/runtime": "workspace:*",
-    "@reduxjs/toolkit": "^2.5.0",
-    "redux": "^5.0.1"
+    "@lattice/runtime": "workspace:*"
   },
   "peerDependencies": {
+    "@reduxjs/toolkit": ">=1.8.0",
+    "redux": ">=4.0.0",
     "react": ">=16.8.0",
     "react-redux": ">=7.0.0"
   },
