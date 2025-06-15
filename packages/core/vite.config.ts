@@ -8,25 +8,37 @@ export default defineConfig({
       insertTypesEntry: true,
       outDir: 'dist',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts']
-    })
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.test.d.ts',
+        'src/**/test-*.ts',
+        'src/**/*-tests.ts',
+      ],
+    }),
   ],
   build: {
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        testing: resolve(__dirname, 'src/testing.ts')
+        testing: resolve(__dirname, 'src/testing.ts'),
+        base: resolve(__dirname, 'src/base.ts'),
+        compose: resolve(__dirname, 'src/compose.ts'),
+        subscribe: resolve(__dirname, 'src/subscribe.ts'),
+        runtime: resolve(__dirname, 'src/runtime.ts'),
+        core: resolve(__dirname, 'src/core.ts'),
+        store: resolve(__dirname, 'src/store.ts'),
       },
-      formats: ['es']
+      formats: ['es'],
     },
     rollupOptions: {
-      external: ['vitest'],
+      external: ['vitest', /^vitest/, 'node:test'],
       output: {
         preserveModules: false,
-        entryFileNames: '[name].js'
-      }
+        entryFileNames: '[name].js',
+        manualChunks: undefined,
+      },
     },
     sourcemap: true,
-    target: 'es2022' // Support for top-level await
-  }
+    target: 'es2022', // Support for top-level await
+  },
 });

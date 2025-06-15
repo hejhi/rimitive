@@ -5,7 +5,8 @@ import { join } from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface BundleResult {
   name: string;
@@ -13,10 +14,13 @@ interface BundleResult {
   gzipSize: number;
 }
 
-async function measureBundle(name: string, code: string): Promise<BundleResult> {
+async function measureBundle(
+  name: string,
+  code: string
+): Promise<BundleResult> {
   const tempDir = join(__dirname, '.temp-bundle');
   mkdirSync(tempDir, { recursive: true });
-  
+
   const entry = join(tempDir, `${name.replace(/[^a-z0-9]/gi, '-')}.ts`);
   writeFileSync(entry, code);
 
@@ -33,25 +37,38 @@ async function measureBundle(name: string, code: string): Promise<BundleResult> 
         },
         rollupOptions: {
           external: [
-            'react', 
-            'react-dom', 
-            'vue', 
+            'react',
+            'react-dom',
+            'vue',
             'svelte',
             '@reduxjs/toolkit',
             'redux',
             'zustand',
             'pinia',
-            'svelte/store'
+            'svelte/store',
           ],
         },
       },
       logLevel: 'silent',
     });
 
-    const output = Array.isArray(result) ? result[0] : result;
-    const bundle = output.output[0];
-    const bundleCode = bundle.code;
+    const buildOutput = Array.isArray(result) ? result[0] : result;
     
+    if (!buildOutput || !('output' in buildOutput)) {
+      throw new Error('Build did not return expected output');
+    }
+
+    const output = buildOutput.output;
+    if (!output || output.length === 0) {
+      throw new Error('Build output is empty');
+    }
+
+    const bundle = output[0];
+    if (!bundle || bundle.type !== 'chunk') {
+      throw new Error('Expected chunk output from build');
+    }
+
+    const bundleCode = bundle.code;
     const rawSize = Buffer.byteLength(bundleCode, 'utf8');
     const gzipSize = gzipSync(bundleCode).length;
 
@@ -70,12 +87,32 @@ async function main() {
   // Measure individual packages
   const packages = [
     { name: '@lattice/core', code: `export * from '@lattice/core';` },
+    { name: '@lattice/core/base', code: `export * from '@lattice/core/base';` },
+    {
+      name: '@lattice/core/compose',
+      code: `export * from '@lattice/core/compose';`,
+    },
     { name: '@lattice/runtime', code: `export * from '@lattice/runtime';` },
-    { name: '@lattice/adapter-redux', code: `export * from '@lattice/adapter-redux';` },
-    { name: '@lattice/adapter-zustand', code: `export * from '@lattice/adapter-zustand';` },
-    { name: '@lattice/adapter-store-react', code: `export * from '@lattice/adapter-store-react';` },
-    { name: '@lattice/adapter-svelte', code: `export * from '@lattice/adapter-svelte';` },
-    { name: '@lattice/adapter-pinia', code: `export * from '@lattice/adapter-pinia';` },
+    {
+      name: '@lattice/adapter-redux',
+      code: `export * from '@lattice/adapter-redux';`,
+    },
+    {
+      name: '@lattice/adapter-zustand',
+      code: `export * from '@lattice/adapter-zustand';`,
+    },
+    {
+      name: '@lattice/adapter-store-react',
+      code: `export * from '@lattice/adapter-store-react';`,
+    },
+    {
+      name: '@lattice/adapter-svelte',
+      code: `export * from '@lattice/adapter-svelte';`,
+    },
+    {
+      name: '@lattice/adapter-pinia',
+      code: `export * from '@lattice/adapter-pinia';`,
+    },
   ];
 
   for (const pkg of packages) {
@@ -92,7 +129,7 @@ async function main() {
         export * from '@lattice/core';
         export * from '@lattice/adapter-redux';
         export * from '@lattice/runtime';
-      `
+      `,
     },
     {
       name: 'Zustand + Lattice',
@@ -100,7 +137,7 @@ async function main() {
         export * from '@lattice/core';
         export * from '@lattice/adapter-zustand';
         export * from '@lattice/runtime';
-      `
+      `,
     },
     {
       name: 'Store-React + Lattice',
@@ -108,7 +145,7 @@ async function main() {
         export * from '@lattice/core';
         export * from '@lattice/adapter-store-react';
         export * from '@lattice/runtime';
-      `
+      `,
     },
   ];
 
@@ -137,13 +174,10 @@ function generateReport(results: BundleResult[]) {
   console.log('-'.repeat(40));
   console.log('Package'.padEnd(30) + 'Gzipped');
   console.log('-'.repeat(40));
-  
-  const packages = results.filter(r => r.name.startsWith('@lattice/'));
+
+  const packages = results.filter((r) => r.name.startsWith('@lattice/'));
   for (const result of packages) {
-    console.log(
-      result.name.padEnd(30) + 
-      formatSize(result.gzipSize)
-    );
+    console.log(result.name.padEnd(30) + formatSize(result.gzipSize));
   }
 
   // Complete setups
@@ -151,18 +185,17 @@ function generateReport(results: BundleResult[]) {
   console.log('-'.repeat(40));
   console.log('Setup'.padEnd(30) + 'Gzipped');
   console.log('-'.repeat(40));
-  
-  const setups = results.filter(r => r.name.includes('+'));
+
+  const setups = results.filter((r) => r.name.includes('+'));
   for (const result of setups) {
-    console.log(
-      result.name.padEnd(30) + 
-      formatSize(result.gzipSize)
-    );
+    console.log(result.name.padEnd(30) + formatSize(result.gzipSize));
   }
 
   // Calculate overhead
-  const coreSize = results.find(r => r.name === '@lattice/core')?.gzipSize || 0;
-  const runtimeSize = results.find(r => r.name === '@lattice/runtime')?.gzipSize || 0;
+  const coreSize =
+    results.find((r) => r.name === '@lattice/core')?.gzipSize || 0;
+  const runtimeSize =
+    results.find((r) => r.name === '@lattice/runtime')?.gzipSize || 0;
   const baseOverhead = coreSize + runtimeSize;
 
   console.log('\n\n📈 Lattice Overhead:');
@@ -174,26 +207,26 @@ function generateReport(results: BundleResult[]) {
   // Save to markdown
   let markdown = '# Bundle Size Report\n\n';
   markdown += `Generated: ${new Date().toISOString()}\n\n`;
-  
+
   markdown += '## Individual Packages\n\n';
   markdown += '| Package | Size (gzipped) |\n';
   markdown += '|---------|----------------|\n';
   for (const pkg of packages) {
     markdown += `| ${pkg.name} | ${formatSize(pkg.gzipSize)} |\n`;
   }
-  
+
   markdown += '\n## Complete Setups\n\n';
   markdown += '| Setup | Size (gzipped) |\n';
   markdown += '|-------|----------------|\n';
   for (const setup of setups) {
     markdown += `| ${setup.name} | ${formatSize(setup.gzipSize)} |\n`;
   }
-  
+
   markdown += '\n## Summary\n\n';
   markdown += `- **Lattice Core + Runtime**: ${formatSize(baseOverhead)}\n`;
   markdown += `- **Average Adapter**: ~0.3 KB\n`;
   markdown += `- **Total Overhead**: ~${formatSize(baseOverhead + 300)}\n\n`;
-  
+
   markdown += '### For Comparison\n\n';
   markdown += '| Library | Size (gzipped) |\n';
   markdown += '|---------|----------------|\n';

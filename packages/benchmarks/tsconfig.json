@@ -1,11 +1,11 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "types": ["vitest/globals", "node"],
     "jsx": "react-jsx"
   },
-  "include": ["src"],
+  "include": ["src", "scripts"],
   "exclude": ["dist", "node_modules"]
 }

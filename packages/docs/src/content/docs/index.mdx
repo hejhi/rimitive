@@ -90,10 +90,10 @@ The **same behavior code** powers all three components. Write once, test once, m
     Lattice wraps your favorite state library. Keep using Redux DevTools, Zustand middleware, or Vue's reactivity. We enhance, not replace.
   </Card>
   <Card title="📦 Tiny Footprint" icon="document">
-    Core + Runtime is just 1.5KB gzipped! Complete setup with store-react is only 1.5KB total. That's 8x smaller than Redux Toolkit and 14x smaller than Recoil.
+    Core + Runtime is just 1.5KB gzipped! While slightly larger than Zustand (588B), Lattice enables true cross-framework portability that no other solution offers.
   </Card>
-  <Card title="🧩 True Composition" icon="star">
-    Build complex behaviors from simple pieces. Dropdowns + focus trap = accessible modal. It's that easy.
+  <Card title="🧩 Composable Architecture" icon="star">
+    Import only what you need. Just want state? Import `createStore` (0.1KB). Need composition? Add `compose` (+0.2KB). Build exactly what your app requires.
   </Card>
 </CardGrid>
 
@@ -106,6 +106,27 @@ The **same behavior code** powers all three components. Write once, test once, m
 > "The best part? When we fix a bug in the behavior, it's fixed everywhere. No more playing whack-a-mole across frameworks."
 > 
 > — *Frontend Architect, Fortune 500*
+
+## Composable by Design
+
+Lattice isn't a monolithic library. Import only what you need:
+
+```typescript
+// Need just state management? (0.1 KB)
+import { createStore } from '@lattice/core/store';
+
+// Need composition too? (0.3 KB total)
+import { createStore } from '@lattice/core/store';
+import { compose } from '@lattice/core/compose';
+
+// Building a full app? (1.5 KB total)
+import { createSlice, compose } from '@lattice/core';
+import { useSliceValues } from '@lattice/runtime';
+```
+
+<Aside>
+  Every Lattice feature is available as a separate import. Build exactly what your app needs, nothing more.
+</Aside>
 
 ## Start Building in 5 Minutes
 

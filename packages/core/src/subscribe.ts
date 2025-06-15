@@ -36,12 +36,6 @@ export interface SubscribeOptions<T> {
    */
   fireImmediately?: boolean;
 
-  /**
-   * Whether to use React transitions for updates (React 18+).
-   * When true, updates will be marked as non-urgent using startTransition.
-   * Defaults to false
-   */
-  useTransition?: boolean;
 }
 
 /**
@@ -71,17 +65,6 @@ export interface SubscribeOptions<T> {
  * );
  * ```
  */
-// startTransition will be injected by the React runtime if available
-let startTransition: ((callback: () => void) => void) | undefined;
-
-/**
- * Inject React's startTransition for use in subscriptions.
- * This avoids bundling React in the core package.
- * @internal
- */
-export function injectStartTransition(fn: (callback: () => void) => void) {
-  startTransition = fn;
-}
 
 export function subscribeToSlices<Component, Selected>(
   store: Component & SubscribableStore,
@@ -92,21 +75,10 @@ export function subscribeToSlices<Component, Selected>(
   const {
     equalityFn = Object.is,
     fireImmediately = false,
-    useTransition = false,
   } = options;
 
   let prevSelected: Selected | undefined;
   let isFirstRun = true;
-
-  // Wrap callback in transition if requested and available
-  const wrappedCallback =
-    useTransition && startTransition
-      ? (selected: Selected, prevSelected: Selected | undefined) => {
-          startTransition?.(() => {
-            callback(selected, prevSelected);
-          });
-        }
-      : callback;
 
   // Run selector and check for changes
   const checkForUpdates = () => {
@@ -118,7 +90,7 @@ export function subscribeToSlices<Component, Selected>(
         isFirstRun = false;
         prevSelected = nextSelected;
         if (fireImmediately) {
-          wrappedCallback(nextSelected, undefined);
+          callback(nextSelected, undefined);
         }
         return;
       }
@@ -129,7 +101,7 @@ export function subscribeToSlices<Component, Selected>(
       if (!isEqual) {
         const oldSelected = prevSelected;
         prevSelected = nextSelected;
-        wrappedCallback(nextSelected, oldSelected);
+        callback(nextSelected, oldSelected);
       }
     } catch (error) {
       // If selector throws, we should handle it gracefully

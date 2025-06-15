@@ -1,12 +1,14 @@
 # Bundle Size Report
 
-Generated: 2025-06-14T23:07:53.202Z
+Generated: 2025-06-15T00:02:07.798Z
 
 ## Individual Packages
 
 | Package | Size (gzipped) |
 |---------|----------------|
-| @lattice/core | 1.2 KB |
+| @lattice/core | 1.1 KB |
+| @lattice/core/base | 0.2 KB |
+| @lattice/core/compose | 0.2 KB |
 | @lattice/runtime | 0.3 KB |
 | @lattice/adapter-redux | 0.9 KB |
 | @lattice/adapter-zustand | 0.9 KB |
@@ -18,15 +20,15 @@ Generated: 2025-06-14T23:07:53.202Z
 
 | Setup | Size (gzipped) |
 |-------|----------------|
-| Redux + Lattice | 1.7 KB |
-| Zustand + Lattice | 1.7 KB |
+| Redux + Lattice | 1.6 KB |
+| Zustand + Lattice | 1.6 KB |
 | Store-React + Lattice | 1.5 KB |
 
 ## Summary
 
-- **Lattice Core + Runtime**: 1.5 KB
+- **Lattice Core + Runtime**: 1.4 KB
 - **Average Adapter**: ~0.3 KB
-- **Total Overhead**: ~1.8 KB
+- **Total Overhead**: ~1.7 KB
 
 ### For Comparison
 

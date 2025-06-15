@@ -17,13 +17,34 @@ Concerned about bundle size? You should be! Let's look at the real numbers and s
 
 ## Detailed Breakdown
 
-### Core Packages
+### Core Package - Fully Composable!
+
+<Aside type="tip">
+  Lattice's core is composable - import only what you need!
+</Aside>
+
+| Import Path | Size (gzipped) | What you get |
+|-------------|----------------|--------------|
+| `@lattice/core` | 1.1 KB | Complete toolkit (all features) |
+| `@lattice/core/base` | 0.2 KB | Lightweight: createStore + compose |
+| `@lattice/core/compose` | 0.2 KB | Just the compose utility |
+| `@lattice/core/store` | 0.1 KB | Just createStore primitive |
+| `@lattice/core/subscribe` | 0.3 KB | Subscription utilities |
+| `@lattice/core/runtime` | 0.4 KB | Runtime adapter integration |
+
+### Runtime Package
 
 | Package | Size (gzipped) | What it does |
 |---------|----------------|--------------|
-| `@lattice/core` | 1.2 KB | Core abstractions (createSlice, compose) |
 | `@lattice/runtime` | 0.3 KB | Framework hooks (useSliceValues, etc.) |
-| **Base overhead** | **1.5 KB** | **What every app needs** |
+
+### Minimum Bundle Examples
+
+| Use Case | Imports | Total Size |
+|----------|---------|------------|
+| CLI Tool | `@lattice/core/store` | 0.1 KB |
+| Node.js Service | `@lattice/core/base` | 0.2 KB |
+| React App | `@lattice/core` + `@lattice/runtime` | 1.4 KB |
 
 ### Adapters (choose one)
 
@@ -79,6 +100,25 @@ Beyond bundle size, here's what our benchmarks show:
   Our custom store-react adapter is optimized specifically for Lattice's patterns. It skips unnecessary middleware and uses direct subscriptions for blazing-fast updates.
 </Card>
 
+## The Composability Advantage
+
+<Card title="🧩 Build Only What You Need" icon="puzzle">
+  Unlike other state managers, Lattice lets you import individual features:
+  
+  ```typescript
+  // Just need state? (0.1 KB)
+  import { createStore } from '@lattice/core/store';
+  
+  // Add composition when ready (+0.2 KB)
+  import { compose } from '@lattice/core/compose';
+  
+  // Full power when you need it (1.1 KB total)
+  import { createSlice, compose } from '@lattice/core';
+  ```
+  
+  This isn't just about bundle size - it's about architectural flexibility!
+</Card>
+
 ## Real-World Impact
 
 Let's put these numbers in perspective:
@@ -87,15 +127,26 @@ Let's put these numbers in perspective:
 
 ```
 Your React App:     150 KB (gzipped)
-+ State Manager:     12 KB (Redux Toolkit)
-+ Lattice:          + 3.9 KB
++ Zustand:           0.6 KB
++ Lattice:          + 1.5 KB
 -----------------------------------
-Total:              164.8 KB → 168.7 KB
+Total:              150.6 KB → 152.1 KB
 
-Impact: 2.4% increase
+Impact: < 1% increase
 ```
 
-### What 3.5KB gets you:
+### Bundle Size Reality Check
+
+Yes, Zustand alone is tiny at 588B. But consider what Lattice's 1.5KB enables:
+
+| Solution | Size | Cross-Framework | Composable Behaviors | 
+|----------|------|-----------------|----------------------|
+| Zustand alone | 588 B | ❌ React only | ❌ Limited |
+| Redux Toolkit | 3.6 KB | ❌ React only | ❌ Limited |
+| **Lattice + Zustand** | **2.2 KB** | **✅ All frameworks** | **✅ Full composition** |
+| **Lattice alone** | **1.5 KB** | **✅ All frameworks** | **✅ Full composition** |
+
+### What 1.5KB gets you:
 
 - ✅ Write behaviors once, use in any framework
 - ✅ Type-safe composition of complex UI patterns  
@@ -103,11 +154,11 @@ Impact: 2.4% increase
 - ✅ Future-proof architecture (switch frameworks anytime)
 
 <Aside type="note" title="Bundle Size Context">
-  3.5KB is smaller than:
-  - A typical favicon (3-5KB)
-  - One medium-quality JPEG thumbnail (5-10KB)  
-  - The Google Analytics script (17KB)
+  1.5KB is smaller than:
+  - A single emoji font character (~2KB)
+  - The React DevTools detection script (2KB)
   - One second of silence in an MP3 (8KB)
+  - Redux Toolkit (3.6KB)
 </Aside>
 
 ## Bundle Size Optimization Tips
@@ -157,8 +208,8 @@ Then measure before and after adding Lattice to see the real impact.
 
 ## The Verdict
 
-<Card title="✅ Ship it with confidence" icon="check">
-  At just 3.5KB, Lattice's bundle size impact is negligible. The developer productivity gains far outweigh the tiny size increase. Your users won't notice 3.5KB, but your team will notice writing 70% less code.
+<Card title="✅ The Right Trade-off" icon="check">
+  At 1.5KB, Lattice is comparable to Redux (1.4KB) but enables something neither Redux nor Zustand can do: true cross-framework portability. If you're building components that need to work across frameworks, Lattice's tiny overhead is a bargain for the capability it provides.
 </Card>
 
 ---

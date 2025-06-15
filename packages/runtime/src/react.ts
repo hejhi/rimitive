@@ -20,14 +20,8 @@ import {
 import {
   subscribeToSlices,
   shallowEqual,
-  injectStartTransition,
   type SubscribableStore,
 } from '@lattice/core';
-
-// Inject React 18's startTransition into core if available
-if (startTransition) {
-  injectStartTransition(startTransition);
-}
 
 /**
  * React hook for subscribing to specific slice method results.
