@@ -1,65 +1,54 @@
 ---
 title: Bundle Size & Performance
-description: Detailed analysis of Lattice's bundle size impact and performance characteristics
+description: Lattice's tiny footprint and tree-shaking capabilities
 ---
 
 import { Card, Aside, Badge } from '@astrojs/starlight/components';
 
-Concerned about bundle size? You should be! Let's look at the real numbers and see how Lattice compares to other state management solutions.
+Lattice is designed to have a minimal impact on your bundle size while providing maximum flexibility.
 
-## Detailed Breakdown
+## Key Characteristics
 
-### Core Package - Fully Composable!
+<Card title="Tiny Footprint" icon="rocket">
+  Lattice has an extremely small footprint and is fully tree-shakeable:
+  
+  - **Zero dependencies** - No external libraries bundled
+  - **Modular design** - Import only what you need
+  - **Tree-shakeable** - Unused code is automatically removed
+  - **TypeScript-first** - No runtime type checking overhead
+</Card>
+
+## Tree-Shaking Advantage
 
 <Aside type="tip">
   Lattice is completely composable - import only what you need!
 </Aside>
 
-| Import Path | Size (gzipped) | What you get |
-|-------------|----------------|--------------|
-| `@lattice/core` | 1.1 KB | Complete toolkit (all features) |
-| `@lattice/core/base` | 0.2 KB | Lightweight: createStore + compose |
-| `@lattice/core/compose` | 0.2 KB | Just the compose utility |
-| `@lattice/core/store` | 0.1 KB | Just createStore primitive |
-| `@lattice/core/subscribe` | 0.3 KB | Subscription utilities |
-| `@lattice/core/runtime` | 0.4 KB | Runtime adapter integration |
+```typescript
+// Minimal imports for basic state management
+import { createStore } from '@lattice/core/store';
 
-### Runtime Package
+// Add composition when you need it
+import { compose } from '@lattice/core/compose';
 
-| Package | Size (gzipped) | What it does |
-|---------|----------------|--------------|
-| `@lattice/runtime` | 0.3 KB | Framework hooks (useSliceValues, etc.) |
+// Full toolkit when building complex applications
+import { createSlice, compose } from '@lattice/core';
+```
 
-## Adapters
+## Adapter Strategy
 
-| Adapter | Size (gzipped) | Use when |
-|---------|----------------|----------|
-| `@lattice/adapter-store-react` | 0.6 KB | New React projects (fastest) |
-| `@lattice/adapter-zustand` | 0.5 KB | Already using Zustand |
-| `@lattice/adapter-redux` | 0.7 KB | Already using Redux |
-| `@lattice/adapter-svelte` | 0.7 KB | Svelte projects |
+Each adapter is designed to be lightweight and leverage your existing state management libraries:
 
-## Complete Setup Sizes
+- **`@lattice/adapter-store-react`** - Direct React state integration
+- **`@lattice/adapter-zustand`** - Builds on Zustand's minimalism
+- **`@lattice/adapter-redux`** - Works with your existing Redux setup
+- **`@lattice/adapter-svelte`** - Integrates with Svelte's reactivity
 
-| Setup | Total Size | Breakdown |
-|-------|------------|-----------|
-| React + store-react | 1.5 KB | Core (1.1) + Runtime (0.3) + Adapter (0.6) |
-| React + Redux | 1.9 KB | Core (1.1) + Runtime (0.3) + Adapter (0.7) |
-| React + Zustand | 1.7 KB | Core (1.1) + Runtime (0.3) + Adapter (0.5) |
+## Performance Benefits
 
-## The Composability Advantage
+The small bundle size translates to real performance benefits:
 
-<Card title="Tree Shaking" icon="puzzle">
-  Use only what you need:
-  
-  ```typescript
-  // Just need state? (0.1 KB)
-  import { createStore } from '@lattice/core/store';
-  
-  // Add composition when ready (+0.2 KB)
-  import { compose } from '@lattice/core/compose';
-  
-  // Full power when you need it (1.1 KB total)
-  import { createSlice, compose } from '@lattice/core';
-  ```
-</Card>
+- **Faster initial page loads** due to smaller JavaScript bundles
+- **Better tree-shaking** means only the code you use gets bundled
+- **No runtime overhead** from unnecessary features you don't use
+- **Framework-agnostic core** reduces duplication across different UI libraries

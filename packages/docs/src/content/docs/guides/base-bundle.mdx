@@ -7,19 +7,23 @@ import { Card, Aside, Code } from '@astrojs/starlight/components';
 
 Want the absolute smallest bundle? Here's how to optimize your Lattice usage for size-conscious applications.
 
-## Bundle Size Options
+## Modular Architecture
 
 Lattice provides multiple entry points depending on your needs:
 
-| Import | Size | Includes |
-|--------|------|----------|
-| `@lattice/core` | 1.2 KB | Everything: slices, compose, runtime, subscriptions |
-| `@lattice/core/base` | ~400 B | Just createStore + compose |
-| `@lattice/core/store` | ~200 B | Just createStore (if you don't need compose) |
+| Import | What it includes |
+|--------|------------------|
+| `@lattice/core` | Everything: slices, compose, runtime, subscriptions |
+| `@lattice/core/base` | Just createStore + compose |
+| `@lattice/core/store` | Just createStore (if you don't need compose) |
 
-## Minimal Usage (~400 bytes)
+<Aside type="tip">
+  All imports are fully tree-shakeable - you only pay for what you use!
+</Aside>
 
-For the smallest bundle, use the base export:
+## Minimal Usage
+
+For the smallest footprint, use the base export:
 
 ```typescript
 import { createStore, compose } from '@lattice/core/base';
@@ -35,7 +39,7 @@ const counter = createSlice(({ get, set }) => ({
 // That's it! No adapters, no runtime, just pure state management
 ```
 
-## Ultra-Minimal Usage (~200 bytes)
+## Ultra-Minimal Usage
 
 If you don't even need composition, import just the store:
 
@@ -51,7 +55,7 @@ const counter = createSlice(({ get, set }) => ({
 ```
 
 <Aside type="note">
-  This approach gives you state management smaller than Zustand (588B) but without framework integration. You'll need to handle subscriptions manually.
+  This approach gives you highly optimized state management that's fully tree-shakeable. You'll need to handle subscriptions manually.
 </Aside>
 
 ## What You Give Up
@@ -79,9 +83,9 @@ The minimal exports are tiny but exclude:
   - Teams already using Redux/Zustand (need adapters)
 </Card>
 
-## Comparison with Zustand
+## Framework Portability Advantage
 
-Yes, Zustand is 588B. But here's what Lattice minimal gives you that Zustand doesn't:
+Here's what Lattice minimal gives you that other solutions don't:
 
 ```typescript
 // Lattice - Works everywhere
@@ -95,13 +99,13 @@ const counter = createSlice(({ get, set }) => ({
 ```
 
 ```typescript
-// Zustand - React only
+// Other solutions - Framework-specific
 const useStore = create((set) => ({
   count: 0,
   increment: () => set((state) => ({ count: state.count + 1 }))
 }));
 
-// Locked to React hooks
+// Locked to specific frameworks
 ```
 
 ## Migration Path
@@ -109,23 +113,23 @@ const useStore = create((set) => ({
 Start minimal, grow as needed:
 
 ```typescript
-// 1. Start with base (400B)
+// 1. Start with base - ultra-minimal
 import { createStore } from '@lattice/core/base';
 
-// 2. Need framework support? Add runtime (+ 300B)
+// 2. Need framework support? Add runtime
 import { useSliceValues } from '@lattice/runtime';
 
-// 3. Need Zustand integration? Use full core (1.2KB total)
+// 3. Need existing library integration? Use adapters
 import { createSlice } from '@lattice/core';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
 ```
 
-## The Verdict
+## The Strategy
 
-- **Need tiny + portable?** Use `@lattice/core/base` (400B)
-- **Need tiny + React-only?** Use Zustand (588B)
-- **Need portable + full features?** Use full Lattice (1.5KB)
+- **Need tiny + portable?** Use `@lattice/core/base`
+- **Need framework integration?** Add `@lattice/runtime`
+- **Need existing library compatibility?** Use full Lattice + adapters
 
 <Aside type="tip">
-  400 bytes for framework-agnostic state management is incredibly small. That's smaller than a typical Google Analytics event!
+  Lattice's modular design means you can start minimal and only add features as you need them - no upfront bundle size penalty!
 </Aside>

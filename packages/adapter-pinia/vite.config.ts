@@ -12,7 +12,7 @@ export default defineConfig({
       formats: ['es']
     },
     rollupOptions: {
-      external: ['vue', '@lattice/core', '@lattice/runtime'],
+      external: ['vue', 'pinia', '@lattice/core', '@lattice/runtime'],
       output: {
         globals: {
           vue: 'Vue'

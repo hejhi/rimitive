@@ -17,14 +17,14 @@ Lattice isn't a monolithic library - it's a collection of focused, composable ut
 
 ```typescript
 // 🎯 Individual imports - maximum control
-import { compose } from '@lattice/core/compose';       // 0.2 KB - Slice composition
-import { createStore } from '@lattice/core/store';     // 0.1 KB - State primitive
-import { subscribeToSlices } from '@lattice/core/subscribe'; // 0.3 KB - Subscriptions
-import { createLatticeStore } from '@lattice/core/runtime';  // 0.4 KB - Runtime
+import { compose } from '@lattice/core/compose';
+import { createStore } from '@lattice/core/store';
+import { subscribeToSlices } from '@lattice/core/subscribe';
+import { createLatticeStore } from '@lattice/core/runtime';
 
 // 🚀 Convenience imports
-import { createSlice, compose } from '@lattice/core';  // 1.1 KB - Full toolkit
-import { createStore, compose } from '@lattice/core/base'; // 0.2 KB - Essentials only
+import { createSlice, compose } from '@lattice/core';
+import { createStore, compose } from '@lattice/core/base';
 ```
 
 ## Import Strategies
@@ -59,17 +59,6 @@ import { createStore, compose } from '@lattice/core/base';
 // ✅ Perfect for Node.js, CLI tools, tests
 ```
 
-## Bundle Size Breakdown
-
-| Import | Size | What You Get |
-|--------|------|--------------|
-| `@lattice/core` | 1.1 KB | Complete toolkit with all features |
-| `@lattice/core/base` | 0.2 KB | Just createStore + compose |
-| `@lattice/core/compose` | 0.2 KB | Slice composition utility |
-| `@lattice/core/store` | 0.1 KB | Basic state management |
-| `@lattice/core/subscribe` | 0.3 KB | Subscription utilities |
-| `@lattice/core/runtime` | 0.4 KB | Adapter integration |
-
 ## Real-World Examples
 
 ### Example 1: Minimal State for a CLI Tool
@@ -95,8 +84,6 @@ const store = createStore({ count: 0 });
 const counter = compose(store, ({ get, set }) => ({
   increment: () => set({ count: get().count + 1 })
 }));
-
-// Total: 0.3 KB (store + compose)
 ```
 
 ### Example 3: Full Framework Integration
@@ -154,10 +141,9 @@ import { useSliceValues } from '@lattice/runtime';
 <Aside type="note" title="Not Just About Size">
   Lattice's composable architecture isn't just about bundle size - it's about flexibility. Build exactly what you need:
   
-  - **Just state?** Use `createStore` (0.1 KB)
-  - **Need composition?** Add `compose` (+0.2 KB)
-  - **Want subscriptions?** Import `subscribe` (+0.3 KB)
-  - **Full framework support?** Go with the standard import (1.1 KB total)
+  - **Just state?** Use `createStore`
+  - **Need composition?** Add `compose`
+  - **Want subscriptions?** Import `subscribe`
 </Aside>
 
 ## Progressive Enhancement
@@ -209,21 +195,6 @@ import { useSliceValues } from '@lattice/runtime';
     ```
   </TabItem>
 </Tabs>
-
-## Verifying Your Bundle
-
-Want to see exactly what's included? Use bundle analysis:
-
-```bash
-# Vite
-npx vite-bundle-visualizer
-
-# Webpack
-npx webpack-bundle-analyzer
-
-# General
-npx source-map-explorer dist/main.js
-```
 
 <Card title="🎯 Pro Tip: Start Standard, Optimize Later">
   For most apps, start with the standard import. If you need to optimize later, switching to granular imports is a simple refactor. Don't premature optimize - 1.1 KB won't break your performance budget!

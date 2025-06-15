@@ -3,14 +3,14 @@
   "version": "0.0.1",
   "description": "Pinia adapter for Lattice - integrate Lattice with Vue's official state management library",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
+  "main": "./dist/adapter-pinia.js",
+  "module": "./dist/adapter-pinia.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "import": "./dist/adapter-pinia.js",
+      "default": "./dist/adapter-pinia.js"
     }
   },
   "files": [

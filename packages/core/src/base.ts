@@ -1,4 +1,4 @@
-// Minimal Lattice Core - Just the essentials for smallest bundle size
+// Minimal Lattice Core - Just the essentials for tree-shakeable imports
 // This is what you'd import for the most basic state management
 
 // Only export the bare minimum needed for basic state management

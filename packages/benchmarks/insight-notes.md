@@ -76,6 +76,6 @@ The React Transitions benchmarks show consistent patterns, but how do adapters p
 
 How do these adapters perform when the same business logic is used across different UI frameworks (React vs Vue vs Svelte)?
 
-6. Production Bundle Size Impact
+6. Framework Integration Patterns
 
-The benchmarks focus on runtime performance, but what's the bundle size impact of Lattice + adapter vs native implementations?
+How can adapters better leverage framework-specific optimizations and idioms while maintaining portability?
