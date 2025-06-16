@@ -147,9 +147,8 @@ describe('Adapter Overhead', () => {
     bench('svelte + lattice - state updates', () => {
       const createComponent = (createStore: CreateStore<{ count: number }>) => {
         const createSlice = createStore({ count: 0 });
-        const counter = createSlice(({ get, set }) => ({
-          increment: () => set({ count: get().count + 1 }),
-          getCount: () => get().count,
+        const counter = createSlice(({ set }) => ({
+          setCount: (count: number) => set({ count }),
         }));
         return { counter };
       };
@@ -157,7 +156,7 @@ describe('Adapter Overhead', () => {
       const store = createSvelteAdapter(createComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.increment();
+        store.counter.selector.setCount(i);
       }
     });
 
@@ -180,8 +179,8 @@ describe('Adapter Overhead', () => {
     bench('svelte + lattice - subscriptions', () => {
       const createComponent = (createStore: CreateStore<{ count: number }>) => {
         const createSlice = createStore({ count: 0 });
-        const counter = createSlice(({ get, set }) => ({
-          increment: () => set({ count: get().count + 1 }),
+        const counter = createSlice(({ set }) => ({
+          setCount: (count: number) => set({ count }),
         }));
         return { counter };
       };
@@ -195,7 +194,7 @@ describe('Adapter Overhead', () => {
       }
 
       // Update state
-      store.counter.selector.increment();
+      store.counter.selector.setCount(1);
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
@@ -207,9 +206,8 @@ describe('Adapter Overhead', () => {
     bench('svelte store + lattice - state updates', () => {
       const createComponent = (createStore: CreateStore<{ count: number }>) => {
         const createSlice = createStore({ count: 0 });
-        const counter = createSlice(({ get, set }) => ({
-          increment: () => set({ count: get().count + 1 }),
-          getCount: () => get().count,
+        const counter = createSlice(({ set }) => ({
+          setCount: (count: number) => set({ count }),
         }));
         return { counter };
       };
@@ -217,15 +215,15 @@ describe('Adapter Overhead', () => {
       const store = createSvelteStoreAdapter(createComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.increment();
+        store.counter.selector.setCount(i);
       }
     });
 
     bench('svelte store + lattice - subscriptions', () => {
       const createComponent = (createStore: CreateStore<{ count: number }>) => {
         const createSlice = createStore({ count: 0 });
-        const counter = createSlice(({ get, set }) => ({
-          increment: () => set({ count: get().count + 1 }),
+        const counter = createSlice(({ set }) => ({
+          setCount: (count: number) => set({ count }),
         }));
         return { counter };
       };
@@ -239,7 +237,7 @@ describe('Adapter Overhead', () => {
       }
 
       // Update state
-      store.counter.selector.increment();
+      store.counter.selector.setCount(1);
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
