@@ -10,10 +10,7 @@ import { createZustandAdapter } from '@lattice/adapter-zustand';
 import { configureStore } from '@reduxjs/toolkit';
 import { createReduxAdapter } from '@lattice/adapter-redux';
 import { writable } from 'svelte/store';
-import {
-  createSvelteAdapter,
-  createSvelteStoreAdapter,
-} from '@lattice/adapter-svelte';
+import { createSvelteAdapter } from '@lattice/adapter-svelte';
 import type { CreateStore } from '@lattice/core';
 
 // Test iterations
@@ -212,7 +209,7 @@ describe('Adapter Overhead', () => {
         return { counter };
       };
 
-      const store = createSvelteStoreAdapter(createComponent);
+      const store = createSvelteAdapter(createComponent);
 
       for (let i = 0; i < ITERATIONS; i++) {
         store.counter.selector.setCount(i);
@@ -228,7 +225,7 @@ describe('Adapter Overhead', () => {
         return { counter };
       };
 
-      const store = createSvelteStoreAdapter(createComponent);
+      const store = createSvelteAdapter(createComponent);
       const unsubscribers: (() => void)[] = [];
 
       // Add subscriptions

@@ -60,25 +60,28 @@ function createNativeSvelteAdapter<State>(
   options?: AdapterOptions
 ): StoreAdapter<State> & {
   subscribe: (run: (value: State) => void) => () => void;
+  destroy?: () => void;
 } {
   let state = initialState;
-
-  // Optimized single listener system - use Set for faster iteration
   const listeners = new Set<() => void>();
 
   const adapter: StoreAdapter<State> & {
     subscribe: (run: (value: State) => void) => () => void;
+    destroy?: () => void;
   } = {
     getState: () => state,
 
     setState: (updates) => {
-      // Skip empty updates - simplified check
       if (!updates) return;
 
-      // Update state - always merge for consistency
-      state = { ...state, ...updates };
-
-      // Notify listeners - fastest possible iteration
+      // Direct property updates for performance
+      for (const key in updates) {
+        if (updates.hasOwnProperty(key)) {
+          (state as any)[key] = updates[key];
+        }
+      }
+      
+      // Notify listeners
       for (const listener of listeners) {
         try {
           listener();
@@ -92,7 +95,6 @@ function createNativeSvelteAdapter<State>(
       }
     },
 
-    // Ultra-simple subscription - no IDs needed with Set
     subscribe(listener: any) {
       listeners.add(listener);
 
@@ -100,6 +102,10 @@ function createNativeSvelteAdapter<State>(
         listeners.delete(listener);
       };
     },
+
+    destroy() {
+      listeners.clear();
+    }
   };
 
   return adapter;
