@@ -16,8 +16,8 @@ import React, {
 } from 'react';
 import { describe, bench } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import { createStoreReactAdapter } from '@lattice/adapter-store-react';
-import type { CreateStore } from '@lattice/core';
+import { createStore } from '@lattice/adapter-store-react';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 // Dashboard state representing a real-world analytics dashboard
 type DashboardState = {
@@ -254,8 +254,7 @@ const ContextChartSection = memo(() => {
 });
 
 // === STORE-REACT IMPLEMENTATION ===
-const createDashboardStore = (createStore: CreateStore<DashboardState>) => {
-  const createSlice = createStore(createInitialState());
+const createDashboardStore = (createSlice: RuntimeSliceFactory<DashboardState>) => {
 
   const metrics = createSlice(({ get, set }) => ({
     updateMetric: (metric: keyof DashboardState['metrics'], value: number) => {
@@ -481,7 +480,8 @@ describe('React Context vs store-react Performance', () => {
 
     bench('store-react - update single metric', () => {
       resetRenderCounts();
-      const store = createStoreReactAdapter(createDashboardStore);
+      const createSlice = createStore(createInitialState());
+      const store = createDashboardStore(createSlice);
 
       // Initial render
       renderToString(<StoreDashboard store={store} />);
@@ -534,7 +534,8 @@ describe('React Context vs store-react Performance', () => {
 
     bench('store-react - toggle sidebar', () => {
       resetRenderCounts();
-      const store = createStoreReactAdapter(createDashboardStore);
+      const createSlice = createStore(createInitialState());
+      const store = createDashboardStore(createSlice);
 
       renderToString(<StoreDashboard store={store} />);
       store.ui.selector.toggleSidebar();
@@ -570,7 +571,8 @@ describe('React Context vs store-react Performance', () => {
     });
 
     bench('store-react - multiple rapid updates', () => {
-      const store = createStoreReactAdapter(createDashboardStore);
+      const createSlice = createStore(createInitialState());
+      const store = createDashboardStore(createSlice);
 
       for (let i = 0; i < 10; i++) {
         store.metrics.selector.updateMetric('revenue', 125000 + i * 1000);
@@ -605,7 +607,8 @@ describe('React Context vs store-react Performance', () => {
     });
 
     bench('store-react - refresh all data', () => {
-      const store = createStoreReactAdapter(createDashboardStore);
+      const createSlice = createStore(createInitialState());
+      const store = createDashboardStore(createSlice);
 
       renderToString(<StoreDashboard store={store} />);
       store.actions.selector.refreshData();
@@ -647,7 +650,8 @@ describe('React Context vs store-react Performance', () => {
     });
 
     bench('store-react - deep tree update', () => {
-      const store = createStoreReactAdapter(createDashboardStore);
+      const createSlice = createStore(createInitialState());
+      const store = createDashboardStore(createSlice);
 
       renderToString(<NestedStoreDashboard store={store} depth={5} />);
       store.metrics.selector.updateMetric('revenue', 200000);

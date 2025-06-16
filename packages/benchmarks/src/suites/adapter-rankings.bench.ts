@@ -5,11 +5,11 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { createReduxAdapter } from '@lattice/adapter-redux';
-import { createStoreReactAdapter } from '@lattice/adapter-store-react';
-import { createSvelteAdapter } from '@lattice/adapter-svelte';
-import type { CreateStore } from '@lattice/core';
+import { createStore as createZustandStore } from '@lattice/adapter-zustand';
+import { createStore as createReduxStore } from '@lattice/adapter-redux';
+import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
+import { createStore as createSvelteStore } from '@lattice/adapter-svelte';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 const ITERATIONS = 10000;
 const SUBSCRIPTION_COUNT = 50;
@@ -23,16 +23,18 @@ type CountSlice = {
   };
 };
 
+// Initial state for all benchmarks
+const getInitialState = (): CountSlice => ({
+  count: 0,
+  items: [] as string[],
+  metadata: {
+    lastUpdate: Date.now(),
+    version: 1,
+  },
+});
+
 // Standard component factory for all adapters
-const createStandardComponent = (createStore: CreateStore<CountSlice>) => {
-  const createSlice = createStore({
-    count: 0,
-    items: [] as string[],
-    metadata: {
-      lastUpdate: Date.now(),
-      version: 1,
-    },
-  });
+const createStandardComponent = (createSlice: RuntimeSliceFactory<CountSlice>) => {
 
   const counter = createSlice(({ get, set }) => ({
     increment: () => set({ count: get().count + 1 }),
@@ -69,7 +71,8 @@ const createStandardComponent = (createStore: CreateStore<CountSlice>) => {
 describe('Adapter Performance Rankings', () => {
   describe('State Update Performance', () => {
     bench('zustand adapter - updates', () => {
-      const store = createZustandAdapter(createStandardComponent);
+      const createSlice = createZustandStore(getInitialState());
+      const store = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
         store.counter.selector.increment();
@@ -83,7 +86,8 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - updates', () => {
-      const store = createReduxAdapter(createStandardComponent);
+      const createSlice = createReduxStore(getInitialState());
+      const store = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
         store.counter.selector.increment();
@@ -97,7 +101,8 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('store-react adapter - updates', () => {
-      const store = createStoreReactAdapter(createStandardComponent);
+      const createSlice = createStoreReactStore(getInitialState());
+      const store = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
         store.counter.selector.increment();
@@ -111,7 +116,10 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('svelte adapter - updates', () => {
-      const store = createSvelteAdapter(createStandardComponent);
+      // Note: In real Svelte usage, state would be created with $state()
+      // For benchmarking, we use a plain object
+      const createSlice = createSvelteStore(getInitialState());
+      const store = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
         store.counter.selector.increment();
@@ -127,7 +135,8 @@ describe('Adapter Performance Rankings', () => {
 
   describe('Complex State Operations', () => {
     bench('zustand adapter - complex operations', () => {
-      const store = createZustandAdapter(createStandardComponent);
+      const createSlice = createZustandStore(getInitialState());
+      const store = createStandardComponent(createSlice);
 
       // Add items
       for (let i = 0; i < 100; i++) {
@@ -145,7 +154,8 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - complex operations', () => {
-      const store = createReduxAdapter(createStandardComponent);
+      const createSlice = createReduxStore(getInitialState());
+      const store = createStandardComponent(createSlice);
 
       // Add items
       for (let i = 0; i < 100; i++) {
@@ -163,7 +173,8 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('store-react adapter - complex operations', () => {
-      const store = createStoreReactAdapter(createStandardComponent);
+      const createSlice = createStoreReactStore(getInitialState());
+      const store = createStandardComponent(createSlice);
 
       // Add items
       for (let i = 0; i < 100; i++) {
@@ -181,7 +192,8 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('svelte adapter - complex operations', () => {
-      const store = createSvelteAdapter(createStandardComponent);
+      const createSlice = createSvelteStore(getInitialState());
+      const store = createStandardComponent(createSlice);
 
       // Add items
       for (let i = 0; i < 100; i++) {
@@ -201,7 +213,8 @@ describe('Adapter Performance Rankings', () => {
 
   describe('Subscription Performance', () => {
     bench('zustand adapter - subscriptions', () => {
-      const store = createZustandAdapter(createStandardComponent);
+      const createSlice = createZustandStore(getInitialState());
+      const store = createStandardComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
 
@@ -224,7 +237,8 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - subscriptions', () => {
-      const store = createReduxAdapter(createStandardComponent);
+      const createSlice = createReduxStore(getInitialState());
+      const store = createStandardComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
 
@@ -247,7 +261,8 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('store-react adapter - subscriptions', () => {
-      const store = createStoreReactAdapter(createStandardComponent);
+      const createSlice = createStoreReactStore(getInitialState());
+      const store = createStandardComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
 
@@ -270,7 +285,8 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('svelte adapter - subscriptions', () => {
-      const store = createSvelteAdapter(createStandardComponent);
+      const createSlice = createSvelteStore(getInitialState());
+      const store = createStandardComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
 
@@ -301,7 +317,8 @@ describe('Adapter Performance Rankings', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        stores.push(createZustandAdapter(createStandardComponent));
+        const createSlice = createZustandStore(getInitialState());
+        stores.push(createStandardComponent(createSlice));
       }
     });
 
@@ -309,7 +326,8 @@ describe('Adapter Performance Rankings', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        stores.push(createReduxAdapter(createStandardComponent));
+        const createSlice = createReduxStore(getInitialState());
+        stores.push(createStandardComponent(createSlice));
       }
     });
 
@@ -317,7 +335,8 @@ describe('Adapter Performance Rankings', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        stores.push(createStoreReactAdapter(createStandardComponent));
+        const createSlice = createStoreReactStore(getInitialState());
+        stores.push(createStandardComponent(createSlice));
       }
     });
 
@@ -325,7 +344,8 @@ describe('Adapter Performance Rankings', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        stores.push(createSvelteAdapter(createStandardComponent));
+        const createSlice = createSvelteStore(getInitialState());
+        stores.push(createStandardComponent(createSlice));
       }
 
       // Clean up to prevent memory leaks

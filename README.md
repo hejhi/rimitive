@@ -25,13 +25,7 @@ This enables you to:
 
 ```typescript
 // Define a headless dropdown behavior
-const createDropdown = (createStore) => {
-  const createSlice = createStore({ 
-    isOpen: false,
-    selectedIndex: -1,
-    items: []
-  });
-  
+const createDropdown = (createSlice) => {
   const dropdown = createSlice(({ get, set }) => ({
     // State
     isOpen: () => get().isOpen,
@@ -64,9 +58,21 @@ const createDropdown = (createStore) => {
 };
 
 // Use the same behavior across different frameworks
-const reactStore = createStoreReactAdapter(createDropdown);   // For React components
-const vueStore = createPiniaAdapter(createDropdown);           // For Vue components
-const svelteStore = createSvelteAdapter(createDropdown);       // For Svelte components
+import { createStore as createReactStore } from '@lattice/adapter-store-react';
+import { createStore as createPiniaStore } from '@lattice/adapter-pinia';
+import { createStore as createSvelteStore } from '@lattice/adapter-svelte';
+
+// Each adapter creates a store with its own API
+const reactSlice = createReactStore({ isOpen: false, selectedIndex: -1, items: [] });
+const reactDropdown = createDropdown(reactSlice);
+
+const vueSlice = createPiniaStore({ isOpen: false, selectedIndex: -1, items: [] });
+const vueDropdown = createDropdown(vueSlice);
+
+// Svelte can use reactive state
+const state = $state({ isOpen: false, selectedIndex: -1, items: [] });
+const svelteSlice = createSvelteStore(state);
+const svelteDropdown = createDropdown(svelteSlice);
 ```
 
 ## Key Benefits
@@ -183,14 +189,16 @@ type AppState = {
   settings: { theme: 'light' | 'dark' };
 };
 
-const createComponent = (createStore: CreateStore<AppState>) => {
-  // TypeScript infers state shape automatically
-  const createSlice = createStore({
-    user: null,
-    items: [],
-    settings: { theme: 'light' }
-  });
+// Create a store with your adapter of choice
+import { createStore } from '@lattice/adapter-zustand';
 
+const createSlice = createStore<AppState>({
+  user: null,
+  items: [],
+  settings: { theme: 'light' }
+});
+
+const createComponent = (createSlice: RuntimeSliceFactory<AppState>) => {
   // Methods are fully typed with parameter and return types
   const user = createSlice(({ get, set }) => ({
     current: () => get().user, // Return type: { id: string; name: string } | null
@@ -272,16 +280,10 @@ npm install @lattice/runtime          # For React/Vue/Svelte hooks
 ```typescript
 // 1. Define a headless modal behavior
 import { compose } from '@lattice/core';
-import { createStoreReactAdapter } from '@lattice/adapter-store-react';
+import { createStore } from '@lattice/adapter-store-react';
 import { useSliceSelector } from '@lattice/runtime/react';
 
-const createModal = (createStore) => {
-  const createSlice = createStore({ 
-    isOpen: false,
-    content: null,
-    trapped: false 
-  });
-  
+const createModal = (createSlice) => {
   const modal = createSlice(({ get, set }) => ({
     // State
     isOpen: () => get().isOpen,
@@ -316,19 +318,23 @@ const createModal = (createStore) => {
   return { modal: accessibleModal };
 };
 
-// 2. Use the same behavior in React
-const store = createStoreReactAdapter(createModal);
+// 2. Create the store and component
+const createSlice = createStore({ isOpen: false, content: null, trapped: false });
+const { modal } = createModal(createSlice);
 
 function Modal() {
-  const isOpen = useSliceSelector(store, s => s.modal.isOpen());
-  const close = () => store.modal.selector.close();
+  const isOpen = useSliceSelector(modal, s => s.isOpen());
+  const close = () => modal.selector.close();
   
   if (!isOpen) return null;
   return <div role="dialog">...</div>;
 }
 
 // 3. Or use it in Vue with a different adapter
-const vueStore = createPiniaAdapter(createModal);
+import { createStore as createPiniaStore } from '@lattice/adapter-pinia';
+
+const vueSlice = createPiniaStore({ isOpen: false, content: null, trapped: false });
+const { modal: vueModal } = createModal(vueSlice);
 // Now use with Vue's composition API
 ```
 
@@ -337,21 +343,26 @@ const vueStore = createPiniaAdapter(createModal);
 Lattice adapters are thin wrappers that preserve full compatibility with native middleware. Use your favorite tools like Redux DevTools or Zustand persist without any changes, and full type awareness:
 
 ```typescript
-// Redux with DevTools
-const store = createReduxAdapter(createComponent, (config) => 
-  configureStore({
-    ...config,
-    devTools: { name: 'My App' }
-  })
-);
-
-// Zustand with persist
+// Zustand with persist middleware
+import { createStore } from '@lattice/adapter-zustand';
 import { persist } from 'zustand/middleware';
 
-const store = createZustandAdapter(
-  createComponent,
-  (stateCreator, createStore) => 
-    createStore(persist(stateCreator, { name: 'app-storage' }))
+const createSlice = createStore(
+  { count: 0, user: null },
+  {
+    enhancer: (stateCreator, create) => 
+      create(persist(stateCreator, { name: 'app-storage' }))
+  }
+);
+
+// Redux with DevTools
+import { createStore as createReduxStore } from '@lattice/adapter-redux';
+
+const reduxSlice = createReduxStore(
+  { count: 0, user: null },
+  {
+    devTools: { name: 'My App' }
+  }
 );
 ```
 

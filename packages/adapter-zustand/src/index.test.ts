@@ -1,15 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { CreateStore } from '@lattice/core';
+import type { RuntimeSliceFactory } from '@lattice/core';
 import { compose } from '@lattice/core';
-import { createZustandAdapter } from '.';
+import { createStore } from '.';
 
 describe('Zustand Adapter - New Architecture', () => {
   it('should demonstrate basic store creation and slice patterns', () => {
     // Define a simple counter component using the new API
-    const createComponent = (createStore: CreateStore<{ count: number }>) => {
-      // Step 1: Create store returns a slice factory
-      const createSlice = createStore({ count: 0 });
-
+    const createComponent = (
+      createSlice: RuntimeSliceFactory<{ count: number }>
+    ) => {
       // Step 2: Create slices - focused interfaces to the store
       // Actions slice - methods that mutate state
       const actions = createSlice(({ get, set }) => ({
@@ -56,8 +55,9 @@ describe('Zustand Adapter - New Architecture', () => {
       };
     };
 
-    // Create the store using createZustandAdapter
-    const store = createZustandAdapter(createComponent);
+    // Create the store using the new API
+    const createSlice = createStore({ count: 0 });
+    const store = createComponent(createSlice);
 
     // Test initial state through queries
     expect(store.queries.selector.count()).toBe(0);
@@ -73,7 +73,9 @@ describe('Zustand Adapter - New Architecture', () => {
 
     // Test parameterized views
     expect(store.views.selector.display('short')).toBe('0');
-    expect(store.views.selector.display('long')).toBe('The current count is 0 (zero)');
+    expect(store.views.selector.display('long')).toBe(
+      'The current count is 0 (zero)'
+    );
 
     // Test actions
     store.actions.selector.increment();
@@ -105,16 +107,11 @@ describe('Zustand Adapter - New Architecture', () => {
 
   it('should demonstrate slice composition with compose', () => {
     const createComponent = (
-      createStore: CreateStore<{
+      createSlice: RuntimeSliceFactory<{
         todos: { id: string; text: string; done: boolean }[];
         filter: 'all' | 'active' | 'completed';
       }>
     ) => {
-      const createSlice = createStore({
-        todos: [],
-        filter: 'all',
-      });
-
       // Base slices
       const todoQueries = createSlice(({ get }) => ({
         allTodos: () => get().todos,
@@ -202,7 +199,14 @@ describe('Zustand Adapter - New Architecture', () => {
       };
     };
 
-    const store = createZustandAdapter(createComponent);
+    const createSlice = createStore<{
+      todos: { id: string; text: string; done: boolean }[];
+      filter: 'all' | 'active' | 'completed';
+    }>({
+      todos: [],
+      filter: 'all',
+    });
+    const store = createComponent(createSlice);
 
     // Test initial state
     expect(store.views.selector.filteredTodos()).toEqual([]);
@@ -246,13 +250,8 @@ describe('Zustand Adapter - New Architecture', () => {
 
   it('should support subscriptions and demonstrate reactivity', () => {
     const createComponent = (
-      createStore: CreateStore<{ value: number; history: number[] }>
+      createSlice: RuntimeSliceFactory<{ value: number; history: number[] }>
     ) => {
-      const createSlice = createStore({
-        value: 0,
-        history: [],
-      });
-
       const actions = createSlice(({ get, set }) => ({
         setValue: (value: number) => {
           const current = get();
@@ -285,7 +284,8 @@ describe('Zustand Adapter - New Architecture', () => {
       return { actions, queries };
     };
 
-    const store = createZustandAdapter(createComponent);
+    const createSlice = createStore({ value: 0, history: [] as number[] });
+    const store = createComponent(createSlice);
 
     // Track subscription calls
     const listener = vi.fn();
@@ -334,7 +334,7 @@ describe('Zustand Adapter - New Architecture', () => {
 
   it('should demonstrate parameterized selectors and mixed patterns', () => {
     const createComponent = (
-      createStore: CreateStore<{
+      createSlice: RuntimeSliceFactory<{
         products: {
           id: string;
           name: string;
@@ -345,17 +345,6 @@ describe('Zustand Adapter - New Architecture', () => {
         discount: number;
       }>
     ) => {
-      const createSlice = createStore({
-        products: [
-          { id: '1', name: 'Laptop', price: 999, category: 'electronics' },
-          { id: '2', name: 'Mouse', price: 29, category: 'electronics' },
-          { id: '3', name: 'Desk', price: 299, category: 'furniture' },
-          { id: '4', name: 'Chair', price: 199, category: 'furniture' },
-        ],
-        taxRate: 0.08,
-        discount: 0.1,
-      });
-
       // Product queries
       const products = createSlice(({ get }) => ({
         all: () => get().products,
@@ -423,11 +412,24 @@ describe('Zustand Adapter - New Architecture', () => {
       return { products, pricing, catalog };
     };
 
-    const store = createZustandAdapter(createComponent);
+    const createSlice = createStore({
+      products: [
+        { id: '1', name: 'Laptop', price: 999, category: 'electronics' },
+        { id: '2', name: 'Mouse', price: 29, category: 'electronics' },
+        { id: '3', name: 'Desk', price: 299, category: 'furniture' },
+        { id: '4', name: 'Chair', price: 199, category: 'furniture' },
+      ],
+      taxRate: 0.08,
+      discount: 0.1,
+    });
+    const store = createComponent(createSlice);
 
     // Test direct computed values
     expect(store.catalog.selector.totalProducts()).toBe(4);
-    expect(store.catalog.selector.categories()).toEqual(['electronics', 'furniture']);
+    expect(store.catalog.selector.categories()).toEqual([
+      'electronics',
+      'furniture',
+    ]);
 
     // Test parameterized product details
     const laptop = store.catalog.selector.getProductDetails('1');
@@ -439,7 +441,8 @@ describe('Zustand Adapter - New Architecture', () => {
     expect(laptop!.tax).toBeCloseTo(71.93, 2);
 
     // Test category summaries
-    const electronics = store.catalog.selector.getCategorySummary('electronics');
+    const electronics =
+      store.catalog.selector.getCategorySummary('electronics');
     expect(electronics.itemCount).toBe(2);
     expect(electronics.category).toBe('electronics');
     expect(electronics.totalBasePrice).toBe(1028);
@@ -451,9 +454,9 @@ describe('Zustand Adapter - New Architecture', () => {
 
   it('should work with createZustandAdapter convenience function', () => {
     // Define a component factory directly
-    const counterComponent = (createStore: CreateStore<{ count: number }>) => {
-      const createSlice = createStore({ count: 0 });
-
+    const counterComponent = (
+      createSlice: RuntimeSliceFactory<{ count: number }>
+    ) => {
       const api = createSlice(({ get, set }) => ({
         count: () => get().count,
         increment: () => set({ count: get().count + 1 }),
@@ -465,8 +468,9 @@ describe('Zustand Adapter - New Architecture', () => {
       return api;
     };
 
-    // Use the convenience function
-    const store = createZustandAdapter(counterComponent);
+    // Use the new API
+    const createSlice = createStore({ count: 0 });
+    const store = counterComponent(createSlice);
 
     // Test the API
     expect(store.selector.count()).toBe(0);

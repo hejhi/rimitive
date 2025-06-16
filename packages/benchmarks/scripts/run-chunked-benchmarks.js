@@ -26,7 +26,8 @@ const BENCHMARK_SUITES = [
   'adapter-rankings',
   'real-world',
   'memory',
-  'react-transitions'
+  'react-transitions',
+  'svelte-runes-real'
 ];
 
 // Configuration

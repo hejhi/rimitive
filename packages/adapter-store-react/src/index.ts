@@ -10,7 +10,7 @@ import type {
   StoreApi as StoreReactApi,
   StoreCreator,
 } from '@lattice/store-react';
-import type { StoreAdapter, ComponentFactory } from '@lattice/core';
+import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 
 /**
@@ -37,21 +37,19 @@ export type StoreEnhancer<State> = (
 ) => StoreReactApi<State>;
 
 /**
- * Creates a store-react adapter for a Lattice component.
+ * Creates a Lattice store using store-react for state management.
  *
- * This is the primary way to use Lattice with store-react. It combines
- * an component factory with store-react's state management.
- *
- * @param componentFactory - The Lattice component factory
- * @param enhancer - Optional store enhancer for customization
- * @param options - Optional configuration for the adapter
- * @returns A Lattice store backed by store-react
+ * @param initialState - The initial state for the store
+ * @param options - Optional configuration including enhancer
+ * @returns A RuntimeSliceFactory for creating slices
  *
  * @example
  * ```typescript
- * const createComponent = (createStore: CreateStore) => {
- *   const createSlice = createStore({ count: 0 });
+ * import { createStore } from '@lattice/adapter-store-react';
  *
+ * const createSlice = createStore({ count: 0 });
+ *
+ * const createComponent = (createSlice) => {
  *   const counter = createSlice(({ get, set }) => ({
  *     count: () => get().count,
  *     increment: () => set({ count: get().count + 1 })
@@ -60,27 +58,47 @@ export type StoreEnhancer<State> = (
  *   return { counter };
  * };
  *
- * const store = createStoreReactAdapter(createComponent);
- * store.counter.increment();
+ * const component = createComponent(createSlice);
+ * component.counter.selector.increment();
  * ```
  */
+export function createStore<State>(
+  initialState: State,
+  options?: AdapterOptions & { enhancer?: StoreEnhancer<State> }
+): RuntimeSliceFactory<State> {
+  // Create a store creator function that returns the initial state
+  const stateCreator: StoreCreator<State> = () => initialState;
+
+  // Create the store using our custom creation function
+  const store = createStoreReactStore(stateCreator, options?.enhancer);
+
+  const adapter = wrapStoreReact(store, options);
+
+  // Return the slice factory
+  return createLatticeStore(adapter);
+}
+
+/**
+ * Creates a store-react adapter for a Lattice component.
+ *
+ * @deprecated Use createStore instead for the new adapter-first API
+ *
+ * @param componentFactory - The Lattice component factory
+ * @param enhancer - Optional store enhancer for customization
+ * @param options - Optional configuration for the adapter
+ * @returns A Lattice store backed by store-react
+ */
 export function createStoreReactAdapter<Component, State>(
-  componentFactory: ComponentFactory<Component, State>,
+  componentFactory: (createStore: (initialState: State) => RuntimeSliceFactory<State>) => Component,
   enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ) {
-  // Create an adapter factory that will be called with initial state
-  const adapterFactory = (initialState: State): StoreAdapter<State> => {
-    // Create a store creator function that returns the initial state
-    const stateCreator: StoreCreator<State> = () => initialState;
-
-    // Create the store using our custom creation function
-    const store = createStoreReactStore(stateCreator, enhancer);
-
-    return wrapStoreReact(store, options);
+  // For backwards compatibility, create a function that mimics the old API
+  const createStoreFunction = (initialState: State) => {
+    return createStore(initialState, { ...options, enhancer });
   };
-
-  return createLatticeStore(componentFactory, adapterFactory);
+  
+  return componentFactory(createStoreFunction);
 }
 
 /**

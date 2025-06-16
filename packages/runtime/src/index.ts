@@ -8,4 +8,4 @@
 export { createLatticeStore } from '@lattice/core';
 
 // Type exports that might be useful across frameworks
-export type { RuntimeResult, ComponentFactory, CreateStore } from '@lattice/core';
+export type { ComponentFactory, RuntimeSliceFactory } from '@lattice/core';

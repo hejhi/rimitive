@@ -6,12 +6,12 @@
 
 import { describe, bench } from 'vitest';
 import { createStore as createZustandStore } from 'zustand/vanilla';
-import { createZustandAdapter } from '@lattice/adapter-zustand';
+import { createStore as createLatticeZustandStore } from '@lattice/adapter-zustand';
 import { configureStore } from '@reduxjs/toolkit';
-import { createReduxAdapter } from '@lattice/adapter-redux';
+import { createStore as createLatticeReduxStore } from '@lattice/adapter-redux';
 import { writable } from 'svelte/store';
-import { createSvelteAdapter } from '@lattice/adapter-svelte';
-import type { CreateStore } from '@lattice/core';
+import { createStore as createLatticeSvelteStore } from '@lattice/adapter-svelte';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 // Test iterations
 const ITERATIONS = 10000;
@@ -19,29 +19,30 @@ const SUBSCRIPTION_COUNT = 100;
 
 describe('Adapter Overhead', () => {
   describe('Zustand', () => {
-    const createComponent = (createStore: CreateStore<{ count: number }>) => {
-      const createSlice = createStore({ count: 0 });
-      const counter = createSlice(({ get, set }) => ({
-        setCount: (count: number) => set({ count }),
-        getCount: () => get().count,
-      }));
-      return { counter };
-    };
-    const store = createZustandStore<{ count: number }>(() => ({ count: 0 }));
-    const zIncrement = (newCount: number) =>
-      store.setState({ count: newCount });
-
     bench('raw zustand - state updates', () => {
+      const store = createZustandStore<{ count: number }>(() => ({ count: 0 }));
+      const setCount = (count: number) => store.setState({ count });
+
       for (let i = 0; i < ITERATIONS; i++) {
-        zIncrement(i);
+        setCount(i);
       }
     });
 
-    const zAdapter = createZustandAdapter(createComponent);
-
     bench('zustand + lattice - state updates', () => {
+      const createSlice = createLatticeZustandStore({ count: 0 });
+      const createComponent = (
+        createSlice: RuntimeSliceFactory<{ count: number }>
+      ) => {
+        const counter = createSlice(({ get, set }) => ({
+          setCount: (count: number) => set({ count }),
+          getCount: () => get().count,
+        }));
+        return { counter };
+      };
+      const component = createComponent(createSlice);
+
       for (let i = 0; i < ITERATIONS; i++) {
-        zAdapter.counter.selector.setCount(i);
+        component.counter.selector.setCount(i);
       }
     });
 
@@ -62,24 +63,25 @@ describe('Adapter Overhead', () => {
     });
 
     bench('zustand + lattice - subscriptions', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
+      const createSlice = createLatticeZustandStore({ count: 0 });
+      const createComponent = (
+        createSlice: RuntimeSliceFactory<{ count: number }>
+      ) => {
         const counter = createSlice(({ set }) => ({
           setCount: (count: number) => set({ count }),
         }));
         return { counter };
       };
-
-      const store = createZustandAdapter(createComponent);
+      const component = createComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
 
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(store.counter.subscribe(() => {}));
+        unsubscribers.push(component.counter.subscribe(() => {}));
       }
 
       // Update state
-      store.counter.selector.setCount(1);
+      component.counter.selector.setCount(1);
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
@@ -92,8 +94,8 @@ describe('Adapter Overhead', () => {
         name: 'counter',
         initialState: { count: 0 },
         reducers: {
-          increment: (state: { count: number }) => {
-            state.count += 1;
+          setCount: (state: { count: number }, action: { payload: number }) => {
+            state.count = action.payload;
           },
         },
       };
@@ -101,33 +103,37 @@ describe('Adapter Overhead', () => {
       const store = configureStore({
         reducer: {
           [slice.name]: (state = slice.initialState, action: any) => {
-            if (action.type === 'counter/increment') {
-              return { count: (state as any).count + 1 };
+            if (action.type === 'counter/setCount') {
+              return { count: action.payload };
             }
             return state;
           },
         },
       });
 
+      const setCount = (count: number) =>
+        store.dispatch({ type: 'counter/setCount', payload: count });
+
       for (let i = 0; i < ITERATIONS; i++) {
-        store.dispatch({ type: 'counter/increment' });
+        setCount(i);
       }
     });
 
     bench('redux + lattice - state updates', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
+      const createSlice = createLatticeReduxStore({ count: 0 });
+      const createComponent = (
+        createSlice: RuntimeSliceFactory<{ count: number }>
+      ) => {
         const counter = createSlice(({ get, set }) => ({
-          increment: () => set({ count: get().count + 1 }),
+          setCount: (count: number) => set({ count }),
           getCount: () => get().count,
         }));
         return { counter };
       };
-
-      const store = createReduxAdapter(createComponent);
+      const component = createComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.increment();
+        component.counter.selector.setCount(i);
       }
     });
   });
@@ -135,30 +141,35 @@ describe('Adapter Overhead', () => {
   describe('Svelte', () => {
     bench('raw svelte - state updates', () => {
       const store = writable({ count: 0 });
+      const setCount = (count: number) => store.set({ count });
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.set({ count: i });
+        setCount(i);
       }
     });
 
     bench('svelte + lattice - state updates', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
+      // For benchmarking, we use a plain object instead of Svelte runes
+      const createSlice = createLatticeSvelteStore({ count: 0 });
+      const createComponent = (
+        createSlice: RuntimeSliceFactory<{ count: number }>
+      ) => {
         const counter = createSlice(({ set }) => ({
           setCount: (count: number) => set({ count }),
         }));
         return { counter };
       };
-
-      const store = createSvelteAdapter(createComponent);
+      const component = createComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.setCount(i);
+        component.counter.selector.setCount(i);
       }
     });
 
+
     bench('raw svelte - subscriptions', () => {
       const store = writable({ count: 0 });
+      const setCount = (count: number) => store.set({ count });
       const unsubscribers: (() => void)[] = [];
 
       // Add subscriptions
@@ -167,77 +178,107 @@ describe('Adapter Overhead', () => {
       }
 
       // Update state
-      store.set({ count: 1 });
+      setCount(1);
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
     });
 
     bench('svelte + lattice - subscriptions', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
+      const createSlice = createLatticeSvelteStore({ count: 0 });
+      const createComponent = (
+        createSlice: RuntimeSliceFactory<{ count: number }>
+      ) => {
         const counter = createSlice(({ set }) => ({
           setCount: (count: number) => set({ count }),
         }));
         return { counter };
       };
-
-      const store = createSvelteAdapter(createComponent);
+      const component = createComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
 
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(store.counter.subscribe(() => {}));
+        unsubscribers.push(component.counter.subscribe(() => {}));
       }
 
       // Update state
-      store.counter.selector.setCount(1);
+      component.counter.selector.setCount(1);
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
-      if ('destroy' in store && typeof store.destroy === 'function') {
-        store.destroy();
-      }
     });
+  });
 
-    bench('svelte store + lattice - state updates', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
-        const counter = createSlice(({ set }) => ({
-          setCount: (count: number) => set({ count }),
+  describe('Progressive Overhead Analysis', () => {
+    describe('State Updates - Layer by Layer', () => {
+      // Svelte progressive benchmarks
+      bench('svelte - direct store.set()', () => {
+        const store = writable({ count: 0 });
+        for (let i = 0; i < ITERATIONS; i++) {
+          store.set({ count: i });
+        }
+      });
+
+      bench('svelte - function wrapped', () => {
+        const store = writable({ count: 0 });
+        const setCount = (count: number) => store.set({ count });
+        for (let i = 0; i < ITERATIONS; i++) {
+          setCount(i);
+        }
+      });
+
+      bench('svelte - lattice wrapped', () => {
+        const createSlice = createLatticeSvelteStore({ count: 0 });
+        const createComponent = (
+          createSlice: RuntimeSliceFactory<{ count: number }>
+        ) => {
+          const counter = createSlice(({ set }) => ({
+            setCount: (count: number) => set({ count }),
+          }));
+          return { counter };
+        };
+        const component = createComponent(createSlice);
+        for (let i = 0; i < ITERATIONS; i++) {
+          component.counter.selector.setCount(i);
+        }
+      });
+
+      // Zustand progressive benchmarks
+      bench('zustand - direct setState()', () => {
+        const store = createZustandStore<{ count: number }>(() => ({
+          count: 0,
         }));
-        return { counter };
-      };
+        for (let i = 0; i < ITERATIONS; i++) {
+          store.setState({ count: i });
+        }
+      });
 
-      const store = createSvelteAdapter(createComponent);
-
-      for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.setCount(i);
-      }
-    });
-
-    bench('svelte store + lattice - subscriptions', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
-        const counter = createSlice(({ set }) => ({
-          setCount: (count: number) => set({ count }),
+      bench('zustand - function wrapped', () => {
+        const store = createZustandStore<{ count: number }>(() => ({
+          count: 0,
         }));
-        return { counter };
-      };
+        const setCount = (count: number) => store.setState({ count });
+        for (let i = 0; i < ITERATIONS; i++) {
+          setCount(i);
+        }
+      });
 
-      const store = createSvelteAdapter(createComponent);
-      const unsubscribers: (() => void)[] = [];
-
-      // Add subscriptions
-      for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(store.counter.subscribe(() => {}));
-      }
-
-      // Update state
-      store.counter.selector.setCount(1);
-
-      // Cleanup
-      unsubscribers.forEach((unsub) => unsub());
+      bench('zustand - lattice wrapped', () => {
+        const createSlice = createLatticeZustandStore({ count: 0 });
+        const createComponent = (
+          createSlice: RuntimeSliceFactory<{ count: number }>
+        ) => {
+          const counter = createSlice(({ set }) => ({
+            setCount: (count: number) => set({ count }),
+          }));
+          return { counter };
+        };
+        const component = createComponent(createSlice);
+        for (let i = 0; i < ITERATIONS; i++) {
+          component.counter.selector.setCount(i);
+        }
+      });
     });
   });
 
@@ -255,17 +296,17 @@ describe('Adapter Overhead', () => {
 
       for (let i = 0; i < 1000; i++) {
         const value = i;
+        const createSlice = createLatticeZustandStore({ value });
         const createComponent = (
-          createStore: CreateStore<{ value: number }>
+          createSlice: RuntimeSliceFactory<{ value: number }>
         ) => {
-          const createSlice = createStore({ value });
           const slice = createSlice(({ get }) => ({
             getValue: () => get().value,
           }));
           return { slice };
         };
 
-        stores.push(createZustandAdapter(createComponent));
+        stores.push(createComponent(createSlice));
       }
     });
 
@@ -282,25 +323,18 @@ describe('Adapter Overhead', () => {
 
       for (let i = 0; i < 1000; i++) {
         const value = i;
+        const createSlice = createLatticeSvelteStore({ value });
         const createComponent = (
-          createStore: CreateStore<{ value: number }>
+          createSlice: RuntimeSliceFactory<{ value: number }>
         ) => {
-          const createSlice = createStore({ value });
           const slice = createSlice(({ get }) => ({
             getValue: () => get().value,
           }));
           return { slice };
         };
 
-        stores.push(createSvelteAdapter(createComponent));
+        stores.push(createComponent(createSlice));
       }
-
-      // Clean up to prevent memory leaks
-      stores.forEach((store) => {
-        if ('destroy' in store && typeof store.destroy === 'function') {
-          store.destroy();
-        }
-      });
     });
   });
 });

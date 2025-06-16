@@ -7,7 +7,7 @@
  */
 
 import { createPinia, defineStore, type Pinia, type Store } from 'pinia';
-import type { StoreAdapter, ComponentFactory } from '@lattice/core';
+import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 
 /**
@@ -36,21 +36,19 @@ export type StoreEnhancer<State extends Record<string, any>> = (
 ) => Store<string, State>;
 
 /**
- * Creates a Pinia adapter for a Lattice component.
+ * Creates a Lattice store using Pinia for state management.
  *
- * This is the primary way to use Lattice with Pinia. It combines
- * an component factory with Pinia's state management.
- *
- * @param componentFactory - The Lattice component factory
- * @param enhancer - Optional store enhancer for plugins
- * @param options - Optional configuration for the adapter
- * @returns A Lattice store backed by Pinia
+ * @param initialState - The initial state for the store
+ * @param options - Optional configuration including plugin enhancer
+ * @returns A RuntimeSliceFactory for creating slices
  *
  * @example
  * ```typescript
- * const createComponent = (createStore: CreateStore) => {
- *   const createSlice = createStore({ count: 0 });
+ * import { createStore } from '@lattice/adapter-pinia';
  *
+ * const createSlice = createStore({ count: 0 });
+ *
+ * const createComponent = (createSlice) => {
  *   const counter = createSlice(({ get, set }) => ({
  *     count: () => get().count,
  *     increment: () => set({ count: get().count + 1 })
@@ -59,50 +57,75 @@ export type StoreEnhancer<State extends Record<string, any>> = (
  *   return { counter };
  * };
  *
- * const store = createPiniaAdapter(createComponent);
- * store.counter.increment();
+ * const component = createComponent(createSlice);
+ * component.counter.selector.increment();
  * ```
  *
  * @example With plugins
  * ```typescript
  * import { createPersistedState } from 'pinia-plugin-persistedstate';
  *
- * const store = createPiniaAdapter(createComponent, (stateCreator, pinia, storeId) => {
- *   pinia.use(createPersistedState({
- *     key: id => `__persisted__${id}`,
- *     storage: localStorage,
- *   }));
+ * const createSlice = createStore(
+ *   { count: 0 },
+ *   {
+ *     enhancer: (stateCreator, pinia, storeId) => {
+ *       pinia.use(createPersistedState({
+ *         key: id => `__persisted__${id}`,
+ *         storage: localStorage,
+ *       }));
  *
- *   const useStore = defineStore(storeId, {
- *     state: stateCreator
- *   });
+ *       const useStore = defineStore(storeId, {
+ *         state: stateCreator
+ *       });
  *
- *   return useStore(pinia);
- * });
+ *       return useStore(pinia);
+ *     }
+ *   }
+ * );
  * ```
+ */
+export function createStore<State extends Record<string, any>>(
+  initialState: State,
+  options?: AdapterOptions & { enhancer?: StoreEnhancer<State> }
+): RuntimeSliceFactory<State> {
+  const pinia = createPinia();
+  const storeId = `lattice-${Date.now()}-${Math.random()}`;
+
+  // Create store with or without enhancer
+  const store = options?.enhancer
+    ? options.enhancer(() => initialState, pinia, storeId)
+    : createDefaultStore(() => initialState, pinia, storeId);
+
+  const adapter = createStoreAdapter(store, options);
+
+  // Return the slice factory
+  return createLatticeStore(adapter);
+}
+
+/**
+ * Creates a Pinia adapter for a Lattice component.
+ *
+ * @deprecated Use createStore instead for the new adapter-first API
+ *
+ * @param componentFactory - The Lattice component factory
+ * @param enhancer - Optional store enhancer for plugins
+ * @param options - Optional configuration for the adapter
+ * @returns A Lattice store backed by Pinia
  */
 export function createPiniaAdapter<
   Component,
   State extends Record<string, any> = any,
 >(
-  componentFactory: ComponentFactory<Component, State>,
+  componentFactory: (createStore: (initialState: State) => RuntimeSliceFactory<State>) => Component,
   enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ) {
-  // Create an adapter factory that will be called with initial state
-  const adapterFactory = (initialState: State): StoreAdapter<State> => {
-    const pinia = createPinia();
-    const storeId = `lattice-${Date.now()}-${Math.random()}`;
-
-    // Create store with or without enhancer
-    const store = enhancer
-      ? enhancer(() => initialState, pinia, storeId)
-      : createDefaultStore(() => initialState, pinia, storeId);
-
-    return createStoreAdapter(store, options);
+  // For backwards compatibility, create a function that mimics the old API
+  const createStoreFunction = (initialState: State) => {
+    return createStore(initialState, { ...options, enhancer });
   };
-
-  return createLatticeStore(componentFactory, adapterFactory);
+  
+  return componentFactory(createStoreFunction);
 }
 
 /**

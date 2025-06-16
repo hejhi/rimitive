@@ -17,6 +17,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        'benchmark-store': resolve(__dirname, 'src/benchmark-store.svelte.ts'),
       },
       name: 'LatticeAdapterSvelte',
       formats: ['es'],

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createLatticeStore } from './runtime';
 import { compose } from './compose';
-import type { StoreAdapter, CreateStore } from './index';
+import type { StoreAdapter, RuntimeSliceFactory } from './index';
 
 describe('compose with createStore', () => {
   // Helper to create a test adapter
@@ -25,8 +25,7 @@ describe('compose with createStore', () => {
   it('should allow composing slices with dependencies', () => {
     type State = { count: number; multiplier: number };
     
-    const createComponent = (createStore: CreateStore<State>) => {
-      const createSlice = createStore({ count: 0, multiplier: 2 });
+    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
 
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
@@ -55,24 +54,25 @@ describe('compose with createStore', () => {
       return { counter, settings, actions };
     };
 
-    const store = createLatticeStore(createComponent, createTestAdapter);
+    const adapter = createTestAdapter({ count: 0, multiplier: 2 });
+    const createSlice = createLatticeStore(adapter);
+    const component = createComponent(createSlice);
 
-    expect(store.counter.selector.count()).toBe(0);
-    expect(store.settings.selector.multiplier()).toBe(2);
+    expect(component.counter.selector.count()).toBe(0);
+    expect(component.settings.selector.multiplier()).toBe(2);
 
-    store.actions.selector.incrementByMultiplier();
-    expect(store.counter.selector.count()).toBe(2); // 0 + 2
+    component.actions.selector.incrementByMultiplier();
+    expect(component.counter.selector.count()).toBe(2); // 0 + 2
 
-    store.actions.selector.doubleAndIncrement();
-    expect(store.settings.selector.multiplier()).toBe(4); // 2 * 2
-    expect(store.counter.selector.count()).toBe(3); // 2 + 1
+    component.actions.selector.doubleAndIncrement();
+    expect(component.settings.selector.multiplier()).toBe(4); // 2 * 2
+    expect(component.counter.selector.count()).toBe(3); // 2 + 1
   });
 
   it('should provide access to tools in composed slices', () => {
     type State = { items: string[]; lastAction: string };
     
-    const createComponent = (createStore: CreateStore<State>) => {
-      const createSlice = createStore({ items: [] as string[], lastAction: '' });
+    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
 
       const items = createSlice(({ get, set }) => ({
         add: (item: string) => {
@@ -100,10 +100,12 @@ describe('compose with createStore', () => {
       return { items, logger, composed };
     };
 
-    const store = createLatticeStore(createComponent, createTestAdapter);
+    const adapter = createTestAdapter({ items: [] as string[], lastAction: '' });
+    const createSlice = createLatticeStore(adapter);
+    const component = createComponent(createSlice);
 
-    const result = store.composed.selector.addWithLog('apple');
+    const result = component.composed.selector.addWithLog('apple');
     expect(result).toBe('added apple (1 total)');
-    expect(store.items.selector.list()).toEqual(['apple']);
+    expect(component.items.selector.list()).toEqual(['apple']);
   });
 });

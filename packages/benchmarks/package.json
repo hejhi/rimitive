@@ -26,6 +26,7 @@
     "@lattice/runtime": "workspace:*",
     "@lattice/store-react": "workspace:*",
     "@reduxjs/toolkit": "^2.8.2",
+    "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@testing-library/react": "^14.0.0",
     "@types/node": "^20.0.0",
     "@types/react": "^18.3.0",

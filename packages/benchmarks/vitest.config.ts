@@ -1,6 +1,8 @@
 import { defineConfig } from 'vitest/config';
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 export default defineConfig({
+  plugins: [svelte()],
   test: {
     globals: true,
     environment: 'jsdom',
@@ -19,6 +21,10 @@ export default defineConfig({
         singleFork: true,
       },
     },
+  },
+  resolve: {
+    // Enable browser conditions for Svelte 5 runes
+    conditions: ['browser'],
   },
   esbuild: {
     jsx: 'automatic',

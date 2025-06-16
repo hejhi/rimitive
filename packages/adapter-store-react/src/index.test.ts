@@ -6,19 +6,19 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import {
-  createStoreReactAdapter,
+  createStore,
   wrapStoreReact,
   createStoreAdapter,
 } from './index';
-import type { CreateStore } from '@lattice/core';
+import type { RuntimeSliceFactory } from '@lattice/core';
 import type { StoreApi as StoreReactApi } from '@lattice/store-react';
 
 describe('store-react adapter', () => {
-  describe('createStoreReactAdapter', () => {
+  describe('createStore', () => {
     it('should create a working store', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
+      const createSlice = createStore({ count: 0 });
 
+      const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
         const counter = createSlice(({ get, set }) => ({
           count: () => get().count,
           increment: () => set({ count: get().count + 1 }),
@@ -28,7 +28,7 @@ describe('store-react adapter', () => {
         return { counter };
       };
 
-      const store = createStoreReactAdapter(createComponent);
+      const store = createComponent(createSlice);
 
       expect(store.counter.selector.count()).toBe(0);
 
@@ -40,9 +40,9 @@ describe('store-react adapter', () => {
     });
 
     it('should support subscriptions', () => {
-      const createComponent = (createStore: CreateStore<{ value: string }>) => {
-        const createSlice = createStore({ value: 'initial' });
+      const createSlice = createStore({ value: 'initial' });
 
+      const createComponent = (createSlice: RuntimeSliceFactory<{ value: string }>) => {
         const actions = createSlice(({ set }) => ({
           setValue: (value: string) => set({ value }),
         }));
@@ -54,7 +54,7 @@ describe('store-react adapter', () => {
         return { actions, queries };
       };
 
-      const store = createStoreReactAdapter(createComponent);
+      const store = createComponent(createSlice);
       const listener = vi.fn();
       const unsubscribe = store.actions.subscribe(listener);
 
@@ -68,9 +68,9 @@ describe('store-react adapter', () => {
     });
 
     it('should handle errors in listeners', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
+      const createSlice = createStore({ count: 0 });
 
+      const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
         const actions = createSlice(({ get, set }) => ({
           increment: () => set({ count: get().count + 1 }),
         }));
@@ -81,7 +81,7 @@ describe('store-react adapter', () => {
       const consoleError = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
-      const store = createStoreReactAdapter(createComponent);
+      const store = createComponent(createSlice);
 
       const goodListener = vi.fn();
       const badListener = vi.fn(() => {
@@ -104,9 +104,12 @@ describe('store-react adapter', () => {
     });
 
     it('should support custom error handlers', () => {
-      const createComponent = (createStore: CreateStore<{ count: number }>) => {
-        const createSlice = createStore({ count: 0 });
+      const errorHandler = vi.fn();
+      const createSlice = createStore({ count: 0 }, {
+        onError: errorHandler,
+      });
 
+      const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
         const actions = createSlice(({ get, set }) => ({
           increment: () => set({ count: get().count + 1 }),
         }));
@@ -114,10 +117,7 @@ describe('store-react adapter', () => {
         return { actions };
       };
 
-      const errorHandler = vi.fn();
-      const store = createStoreReactAdapter(createComponent, undefined, {
-        onError: errorHandler,
-      });
+      const store = createComponent(createSlice);
 
       const badListener = vi.fn(() => {
         throw new Error('Test error');
@@ -130,19 +130,6 @@ describe('store-react adapter', () => {
     });
 
     it('should support enhancers', () => {
-      const createComponent = (
-        createStore: CreateStore<{ count: number; enhanced: boolean }>
-      ) => {
-        const createSlice = createStore({ count: 0, enhanced: false });
-
-        const queries = createSlice(({ get }) => ({
-          count: () => get().count,
-          enhanced: () => get().enhanced,
-        }));
-
-        return { queries };
-      };
-
       // Create a simple enhancer that adds a flag
       const enhancer = (stateCreator: any, createStore: any) => {
         const store = createStore((set: any, get: any) => {
@@ -152,7 +139,20 @@ describe('store-react adapter', () => {
         return store;
       };
 
-      const store = createStoreReactAdapter(createComponent, enhancer);
+      const createSlice = createStore({ count: 0, enhanced: false }, { enhancer });
+
+      const createComponent = (
+        createSlice: RuntimeSliceFactory<{ count: number; enhanced: boolean }>
+      ) => {
+        const queries = createSlice(({ get }) => ({
+          count: () => get().count,
+          enhanced: () => get().enhanced,
+        }));
+
+        return { queries };
+      };
+
+      const store = createComponent(createSlice);
 
       expect(store.queries.selector.count()).toBe(0);
       expect(store.queries.selector.enhanced()).toBe(true);
@@ -284,9 +284,9 @@ describe('store-react adapter', () => {
 
   describe('destroy functionality', () => {
     it('should clean up when destroy is called', () => {
-      const createComponent = (createStore: CreateStore<{ value: number }>) => {
-        const createSlice = createStore({ value: 0 });
+      const createSlice = createStore({ value: 0 });
 
+      const createComponent = (createSlice: RuntimeSliceFactory<{ value: number }>) => {
         const actions = createSlice(({ get, set }) => ({
           increment: () => set({ value: get().value + 1 }),
         }));
@@ -294,7 +294,7 @@ describe('store-react adapter', () => {
         return { actions };
       };
 
-      const store = createStoreReactAdapter(createComponent);
+      const store = createComponent(createSlice);
       const listener = vi.fn();
 
       store.actions.subscribe(listener);

@@ -6,10 +6,10 @@
 
 import { describe, bench } from 'vitest';
 import { act } from 'react';
-import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { createReduxAdapter } from '@lattice/adapter-redux';
-import { createStoreReactAdapter } from '@lattice/adapter-store-react';
-import type { CreateStore } from '@lattice/core';
+import { createStore as createZustandStore } from '@lattice/adapter-zustand';
+import { createStore as createReduxStore } from '@lattice/adapter-redux';
+import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 const HOOK_COUNT = 100;
 const UPDATE_COUNT = 100;
@@ -21,12 +21,13 @@ type TestState = {
 };
 
 describe('React Transitions Performance', () => {
-  const createTestComponent = (createStore: CreateStore<TestState>) => {
-    const createSlice = createStore({
-      count: 0,
-      items: [] as string[],
-      user: null as { name: string; email: string } | null,
-    });
+  const getInitialState = (): TestState => ({
+    count: 0,
+    items: [],
+    user: null,
+  });
+
+  const createTestComponent = (createSlice: RuntimeSliceFactory<TestState>) => {
 
     const counter = createSlice(({ get, set }) => ({
       value: () => get().count,
@@ -60,7 +61,8 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createZustandAdapter(createTestComponent);
+        const createSlice = createZustandStore(getInitialState());
+        const store = createTestComponent(createSlice);
         // const { result } = renderHook(
         //   () =>
         //     useSliceSelector(
@@ -91,7 +93,8 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createReduxAdapter(createTestComponent);
+        const createSlice = createReduxStore(getInitialState());
+        const store = createTestComponent(createSlice);
         // const { result } = renderHook(
         //   () =>
         //     useSliceSelector(
@@ -122,7 +125,8 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createStoreReactAdapter(createTestComponent);
+        const createSlice = createStoreReactStore(getInitialState());
+        const store = createTestComponent(createSlice);
         // const { result } = renderHook(
         //   () =>
         //     useSliceSelector(
@@ -155,7 +159,8 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createZustandAdapter(createTestComponent);
+        const createSlice = createZustandStore(getInitialState());
+        const store = createTestComponent(createSlice);
         // const { result } = renderHook(
         //   () =>
         //     useSliceSelector(
@@ -186,7 +191,8 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createReduxAdapter(createTestComponent);
+        const createSlice = createReduxStore(getInitialState());
+        const store = createTestComponent(createSlice);
         // const { result } = renderHook(
         //   () =>
         //     useSliceSelector(
@@ -217,7 +223,8 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const store = createStoreReactAdapter(createTestComponent);
+        const createSlice = createStoreReactStore(getInitialState());
+        const store = createTestComponent(createSlice);
         // const { result } = renderHook(
         //   () =>
         //     useSliceSelector(
@@ -246,7 +253,8 @@ describe('React Transitions Performance', () => {
 
   describe('Rapid updates', () => {
     bench('zustand - rapid updates without transitions', () => {
-      const store = createZustandAdapter(createTestComponent);
+      const createSlice = createZustandStore(getInitialState());
+      const store = createTestComponent(createSlice);
       // renderHook(() =>
       //   useSliceSelector(
       //     store,
@@ -264,7 +272,8 @@ describe('React Transitions Performance', () => {
     });
 
     bench('zustand - rapid updates with transitions', () => {
-      const store = createZustandAdapter(createTestComponent);
+      const createSlice = createZustandStore(getInitialState());
+      const store = createTestComponent(createSlice);
       // renderHook(() =>
       //   useSliceSelector(
       //     store,
@@ -282,7 +291,8 @@ describe('React Transitions Performance', () => {
     });
 
     bench('store-react - rapid updates without transitions', () => {
-      const store = createStoreReactAdapter(createTestComponent);
+      const createSlice = createStoreReactStore(getInitialState());
+      const store = createTestComponent(createSlice);
       // renderHook(() =>
       //   useSliceSelector(
       //     store,
@@ -300,7 +310,8 @@ describe('React Transitions Performance', () => {
     });
 
     bench('store-react - rapid updates with transitions', () => {
-      const store = createStoreReactAdapter(createTestComponent);
+      const createSlice = createStoreReactStore(getInitialState());
+      const store = createTestComponent(createSlice);
       // renderHook(() =>
       //   useSliceSelector(
       //     store,

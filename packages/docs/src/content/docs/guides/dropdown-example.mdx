@@ -11,16 +11,19 @@ Let's build a production-ready dropdown that demonstrates Lattice's power. This 
 
 ```typescript
 // dropdown.ts
-import { createSlice, compose } from '@lattice/core';
+import { compose } from '@lattice/core';
 
 interface DropdownState {
   isOpen: boolean;
   highlightedIndex: number;
   items: string[];
+  selectedItem: string | null;
 }
 
-// Basic dropdown behavior
-const dropdown = createSlice<DropdownState>(({ get, set }) => ({
+// Create a dropdown component that accepts a slice factory
+export const createDropdown = (createSlice) => {
+  // Basic dropdown behavior
+  const dropdown = createSlice(({ get, set }) => ({
   // State getters
   isOpen: () => get().isOpen || false,
   highlightedIndex: () => get().highlightedIndex || 0,
@@ -49,9 +52,9 @@ const dropdown = createSlice<DropdownState>(({ get, set }) => ({
   }
 }));
 
-// Add keyboard shortcuts
-const keyboardDropdown = createSlice(
-  compose({ dropdown }, ({ get }, deps) => ({
+  // Add keyboard shortcuts
+  const keyboardDropdown = createSlice(
+    compose({ dropdown }, ({ get }, deps) => ({
     handleKeyDown: (event: KeyboardEvent) => {
       if (!deps.dropdown.isOpen()) return;
       
@@ -78,8 +81,9 @@ const keyboardDropdown = createSlice(
   }))
 );
 
-// Export the complete dropdown behavior
-export const createDropdown = compose({ dropdown, keyboard: keyboardDropdown });
+  // Return the complete dropdown behavior
+  return { dropdown: keyboardDropdown };
+};
 ```
 
 <Aside type="tip">
@@ -93,12 +97,17 @@ Now let's use this dropdown in different frameworks:
 <Tabs>
   <TabItem label="React">
     ```tsx
-    import { useSliceValues } from '@lattice/runtime/react';
+    import { createStore } from '@lattice/adapter-store-react';
+    import { useSliceSelector } from '@lattice/runtime/react';
     import { createDropdown } from './dropdown';
 
     function SelectMenu({ items, onSelect }) {
-      const store = useStore(createDropdown, { items });
-      const { isOpen, toggle, highlightedIndex, handleKeyDown } = useSliceValues(store);
+      const createSlice = createStore({ items, isOpen: false, highlightedIndex: 0, selectedItem: null });
+      const { dropdown } = createDropdown(createSlice);
+      
+      const isOpen = useSliceSelector(dropdown, s => s.isOpen());
+      const highlightedIndex = useSliceSelector(dropdown, s => s.highlightedIndex());
+      const { toggle, handleKeyDown, close } = dropdown.selector;
       
       return (
         <div className="dropdown" onKeyDown={handleKeyDown}>
@@ -116,7 +125,7 @@ Now let's use this dropdown in different frameworks:
                   className={index === highlightedIndex() ? 'highlighted' : ''}
                   onClick={() => {
                     onSelect(item);
-                    store.actions.close();
+                    close();
                   }}
                 >
                   {item}
@@ -133,12 +142,17 @@ Now let's use this dropdown in different frameworks:
   <TabItem label="Vue">
     ```vue
     <script setup>
-    import { useSliceValues, useStore } from '@lattice/runtime/vue';
+    import { createStore } from '@lattice/adapter-pinia';
+    import { useSlice } from '@lattice/runtime/vue';
     import { createDropdown } from './dropdown';
 
     const props = defineProps(['items', 'onSelect']);
-    const store = useStore(createDropdown, { items: props.items });
-    const { isOpen, toggle, highlightedIndex, handleKeyDown } = useSliceValues(store);
+    const createSlice = createStore({ items: props.items, isOpen: false, highlightedIndex: 0, selectedItem: null });
+    const { dropdown } = createDropdown(createSlice);
+    
+    const isOpen = useSlice(dropdown, s => s.isOpen());
+    const highlightedIndex = useSlice(dropdown, s => s.highlightedIndex());
+    const { toggle, handleKeyDown, close } = dropdown.selector;
     </script>
 
     <template>
@@ -211,17 +225,19 @@ Here's how you test the behavior once:
 ```typescript
 // dropdown.test.ts
 import { createDropdown } from './dropdown';
-import { createStoreReactAdapter } from '@lattice/adapter-store-react';
+import { createStore } from '@lattice/adapter-store-react';
 
 describe('Dropdown behavior', () => {
   it('handles keyboard navigation', () => {
-    const store = createStoreReactAdapter(createDropdown);
-    const instance = store.create({ 
+    const createSlice = createStore({ 
       items: ['Apple', 'Banana', 'Cherry'],
-      isOpen: true 
+      selectedItem: null,
+      isOpen: true,
+      highlightedIndex: 0
     });
+    const { dropdown } = createDropdown(createSlice);
     
-    const { highlightedIndex, handleKeyDown } = instance.actions;
+    const { highlightedIndex, handleKeyDown } = dropdown.selector;
     
     // Test arrow down
     handleKeyDown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
@@ -235,7 +251,7 @@ describe('Dropdown behavior', () => {
     // Test selection
     const selected = handleKeyDown(new KeyboardEvent('keydown', { key: 'Enter' }));
     expect(selected).toBe('Apple');
-    expect(instance.actions.isOpen()).toBe(false);
+    expect(dropdown.selector.isOpen()).toBe(false);
   });
 });
 ```

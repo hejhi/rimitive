@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StoreAdapter } from './adapter-contract';
 import { isStoreAdapter } from './adapter-contract';
 import { createLatticeStore } from './runtime';
-import type { CreateStore } from './runtime';
+import type { RuntimeSliceFactory } from './runtime';
 
 /**
  * Test state shape used throughout the adapter tests
@@ -309,9 +309,7 @@ export function createAdapterTestSuite(
         const adapterFactory = (initialState: TestState) =>
           createAdapter(initialState);
 
-        const createComponent = (createStore: CreateStore<TestState>) => {
-          const createSlice = createStore(createInitialState());
-
+        const createComponent = (createSlice: RuntimeSliceFactory<TestState>) => {
           const counter = createSlice(({ get, set }) => ({
             count: () => get().count,
             increment: () => set({ count: get().count + 1 }),
@@ -327,31 +325,33 @@ export function createAdapterTestSuite(
           return { counter, textEditor };
         };
 
-        const store = createLatticeStore(createComponent, adapterFactory);
+        const adapter = adapterFactory(createInitialState());
+        const createSlice = createLatticeStore(adapter);
+        const component = createComponent(createSlice);
 
         // Test initial state
-        expect(store.counter.selector.count()).toBe(0);
-        expect(store.textEditor.selector.text()).toBe('hello');
+        expect(component.counter.selector.count()).toBe(0);
+        expect(component.textEditor.selector.text()).toBe('hello');
 
         // Test mutations
-        store.counter.selector.increment();
-        expect(store.counter.selector.count()).toBe(1);
+        component.counter.selector.increment();
+        expect(component.counter.selector.count()).toBe(1);
 
-        store.textEditor.selector.setText('goodbye');
-        expect(store.textEditor.selector.text()).toBe('goodbye');
+        component.textEditor.selector.setText('goodbye');
+        expect(component.textEditor.selector.text()).toBe('goodbye');
 
-        store.textEditor.selector.append(' world');
-        expect(store.textEditor.selector.text()).toBe('goodbye world');
+        component.textEditor.selector.append(' world');
+        expect(component.textEditor.selector.text()).toBe('goodbye world');
 
         // Test subscriptions
         const listener = vi.fn();
-        const unsubscribe = store.counter.subscribe(listener);
+        const unsubscribe = component.counter.subscribe(listener);
 
-        store.counter.selector.increment();
+        component.counter.selector.increment();
         expect(listener).toHaveBeenCalledTimes(1);
 
         unsubscribe();
-        store.counter.selector.increment();
+        component.counter.selector.increment();
         expect(listener).toHaveBeenCalledTimes(1); // No additional calls
       });
 
@@ -360,9 +360,7 @@ export function createAdapterTestSuite(
         const adapterFactory = (initialState: TestState) =>
           createAdapter(initialState);
 
-        const createComponent = (createStore: CreateStore<TestState>) => {
-          const createSlice = createStore(createInitialState());
-
+        const createComponent = (createSlice: RuntimeSliceFactory<TestState>) => {
           const reader = createSlice(({ get }) => ({
             getAll: () => get(),
             getCount: () => get().count,
@@ -378,17 +376,19 @@ export function createAdapterTestSuite(
           return { reader, writer };
         };
 
-        const store = createLatticeStore(createComponent, adapterFactory);
+        const adapter = adapterFactory(createInitialState());
+        const createSlice = createLatticeStore(adapter);
+        const component = createComponent(createSlice);
 
         // Modify through writer
-        store.writer.selector.setCount(10);
-        store.writer.selector.setText('modified');
+        component.writer.selector.setCount(10);
+        component.writer.selector.setText('modified');
 
         // Read through reader - should see updates
-        expect(store.reader.selector.getCount()).toBe(10);
-        expect(store.reader.selector.getText()).toBe('modified');
+        expect(component.reader.selector.getCount()).toBe(10);
+        expect(component.reader.selector.getText()).toBe('modified');
 
-        const fullState = store.reader.selector.getAll();
+        const fullState = component.reader.selector.getAll();
         expect(fullState.count).toBe(10);
         expect(fullState.text).toBe('modified');
         expect(fullState.nested).toEqual({ value: 42, flag: true });

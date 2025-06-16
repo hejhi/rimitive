@@ -5,12 +5,12 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { createReduxAdapter } from '@lattice/adapter-redux';
-import { createStoreReactAdapter } from '@lattice/adapter-store-react';
-import { createSvelteAdapter } from '@lattice/adapter-svelte';
+import { createStore as createZustandStore } from '@lattice/adapter-zustand';
+import { createStore as createReduxStore } from '@lattice/adapter-redux';
+import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
+import { createStore as createSvelteStore } from '@lattice/adapter-svelte';
 import { compose } from '@lattice/core';
-import type { CreateStore } from '@lattice/core';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 type EcommerceState = {
   cart: Array<{ id: string; name: string; price: number; quantity: number }>;
@@ -25,27 +25,18 @@ type EcommerceState = {
 
 describe('Real-World Scenarios', () => {
   describe('E-commerce Cart Simulation', () => {
-    const createEcommerceApp = (createStore: CreateStore<EcommerceState>) => {
-      const createSlice = createStore({
-        cart: [] as Array<{
-          id: string;
-          name: string;
-          price: number;
-          quantity: number;
-        }>,
-        user: null as { id: string; name: string; email: string } | null,
-        products: [] as Array<{
-          id: string;
-          name: string;
-          price: number;
-          stock: number;
-        }>,
-        ui: {
-          isLoading: false,
-          cartOpen: false,
-          selectedProduct: null as string | null,
-        },
-      });
+    const getInitialState = (): EcommerceState => ({
+      cart: [],
+      user: null,
+      products: [],
+      ui: {
+        isLoading: false,
+        cartOpen: false,
+        selectedProduct: null,
+      },
+    });
+
+    const createEcommerceApp = (createSlice: RuntimeSliceFactory<EcommerceState>) => {
 
       const cart = createSlice(
         ({
@@ -203,7 +194,8 @@ describe('Real-World Scenarios', () => {
     };
 
     bench('zustand - ecommerce simulation', () => {
-      const store = createZustandAdapter(createEcommerceApp);
+      const createSlice = createZustandStore(getInitialState());
+      const store = createEcommerceApp(createSlice);
 
       // Load products
       const productList = Array.from({ length: 100 }, (_, i) => ({
@@ -252,7 +244,8 @@ describe('Real-World Scenarios', () => {
     });
 
     bench('redux - ecommerce simulation', () => {
-      const store = createReduxAdapter(createEcommerceApp);
+      const createSlice = createReduxStore(getInitialState());
+      const store = createEcommerceApp(createSlice);
 
       // Load products
       const productList = Array.from({ length: 100 }, (_, i) => ({
@@ -301,7 +294,8 @@ describe('Real-World Scenarios', () => {
     });
 
     bench('store-react - ecommerce simulation', () => {
-      const store = createStoreReactAdapter(createEcommerceApp);
+      const createSlice = createStoreReactStore(getInitialState());
+      const store = createEcommerceApp(createSlice);
 
       // Load products
       const productList = Array.from({ length: 100 }, (_, i) => ({
@@ -350,7 +344,8 @@ describe('Real-World Scenarios', () => {
     });
 
     bench('svelte - ecommerce simulation', () => {
-      const store = createSvelteAdapter(createEcommerceApp);
+      const createSlice = createSvelteStore(getInitialState());
+      const store = createEcommerceApp(createSlice);
 
       // Load products
       const productList = Array.from({ length: 100 }, (_, i) => ({
@@ -412,18 +407,14 @@ describe('Real-World Scenarios', () => {
   };
 
   describe('Todo App with Filtering', () => {
-    const createTodoApp = (createStore: CreateStore<TodoState>) => {
-      const createSlice = createStore({
-        todos: [] as Array<{
-          id: string;
-          text: string;
-          completed: boolean;
-          tags: string[];
-        }>,
-        filter: 'all' as 'all' | 'active' | 'completed',
-        searchTerm: '',
-        selectedTags: [] as string[],
-      });
+    const getTodoInitialState = (): TodoState => ({
+      todos: [],
+      filter: 'all',
+      searchTerm: '',
+      selectedTags: [],
+    });
+
+    const createTodoApp = (createSlice: RuntimeSliceFactory<TodoState>) => {
 
       const todos = createSlice(
         ({
@@ -551,7 +542,8 @@ describe('Real-World Scenarios', () => {
     };
 
     bench('zustand - todo app simulation', () => {
-      const store = createZustandAdapter(createTodoApp);
+      const createSlice = createZustandStore(getTodoInitialState());
+      const store = createTodoApp(createSlice);
 
       // Add todos
       for (let i = 0; i < 100; i++) {
@@ -583,7 +575,8 @@ describe('Real-World Scenarios', () => {
     });
 
     bench('redux - todo app simulation', () => {
-      const store = createReduxAdapter(createTodoApp);
+      const createSlice = createReduxStore(getTodoInitialState());
+      const store = createTodoApp(createSlice);
 
       // Add todos
       for (let i = 0; i < 100; i++) {
@@ -615,7 +608,8 @@ describe('Real-World Scenarios', () => {
     });
 
     bench('store-react - todo app simulation', () => {
-      const store = createStoreReactAdapter(createTodoApp);
+      const createSlice = createStoreReactStore(getTodoInitialState());
+      const store = createTodoApp(createSlice);
 
       // Add todos
       for (let i = 0; i < 100; i++) {
@@ -647,7 +641,8 @@ describe('Real-World Scenarios', () => {
     });
 
     bench('svelte - todo app simulation', () => {
-      const store = createSvelteAdapter(createTodoApp);
+      const createSlice = createSvelteStore(getTodoInitialState());
+      const store = createTodoApp(createSlice);
 
       // Add todos
       for (let i = 0; i < 100; i++) {

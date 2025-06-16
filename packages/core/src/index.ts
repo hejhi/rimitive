@@ -12,9 +12,7 @@ export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 // Export runtime
 export {
   createLatticeStore,
-  type RuntimeResult,
   type ComponentFactory,
-  type CreateStore,
 } from './runtime';
 
 // Export adapter contract

@@ -7,7 +7,7 @@
  */
 
 import { createStore as zustandCreateStore, StoreApi } from 'zustand/vanilla';
-import type { StoreAdapter, ComponentFactory } from '@lattice/core';
+import type { StoreAdapter, AdapterFactory, RuntimeSliceFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 
 /**
@@ -34,21 +34,19 @@ export type StoreEnhancer<State> = (
 ) => StoreApi<State>;
 
 /**
- * Creates a Zustand adapter for a Lattice component.
+ * Creates a Lattice store using Zustand for state management.
  *
- * This is the primary way to use Lattice with Zustand. It combines
- * an component factory with Zustand's state management.
- *
- * @param componentFactory - The Lattice component factory
- * @param enhancer - Optional store enhancer for middleware
- * @param options - Optional configuration for the adapter
- * @returns A Lattice store backed by Zustand
+ * @param initialState - The initial state for the store
+ * @param options - Optional configuration including middleware enhancer
+ * @returns A RuntimeSliceFactory for creating slices
  *
  * @example
  * ```typescript
- * const createComponent = (createStore: CreateStore) => {
- *   const createSlice = createStore({ count: 0 });
+ * import { createStore } from '@lattice/adapter-zustand';
  *
+ * const createSlice = createStore({ count: 0 });
+ *
+ * const createComponent = (createSlice) => {
  *   const counter = createSlice(({ get, set }) => ({
  *     count: () => get().count,
  *     increment: () => set({ count: get().count + 1 })
@@ -57,26 +55,54 @@ export type StoreEnhancer<State> = (
  *   return { counter };
  * };
  *
- * const store = createZustandAdapter(createComponent);
- * store.counter.increment();
+ * const component = createComponent(createSlice);
+ * component.counter.selector.increment();
  * ```
  *
  * @example With middleware
  * ```typescript
  * import { persist } from 'zustand/middleware';
  *
- * const store = createZustandAdapter(createComponent, (stateCreator, createStore) =>
- *   createStore(persist(stateCreator, { name: 'component-storage' }))
+ * const createSlice = createStore(
+ *   { count: 0 },
+ *   {
+ *     enhancer: (stateCreator, createStore) =>
+ *       createStore(persist(stateCreator, { name: 'app-storage' }))
+ *   }
  * );
  * ```
  */
-export function createZustandAdapter<Component, State>(
-  componentFactory: ComponentFactory<Component, State>,
+export function createStore<State>(
+  initialState: State,
+  options?: AdapterOptions & { enhancer?: StoreEnhancer<State> }
+): RuntimeSliceFactory<State> {
+  // Create Zustand store with initial state, optionally enhanced
+  const store = options?.enhancer
+    ? options.enhancer(() => initialState, zustandCreateStore)
+    : zustandCreateStore<State>(() => initialState);
+
+  // Create adapter from the Zustand store
+  const adapter = createStoreAdapter(store, options);
+
+  // Return the slice factory
+  return createLatticeStore(adapter);
+}
+
+/**
+ * Creates a Zustand adapter factory for use with Lattice.
+ *
+ * @deprecated Use createStore instead for the new adapter-first API
+ *
+ * @param enhancer - Optional store enhancer for middleware
+ * @param options - Optional configuration for the adapter
+ * @returns An adapter factory for use with createLatticeStore
+ */
+export function createZustandAdapter<State>(
   enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
-) {
-  // Create an adapter factory that will be called with initial state
-  const adapterFactory = (initialState: State): StoreAdapter<State> => {
+): AdapterFactory<State> {
+  // Return an adapter factory that will be called with initial state
+  return (initialState: State): StoreAdapter<State> => {
     // Create Zustand store with initial state, optionally enhanced
     const store = enhancer
       ? enhancer(() => initialState, zustandCreateStore)
@@ -84,8 +110,6 @@ export function createZustandAdapter<Component, State>(
 
     return createStoreAdapter(store, options);
   };
-
-  return createLatticeStore(componentFactory, adapterFactory);
 }
 
 /**

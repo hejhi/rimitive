@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createLatticeStore } from './runtime';
 import { createStore } from './index';
-import type { CreateStore, StoreAdapter } from './runtime';
+import type { RuntimeSliceFactory, StoreAdapter } from './index';
 
 describe('runtime with new createStore API', () => {
   it('should connect an component to an adapter', () => {
@@ -24,9 +24,7 @@ describe('runtime with new createStore API', () => {
     };
 
     // Create an component factory
-    const createComponent = (createStore: CreateStore<{ count: number }>) => {
-      const createSlice = createStore({ count: 0 });
-
+    const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
         increment: () => set({ count: get().count + 1 }),
@@ -36,22 +34,24 @@ describe('runtime with new createStore API', () => {
       return { counter };
     };
 
-    // Create the store with runtime using factory
-    const store = createLatticeStore(createComponent, adapterFactory);
+    // Create adapter and store
+    const adapter = adapterFactory({ count: 0 });
+    const createSlice = createLatticeStore(adapter);
+    const component = createComponent(createSlice);
 
     // Verify factory was called with initial state
     expect(capturedInitialState).toEqual({ count: 0 });
 
     // Test the counter slice
-    expect(store.counter.selector.count()).toBe(0);
+    expect(component.counter.selector.count()).toBe(0);
 
     // Test increment
-    store.counter.selector.increment();
+    component.counter.selector.increment();
     expect(mockState.count).toBe(1);
 
     // Test decrement
-    store.counter.selector.decrement();
-    store.counter.selector.decrement();
+    component.counter.selector.decrement();
+    component.counter.selector.decrement();
     expect(mockState.count).toBe(-1);
   });
 
@@ -71,10 +71,8 @@ describe('runtime with new createStore API', () => {
     };
 
     const createComponent = (
-      createStore: CreateStore<{ count: number; multiplier: number }>
+      createSlice: RuntimeSliceFactory<{ count: number; multiplier: number }>
     ) => {
-      const createSlice = createStore({ count: 0, multiplier: 2 });
-
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
         increment: () => set({ count: get().count + 1 }),
@@ -89,20 +87,22 @@ describe('runtime with new createStore API', () => {
       return { counter, config };
     };
 
-    const store = createLatticeStore(createComponent, adapterFactory);
+    const adapter = adapterFactory({ count: 0, multiplier: 2 });
+    const createSlice = createLatticeStore(adapter);
+    const component = createComponent(createSlice);
 
-    expect(store.counter.selector.count()).toBe(0);
-    expect(store.config.selector.multiplier()).toBe(2);
+    expect(component.counter.selector.count()).toBe(0);
+    expect(component.config.selector.multiplier()).toBe(2);
 
-    store.counter.selector.increment();
-    expect(store.counter.selector.count()).toBe(1);
+    component.counter.selector.increment();
+    expect(component.counter.selector.count()).toBe(1);
 
-    store.counter.selector.multiply();
-    expect(store.counter.selector.count()).toBe(2);
+    component.counter.selector.multiply();
+    expect(component.counter.selector.count()).toBe(2);
 
-    store.config.selector.setMultiplier(3);
-    store.counter.selector.multiply();
-    expect(store.counter.selector.count()).toBe(6);
+    component.config.selector.setMultiplier(3);
+    component.counter.selector.multiply();
+    expect(component.counter.selector.count()).toBe(6);
   });
 
   it('should expose subscription capability on slices', () => {
@@ -112,9 +112,7 @@ describe('runtime with new createStore API', () => {
       subscribe: vi.fn(() => () => {}),
     };
 
-    const createComponent = (createStore: CreateStore<{ count: number }>) => {
-      const createSlice = createStore({ count: 0 });
-      
+    const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
         increment: () => set({ count: get().count + 1 }),
@@ -123,13 +121,14 @@ describe('runtime with new createStore API', () => {
       return { counter };
     };
 
-    const store = createLatticeStore(createComponent, () => mockAdapter);
+    const createSlice = createLatticeStore(mockAdapter);
+    const component = createComponent(createSlice);
 
-    expect(typeof store.counter.subscribe).toBe('function');
-    expect(store.counter.subscribe).toBe(mockAdapter.subscribe);
+    expect(typeof component.counter.subscribe).toBe('function');
+    expect(component.counter.subscribe).toBe(mockAdapter.subscribe);
 
     // Test that subscription works
-    const unsubscribe = store.counter.subscribe(() => {});
+    const unsubscribe = component.counter.subscribe(() => {});
     expect(mockAdapter.subscribe).toHaveBeenCalled();
     expect(typeof unsubscribe).toBe('function');
   });
@@ -158,27 +157,34 @@ describe('runtime with new createStore API', () => {
     expect(editor.name()).toBe('updated');
   });
 
-  it('should enforce single store pattern', () => {
+  it('should work with multiple slices sharing the same state', () => {
+    let mockState: any;
     const mockAdapter: StoreAdapter<any> = {
-      getState: () => ({}),
-      setState: () => {},
+      getState: () => mockState,
+      setState: (updates) => Object.assign(mockState, updates),
       subscribe: () => () => {},
     };
 
-    const createComponent = (createStore: CreateStore<any>) => {
-      // First call should work
-      createStore({ value: 1 });
+    const createComponent = (createSlice: RuntimeSliceFactory<{ value1: number; value2: number }>) => {
+      const slice1 = createSlice(({ get, set }) => ({
+        value1: () => get().value1,
+        increment1: () => set({ value1: get().value1 + 1 }),
+      }));
 
-      // Second call should throw
-      expect(() => createStore({ value: 2 })).toThrow(
-        'createStore can only be called once'
-      );
+      const slice2 = createSlice(({ get, set }) => ({
+        value2: () => get().value2,
+        increment2: () => set({ value2: get().value2 + 1 }),
+      }));
 
-      return {};
+      return { slice1, slice2 };
     };
 
-    // This should not throw because the error is caught in the test
-    createLatticeStore(createComponent, () => mockAdapter);
+    mockState = { value1: 1, value2: 2 };
+    const createSlice = createLatticeStore(mockAdapter);
+    const component = createComponent(createSlice);
+    
+    expect(component.slice1.selector.value1()).toBe(1);
+    expect(component.slice2.selector.value2()).toBe(2);
   });
 
   it('should properly type the state through the adapter', () => {
@@ -201,9 +207,7 @@ describe('runtime with new createStore API', () => {
       return mockAdapter;
     };
 
-    const createComponent = (createStore: CreateStore<ComponentState>) => {
-      const createSlice = createStore({ count: 0, name: 'test' });
-
+    const createComponent = (createSlice: RuntimeSliceFactory<ComponentState>) => {
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
         increment: () => set({ count: get().count + 1 }),
@@ -212,10 +216,12 @@ describe('runtime with new createStore API', () => {
       return { counter };
     };
 
-    const store = createLatticeStore(createComponent, adapterFactory);
+    const adapter = adapterFactory({ count: 0, name: 'test' });
+    const createSlice = createLatticeStore(adapter);
+    const component = createComponent(createSlice);
 
     // Test operations
-    store.counter.selector.increment();
+    component.counter.selector.increment();
     expect(mockState.count).toBe(1);
   });
 });

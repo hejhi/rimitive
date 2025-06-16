@@ -32,23 +32,25 @@ Let's build a counter that works in **any** JavaScript framework. By the end of 
 Create a file called `counter.ts`:
 
 ```typescript
-import { createSlice } from '@lattice/core';
-
 // Define your state shape
 interface CounterState {
   count: number;
 }
 
-// Create a behavior slice
-export const createCounter = createSlice<CounterState>(({ get, set }) => ({
-  // Getters return current values
-  count: () => get().count || 0,
+// Create a component that takes a slice factory
+export const createCounter = (createSlice) => {
+  const counter = createSlice(({ get, set }) => ({
+    // Getters return current values
+    count: () => get().count,
+    
+    // Actions update state
+    increment: () => set({ count: get().count + 1 }),
+    decrement: () => set({ count: get().count - 1 }),
+    reset: () => set({ count: 0 })
+  }));
   
-  // Actions update state
-  increment: () => set({ count: (get().count || 0) + 1 }),
-  decrement: () => set({ count: (get().count || 0) - 1 }),
-  reset: () => set({ count: 0 })
-}));
+  return { counter };
+};
 ```
 
 <Aside type="tip">
@@ -65,10 +67,12 @@ Lattice works with your existing state management library. Pick the one you're a
     npm install @lattice/adapter-zustand zustand
     ```
     ```typescript
-    import { createZustandAdapter } from '@lattice/adapter-zustand';
+    import { createStore } from '@lattice/adapter-zustand';
     import { createCounter } from './counter';
 
-    export const counterStore = createZustandAdapter(createCounter);
+    // Create a store and pass it to your component
+    const createSlice = createStore({ count: 0 });
+    export const { counter } = createCounter(createSlice);
     ```
   </TabItem>
   <TabItem label="Redux">
@@ -76,10 +80,12 @@ Lattice works with your existing state management library. Pick the one you're a
     npm install @lattice/adapter-redux @reduxjs/toolkit
     ```
     ```typescript
-    import { createReduxAdapter } from '@lattice/adapter-redux';
+    import { createStore } from '@lattice/adapter-redux';
     import { createCounter } from './counter';
 
-    export const counterStore = createReduxAdapter(createCounter);
+    // Create a store and pass it to your component
+    const createSlice = createStore({ count: 0 });
+    export const { counter } = createCounter(createSlice);
     ```
   </TabItem>
   <TabItem label="Store-React">
@@ -87,10 +93,12 @@ Lattice works with your existing state management library. Pick the one you're a
     npm install @lattice/adapter-store-react
     ```
     ```typescript
-    import { createStoreReactAdapter } from '@lattice/adapter-store-react';
+    import { createStore } from '@lattice/adapter-store-react';
     import { createCounter } from './counter';
 
-    export const counterStore = createStoreReactAdapter(createCounter);
+    // Create a store and pass it to your component
+    const createSlice = createStore({ count: 0 });
+    export const { counter } = createCounter(createSlice);
     ```
     <Aside type="tip">
       Store-React is our fastest adapter - 110x faster than Redux!
@@ -105,15 +113,16 @@ Now use your counter in any framework:
 <Tabs>
   <TabItem label="React">
     ```tsx
-    import { useSliceValues } from '@lattice/runtime/react';
-    import { counterStore } from './store';
+    import { useSliceSelector } from '@lattice/runtime/react';
+    import { counter } from './store';
 
     function Counter() {
-      const { count, increment, decrement, reset } = useSliceValues(counterStore);
+      const count = useSliceSelector(counter, s => s.count());
+      const { increment, decrement, reset } = counter.selector;
       
       return (
         <div>
-          <h1>Count: {count()}</h1>
+          <h1>Count: {count}</h1>
           <button onClick={increment}>+</button>
           <button onClick={decrement}>-</button>
           <button onClick={reset}>Reset</button>
@@ -125,15 +134,16 @@ Now use your counter in any framework:
   <TabItem label="Vue">
     ```vue
     <script setup>
-    import { useSliceValues } from '@lattice/runtime/vue';
-    import { counterStore } from './store';
+    import { useSlice } from '@lattice/runtime/vue';
+    import { counter } from './store';
 
-    const { count, increment, decrement, reset } = useSliceValues(counterStore);
+    const count = useSlice(counter, s => s.count());
+    const { increment, decrement, reset } = counter.selector;
     </script>
 
     <template>
       <div>
-        <h1>Count: {{ count() }}</h1>
+        <h1>Count: {{ count }}</h1>
         <button @click="increment">+</button>
         <button @click="decrement">-</button>
         <button @click="reset">Reset</button>
@@ -144,14 +154,19 @@ Now use your counter in any framework:
   <TabItem label="Svelte">
     ```svelte
     <script>
-    import { sliceValues } from '@lattice/runtime/svelte';
-    import { counterStore } from './store';
-
-    const { count, increment, decrement, reset } = sliceValues(counterStore);
+    import { createStore } from '@lattice/adapter-svelte';
+    import { createCounter } from './counter';
+    
+    // Svelte can use reactive state directly
+    const state = $state({ count: 0 });
+    const createSlice = createStore(state);
+    const { counter } = createCounter(createSlice);
+    
+    const { increment, decrement, reset } = counter.selector;
     </script>
 
     <div>
-      <h1>Count: {$count}</h1>
+      <h1>Count: {state.count}</h1>
       <button on:click={increment}>+</button>
       <button on:click={decrement}>-</button>
       <button on:click={reset}>Reset</button>
@@ -160,10 +175,9 @@ Now use your counter in any framework:
   </TabItem>
   <TabItem label="Vanilla JS">
     ```javascript
-    import { counterStore } from './store';
+    import { counter } from './store';
 
-    const counter = counterStore.create({ count: 0 });
-    const { count, increment, decrement, reset } = counter.actions;
+    const { count, increment, decrement, reset } = counter.selector;
 
     // Get current value
     console.log(count()); // 0

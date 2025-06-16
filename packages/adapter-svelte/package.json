@@ -10,6 +10,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./dist/benchmark-store.js": {
+      "import": "./dist/benchmark-store.js",
+      "types": "./dist/benchmark-store.d.ts"
     }
   },
   "scripts": {

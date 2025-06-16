@@ -9,8 +9,8 @@
 
 import { describe, bench } from 'vitest';
 import { writable } from 'svelte/store';
-import { createSvelteAdapter } from '@lattice/adapter-svelte';
-import type { CreateStore } from '@lattice/core';
+import { createStore as createLatticeSvelteStore } from '@lattice/adapter-svelte';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 // Test iterations
 const ITERATIONS = 10000;
@@ -18,14 +18,6 @@ const BATCH_SIZE = 1000;
 
 describe('Svelte Adapter Optimizations', () => {
   describe('Direct Store Access Performance', () => {
-    const createComponent = (createStore: CreateStore<{ count: number }>) => {
-      const createSlice = createStore({ count: 0 });
-      const counter = createSlice(({ set }) => ({
-        setCount: (count: number) => set({ count }),
-      }));
-      return { counter };
-    };
-
     bench('raw svelte - state updates (baseline)', () => {
       const store = writable({ count: 0 });
 
@@ -35,59 +27,39 @@ describe('Svelte Adapter Optimizations', () => {
     });
 
     bench('lattice standard - state updates', () => {
-      const store = createSvelteAdapter(createComponent);
+      const createSlice = createLatticeSvelteStore({ count: 0 });
+      const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
+        const counter = createSlice(({ set }) => ({
+          setCount: (count: number) => set({ count }),
+        }));
+        return { counter };
+      };
+      const component = createComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.setCount(i);
-      }
-    });
-
-    bench('lattice optimized - direct store access', () => {
-      const store = createSvelteAdapter(createComponent);
-      const directStore = store.counter.adapter.$store;
-
-      for (let i = 0; i < ITERATIONS; i++) {
-        directStore.set({ count: i });
+        component.counter.selector.setCount(i);
       }
     });
   });
 
   describe('Batch Update Performance', () => {
-    const createComponent = (createStore: CreateStore<{ count: number }>) => {
-      const createSlice = createStore({ count: 0 });
-      const counter = createSlice(({ set }) => ({
-        setCount: (count: number) => set({ count }),
-      }));
-      return { counter };
-    };
-
     bench('lattice standard - multiple updates', () => {
-      const store = createSvelteAdapter(createComponent);
+      const createSlice = createLatticeSvelteStore({ count: 0 });
+      const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
+        const counter = createSlice(({ set }) => ({
+          setCount: (count: number) => set({ count }),
+        }));
+        return { counter };
+      };
+      const component = createComponent(createSlice);
 
       for (let i = 0; i < BATCH_SIZE; i++) {
-        store.counter.selector.setCount(i);
+        component.counter.selector.setCount(i);
       }
-    });
-
-    bench('lattice optimized - batched updates', () => {
-      const store = createSvelteAdapter(createComponent);
-
-      store.counter.adapter.$batch(() => {
-        for (let i = 0; i < BATCH_SIZE; i++) {
-          store.counter.selector.setCount(i);
-        }
-      });
     });
   });
 
   describe('Subscription Performance', () => {
-    const createComponent = (createStore: CreateStore<{ count: number }>) => {
-      const createSlice = createStore({ count: 0 });
-      const counter = createSlice(({ set }) => ({
-        setCount: (count: number) => set({ count }),
-      }));
-      return { counter };
-    };
 
     bench('raw svelte - subscription handling', () => {
       const store = writable({ count: 0 });
@@ -100,22 +72,6 @@ describe('Svelte Adapter Optimizations', () => {
 
       // Update state
       store.set({ count: 1 });
-
-      // Cleanup
-      unsubscribers.forEach((unsub) => unsub());
-    });
-
-    bench('lattice optimized - subscription handling', () => {
-      const store = createSvelteAdapter(createComponent);
-      const unsubscribers: (() => void)[] = [];
-
-      // Add 100 subscriptions using perfect store contract
-      for (let i = 0; i < 100; i++) {
-        unsubscribers.push(store.counter.adapter.$store.subscribe(() => {}));
-      }
-
-      // Update state
-      store.counter.adapter.$store.set({ count: 1 });
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
@@ -136,25 +92,18 @@ describe('Svelte Adapter Optimizations', () => {
 
       for (let i = 0; i < 1000; i++) {
         const value = i;
+        const createSlice = createLatticeSvelteStore({ value });
         const createComponent = (
-          createStore: CreateStore<{ value: number }>
+          createSlice: RuntimeSliceFactory<{ value: number }>
         ) => {
-          const createSlice = createStore({ value });
           const slice = createSlice(({ get }) => ({
             getValue: () => get().value,
           }));
           return { slice };
         };
 
-        stores.push(createSvelteAdapter(createComponent));
+        stores.push(createComponent(createSlice));
       }
-
-      // Clean up to prevent memory leaks
-      stores.forEach((store: any) => {
-        if ('destroy' in store.slice.adapter && typeof store.slice.adapter.destroy === 'function') {
-          store.slice.adapter.destroy();
-        }
-      });
     });
   });
 });
