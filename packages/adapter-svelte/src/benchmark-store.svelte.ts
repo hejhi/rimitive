@@ -3,15 +3,24 @@
  * This file uses real Svelte 5 runes
  */
 
-import { createStore } from './svelte-adapter';
+import { LatticeStore, createStoreAdapter } from './svelte-adapter.svelte';
+import { createLatticeStore } from '@lattice/core';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
 // Create stores with different state shapes for benchmarking
 
-// Simple counter store
+// Simple counter store (using deep proxy for comparison)
 export function createCounterStore() {
   const state = $state({ count: 0 });
-  const createSlice = createStore(state);
+  
+  // Manual adapter creation for benchmarking
+  const adapter = {
+    getState: () => state,
+    setState: (updates: any) => Object.assign(state, updates),
+    subscribe: () => () => {}
+  };
+  
+  const createSlice = createLatticeStore(adapter);
   
   const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
     const counter = createSlice(({ get, set }) => ({
@@ -43,7 +52,13 @@ export function createComplexStore() {
     settings: { theme: 'light', notifications: true }
   });
   
-  const createSlice = createStore(state);
+  const adapter = {
+    getState: () => state,
+    setState: (updates: any) => Object.assign(state, updates),
+    subscribe: () => () => {}
+  };
+  
+  const createSlice = createLatticeStore(adapter);
   
   const createComponent = (createSlice: RuntimeSliceFactory<ComplexState>) => {
     const user = createSlice(({ get, set }) => ({
@@ -78,7 +93,13 @@ export function createBatchStore() {
     items: [] 
   });
   
-  const createSlice = createStore(state);
+  const adapter = {
+    getState: () => state,
+    setState: (updates: any) => Object.assign(state, updates),
+    subscribe: () => () => {}
+  };
+  
+  const createSlice = createLatticeStore(adapter);
   
   const createComponent = (createSlice: RuntimeSliceFactory<BatchState>) => {
     const batch = createSlice(({ get, set }) => ({
@@ -124,16 +145,17 @@ export function createDirectAccessStore() {
   };
 }
 
-// Optimized class-based store for better write performance
-class CounterState {
+// Optimized class-based store using LatticeStore
+class CounterStore extends LatticeStore {
   count = $state(0);
 }
 
 export function createOptimizedCounterStore() {
-  const state = new CounterState();
-  const createSlice = createStore(state);
+  const store = new CounterStore();
+  const adapter = createStoreAdapter(store);
+  const createSlice = createLatticeStore(adapter);
   
-  const createComponent = (createSlice: RuntimeSliceFactory<CounterState>) => {
+  const createComponent = (createSlice: RuntimeSliceFactory<CounterStore>) => {
     const counter = createSlice(({ get, set }) => ({
       value: () => get().count,
       setValue: (count: number) => set({ count }),
@@ -144,7 +166,44 @@ export function createOptimizedCounterStore() {
   };
   
   return {
-    state,
+    state: store,
+    component: createComponent(createSlice)
+  };
+}
+
+// Another example using LatticeStore with complex state
+class ComplexStore extends LatticeStore {
+  name = $state('Test');
+  age = $state(25);
+  items = $state<string[]>(['a', 'b', 'c']);
+  theme = $state('light');
+  notifications = $state(true);
+  
+  // Computed property example
+  get userInfo() {
+    return `${this.name} (${this.age})`;
+  }
+}
+
+export function createOptimizedComplexStore() {
+  const store = new ComplexStore();
+  const adapter = createStoreAdapter(store);
+  const createSlice = createLatticeStore(adapter);
+  
+  const createComponent = (createSlice: RuntimeSliceFactory<ComplexStore>) => {
+    const user = createSlice(({ get, set }) => ({
+      setAge: (age: number) => set({ age }),
+      setName: (name: string) => set({ name }),
+      addItem: (item: string) => set({ items: [...get().items, item] }),
+      clearItems: () => set({ items: [] }),
+      toggleNotifications: () => set({ notifications: !get().notifications }),
+      getUserInfo: () => get().userInfo
+    }));
+    return { user };
+  };
+  
+  return {
+    state: store,
     component: createComponent(createSlice)
   };
 }
