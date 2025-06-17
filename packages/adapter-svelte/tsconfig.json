@@ -13,7 +13,12 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
     "composite": true,
-    "types": ["vitest/importMeta"]
+    "types": ["vitest/importMeta", "svelte"],
+    "target": "ES2022",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "*.d.ts"]
 }

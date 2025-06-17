@@ -9,8 +9,6 @@ import { createStore as createZustandStore } from 'zustand/vanilla';
 import { createStore as createLatticeZustandStore } from '@lattice/adapter-zustand';
 import { configureStore } from '@reduxjs/toolkit';
 import { createStore as createLatticeReduxStore } from '@lattice/adapter-redux';
-import { writable } from 'svelte/store';
-import { createStore as createLatticeSvelteStore } from '@lattice/adapter-svelte';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
 // Test iterations
@@ -138,112 +136,8 @@ describe('Adapter Overhead', () => {
     });
   });
 
-  describe('Svelte', () => {
-    bench('raw svelte - state updates', () => {
-      const store = writable({ count: 0 });
-      const setCount = (count: number) => store.set({ count });
-
-      for (let i = 0; i < ITERATIONS; i++) {
-        setCount(i);
-      }
-    });
-
-    bench('svelte + lattice - state updates', () => {
-      // For benchmarking, we use a plain object instead of Svelte runes
-      const createSlice = createLatticeSvelteStore({ count: 0 });
-      const createComponent = (
-        createSlice: RuntimeSliceFactory<{ count: number }>
-      ) => {
-        const counter = createSlice(({ set }) => ({
-          setCount: (count: number) => set({ count }),
-        }));
-        return { counter };
-      };
-      const component = createComponent(createSlice);
-
-      for (let i = 0; i < ITERATIONS; i++) {
-        component.counter.selector.setCount(i);
-      }
-    });
-
-
-    bench('raw svelte - subscriptions', () => {
-      const store = writable({ count: 0 });
-      const setCount = (count: number) => store.set({ count });
-      const unsubscribers: (() => void)[] = [];
-
-      // Add subscriptions
-      for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(store.subscribe(() => {}));
-      }
-
-      // Update state
-      setCount(1);
-
-      // Cleanup
-      unsubscribers.forEach((unsub) => unsub());
-    });
-
-    bench('svelte + lattice - subscriptions', () => {
-      const createSlice = createLatticeSvelteStore({ count: 0 });
-      const createComponent = (
-        createSlice: RuntimeSliceFactory<{ count: number }>
-      ) => {
-        const counter = createSlice(({ set }) => ({
-          setCount: (count: number) => set({ count }),
-        }));
-        return { counter };
-      };
-      const component = createComponent(createSlice);
-      const unsubscribers: (() => void)[] = [];
-
-      // Add subscriptions
-      for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(component.counter.subscribe(() => {}));
-      }
-
-      // Update state
-      component.counter.selector.setCount(1);
-
-      // Cleanup
-      unsubscribers.forEach((unsub) => unsub());
-    });
-  });
-
   describe('Progressive Overhead Analysis', () => {
     describe('State Updates - Layer by Layer', () => {
-      // Svelte progressive benchmarks
-      bench('svelte - direct store.set()', () => {
-        const store = writable({ count: 0 });
-        for (let i = 0; i < ITERATIONS; i++) {
-          store.set({ count: i });
-        }
-      });
-
-      bench('svelte - function wrapped', () => {
-        const store = writable({ count: 0 });
-        const setCount = (count: number) => store.set({ count });
-        for (let i = 0; i < ITERATIONS; i++) {
-          setCount(i);
-        }
-      });
-
-      bench('svelte - lattice wrapped', () => {
-        const createSlice = createLatticeSvelteStore({ count: 0 });
-        const createComponent = (
-          createSlice: RuntimeSliceFactory<{ count: number }>
-        ) => {
-          const counter = createSlice(({ set }) => ({
-            setCount: (count: number) => set({ count }),
-          }));
-          return { counter };
-        };
-        const component = createComponent(createSlice);
-        for (let i = 0; i < ITERATIONS; i++) {
-          component.counter.selector.setCount(i);
-        }
-      });
-
       // Zustand progressive benchmarks
       bench('zustand - direct setState()', () => {
         const store = createZustandStore<{ count: number }>(() => ({
@@ -297,33 +191,6 @@ describe('Adapter Overhead', () => {
       for (let i = 0; i < 1000; i++) {
         const value = i;
         const createSlice = createLatticeZustandStore({ value });
-        const createComponent = (
-          createSlice: RuntimeSliceFactory<{ value: number }>
-        ) => {
-          const slice = createSlice(({ get }) => ({
-            getValue: () => get().value,
-          }));
-          return { slice };
-        };
-
-        stores.push(createComponent(createSlice));
-      }
-    });
-
-    bench('raw svelte - store creation', () => {
-      const stores = [];
-
-      for (let i = 0; i < 1000; i++) {
-        stores.push(writable({ value: i }));
-      }
-    });
-
-    bench('svelte + lattice - store creation', () => {
-      const stores = [];
-
-      for (let i = 0; i < 1000; i++) {
-        const value = i;
-        const createSlice = createLatticeSvelteStore({ value });
         const createComponent = (
           createSlice: RuntimeSliceFactory<{ value: number }>
         ) => {

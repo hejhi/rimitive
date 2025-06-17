@@ -8,7 +8,6 @@ import { describe, bench } from 'vitest';
 import { createStore as createZustandStore } from '@lattice/adapter-zustand';
 import { createStore as createReduxStore } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
-import { createStore as createSvelteStore } from '@lattice/adapter-svelte';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
 const ITERATIONS = 10000;
@@ -34,8 +33,9 @@ const getInitialState = (): CountSlice => ({
 });
 
 // Standard component factory for all adapters
-const createStandardComponent = (createSlice: RuntimeSliceFactory<CountSlice>) => {
-
+const createStandardComponent = (
+  createSlice: RuntimeSliceFactory<CountSlice>
+) => {
   const counter = createSlice(({ get, set }) => ({
     increment: () => set({ count: get().count + 1 }),
     decrement: () => set({ count: get().count - 1 }),
@@ -114,23 +114,6 @@ describe('Adapter Performance Rankings', () => {
         }
       }
     });
-
-    bench('svelte adapter - updates', () => {
-      // Note: In real Svelte usage, state would be created with $state()
-      // For benchmarking, we use a plain object
-      const createSlice = createSvelteStore(getInitialState());
-      const store = createStandardComponent(createSlice);
-
-      for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.increment();
-        if (i % 10 === 0) {
-          store.items.selector.addItem(`item-${i}`);
-        }
-        if (i % 100 === 0) {
-          store.metadata.selector.updateTimestamp();
-        }
-      }
-    });
   });
 
   describe('Complex State Operations', () => {
@@ -174,25 +157,6 @@ describe('Adapter Performance Rankings', () => {
 
     bench('store-react adapter - complex operations', () => {
       const createSlice = createStoreReactStore(getInitialState());
-      const store = createStandardComponent(createSlice);
-
-      // Add items
-      for (let i = 0; i < 100; i++) {
-        store.items.selector.addItem(`item-${i}`);
-      }
-
-      // Update counter while removing items
-      for (let i = 99; i >= 0; i--) {
-        store.counter.selector.increment();
-        if (i % 2 === 0) {
-          store.items.selector.removeItem(0);
-        }
-        store.metadata.selector.incrementVersion();
-      }
-    });
-
-    bench('svelte adapter - complex operations', () => {
-      const createSlice = createSvelteStore(getInitialState());
       const store = createStandardComponent(createSlice);
 
       // Add items
@@ -283,33 +247,6 @@ describe('Adapter Performance Rankings', () => {
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
     });
-
-    bench('svelte adapter - subscriptions', () => {
-      const createSlice = createSvelteStore(getInitialState());
-      const store = createStandardComponent(createSlice);
-      const unsubscribers: (() => void)[] = [];
-      let notificationCount = 0;
-
-      // Add subscriptions
-      for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(
-          store.counter.subscribe(() => {
-            notificationCount++;
-          })
-        );
-      }
-
-      // Trigger updates
-      for (let i = 0; i < 100; i++) {
-        store.counter.selector.increment();
-      }
-
-      // Cleanup
-      unsubscribers.forEach((unsub) => unsub());
-      if ('destroy' in store && typeof store.destroy === 'function') {
-        store.destroy();
-      }
-    });
   });
 
   describe('Store Creation Performance', () => {
@@ -338,22 +275,6 @@ describe('Adapter Performance Rankings', () => {
         const createSlice = createStoreReactStore(getInitialState());
         stores.push(createStandardComponent(createSlice));
       }
-    });
-
-    bench('svelte adapter - store creation', () => {
-      const stores = [];
-
-      for (let i = 0; i < 100; i++) {
-        const createSlice = createSvelteStore(getInitialState());
-        stores.push(createStandardComponent(createSlice));
-      }
-
-      // Clean up to prevent memory leaks
-      stores.forEach((store) => {
-        if ('destroy' in store && typeof store.destroy === 'function') {
-          store.destroy();
-        }
-      });
     });
   });
 });

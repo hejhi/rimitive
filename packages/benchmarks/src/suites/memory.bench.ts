@@ -8,8 +8,23 @@ import { describe, bench } from 'vitest';
 import { createStore as createZustandStore } from '@lattice/adapter-zustand';
 import { createStore as createReduxStore } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
-import { createStore as createSvelteStore } from '@lattice/adapter-svelte';
+import { LatticeStore, createSliceFactory } from '@lattice/adapter-svelte';
 import type { RuntimeSliceFactory } from '@lattice/core';
+
+// Helper for memory benchmarks that need dynamic state
+function createSvelteStore<T extends Record<string, any>>(initialState: T): RuntimeSliceFactory<T> {
+  // Create a dynamic store class
+  class DynamicStore extends LatticeStore {
+    constructor() {
+      super();
+      // Copy all properties from initial state
+      Object.assign(this, initialState);
+    }
+  }
+  
+  const store = new DynamicStore();
+  return createSliceFactory(store) as unknown as RuntimeSliceFactory<T>;
+}
 
 describe('Memory Usage Patterns', () => {
   describe('Large State Trees', () => {
