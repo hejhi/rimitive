@@ -1,15 +1,14 @@
 # @lattice/adapter-pinia
 
-Pinia adapter for Lattice - integrate Lattice with Vue's official state management library.
+Pinia adapter for Lattice - wrap existing Pinia stores for use with Lattice components.
 
 ## Features
 
-- 🍍 **Pinia integration** - Use Vue's official state management library
-- 🛠️ **DevTools support** - Full Vue DevTools integration with time-travel debugging
-- 🔌 **Plugin ecosystem** - Access to Pinia's plugin system via enhancer
+- 🍍 **True adapter pattern** - Wraps any existing Pinia store
+- 🛠️ **Preserves all Pinia features** - DevTools, plugins, HMR, getters, actions
+- 🔌 **Plugin ecosystem** - Use any Pinia plugin with your stores
 - 📦 **Type-safe** - Full TypeScript support with type inference
-- 🎯 **Global stores** - Create stores that persist across components
-- 🔄 **Hot module replacement** - Development experience with HMR support
+- 🎯 **Minimal overhead** - Thin wrapper around native Pinia functionality
 
 ## Installation
 
@@ -22,29 +21,41 @@ pnpm add @lattice/adapter-pinia @lattice/core pinia
 ## Basic Usage
 
 ```ts
-import { createPiniaAdapter } from '@lattice/adapter-pinia';
+import { defineStore } from 'pinia';
+import { piniaAdapter } from '@lattice/adapter-pinia';
 
-// Define your component
-const createComponent = (createStore) => {
-  const createSlice = createStore({ count: 0 });
+// Create a Pinia store using the native API
+const useCounterStore = defineStore('counter', {
+  state: () => ({ count: 0 }),
+  actions: {
+    increment() {
+      this.count++;
+    }
+  }
+});
 
-  const counter = createSlice(({ get, set }) => ({
-    count: () => get().count,
-    increment: () => set({ count: get().count + 1 }),
-    decrement: () => set({ count: get().count - 1 }),
-    reset: () => set({ count: 0 }),
-  }));
+// Get the store instance
+const store = useCounterStore();
 
-  return { counter };
-};
+// Wrap it with the adapter
+const createSlice = piniaAdapter(store);
 
-// Create a Lattice store backed by Pinia
-const store = createPiniaAdapter(createComponent);
+// Create Lattice components
+const counter = createSlice(({ get, set }) => ({
+  count: () => get().count,
+  increment: () => set({ count: get().count + 1 }),
+  decrement: () => set({ count: get().count - 1 }),
+  reset: () => set({ count: 0 }),
+}));
 
-// Use the store
-console.log(store.counter.selector.count()); // 0
-store.counter.selector.increment();
-console.log(store.counter.selector.count()); // 1
+// Use the component
+console.log(counter.selector.count()); // 0
+counter.selector.increment();
+console.log(counter.selector.count()); // 1
+
+// Native Pinia actions still work
+store.increment();
+console.log(counter.selector.count()); // 2
 ```
 
 ## Using in Vue Components
@@ -52,17 +63,45 @@ console.log(store.counter.selector.count()); // 1
 ```vue
 <script setup>
 import { computed } from 'vue';
-import { store } from './store';
+import { defineStore } from 'pinia';
+import { piniaAdapter } from '@lattice/adapter-pinia';
 
-const count = computed(() => store.counter.selector.count());
+// Define your Pinia store
+const useAppStore = defineStore('app', {
+  state: () => ({
+    user: null,
+    theme: 'light',
+    sidebarOpen: true
+  }),
+  getters: {
+    isLoggedIn: (state) => !!state.user
+  }
+});
+
+// Create store instance and wrap with adapter
+const store = useAppStore();
+const createSlice = piniaAdapter(store);
+
+// Create your Lattice components
+const ui = createSlice(({ get, set }) => ({
+  theme: () => get().theme,
+  toggleTheme: () => set({ 
+    theme: get().theme === 'light' ? 'dark' : 'light' 
+  }),
+  toggleSidebar: () => set({ 
+    sidebarOpen: !get().sidebarOpen 
+  })
+}));
+
+// Use in template with computed
+const theme = computed(() => ui.selector.theme());
+const sidebarOpen = computed(() => store.sidebarOpen); // Can also use native store
 </script>
 
 <template>
-  <div>
-    <p>Count: {{ count }}</p>
-    <button @click="store.counter.selector.increment">+</button>
-    <button @click="store.counter.selector.decrement">-</button>
-    <button @click="store.counter.selector.reset">Reset</button>
+  <div :class="theme">
+    <button @click="ui.selector.toggleTheme">Toggle Theme</button>
+    <button @click="ui.selector.toggleSidebar">Toggle Sidebar</button>
   </div>
 </template>
 ```
@@ -71,195 +110,87 @@ const count = computed(() => store.counter.selector.count());
 
 ### With Pinia Plugins
 
-Use the enhancer parameter to add Pinia plugins:
-
 ```ts
-import { createPiniaAdapter } from '@lattice/adapter-pinia';
+import { createPinia, defineStore } from 'pinia';
 import { createPersistedState } from 'pinia-plugin-persistedstate';
+import { piniaAdapter } from '@lattice/adapter-pinia';
 
-const store = createPiniaAdapter(createComponent, (stateCreator, pinia, storeId) => {
-  // Add plugins to the Pinia instance
-  pinia.use(createPersistedState({
-    key: id => `__persisted__${id}`,
-    storage: localStorage,
-  }));
-  
-  // Create and return the store
-  const useStore = defineStore(storeId, {
-    state: stateCreator,
-  });
-  
-  return useStore(pinia);
+// Create Pinia instance with plugins
+const pinia = createPinia();
+pinia.use(createPersistedState());
+
+// Define store with persistence
+const useSettingsStore = defineStore('settings', {
+  state: () => ({
+    language: 'en',
+    notifications: true
+  }),
+  persist: true // Will be persisted to localStorage
 });
+
+// Create store instance with your pinia
+const store = useSettingsStore(pinia);
+
+// Wrap with adapter - all plugin features preserved
+const createSlice = piniaAdapter(store);
 ```
 
 ### Subscriptions
 
 ```ts
 // Subscribe to all state changes
-const unsubscribe = store.subscribe(() => {
+const unsubscribe = counter.subscribe(() => {
   console.log('State changed!');
 });
 
-// Cleanup
+// Cleanup when done
 unsubscribe();
 ```
 
-### Vue Composables
-
-The adapter includes Vue composables that integrate seamlessly with Vue's reactivity system:
-
-```vue
-<script setup>
-import { useSliceSelector, useSliceValues } from '@lattice/runtime/vue';
-import { store } from './store';
-
-// Subscribe to a single value
-const count = useSliceSelector(store.counter, c => c.selector.count());
-
-// Subscribe to multiple values
-const { user, isLoggedIn } = useSliceValues(store.auth, a => ({
-  user: a.selector.currentUser(),
-  isLoggedIn: a.selector.isAuthenticated()
-}));
-
-// Get both slice methods and reactive values
-const [counter, { count: countRef, doubled }] = useLattice(
-  store.counter,
-  c => ({ count: c.selector.count(), doubled: c.selector.doubled() })
-);
-</script>
-
-<template>
-  <div>
-    <p>Count: {{ count }}</p>
-    <p>Doubled: {{ doubled }}</p>
-    <button @click="counter.selector.increment">+</button>
-    
-    <div v-if="isLoggedIn">
-      Welcome, {{ user.name }}!
-    </div>
-  </div>
-</template>
-```
-
-### Direct Composition API Usage
-
-You can also use Vue's built-in composition API directly:
-
-```vue
-<script setup>
-import { computed, watchEffect } from 'vue';
-import { store } from './store';
-
-// Reactive computed values
-const count = computed(() => store.counter.selector.count());
-
-// Watch for changes
-watchEffect(() => {
-  console.log('Count changed:', count.value);
-});
-</script>
-```
-
-### Wrapping Existing Pinia Stores
-
-If you have an existing Pinia store, you can wrap it for use with Lattice:
+### Multiple Slices from Same Store
 
 ```ts
-import { wrapPiniaStore } from '@lattice/adapter-pinia';
-import { defineStore } from 'pinia';
+const store = useAppStore();
+const createSlice = piniaAdapter(store);
 
-// Existing Pinia store
-const usePiniaStore = defineStore('myStore', {
-  state: () => ({ count: 0 }),
-});
+// Create focused slices for different concerns
+const auth = createSlice(({ get, set }) => ({
+  login: (user) => set({ user }),
+  logout: () => set({ user: null }),
+  currentUser: () => get().user,
+  isAuthenticated: () => !!get().user
+}));
 
-const piniaStore = usePiniaStore();
-const adapter = wrapPiniaStore(piniaStore);
-
-// Use with createLatticeStore from core
-import { createLatticeStore } from '@lattice/core';
-const store = createLatticeStore(createComponent, adapter);
+const preferences = createSlice(({ get, set }) => ({
+  theme: () => get().theme,
+  language: () => get().language,
+  updatePreferences: (prefs) => set(prefs)
+}));
 ```
+
+## Why Use This Pattern?
+
+1. **Use existing Pinia stores** - No need to rewrite your stores
+2. **Preserve Pinia features** - Keep using getters, actions, plugins, devtools
+3. **Gradual adoption** - Wrap stores as needed, use Lattice features where beneficial
+4. **Type safety** - Full TypeScript support throughout
+5. **Framework agnostic components** - Use Lattice components across different frameworks
 
 ## API Reference
 
-### `createPiniaAdapter(componentFactory, enhancer?, options?)`
+### `piniaAdapter(store, options?)`
 
-Creates a Pinia adapter for a Lattice component.
-
-#### Parameters
-- `componentFactory`: Function that creates your component using Lattice patterns
-- `enhancer?`: Optional function to enhance store creation with plugins
-- `options?`: Optional configuration
-  - `onError?`: Custom error handler for listener errors
-
-#### Returns
-A Lattice store backed by Pinia
-
-### `wrapPiniaStore(store, options?)`
-
-Wraps an existing Pinia store as a Lattice adapter.
+Wraps an existing Pinia store for use with Lattice.
 
 #### Parameters
-- `store`: An existing Pinia store instance
-- `options?`: Optional configuration
+
+- `store` - A Pinia store instance
+- `options` (optional)
+  - `onError` - Custom error handler for subscription errors
 
 #### Returns
-A minimal store adapter
 
-### `createStoreAdapter(store, options?)`
-
-Creates a minimal adapter from a Pinia store (internal utility).
-
-### Vue Composables
-
-Vue composables are provided by `@lattice/runtime/vue` and work with any Lattice adapter:
-
-- `useSliceSelector` - Subscribe to specific values with reactive updates
-- `useSlice` - Access a single slice directly
-- `useSliceValues` - Subscribe to multiple values with destructuring support
-- `useLattice` - Get both slice methods and reactive values
-
-See the [@lattice/runtime documentation](https://github.com/hivvy/lattice/tree/main/packages/runtime#vue-composables) for full API details.
-
-## TypeScript
-
-Full TypeScript support with automatic type inference:
-
-```ts
-const createComponent = (createStore) => {
-  const createSlice = createStore({ 
-    user: null as { name: string; email: string } | null,
-    isLoggedIn: false 
-  });
-  
-  const auth = createSlice(({ get, set }) => ({
-    login: (name: string, email: string) => {
-      set({ user: { name, email }, isLoggedIn: true });
-    },
-    logout: () => {
-      set({ user: null, isLoggedIn: false });
-    },
-    currentUser: () => get().user,
-    isAuthenticated: () => get().isLoggedIn,
-  }));
-  
-  return { auth };
-};
-
-const store = createPiniaAdapter(createComponent);
-// TypeScript knows all the types!
-```
-
-## DevTools Integration
-
-All Lattice stores created with the Pinia adapter automatically appear in Vue DevTools with:
-- State inspection
-- Action tracking
-- Time-travel debugging
-- State export/import
+A `RuntimeSliceFactory` for creating Lattice slices from the store.
 
 ## License
 

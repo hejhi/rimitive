@@ -104,7 +104,9 @@ export function createStore<State>(
  * @returns A Lattice store backed by Redux
  */
 export function createReduxAdapter<Component>(
-  componentFactory: (createStore: (initialState: any) => RuntimeSliceFactory<any>) => Component,
+  componentFactory: (
+    createStore: (initialState: any) => RuntimeSliceFactory<any>
+  ) => Component,
   enhancer?: StoreEnhancer<any>,
   options?: AdapterOptions
 ): Component {
@@ -112,7 +114,7 @@ export function createReduxAdapter<Component>(
   const createStoreFunction = (initialState: any) => {
     return createStore(initialState, { ...options, enhancer });
   };
-  
+
   return componentFactory(createStoreFunction);
 }
 
@@ -281,6 +283,3 @@ export function wrapReduxStore<Model>(
     },
   };
 }
-
-// Re-export types for convenience
-export type { StoreAdapter } from '@lattice/core';

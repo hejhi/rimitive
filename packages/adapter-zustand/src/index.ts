@@ -127,7 +127,3 @@ export function zustandAdapter<State>(
 
   return createLatticeStore(adapter);
 }
-
-// Re-export types for convenience
-export type { StoreApi } from 'zustand';
-export type { RuntimeSliceFactory } from '@lattice/core';

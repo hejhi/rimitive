@@ -89,7 +89,9 @@ export function createStore<State>(
  * @returns A Lattice store backed by store-react
  */
 export function createStoreReactAdapter<Component, State>(
-  componentFactory: (createStore: (initialState: State) => RuntimeSliceFactory<State>) => Component,
+  componentFactory: (
+    createStore: (initialState: State) => RuntimeSliceFactory<State>
+  ) => Component,
   enhancer?: StoreEnhancer<State>,
   options?: AdapterOptions
 ) {
@@ -97,7 +99,7 @@ export function createStoreReactAdapter<Component, State>(
   const createStoreFunction = (initialState: State) => {
     return createStore(initialState, { ...options, enhancer });
   };
-  
+
   return componentFactory(createStoreFunction);
 }
 
@@ -237,6 +239,3 @@ export function createStoreAdapter<State>(
     return wrapStoreReact(store, options);
   };
 }
-
-// Re-export types for convenience
-export type { StoreAdapter } from '@lattice/core';

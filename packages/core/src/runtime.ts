@@ -6,10 +6,7 @@
  */
 
 import type { StoreTools, RuntimeSliceFactory, LatticeSlice } from './index';
-import {
-  type StoreAdapter,
-  isStoreAdapter,
-} from './adapter-contract';
+import { type StoreAdapter } from './adapter-contract';
 
 /**
  * Component factory receives slice factory and returns the component's slices
@@ -47,15 +44,13 @@ export function createLatticeStore<State>(
   return function createSlice<Methods>(
     factory: (tools: StoreTools<State>) => Methods
   ): LatticeSlice<Methods, State> {
-    const methods = factory(tools);
     return {
-      selector: methods,
+      selector: factory(tools),
       subscribe: adapter.subscribe,
-      compose: (newTools: StoreTools<State>) => {
+      compose: (composedTools: StoreTools<State>) => {
         // Create a new slice with the new tools
-        const newMethods = factory(newTools);
         return {
-          selector: newMethods,
+          selector: factory(composedTools),
           subscribe: adapter.subscribe,
           compose: (newerTools: StoreTools<State>) => {
             return createSlice(factory).compose(newerTools);
@@ -67,7 +62,3 @@ export function createLatticeStore<State>(
     };
   };
 }
-
-// Re-export for convenience
-export { type StoreAdapter, isStoreAdapter };
-export type { RuntimeSliceFactory } from './index';

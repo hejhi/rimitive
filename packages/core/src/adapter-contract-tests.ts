@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StoreAdapter } from './adapter-contract';
 import { isStoreAdapter } from './adapter-contract';
 import { createLatticeStore } from './runtime';
-import type { RuntimeSliceFactory } from './runtime';
+import { RuntimeSliceFactory } from '.';
 
 /**
  * Test state shape used throughout the adapter tests
@@ -309,7 +309,9 @@ export function createAdapterTestSuite(
         const adapterFactory = (initialState: TestState) =>
           createAdapter(initialState);
 
-        const createComponent = (createSlice: RuntimeSliceFactory<TestState>) => {
+        const createComponent = (
+          createSlice: RuntimeSliceFactory<TestState>
+        ) => {
           const counter = createSlice(({ get, set }) => ({
             count: () => get().count,
             increment: () => set({ count: get().count + 1 }),
@@ -360,7 +362,9 @@ export function createAdapterTestSuite(
         const adapterFactory = (initialState: TestState) =>
           createAdapter(initialState);
 
-        const createComponent = (createSlice: RuntimeSliceFactory<TestState>) => {
+        const createComponent = (
+          createSlice: RuntimeSliceFactory<TestState>
+        ) => {
           const reader = createSlice(({ get }) => ({
             getAll: () => get(),
             getCount: () => get().count,

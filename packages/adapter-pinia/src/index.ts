@@ -1,19 +1,19 @@
 /**
  * @fileoverview Pinia adapter for Lattice
  *
- * This adapter provides integration with Pinia for state management.
- * Following the minimal adapter pattern, it only provides store primitives.
- * All component execution is handled by the Lattice runtime.
+ * Provides a clean adapter that wraps existing Pinia stores for use with Lattice.
+ * The adapter preserves all Pinia features while providing the minimal interface
+ * required by Lattice.
  */
 
-import { createPinia, defineStore, type Pinia, type Store } from 'pinia';
+import type { Store } from 'pinia';
 import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 
 /**
- * Configuration options for Pinia adapters
+ * Configuration options for the Pinia adapter
  */
-export interface AdapterOptions {
+export interface PiniaAdapterOptions {
   /**
    * Custom error handler for listener errors.
    * Default: logs to console.error
@@ -22,159 +22,85 @@ export interface AdapterOptions {
 }
 
 /**
- * Store enhancer function that allows plugin composition
+ * Creates a Lattice adapter from an existing Pinia store.
  *
- * @param stateCreator - Function that returns the initial state
- * @param pinia - The Pinia instance to enhance
- * @param storeId - The unique store ID
- * @returns Enhanced Pinia store instance
- */
-export type StoreEnhancer<State extends Record<string, any>> = (
-  stateCreator: () => State,
-  pinia: Pinia,
-  storeId: string
-) => Store<string, State>;
-
-/**
- * Creates a Lattice store using Pinia for state management.
+ * This adapter wraps any Pinia store, preserving all its features
+ * (plugins, devtools, persistence, etc.) while providing the minimal
+ * interface required by Lattice.
  *
- * @param initialState - The initial state for the store
- * @param options - Optional configuration including plugin enhancer
- * @returns A RuntimeSliceFactory for creating slices
+ * @param store - An existing Pinia store instance
+ * @param options - Optional configuration for the adapter
+ * @returns A RuntimeSliceFactory for creating Lattice slices
  *
  * @example
  * ```typescript
- * import { createStore } from '@lattice/adapter-pinia';
+ * import { defineStore } from 'pinia';
+ * import { piniaAdapter } from '@lattice/adapter-pinia';
  *
- * const createSlice = createStore({ count: 0 });
+ * // Create a Pinia store using the native API
+ * const useCounterStore = defineStore('counter', {
+ *   state: () => ({ count: 0 }),
+ *   actions: {
+ *     increment() {
+ *       this.count++;
+ *     }
+ *   }
+ * });
  *
- * const createComponent = (createSlice) => {
- *   const counter = createSlice(({ get, set }) => ({
- *     count: () => get().count,
- *     increment: () => set({ count: get().count + 1 })
- *   }));
+ * // Get the store instance
+ * const store = useCounterStore();
  *
- *   return { counter };
- * };
- *
- * const component = createComponent(createSlice);
- * component.counter.selector.increment();
+ * // Wrap it with the adapter
+ * const createSlice = piniaAdapter(store);
+ * 
+ * // Use with Lattice components
+ * const component = myComponent(createSlice);
  * ```
  *
  * @example With plugins
  * ```typescript
+ * import { createPinia, defineStore } from 'pinia';
  * import { createPersistedState } from 'pinia-plugin-persistedstate';
+ * import { piniaAdapter } from '@lattice/adapter-pinia';
  *
- * const createSlice = createStore(
- *   { count: 0 },
- *   {
- *     enhancer: (stateCreator, pinia, storeId) => {
- *       pinia.use(createPersistedState({
- *         key: id => `__persisted__${id}`,
- *         storage: localStorage,
- *       }));
+ * // Create Pinia instance with plugins
+ * const pinia = createPinia();
+ * pinia.use(createPersistedState());
  *
- *       const useStore = defineStore(storeId, {
- *         state: stateCreator
- *       });
+ * // Define store
+ * const useAppStore = defineStore('app', {
+ *   state: () => ({ user: null, theme: 'light' }),
+ *   persist: true
+ * });
  *
- *       return useStore(pinia);
- *     }
- *   }
- * );
+ * // Create store instance with pinia
+ * const store = useAppStore(pinia);
+ *
+ * // Wrap with adapter
+ * const createSlice = piniaAdapter(store);
  * ```
  */
-export function createStore<State extends Record<string, any>>(
-  initialState: State,
-  options?: AdapterOptions & { enhancer?: StoreEnhancer<State> }
-): RuntimeSliceFactory<State> {
-  const pinia = createPinia();
-  const storeId = `lattice-${Date.now()}-${Math.random()}`;
-
-  // Create store with or without enhancer
-  const store = options?.enhancer
-    ? options.enhancer(() => initialState, pinia, storeId)
-    : createDefaultStore(() => initialState, pinia, storeId);
-
-  const adapter = createStoreAdapter(store, options);
-
-  // Return the slice factory
-  return createLatticeStore(adapter);
-}
-
-/**
- * Creates a Pinia adapter for a Lattice component.
- *
- * @deprecated Use createStore instead for the new adapter-first API
- *
- * @param componentFactory - The Lattice component factory
- * @param enhancer - Optional store enhancer for plugins
- * @param options - Optional configuration for the adapter
- * @returns A Lattice store backed by Pinia
- */
-export function createPiniaAdapter<
-  Component,
-  State extends Record<string, any> = any,
->(
-  componentFactory: (createStore: (initialState: State) => RuntimeSliceFactory<State>) => Component,
-  enhancer?: StoreEnhancer<State>,
-  options?: AdapterOptions
-) {
-  // For backwards compatibility, create a function that mimics the old API
-  const createStoreFunction = (initialState: State) => {
-    return createStore(initialState, { ...options, enhancer });
-  };
-  
-  return componentFactory(createStoreFunction);
-}
-
-/**
- * Creates a default Pinia store
- */
-function createDefaultStore<State extends Record<string, any>>(
-  stateCreator: () => State,
-  pinia: Pinia,
-  storeId: string
-): Store<string, State> {
-  const useStore = defineStore(storeId, {
-    state: stateCreator,
-  });
-
-  return useStore(pinia);
-}
-
-/**
- * Creates a minimal adapter from a Pinia store
- *
- * This wraps a Pinia store with minimal adapter interface.
- * Handles edge cases like unsubscribe during notification.
- *
- * @param store - The Pinia store to wrap
- * @param options - Optional configuration for the adapter
- * @returns A minimal store adapter
- */
-export function createStoreAdapter<State extends Record<string, any>>(
+export function piniaAdapter<State extends Record<string, any>>(
   store: Store<string, State>,
-  options?: AdapterOptions
-): StoreAdapter<State> {
-  // Track listeners for edge case handling
-  const listeners = new Set<() => void>();
-  let isNotifying = false;
-  const pendingUnsubscribes = new Set<() => void>();
-
-  // For error handling
+  options?: PiniaAdapterOptions
+): RuntimeSliceFactory<State> {
   const handleError =
     options?.onError ??
     ((error) => {
       console.error('Error in store listener:', error);
     });
 
-  // Subscribe to Pinia and forward to our listeners
+  // Performance optimization: Direct listener management
+  const listeners = new Set<() => void>();
+  const pendingUnsubscribes = new Set<() => void>();
+  let isNotifying = false;
+
+  // Subscribe to Pinia store once
   store.$subscribe(() => {
     isNotifying = true;
-    const currentListeners = Array.from(listeners);
 
-    for (const listener of currentListeners) {
+    // Use for...of directly on the Set to avoid array allocation
+    for (const listener of listeners) {
       try {
         listener();
       } catch (error) {
@@ -184,22 +110,21 @@ export function createStoreAdapter<State extends Record<string, any>>(
 
     isNotifying = false;
 
-    // Process pending unsubscribes
+    // Process pending unsubscribes after notification
     for (const listener of pendingUnsubscribes) {
       listeners.delete(listener);
     }
     pendingUnsubscribes.clear();
   });
 
-  return {
+  const adapter: StoreAdapter<State> = {
     getState: () => {
-      // Return a deep copy to prevent mutation of the original state
-      // Pinia's state is reactive, so we need to ensure we return plain objects
+      // Return a deep copy to prevent external mutations
+      // Pinia's state is reactive, so we ensure plain objects
       return JSON.parse(JSON.stringify(store.$state)) as State;
     },
     setState: (updates) => {
-      // Pinia's $patch expects the updates to be compatible with UnwrapRef<State>
-      // We use a function to avoid type issues with Vue's reactivity system
+      // Use $patch with a function to handle Vue's reactivity
       store.$patch((state) => {
         Object.assign(state as any, updates);
       });
@@ -209,6 +134,7 @@ export function createStoreAdapter<State extends Record<string, any>>(
 
       return () => {
         if (isNotifying) {
+          // Defer unsubscribe until after current notification
           pendingUnsubscribes.add(listener);
         } else {
           listeners.delete(listener);
@@ -216,36 +142,9 @@ export function createStoreAdapter<State extends Record<string, any>>(
       };
     },
   };
-}
 
-/**
- * Wraps an existing Pinia store as a minimal adapter
- *
- * This allows you to use an existing Pinia store with Lattice.
- * Uses the same sophisticated subscription management as createStoreAdapter
- * to handle edge cases like unsubscribe during notification.
- *
- * @param store - An existing Pinia store
- * @param options - Optional configuration for the adapter
- * @returns A minimal store adapter with proper subscription management
- *
- * @example
- * ```typescript
- * const piniaStore = useCounterStore();
- * const adapter = wrapPiniaStore(piniaStore);
- * const store = createLatticeStore(componentFactory, adapter);
- * ```
- */
-export function wrapPiniaStore<State extends Record<string, any>>(
-  store: Store<string, State>,
-  options?: AdapterOptions
-): StoreAdapter<State> {
-  return createStoreAdapter(store, options);
+  return createLatticeStore(adapter);
 }
 
 // Re-export types for convenience
-export type { StoreAdapter } from '@lattice/core';
-export type { SubscribableStore } from '@lattice/core';
-
-// Note: Vue composables are available from '@lattice/runtime/vue'
-// They work with any adapter including this Pinia adapter
+export type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
