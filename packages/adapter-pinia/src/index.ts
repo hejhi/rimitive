@@ -52,7 +52,7 @@ export interface PiniaAdapterOptions {
  *
  * // Wrap it with the adapter
  * const createSlice = piniaAdapter(store);
- * 
+ *
  * // Use with Lattice components
  * const component = myComponent(createSlice);
  * ```
@@ -145,6 +145,3 @@ export function piniaAdapter<State extends Record<string, any>>(
 
   return createLatticeStore(adapter);
 }
-
-// Re-export types for convenience
-export type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';

@@ -23,33 +23,33 @@ export interface AdapterOptions {
  * Extract the state shape from a LatticeStore class
  */
 export type StateFromStore<T extends LatticeStore> = {
-  [K in keyof T as T[K] extends Function ? never : K]: T[K]
+  [K in keyof T as T[K] extends Function ? never : K]: T[K];
 };
 
 /**
  * Base class for creating Lattice stores with Svelte 5 runes.
- * 
+ *
  * Extend this class and define your state properties using $state() runes
  * for optimal performance. The class-based approach avoids deep proxy overhead
  * while maintaining reactivity.
- * 
+ *
  * @example
  * ```ts
  * // store.svelte.ts
  * import { LatticeStore, createSliceFactory } from '@lattice/adapter-svelte';
- * 
+ *
  * class AppStore extends LatticeStore {
  *   // Define reactive state properties
  *   count = $state(0);
  *   user = $state({ name: 'John', age: 25 });
  *   items = $state<string[]>([]);
- *   
+ *
  *   // Optional: Add computed properties
  *   get doubleCount() {
  *     return this.count * 2;
  *   }
  * }
- * 
+ *
  * // Create store instance and slice factory
  * const store = new AppStore();
  * export const createSlice = createSliceFactory(store);
@@ -62,28 +62,30 @@ export abstract class LatticeStore {
    */
   getState(): Record<string, any> {
     const state: Record<string, any> = {};
-    
+
     // Get all own property descriptors (includes getters)
-    const descriptors = Object.getOwnPropertyDescriptors(Object.getPrototypeOf(this));
-    
+    const descriptors = Object.getOwnPropertyDescriptors(
+      Object.getPrototypeOf(this)
+    );
+
     for (const [key, descriptor] of Object.entries(descriptors)) {
       // Skip constructor and methods
       if (key === 'constructor' || typeof descriptor.value === 'function') {
         continue;
       }
-      
+
       // Include properties with getters (these are our $state properties)
       if (descriptor.get) {
         state[key] = (this as any)[key];
       }
     }
-    
+
     return state;
   }
 
   /**
    * Updates the state with the provided updates.
-   * 
+   *
    * @param updates - Partial state updates to apply
    */
   setState(updates: Record<string, any>): void {
@@ -160,6 +162,3 @@ export function createSliceFactory<T extends LatticeStore>(
 
   return createLatticeStore(adapter);
 }
-
-// Re-export types for convenience
-export type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
