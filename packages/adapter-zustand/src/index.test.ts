@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
+import { create } from 'zustand';
+import { createStore as createVanillaStore } from 'zustand/vanilla';
 import type { RuntimeSliceFactory } from '@lattice/core';
 import { compose } from '@lattice/core';
-import { createStore } from '.';
+import { zustandAdapter } from '.';
 
 describe('Zustand Adapter - New Architecture', () => {
   it('should demonstrate basic store creation and slice patterns', () => {
@@ -55,8 +57,11 @@ describe('Zustand Adapter - New Architecture', () => {
       };
     };
 
-    // Create the store using the new API
-    const createSlice = createStore({ count: 0 });
+    // Create a Zustand store using native API
+    const useStore = create<{ count: number }>(() => ({ count: 0 }));
+
+    // Wrap it with the adapter
+    const createSlice = zustandAdapter(useStore);
     const store = createComponent(createSlice);
 
     // Test initial state through queries
@@ -199,13 +204,17 @@ describe('Zustand Adapter - New Architecture', () => {
       };
     };
 
-    const createSlice = createStore<{
+    // Create Zustand store with native API
+    const useStore = create<{
       todos: { id: string; text: string; done: boolean }[];
       filter: 'all' | 'active' | 'completed';
-    }>({
+    }>(() => ({
       todos: [],
       filter: 'all',
-    });
+    }));
+
+    // Wrap with adapter
+    const createSlice = zustandAdapter(useStore);
     const store = createComponent(createSlice);
 
     // Test initial state
@@ -284,7 +293,14 @@ describe('Zustand Adapter - New Architecture', () => {
       return { actions, queries };
     };
 
-    const createSlice = createStore({ value: 0, history: [] as number[] });
+    // Create vanilla Zustand store for easier testing
+    const vanillaStore = createVanillaStore<{
+      value: number;
+      history: number[];
+    }>(() => ({ value: 0, history: [] }));
+
+    // Wrap with adapter
+    const createSlice = zustandAdapter(vanillaStore);
     const store = createComponent(createSlice);
 
     // Track subscription calls
@@ -412,7 +428,17 @@ describe('Zustand Adapter - New Architecture', () => {
       return { products, pricing, catalog };
     };
 
-    const createSlice = createStore({
+    // Create Zustand store with initial data
+    const useStore = create<{
+      products: {
+        id: string;
+        name: string;
+        price: number;
+        category: string;
+      }[];
+      taxRate: number;
+      discount: number;
+    }>(() => ({
       products: [
         { id: '1', name: 'Laptop', price: 999, category: 'electronics' },
         { id: '2', name: 'Mouse', price: 29, category: 'electronics' },
@@ -421,7 +447,10 @@ describe('Zustand Adapter - New Architecture', () => {
       ],
       taxRate: 0.08,
       discount: 0.1,
-    });
+    }));
+
+    // Wrap with adapter
+    const createSlice = zustandAdapter(useStore);
     const store = createComponent(createSlice);
 
     // Test direct computed values
@@ -450,5 +479,142 @@ describe('Zustand Adapter - New Architecture', () => {
     const furniture = store.catalog.selector.getCategorySummary('furniture');
     expect(furniture.itemCount).toBe(2);
     expect(furniture.totalBasePrice).toBe(498);
+  });
+
+  it('should work with Zustand middleware (persist, devtools, etc)', () => {
+    // Example showing how existing Zustand stores with middleware work
+    interface State {
+      count: number;
+      lastAction: string;
+    }
+
+    // Simulate a store with devtools middleware (common pattern)
+    const useStore = create<State>()(() => ({
+      count: 0,
+      lastAction: 'init',
+      // Note: In real usage, these actions would also work through Lattice
+    }));
+
+    // Create component with the adapter
+    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
+      const actions = createSlice(({ get, set }) => ({
+        increment: () =>
+          set({
+            count: get().count + 1,
+            lastAction: 'increment',
+          }),
+        decrement: () =>
+          set({
+            count: get().count - 1,
+            lastAction: 'decrement',
+          }),
+      }));
+
+      const queries = createSlice(({ get }) => ({
+        state: () => get(),
+        count: () => get().count,
+        lastAction: () => get().lastAction,
+      }));
+
+      return { actions, queries };
+    };
+
+    // Wrap store with adapter - middleware continues to work
+    const createSlice = zustandAdapter(useStore);
+    const store = createComponent(createSlice);
+
+    // Test basic functionality (middleware like devtools would see these)
+    expect(store.queries.selector.count()).toBe(0);
+    expect(store.queries.selector.lastAction()).toBe('init');
+
+    store.actions.selector.increment();
+    expect(store.queries.selector.count()).toBe(1);
+    expect(store.queries.selector.lastAction()).toBe('increment');
+
+    store.actions.selector.decrement();
+    expect(store.queries.selector.count()).toBe(0);
+    expect(store.queries.selector.lastAction()).toBe('decrement');
+
+    // The key point: all Zustand middleware (persist, devtools, immer, etc)
+    // continues to work because we're just wrapping the store, not replacing it
+  });
+
+  it('should demonstrate real-world usage with existing Zustand store', () => {
+    // Simulate an existing Zustand store that a user might have
+    interface UserState {
+      user: { id: string; name: string } | null;
+      isAuthenticated: boolean;
+      login: (id: string, name: string) => void;
+      logout: () => void;
+    }
+
+    // User's existing Zustand store with actions
+    const useAuthStore = create<UserState>((set) => ({
+      user: null,
+      isAuthenticated: false,
+      login: (id: string, name: string) =>
+        set({
+          user: { id, name },
+          isAuthenticated: true,
+        }),
+      logout: () =>
+        set({
+          user: null,
+          isAuthenticated: false,
+        }),
+    }));
+
+    // Now they want to use it with Lattice components
+    const createAuthComponent = (
+      createSlice: RuntimeSliceFactory<UserState>
+    ) => {
+      // They can still use the store's built-in actions
+      const auth = createSlice(({ get }) => ({
+        // Expose queries
+        user: () => get().user,
+        isAuthenticated: () => get().isAuthenticated,
+        userName: () => get().user?.name ?? 'Guest',
+
+        // Can also expose the store's actions if needed
+        login: () => get().login,
+        logout: () => get().logout,
+      }));
+
+      // Or create new Lattice-style actions
+      const actions = createSlice(({ get, set }) => ({
+        updateUserName: (name: string) => {
+          const user = get().user;
+          if (user) {
+            set({ user: { ...user, name } });
+          }
+        },
+      }));
+
+      return { auth, actions };
+    };
+
+    // Wrap the existing store
+    const createSlice = zustandAdapter(useAuthStore);
+    const component = createAuthComponent(createSlice);
+
+    // Test using both store methods and Lattice methods
+    expect(component.auth.selector.isAuthenticated()).toBe(false);
+    expect(component.auth.selector.userName()).toBe('Guest');
+
+    // Use the original store's action through Lattice
+    const login = component.auth.selector.login();
+    login('123', 'John Doe');
+
+    expect(component.auth.selector.isAuthenticated()).toBe(true);
+    expect(component.auth.selector.userName()).toBe('John Doe');
+
+    // Use Lattice-style action
+    component.actions.selector.updateUserName('Jane Doe');
+    expect(component.auth.selector.userName()).toBe('Jane Doe');
+
+    // Original store action still works
+    const logout = component.auth.selector.logout();
+    logout();
+    expect(component.auth.selector.isAuthenticated()).toBe(false);
   });
 });

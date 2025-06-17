@@ -1,19 +1,19 @@
 /**
  * @fileoverview Zustand adapter for Lattice
  *
- * This adapter provides integration with Zustand for state management.
- * Following the minimal adapter pattern, it only provides store primitives.
- * All component execution is handled by the Lattice runtime.
+ * Provides a clean adapter pattern for integrating existing Zustand stores
+ * with Lattice components. Users create their stores with Zustand's native
+ * API and wrap them with this adapter.
  */
 
-import { createStore as zustandCreateStore, StoreApi } from 'zustand/vanilla';
+import type { StoreApi } from 'zustand';
 import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 
 /**
- * Configuration options for Zustand adapters
+ * Configuration options for the Zustand adapter
  */
-export interface AdapterOptions {
+export interface ZustandAdapterOptions {
   /**
    * Custom error handler for listener errors.
    * Default: logs to console.error
@@ -22,106 +22,77 @@ export interface AdapterOptions {
 }
 
 /**
- * Store enhancer function that allows middleware composition
+ * Creates a Lattice adapter from an existing Zustand store.
  *
- * @param stateCreator - Function that returns the initial state
- * @param createStore - Zustand's createStore function
- * @returns Enhanced store instance
- */
-export type StoreEnhancer<State> = (
-  stateCreator: () => State,
-  createStore: typeof zustandCreateStore
-) => StoreApi<State>;
-
-/**
- * Creates a Lattice store using Zustand for state management.
+ * This adapter wraps any Zustand store (including those with middleware)
+ * to work seamlessly with Lattice components. The store retains all its
+ * native functionality including middleware, devtools, persistence, etc.
  *
- * @param initialState - The initial state for the store
- * @param options - Optional configuration including middleware enhancer
- * @returns A RuntimeSliceFactory for creating slices
+ * @param store - An existing Zustand store created with zustand/vanilla or zustand
+ * @param options - Optional configuration for error handling
+ * @returns A RuntimeSliceFactory for creating Lattice slices
  *
  * @example
  * ```typescript
- * import { createStore } from '@lattice/adapter-zustand';
+ * import { create } from 'zustand';
+ * import { zustandAdapter } from '@lattice/adapter-zustand';
  *
- * const createSlice = createStore({ count: 0 });
+ * // Create a Zustand store with native API
+ * const useStore = create((set) => ({
+ *   count: 0,
+ *   increment: () => set((state) => ({ count: state.count + 1 }))
+ * }));
  *
+ * // Wrap it for use with Lattice components
+ * const createSlice = zustandAdapter(useStore);
+ *
+ * // Use in a Lattice component
  * const createComponent = (createSlice) => {
- *   const counter = createSlice(({ get, set }) => ({
- *     count: () => get().count,
- *     increment: () => set({ count: get().count + 1 })
+ *   const counter = createSlice(({ get }) => ({
+ *     value: () => get().count,
+ *     // Note: You can also use the store's methods directly
  *   }));
- *
  *   return { counter };
  * };
- *
- * const component = createComponent(createSlice);
- * component.counter.selector.increment();
  * ```
  *
  * @example With middleware
  * ```typescript
- * import { persist } from 'zustand/middleware';
+ * import { create } from 'zustand';
+ * import { persist, devtools } from 'zustand/middleware';
+ * import { zustandAdapter } from '@lattice/adapter-zustand';
  *
- * const createSlice = createStore(
- *   { count: 0 },
- *   {
- *     enhancer: (stateCreator, createStore) =>
- *       createStore(persist(stateCreator, { name: 'app-storage' }))
- *   }
+ * const useStore = create(
+ *   devtools(
+ *     persist(
+ *       (set) => ({ count: 0, increment: () => set((s) => ({ count: s.count + 1 })) }),
+ *       { name: 'app-storage' }
+ *     )
+ *   )
  * );
+ *
+ * const createSlice = zustandAdapter(useStore);
  * ```
  */
-export function createStore<State>(
-  initialState: State,
-  options?: AdapterOptions & { enhancer?: StoreEnhancer<State> }
-): RuntimeSliceFactory<State> {
-  // Create Zustand store with initial state, optionally enhanced
-  const store = options?.enhancer
-    ? options.enhancer(() => initialState, zustandCreateStore)
-    : zustandCreateStore<State>(() => initialState);
-
-  // Create adapter from the Zustand store
-  const adapter = createStoreAdapter(store, options);
-
-  // Return the slice factory
-  return createLatticeStore(adapter);
-}
-
-/**
- * Creates a minimal adapter from a Zustand store
- *
- * This wraps a Zustand store with minimal adapter interface.
- * We mostly pass through Zustand's native methods directly to ensure
- * middleware and all Zustand features work correctly, but we add
- * error handling and proper unsubscribe-during-notification support.
- *
- * @param store - The Zustand store to wrap
- * @param options - Optional configuration for the adapter
- * @returns A minimal store adapter
- */
-export function createStoreAdapter<State>(
+export function zustandAdapter<State>(
   store: StoreApi<State>,
-  options?: AdapterOptions
-): StoreAdapter<State> {
-  // For error handling
+  options?: ZustandAdapterOptions
+): RuntimeSliceFactory<State> {
   const handleError =
     options?.onError ??
     ((error) => {
       console.error('Error in store listener:', error);
     });
 
-  // Performance optimization: Direct listener management without double subscription
+  // Performance optimization: Direct listener management
   const listeners = new Set<() => void>();
   const pendingUnsubscribes = new Set<() => void>();
   let isNotifying = false;
 
   // Subscribe to Zustand store once
   store.subscribe(() => {
-    // Notify all listeners
     isNotifying = true;
 
-    // Use for...of directly on the Set to avoid array allocation
     for (const listener of listeners) {
       try {
         listener();
@@ -139,12 +110,11 @@ export function createStoreAdapter<State>(
     pendingUnsubscribes.clear();
   });
 
-  return {
+  const adapter: StoreAdapter<State> = {
     getState: () => store.getState(),
     setState: (updates) => store.setState(updates),
     subscribe: (listener) => {
       listeners.add(listener);
-
       return () => {
         if (isNotifying) {
           pendingUnsubscribes.add(listener);
@@ -154,7 +124,10 @@ export function createStoreAdapter<State>(
       };
     },
   };
+
+  return createLatticeStore(adapter);
 }
 
 // Re-export types for convenience
-export type { StoreAdapter } from '@lattice/core';
+export type { StoreApi } from 'zustand';
+export type { RuntimeSliceFactory } from '@lattice/core';
