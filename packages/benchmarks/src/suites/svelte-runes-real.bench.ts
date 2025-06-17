@@ -12,7 +12,6 @@ import {
   createComplexStore,
   createBatchStore,
   createDirectAccessStore,
-  createOptimizedCounterStore,
 } from '@lattice/adapter-svelte/dist/benchmark-store.js';
 
 // Test iterations
@@ -50,14 +49,6 @@ describe('Svelte 5 Runes + Lattice Performance (Real)', () => {
 
       for (let i = 0; i < ITERATIONS; i++) {
         component.counter.selector.increment();
-      }
-    });
-
-    bench('lattice + runes (class-based) - state updates', () => {
-      const { component } = createOptimizedCounterStore();
-
-      for (let i = 0; i < ITERATIONS; i++) {
-        component.counter.selector.setValue(i);
       }
     });
   });

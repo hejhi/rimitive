@@ -5,7 +5,8 @@
  * where reactive state is passed to the adapter.
  */
 
-import type { StoreAdapter } from '@lattice/core';
+import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
+import { createLatticeStore } from '@lattice/core';
 
 /**
  * Configuration options for Svelte adapters
@@ -19,6 +20,13 @@ export interface AdapterOptions {
 }
 
 /**
+ * Extract the state shape from a LatticeStore class
+ */
+export type StateFromStore<T extends LatticeStore> = {
+  [K in keyof T as T[K] extends Function ? never : K]: T[K]
+};
+
+/**
  * Base class for creating Lattice stores with Svelte 5 runes.
  * 
  * Extend this class and define your state properties using $state() runes
@@ -28,8 +36,7 @@ export interface AdapterOptions {
  * @example
  * ```ts
  * // store.svelte.ts
- * import { LatticeStore, createStoreAdapter } from '@lattice/adapter-svelte';
- * import { createLatticeStore } from '@lattice/core';
+ * import { LatticeStore, createSliceFactory } from '@lattice/adapter-svelte';
  * 
  * class AppStore extends LatticeStore {
  *   // Define reactive state properties
@@ -43,12 +50,9 @@ export interface AdapterOptions {
  *   }
  * }
  * 
- * // Create store instance
+ * // Create store instance and slice factory
  * const store = new AppStore();
- * 
- * // Create adapter and slice factory
- * const adapter = createStoreAdapter(store);
- * export const createSlice = createLatticeStore(adapter);
+ * export const createSlice = createSliceFactory(store);
  * ```
  */
 export abstract class LatticeStore {
@@ -59,9 +63,19 @@ export abstract class LatticeStore {
   getState(): Record<string, any> {
     const state: Record<string, any> = {};
     
-    // Get all enumerable properties from the instance
-    for (const key of Object.keys(this)) {
-      state[key] = (this as any)[key];
+    // Get all own property descriptors (includes getters)
+    const descriptors = Object.getOwnPropertyDescriptors(Object.getPrototypeOf(this));
+    
+    for (const [key, descriptor] of Object.entries(descriptors)) {
+      // Skip constructor and methods
+      if (key === 'constructor' || typeof descriptor.value === 'function') {
+        continue;
+      }
+      
+      // Include properties with getters (these are our $state properties)
+      if (descriptor.get) {
+        state[key] = (this as any)[key];
+      }
     }
     
     return state;
@@ -83,19 +97,18 @@ export abstract class LatticeStore {
 }
 
 /**
- * Creates a minimal adapter from a Svelte LatticeStore instance
+ * Creates a RuntimeSliceFactory from a Svelte LatticeStore instance
  *
- * This wraps a LatticeStore with the minimal adapter interface.
- * Svelte handles all reactivity through its runes system.
+ * This wraps a LatticeStore with the minimal adapter interface and
+ * returns a slice factory ready to use.
  *
  * @param store - The LatticeStore instance
  * @param options - Optional configuration for the adapter
- * @returns A minimal store adapter
+ * @returns A RuntimeSliceFactory for creating slices
  *
  * @example
  * ```ts
- * import { LatticeStore, createStoreAdapter } from '@lattice/adapter-svelte';
- * import { createLatticeStore } from '@lattice/core';
+ * import { LatticeStore, createSliceFactory } from '@lattice/adapter-svelte';
  *
  * class AppStore extends LatticeStore {
  *   count = $state(0);
@@ -103,14 +116,13 @@ export abstract class LatticeStore {
  * }
  *
  * const store = new AppStore();
- * const adapter = createStoreAdapter(store);
- * export const createSlice = createLatticeStore(adapter);
+ * export const createSlice = createSliceFactory(store);
  * ```
  */
-export function createStoreAdapter<T extends LatticeStore>(
+export function createSliceFactory<T extends LatticeStore>(
   store: T,
   options?: AdapterOptions
-): StoreAdapter<T> {
+): RuntimeSliceFactory<StateFromStore<T>> {
   // For error handling
   const handleError =
     options?.onError ??
@@ -122,8 +134,8 @@ export function createStoreAdapter<T extends LatticeStore>(
   // for compatibility with the adapter interface
   const listeners = new Set<() => void>();
 
-  return {
-    getState: () => store.getState() as T,
+  const adapter: StoreAdapter<StateFromStore<T>> = {
+    getState: () => store.getState() as StateFromStore<T>,
     setState: (updates) => {
       store.setState(updates);
 
@@ -145,7 +157,9 @@ export function createStoreAdapter<T extends LatticeStore>(
       };
     },
   };
+
+  return createLatticeStore(adapter);
 }
 
 // Re-export types for convenience
-export type { StoreAdapter } from '@lattice/core';
+export type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
