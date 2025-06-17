@@ -123,3 +123,28 @@ export function createDirectAccessStore() {
     getValue: () => state.count
   };
 }
+
+// Optimized class-based store for better write performance
+class CounterState {
+  count = $state(0);
+}
+
+export function createOptimizedCounterStore() {
+  const state = new CounterState();
+  const createSlice = createStore(state);
+  
+  const createComponent = (createSlice: RuntimeSliceFactory<CounterState>) => {
+    const counter = createSlice(({ get, set }) => ({
+      value: () => get().count,
+      setValue: (count: number) => set({ count }),
+      increment: () => set({ count: get().count + 1 }),
+      decrement: () => set({ count: get().count - 1 })
+    }));
+    return { counter };
+  };
+  
+  return {
+    state,
+    component: createComponent(createSlice)
+  };
+}

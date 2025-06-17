@@ -5,3 +5,4 @@
  */
 
 export { createStore } from './svelte-adapter';
+export { derived, deriveValues, useSlice } from './svelte-runtime.svelte';
