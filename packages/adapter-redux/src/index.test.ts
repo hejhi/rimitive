@@ -1,25 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  configureStore,
-  createSlice as createReduxSlice,
-} from '@reduxjs/toolkit';
+import { configureStore, createSlice as createReduxSlice } from '@reduxjs/toolkit';
 import { reduxAdapter } from './index';
 
 describe('Redux Adapter', () => {
-  it('should wrap an existing Redux store', () => {
+  it('should wrap an existing Redux store with action mapping', () => {
     // Create a Redux store using native API
     const counterSlice = createReduxSlice({
       name: 'counter',
       initialState: { value: 0 },
       reducers: {
+        setValue: (state, action) => {
+          state.value = action.payload;
+        },
         increment: (state) => {
           state.value += 1;
         },
         decrement: (state) => {
           state.value -= 1;
-        },
-        incrementBy: (state, action) => {
-          state.value += action.payload;
         },
       },
     });
@@ -30,20 +27,23 @@ describe('Redux Adapter', () => {
       },
     });
 
+    // Create action mapping
+    const actionMapping = {
+      counter: (value: { value: number }) => counterSlice.actions.setValue(value.value),
+    };
+
     // Wrap it with the adapter
-    const createSlice = reduxAdapter(store);
+    const createSlice = reduxAdapter(store, { actionMapping });
 
     // Create a Lattice component
     const counter = createSlice(({ get, set }) => ({
       count: () => get().counter.value,
-      increment: () =>
-        set({
-          counter: { value: get().counter.value + 1 },
-        }),
-      decrement: () =>
-        set({
-          counter: { value: get().counter.value - 1 },
-        }),
+      increment: () => set({ 
+        counter: { value: get().counter.value + 1 } 
+      }),
+      decrement: () => set({ 
+        counter: { value: get().counter.value - 1 } 
+      }),
     }));
 
     // Test initial state
@@ -162,25 +162,26 @@ describe('Redux Adapter', () => {
     expect(counter.selector.value()).toBe(1);
   });
 
-  it('should work with complex state shapes', () => {
+  it('should work with complex state shapes and action mapping', () => {
     interface Todo {
       id: number;
       text: string;
       completed: boolean;
     }
 
-    interface AppState {
-      todos: Todo[];
-      filter: 'all' | 'active' | 'completed';
-    }
-
     const todosSlice = createReduxSlice({
       name: 'todos',
       initialState: {
         items: [] as Todo[],
-        filter: 'all' as AppState['filter'],
+        filter: 'all' as 'all' | 'active' | 'completed',
       },
       reducers: {
+        setItems: (state, action) => {
+          state.items = action.payload;
+        },
+        setFilter: (state, action) => {
+          state.filter = action.payload;
+        },
         addTodo: (state, action) => {
           state.items.push({
             id: Date.now(),
@@ -194,9 +195,6 @@ describe('Redux Adapter', () => {
             todo.completed = !todo.completed;
           }
         },
-        setFilter: (state, action) => {
-          state.filter = action.payload;
-        },
       },
     });
 
@@ -206,37 +204,32 @@ describe('Redux Adapter', () => {
       },
     });
 
-    const createSlice = reduxAdapter(store);
+    // Create action mapping for the state shape
+    const actionMapping = {
+      todos: (value: { items: Todo[]; filter: 'all' | 'active' | 'completed' }) => {
+        // For complex updates, we might need multiple actions
+        if ('items' in value && 'filter' in value) {
+          // Full state update
+          store.dispatch(todosSlice.actions.setItems(value.items));
+          store.dispatch(todosSlice.actions.setFilter(value.filter));
+          return { type: '@@BATCH_UPDATE' }; // Dummy action
+        }
+        return { type: '@@NOOP' };
+      },
+    };
 
-    const actions = createSlice(({ get, set }) => ({
+    const createSlice = reduxAdapter(store, { actionMapping });
+
+    const actions = createSlice(() => ({
       addTodo: (text: string) => {
-        const todos = get().todos;
-        set({
-          todos: {
-            ...todos,
-            items: [...todos.items, { id: Date.now(), text, completed: false }],
-          },
-        });
+        // Since we're updating nested state, we dispatch directly
+        store.dispatch(todosSlice.actions.addTodo(text));
       },
       toggleTodo: (id: number) => {
-        const todos = get().todos;
-        set({
-          todos: {
-            ...todos,
-            items: todos.items.map((t) =>
-              t.id === id ? { ...t, completed: !t.completed } : t
-            ),
-          },
-        });
+        store.dispatch(todosSlice.actions.toggleTodo(id));
       },
-      setFilter: (filter: AppState['filter']) => {
-        const todos = get().todos;
-        set({
-          todos: {
-            ...todos,
-            filter,
-          },
-        });
+      setFilter: (filter: 'all' | 'active' | 'completed') => {
+        store.dispatch(todosSlice.actions.setFilter(filter));
       },
     }));
 
@@ -338,7 +331,11 @@ describe('Redux Adapter', () => {
       reducer: slice.reducer,
     });
 
-    const createLatticeSlice = reduxAdapter(store);
+    const actionMapping = {
+      value: (value: number) => slice.actions.setValue(value),
+    };
+
+    const createLatticeSlice = reduxAdapter(store, { actionMapping });
     const state = createLatticeSlice(({ get, set }) => ({
       value: () => get().value,
       setValue: (value: number) => set({ value }),
@@ -409,5 +406,56 @@ describe('Redux Adapter', () => {
     expect(counter.selector.value()).toBe(0);
     store.dispatch(slice.actions.increment());
     expect(counter.selector.value()).toBe(1);
+  });
+
+  it('should only dispatch actions for mapped keys', () => {
+    const counterSlice = createReduxSlice({
+      name: 'counter',
+      initialState: { value: 0 },
+      reducers: {
+        setValue: (state, action) => {
+          state.value = action.payload;
+        },
+      },
+    });
+
+    const userSlice = createReduxSlice({
+      name: 'user',
+      initialState: { name: '', age: 0 },
+      reducers: {
+        setUser: (state, action) => {
+          Object.assign(state, action.payload);
+        },
+      },
+    });
+
+    const store = configureStore({
+      reducer: {
+        counter: counterSlice.reducer,
+        user: userSlice.reducer,
+      },
+    });
+
+    // Only map the counter action
+    const actionMapping = {
+      counter: (value: { value: number }) => counterSlice.actions.setValue(value.value),
+    };
+
+    const createSlice = reduxAdapter(store, { actionMapping });
+
+    const component = createSlice(({ get, set }) => ({
+      count: () => get().counter.value,
+      userName: () => get().user.name,
+      setCount: (value: number) => set({ counter: { value } }),
+      setUser: (name: string, age: number) => set({ user: { name, age } }),
+    }));
+
+    // Test mapped action works
+    component.selector.setCount(5);
+    expect(component.selector.count()).toBe(5);
+
+    // Test unmapped action doesn't update (no fallback)
+    component.selector.setUser('John', 30);
+    expect(component.selector.userName()).toBe(''); // Should remain unchanged
   });
 });

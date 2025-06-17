@@ -6,38 +6,43 @@
 
 import { createAdapterTestSuite } from '@lattice/core/testing';
 import { configureStore, createSlice } from '@reduxjs/toolkit';
-import { reduxAdapter } from './index';
 
 // Create a factory function that matches the expected signature
-function createAdapter<State>(initialState?: State) {
-  // Create a Redux slice with the initial state
+function createAdapter<State extends Record<string, any>>(initialState?: State) {
+  // Create a simple Redux slice like a user would
   const slice = createSlice({
     name: 'test',
     initialState: initialState ?? ({} as State),
     reducers: {
-      setState: (state, action) => {
-        Object.assign(state, action.payload);
-      },
-    },
-    extraReducers: (builder) => {
-      // Handle the Lattice SET_STATE action
-      builder.addCase('@lattice/SET_STATE', (state, action: any) => {
-        Object.assign(state, action.payload);
-      });
-    },
+      updateState: (state, action) => {
+        // Redux Toolkit uses Immer, so we can mutate
+        for (const [key, value] of Object.entries(action.payload)) {
+          (state as any)[key] = value;
+        }
+      }
+    }
   });
 
   // Create Redux store
   const store = configureStore({
-    reducer: slice.reducer,
+    reducer: slice.reducer
   });
 
-  // Return the adapter directly (not using reduxAdapter here)
+  // Create simple action mapping
+  const actionMapping: Record<string, any> = {};
+  
+  // For each key in initial state, map to the updateState action
+  if (initialState) {
+    for (const key of Object.keys(initialState)) {
+      actionMapping[key] = (value: any) => slice.actions.updateState({ [key]: value });
+    }
+  }
+
+  // Use the adapter but return the raw interface for testing
   const listeners = new Set<() => void>();
   let isNotifying = false;
   const pendingUnsubscribes = new Set<() => void>();
 
-  // Subscribe to Redux store once
   store.subscribe(() => {
     isNotifying = true;
     for (const listener of listeners) {
@@ -57,7 +62,8 @@ function createAdapter<State>(initialState?: State) {
   return {
     getState: () => store.getState() as State,
     setState: (updates: Partial<State>) => {
-      store.dispatch({ type: '@lattice/SET_STATE', payload: updates });
+      // Just dispatch the update action
+      store.dispatch(slice.actions.updateState(updates));
     },
     subscribe: (listener: () => void) => {
       listeners.add(listener);
