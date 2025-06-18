@@ -6,9 +6,10 @@
 
 import { describe, bench } from 'vitest';
 import { createStore as createZustandStore } from 'zustand/vanilla';
-import { createStore as createLatticeZustandStore } from '@lattice/adapter-zustand';
+import { create } from 'zustand';
+import { zustandAdapter } from '@lattice/adapter-zustand';
 import { configureStore } from '@reduxjs/toolkit';
-import { createStore } from '@lattice/adapter-redux';
+import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
 // Test iterations
@@ -27,7 +28,8 @@ describe('Adapter Overhead', () => {
     });
 
     bench('zustand + lattice - state updates', () => {
-      const createSlice = createLatticeZustandStore({ count: 0 });
+      const useStore = create<{ count: number }>(() => ({ count: 0 }));
+      const createSlice = zustandAdapter(useStore);
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number }>
       ) => {
@@ -61,7 +63,8 @@ describe('Adapter Overhead', () => {
     });
 
     bench('zustand + lattice - subscriptions', () => {
-      const createSlice = createLatticeZustandStore({ count: 0 });
+      const useStore = create<{ count: number }>(() => ({ count: 0 }));
+      const createSlice = zustandAdapter(useStore);
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number }>
       ) => {
@@ -118,7 +121,11 @@ describe('Adapter Overhead', () => {
     });
 
     bench('redux + lattice - state updates', () => {
-      const { createSlice } = createStore({ count: 0 });
+      const store = configureStore({
+        reducer: latticeReducer.reducer,
+        preloadedState: { count: 0 },
+      });
+      const createSlice = reduxAdapter<{ count: number }>(store);
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number }>
       ) => {
@@ -159,7 +166,8 @@ describe('Adapter Overhead', () => {
       });
 
       bench('zustand - lattice wrapped', () => {
-        const createSlice = createLatticeZustandStore({ count: 0 });
+        const useStore = create<{ count: number }>(() => ({ count: 0 }));
+        const createSlice = zustandAdapter(useStore);
         const createComponent = (
           createSlice: RuntimeSliceFactory<{ count: number }>
         ) => {
@@ -190,7 +198,8 @@ describe('Adapter Overhead', () => {
 
       for (let i = 0; i < 1000; i++) {
         const value = i;
-        const createSlice = createLatticeZustandStore({ value });
+        const useStore = create<{ value: number }>(() => ({ value }));
+        const createSlice = zustandAdapter(useStore);
         const createComponent = (
           createSlice: RuntimeSliceFactory<{ value: number }>
         ) => {

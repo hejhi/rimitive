@@ -5,8 +5,10 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createStore as createZustandStore } from '@lattice/adapter-zustand';
-import { createStore } from '@lattice/adapter-redux';
+import { create } from 'zustand';
+import { zustandAdapter } from '@lattice/adapter-zustand';
+import { configureStore } from '@reduxjs/toolkit';
+import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
@@ -71,7 +73,8 @@ const createStandardComponent = (
 describe('Adapter Performance Rankings', () => {
   describe('State Update Performance', () => {
     bench('zustand adapter - updates', () => {
-      const createSlice = createZustandStore(getInitialState());
+      const useStore = create<CountSlice>(() => getInitialState());
+      const createSlice = zustandAdapter(useStore);
       const store = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
@@ -86,16 +89,20 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - updates', () => {
-      const { createSlice } = createStore(getInitialState());
-      const store = createStandardComponent(createSlice);
+      const store = configureStore({
+        reducer: latticeReducer.reducer,
+        preloadedState: getInitialState(),
+      });
+      const createSlice = reduxAdapter<CountSlice>(store);
+      const components = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.increment();
+        components.counter.selector.increment();
         if (i % 10 === 0) {
-          store.items.selector.addItem(`item-${i}`);
+          components.items.selector.addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          store.metadata.selector.updateTimestamp();
+          components.metadata.selector.updateTimestamp();
         }
       }
     });
@@ -118,7 +125,8 @@ describe('Adapter Performance Rankings', () => {
 
   describe('Complex State Operations', () => {
     bench('zustand adapter - complex operations', () => {
-      const createSlice = createZustandStore(getInitialState());
+      const useStore = create<CountSlice>(() => getInitialState());
+      const createSlice = zustandAdapter(useStore);
       const store = createStandardComponent(createSlice);
 
       // Add items
@@ -137,21 +145,25 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - complex operations', () => {
-      const { createSlice } = createStore(getInitialState());
-      const store = createStandardComponent(createSlice);
+      const store = configureStore({
+        reducer: latticeReducer.reducer,
+        preloadedState: getInitialState(),
+      });
+      const createSlice = reduxAdapter<CountSlice>(store);
+      const components = createStandardComponent(createSlice);
 
       // Add items
       for (let i = 0; i < 100; i++) {
-        store.items.selector.addItem(`item-${i}`);
+        components.items.selector.addItem(`item-${i}`);
       }
 
       // Update counter while removing items
       for (let i = 99; i >= 0; i--) {
-        store.counter.selector.increment();
+        components.counter.selector.increment();
         if (i % 2 === 0) {
-          store.items.selector.removeItem(0);
+          components.items.selector.removeItem(0);
         }
-        store.metadata.selector.incrementVersion();
+        components.metadata.selector.incrementVersion();
       }
     });
 
@@ -177,7 +189,8 @@ describe('Adapter Performance Rankings', () => {
 
   describe('Subscription Performance', () => {
     bench('zustand adapter - subscriptions', () => {
-      const createSlice = createZustandStore(getInitialState());
+      const useStore = create<CountSlice>(() => getInitialState());
+      const createSlice = zustandAdapter(useStore);
       const store = createStandardComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
@@ -201,15 +214,19 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - subscriptions', () => {
-      const { createSlice } = createStore(getInitialState());
-      const store = createStandardComponent(createSlice);
+      const store = configureStore({
+        reducer: latticeReducer.reducer,
+        preloadedState: getInitialState(),
+      });
+      const createSlice = reduxAdapter<CountSlice>(store);
+      const components = createStandardComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
 
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
         unsubscribers.push(
-          store.counter.subscribe(() => {
+          components.counter.subscribe(() => {
             notificationCount++;
           })
         );
@@ -217,7 +234,7 @@ describe('Adapter Performance Rankings', () => {
 
       // Trigger updates
       for (let i = 0; i < 100; i++) {
-        store.counter.selector.increment();
+        components.counter.selector.increment();
       }
 
       // Cleanup
@@ -254,7 +271,8 @@ describe('Adapter Performance Rankings', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        const createSlice = createZustandStore(getInitialState());
+        const useStore = create<CountSlice>(() => getInitialState());
+        const createSlice = zustandAdapter(useStore);
         stores.push(createStandardComponent(createSlice));
       }
     });
@@ -263,7 +281,11 @@ describe('Adapter Performance Rankings', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        const { createSlice } = createStore(getInitialState());
+        const store = configureStore({
+          reducer: latticeReducer.reducer,
+          preloadedState: getInitialState(),
+        });
+        const createSlice = reduxAdapter<CountSlice>(store);
         stores.push(createStandardComponent(createSlice));
       }
     });

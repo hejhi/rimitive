@@ -5,26 +5,13 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createStore as createZustandStore } from '@lattice/adapter-zustand';
-import { createStore } from '@lattice/adapter-redux';
+import { create } from 'zustand';
+import { zustandAdapter } from '@lattice/adapter-zustand';
+import { configureStore } from '@reduxjs/toolkit';
+import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
-import { LatticeStore, createSliceFactory } from '@lattice/adapter-svelte';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
-// Helper for memory benchmarks that need dynamic state
-function createSvelteStore<T extends Record<string, any>>(initialState: T): RuntimeSliceFactory<T> {
-  // Create a dynamic store class
-  class DynamicStore extends LatticeStore {
-    constructor() {
-      super();
-      // Copy all properties from initial state
-      Object.assign(this, initialState);
-    }
-  }
-  
-  const store = new DynamicStore();
-  return createSliceFactory(store) as unknown as RuntimeSliceFactory<T>;
-}
 
 describe('Memory Usage Patterns', () => {
   describe('Large State Trees', () => {
@@ -107,7 +94,8 @@ describe('Memory Usage Patterns', () => {
 
     bench('zustand - large state (1000 items)', () => {
       const initialState = createLargeInitialState(1000);
-      const createSlice = createZustandStore(initialState);
+      const useStore = create<any>(() => initialState);
+      const createSlice = zustandAdapter(useStore);
       const store = createLargeStateComponent(1000)(createSlice);
 
       // Perform updates
@@ -123,15 +111,19 @@ describe('Memory Usage Patterns', () => {
 
     bench('redux - large state (1000 items)', () => {
       const initialState = createLargeInitialState(1000);
-      const { createSlice } = createStore(initialState);
-      const store = createLargeStateComponent(1000)(createSlice);
+      const store = configureStore({
+        reducer: latticeReducer.reducer,
+        preloadedState: initialState,
+      });
+      const createSlice = reduxAdapter<any>(store);
+      const components = createLargeStateComponent(1000)(createSlice);
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
-        store.users.selector.updateUser(`user-${i}`, {
+        components.users.selector.updateUser(`user-${i}`, {
           name: `Updated User ${i}`,
         });
-        store.posts.selector.updatePost(`post-${i}`, {
+        components.posts.selector.updatePost(`post-${i}`, {
           title: `Updated Post ${i}`,
         });
       }
@@ -153,21 +145,6 @@ describe('Memory Usage Patterns', () => {
       }
     });
 
-    bench('svelte - large state (1000 items)', () => {
-      const initialState = createLargeInitialState(1000);
-      const createSlice = createSvelteStore(initialState);
-      const store = createLargeStateComponent(1000)(createSlice);
-
-      // Perform updates
-      for (let i = 0; i < 100; i++) {
-        store.users.selector.updateUser(`user-${i}`, {
-          name: `Updated User ${i}`,
-        });
-        store.posts.selector.updatePost(`post-${i}`, {
-          title: `Updated Post ${i}`,
-        });
-      }
-    });
   });
 
   describe('Subscription Memory Leaks', () => {
@@ -185,7 +162,8 @@ describe('Memory Usage Patterns', () => {
 
       // Create many stores with subscriptions
       for (let i = 0; i < 100; i++) {
-        const createSlice = createZustandStore({ value: 0 });
+        const useStore = create<{ value: number }>(() => ({ value: 0 }));
+        const createSlice = zustandAdapter(useStore);
         const store = createComponent(createSlice);
         stores.push(store);
 
@@ -225,19 +203,23 @@ describe('Memory Usage Patterns', () => {
 
       // Create many stores with subscriptions
       for (let i = 0; i < 100; i++) {
-        const { createSlice } = createStore({ value: 0 });
-        const store = createComponent(createSlice);
-        stores.push(store);
+        const store = configureStore({
+          reducer: latticeReducer.reducer,
+          preloadedState: { value: 0 },
+        });
+        const createSlice = reduxAdapter<{ value: number }>(store);
+        const component = createComponent(createSlice);
+        stores.push(component);
 
         // Add subscriptions to each store
         const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
-          unsubscribers.push(store.slice.subscribe(() => {}));
+          unsubscribers.push(component.slice.subscribe(() => {}));
         }
         allUnsubscribers.push(unsubscribers);
 
         // Trigger some updates
-        store.slice.selector.increment();
+        component.slice.selector.increment();
       }
 
       // Cleanup all subscriptions
@@ -291,45 +273,6 @@ describe('Memory Usage Patterns', () => {
       });
     });
 
-    bench('svelte - subscription cleanup', () => {
-      const createComponent = (createSlice: RuntimeSliceFactory<{ value: number }>) => {
-        const slice = createSlice(({ get, set }: any) => ({
-          increment: () => set({ value: get().value + 1 }),
-          getValue: () => get().value,
-        }));
-        return { slice };
-      };
-
-      const stores: any[] = [];
-      const allUnsubscribers: (() => void)[][] = [];
-
-      // Create many stores with subscriptions
-      for (let i = 0; i < 100; i++) {
-        const createSlice = createSvelteStore({ value: 0 });
-        const store = createComponent(createSlice);
-        stores.push(store);
-
-        // Add subscriptions to each store
-        const unsubscribers: (() => void)[] = [];
-        for (let j = 0; j < 10; j++) {
-          unsubscribers.push(store.slice.subscribe(() => {}));
-        }
-        allUnsubscribers.push(unsubscribers);
-
-        // Trigger some updates
-        store.slice.selector.increment();
-      }
-
-      // Cleanup all subscriptions
-      allUnsubscribers.forEach((unsubscribers) => {
-        unsubscribers.forEach((unsub) => unsub());
-      });
-
-      // Destroy stores - Svelte adapter has destroy method
-      stores.forEach((store: any) => {
-        if (store.destroy) store.destroy();
-      });
-    });
   });
 
   describe('Rapid Store Creation/Destruction', () => {
@@ -351,7 +294,8 @@ describe('Memory Usage Patterns', () => {
 
       // Rapidly create and destroy stores
       for (let i = 0; i < 1000; i++) {
-        const createSlice = createZustandStore({ value: i, history: [] as number[] });
+        const useStore = create<{ value: number; history: number[] }>(() => ({ value: i, history: [] }));
+        const createSlice = zustandAdapter(useStore);
         const store = createComponent(i)(createSlice);
 
         // Do some work
@@ -386,20 +330,24 @@ describe('Memory Usage Patterns', () => {
 
       // Rapidly create and destroy stores
       for (let i = 0; i < 1000; i++) {
-        const { createSlice } = createStore({ value: i, history: [] as number[] });
-        const store = createComponent(i)(createSlice);
+        const store = configureStore({
+          reducer: latticeReducer.reducer,
+          preloadedState: { value: i, history: [] as number[] },
+        });
+        const createSlice = reduxAdapter<{ value: number; history: number[] }>(store);
+        const component = createComponent(i)(createSlice);
 
         // Do some work
-        store.slice.selector.update(i * 2);
-        store.slice.selector.update(i * 3);
-        totalValue += store.slice.selector.getValue();
+        component.slice.selector.update(i * 2);
+        component.slice.selector.update(i * 3);
+        totalValue += component.slice.selector.getValue();
 
         // Add and remove subscription
-        const unsub = store.slice.subscribe(() => {});
+        const unsub = component.slice.subscribe(() => {});
         unsub();
 
         // Destroy if possible
-        if ((store as any).destroy) (store as any).destroy();
+        if ((component as any).destroy) (component as any).destroy();
       }
     });
 
@@ -438,41 +386,5 @@ describe('Memory Usage Patterns', () => {
       }
     });
 
-    bench('svelte - rapid lifecycle', () => {
-      const createComponent =
-        (_value: number) =>
-        (createSlice: RuntimeSliceFactory<{ value: number; history: number[] }>) => {
-          const slice = createSlice(({ get, set }: any) => ({
-            update: (newValue: number) => {
-              const history = [...get().history, get().value];
-              set({ value: newValue, history });
-            },
-            getValue: () => get().value,
-          }));
-          return { slice };
-        };
-
-      let totalValue = 0;
-
-      // Rapidly create and destroy stores
-      for (let i = 0; i < 1000; i++) {
-        const createSlice = createSvelteStore({ value: i, history: [] as number[] });
-        const store = createComponent(i)(createSlice);
-
-        // Do some work
-        store.slice.selector.update(i * 2);
-        store.slice.selector.update(i * 3);
-        totalValue += store.slice.selector.getValue();
-
-        // Add and remove subscription
-        const unsub = store.slice.subscribe(() => {});
-        unsub();
-
-        // Always destroy Svelte stores to clean up
-        if ('destroy' in store && typeof store.destroy === 'function') {
-          store.destroy();
-        }
-      }
-    });
   });
 });
