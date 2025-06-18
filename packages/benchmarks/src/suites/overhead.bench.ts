@@ -8,7 +8,7 @@ import { describe, bench } from 'vitest';
 import { createStore as createZustandStore } from 'zustand/vanilla';
 import { createStore as createLatticeZustandStore } from '@lattice/adapter-zustand';
 import { configureStore } from '@reduxjs/toolkit';
-import { createStore as createLatticeReduxStore } from '@lattice/adapter-redux';
+import { createStore } from '@lattice/adapter-redux';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
 // Test iterations
@@ -118,7 +118,7 @@ describe('Adapter Overhead', () => {
     });
 
     bench('redux + lattice - state updates', () => {
-      const createSlice = createLatticeReduxStore({ count: 0 });
+      const { createSlice } = createStore({ count: 0 });
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number }>
       ) => {

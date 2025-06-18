@@ -6,7 +6,7 @@
 
 import { describe, bench } from 'vitest';
 import { createStore as createZustandStore } from '@lattice/adapter-zustand';
-import { createStore as createReduxStore } from '@lattice/adapter-redux';
+import { createStore } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
@@ -86,7 +86,7 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - updates', () => {
-      const createSlice = createReduxStore(getInitialState());
+      const { createSlice } = createStore(getInitialState());
       const store = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
@@ -137,7 +137,7 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - complex operations', () => {
-      const createSlice = createReduxStore(getInitialState());
+      const { createSlice } = createStore(getInitialState());
       const store = createStandardComponent(createSlice);
 
       // Add items
@@ -201,7 +201,7 @@ describe('Adapter Performance Rankings', () => {
     });
 
     bench('redux adapter - subscriptions', () => {
-      const createSlice = createReduxStore(getInitialState());
+      const { createSlice } = createStore(getInitialState());
       const store = createStandardComponent(createSlice);
       const unsubscribers: (() => void)[] = [];
       let notificationCount = 0;
@@ -263,7 +263,7 @@ describe('Adapter Performance Rankings', () => {
       const stores = [];
 
       for (let i = 0; i < 100; i++) {
-        const createSlice = createReduxStore(getInitialState());
+        const { createSlice } = createStore(getInitialState());
         stores.push(createStandardComponent(createSlice));
       }
     });

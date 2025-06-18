@@ -6,7 +6,7 @@
 
 import { describe, bench } from 'vitest';
 import { createStore as createZustandStore } from '@lattice/adapter-zustand';
-import { createStore as createReduxStore } from '@lattice/adapter-redux';
+import { createStore } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
 import { LatticeStore, createSliceFactory } from '@lattice/adapter-svelte';
 import type { RuntimeSliceFactory } from '@lattice/core';
@@ -123,7 +123,7 @@ describe('Memory Usage Patterns', () => {
 
     bench('redux - large state (1000 items)', () => {
       const initialState = createLargeInitialState(1000);
-      const createSlice = createReduxStore(initialState);
+      const { createSlice } = createStore(initialState);
       const store = createLargeStateComponent(1000)(createSlice);
 
       // Perform updates
@@ -225,7 +225,7 @@ describe('Memory Usage Patterns', () => {
 
       // Create many stores with subscriptions
       for (let i = 0; i < 100; i++) {
-        const createSlice = createReduxStore({ value: 0 });
+        const { createSlice } = createStore({ value: 0 });
         const store = createComponent(createSlice);
         stores.push(store);
 
@@ -386,7 +386,7 @@ describe('Memory Usage Patterns', () => {
 
       // Rapidly create and destroy stores
       for (let i = 0; i < 1000; i++) {
-        const createSlice = createReduxStore({ value: i, history: [] as number[] });
+        const { createSlice } = createStore({ value: i, history: [] as number[] });
         const store = createComponent(i)(createSlice);
 
         // Do some work

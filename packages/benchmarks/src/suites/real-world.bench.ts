@@ -6,7 +6,7 @@
 
 import { describe, bench } from 'vitest';
 import { createStore as createZustandStore } from '@lattice/adapter-zustand';
-import { createStore as createReduxStore } from '@lattice/adapter-redux';
+import { createStore } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
 import { LatticeStore, createSliceFactory } from '@lattice/adapter-svelte';
 import { compose } from '@lattice/core';
@@ -259,7 +259,7 @@ describe('Real-World Scenarios', () => {
     });
 
     bench('redux - ecommerce simulation', () => {
-      const createSlice = createReduxStore(getInitialState());
+      const { createSlice } = createStore(getInitialState());
       const store = createEcommerceApp(createSlice);
 
       // Load products
@@ -590,7 +590,7 @@ describe('Real-World Scenarios', () => {
     });
 
     bench('redux - todo app simulation', () => {
-      const createSlice = createReduxStore(getTodoInitialState());
+      const { createSlice } = createStore(getTodoInitialState());
       const store = createTodoApp(createSlice);
 
       // Add todos

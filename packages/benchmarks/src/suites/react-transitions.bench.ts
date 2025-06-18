@@ -7,7 +7,7 @@
 import { describe, bench } from 'vitest';
 import { act } from 'react';
 import { createStore as createZustandStore } from '@lattice/adapter-zustand';
-import { createStore as createReduxStore } from '@lattice/adapter-redux';
+import { createStore } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
@@ -93,7 +93,7 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const createSlice = createReduxStore(getInitialState());
+        const { createSlice } = createStore(getInitialState());
         const store = createTestComponent(createSlice);
         // const { result } = renderHook(
         //   () =>
@@ -191,7 +191,7 @@ describe('React Transitions Performance', () => {
 
       // Create multiple hooks subscribing to the same store
       for (let i = 0; i < HOOK_COUNT; i++) {
-        const createSlice = createReduxStore(getInitialState());
+        const { createSlice } = createStore(getInitialState());
         const store = createTestComponent(createSlice);
         // const { result } = renderHook(
         //   () =>

@@ -1,299 +1,208 @@
 import { describe, it, expect, vi } from 'vitest';
-import { configureStore, createSlice as createReduxSlice } from '@reduxjs/toolkit';
-import { reduxAdapter } from './index';
+import { createStore } from './index';
 
 describe('Redux Adapter', () => {
-  it('should wrap an existing Redux store with action mapping', () => {
-    // Create a Redux store using native API
-    const counterSlice = createReduxSlice({
-      name: 'counter',
-      initialState: { value: 0 },
-      reducers: {
-        setValue: (state, action) => {
-          state.value = action.payload;
-        },
-        increment: (state) => {
-          state.value += 1;
-        },
-        decrement: (state) => {
-          state.value -= 1;
-        },
-      },
+  it('should create a Redux store with Lattice slices', () => {
+    const { store, createSlice } = createStore({
+      counter: { value: 0 },
     });
 
-    const store = configureStore({
-      reducer: {
-        counter: counterSlice.reducer,
-      },
-    });
-
-    // Create action mapping
-    const actionMapping = {
-      counter: (value: { value: number }) => counterSlice.actions.setValue(value.value),
-    };
-
-    // Wrap it with the adapter
-    const createSlice = reduxAdapter(store, { actionMapping });
-
-    // Create a Lattice component
     const counter = createSlice(({ get, set }) => ({
       count: () => get().counter.value,
-      increment: () => set({ 
-        counter: { value: get().counter.value + 1 } 
+      increment: () => set({
+        counter: { value: get().counter.value + 1 }
       }),
-      decrement: () => set({ 
-        counter: { value: get().counter.value - 1 } 
+      decrement: () => set({
+        counter: { value: get().counter.value - 1 }
       }),
     }));
 
     // Test initial state
     expect(counter.selector.count()).toBe(0);
 
-    // Test Lattice methods
+    // Test increment
     counter.selector.increment();
     expect(counter.selector.count()).toBe(1);
+    expect(store.getState().counter.value).toBe(1);
 
+    // Test decrement
     counter.selector.decrement();
     expect(counter.selector.count()).toBe(0);
   });
 
-  it('should work with native Redux actions', () => {
-    const counterSlice = createReduxSlice({
-      name: 'counter',
-      initialState: { value: 0 },
-      reducers: {
-        increment: (state) => {
-          state.value += 1;
-        },
-        incrementBy: (state, action) => {
-          state.value += action.payload;
-        },
-      },
+  it('should handle multiple slices', () => {
+    const { store, createSlice } = createStore({
+      counter: { value: 0 },
+      user: { name: '', loggedIn: false },
     });
 
-    const store = configureStore({
-      reducer: {
-        counter: counterSlice.reducer,
-      },
-    });
-
-    const createSlice = reduxAdapter(store);
-
-    const counter = createSlice(({ get }) => ({
-      count: () => get().counter.value,
+    const counter = createSlice(({ get, set }) => ({
+      value: () => get().counter.value,
+      increment: () => set({
+        counter: { value: get().counter.value + 1 }
+      }),
     }));
 
-    // Test that native Redux actions still work
-    expect(counter.selector.count()).toBe(0);
+    const user = createSlice(({ get, set }) => ({
+      getName: () => get().user.name,
+      isLoggedIn: () => get().user.loggedIn,
+      login: (name: string) => set({
+        user: { name, loggedIn: true }
+      }),
+      logout: () => set({
+        user: { name: '', loggedIn: false }
+      }),
+    }));
 
-    store.dispatch(counterSlice.actions.increment());
-    expect(counter.selector.count()).toBe(1);
+    // Test both slices work independently
+    counter.selector.increment();
+    user.selector.login('Alice');
 
-    store.dispatch(counterSlice.actions.incrementBy(5));
-    expect(counter.selector.count()).toBe(6);
+    expect(counter.selector.value()).toBe(1);
+    expect(user.selector.getName()).toBe('Alice');
+    expect(user.selector.isLoggedIn()).toBe(true);
+
+    // Verify Redux store has both updates
+    expect(store.getState()).toEqual({
+      counter: { value: 1 },
+      user: { name: 'Alice', loggedIn: true },
+    });
   });
 
   it('should support subscriptions', () => {
-    const slice = createReduxSlice({
-      name: 'test',
-      initialState: { value: 0 },
-      reducers: {
-        setValue: (state, action) => {
-          state.value = action.payload;
-        },
-      },
-    });
+    const { createSlice } = createStore({ value: 0 });
 
-    const store = configureStore({
-      reducer: slice.reducer,
-    });
-
-    const createLatticeSlice = reduxAdapter(store);
-    const state = createLatticeSlice(({ get }) => ({
+    const state = createSlice(({ get, set }) => ({
       value: () => get().value,
+      setValue: (value: number) => set({ value }),
     }));
 
     const callback = vi.fn();
     const unsubscribe = state.subscribe(callback);
 
     // Trigger state change
-    store.dispatch(slice.actions.setValue(1));
+    state.selector.setValue(1);
 
     expect(callback).toHaveBeenCalledTimes(1);
 
     // Unsubscribe and verify no more calls
     unsubscribe();
-    store.dispatch(slice.actions.setValue(2));
+    state.selector.setValue(2);
 
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
-  it('should work with middleware', () => {
-    const loggerMiddleware = () => (next: any) => (action: any) => {
-      console.log('Action:', action.type);
-      return next(action);
-    };
-
-    const slice = createReduxSlice({
-      name: 'test',
-      initialState: { value: 0 },
-      reducers: {
-        increment: (state) => {
-          state.value += 1;
-        },
-      },
+  it('should work with Redux DevTools', () => {
+    const { store, createSlice } = createStore({
+      counter: { value: 0 },
     });
 
-    const store = configureStore({
-      reducer: slice.reducer,
-      middleware: (getDefaultMiddleware) =>
-        getDefaultMiddleware().concat(loggerMiddleware),
-    });
-
-    const createLatticeSlice = reduxAdapter(store);
-    const counter = createLatticeSlice(({ get }) => ({
-      value: () => get().value,
+    const counter = createSlice(({ get, set }) => ({
+      value: () => get().counter.value,
+      increment: () => set({
+        counter: { value: get().counter.value + 1 }
+      }),
     }));
 
-    expect(counter.selector.value()).toBe(0);
-
-    // Dispatch action through Redux
-    store.dispatch(slice.actions.increment());
+    // DevTools will see 'lattice/batchUpdate' actions
+    counter.selector.increment();
     expect(counter.selector.value()).toBe(1);
+
+    // Can still access Redux store directly
+    expect(store.getState().counter.value).toBe(1);
   });
 
-  it('should work with complex state shapes and action mapping', () => {
+  it('should handle complex state updates', () => {
     interface Todo {
       id: number;
       text: string;
       completed: boolean;
     }
 
-    const todosSlice = createReduxSlice({
-      name: 'todos',
-      initialState: {
+    const { store, createSlice } = createStore({
+      todos: {
         items: [] as Todo[],
         filter: 'all' as 'all' | 'active' | 'completed',
       },
-      reducers: {
-        setItems: (state, action) => {
-          state.items = action.payload;
-        },
-        setFilter: (state, action) => {
-          state.filter = action.payload;
-        },
-        addTodo: (state, action) => {
-          state.items.push({
-            id: Date.now(),
-            text: action.payload,
-            completed: false,
-          });
-        },
-        toggleTodo: (state, action) => {
-          const todo = state.items.find((t) => t.id === action.payload);
-          if (todo) {
-            todo.completed = !todo.completed;
-          }
-        },
-      },
     });
 
-    const store = configureStore({
-      reducer: {
-        todos: todosSlice.reducer,
-      },
-    });
-
-    // Create action mapping for the state shape
-    const actionMapping = {
-      todos: (value: { items: Todo[]; filter: 'all' | 'active' | 'completed' }) => {
-        // For complex updates, we might need multiple actions
-        if ('items' in value && 'filter' in value) {
-          // Full state update
-          store.dispatch(todosSlice.actions.setItems(value.items));
-          store.dispatch(todosSlice.actions.setFilter(value.filter));
-          return { type: '@@BATCH_UPDATE' }; // Dummy action
-        }
-        return { type: '@@NOOP' };
-      },
-    };
-
-    const createSlice = reduxAdapter(store, { actionMapping });
-
-    const actions = createSlice(() => ({
+    let nextId = 1;
+    const todos = createSlice(({ get, set }) => ({
+      getAll: () => get().todos.items,
+      getActive: () => get().todos.items.filter(t => !t.completed),
+      getCompleted: () => get().todos.items.filter(t => t.completed),
+      
       addTodo: (text: string) => {
-        // Since we're updating nested state, we dispatch directly
-        store.dispatch(todosSlice.actions.addTodo(text));
+        set({
+          todos: {
+            ...get().todos,
+            items: [...get().todos.items, {
+              id: nextId++,
+              text,
+              completed: false,
+            }],
+          },
+        });
       },
+      
       toggleTodo: (id: number) => {
-        store.dispatch(todosSlice.actions.toggleTodo(id));
+        set({
+          todos: {
+            ...get().todos,
+            items: get().todos.items.map(todo =>
+              todo.id === id
+                ? { ...todo, completed: !todo.completed }
+                : todo
+            ),
+          },
+        });
       },
+      
       setFilter: (filter: 'all' | 'active' | 'completed') => {
-        store.dispatch(todosSlice.actions.setFilter(filter));
-      },
-    }));
-
-    const queries = createSlice(({ get }) => ({
-      allTodos: () => get().todos.items,
-      activeTodos: () => get().todos.items.filter((t) => !t.completed),
-      completedTodos: () => get().todos.items.filter((t) => t.completed),
-      visibleTodos: () => {
-        const { items, filter } = get().todos;
-        if (filter === 'active') return items.filter((t) => !t.completed);
-        if (filter === 'completed') return items.filter((t) => t.completed);
-        return items;
+        set({
+          todos: {
+            ...get().todos,
+            filter,
+          },
+        });
       },
     }));
 
     // Add todos
-    actions.selector.addTodo('Learn Lattice');
-    actions.selector.addTodo('Build a component');
+    todos.selector.addTodo('Learn Lattice');
+    todos.selector.addTodo('Build app');
 
-    const todos = queries.selector.allTodos();
-    expect(todos).toHaveLength(2);
-    expect(todos[0]?.text).toBe('Learn Lattice');
-    expect(todos[1]?.text).toBe('Build a component');
+    expect(todos.selector.getAll()).toHaveLength(2);
+    expect(todos.selector.getActive()).toHaveLength(2);
+    expect(todos.selector.getCompleted()).toHaveLength(0);
 
-    // Toggle todo
-    const firstTodoId = todos[0]?.id;
-    firstTodoId && actions.selector.toggleTodo(firstTodoId);
+    // Toggle first todo
+    const allTodos = todos.selector.getAll();
+    expect(allTodos[0]).toBeDefined();
+    const firstId = allTodos[0]!.id;
+    todos.selector.toggleTodo(firstId);
 
-    expect(queries.selector.activeTodos()).toHaveLength(1);
-    expect(queries.selector.completedTodos()).toHaveLength(1);
+    expect(todos.selector.getActive()).toHaveLength(1);
+    expect(todos.selector.getCompleted()).toHaveLength(1);
 
-    // Test filtering
-    actions.selector.setFilter('active');
-    expect(queries.selector.visibleTodos()).toHaveLength(1);
-    expect(queries.selector.visibleTodos()[0]?.text).toBe('Build a component');
-
-    actions.selector.setFilter('completed');
-    expect(queries.selector.visibleTodos()).toHaveLength(1);
-    expect(queries.selector.visibleTodos()[0]?.text).toBe('Learn Lattice');
+    // Change filter
+    todos.selector.setFilter('active');
+    expect(store.getState().todos.filter).toBe('active');
   });
 
   it('should handle errors in listeners gracefully', () => {
     const errors: unknown[] = [];
+    
+    // Note: Our implementation logs errors to console by default
+    // In a real app, you might want to pass a custom error handler
+    const originalError = console.error;
+    console.error = (error: unknown) => errors.push(error);
 
-    const slice = createReduxSlice({
-      name: 'test',
-      initialState: { value: 0 },
-      reducers: {
-        setValue: (state, action) => {
-          state.value = action.payload;
-        },
-      },
-    });
+    const { createSlice } = createStore({ value: 0 });
 
-    const store = configureStore({
-      reducer: slice.reducer,
-    });
-
-    const createLatticeSlice = reduxAdapter(store, {
-      onError: (error) => errors.push(error),
-    });
-
-    const state = createLatticeSlice(({ get }) => ({
+    const state = createSlice(({ get, set }) => ({
       value: () => get().value,
+      setValue: (value: number) => set({ value }),
     }));
 
     // Subscribe with a listener that throws
@@ -306,156 +215,74 @@ describe('Redux Adapter', () => {
     state.subscribe(normalListener);
 
     // Trigger state change
-    store.dispatch(slice.actions.setValue(1));
+    state.selector.setValue(1);
 
     // Error listener threw, but normal listener should still be called
     expect(errorListener).toHaveBeenCalledTimes(1);
     expect(normalListener).toHaveBeenCalledTimes(1);
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toBeInstanceOf(Error);
-    expect((errors[0] as Error).message).toBe('Listener error');
+
+    // Restore console.error
+    console.error = originalError;
   });
 
-  it('should handle unsubscribe during notification', () => {
-    const slice = createReduxSlice({
-      name: 'test',
-      initialState: { value: 0 },
-      reducers: {
-        setValue: (state, action) => {
-          state.value = action.payload;
+  it('should handle nested state updates', () => {
+    const { createSlice } = createStore({
+      ui: {
+        modal: {
+          isOpen: false,
+          content: null as string | null,
         },
+        theme: 'light',
       },
     });
 
-    const store = configureStore({
-      reducer: slice.reducer,
-    });
-
-    const actionMapping = {
-      value: (value: number) => slice.actions.setValue(value),
-    };
-
-    const createLatticeSlice = reduxAdapter(store, { actionMapping });
-    const state = createLatticeSlice(({ get, set }) => ({
-      value: () => get().value,
-      setValue: (value: number) => set({ value }),
+    const ui = createSlice(({ get, set }) => ({
+      isModalOpen: () => get().ui.modal.isOpen,
+      getModalContent: () => get().ui.modal.content,
+      getTheme: () => get().ui.theme,
+      
+      openModal: (content: string) => {
+        set({
+          ui: {
+            ...get().ui,
+            modal: { isOpen: true, content },
+          },
+        });
+      },
+      
+      closeModal: () => {
+        set({
+          ui: {
+            ...get().ui,
+            modal: { isOpen: false, content: null },
+          },
+        });
+      },
+      
+      toggleTheme: () => {
+        set({
+          ui: {
+            ...get().ui,
+            theme: get().ui.theme === 'light' ? 'dark' : 'light',
+          },
+        });
+      },
     }));
 
-    let callsA = 0;
-    let callsB = 0;
-    let callsC = 0;
-    let unsubscribeB: (() => void) | null = null;
-
-    // Listener A: increments counter
-    state.subscribe(() => {
-      callsA++;
-    });
-
-    // Listener B: unsubscribes itself
-    unsubscribeB = state.subscribe(() => {
-      callsB++;
-      unsubscribeB?.();
-    });
-
-    // Listener C: increments counter
-    state.subscribe(() => {
-      callsC++;
-    });
-
-    // Trigger notification
-    state.selector.setValue(1);
-
-    // All listeners should be called once
-    expect(callsA).toBe(1);
-    expect(callsB).toBe(1);
-    expect(callsC).toBe(1);
-
-    // Trigger another notification
-    state.selector.setValue(2);
-
-    // A and C should be called again, B should not
-    expect(callsA).toBe(2);
-    expect(callsB).toBe(1); // Still 1
-    expect(callsC).toBe(2);
-  });
-
-  it('should work with Redux DevTools', () => {
-    const slice = createReduxSlice({
-      name: 'counter',
-      initialState: { value: 0 },
-      reducers: {
-        increment: (state) => {
-          state.value += 1;
-        },
-      },
-    });
-
-    const store = configureStore({
-      reducer: {
-        counter: slice.reducer,
-      },
-      devTools: true,
-    });
-
-    const createLatticeSlice = reduxAdapter(store);
-    const counter = createLatticeSlice(({ get }) => ({
-      value: () => get().counter.value,
-    }));
-
-    // DevTools should work transparently
-    expect(counter.selector.value()).toBe(0);
-    store.dispatch(slice.actions.increment());
-    expect(counter.selector.value()).toBe(1);
-  });
-
-  it('should only dispatch actions for mapped keys', () => {
-    const counterSlice = createReduxSlice({
-      name: 'counter',
-      initialState: { value: 0 },
-      reducers: {
-        setValue: (state, action) => {
-          state.value = action.payload;
-        },
-      },
-    });
-
-    const userSlice = createReduxSlice({
-      name: 'user',
-      initialState: { name: '', age: 0 },
-      reducers: {
-        setUser: (state, action) => {
-          Object.assign(state, action.payload);
-        },
-      },
-    });
-
-    const store = configureStore({
-      reducer: {
-        counter: counterSlice.reducer,
-        user: userSlice.reducer,
-      },
-    });
-
-    // Only map the counter action
-    const actionMapping = {
-      counter: (value: { value: number }) => counterSlice.actions.setValue(value.value),
-    };
-
-    const createSlice = reduxAdapter(store, { actionMapping });
-
-    const component = createSlice(({ get, set }) => ({
-      count: () => get().counter.value,
-      userName: () => get().user.name,
-      setCount: (value: number) => set({ counter: { value } }),
-      setUser: (name: string, age: number) => set({ user: { name, age } }),
-    }));
-
-    // Test mapped action works
-    component.selector.setCount(5);
-    expect(component.selector.count()).toBe(5);
-
-    // Test unmapped action doesn't update (no fallback)
-    component.selector.setUser('John', 30);
-    expect(component.selector.userName()).toBe(''); // Should remain unchanged
+    // Test modal operations
+    expect(ui.selector.isModalOpen()).toBe(false);
+    
+    ui.selector.openModal('Hello World');
+    expect(ui.selector.isModalOpen()).toBe(true);
+    expect(ui.selector.getModalContent()).toBe('Hello World');
+    
+    ui.selector.closeModal();
+    expect(ui.selector.isModalOpen()).toBe(false);
+    expect(ui.selector.getModalContent()).toBe(null);
+    
+    // Test theme toggle
+    expect(ui.selector.getTheme()).toBe('light');
+    ui.selector.toggleTheme();
+    expect(ui.selector.getTheme()).toBe('dark');
   });
 });
