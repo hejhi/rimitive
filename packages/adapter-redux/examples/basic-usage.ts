@@ -1,10 +1,11 @@
 /**
- * Example: Basic Redux adapter usage
+ * Example: Basic Redux adapter usage with the new pattern
  * 
- * Shows how to use pure Lattice slices with Redux
+ * Shows how to use Redux stores with Lattice following the separated pattern
  */
 
-import { createStore } from '@lattice/adapter-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import type { StoreTools } from '@lattice/core';
 
 // Define your state shape
@@ -21,12 +22,22 @@ interface AppState {
   };
 }
 
-// Create the Redux store with initial state
-const { store, createSlice } = createStore<AppState>({
-  counter: { value: 0 },
-  todos: { items: [], filter: 'all' },
-  user: { name: '', email: '', loggedIn: false },
+// NEW PATTERN: Create your Redux store separately with Redux's native API
+const store = configureStore({
+  reducer: latticeReducer.reducer,
+  preloadedState: {
+    counter: { value: 0 },
+    todos: { items: [], filter: 'all' },
+    user: { name: '', email: '', loggedIn: false },
+  },
+  // You can add any Redux middleware you want
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware(),
+  // Redux DevTools work automatically
+  devTools: process.env.NODE_ENV !== 'production',
 });
+
+// Wrap the store with the Lattice adapter
+const createSlice = reduxAdapter<AppState>(store);
 
 // Define slices using pure Lattice syntax - no Redux knowledge needed!
 
@@ -130,9 +141,41 @@ const user = createSlice(({ get, set }: StoreTools<AppState>) => ({
   },
 }));
 
+// Advanced example: Using Redux store with multiple slices
+export function advancedExample() {
+  // You can combine Lattice with other Redux slices
+  const advancedStore = configureStore({
+    reducer: {
+      // Lattice manages this slice
+      app: latticeReducer.reducer,
+      // Other Redux slices can coexist
+      // auth: authSlice.reducer,
+      // api: apiSlice.reducer,
+    },
+    preloadedState: {
+      app: {
+        counter: { value: 0 },
+        todos: { items: [], filter: 'all' },
+        user: { name: '', email: '', loggedIn: false },
+      }
+    }
+  });
+  
+  // Tell the adapter which slice to use
+  const createAppSlice = reduxAdapter<AppState>(advancedStore, { slice: 'app' });
+  
+  // Now create slices that work with the 'app' portion of the state
+  const appCounter = createAppSlice(({ get, set }) => ({
+    value: () => get().counter.value,
+    increment: () => set({ counter: { value: get().counter.value + 1 } })
+  }));
+  
+  return { store: advancedStore, counter: appCounter };
+}
+
 // Usage example
 export function demonstrateUsage() {
-  console.log('=== Redux Adapter Example ===\n');
+  console.log('=== Redux Adapter Example (New Pattern) ===\n');
   
   // Counter operations
   console.log('Counter value:', counter.selector.value()); // 0
@@ -171,12 +214,13 @@ export function demonstrateUsage() {
   unsubscribe();
 }
 
-// Benefits:
-// 1. Write pure Lattice code - no Redux boilerplate
-// 2. Automatic Redux DevTools support
-// 3. Time-travel debugging works out of the box
-// 4. Compatible with Redux middleware
-// 5. Full TypeScript support
+// Benefits of the new pattern:
+// 1. Full control over Redux store configuration
+// 2. Can integrate with existing Redux applications
+// 3. Use any Redux middleware or enhancers
+// 4. Combine Lattice with other Redux slices
+// 5. Better separation of concerns
+// 6. Maintains all Redux DevTools support
 
 if (typeof require !== 'undefined' && require.main === module) {
   demonstrateUsage();

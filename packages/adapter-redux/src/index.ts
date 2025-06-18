@@ -1,107 +1,173 @@
 /**
  * @fileoverview Redux adapter for Lattice
  *
- * Provides automatic Redux store creation from pure Lattice slice definitions.
- * The adapter preserves all Redux features including middleware, DevTools, and time-travel debugging.
+ * Provides a clean adapter pattern for integrating existing Redux stores
+ * with Lattice components. Users create their stores with Redux's native
+ * API and wrap them with this adapter.
  */
 
 import type { Store } from 'redux';
-import type { RuntimeSliceFactory } from '@lattice/core';
+import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
-import { createSlice as createReduxSlice, configureStore } from '@reduxjs/toolkit';
+import { createSlice as createReduxSlice } from '@reduxjs/toolkit';
 
 /**
- * Creates a Redux store that automatically handles Lattice-style updates
- * 
- * @param initialState - The initial state for the Redux store
- * @returns An object with the Redux store and a createSlice function for Lattice
- * 
+ * Configuration options for the Redux adapter
+ */
+export interface ReduxAdapterOptions {
+  /**
+   * The slice of the Redux state to use for Lattice.
+   * If not provided, the entire Redux state is used.
+   */
+  slice?: string;
+
+  /**
+   * Custom error handler for listener errors.
+   * Default: logs to console.error
+   */
+  onError?: (error: unknown) => void;
+}
+
+/**
+ * Lattice reducer that handles generic state updates.
+ * Include this in your Redux store configuration to enable Lattice integration.
+ *
  * @example
  * ```typescript
- * const { store, createSlice } = createStore({ count: 0 });
- * 
+ * import { configureStore } from '@reduxjs/toolkit';
+ * import { latticeReducer } from '@lattice/adapter-redux';
+ *
+ * const store = configureStore({
+ *   reducer: latticeReducer.reducer,
+ *   preloadedState: { count: 0 }
+ * });
+ * ```
+ */
+export const latticeReducer = createReduxSlice({
+  name: 'lattice',
+  initialState: {} as any,
+  reducers: {
+    /**
+     * Updates the state with partial updates
+     */
+    updateState: (state, action) => {
+      // Use Object.assign for optimal Immer performance
+      // Immer tracks mutations and handles immutability
+      Object.assign(state, action.payload);
+    },
+
+    /**
+     * Replaces the entire state
+     */
+    replaceState: (_state, action) => {
+      return action.payload;
+    },
+
+    /**
+     * Updates a nested path in the state
+     */
+    updateNested: (state, action) => {
+      const { path, value } = action.payload;
+
+      if (path.length === 0) {
+        return value;
+      }
+
+      // Use Immer's draft state for efficient nested updates
+      let current: any = state;
+
+      for (let i = 0; i < path.length - 1; i++) {
+        const key = path[i];
+        current = current[key];
+      }
+
+      current[path[path.length - 1]] = value;
+    },
+  },
+});
+
+/**
+ * Creates a Lattice adapter from an existing Redux store.
+ *
+ * This adapter wraps any Redux store to work seamlessly with Lattice components.
+ * The store must include the latticeReducer to handle state updates from Lattice.
+ *
+ * @param store - An existing Redux store
+ * @param options - Optional configuration for slice selection and error handling
+ * @returns A RuntimeSliceFactory for creating Lattice slices
+ *
+ * @example Basic usage
+ * ```typescript
+ * import { configureStore } from '@reduxjs/toolkit';
+ * import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
+ *
+ * // Create a Redux store with Lattice reducer
+ * const store = configureStore({
+ *   reducer: latticeReducer.reducer,
+ *   preloadedState: { count: 0, user: { name: '' } }
+ * });
+ *
+ * // Wrap it for use with Lattice components
+ * const createSlice = reduxAdapter(store);
+ *
+ * // Use in a Lattice component
  * const counter = createSlice(({ get, set }) => ({
  *   value: () => get().count,
  *   increment: () => set({ count: get().count + 1 })
  * }));
  * ```
+ *
+ * @example With middleware and multiple slices
+ * ```typescript
+ * import { configureStore } from '@reduxjs/toolkit';
+ * import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
+ * import logger from 'redux-logger';
+ *
+ * const store = configureStore({
+ *   reducer: {
+ *     app: latticeReducer.reducer,
+ *     auth: authSlice.reducer,
+ *     api: apiSlice.reducer
+ *   },
+ *   middleware: (getDefaultMiddleware) =>
+ *     getDefaultMiddleware().concat(logger),
+ *   devTools: process.env.NODE_ENV !== 'production'
+ * });
+ *
+ * // Specify which slice to use for Lattice
+ * const createSlice = reduxAdapter(store, { slice: 'app' });
+ * ```
  */
-export function createStore<State extends Record<string, any>>(
-  initialState: State
-): {
-  store: Store<State>;
-  createSlice: RuntimeSliceFactory<State>;
-} {
-  // Create a meta-slice that can handle any state update
-  const metaSlice = createReduxSlice({
-    name: 'lattice',
-    initialState,
-    reducers: {
-      // Generic reducer that can update any part of the state
-      updateState: (state, action) => {
-        const { path, value } = action.payload;
+export function reduxAdapter<State>(
+  store: Store,
+  options?: ReduxAdapterOptions
+): RuntimeSliceFactory<State> {
+  const slicePath = options?.slice;
+  const handleError =
+    options?.onError ??
+    ((error) => {
+      console.error('Error in store listener:', error);
+    });
 
-        if (path.length === 0) {
-          // Full state replacement
-          return value;
-        }
-
-        // Deep update for nested paths
-        const newState = { ...state };
-        let current: any = newState;
-
-        for (let i = 0; i < path.length - 1; i++) {
-          const key = path[i];
-          current[key] = { ...current[key] };
-          current = current[key];
-        }
-
-        current[path[path.length - 1]] = value;
-        return newState;
-      },
-
-      // Batch update for multiple paths
-      batchUpdate: (state, action) => {
-        const updates = action.payload;
-        const newState = { ...state };
-
-        for (const [key, value] of Object.entries(updates)) {
-          (newState as any)[key] = value;
-        }
-
-        return newState;
-      },
-    },
-  });
-
-  // Create Redux store
-  const store = configureStore({
-    reducer: metaSlice.reducer,
-  });
-
-  // Track listeners separately to handle errors
+  // Performance optimization: Direct listener management
   const listeners = new Set<() => void>();
-  let isNotifying = false;
   const pendingUnsubscribes = new Set<() => void>();
-  
-  // Subscribe to Redux store and notify listeners with error handling
+  let isNotifying = false;
+
+  // Subscribe to Redux store once
   store.subscribe(() => {
     isNotifying = true;
-    
-    // Make a copy of listeners to avoid modification during iteration
-    const currentListeners = Array.from(listeners);
-    
-    for (const listener of currentListeners) {
+
+    for (const listener of listeners) {
       try {
         listener();
       } catch (error) {
-        // Log error but continue notifying other listeners
-        console.error('Error in store listener:', error);
+        handleError(error);
       }
     }
-    
+
     isNotifying = false;
-    
+
     // Process pending unsubscribes
     for (const listener of pendingUnsubscribes) {
       listeners.delete(listener);
@@ -109,14 +175,20 @@ export function createStore<State extends Record<string, any>>(
     pendingUnsubscribes.clear();
   });
 
-  // Create a custom adapter that intercepts set() calls
-  const adapter = {
-    getState: () => store.getState(),
-    setState: (updates: Partial<State>) => {
-      // Dispatch the batch update action
-      store.dispatch(metaSlice.actions.batchUpdate(updates));
+  const adapter: StoreAdapter<State> = {
+    getState: () => {
+      const state = store.getState();
+      // If a slice is specified, return only that part of the state
+      return slicePath ? (state as any)[slicePath] : (state as State);
     },
-    subscribe: (listener: () => void) => {
+
+    setState: (updates: Partial<State>) => {
+      // Always dispatch the updateState action
+      // The reducer will handle the actual state update
+      store.dispatch(latticeReducer.actions.updateState(updates));
+    },
+
+    subscribe: (listener) => {
       listeners.add(listener);
       return () => {
         if (isNotifying) {
@@ -128,10 +200,7 @@ export function createStore<State extends Record<string, any>>(
     },
   };
 
-  // Create the Lattice store factory using the core function
-  const createSlice = createLatticeStore(adapter);
-
-  return { store, createSlice };
+  return createLatticeStore(adapter);
 }
 
 // Re-export types for convenience

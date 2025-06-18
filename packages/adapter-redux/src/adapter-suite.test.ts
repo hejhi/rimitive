@@ -5,7 +5,8 @@
  */
 
 import { createAdapterTestSuite } from '@lattice/core/testing';
-import { createSlice as createReduxSlice, configureStore } from '@reduxjs/toolkit';
+import { configureStore } from '@reduxjs/toolkit';
+import { latticeReducer } from './index';
 
 // Create a factory function that matches the expected signature
 function createAdapter<State extends Record<string, any>>(
@@ -13,64 +14,40 @@ function createAdapter<State extends Record<string, any>>(
 ) {
   const state = initialState ?? ({} as State);
   
-  // Create a meta-slice that can handle any state update
-  const metaSlice = createReduxSlice({
-    name: 'lattice',
-    initialState: state,
-    reducers: {
-      batchUpdate: (state, action) => {
-        const updates = action.payload;
-        const newState = { ...state };
-
-        for (const [key, value] of Object.entries(updates)) {
-          (newState as any)[key] = value;
-        }
-
-        return newState;
-      },
-    },
-  });
-
-  // Create Redux store
+  // Create Redux store with the lattice reducer
   const store = configureStore({
-    reducer: metaSlice.reducer,
+    reducer: latticeReducer.reducer,
+    preloadedState: state
   });
-
-  // Track listeners separately to handle errors
-  const listeners = new Set<() => void>();
-  let isNotifying = false;
-  const pendingUnsubscribes = new Set<() => void>();
   
-  // Subscribe to Redux store and notify listeners with error handling
+  // Create the adapter but return the raw StoreAdapter, not the RuntimeSliceFactory
+  const listeners = new Set<() => void>();
+  const pendingUnsubscribes = new Set<() => void>();
+  let isNotifying = false;
+  
   store.subscribe(() => {
     isNotifying = true;
     
-    // Make a copy of listeners to avoid modification during iteration
-    const currentListeners = Array.from(listeners);
-    
-    for (const listener of currentListeners) {
+    for (const listener of listeners) {
       try {
         listener();
       } catch (error) {
-        // Log error but continue notifying other listeners
         console.error('Error in store listener:', error);
       }
     }
     
     isNotifying = false;
     
-    // Process pending unsubscribes
     for (const listener of pendingUnsubscribes) {
       listeners.delete(listener);
     }
     pendingUnsubscribes.clear();
   });
-
-  // Create adapter interface
+  
   return {
-    getState: () => store.getState(),
+    getState: () => store.getState() as State,
     setState: (updates: Partial<State>) => {
-      store.dispatch(metaSlice.actions.batchUpdate(updates));
+      store.dispatch(latticeReducer.actions.updateState(updates));
     },
     subscribe: (listener: () => void) => {
       listeners.add(listener);
@@ -81,9 +58,9 @@ function createAdapter<State extends Record<string, any>>(
           listeners.delete(listener);
         }
       };
-    },
+    }
   };
 }
 
-// Run the shared adapter test suite
-createAdapterTestSuite('Redux', createAdapter);
+// Run the standard test suite
+createAdapterTestSuite('Redux Adapter', createAdapter);
