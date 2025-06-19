@@ -1,6 +1,4 @@
 // Core exports without testing utilities
-export { compose } from './compose';
-export { resolve } from './resolve';
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 export {
   type StoreAdapter,

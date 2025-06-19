@@ -22,7 +22,6 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         testing: resolve(__dirname, 'src/testing.ts'),
         base: resolve(__dirname, 'src/base.ts'),
-        compose: resolve(__dirname, 'src/compose.ts'),
         subscribe: resolve(__dirname, 'src/subscribe.ts'),
         runtime: resolve(__dirname, 'src/runtime.ts'),
         core: resolve(__dirname, 'src/core.ts'),

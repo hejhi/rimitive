@@ -4,29 +4,69 @@
 - [x] Created spec in `.claude/specs/slice-based-reactive-state.md`
 - [x] Analyzed current selector performance issues
 - [x] Designed dependency tracking approach
+- [x] Finalized API design with two-phase pattern
+- [x] Added `set` parameter for state mutations
+- [x] Designed composition pattern (spreading dependencies)
+- [x] Removed Proxy requirement - using selectors directly
+- [x] **SPEC LOCKED** - Ready for implementation
 
 ## In Progress
 - [ ] Core slice implementation (NOT STARTED)
 
 ## TODO
 - [ ] Create `createSlice` function with dependency tracking
+- [ ] Implement selectors that track access during dependency phase
 - [ ] Implement keyed subscriptions in store
 - [ ] Create selector type with subscription support
-- [ ] Implement slice composition (child slices)
+- [ ] Implement two-phase `set` function
+- [ ] Implement slice composition (child slices via spread pattern)
 - [ ] Create `useSliceSelector` React hook
 - [ ] Delete old `useStore` and `useStoreSelector` implementations
+- [ ] Delete `compose.ts` (replaced by slice composition)
+- [ ] Delete `resolve.ts` (replaced by slice composition)
 - [ ] Update all benchmarks to use new API
 - [ ] Performance testing with fine-grained subscriptions
 
 ## Decisions Made
-- Using Proxy pattern for dependency detection
+- **NO PROXIES** - Selectors track their own access
 - Selectors are functions that return current value
 - Two-phase API: dependencies then computations
+- Two-phase `set` API for consistent state updates
+- Composition via spreading dependencies in phase 1
 - No backwards compatibility needed
+- `compose.ts` and `resolve.ts` will be deleted
+
+## Final API Summary
+```typescript
+// Basic slice
+const slice = createSlice(
+  (selectors) => ({ key1: selectors.key1, key2: selectors.key2 }),
+  ({ key1, key2 }, set) => ({
+    computed: () => key1() + key2(),
+    update: (val) => set(
+      (selectors) => ({ key1: selectors.key1 }),
+      ({ key1 }) => ({ key1: val })
+    )
+  })
+);
+
+// Composition
+const child = parent(
+  ({ foo }) => ({ 
+    foo,
+    ...otherSlice(({ bar }) => ({ bar }))
+  }),
+  ({ foo, bar }, set) => ({
+    combined: () => foo() + bar()
+  })
+);
+```
 
 ## Current Blockers
 - None yet
 
 ## Notes for Next Session
-- Start with implementing keyed subscriptions in the store
-- This is foundation for everything else
+- Start with implementing selectors that can track access
+- Then implement keyed subscriptions in the store
+- The two-phase `set` pattern mirrors the slice creation pattern
+- Composition happens by spreading one slice's deps into another

@@ -1,11 +1,5 @@
 // Lattice Core API - Pure state management with slices
 
-// Export compose utilities
-export { compose } from './compose';
-
-// Export resolve utility for bound computed views
-export { resolve } from './resolve';
-
 // Export memoization utilities
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 

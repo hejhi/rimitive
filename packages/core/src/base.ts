@@ -2,7 +2,6 @@
 // This is what you'd import for the most basic state management
 
 // Only export the bare minimum needed for basic state management
-export { compose } from './compose';
 export { createStore, type StoreTools, type StoreSliceFactory } from './store';
 
 // Re-export only essential types
