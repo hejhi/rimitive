@@ -125,6 +125,7 @@ describe('runtime with new createStore API', () => {
     const component = createComponent(createSlice);
 
     expect(typeof component.counter.subscribe).toBe('function');
+    // The subscribe function is now a wrapper around subscribeToKeys
     expect(component.counter.subscribe).toBe(mockAdapter.subscribe);
 
     // Test that subscription works
@@ -174,7 +175,7 @@ describe('runtime with new createStore API', () => {
     const mockAdapter: StoreAdapter<any> = {
       getState: () => mockState,
       setState: (updates) => Object.assign(mockState, updates),
-      subscribe: () => () => {},
+      subscribeToKeys: () => () => {},
     };
 
     const createComponent = (createSlice: RuntimeSliceFactory<{ value1: number; value2: number }>) => {
