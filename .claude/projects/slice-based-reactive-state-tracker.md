@@ -11,21 +11,21 @@
 - [x] **SPEC LOCKED** - Ready for implementation
 - [x] Deleted `compose.ts` (replaced by slice composition)
 - [x] Deleted `resolve.ts` (replaced by slice composition)
+- [x] Created `createReactiveStore` with dependency tracking
+- [x] Implemented selectors that track access using Object.defineProperty
+- [x] Added optional `subscribeToKeys` to StoreAdapter interface
+- [x] Implemented two-phase `set` function
+- [x] Created comprehensive tests for reactive store
 
 ## In Progress
-- [ ] Core slice implementation (NOT STARTED)
+- [ ] Create `useSliceSelector` React hook for reactive slices
 
 ## TODO
-- [ ] Create `createSlice` function with dependency tracking
-- [ ] Implement selectors that track access during dependency phase
-- [ ] Implement keyed subscriptions in store
-- [ ] Create selector type with subscription support
-- [ ] Implement two-phase `set` function
 - [ ] Implement slice composition (child slices via spread pattern)
-- [ ] Create `useSliceSelector` React hook
-- [ ] Delete old `useStore` and `useStoreSelector` implementations
-- [ ] Update all benchmarks to use new API
+- [ ] Update all benchmarks to use new reactive API
 - [ ] Performance testing with fine-grained subscriptions
+- [ ] Create adapters that support keyed subscriptions
+- [ ] Migrate existing code to use reactive slices
 
 ## Decisions Made
 - **NO PROXIES** - Selectors track their own access
@@ -66,7 +66,8 @@ const child = parent(
 - None yet
 
 ## Notes for Next Session
-- Start with implementing selectors that can track access
-- Then implement keyed subscriptions in the store
-- The two-phase `set` pattern mirrors the slice creation pattern
-- Composition happens by spreading one slice's deps into another
+- Reactive store foundation is complete with dependency tracking
+- Next: Create React hook for using reactive slices  
+- Then: Implement slice composition pattern
+- Consider: How to migrate existing code gradually
+- Key insight: Used Object.defineProperty instead of Proxies for tracking

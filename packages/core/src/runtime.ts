@@ -7,6 +7,7 @@
 
 import type { StoreTools, RuntimeSliceFactory, LatticeSlice } from './index';
 import { type StoreAdapter } from './adapter-contract';
+import { createReactiveStore, type ReactiveStoreAdapter } from './reactive-store';
 
 /**
  * Component factory receives slice factory and returns the component's slices
