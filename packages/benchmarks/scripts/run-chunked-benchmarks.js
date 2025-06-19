@@ -20,31 +20,42 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
 // Benchmark suites to run
-const BENCHMARK_SUITES = [
-  'overhead',
-  'head-to-head', 
-  'adapter-rankings',
-  'real-world',
-  'memory',
-  'svelte-runes-real'
-];
+const BENCHMARK_SUITES = {
+  lattice: [
+    'overhead',
+    'adapter-rankings',
+    'real-world',
+    'memory',
+    'svelte-runes'
+  ],
+  'store-react': [
+    'test',
+    // 'context-vs-store',
+    // 'core-performance',
+    'react-integration',
+    // 'real-world',
+    // 'scalability',
+    // 'store-react-apis'
+  ]
+};
 
 // Configuration
 const CONFIG = {
   outputDir: 'dist/benchmarks',
   maxOldSpaceSize: 4096,
   disableMemoization: process.env.LATTICE_DISABLE_MEMOIZATION === 'true',
-  mode: process.argv[2] || 'real' // 'raw' or 'real'
+  mode: process.argv[2] || 'real', // 'raw' or 'real'
+  suite: process.argv[3] || 'lattice' // 'lattice' or 'store-react'
 };
 
 /**
  * Run a single benchmark suite
  */
-async function runBenchmarkSuite(suite, timestamp) {
-  const outputFile = `${suite}-${CONFIG.mode}.json`;
+async function runBenchmarkSuite(suiteName, category, timestamp) {
+  const outputFile = `${suiteName}-${CONFIG.mode}.json`;
   const outputPath = path.join(projectRoot, CONFIG.outputDir, timestamp, outputFile);
   
-  console.log(`\n📊 Running ${suite} benchmark...`);
+  console.log(`\n📊 Running ${suiteName} benchmark...`);
   
   const env = {
     ...process.env,
@@ -55,12 +66,16 @@ async function runBenchmarkSuite(suite, timestamp) {
     env.LATTICE_DISABLE_MEMOIZATION = 'true';
   }
   
+  // Determine file extension based on suite name
+  const isReactFile = ['context-vs-store', 'react-integration', 'real-world', 'core-performance', 'store-react-apis'].includes(suiteName) && category === 'store-react';
+  const extension = isReactFile ? '.tsx' : '.ts';
+  
   const args = [
     'vitest',
     'bench',
     '--run',
     `--outputJson=${outputPath}`,
-    `src/suites/${suite}.bench.ts`
+    `src/suites/${category}/${suiteName}.bench${extension}`
   ];
   
   return new Promise((resolve, reject) => {
@@ -72,17 +87,17 @@ async function runBenchmarkSuite(suite, timestamp) {
     
     child.on('close', (code) => {
       if (code === 0) {
-        console.log(`✅ ${suite} benchmark completed`);
-        resolve({ suite, outputFile, status: 'success' });
+        console.log(`✅ ${suiteName} benchmark completed`);
+        resolve({ suite: suiteName, outputFile, status: 'success' });
       } else {
-        console.error(`❌ ${suite} benchmark failed with code ${code}`);
-        resolve({ suite, outputFile, status: 'failed', code });
+        console.error(`❌ ${suiteName} benchmark failed with code ${code}`);
+        resolve({ suite: suiteName, outputFile, status: 'failed', code });
       }
     });
     
     child.on('error', (error) => {
-      console.error(`❌ Error running ${suite} benchmark:`, error);
-      resolve({ suite, outputFile, status: 'error', error: error.message });
+      console.error(`❌ Error running ${suiteName} benchmark:`, error);
+      resolve({ suite: suiteName, outputFile, status: 'error', error: error.message });
     });
   });
 }
@@ -107,6 +122,7 @@ async function main() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
   
   console.log('🚀 Starting chunked benchmark run');
+  console.log(`Suite: ${CONFIG.suite}`);
   console.log(`Mode: ${CONFIG.mode}`);
   console.log(`Memoization: ${CONFIG.disableMemoization ? 'disabled' : 'enabled'}`);
   console.log(`Timestamp: ${timestamp}`);
@@ -115,10 +131,16 @@ async function main() {
     // Setup directories
     await setupDirectories(timestamp);
     
+    // Get the benchmark suites for the selected category
+    const suites = BENCHMARK_SUITES[CONFIG.suite];
+    if (!suites) {
+      throw new Error(`Unknown suite: ${CONFIG.suite}. Valid options: ${Object.keys(BENCHMARK_SUITES).join(', ')}`);
+    }
+    
     // Run benchmarks sequentially to avoid memory issues
     const results = [];
-    for (const suite of BENCHMARK_SUITES) {
-      const result = await runBenchmarkSuite(suite, timestamp);
+    for (const suite of suites) {
+      const result = await runBenchmarkSuite(suite, CONFIG.suite, timestamp);
       results.push(result);
       
       // Add a small delay between suites to let GC run

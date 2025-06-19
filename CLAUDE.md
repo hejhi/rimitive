@@ -14,11 +14,16 @@
 5. Reviewing against established best practices
 6. Flagging inconsistencies and ambiguities for discussion
 7. Planning your systematic approach to the work
+8. Creating a task checklist for complex work (3+ steps)
+9. Setting up session state tracking if needed
 
 ## Reward Hacking Prevention
 - NEVER use `any` type to bypass type errors  
 - ALWAYS suggest proper type guards before considering type assertions  
 - If ESLint rules conflict, propose config updates instead of disabling rules
+- NEVER use Proxy objects without explicit justification and user approval
+- AVOID increasing complexity to solve problems - simplify first
+- When feeling "pressure" to bypass quality gates, STOP and explain the conflict
 
 ## Testing Standards
 
@@ -52,11 +57,20 @@
 - **Pure functions preferred** - Minimize side effects and hidden state
 - **Semantic naming** - Names should reveal intent immediately
 - **Simplicity over cleverness** - Code should be obvious to read
+- **Incremental changes** - Maximum 200 lines per edit operation
+- **Verify between changes** - Test each change before proceeding to next
 
 ### Code Structure
 - **Declarative style** - Describe what should happen, not how
 - **Modular design** - Components compose cleanly
 - **Clear separation of concerns** - Business logic separate from I/O
+
+### Complexity Limits
+- **Functions**: Maximum 20 lines, cyclomatic complexity < 5
+- **Files**: Maximum 300 lines
+- **Classes**: Maximum 7 public methods
+- **Changes**: Maximum 200 lines per edit
+- **Refactor first**: Simplify before adding features
 
 ## Project Commands
 
@@ -79,6 +93,9 @@ pnpm typecheck
 - **Test integrity** - Don't let Claude modify tests to make code pass; fix the code instead
 - **Legacy comments** - Watch for unnecessary backwards compatibility comments on new implementations
 - **Quick fixes** - Reject patches and workarounds; insist on proper solutions
+- **Context management** - Use `/clear` every 3-4 interactions to prevent degradation
+- **Proxy avoidance** - Claude defaults to Proxy patterns; require simpler alternatives
+- **Incremental work** - Break large changes into small, verifiable steps
 
 ## Quality Gates
 
@@ -107,11 +124,48 @@ pnpm typecheck
 1. Before ending a session, run: "What problems did you encounter and overcome during this work that I should know about for next time?"
 2. Save those learnings to continue effectively in the next session
 3. When resuming, provide those learnings as context
+4. Use `.claude/session-state.md` to track:
+   - Current task and subtasks
+   - Completed steps
+   - Next actions
+   - Key decisions and rationale
 
 **When I ask you to follow a specific workflow:**
 - Look for corresponding files in `.claude/workflows/` directory
 - Execute the steps defined in those workflow files
 - This helps maintain consistency across sessions
+
+## Context Window Management
+
+**Maintain quality throughout long sessions:**
+- Check context usage with `/status` every 5 messages
+- Use `/clear` proactively every 3-4 interactions
+- Before clearing, save important state to `.claude/session-state.md`
+- Use thinking modes progressively: `think` → `think hard` → `ultrathink`
+
+### Context Management Signals
+**When Claude exhibits these behaviors, use `/clear`:**
+- Increasing verbosity in responses
+- Referencing outdated information from earlier in conversation
+- Making larger edits than requested (exceeding 200-line limit)
+- Suggesting complex solutions to simple problems
+- Mixing up different parts of the codebase
+- Slower response times or apparent "confusion"
+
+### Claude's Responsibilities
+- Track interaction count since last clear
+- After 3-4 interactions, explicitly request: "Context getting full. Please use `/clear` to maintain quality."
+- Before requesting clear, offer to save state: "Should I save current progress to session state before you clear?"
+- Include interaction count in complex tasks: "Interaction 3/4 since last clear"
+
+## Data Analysis Protocol
+
+**For reliable data analysis:**
+1. **First pass**: Describe data structure and format only
+2. **Second pass**: Calculate basic statistics and counts
+3. **Third pass**: Extract specific insights requested
+4. **Verification**: Cross-check key findings with different methods
+5. **Document assumptions**: State any data quality issues found
 
 ---
 

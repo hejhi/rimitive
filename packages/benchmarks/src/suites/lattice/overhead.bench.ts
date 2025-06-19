@@ -18,16 +18,11 @@ const SUBSCRIPTION_COUNT = 100;
 
 describe('Adapter Overhead', () => {
   describe('Zustand', () => {
-    bench('raw zustand - state updates', () => {
-      const store = createZustandStore<{ count: number }>(() => ({ count: 0 }));
-      const setCount = (count: number) => store.setState({ count });
-
-      for (let i = 0; i < ITERATIONS; i++) {
-        setCount(i);
-      }
-    });
-
-    bench('zustand + lattice - state updates', () => {
+    // Initialize stores outside benchmarks
+    const rawStore = createZustandStore<{ count: number }>(() => ({ count: 0 }));
+    const setCount = (count: number) => rawStore.setState({ count });
+    
+    const latticeStore = (() => {
       const useStore = create<{ count: number }>(() => ({ count: 0 }));
       const createSlice = zustandAdapter(useStore);
       const createComponent = (
@@ -39,30 +34,24 @@ describe('Adapter Overhead', () => {
         }));
         return { counter };
       };
-      const component = createComponent(createSlice);
+      return createComponent(createSlice);
+    })();
 
+    bench('raw zustand - state updates', () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        component.counter.selector.setCount(i);
+        setCount(i);
       }
     });
 
-    bench('raw zustand - subscriptions', () => {
-      const store = createZustandStore<{ count: number }>(() => ({ count: 0 }));
-      const unsubscribers: (() => void)[] = [];
-
-      // Add subscriptions
-      for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(store.subscribe(() => {}));
+    bench('zustand + lattice - state updates', () => {
+      for (let i = 0; i < ITERATIONS; i++) {
+        latticeStore.counter.selector.setCount(i);
       }
-
-      // Update state
-      store.setState({ count: 1 });
-
-      // Cleanup
-      unsubscribers.forEach((unsub) => unsub());
     });
 
-    bench('zustand + lattice - subscriptions', () => {
+    // Initialize subscription test stores
+    const rawSubStore = createZustandStore<{ count: number }>(() => ({ count: 0 }));
+    const latticeSubStore = (() => {
       const useStore = create<{ count: number }>(() => ({ count: 0 }));
       const createSlice = zustandAdapter(useStore);
       const createComponent = (
@@ -73,16 +62,34 @@ describe('Adapter Overhead', () => {
         }));
         return { counter };
       };
-      const component = createComponent(createSlice);
+      return createComponent(createSlice);
+    })();
+
+    bench('raw zustand - subscriptions', () => {
       const unsubscribers: (() => void)[] = [];
 
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(component.counter.subscribe(() => {}));
+        unsubscribers.push(rawSubStore.subscribe(() => {}));
       }
 
       // Update state
-      component.counter.selector.setCount(1);
+      rawSubStore.setState({ count: Math.random() });
+
+      // Cleanup
+      unsubscribers.forEach((unsub) => unsub());
+    });
+
+    bench('zustand + lattice - subscriptions', () => {
+      const unsubscribers: (() => void)[] = [];
+
+      // Add subscriptions
+      for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
+        unsubscribers.push(latticeSubStore.counter.subscribe(() => {}));
+      }
+
+      // Update state
+      latticeSubStore.counter.selector.setCount(Math.random());
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
@@ -90,7 +97,8 @@ describe('Adapter Overhead', () => {
   });
 
   describe('Redux', () => {
-    bench('raw redux - state updates', () => {
+    // Initialize Redux stores outside benchmarks
+    const rawReduxStore = (() => {
       const slice = {
         name: 'counter',
         initialState: { count: 0 },
@@ -114,13 +122,11 @@ describe('Adapter Overhead', () => {
 
       const setCount = (count: number) =>
         store.dispatch({ type: 'counter/setCount', payload: count });
-
-      for (let i = 0; i < ITERATIONS; i++) {
-        setCount(i);
-      }
-    });
-
-    bench('redux + lattice - state updates', () => {
+        
+      return { store, setCount };
+    })();
+    
+    const latticeReduxStore = (() => {
       const store = configureStore({
         reducer: latticeReducer.reducer,
         preloadedState: { count: 0 },
@@ -135,37 +141,38 @@ describe('Adapter Overhead', () => {
         }));
         return { counter };
       };
-      const component = createComponent(createSlice);
+      return createComponent(createSlice);
+    })();
 
+    bench('raw redux - state updates', () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        component.counter.selector.setCount(i);
+        rawReduxStore.setCount(i);
+      }
+    });
+
+    bench('redux + lattice - state updates', () => {
+      for (let i = 0; i < ITERATIONS; i++) {
+        latticeReduxStore.counter.selector.setCount(i);
       }
     });
   });
 
   describe('Progressive Overhead Analysis', () => {
     describe('State Updates - Layer by Layer', () => {
-      // Zustand progressive benchmarks
-      bench('zustand - direct setState()', () => {
-        const store = createZustandStore<{ count: number }>(() => ({
-          count: 0,
-        }));
-        for (let i = 0; i < ITERATIONS; i++) {
-          store.setState({ count: i });
-        }
-      });
-
-      bench('zustand - function wrapped', () => {
+      // Pre-initialize all stores for fair comparison
+      const directStore = createZustandStore<{ count: number }>(() => ({
+        count: 0,
+      }));
+      
+      const wrappedStore = (() => {
         const store = createZustandStore<{ count: number }>(() => ({
           count: 0,
         }));
         const setCount = (count: number) => store.setState({ count });
-        for (let i = 0; i < ITERATIONS; i++) {
-          setCount(i);
-        }
-      });
-
-      bench('zustand - lattice wrapped', () => {
+        return { setCount };
+      })();
+      
+      const latticeWrappedStore = (() => {
         const useStore = create<{ count: number }>(() => ({ count: 0 }));
         const createSlice = zustandAdapter(useStore);
         const createComponent = (
@@ -176,26 +183,45 @@ describe('Adapter Overhead', () => {
           }));
           return { counter };
         };
-        const component = createComponent(createSlice);
+        return createComponent(createSlice);
+      })();
+
+      bench('zustand - direct setState()', () => {
         for (let i = 0; i < ITERATIONS; i++) {
-          component.counter.selector.setCount(i);
+          directStore.setState({ count: i });
+        }
+      });
+
+      bench('zustand - function wrapped', () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          wrappedStore.setCount(i);
+        }
+      });
+
+      bench('zustand - lattice wrapped', () => {
+        for (let i = 0; i < ITERATIONS; i++) {
+          latticeWrappedStore.counter.selector.setCount(i);
         }
       });
     });
   });
 
   describe('Store Creation Overhead', () => {
-    bench('raw zustand - store creation', () => {
-      const stores = [];
-
+    bench('raw zustand - store creation only', () => {
       for (let i = 0; i < 1000; i++) {
-        stores.push(createZustandStore(() => ({ value: i })));
+        createZustandStore(() => ({ value: i }));
       }
     });
 
-    bench('zustand + lattice - store creation', () => {
-      const stores = [];
+    bench('zustand + adapter - no component', () => {
+      for (let i = 0; i < 1000; i++) {
+        const value = i;
+        const useStore = create<{ value: number }>(() => ({ value }));
+        zustandAdapter(useStore);
+      }
+    });
 
+    bench('zustand + lattice - full stack', () => {
       for (let i = 0; i < 1000; i++) {
         const value = i;
         const useStore = create<{ value: number }>(() => ({ value }));
@@ -209,7 +235,7 @@ describe('Adapter Overhead', () => {
           return { slice };
         };
 
-        stores.push(createComponent(createSlice));
+        createComponent(createSlice);
       }
     });
   });

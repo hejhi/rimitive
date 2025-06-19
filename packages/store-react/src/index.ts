@@ -167,6 +167,14 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
 
 /**
  * Subscribe to specific parts of the store with a selector.
+ * 
+ * This hook implements a double equality check pattern:
+ * 1. In subscribeWithSelector: Filters updates at subscription level (performance)
+ * 2. In getSnapshot: Ensures stable references for React's multiple calls (correctness)
+ * 
+ * Both checks are necessary because React's useSyncExternalStore may call
+ * getSnapshot independently of subscriptions during concurrent features,
+ * StrictMode, hydration, and other edge cases.
  *
  * @param store - Store instance from useStore
  * @param selector - Function to select specific values
@@ -189,28 +197,77 @@ export function useStoreSelector<Store, Selected>(
   selector: (state: Store) => Selected,
   equalityFn: (a: Selected, b: Selected) => boolean = Object.is
 ): Selected {
-  // Get the current selected value
+  // Extract stable API methods - these don't change
+  const getState = store.getState;
+  const subscribe = store.subscribe;
+
+  // IMPORTANT: We use refs to ensure the latest selector and equality function
+  // are always used without causing hook dependency changes. This prevents
+  // unnecessary re-subscriptions when the selector or equalityFn references change.
+  const selectorRef = useRef(selector);
+  selectorRef.current = selector;
+
+  const equalityFnRef = useRef(equalityFn);
+  equalityFnRef.current = equalityFn;
+
+  // Cache for the selected value to ensure stable references.
+  // This is crucial for React's useSyncExternalStore which requires
+  // getSnapshot to return the same reference when data hasn't changed.
+  const selectedValueRef = useRef<Selected>();
+  const hasInitialized = useRef(false);
+
+  // Create a stable getSnapshot function that returns cached values.
+  // React's useSyncExternalStore may call this multiple times:
+  // - During initial render (before subscription)
+  // - Multiple times in StrictMode for detecting side effects
+  // - During concurrent features (Suspense, time slicing)
+  // - During hydration for server/client reconciliation
+  // - When React checks if re-rendering is needed
   const getSnapshot = useCallback(() => {
-    return selector(store.getState());
-  }, [store, selector]);
+    const currentState = getState();
+    const nextValue = selectorRef.current(currentState);
+    
+    // Initialize on first call
+    if (!hasInitialized.current) {
+      selectedValueRef.current = nextValue;
+      hasInitialized.current = true;
+      return nextValue;
+    }
+    
+    // CRITICAL: This equality check ensures stable references between React's
+    // multiple getSnapshot calls. Without it, returning new objects would
+    // cause infinite re-renders. This is defensive programming to handle
+    // React's edge cases, not a performance optimization.
+    if (!equalityFnRef.current(selectedValueRef.current as Selected, nextValue)) {
+      selectedValueRef.current = nextValue;
+    }
+    
+    return selectedValueRef.current as Selected;
+  }, [getState]);
 
-  // Subscribe with selector
-  const subscribe = useCallback(
+  // Create stable subscribe function with selector-specific filtering.
+  // This implements the "selector pattern" where we only notify React
+  // of changes when the selected value actually changes.
+  const subscribeWithSelector = useCallback(
     (onStoreChange: () => void) => {
-      let currentValue = selector(store.getState());
-
-      return store.subscribe(() => {
-        const nextValue = selector(store.getState());
-        if (!equalityFn(currentValue, nextValue)) {
-          currentValue = nextValue;
+      return subscribe(() => {
+        const currentState = getState();
+        const nextValue = selectorRef.current(currentState);
+        
+        // PERFORMANCE: This equality check filters out unnecessary re-renders
+        // at the subscription level. It prevents React from even considering
+        // a re-render when the selected value hasn't changed.
+        // This is different from the getSnapshot check which handles React's
+        // internal multiple calls.
+        if (!equalityFnRef.current(selectedValueRef.current as Selected, nextValue)) {
           onStoreChange();
         }
       });
     },
-    [store, selector, equalityFn]
+    [subscribe, getState]
   );
 
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return useSyncExternalStore(subscribeWithSelector, getSnapshot, getSnapshot);
 }
 
 // ============================================================================

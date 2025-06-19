@@ -8,6 +8,7 @@
   "private": true,
   "scripts": {
     "bench": "pnpm bench:report:real",
+    "bench:store-react": "node scripts/run-chunked-benchmarks.js real store-react",
     "bench:report:raw": "LATTICE_DISABLE_MEMOIZATION=true node scripts/run-chunked-benchmarks.js raw",
     "bench:report:real": "node scripts/run-chunked-benchmarks.js real",
     "bench:merge": "node scripts/merge-benchmark-results.js",

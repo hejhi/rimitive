@@ -13,7 +13,6 @@ import { createStore as createStoreReactStore } from '@lattice/adapter-store-rea
 import { compose } from '@lattice/core';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
-
 type EcommerceState = {
   cart: Array<{ id: string; name: string; price: number; quantity: number }>;
   user: { id: string; name: string; email: string } | null;
@@ -38,8 +37,34 @@ describe('Real-World Scenarios', () => {
       },
     });
 
-    const createEcommerceApp = (createSlice: RuntimeSliceFactory<EcommerceState>) => {
+    // Pre-initialize stores with products and user
+    const initializeEcommerceStore = <
+      T extends ReturnType<typeof createEcommerceApp>,
+    >(
+      store: T
+    ) => {
+      // Load products
+      const productList = Array.from({ length: 100 }, (_, i) => ({
+        id: `prod-${i}`,
+        name: `Product ${i}`,
+        price: Math.random() * 100,
+        stock: Math.floor(Math.random() * 50),
+      }));
+      store.products.selector.loadProducts(productList);
 
+      // Login user
+      store.user.selector.login({
+        id: 'user-1',
+        name: 'Test User',
+        email: 'test@example.com',
+      });
+
+      return store;
+    };
+
+    const createEcommerceApp = (
+      createSlice: RuntimeSliceFactory<EcommerceState>
+    ) => {
       const cart = createSlice(
         ({
           get,
@@ -195,45 +220,54 @@ describe('Real-World Scenarios', () => {
       return { cart, products, user, ui, checkout };
     };
 
+    const zustandEcommerce = initializeEcommerceStore(
+      (() => {
+        const useStore = create<EcommerceState>(() => getInitialState());
+        const createSlice = zustandAdapter(useStore);
+        return createEcommerceApp(createSlice);
+      })()
+    );
+
+    const reduxEcommerce = initializeEcommerceStore(
+      (() => {
+        const store = configureStore({
+          reducer: latticeReducer.reducer,
+          preloadedState: getInitialState(),
+        });
+        const createSlice = reduxAdapter<EcommerceState>(store);
+        return createEcommerceApp(createSlice);
+      })()
+    );
+
+    const storeReactEcommerce = initializeEcommerceStore(
+      (() => {
+        const createSlice = createStoreReactStore(getInitialState());
+        return createEcommerceApp(createSlice);
+      })()
+    );
+
     bench('zustand - ecommerce simulation', () => {
-      const useStore = create<EcommerceState>(() => getInitialState());
-      const createSlice = zustandAdapter(useStore);
-      const store = createEcommerceApp(createSlice);
-
-      // Load products
-      const productList = Array.from({ length: 100 }, (_, i) => ({
-        id: `prod-${i}`,
-        name: `Product ${i}`,
-        price: Math.random() * 100,
-        stock: Math.floor(Math.random() * 50),
-      }));
-      store.products.selector.loadProducts(productList);
-
-      // Simulate user session
-      store.user.selector.login({
-        id: 'user-1',
-        name: 'Test User',
-        email: 'test@example.com',
-      });
+      // Clear cart for consistent state
+      zustandEcommerce.cart.selector.clearCart();
 
       // Simulate shopping behavior
       for (let i = 0; i < 50; i++) {
         const productId = `prod-${Math.floor(Math.random() * 100)}`;
-        store.ui.selector.selectProduct(productId);
-        store.cart.selector.addItem(
+        zustandEcommerce.ui.selector.selectProduct(productId);
+        zustandEcommerce.cart.selector.addItem(
           productId,
           Math.floor(Math.random() * 3) + 1
         );
 
         if (i % 10 === 0) {
-          store.ui.selector.toggleCart();
+          zustandEcommerce.ui.selector.toggleCart();
         }
 
-        if (i % 5 === 0 && store.cart.selector.getItemCount() > 0) {
-          const cartItems = store.cart.selector.getItemCount();
+        if (i % 5 === 0 && zustandEcommerce.cart.selector.getItemCount() > 0) {
+          const cartItems = zustandEcommerce.cart.selector.getItemCount();
           if (cartItems > 10) {
             // Remove some items
-            store.cart.selector.removeItem(
+            zustandEcommerce.cart.selector.removeItem(
               `prod-${Math.floor(Math.random() * 100)}`
             );
           }
@@ -241,53 +275,33 @@ describe('Real-World Scenarios', () => {
       }
 
       // Checkout if possible
-      if (store.checkout.selector.canCheckout()) {
-        store.checkout.selector.processCheckout();
+      if (zustandEcommerce.checkout.selector.canCheckout()) {
+        zustandEcommerce.checkout.selector.processCheckout();
       }
     });
 
     bench('redux - ecommerce simulation', () => {
-      const store = configureStore({
-        reducer: latticeReducer.reducer,
-        preloadedState: getInitialState(),
-      });
-      const createSlice = reduxAdapter<EcommerceState>(store);
-      const components = createEcommerceApp(createSlice);
-
-      // Load products
-      const productList = Array.from({ length: 100 }, (_, i) => ({
-        id: `prod-${i}`,
-        name: `Product ${i}`,
-        price: Math.random() * 100,
-        stock: Math.floor(Math.random() * 50),
-      }));
-      components.products.selector.loadProducts(productList);
-
-      // Simulate user session
-      components.user.selector.login({
-        id: 'user-1',
-        name: 'Test User',
-        email: 'test@example.com',
-      });
+      // Clear cart for consistent state
+      reduxEcommerce.cart.selector.clearCart();
 
       // Simulate shopping behavior
       for (let i = 0; i < 50; i++) {
         const productId = `prod-${Math.floor(Math.random() * 100)}`;
-        components.ui.selector.selectProduct(productId);
-        components.cart.selector.addItem(
+        reduxEcommerce.ui.selector.selectProduct(productId);
+        reduxEcommerce.cart.selector.addItem(
           productId,
           Math.floor(Math.random() * 3) + 1
         );
 
         if (i % 10 === 0) {
-          components.ui.selector.toggleCart();
+          reduxEcommerce.ui.selector.toggleCart();
         }
 
-        if (i % 5 === 0 && components.cart.selector.getItemCount() > 0) {
-          const cartItems = components.cart.selector.getItemCount();
+        if (i % 5 === 0 && reduxEcommerce.cart.selector.getItemCount() > 0) {
+          const cartItems = reduxEcommerce.cart.selector.getItemCount();
           if (cartItems > 10) {
             // Remove some items
-            components.cart.selector.removeItem(
+            reduxEcommerce.cart.selector.removeItem(
               `prod-${Math.floor(Math.random() * 100)}`
             );
           }
@@ -295,49 +309,36 @@ describe('Real-World Scenarios', () => {
       }
 
       // Checkout if possible
-      if (components.checkout.selector.canCheckout()) {
-        components.checkout.selector.processCheckout();
+      if (reduxEcommerce.checkout.selector.canCheckout()) {
+        reduxEcommerce.checkout.selector.processCheckout();
       }
     });
 
     bench('store-react - ecommerce simulation', () => {
-      const createSlice = createStoreReactStore(getInitialState());
-      const store = createEcommerceApp(createSlice);
-
-      // Load products
-      const productList = Array.from({ length: 100 }, (_, i) => ({
-        id: `prod-${i}`,
-        name: `Product ${i}`,
-        price: Math.random() * 100,
-        stock: Math.floor(Math.random() * 50),
-      }));
-      store.products.selector.loadProducts(productList);
-
-      // Simulate user session
-      store.user.selector.login({
-        id: 'user-1',
-        name: 'Test User',
-        email: 'test@example.com',
-      });
+      // Clear cart for consistent state
+      storeReactEcommerce.cart.selector.clearCart();
 
       // Simulate shopping behavior
       for (let i = 0; i < 50; i++) {
         const productId = `prod-${Math.floor(Math.random() * 100)}`;
-        store.ui.selector.selectProduct(productId);
-        store.cart.selector.addItem(
+        storeReactEcommerce.ui.selector.selectProduct(productId);
+        storeReactEcommerce.cart.selector.addItem(
           productId,
           Math.floor(Math.random() * 3) + 1
         );
 
         if (i % 10 === 0) {
-          store.ui.selector.toggleCart();
+          storeReactEcommerce.ui.selector.toggleCart();
         }
 
-        if (i % 5 === 0 && store.cart.selector.getItemCount() > 0) {
-          const cartItems = store.cart.selector.getItemCount();
+        if (
+          i % 5 === 0 &&
+          storeReactEcommerce.cart.selector.getItemCount() > 0
+        ) {
+          const cartItems = storeReactEcommerce.cart.selector.getItemCount();
           if (cartItems > 10) {
             // Remove some items
-            store.cart.selector.removeItem(
+            storeReactEcommerce.cart.selector.removeItem(
               `prod-${Math.floor(Math.random() * 100)}`
             );
           }
@@ -345,11 +346,10 @@ describe('Real-World Scenarios', () => {
       }
 
       // Checkout if possible
-      if (store.checkout.selector.canCheckout()) {
-        store.checkout.selector.processCheckout();
+      if (storeReactEcommerce.checkout.selector.canCheckout()) {
+        storeReactEcommerce.checkout.selector.processCheckout();
       }
     });
-
   });
 
   type TodoState = {
@@ -372,8 +372,28 @@ describe('Real-World Scenarios', () => {
       selectedTags: [],
     });
 
-    const createTodoApp = (createSlice: RuntimeSliceFactory<TodoState>) => {
+    // Pre-initialize stores with todos
+    const initializeTodoStore = <T extends ReturnType<typeof createTodoApp>>(
+      store: T
+    ) => {
+      // Add initial todos
+      for (let i = 0; i < 100; i++) {
+        const tags = [`tag${i % 5}`, `priority${i % 3}`];
+        store.todos.selector.addTodo(`Todo item ${i}`, tags);
+      }
 
+      // Toggle some todos as completed
+      for (let i = 0; i < 50; i++) {
+        const todos = store.queries.selector.getFilteredTodos();
+        const todo = todos[i]?.id;
+
+        if (todo) store.todos.selector.toggleTodo(todo);
+      }
+
+      return store;
+    };
+
+    const createTodoApp = (createSlice: RuntimeSliceFactory<TodoState>) => {
       const todos = createSlice(
         ({
           get,
@@ -499,109 +519,124 @@ describe('Real-World Scenarios', () => {
       return { todos, filters, queries };
     };
 
+    const zustandTodo = initializeTodoStore(
+      (() => {
+        const useStore = create<TodoState>(() => getTodoInitialState());
+        const createSlice = zustandAdapter(useStore);
+        return createTodoApp(createSlice);
+      })()
+    );
+
+    const reduxTodo = initializeTodoStore(
+      (() => {
+        const store = configureStore({
+          reducer: latticeReducer.reducer,
+          preloadedState: getTodoInitialState(),
+        });
+        const createSlice = reduxAdapter<TodoState>(store);
+        return createTodoApp(createSlice);
+      })()
+    );
+
+    const storeReactTodo = initializeTodoStore(
+      (() => {
+        const createSlice = createStoreReactStore(getTodoInitialState());
+        return createTodoApp(createSlice);
+      })()
+    );
+
     bench('zustand - todo app simulation', () => {
-      const useStore = create<TodoState>(() => getTodoInitialState());
-      const createSlice = zustandAdapter(useStore);
-      const store = createTodoApp(createSlice);
-
-      // Add todos
-      for (let i = 0; i < 100; i++) {
-        const tags = [`tag${i % 5}`, `priority${i % 3}`];
-        store.todos.selector.addTodo(`Todo item ${i}`, tags);
-      }
-
-      // Toggle some todos
-      for (let i = 0; i < 50; i++) {
-        store.todos.selector.toggleTodo(`todo-${Date.now() - i * 1000}`);
-      }
+      // Reset filters for consistent state
+      zustandTodo.filters.selector.clearFilters();
 
       // Apply filters and get results
-      store.filters.selector.setFilter('active');
-      store.queries.selector.getFilteredTodos();
+      zustandTodo.filters.selector.setFilter('active');
+      zustandTodo.queries.selector.getFilteredTodos();
 
-      store.filters.selector.setSearchTerm('item 1');
-      store.queries.selector.getFilteredTodos();
+      zustandTodo.filters.selector.setSearchTerm('item 1');
+      zustandTodo.queries.selector.getFilteredTodos();
 
-      store.filters.selector.toggleTag('tag1');
-      store.filters.selector.toggleTag('priority0');
-      store.queries.selector.getFilteredTodos();
+      zustandTodo.filters.selector.toggleTag('tag1');
+      zustandTodo.filters.selector.toggleTag('priority0');
+      zustandTodo.queries.selector.getFilteredTodos();
 
       // Get stats
-      store.queries.selector.getStats();
+      zustandTodo.queries.selector.getStats();
+
+      // Update some todos
+      for (let i = 0; i < 20; i++) {
+        const todos = zustandTodo.queries.selector.getFilteredTodos();
+        const todoId = todos[i]?.id;
+        if (todoId) {
+          zustandTodo.todos.selector.updateTodo(todoId, `Updated ${i}`);
+        }
+      }
 
       // Clear completed
-      store.todos.selector.clearCompleted();
+      zustandTodo.todos.selector.clearCompleted();
     });
 
     bench('redux - todo app simulation', () => {
-      const store = configureStore({
-        reducer: latticeReducer.reducer,
-        preloadedState: getTodoInitialState(),
-      });
-      const createSlice = reduxAdapter<TodoState>(store);
-      const components = createTodoApp(createSlice);
-
-      // Add todos
-      for (let i = 0; i < 100; i++) {
-        const tags = [`tag${i % 5}`, `priority${i % 3}`];
-        components.todos.selector.addTodo(`Todo item ${i}`, tags);
-      }
-
-      // Toggle some todos
-      for (let i = 0; i < 50; i++) {
-        components.todos.selector.toggleTodo(`todo-${Date.now() - i * 1000}`);
-      }
+      // Reset filters for consistent state
+      reduxTodo.filters.selector.clearFilters();
 
       // Apply filters and get results
-      components.filters.selector.setFilter('active');
-      components.queries.selector.getFilteredTodos();
+      reduxTodo.filters.selector.setFilter('active');
+      reduxTodo.queries.selector.getFilteredTodos();
 
-      components.filters.selector.setSearchTerm('item 1');
-      components.queries.selector.getFilteredTodos();
+      reduxTodo.filters.selector.setSearchTerm('item 1');
+      reduxTodo.queries.selector.getFilteredTodos();
 
-      components.filters.selector.toggleTag('tag1');
-      components.filters.selector.toggleTag('priority0');
-      components.queries.selector.getFilteredTodos();
+      reduxTodo.filters.selector.toggleTag('tag1');
+      reduxTodo.filters.selector.toggleTag('priority0');
+      reduxTodo.queries.selector.getFilteredTodos();
 
       // Get stats
-      components.queries.selector.getStats();
+      reduxTodo.queries.selector.getStats();
+
+      // Update some todos
+      for (let i = 0; i < 20; i++) {
+        const todos = reduxTodo.queries.selector.getFilteredTodos();
+        const todoId = todos[i]?.id;
+
+        if (todoId) {
+          reduxTodo.todos.selector.updateTodo(todoId, `Updated ${i}`);
+        }
+      }
 
       // Clear completed
-      components.todos.selector.clearCompleted();
+      reduxTodo.todos.selector.clearCompleted();
     });
 
     bench('store-react - todo app simulation', () => {
-      const createSlice = createStoreReactStore(getTodoInitialState());
-      const store = createTodoApp(createSlice);
-
-      // Add todos
-      for (let i = 0; i < 100; i++) {
-        const tags = [`tag${i % 5}`, `priority${i % 3}`];
-        store.todos.selector.addTodo(`Todo item ${i}`, tags);
-      }
-
-      // Toggle some todos
-      for (let i = 0; i < 50; i++) {
-        store.todos.selector.toggleTodo(`todo-${Date.now() - i * 1000}`);
-      }
+      // Reset filters for consistent state
+      storeReactTodo.filters.selector.clearFilters();
 
       // Apply filters and get results
-      store.filters.selector.setFilter('active');
-      store.queries.selector.getFilteredTodos();
+      storeReactTodo.filters.selector.setFilter('active');
+      storeReactTodo.queries.selector.getFilteredTodos();
 
-      store.filters.selector.setSearchTerm('item 1');
-      store.queries.selector.getFilteredTodos();
+      storeReactTodo.filters.selector.setSearchTerm('item 1');
+      storeReactTodo.queries.selector.getFilteredTodos();
 
-      store.filters.selector.toggleTag('tag1');
-      store.filters.selector.toggleTag('priority0');
-      store.queries.selector.getFilteredTodos();
+      storeReactTodo.filters.selector.toggleTag('tag1');
+      storeReactTodo.filters.selector.toggleTag('priority0');
+      storeReactTodo.queries.selector.getFilteredTodos();
 
       // Get stats
-      store.queries.selector.getStats();
+      storeReactTodo.queries.selector.getStats();
+
+      // Update some todos
+      for (let i = 0; i < 20; i++) {
+        const todos = storeReactTodo.queries.selector.getFilteredTodos();
+        const todoId = todos[i]?.id;
+        if (todoId) {
+          storeReactTodo.todos.selector.updateTodo(todoId, `Updated ${i}`);
+        }
+      }
 
       // Clear completed
-      store.todos.selector.clearCompleted();
+      storeReactTodo.todos.selector.clearCompleted();
     });
-
   });
 });
