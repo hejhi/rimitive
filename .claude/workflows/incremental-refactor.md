@@ -4,7 +4,7 @@
 This workflow ensures systematic, verifiable refactoring with minimal risk and maximum clarity.
 
 ## Pre-requisites
-- [ ] Identify target scope (maximum 1 file or class)
+- [ ] Identify target scope (maximum 1 file or model)
 - [ ] Ensure all existing tests pass
 - [ ] Create backup branch if changes are significant
 

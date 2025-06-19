@@ -4,6 +4,16 @@
 
 > **This file defines the technical standards and operational procedures for this codebase. These are not suggestions—they are the established engineering practices for this project.**
 
+## CRITICAL: ALL DEVELOPMENT IS GREENFIELD DEVELOPMENT
+
+**Assume that whatever existing code is code that you have JUST WRITTEN. This means:**
+1. NEVER create migration plans or offer backwards compatibility 
+2. ALWAYS delete any legacy or unused code, and NEVER comment it out or mark it as "legacy"
+3. NEVER support "fallback" APIs or multiple ways to do the same thing
+
+This codebase is unreleased and under development, and therefore has NO USERS TO SUPPORT.
+Violating ANY of the above just creates confusion and code bloat.
+
 ## Session Initialization
 
 **Start every session by:**
@@ -119,6 +129,8 @@ pnpm typecheck
 **Remember: These standards exist to maintain code quality and team productivity. When in doubt, ask rather than compromise the standards.**
 
 ## Workflow Management
+
+To find any workflow or project management documentation, look in the `.claude` directory (REMEMBER to use `ls -la` as it's a dotfile).
 
 **For complex changes lasting multiple sessions:**
 1. Before ending a session, run: "What problems did you encounter and overcome during this work that I should know about for next time?"

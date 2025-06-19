@@ -4,15 +4,17 @@ import type { StoreAdapter, RuntimeSliceFactory } from './index';
 
 describe('slice composition patterns', () => {
   // Helper to create a test adapter
-  const createTestAdapter = <State>(initialState: State): StoreAdapter<State> => {
+  const createTestAdapter = <State>(
+    initialState: State
+  ): StoreAdapter<State> => {
     let state = { ...initialState };
     const listeners = new Set<() => void>();
-    
+
     return {
       getState: () => state,
       setState: (updates) => {
         state = { ...state, ...updates };
-        listeners.forEach(listener => listener());
+        listeners.forEach((listener) => listener());
       },
       subscribe: (listener) => {
         listeners.add(listener);
@@ -22,14 +24,13 @@ describe('slice composition patterns', () => {
   };
 
   it('should allow spreading composed slice methods', () => {
-    type State = { 
+    type State = {
       products: Array<{ id: string; category: string; price: number }>;
       taxRate: number;
       discount: number;
     };
-    
-    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
 
+    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
       // Product queries slice
       const products = createSlice(({ get }) => ({
         all: () => get().products,
@@ -53,15 +54,15 @@ describe('slice composition patterns', () => {
       return { products, pricing };
     };
 
-    const adapter = createTestAdapter({ 
-        products: [
-          { id: '1', category: 'electronics', price: 100 },
-          { id: '2', category: 'clothing', price: 50 },
-          { id: '3', category: 'electronics', price: 200 }
-        ],
-        taxRate: 0.1,
-        discount: 0.2
-      });
+    const adapter = createTestAdapter({
+      products: [
+        { id: '1', category: 'electronics', price: 100 },
+        { id: '2', category: 'clothing', price: 50 },
+        { id: '3', category: 'electronics', price: 200 },
+      ],
+      taxRate: 0.1,
+      discount: 0.2,
+    });
     const createSlice = createLatticeStore(adapter);
     const component = createComponent(createSlice);
 
@@ -69,14 +70,18 @@ describe('slice composition patterns', () => {
     expect(typeof component.pricing.selector.all).toBe('function');
     expect(typeof component.pricing.selector.byId).toBe('function');
     expect(typeof component.pricing.selector.byCategory).toBe('function');
-    
+
     // Test that the methods work correctly
     expect(component.pricing.selector.all()).toHaveLength(3);
     expect(component.pricing.selector.byId('2')).toEqual({
-      id: '2', category: 'clothing', price: 50
+      id: '2',
+      category: 'clothing',
+      price: 50,
     });
-    expect(component.pricing.selector.byCategory('electronics')).toHaveLength(2);
-    
+    expect(component.pricing.selector.byCategory('electronics')).toHaveLength(
+      2
+    );
+
     // Test pricing-specific methods
     expect(component.pricing.selector.taxRate()).toBe(0.1);
     expect(component.pricing.selector.discount()).toBe(0.2);
@@ -85,9 +90,8 @@ describe('slice composition patterns', () => {
 
   it('should allow slice-level subscriptions', () => {
     type State = { count: number; name: string };
-    
-    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
 
+    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
       const counter = createSlice(({ get, set }) => ({
         count: () => get().count,
         increment: () => set({ count: get().count + 1 }),
@@ -140,9 +144,8 @@ describe('slice composition patterns', () => {
 
   it('should correctly rebind slices when composing', () => {
     type State = { value: number };
-    
-    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
 
+    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
       const base = createSlice(({ get, set }) => ({
         getValue: () => get().value,
         setValue: (value: number) => set({ value }),

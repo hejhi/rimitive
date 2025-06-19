@@ -8,6 +8,7 @@
 import React, {
   useEffect,
   useRef,
+  useMemo,
   createContext,
   useContext,
   useSyncExternalStore,
@@ -162,6 +163,82 @@ export function useStore<T>(createStore: StoreCreator<T>): T & StoreApi<T> {
 }
 
 // ============================================================================
+// Selector Implementation
+// ============================================================================
+
+/**
+ * Creates a stable selector implementation for useSyncExternalStore.
+ * This extracts the ref-heavy logic into a reusable function.
+ */
+function createStoreSelector<Store, Selected>(
+  getState: GetState<Store>,
+  selector: (state: Store) => Selected,
+  equalityFn: (a: Selected, b: Selected) => boolean = Object.is
+) {
+  let currentSelector = selector;
+  let currentEqualityFn = equalityFn;
+  let cachedValue: Selected | undefined;
+  let hasInitialized = false;
+
+  // Update the selector function
+  const updateSelector = (newSelector: (state: Store) => Selected) => {
+    currentSelector = newSelector;
+  };
+
+  // Update the equality function
+  const updateEqualityFn = (newEqualityFn: (a: Selected, b: Selected) => boolean) => {
+    currentEqualityFn = newEqualityFn;
+  };
+
+  // Get snapshot with caching and stability guarantees
+  const getSnapshot = () => {
+    const currentState = getState();
+    const nextValue = currentSelector(currentState);
+    
+    // Initialize on first call
+    if (!hasInitialized) {
+      cachedValue = nextValue;
+      hasInitialized = true;
+      return nextValue;
+    }
+    
+    // CRITICAL: This equality check ensures stable references between React's
+    // multiple getSnapshot calls. Without it, returning new objects would
+    // cause infinite re-renders. This is defensive programming to handle
+    // React's edge cases, not a performance optimization.
+    if (!currentEqualityFn(cachedValue as Selected, nextValue)) {
+      cachedValue = nextValue;
+    }
+    
+    return cachedValue as Selected;
+  };
+
+  // Create subscription with filtering
+  const createSubscription = (subscribe: Subscribe) => {
+    return (onStoreChange: () => void) => {
+      return subscribe(() => {
+        const currentState = getState();
+        const nextValue = currentSelector(currentState);
+        
+        // PERFORMANCE: This equality check filters out unnecessary re-renders
+        // at the subscription level. It prevents React from even considering
+        // a re-render when the selected value hasn't changed.
+        if (!currentEqualityFn(cachedValue as Selected, nextValue)) {
+          onStoreChange();
+        }
+      });
+    };
+  };
+
+  return {
+    getSnapshot,
+    createSubscription,
+    updateSelector,
+    updateEqualityFn,
+  };
+}
+
+// ============================================================================
 // Selector Hook with Performance Optimizations
 // ============================================================================
 
@@ -197,77 +274,35 @@ export function useStoreSelector<Store, Selected>(
   selector: (state: Store) => Selected,
   equalityFn: (a: Selected, b: Selected) => boolean = Object.is
 ): Selected {
-  // Extract stable API methods - these don't change
-  const getState = store.getState;
-  const subscribe = store.subscribe;
-
-  // IMPORTANT: We use refs to ensure the latest selector and equality function
-  // are always used without causing hook dependency changes. This prevents
-  // unnecessary re-subscriptions when the selector or equalityFn references change.
-  const selectorRef = useRef(selector);
-  selectorRef.current = selector;
-
-  const equalityFnRef = useRef(equalityFn);
-  equalityFnRef.current = equalityFn;
-
-  // Cache for the selected value to ensure stable references.
-  // This is crucial for React's useSyncExternalStore which requires
-  // getSnapshot to return the same reference when data hasn't changed.
-  const selectedValueRef = useRef<Selected>();
-  const hasInitialized = useRef(false);
-
-  // Create a stable getSnapshot function that returns cached values.
-  // React's useSyncExternalStore may call this multiple times:
-  // - During initial render (before subscription)
-  // - Multiple times in StrictMode for detecting side effects
-  // - During concurrent features (Suspense, time slicing)
-  // - During hydration for server/client reconciliation
-  // - When React checks if re-rendering is needed
-  const getSnapshot = useCallback(() => {
-    const currentState = getState();
-    const nextValue = selectorRef.current(currentState);
-    
-    // Initialize on first call
-    if (!hasInitialized.current) {
-      selectedValueRef.current = nextValue;
-      hasInitialized.current = true;
-      return nextValue;
-    }
-    
-    // CRITICAL: This equality check ensures stable references between React's
-    // multiple getSnapshot calls. Without it, returning new objects would
-    // cause infinite re-renders. This is defensive programming to handle
-    // React's edge cases, not a performance optimization.
-    if (!equalityFnRef.current(selectedValueRef.current as Selected, nextValue)) {
-      selectedValueRef.current = nextValue;
-    }
-    
-    return selectedValueRef.current as Selected;
-  }, [getState]);
-
-  // Create stable subscribe function with selector-specific filtering.
-  // This implements the "selector pattern" where we only notify React
-  // of changes when the selected value actually changes.
-  const subscribeWithSelector = useCallback(
-    (onStoreChange: () => void) => {
-      return subscribe(() => {
-        const currentState = getState();
-        const nextValue = selectorRef.current(currentState);
-        
-        // PERFORMANCE: This equality check filters out unnecessary re-renders
-        // at the subscription level. It prevents React from even considering
-        // a re-render when the selected value hasn't changed.
-        // This is different from the getSnapshot check which handles React's
-        // internal multiple calls.
-        if (!equalityFnRef.current(selectedValueRef.current as Selected, nextValue)) {
-          onStoreChange();
-        }
-      });
-    },
-    [subscribe, getState]
+  // Create a stable selector instance using useMemo for lazy initialization
+  // This ensures we only create the selector once, on the first render
+  const selectorInstance = useMemo(
+    () => createStoreSelector(
+      store.getState,
+      selector,
+      equalityFn
+    ),
+    [store.getState] // Only recreate if the store changes (extremely rare)
   );
 
-  return useSyncExternalStore(subscribeWithSelector, getSnapshot, getSnapshot);
+  // Update selector and equality function on each render
+  // This ensures we always use the latest versions without recreating subscriptions
+  selectorInstance.updateSelector(selector);
+  selectorInstance.updateEqualityFn(equalityFn);
+
+  // Create stable callbacks using the selector instance
+  const getSnapshot = useCallback(
+    () => selectorInstance.getSnapshot(),
+    [selectorInstance]
+  );
+
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => 
+      selectorInstance.createSubscription(store.subscribe)(onStoreChange),
+    [selectorInstance, store.subscribe]
+  );
+
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
 // ============================================================================

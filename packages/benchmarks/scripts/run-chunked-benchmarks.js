@@ -29,13 +29,12 @@ const BENCHMARK_SUITES = {
     'svelte-runes'
   ],
   'store-react': [
-    'test',
-    // 'context-vs-store',
-    // 'core-performance',
+    'context-vs-store',
+    'core-performance',
     'react-integration',
-    // 'real-world',
-    // 'scalability',
-    // 'store-react-apis'
+    'real-world',
+    'scalability',
+    'store-react-apis'
   ]
 };
 
