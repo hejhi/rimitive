@@ -38,16 +38,17 @@ import type { StoreTools, LatticeSlice } from './index';
 type SliceMap = Record<string, LatticeSlice<any, any>>;
 
 type ExtractSelectors<T extends SliceMap> = {
-  [K in keyof T]: T[K] extends LatticeSlice<infer Methods, any> ? Methods : never;
+  [K in keyof T]: T[K] extends LatticeSlice<infer Methods, any>
+    ? Methods
+    : never;
 };
 
-export function compose<
-  State,
-  Deps extends SliceMap,
-  Result
->(
+export function compose<State, Deps extends SliceMap, Result>(
   deps: Deps,
-  factory: (tools: StoreTools<State>, resolvedDeps: ExtractSelectors<Deps>) => Result
+  factory: (
+    tools: StoreTools<State>,
+    resolvedDeps: ExtractSelectors<Deps>
+  ) => Result
 ): (tools: StoreTools<State>) => Result {
   return (tools: StoreTools<State>): Result => {
     const remappedDeps = Object.entries(deps).map(([sliceKey, slice]) => [
@@ -55,6 +56,9 @@ export function compose<
       slice.compose(tools).selector,
     ]);
 
-    return factory(tools, Object.fromEntries(remappedDeps) as ExtractSelectors<Deps>);
+    return factory(
+      tools,
+      Object.fromEntries(remappedDeps) as ExtractSelectors<Deps>
+    );
   };
 }

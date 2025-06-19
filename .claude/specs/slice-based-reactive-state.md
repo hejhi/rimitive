@@ -60,14 +60,28 @@ State (root)
 ```typescript
 const slice = createSlice<Dependencies, Computations>(
   // Phase 1: Declare dependencies
-  (model) => ({
-    key1: model.key1,  // Returns a selector
-    key2: model.key2,  // Returns a selector
+  (selectors) => ({
+    key1: selectors.key1,  // Already a selector
+    key2: selectors.key2,  // Already a selector
   }),
-  // Phase 2: Define computations using dependencies
-  ({ key1, key2 }) => ({
+  // Phase 2: Define computations and actions
+  ({ key1, key2 }, set) => ({
+    // Computed values
     computed1: () => key1() + key2(),
     computed2: () => key1() * 2,
+    // Actions that modify state using two-phase pattern
+    updateKey1: (value: number) => set(
+      selectors => selectors,
+      state => ({ ...state, key1: value })
+    ),
+    increment: () => set(
+      (selectors) => ({ key1: selectors.key1 }),
+      ({ key1 }) => ({ key1: key1() + 1 })
+    ),
+    incrementBoth: () => set(
+      ({ key1, key2 }) => ({ key1, key2 }),
+      ({ key1, key2 }) => ({ key1: key1() + 1, key2: key2() + 1 })
+    ),
   })
 );
 ```
@@ -77,8 +91,29 @@ const slice = createSlice<Dependencies, Computations>(
 // Create child slice from parent
 const childSlice = parentSlice(
   ({ computed1, computed2 }) => ({ computed1, computed2 }),
-  ({ computed1, computed2 }) => ({
-    further: () => computed1() + computed2()
+  ({ computed1, computed2 }, set) => ({
+    further: () => computed1() + computed2(),
+    reset: () => set(
+      selectors => selectors,
+      state => ({ ...state, key1: 0, key2: 0 })
+    )
+  })
+);
+
+// Compose multiple slices together
+const combinedSlice = slice1(
+  ({ foo }) => ({
+    foo,
+    // Spread dependencies from another slice
+    ...slice2(({ bar, baz }) => ({ bar, baz }))
+  }),
+  ({ foo, bar, baz }, set) => ({
+    // Now have access to dependencies from both slices
+    combined: () => foo() + bar() + baz(),
+    updateAll: (value: number) => set(
+      selectors => selectors,
+      state => ({ ...state, foo: value, bar: value, baz: value })
+    )
   })
 );
 ```
@@ -91,41 +126,61 @@ type Selector<T> = {
   _dependencies: Set<string>;
 };
 
-type SliceFactory<Model, Deps, Computed> = {
-  (depsFn: (model: Model) => Deps, computeFn: (deps: Deps) => Computed): Slice<Computed>;
+type SetState<State> = <Deps>(
+  depsFn: (selectors: Selectors<State>) => Deps,
+  updateFn: (deps: Deps) => Partial<State>
+) => void;
+
+type SliceFactory<State, Deps, Computed> = {
+  (depsFn: (selectors: Selectors<State>) => Deps, computeFn: (deps: Deps, set: SetState<State>) => Computed): Slice<Computed>;
 };
 
 type Slice<Computed> = Computed & {
   <ChildDeps, ChildComputed>(
     depsFn: (parent: Computed) => ChildDeps,
-    computeFn: (deps: ChildDeps) => ChildComputed
+    computeFn: (deps: ChildDeps, set: SetState<State>) => ChildComputed
   ): Slice<ChildComputed>;
 };
 ```
 
 ### Implementation Details
 
+#### Dependency Tracking Without Proxies
+The key insight is that selectors themselves can track when they're accessed during the dependency declaration phase. No Proxy objects are needed - just instrumented selectors that record their usage.
+
 #### Dependency Tracking
 ```typescript
-function createSlice<Model, Deps, Computed>(
-  depsFn: (model: Model) => Deps,
-  computeFn: (deps: Deps) => Computed
+function createSlice<State, Deps, Computed>(
+  depsFn: (selectors: Selectors<State>) => Deps,
+  computeFn: (deps: Deps, set: SetState<State>) => Computed
 ) {
   const dependencies = new Set<string>();
   
-  // Proxy to track accessed keys
-  const modelProxy = new Proxy(model, {
-    get(target, key) {
-      dependencies.add(key as string);
-      return createSelector(() => target[key], [key]);
-    }
-  });
+  // Create selectors that track when they're accessed
+  const selectors = {} as Selectors<State>;
+  for (const key in state) {
+    selectors[key] = createSelector(() => state[key], [key], {
+      onAccess: () => dependencies.add(key)
+    });
+  }
   
-  // Build dependency model
-  const deps = depsFn(modelProxy);
+  // Build dependency model - this tracks which selectors are used
+  const deps = depsFn(selectors);
   
-  // Create computed values
-  const computed = computeFn(deps);
+  // Create set function with two-phase pattern
+  const set: SetState<State> = (depsFn, updateFn) => {
+    // Reuse the same selectors for consistency
+    const deps = depsFn(selectors);
+    const updates = updateFn(deps);
+    
+    // Apply updates to state
+    const currentState = store.getState();
+    const newState = { ...currentState, ...updates };
+    store.setState(newState);
+  };
+  
+  // Create computed values and actions
+  const computed = computeFn(deps, set);
   
   // Subscribe only to relevant changes
   const subscribe = (listener: () => void) => {
@@ -162,11 +217,19 @@ subscribeToKeys(keys: Set<string>, listener: () => void) {
 // Define products slice
 const products = createSlice(
   ({ products }) => ({ products }),
-  ({ products }) => ({
+  ({ products }, set) => ({
     all: products,
     byId: (id: string) => products().find(p => p.id === id),
     byCategory: (category: string) => 
-      products().filter(p => p.category === category)
+      products().filter(p => p.category === category),
+    addProduct: (product: Product) => set(
+      ({ products }) => ({ products }),
+      ({ products }) => ({ products: [...products(), product] })
+    ),
+    removeProduct: (id: string) => set(
+      ({ products }) => ({ products }),
+      ({ products }) => ({ products: products().filter(p => p.id !== id) })
+    )
   })
 );
 
@@ -182,40 +245,94 @@ function ProductList() {
 // Base slices
 const products = createSlice(
   ({ products, categories }) => ({ products, categories }),
-  ({ products, categories }) => ({
+  ({ products, categories }, set) => ({
     all: products,
     active: () => products().filter(p => p.active),
-    byCategory: (cat: string) => products().filter(p => p.category === cat)
+    byCategory: (cat: string) => products().filter(p => p.category === cat),
+    toggleActive: (productId: string) => set(
+      ({ products }) => ({ products }),
+      ({ products }) => ({
+        products: products().map(p => 
+          p.id === productId ? { ...p, active: !p.active } : p
+        )
+      })
+    ),
+    incrementAllPrices: (amount: number) => set(
+      ({ products }) => ({ products }),
+      ({ products }) => ({
+        products: products().map(p => ({ ...p, price: p.price + amount }))
+      })
+    )
   })
 );
 
 const inventory = createSlice(
   ({ stock }) => ({ stock }),
-  ({ stock }) => ({
+  ({ stock }, set) => ({
     levels: stock,
-    isInStock: (productId: string) => (stock()[productId] || 0) > 0
+    isInStock: (productId: string) => (stock()[productId] || 0) > 0,
+    updateStock: (productId: string, quantity: number) => set(
+      ({ stock }) => ({ stock }),
+      ({ stock }) => ({ stock: { ...stock(), [productId]: quantity } })
+    ),
+    adjustStock: (productId: string, delta: number) => set(
+      ({ stock }) => ({ stock }),
+      ({ stock }) => ({
+        stock: {
+          ...stock(),
+          [productId]: (stock()[productId] || 0) + delta
+        }
+      })
+    )
   })
 );
 
-// Composed slice
+// Composed slice - combines products with inventory
 const shopProducts = products(
-  ({ all, active }) => ({ all, active }),
-  ({ all, active }, { use }) => ({
-    ...use(inventory), // Include inventory methods
-    inStock: () => active().filter(p => use(inventory).isInStock(p.id)),
-    outOfStock: () => active().filter(p => !use(inventory).isInStock(p.id))
+  ({ all, active }) => ({
+    all,
+    active,
+    ...inventory(({ levels, isInStock, updateStock }) => ({ levels, isInStock, updateStock }))
+  }),
+  ({ all, active, levels, isInStock, updateStock }, set) => ({
+    allProducts: all,
+    activeProducts: active,
+    stockLevels: levels,
+    inStock: () => active().filter(p => isInStock(p.id)),
+    outOfStock: () => active().filter(p => !isInStock(p.id)),
+    restockAll: () => set(
+      ({ stock, products }) => ({ stock, products }),
+      ({ stock, products }) => {
+        const outOfStockIds = products()
+          .filter(p => p.active && !stock()[p.id])
+          .map(p => p.id);
+        const newStock = { ...stock() };
+        outOfStockIds.forEach(id => { newStock[id] = 100; });
+        return { stock: newStock };
+      }
+    )
   })
 );
 
 // Further composition
 const analytics = shopProducts(
   ({ inStock, outOfStock }) => ({ inStock, outOfStock }),
-  ({ inStock, outOfStock }) => ({
+  ({ inStock, outOfStock }, set) => ({
     stockStatus: () => ({
       available: inStock().length,
       unavailable: outOfStock().length,
       percentage: (inStock().length / (inStock().length + outOfStock().length)) * 100
-    })
+    }),
+    logAnalytics: () => set(
+      ({ analyticsLog }) => ({ analyticsLog, inStock, outOfStock }),
+      ({ analyticsLog, inStock, outOfStock }) => ({
+        analyticsLog: [...(analyticsLog() || []), {
+          available: inStock().length,
+          unavailable: outOfStock().length,
+          timestamp: Date.now()
+        }]
+      })
+    )
   })
 );
 ```
@@ -225,36 +342,60 @@ const analytics = shopProducts(
 // Root slices
 const catalog = createSlice(
   ({ products, categories, brands }) => ({ products, categories, brands }),
-  ({ products, categories, brands }) => ({
+  ({ products, categories, brands }, set) => ({
     products: products,
     categories: categories,
     brands: brands,
     productsByBrand: (brandId: string) => 
-      products().filter(p => p.brandId === brandId)
+      products().filter(p => p.brandId === brandId),
+    addBrand: (brand: Brand) => set(
+      ({ brands }) => ({ brands }),
+      ({ brands }) => ({ brands: [...brands(), brand] })
+    )
   })
 );
 
 const pricing = catalog(
   ({ products }) => ({ products }),
-  ({ products }) => ({
+  ({ products }, set) => ({
     withTax: (taxRate: number) => 
       products().map(p => ({ ...p, finalPrice: p.price * (1 + taxRate) })),
     discounted: (discount: number) => 
-      products().map(p => ({ ...p, salePrice: p.price * (1 - discount) }))
+      products().map(p => ({ ...p, salePrice: p.price * (1 - discount) })),
+    applyGlobalDiscount: (discount: number) => set(
+      ({ products }) => ({ products }),
+      ({ products }) => ({
+        products: products().map(p => ({ ...p, price: p.price * (1 - discount) }))
+      })
+    )
   })
 );
 
-const cart = createSlice(
-  ({ cartItems }) => ({ cartItems }),
-  ({ cartItems }, { use }) => ({
+// Cart slice that composes with pricing
+const cart = pricing(
+  ({ withTax }) => ({
+    withTax,
+    cartItems: selectors.cartItems  // Access cart-specific state via selectors
+  }),
+  ({ withTax, cartItems }, set) => ({
     items: cartItems,
     total: () => {
-      const prices = use(pricing).withTax(0.08); // 8% tax
+      const prices = withTax(0.08); // 8% tax
       return cartItems().reduce((sum, item) => {
-        const product = prices().find(p => p.id === item.productId);
+        const product = prices.find(p => p.id === item.productId);
         return sum + (product?.finalPrice || 0) * item.quantity;
       }, 0);
-    }
+    },
+    addItem: (productId: string, quantity: number) => set(
+      ({ cartItems }) => ({ cartItems }),
+      ({ cartItems }) => ({
+        cartItems: [...cartItems(), { productId, quantity }]
+      })
+    ),
+    clearCart: () => set(
+      ({ cartItems }) => ({ cartItems }),
+      ({ cartItems }) => ({ cartItems: [] })
+    )
   })
 );
 ```
