@@ -63,11 +63,11 @@ describe('createStore', () => {
     
     const user = createSlice(
       (selectors) => ({ name: selectors.name }),
-      ({ name }, set) => ({
-        name: () => name(),
+      ({ name: nameDep }, set) => ({
+        name: () => nameDep(),
         setName: (newName: string) => set(
           (selectors) => ({ name: selectors.name }),
-          ({ name }) => ({ name: newName })
+          () => ({ name: newName })
         )
       })
     );

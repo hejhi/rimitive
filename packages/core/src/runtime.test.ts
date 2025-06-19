@@ -151,11 +151,11 @@ describe('runtime with new createStore API', () => {
 
     const editor = createSlice(
       (selectors) => ({ name: selectors.name }),
-      ({ name }, set) => ({
-        name: () => name(),
+      ({ name: nameDep }, set) => ({
+        name: () => nameDep(),
         setName: (newName: string) => set(
           (selectors) => ({ name: selectors.name }),
-          ({ name }) => ({ name: newName })
+          () => ({ name: newName })
         ),
       })
     );
@@ -171,11 +171,11 @@ describe('runtime with new createStore API', () => {
   });
 
   it('should work with multiple slices sharing the same state', () => {
-    let mockState: any;
-    const mockAdapter: StoreAdapter<any> = {
+    let mockState: { value1: number; value2: number };
+    const mockAdapter: StoreAdapter<{ value1: number; value2: number }> = {
       getState: () => mockState,
       setState: (updates) => Object.assign(mockState, updates),
-      subscribeToKeys: () => () => {},
+      subscribe: () => () => {},
     };
 
     const createComponent = (createSlice: RuntimeSliceFactory<{ value1: number; value2: number }>) => {

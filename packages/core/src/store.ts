@@ -25,13 +25,21 @@ export type SetState<State> = <Deps>(
   updateFn: (deps: Deps) => Partial<State>
 ) => void;
 
+type ComposedFrom = {
+  slice: Slice<unknown>;
+  dependencies: Set<string>;
+};
+
+export type Slice<Computed> = Computed & {
+  _dependencies: Set<string>;
+  _subscribe: (listener: () => void) => () => void;
+  <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps & { _composedFrom?: ComposedFrom };
+};
+
 export type ReactiveSliceFactory<State> = <Deps, Computed>(
   depsFn: (selectors: Selectors<State>) => Deps,
   computeFn: (deps: Deps, set: SetState<State>) => Computed
-) => Computed & {
-  _dependencies: Set<string>;
-  _subscribe: (listener: () => void) => () => void;
-};
+) => Slice<Computed>;
 
 /**
  * Creates a store with pure serializable state and returns a slice factory.
@@ -63,12 +71,15 @@ export function createStore<State>(
   initialState: State
 ): ReactiveSliceFactory<State> {
   let state = initialState;
-  const listeners = new Map<Set<string>, Set<() => void>>();
+  // Use string keys for reliable Map lookups
+  const listeners = new Map<string, Set<() => void>>();
+  const keySetToString = (keys: Set<string>) => [...keys].sort().join('|');
   
   // Helper to notify listeners
   const notifyListeners = (changedKeys: Set<string>) => {
-    for (const [keys, keyListeners] of listeners) {
-      const shouldNotify = [...keys].some(key => changedKeys.has(key));
+    for (const [keyString, keyListeners] of listeners) {
+      const keys = keyString.split('|');
+      const shouldNotify = keys.some(key => changedKeys.has(key));
       if (shouldNotify) {
         keyListeners.forEach(listener => listener());
       }
@@ -83,18 +94,18 @@ export function createStore<State>(
     const selector = () => getValue();
     
     selector.subscribe = (listener: () => void) => {
-      const keys = new Set([key]);
-      if (!listeners.has(keys)) {
-        listeners.set(keys, new Set());
+      const keyString = key; // Single key, no need to sort
+      if (!listeners.has(keyString)) {
+        listeners.set(keyString, new Set());
       }
-      listeners.get(keys)!.add(listener);
+      listeners.get(keyString)!.add(listener);
       
       return () => {
-        const keyListeners = listeners.get(keys);
+        const keyListeners = listeners.get(keyString);
         if (keyListeners) {
           keyListeners.delete(listener);
           if (keyListeners.size === 0) {
-            listeners.delete(keys);
+            listeners.delete(keyString);
           }
         }
       };
@@ -109,7 +120,7 @@ export function createStore<State>(
   return function createSlice<Deps, Computed>(
     depsFn: (selectors: Selectors<State>) => Deps,
     computeFn: (deps: Deps, set: SetState<State>) => Computed
-  ): Computed & { _dependencies: Set<string>; _subscribe: (listener: () => void) => () => void } {
+  ): Slice<Computed> {
     const dependencies = new Set<string>();
     
     // Create tracking-enabled selectors
@@ -143,6 +154,18 @@ export function createStore<State>(
     const deps = depsFn(trackingSelectors);
     isTracking = false;
     
+    // Check for composed dependencies
+    for (const key in deps) {
+      const value = deps[key];
+      if (value && (typeof value === 'function' || typeof value === 'object') && '_composedFrom' in value) {
+        // Merge dependencies from the composed slice
+        const composedInfo = (value as { _composedFrom: ComposedFrom })._composedFrom;
+        for (const dep of composedInfo.dependencies) {
+          dependencies.add(dep);
+        }
+      }
+    }
+    
     // Create set function with two-phase pattern
     const set: SetState<State> = (depsFn, updateFn) => {
       const deps = depsFn(actualSelectors);
@@ -166,26 +189,77 @@ export function createStore<State>(
     
     // Subscribe function for this slice
     const subscribe = (listener: () => void) => {
-      if (!listeners.has(dependencies)) {
-        listeners.set(dependencies, new Set());
+      const keyString = keySetToString(dependencies);
+      if (!listeners.has(keyString)) {
+        listeners.set(keyString, new Set());
       }
-      listeners.get(dependencies)!.add(listener);
+      listeners.get(keyString)!.add(listener);
       
       return () => {
-        const depListeners = listeners.get(dependencies);
+        const depListeners = listeners.get(keyString);
         if (depListeners) {
           depListeners.delete(listener);
           if (depListeners.size === 0) {
-            listeners.delete(dependencies);
+            listeners.delete(keyString);
           }
         }
       };
     };
     
-    return {
-      ...computed,
-      _dependencies: dependencies,
-      _subscribe: subscribe
+    // Create the slice function
+    const sliceCompose = function <ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps & { _composedFrom?: ComposedFrom } {
+      // When composing, we need to track which computed values are accessed
+      // and merge their dependencies
+      const childDeps = childDepsFn(computed);
+      
+      // Wrap each function with metadata
+      const wrappedDeps = {} as ChildDeps;
+      for (const key in childDeps) {
+        const value = childDeps[key];
+        if (typeof value === 'function') {
+          // Create a wrapper that preserves the function but adds metadata
+          (wrappedDeps as Record<string, unknown>)[key] = Object.assign(value, {
+            _composedFrom: { slice: sliceCompose, dependencies }
+          });
+        } else {
+          (wrappedDeps as Record<string, unknown>)[key] = value;
+        }
+      }
+      
+      return wrappedDeps as ChildDeps & { _composedFrom?: ComposedFrom };
     };
+    
+    // Add properties to the function
+    const slice = sliceCompose as typeof sliceCompose & Computed & {
+      _dependencies: Set<string>;
+      _subscribe: (listener: () => void) => () => void;
+    };
+    
+    // Copy computed properties using defineProperty to avoid read-only issues
+    for (const key in computed) {
+      Object.defineProperty(slice, key, {
+        value: computed[key],
+        writable: true,
+        enumerable: true,
+        configurable: true
+      });
+    }
+    
+    // Add metadata
+    Object.defineProperty(slice, '_dependencies', {
+      value: dependencies,
+      writable: false,
+      enumerable: false,
+      configurable: false
+    });
+    
+    Object.defineProperty(slice, '_subscribe', {
+      value: subscribe,
+      writable: false,
+      enumerable: false,
+      configurable: false
+    });
+    
+    return slice as Slice<Computed>;
   };
 }
