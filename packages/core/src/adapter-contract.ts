@@ -28,6 +28,14 @@ export interface StoreAdapter<State> {
    * @returns Unsubscribe function
    */
   subscribe: (listener: () => void) => () => void;
+
+  /**
+   * Optional: Subscribe to specific state keys for fine-grained reactivity
+   * @param keys - Set of state keys to watch
+   * @param listener - Called when any of the watched keys change
+   * @returns Unsubscribe function
+   */
+  subscribeToKeys?: (keys: Set<string>, listener: () => void) => () => void;
 }
 
 /**
