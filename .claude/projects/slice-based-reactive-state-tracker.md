@@ -11,21 +11,20 @@
 - [x] **SPEC LOCKED** - Ready for implementation
 - [x] Deleted `compose.ts` (replaced by slice composition)
 - [x] Deleted `resolve.ts` (replaced by slice composition)
+- [x] Replaced createStore with reactive two-phase API
+- [x] Implemented dependency tracking using Object.defineProperty
+- [x] Added fine-grained subscriptions at store layer
+- [x] Updated all store tests to use new API
 
 ## In Progress
-- [ ] Core slice implementation (NOT STARTED)
+- [ ] Update runtime to use new two-phase API
 
 ## TODO
-- [ ] Create `createSlice` function with dependency tracking
-- [ ] Implement selectors that track access during dependency phase
-- [ ] Implement keyed subscriptions in store
-- [ ] Create selector type with subscription support
-- [ ] Implement two-phase `set` function
 - [ ] Implement slice composition (child slices via spread pattern)
-- [ ] Create `useSliceSelector` React hook
-- [ ] Delete old `useStore` and `useStoreSelector` implementations
-- [ ] Update all benchmarks to use new API
+- [ ] Create `useSliceSelector` React hook for reactive slices
+- [ ] Update all benchmarks to use new reactive API
 - [ ] Performance testing with fine-grained subscriptions
+- [ ] Update all adapters to work with new API
 
 ## Decisions Made
 - **NO PROXIES** - Selectors track their own access
