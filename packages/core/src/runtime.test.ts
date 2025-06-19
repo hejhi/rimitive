@@ -137,15 +137,27 @@ describe('runtime with new createStore API', () => {
     // This demonstrates how the new createStore works independently
     const createSlice = createStore({ count: 0, name: 'test' });
 
-    const counter = createSlice(({ get, set }) => ({
-      count: () => get().count,
-      increment: () => set({ count: get().count + 1 }),
-    }));
+    const counter = createSlice(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }, set) => ({
+        count: () => count(),
+        increment: () => set(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }) => ({ count: count() + 1 })
+        ),
+      })
+    );
 
-    const editor = createSlice(({ get, set }) => ({
-      name: () => get().name,
-      setName: (name: string) => set({ name }),
-    }));
+    const editor = createSlice(
+      (selectors) => ({ name: selectors.name }),
+      ({ name }, set) => ({
+        name: () => name(),
+        setName: (newName: string) => set(
+          (selectors) => ({ name: selectors.name }),
+          ({ name }) => ({ name: newName })
+        ),
+      })
+    );
 
     expect(counter.count()).toBe(0);
     expect(editor.name()).toBe('test');
