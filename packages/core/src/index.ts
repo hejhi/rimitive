@@ -28,17 +28,6 @@ export {
 // Import and re-export store functionality
 export { createStore, type StoreTools, type StoreSliceFactory } from './store';
 
-// Export reactive store functionality
-export {
-  createReactiveStore,
-  type Selector,
-  type Selectors,
-  type SetState,
-  type SliceFactory,
-  type Slice,
-  type ReactiveStoreAdapter,
-} from './reactive-store';
-
 // Import types needed for interfaces
 import type { StoreAdapter as Adapter } from './adapter-contract';
 import type { StoreTools } from './store';
