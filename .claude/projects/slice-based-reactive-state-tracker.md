@@ -9,6 +9,8 @@
 - [x] Designed composition pattern (spreading dependencies)
 - [x] Removed Proxy requirement - using selectors directly
 - [x] **SPEC LOCKED** - Ready for implementation
+- [x] Deleted `compose.ts` (replaced by slice composition)
+- [x] Deleted `resolve.ts` (replaced by slice composition)
 
 ## In Progress
 - [ ] Core slice implementation (NOT STARTED)
@@ -22,8 +24,6 @@
 - [ ] Implement slice composition (child slices via spread pattern)
 - [ ] Create `useSliceSelector` React hook
 - [ ] Delete old `useStore` and `useStoreSelector` implementations
-- [ ] Delete `compose.ts` (replaced by slice composition)
-- [ ] Delete `resolve.ts` (replaced by slice composition)
 - [ ] Update all benchmarks to use new API
 - [ ] Performance testing with fine-grained subscriptions
 
