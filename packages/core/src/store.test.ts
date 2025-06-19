@@ -1,25 +1,39 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createStore } from './index';
 
 describe('createStore', () => {
   it('should create a store with initial state', () => {
     const createSlice = createStore({ count: 0, name: 'John' });
     
-    const state = createSlice(({ get }) => ({
-      getState: () => get()
-    }));
+    const state = createSlice(
+      (selectors) => ({ count: selectors.count, name: selectors.name }),
+      ({ count, name }) => ({
+        getCount: () => count(),
+        getName: () => name()
+      })
+    );
     
-    expect(state.getState()).toEqual({ count: 0, name: 'John' });
+    expect(state.getCount()).toBe(0);
+    expect(state.getName()).toBe('John');
   });
 
   it('should allow creating slices with behaviors', () => {
     const createSlice = createStore({ count: 0 });
     
-    const counter = createSlice(({ get, set }) => ({
-      count: () => get().count,
-      increment: () => set({ count: get().count + 1 }),
-      decrement: () => set({ count: get().count - 1 })
-    }));
+    const counter = createSlice(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }, set) => ({
+        count: () => count(),
+        increment: () => set(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }) => ({ count: count() + 1 })
+        ),
+        decrement: () => set(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }) => ({ count: count() - 1 })
+        )
+      })
+    );
     
     expect(counter.count()).toBe(0);
     
@@ -36,19 +50,34 @@ describe('createStore', () => {
   it('should share state between multiple slices', () => {
     const createSlice = createStore({ count: 0, name: 'John' });
     
-    const counter = createSlice(({ get, set }) => ({
-      count: () => get().count,
-      increment: () => set({ count: get().count + 1 })
-    }));
+    const counter = createSlice(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }, set) => ({
+        count: () => count(),
+        increment: () => set(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }) => ({ count: count() + 1 })
+        )
+      })
+    );
     
-    const user = createSlice(({ get, set }) => ({
-      name: () => get().name,
-      setName: (name: string) => set({ name })
-    }));
+    const user = createSlice(
+      (selectors) => ({ name: selectors.name }),
+      ({ name }, set) => ({
+        name: () => name(),
+        setName: (newName: string) => set(
+          (selectors) => ({ name: selectors.name }),
+          ({ name }) => ({ name: newName })
+        )
+      })
+    );
     
-    const display = createSlice(({ get }) => ({
-      summary: () => `${get().name} has count: ${get().count}`
-    }));
+    const display = createSlice(
+      (selectors) => ({ count: selectors.count, name: selectors.name }),
+      ({ count, name }) => ({
+        summary: () => `${name()} has count: ${count()}`
+      })
+    );
     
     expect(display.summary()).toBe('John has count: 0');
     
@@ -61,13 +90,70 @@ describe('createStore', () => {
   it('should only update specified properties in set', () => {
     const createSlice = createStore({ count: 0, name: 'John', age: 30 });
     
-    const actions = createSlice(({ get, set }) => ({
-      updateCount: (count: number) => set({ count }),
-      getState: () => get()
-    }));
+    const actions = createSlice(
+      (selectors) => ({ count: selectors.count, name: selectors.name, age: selectors.age }),
+      ({ count, name, age }, set) => ({
+        updateCount: (newCount: number) => set(
+          (selectors) => ({ count: selectors.count }),
+          () => ({ count: newCount })
+        ),
+        getCount: () => count(),
+        getName: () => name(),
+        getAge: () => age()
+      })
+    );
     
     actions.updateCount(5);
     
-    expect(actions.getState()).toEqual({ count: 5, name: 'John', age: 30 });
+    expect(actions.getCount()).toBe(5);
+    expect(actions.getName()).toBe('John');
+    expect(actions.getAge()).toBe(30);
+  });
+
+  it('should track dependencies correctly', () => {
+    const createSlice = createStore({ count: 0, name: 'John', age: 30 });
+    
+    const slice = createSlice(
+      (selectors) => ({
+        count: selectors.count,
+        name: selectors.name,
+        // Note: age is not accessed
+      }),
+      ({ count, name }) => ({
+        summary: () => `${name()} has count: ${count()}`
+      })
+    );
+    
+    // Should only depend on count and name
+    expect(slice._dependencies.has('count')).toBe(true);
+    expect(slice._dependencies.has('name')).toBe(true);
+    expect(slice._dependencies.has('age')).toBe(false);
+  });
+
+  it('should support fine-grained subscriptions', () => {
+    const createSlice = createStore({ count: 0, name: 'John' });
+    
+    const slice = createSlice(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }, set) => ({
+        count: () => count(),
+        increment: () => set(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }) => ({ count: count() + 1 })
+        )
+      })
+    );
+    
+    const listener = vi.fn();
+    const unsubscribe = slice._subscribe(listener);
+    
+    // Should only track count dependency
+    expect(slice._dependencies.size).toBe(1);
+    expect(slice._dependencies.has('count')).toBe(true);
+    
+    slice.increment();
+    expect(listener).toHaveBeenCalled();
+    
+    unsubscribe();
   });
 });

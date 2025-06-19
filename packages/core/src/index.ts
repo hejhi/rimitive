@@ -26,7 +26,15 @@ export {
 } from './subscribe';
 
 // Import and re-export store functionality
-export { createStore, type StoreTools, type StoreSliceFactory } from './store';
+export { 
+  createStore, 
+  type StoreTools, 
+  type StoreSliceFactory,
+  type Selector,
+  type Selectors,
+  type SetState,
+  type ReactiveSliceFactory
+} from './store';
 
 // Import types needed for interfaces
 import type { StoreAdapter as Adapter } from './adapter-contract';
