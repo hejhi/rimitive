@@ -5,6 +5,14 @@
 
 import type { SliceHandle } from '../store';
 
+// Brand type for type-safe slice functions
+const SliceFunctionBrand = Symbol('SliceFunction');
+type SliceFunction = Function & { [SliceFunctionBrand]?: true };
+
+// Brand type for composed value functions  
+const ComposedFunctionBrand = Symbol('ComposedFunction');
+type ComposedFunction = Function & { [ComposedFunctionBrand]?: true };
+
 export interface SliceMetadata {
   dependencies: Set<string>;
   subscribe: (listener: () => void) => () => void;
@@ -17,15 +25,15 @@ export interface CompositionMetadata {
 
 // Store metadata scoped to each store instance
 export interface MetadataStore {
-  sliceMetadata: WeakMap<Function, SliceMetadata>;
-  compositionMetadata: WeakMap<Function, CompositionMetadata>;
+  sliceMetadata: WeakMap<SliceFunction, SliceMetadata>;
+  compositionMetadata: WeakMap<ComposedFunction, CompositionMetadata>;
 }
 
 // Create a new metadata store for a store instance
 export function createMetadataStore(): MetadataStore {
   return {
-    sliceMetadata: new WeakMap<Function, SliceMetadata>(),
-    compositionMetadata: new WeakMap<Function, CompositionMetadata>()
+    sliceMetadata: new WeakMap<SliceFunction, SliceMetadata>(),
+    compositionMetadata: new WeakMap<ComposedFunction, CompositionMetadata>()
   };
 }
 
@@ -52,7 +60,31 @@ function getMetadataStore(storeId: symbol): MetadataStore {
 
 // Keep track of all slices globally for lookup
 // This allows getSliceMetadata to work without knowing the store ID
-const globalSliceRegistry = new WeakMap<Function, symbol>();
+const globalSliceRegistry = new WeakMap<SliceFunction, symbol>();
+
+/**
+ * Type guard to check if a value is a function
+ */
+function isFunction(value: unknown): value is Function {
+  return typeof value === 'function';
+}
+
+/**
+ * Safely cast a SliceHandle to SliceFunction for WeakMap storage
+ */
+function toSliceFunction<T>(slice: SliceHandle<T>): SliceFunction {
+  if (!isFunction(slice)) {
+    throw new Error('Invalid slice: must be a function');
+  }
+  return slice as SliceFunction;
+}
+
+/**
+ * Safely cast a function to ComposedFunction for WeakMap storage
+ */
+function toComposedFunction(fn: Function): ComposedFunction {
+  return fn as ComposedFunction;
+}
 
 /**
  * Store metadata for a slice (internal use only)
@@ -63,9 +95,10 @@ export function storeSliceMetadata<Computed>(
   metadata: SliceMetadata
 ): void {
   const store = getMetadataStore(storeId);
-  store.sliceMetadata.set(slice as unknown as Function, metadata);
+  const sliceFunction = toSliceFunction(slice);
+  store.sliceMetadata.set(sliceFunction, metadata);
   // Also register globally for lookup
-  globalSliceRegistry.set(slice as unknown as Function, storeId);
+  globalSliceRegistry.set(sliceFunction, storeId);
 }
 
 /**
@@ -76,7 +109,8 @@ export function getSliceMetadata<Computed>(
   slice: SliceHandle<Computed>
 ): SliceMetadata | undefined {
   // Find which store this slice belongs to
-  const storeId = globalSliceRegistry.get(slice as unknown as Function);
+  const sliceFunction = toSliceFunction(slice);
+  const storeId = globalSliceRegistry.get(sliceFunction);
   if (!storeId) {
     return undefined;
   }
@@ -87,7 +121,7 @@ export function getSliceMetadata<Computed>(
     return undefined;
   }
   
-  return store.sliceMetadata.get(slice as unknown as Function);
+  return store.sliceMetadata.get(sliceFunction);
 }
 
 /**
@@ -99,7 +133,8 @@ export function storeCompositionMetadata(
   metadata: CompositionMetadata
 ): void {
   const store = getMetadataStore(storeId);
-  store.compositionMetadata.set(fn, metadata);
+  const composedFunction = toComposedFunction(fn);
+  store.compositionMetadata.set(composedFunction, metadata);
 }
 
 /**
@@ -110,5 +145,6 @@ export function getCompositionMetadata(
   fn: Function
 ): CompositionMetadata | undefined {
   const store = getMetadataStore(storeId);
-  return store.compositionMetadata.get(fn);
+  const composedFunction = toComposedFunction(fn);
+  return store.compositionMetadata.get(composedFunction);
 }
