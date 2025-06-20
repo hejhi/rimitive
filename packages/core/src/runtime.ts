@@ -49,9 +49,49 @@ export function createLatticeStore<State>(
   adapter: StoreAdapter<State>
 ): ReactiveSliceFactory<State> {
   // Create an internal store-like structure to manage fine-grained subscriptions
-  let currentState = adapter.getState();
+  let currentState = { ...adapter.getState() }; // Clone to avoid reference issues
   const listeners = new Map<string, Set<() => void>>();
   const keySetToString = (keys: Set<string>) => [...keys].sort().join('|');
+  
+  // Helper to create a selector with fine-grained subscription
+  function createSelector<T>(
+    getValue: () => T,
+    key: string
+  ): Selector<T> {
+    const selector = () => getValue();
+    
+    selector.subscribe = (listener: () => void) => {
+      const keyString = key; // Single key for individual selectors
+      if (!listeners.has(keyString)) {
+        listeners.set(keyString, new Set());
+      }
+      listeners.get(keyString)!.add(listener);
+      
+      return () => {
+        const keyListeners = listeners.get(keyString);
+        if (keyListeners) {
+          keyListeners.delete(listener);
+          if (keyListeners.size === 0) {
+            listeners.delete(keyString);
+          }
+        }
+      };
+    };
+    
+    selector._dependencies = new Set([key]);
+    
+    return selector as Selector<T>;
+  }
+  
+  // Initialize root selectors early to avoid hoisting issues
+  const rootSelectors = {} as Selectors<State>;
+  for (const key in currentState) {
+    const k = key as Extract<keyof State, string>;
+    rootSelectors[k] = createSelector(
+      () => adapter.getState()[k],
+      k
+    );
+  }
   
   // Helper to notify listeners when specific keys change
   const notifyListeners = (changedKeys: Set<string>) => {
@@ -94,52 +134,12 @@ export function createLatticeStore<State>(
       }
     }
     
-    currentState = newState;
+    currentState = { ...newState }; // Clone to maintain immutability
     
     if (changedKeys.size > 0) {
       notifyListeners(changedKeys);
     }
   });
-  
-  // Helper to create a selector with fine-grained subscription
-  function createSelector<T>(
-    getValue: () => T,
-    key: string
-  ): Selector<T> {
-    const selector = () => getValue();
-    
-    selector.subscribe = (listener: () => void) => {
-      const keyString = key; // Single key for individual selectors
-      if (!listeners.has(keyString)) {
-        listeners.set(keyString, new Set());
-      }
-      listeners.get(keyString)!.add(listener);
-      
-      return () => {
-        const keyListeners = listeners.get(keyString);
-        if (keyListeners) {
-          keyListeners.delete(listener);
-          if (keyListeners.size === 0) {
-            listeners.delete(keyString);
-          }
-        }
-      };
-    };
-    
-    selector._dependencies = new Set([key]);
-    
-    return selector as Selector<T>;
-  }
-  
-  // Create the root selectors object that provides fine-grained access
-  const rootSelectors = {} as Selectors<State>;
-  for (const key in currentState) {
-    const k = key as Extract<keyof State, string>;
-    rootSelectors[k] = createSelector(
-      () => adapter.getState()[k],
-      k
-    );
-  }
   
   // Return the reactive slice factory
   return function createSlice<Deps, Computed>(
