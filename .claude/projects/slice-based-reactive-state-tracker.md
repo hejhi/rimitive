@@ -18,16 +18,24 @@
 - [x] Implemented slice composition (child slices via spread pattern)
 - [x] Created clean module architecture with internal metadata
 - [x] Added JSDoc documentation for slice handle API
+- [x] Update runtime to use new two-phase API
+- [x] Implemented `createLatticeStore` adapter bridge
+- [x] Added fine-grained subscriptions for adapter-based stores (root slice architecture)
+- [x] React hooks integration (`useSlice`, `useSlices`)
+- [x] Full TypeScript support with clean types
 
 ## In Progress
-- [ ] Update runtime to use new two-phase API
+- None - Core implementation is complete!
 
-## TODO
-- [ ] Create `useSliceSelector` React hook for reactive slices (Note: existing hook is for old API)
+## TODO - Nice to Have
+- [ ] Update Vue composables for new reactive API
+- [ ] Update Svelte stores for new reactive API
 - [ ] Update all benchmarks to use new reactive API
-- [ ] Performance testing with fine-grained subscriptions
-- [ ] Update all adapters to support subscribeToKeys for optimal performance
+- [ ] Performance testing and benchmarking
 - [ ] Migrate examples to use new two-phase API
+- [ ] DevTools integration for dependency graph visualization
+- [ ] Built-in memoization utilities
+- [ ] Framework-specific convenience wrappers
 
 ## Decisions Made
 - **NO PROXIES** - Selectors track their own access
@@ -64,11 +72,14 @@ const child = parent(
 );
 ```
 
-## Current Blockers
-- None yet
+## Implementation Highlights
+- Root slice architecture provides fine-grained subscriptions for all store types
+- Clean separation: adapters handle storage, Lattice handles reactivity
+- React integration uses `useSyncExternalStore` for concurrent mode
+- No need for `subscribeToKeys` on adapters - handled by root slice layer
 
-## Notes for Next Session
-- Start with implementing selectors that can track access
-- Then implement keyed subscriptions in the store
-- The two-phase `set` pattern mirrors the slice creation pattern
-- Composition happens by spreading one slice's deps into another
+## Performance Notes
+- State change detection uses `Object.is` for precise equality checks
+- Subscription management uses efficient Map-based lookups
+- Only affected slices are notified on state changes
+- React components only re-render when selected values change

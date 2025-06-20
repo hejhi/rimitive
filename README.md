@@ -15,7 +15,7 @@ This gets worse when you want to share behavior across components. The same focu
 
 ## What Lattice Does
 
-Lattice lets you write UI behavior as composable functions that work with any framework. Instead of inheriting from base classes or coupling to specific frameworks, you compose behaviors from simple primitives: `get`, `set`, and `subscribe`.
+Lattice lets you write UI behavior as composable functions that work with any framework. Instead of inheriting from base classes or coupling to specific frameworks, you compose behaviors using a reactive slice pattern with selectors and computed values that automatically track dependencies.
 
 This enables you to:
 - Write a modal's focus trap behavior once and use it in React, Vue, Svelte, or vanilla JS
@@ -26,53 +26,76 @@ This enables you to:
 ```typescript
 // Define a headless dropdown behavior
 const createDropdown = (createSlice) => {
-  const dropdown = createSlice(({ get, set }) => ({
-    // State
-    isOpen: () => get().isOpen,
-    selectedIndex: () => get().selectedIndex,
-    
-    // Actions
-    open: () => set({ isOpen: true }),
-    close: () => set({ isOpen: false, selectedIndex: -1 }),
-    toggle: () => set({ isOpen: !get().isOpen }),
-    
-    // Keyboard navigation
-    selectNext: () => {
-      const { selectedIndex, items } = get();
-      set({ selectedIndex: Math.min(selectedIndex + 1, items.length - 1) });
-    },
-    selectPrevious: () => {
-      const { selectedIndex } = get();
-      set({ selectedIndex: Math.max(selectedIndex - 1, -1) });
-    },
-    
-    // Item management
-    setItems: (items) => set({ items }),
-    selectItem: (index) => {
-      set({ selectedIndex: index, isOpen: false });
-      // Trigger selection callback if needed
-    }
-  }));
+  const dropdown = createSlice(
+    // Phase 1: Select dependencies from state
+    (selectors) => ({
+      isOpen: selectors.isOpen,
+      selectedIndex: selectors.selectedIndex,
+      items: selectors.items
+    }),
+    // Phase 2: Define computed values and actions
+    ({ isOpen, selectedIndex, items }, set) => ({
+      // State accessors
+      isOpen: () => isOpen(),
+      selectedIndex: () => selectedIndex(),
+      
+      // Actions
+      open: () => set(
+        (selectors) => ({ isOpen: selectors.isOpen }),
+        () => ({ isOpen: true })
+      ),
+      close: () => set(
+        (selectors) => ({ isOpen: selectors.isOpen, selectedIndex: selectors.selectedIndex }),
+        () => ({ isOpen: false, selectedIndex: -1 })
+      ),
+      toggle: () => set(
+        (selectors) => ({ isOpen: selectors.isOpen }),
+        ({ isOpen }) => ({ isOpen: !isOpen() })
+      ),
+      
+      // Keyboard navigation
+      selectNext: () => set(
+        (selectors) => ({ selectedIndex: selectors.selectedIndex, items: selectors.items }),
+        ({ selectedIndex, items }) => ({ 
+          selectedIndex: Math.min(selectedIndex() + 1, items().length - 1) 
+        })
+      ),
+      selectPrevious: () => set(
+        (selectors) => ({ selectedIndex: selectors.selectedIndex }),
+        ({ selectedIndex }) => ({ 
+          selectedIndex: Math.max(selectedIndex() - 1, -1) 
+        })
+      ),
+      
+      // Item management
+      setItems: (newItems) => set(
+        (selectors) => ({ items: selectors.items }),
+        () => ({ items: newItems })
+      ),
+      selectItem: (index) => set(
+        (selectors) => ({ selectedIndex: selectors.selectedIndex, isOpen: selectors.isOpen }),
+        () => ({ selectedIndex: index, isOpen: false })
+      )
+    })
+  );
   
   return { dropdown };
 };
 
 // Use the same behavior across different frameworks
-import { createStore as createReactStore } from '@lattice/adapter-store-react';
+import { createStore } from '@lattice/adapter-store-react';
 import { createStore as createPiniaStore } from '@lattice/adapter-pinia';
 import { createStore as createSvelteStore } from '@lattice/adapter-svelte';
 
-// Each adapter creates a store with its own API
-const reactSlice = createReactStore({ isOpen: false, selectedIndex: -1, items: [] });
-const reactDropdown = createDropdown(reactSlice);
+// Each adapter creates a store that returns a slice factory
+const reactCreateSlice = createStore({ isOpen: false, selectedIndex: -1, items: [] });
+const reactDropdown = createDropdown(reactCreateSlice);
 
-const vueSlice = createPiniaStore({ isOpen: false, selectedIndex: -1, items: [] });
-const vueDropdown = createDropdown(vueSlice);
+const vueCreateSlice = createPiniaStore({ isOpen: false, selectedIndex: -1, items: [] });
+const vueDropdown = createDropdown(vueCreateSlice);
 
-// Svelte can use reactive state
-const state = $state({ isOpen: false, selectedIndex: -1, items: [] });
-const svelteSlice = createSvelteStore(state);
-const svelteDropdown = createDropdown(svelteSlice);
+const svelteCreateSlice = createSvelteStore({ isOpen: false, selectedIndex: -1, items: [] });
+const svelteDropdown = createDropdown(svelteCreateSlice);
 ```
 
 ## Key Benefits
@@ -81,17 +104,34 @@ const svelteDropdown = createDropdown(svelteSlice);
 Unlike class-based inheritance, Lattice enables functional composition of behaviors. You can combine keyboard navigation from one package, focus management from another, and your custom logic - all without worrying about inheritance chains or method overrides.
 
 ```typescript
-// Compose behaviors without inheritance issues
+// Compose behaviors by using slice handles to select computed values
 const accessibleDropdown = createSlice(
-  compose({ dropdown, focusTrap, announcements }, 
-    (tools, { dropdown, focusTrap, announcements }) => ({
-      open: () => {
-        dropdown.open();
-        focusTrap.activate();
-        announcements.announce('Dropdown opened');
-      }
-    })
-  )
+  (selectors) => ({
+    ...selectors, // Include all base state
+    // Select computed values from other slices
+    ...dropdown(d => ({ 
+      dropdownOpen: d.open,
+      dropdownClose: d.close 
+    })),
+    ...focusTrap(f => ({ 
+      trapActivate: f.activate,
+      trapRelease: f.release 
+    })),
+    ...announcements(a => ({ announce: a.announce }))
+  }),
+  ({ dropdownOpen, dropdownClose, trapActivate, trapRelease, announce }, set) => ({
+    // Combine behaviors
+    open: () => {
+      dropdownOpen();
+      trapActivate();
+      announce('Dropdown opened');
+    },
+    close: () => {
+      trapRelease();
+      dropdownClose();
+      announce('Dropdown closed');
+    }
+  })
 );
 ```
 
@@ -125,16 +165,29 @@ When composing behaviors, you explicitly include what you need. Unlike inheritan
 ## Core Concepts
 
 ### Behavior as Specification
-Behaviors are defined as pure functions that receive `get` and `set` primitives. This simple contract works with any reactive system:
+Behaviors are defined using a two-phase reactive pattern: first selecting dependencies, then computing values and actions. This enables automatic dependency tracking:
 
 ```typescript
-const dropdown = createSlice(({ get, set }) => ({
-  // Pure functions that describe behavior
-  isOpen: () => get().isOpen,
-  open: () => set({ isOpen: true }),
-  close: () => set({ isOpen: false }),
-  toggle: () => set({ isOpen: !get().isOpen })
-}));
+const dropdown = createSlice(
+  // Phase 1: Select state dependencies
+  (selectors) => ({ isOpen: selectors.isOpen }),
+  // Phase 2: Compute values and actions based on dependencies
+  ({ isOpen }, set) => ({
+    isOpen: () => isOpen(),
+    open: () => set(
+      (selectors) => ({ isOpen: selectors.isOpen }),
+      () => ({ isOpen: true })
+    ),
+    close: () => set(
+      (selectors) => ({ isOpen: selectors.isOpen }),
+      () => ({ isOpen: false })
+    ),
+    toggle: () => set(
+      (selectors) => ({ isOpen: selectors.isOpen }),
+      ({ isOpen }) => ({ isOpen: !isOpen() })
+    )
+  })
+);
 ```
 
 ### Composition Over Inheritance
@@ -149,14 +202,20 @@ class AccessibleDropdown extends Dropdown {
   }
 }
 
-// Do this - explicit composition
+// Do this - explicit composition by selecting from slice handles
 const accessibleDropdown = createSlice(
-  compose({ dropdown, focusTrap }, (tools, deps) => ({
+  (selectors) => ({
+    ...selectors,
+    // Select specific methods from composed slices
+    ...dropdown(d => ({ dropdownOpen: d.open })),
+    ...focusTrap(f => ({ trapActivate: f.activate }))
+  }),
+  ({ dropdownOpen, trapActivate }, set) => ({
     open: () => {
-      deps.dropdown.open();
-      deps.focusTrap.activate();
+      dropdownOpen();
+      trapActivate();
     }
-  }))
+  })
 );
 ```
 
@@ -170,10 +229,27 @@ const selectable = createSlice(/* selection behavior */);
 const navigable = createSlice(/* keyboard navigation */);
 const focusable = createSlice(/* focus management */);
 
-// Compose into a full dropdown
+// Compose multiple behaviors into a full dropdown
 const dropdown = createSlice(
-  compose({ toggleable, selectable, navigable, focusable }, 
-    /* combine behaviors */)
+  (selectors) => ({
+    ...selectors,
+    // Select all methods from each behavior slice
+    ...toggleable(t => ({ toggle: t.toggle, isOpen: t.isOpen })),
+    ...selectable(s => ({ select: s.select, selected: s.selected })),
+    ...navigable(n => ({ next: n.next, previous: n.previous })),
+    ...focusable(f => ({ focus: f.focus, blur: f.blur }))
+  }),
+  ({ toggle, isOpen, select, selected, next, previous, focus, blur }, set) => ({
+    // Combine all behaviors into unified API
+    isOpen: () => isOpen(),
+    toggle: () => toggle(),
+    select: (item) => select(item),
+    selected: () => selected(),
+    navigateNext: () => next(),
+    navigatePrevious: () => previous(),
+    focus: () => focus(),
+    blur: () => blur()
+  })
 );
 ```
 
@@ -200,37 +276,54 @@ const createSlice = createStore<AppState>({
 
 const createComponent = (createSlice: RuntimeSliceFactory<AppState>) => {
   // Methods are fully typed with parameter and return types
-  const user = createSlice(({ get, set }) => ({
-    current: () => get().user, // Return type: { id: string; name: string } | null
-    login: (id: string, name: string) => set({ user: { id, name } }),
-    logout: () => set({ user: null })
-  }));
+  const user = createSlice(
+    (selectors) => ({ user: selectors.user }),
+    ({ user }, set) => ({
+      current: () => user(), // Return type: { id: string; name: string } | null
+      login: (id: string, name: string) => set(
+        (selectors) => ({ user: selectors.user }),
+        () => ({ user: { id, name } })
+      ),
+      logout: () => set(
+        (selectors) => ({ user: selectors.user }),
+        () => ({ user: null })
+      )
+    })
+  );
 
   // TypeScript catches errors at compile time
-  const cart = createSlice(({ get, set }) => ({
-    addItem: (id: string, price: number) => {
-      // TypeScript knows 'items' is an array of { id: string; price: number }
-      set({ items: [...get().items, { id, price }] });
-    },
-    // This would cause a TypeScript error:
-    // set({ items: [...get().items, { id, cost: price }] }); // Error: 'cost' doesn't exist
-  }));
+  const cart = createSlice(
+    (selectors) => ({ items: selectors.items }),
+    ({ items }, set) => ({
+      addItem: (id: string, price: number) => set(
+        (selectors) => ({ items: selectors.items }),
+        ({ items }) => ({ items: [...items(), { id, price }] })
+      ),
+      // This would cause a TypeScript error:
+      // ({ items }) => ({ items: [...items(), { id, cost: price }] }) // Error: 'cost' doesn't exist
+    })
+  );
 
   return { user, cart };
 };
 
 // Type inference flows through to React components
+import { useSlice } from '@lattice/runtime/react';
+
+// Assuming we have created the component
+const { user: userSlice, cart: cartSlice } = createComponent(createSlice);
+
 function UserProfile() {
-  // TypeScript knows todos is an array of { id: string; price: number }
-  const items = useSliceSelector(store, s => s.cart.items());
+  // TypeScript knows items is an array of { id: string; price: number }
+  const items = useSlice(cartSlice, c => c.items());
   
-  // TypeScript knows user is { id: string; name: string } | null
-  const user = useSliceSelector(store, s => s.user.current());
+  // TypeScript knows currentUser is { id: string; name: string } | null
+  const currentUser = useSlice(userSlice, u => u.current());
   
-  if (!user) return <div>Please log in</div>;
+  if (!currentUser) return <div>Please log in</div>;
   
-  // TypeScript knows user is non-null here
-  return <div>Welcome, {user.name}!</div>;
+  // TypeScript knows currentUser is non-null here
+  return <div>Welcome, {currentUser.name}!</div>;
 }
 ```
 
@@ -239,8 +332,8 @@ function UserProfile() {
 ```
 ┌─────────────────────┐     ┌──────────────┐     ┌─────────────────┐
 │ Headless Components │────▶│ Lattice Core │────▶│ Adapters        │
-│ (Behavioral Specs)  │     │ (get, set,   │     │ (React, Vue,    │
-│                     │     │  subscribe)  │     │  Svelte, etc)   │
+│ (Behavioral Specs)  │     │ (selectors,  │     │ (React, Vue,    │
+│                     │     │  set, slices)│     │  Svelte, etc)   │
 └─────────────────────┘     └──────────────┘     └─────────────────┘
          │                          │                     │
          │                          │                     ▼
@@ -279,40 +372,71 @@ npm install @lattice/runtime          # For React/Vue/Svelte hooks
 
 ```typescript
 // 1. Define a headless modal behavior
-import { compose } from '@lattice/core';
 import { createStore } from '@lattice/adapter-store-react';
-import { useSliceSelector } from '@lattice/runtime/react';
+import { useSlice } from '@lattice/runtime/react';
 
 const createModal = (createSlice) => {
-  const modal = createSlice(({ get, set }) => ({
-    // State
-    isOpen: () => get().isOpen,
-    content: () => get().content,
-    
-    // Actions
-    open: (content = null) => set({ isOpen: true, content }),
-    close: () => set({ isOpen: false, content: null })
-  }));
+  const modal = createSlice(
+    (selectors) => ({ isOpen: selectors.isOpen, content: selectors.content }),
+    ({ isOpen, content }, set) => ({
+      // State
+      isOpen: () => isOpen(),
+      content: () => content(),
+      
+      // Actions
+      open: (newContent = null) => set(
+        (selectors) => ({ isOpen: selectors.isOpen, content: selectors.content }),
+        () => ({ isOpen: true, content: newContent })
+      ),
+      close: () => set(
+        (selectors) => ({ isOpen: selectors.isOpen, content: selectors.content }),
+        () => ({ isOpen: false, content: null })
+      )
+    })
+  );
   
   // Compose with focus trap behavior
-  const focusTrap = createSlice(({ get, set }) => ({
-    trapped: () => get().trapped,
-    trap: () => set({ trapped: true }), /* focus trap implementation */
-    release: () => set({ trapped: false }) /* release implementation */
-  }));
+  const focusTrap = createSlice(
+    (selectors) => ({ trapped: selectors.trapped }),
+    ({ trapped }, set) => ({
+      trapped: () => trapped(),
+      trap: () => set(
+        (selectors) => ({ trapped: selectors.trapped }),
+        () => ({ trapped: true })
+      ),
+      release: () => set(
+        (selectors) => ({ trapped: selectors.trapped }),
+        () => ({ trapped: false })
+      )
+    })
+  );
   
-  // Combine behaviors
+  // Combine behaviors by selecting from slice handles
   const accessibleModal = createSlice(
-    compose({ modal, focusTrap }, (_, { modal, focusTrap }) => ({
+    (selectors) => ({
+      ...selectors,
+      // Select computed values from the component slices
+      ...modal(m => ({ 
+        modalOpen: m.open,
+        modalClose: m.close,
+        modalIsOpen: m.isOpen
+      })),
+      ...focusTrap(f => ({ 
+        trap: f.trap,
+        release: f.release 
+      }))
+    }),
+    ({ modalOpen, modalClose, modalIsOpen, trap, release }, set) => ({
       open: (content) => {
-        modal.open(content);
-        focusTrap.trap();
+        modalOpen(content);
+        trap();
       },
       close: () => {
-        focusTrap.release();
-        modal.close();
-      }
-    }))
+        release();
+        modalClose();
+      },
+      isOpen: () => modalIsOpen()
+    })
   );
   
   return { modal: accessibleModal };
@@ -323,18 +447,23 @@ const createSlice = createStore({ isOpen: false, content: null, trapped: false }
 const { modal } = createModal(createSlice);
 
 function Modal() {
-  const isOpen = useSliceSelector(modal, s => s.isOpen());
-  const close = () => modal.selector.close();
+  const isOpen = useSlice(modal, m => m.isOpen());
+  const modalActions = useSlice(modal);
   
   if (!isOpen) return null;
-  return <div role="dialog">...</div>;
+  return (
+    <div role="dialog">
+      <button onClick={() => modalActions.close()}>Close</button>
+    </div>
+  );
 }
 
 // 3. Or use it in Vue with a different adapter
 import { createStore as createPiniaStore } from '@lattice/adapter-pinia';
+import { useSlice as useVueSlice } from '@lattice/runtime/vue';
 
-const vueSlice = createPiniaStore({ isOpen: false, content: null, trapped: false });
-const { modal: vueModal } = createModal(vueSlice);
+const vueCreateSlice = createPiniaStore({ isOpen: false, content: null, trapped: false });
+const { modal: vueModal } = createModal(vueCreateSlice);
 // Now use with Vue's composition API
 ```
 
@@ -370,10 +499,10 @@ Your behavioral components stay portable while keeping full access to the underl
 
 ## Documentation
 
-- **[Core Concepts](./packages/core/README.md)** - Deep dive into slices, composition, and architecture
-- **[Adapter Guide](./packages/adapter-redux/README.md)** - How to use and create adapters
-- **[Runtime Hooks](./packages/runtime/README.md)** - React and Vue integration
-- **[Examples](./packages/runtime/examples)** - Sample applications and patterns
+- **[Core Package](./packages/core)** - Core reactive slice system and composition utilities
+- **[Adapters](./packages)** - State management adapters for Redux, Zustand, Pinia, and more (see adapter-* packages)
+- **[Runtime Hooks](./packages/runtime)** - React, Vue, and Svelte integration hooks
+- **[Example: Dropdown](./packages/examples/dropdown)** - Sample dropdown implementation
 
 ## Why Lattice?
 

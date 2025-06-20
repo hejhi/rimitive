@@ -254,23 +254,21 @@ const count = useSlice(counterSlice, c => c.value());
 3. **Feature Preservation**: Store features like devtools and persistence work unchanged
 4. **Clean Architecture**: Clear separation between state storage and reactive computation
 
-### Performance Trade-offs
+### Performance Characteristics
 
-Subscription granularity operates at two levels:
+**Fine-Grained Subscriptions**
+- Slices are only notified when their declared dependencies change
+- State change detection identifies which specific keys have changed
+- Subscription management uses efficient key-based lookups
+- Both native stores and adapter-based stores provide identical fine-grained reactivity
 
-**State → Slices** (limited by adapter)
-- Adapters only provide global state change notifications
-- When any state changes, all slices with state dependencies get notified
-- Cannot distinguish between `count` vs `name` changes at adapter level
+**Subscription Flow:**
+1. State changes trigger change detection
+2. System identifies which state keys were modified
+3. Only slices depending on changed keys are notified
+4. React components re-render only when selected values change
 
-**Slices → Slices** (fine-grained)
-- Composed slices subscribe to specific slice computations, not state
-- Only notified when their exact dependencies change
-- Example: `analyticsSlice` depending on `productsSlice.active()` won't be notified by inventory changes
-
-This creates a natural optimization pattern: build a layer of "selector slices" that depend on state, then compose application logic from those slices to achieve fine-grained reactivity.
-
-For maximum performance with direct state dependencies, use native `createStore`. For compatibility with existing stores, use adapters and leverage slice composition.
+The reactive slice system ensures optimal performance by maintaining a precise dependency graph and propagating changes only through affected paths.
 
 ## Examples
 
