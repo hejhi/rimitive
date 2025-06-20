@@ -256,12 +256,21 @@ const count = useSlice(counterSlice, c => c.value());
 
 ### Performance Trade-offs
 
-While adapter-wrapped stores don't know which specific keys changed (unlike native `createStore`), Lattice still provides optimization by:
-- Tracking dependencies at the slice level
-- Only notifying slices whose declared dependencies might have changed
-- Preventing unnecessary React re-renders through fine-grained hook subscriptions
+Subscription granularity operates at two levels:
 
-For maximum performance, use native `createStore`. For compatibility with existing stores, use adapters.
+**State → Slices** (limited by adapter)
+- Adapters only provide global state change notifications
+- When any state changes, all slices with state dependencies get notified
+- Cannot distinguish between `count` vs `name` changes at adapter level
+
+**Slices → Slices** (fine-grained)
+- Composed slices subscribe to specific slice computations, not state
+- Only notified when their exact dependencies change
+- Example: `analyticsSlice` depending on `productsSlice.active()` won't be notified by inventory changes
+
+This creates a natural optimization pattern: build a layer of "selector slices" that depend on state, then compose application logic from those slices to achieve fine-grained reactivity.
+
+For maximum performance with direct state dependencies, use native `createStore`. For compatibility with existing stores, use adapters and leverage slice composition.
 
 ## Examples
 

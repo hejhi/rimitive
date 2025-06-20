@@ -32,24 +32,37 @@ describe('slice composition patterns', () => {
 
     const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
       // Product queries slice
-      const products = createSlice(({ get }) => ({
-        all: () => get().products,
-        byId: (id: string) => get().products.find((p) => p.id === id),
-        byCategory: (category: string) =>
-          get().products.filter((p) => p.category === category),
-      }));
+      const products = createSlice(
+        (selectors) => ({ products: selectors.products }),
+        ({ products }) => ({
+          all: () => products(),
+          byId: (id: string) => products().find((p: { id: string; category: string; price: number }) => p.id === id),
+          byCategory: (category: string) =>
+            products().filter((p: { id: string; category: string; price: number }) => p.category === category),
+        })
+      );
 
       // Pricing calculations slice that spreads products methods
-      const pricing = createSlice((tools) => ({
-        taxRate: () => tools.get().taxRate,
-        discount: () => tools.get().discount,
-        calculatePrice: (basePrice: number) => {
-          const discounted = basePrice * (1 - tools.get().discount);
-          return discounted * (1 + tools.get().taxRate);
-        },
-        // Spread all products methods into pricing slice
-        ...products.compose(tools).selector,
-      }));
+      const pricing = createSlice(
+        (selectors) => ({
+          taxRate: selectors.taxRate,
+          discount: selectors.discount,
+          // Spread all products methods by composing
+          ...products(({ all, byId, byCategory }) => ({ all, byId, byCategory }))
+        }),
+        ({ taxRate, discount, all, byId, byCategory }) => ({
+          taxRate: () => taxRate(),
+          discount: () => discount(),
+          calculatePrice: (basePrice: number) => {
+            const discounted = basePrice * (1 - discount());
+            return discounted * (1 + taxRate());
+          },
+          // Re-expose the composed methods
+          all,
+          byId,
+          byCategory
+        })
+      );
 
       return { products, pricing };
     };
@@ -67,40 +80,52 @@ describe('slice composition patterns', () => {
     const component = createComponent(createSlice);
 
     // Test that pricing has all the products methods
-    expect(typeof component.pricing.selector.all).toBe('function');
-    expect(typeof component.pricing.selector.byId).toBe('function');
-    expect(typeof component.pricing.selector.byCategory).toBe('function');
+    expect(typeof component.pricing().all).toBe('function');
+    expect(typeof component.pricing().byId).toBe('function');
+    expect(typeof component.pricing().byCategory).toBe('function');
 
     // Test that the methods work correctly
-    expect(component.pricing.selector.all()).toHaveLength(3);
-    expect(component.pricing.selector.byId('2')).toEqual({
+    expect(component.pricing().all()).toHaveLength(3);
+    expect(component.pricing().byId('2')).toEqual({
       id: '2',
       category: 'clothing',
       price: 50,
     });
-    expect(component.pricing.selector.byCategory('electronics')).toHaveLength(
+    expect(component.pricing().byCategory('electronics')).toHaveLength(
       2
     );
 
     // Test pricing-specific methods
-    expect(component.pricing.selector.taxRate()).toBe(0.1);
-    expect(component.pricing.selector.discount()).toBe(0.2);
-    expect(component.pricing.selector.calculatePrice(100)).toBe(88); // 100 * 0.8 * 1.1
+    expect(component.pricing().taxRate()).toBe(0.1);
+    expect(component.pricing().discount()).toBe(0.2);
+    expect(component.pricing().calculatePrice(100)).toBe(88); // 100 * 0.8 * 1.1
   });
 
-  it('should allow slice-level subscriptions', () => {
+  it('should allow slice-level subscriptions', async () => {
     type State = { count: number; name: string };
 
     const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
-      const counter = createSlice(({ get, set }) => ({
-        count: () => get().count,
-        increment: () => set({ count: get().count + 1 }),
-      }));
+      const counter = createSlice(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }, set) => ({
+          count: () => count(),
+          increment: () => set(
+            (selectors) => ({ count: selectors.count }),
+            ({ count }) => ({ count: count() + 1 })
+          ),
+        })
+      );
 
-      const user = createSlice(({ get, set }) => ({
-        name: () => get().name,
-        setName: (name: string) => set({ name }),
-      }));
+      const user = createSlice(
+        (selectors) => ({ name: selectors.name }),
+        ({ name }, set) => ({
+          name: () => name(),
+          setName: (newName: string) => set(
+            (selectors) => ({ name: selectors.name }),
+            () => ({ name: newName })
+          ),
+        })
+      );
 
       return { counter, user };
     };
@@ -109,25 +134,30 @@ describe('slice composition patterns', () => {
     const createSlice = createLatticeStore(adapter);
     const component = createComponent(createSlice);
 
+    // Get slice metadata for subscriptions
+    const { getSliceMetadata } = await import('./utils');
+    const counterMeta = getSliceMetadata(component.counter);
+    const userMeta = getSliceMetadata(component.user);
+
     // Subscribe to counter slice
     let counterUpdates = 0;
-    const unsubscribeCounter = component.counter.subscribe(() => {
+    const unsubscribeCounter = counterMeta!.subscribe(() => {
       counterUpdates++;
     });
 
     // Subscribe to user slice
     let userUpdates = 0;
-    const unsubscribeUser = component.user.subscribe(() => {
+    const unsubscribeUser = userMeta!.subscribe(() => {
       userUpdates++;
     });
 
     // Update counter - both subscriptions should fire (shared state)
-    component.counter.selector.increment();
+    component.counter().increment();
     expect(counterUpdates).toBe(1);
     expect(userUpdates).toBe(1);
 
     // Update user - both subscriptions should fire (shared state)
-    component.user.selector.setName('Alice');
+    component.user().setName('Alice');
     expect(counterUpdates).toBe(2);
     expect(userUpdates).toBe(2);
 
@@ -135,7 +165,7 @@ describe('slice composition patterns', () => {
     unsubscribeCounter();
 
     // Update again - only user subscription should fire
-    component.counter.selector.increment();
+    component.counter().increment();
     expect(counterUpdates).toBe(2); // No change
     expect(userUpdates).toBe(3);
 
@@ -146,23 +176,45 @@ describe('slice composition patterns', () => {
     type State = { value: number };
 
     const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
-      const base = createSlice(({ get, set }) => ({
-        getValue: () => get().value,
-        setValue: (value: number) => set({ value }),
-      }));
+      const base = createSlice(
+        (selectors) => ({ value: selectors.value }),
+        ({ value }, set) => ({
+          getValue: () => value(),
+          setValue: (newValue: number) => set(
+            (selectors) => ({ value: selectors.value }),
+            () => ({ value: newValue })
+          ),
+        })
+      );
 
       // Create two different composed slices that include base
-      const sliceA = createSlice((tools) => ({
-        doubleValue: () => tools.get().value * 2,
-        // Compose base - this should be rebound to use sliceA's tools
-        ...base.compose(tools).selector,
-      }));
+      const sliceA = createSlice(
+        (selectors) => ({
+          value: selectors.value,
+          // Compose base
+          ...base(({ getValue, setValue }) => ({ getValue, setValue }))
+        }),
+        ({ value, getValue, setValue }) => ({
+          doubleValue: () => value() * 2,
+          // Re-expose composed methods
+          getValue,
+          setValue
+        })
+      );
 
-      const sliceB = createSlice((tools) => ({
-        tripleValue: () => tools.get().value * 3,
-        // Compose base - this should be rebound to use sliceB's tools
-        ...base.compose(tools).selector,
-      }));
+      const sliceB = createSlice(
+        (selectors) => ({
+          value: selectors.value,
+          // Compose base
+          ...base(({ getValue, setValue }) => ({ getValue, setValue }))
+        }),
+        ({ value, getValue, setValue }) => ({
+          tripleValue: () => value() * 3,
+          // Re-expose composed methods
+          getValue,
+          setValue
+        })
+      );
 
       return { base, sliceA, sliceB };
     };
@@ -172,18 +224,18 @@ describe('slice composition patterns', () => {
     const component = createComponent(createSlice);
 
     // All slices should see the same value
-    expect(component.base.selector.getValue()).toBe(0);
-    expect(component.sliceA.selector.getValue()).toBe(0);
-    expect(component.sliceB.selector.getValue()).toBe(0);
+    expect(component.base().getValue()).toBe(0);
+    expect(component.sliceA().getValue()).toBe(0);
+    expect(component.sliceB().getValue()).toBe(0);
 
     // Update through sliceA
-    component.sliceA.selector.setValue(10);
+    component.sliceA().setValue(10);
 
     // All slices should see the updated value
-    expect(component.base.selector.getValue()).toBe(10);
-    expect(component.sliceA.selector.getValue()).toBe(10);
-    expect(component.sliceB.selector.getValue()).toBe(10);
-    expect(component.sliceA.selector.doubleValue()).toBe(20);
-    expect(component.sliceB.selector.tripleValue()).toBe(30);
+    expect(component.base().getValue()).toBe(10);
+    expect(component.sliceA().getValue()).toBe(10);
+    expect(component.sliceB().getValue()).toBe(10);
+    expect(component.sliceA().doubleValue()).toBe(20);
+    expect(component.sliceB().tripleValue()).toBe(30);
   });
 });

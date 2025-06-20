@@ -117,9 +117,9 @@ export function createLatticeStore<State>(
     
     const state = adapter.getState();
     for (const key in state) {
-      const k = key;
+      const k = key as Extract<keyof State, string>;
       actualSelectors[k] = createSelector(
-        () => adapter.getState()[k as keyof State],
+        () => adapter.getState()[k],
         k
       );
     }

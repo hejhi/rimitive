@@ -3,14 +3,11 @@
 // Export memoization utilities
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
-// Export slice metadata utilities  
+// Export slice metadata utilities
 export { getSliceMetadata } from './utils';
 
 // Export runtime
-export {
-  createLatticeStore,
-  type ComponentFactory,
-} from './runtime';
+export { createLatticeStore, type ComponentFactory } from './runtime';
 
 // Export adapter contract
 export {
@@ -29,20 +26,20 @@ export {
 } from './subscribe';
 
 // Import and re-export store functionality
-export { 
+export {
   createStore,
-  type StoreTools, 
+  type StoreTools,
   type StoreSliceFactory,
   type Selector,
   type Selectors,
   type SetState,
   type ReactiveSliceFactory,
-  type SliceHandle
+  type SliceHandle,
 } from './store';
 
 // Import types needed for interfaces
 import type { StoreAdapter as Adapter } from './adapter-contract';
-import type { StoreTools } from './store';
+import type { ReactiveSliceFactory, StoreTools } from './store';
 
 /**
  * A Lattice slice with methods, subscription, and composition capabilities

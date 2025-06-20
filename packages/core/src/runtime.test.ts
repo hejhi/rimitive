@@ -91,6 +91,7 @@ describe('createLatticeStore - adapter bridge', () => {
         (selectors) => ({ count: selectors.count, multiplier: selectors.multiplier }),
         ({ count, multiplier }, set) => ({
           count: () => count(),
+          multiplier: () => multiplier(), // Expose multiplier to avoid unused variable warning
           increment: () => set(
             (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
@@ -136,10 +137,14 @@ describe('createLatticeStore - adapter bridge', () => {
 
   it('should handle fine-grained subscriptions for slices', async () => {
     let mockState: any;
+    let adapterListener: (() => void) | undefined;
     const mockAdapter: StoreAdapter<any> = {
       getState: () => mockState,
       setState: (updates) => Object.assign(mockState, updates),
-      subscribe: vi.fn(() => () => {}),
+      subscribe: vi.fn((listener) => {
+        adapterListener = listener;
+        return () => { adapterListener = undefined; };
+      }),
     };
 
     type State = { count: number; name: string };
@@ -184,15 +189,13 @@ describe('createLatticeStore - adapter bridge', () => {
     const userListener = vi.fn();
 
     const unsubCounter = counterMeta!.subscribe(counterListener);
-    const unsubUser = userMeta!.subscribe(userListener);
+    userMeta!.subscribe(userListener);
 
     // Manually trigger the adapter's listeners to simulate state changes
     const triggerChange = () => {
-      // Get all registered listeners and call them
-      if (mockAdapter.subscribe.mock.calls.length > 0) {
-        // The adapter was subscribed to, trigger its listener
-        const listener = mockAdapter.subscribe.mock.calls[0][0];
-        listener();
+      // Trigger the adapter listener if it exists
+      if (adapterListener) {
+        adapterListener();
       }
     };
 
