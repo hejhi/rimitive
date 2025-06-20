@@ -28,16 +28,13 @@ export {
 // Import and re-export store functionality
 export { 
   createStore,
-  createStoreWithMetadata,
   type StoreTools, 
   type StoreSliceFactory,
   type Selector,
   type Selectors,
   type SetState,
   type ReactiveSliceFactory,
-  type SliceHandle,
-  type SliceMetadata,
-  type StoreWithMetadata
+  type SliceHandle
 } from './store';
 
 // Import types needed for interfaces

@@ -1,5 +1,11 @@
 // Standalone store implementation without runtime dependencies
 
+import { 
+  storeSliceMetadata, 
+  storeCompositionMetadata,
+  getCompositionMetadata 
+} from './internal/metadata';
+
 export interface StoreTools<State> {
   get: () => State;
   set: (updates: Partial<State>) => void;
@@ -25,12 +31,6 @@ export type SetState<State> = <Deps>(
   updateFn: (deps: Deps) => Partial<State>
 ) => void;
 
-// Internal metadata type - not exposed in public API
-type ComposedFrom = {
-  slice: SliceHandle<unknown>;
-  dependencies: Set<string>;
-};
-
 // Clean public type without metadata exposure
 export interface SliceHandle<Computed> {
   (): Computed;
@@ -41,17 +41,6 @@ export type ReactiveSliceFactory<State> = <Deps, Computed>(
   depsFn: (selectors: Selectors<State>) => Deps,
   computeFn: (deps: Deps, set: SetState<State>) => Computed
 ) => SliceHandle<Computed>;
-
-// Metadata access for framework integration and testing
-export interface SliceMetadata {
-  dependencies: Set<string>;
-  subscribe: (listener: () => void) => () => void;
-}
-
-export interface StoreWithMetadata<State> {
-  createSlice: ReactiveSliceFactory<State>;
-  getMetadata: (slice: SliceHandle<any>) => SliceMetadata | undefined;
-}
 
 /**
  * Creates a store with pure serializable state and returns a slice factory.
@@ -79,18 +68,13 @@ export interface StoreWithMetadata<State> {
  * );
  * ```
  */
-// Internal factory that optionally captures metadata
-function createStoreInternal<State>(
-  initialState: State,
-  metadataCapture?: WeakMap<Function, SliceMetadata>
+export function createStore<State>(
+  initialState: State
 ): ReactiveSliceFactory<State> {
   let state = initialState;
   // Use string keys for reliable Map lookups
   const listeners = new Map<string, Set<() => void>>();
   const keySetToString = (keys: Set<string>) => [...keys].sort().join('|');
-  
-  // Store-scoped WeakMap to store composition metadata without polluting objects
-  const compositionMetadata = new WeakMap<Function, ComposedFrom>();
   
   // Helper to notify listeners
   const notifyListeners = (changedKeys: Set<string>) => {
@@ -175,7 +159,7 @@ function createStoreInternal<State>(
     for (const key in deps) {
       const value = deps[key];
       if (typeof value === 'function') {
-        const composedInfo = compositionMetadata.get(value);
+        const composedInfo = getCompositionMetadata(value);
         if (composedInfo) {
           // Merge dependencies from the composed slice
           for (const dep of composedInfo.dependencies) {
@@ -241,66 +225,16 @@ function createStoreInternal<State>(
       for (const key in childDeps) {
         const value = childDeps[key];
         if (typeof value === 'function') {
-          compositionMetadata.set(value, { slice: slice as SliceHandle<unknown>, dependencies });
+          storeCompositionMetadata(value, { slice: slice as SliceHandle<unknown>, dependencies });
         }
       }
       
       return childDeps;
     }
     
-    // Store metadata if capture is provided
-    if (metadataCapture) {
-      metadataCapture.set(slice, { dependencies, subscribe });
-    }
+    // Store metadata for testing/framework use
+    storeSliceMetadata(slice as SliceHandle<Computed>, { dependencies, subscribe });
     
     return slice as SliceHandle<Computed>;
-  };
-}
-
-/**
- * Creates a store with pure serializable state and returns a slice factory.
- * This is the simple API that hides all internals.
- */
-export function createStore<State>(
-  initialState: State
-): ReactiveSliceFactory<State> {
-  return createStoreInternal(initialState);
-}
-
-/**
- * Creates a store with metadata access for framework integration and testing.
- * This is the advanced API that exposes internals.
- * 
- * @param initialState - The initial state (must be serializable)
- * @returns Object with createSlice factory and getMetadata function
- * 
- * @example
- * ```typescript
- * const store = createStoreWithMetadata({ count: 0 });
- * 
- * const slice = store.createSlice(
- *   (selectors) => ({ count: selectors.count }),
- *   ({ count }, set) => ({
- *     increment: () => set(
- *       (selectors) => ({ count: selectors.count }),
- *       ({ count }) => ({ count: count() + 1 })
- *     )
- *   })
- * );
- * 
- * // Access metadata for testing or framework integration
- * const metadata = store.getMetadata(slice);
- * console.log(metadata?.dependencies); // Set { 'count' }
- * ```
- */
-export function createStoreWithMetadata<State>(
-  initialState: State
-): StoreWithMetadata<State> {
-  const sliceMetadata = new WeakMap<Function, SliceMetadata>();
-  const createSlice = createStoreInternal(initialState, sliceMetadata);
-  
-  return {
-    createSlice,
-    getMetadata: (slice: SliceHandle<any>) => sliceMetadata.get(slice)
   };
 }

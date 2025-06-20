@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createStore, createStoreWithMetadata } from './store';
+import { createStore } from './store';
+import { getSliceMetadata } from './utils';
 
 describe('Store Composition via Computed State', () => {
   it('should support composition by passing computed values between slices', () => {
@@ -66,16 +67,16 @@ describe('Store Composition via Computed State', () => {
   });
 
   it('should efficiently track dependencies through computed chains', () => {
-    const store = createStoreWithMetadata({ a: 1, b: 2, c: 3 });
+    const createSlice = createStore({ a: 1, b: 2, c: 3 });
 
-    const sliceA = store.createSlice(
+    const sliceA = createSlice(
       (selectors) => ({ a: selectors.a }),
       ({ a }) => ({
         doubled: () => a() * 2
       })
     );
 
-    const sliceB = store.createSlice(
+    const sliceB = createSlice(
       (selectors) => ({ 
         b: selectors.b,
         ...sliceA(({ doubled }) => ({ doubled }))
@@ -86,8 +87,8 @@ describe('Store Composition via Computed State', () => {
       })
     );
 
-    const metadataA = store.getMetadata(sliceA);
-    const metadataB = store.getMetadata(sliceB);
+    const metadataA = getSliceMetadata(sliceA);
+    const metadataB = getSliceMetadata(sliceB);
 
     // Check dependencies
     expect(metadataA?.dependencies.has('a')).toBe(true);
@@ -97,12 +98,12 @@ describe('Store Composition via Computed State', () => {
   });
 
   it('should notify composed slices when dependencies change', () => {
-    const store = createStoreWithMetadata({ 
+    const createSlice = createStore({ 
       users: [{ id: '1', active: true }],
       scores: { '1': 100 }
     });
 
-    const userSlice = store.createSlice(
+    const userSlice = createSlice(
       (selectors) => ({ users: selectors.users }),
       ({ users }, set) => ({
         activeUsers: () => users().filter(u => u.active),
@@ -115,7 +116,7 @@ describe('Store Composition via Computed State', () => {
       })
     );
 
-    const scoreSlice = store.createSlice(
+    const scoreSlice = createSlice(
       (selectors) => ({ 
         scores: selectors.scores,
         ...userSlice(({ activeUsers }) => ({ activeUsers }))
@@ -129,7 +130,7 @@ describe('Store Composition via Computed State', () => {
       })
     );
 
-    const metadata = store.getMetadata(scoreSlice);
+    const metadata = getSliceMetadata(scoreSlice);
     const listener = vi.fn();
     metadata!.subscribe(listener);
 

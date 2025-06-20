@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createStore, createStoreWithMetadata } from './index';
+import { createStore } from './index';
+import { getSliceMetadata } from './utils';
 
 describe('createStore', () => {
   it('should create a store with initial state', () => {
@@ -111,9 +112,9 @@ describe('createStore', () => {
   });
 
   it('should track dependencies correctly', () => {
-    const store = createStoreWithMetadata({ count: 0, name: 'John', age: 30 });
+    const createSlice = createStore({ count: 0, name: 'John', age: 30 });
     
-    const slice = store.createSlice(
+    const slice = createSlice(
       (selectors) => ({
         count: selectors.count,
         name: selectors.name,
@@ -124,7 +125,7 @@ describe('createStore', () => {
       })
     );
     
-    const metadata = store.getMetadata(slice);
+    const metadata = getSliceMetadata(slice);
     
     // Should only depend on count and name
     expect(metadata?.dependencies.has('count')).toBe(true);
@@ -133,9 +134,9 @@ describe('createStore', () => {
   });
 
   it('should support fine-grained subscriptions', () => {
-    const store = createStoreWithMetadata({ count: 0, name: 'John' });
+    const createSlice = createStore({ count: 0, name: 'John' });
     
-    const slice = store.createSlice(
+    const slice = createSlice(
       (selectors) => ({ count: selectors.count }),
       ({ count }, set) => ({
         count: () => count(),
@@ -146,7 +147,7 @@ describe('createStore', () => {
       })
     );
     
-    const metadata = store.getMetadata(slice);
+    const metadata = getSliceMetadata(slice);
     const listener = vi.fn();
     const unsubscribe = metadata!.subscribe(listener);
     
