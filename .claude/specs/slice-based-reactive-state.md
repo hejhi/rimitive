@@ -254,6 +254,14 @@ const count = useSlice(counterSlice, c => c.value());
 3. **Feature Preservation**: Store features like devtools and persistence work unchanged
 4. **Clean Architecture**: Clear separation between state storage and reactive computation
 
+### Performance Trade-offs
+
+While adapter-wrapped stores don't know which specific keys changed (unlike native `createStore`), Lattice still provides optimization by:
+- Tracking dependencies at the slice level
+- Only notifying slices whose declared dependencies might have changed
+- Preventing unnecessary React re-renders through fine-grained hook subscriptions
+
+For maximum performance, use native `createStore`. For compatibility with existing stores, use adapters.
 
 ## Examples
 
