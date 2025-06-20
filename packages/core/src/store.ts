@@ -26,20 +26,21 @@ export type SetState<State> = <Deps>(
 ) => void;
 
 type ComposedFrom = {
-  slice: Slice<unknown>;
+  slice: SliceHandle<unknown>;
   dependencies: Set<string>;
 };
 
-export type Slice<Computed> = Computed & {
+export interface SliceHandle<Computed> {
+  (): Computed;
+  <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps & { _composedFrom?: ComposedFrom };
   _dependencies: Set<string>;
   _subscribe: (listener: () => void) => () => void;
-  <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps & { _composedFrom?: ComposedFrom };
-};
+}
 
 export type ReactiveSliceFactory<State> = <Deps, Computed>(
   depsFn: (selectors: Selectors<State>) => Deps,
   computeFn: (deps: Deps, set: SetState<State>) => Computed
-) => Slice<Computed>;
+) => SliceHandle<Computed>;
 
 /**
  * Creates a store with pure serializable state and returns a slice factory.
@@ -120,7 +121,7 @@ export function createStore<State>(
   return function createSlice<Deps, Computed>(
     depsFn: (selectors: Selectors<State>) => Deps,
     computeFn: (deps: Deps, set: SetState<State>) => Computed
-  ): Slice<Computed> {
+  ): SliceHandle<Computed> {
     const dependencies = new Set<string>();
     
     // Create tracking-enabled selectors
@@ -206,10 +207,16 @@ export function createStore<State>(
       };
     };
     
-    // Create the slice function
-    const sliceCompose = function <ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps & { _composedFrom?: ComposedFrom } {
-      // When composing, we need to track which computed values are accessed
-      // and merge their dependencies
+    // Create the slice function that returns computed values when called
+    function slice(): Computed;
+    function slice<ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps & { _composedFrom?: ComposedFrom };
+    function slice<ChildDeps>(childDepsFn?: (parent: Computed) => ChildDeps) {
+      // If called without arguments, return the computed object
+      if (!childDepsFn) {
+        return computed;
+      }
+      
+      // Otherwise, handle composition
       const childDeps = childDepsFn(computed);
       
       // Wrap each function with metadata
@@ -219,7 +226,7 @@ export function createStore<State>(
         if (typeof value === 'function') {
           // Create a wrapper that preserves the function but adds metadata
           (wrappedDeps as Record<string, unknown>)[key] = Object.assign(value, {
-            _composedFrom: { slice: sliceCompose, dependencies }
+            _composedFrom: { slice, dependencies }
           });
         } else {
           (wrappedDeps as Record<string, unknown>)[key] = value;
@@ -227,25 +234,9 @@ export function createStore<State>(
       }
       
       return wrappedDeps as ChildDeps & { _composedFrom?: ComposedFrom };
-    };
-    
-    // Add properties to the function
-    const slice = sliceCompose as typeof sliceCompose & Computed & {
-      _dependencies: Set<string>;
-      _subscribe: (listener: () => void) => () => void;
-    };
-    
-    // Copy computed properties using defineProperty to avoid read-only issues
-    for (const key in computed) {
-      Object.defineProperty(slice, key, {
-        value: computed[key],
-        writable: true,
-        enumerable: true,
-        configurable: true
-      });
     }
     
-    // Add metadata
+    // Add metadata as non-enumerable properties
     Object.defineProperty(slice, '_dependencies', {
       value: dependencies,
       writable: false,
@@ -260,6 +251,6 @@ export function createStore<State>(
       configurable: false
     });
     
-    return slice as Slice<Computed>;
+    return slice as SliceHandle<Computed>;
   };
 }

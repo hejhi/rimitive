@@ -50,19 +50,19 @@ describe('Store Composition via Computed State', () => {
     );
 
     // Initial state
-    expect(inventorySlice.inStockActive()).toHaveLength(2); // products 1 and 3
+    expect(inventorySlice().inStockActive()).toHaveLength(2); // products 1 and 3
 
     // Toggle product 1 to inactive
-    productSlice.toggleActive('1');
-    expect(inventorySlice.inStockActive()).toHaveLength(1); // only product 3
+    productSlice().toggleActive('1');
+    expect(inventorySlice().inStockActive()).toHaveLength(1); // only product 3
 
     // Update stock for product 2
-    inventorySlice.updateStock('2', 10);
-    expect(inventorySlice.inStockActive()).toHaveLength(1); // still only product 3 (2 is inactive)
+    inventorySlice().updateStock('2', 10);
+    expect(inventorySlice().inStockActive()).toHaveLength(1); // still only product 3 (2 is inactive)
 
     // Toggle product 2 to active
-    productSlice.toggleActive('2');
-    expect(inventorySlice.inStockActive()).toHaveLength(2); // products 2 and 3
+    productSlice().toggleActive('2');
+    expect(inventorySlice().inStockActive()).toHaveLength(2); // products 2 and 3
   });
 
   it('should efficiently track dependencies through computed chains', () => {
@@ -130,11 +130,11 @@ describe('Store Composition via Computed State', () => {
     scoreSlice._subscribe(listener);
 
     // Initial state
-    expect(scoreSlice.activeUserScores()).toEqual([{ userId: '1', score: 100 }]);
+    expect(scoreSlice().activeUserScores()).toEqual([{ userId: '1', score: 100 }]);
 
     // Deactivate user should trigger scoreSlice listener
-    userSlice.deactivateUser('1');
+    userSlice().deactivateUser('1');
     expect(listener).toHaveBeenCalled();
-    expect(scoreSlice.activeUserScores()).toEqual([]);
+    expect(scoreSlice().activeUserScores()).toEqual([]);
   });
 });

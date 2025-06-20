@@ -13,8 +13,8 @@ describe('createStore', () => {
       })
     );
     
-    expect(state.getCount()).toBe(0);
-    expect(state.getName()).toBe('John');
+    expect(state().getCount()).toBe(0);
+    expect(state().getName()).toBe('John');
   });
 
   it('should allow creating slices with behaviors', () => {
@@ -35,16 +35,16 @@ describe('createStore', () => {
       })
     );
     
-    expect(counter.count()).toBe(0);
+    expect(counter().count()).toBe(0);
     
-    counter.increment();
-    expect(counter.count()).toBe(1);
+    counter().increment();
+    expect(counter().count()).toBe(1);
     
-    counter.increment();
-    expect(counter.count()).toBe(2);
+    counter().increment();
+    expect(counter().count()).toBe(2);
     
-    counter.decrement();
-    expect(counter.count()).toBe(1);
+    counter().decrement();
+    expect(counter().count()).toBe(1);
   });
 
   it('should share state between multiple slices', () => {
@@ -79,12 +79,12 @@ describe('createStore', () => {
       })
     );
     
-    expect(display.summary()).toBe('John has count: 0');
+    expect(display().summary()).toBe('John has count: 0');
     
-    counter.increment();
-    user.setName('Jane');
+    counter().increment();
+    user().setName('Jane');
     
-    expect(display.summary()).toBe('Jane has count: 1');
+    expect(display().summary()).toBe('Jane has count: 1');
   });
 
   it('should only update specified properties in set', () => {
@@ -103,11 +103,11 @@ describe('createStore', () => {
       })
     );
     
-    actions.updateCount(5);
+    actions().updateCount(5);
     
-    expect(actions.getCount()).toBe(5);
-    expect(actions.getName()).toBe('John');
-    expect(actions.getAge()).toBe(30);
+    expect(actions().getCount()).toBe(5);
+    expect(actions().getName()).toBe('John');
+    expect(actions().getAge()).toBe(30);
   });
 
   it('should track dependencies correctly', () => {
@@ -151,7 +151,7 @@ describe('createStore', () => {
     expect(slice._dependencies.size).toBe(1);
     expect(slice._dependencies.has('count')).toBe(true);
     
-    slice.increment();
+    slice().increment();
     expect(listener).toHaveBeenCalled();
     
     unsubscribe();

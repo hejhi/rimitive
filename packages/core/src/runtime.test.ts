@@ -160,14 +160,14 @@ describe('runtime with new createStore API', () => {
       })
     );
 
-    expect(counter.count()).toBe(0);
-    expect(editor.name()).toBe('test');
+    expect(counter().count()).toBe(0);
+    expect(editor().name()).toBe('test');
 
-    counter.increment();
-    expect(counter.count()).toBe(1);
+    counter().increment();
+    expect(counter().count()).toBe(1);
 
-    editor.setName('updated');
-    expect(editor.name()).toBe('updated');
+    editor().setName('updated');
+    expect(editor().name()).toBe('updated');
   });
 
   it('should work with multiple slices sharing the same state', () => {
