@@ -31,7 +31,14 @@ export type SetState<State> = <Deps>(
   updateFn: (deps: Deps) => Partial<State>
 ) => void;
 
-// Clean public type without metadata exposure
+/**
+ * A handle to a reactive slice that provides dual functionality:
+ * 
+ * 1. When called with no arguments, returns the computed values and methods
+ * 2. When called with a selector function, extracts values for composition with other slices
+ * 
+ * @template Computed - The type of computed values and methods this slice provides
+ */
 export interface SliceHandle<Computed> {
   (): Computed;
   <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps;
@@ -210,7 +217,60 @@ export function createStore<State>(
       };
     };
     
-    // Create the slice function that returns computed values when called
+    /**
+     * A slice handle that provides access to computed values and enables composition.
+     * 
+     * This function has two modes:
+     * 
+     * 1. **Access mode** (no arguments): Returns the computed values
+     *    ```typescript
+     *    const values = slice();
+     *    values.increment(); // Call methods
+     *    values.count(); // Access computed values
+     *    ```
+     * 
+     * 2. **Composition mode** (with selector function): Extracts values for use in other slices
+     *    ```typescript
+     *    const deps = slice(({ count, increment }) => ({ count, increment }));
+     *    // Use deps in another slice's dependency declaration
+     *    ```
+     * 
+     * @example
+     * ```typescript
+     * // Create a base slice
+     * const counterSlice = createSlice(
+     *   (selectors) => ({ count: selectors.count }),
+     *   ({ count }, set) => ({
+     *     value: () => count(),
+     *     increment: () => set(
+     *       (selectors) => ({ count: selectors.count }),
+     *       ({ count }) => ({ count: count() + 1 })
+     *     )
+     *   })
+     * );
+     * 
+     * // Access computed values
+     * const counter = counterSlice();
+     * console.log(counter.value()); // 0
+     * counter.increment();
+     * console.log(counter.value()); // 1
+     * 
+     * // Compose with another slice
+     * const displaySlice = createSlice(
+     *   (selectors) => ({
+     *     prefix: selectors.prefix,
+     *     // Extract the value function from counterSlice
+     *     ...counterSlice(({ value }) => ({ counterValue: value }))
+     *   }),
+     *   ({ prefix, counterValue }) => ({
+     *     display: () => `${prefix()}: ${counterValue()}`
+     *   })
+     * );
+     * ```
+     * 
+     * @param childDepsFn - Optional function to select values for composition
+     * @returns Either the computed values (no args) or selected dependencies (with args)
+     */
     function slice(): Computed;
     function slice<ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps;
     function slice<ChildDeps>(childDepsFn?: (parent: Computed) => ChildDeps) {

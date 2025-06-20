@@ -86,108 +86,183 @@ const slice = createSlice<Dependencies, Computations>(
 );
 ```
 
-#### Slice Composition
+#### Slice Access and Composition
+
+Slices are functions with dual behavior:
+
 ```typescript
-// Create child slice from parent
-const childSlice = parentSlice(
-  ({ computed1, computed2 }) => ({ computed1, computed2 }),
-  ({ computed1, computed2 }, set) => ({
-    further: () => computed1() + computed2(),
-    reset: () => set(
-      selectors => selectors,
-      state => ({ ...state, key1: 0, key2: 0 })
+// Access mode - call with no arguments to get computed values
+const values = slice();
+values.increment();
+console.log(values.count()); // 5
+
+// Composition mode - call with selector to extract values for other slices
+const createSlice = createStore({ products: [], inventory: {} });
+
+const productSlice = createSlice(
+  (selectors) => ({ products: selectors.products }),
+  ({ products }, set) => ({
+    all: () => products(),
+    active: () => products().filter(p => p.active),
+    toggleActive: (id: string) => set(
+      (selectors) => ({ products: selectors.products }),
+      ({ products }) => ({
+        products: products().map(p => 
+          p.id === id ? { ...p, active: !p.active } : p
+        )
+      })
     )
   })
 );
 
-// Compose multiple slices together
-const combinedSlice = slice1(
-  ({ foo }) => ({
-    foo,
-    // Spread dependencies from another slice
-    ...slice2(({ bar, baz }) => ({ bar, baz }))
+// Compose slices by extracting computed values
+const inventorySlice = createSlice(
+  (selectors) => ({
+    inventory: selectors.inventory,
+    // Extract active products from productSlice
+    ...productSlice(({ active }) => ({ activeProducts: active }))
   }),
-  ({ foo, bar, baz }, set) => ({
-    // Now have access to dependencies from both slices
-    combined: () => foo() + bar() + baz(),
-    updateAll: (value: number) => set(
-      selectors => selectors,
-      state => ({ ...state, foo: value, bar: value, baz: value })
+  ({ inventory, activeProducts }, set) => ({
+    // Use composed values in computations
+    inStockActive: () => {
+      const inv = inventory();
+      return activeProducts().filter(p => inv[p.id] > 0);
+    },
+    updateStock: (id: string, qty: number) => set(
+      (selectors) => ({ inventory: selectors.inventory }),
+      ({ inventory }) => ({ 
+        inventory: { ...inventory(), [id]: qty } 
+      })
     )
   })
 );
+
+// Use the slices
+const products = productSlice();
+products.toggleActive('123');
+
+const inventory = inventorySlice();
+console.log(inventory.inStockActive()); // Reactive to both slices
 ```
 
 #### Type Definitions
 ```typescript
+// Selector that tracks access and provides subscription
 type Selector<T> = {
   (): T;
   subscribe: (listener: () => void) => () => void;
-  _dependencies: Set<string>;
 };
 
+// Two-phase state setter
 type SetState<State> = <Deps>(
   depsFn: (selectors: Selectors<State>) => Deps,
   updateFn: (deps: Deps) => Partial<State>
 ) => void;
 
-type SliceFactory<State, Deps, Computed> = {
-  (depsFn: (selectors: Selectors<State>) => Deps, computeFn: (deps: Deps, set: SetState<State>) => Computed): Slice<Computed>;
-};
+// Slice handle with dual functionality
+interface SliceHandle<Computed> {
+  // Access mode: returns computed values
+  (): Computed;
+  // Composition mode: extracts values for other slices
+  <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps;
+}
 
-type Slice<Computed> = Computed & {
-  <ChildDeps, ChildComputed>(
-    depsFn: (parent: Computed) => ChildDeps,
-    computeFn: (deps: ChildDeps, set: SetState<State>) => ChildComputed
-  ): Slice<ChildComputed>;
-};
+// Factory returned by createStore
+type ReactiveSliceFactory<State> = <Deps, Computed>(
+  depsFn: (selectors: Selectors<State>) => Deps,
+  computeFn: (deps: Deps, set: SetState<State>) => Computed
+) => SliceHandle<Computed>;
+
+// Metadata access for framework integration (not part of user API)
+interface SliceMetadata {
+  dependencies: Set<string>;
+  subscribe: (listener: () => void) => () => void;
+}
 ```
 
 ### Implementation Details
 
-#### Dependency Tracking Without Proxies
-The key insight is that selectors themselves can track when they're accessed during the dependency declaration phase. No Proxy objects are needed - just instrumented selectors that record their usage.
+#### Module Architecture
 
-#### Dependency Tracking
+The implementation follows a clean separation of concerns:
+
+1. **User API** (`store.ts`): The main `createStore` function and slice creation
+2. **Internal Metadata** (`internal/metadata.ts`): WeakMap-based metadata storage for framework integration
+3. **Public Utilities** (`utils.ts`): Controlled access to metadata for testing and dev tools
+
+This design ensures:
+- No metadata pollution in user-facing types
+- Memory-safe metadata storage with WeakMaps
+- Clean API surface without internal implementation details
+
+#### Dependency Tracking Without Proxies
+The implementation uses `Object.defineProperty` to create tracking getters instead of Proxies. When selectors are accessed during the dependency phase, the getters record which state keys are used.
+
+#### Dependency Tracking Implementation
 ```typescript
+// Simplified implementation showing key concepts
 function createSlice<State, Deps, Computed>(
   depsFn: (selectors: Selectors<State>) => Deps,
   computeFn: (deps: Deps, set: SetState<State>) => Computed
-) {
+): SliceHandle<Computed> {
   const dependencies = new Set<string>();
   
-  // Create selectors that track when they're accessed
-  const selectors = {} as Selectors<State>;
+  // Create tracking-enabled selectors using Object.defineProperty
+  let isTracking = true;
+  const trackingSelectors = {} as Selectors<State>;
+  const actualSelectors = {} as Selectors<State>;
+  
   for (const key in state) {
-    selectors[key] = createSelector(() => state[key], [key], {
-      onAccess: () => dependencies.add(key)
+    actualSelectors[key] = createSelector(() => state[key], key);
+    
+    Object.defineProperty(trackingSelectors, key, {
+      get() {
+        if (isTracking) {
+          dependencies.add(key);
+        }
+        return actualSelectors[key];
+      }
     });
   }
   
-  // Build dependency model - this tracks which selectors are used
-  const deps = depsFn(selectors);
+  // Track dependencies during this phase
+  const deps = depsFn(trackingSelectors);
+  isTracking = false;
   
-  // Create set function with two-phase pattern
-  const set: SetState<State> = (depsFn, updateFn) => {
-    // Reuse the same selectors for consistency
-    const deps = depsFn(selectors);
-    const updates = updateFn(deps);
-    
-    // Apply updates to state
-    const currentState = store.getState();
-    const newState = { ...currentState, ...updates };
-    store.setState(newState);
-  };
+  // Check for composed dependencies
+  for (const value of Object.values(deps)) {
+    const composedMetadata = getCompositionMetadata(value);
+    if (composedMetadata) {
+      // Merge dependencies from composed slices
+      for (const dep of composedMetadata.dependencies) {
+        dependencies.add(dep);
+      }
+    }
+  }
   
-  // Create computed values and actions
+  // Create computed values with tracked dependencies
   const computed = computeFn(deps, set);
   
-  // Subscribe only to relevant changes
-  const subscribe = (listener: () => void) => {
-    return store.subscribeToKeys(dependencies, listener);
-  };
+  // Return slice handle with dual functionality
+  function slice(): Computed;
+  function slice<ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps;
+  function slice<ChildDeps>(childDepsFn?: (parent: Computed) => ChildDeps) {
+    if (!childDepsFn) return computed;
+    
+    // Extract and track composition metadata
+    const childDeps = childDepsFn(computed);
+    for (const value of Object.values(childDeps)) {
+      if (typeof value === 'function') {
+        storeCompositionMetadata(value, { slice, dependencies });
+      }
+    }
+    return childDeps;
+  }
   
-  return { ...computed, subscribe, dependencies };
+  // Store metadata separately without polluting the API
+  storeSliceMetadata(slice, { dependencies, subscribe });
+  
+  return slice;
 }
 ```
 
