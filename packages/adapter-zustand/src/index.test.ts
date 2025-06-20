@@ -6,48 +6,67 @@ import { zustandAdapter } from '.';
 
 describe('Zustand Adapter - New Architecture', () => {
   it('should demonstrate basic store creation and slice patterns', () => {
-    // Define a simple counter component using the new API
+    // Define a simple counter component using the two-phase API
     const createComponent = (
       createSlice: RuntimeSliceFactory<{ count: number }>
     ) => {
-      // Step 2: Create slices - focused interfaces to the store
       // Actions slice - methods that mutate state
-      const actions = createSlice(({ get, set }) => ({
-        increment: () => set({ count: get().count + 1 }),
-        decrement: () => set({ count: get().count - 1 }),
-        reset: () => set({ count: 0 }),
-        setCount: (value: number) => set({ count: value }),
-      }));
+      const actions = createSlice(
+        (selectors) => ({ count: selectors.count }),
+        (_, set) => ({
+          increment: () =>
+            set(
+              (selectors) => ({ count: selectors.count }),
+              ({ count }) => ({ count: count() + 1 })
+            ),
+          decrement: () =>
+            set(
+              (selectors) => ({ count: selectors.count }),
+              ({ count }) => ({ count: count() - 1 })
+            ),
+          reset: () =>
+            set(
+              () => ({}),
+              () => ({ count: 0 })
+            ),
+          setCount: (value: number) =>
+            set(
+              () => ({}),
+              () => ({ count: value })
+            ),
+        })
+      );
 
       // Query slice - methods that read state
-      const queries = createSlice(({ get }) => ({
-        count: () => get().count,
-        isPositive: () => get().count > 0,
-        isNegative: () => get().count < 0,
-        isZero: () => get().count === 0,
-      }));
+      const queries = createSlice(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }) => ({
+          count: () => count(),
+          isPositive: () => count() > 0,
+          isNegative: () => count() < 0,
+          isZero: () => count() === 0,
+        })
+      );
 
-      // Step 3: Create view slices that compute values
-      const views = createSlice(({ get }) => ({
-        // Direct computed values as methods
-        computed: () => ({
-          value: get().count,
-          label: `Count: ${get().count}`,
-          sign:
-            get().count > 0
-              ? 'positive'
-              : get().count < 0
-                ? 'negative'
-                : 'zero',
-        }),
-        // Parameterized view
-        display: (format: 'short' | 'long') => {
-          const count = get().count;
-          return format === 'short'
-            ? `${count}`
-            : `The current count is ${count} (${count > 0 ? 'positive' : count < 0 ? 'negative' : 'zero'})`;
-        },
-      }));
+      // View slices that compute values
+      const views = createSlice(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }) => ({
+          // Direct computed values as methods
+          computed: () => ({
+            value: count(),
+            label: `Count: ${count()}`,
+            sign: count() > 0 ? 'positive' : count() < 0 ? 'negative' : 'zero',
+          }),
+          // Parameterized view
+          display: (format: 'short' | 'long') => {
+            const val = count();
+            return format === 'short'
+              ? `${val}`
+              : `The current count is ${val} (${val > 0 ? 'positive' : val < 0 ? 'negative' : 'zero'})`;
+          },
+        })
+      );
 
       return {
         actions,
@@ -64,83 +83,107 @@ describe('Zustand Adapter - New Architecture', () => {
     const store = createComponent(createSlice);
 
     // Test initial state through queries
-    expect(store.queries.selector.count()).toBe(0);
-    expect(store.queries.selector.isZero()).toBe(true);
-    expect(store.queries.selector.isPositive()).toBe(false);
-    expect(store.queries.selector.isNegative()).toBe(false);
+    expect(store.queries().count()).toBe(0);
+    expect(store.queries().isZero()).toBe(true);
+    expect(store.queries().isPositive()).toBe(false);
+    expect(store.queries().isNegative()).toBe(false);
 
     // Test computed values (they're methods that return fresh data)
-    const computed = store.views.selector.computed();
+    const computed = store.views().computed();
     expect(computed.value).toBe(0);
     expect(computed.label).toBe('Count: 0');
     expect(computed.sign).toBe('zero');
 
     // Test parameterized views
-    expect(store.views.selector.display('short')).toBe('0');
-    expect(store.views.selector.display('long')).toBe(
-      'The current count is 0 (zero)'
-    );
+    expect(store.views().display('short')).toBe('0');
+    expect(store.views().display('long')).toBe('The current count is 0 (zero)');
 
     // Test actions
-    store.actions.selector.increment();
-    expect(store.queries.selector.count()).toBe(1);
+    store.actions().increment();
+    expect(store.queries().count()).toBe(1);
 
     // Get fresh computed values
-    const updated = store.views.selector.computed();
+    const updated = store.views().computed();
     expect(updated.value).toBe(1);
     expect(updated.sign).toBe('positive');
-    expect(store.views.selector.display('short')).toBe('1');
+    expect(store.views().display('short')).toBe('1');
 
     // Test multiple operations
-    store.actions.selector.increment();
-    store.actions.selector.increment();
-    expect(store.queries.selector.count()).toBe(3);
+    store.actions().increment();
+    store.actions().increment();
+    expect(store.queries().count()).toBe(3);
 
-    store.actions.selector.decrement();
-    expect(store.queries.selector.count()).toBe(2);
+    store.actions().decrement();
+    expect(store.queries().count()).toBe(2);
 
-    store.actions.selector.reset();
-    expect(store.queries.selector.count()).toBe(0);
-    expect(store.queries.selector.isZero()).toBe(true);
+    store.actions().reset();
+    expect(store.queries().count()).toBe(0);
+    expect(store.queries().isZero()).toBe(true);
 
-    store.actions.selector.setCount(-5);
-    expect(store.queries.selector.count()).toBe(-5);
-    expect(store.queries.selector.isNegative()).toBe(true);
-    expect(store.views.selector.computed().sign).toBe('negative');
+    store.actions().setCount(-5);
+    expect(store.queries().count()).toBe(-5);
+    expect(store.queries().isNegative()).toBe(true);
+    expect(store.views().computed().sign).toBe('negative');
   });
 
-  it('should support subscriptions and demonstrate reactivity', () => {
+  it('should support subscriptions and demonstrate reactivity', async () => {
     const createComponent = (
       createSlice: RuntimeSliceFactory<{ value: number; history: number[] }>
     ) => {
-      const actions = createSlice(({ get, set }) => ({
-        setValue: (value: number) => {
-          const current = get();
-          set({
-            value,
-            history: [...current.history, value],
-          });
-        },
-        increment: () => {
-          const current = get();
-          const newValue = current.value + 1;
-          set({
-            value: newValue,
-            history: [...current.history, newValue],
-          });
-        },
-        reset: () => set({ value: 0, history: [] }),
-      }));
+      const actions = createSlice(
+        (selectors) => ({
+          value: selectors.value,
+          history: selectors.history,
+        }),
+        (_, set) => ({
+          setValue: (newValue: number) =>
+            set(
+              (selectors) => ({
+                value: selectors.value,
+                history: selectors.history,
+              }),
+              ({ history }) => ({
+                value: newValue,
+                history: [...history(), newValue],
+              })
+            ),
+          increment: () =>
+            set(
+              (selectors) => ({
+                value: selectors.value,
+                history: selectors.history,
+              }),
+              ({ value, history }) => {
+                const newValue = value() + 1;
+                return {
+                  value: newValue,
+                  history: [...history(), newValue],
+                };
+              }
+            ),
+          reset: () =>
+            set(
+              () => ({}),
+              () => ({ value: 0, history: [] })
+            ),
+        })
+      );
 
-      const queries = createSlice(({ get }) => ({
-        current: () => get().value,
-        history: () => get().history,
-        hasHistory: () => get().history.length > 0,
-        lastValue: () => {
-          const hist = get().history;
-          return hist.length > 1 ? hist[hist.length - 2] : null;
-        },
-      }));
+      const queries = createSlice(
+        (selectors) => ({
+          value: selectors.value,
+          history: selectors.history,
+        }),
+        ({ value, history }) => ({
+          current: () => value(),
+          history: () => history(),
+          hasHistory: () => history().length > 0,
+          lastValue: () => {
+            const hist = history();
+            return hist.length > 1 ? hist[hist.length - 2] : null;
+          },
+        })
+      );
 
       return { actions, queries };
     };
@@ -155,42 +198,46 @@ describe('Zustand Adapter - New Architecture', () => {
     const createSlice = zustandAdapter(vanillaStore);
     const store = createComponent(createSlice);
 
+    // Import getSliceMetadata for subscription access
+    const { getSliceMetadata } = await import('@lattice/core');
+
     // Track subscription calls
     const listener = vi.fn();
-    const unsubscribe = store.actions.subscribe(listener);
+    const metadata = getSliceMetadata(store.actions);
+    const unsubscribe = metadata!.subscribe(listener);
 
     // Initial state
-    expect(store.queries.selector.current()).toBe(0);
-    expect(store.queries.selector.hasHistory()).toBe(false);
+    expect(store.queries().current()).toBe(0);
+    expect(store.queries().hasHistory()).toBe(false);
     expect(listener).not.toHaveBeenCalled();
 
     // Update state
-    store.actions.selector.setValue(42);
-    expect(store.queries.selector.current()).toBe(42);
-    expect(store.queries.selector.history()).toEqual([42]);
+    store.actions().setValue(42);
+    expect(store.queries().current()).toBe(42);
+    expect(store.queries().history()).toEqual([42]);
     expect(listener).toHaveBeenCalledTimes(1);
 
     // Another update
-    store.actions.selector.increment();
-    expect(store.queries.selector.current()).toBe(43);
-    expect(store.queries.selector.history()).toEqual([42, 43]);
-    expect(store.queries.selector.lastValue()).toBe(42);
+    store.actions().increment();
+    expect(store.queries().current()).toBe(43);
+    expect(store.queries().history()).toEqual([42, 43]);
+    expect(store.queries().lastValue()).toBe(42);
     expect(listener).toHaveBeenCalledTimes(2);
 
     // Multiple listeners
     const listener2 = vi.fn();
     const listener3 = vi.fn();
-    const unsub2 = store.actions.subscribe(listener2);
-    const unsub3 = store.actions.subscribe(listener3);
+    const unsub2 = metadata!.subscribe(listener2);
+    const unsub3 = metadata!.subscribe(listener3);
 
-    store.actions.selector.setValue(100);
+    store.actions().setValue(100);
     expect(listener).toHaveBeenCalledTimes(3);
     expect(listener2).toHaveBeenCalledTimes(1);
     expect(listener3).toHaveBeenCalledTimes(1);
 
     // Unsubscribe first listener
     unsubscribe();
-    store.actions.selector.reset();
+    store.actions().reset();
     expect(listener).toHaveBeenCalledTimes(3); // No more calls
     expect(listener2).toHaveBeenCalledTimes(2);
     expect(listener3).toHaveBeenCalledTimes(2);
@@ -214,68 +261,84 @@ describe('Zustand Adapter - New Architecture', () => {
       }>
     ) => {
       // Product queries
-      const products = createSlice(({ get }) => ({
-        all: () => get().products,
-        byId: (id: string) => get().products.find((p) => p.id === id),
-        byCategory: (category: string) =>
-          get().products.filter((p) => p.category === category),
-      }));
+      const products = createSlice(
+        (selectors) => ({ products: selectors.products }),
+        ({ products }) => ({
+          all: () => products(),
+          byId: (id: string) => products().find((p) => p.id === id),
+          byCategory: (category: string) =>
+            products().filter((p) => p.category === category),
+        })
+      );
 
       // Pricing calculations
-      const pricing = createSlice(({ get }) => ({
-        taxRate: () => get().taxRate,
-        discount: () => get().discount,
-        calculatePrice: (basePrice: number) => {
-          const discounted = basePrice * (1 - get().discount);
-          return discounted * (1 + get().taxRate);
-        },
-      }));
+      const pricing = createSlice(
+        (selectors) => ({
+          taxRate: selectors.taxRate,
+          discount: selectors.discount,
+        }),
+        ({ taxRate, discount }) => ({
+          taxRate: () => taxRate(),
+          discount: () => discount(),
+          calculatePrice: (basePrice: number) => {
+            const discounted = basePrice * (1 - discount());
+            return discounted * (1 + taxRate());
+          },
+        })
+      );
 
       // Create catalog views
-      const catalog = createSlice(({ get }) => ({
-        // Direct computed values
-        totalProducts: () => get().products.length,
-        categories: () => [...new Set(get().products.map((p) => p.category))],
+      const catalog = createSlice(
+        (selectors) => ({
+          products: selectors.products,
+          taxRate: selectors.taxRate,
+          discount: selectors.discount,
+        }),
+        ({ products, taxRate, discount }) => ({
+          // Direct computed values
+          totalProducts: () => products().length,
+          categories: () => [...new Set(products().map((p) => p.category))],
 
-        // Parameterized selector for product details
-        getProductDetails: (id: string) => {
-          const product = get().products.find((p) => p.id === id);
-          if (!product) return null;
+          // Parameterized selector for product details
+          getProductDetails: (id: string) => {
+            const product = products().find((p) => p.id === id);
+            if (!product) return null;
 
-          const discount = get().discount;
-          const taxRate = get().taxRate;
-          const discountedPrice = product.price * (1 - discount);
-          const finalPrice = discountedPrice * (1 + taxRate);
+            const discountVal = discount();
+            const taxRateVal = taxRate();
+            const discountedPrice = product.price * (1 - discountVal);
+            const finalPrice = discountedPrice * (1 + taxRateVal);
 
-          return {
-            ...product,
-            finalPrice,
-            savings: product.price * discount,
-            tax: discountedPrice * taxRate,
-          };
-        },
+            return {
+              ...product,
+              finalPrice,
+              savings: product.price * discountVal,
+              tax: discountedPrice * taxRateVal,
+            };
+          },
 
-        // Category summary factory
-        getCategorySummary: (category: string) => {
-          const items = get().products.filter((p) => p.category === category);
-          const discount = get().discount;
-          const taxRate = get().taxRate;
+          // Category summary factory
+          getCategorySummary: (category: string) => {
+            const items = products().filter((p) => p.category === category);
+            const discountVal = discount();
+            const taxRateVal = taxRate();
 
-          const totalBase = items.reduce((sum, p) => sum + p.price, 0);
-          const totalFinal = items.reduce((sum, p) => {
-            const discounted = p.price * (1 - discount);
-            return sum + discounted * (1 + taxRate);
-          }, 0);
+            const totalBase = items.reduce((sum, p) => sum + p.price, 0);
+            const totalFinal = items.reduce((sum, p) => {
+              const discounted = p.price * (1 - discountVal);
+              return sum + discounted * (1 + taxRateVal);
+            }, 0);
 
-          return {
-            category,
-            itemCount: items.length,
-            totalBasePrice: totalBase,
-            totalFinalPrice: totalFinal,
-            totalSavings: totalBase - totalFinal / (1 + taxRate),
-          };
-        },
-      }));
+            return {
+              category,
+              itemCount: items.length,
+              totalBasePrice: totalBase,
+              totalFinalPrice: totalFinal,
+              totalSavings: totalBase - totalFinal / (1 + taxRateVal),
+            };
+          },
+        })
+      );
 
       return { products, pricing, catalog };
     };
@@ -306,14 +369,11 @@ describe('Zustand Adapter - New Architecture', () => {
     const store = createComponent(createSlice);
 
     // Test direct computed values
-    expect(store.catalog.selector.totalProducts()).toBe(4);
-    expect(store.catalog.selector.categories()).toEqual([
-      'electronics',
-      'furniture',
-    ]);
+    expect(store.catalog().totalProducts()).toBe(4);
+    expect(store.catalog().categories()).toEqual(['electronics', 'furniture']);
 
     // Test parameterized product details
-    const laptop = store.catalog.selector.getProductDetails('1');
+    const laptop = store.catalog().getProductDetails('1');
     expect(laptop).not.toBeNull();
     expect(laptop!.name).toBe('Laptop');
     expect(laptop!.price).toBe(999);
@@ -322,13 +382,12 @@ describe('Zustand Adapter - New Architecture', () => {
     expect(laptop!.tax).toBeCloseTo(71.93, 2);
 
     // Test category summaries
-    const electronics =
-      store.catalog.selector.getCategorySummary('electronics');
+    const electronics = store.catalog().getCategorySummary('electronics');
     expect(electronics.itemCount).toBe(2);
     expect(electronics.category).toBe('electronics');
     expect(electronics.totalBasePrice).toBe(1028);
 
-    const furniture = store.catalog.selector.getCategorySummary('furniture');
+    const furniture = store.catalog().getCategorySummary('furniture');
     expect(furniture.itemCount).toBe(2);
     expect(furniture.totalBasePrice).toBe(498);
   });
@@ -349,24 +408,42 @@ describe('Zustand Adapter - New Architecture', () => {
 
     // Create component with the adapter
     const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
-      const actions = createSlice(({ get, set }) => ({
-        increment: () =>
-          set({
-            count: get().count + 1,
-            lastAction: 'increment',
-          }),
-        decrement: () =>
-          set({
-            count: get().count - 1,
-            lastAction: 'decrement',
-          }),
-      }));
+      const actions = createSlice(
+        (selectors) => ({
+          count: selectors.count,
+          lastAction: selectors.lastAction,
+        }),
+        (_, set) => ({
+          increment: () =>
+            set(
+              (selectors) => ({ count: selectors.count }),
+              ({ count }) => ({
+                count: count() + 1,
+                lastAction: 'increment',
+              })
+            ),
+          decrement: () =>
+            set(
+              (selectors) => ({ count: selectors.count }),
+              ({ count }) => ({
+                count: count() - 1,
+                lastAction: 'decrement',
+              })
+            ),
+        })
+      );
 
-      const queries = createSlice(({ get }) => ({
-        state: () => get(),
-        count: () => get().count,
-        lastAction: () => get().lastAction,
-      }));
+      const queries = createSlice(
+        (selectors) => ({
+          count: selectors.count,
+          lastAction: selectors.lastAction,
+        }),
+        ({ count, lastAction }) => ({
+          state: () => ({ count: count(), lastAction: lastAction() }),
+          count: () => count(),
+          lastAction: () => lastAction(),
+        })
+      );
 
       return { actions, queries };
     };
@@ -376,16 +453,16 @@ describe('Zustand Adapter - New Architecture', () => {
     const store = createComponent(createSlice);
 
     // Test basic functionality (middleware like devtools would see these)
-    expect(store.queries.selector.count()).toBe(0);
-    expect(store.queries.selector.lastAction()).toBe('init');
+    expect(store.queries().count()).toBe(0);
+    expect(store.queries().lastAction()).toBe('init');
 
-    store.actions.selector.increment();
-    expect(store.queries.selector.count()).toBe(1);
-    expect(store.queries.selector.lastAction()).toBe('increment');
+    store.actions().increment();
+    expect(store.queries().count()).toBe(1);
+    expect(store.queries().lastAction()).toBe('increment');
 
-    store.actions.selector.decrement();
-    expect(store.queries.selector.count()).toBe(0);
-    expect(store.queries.selector.lastAction()).toBe('decrement');
+    store.actions().decrement();
+    expect(store.queries().count()).toBe(0);
+    expect(store.queries().lastAction()).toBe('decrement');
 
     // The key point: all Zustand middleware (persist, devtools, immer, etc)
     // continues to work because we're just wrapping the store, not replacing it
@@ -420,27 +497,41 @@ describe('Zustand Adapter - New Architecture', () => {
     const createAuthComponent = (
       createSlice: RuntimeSliceFactory<UserState>
     ) => {
-      // They can still use the store's built-in actions
-      const auth = createSlice(({ get }) => ({
-        // Expose queries
-        user: () => get().user,
-        isAuthenticated: () => get().isAuthenticated,
-        userName: () => get().user?.name ?? 'Guest',
+      // Create queries slice
+      const auth = createSlice(
+        (selectors) => ({
+          user: selectors.user,
+          isAuthenticated: selectors.isAuthenticated,
+          login: selectors.login,
+          logout: selectors.logout,
+        }),
+        ({ user, isAuthenticated, login, logout }) => ({
+          // Expose queries
+          user: () => user(),
+          isAuthenticated: () => isAuthenticated(),
+          userName: () => user()?.name ?? 'Guest',
 
-        // Can also expose the store's actions if needed
-        login: () => get().login,
-        logout: () => get().logout,
-      }));
+          // Can also expose the store's actions if needed
+          login: () => login(),
+          logout: () => logout(),
+        })
+      );
 
       // Or create new Lattice-style actions
-      const actions = createSlice(({ get, set }) => ({
-        updateUserName: (name: string) => {
-          const user = get().user;
-          if (user) {
-            set({ user: { ...user, name } });
-          }
-        },
-      }));
+      const actions = createSlice(
+        (selectors) => ({ user: selectors.user }),
+        ({ user }, set) => ({
+          updateUserName: (name: string) => {
+            const currentUser = user();
+            if (currentUser) {
+              set(
+                () => ({}),
+                () => ({ user: { ...currentUser, name } })
+              );
+            }
+          },
+        })
+      );
 
       return { auth, actions };
     };
@@ -450,23 +541,23 @@ describe('Zustand Adapter - New Architecture', () => {
     const component = createAuthComponent(createSlice);
 
     // Test using both store methods and Lattice methods
-    expect(component.auth.selector.isAuthenticated()).toBe(false);
-    expect(component.auth.selector.userName()).toBe('Guest');
+    expect(component.auth().isAuthenticated()).toBe(false);
+    expect(component.auth().userName()).toBe('Guest');
 
     // Use the original store's action through Lattice
-    const login = component.auth.selector.login();
+    const login = component.auth().login();
     login('123', 'John Doe');
 
-    expect(component.auth.selector.isAuthenticated()).toBe(true);
-    expect(component.auth.selector.userName()).toBe('John Doe');
+    expect(component.auth().isAuthenticated()).toBe(true);
+    expect(component.auth().userName()).toBe('John Doe');
 
     // Use Lattice-style action
-    component.actions.selector.updateUserName('Jane Doe');
-    expect(component.auth.selector.userName()).toBe('Jane Doe');
+    component.actions().updateUserName('Jane Doe');
+    expect(component.auth().userName()).toBe('Jane Doe');
 
     // Original store action still works
-    const logout = component.auth.selector.logout();
+    const logout = component.auth().logout();
     logout();
-    expect(component.auth.selector.isAuthenticated()).toBe(false);
+    expect(component.auth().isAuthenticated()).toBe(false);
   });
 });

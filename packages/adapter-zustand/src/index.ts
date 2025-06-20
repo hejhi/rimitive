@@ -46,12 +46,18 @@ export interface ZustandAdapterOptions {
  * // Wrap it for use with Lattice components
  * const createSlice = zustandAdapter(useStore);
  *
- * // Use in a Lattice component
+ * // Use in a Lattice component with two-phase pattern
  * const createComponent = (createSlice) => {
- *   const counter = createSlice(({ get }) => ({
- *     value: () => get().count,
- *     // Note: You can also use the store's methods directly
- *   }));
+ *   const counter = createSlice(
+ *     (selectors) => ({ count: selectors.count }),
+ *     ({ count }, set) => ({
+ *       value: () => count(),
+ *       increment: () => set(
+ *         (selectors) => ({ count: selectors.count }),
+ *         ({ count }) => ({ count: count() + 1 })
+ *       )
+ *     })
+ *   );
  *   return { counter };
  * };
  * ```
