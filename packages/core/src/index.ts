@@ -3,6 +3,9 @@
 // Export memoization utilities
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
+// Export slice metadata utilities  
+export { getSliceMetadata } from './utils';
+
 // Export runtime
 export {
   createLatticeStore,

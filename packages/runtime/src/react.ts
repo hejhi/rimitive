@@ -1,14 +1,14 @@
 /**
  * @fileoverview React hooks for Lattice
  *
- * This module provides React hooks that work with any Lattice adapter,
- * enabling reactive component updates based on slice method results.
+ * This module provides React hooks that work with the new reactive slice API,
+ * enabling fine-grained reactive component updates.
  *
  * Key features:
- * - Slice-based subscriptions with useSliceSelector
- * - Convenience hooks for common patterns
+ * - Slice handle subscriptions with useSliceSelector
+ * - Fine-grained dependency tracking
  * - Full TypeScript support with proper inference
- * - Optimized re-renders based on slice method results
+ * - Optimized re-renders based on slice dependencies
  */
 
 import {
@@ -17,41 +17,67 @@ import {
   useSyncExternalStore,
   startTransition,
 } from 'react';
-import {
-  subscribeToSlices,
-  shallowEqual,
-  type SubscribableStore,
-} from '@lattice/core';
+import type { SliceHandle } from '@lattice/core';
+import { getSliceMetadata } from '@lattice/core';
 
 /**
- * React hook for subscribing to specific slice method results.
+ * Shallow equality comparison for objects
+ */
+function shallowEqual<T>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) {
+    return false;
+  }
+  
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  
+  if (keysA.length !== keysB.length) return false;
+  
+  for (const key of keysA) {
+    if (!Object.is((a as any)[key], (b as any)[key])) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+/**
+ * React hook for subscribing to reactive slice values.
  *
  * This hook will re-render the component only when the selected values
  * change according to the equality function.
  *
- * @param store - A Lattice store with slices and subscribe method
- * @param selector - Function that selects values from slices
+ * @param slice - A reactive slice handle
+ * @param selector - Function that selects values from the slice
  * @param equalityFn - Optional custom equality function (defaults to Object.is)
  * @returns The selected values
  *
  * @example
  * ```tsx
  * function Counter() {
- *   const { count, isEven } = useSliceSelector(store, (slices) => ({
- *     count: slices.counter.value(),
- *     isEven: slices.counter.isEven()
+ *   const { count, isEven } = useSliceSelector(counterSlice, (counter) => ({
+ *     count: counter.value(),
+ *     isEven: counter.isEven()
  *   }));
  *
  *   return <div>Count: {count} (even: {isEven})</div>;
  * }
  * ```
  */
-export function useSliceSelector<Component, Selected>(
-  store: Component & SubscribableStore,
-  selector: (slices: Component) => Selected,
+export function useSliceSelector<Computed, Selected>(
+  slice: SliceHandle<Computed>,
+  selector: (computed: Computed) => Selected,
   equalityFn?: (a: Selected, b: Selected) => boolean,
   useTransitions = false
 ): Selected {
+  // Get slice metadata for subscription
+  const metadata = getSliceMetadata(slice);
+  if (!metadata) {
+    throw new Error('Invalid slice: missing metadata');
+  }
+
   // Store the selector and equality function in refs
   const selectorRef = useRef(selector);
   selectorRef.current = selector;
@@ -65,39 +91,35 @@ export function useSliceSelector<Component, Selected>(
 
   // Lazy initialization pattern for better performance
   if (!getSnapshotRef.current) {
-    selectedValueRef.current = selector(store);
+    const computed = slice();
+    selectedValueRef.current = selector(computed);
     getSnapshotRef.current = () => selectedValueRef.current!;
   }
 
   // Create stable callbacks for useSyncExternalStore
   const subscribe = useCallback(
     (onStoreChange: () => void) => {
-      return subscribeToSlices(
-        store,
-        (slices) => {
-          const nextValue = selectorRef.current(slices);
-          const currentValue = selectedValueRef.current!;
+      return metadata.subscribe(() => {
+        const computed = slice();
+        const nextValue = selectorRef.current(computed);
+        const currentValue = selectedValueRef.current!;
 
-          // Direct equality check without ternary
-          const isEqual =
-            equalityFnRef.current?.(currentValue, nextValue) ??
-            Object.is(currentValue, nextValue);
+        // Direct equality check without ternary
+        const isEqual =
+          equalityFnRef.current?.(currentValue, nextValue) ??
+          Object.is(currentValue, nextValue);
 
-          if (!isEqual) {
-            selectedValueRef.current = nextValue;
-            if (useTransitions) {
-              startTransition(onStoreChange);
-            } else {
-              onStoreChange();
-            }
+        if (!isEqual) {
+          selectedValueRef.current = nextValue;
+          if (useTransitions) {
+            startTransition(onStoreChange);
+          } else {
+            onStoreChange();
           }
-          return nextValue;
-        },
-        () => {}, // Empty callback since we handle the change detection above
-        { fireImmediately: false }
-      );
+        }
+      });
     },
-    [store, useTransitions]
+    [metadata, slice, useTransitions]
   );
 
   // Stable getSnapshot using ref
@@ -105,8 +127,11 @@ export function useSliceSelector<Component, Selected>(
 
   // Memoize getServerSnapshot
   const getServerSnapshot = useCallback(
-    () => selector(store),
-    [store, selector]
+    () => {
+      const computed = slice();
+      return selector(computed);
+    },
+    [slice, selector]
   );
 
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

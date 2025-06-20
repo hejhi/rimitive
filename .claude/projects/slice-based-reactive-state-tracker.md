@@ -15,16 +15,19 @@
 - [x] Implemented dependency tracking using Object.defineProperty
 - [x] Added fine-grained subscriptions at store layer
 - [x] Updated all store tests to use new API
+- [x] Implemented slice composition (child slices via spread pattern)
+- [x] Created clean module architecture with internal metadata
+- [x] Added JSDoc documentation for slice handle API
 
 ## In Progress
 - [ ] Update runtime to use new two-phase API
 
 ## TODO
-- [ ] Implement slice composition (child slices via spread pattern)
-- [ ] Create `useSliceSelector` React hook for reactive slices
+- [ ] Create `useSliceSelector` React hook for reactive slices (Note: existing hook is for old API)
 - [ ] Update all benchmarks to use new reactive API
 - [ ] Performance testing with fine-grained subscriptions
-- [ ] Update all adapters to work with new API
+- [ ] Update all adapters to support subscribeToKeys for optimal performance
+- [ ] Migrate examples to use new two-phase API
 
 ## Decisions Made
 - **NO PROXIES** - Selectors track their own access
