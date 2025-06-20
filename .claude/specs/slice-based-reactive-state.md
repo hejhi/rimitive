@@ -419,6 +419,99 @@ const cart = pricing(
 3. **Lazy evaluation**: Selectors only compute when accessed
 4. **Structural sharing**: Unchanged values maintain referential equality
 
+## Module Design
+
+### API Surface
+
+The implementation provides a clean separation between user-facing API and framework/testing utilities:
+
+```typescript
+// Main API - @lattice/core
+import { createStore } from '@lattice/core';
+
+// Utilities - @lattice/core/utils  
+import { getSliceMetadata } from '@lattice/core/utils';
+```
+
+### Implementation Architecture
+
+```
+packages/core/src/
+├── store.ts              # Main createStore implementation
+├── internal/
+│   └── metadata.ts       # Hidden metadata storage (WeakMaps)
+├── utils.ts              # Public utilities for framework integration
+└── index.ts              # Clean public API exports
+```
+
+### Key Design Decisions
+
+1. **Single createStore Function**: No API fragmentation. Metadata is always stored internally but only exposed through utilities.
+
+2. **Module-scoped WeakMaps**: Metadata storage is completely hidden in `internal/metadata.ts`, preventing any leakage into the public API.
+
+3. **Clean Slice Type**: Slices are pure functions with no visible metadata properties:
+   ```typescript
+   interface SliceHandle<Computed> {
+     (): Computed;                                    // Get computed values
+     <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps; // Compose
+   }
+   ```
+
+4. **Separate Utility Module**: Framework integrations and testing utilities are isolated in a separate import path, keeping the main API uncluttered.
+
+### Usage Patterns
+
+#### Basic Usage (User Code)
+```typescript
+import { createStore } from '@lattice/core';
+
+const createSlice = createStore({ count: 0 });
+const slice = createSlice(
+  (selectors) => ({ count: selectors.count }),
+  ({ count }, set) => ({
+    value: () => count(),
+    increment: () => set(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }) => ({ count: count() + 1 })
+    )
+  })
+);
+
+// Clean API - no metadata visible
+slice().increment();
+console.log(slice().value()); // 1
+```
+
+#### Testing/Framework Integration
+```typescript
+import { createStore } from '@lattice/core';
+import { getSliceMetadata } from '@lattice/core/utils';
+
+const createSlice = createStore({ count: 0, name: 'test' });
+const slice = createSlice(
+  (selectors) => ({ count: selectors.count }),
+  ({ count }, set) => ({ /* ... */ })
+);
+
+// Access metadata when needed
+const metadata = getSliceMetadata(slice);
+console.log(metadata?.dependencies); // Set { 'count' }
+
+// Subscribe to changes
+const unsubscribe = metadata?.subscribe(() => {
+  console.log('Dependencies changed!');
+});
+```
+
+### Benefits
+
+1. **Clean Public API**: Users only see what they need - no `_dependencies` or `_subscribe` cluttering the interface
+2. **Powerful When Needed**: Full metadata access available for frameworks and tooling
+3. **No Backwards Compatibility**: Greenfield design allows for the cleanest possible API
+4. **Type Safety**: Full TypeScript support with clean, understandable types
+5. **Performance**: WeakMaps ensure automatic cleanup when slices are garbage collected
+
 ## Open Questions
 
 1. **Naming**: Is "slice" the best term? Alternatives: segment, projection, view
