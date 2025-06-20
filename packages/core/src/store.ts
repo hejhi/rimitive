@@ -35,14 +35,23 @@ type ComposedFrom = {
 export interface SliceHandle<Computed> {
   (): Computed;
   <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps;
-  _dependencies: Set<string>;
-  _subscribe: (listener: () => void) => () => void;
 }
 
 export type ReactiveSliceFactory<State> = <Deps, Computed>(
   depsFn: (selectors: Selectors<State>) => Deps,
   computeFn: (deps: Deps, set: SetState<State>) => Computed
 ) => SliceHandle<Computed>;
+
+// Metadata access for framework integration and testing
+export interface SliceMetadata {
+  dependencies: Set<string>;
+  subscribe: (listener: () => void) => () => void;
+}
+
+export interface StoreWithMetadata<State> {
+  createSlice: ReactiveSliceFactory<State>;
+  getMetadata: (slice: SliceHandle<any>) => SliceMetadata | undefined;
+}
 
 /**
  * Creates a store with pure serializable state and returns a slice factory.
@@ -70,8 +79,10 @@ export type ReactiveSliceFactory<State> = <Deps, Computed>(
  * );
  * ```
  */
-export function createStore<State>(
-  initialState: State
+// Internal factory that optionally captures metadata
+function createStoreInternal<State>(
+  initialState: State,
+  metadataCapture?: WeakMap<Function, SliceMetadata>
 ): ReactiveSliceFactory<State> {
   let state = initialState;
   // Use string keys for reliable Map lookups
@@ -237,21 +248,59 @@ export function createStore<State>(
       return childDeps;
     }
     
-    // Add metadata as non-enumerable properties
-    Object.defineProperty(slice, '_dependencies', {
-      value: dependencies,
-      writable: false,
-      enumerable: false,
-      configurable: false
-    });
-    
-    Object.defineProperty(slice, '_subscribe', {
-      value: subscribe,
-      writable: false,
-      enumerable: false,
-      configurable: false
-    });
+    // Store metadata if capture is provided
+    if (metadataCapture) {
+      metadataCapture.set(slice, { dependencies, subscribe });
+    }
     
     return slice as SliceHandle<Computed>;
+  };
+}
+
+/**
+ * Creates a store with pure serializable state and returns a slice factory.
+ * This is the simple API that hides all internals.
+ */
+export function createStore<State>(
+  initialState: State
+): ReactiveSliceFactory<State> {
+  return createStoreInternal(initialState);
+}
+
+/**
+ * Creates a store with metadata access for framework integration and testing.
+ * This is the advanced API that exposes internals.
+ * 
+ * @param initialState - The initial state (must be serializable)
+ * @returns Object with createSlice factory and getMetadata function
+ * 
+ * @example
+ * ```typescript
+ * const store = createStoreWithMetadata({ count: 0 });
+ * 
+ * const slice = store.createSlice(
+ *   (selectors) => ({ count: selectors.count }),
+ *   ({ count }, set) => ({
+ *     increment: () => set(
+ *       (selectors) => ({ count: selectors.count }),
+ *       ({ count }) => ({ count: count() + 1 })
+ *     )
+ *   })
+ * );
+ * 
+ * // Access metadata for testing or framework integration
+ * const metadata = store.getMetadata(slice);
+ * console.log(metadata?.dependencies); // Set { 'count' }
+ * ```
+ */
+export function createStoreWithMetadata<State>(
+  initialState: State
+): StoreWithMetadata<State> {
+  const sliceMetadata = new WeakMap<Function, SliceMetadata>();
+  const createSlice = createStoreInternal(initialState, sliceMetadata);
+  
+  return {
+    createSlice,
+    getMetadata: (slice: SliceHandle<any>) => sliceMetadata.get(slice)
   };
 }

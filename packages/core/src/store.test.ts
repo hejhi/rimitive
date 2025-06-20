@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createStore } from './index';
+import { createStore, createStoreWithMetadata } from './index';
 
 describe('createStore', () => {
   it('should create a store with initial state', () => {
@@ -111,9 +111,9 @@ describe('createStore', () => {
   });
 
   it('should track dependencies correctly', () => {
-    const createSlice = createStore({ count: 0, name: 'John', age: 30 });
+    const store = createStoreWithMetadata({ count: 0, name: 'John', age: 30 });
     
-    const slice = createSlice(
+    const slice = store.createSlice(
       (selectors) => ({
         count: selectors.count,
         name: selectors.name,
@@ -124,16 +124,18 @@ describe('createStore', () => {
       })
     );
     
+    const metadata = store.getMetadata(slice);
+    
     // Should only depend on count and name
-    expect(slice._dependencies.has('count')).toBe(true);
-    expect(slice._dependencies.has('name')).toBe(true);
-    expect(slice._dependencies.has('age')).toBe(false);
+    expect(metadata?.dependencies.has('count')).toBe(true);
+    expect(metadata?.dependencies.has('name')).toBe(true);
+    expect(metadata?.dependencies.has('age')).toBe(false);
   });
 
   it('should support fine-grained subscriptions', () => {
-    const createSlice = createStore({ count: 0, name: 'John' });
+    const store = createStoreWithMetadata({ count: 0, name: 'John' });
     
-    const slice = createSlice(
+    const slice = store.createSlice(
       (selectors) => ({ count: selectors.count }),
       ({ count }, set) => ({
         count: () => count(),
@@ -144,12 +146,13 @@ describe('createStore', () => {
       })
     );
     
+    const metadata = store.getMetadata(slice);
     const listener = vi.fn();
-    const unsubscribe = slice._subscribe(listener);
+    const unsubscribe = metadata!.subscribe(listener);
     
     // Should only track count dependency
-    expect(slice._dependencies.size).toBe(1);
-    expect(slice._dependencies.has('count')).toBe(true);
+    expect(metadata?.dependencies.size).toBe(1);
+    expect(metadata?.dependencies.has('count')).toBe(true);
     
     slice().increment();
     expect(listener).toHaveBeenCalled();
