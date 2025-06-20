@@ -1,12 +1,12 @@
 /**
- * Redux Adapter Usage Guide
+ * Redux Adapter Advanced Usage Guide
  * 
- * This guide shows how to use the Redux adapter with Lattice
+ * This guide shows advanced patterns with the Redux adapter and two-phase reactive API
  */
 
-import { configureStore } from '@reduxjs/toolkit';
+import { configureStore, createSlice as createReduxSlice } from '@reduxjs/toolkit';
 import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
-import type { StoreTools } from '@lattice/core';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 interface AppState {
   count: number;
@@ -33,10 +33,16 @@ export function basicUsage() {
   // Then wrap it with the adapter
   const createSlice = reduxAdapter<AppState>(store);
   
-  const counter = createSlice(({ get, set }: StoreTools<AppState>) => ({
-    value: () => get().count,
-    increment: () => set({ count: get().count + 1 })
-  }));
+  const counter = createSlice(
+    (selectors) => ({ count: selectors.count }),
+    ({ count }, set) => ({
+      value: () => count(),
+      increment: () => set(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }) => ({ count: count() + 1 })
+      )
+    })
+  );
   
   return { store, counter };
 }

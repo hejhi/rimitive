@@ -124,11 +124,22 @@ export const latticeReducer = createReduxSlice({
  * // Wrap it for use with Lattice components
  * const createSlice = reduxAdapter(store);
  *
- * // Use in a Lattice component
- * const counter = createSlice(({ get, set }) => ({
- *   value: () => get().count,
- *   increment: () => set({ count: get().count + 1 })
- * }));
+ * // Use in a Lattice component with two-phase pattern
+ * const counter = createSlice(
+ *   (selectors) => ({ count: selectors.count }),
+ *   ({ count }, set) => ({
+ *     value: () => count(),
+ *     increment: () => set(
+ *       (selectors) => ({ count: selectors.count }),
+ *       ({ count }) => ({ count: count() + 1 })
+ *     )
+ *   })
+ * );
+ *
+ * // Usage
+ * console.log(counter().value()); // 0
+ * counter().increment();
+ * console.log(counter().value()); // 1
  * ```
  *
  * @example With middleware and multiple slices

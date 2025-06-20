@@ -1,12 +1,12 @@
 /**
- * Example: Basic Redux adapter usage with the new pattern
+ * Example: Basic Redux adapter usage with the two-phase reactive pattern
  * 
- * Shows how to use Redux stores with Lattice following the separated pattern
+ * Shows how to use Redux stores with Lattice following the reactive slice API
  */
 
 import { configureStore } from '@reduxjs/toolkit';
 import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
-import type { StoreTools } from '@lattice/core';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 // Define your state shape
 interface AppState {
@@ -39,107 +39,142 @@ const store = configureStore({
 // Wrap the store with the Lattice adapter
 const createSlice = reduxAdapter<AppState>(store);
 
-// Define slices using pure Lattice syntax - no Redux knowledge needed!
+// Define slices using the two-phase reactive pattern
 
-const counter = createSlice(({ get, set }: StoreTools<AppState>) => ({
-  // Selectors (queries)
-  value: () => get().counter.value,
-  isPositive: () => get().counter.value > 0,
-  
-  // Actions (mutations)
-  increment: () => set({
-    counter: { value: get().counter.value + 1 }
-  }),
-  decrement: () => set({
-    counter: { value: get().counter.value - 1 }
-  }),
-  setValue: (value: number) => set({
-    counter: { value }
-  }),
-}));
+const counter = createSlice(
+  // Phase 1: Declare dependencies
+  (selectors) => ({ counter: selectors.counter }),
+  // Phase 2: Define computed values and actions
+  ({ counter }, set) => ({
+    // Selectors (queries)
+    value: () => counter().value,
+    isPositive: () => counter().value > 0,
+    
+    // Actions (mutations)
+    increment: () => set(
+      (selectors) => ({ counter: selectors.counter }),
+      ({ counter }) => ({
+        counter: { value: counter().value + 1 }
+      })
+    ),
+    decrement: () => set(
+      (selectors) => ({ counter: selectors.counter }),
+      ({ counter }) => ({
+        counter: { value: counter().value - 1 }
+      })
+    ),
+    setValue: (value: number) => set(
+      () => ({}),
+      () => ({ counter: { value } })
+    ),
+  })
+);
 
-const todos = createSlice(({ get, set }: StoreTools<AppState>) => ({
-  // Selectors
-  all: () => get().todos.items,
-  active: () => get().todos.items.filter(t => !t.completed),
-  completed: () => get().todos.items.filter(t => t.completed),
-  currentFilter: () => get().todos.filter,
-  
-  // Actions
-  add: (text: string) => {
-    const newTodo = {
-      id: Math.random().toString(36).substr(2, 9),
-      text,
-      completed: false,
-    };
-    set({
-      todos: {
-        ...get().todos,
-        items: [...get().todos.items, newTodo],
-      },
-    });
-  },
-  
-  toggle: (id: string) => {
-    set({
-      todos: {
-        ...get().todos,
-        items: get().todos.items.map(todo =>
-          todo.id === id
-            ? { ...todo, completed: !todo.completed }
-            : todo
-        ),
-      },
-    });
-  },
-  
-  remove: (id: string) => {
-    set({
-      todos: {
-        ...get().todos,
-        items: get().todos.items.filter(todo => todo.id !== id),
-      },
-    });
-  },
-  
-  setFilter: (filter: 'all' | 'active' | 'completed') => {
-    set({
-      todos: {
-        ...get().todos,
-        filter,
-      },
-    });
-  },
-}));
+const todos = createSlice(
+  (selectors) => ({ todos: selectors.todos }),
+  ({ todos }, set) => ({
+    // Selectors
+    all: () => todos().items,
+    active: () => todos().items.filter(t => !t.completed),
+    completed: () => todos().items.filter(t => t.completed),
+    currentFilter: () => todos().filter,
+    
+    // Actions
+    add: (text: string) => {
+      const newTodo = {
+        id: Math.random().toString(36).substr(2, 9),
+        text,
+        completed: false,
+      };
+      set(
+        (selectors) => ({ todos: selectors.todos }),
+        ({ todos }) => ({
+          todos: {
+            ...todos(),
+            items: [...todos().items, newTodo],
+          },
+        })
+      );
+    },
+    
+    toggle: (id: string) => {
+      set(
+        (selectors) => ({ todos: selectors.todos }),
+        ({ todos }) => ({
+          todos: {
+            ...todos(),
+            items: todos().items.map(todo =>
+              todo.id === id
+                ? { ...todo, completed: !todo.completed }
+                : todo
+            ),
+          },
+        })
+      );
+    },
+    
+    remove: (id: string) => {
+      set(
+        (selectors) => ({ todos: selectors.todos }),
+        ({ todos }) => ({
+          todos: {
+            ...todos(),
+            items: todos().items.filter(todo => todo.id !== id),
+          },
+        })
+      );
+    },
+    
+    setFilter: (filter: 'all' | 'active' | 'completed') => {
+      set(
+        (selectors) => ({ todos: selectors.todos }),
+        ({ todos }) => ({
+          todos: {
+            ...todos(),
+            filter,
+          },
+        })
+      );
+    },
+  })
+);
 
-const user = createSlice(({ get, set }: StoreTools<AppState>) => ({
-  // Selectors
-  name: () => get().user.name,
-  email: () => get().user.email,
-  isLoggedIn: () => get().user.loggedIn,
-  
-  // Actions
-  login: (name: string, email: string) => {
-    set({
-      user: { name, email, loggedIn: true },
-    });
-  },
-  
-  logout: () => {
-    set({
-      user: { name: '', email: '', loggedIn: false },
-    });
-  },
-  
-  updateEmail: (email: string) => {
-    set({
-      user: {
-        ...get().user,
-        email,
-      },
-    });
-  },
-}));
+const user = createSlice(
+  (selectors) => ({ user: selectors.user }),
+  ({ user }, set) => ({
+    // Selectors
+    name: () => user().name,
+    email: () => user().email,
+    isLoggedIn: () => user().loggedIn,
+    
+    // Actions
+    login: (name: string, email: string) => {
+      set(
+        () => ({}),
+        () => ({ user: { name, email, loggedIn: true } })
+      );
+    },
+    
+    logout: () => {
+      set(
+        () => ({}),
+        () => ({ user: { name: '', email: '', loggedIn: false } })
+      );
+    },
+    
+    updateEmail: (email: string) => {
+      set(
+        (selectors) => ({ user: selectors.user }),
+        ({ user }) => ({
+          user: {
+            ...user(),
+            email,
+          },
+        })
+      );
+    },
+  })
+);
 
 // Advanced example: Using Redux store with multiple slices
 export function advancedExample() {
@@ -165,53 +200,65 @@ export function advancedExample() {
   const createAppSlice = reduxAdapter<AppState>(advancedStore, { slice: 'app' });
   
   // Now create slices that work with the 'app' portion of the state
-  const appCounter = createAppSlice(({ get, set }) => ({
-    value: () => get().counter.value,
-    increment: () => set({ counter: { value: get().counter.value + 1 } })
-  }));
+  const appCounter = createAppSlice(
+    (selectors) => ({ counter: selectors.counter }),
+    ({ counter }, set) => ({
+      value: () => counter().value,
+      increment: () => set(
+        (selectors) => ({ counter: selectors.counter }),
+        ({ counter }) => ({
+          counter: { value: counter().value + 1 }
+        })
+      )
+    })
+  );
   
   return { store: advancedStore, counter: appCounter };
 }
 
 // Usage example
-export function demonstrateUsage() {
-  console.log('=== Redux Adapter Example (New Pattern) ===\n');
+export async function demonstrateUsage() {
+  console.log('=== Redux Adapter Example (Two-Phase Pattern) ===\n');
   
   // Counter operations
-  console.log('Counter value:', counter.selector.value()); // 0
-  counter.selector.increment();
-  counter.selector.increment();
-  console.log('After increment:', counter.selector.value()); // 2
-  console.log('Is positive?', counter.selector.isPositive()); // true
+  console.log('Counter value:', counter().value()); // 0
+  counter().increment();
+  counter().increment();
+  console.log('After increment:', counter().value()); // 2
+  console.log('Is positive?', counter().isPositive()); // true
   
   // Todo operations
-  todos.selector.add('Learn Lattice');
-  todos.selector.add('Build an app');
-  todos.selector.add('Deploy to production');
+  todos().add('Learn Lattice');
+  todos().add('Build an app');
+  todos().add('Deploy to production');
   
-  console.log('\nTodos:', todos.selector.all().length); // 3
+  console.log('\nTodos:', todos().all().length); // 3
   
-  const firstTodo = todos.selector.all()[0];
-  todos.selector.toggle(firstTodo.id);
+  const firstTodo = todos().all()[0];
+  if (firstTodo) {
+    todos().toggle(firstTodo.id);
+  }
   
-  console.log('Active:', todos.selector.active().length); // 2
-  console.log('Completed:', todos.selector.completed().length); // 1
+  console.log('Active:', todos().active().length); // 2
+  console.log('Completed:', todos().completed().length); // 1
   
   // User operations
-  user.selector.login('Alice', 'alice@example.com');
-  console.log('\nLogged in as:', user.selector.name()); // Alice
-  console.log('Email:', user.selector.email()); // alice@example.com
+  user().login('Alice', 'alice@example.com');
+  console.log('\nLogged in as:', user().name()); // Alice
+  console.log('Email:', user().email()); // alice@example.com
   
   // Redux store is automatically synchronized
   console.log('\nRedux state:', store.getState());
   
-  // Subscribe to changes
-  const unsubscribe = counter.subscribe(() => {
-    console.log('Counter changed to:', counter.selector.value());
+  // Subscribe to changes using slice metadata
+  const { getSliceMetadata } = await import('@lattice/core');
+  const metadata = getSliceMetadata(counter);
+  const unsubscribe = metadata?.subscribe(() => {
+    console.log('Counter changed to:', counter().value());
   });
   
-  counter.selector.setValue(10);
-  unsubscribe();
+  counter().setValue(10);
+  if (unsubscribe) unsubscribe();
 }
 
 // Benefits of the new pattern:
