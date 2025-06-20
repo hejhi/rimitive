@@ -1,6 +1,28 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { latticeReducer, reduxAdapter } from './index';
+import type { Selectors } from '@lattice/core';
+
+// Common selector factories for reuse across tests
+const selectCounter = <T extends { counter: any }>(selectors: Selectors<T>) => 
+  ({ counter: selectors.counter });
+
+const selectUser = <T extends { user: any }>(selectors: Selectors<T>) => 
+  ({ user: selectors.user });
+
+const selectValue = <T extends { value: any }>(selectors: Selectors<T>) => 
+  ({ value: selectors.value });
+
+const selectTodos = <T extends { todos: any }>(selectors: Selectors<T>) => 
+  ({ todos: selectors.todos });
+
+const selectUI = <T extends { ui: any }>(selectors: Selectors<T>) => 
+  ({ ui: selectors.ui });
+
+const selectCount = <T extends { count: any }>(selectors: Selectors<T>) => 
+  ({ count: selectors.count });
+
+const selectNone = () => ({});
 
 describe('Redux Adapter', () => {
   it('should create a Redux store with Lattice slices', () => {
@@ -14,19 +36,19 @@ describe('Redux Adapter', () => {
     const createSlice = reduxAdapter<{ counter: { value: number } }>(store);
 
     const counter = createSlice(
-      (selectors) => ({ value: selectors.counter }),
-      ({ value }, set) => ({
-        count: () => value().value,
+      selectCounter,
+      ({ counter }, set) => ({
+        count: () => counter().value,
         increment: () =>
           set(
-            (selectors) => ({ counter: selectors.counter }),
+            selectCounter,
             ({ counter }) => ({
               counter: { value: counter().value + 1 },
             })
           ),
         decrement: () =>
           set(
-            (selectors) => ({ counter: selectors.counter }),
+            selectCounter,
             ({ counter }) => ({
               counter: { value: counter().value - 1 },
             })
@@ -64,12 +86,12 @@ describe('Redux Adapter', () => {
     const createSlice = reduxAdapter<CountStore>(store);
 
     const counter = createSlice(
-      (selectors) => ({ counter: selectors.counter }),
+      selectCounter,
       ({ counter }, set) => ({
         value: () => counter().value,
         increment: () =>
           set(
-            (selectors) => ({ counter: selectors.counter }),
+            selectCounter,
             ({ counter }) => ({
               counter: { value: counter().value + 1 },
             })
@@ -78,20 +100,20 @@ describe('Redux Adapter', () => {
     );
 
     const user = createSlice(
-      (selectors) => ({ user: selectors.user }),
+      selectUser,
       ({ user }, set) => ({
         getName: () => user().name,
         isLoggedIn: () => user().loggedIn,
         login: (name: string) =>
           set(
-            () => ({}),
+            selectNone,
             () => ({
               user: { name, loggedIn: true },
             })
           ),
         logout: () =>
           set(
-            () => ({}),
+            selectNone,
             () => ({
               user: { name: '', loggedIn: false },
             })
@@ -123,11 +145,11 @@ describe('Redux Adapter', () => {
     const createSlice = reduxAdapter<{ value: number }>(store);
 
     const state = createSlice(
-      (selectors) => ({ value: selectors.value }),
+      selectValue,
       ({ value }, set) => ({
         value: () => value(),
         setValue: (newValue: number) => set(
-          () => ({}),
+          selectNone,
           () => ({ value: newValue })
         ),
       })
@@ -163,12 +185,12 @@ describe('Redux Adapter', () => {
     const createSlice = reduxAdapter<{ counter: { value: number } }>(store);
 
     const counter = createSlice(
-      (selectors) => ({ counter: selectors.counter }),
+      selectCounter,
       ({ counter }, set) => ({
         value: () => counter().value,
         increment: () =>
           set(
-            (selectors) => ({ counter: selectors.counter }),
+            selectCounter,
             ({ counter }) => ({
               counter: { value: counter().value + 1 },
             })
@@ -210,7 +232,7 @@ describe('Redux Adapter', () => {
 
     let nextId = 1;
     const todos = createSlice(
-      (selectors) => ({ todos: selectors.todos }),
+      selectTodos,
       ({ todos }, set) => ({
         getAll: () => todos().items,
         getActive: () => todos().items.filter((t) => !t.completed),
@@ -218,7 +240,7 @@ describe('Redux Adapter', () => {
 
         addTodo: (text: string) => {
           set(
-            (selectors) => ({ todos: selectors.todos }),
+            selectTodos,
             ({ todos }) => ({
               todos: {
                 ...todos(),
@@ -237,7 +259,7 @@ describe('Redux Adapter', () => {
 
         toggleTodo: (id: number) => {
           set(
-            (selectors) => ({ todos: selectors.todos }),
+            selectTodos,
             ({ todos }) => ({
               todos: {
                 ...todos(),
@@ -251,7 +273,7 @@ describe('Redux Adapter', () => {
 
         setFilter: (filter: 'all' | 'active' | 'completed') => {
           set(
-            (selectors) => ({ todos: selectors.todos }),
+            selectTodos,
             ({ todos }) => ({
               todos: {
                 ...todos(),
@@ -299,11 +321,11 @@ describe('Redux Adapter', () => {
     });
 
     const state = createSlice(
-      (selectors) => ({ value: selectors.value }),
+      selectValue,
       ({ value }, set) => ({
         value: () => value(),
         setValue: (newValue: number) => set(
-          () => ({}),
+          selectNone,
           () => ({ value: newValue })
         ),
       })
@@ -358,7 +380,7 @@ describe('Redux Adapter', () => {
     }>(store);
 
     const ui = createSlice(
-      (selectors) => ({ ui: selectors.ui }),
+      selectUI,
       ({ ui }, set) => ({
         isModalOpen: () => ui().modal.isOpen,
         getModalContent: () => ui().modal.content,
@@ -366,7 +388,7 @@ describe('Redux Adapter', () => {
 
         openModal: (content: string) => {
           set(
-            (selectors) => ({ ui: selectors.ui }),
+            selectUI,
             ({ ui }) => ({
               ui: {
                 ...ui(),
@@ -378,7 +400,7 @@ describe('Redux Adapter', () => {
 
         closeModal: () => {
           set(
-            (selectors) => ({ ui: selectors.ui }),
+            selectUI,
             ({ ui }) => ({
               ui: {
                 ...ui(),
@@ -390,7 +412,7 @@ describe('Redux Adapter', () => {
 
         toggleTheme: () => {
           set(
-            (selectors) => ({ ui: selectors.ui }),
+            selectUI,
             ({ ui }) => ({
               ui: {
                 ...ui(),
@@ -439,11 +461,11 @@ describe('Redux Adapter', () => {
     }>(store, { slice: 'app' });
 
     const counter = createSlice(
-      (selectors) => ({ count: selectors.count }),
+      selectCount,
       ({ count }, set) => ({
         value: () => count(),
         increment: () => set(
-          (selectors) => ({ count: selectors.count }),
+          selectCount,
           ({ count }) => ({ count: count() + 1 })
         ),
       })
