@@ -179,7 +179,7 @@ export function useSlices<
 >(
   slices: T
 ): {
-  [K in keyof T]: T[K] extends [SliceHandle<infer C>, (computed: C) => infer R] ? R : never
+  [K in keyof T]: T[K] extends [SliceHandle<any>, (computed: any) => infer R] ? R : never
 } {
   // Store previous values for comparison
   const prevValuesRef = useRef<Record<string, any>>({});

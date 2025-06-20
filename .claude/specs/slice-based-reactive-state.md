@@ -198,279 +198,147 @@ This design ensures:
 #### Dependency Tracking Without Proxies
 The implementation uses `Object.defineProperty` to create tracking getters instead of Proxies. When selectors are accessed during the dependency phase, the getters record which state keys are used.
 
-#### Dependency Tracking Implementation
+#### Fine-Grained Subscription Management
+The store tracks listeners by their dependency keys, notifying only those whose dependencies have changed:
+- Each slice knows exactly which state keys it depends on
+- When state changes, only slices with affected dependencies are notified
+- Subscription management happens at the slice level, not the adapter level
+
+## Adapter Integration
+
+### Separation of Concerns
+
+The reactive slice system cleanly separates responsibilities between adapters and Lattice:
+
+#### Adapters Provide:
+- **Store Creation**: Initialize the underlying store from initial state
+- **Basic Operations**: Simple get/set/subscribe for the entire state model
+- **Store Features**: Middleware, devtools, persistence, time-travel, etc.
+- **No Slice Knowledge**: Adapters don't need to understand slices or dependencies
+
+#### Lattice Provides:
+- **Reactive Layer**: Creates reactive slices on top of any adapter
+- **Dependency Tracking**: Manages which slices depend on which state keys
+- **Fine-Grained Subscriptions**: Notifies only affected slices when state changes
+- **Composition**: Handles slice composition and dependency merging
+- **Optimization**: Ensures minimal re-computations and re-renders
+
+### How It Works
+
 ```typescript
-// Simplified implementation showing key concepts
-function createSlice<State, Deps, Computed>(
-  depsFn: (selectors: Selectors<State>) => Deps,
-  computeFn: (deps: Deps, set: SetState<State>) => Computed
-): SliceHandle<Computed> {
-  const dependencies = new Set<string>();
-  
-  // Create tracking-enabled selectors using Object.defineProperty
-  let isTracking = true;
-  const trackingSelectors = {} as Selectors<State>;
-  const actualSelectors = {} as Selectors<State>;
-  
-  for (const key in state) {
-    actualSelectors[key] = createSelector(() => state[key], key);
-    
-    Object.defineProperty(trackingSelectors, key, {
-      get() {
-        if (isTracking) {
-          dependencies.add(key);
-        }
-        return actualSelectors[key];
-      }
-    });
-  }
-  
-  // Track dependencies during this phase
-  const deps = depsFn(trackingSelectors);
-  isTracking = false;
-  
-  // Check for composed dependencies
-  for (const value of Object.values(deps)) {
-    const composedMetadata = getCompositionMetadata(value);
-    if (composedMetadata) {
-      // Merge dependencies from composed slices
-      for (const dep of composedMetadata.dependencies) {
-        dependencies.add(dep);
-      }
-    }
-  }
-  
-  // Create computed values with tracked dependencies
-  const computed = computeFn(deps, set);
-  
-  // Return slice handle with dual functionality
-  function slice(): Computed;
-  function slice<ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps;
-  function slice<ChildDeps>(childDepsFn?: (parent: Computed) => ChildDeps) {
-    if (!childDepsFn) return computed;
-    
-    // Extract and track composition metadata
-    const childDeps = childDepsFn(computed);
-    for (const value of Object.values(childDeps)) {
-      if (typeof value === 'function') {
-        storeCompositionMetadata(value, { slice, dependencies });
-      }
-    }
-    return childDeps;
-  }
-  
-  // Store metadata separately without polluting the API
-  storeSliceMetadata(slice, { dependencies, subscribe });
-  
-  return slice;
-}
+// 1. Adapter provides basic store operations
+const zustandStore = create(...);
+const adapter = zustandAdapter(zustandStore);
+
+// 2. Lattice adds reactive layer on top
+const createSlice = createLatticeStore(adapter);
+
+// 3. Slices have fine-grained subscriptions
+const counterSlice = createSlice(
+  (selectors) => ({ count: selectors.count }),
+  ({ count }, set) => ({
+    value: () => count(),
+    increment: () => set(...)
+  })
+);
+
+// 4. React hooks subscribe to specific slices
+const count = useSlice(counterSlice, c => c.value());
+// Only re-renders when count changes, not on any state change
 ```
 
-#### Subscription Management
-```typescript
-// In store implementation
-subscribeToKeys(keys: Set<string>, listener: () => void) {
-  const wrappedListener = (changedKeys: Set<string>) => {
-    // Only notify if our keys changed
-    if ([...keys].some(key => changedKeys.has(key))) {
-      listener();
-    }
-  };
-  
-  this.keyedListeners.add({ keys, listener: wrappedListener });
-  
-  return () => {
-    this.keyedListeners.delete({ keys, listener: wrappedListener });
-  };
-}
-```
+### Benefits
+
+1. **Universal Optimization**: All stores (Zustand, Redux, etc.) get fine-grained subscriptions
+2. **Adapter Simplicity**: Adapters remain simple wrappers around existing stores
+3. **Feature Preservation**: Store features like devtools and persistence work unchanged
+4. **Clean Architecture**: Clear separation between state storage and reactive computation
+
 
 ## Examples
 
-### Basic Usage
+### Basic Counter
 ```typescript
-// Define products slice
-const products = createSlice(
-  ({ products }) => ({ products }),
-  ({ products }, set) => ({
-    all: products,
-    byId: (id: string) => products().find(p => p.id === id),
-    byCategory: (category: string) => 
-      products().filter(p => p.category === category),
-    addProduct: (product: Product) => set(
-      ({ products }) => ({ products }),
-      ({ products }) => ({ products: [...products(), product] })
+const createSlice = createStore({ count: 0 });
+
+const counterSlice = createSlice(
+  (selectors) => ({ count: selectors.count }),
+  ({ count }, set) => ({
+    value: () => count(),
+    increment: () => set(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }) => ({ count: count() + 1 })
     ),
-    removeProduct: (id: string) => set(
-      ({ products }) => ({ products }),
-      ({ products }) => ({ products: products().filter(p => p.id !== id) })
+    decrement: () => set(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }) => ({ count: count() - 1 })
     )
   })
 );
 
-// Use in component
-function ProductList() {
-  const allProducts = useSliceSelector(products, 'all');
-  return <div>{allProducts.map(p => <Product key={p.id} {...p} />)}</div>;
-}
+// Usage
+const counter = counterSlice();
+console.log(counter.value()); // 0
+counter.increment();
+console.log(counter.value()); // 1
 ```
 
-### Advanced Composition
+### Slice Composition
 ```typescript
-// Base slices
-const products = createSlice(
-  ({ products, categories }) => ({ products, categories }),
-  ({ products, categories }, set) => ({
-    all: products,
+const createSlice = createStore({ 
+  products: [],
+  inventory: {},
+  cart: []
+});
+
+// Product slice
+const productSlice = createSlice(
+  (selectors) => ({ products: selectors.products }),
+  ({ products }, set) => ({
+    all: () => products(),
     active: () => products().filter(p => p.active),
-    byCategory: (cat: string) => products().filter(p => p.category === cat),
-    toggleActive: (productId: string) => set(
-      ({ products }) => ({ products }),
+    toggleActive: (id: string) => set(
+      (selectors) => ({ products: selectors.products }),
       ({ products }) => ({
         products: products().map(p => 
-          p.id === productId ? { ...p, active: !p.active } : p
+          p.id === id ? { ...p, active: !p.active } : p
         )
       })
-    ),
-    incrementAllPrices: (amount: number) => set(
-      ({ products }) => ({ products }),
-      ({ products }) => ({
-        products: products().map(p => ({ ...p, price: p.price + amount }))
-      })
     )
   })
 );
 
-const inventory = createSlice(
-  ({ stock }) => ({ stock }),
-  ({ stock }, set) => ({
-    levels: stock,
-    isInStock: (productId: string) => (stock()[productId] || 0) > 0,
-    updateStock: (productId: string, quantity: number) => set(
-      ({ stock }) => ({ stock }),
-      ({ stock }) => ({ stock: { ...stock(), [productId]: quantity } })
-    ),
-    adjustStock: (productId: string, delta: number) => set(
-      ({ stock }) => ({ stock }),
-      ({ stock }) => ({
-        stock: {
-          ...stock(),
-          [productId]: (stock()[productId] || 0) + delta
-        }
-      })
-    )
-  })
-);
-
-// Composed slice - combines products with inventory
-const shopProducts = products(
-  ({ all, active }) => ({
-    all,
-    active,
-    ...inventory(({ levels, isInStock, updateStock }) => ({ levels, isInStock, updateStock }))
+// Inventory slice composes with products
+const inventorySlice = createSlice(
+  (selectors) => ({
+    inventory: selectors.inventory,
+    // Compose with product slice
+    ...productSlice(({ active }) => ({ activeProducts: active }))
   }),
-  ({ all, active, levels, isInStock, updateStock }, set) => ({
-    allProducts: all,
-    activeProducts: active,
-    stockLevels: levels,
-    inStock: () => active().filter(p => isInStock(p.id)),
-    outOfStock: () => active().filter(p => !isInStock(p.id)),
-    restockAll: () => set(
-      ({ stock, products }) => ({ stock, products }),
-      ({ stock, products }) => {
-        const outOfStockIds = products()
-          .filter(p => p.active && !stock()[p.id])
-          .map(p => p.id);
-        const newStock = { ...stock() };
-        outOfStockIds.forEach(id => { newStock[id] = 100; });
-        return { stock: newStock };
-      }
-    )
-  })
-);
-
-// Further composition
-const analytics = shopProducts(
-  ({ inStock, outOfStock }) => ({ inStock, outOfStock }),
-  ({ inStock, outOfStock }, set) => ({
-    stockStatus: () => ({
-      available: inStock().length,
-      unavailable: outOfStock().length,
-      percentage: (inStock().length / (inStock().length + outOfStock().length)) * 100
-    }),
-    logAnalytics: () => set(
-      ({ analyticsLog }) => ({ analyticsLog, inStock, outOfStock }),
-      ({ analyticsLog, inStock, outOfStock }) => ({
-        analyticsLog: [...(analyticsLog() || []), {
-          available: inStock().length,
-          unavailable: outOfStock().length,
-          timestamp: Date.now()
-        }]
-      })
-    )
-  })
-);
-```
-
-### Real-World E-commerce Example
-```typescript
-// Root slices
-const catalog = createSlice(
-  ({ products, categories, brands }) => ({ products, categories, brands }),
-  ({ products, categories, brands }, set) => ({
-    products: products,
-    categories: categories,
-    brands: brands,
-    productsByBrand: (brandId: string) => 
-      products().filter(p => p.brandId === brandId),
-    addBrand: (brand: Brand) => set(
-      ({ brands }) => ({ brands }),
-      ({ brands }) => ({ brands: [...brands(), brand] })
-    )
-  })
-);
-
-const pricing = catalog(
-  ({ products }) => ({ products }),
-  ({ products }, set) => ({
-    withTax: (taxRate: number) => 
-      products().map(p => ({ ...p, finalPrice: p.price * (1 + taxRate) })),
-    discounted: (discount: number) => 
-      products().map(p => ({ ...p, salePrice: p.price * (1 - discount) })),
-    applyGlobalDiscount: (discount: number) => set(
-      ({ products }) => ({ products }),
-      ({ products }) => ({
-        products: products().map(p => ({ ...p, price: p.price * (1 - discount) }))
-      })
-    )
-  })
-);
-
-// Cart slice that composes with pricing
-const cart = pricing(
-  ({ withTax }) => ({
-    withTax,
-    cartItems: selectors.cartItems  // Access cart-specific state via selectors
-  }),
-  ({ withTax, cartItems }, set) => ({
-    items: cartItems,
-    total: () => {
-      const prices = withTax(0.08); // 8% tax
-      return cartItems().reduce((sum, item) => {
-        const product = prices.find(p => p.id === item.productId);
-        return sum + (product?.finalPrice || 0) * item.quantity;
-      }, 0);
+  ({ inventory, activeProducts }, set) => ({
+    inStock: () => {
+      const inv = inventory();
+      return activeProducts().filter(p => inv[p.id] > 0);
     },
-    addItem: (productId: string, quantity: number) => set(
-      ({ cartItems }) => ({ cartItems }),
-      ({ cartItems }) => ({
-        cartItems: [...cartItems(), { productId, quantity }]
+    updateStock: (id: string, qty: number) => set(
+      (selectors) => ({ inventory: selectors.inventory }),
+      ({ inventory }) => ({ 
+        inventory: { ...inventory(), [id]: qty } 
       })
-    ),
-    clearCart: () => set(
-      ({ cartItems }) => ({ cartItems }),
-      ({ cartItems }) => ({ cartItems: [] })
     )
+  })
+);
+
+// Cart slice for UI consumption
+const cartSlice = createSlice(
+  (selectors) => ({
+    cart: selectors.cart,
+    ...inventorySlice(({ inStock }) => ({ availableProducts: inStock }))
+  }),
+  ({ cart, availableProducts }) => ({
+    items: () => cart(),
+    canAddToCart: (productId: string) => 
+      availableProducts().some(p => p.id === productId)
   })
 );
 ```
