@@ -31,9 +31,6 @@ type ComposedFrom = {
   dependencies: Set<string>;
 };
 
-// WeakMap to store composition metadata without polluting objects
-const compositionMetadata = new WeakMap<Function, ComposedFrom>();
-
 // Clean public type without metadata exposure
 export interface SliceHandle<Computed> {
   (): Computed;
@@ -80,6 +77,9 @@ export function createStore<State>(
   // Use string keys for reliable Map lookups
   const listeners = new Map<string, Set<() => void>>();
   const keySetToString = (keys: Set<string>) => [...keys].sort().join('|');
+  
+  // Store-scoped WeakMap to store composition metadata without polluting objects
+  const compositionMetadata = new WeakMap<Function, ComposedFrom>();
   
   // Helper to notify listeners
   const notifyListeners = (changedKeys: Set<string>) => {
