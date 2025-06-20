@@ -25,14 +25,19 @@ export type SetState<State> = <Deps>(
   updateFn: (deps: Deps) => Partial<State>
 ) => void;
 
+// Internal metadata type - not exposed in public API
 type ComposedFrom = {
   slice: SliceHandle<unknown>;
   dependencies: Set<string>;
 };
 
+// WeakMap to store composition metadata without polluting objects
+const compositionMetadata = new WeakMap<Function, ComposedFrom>();
+
+// Clean public type without metadata exposure
 export interface SliceHandle<Computed> {
   (): Computed;
-  <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps & { _composedFrom?: ComposedFrom };
+  <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps;
   _dependencies: Set<string>;
   _subscribe: (listener: () => void) => () => void;
 }
@@ -155,14 +160,16 @@ export function createStore<State>(
     const deps = depsFn(trackingSelectors);
     isTracking = false;
     
-    // Check for composed dependencies
+    // Check for composed dependencies using WeakMap
     for (const key in deps) {
       const value = deps[key];
-      if (value && (typeof value === 'function' || typeof value === 'object') && '_composedFrom' in value) {
-        // Merge dependencies from the composed slice
-        const composedInfo = (value as { _composedFrom: ComposedFrom })._composedFrom;
-        for (const dep of composedInfo.dependencies) {
-          dependencies.add(dep);
+      if (typeof value === 'function') {
+        const composedInfo = compositionMetadata.get(value);
+        if (composedInfo) {
+          // Merge dependencies from the composed slice
+          for (const dep of composedInfo.dependencies) {
+            dependencies.add(dep);
+          }
         }
       }
     }
@@ -209,7 +216,7 @@ export function createStore<State>(
     
     // Create the slice function that returns computed values when called
     function slice(): Computed;
-    function slice<ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps & { _composedFrom?: ComposedFrom };
+    function slice<ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps;
     function slice<ChildDeps>(childDepsFn?: (parent: Computed) => ChildDeps) {
       // If called without arguments, return the computed object
       if (!childDepsFn) {
@@ -219,21 +226,15 @@ export function createStore<State>(
       // Otherwise, handle composition
       const childDeps = childDepsFn(computed);
       
-      // Wrap each function with metadata
-      const wrappedDeps = {} as ChildDeps;
+      // Store metadata separately without polluting the returned object
       for (const key in childDeps) {
         const value = childDeps[key];
         if (typeof value === 'function') {
-          // Create a wrapper that preserves the function but adds metadata
-          (wrappedDeps as Record<string, unknown>)[key] = Object.assign(value, {
-            _composedFrom: { slice, dependencies }
-          });
-        } else {
-          (wrappedDeps as Record<string, unknown>)[key] = value;
+          compositionMetadata.set(value, { slice: slice as SliceHandle<unknown>, dependencies });
         }
       }
       
-      return wrappedDeps as ChildDeps & { _composedFrom?: ComposedFrom };
+      return childDeps;
     }
     
     // Add metadata as non-enumerable properties
