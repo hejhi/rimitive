@@ -139,8 +139,11 @@ describe('createLatticeStore - adapter bridge', () => {
     let mockState: any;
     let adapterListener: (() => void) | undefined;
     const mockAdapter: StoreAdapter<any> = {
-      getState: () => mockState,
-      setState: (updates) => Object.assign(mockState, updates),
+      getState: () => ({ ...mockState }),  // Return a copy
+      setState: (updates) => {
+        mockState = { ...mockState, ...updates };  // Create new object
+        if (adapterListener) adapterListener();  // Notify after state change
+      },
       subscribe: vi.fn((listener) => {
         adapterListener = listener;
         return () => { adapterListener = undefined; };
@@ -191,32 +194,82 @@ describe('createLatticeStore - adapter bridge', () => {
     const unsubCounter = counterMeta!.subscribe(counterListener);
     userMeta!.subscribe(userListener);
 
-    // Manually trigger the adapter's listeners to simulate state changes
-    const triggerChange = () => {
-      // Trigger the adapter listener if it exists
-      if (adapterListener) {
-        adapterListener();
-      }
-    };
-
     // Change counter state
     component.counter().increment();
-    triggerChange();
     expect(counterListener).toHaveBeenCalledTimes(1);
-    expect(userListener).toHaveBeenCalledTimes(1); // Both called due to adapter limitation
+    expect(userListener).toHaveBeenCalledTimes(0); // Fine-grained: user slice not notified
 
     // Change user state
     component.user().setName('Bob');
-    triggerChange();
-    expect(counterListener).toHaveBeenCalledTimes(2); // Called again due to adapter limitation
-    expect(userListener).toHaveBeenCalledTimes(2);
+    expect(counterListener).toHaveBeenCalledTimes(1); // Fine-grained: counter not notified
+    expect(userListener).toHaveBeenCalledTimes(1);
 
     // Unsubscribe and verify
     unsubCounter();
     component.counter().increment();
-    triggerChange();
-    expect(counterListener).toHaveBeenCalledTimes(2); // Not called after unsubscribe
-    expect(userListener).toHaveBeenCalledTimes(3); // Still called
+    expect(counterListener).toHaveBeenCalledTimes(1); // Not called after unsubscribe
+    expect(userListener).toHaveBeenCalledTimes(1); // Fine-grained: not called
+  });
+
+  it('should demonstrate fine-grained subscriptions with multiple slices', async () => {
+    let mockState: any = { a: 1, b: 2, c: 3, d: 4 };
+    let adapterListener: (() => void) | undefined;
+    
+    const mockAdapter: StoreAdapter<any> = {
+      getState: () => ({ ...mockState }),  // Return a copy to avoid reference issues
+      setState: (updates) => {
+        mockState = { ...mockState, ...updates };  // Create new object
+        // Simulate adapter notification
+        if (adapterListener) adapterListener();
+      },
+      subscribe: (listener) => {
+        adapterListener = listener;
+        return () => { adapterListener = undefined; };
+      },
+    };
+
+    type State = { a: number; b: number; c: number; d: number };
+    const createSlice = createLatticeStore<State>(mockAdapter);
+    
+    // Create slices with different dependencies
+    const sliceA = createSlice(
+      (selectors) => ({ a: selectors.a }),
+      ({ a }) => ({ value: () => a() })
+    );
+    
+    const sliceBC = createSlice(
+      (selectors) => ({ b: selectors.b, c: selectors.c }),
+      ({ b, c }) => ({ sum: () => b() + c() })
+    );
+    
+    const sliceD = createSlice(
+      (selectors) => ({ d: selectors.d }),
+      ({ d }) => ({ value: () => d() })
+    );
+    
+    // Track notifications
+    const notifications = { a: 0, bc: 0, d: 0 };
+    
+    const { getSliceMetadata } = await import('./utils');
+    getSliceMetadata(sliceA)!.subscribe(() => notifications.a++);
+    getSliceMetadata(sliceBC)!.subscribe(() => notifications.bc++);
+    getSliceMetadata(sliceD)!.subscribe(() => notifications.d++);
+    
+    // Change only 'a' - should only notify sliceA
+    mockAdapter.setState({ a: 10 });
+    expect(notifications).toEqual({ a: 1, bc: 0, d: 0 });
+    
+    // Change 'b' and 'c' - should only notify sliceBC
+    mockAdapter.setState({ b: 20, c: 30 });
+    expect(notifications).toEqual({ a: 1, bc: 1, d: 0 });
+    
+    // Change 'd' - should only notify sliceD
+    mockAdapter.setState({ d: 40 });
+    expect(notifications).toEqual({ a: 1, bc: 1, d: 1 });
+    
+    // Change all - should notify all slices
+    mockAdapter.setState({ a: 100, b: 200, c: 300, d: 400 });
+    expect(notifications).toEqual({ a: 2, bc: 2, d: 2 });
   });
 
   it('should expose subscription capability on slices', async () => {

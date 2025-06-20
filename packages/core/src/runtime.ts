@@ -48,32 +48,60 @@ export type ComponentFactory<Component, State> = (
 export function createLatticeStore<State>(
   adapter: StoreAdapter<State>
 ): ReactiveSliceFactory<State> {
-  // Track all slice listeners by their dependency keys
-  const sliceListeners = new Map<string, Set<() => void>>();
+  // Create an internal store-like structure to manage fine-grained subscriptions
+  let currentState = adapter.getState();
+  const listeners = new Map<string, Set<() => void>>();
   const keySetToString = (keys: Set<string>) => [...keys].sort().join('|');
   
-  // When adapter notifies of any change, check which slices are affected
-  adapter.subscribe(() => {
-    const state = adapter.getState();
-    const changedKeys = new Set<string>();
-    
-    // In practice, we'd need to track which keys changed
-    // For now, assume all keys potentially changed
-    for (const key in state) {
-      changedKeys.add(key);
-    }
-    
-    // Notify slice listeners whose dependencies changed
-    for (const [keyString, listeners] of sliceListeners) {
+  // Helper to notify listeners when specific keys change
+  const notifyListeners = (changedKeys: Set<string>) => {
+    for (const [keyString, keyListeners] of listeners) {
       const keys = keyString.split('|');
       const shouldNotify = keys.some(key => changedKeys.has(key));
       if (shouldNotify) {
-        listeners.forEach(listener => listener());
+        keyListeners.forEach(listener => listener());
       }
+    }
+  };
+  
+  // When adapter notifies of any change, detect what actually changed
+  adapter.subscribe(() => {
+    const newState = adapter.getState();
+    const changedKeys = new Set<string>();
+    
+    // Compare old and new state to find actual changes
+    for (const key in newState) {
+      if (!Object.is(currentState[key], newState[key])) {
+        changedKeys.add(key);
+      }
+    }
+    
+    // Check for removed keys
+    for (const key in currentState) {
+      if (!Object.prototype.hasOwnProperty.call(newState, key)) {
+        changedKeys.add(key);
+      }
+    }
+    
+    // Check for new keys and update root selectors
+    for (const key in newState) {
+      if (!(key in rootSelectors)) {
+        const k = key as Extract<keyof State, string>;
+        rootSelectors[k] = createSelector(
+          () => adapter.getState()[k],
+          k
+        );
+      }
+    }
+    
+    currentState = newState;
+    
+    if (changedKeys.size > 0) {
+      notifyListeners(changedKeys);
     }
   });
   
-  // Helper to create a selector
+  // Helper to create a selector with fine-grained subscription
   function createSelector<T>(
     getValue: () => T,
     key: string
@@ -81,18 +109,18 @@ export function createLatticeStore<State>(
     const selector = () => getValue();
     
     selector.subscribe = (listener: () => void) => {
-      const keyString = key;
-      if (!sliceListeners.has(keyString)) {
-        sliceListeners.set(keyString, new Set());
+      const keyString = key; // Single key for individual selectors
+      if (!listeners.has(keyString)) {
+        listeners.set(keyString, new Set());
       }
-      sliceListeners.get(keyString)!.add(listener);
+      listeners.get(keyString)!.add(listener);
       
       return () => {
-        const listeners = sliceListeners.get(keyString);
-        if (listeners) {
-          listeners.delete(listener);
-          if (listeners.size === 0) {
-            sliceListeners.delete(keyString);
+        const keyListeners = listeners.get(keyString);
+        if (keyListeners) {
+          keyListeners.delete(listener);
+          if (keyListeners.size === 0) {
+            listeners.delete(keyString);
           }
         }
       };
@@ -103,6 +131,16 @@ export function createLatticeStore<State>(
     return selector as Selector<T>;
   }
   
+  // Create the root selectors object that provides fine-grained access
+  const rootSelectors = {} as Selectors<State>;
+  for (const key in currentState) {
+    const k = key as Extract<keyof State, string>;
+    rootSelectors[k] = createSelector(
+      () => adapter.getState()[k],
+      k
+    );
+  }
+  
   // Return the reactive slice factory
   return function createSlice<Deps, Computed>(
     depsFn: (selectors: Selectors<State>) => Deps,
@@ -110,28 +148,18 @@ export function createLatticeStore<State>(
   ): SliceHandle<Computed> {
     const dependencies = new Set<string>();
     
-    // Create tracking-enabled selectors
+    // Create tracking-enabled selectors that wrap the root selectors
     let isTracking = true;
     const trackingSelectors = {} as Selectors<State>;
-    const actualSelectors = {} as Selectors<State>;
-    
-    const state = adapter.getState();
-    for (const key in state) {
-      const k = key as Extract<keyof State, string>;
-      actualSelectors[k] = createSelector(
-        () => adapter.getState()[k],
-        k
-      );
-    }
     
     // Track dependencies during selector access
-    for (const key in state) {
+    for (const key in currentState) {
       Object.defineProperty(trackingSelectors, key, {
         get() {
           if (isTracking) {
             dependencies.add(key);
           }
-          return actualSelectors[key];
+          return rootSelectors[key];
         },
         enumerable: true,
         configurable: true
@@ -158,7 +186,7 @@ export function createLatticeStore<State>(
     
     // Create set function that writes back to the adapter
     const set: SetState<State> = (depsFn, updateFn) => {
-      const deps = depsFn(actualSelectors);
+      const deps = depsFn(rootSelectors);
       const updates = updateFn(deps);
       adapter.setState(updates);
     };
@@ -169,17 +197,17 @@ export function createLatticeStore<State>(
     // Subscribe function for this slice
     const subscribe = (listener: () => void) => {
       const keyString = keySetToString(dependencies);
-      if (!sliceListeners.has(keyString)) {
-        sliceListeners.set(keyString, new Set());
+      if (!listeners.has(keyString)) {
+        listeners.set(keyString, new Set());
       }
-      sliceListeners.get(keyString)!.add(listener);
+      listeners.get(keyString)!.add(listener);
       
       return () => {
-        const listeners = sliceListeners.get(keyString);
-        if (listeners) {
-          listeners.delete(listener);
-          if (listeners.size === 0) {
-            sliceListeners.delete(keyString);
+        const keyListeners = listeners.get(keyString);
+        if (keyListeners) {
+          keyListeners.delete(listener);
+          if (keyListeners.size === 0) {
+            listeners.delete(keyString);
           }
         }
       };

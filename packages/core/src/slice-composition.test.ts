@@ -151,23 +151,23 @@ describe('slice composition patterns', () => {
       userUpdates++;
     });
 
-    // Update counter - both subscriptions should fire (shared state)
+    // Update counter - only counter subscription should fire (fine-grained)
     component.counter().increment();
     expect(counterUpdates).toBe(1);
-    expect(userUpdates).toBe(1);
+    expect(userUpdates).toBe(0);
 
-    // Update user - both subscriptions should fire (shared state)
+    // Update user - only user subscription should fire (fine-grained)
     component.user().setName('Alice');
-    expect(counterUpdates).toBe(2);
-    expect(userUpdates).toBe(2);
+    expect(counterUpdates).toBe(1);
+    expect(userUpdates).toBe(1);
 
     // Unsubscribe counter
     unsubscribeCounter();
 
-    // Update again - only user subscription should fire
+    // Update counter again - no subscriptions should fire
     component.counter().increment();
-    expect(counterUpdates).toBe(2); // No change
-    expect(userUpdates).toBe(3);
+    expect(counterUpdates).toBe(1); // No change
+    expect(userUpdates).toBe(1); // No change
 
     unsubscribeUser();
   });
