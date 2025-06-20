@@ -2,158 +2,205 @@ import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
 import { createStore } from '@lattice/core';
-import { useSliceSelector, useSliceValues, useLattice } from './react';
+import { useSlice, useSlices } from './react';
 
 describe('React hooks', () => {
-  // Create a test store
-  const createTestStore = () => {
+  // Create test slices using the new API
+  const createTestSlices = () => {
     const createSlice = createStore({
       count: 0,
       name: 'test',
       items: [] as string[],
     });
 
-    const listeners = new Set<() => void>();
+    const counterSlice = createSlice(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }, set) => ({
+        value: () => count(),
+        increment: () => set(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }) => ({ count: count() + 1 })
+        ),
+        isEven: () => count() % 2 === 0,
+      })
+    );
 
-    const counter = createSlice(({ get, set }) => ({
-      value: () => get().count,
-      increment: () => {
-        set({ count: get().count + 1 });
-        listeners.forEach((l) => l());
-      },
-      isEven: () => get().count % 2 === 0,
-    }));
+    const userSlice = createSlice(
+      (selectors) => ({ name: selectors.name }),
+      ({ name }, set) => ({
+        name: () => name(),
+        setName: (newName: string) => set(
+          (selectors) => ({ name: selectors.name }),
+          () => ({ name: newName })
+        ),
+      })
+    );
 
-    const user = createSlice(({ get, set }) => ({
-      name: () => get().name,
-      setName: (name: string) => {
-        set({ name });
-        listeners.forEach((l) => l());
-      },
-    }));
+    const itemsSlice = createSlice(
+      (selectors) => ({ items: selectors.items }),
+      ({ items }, set) => ({
+        all: () => items(),
+        add: (item: string) => set(
+          (selectors) => ({ items: selectors.items }),
+          ({ items }) => ({ items: [...items(), item] })
+        ),
+        count: () => items().length,
+      })
+    );
 
-    const items = createSlice(({ get, set }) => ({
-      all: () => get().items,
-      add: (item: string) => {
-        set({ items: [...get().items, item] });
-        listeners.forEach((l) => l());
-      },
-    }));
-
-    return {
-      counter,
-      user,
-      items,
-      subscribe: (listener: () => void) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
-    };
+    return { counterSlice, userSlice, itemsSlice };
   };
 
-  describe('useSliceSelector', () => {
-    it('should return selected values and re-render on changes', () => {
-      const store = createTestStore();
+  describe('useSlice', () => {
+    it('should return entire slice when no selector provided', () => {
+      const { counterSlice } = createTestSlices();
 
-      const { result } = renderHook(() =>
-        useSliceSelector(store, (s) => ({
-          count: s.counter.value(),
-          isEven: s.counter.isEven(),
-        }))
-      );
+      const { result } = renderHook(() => useSlice(counterSlice));
 
-      expect(result.current).toEqual({ count: 0, isEven: true });
-
+      expect(result.current.value()).toBe(0);
+      expect(result.current.isEven()).toBe(true);
+      
       act(() => {
-        store.counter.increment();
+        result.current.increment();
       });
 
-      expect(result.current).toEqual({ count: 1, isEven: false });
+      expect(result.current.value()).toBe(1);
+      expect(result.current.isEven()).toBe(false);
     });
 
-    it('should not re-render for unrelated changes', () => {
-      const store = createTestStore();
+    it('should return selected value when selector provided', () => {
+      const { counterSlice } = createTestSlices();
+
+      const { result } = renderHook(() => 
+        useSlice(counterSlice, c => c.value())
+      );
+
+      expect(result.current).toBe(0);
+    });
+
+    it('should re-render only when selected value changes', () => {
+      const { counterSlice, userSlice } = createTestSlices();
       let renderCount = 0;
 
       const { result } = renderHook(() => {
         renderCount++;
-        return useSliceSelector(store, (s) => s.counter.value());
+        return useSlice(counterSlice, c => c.value());
       });
 
       expect(renderCount).toBe(1);
       expect(result.current).toBe(0);
 
-      // Change unrelated state
+      // Change different slice - should not re-render
       act(() => {
-        store.user.setName('alice');
+        userSlice().setName('alice');
       });
 
-      // Should not re-render
       expect(renderCount).toBe(1);
-      expect(result.current).toBe(0);
 
-      // Change selected state
+      // Change selected value - should re-render
       act(() => {
-        store.counter.increment();
+        counterSlice().increment();
       });
 
       expect(renderCount).toBe(2);
       expect(result.current).toBe(1);
     });
+
+    it('should support complex selectors', () => {
+      const { itemsSlice } = createTestSlices();
+
+      const { result } = renderHook(() =>
+        useSlice(itemsSlice, items => ({
+          count: items.count(),
+          isEmpty: items.all().length === 0,
+        }))
+      );
+
+      expect(result.current).toEqual({ count: 0, isEmpty: true });
+
+      act(() => {
+        itemsSlice().add('apple');
+      });
+
+      expect(result.current).toEqual({ count: 1, isEmpty: false });
+    });
   });
 
-  describe('useSliceValues', () => {
-    it('should use shallow equality by default', () => {
-      const store = createTestStore();
+  describe('useSlices', () => {
+    it('should handle multiple slices with selectors', () => {
+      const { counterSlice, userSlice, itemsSlice } = createTestSlices();
+
+      const { result } = renderHook(() =>
+        useSlices({
+          count: [counterSlice, c => c.value()],
+          userName: [userSlice, u => u.name()],
+          itemCount: [itemsSlice, i => i.count()],
+        })
+      );
+
+      expect(result.current).toEqual({
+        count: 0,
+        userName: 'test',
+        itemCount: 0,
+      });
+
+      act(() => {
+        counterSlice().increment();
+        userSlice().setName('alice');
+        itemsSlice().add('apple');
+      });
+
+      expect(result.current).toEqual({
+        count: 1,
+        userName: 'alice',
+        itemCount: 1,
+      });
+    });
+
+    it('should handle entire slice selection', () => {
+      const { counterSlice } = createTestSlices();
+
+      const { result } = renderHook(() =>
+        useSlices({
+          counter: [counterSlice, c => c],
+        })
+      );
+
+      expect(result.current.counter.value()).toBe(0);
+      
+      act(() => {
+        result.current.counter.increment();
+      });
+
+      expect(result.current.counter.value()).toBe(1);
+    });
+
+    it('should optimize re-renders with shallow equality', () => {
+      const { counterSlice, userSlice } = createTestSlices();
       let renderCount = 0;
 
       const { result } = renderHook(() => {
         renderCount++;
-        return useSliceValues(store, (s) => ({
-          count: s.counter.value(),
-          name: s.user.name(),
-        }));
+        return useSlices({
+          count: [counterSlice, c => c.value()],
+        });
       });
 
-      // Initial render count (React Testing Library may cause extra renders)
-      const initialRenderCount = renderCount;
-      expect(result.current).toEqual({ count: 0, name: 'test' });
+      expect(renderCount).toBe(1);
 
-      // Multiple updates that result in same values
+      // Change unrelated slice - should not re-render
       act(() => {
-        store.counter.increment();
-        store.counter.increment();
-        store.user.setName('test'); // Same name
-        store.counter.increment();
-        store.counter.increment();
-        // Back to count: 4, name: 'test'
+        userSlice().setName('alice');
       });
 
-      // Should have re-rendered for count changes
-      expect(renderCount).toBeGreaterThan(initialRenderCount);
-      expect(result.current).toEqual({ count: 4, name: 'test' });
-    });
-  });
+      expect(renderCount).toBe(1);
 
-  describe('useLattice', () => {
-    it('should provide both values and slices', () => {
-      const store = createTestStore();
-
-      const { result } = renderHook(() =>
-        useLattice(store, (s) => ({
-          count: s.counter.value(),
-        }))
-      );
-
-      expect(result.current.values).toEqual({ count: 0 });
-      expect(result.current.slices).toBe(store);
-
-      // Can use slices to trigger actions
+      // Change selected value - should re-render
       act(() => {
-        result.current.slices.counter.increment();
+        counterSlice().increment();
       });
 
-      expect(result.current.values).toEqual({ count: 1 });
+      expect(renderCount).toBe(2);
     });
   });
 });

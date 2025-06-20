@@ -15,7 +15,8 @@ import {
   useRef,
   useCallback,
   useSyncExternalStore,
-  startTransition,
+  useEffect,
+  useReducer,
 } from 'react';
 import type { SliceHandle } from '@lattice/core';
 import { getSliceMetadata } from '@lattice/core';
@@ -44,33 +45,47 @@ function shallowEqual<T>(a: T, b: T): boolean {
 }
 
 /**
- * React hook for subscribing to reactive slice values.
+ * React hook for using reactive slices.
  *
- * This hook will re-render the component only when the selected values
- * change according to the equality function.
+ * This hook provides access to slice values and methods, with optional
+ * selection for fine-grained reactivity.
  *
  * @param slice - A reactive slice handle
- * @param selector - Function that selects values from the slice
+ * @param selector - Optional function to select specific values from the slice
  * @param equalityFn - Optional custom equality function (defaults to Object.is)
- * @returns The selected values
+ * @returns The slice computed values or selected values
  *
  * @example
  * ```tsx
+ * // Use entire slice (re-renders on any change)
  * function Counter() {
- *   const { count, isEven } = useSliceSelector(counterSlice, (counter) => ({
- *     count: counter.value(),
- *     isEven: counter.isEven()
- *   }));
- *
- *   return <div>Count: {count} (even: {isEven})</div>;
+ *   const counter = useSlice(counterSlice);
+ *   return (
+ *     <button onClick={counter.increment}>
+ *       Count: {counter.value()}
+ *     </button>
+ *   );
+ * }
+ * 
+ * // Use with selector (re-renders only when selected value changes)
+ * function CountDisplay() {
+ *   const count = useSlice(counterSlice, c => c.value());
+ *   return <div>Count: {count}</div>;
  * }
  * ```
  */
-export function useSliceSelector<Computed, Selected>(
+export function useSlice<Computed>(
+  slice: SliceHandle<Computed>
+): Computed;
+export function useSlice<Computed, Selected>(
   slice: SliceHandle<Computed>,
   selector: (computed: Computed) => Selected,
-  equalityFn?: (a: Selected, b: Selected) => boolean,
-  useTransitions = false
+  equalityFn?: (a: Selected, b: Selected) => boolean
+): Selected;
+export function useSlice<Computed, Selected = Computed>(
+  slice: SliceHandle<Computed>,
+  selector?: (computed: Computed) => Selected,
+  equalityFn?: (a: Selected, b: Selected) => boolean
 ): Selected {
   // Get slice metadata for subscription
   const metadata = getSliceMetadata(slice);
@@ -78,9 +93,12 @@ export function useSliceSelector<Computed, Selected>(
     throw new Error('Invalid slice: missing metadata');
   }
 
+  // If no selector provided, return the entire computed object
+  const computedSelector = selector || ((computed: Computed) => computed as unknown as Selected);
+
   // Store the selector and equality function in refs
-  const selectorRef = useRef(selector);
-  selectorRef.current = selector;
+  const selectorRef = useRef(computedSelector);
+  selectorRef.current = computedSelector;
 
   const equalityFnRef = useRef(equalityFn);
   equalityFnRef.current = equalityFn;
@@ -92,7 +110,7 @@ export function useSliceSelector<Computed, Selected>(
   // Lazy initialization pattern for better performance
   if (!getSnapshotRef.current) {
     const computed = slice();
-    selectedValueRef.current = selector(computed);
+    selectedValueRef.current = computedSelector(computed);
     getSnapshotRef.current = () => selectedValueRef.current!;
   }
 
@@ -111,15 +129,11 @@ export function useSliceSelector<Computed, Selected>(
 
         if (!isEqual) {
           selectedValueRef.current = nextValue;
-          if (useTransitions) {
-            startTransition(onStoreChange);
-          } else {
-            onStoreChange();
-          }
+          onStoreChange();
         }
       });
     },
-    [metadata, slice, useTransitions]
+    [metadata, slice]
   );
 
   // Stable getSnapshot using ref
@@ -129,133 +143,82 @@ export function useSliceSelector<Computed, Selected>(
   const getServerSnapshot = useCallback(
     () => {
       const computed = slice();
-      return selector(computed);
+      return computedSelector(computed);
     },
-    [slice, selector]
+    [slice, computedSelector]
   );
 
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
-/**
- * Convenience hook for accessing a single slice.
- *
- * This is a simpler alternative to useSliceSelector when you just need
- * to access all methods from a single slice.
- *
- * @param store - A Lattice store with slices
- * @param sliceName - The name of the slice to access
- * @returns The slice object
- *
- * @example
- * ```tsx
- * function Counter() {
- *   const counter = useSlice(store, 'counter');
- *
- *   return (
- *     <button onClick={counter.increment}>
- *       Count: {counter.value()}
- *     </button>
- *   );
- * }
- * ```
- */
-export function useSlice<Component, K extends keyof Component>(
-  store: Component & SubscribableStore,
-  sliceName: K
-): Component[K] {
-  // For a single slice, we can just return it directly since
-  // slice objects themselves are stable
-  return store[sliceName];
-}
 
 /**
- * Hook for subscribing to multiple slice values with shallow equality.
+ * Hook for using multiple slices with a combined selector.
  *
- * This is optimized for selecting multiple primitive values from different
- * slices. It uses shallow equality by default to prevent unnecessary
- * re-renders when selecting objects.
+ * This hook allows selecting values from multiple slices in a single call,
+ * optimized with shallow equality by default.
  *
- * @param store - A Lattice store with slices
- * @param selector - Function that selects values from slices
- * @returns The selected values
+ * @param slices - Object mapping keys to [slice, selector] tuples
+ * @returns Object with selected values
  *
  * @example
  * ```tsx
- * function UserProfile() {
- *   const data = useSliceValues(store, (slices) => ({
- *     name: slices.user.name(),
- *     email: slices.user.email(),
- *     isLoggedIn: slices.auth.isAuthenticated(),
- *     itemCount: slices.cart.itemCount()
- *   }));
+ * function Dashboard() {
+ *   const data = useSlices({
+ *     count: [counterSlice, c => c.value()],
+ *     user: [userSlice, u => ({ name: u.name(), email: u.email() })],
+ *     cartTotal: [cartSlice, c => c.total()]
+ *   });
  *
- *   return <div>Welcome {data.name}!</div>;
+ *   return <div>{data.user.name}: {data.count} items, ${data.cartTotal}</div>;
  * }
  * ```
  */
-export function useSliceValues<
-  Component,
-  Selected extends Record<string, unknown>,
+export function useSlices<
+  T extends Record<string, [SliceHandle<any>, (computed: any) => any]>
 >(
-  store: Component & SubscribableStore,
-  selector: (slices: Component) => Selected,
-  useTransitions = false
-): Selected {
-  return useSliceSelector(store, selector, shallowEqual, useTransitions);
-}
-
-/**
- * Hook that provides both slice values and the full store for actions.
- *
- * This is useful when you need to both read values and call actions
- * in the same component.
- *
- * @param store - A Lattice store with slices
- * @param selector - Function that selects values from slices
- * @param equalityFn - Optional custom equality function
- * @returns Object with selected values and slices
- *
- * @example
- * ```tsx
- * function TodoItem({ id }) {
- *   const { values, slices } = useLattice(store, (s) => ({
- *     todo: s.todos.getById(id),
- *     isEditing: s.ui.isEditing(id)
- *   }));
- *
- *   return (
- *     <div>
- *       <span>{values.todo.text}</span>
- *       <button onClick={() => slices.todos.remove(id)}>
- *         Delete
- *       </button>
- *     </div>
- *   );
- * }
- * ```
- */
-export function useLattice<Component, Selected>(
-  store: Component & SubscribableStore,
-  selector: (slices: Component) => Selected,
-  equalityFn?: (a: Selected, b: Selected) => boolean,
-  useTransitions = false
+  slices: T
 ): {
-  values: Selected;
-  slices: Component;
+  [K in keyof T]: T[K] extends [SliceHandle<infer C>, (computed: C) => infer R] ? R : never
 } {
-  const values = useSliceSelector(store, selector, equalityFn, useTransitions);
+  // Store previous values for comparison
+  const prevValuesRef = useRef<Record<string, any>>({});
+  const forceUpdate = useReducer((x) => x + 1, 0)[1];
 
-  // Use a single ref for the result object and update it only when values change
-  const resultRef = useRef<{ values: Selected; slices: Component }>();
+  // Subscribe to all slices
+  useEffect(() => {
+    const unsubscribes: Array<() => void> = [];
 
-  // Lazy initialization for the result object
-  if (!resultRef.current) {
-    resultRef.current = { values, slices: store };
-  } else if (resultRef.current.values !== values) {
-    // Only update when values actually change
-    resultRef.current.values = values;
+    for (const [key, [slice, selector]] of Object.entries(slices)) {
+      const metadata = getSliceMetadata(slice);
+      if (!metadata) continue;
+
+      const unsubscribe = metadata.subscribe(() => {
+        const computed = slice();
+        const newValue = selector(computed);
+        
+        if (!shallowEqual(prevValuesRef.current[key], newValue)) {
+          prevValuesRef.current[key] = newValue;
+          forceUpdate();
+        }
+      });
+      
+      unsubscribes.push(unsubscribe);
+    }
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, [slices]);
+
+  // Build result object
+  const result: any = {};
+  for (const [key, [slice, selector]] of Object.entries(slices)) {
+    const computed = slice();
+    result[key] = selector(computed);
+    prevValuesRef.current[key] = result[key];
   }
 
-  return resultRef.current;
+  return result;
 }
+
