@@ -54,10 +54,8 @@ export interface LatticeSlice<Methods, State> {
   adapter: Adapter<State>;
 }
 
-// Type for runtime slice factory that returns full LatticeSlice
-export type RuntimeSliceFactory<State> = <Methods>(
-  factory: (tools: StoreTools<State>) => Methods
-) => LatticeSlice<Methods, State>;
+// Re-export ReactiveSliceFactory for backwards compatibility
+export type RuntimeSliceFactory<State> = ReactiveSliceFactory<State>;
 
 /**
  * Factory function that creates a slice factory when provided with tools.

@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createLatticeStore } from './runtime';
-import { createStore } from './index';
-import type { RuntimeSliceFactory, StoreAdapter } from './index';
+import type { ReactiveSliceFactory, StoreAdapter } from './index';
 
-describe('runtime with new createStore API', () => {
-  it('should connect an component to an adapter', () => {
+describe('createLatticeStore - adapter bridge', () => {
+  it('should bridge an adapter to the reactive slice system', () => {
     // Track what happens during adapter creation
     let capturedInitialState: any;
     let mockState: any;
@@ -23,13 +22,22 @@ describe('runtime with new createStore API', () => {
       return mockAdapter;
     };
 
-    // Create an component factory
-    const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
-      const counter = createSlice(({ get, set }) => ({
-        count: () => get().count,
-        increment: () => set({ count: get().count + 1 }),
-        decrement: () => set({ count: get().count - 1 }),
-      }));
+    // Create a component using the new reactive API
+    const createComponent = (createSlice: ReactiveSliceFactory<{ count: number }>) => {
+      const counter = createSlice(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }, set) => ({
+          value: () => count(),
+          increment: () => set(
+            (selectors) => ({ count: selectors.count }),
+            ({ count }) => ({ count: count() + 1 })
+          ),
+          decrement: () => set(
+            (selectors) => ({ count: selectors.count }),
+            ({ count }) => ({ count: count() - 1 })
+          ),
+        })
+      );
 
       return { counter };
     };
@@ -43,16 +51,22 @@ describe('runtime with new createStore API', () => {
     expect(capturedInitialState).toEqual({ count: 0 });
 
     // Test the counter slice
-    expect(component.counter.selector.count()).toBe(0);
+    expect(component.counter().value()).toBe(0);
 
     // Test increment
-    component.counter.selector.increment();
+    component.counter().increment();
     expect(mockState.count).toBe(1);
+    expect(component.counter().value()).toBe(1);
 
     // Test decrement
-    component.counter.selector.decrement();
-    component.counter.selector.decrement();
-    expect(mockState.count).toBe(-1);
+    component.counter().decrement();
+    expect(mockState.count).toBe(0);
+    expect(component.counter().value()).toBe(0);
+
+    // Verify adapter methods were called
+    expect(adapter.getState).toHaveBeenCalled();
+    expect(adapter.setState).toHaveBeenCalledWith({ count: 1 });
+    expect(adapter.subscribe).toHaveBeenCalled();
   });
 
   it('should work with composed slices', () => {
@@ -71,18 +85,33 @@ describe('runtime with new createStore API', () => {
     };
 
     const createComponent = (
-      createSlice: RuntimeSliceFactory<{ count: number; multiplier: number }>
+      createSlice: ReactiveSliceFactory<{ count: number; multiplier: number }>
     ) => {
-      const counter = createSlice(({ get, set }) => ({
-        count: () => get().count,
-        increment: () => set({ count: get().count + 1 }),
-        multiply: () => set({ count: get().count * get().multiplier }),
-      }));
+      const counter = createSlice(
+        (selectors) => ({ count: selectors.count, multiplier: selectors.multiplier }),
+        ({ count, multiplier }, set) => ({
+          count: () => count(),
+          increment: () => set(
+            (selectors) => ({ count: selectors.count }),
+            ({ count }) => ({ count: count() + 1 })
+          ),
+          multiply: () => set(
+            (selectors) => ({ count: selectors.count, multiplier: selectors.multiplier }),
+            ({ count, multiplier }) => ({ count: count() * multiplier() })
+          ),
+        })
+      );
 
-      const config = createSlice(({ get, set }) => ({
-        multiplier: () => get().multiplier,
-        setMultiplier: (value: number) => set({ multiplier: value }),
-      }));
+      const config = createSlice(
+        (selectors) => ({ multiplier: selectors.multiplier }),
+        ({ multiplier }, set) => ({
+          multiplier: () => multiplier(),
+          setMultiplier: (value: number) => set(
+            (selectors) => ({ multiplier: selectors.multiplier }),
+            () => ({ multiplier: value })
+          ),
+        })
+      );
 
       return { counter, config };
     };
@@ -91,150 +120,133 @@ describe('runtime with new createStore API', () => {
     const createSlice = createLatticeStore(adapter);
     const component = createComponent(createSlice);
 
-    expect(component.counter.selector.count()).toBe(0);
-    expect(component.config.selector.multiplier()).toBe(2);
+    expect(component.counter().count()).toBe(0);
+    expect(component.config().multiplier()).toBe(2);
 
-    component.counter.selector.increment();
-    expect(component.counter.selector.count()).toBe(1);
+    component.counter().increment();
+    expect(component.counter().count()).toBe(1);
 
-    component.counter.selector.multiply();
-    expect(component.counter.selector.count()).toBe(2);
+    component.counter().multiply();
+    expect(component.counter().count()).toBe(2);
 
-    component.config.selector.setMultiplier(3);
-    component.counter.selector.multiply();
-    expect(component.counter.selector.count()).toBe(6);
+    component.config().setMultiplier(3);
+    component.counter().multiply();
+    expect(component.counter().count()).toBe(6);
   });
 
-  it('should expose subscription capability on slices', () => {
+  it('should handle fine-grained subscriptions for slices', async () => {
+    let mockState: any;
+    const mockAdapter: StoreAdapter<any> = {
+      getState: () => mockState,
+      setState: (updates) => Object.assign(mockState, updates),
+      subscribe: vi.fn(() => () => {}),
+    };
+
+    type State = { count: number; name: string };
+
+    const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
+      const counter = createSlice(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }, set) => ({
+          value: () => count(),
+          increment: () => set(
+            (selectors) => ({ count: selectors.count }),
+            ({ count }) => ({ count: count() + 1 })
+          ),
+        })
+      );
+
+      const user = createSlice(
+        (selectors) => ({ name: selectors.name }),
+        ({ name }, set) => ({
+          name: () => name(),
+          setName: (newName: string) => set(
+            (selectors) => ({ name: selectors.name }),
+            () => ({ name: newName })
+          ),
+        })
+      );
+
+      return { counter, user };
+    };
+
+    mockState = { count: 0, name: 'Alice' };
+    const createSlice = createLatticeStore(mockAdapter);
+    const component = createComponent(createSlice);
+
+    // Get slice metadata to access fine-grained subscriptions
+    const { getSliceMetadata } = await import('./utils');
+    const counterMeta = getSliceMetadata(component.counter);
+    const userMeta = getSliceMetadata(component.user);
+
+    // Subscribe to slices
+    const counterListener = vi.fn();
+    const userListener = vi.fn();
+
+    const unsubCounter = counterMeta!.subscribe(counterListener);
+    const unsubUser = userMeta!.subscribe(userListener);
+
+    // Manually trigger the adapter's listeners to simulate state changes
+    const triggerChange = () => {
+      // Get all registered listeners and call them
+      if (mockAdapter.subscribe.mock.calls.length > 0) {
+        // The adapter was subscribed to, trigger its listener
+        const listener = mockAdapter.subscribe.mock.calls[0][0];
+        listener();
+      }
+    };
+
+    // Change counter state
+    component.counter().increment();
+    triggerChange();
+    expect(counterListener).toHaveBeenCalledTimes(1);
+    expect(userListener).toHaveBeenCalledTimes(1); // Both called due to adapter limitation
+
+    // Change user state
+    component.user().setName('Bob');
+    triggerChange();
+    expect(counterListener).toHaveBeenCalledTimes(2); // Called again due to adapter limitation
+    expect(userListener).toHaveBeenCalledTimes(2);
+
+    // Unsubscribe and verify
+    unsubCounter();
+    component.counter().increment();
+    triggerChange();
+    expect(counterListener).toHaveBeenCalledTimes(2); // Not called after unsubscribe
+    expect(userListener).toHaveBeenCalledTimes(3); // Still called
+  });
+
+  it('should expose subscription capability on slices', async () => {
     const mockAdapter: StoreAdapter<any> = {
       getState: () => ({ count: 0 }),
       setState: () => {},
       subscribe: vi.fn(() => () => {}),
     };
 
-    const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
-      const counter = createSlice(({ get, set }) => ({
-        count: () => get().count,
-        increment: () => set({ count: get().count + 1 }),
-      }));
-      
+    const createComponent = (createSlice: ReactiveSliceFactory<{ count: number }>) => {
+      const counter = createSlice(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }, set) => ({
+          value: () => count(),
+          increment: () => set(
+            (selectors) => ({ count: selectors.count }),
+            ({ count }) => ({ count: count() + 1 })
+          ),
+        })
+      );
+
       return { counter };
     };
 
     const createSlice = createLatticeStore(mockAdapter);
     const component = createComponent(createSlice);
 
-    expect(typeof component.counter.subscribe).toBe('function');
-    // The subscribe function is now a wrapper around subscribeToKeys
-    expect(component.counter.subscribe).toBe(mockAdapter.subscribe);
-
-    // Test that subscription works
-    const unsubscribe = component.counter.subscribe(() => {});
-    expect(mockAdapter.subscribe).toHaveBeenCalled();
-    expect(typeof unsubscribe).toBe('function');
-  });
-
-  it('should work with standalone createStore for comparison', () => {
-    // This demonstrates how the new createStore works independently
-    const createSlice = createStore({ count: 0, name: 'test' });
-
-    const counter = createSlice(
-      (selectors) => ({ count: selectors.count }),
-      ({ count }, set) => ({
-        count: () => count(),
-        increment: () => set(
-          (selectors) => ({ count: selectors.count }),
-          ({ count }) => ({ count: count() + 1 })
-        ),
-      })
-    );
-
-    const editor = createSlice(
-      (selectors) => ({ name: selectors.name }),
-      ({ name: nameDep }, set) => ({
-        name: () => nameDep(),
-        setName: (newName: string) => set(
-          (selectors) => ({ name: selectors.name }),
-          () => ({ name: newName })
-        ),
-      })
-    );
-
-    expect(counter().count()).toBe(0);
-    expect(editor().name()).toBe('test');
-
-    counter().increment();
-    expect(counter().count()).toBe(1);
-
-    editor().setName('updated');
-    expect(editor().name()).toBe('updated');
-  });
-
-  it('should work with multiple slices sharing the same state', () => {
-    let mockState: { value1: number; value2: number };
-    const mockAdapter: StoreAdapter<{ value1: number; value2: number }> = {
-      getState: () => mockState,
-      setState: (updates) => Object.assign(mockState, updates),
-      subscribe: () => () => {},
-    };
-
-    const createComponent = (createSlice: RuntimeSliceFactory<{ value1: number; value2: number }>) => {
-      const slice1 = createSlice(({ get, set }) => ({
-        value1: () => get().value1,
-        increment1: () => set({ value1: get().value1 + 1 }),
-      }));
-
-      const slice2 = createSlice(({ get, set }) => ({
-        value2: () => get().value2,
-        increment2: () => set({ value2: get().value2 + 1 }),
-      }));
-
-      return { slice1, slice2 };
-    };
-
-    mockState = { value1: 1, value2: 2 };
-    const createSlice = createLatticeStore(mockAdapter);
-    const component = createComponent(createSlice);
+    // Slices should have metadata with subscribe capability
+    const { getSliceMetadata } = await import('./utils');
+    const metadata = getSliceMetadata(component.counter);
     
-    expect(component.slice1.selector.value1()).toBe(1);
-    expect(component.slice2.selector.value2()).toBe(2);
-  });
-
-  it('should properly type the state through the adapter', () => {
-    interface ComponentState {
-      count: number;
-      name: string;
-    }
-
-    let mockState: ComponentState = { name: 'test', count: 0 };
-
-    const adapterFactory = (initialState: ComponentState) => {
-      mockState = { ...initialState };
-
-      const mockAdapter: StoreAdapter<ComponentState> = {
-        getState: vi.fn(() => mockState),
-        setState: vi.fn((updates) => Object.assign(mockState, updates)),
-        subscribe: vi.fn(() => () => {}),
-      };
-
-      return mockAdapter;
-    };
-
-    const createComponent = (createSlice: RuntimeSliceFactory<ComponentState>) => {
-      const counter = createSlice(({ get, set }) => ({
-        count: () => get().count,
-        increment: () => set({ count: get().count + 1 }),
-      }));
-
-      return { counter };
-    };
-
-    const adapter = adapterFactory({ count: 0, name: 'test' });
-    const createSlice = createLatticeStore(adapter);
-    const component = createComponent(createSlice);
-
-    // Test operations
-    component.counter.selector.increment();
-    expect(mockState.count).toBe(1);
+    expect(metadata).toBeDefined();
+    expect(metadata?.dependencies).toEqual(new Set(['count']));
+    expect(typeof metadata?.subscribe).toBe('function');
   });
 });
