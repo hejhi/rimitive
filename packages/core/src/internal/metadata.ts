@@ -23,44 +23,10 @@ export interface CompositionMetadata {
   dependencies: Set<string>;
 }
 
-// Store metadata scoped to each store instance
-export interface MetadataStore {
-  sliceMetadata: WeakMap<SliceFunction, SliceMetadata>;
-  compositionMetadata: WeakMap<ComposedFunction, CompositionMetadata>;
-}
-
-// Create a new metadata store for a store instance
-export function createMetadataStore(): MetadataStore {
-  return {
-    sliceMetadata: new WeakMap<SliceFunction, SliceMetadata>(),
-    compositionMetadata: new WeakMap<ComposedFunction, CompositionMetadata>()
-  };
-}
-
-// Global registry mapping store IDs to their metadata stores
-const storeRegistry = new WeakMap<symbol, MetadataStore>();
-
-/**
- * Register a metadata store for a store instance
- */
-export function registerStore(storeId: symbol): void {
-  storeRegistry.set(storeId, createMetadataStore());
-}
-
-/**
- * Get the metadata store for a store instance
- */
-function getMetadataStore(storeId: symbol): MetadataStore {
-  const store = storeRegistry.get(storeId);
-  if (!store) {
-    throw new Error('Store not registered. This is an internal error.');
-  }
-  return store;
-}
-
-// Keep track of all slices globally for lookup
-// This allows getSliceMetadata to work without knowing the store ID
-const globalSliceRegistry = new WeakMap<SliceFunction, symbol>();
+// Direct mapping from slice functions to their metadata
+// This is much simpler and avoids the double-registry problem
+const sliceMetadataRegistry = new WeakMap<SliceFunction, SliceMetadata>();
+const compositionMetadataRegistry = new WeakMap<ComposedFunction, CompositionMetadata>();
 
 /**
  * Type guard to check if a value is a function
@@ -90,15 +56,11 @@ function toComposedFunction(fn: Function): ComposedFunction {
  * Store metadata for a slice (internal use only)
  */
 export function storeSliceMetadata<Computed>(
-  storeId: symbol,
   slice: SliceHandle<Computed>,
   metadata: SliceMetadata
 ): void {
-  const store = getMetadataStore(storeId);
   const sliceFunction = toSliceFunction(slice);
-  store.sliceMetadata.set(sliceFunction, metadata);
-  // Also register globally for lookup
-  globalSliceRegistry.set(sliceFunction, storeId);
+  sliceMetadataRegistry.set(sliceFunction, metadata);
 }
 
 /**
@@ -108,43 +70,27 @@ export function storeSliceMetadata<Computed>(
 export function getSliceMetadata<Computed>(
   slice: SliceHandle<Computed>
 ): SliceMetadata | undefined {
-  // Find which store this slice belongs to
   const sliceFunction = toSliceFunction(slice);
-  const storeId = globalSliceRegistry.get(sliceFunction);
-  if (!storeId) {
-    return undefined;
-  }
-  
-  // Get the metadata from the correct store
-  const store = storeRegistry.get(storeId);
-  if (!store) {
-    return undefined;
-  }
-  
-  return store.sliceMetadata.get(sliceFunction);
+  return sliceMetadataRegistry.get(sliceFunction);
 }
 
 /**
  * Store composition metadata for a function
  */
 export function storeCompositionMetadata(
-  storeId: symbol,
   fn: Function,
   metadata: CompositionMetadata
 ): void {
-  const store = getMetadataStore(storeId);
   const composedFunction = toComposedFunction(fn);
-  store.compositionMetadata.set(composedFunction, metadata);
+  compositionMetadataRegistry.set(composedFunction, metadata);
 }
 
 /**
  * Get composition metadata for a function
  */
 export function getCompositionMetadata(
-  storeId: symbol,
   fn: Function
 ): CompositionMetadata | undefined {
-  const store = getMetadataStore(storeId);
   const composedFunction = toComposedFunction(fn);
-  return store.compositionMetadata.get(composedFunction);
+  return compositionMetadataRegistry.get(composedFunction);
 }

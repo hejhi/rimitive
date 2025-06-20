@@ -1,7 +1,6 @@
 // Standalone store implementation without runtime dependencies
 
 import { 
-  registerStore,
   storeSliceMetadata, 
   storeCompositionMetadata,
   getCompositionMetadata 
@@ -73,11 +72,6 @@ export function createStore<State>(
   initialState: State
 ): ReactiveSliceFactory<State> {
   let state = initialState;
-  // Create a unique ID for this store instance
-  const storeId = Symbol('store-instance');
-  
-  // Register this store in the metadata system
-  registerStore(storeId);
   
   // Use string keys for reliable Map lookups
   const listeners = new Map<string, Set<() => void>>();
@@ -166,7 +160,7 @@ export function createStore<State>(
     for (const key in deps) {
       const value = deps[key];
       if (typeof value === 'function') {
-        const composedInfo = getCompositionMetadata(storeId, value);
+        const composedInfo = getCompositionMetadata(value);
         if (composedInfo) {
           // Merge dependencies from the composed slice
           for (const dep of composedInfo.dependencies) {
@@ -232,7 +226,7 @@ export function createStore<State>(
       for (const key in childDeps) {
         const value = childDeps[key];
         if (typeof value === 'function') {
-          storeCompositionMetadata(storeId, value, { slice: slice as SliceHandle<unknown>, dependencies });
+          storeCompositionMetadata(value, { slice: slice as SliceHandle<unknown>, dependencies });
         }
       }
       
@@ -240,7 +234,7 @@ export function createStore<State>(
     }
     
     // Store metadata for testing/framework use
-    storeSliceMetadata(storeId, slice as SliceHandle<Computed>, { dependencies, subscribe });
+    storeSliceMetadata(slice as SliceHandle<Computed>, { dependencies, subscribe });
     
     return slice as SliceHandle<Computed>;
   };
