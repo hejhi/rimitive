@@ -52,33 +52,23 @@ export function createLatticeStore<State>(
   const sliceListeners = new Map<string, Set<() => void>>();
   const keySetToString = (keys: Set<string>) => [...keys].sort().join('|');
   
-  // Track previous state to detect actual changes
-  let previousState = { ...adapter.getState() };
-  
-  // When adapter notifies of any change, check which keys actually changed
+  // When adapter notifies of any change, check which slices are affected
   adapter.subscribe(() => {
-    const currentState = adapter.getState();
+    const state = adapter.getState();
     const changedKeys = new Set<string>();
     
-    // Compare with previous state to detect actual changes
-    for (const key in currentState) {
-      if (!Object.is(previousState[key], currentState[key])) {
-        changedKeys.add(key);
-      }
+    // In practice, we'd need to track which keys changed
+    // For now, assume all keys potentially changed
+    for (const key in state) {
+      changedKeys.add(key);
     }
     
-    // Update previous state
-    previousState = { ...currentState };
-    
-    // Only notify if there were actual changes
-    if (changedKeys.size > 0) {
-      // Notify slice listeners whose dependencies changed
-      for (const [keyString, listeners] of sliceListeners) {
-        const keys = keyString.split('|');
-        const shouldNotify = keys.some(key => changedKeys.has(key));
-        if (shouldNotify) {
-          listeners.forEach(listener => listener());
-        }
+    // Notify slice listeners whose dependencies changed
+    for (const [keyString, listeners] of sliceListeners) {
+      const keys = keyString.split('|');
+      const shouldNotify = keys.some(key => changedKeys.has(key));
+      if (shouldNotify) {
+        listeners.forEach(listener => listener());
       }
     }
   });
