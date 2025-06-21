@@ -16,8 +16,11 @@ const COUNTER_COUNT = 100;
 const UPDATE_ITERATIONS = 100; // Reduced for fair comparison without React batching
 
 // Generate counter IDs outside benchmarks
-const counterIds = Array.from({ length: COUNTER_COUNT }, (_, i) => `counter_${i}`);
-const initialCounters = Object.fromEntries(counterIds.map(id => [id, 0]));
+const counterIds = Array.from(
+  { length: COUNTER_COUNT },
+  (_, i) => `counter_${i}`
+);
+const initialCounters = Object.fromEntries(counterIds.map((id) => [id, 0]));
 
 describe('Fine-Grained Reactivity - Subscription Efficiency', () => {
   // Lattice with fine-grained subscriptions
@@ -26,19 +29,20 @@ describe('Fine-Grained Reactivity - Subscription Efficiency', () => {
       const createSlice = createStore({
         counters: initialCounters,
       });
-      
+
       // Create slice for each counter (fine-grained subscriptions)
-      const counterSlices = counterIds.map(id => 
+      const counterSlices = counterIds.map((id) =>
         createSlice(
           (selectors) => ({ counters: selectors.counters }),
           ({ counters }, set) => ({
             value: () => counters()[id] || 0,
-            increment: () => set(
-              (selectors) => ({ counters: selectors.counters }),
-              ({ counters }) => ({ 
-                counters: { ...counters(), [id]: (counters()[id] || 0) + 1 }
-              })
-            )
+            increment: () =>
+              set(
+                (selectors) => ({ counters: selectors.counters }),
+                ({ counters }) => ({
+                  counters: { [id]: (counters()[id] || 0) + 1 },
+                })
+              ),
           })
         )
       );
@@ -47,10 +51,9 @@ describe('Fine-Grained Reactivity - Subscription Efficiency', () => {
         slices: counterSlices,
         incrementCounter: (index: number) => {
           const slice = counterSlices[index];
-          if (slice) {
-            slice().increment();
-          }
-        }
+
+          if (slice) slice().increment();
+        },
       };
     };
 
@@ -68,18 +71,17 @@ describe('Fine-Grained Reactivity - Subscription Efficiency', () => {
       {
         setup: () => {
           latticeSetup = setupLattice();
-        }
+        },
       }
     );
   }
-
 
   // MobX with fine-grained reactivity (comparable to Lattice)
   {
     const setupMobX = () => {
       // Create observable store
       const store = observable({
-        counters: { ...initialCounters }
+        counters: { ...initialCounters },
       });
 
       // Create action for incrementing
@@ -88,7 +90,7 @@ describe('Fine-Grained Reactivity - Subscription Efficiency', () => {
       });
 
       // Simulate fine-grained subscriptions like Lattice
-      const disposers = counterIds.map(id => 
+      const disposers = counterIds.map((id) =>
         reaction(
           () => store.counters[id], // Only watch this specific counter
           () => {
@@ -100,7 +102,7 @@ describe('Fine-Grained Reactivity - Subscription Efficiency', () => {
       return {
         store,
         increment,
-        disposers
+        disposers,
       };
     };
 
@@ -118,7 +120,7 @@ describe('Fine-Grained Reactivity - Subscription Efficiency', () => {
       {
         setup: () => {
           mobxSetup = setupMobX();
-        }
+        },
       }
     );
   }
@@ -127,24 +129,30 @@ describe('Fine-Grained Reactivity - Subscription Efficiency', () => {
 describe('Fine-Grained Reactivity - Memory Efficiency', () => {
   // Test memory usage with large state trees
   const LARGE_COUNTER_COUNT = 1000;
-  const largeCounterIds = Array.from({ length: LARGE_COUNTER_COUNT }, (_, i) => `counter_${i}`);
-  const largeInitialCounters = Object.fromEntries(largeCounterIds.map(id => [id, 0]));
+  const largeCounterIds = Array.from(
+    { length: LARGE_COUNTER_COUNT },
+    (_, i) => `counter_${i}`
+  );
+  const largeInitialCounters = Object.fromEntries(
+    largeCounterIds.map((id) => [id, 0])
+  );
 
   {
     const setupLargeLattice = () => {
       const createSlice = createStore({
         counters: largeInitialCounters,
       });
-      
+
       const updateSlice = createSlice(
         (selectors) => ({ counters: selectors.counters }),
         (_deps, set) => ({
-          increment: (id: string) => set(
-            (selectors) => ({ counters: selectors.counters }),
-            ({ counters }) => ({ 
-              counters: { ...counters(), [id]: (counters()[id] || 0) + 1 }
-            })
-          )
+          increment: (id: string) =>
+            set(
+              (selectors) => ({ counters: selectors.counters }),
+              ({ counters }) => ({
+                counters: { [id]: (counters()[id] || 0) + 1 },
+              })
+            ),
         })
       );
 
@@ -158,14 +166,15 @@ describe('Fine-Grained Reactivity - Memory Efficiency', () => {
       () => {
         // Update 100 random counters
         for (let i = 0; i < 100; i++) {
-          const randomId = largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
+          const randomId =
+            largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
           largeSetup().increment(randomId);
         }
       },
       {
         setup: () => {
           largeSetup = setupLargeLattice();
-        }
+        },
       }
     );
   }
@@ -173,7 +182,7 @@ describe('Fine-Grained Reactivity - Memory Efficiency', () => {
   {
     const setupLargeMobX = () => {
       const store = observable({
-        counters: { ...largeInitialCounters }
+        counters: { ...largeInitialCounters },
       });
 
       const increment = action((id: string) => {
@@ -190,14 +199,15 @@ describe('Fine-Grained Reactivity - Memory Efficiency', () => {
       () => {
         // Same update pattern
         for (let i = 0; i < 100; i++) {
-          const randomId = largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
+          const randomId =
+            largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
           largeMobXSetup.increment(randomId);
         }
       },
       {
         setup: () => {
           largeMobXSetup = setupLargeMobX();
-        }
+        },
       }
     );
   }
