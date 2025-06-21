@@ -38,34 +38,63 @@ const getInitialState = (): CountSlice => ({
 const createStandardComponent = (
   createSlice: RuntimeSliceFactory<CountSlice>
 ) => {
-  const counter = createSlice(({ get, set }) => ({
-    increment: () => set({ count: get().count + 1 }),
-    decrement: () => set({ count: get().count - 1 }),
-    getCount: () => get().count,
-  }));
+  const counter = createSlice(
+    (selectors) => ({ count: selectors.count }),
+    ({ count }, set) => ({
+      increment: () => set(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }) => ({ count: count() + 1 })
+      ),
+      decrement: () => set(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }) => ({ count: count() - 1 })
+      ),
+      getCount: () => count(),
+    })
+  );
 
-  const items = createSlice(({ get, set }) => ({
-    addItem: (item: string) => set({ items: [...get().items, item] }),
-    removeItem: (index: number) => {
-      const newItems = [...get().items];
-      newItems.splice(index, 1);
-      set({ items: newItems });
-    },
-    getItems: () => get().items,
-    getItemCount: () => get().items.length,
-  }));
+  const items = createSlice(
+    (selectors) => ({ items: selectors.items }),
+    ({ items }, set) => ({
+      addItem: (item: string) => set(
+        (selectors) => ({ items: selectors.items }),
+        ({ items }) => ({ items: [...items(), item] })
+      ),
+      removeItem: (index: number) => {
+        set(
+          (selectors) => ({ items: selectors.items }),
+          ({ items }) => {
+            const newItems = [...items()];
+            newItems.splice(index, 1);
+            return { items: newItems };
+          }
+        );
+      },
+      getItems: () => items(),
+      getItemCount: () => items().length,
+    })
+  );
 
-  const metadata = createSlice(({ get, set }) => ({
-    updateTimestamp: () =>
-      set({
-        metadata: { ...get().metadata, lastUpdate: Date.now() },
-      }),
-    incrementVersion: () =>
-      set({
-        metadata: { ...get().metadata, version: get().metadata.version + 1 },
-      }),
-    getMetadata: () => get().metadata,
-  }));
+  const metadata = createSlice(
+    (selectors) => ({ metadata: selectors.metadata }),
+    ({ metadata }, set) => ({
+      updateTimestamp: () =>
+        set(
+          (selectors) => ({ metadata: selectors.metadata }),
+          ({ metadata }) => ({
+            metadata: { ...metadata(), lastUpdate: Date.now() },
+          })
+        ),
+      incrementVersion: () =>
+        set(
+          (selectors) => ({ metadata: selectors.metadata }),
+          ({ metadata }) => ({
+            metadata: { ...metadata(), version: metadata().version + 1 },
+          })
+        ),
+      getMetadata: () => metadata(),
+    })
+  );
 
   return { counter, items, metadata };
 };
@@ -95,9 +124,9 @@ describe('Adapter Performance Rankings', () => {
   // Warmup phase to allow JIT optimization
   const warmup = (store: any) => {
     for (let i = 0; i < 1000; i++) {
-      store.counter.selector.increment();
+      store.counter().increment();
       if (i % 10 === 0) {
-        store.items.selector.addItem(`warmup-${i}`);
+        store.items().addItem(`warmup-${i}`);
       }
     }
   };
@@ -109,36 +138,36 @@ describe('Adapter Performance Rankings', () => {
   describe('State Update Performance', () => {
     bench('zustand adapter - updates (init separated)', () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        zustandStore.counter.selector.increment();
+        zustandStore.counter().increment();
         if (i % 10 === 0) {
-          zustandStore.items.selector.addItem(`item-${i}`);
+          zustandStore.items().addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          zustandStore.metadata.selector.updateTimestamp();
+          zustandStore.metadata().updateTimestamp();
         }
       }
     });
 
     bench('redux adapter - updates (init separated)', () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        reduxStore.counter.selector.increment();
+        reduxStore.counter().increment();
         if (i % 10 === 0) {
-          reduxStore.items.selector.addItem(`item-${i}`);
+          reduxStore.items().addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          reduxStore.metadata.selector.updateTimestamp();
+          reduxStore.metadata().updateTimestamp();
         }
       }
     });
 
     bench('store-react adapter - updates (init separated)', () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        storeReactStore.counter.selector.increment();
+        storeReactStore.counter().increment();
         if (i % 10 === 0) {
-          storeReactStore.items.selector.addItem(`item-${i}`);
+          storeReactStore.items().addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          storeReactStore.metadata.selector.updateTimestamp();
+          storeReactStore.metadata().updateTimestamp();
         }
       }
     });
@@ -150,12 +179,12 @@ describe('Adapter Performance Rankings', () => {
       const store = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.increment();
+        store.counter().increment();
         if (i % 10 === 0) {
-          store.items.selector.addItem(`item-${i}`);
+          store.items().addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          store.metadata.selector.updateTimestamp();
+          store.metadata().updateTimestamp();
         }
       }
     });
@@ -169,12 +198,12 @@ describe('Adapter Performance Rankings', () => {
       const components = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        components.counter.selector.increment();
+        components.counter().increment();
         if (i % 10 === 0) {
-          components.items.selector.addItem(`item-${i}`);
+          components.items().addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          components.metadata.selector.updateTimestamp();
+          components.metadata().updateTimestamp();
         }
       }
     });
@@ -184,12 +213,12 @@ describe('Adapter Performance Rankings', () => {
       const store = createStandardComponent(createSlice);
 
       for (let i = 0; i < ITERATIONS; i++) {
-        store.counter.selector.increment();
+        store.counter().increment();
         if (i % 10 === 0) {
-          store.items.selector.addItem(`item-${i}`);
+          store.items().addItem(`item-${i}`);
         }
         if (i % 100 === 0) {
-          store.metadata.selector.updateTimestamp();
+          store.metadata().updateTimestamp();
         }
       }
     });
@@ -220,48 +249,48 @@ describe('Adapter Performance Rankings', () => {
     bench('zustand adapter - complex operations', () => {
       // Add items
       for (let i = 0; i < 100; i++) {
-        zustandComplexStore.items.selector.addItem(`item-${i}`);
+        zustandComplexStore.items().addItem(`item-${i}`);
       }
 
       // Update counter while removing items
       for (let i = 99; i >= 0; i--) {
-        zustandComplexStore.counter.selector.increment();
+        zustandComplexStore.counter().increment();
         if (i % 2 === 0) {
-          zustandComplexStore.items.selector.removeItem(0);
+          zustandComplexStore.items().removeItem(0);
         }
-        zustandComplexStore.metadata.selector.incrementVersion();
+        zustandComplexStore.metadata().incrementVersion();
       }
     });
 
     bench('redux adapter - complex operations', () => {
       // Add items
       for (let i = 0; i < 100; i++) {
-        reduxComplexStore.items.selector.addItem(`item-${i}`);
+        reduxComplexStore.items().addItem(`item-${i}`);
       }
 
       // Update counter while removing items
       for (let i = 99; i >= 0; i--) {
-        reduxComplexStore.counter.selector.increment();
+        reduxComplexStore.counter().increment();
         if (i % 2 === 0) {
-          reduxComplexStore.items.selector.removeItem(0);
+          reduxComplexStore.items().removeItem(0);
         }
-        reduxComplexStore.metadata.selector.incrementVersion();
+        reduxComplexStore.metadata().incrementVersion();
       }
     });
 
     bench('store-react adapter - complex operations', () => {
       // Add items
       for (let i = 0; i < 100; i++) {
-        storeReactComplexStore.items.selector.addItem(`item-${i}`);
+        storeReactComplexStore.items().addItem(`item-${i}`);
       }
 
       // Update counter while removing items
       for (let i = 99; i >= 0; i--) {
-        storeReactComplexStore.counter.selector.increment();
+        storeReactComplexStore.counter().increment();
         if (i % 2 === 0) {
-          storeReactComplexStore.items.selector.removeItem(0);
+          storeReactComplexStore.items().removeItem(0);
         }
-        storeReactComplexStore.metadata.selector.incrementVersion();
+        storeReactComplexStore.metadata().incrementVersion();
       }
     });
   });
@@ -287,7 +316,7 @@ describe('Adapter Performance Rankings', () => {
           notificationCount = 0;
           // Trigger updates
           for (let i = 0; i < 100; i++) {
-            store.counter.selector.increment();
+            store.counter().increment();
           }
           return notificationCount;
         },

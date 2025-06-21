@@ -7,7 +7,7 @@
 
 import { describe, bench } from 'vitest';
 import { renderHook, act, render } from '@testing-library/react';
-import { useStore, useStoreSelector, createStoreContext } from '@lattice/store-react';
+import { useStore, useStoreSelector, createStoreContext } from '@lattice/store/react';
 import { create as createZustand } from 'zustand';
 import React from 'react';
 

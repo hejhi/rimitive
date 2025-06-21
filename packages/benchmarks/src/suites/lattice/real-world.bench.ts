@@ -10,7 +10,6 @@ import { zustandAdapter } from '@lattice/adapter-zustand';
 import { configureStore } from '@reduxjs/toolkit';
 import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
-import { compose } from '@lattice/core';
 import type { RuntimeSliceFactory } from '@lattice/core';
 
 type EcommerceState = {
@@ -50,10 +49,10 @@ describe('Real-World Scenarios', () => {
         price: Math.random() * 100,
         stock: Math.floor(Math.random() * 50),
       }));
-      store.products.selector.loadProducts(productList);
+      store.products().loadProducts(productList);
 
       // Login user
-      store.user.selector.login({
+      store.user().login({
         id: 'user-1',
         name: 'Test User',
         email: 'test@example.com',
@@ -66,155 +65,184 @@ describe('Real-World Scenarios', () => {
       createSlice: RuntimeSliceFactory<EcommerceState>
     ) => {
       const cart = createSlice(
-        ({
-          get,
-          set,
-        }: {
-          get: () => EcommerceState;
-          set: (updates: Partial<EcommerceState>) => void;
-        }) => ({
+        (selectors) => ({ 
+          cart: selectors.cart,
+          products: selectors.products
+        }),
+        ({ cart, products }, set) => ({
           addItem: (productId: string, quantity: number = 1) => {
-            const products = get().products;
-            const product = products.find((p) => p.id === productId);
+            const productList = products();
+            const product = productList.find((p) => p.id === productId);
             if (!product) return;
 
-            const currentCart = get().cart;
+            const currentCart = cart();
             const existingItem = currentCart.find(
               (item) => item.id === productId
             );
 
             if (existingItem) {
-              set({
-                cart: currentCart.map((item) =>
-                  item.id === productId
-                    ? { ...item, quantity: item.quantity + quantity }
-                    : item
-                ),
-              });
+              set(
+                (selectors) => ({ cart: selectors.cart }),
+                ({ cart }) => ({
+                  cart: cart().map((item) =>
+                    item.id === productId
+                      ? { ...item, quantity: item.quantity + quantity }
+                      : item
+                  ),
+                })
+              );
             } else {
-              set({
-                cart: [
-                  ...currentCart,
-                  {
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
-                    quantity,
-                  },
-                ],
-              });
+              set(
+                (selectors) => ({ cart: selectors.cart }),
+                ({ cart }) => ({
+                  cart: [
+                    ...cart(),
+                    {
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      quantity,
+                    },
+                  ],
+                })
+              );
             }
           },
           removeItem: (productId: string) => {
-            set({
-              cart: get().cart.filter((item) => item.id !== productId),
-            });
+            set(
+              (selectors) => ({ cart: selectors.cart }),
+              ({ cart }) => ({
+                cart: cart().filter((item) => item.id !== productId),
+              })
+            );
           },
           updateQuantity: (productId: string, quantity: number) => {
             if (quantity <= 0) {
-              set({ cart: get().cart.filter((item) => item.id !== productId) });
+              set(
+                (selectors) => ({ cart: selectors.cart }),
+                ({ cart }) => ({
+                  cart: cart().filter((item) => item.id !== productId)
+                })
+              );
             } else {
-              set({
-                cart: get().cart.map((item) =>
-                  item.id === productId ? { ...item, quantity } : item
-                ),
-              });
+              set(
+                (selectors) => ({ cart: selectors.cart }),
+                ({ cart }) => ({
+                  cart: cart().map((item) =>
+                    item.id === productId ? { ...item, quantity } : item
+                  ),
+                })
+              );
             }
           },
           getTotal: () => {
-            return get().cart.reduce(
+            return cart().reduce(
               (sum, item) => sum + item.price * item.quantity,
               0
             );
           },
           getItemCount: () => {
-            return get().cart.reduce((sum, item) => sum + item.quantity, 0);
+            return cart().reduce((sum, item) => sum + item.quantity, 0);
           },
-          clearCart: () => set({ cart: [] }),
+          clearCart: () => set(
+            (selectors) => ({ cart: selectors.cart }),
+            () => ({ cart: [] })
+          ),
         })
       );
 
       const products = createSlice(
-        ({
-          get,
-          set,
-        }: {
-          get: () => EcommerceState;
-          set: (updates: Partial<EcommerceState>) => void;
-        }) => ({
+        (selectors) => ({ products: selectors.products }),
+        ({ products }, set) => ({
           loadProducts: (productList: EcommerceState['products']) => {
-            set({ products: productList });
+            set(
+              (selectors) => ({ products: selectors.products }),
+              () => ({ products: productList })
+            );
           },
           updateStock: (productId: string, stock: number) => {
-            set({
-              products: get().products.map((p) =>
-                p.id === productId ? { ...p, stock } : p
-              ),
-            });
+            set(
+              (selectors) => ({ products: selectors.products }),
+              ({ products }) => ({
+                products: products().map((p) =>
+                  p.id === productId ? { ...p, stock } : p
+                ),
+              })
+            );
           },
-          getProduct: (id: string) => get().products.find((p) => p.id === id),
+          getProduct: (id: string) => products().find((p) => p.id === id),
         })
       );
 
       const user = createSlice(
-        ({
-          get,
-          set,
-        }: {
-          get: () => EcommerceState;
-          set: (updates: Partial<EcommerceState>) => void;
-        }) => ({
+        (selectors) => ({ user: selectors.user }),
+        ({ user }, set) => ({
           login: (userData: { id: string; name: string; email: string }) => {
-            set({ user: userData });
+            set(
+              (selectors) => ({ user: selectors.user }),
+              () => ({ user: userData })
+            );
           },
           logout: () => {
-            set({ user: null });
+            set(
+              (selectors) => ({ user: selectors.user }),
+              () => ({ user: null })
+            );
           },
-          isLoggedIn: () => get().user !== null,
-          getCurrentUser: () => get().user,
+          isLoggedIn: () => user() !== null,
+          getCurrentUser: () => user(),
         })
       );
 
       const ui = createSlice(
-        ({
-          get,
-          set,
-        }: {
-          get: () => EcommerceState;
-          set: (updates: Partial<EcommerceState>) => void;
-        }) => ({
+        (selectors) => ({ ui: selectors.ui }),
+        ({}, set) => ({
           setLoading: (isLoading: boolean) => {
-            set({ ui: { ...get().ui, isLoading } });
+            set(
+              (selectors) => ({ ui: selectors.ui }),
+              ({ ui }) => ({ ui: { ...ui(), isLoading } })
+            );
           },
           toggleCart: () => {
-            set({ ui: { ...get().ui, cartOpen: !get().ui.cartOpen } });
+            set(
+              (selectors) => ({ ui: selectors.ui }),
+              ({ ui }) => ({ ui: { ...ui(), cartOpen: !ui().cartOpen } })
+            );
           },
           selectProduct: (productId: string | null) => {
-            set({ ui: { ...get().ui, selectedProduct: productId } });
+            set(
+              (selectors) => ({ ui: selectors.ui }),
+              ({ ui }) => ({ ui: { ...ui(), selectedProduct: productId } })
+            );
           },
         })
       );
 
       // Composed checkout slice that depends on cart and user
       const checkout = createSlice(
-        compose({ cart, user }, (_, { cart, user }) => ({
+        () => ({
+          // Use slice composition to extract methods from other slices
+          cartMethods: cart(({ getItemCount, clearCart }) => ({ getItemCount, clearCart })),
+          userMethods: user(({ isLoggedIn }) => ({ isLoggedIn }))
+        }),
+        ({ cartMethods, userMethods }) => ({
           canCheckout: () => {
-            return user.isLoggedIn() && cart.getItemCount() > 0;
+            return userMethods.isLoggedIn() && cartMethods.getItemCount() > 0;
           },
           processCheckout: () => {
-            if (!user.isLoggedIn()) {
+            if (!userMethods.isLoggedIn()) {
               throw new Error('User must be logged in');
             }
-            if (cart.getItemCount() === 0) {
+            if (cartMethods.getItemCount() === 0) {
               throw new Error('Cart is empty');
             }
 
             // Simulate checkout process
             const orderId = `order-${Date.now()}`;
-            cart.clearCart();
+            cartMethods.clearCart();
             return orderId;
           },
-        }))
+        })
       );
 
       return { cart, products, user, ui, checkout };
@@ -248,26 +276,26 @@ describe('Real-World Scenarios', () => {
 
     bench('zustand - ecommerce simulation', () => {
       // Clear cart for consistent state
-      zustandEcommerce.cart.selector.clearCart();
+      zustandEcommerce.cart().clearCart();
 
       // Simulate shopping behavior
       for (let i = 0; i < 50; i++) {
         const productId = `prod-${Math.floor(Math.random() * 100)}`;
-        zustandEcommerce.ui.selector.selectProduct(productId);
-        zustandEcommerce.cart.selector.addItem(
+        zustandEcommerce.ui().selectProduct(productId);
+        zustandEcommerce.cart().addItem(
           productId,
           Math.floor(Math.random() * 3) + 1
         );
 
         if (i % 10 === 0) {
-          zustandEcommerce.ui.selector.toggleCart();
+          zustandEcommerce.ui().toggleCart();
         }
 
-        if (i % 5 === 0 && zustandEcommerce.cart.selector.getItemCount() > 0) {
-          const cartItems = zustandEcommerce.cart.selector.getItemCount();
+        if (i % 5 === 0 && zustandEcommerce.cart().getItemCount() > 0) {
+          const cartItems = zustandEcommerce.cart().getItemCount();
           if (cartItems > 10) {
             // Remove some items
-            zustandEcommerce.cart.selector.removeItem(
+            zustandEcommerce.cart().removeItem(
               `prod-${Math.floor(Math.random() * 100)}`
             );
           }
@@ -275,33 +303,33 @@ describe('Real-World Scenarios', () => {
       }
 
       // Checkout if possible
-      if (zustandEcommerce.checkout.selector.canCheckout()) {
-        zustandEcommerce.checkout.selector.processCheckout();
+      if (zustandEcommerce.checkout().canCheckout()) {
+        zustandEcommerce.checkout().processCheckout();
       }
     });
 
     bench('redux - ecommerce simulation', () => {
       // Clear cart for consistent state
-      reduxEcommerce.cart.selector.clearCart();
+      reduxEcommerce.cart().clearCart();
 
       // Simulate shopping behavior
       for (let i = 0; i < 50; i++) {
         const productId = `prod-${Math.floor(Math.random() * 100)}`;
-        reduxEcommerce.ui.selector.selectProduct(productId);
-        reduxEcommerce.cart.selector.addItem(
+        reduxEcommerce.ui().selectProduct(productId);
+        reduxEcommerce.cart().addItem(
           productId,
           Math.floor(Math.random() * 3) + 1
         );
 
         if (i % 10 === 0) {
-          reduxEcommerce.ui.selector.toggleCart();
+          reduxEcommerce.ui().toggleCart();
         }
 
-        if (i % 5 === 0 && reduxEcommerce.cart.selector.getItemCount() > 0) {
-          const cartItems = reduxEcommerce.cart.selector.getItemCount();
+        if (i % 5 === 0 && reduxEcommerce.cart().getItemCount() > 0) {
+          const cartItems = reduxEcommerce.cart().getItemCount();
           if (cartItems > 10) {
             // Remove some items
-            reduxEcommerce.cart.selector.removeItem(
+            reduxEcommerce.cart().removeItem(
               `prod-${Math.floor(Math.random() * 100)}`
             );
           }
@@ -309,36 +337,36 @@ describe('Real-World Scenarios', () => {
       }
 
       // Checkout if possible
-      if (reduxEcommerce.checkout.selector.canCheckout()) {
-        reduxEcommerce.checkout.selector.processCheckout();
+      if (reduxEcommerce.checkout().canCheckout()) {
+        reduxEcommerce.checkout().processCheckout();
       }
     });
 
     bench('store-react - ecommerce simulation', () => {
       // Clear cart for consistent state
-      storeReactEcommerce.cart.selector.clearCart();
+      storeReactEcommerce.cart().clearCart();
 
       // Simulate shopping behavior
       for (let i = 0; i < 50; i++) {
         const productId = `prod-${Math.floor(Math.random() * 100)}`;
-        storeReactEcommerce.ui.selector.selectProduct(productId);
-        storeReactEcommerce.cart.selector.addItem(
+        storeReactEcommerce.ui().selectProduct(productId);
+        storeReactEcommerce.cart().addItem(
           productId,
           Math.floor(Math.random() * 3) + 1
         );
 
         if (i % 10 === 0) {
-          storeReactEcommerce.ui.selector.toggleCart();
+          storeReactEcommerce.ui().toggleCart();
         }
 
         if (
           i % 5 === 0 &&
-          storeReactEcommerce.cart.selector.getItemCount() > 0
+          storeReactEcommerce.cart().getItemCount() > 0
         ) {
-          const cartItems = storeReactEcommerce.cart.selector.getItemCount();
+          const cartItems = storeReactEcommerce.cart().getItemCount();
           if (cartItems > 10) {
             // Remove some items
-            storeReactEcommerce.cart.selector.removeItem(
+            storeReactEcommerce.cart().removeItem(
               `prod-${Math.floor(Math.random() * 100)}`
             );
           }
@@ -346,8 +374,8 @@ describe('Real-World Scenarios', () => {
       }
 
       // Checkout if possible
-      if (storeReactEcommerce.checkout.selector.canCheckout()) {
-        storeReactEcommerce.checkout.selector.processCheckout();
+      if (storeReactEcommerce.checkout().canCheckout()) {
+        storeReactEcommerce.checkout().processCheckout();
       }
     });
   });
@@ -379,15 +407,15 @@ describe('Real-World Scenarios', () => {
       // Add initial todos
       for (let i = 0; i < 100; i++) {
         const tags = [`tag${i % 5}`, `priority${i % 3}`];
-        store.todos.selector.addTodo(`Todo item ${i}`, tags);
+        store.todos().addTodo(`Todo item ${i}`, tags);
       }
 
       // Toggle some todos as completed
       for (let i = 0; i < 50; i++) {
-        const todos = store.queries.selector.getFilteredTodos();
+        const todos = store.queries().getFilteredTodos();
         const todo = todos[i]?.id;
 
-        if (todo) store.todos.selector.toggleTodo(todo);
+        if (todo) store.todos().toggleTodo(todo);
       }
 
       return store;
@@ -395,121 +423,143 @@ describe('Real-World Scenarios', () => {
 
     const createTodoApp = (createSlice: RuntimeSliceFactory<TodoState>) => {
       const todos = createSlice(
-        ({
-          get,
-          set,
-        }: {
-          get: () => TodoState;
-          set: (updates: Partial<TodoState>) => void;
-        }) => ({
+        (selectors) => ({ todos: selectors.todos }),
+        ({}, set) => ({
           addTodo: (text: string, tags: string[] = []) => {
-            set({
-              todos: [
-                ...get().todos,
-                {
-                  id: `todo-${Date.now()}`,
-                  text,
-                  completed: false,
-                  tags,
-                },
-              ],
-            });
+            set(
+              (selectors) => ({ todos: selectors.todos }),
+              ({ todos }) => ({
+                todos: [
+                  ...todos(),
+                  {
+                    id: `todo-${Date.now()}`,
+                    text,
+                    completed: false,
+                    tags,
+                  },
+                ],
+              })
+            );
           },
           toggleTodo: (id: string) => {
-            set({
-              todos: get().todos.map((todo) =>
-                todo.id === id ? { ...todo, completed: !todo.completed } : todo
-              ),
-            });
+            set(
+              (selectors) => ({ todos: selectors.todos }),
+              ({ todos }) => ({
+                todos: todos().map((todo) =>
+                  todo.id === id ? { ...todo, completed: !todo.completed } : todo
+                ),
+              })
+            );
           },
           deleteTodo: (id: string) => {
-            set({
-              todos: get().todos.filter((todo) => todo.id !== id),
-            });
+            set(
+              (selectors) => ({ todos: selectors.todos }),
+              ({ todos }) => ({
+                todos: todos().filter((todo) => todo.id !== id),
+              })
+            );
           },
           updateTodo: (id: string, text: string) => {
-            set({
-              todos: get().todos.map((todo) =>
-                todo.id === id ? { ...todo, text } : todo
-              ),
-            });
+            set(
+              (selectors) => ({ todos: selectors.todos }),
+              ({ todos }) => ({
+                todos: todos().map((todo) =>
+                  todo.id === id ? { ...todo, text } : todo
+                ),
+              })
+            );
           },
           clearCompleted: () => {
-            set({
-              todos: get().todos.filter((todo) => !todo.completed),
-            });
+            set(
+              (selectors) => ({ todos: selectors.todos }),
+              ({ todos }) => ({
+                todos: todos().filter((todo) => !todo.completed),
+              })
+            );
           },
         })
       );
 
       const filters = createSlice(
-        ({
-          get,
-          set,
-        }: {
-          get: () => TodoState;
-          set: (updates: Partial<TodoState>) => void;
-        }) => ({
-          setFilter: (filter: 'all' | 'active' | 'completed') => {
-            set({ filter });
+        (selectors) => ({ filter: selectors.filter, searchTerm: selectors.searchTerm, selectedTags: selectors.selectedTags }),
+        ({}, set) => ({
+          setFilter: (newFilter: 'all' | 'active' | 'completed') => {
+            set(
+              (selectors) => ({ filter: selectors.filter }),
+              () => ({ filter: newFilter })
+            );
           },
           setSearchTerm: (term: string) => {
-            set({ searchTerm: term });
+            set(
+              (selectors) => ({ searchTerm: selectors.searchTerm }),
+              () => ({ searchTerm: term })
+            );
           },
           toggleTag: (tag: string) => {
-            const selected = get().selectedTags;
-            if (selected.includes(tag)) {
-              set({ selectedTags: selected.filter((t) => t !== tag) });
-            } else {
-              set({ selectedTags: [...selected, tag] });
-            }
+            set(
+              (selectors) => ({ selectedTags: selectors.selectedTags }),
+              ({ selectedTags }) => {
+                const selected = selectedTags();
+                if (selected.includes(tag)) {
+                  return { selectedTags: selected.filter((t) => t !== tag) };
+                } else {
+                  return { selectedTags: [...selected, tag] };
+                }
+              }
+            );
           },
           clearFilters: () => {
-            set({ filter: 'all', searchTerm: '', selectedTags: [] });
+            set(
+              (selectors) => ({ filter: selectors.filter, searchTerm: selectors.searchTerm, selectedTags: selectors.selectedTags }),
+              () => ({ filter: 'all', searchTerm: '', selectedTags: [] })
+            );
           },
         })
       );
 
-      const queries = createSlice(({ get }: { get: () => TodoState }) => ({
+      const queries = createSlice(
+        (selectors) => ({ todos: selectors.todos, filter: selectors.filter, searchTerm: selectors.searchTerm, selectedTags: selectors.selectedTags }),
+        ({ todos, filter, searchTerm, selectedTags }) => ({
         getFilteredTodos: () => {
-          let todos = get().todos;
+          let todoList = todos();
 
           // Filter by completion status
-          if (get().filter === 'active') {
-            todos = todos.filter((t) => !t.completed);
-          } else if (get().filter === 'completed') {
-            todos = todos.filter((t) => t.completed);
+          const currentFilter = filter();
+          if (currentFilter === 'active') {
+            todoList = todoList.filter((t) => !t.completed);
+          } else if (currentFilter === 'completed') {
+            todoList = todoList.filter((t) => t.completed);
           }
 
           // Filter by search term
-          const searchTerm = get().searchTerm.toLowerCase();
-          if (searchTerm) {
-            todos = todos.filter((t) =>
-              t.text.toLowerCase().includes(searchTerm)
+          const currentSearchTerm = searchTerm().toLowerCase();
+          if (currentSearchTerm) {
+            todoList = todoList.filter((t) =>
+              t.text.toLowerCase().includes(currentSearchTerm)
             );
           }
 
           // Filter by tags
-          const selectedTags = get().selectedTags;
-          if (selectedTags.length > 0) {
-            todos = todos.filter((t) =>
-              selectedTags.some((tag) => t.tags.includes(tag))
+          const currentSelectedTags = selectedTags();
+          if (currentSelectedTags.length > 0) {
+            todoList = todoList.filter((t) =>
+              currentSelectedTags.some((tag) => t.tags.includes(tag))
             );
           }
 
-          return todos;
+          return todoList;
         },
         getStats: () => {
-          const todos = get().todos;
+          const todoList = todos();
           return {
-            total: todos.length,
-            active: todos.filter((t) => !t.completed).length,
-            completed: todos.filter((t) => t.completed).length,
+            total: todoList.length,
+            active: todoList.filter((t) => !t.completed).length,
+            completed: todoList.filter((t) => t.completed).length,
           };
         },
         getAllTags: () => {
           const tags = new Set<string>();
-          get().todos.forEach((todo) => {
+          todos().forEach((todo) => {
             todo.tags.forEach((tag) => tags.add(tag));
           });
           return Array.from(tags);
@@ -547,96 +597,96 @@ describe('Real-World Scenarios', () => {
 
     bench('zustand - todo app simulation', () => {
       // Reset filters for consistent state
-      zustandTodo.filters.selector.clearFilters();
+      zustandTodo.filters().clearFilters();
 
       // Apply filters and get results
-      zustandTodo.filters.selector.setFilter('active');
-      zustandTodo.queries.selector.getFilteredTodos();
+      zustandTodo.filters().setFilter('active');
+      zustandTodo.queries().getFilteredTodos();
 
-      zustandTodo.filters.selector.setSearchTerm('item 1');
-      zustandTodo.queries.selector.getFilteredTodos();
+      zustandTodo.filters().setSearchTerm('item 1');
+      zustandTodo.queries().getFilteredTodos();
 
-      zustandTodo.filters.selector.toggleTag('tag1');
-      zustandTodo.filters.selector.toggleTag('priority0');
-      zustandTodo.queries.selector.getFilteredTodos();
+      zustandTodo.filters().toggleTag('tag1');
+      zustandTodo.filters().toggleTag('priority0');
+      zustandTodo.queries().getFilteredTodos();
 
       // Get stats
-      zustandTodo.queries.selector.getStats();
+      zustandTodo.queries().getStats();
 
       // Update some todos
       for (let i = 0; i < 20; i++) {
-        const todos = zustandTodo.queries.selector.getFilteredTodos();
+        const todos = zustandTodo.queries().getFilteredTodos();
         const todoId = todos[i]?.id;
         if (todoId) {
-          zustandTodo.todos.selector.updateTodo(todoId, `Updated ${i}`);
+          zustandTodo.todos().updateTodo(todoId, `Updated ${i}`);
         }
       }
 
       // Clear completed
-      zustandTodo.todos.selector.clearCompleted();
+      zustandTodo.todos().clearCompleted();
     });
 
     bench('redux - todo app simulation', () => {
       // Reset filters for consistent state
-      reduxTodo.filters.selector.clearFilters();
+      reduxTodo.filters().clearFilters();
 
       // Apply filters and get results
-      reduxTodo.filters.selector.setFilter('active');
-      reduxTodo.queries.selector.getFilteredTodos();
+      reduxTodo.filters().setFilter('active');
+      reduxTodo.queries().getFilteredTodos();
 
-      reduxTodo.filters.selector.setSearchTerm('item 1');
-      reduxTodo.queries.selector.getFilteredTodos();
+      reduxTodo.filters().setSearchTerm('item 1');
+      reduxTodo.queries().getFilteredTodos();
 
-      reduxTodo.filters.selector.toggleTag('tag1');
-      reduxTodo.filters.selector.toggleTag('priority0');
-      reduxTodo.queries.selector.getFilteredTodos();
+      reduxTodo.filters().toggleTag('tag1');
+      reduxTodo.filters().toggleTag('priority0');
+      reduxTodo.queries().getFilteredTodos();
 
       // Get stats
-      reduxTodo.queries.selector.getStats();
+      reduxTodo.queries().getStats();
 
       // Update some todos
       for (let i = 0; i < 20; i++) {
-        const todos = reduxTodo.queries.selector.getFilteredTodos();
+        const todos = reduxTodo.queries().getFilteredTodos();
         const todoId = todos[i]?.id;
 
         if (todoId) {
-          reduxTodo.todos.selector.updateTodo(todoId, `Updated ${i}`);
+          reduxTodo.todos().updateTodo(todoId, `Updated ${i}`);
         }
       }
 
       // Clear completed
-      reduxTodo.todos.selector.clearCompleted();
+      reduxTodo.todos().clearCompleted();
     });
 
     bench('store-react - todo app simulation', () => {
       // Reset filters for consistent state
-      storeReactTodo.filters.selector.clearFilters();
+      storeReactTodo.filters().clearFilters();
 
       // Apply filters and get results
-      storeReactTodo.filters.selector.setFilter('active');
-      storeReactTodo.queries.selector.getFilteredTodos();
+      storeReactTodo.filters().setFilter('active');
+      storeReactTodo.queries().getFilteredTodos();
 
-      storeReactTodo.filters.selector.setSearchTerm('item 1');
-      storeReactTodo.queries.selector.getFilteredTodos();
+      storeReactTodo.filters().setSearchTerm('item 1');
+      storeReactTodo.queries().getFilteredTodos();
 
-      storeReactTodo.filters.selector.toggleTag('tag1');
-      storeReactTodo.filters.selector.toggleTag('priority0');
-      storeReactTodo.queries.selector.getFilteredTodos();
+      storeReactTodo.filters().toggleTag('tag1');
+      storeReactTodo.filters().toggleTag('priority0');
+      storeReactTodo.queries().getFilteredTodos();
 
       // Get stats
-      storeReactTodo.queries.selector.getStats();
+      storeReactTodo.queries().getStats();
 
       // Update some todos
       for (let i = 0; i < 20; i++) {
-        const todos = storeReactTodo.queries.selector.getFilteredTodos();
+        const todos = storeReactTodo.queries().getFilteredTodos();
         const todoId = todos[i]?.id;
         if (todoId) {
-          storeReactTodo.todos.selector.updateTodo(todoId, `Updated ${i}`);
+          storeReactTodo.todos().updateTodo(todoId, `Updated ${i}`);
         }
       }
 
       // Clear completed
-      storeReactTodo.todos.selector.clearCompleted();
+      storeReactTodo.todos().clearCompleted();
     });
   });
 });

@@ -7,7 +7,7 @@
 
 import { describe, bench } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useStore } from '@lattice/store-react';
+import { useStore } from '@lattice/store/react';
 import { create as createZustand } from 'zustand';
 
 describe('Core Performance - Store Creation', () => {

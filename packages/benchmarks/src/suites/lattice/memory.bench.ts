@@ -11,6 +11,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import { createStore as createStoreReactStore } from '@lattice/adapter-store-react';
 import type { RuntimeSliceFactory } from '@lattice/core';
+import { getSliceMetadata } from '@lattice/core';
 
 
 describe('Memory Usage Patterns', () => {
@@ -71,23 +72,49 @@ describe('Memory Usage Patterns', () => {
     const createLargeStateComponent =
       (_size: number) => (createSlice: RuntimeSliceFactory<any>) => {
 
-        const users = createSlice(({ get, set }) => ({
-          updateUser: (userId: string, updates: any) => {
-            const users = { ...get().users };
-            users[userId] = { ...users[userId], ...updates };
-            set({ users });
-          },
-          getUser: (userId: string) => get().users[userId],
-        }));
+        const users = createSlice(
+          (selectors) => ({ users: selectors.users }),
+          ({ users }, set) => ({
+            updateUser: (userId: string, updates: any) => {
+              set(
+                (selectors) => ({ users: selectors.users }),
+                ({ users }) => {
+                  const currentUsers = users?.() || {};
+                  const updatedUsers = { ...currentUsers };
+                  const existingUser = updatedUsers[userId] || {};
+                  updatedUsers[userId] = { ...existingUser, ...updates };
+                  return { users: updatedUsers };
+                }
+              );
+            },
+            getUser: (userId: string) => {
+              const currentUsers = users?.();
+              return currentUsers ? currentUsers[userId] : undefined;
+            },
+          })
+        );
 
-        const posts = createSlice(({ get, set }) => ({
-          updatePost: (postId: string, updates: any) => {
-            const posts = { ...get().posts };
-            posts[postId] = { ...posts[postId], ...updates };
-            set({ posts });
-          },
-          getPost: (postId: string) => get().posts[postId],
-        }));
+        const posts = createSlice(
+          (selectors) => ({ posts: selectors.posts }),
+          ({ posts }, set) => ({
+            updatePost: (postId: string, updates: any) => {
+              set(
+                (selectors) => ({ posts: selectors.posts }),
+                ({ posts }) => {
+                  const currentPosts = posts?.() || {};
+                  const updatedPosts = { ...currentPosts };
+                  const existingPost = updatedPosts[postId] || {};
+                  updatedPosts[postId] = { ...existingPost, ...updates };
+                  return { posts: updatedPosts };
+                }
+              );
+            },
+            getPost: (postId: string) => {
+              const currentPosts = posts?.();
+              return currentPosts ? currentPosts[postId] : undefined;
+            },
+          })
+        );
 
         return { users, posts };
       };
@@ -100,10 +127,10 @@ describe('Memory Usage Patterns', () => {
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
-        store.users.selector.updateUser(`user-${i}`, {
+        store.users().updateUser(`user-${i}`, {
           name: `Updated User ${i}`,
         });
-        store.posts.selector.updatePost(`post-${i}`, {
+        store.posts().updatePost(`post-${i}`, {
           title: `Updated Post ${i}`,
         });
       }
@@ -120,10 +147,10 @@ describe('Memory Usage Patterns', () => {
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
-        components.users.selector.updateUser(`user-${i}`, {
+        components.users().updateUser(`user-${i}`, {
           name: `Updated User ${i}`,
         });
-        components.posts.selector.updatePost(`post-${i}`, {
+        components.posts().updatePost(`post-${i}`, {
           title: `Updated Post ${i}`,
         });
       }
@@ -136,10 +163,10 @@ describe('Memory Usage Patterns', () => {
 
       // Perform updates
       for (let i = 0; i < 100; i++) {
-        store.users.selector.updateUser(`user-${i}`, {
+        store.users().updateUser(`user-${i}`, {
           name: `Updated User ${i}`,
         });
-        store.posts.selector.updatePost(`post-${i}`, {
+        store.posts().updatePost(`post-${i}`, {
           title: `Updated Post ${i}`,
         });
       }
@@ -150,10 +177,16 @@ describe('Memory Usage Patterns', () => {
   describe('Subscription Memory Leaks', () => {
     bench('zustand - subscription cleanup', () => {
       const createComponent = (createSlice: RuntimeSliceFactory<{ value: number }>) => {
-        const slice = createSlice(({ get, set }: any) => ({
-          increment: () => set({ value: get().value + 1 }),
-          getValue: () => get().value,
-        }));
+        const slice = createSlice(
+          (selectors) => ({ value: selectors.value }),
+          ({ value }, set) => ({
+            increment: () => set(
+              (selectors) => ({ value: selectors.value }),
+              ({ value }) => ({ value: value() + 1 })
+            ),
+            getValue: () => value(),
+          })
+        );
         return { slice };
       };
 
@@ -170,12 +203,15 @@ describe('Memory Usage Patterns', () => {
         // Add subscriptions to each store
         const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
-          unsubscribers.push(store.slice.subscribe(() => {}));
+          const metadata = getSliceMetadata(store.slice);
+          if (metadata?.subscribe) {
+            unsubscribers.push(metadata.subscribe(() => {}));
+          }
         }
         allUnsubscribers.push(unsubscribers);
 
         // Trigger some updates
-        store.slice.selector.increment();
+        store.slice().increment();
       }
 
       // Cleanup all subscriptions
@@ -191,10 +227,16 @@ describe('Memory Usage Patterns', () => {
 
     bench('redux - subscription cleanup', () => {
       const createComponent = (createSlice: RuntimeSliceFactory<{ value: number }>) => {
-        const slice = createSlice(({ get, set }: any) => ({
-          increment: () => set({ value: get().value + 1 }),
-          getValue: () => get().value,
-        }));
+        const slice = createSlice(
+          (selectors) => ({ value: selectors.value }),
+          ({ value }, set) => ({
+            increment: () => set(
+              (selectors) => ({ value: selectors.value }),
+              ({ value }) => ({ value: value() + 1 })
+            ),
+            getValue: () => value(),
+          })
+        );
         return { slice };
       };
 
@@ -213,13 +255,16 @@ describe('Memory Usage Patterns', () => {
 
         // Add subscriptions to each store
         const unsubscribers: (() => void)[] = [];
-        for (let j = 0; j < 10; j++) {
-          unsubscribers.push(component.slice.subscribe(() => {}));
+        const metadata = getSliceMetadata(component.slice);
+        if (metadata?.subscribe) {
+          for (let j = 0; j < 10; j++) {
+            unsubscribers.push(metadata.subscribe(() => {}));
+          }
         }
         allUnsubscribers.push(unsubscribers);
 
         // Trigger some updates
-        component.slice.selector.increment();
+        component.slice().increment();
       }
 
       // Cleanup all subscriptions
@@ -235,10 +280,16 @@ describe('Memory Usage Patterns', () => {
 
     bench('store-react - subscription cleanup', () => {
       const createComponent = (createSlice: RuntimeSliceFactory<{ value: number }>) => {
-        const slice = createSlice(({ get, set }: any) => ({
-          increment: () => set({ value: get().value + 1 }),
-          getValue: () => get().value,
-        }));
+        const slice = createSlice(
+          (selectors) => ({ value: selectors.value }),
+          ({ value }, set) => ({
+            increment: () => set(
+              (selectors) => ({ value: selectors.value }),
+              ({ value }) => ({ value: value() + 1 })
+            ),
+            getValue: () => value(),
+          })
+        );
         return { slice };
       };
 
@@ -254,12 +305,15 @@ describe('Memory Usage Patterns', () => {
         // Add subscriptions to each store
         const unsubscribers: (() => void)[] = [];
         for (let j = 0; j < 10; j++) {
-          unsubscribers.push(store.slice.subscribe(() => {}));
+          const metadata = getSliceMetadata(store.slice);
+          if (metadata?.subscribe) {
+            unsubscribers.push(metadata.subscribe(() => {}));
+          }
         }
         allUnsubscribers.push(unsubscribers);
 
         // Trigger some updates
-        store.slice.selector.increment();
+        store.slice().increment();
       }
 
       // Cleanup all subscriptions
@@ -280,13 +334,21 @@ describe('Memory Usage Patterns', () => {
       const createComponent =
         (_value: number) =>
         (createSlice: RuntimeSliceFactory<{ value: number; history: number[] }>) => {
-          const slice = createSlice(({ get, set }: any) => ({
-            update: (newValue: number) => {
-              const history = [...get().history, get().value];
-              set({ value: newValue, history });
-            },
-            getValue: () => get().value,
-          }));
+          const slice = createSlice(
+            (selectors) => ({ value: selectors.value, history: selectors.history }),
+            ({ value }, set) => ({
+              update: (newValue: number) => {
+                set(
+                  (selectors) => ({ value: selectors.value, history: selectors.history }),
+                  ({ value, history }) => ({ 
+                    value: newValue, 
+                    history: [...(history() || []), value()] 
+                  })
+                );
+              },
+              getValue: () => value(),
+            })
+          );
           return { slice };
         };
 
@@ -299,13 +361,16 @@ describe('Memory Usage Patterns', () => {
         const store = createComponent(i)(createSlice);
 
         // Do some work
-        store.slice.selector.update(i * 2);
-        store.slice.selector.update(i * 3);
-        totalValue += store.slice.selector.getValue();
+        store.slice().update(i * 2);
+        store.slice().update(i * 3);
+        totalValue += store.slice().getValue();
 
         // Add and remove subscription
-        const unsub = store.slice.subscribe(() => {});
-        unsub();
+        const metadata = getSliceMetadata(store.slice);
+        if (metadata?.subscribe) {
+          const unsub = metadata.subscribe(() => {});
+          unsub();
+        }
 
         // Destroy if possible
         if ((store as any).destroy) (store as any).destroy();
@@ -316,13 +381,21 @@ describe('Memory Usage Patterns', () => {
       const createComponent =
         (_value: number) =>
         (createSlice: RuntimeSliceFactory<{ value: number; history: number[] }>) => {
-          const slice = createSlice(({ get, set }: any) => ({
-            update: (newValue: number) => {
-              const history = [...get().history, get().value];
-              set({ value: newValue, history });
-            },
-            getValue: () => get().value,
-          }));
+          const slice = createSlice(
+            (selectors) => ({ value: selectors.value, history: selectors.history }),
+            ({ value }, set) => ({
+              update: (newValue: number) => {
+                set(
+                  (selectors) => ({ value: selectors.value, history: selectors.history }),
+                  ({ value, history }) => ({ 
+                    value: newValue, 
+                    history: [...(history() || []), value()] 
+                  })
+                );
+              },
+              getValue: () => value(),
+            })
+          );
           return { slice };
         };
 
@@ -338,13 +411,14 @@ describe('Memory Usage Patterns', () => {
         const component = createComponent(i)(createSlice);
 
         // Do some work
-        component.slice.selector.update(i * 2);
-        component.slice.selector.update(i * 3);
-        totalValue += component.slice.selector.getValue();
+        component.slice().update(i * 2);
+        component.slice().update(i * 3);
+        totalValue += component.slice().getValue();
 
         // Add and remove subscription
-        const unsub = component.slice.subscribe(() => {});
-        unsub();
+        const metadata = getSliceMetadata(component.slice);
+        const unsub = metadata?.subscribe?.(() => {});
+        if (unsub) unsub();
 
         // Destroy if possible
         if ((component as any).destroy) (component as any).destroy();
@@ -355,13 +429,21 @@ describe('Memory Usage Patterns', () => {
       const createComponent =
         (_value: number) =>
         (createSlice: RuntimeSliceFactory<{ value: number; history: number[] }>) => {
-          const slice = createSlice(({ get, set }: any) => ({
-            update: (newValue: number) => {
-              const history = [...get().history, get().value];
-              set({ value: newValue, history });
-            },
-            getValue: () => get().value,
-          }));
+          const slice = createSlice(
+            (selectors) => ({ value: selectors.value, history: selectors.history }),
+            ({ value }, set) => ({
+              update: (newValue: number) => {
+                set(
+                  (selectors) => ({ value: selectors.value, history: selectors.history }),
+                  ({ value, history }) => ({ 
+                    value: newValue, 
+                    history: [...(history() || []), value()] 
+                  })
+                );
+              },
+              getValue: () => value(),
+            })
+          );
           return { slice };
         };
 
@@ -373,13 +455,16 @@ describe('Memory Usage Patterns', () => {
         const store = createComponent(i)(createSlice);
 
         // Do some work
-        store.slice.selector.update(i * 2);
-        store.slice.selector.update(i * 3);
-        totalValue += store.slice.selector.getValue();
+        store.slice().update(i * 2);
+        store.slice().update(i * 3);
+        totalValue += store.slice().getValue();
 
         // Add and remove subscription
-        const unsub = store.slice.subscribe(() => {});
-        unsub();
+        const metadata = getSliceMetadata(store.slice);
+        if (metadata?.subscribe) {
+          const unsub = metadata.subscribe(() => {});
+          unsub();
+        }
 
         // Destroy if possible
         if ((store as any).destroy) (store as any).destroy();

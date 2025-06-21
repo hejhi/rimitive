@@ -12,7 +12,7 @@ import {
   createStoreContext,
   useStoreSelector,
   StoreApi,
-} from '@lattice/store-react';
+} from '@lattice/store/react';
 import React, { act } from 'react';
 
 describe('Store-React Specific APIs', () => {

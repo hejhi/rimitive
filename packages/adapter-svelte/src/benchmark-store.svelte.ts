@@ -14,12 +14,24 @@ export function createCounterStore() {
   const store = new CounterStore();
   const createSlice = createSliceFactory(store);
 
-  const counter = createSlice(({ get, set }) => ({
-    value: () => get().count,
-    setValue: (count: number) => set({ count }),
-    increment: () => set({ count: get().count + 1 }),
-    decrement: () => set({ count: get().count - 1 }),
-  }));
+  const counter = createSlice(
+    (selectors) => ({ count: selectors.count }),
+    ({ count }, set) => ({
+      value: () => count(),
+      setValue: (value: number) => set(
+        (selectors) => ({ count: selectors.count }),
+        () => ({ count: value })
+      ),
+      increment: () => set(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }) => ({ count: count() + 1 })
+      ),
+      decrement: () => set(
+        (selectors) => ({ count: selectors.count }),
+        ({ count }) => ({ count: count() - 1 })
+      ),
+    })
+  );
 
   return {
     state: store,
@@ -37,19 +49,40 @@ export function createComplexStore() {
   const store = new ComplexStore();
   const createSlice = createSliceFactory(store);
 
-  const user = createSlice(({ get, set }) => ({
-    setAge: (age: number) => set({ user: { ...get().user, age } }),
-    setName: (name: string) => set({ user: { ...get().user, name } }),
-    addItem: (item: string) => set({ items: [...get().items, item] }),
-    clearItems: () => set({ items: [] }),
-    toggleNotifications: () =>
-      set({
-        settings: {
-          ...get().settings,
-          notifications: !get().settings.notifications,
-        },
-      }),
-  }));
+  const user = createSlice(
+    (selectors) => ({ 
+      user: selectors.user,
+      items: selectors.items,
+      settings: selectors.settings
+    }),
+    (_deps, set) => ({
+      setAge: (age: number) => set(
+        (selectors) => ({ user: selectors.user }),
+        ({ user }) => ({ user: { ...user(), age } })
+      ),
+      setName: (name: string) => set(
+        (selectors) => ({ user: selectors.user }),
+        ({ user }) => ({ user: { ...user(), name } })
+      ),
+      addItem: (item: string) => set(
+        (selectors) => ({ items: selectors.items }),
+        ({ items }) => ({ items: [...items(), item] })
+      ),
+      clearItems: () => set(
+        (_selectors) => ({}),
+        () => ({ items: [] })
+      ),
+      toggleNotifications: () => set(
+        (selectors) => ({ settings: selectors.settings }),
+        ({ settings }) => ({ 
+          settings: {
+            ...settings(),
+            notifications: !settings().notifications,
+          },
+        })
+      ),
+    })
+  );
 
   return {
     state: store,
@@ -67,26 +100,49 @@ export function createBatchStore() {
   const store = new BatchStore();
   const createSlice = createSliceFactory(store);
 
-  const batch = createSlice(({ get, set }) => ({
-    processBatch: (start: number, size: number) => {
-      const current = get();
-      const newItems = [];
-      let newTotal = current.total;
+  const batch = createSlice(
+    (selectors) => ({
+      count: selectors.count,
+      total: selectors.total,
+      items: selectors.items
+    }),
+    ({ count, total, items }, set) => ({
+      processBatch: (start: number, size: number) => {
+        const currentItems = items();
+        const currentTotal = total();
+        const currentCount = count();
+        const newItems: number[] = [];
+        let newTotal = currentTotal;
 
-      for (let i = 0; i < size; i++) {
-        const value = start + i;
-        newItems.push(value);
-        newTotal += value;
-      }
+        for (let i = 0; i < size; i++) {
+          const value = start + i;
+          newItems.push(value);
+          newTotal += value;
+        }
 
-      set({
-        count: current.count + size,
-        total: newTotal,
-        items: [...current.items, ...newItems],
-      });
-    },
-    reset: () => set({ count: 0, total: 0, items: [] }),
-  }));
+        set(
+          (selectors) => ({ 
+            count: selectors.count, 
+            total: selectors.total, 
+            items: selectors.items 
+          }),
+          () => ({
+            count: currentCount + size,
+            total: newTotal,
+            items: [...currentItems, ...newItems],
+          })
+        );
+      },
+      reset: () => set(
+        (selectors) => ({ 
+          count: selectors.count, 
+          total: selectors.total, 
+          items: selectors.items 
+        }),
+        () => ({ count: 0, total: 0, items: [] })
+      ),
+    })
+  );
 
   return {
     state: store,

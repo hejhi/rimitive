@@ -8,10 +8,11 @@
 
 import type {
   StoreApi as StoreReactApi,
-  StoreCreator,
-} from '@lattice/store-react';
+} from '@lattice/store/react';
 import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
+
+type StoreCreator<T> = (set: (partial: Partial<T>) => void, get: () => T) => T;
 
 /**
  * Configuration options for store-react adapters
@@ -124,7 +125,7 @@ function createStoreReactStore<State>(
   // Create the store API
   const api: StoreReactApi<State> = {
     getState: () => state,
-    setState: (updates) => {
+    setState: (updates: Partial<State> | ((state: State) => Partial<State>)) => {
       const partial = typeof updates === 'function' ? updates(state) : updates;
 
       // Always update state and notify (store-react pattern)

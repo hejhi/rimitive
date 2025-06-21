@@ -1,6 +1,6 @@
 import { describe, bench } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { createStoreContext, useStore } from '@lattice/store-react';
+import { createStoreContext, useStore } from '@lattice/store/react';
 import { act } from 'react';
 
 describe('React TESTERT', () => {

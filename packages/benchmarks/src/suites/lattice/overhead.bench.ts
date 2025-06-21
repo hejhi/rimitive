@@ -11,6 +11,7 @@ import { zustandAdapter } from '@lattice/adapter-zustand';
 import { configureStore } from '@reduxjs/toolkit';
 import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import type { RuntimeSliceFactory } from '@lattice/core';
+import { getSliceMetadata } from '@lattice/core';
 
 // Test iterations
 const ITERATIONS = 10000;
@@ -28,10 +29,16 @@ describe('Adapter Overhead', () => {
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number }>
       ) => {
-        const counter = createSlice(({ get, set }) => ({
-          setCount: (count: number) => set({ count }),
-          getCount: () => get().count,
-        }));
+        const counter = createSlice(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }, set) => ({
+            setCount: (newCount: number) => set(
+              (selectors) => ({ count: selectors.count }),
+              () => ({ count: newCount })
+            ),
+            getCount: () => count(),
+          })
+        );
         return { counter };
       };
       return createComponent(createSlice);
@@ -45,7 +52,7 @@ describe('Adapter Overhead', () => {
 
     bench('zustand + lattice - state updates', () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        latticeStore.counter.selector.setCount(i);
+        latticeStore.counter().setCount(i);
       }
     });
 
@@ -57,9 +64,15 @@ describe('Adapter Overhead', () => {
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number }>
       ) => {
-        const counter = createSlice(({ set }) => ({
-          setCount: (count: number) => set({ count }),
-        }));
+        const counter = createSlice(
+          (selectors) => ({ count: selectors.count }),
+          ({}, set) => ({
+            setCount: (count: number) => set(
+              (selectors) => ({ count: selectors.count }),
+              () => ({ count })
+            ),
+          })
+        );
         return { counter };
       };
       return createComponent(createSlice);
@@ -85,11 +98,14 @@ describe('Adapter Overhead', () => {
 
       // Add subscriptions
       for (let i = 0; i < SUBSCRIPTION_COUNT; i++) {
-        unsubscribers.push(latticeSubStore.counter.subscribe(() => {}));
+        const metadata = getSliceMetadata(latticeSubStore.counter);
+        if (metadata?.subscribe) {
+          unsubscribers.push(metadata.subscribe(() => {}));
+        }
       }
 
       // Update state
-      latticeSubStore.counter.selector.setCount(Math.random());
+      latticeSubStore.counter().setCount(Math.random());
 
       // Cleanup
       unsubscribers.forEach((unsub) => unsub());
@@ -135,10 +151,16 @@ describe('Adapter Overhead', () => {
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number }>
       ) => {
-        const counter = createSlice(({ get, set }) => ({
-          setCount: (count: number) => set({ count }),
-          getCount: () => get().count,
-        }));
+        const counter = createSlice(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }, set) => ({
+            setCount: (newCount: number) => set(
+              (selectors) => ({ count: selectors.count }),
+              () => ({ count: newCount })
+            ),
+            getCount: () => count(),
+          })
+        );
         return { counter };
       };
       return createComponent(createSlice);
@@ -152,7 +174,7 @@ describe('Adapter Overhead', () => {
 
     bench('redux + lattice - state updates', () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        latticeReduxStore.counter.selector.setCount(i);
+        latticeReduxStore.counter().setCount(i);
       }
     });
   });
@@ -178,9 +200,15 @@ describe('Adapter Overhead', () => {
         const createComponent = (
           createSlice: RuntimeSliceFactory<{ count: number }>
         ) => {
-          const counter = createSlice(({ set }) => ({
-            setCount: (count: number) => set({ count }),
-          }));
+          const counter = createSlice(
+            (selectors) => ({ count: selectors.count }),
+            ({}, set) => ({
+              setCount: (count: number) => set(
+                (selectors) => ({ count: selectors.count }),
+                () => ({ count })
+              ),
+            })
+          );
           return { counter };
         };
         return createComponent(createSlice);
@@ -200,7 +228,7 @@ describe('Adapter Overhead', () => {
 
       bench('zustand - lattice wrapped', () => {
         for (let i = 0; i < ITERATIONS; i++) {
-          latticeWrappedStore.counter.selector.setCount(i);
+          latticeWrappedStore.counter().setCount(i);
         }
       });
     });
@@ -229,9 +257,12 @@ describe('Adapter Overhead', () => {
         const createComponent = (
           createSlice: RuntimeSliceFactory<{ value: number }>
         ) => {
-          const slice = createSlice(({ get }) => ({
-            getValue: () => get().value,
-          }));
+          const slice = createSlice(
+            (selectors) => ({ value: selectors.value }),
+            ({ value }) => ({
+              getValue: () => value(),
+            })
+          );
           return { slice };
         };
 

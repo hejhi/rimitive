@@ -18,14 +18,13 @@
     "check": "pnpm typecheck"
   },
   "devDependencies": {
-    "@lattice/adapter-pinia": "workspace:*",
     "@lattice/adapter-redux": "workspace:*",
     "@lattice/adapter-store-react": "workspace:*",
     "@lattice/adapter-svelte": "workspace:*",
     "@lattice/adapter-zustand": "workspace:*",
     "@lattice/core": "workspace:*",
     "@lattice/runtime": "workspace:*",
-    "@lattice/store-react": "workspace:*",
+    "@lattice/store": "workspace:*",
     "@reduxjs/toolkit": "^2.8.2",
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@testing-library/react": "^14.0.0",

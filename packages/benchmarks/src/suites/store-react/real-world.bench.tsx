@@ -9,7 +9,7 @@ import { describe, bench } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import {
   useStore,
-} from '@lattice/store-react';
+} from '@lattice/store/react';
 import { create as createZustand } from 'zustand';
 
 describe('Real-World - Form Management', () => {

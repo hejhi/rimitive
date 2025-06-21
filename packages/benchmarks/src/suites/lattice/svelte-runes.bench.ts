@@ -40,7 +40,7 @@ describe('Svelte 5 Runes + Lattice Performance (Real)', () => {
       const { component } = createCounterStore();
 
       for (let i = 0; i < ITERATIONS; i++) {
-        component.counter.selector.setValue(i);
+        component.counter().setValue(i);
       }
     });
 
@@ -48,7 +48,7 @@ describe('Svelte 5 Runes + Lattice Performance (Real)', () => {
       const { component } = createCounterStore();
 
       for (let i = 0; i < ITERATIONS; i++) {
-        component.counter.selector.increment();
+        component.counter().increment();
       }
     });
   });
@@ -74,8 +74,8 @@ describe('Svelte 5 Runes + Lattice Performance (Real)', () => {
       const { component } = createComplexStore();
 
       for (let i = 0; i < ITERATIONS / 10; i++) {
-        component.user.selector.setAge(i);
-        component.user.selector.addItem(`item${i}`);
+        component.user().setAge(i);
+        component.user().addItem(`item${i}`);
       }
     });
   });
@@ -112,7 +112,7 @@ describe('Svelte 5 Runes + Lattice Performance (Real)', () => {
       const { component } = createBatchStore();
 
       for (let batch = 0; batch < 10; batch++) {
-        component.batch.selector.processBatch(batch * BATCH_SIZE, BATCH_SIZE);
+        component.batch().processBatch(batch * BATCH_SIZE, BATCH_SIZE);
       }
     });
   });
@@ -143,7 +143,7 @@ describe('Svelte 5 Runes + Lattice Performance (Real)', () => {
       let total = 0;
 
       for (let i = 0; i < ITERATIONS; i++) {
-        total += component.counter.selector.value();
+        total += component.counter().value();
       }
     });
   });
@@ -161,7 +161,7 @@ describe('Svelte 5 Runes + Lattice Performance (Real)', () => {
       const { component } = createCounterStore();
 
       for (let i = 0; i < ITERATIONS; i++) {
-        component.counter.selector.setValue(i);
+        component.counter().setValue(i);
       }
     });
 
@@ -173,7 +173,7 @@ describe('Svelte 5 Runes + Lattice Performance (Real)', () => {
         // Direct mutation for simple updates
         direct.setValue(i);
         // Lattice for business logic
-        lattice.component.counter.selector.increment();
+        lattice.component.counter().increment();
       }
     });
   });

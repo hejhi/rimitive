@@ -17,7 +17,7 @@ import React, {
 } from 'react';
 import { describe, bench, beforeEach } from 'vitest';
 import { render, act, waitFor } from '@testing-library/react';
-import { useStore, useStoreSelector, type StoreApi } from '@lattice/store-react';
+import { useStore, useStoreSelector, type StoreApi } from '@lattice/store/react';
 
 // Dashboard state
 type DashboardState = {

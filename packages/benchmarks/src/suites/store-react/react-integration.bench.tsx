@@ -15,7 +15,7 @@ import {
   useStoreSelector,
   type StoreCreator,
   type StoreApi,
-} from '@lattice/store-react';
+} from '@lattice/store/react';
 import { create as createZustand } from 'zustand';
 // import { shallow } from 'zustand/shallow'; // Not needed with current approach
 import { act } from 'react';

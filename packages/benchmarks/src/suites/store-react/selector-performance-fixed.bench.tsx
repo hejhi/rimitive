@@ -6,7 +6,7 @@
 
 import { describe, bench, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
-import { useStore, type StoreApi } from '@lattice/store-react';
+import { useStore, type StoreApi } from '@lattice/store/react';
 
 describe('Selector Performance - Properly Isolated', () => {
   type ComplexState = {

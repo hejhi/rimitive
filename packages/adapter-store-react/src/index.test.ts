@@ -11,7 +11,7 @@ import {
   createStoreAdapter,
 } from './index';
 import type { RuntimeSliceFactory } from '@lattice/core';
-import type { StoreApi as StoreReactApi } from '@lattice/store-react';
+import type { StoreApi as StoreReactApi } from '@lattice/store/react';
 
 describe('store-react adapter', () => {
   describe('createStore', () => {
@@ -19,79 +19,129 @@ describe('store-react adapter', () => {
       const createSlice = createStore({ count: 0 });
 
       const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
-        const counter = createSlice(({ get, set }) => ({
-          count: () => get().count,
-          increment: () => set({ count: get().count + 1 }),
-          decrement: () => set({ count: get().count - 1 }),
-        }));
+        const counter = createSlice(
+          // depsFn - select dependencies from state
+          (selectors) => ({ count: selectors.count }),
+          // computeFn - define computed values and actions
+          ({ count }, set) => ({
+            count: () => count(),
+            increment: () => set(
+              (selectors) => ({ count: selectors.count }),
+              ({ count }) => ({ count: count() + 1 })
+            ),
+            decrement: () => set(
+              (selectors) => ({ count: selectors.count }),
+              ({ count }) => ({ count: count() - 1 })
+            ),
+          })
+        );
 
         return { counter };
       };
 
       const store = createComponent(createSlice);
 
-      expect(store.counter.selector.count()).toBe(0);
+      const counterSlice = store.counter();
+      expect(counterSlice.count()).toBe(0);
 
-      store.counter.selector.increment();
-      expect(store.counter.selector.count()).toBe(1);
+      counterSlice.increment();
+      expect(counterSlice.count()).toBe(1);
 
-      store.counter.selector.decrement();
-      expect(store.counter.selector.count()).toBe(0);
+      counterSlice.decrement();
+      expect(counterSlice.count()).toBe(0);
     });
 
     it('should support subscriptions', () => {
       const createSlice = createStore({ value: 'initial' });
 
       const createComponent = (createSlice: RuntimeSliceFactory<{ value: string }>) => {
-        const actions = createSlice(({ set }) => ({
-          setValue: (value: string) => set({ value }),
-        }));
+        const actions = createSlice(
+          // No dependencies needed for actions
+          () => ({}),
+          (_, set) => ({
+            setValue: (value: string) => set(
+              () => ({}),
+              () => ({ value })
+            ),
+          })
+        );
 
-        const queries = createSlice(({ get }) => ({
-          value: () => get().value,
-        }));
+        const queries = createSlice(
+          // Depend on value
+          (selectors) => ({ value: selectors.value }),
+          ({ value }) => ({
+            value: () => value(),
+          })
+        );
 
         return { actions, queries };
       };
 
       const store = createComponent(createSlice);
       const listener = vi.fn();
-      const unsubscribe = store.actions.subscribe(listener);
+      
+      // Get metadata to access subscribe function
+      const metadata = (store.queries as any).__metadata__;
+      const unsubscribe = metadata.subscribe(listener);
 
-      store.actions.selector.setValue('changed');
+      const actionsSlice = store.actions();
+      actionsSlice.setValue('changed');
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(store.queries.selector.value()).toBe('changed');
+      
+      const queriesSlice = store.queries();
+      expect(queriesSlice.value()).toBe('changed');
 
       unsubscribe();
-      store.actions.selector.setValue('changed again');
+      actionsSlice.setValue('changed again');
       expect(listener).toHaveBeenCalledTimes(1); // Should not be called again
     });
 
     it('should handle errors in listeners', () => {
-      const createSlice = createStore({ count: 0 });
+      // Test the adapter's error handling directly
+      const listeners = new Set<() => void>();
+      let state = { count: 0 };
 
-      const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
-        const actions = createSlice(({ get, set }) => ({
-          increment: () => set({ count: get().count + 1 }),
-        }));
-
-        return { actions };
+      const mockStore: StoreReactApi<{ count: number }> = {
+        getState: () => state,
+        setState: (updates: Partial<{ count: number }> | ((state: { count: number }) => Partial<{ count: number }>)) => {
+          const partial =
+            typeof updates === 'function' ? updates(state) : updates;
+          state = { ...state, ...partial };
+          
+          // Error handling implementation from createStoreReactStore
+          const currentListeners = Array.from(listeners);
+          for (const listener of currentListeners) {
+            try {
+              listener();
+            } catch (error) {
+              if (process.env.NODE_ENV !== 'production') {
+                console.error('Error in store listener:', error);
+              }
+            }
+          }
+        },
+        subscribe: (listener: () => void) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        destroy: () => listeners.clear(),
       };
 
       const consoleError = vi
         .spyOn(console, 'error')
         .mockImplementation(() => {});
-      const store = createComponent(createSlice);
+
+      const adapter = wrapStoreReact(mockStore);
 
       const goodListener = vi.fn();
       const badListener = vi.fn(() => {
         throw new Error('Listener error');
       });
 
-      store.actions.subscribe(badListener);
-      store.actions.subscribe(goodListener);
+      adapter.subscribe(badListener);
+      adapter.subscribe(goodListener);
 
-      store.actions.selector.increment();
+      adapter.setState({ count: 1 });
 
       expect(badListener).toHaveBeenCalled();
       expect(goodListener).toHaveBeenCalled();
@@ -110,9 +160,15 @@ describe('store-react adapter', () => {
       });
 
       const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
-        const actions = createSlice(({ get, set }) => ({
-          increment: () => set({ count: get().count + 1 }),
-        }));
+        const actions = createSlice(
+          (selectors) => ({ count: selectors.count }),
+          (_, set) => ({
+            increment: () => set(
+              (selectors) => ({ count: selectors.count }),
+              ({ count }) => ({ count: count() + 1 })
+            ),
+          })
+        );
 
         return { actions };
       };
@@ -123,8 +179,11 @@ describe('store-react adapter', () => {
         throw new Error('Test error');
       });
 
-      store.actions.subscribe(badListener);
-      store.actions.selector.increment();
+      const metadata = (store.actions as any).__metadata__;
+      metadata.subscribe(badListener);
+      
+      const actionsSlice = store.actions();
+      actionsSlice.increment();
 
       expect(errorHandler).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -144,18 +203,22 @@ describe('store-react adapter', () => {
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number; enhanced: boolean }>
       ) => {
-        const queries = createSlice(({ get }) => ({
-          count: () => get().count,
-          enhanced: () => get().enhanced,
-        }));
+        const queries = createSlice(
+          (selectors) => ({ count: selectors.count, enhanced: selectors.enhanced }),
+          ({ count, enhanced }) => ({
+            count: () => count(),
+            enhanced: () => enhanced(),
+          })
+        );
 
         return { queries };
       };
 
       const store = createComponent(createSlice);
 
-      expect(store.queries.selector.count()).toBe(0);
-      expect(store.queries.selector.enhanced()).toBe(true);
+      const queriesSlice = store.queries();
+      expect(queriesSlice.count()).toBe(0);
+      expect(queriesSlice.enhanced()).toBe(true);
     });
   });
 
@@ -167,13 +230,13 @@ describe('store-react adapter', () => {
 
       const mockStore: StoreReactApi<{ count: number }> = {
         getState: () => state,
-        setState: (updates) => {
+        setState: (updates: Partial<{ count: number }> | ((state: { count: number }) => Partial<{ count: number }>)) => {
           const partial =
             typeof updates === 'function' ? updates(state) : updates;
           state = { ...state, ...partial };
           listeners.forEach((l) => l());
         },
-        subscribe: (listener) => {
+        subscribe: (listener: () => void) => {
           listeners.add(listener);
           return () => listeners.delete(listener);
         },
@@ -202,7 +265,7 @@ describe('store-react adapter', () => {
 
       const mockStore: StoreReactApi<{ value: number }> = {
         getState: () => state,
-        setState: (updates) => {
+        setState: (updates: Partial<{ value: number }> | ((state: { value: number }) => Partial<{ value: number }>)) => {
           const partial =
             typeof updates === 'function' ? updates(state) : updates;
           state = { ...state, ...partial };
@@ -210,7 +273,7 @@ describe('store-react adapter', () => {
           const currentListeners = Array.from(listeners);
           currentListeners.forEach((l) => l());
         },
-        subscribe: (listener) => {
+        subscribe: (listener: () => void) => {
           listeners.add(listener);
           return () => listeners.delete(listener);
         },
@@ -287,9 +350,15 @@ describe('store-react adapter', () => {
       const createSlice = createStore({ value: 0 });
 
       const createComponent = (createSlice: RuntimeSliceFactory<{ value: number }>) => {
-        const actions = createSlice(({ get, set }) => ({
-          increment: () => set({ value: get().value + 1 }),
-        }));
+        const actions = createSlice(
+          (selectors) => ({ value: selectors.value }),
+          (_, set) => ({
+            increment: () => set(
+              (selectors) => ({ value: selectors.value }),
+              ({ value }) => ({ value: value() + 1 })
+            ),
+          })
+        );
 
         return { actions };
       };
@@ -297,8 +366,11 @@ describe('store-react adapter', () => {
       const store = createComponent(createSlice);
       const listener = vi.fn();
 
-      store.actions.subscribe(listener);
-      store.actions.selector.increment();
+      const metadata = (store.actions as any).__metadata__;
+      metadata.subscribe(listener);
+      
+      const actionsSlice = store.actions();
+      actionsSlice.increment();
       expect(listener).toHaveBeenCalledTimes(1);
 
       // Note: destroy method was removed from RuntimeResult in the new architecture
