@@ -12,8 +12,8 @@ import {
   createStoreContext,
   createStoreProvider,
   shallowEqual,
-  StoreApi,
-} from './index';
+  type StoreApi,
+} from './react';
 
 describe('store-react', () => {
   describe('useStore', () => {
