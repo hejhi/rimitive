@@ -102,7 +102,10 @@ export function createStore<State extends Record<string, unknown>>(
   const listenersByDependencySet = new Map<Set<string>, Set<() => void>>();
 
   // Helper to subscribe to a dependency set - dedupes common subscription logic
-  const subscribeToDependencies = (dependencies: Set<string>, listener: () => void) => {
+  const subscribeToDependencies = (
+    dependencies: Set<string>,
+    listener: () => void
+  ) => {
     if (!listenersByDependencySet.has(dependencies)) {
       listenersByDependencySet.set(dependencies, new Set());
     }
@@ -149,7 +152,10 @@ export function createStore<State extends Record<string, unknown>>(
 
   // Global subscribe method for the store
   const globalSubscribe = (listener: () => void) => {
-    return subscribeToDependencies(new Set(Object.keys(initialState)), listener);
+    return subscribeToDependencies(
+      new Set(Object.keys(initialState)),
+      listener
+    );
   };
 
   // Create the reactive slice factory function
@@ -267,7 +273,7 @@ export function createStore<State extends Record<string, unknown>>(
   }
 
   // Add the subscribe method to the createSlice function
-  (createSlice as any).subscribe = globalSubscribe;
+  createSlice.subscribe = globalSubscribe;
 
   return createSlice as ReactiveSliceFactory<State> & {
     subscribe: (listener: () => void) => () => void;
