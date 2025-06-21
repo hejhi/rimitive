@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StoreAdapter } from './adapter-contract';
 import { isStoreAdapter } from './adapter-contract';
 import { createLatticeStore } from './runtime';
-import { RuntimeSliceFactory } from '.';
+import type { RuntimeSliceFactory } from '.';
 
 /**
  * Test state shape used throughout the adapter tests

@@ -12,4 +12,5 @@ export {
   type SubscribableStore,
   type SubscribeOptions,
 } from './subscribe';
-export { createStore, type StoreTools, type StoreSliceFactory } from './store';
+export { createLatticeStore } from './runtime';
+export type { ReactiveSliceFactory, SliceHandle } from './runtime-types';

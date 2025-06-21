@@ -1,8 +1,9 @@
 // Minimal Lattice Core - Just the essentials for tree-shakeable imports
 // This is what you'd import for the most basic state management
 
-// Only export the bare minimum needed for basic state management
-export { createStore, type StoreTools, type StoreSliceFactory } from './store';
+// Export runtime for adapter-based stores
+export { createLatticeStore } from './runtime';
 
-// Re-export only essential types
+// Re-export essential types
 export type { StoreAdapter, AdapterFactory } from './adapter-contract';
+export type { ReactiveSliceFactory, SliceHandle } from './runtime-types';

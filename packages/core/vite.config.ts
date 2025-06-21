@@ -25,7 +25,6 @@ export default defineConfig({
         subscribe: resolve(__dirname, 'src/subscribe.ts'),
         runtime: resolve(__dirname, 'src/runtime.ts'),
         core: resolve(__dirname, 'src/core.ts'),
-        store: resolve(__dirname, 'src/store.ts'),
       },
       formats: ['es'],
     },
