@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
-import { createStore } from '@lattice/core';
+import { createStore } from '@lattice/store';
 import { useSlice, useSlices } from './react';
 
 describe('React hooks', () => {
@@ -179,7 +179,7 @@ describe('React hooks', () => {
       const { counterSlice, userSlice } = createTestSlices();
       let renderCount = 0;
 
-      const { result } = renderHook(() => {
+      renderHook(() => {
         renderCount++;
         return useSlices({
           count: [counterSlice, c => c.value()],

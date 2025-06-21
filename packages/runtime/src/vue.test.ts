@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, nextTick } from 'vue';
-import { createStore } from '@lattice/core';
+import { createStore } from '@lattice/store';
 import { useSliceSelector, useSliceValues, useSlice, useLattice } from './vue.js';
 
 describe('Vue composables', () => {
@@ -13,41 +13,46 @@ describe('Vue composables', () => {
       items: [] as string[],
     });
 
-    const listeners = new Set<() => void>();
+    const counter = createSlice(
+      (selectors) => ({ count: selectors.count }),
+      ({ count }, set) => ({
+        value: () => count(),
+        increment: () => set(
+          (selectors) => ({ count: selectors.count }),
+          ({ count }) => ({ count: count() + 1 })
+        ),
+        isEven: () => count() % 2 === 0,
+      })
+    );
 
-    const counter = createSlice(({ get, set }) => ({
-      value: () => get().count,
-      increment: () => {
-        set({ count: get().count + 1 });
-        listeners.forEach((l) => l());
-      },
-      isEven: () => get().count % 2 === 0,
-    }));
+    const user = createSlice(
+      (selectors) => ({ name: selectors.name }),
+      ({ name }, set) => ({
+        name: () => name(),
+        setName: (newName: string) => set(
+          (selectors) => ({ name: selectors.name }),
+          () => ({ name: newName })
+        ),
+      })
+    );
 
-    const user = createSlice(({ get, set }) => ({
-      name: () => get().name,
-      setName: (name: string) => {
-        set({ name });
-        listeners.forEach((l) => l());
-      },
-    }));
+    const items = createSlice(
+      (selectors) => ({ items: selectors.items }),
+      ({ items }, set) => ({
+        all: () => items(),
+        add: (item: string) => set(
+          (selectors) => ({ items: selectors.items }),
+          ({ items }) => ({ items: [...items(), item] })
+        ),
+      })
+    );
 
-    const items = createSlice(({ get, set }) => ({
-      all: () => get().items,
-      add: (item: string) => {
-        set({ items: [...get().items, item] });
-        listeners.forEach((l) => l());
-      },
-    }));
-
+    // Use the global subscribe method from the createSlice factory
     return {
-      counter,
-      user,
-      items,
-      subscribe: (listener: () => void) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
+      counter: counter(),
+      user: user(),
+      items: items(),
+      subscribe: createSlice.subscribe,
     };
   };
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { get } from 'svelte/store';
-import { createStore } from '@lattice/core';
+import { createStore, type Selectors, type SetState } from '@lattice/store';
 import { sliceValue, sliceValues, derivedSlice, asReadable } from './svelte.js';
 
 describe('Svelte runtime utilities', () => {
@@ -12,32 +12,34 @@ describe('Svelte runtime utilities', () => {
       items: [] as string[],
     });
     
-    const listeners = new Set<() => void>();
+    const counter = createSlice(
+      (selectors: Selectors<{ count: number; name: string; items: string[] }>) => ({ count: selectors.count }),
+      ({ count }: { count: () => number }, set: SetState<{ count: number; name: string; items: string[] }>) => ({
+        value: () => count(),
+        increment: () => set(
+          (selectors: Selectors<{ count: number; name: string; items: string[] }>) => ({ count: selectors.count }),
+          ({ count }: { count: () => number }) => ({ count: count() + 1 })
+        ),
+        doubled: () => count() * 2,
+      })
+    );
     
-    const counter = createSlice(({ get, set }) => ({
-      value: () => get().count,
-      increment: () => {
-        set({ count: get().count + 1 });
-        listeners.forEach((l) => l());
-      },
-      doubled: () => get().count * 2,
-    }));
+    const user = createSlice(
+      (selectors: Selectors<{ count: number; name: string; items: string[] }>) => ({ name: selectors.name }),
+      ({ name }: { name: () => string }, set: SetState<{ count: number; name: string; items: string[] }>) => ({
+        name: () => name(),
+        setName: (newName: string) => set(
+          (selectors: Selectors<{ count: number; name: string; items: string[] }>) => ({ name: selectors.name }),
+          () => ({ name: newName })
+        ),
+      })
+    );
     
-    const user = createSlice(({ get, set }) => ({
-      name: () => get().name,
-      setName: (name: string) => {
-        set({ name });
-        listeners.forEach((l) => l());
-      },
-    }));
-    
+    // Use the global subscribe method from the createSlice factory
     return {
-      counter,
-      user,
-      subscribe: (listener: () => void) => {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
-      },
+      counter: counter(),
+      user: user(),
+      subscribe: createSlice.subscribe,
     };
   };
   

@@ -36,6 +36,10 @@
     "./utils": {
       "import": "./dist/utils.js",
       "types": "./dist/utils.d.ts"
+    },
+    "./lib/metadata": {
+      "import": "./dist/lib/metadata.js",
+      "types": "./dist/lib/metadata.d.ts"
     }
   },
   "files": [
