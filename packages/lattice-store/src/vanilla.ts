@@ -101,6 +101,24 @@ export function createStore<State extends Record<string, unknown>>(
   // Use dependency sets directly as keys
   const listenersByDependencySet = new Map<Set<string>, Set<() => void>>();
 
+  // Helper to subscribe to a dependency set - dedupes common subscription logic
+  const subscribeToDependencies = (dependencies: Set<string>, listener: () => void) => {
+    if (!listenersByDependencySet.has(dependencies)) {
+      listenersByDependencySet.set(dependencies, new Set());
+    }
+    listenersByDependencySet.get(dependencies)!.add(listener);
+
+    return () => {
+      const listeners = listenersByDependencySet.get(dependencies);
+      if (listeners) {
+        listeners.delete(listener);
+        if (listeners.size === 0) {
+          listenersByDependencySet.delete(dependencies);
+        }
+      }
+    };
+  };
+
   // Helper to notify listeners - check Set intersection directly
   const notifyListeners = (changedKeys: Set<string>) => {
     for (const [dependencies, keyListeners] of listenersByDependencySet) {
@@ -121,21 +139,7 @@ export function createStore<State extends Record<string, unknown>>(
     const selector = () => getValue();
 
     selector.subscribe = (listener: () => void) => {
-      const singleKeySet = new Set([key]);
-      if (!listenersByDependencySet.has(singleKeySet)) {
-        listenersByDependencySet.set(singleKeySet, new Set());
-      }
-      listenersByDependencySet.get(singleKeySet)!.add(listener);
-
-      return () => {
-        const keyListeners = listenersByDependencySet.get(singleKeySet);
-        if (keyListeners) {
-          keyListeners.delete(listener);
-          if (keyListeners.size === 0) {
-            listenersByDependencySet.delete(singleKeySet);
-          }
-        }
-      };
+      return subscribeToDependencies(new Set([key]), listener);
     };
 
     selector._dependencies = new Set([key]);
@@ -145,22 +149,7 @@ export function createStore<State extends Record<string, unknown>>(
 
   // Global subscribe method for the store
   const globalSubscribe = (listener: () => void) => {
-    // Subscribe to all state changes - use Set of all keys
-    const allKeysSet = new Set(Object.keys(initialState));
-    if (!listenersByDependencySet.has(allKeysSet)) {
-      listenersByDependencySet.set(allKeysSet, new Set());
-    }
-    listenersByDependencySet.get(allKeysSet)!.add(listener);
-
-    return () => {
-      const allListeners = listenersByDependencySet.get(allKeysSet);
-      if (allListeners) {
-        allListeners.delete(listener);
-        if (allListeners.size === 0) {
-          listenersByDependencySet.delete(allKeysSet);
-        }
-      }
-    };
+    return subscribeToDependencies(new Set(Object.keys(initialState)), listener);
   };
 
   // Create the reactive slice factory function
@@ -237,20 +226,7 @@ export function createStore<State extends Record<string, unknown>>(
 
     // Subscribe function for this slice
     const subscribe = (listener: () => void) => {
-      if (!listenersByDependencySet.has(dependencies)) {
-        listenersByDependencySet.set(dependencies, new Set());
-      }
-      listenersByDependencySet.get(dependencies)!.add(listener);
-
-      return () => {
-        const depListeners = listenersByDependencySet.get(dependencies);
-        if (depListeners) {
-          depListeners.delete(listener);
-          if (depListeners.size === 0) {
-            listenersByDependencySet.delete(dependencies);
-          }
-        }
-      };
+      return subscribeToDependencies(dependencies, listener);
     };
 
     // Create the slice handle with dual functionality
