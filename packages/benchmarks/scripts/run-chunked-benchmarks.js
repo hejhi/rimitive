@@ -22,11 +22,7 @@ const projectRoot = path.resolve(__dirname, '..');
 // Benchmark suites to run
 const BENCHMARK_SUITES = {
   lattice: [
-    'overhead',
-    'adapter-rankings',
-    'real-world',
-    'memory',
-    'svelte-runes'
+    'fine-grained-reactivity',
   ],
   'store-react': [
     'context-vs-store',
