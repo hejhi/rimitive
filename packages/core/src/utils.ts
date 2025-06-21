@@ -5,8 +5,8 @@
  * integration, testing, and developer tools.
  */
 
-import { getSliceMetadata as getMetadata } from './internal/metadata';
-import type { SliceHandle } from './store';
+import { getSliceMetadata as getMetadata } from './lib/metadata';
+import type { SliceHandle } from './runtime-types';
 
 /**
  * Get metadata for a slice (dependencies and subscribe function)

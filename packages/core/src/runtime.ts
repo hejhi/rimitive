@@ -5,9 +5,9 @@
  * providing fine-grained subscriptions and efficient computed state.
  */
 
-import type { ReactiveSliceFactory, Selector, Selectors, SetState, SliceHandle } from './store';
+import type { ReactiveSliceFactory, Selector, Selectors, SetState, SliceHandle } from './runtime-types';
+import { storeSliceMetadata, storeCompositionMetadata, getCompositionMetadata } from './lib/metadata';
 import { type StoreAdapter } from './adapter-contract';
-import { storeSliceMetadata, storeCompositionMetadata, getCompositionMetadata } from './internal/metadata';
 
 /**
  * Component factory receives slice factory and returns the component's slices

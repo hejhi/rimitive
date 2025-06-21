@@ -6,6 +6,13 @@ export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 // Export slice metadata utilities
 export { getSliceMetadata } from './utils';
 
+// Export internal metadata functions for framework packages
+export { 
+  storeSliceMetadata, 
+  storeCompositionMetadata, 
+  getCompositionMetadata 
+} from './lib/metadata';
+
 // Export runtime
 export { createLatticeStore, type ComponentFactory } from './runtime';
 
@@ -25,39 +32,17 @@ export {
   type SubscribeOptions,
 } from './subscribe';
 
-// Import and re-export store functionality
-export {
-  createStore,
-  type StoreTools,
-  type StoreSliceFactory,
-  type Selector,
-  type Selectors,
-  type SetState,
-  type ReactiveSliceFactory,
-  type SliceHandle,
-} from './store';
+// Export types that are needed by the runtime
+export type {
+  Selector,
+  Selectors,
+  SetState,
+  ReactiveSliceFactory,
+  SliceHandle,
+} from './runtime-types';
 
 // Import types needed for interfaces
-import type { StoreAdapter as Adapter } from './adapter-contract';
-import type { ReactiveSliceFactory, StoreTools } from './store';
-
-/**
- * A Lattice slice with methods, subscription, and composition capabilities
- */
-export interface LatticeSlice<Methods, State> {
-  selector: Methods;
-  subscribe: (listener: () => void) => () => void;
-  compose: (tools: StoreTools<State>) => LatticeSlice<Methods, State>;
-  adapter: Adapter<State>;
-}
+import type { ReactiveSliceFactory } from './runtime-types';
 
 // Re-export ReactiveSliceFactory for backwards compatibility
 export type RuntimeSliceFactory<State> = ReactiveSliceFactory<State>;
-
-/**
- * Factory function that creates a slice factory when provided with tools.
- * This is used internally by the runtime to create adapter-backed stores.
- */
-export type StoreFactory<State> = (
-  tools: StoreTools<State>
-) => import('./store').StoreSliceFactory<State>;
