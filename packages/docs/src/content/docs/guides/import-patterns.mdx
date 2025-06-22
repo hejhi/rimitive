@@ -19,7 +19,6 @@ Lattice isn't a monolithic library - it's a collection of focused, composable ut
 // 🎯 Individual imports - maximum control
 import { compose } from '@lattice/core/compose';
 import { createStore } from '@lattice/core/store';
-import { subscribeToSlices } from '@lattice/core/subscribe';
 import { createLatticeStore } from '@lattice/core';
 
 // 🚀 Convenience imports
@@ -43,7 +42,7 @@ import { useSliceValues } from '@lattice/runtime';
 ```typescript
 // Import exactly what you need
 import { compose } from '@lattice/core/compose';
-import { subscribeToSlices } from '@lattice/core/subscribe';
+import { createStore } from '@lattice/core/store';
 
 // ✅ Perfect control over bundle size
 // ✅ Clear dependencies
