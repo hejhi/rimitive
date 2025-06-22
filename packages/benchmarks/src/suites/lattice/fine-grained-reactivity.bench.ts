@@ -7,7 +7,7 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createStore } from '@lattice/store/vanilla';
+import { createStore } from '@lattice/core';
 import { observable, action, reaction } from 'mobx';
 
 // Test state: 100 independent counters
