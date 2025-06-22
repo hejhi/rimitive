@@ -6,9 +6,13 @@
  * All component execution is handled by the Lattice runtime.
  */
 
-import type {
-  StoreApi as StoreReactApi,
-} from '@lattice/store/react';
+// Internal store API type (previously from @lattice/store/react)
+interface StoreReactApi<T> {
+  getState: () => T;
+  setState: (updates: Partial<T>) => void;
+  subscribe: (listener: () => void) => () => void;
+  destroy?: () => void;
+}
 import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
 import { createLatticeStore } from '@lattice/core';
 

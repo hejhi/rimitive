@@ -22,8 +22,7 @@
   },
   "dependencies": {
     "@lattice/core": "workspace:*",
-    "@lattice/runtime": "workspace:*",
-    "@lattice/store": "workspace:*"
+    "@lattice/runtime": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=16.8.0"

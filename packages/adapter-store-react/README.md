@@ -5,7 +5,7 @@ Store-React adapter for Lattice - integrate Lattice components with store-react 
 ## Installation
 
 ```bash
-npm install @lattice/adapter-store-react @lattice/store-react
+npm install @lattice/adapter-store-react
 ```
 
 ## Usage
@@ -70,13 +70,13 @@ If you have an existing store-react store, you can wrap it for use with Lattice:
 
 ```typescript
 import { wrapStoreReact } from '@lattice/adapter-store-react';
-import { useStore } from '@lattice/store-react';
 
-// Existing store-react store
-const existingStore = useStore((set, get) => ({
-  value: 0,
-  increment: () => set({ value: get().value + 1 })
-}));
+// Create your own store-react compatible store
+const existingStore = {
+  getState: () => ({ value: 0 }),
+  setState: (updates) => { /* implementation */ },
+  subscribe: (listener) => { /* implementation */ },
+};
 
 // Wrap for Lattice
 const adapter = wrapStoreReact(existingStore);

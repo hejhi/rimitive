@@ -23,14 +23,12 @@ export default defineConfig({
       external: [
         '@lattice/core',
         '@lattice/runtime',
-        '@lattice/store-react',
         'react',
       ],
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
           '@lattice/runtime': 'LatticeRuntime',
-          '@lattice/store-react': 'LatticeStoreReact',
           react: 'React',
         },
       },

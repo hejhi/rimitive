@@ -11,7 +11,13 @@ import {
   createStoreAdapter,
 } from './index';
 import type { RuntimeSliceFactory } from '@lattice/core';
-import type { StoreApi as StoreReactApi } from '@lattice/store/react';
+// Internal store API type (previously from @lattice/store/react)
+interface StoreReactApi<T> {
+  getState: () => T;
+  setState: (updates: Partial<T>) => void;
+  subscribe: (listener: () => void) => () => void;
+  destroy?: () => void;
+}
 
 describe('store-react adapter', () => {
   describe('createStore', () => {
