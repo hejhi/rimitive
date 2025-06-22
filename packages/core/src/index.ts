@@ -16,6 +16,9 @@ export {
 // Export runtime
 export { createLatticeStore, type ComponentFactory } from './runtime';
 
+// Export built-in adapters
+export { vanillaAdapter, createStore } from './adapters';
+
 // Export adapter contract
 export {
   type StoreAdapter,
@@ -24,13 +27,10 @@ export {
   isAdapterFactory,
 } from './adapter-contract';
 
-// Export subscription utilities
-export {
-  subscribeToSlices,
-  shallowEqual,
-  type SubscribableStore,
-  type SubscribeOptions,
-} from './subscribe';
+// Export subscription types (kept for adapter compatibility)
+export type SubscribableStore = {
+  subscribe: (listener: () => void) => () => void;
+};
 
 // Export types that are needed by the runtime
 export type {

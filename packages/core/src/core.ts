@@ -6,11 +6,9 @@ export {
   isStoreAdapter,
   isAdapterFactory,
 } from './adapter-contract';
-export {
-  subscribeToSlices,
-  shallowEqual,
-  type SubscribableStore,
-  type SubscribeOptions,
-} from './subscribe';
+// Export subscription types
+export type SubscribableStore = {
+  subscribe: (listener: () => void) => () => void;
+};
 export { createLatticeStore } from './runtime';
 export type { ReactiveSliceFactory, SliceHandle } from './runtime-types';
