@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { get } from 'svelte/store';
-import { createStore, type Selectors, type SetState } from '@lattice/store';
+import { createStore, vanillaAdapter, createLatticeStore, type Selectors, type SetState, getSliceMetadata } from '@lattice/core';
 import { sliceValue, sliceValues, derivedSlice, asReadable } from './svelte.js';
 
 describe('Svelte runtime utilities', () => {
   // Create a test store
   const createTestStore = () => {
-    const createSlice = createStore({
+    // Create the adapter directly so we can access its subscribe method
+    const adapter = vanillaAdapter({
       count: 0,
-      name: 'test',
+      name: 'test', 
       items: [] as string[],
     });
+    const createSlice = createLatticeStore(adapter);
     
     const counter = createSlice(
       (selectors: Selectors<{ count: number; name: string; items: string[] }>) => ({ count: selectors.count }),
@@ -35,11 +37,11 @@ describe('Svelte runtime utilities', () => {
       })
     );
     
-    // Use the global subscribe method from the createSlice factory
+    // Use the adapter's subscribe method for store-level changes
     return {
       counter: counter(),
       user: user(),
-      subscribe: createSlice.subscribe,
+      subscribe: adapter.subscribe,
     };
   };
   

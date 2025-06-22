@@ -1,17 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, nextTick } from 'vue';
-import { createStore } from '@lattice/store';
-import { useSliceSelector, useSliceValues, useSlice, useLattice } from './vue.js';
+import { createStore, vanillaAdapter, createLatticeStore, getSliceMetadata } from '@lattice/core';
+import { useSliceSelector, useSliceValues, useSliceByName, useLattice } from './vue.js';
 
 describe('Vue composables', () => {
   // Create a test store
   const createTestStore = () => {
-    const createSlice = createStore({
+    // Create the adapter directly so we can access its subscribe method
+    const adapter = vanillaAdapter({
       count: 0,
       name: 'test',
       items: [] as string[],
     });
+    const createSlice = createLatticeStore(adapter);
 
     const counter = createSlice(
       (selectors) => ({ count: selectors.count }),
@@ -47,12 +49,12 @@ describe('Vue composables', () => {
       })
     );
 
-    // Use the global subscribe method from the createSlice factory
+    // Use the adapter's subscribe method for store-level changes
     return {
       counter: counter(),
       user: user(),
       items: items(),
-      subscribe: createSlice.subscribe,
+      subscribe: adapter.subscribe,
     };
   };
 
@@ -218,7 +220,7 @@ describe('Vue composables', () => {
 
       const TestComponent = defineComponent({
         setup() {
-          const counter = useSlice(store, 'counter');
+          const counter = useSliceByName(store, 'counter');
           return { counter };
         },
         template: '<div>{{ counter.value() }}</div>',

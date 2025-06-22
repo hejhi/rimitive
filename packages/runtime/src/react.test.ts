@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
-import { createStore } from '@lattice/store';
+import { createStore } from '@lattice/core';
 import { useSlice, useSlices } from './react';
 
 describe('React hooks', () => {
