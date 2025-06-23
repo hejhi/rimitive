@@ -16,9 +16,9 @@ import { readable, type Readable } from 'svelte/store';
 import { getSliceMetadata, type SliceHandle } from '@lattice/core';
 
 // Type helper for inferring slice types
-type InferSliceTypes<T> = T extends readonly SliceHandle<infer U>[] 
-  ? { [K in keyof T]: T[K] extends SliceHandle<infer V> ? V : never }
-  : never;
+type InferSliceTypes<T extends readonly SliceHandle<any>[]> = {
+  [K in keyof T]: T[K] extends SliceHandle<infer V> ? V : never
+};
 
 /**
  * Convert a Lattice slice to a Svelte store with fine-grained reactivity.
@@ -150,7 +150,7 @@ export function combineSlices<T extends readonly SliceHandle<any>[], U>(
   slices: T,
   fn: (...values: InferSliceTypes<T>) => U
 ): Readable<U> {
-  const calculate = () => fn(...slices.map(s => s()) as InferSliceTypes<T>);
+  const calculate = () => fn(...slices.map(s => s()) as any);
   
   return readable(calculate(), (set) => {
     const unsubscribes = slices.map(slice => {
@@ -229,7 +229,7 @@ export function asyncDerived<T, U>(
   const metadata = getSliceMetadata(slice);
   
   return readable(
-    { data: initial, loading: false, error: null },
+    { data: initial, loading: false, error: null } as { data: U | undefined; loading: boolean; error: Error | null },
     (set) => {
       if (!metadata?.subscribe) {
         if (process.env.NODE_ENV !== 'production') {
@@ -241,7 +241,7 @@ export function asyncDerived<T, U>(
       let cancelled = false;
       
       const runAsync = async () => {
-        set({ data: initial, loading: true, error: null });
+        set({ data: initial, loading: true, error: null } as any);
         
         try {
           const result = await fn(slice());
@@ -250,7 +250,7 @@ export function asyncDerived<T, U>(
           }
         } catch (error) {
           if (!cancelled) {
-            set({ data: initial, loading: false, error: error as Error });
+            set({ data: initial, loading: false, error: error as Error } as any);
           }
         }
       };
@@ -316,10 +316,9 @@ export function asyncDerived<T, U>(
 export function memoized<T, U>(
   slice: SliceHandle<T>,
   fn: (value: T) => U,
-  options: { maxSize?: number; ttl?: number } = {}
+  _options: { maxSize?: number; ttl?: number } = {}
 ): Readable<U> {
-  const cache = new Map<string, { result: U; timestamp: number }>();
-  const { maxSize = 100, ttl = Infinity } = options;
+  // Simplified memoization using slice subscription invalidation
   let lastResult: U;
   let hasCachedResult = false;
   
