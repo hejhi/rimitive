@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { get } from 'svelte/store';
-import { createStore, vanillaAdapter, createLatticeStore, type Selectors, type SetState, getSliceMetadata } from '@lattice/core';
+import { vanillaAdapter, createLatticeStore, type Selectors, type SetState } from '@lattice/core';
 import { sliceValue, sliceValues, derivedSlice, asReadable } from './svelte.js';
 
 describe('Svelte runtime utilities', () => {

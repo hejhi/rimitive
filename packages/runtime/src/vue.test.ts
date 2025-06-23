@@ -1,21 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { defineComponent, nextTick } from 'vue';
-import { createStore, vanillaAdapter, createLatticeStore, getSliceMetadata } from '@lattice/core';
-import { useSliceSelector, useSliceValues, useSliceByName, useLattice } from './vue.js';
+import { defineComponent, computed, watch, nextTick } from 'vue';
+import { createStore } from '@lattice/core';
+import { useLatticeRef, useLatticeReactive, provideLatticeSlice, injectLatticeSlice } from './vue.js';
 
-describe('Vue composables', () => {
-  // Create a test store
-  const createTestStore = () => {
-    // Create the adapter directly so we can access its subscribe method
-    const adapter = vanillaAdapter({
+describe('Vue Lattice composables - New slice-based API', () => {
+  // Create test slices
+  const createTestSlices = () => {
+    const createSlice = createStore({
       count: 0,
       name: 'test',
       items: [] as string[],
     });
-    const createSlice = createLatticeStore(adapter);
 
-    const counter = createSlice(
+    const counterSlice = createSlice(
       (selectors) => ({ count: selectors.count }),
       ({ count }, set) => ({
         value: () => count(),
@@ -23,11 +21,12 @@ describe('Vue composables', () => {
           (selectors) => ({ count: selectors.count }),
           ({ count }) => ({ count: count() + 1 })
         ),
+        doubled: () => count() * 2,
         isEven: () => count() % 2 === 0,
       })
     );
 
-    const user = createSlice(
+    const userSlice = createSlice(
       (selectors) => ({ name: selectors.name }),
       ({ name }, set) => ({
         name: () => name(),
@@ -38,7 +37,7 @@ describe('Vue composables', () => {
       })
     );
 
-    const items = createSlice(
+    const itemsSlice = createSlice(
       (selectors) => ({ items: selectors.items }),
       ({ items }, set) => ({
         all: () => items(),
@@ -49,270 +48,269 @@ describe('Vue composables', () => {
       })
     );
 
-    // Use the adapter's subscribe method for store-level changes
-    return {
-      counter: counter(),
-      user: user(),
-      items: items(),
-      subscribe: adapter.subscribe,
-    };
+    return { counterSlice, userSlice, itemsSlice };
   };
 
-  describe('useSliceSelector', () => {
-    it('should return selected values and update on changes', async () => {
-      const store = createTestStore();
+  describe('useLatticeRef', () => {
+    it('should return a reactive ref that updates when slice changes', async () => {
+      const { counterSlice } = createTestSlices();
 
       const TestComponent = defineComponent({
         setup() {
-          const data = useSliceSelector(store, (s) => ({
-            count: s.counter.value(),
-            isEven: s.counter.isEven(),
-          }));
+          const count = useLatticeRef(counterSlice, c => c.value());
+          const doubled = useLatticeRef(counterSlice, c => c.doubled());
 
-          return { data };
+          return { count, doubled };
         },
-        template: '<div>{{ data }}</div>',
+        template: '<div>{{ count }} {{ doubled }}</div>',
       });
 
       const wrapper = mount(TestComponent);
+      expect(wrapper.text()).toBe('0 0');
 
-      expect(wrapper.vm.data).toEqual({ count: 0, isEven: true });
-
-      // Update store
-      store.counter.increment();
+      // Trigger slice action
+      counterSlice().increment();
       await nextTick();
+      expect(wrapper.text()).toBe('1 2');
 
-      expect(wrapper.vm.data).toEqual({ count: 1, isEven: false });
+      counterSlice().increment();
+      await nextTick();
+      expect(wrapper.text()).toBe('2 4');
     });
 
-    it('should not update for unrelated changes', async () => {
-      const store = createTestStore();
+    it('should work with Vue computed and watch', async () => {
+      const { counterSlice } = createTestSlices();
+      const watchedValues: number[] = [];
+
+      const TestComponent = defineComponent({
+        setup() {
+          const count = useLatticeRef(counterSlice, c => c.value());
+          const tripled = computed(() => count.value * 3);
+          
+          watch(count, (newVal) => {
+            watchedValues.push(newVal);
+          });
+
+          return { count, tripled };
+        },
+        template: '<div>{{ count }} {{ tripled }}</div>',
+      });
+
+      const wrapper = mount(TestComponent);
+      expect(wrapper.text()).toBe('0 0');
+
+      counterSlice().increment();
+      await nextTick();
+      expect(wrapper.text()).toBe('1 3');
+      expect(watchedValues).toEqual([1]);
+
+      counterSlice().increment();
+      await nextTick();
+      expect(wrapper.text()).toBe('2 6');
+      expect(watchedValues).toEqual([1, 2]);
+    });
+
+    it('should have fine-grained reactivity (not update for unrelated changes)', async () => {
+      const { counterSlice, userSlice } = createTestSlices();
       let renderCount = 0;
 
       const TestComponent = defineComponent({
         setup() {
-          renderCount++;
-          const count = useSliceSelector(store, (s) => s.counter.value());
+          const count = useLatticeRef(counterSlice, c => {
+            renderCount++;
+            return c.value();
+          });
+
           return { count };
         },
         template: '<div>{{ count }}</div>',
       });
 
       const wrapper = mount(TestComponent);
-      const initialRenderCount = renderCount;
+      expect(wrapper.text()).toBe('0');
+      expect(renderCount).toBe(1);
 
-      expect(wrapper.vm.count).toBe(0);
-
-      // Change unrelated state
-      store.user.setName('alice');
+      // Change unrelated slice - should NOT trigger re-render
+      userSlice().setName('alice');
       await nextTick();
+      expect(wrapper.text()).toBe('0');
+      expect(renderCount).toBe(1); // Still 1!
 
-      // Should not trigger re-render
-      expect(renderCount).toBe(initialRenderCount);
-      expect(wrapper.vm.count).toBe(0);
-
-      // Change selected state
-      store.counter.increment();
+      // Change related slice - should trigger re-render
+      counterSlice().increment();
       await nextTick();
-
-      expect(wrapper.vm.count).toBe(1);
+      expect(wrapper.text()).toBe('1');
+      expect(renderCount).toBe(2); // Now 2
     });
+  });
 
-    it('should clean up subscription on unmount', () => {
-      const store = createTestStore();
-      let unsubscribeCalled = false;
-      const originalSubscribe = store.subscribe;
-
-      // Mock subscribe to track unsubscribe calls
-      store.subscribe = vi.fn((listener) => {
-        const unsubscribe = originalSubscribe(listener);
-        return () => {
-          unsubscribeCalled = true;
-          return unsubscribe();
-        };
-      });
+  describe('useLatticeReactive', () => {
+    it('should return reactive object with multiple values', async () => {
+      const { counterSlice } = createTestSlices();
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useSliceSelector(store, (s) => s.counter.value());
+          const counter = useLatticeReactive(counterSlice, c => ({
+            value: c.value(),
+            doubled: c.doubled(),
+            isEven: c.isEven(),
+          }));
+
+          return { counter };
+        },
+        template: '<div>{{ counter.value }} {{ counter.doubled }} {{ counter.isEven }}</div>',
+      });
+
+      const wrapper = mount(TestComponent);
+      expect(wrapper.text()).toBe('0 0 true');
+
+      counterSlice().increment();
+      await nextTick();
+      expect(wrapper.text()).toBe('1 2 false');
+
+      counterSlice().increment();
+      await nextTick();
+      expect(wrapper.text()).toBe('2 4 true');
+    });
+
+    it('should work with computed refs based on reactive object', async () => {
+      const { counterSlice } = createTestSlices();
+
+      const TestComponent = defineComponent({
+        setup() {
+          const counter = useLatticeReactive(counterSlice, c => ({
+            value: c.value(),
+            doubled: c.doubled(),
+          }));
+
+          const tripled = computed(() => counter.value.value * 3);
+          const quadrupled = computed(() => counter.value.doubled * 2);
+
+          return { counter, tripled, quadrupled };
+        },
+        template: '<div>{{ counter.value }} {{ tripled }} {{ quadrupled }}</div>',
+      });
+
+      const wrapper = mount(TestComponent);
+      expect(wrapper.text()).toBe('0 0 0');
+
+      counterSlice().increment();
+      await nextTick();
+      expect(wrapper.text()).toBe('1 3 4');
+    });
+  });
+
+  describe('Dependency injection', () => {
+    it('should provide and inject slices across component tree', async () => {
+      const { counterSlice } = createTestSlices();
+
+      // Define proper type for the slice
+      type CounterSlice = typeof counterSlice;
+
+      const ChildComponent = defineComponent({
+        setup() {
+          const counter = injectLatticeSlice<ReturnType<CounterSlice>>('test-counter');
+          const count = useLatticeRef(counter, (c: any) => c.value());
+          
+          return { count, counter };
+        },
+        template: '<button @click="counter().increment()">{{ count }}</button>',
+      });
+
+      const ParentComponent = defineComponent({
+        setup() {
+          provideLatticeSlice('test-counter', counterSlice);
+          return {};
+        },
+        template: '<ChildComponent />',
+        components: { ChildComponent },
+      });
+
+      const wrapper = mount(ParentComponent);
+      expect(wrapper.text()).toBe('0');
+
+      // Click button to increment
+      await wrapper.find('button').trigger('click');
+      await nextTick();
+      expect(wrapper.text()).toBe('1');
+    });
+
+    it('should throw error when injecting non-provided slice', () => {
+      const TestComponent = defineComponent({
+        setup() {
+          expect(() => {
+            injectLatticeSlice('non-existent');
+          }).toThrow('Lattice slice with key "non-existent" was not found in the component tree');
+          
+          return {};
+        },
+        template: '<div></div>',
+      });
+
+      mount(TestComponent);
+    });
+  });
+
+  describe('Vue ecosystem integration', () => {
+    it('should work seamlessly with watch', async () => {
+      const { counterSlice } = createTestSlices();
+      const watchedValues: number[] = [];
+
+      const TestComponent = defineComponent({
+        setup() {
+          const count = useLatticeRef(counterSlice, c => c.value());
+          const doubled = useLatticeRef(counterSlice, c => c.doubled());
+          
+          watch([count, doubled], ([newCount, newDoubled]) => {
+            watchedValues.push(newCount, newDoubled);
+          });
+
+          return { count, doubled };
+        },
+        template: '<div>{{ count }} {{ doubled }}</div>',
+      });
+
+      mount(TestComponent);
+
+      counterSlice().increment();
+      await nextTick();
+      expect(watchedValues).toEqual([1, 2]);
+
+      counterSlice().increment();
+      await nextTick();
+      expect(watchedValues).toEqual([1, 2, 2, 4]);
+    });
+
+    it('should clean up subscriptions on unmount', () => {
+      const { counterSlice } = createTestSlices();
+      const unsubscribeSpy = vi.fn();
+      
+      // Mock the metadata to track unsubscribe calls
+      const originalMetadata = (counterSlice as any).__metadata__;
+      const mockSubscribe = vi.fn(() => unsubscribeSpy);
+      (counterSlice as any).__metadata__ = {
+        ...originalMetadata,
+        subscribe: mockSubscribe,
+      };
+
+      const TestComponent = defineComponent({
+        setup() {
+          const count = useLatticeRef(counterSlice, c => c.value());
           return { count };
         },
         template: '<div>{{ count }}</div>',
       });
 
       const wrapper = mount(TestComponent);
-      expect(store.subscribe).toHaveBeenCalledTimes(1);
-      expect(unsubscribeCalled).toBe(false);
+      expect(mockSubscribe).toHaveBeenCalledTimes(1);
+      expect(unsubscribeSpy).not.toHaveBeenCalled();
 
       // Unmount should call unsubscribe
       wrapper.unmount();
-      expect(unsubscribeCalled).toBe(true);
-    });
-  });
+      expect(unsubscribeSpy).toHaveBeenCalledTimes(1);
 
-  describe('useSliceValues', () => {
-    it('should use shallow equality by default and support destructuring', async () => {
-      const store = createTestStore();
-
-      const TestComponent = defineComponent({
-        setup() {
-          const { count, name } = useSliceValues(store, (s) => ({
-            count: s.counter.value(),
-            name: s.user.name(),
-          }));
-
-          return { count, name };
-        },
-        template: '<div>Count: {{ count }}, Name: {{ name }}</div>',
-      });
-
-      const wrapper = mount(TestComponent);
-
-      expect(wrapper.vm.count).toBe(0);
-      expect(wrapper.vm.name).toBe('test');
-
-      // Update values
-      store.counter.increment();
-      await nextTick();
-
-      expect(wrapper.vm.count).toBe(1);
-      expect(wrapper.vm.name).toBe('test');
-
-      store.user.setName('alice');
-      await nextTick();
-
-      expect(wrapper.vm.count).toBe(1);
-      expect(wrapper.vm.name).toBe('alice');
-    });
-
-    it('should handle multiple updates correctly', async () => {
-      const store = createTestStore();
-
-      const TestComponent = defineComponent({
-        setup() {
-          const values = useSliceValues(store, (s) => ({
-            count: s.counter.value(),
-            name: s.user.name(),
-          }));
-
-          return values;
-        },
-        template: '<div>{{ count }} {{ name }}</div>',
-      });
-
-      const wrapper = mount(TestComponent);
-
-      // Multiple updates
-      store.counter.increment();
-      store.counter.increment();
-      store.user.setName('bob');
-      store.counter.increment();
-      await nextTick();
-
-      expect(wrapper.vm.count).toBe(3);
-      expect(wrapper.vm.name).toBe('bob');
-    });
-  });
-
-  describe('useSlice', () => {
-    it('should return a single slice directly', () => {
-      const store = createTestStore();
-
-      const TestComponent = defineComponent({
-        setup() {
-          const counter = useSliceByName(store, 'counter');
-          return { counter };
-        },
-        template: '<div>{{ counter.value() }}</div>',
-      });
-
-      const wrapper = mount(TestComponent);
-
-      expect(wrapper.vm.counter).toBe(store.counter);
-      expect(wrapper.vm.counter.value()).toBe(0);
-
-      // Can call methods on the slice
-      wrapper.vm.counter.increment();
-      expect(wrapper.vm.counter.value()).toBe(1);
-    });
-  });
-
-  describe('useLattice', () => {
-    it('should provide both values and slices', async () => {
-      const store = createTestStore();
-
-      const TestComponent = defineComponent({
-        setup() {
-          const { values, slices } = useLattice(store, (s) => ({
-            count: s.counter.value(),
-          }));
-
-          return { values, slices };
-        },
-        template: '<div>{{ values.count }}</div>',
-      });
-
-      const wrapper = mount(TestComponent);
-
-      expect(wrapper.vm.values.count).toBe(0);
-      expect(wrapper.vm.slices).toBe(store);
-
-      // Can use slices to trigger actions
-      wrapper.vm.slices.counter.increment();
-      await nextTick();
-
-      expect(wrapper.vm.values.count).toBe(1);
-    });
-
-    it('should support custom equality function', async () => {
-      const store = createTestStore();
-      const customEqual = vi.fn(
-        (a: number, b: number) => Math.abs(a - b) < 3
-      );
-
-      const TestComponent = defineComponent({
-        setup() {
-          const { values } = useLattice(
-            store,
-            (s) => s.counter.value(),
-            customEqual
-          );
-
-          return { values };
-        },
-        template: '<div>{{ values }}</div>',
-      });
-
-      const wrapper = mount(TestComponent);
-
-      // Initial value - values is a ref containing the primitive
-      expect(wrapper.vm.values).toBe(0);
-
-      // Small changes should not trigger updates
-      store.counter.increment(); // 1
-      store.counter.increment(); // 2
-      await nextTick();
-
-      // Custom equality function should have been called
-      expect(customEqual).toHaveBeenCalled();
-
-      // Should still be 0 due to custom equality (diff < 3)
-      expect(wrapper.vm.values).toBe(0);
-
-      // This change triggers update (diff = 3, which is NOT < 3)
-      store.counter.increment(); // 3
-      await nextTick();
-
-      // Should update to 3
-      expect(wrapper.vm.values).toBe(3);
-
-      // Small change from 3 should not trigger update
-      store.counter.increment(); // 4
-      store.counter.increment(); // 5
-      await nextTick();
-
-      // Should still be 3 (diff < 3)
-      expect(wrapper.vm.values).toBe(3);
+      // Restore original metadata
+      (counterSlice as any).__metadata__ = originalMetadata;
     });
   });
 });

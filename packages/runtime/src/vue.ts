@@ -1,248 +1,220 @@
 /**
- * @fileoverview Vue composables for Lattice
+ * @fileoverview Vue composables for Lattice - New slice-based API
  *
- * This module provides Vue 3 composables that work with any Lattice adapter,
- * enabling reactive component updates based on slice method results.
+ * This module provides Vue 3 composables that leverage Lattice's fine-grained 
+ * reactivity system. Unlike the old store-based approach, these composables
+ * work directly with slice handles and provide native Vue ref integration.
  *
  * Key features:
- * - Direct slice subscriptions leveraging Lattice's fine-grained reactivity
- * - Convenience composables for common patterns
- * - Full TypeScript support with proper inference
- * - Optimized reactivity using Vue's ref and reactive
+ * - Fine-grained reactivity using slice-level subscriptions
+ * - Native Vue ref integration (works with computed, watch, etc.)
+ * - Dependency injection for clean slice management
+ * - Full TypeScript inference from slice types to Vue refs
+ * - Minimal API that covers 90% of use cases
+ * - Consistent error handling with development warnings
  */
 
-import { ref, reactive, toRefs, onUnmounted, type Ref, type ToRefs } from 'vue';
+import { 
+  ref, 
+  computed, 
+  inject, 
+  provide, 
+  onUnmounted, 
+  type ComputedRef,
+  type InjectionKey 
+} from 'vue';
+
+import { getSliceMetadata } from '@lattice/core';
+import type { SliceHandle } from '@lattice/core';
+
+// Map for injection keys - bounded by string keys used in app
+const SLICE_INJECTION_KEYS = new Map<string, InjectionKey<any>>();
 
 /**
- * A store that can be subscribed to (for backwards compatibility)
+ * Creates or retrieves an injection key for a given slice key.
+ * Uses Map since we need string keys, but this is bounded by actual usage.
  */
-export type SubscribableStore = {
-  subscribe: (listener: () => void) => () => void;
-};
-
-/**
- * Get slice metadata to access its subscription method
- */
-function getSliceSubscribe(slice: any): ((listener: () => void) => () => void) | undefined {
-  // Try to get metadata from slice
-  if (typeof slice?._latticeMetadata?.subscribe === 'function') {
-    return slice._latticeMetadata.subscribe;
+function getOrCreateSliceKey<T>(key: string): InjectionKey<SliceHandle<T>> {
+  if (!SLICE_INJECTION_KEYS.has(key)) {
+    SLICE_INJECTION_KEYS.set(key, Symbol(`lattice-slice-${key}`) as InjectionKey<SliceHandle<T>>);
   }
-  
-  // Fallback: check if slice itself has subscribe method
-  if (typeof slice?.subscribe === 'function') {
-    return slice.subscribe;
-  }
-  
-  return undefined;
+  return SLICE_INJECTION_KEYS.get(key) as InjectionKey<SliceHandle<T>>;
 }
 
 /**
- * Vue composable for subscribing to a single slice.
+ * Creates a Vue ref from a Lattice slice selector with fine-grained reactivity.
  *
- * This leverages Lattice's fine-grained reactivity by subscribing directly
- * to the slice's own subscription mechanism.
+ * This is the core utility that bridges Lattice slices to Vue's reactivity system.
+ * The returned ref will only update when the slice's dependencies change, leveraging
+ * Lattice's fine-grained subscription system.
  *
- * @param slice - A Lattice slice
- * @returns Ref that updates when the slice's dependencies change
+ * @param slice - A Lattice slice handle
+ * @param selector - Function that extracts a value from the slice's computed properties
+ * @returns ComputedRef that updates when the slice's dependencies change
  *
  * @example
  * ```vue
  * <script setup>
- * const counterData = useSlice(store.counter);
+ * const count = useLatticeRef(counterSlice, c => c.value())
+ * const doubled = useLatticeRef(counterSlice, c => c.doubled())
+ * 
+ * // Use with any Vue API
+ * const tripled = computed(() => count.value * 3)
+ * watch(count, (newVal) => console.log('Count changed:', newVal))
  * </script>
  *
  * <template>
- *   <div>Count: {{ counterData().value }}</div>
+ *   <div>Count: {{ count }}</div>
+ *   <div>Doubled: {{ doubled }}</div>
+ *   <div>Tripled: {{ tripled }}</div>
  * </template>
  * ```
  */
-export function useSlice<T>(slice: T): Ref<T> {
-  const state = ref<T>(slice);
+export function useLatticeRef<Computed, T>(
+  slice: SliceHandle<Computed>,
+  selector: (computed: Computed) => T
+): ComputedRef<T> {
+  const metadata = getSliceMetadata(slice);
   
-  const subscribe = getSliceSubscribe(slice);
-  if (subscribe) {
-    const unsubscribe = subscribe(() => {
-      state.value = slice;
+  if (!metadata?.subscribe) {
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error('[useLatticeRef] No subscription metadata found for slice. This is likely a bug - ensure you\'re passing a valid slice handle.');
+    }
+  }
+
+  // Use Vue's reactivity directly - create a ref that gets updated
+  const result = ref(selector(slice()));
+  
+  if (metadata?.subscribe) {
+    const unsubscribe = metadata.subscribe(() => {
+      // Direct update when slice dependencies change
+      result.value = selector(slice());
     });
     onUnmounted(unsubscribe);
   }
 
-  return state as Ref<T>;
+  // Return as computed ref for proper typing and Vue ecosystem compatibility
+  return computed(() => result.value);
 }
 
 /**
- * Vue composable for subscribing to multiple slices.
+ * Creates a reactive object from a Lattice slice selector with fine-grained reactivity.
  *
- * For complex selectors, falls back to store-level subscription.
- * Prefer useSlice for single slices or useSliceValues for simple multi-slice access.
+ * This is useful when you want to extract multiple values from a single slice.
+ * The returned ref contains an object with the selected properties, and only
+ * updates when the slice's dependencies change.
  *
- * @param store - A Lattice store with slices and subscribe method
- * @param selector - Function that selects values from slices
- * @param equalityFn - Optional custom equality function (defaults to Object.is)
- * @returns Ref containing the selected values
+ * @param slice - A Lattice slice handle  
+ * @param selector - Function that extracts an object from the slice's computed properties
+ * @returns ComputedRef containing the selected object
  *
  * @example
  * ```vue
  * <script setup>
- * const data = useSliceSelector(store, (slices) => ({
- *   count: slices.counter().value,
- *   user: slices.user().name
- * }));
+ * const counter = useLatticeReactive(counterSlice, c => ({
+ *   value: c.value(),
+ *   doubled: c.doubled(), 
+ *   isEven: c.value() % 2 === 0
+ * }))
+ * 
+ * // Access properties directly
+ * const tripled = computed(() => counter.value.value * 3)
  * </script>
  *
  * <template>
- *   <div>{{ data.user }}: {{ data.count }}</div>
+ *   <div>Count: {{ counter.value }}</div>
+ *   <div>Doubled: {{ counter.doubled }}</div>
+ *   <div>Is Even: {{ counter.isEven }}</div>
  * </template>
  * ```
  */
-export function useSliceSelector<Component, Selected>(
-  store: Component & SubscribableStore,
-  selector: (slices: Component) => Selected,
-  equalityFn: (a: Selected, b: Selected) => boolean = Object.is
-): Ref<Selected> {
-  const state = ref<Selected>(selector(store));
-  let prevSelected = state.value;
-
-  // Use store-level subscription for complex selectors
-  const unsubscribe = store.subscribe(() => {
-    try {
-      const nextSelected = selector(store);
-      
-      if (!equalityFn(nextSelected, prevSelected)) {
-        prevSelected = nextSelected;
-        state.value = nextSelected;
-      }
-    } catch (error) {
-      console.error('Error in useSliceSelector selector:', error);
+export function useLatticeReactive<Computed, T extends Record<string, unknown>>(
+  slice: SliceHandle<Computed>,
+  selector: (computed: Computed) => T
+): ComputedRef<T> {
+  const metadata = getSliceMetadata(slice);
+  
+  if (!metadata?.subscribe) {
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error('[useLatticeReactive] No subscription metadata found for slice. This is likely a bug - ensure you\'re passing a valid slice handle.');
     }
-  });
+  }
 
-  onUnmounted(unsubscribe);
-  return state as Ref<Selected>;
+  // Use Vue's reactivity directly - create a ref that gets updated
+  const result = ref(selector(slice()));
+  
+  if (metadata?.subscribe) {
+    const unsubscribe = metadata.subscribe(() => {
+      // Direct update when slice dependencies change
+      result.value = selector(slice());
+    });
+    onUnmounted(unsubscribe);
+  }
+
+  // Return as computed ref for proper typing and Vue ecosystem compatibility
+  return computed(() => result.value);
 }
 
 /**
- * Convenience composable for accessing a slice by name from a store.
+ * Provides a Lattice slice to the component tree for dependency injection.
  *
- * This returns the slice directly since slice objects are stable.
- * For reactive updates, use the returned slice with useSlice.
+ * This enables clean separation of slice creation from usage, allowing child
+ * components to access slices without prop drilling.
  *
- * @param store - A Lattice store with slices
- * @param sliceName - The name of the slice to access
- * @returns The slice object
+ * @param key - Unique string key for the slice
+ * @param slice - The slice handle to provide
  *
  * @example
  * ```vue
+ * <!-- Parent component -->
  * <script setup>
- * const counter = useSliceByName(store, 'counter');
- * const counterData = useSlice(counter);
+ * const counterSlice = createSlice(...)
+ * provideLatticeSlice('counter', counterSlice)
  * </script>
  *
  * <template>
- *   <button @click="counter().increment">
- *     Count: {{ counterData().value }}
- *   </button>
+ *   <ChildComponent />
  * </template>
  * ```
  */
-export function useSliceByName<Component, K extends keyof Component>(
-  store: Component,
-  sliceName: K
-): Component[K] {
-  return store[sliceName];
+export function provideLatticeSlice<T>(key: string, slice: SliceHandle<T>): void {
+  const injectionKey = getOrCreateSliceKey<T>(key);
+  provide(injectionKey, slice);
 }
 
 /**
- * Composable for subscribing to multiple slice values.
+ * Injects a Lattice slice from the component tree using dependency injection.
  *
- * This leverages Lattice's fine-grained reactivity without manual equality checks.
- * Returns refs for destructuring support.
+ * This allows child components to access slices provided by parent components
+ * without explicit prop passing.
  *
- * @param store - A Lattice store with slices
- * @param selector - Function that selects values from slices
- * @returns Refs of the selected values for destructuring
- *
- * @example
- * ```vue
- * <script setup>
- * const { name, email, isLoggedIn, itemCount } = useSliceValues(store, (slices) => ({
- *   name: slices.user().name,
- *   email: slices.user().email,
- *   isLoggedIn: slices.auth().isAuthenticated,
- *   itemCount: slices.cart().itemCount
- * }));
- * </script>
- *
- * <template>
- *   <div>Welcome {{ name }}!</div>
- * </template>
- * ```
- */
-export function useSliceValues<
-  Component,
-  Selected extends Record<string, unknown>,
->(
-  store: Component & SubscribableStore,
-  selector: (slices: Component) => Selected
-): ToRefs<Selected> {
-  // Use reactive for object state
-  const state = reactive(selector(store)) as Selected;
-
-  // Subscribe to store changes - Lattice handles fine-grained updates
-  const unsubscribe = store.subscribe(() => {
-    try {
-      const nextSelected = selector(store);
-      Object.assign(state, nextSelected);
-    } catch (error) {
-      console.error('Error in useSliceValues selector:', error);
-    }
-  });
-
-  // Clean up subscription
-  onUnmounted(unsubscribe);
-
-  // Return refs for destructuring support
-  return toRefs(state) as ToRefs<Selected>;
-}
-
-/**
- * Composable that provides both slice values and the full store for actions.
- *
- * This is useful when you need to both read values and call actions
- * in the same component.
- *
- * @param store - A Lattice store with slices
- * @param selector - Function that selects values from slices
- * @returns Object with selected values (as ref) and slices
+ * @param key - Unique string key for the slice
+ * @returns The injected slice handle
+ * @throws Error if slice was not provided
  *
  * @example
  * ```vue
+ * <!-- Child component -->
  * <script setup>
- * const { values, slices } = useLattice(store, (s) => ({
- *   todo: s.todos().getById(props.id),
- *   isEditing: s.ui().isEditing(props.id)
- * }));
+ * const counterSlice = injectLatticeSlice('counter')
+ * const count = useLatticeRef(counterSlice, c => c.value())
+ * 
+ * const increment = () => counterSlice().increment()
  * </script>
  *
  * <template>
- *   <div>
- *     <span>{{ values.todo.text }}</span>
- *     <button @click="() => slices.todos().remove(props.id)">
- *       Delete
- *     </button>
- *   </div>
+ *   <button @click="increment">{{ count }}</button>
  * </template>
  * ```
  */
-export function useLattice<Component, Selected>(
-  store: Component & SubscribableStore,
-  selector: (slices: Component) => Selected,
-  equalityFn?: (a: Selected, b: Selected) => boolean
-): {
-  values: Ref<Selected>;
-  slices: Component;
-} {
-  const values = useSliceSelector(store, selector, equalityFn);
-  return { values, slices: store };
+export function injectLatticeSlice<T>(key: string): SliceHandle<T> {
+  const injectionKey = getOrCreateSliceKey<T>(key);
+  const slice = inject(injectionKey);
+  
+  if (!slice) {
+    throw new Error(`Lattice slice with key "${key}" was not found in the component tree. Make sure it's provided by a parent component using provideLatticeSlice().`);
+  }
+  
+  return slice;
 }
+
