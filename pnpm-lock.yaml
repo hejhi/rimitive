@@ -365,6 +365,9 @@ importers:
         specifier: workspace:*
         version: link:../core
     devDependencies:
+      '@sveltejs/vite-plugin-svelte':
+        specifier: ^5.1.0
+        version: 5.1.0(svelte@5.34.1)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))
       '@testing-library/react':
         specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@19.1.6(@types/react@18.3.22))(@types/react@18.3.22)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -7349,6 +7352,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@sveltejs/vite-plugin-svelte-inspector@4.0.1(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.34.1)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1)))(svelte@5.34.1)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))':
+    dependencies:
+      '@sveltejs/vite-plugin-svelte': 5.1.0(svelte@5.34.1)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))
+      debug: 4.4.1
+      svelte: 5.34.1
+      vite: 6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1)
+    transitivePeerDependencies:
+      - supports-color
+
   '@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.34.1)(vite@6.3.3(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))':
     dependencies:
       '@sveltejs/vite-plugin-svelte-inspector': 4.0.1(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.34.1)(vite@6.3.3(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1)))(svelte@5.34.1)(vite@6.3.3(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))
@@ -7372,6 +7384,19 @@ snapshots:
       svelte: 5.34.1
       vite: 6.3.5(@types/node@20.17.52)(tsx@4.19.4)(yaml@2.7.1)
       vitefu: 1.0.6(vite@6.3.5(@types/node@20.17.52)(tsx@4.19.4)(yaml@2.7.1))
+    transitivePeerDependencies:
+      - supports-color
+
+  '@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.34.1)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))':
+    dependencies:
+      '@sveltejs/vite-plugin-svelte-inspector': 4.0.1(@sveltejs/vite-plugin-svelte@5.1.0(svelte@5.34.1)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1)))(svelte@5.34.1)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))
+      debug: 4.4.1
+      deepmerge: 4.3.1
+      kleur: 4.1.5
+      magic-string: 0.30.17
+      svelte: 5.34.1
+      vite: 6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1)
+      vitefu: 1.0.6(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))
     transitivePeerDependencies:
       - supports-color
 

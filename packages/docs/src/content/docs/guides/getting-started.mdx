@@ -154,7 +154,13 @@ Now use your counter in any framework:
   <TabItem label="Svelte">
     ```svelte
     <script>
-    import { createStore } from '@lattice/adapter-svelte';
+    // Svelte 5 + Runes (Recommended)
+    import { createStore } from '@lattice/core';
+    const state = $state({ count: 0 });
+    const createSlice = createStore(state);
+    
+    // OR Svelte 4 + Stores (Legacy)
+    import { asStore } from '@lattice/frameworks/svelte';
     import { createCounter } from './counter';
     
     // Svelte can use reactive state directly

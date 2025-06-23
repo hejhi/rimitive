@@ -85,11 +85,16 @@ const createDropdown = (createSlice) => {
 // Use the same behavior across different frameworks
 import { createStore } from '@lattice/adapter-store-react';
 import { createStore as createPiniaStore } from '@lattice/adapter-pinia';
-import { createStore as createSvelteStore } from '@lattice/adapter-svelte';
+import { createStore as createSvelteStore } from '@lattice/core'; // Direct core usage with runes
 
 // Each adapter creates a store that returns a slice factory
 const reactCreateSlice = createStore({ isOpen: false, selectedIndex: -1, items: [] });
 const reactDropdown = createDropdown(reactCreateSlice);
+
+// For Svelte 5 + Runes - use core directly with $state
+const svelteState = $state({ isOpen: false, selectedIndex: -1, items: [] });
+const svelteCreateSlice = createSvelteStore(svelteState);
+const svelteDropdown = createDropdown(svelteCreateSlice);
 
 const vueCreateSlice = createPiniaStore({ isOpen: false, selectedIndex: -1, items: [] });
 const vueDropdown = createDropdown(vueCreateSlice);
@@ -362,9 +367,10 @@ npm install @lattice/core
 npm install @lattice/adapter-redux    # For Redux
 npm install @lattice/adapter-zustand   # For Zustand
 npm install @lattice/adapter-pinia     # For Pinia
-npm install @lattice/adapter-svelte    # For Svelte
+npm install @lattice/core              # For Svelte 5 + Runes (direct usage)
 
 # Framework integration (optional)
+npm install @lattice/frameworks       # For framework-specific utilities
 npm install @lattice/runtime          # For React/Vue/Svelte hooks
 ```
 

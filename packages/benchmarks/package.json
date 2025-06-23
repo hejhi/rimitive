@@ -21,7 +21,6 @@
   "devDependencies": {
     "@lattice/adapter-redux": "workspace:*",
     "@lattice/adapter-store-react": "workspace:*",
-    "@lattice/adapter-svelte": "workspace:*",
     "@lattice/adapter-zustand": "workspace:*",
     "@lattice/core": "workspace:*",
     "@lattice/frameworks": "workspace:*",
