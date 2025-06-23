@@ -1,8 +1,8 @@
-// Runtime package main entry point
+// Framework integrations package main entry point
 // Framework-specific exports are available via subpath exports:
-// - @lattice/runtime/react
-// - @lattice/runtime/vue  
-// - @lattice/runtime/svelte
+// - @lattice/frameworks/react
+// - @lattice/frameworks/vue  
+// - @lattice/frameworks/svelte
 
 // Re-export core utilities that are framework-agnostic
 export { createLatticeStore } from '@lattice/core';

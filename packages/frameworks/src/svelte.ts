@@ -32,7 +32,7 @@ type InferSliceTypes<T extends readonly SliceHandle<any>[]> = {
  * @example
  * ```svelte
  * <script>
- *   import { asStore } from '@lattice/runtime/svelte';
+ *   import { asStore } from '@lattice/frameworks/svelte';
  *   
  *   const counter = asStore(counterSlice);
  *   const user = asStore(userSlice);
@@ -73,7 +73,7 @@ export function asStore<T>(slice: SliceHandle<T>): Readable<T> {
  * @example
  * ```svelte
  * <script>
- *   import { sliceDerived } from '@lattice/runtime/svelte';
+ *   import { sliceDerived } from '@lattice/frameworks/svelte';
  *   
  *   // Only updates when counter dependencies change (not user, cart, etc.)
  *   const doubled = sliceDerived(counterSlice, c => c.value() * 2);
@@ -123,7 +123,7 @@ export function sliceDerived<T, U>(
  * @example
  * ```svelte
  * <script>
- *   import { combineSlices } from '@lattice/runtime/svelte';
+ *   import { combineSlices } from '@lattice/frameworks/svelte';
  *   
  *   // Only updates when counter OR user changes (not cart, auth, etc.)
  *   const summary = combineSlices(
@@ -197,7 +197,7 @@ export function combineSlices<T extends readonly SliceHandle<any>[], U>(
  * @example
  * ```svelte
  * <script>
- *   import { asyncDerived } from '@lattice/runtime/svelte';
+ *   import { asyncDerived } from '@lattice/frameworks/svelte';
  *   
  *   // Only refetches when user slice dependencies change
  *   const userData = asyncDerived(userSlice, async user => {
@@ -297,7 +297,7 @@ export function asyncDerived<T, U>(
  * @example
  * ```svelte
  * <script>
- *   import { memoized } from '@lattice/runtime/svelte';
+ *   import { memoized } from '@lattice/frameworks/svelte';
  *   
  *   // Expensive computation that's memoized
  *   const fibonacci = memoized(

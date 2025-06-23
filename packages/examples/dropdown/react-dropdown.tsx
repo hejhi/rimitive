@@ -4,7 +4,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { createZustandAdapter } from '@lattice/adapter-zustand';
-import { useSliceValues } from '@lattice/runtime/react';
+import { useSliceValues } from '@lattice/frameworks/react';
 import { createFullDropdown } from './dropdown-behavior';
 
 // Create the dropdown store

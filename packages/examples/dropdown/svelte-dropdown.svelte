@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy, tick } from 'svelte';
   import { createSvelteAdapter } from '@lattice/adapter-svelte';
-  import { sliceValues } from '@lattice/runtime/svelte';
+  import { sliceValues } from '@lattice/frameworks/svelte';
   import { createFullDropdown } from './dropdown-behavior';
 
   // Props

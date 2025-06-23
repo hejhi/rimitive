@@ -23,11 +23,11 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: ['@lattice/core', '@lattice/runtime', 'svelte', 'svelte/store'],
+      external: ['@lattice/core', '@lattice/frameworks', 'svelte', 'svelte/store'],
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
-          '@lattice/runtime': 'LatticeRuntime',
+          '@lattice/frameworks': 'LatticeFrameworks',
           svelte: 'Svelte',
           'svelte/store': 'SvelteStore',
         },

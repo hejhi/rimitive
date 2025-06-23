@@ -11,7 +11,7 @@
 import { describe, bench } from 'vitest';
 import { writable, derived, get, type Writable } from 'svelte/store';
 import { createStore } from '@lattice/core';
-import { combineSlices, sliceDerived } from '@lattice/runtime/svelte';
+import { combineSlices, sliceDerived } from '@lattice/frameworks/svelte';
 
 // Test scenario: Multiple independent state domains that get combined into derived views
 const INITIAL_STATE = {

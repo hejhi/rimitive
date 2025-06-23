@@ -1,7 +1,7 @@
 {
-  "name": "@lattice/runtime",
+  "name": "@lattice/frameworks",
   "version": "0.0.1",
-  "description": "Runtime architecture for Lattice - provides universal execution engine and middleware system",
+  "description": "Framework integrations for Lattice - React hooks, Vue composables, and Svelte stores",
   "author": "Lattice Team",
   "license": "MIT",
   "type": "module",

@@ -24,7 +24,7 @@
     "@lattice/adapter-svelte": "workspace:*",
     "@lattice/adapter-zustand": "workspace:*",
     "@lattice/core": "workspace:*",
-    "@lattice/runtime": "workspace:*",
+    "@lattice/frameworks": "workspace:*",
     "@reduxjs/toolkit": "^2.8.2",
     "@sveltejs/vite-plugin-svelte": "^5.1.0",
     "@testing-library/react": "^14.0.0",

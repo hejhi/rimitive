@@ -22,7 +22,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         '@lattice/core',
-        '@lattice/runtime',
+        '@lattice/frameworks',
         '@reduxjs/toolkit',
         'redux',
         'react',
@@ -31,7 +31,7 @@ export default defineConfig({
       output: {
         globals: {
           '@lattice/core': 'LatticeCore',
-          '@lattice/runtime': 'LatticeRuntime',
+          '@lattice/frameworks': 'LatticeFrameworks',
           '@reduxjs/toolkit': 'RTK',
           redux: 'Redux',
           react: 'React',

@@ -71,7 +71,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { createPiniaAdapter } from '@lattice/adapter-pinia';
-import { useSliceValues } from '@lattice/runtime/vue';
+import { useSliceValues } from '@lattice/frameworks/vue';
 import { createFullDropdown } from './dropdown-behavior';
 
 // Props
