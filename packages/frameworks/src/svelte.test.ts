@@ -1,7 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { get } from 'svelte/store';
 import { createStore } from '@lattice/core';
-import { asStore, sliceDerived, combineSlices, asyncDerived, memoized } from './svelte.js';
+import {
+  asStore,
+  sliceDerived,
+  combineSlices,
+  asyncDerived,
+  memoized,
+} from './svelte';
 
 describe('Svelte utilities - New slice-based API', () => {
   // Create test slices
@@ -16,22 +22,24 @@ describe('Svelte utilities - New slice-based API', () => {
       (selectors) => ({ count: selectors.count }),
       ({ count }, set) => ({
         value: () => count(),
-        increment: () => set(
-          (selectors) => ({ count: selectors.count }),
-          ({ count }) => ({ count: count() + 1 })
-        ),
+        increment: () =>
+          set(
+            (selectors) => ({ count: selectors.count }),
+            ({ count }) => ({ count: count() + 1 })
+          ),
         doubled: () => count() * 2,
       })
     );
-    
+
     const userSlice = createSlice(
       (selectors) => ({ name: selectors.name }),
       ({ name }, set) => ({
         name: () => name(),
-        setName: (newName: string) => set(
-          (selectors) => ({ name: selectors.name }),
-          () => ({ name: newName })
-        ),
+        setName: (newName: string) =>
+          set(
+            (selectors) => ({ name: selectors.name }),
+            () => ({ name: newName })
+          ),
       })
     );
 
@@ -39,10 +47,11 @@ describe('Svelte utilities - New slice-based API', () => {
       (selectors) => ({ items: selectors.items }),
       ({ items }, set) => ({
         all: () => items(),
-        add: (item: string) => set(
-          (selectors) => ({ items: selectors.items }),
-          ({ items }) => ({ items: [...items(), item] })
-        ),
+        add: (item: string) =>
+          set(
+            (selectors) => ({ items: selectors.items }),
+            ({ items }) => ({ items: [...items(), item] })
+          ),
       })
     );
 
@@ -76,9 +85,9 @@ describe('Svelte utilities - New slice-based API', () => {
 
       // Change the name
       get(userStore).setName('Alice');
-      
+
       expect(values).toEqual(['test', 'Alice']);
-      
+
       unsubscribe();
     });
   });
@@ -86,11 +95,13 @@ describe('Svelte utilities - New slice-based API', () => {
   describe('sliceDerived', () => {
     it('should create derived store from slice', () => {
       const { counterSlice } = createTestSlices();
-      const doubled = sliceDerived(counterSlice, (counter) => counter.doubled());
-      
+      const doubled = sliceDerived(counterSlice, (counter) =>
+        counter.doubled()
+      );
+
       // Subscribe to ensure the store is active
       const values: number[] = [];
-      const unsubscribe = doubled.subscribe(value => values.push(value));
+      const unsubscribe = doubled.subscribe((value) => values.push(value));
 
       expect(get(doubled)).toBe(0);
 
@@ -100,16 +111,16 @@ describe('Svelte utilities - New slice-based API', () => {
 
       counterSlice().increment();
       expect(get(doubled)).toBe(4);
-      
+
       expect(values).toEqual([0, 2, 4]);
-      
+
       unsubscribe();
     });
 
     it('should only update when slice dependencies change', () => {
       const { counterSlice, userSlice } = createTestSlices();
       let computationCount = 0;
-      
+
       const expensiveDerivation = sliceDerived(counterSlice, (counter) => {
         computationCount++;
         return `Count: ${counter.value()}`;
@@ -138,15 +149,15 @@ describe('Svelte utilities - New slice-based API', () => {
   describe('combineSlices', () => {
     it('should combine multiple slices efficiently', () => {
       const { counterSlice, userSlice } = createTestSlices();
-      
+
       const summary = combineSlices(
-        [counterSlice, userSlice],
+        [counterSlice, userSlice] as const,
         (counter, user) => `${user.name()}: ${counter.value()}`
       );
 
       // Subscribe to make it active
       const values: string[] = [];
-      const unsubscribe = summary.subscribe(value => values.push(value));
+      const unsubscribe = summary.subscribe((value) => values.push(value));
 
       expect(get(summary)).toBe('test: 0');
 
@@ -157,18 +168,18 @@ describe('Svelte utilities - New slice-based API', () => {
       // Update user
       userSlice().setName('Alice');
       expect(get(summary)).toBe('Alice: 1');
-      
+
       expect(values).toEqual(['test: 0', 'test: 1', 'Alice: 1']);
-      
+
       unsubscribe();
     });
 
     it('should only recalculate when relevant slices change', () => {
       const { counterSlice, userSlice, itemsSlice } = createTestSlices();
       let computationCount = 0;
-      
+
       const summary = combineSlices(
-        [counterSlice, userSlice], // Only depends on counter and user, NOT items
+        [counterSlice, userSlice] as const, // Only depends on counter and user, NOT items
         (counter, user) => {
           computationCount++;
           return `${user.name()}: ${counter.value()}`;
@@ -203,35 +214,37 @@ describe('Svelte utilities - New slice-based API', () => {
   describe('asyncDerived', () => {
     it('should handle async operations with loading states', async () => {
       const { userSlice } = createTestSlices();
-      
+
       const userData = asyncDerived(userSlice, async (user) => {
         // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 10));
+        await new Promise((resolve) => setTimeout(resolve, 10));
         return { email: `${user.name().toLowerCase()}@example.com` };
       });
 
       // Subscribe to make it active
       const states: any[] = [];
-      const unsubscribe = userData.subscribe(state => states.push({...state}));
+      const unsubscribe = userData.subscribe((state) =>
+        states.push({ ...state })
+      );
 
       // Initially should be loading since async operation starts immediately
       expect(get(userData).loading).toBe(true);
 
       // Wait for async operation to complete
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       const result = get(userData);
       expect(result.loading).toBe(false);
       expect(result.error).toBe(null);
       expect(result.data).toEqual({ email: 'test@example.com' });
-      
+
       unsubscribe();
     });
 
     it('should handle async errors', async () => {
       const { userSlice } = createTestSlices();
-      
-      const failingData = asyncDerived(userSlice, async (user) => {
+
+      const failingData = asyncDerived(userSlice, async () => {
         throw new Error('API Error');
       });
 
@@ -239,14 +252,14 @@ describe('Svelte utilities - New slice-based API', () => {
       const unsubscribe = failingData.subscribe(() => {});
 
       // Wait for async operation to fail
-      await new Promise(resolve => setTimeout(resolve, 20));
+      await new Promise((resolve) => setTimeout(resolve, 20));
 
       const result = get(failingData);
       expect(result.loading).toBe(false);
       expect(result.data).toBe(undefined);
       expect(result.error).toBeInstanceOf(Error);
       expect(result.error?.message).toBe('API Error');
-      
+
       unsubscribe();
     });
   });
@@ -255,23 +268,22 @@ describe('Svelte utilities - New slice-based API', () => {
     it('should memoize expensive computations', () => {
       const { counterSlice } = createTestSlices();
       let computationCount = 0;
-      
+
       const expensiveStore = memoized(
         counterSlice,
         (counter) => {
           computationCount++;
-          // Expensive computation
-          let result = 0;
-          for (let i = 0; i < 1000; i++) {
-            result += counter.value() * i;
-          }
-          return result;
-        },
-        { maxSize: 10 }
+          // Simpler expensive computation that's easier to verify
+          return counter.value() * 100;
+        }
       );
 
-      // First computation
+      // Subscribe to ensure the store is active
+      const unsubscribe = expensiveStore.subscribe(() => {});
+
+      // First computation (count = 0)
       const result1 = get(expensiveStore);
+      expect(result1).toBe(0);
       expect(computationCount).toBe(1);
 
       // Same input - should use cache
@@ -280,44 +292,56 @@ describe('Svelte utilities - New slice-based API', () => {
       expect(computationCount).toBe(1); // Still 1!
 
       // Different input - should recompute
-      counterSlice().increment();
+      counterSlice().increment(); // count = 1
       const result3 = get(expensiveStore);
+      expect(result3).toBe(100); // 1 * 100
       expect(result3).not.toBe(result1);
       expect(computationCount).toBe(2);
 
-      // Back to original input - should use cache
-      counterSlice().increment(); // Now count is 2
+      // Different input again - should recompute
+      counterSlice().increment(); // count = 2
       const result4 = get(expensiveStore);
+      expect(result4).toBe(200); // 2 * 100
       expect(computationCount).toBe(3);
+
+      unsubscribe();
     });
 
-    it('should respect TTL cache expiration', async () => {
-      const { counterSlice } = createTestSlices();
+    it('should only recompute when slice dependencies change', () => {
+      const { counterSlice, userSlice } = createTestSlices();
       let computationCount = 0;
-      
+
       const expensiveStore = memoized(
         counterSlice,
         (counter) => {
           computationCount++;
           return counter.value() * 100;
-        },
-        { ttl: 50 } // 50ms TTL
+        }
       );
 
-      // First computation
-      get(expensiveStore);
+      // Subscribe to ensure the store is active
+      const unsubscribe = expensiveStore.subscribe(() => {});
+
+      // Initial computation
+      expect(get(expensiveStore)).toBe(0);
       expect(computationCount).toBe(1);
 
-      // Immediate second call - should use cache
-      get(expensiveStore);
-      expect(computationCount).toBe(1);
+      // Multiple gets without slice changes - should use cache
+      expect(get(expensiveStore)).toBe(0);
+      expect(get(expensiveStore)).toBe(0);
+      expect(computationCount).toBe(1); // Still 1!
 
-      // Wait for TTL to expire
-      await new Promise(resolve => setTimeout(resolve, 60));
+      // Change unrelated slice - should NOT recompute
+      userSlice().setName('Alice');
+      expect(get(expensiveStore)).toBe(0);
+      expect(computationCount).toBe(1); // Still 1!
 
-      // Should recompute after TTL expiration
-      get(expensiveStore);
-      expect(computationCount).toBe(2);
+      // Change relevant slice - should recompute
+      counterSlice().increment();
+      expect(get(expensiveStore)).toBe(100);
+      expect(computationCount).toBe(2); // Now 2
+
+      unsubscribe();
     });
   });
 });

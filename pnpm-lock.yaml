@@ -60,9 +60,9 @@ importers:
       '@lattice/core':
         specifier: workspace:*
         version: link:../core
-      '@lattice/runtime':
+      '@lattice/frameworks':
         specifier: workspace:*
-        version: link:../runtime
+        version: link:../frameworks
       '@reduxjs/toolkit':
         specifier: '>=1.8.0'
         version: 2.8.2(react-redux@9.2.0(@types/react@18.3.22)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
@@ -121,12 +121,9 @@ importers:
       '@lattice/core':
         specifier: workspace:*
         version: link:../core
-      '@lattice/runtime':
+      '@lattice/frameworks':
         specifier: workspace:*
-        version: link:../runtime
-      '@lattice/store':
-        specifier: workspace:*
-        version: link:../lattice-store
+        version: link:../frameworks
     devDependencies:
       '@testing-library/react':
         specifier: ^16.3.0
@@ -173,9 +170,9 @@ importers:
       '@lattice/core':
         specifier: workspace:*
         version: link:../core
-      '@lattice/runtime':
+      '@lattice/frameworks':
         specifier: workspace:*
-        version: link:../runtime
+        version: link:../frameworks
     devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^5.1.0
@@ -213,9 +210,9 @@ importers:
       '@lattice/core':
         specifier: workspace:*
         version: link:../core
-      '@lattice/runtime':
+      '@lattice/frameworks':
         specifier: workspace:*
-        version: link:../runtime
+        version: link:../frameworks
     devDependencies:
       '@testing-library/react':
         specifier: ^16.3.0
@@ -277,12 +274,9 @@ importers:
       '@lattice/core':
         specifier: workspace:*
         version: link:../core
-      '@lattice/runtime':
+      '@lattice/frameworks':
         specifier: workspace:*
-        version: link:../runtime
-      '@lattice/store':
-        specifier: workspace:*
-        version: link:../lattice-store
+        version: link:../frameworks
       '@reduxjs/toolkit':
         specifier: ^2.8.2
         version: 2.8.2(react-redux@9.2.0(@types/react@18.3.22)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
@@ -365,61 +359,12 @@ importers:
         specifier: ^0.32.5
         version: 0.32.6
 
-  packages/lattice-store:
+  packages/frameworks:
     dependencies:
       '@lattice/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
-      '@testing-library/react':
-        specifier: ^16.3.0
-        version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@19.1.6(@types/react@18.3.22))(@types/react@18.3.22)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@testing-library/react-hooks':
-        specifier: ^8.0.1
-        version: 8.0.1(@types/react@18.3.22)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@18.3.1(react@18.3.1))(react@18.3.1)
-      '@types/node':
-        specifier: ^22.5.4
-        version: 22.15.3
-      '@types/react':
-        specifier: ^18.3.17
-        version: 18.3.22
-      happy-dom:
-        specifier: ^17.5.6
-        version: 17.5.6
-      jsdom:
-        specifier: ^26.1.0
-        version: 26.1.0
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
-      react-test-renderer:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
-      typescript:
-        specifier: ^5.8.3
-        version: 5.8.3
-      vite:
-        specifier: ^6.3.2
-        version: 6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1)
-      vite-plugin-dts:
-        specifier: ^4.5.4
-        version: 4.5.4(@types/node@22.15.3)(rollup@4.40.0)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))
-      vitest:
-        specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.15.3)(@vitest/ui@2.1.9)(happy-dom@17.5.6)(jsdom@26.1.0)
-
-  packages/runtime:
-    dependencies:
-      '@lattice/core':
-        specifier: workspace:*
-        version: link:../core
-    devDependencies:
-      '@lattice/store':
-        specifier: workspace:*
-        version: link:../lattice-store
       '@testing-library/react':
         specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@19.1.6(@types/react@18.3.22))(@types/react@18.3.22)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -449,10 +394,10 @@ importers:
         version: 5.8.3
       vite:
         specifier: ^6.3.2
-        version: 6.3.3(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1)
+        version: 6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1)
       vite-plugin-dts:
         specifier: ^4.5.4
-        version: 4.5.4(@types/node@22.15.3)(rollup@4.40.0)(typescript@5.8.3)(vite@6.3.3(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))
+        version: 4.5.4(@types/node@22.15.3)(rollup@4.40.0)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.3)(tsx@4.19.4)(yaml@2.7.1))
       vitest:
         specifier: ^3.1.1
         version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(happy-dom@17.5.6)(jsdom@26.1.0)(tsx@4.19.4)(yaml@2.7.1)

@@ -9,7 +9,7 @@
  */
 
 import { describe, bench } from 'vitest';
-import { writable, derived, get, type Writable } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { createStore } from '@lattice/core';
 import { combineSlices, sliceDerived } from '@lattice/frameworks/svelte';
 
@@ -173,14 +173,14 @@ describe('Svelte Reactivity - Complex State Composition', () => {
 
       // Combine only the slices we actually need (fine-grained!)
       const summary = combineSlices(
-        [counterSlice, userSlice],
+        [counterSlice, userSlice] as const,
         (counter, user) => `${user.name()}: ${counter.value()} clicks`
       );
 
       // Track computation count for expensive derived
       let computationCount = 0;
       const expensiveView = combineSlices(
-        [counterSlice, userSlice], // Only depends on these 2 slices!
+        [counterSlice, userSlice] as const, // Only depends on these 2 slices!
         (counter, user) => {
           computationCount++;
           // Same expensive computation
@@ -246,7 +246,7 @@ describe('Svelte Reactivity - Computation Efficiency Analysis', () => {
         const unrelated = writable('foo');
         
         let expensiveComputations = 0;
-        const expensive = derived([counter, unrelated], ([c, u]) => {
+        const expensive = derived([counter, unrelated], ([c]) => {
           expensiveComputations++;
           // Expensive work
           let result = 0;

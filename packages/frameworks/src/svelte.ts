@@ -286,12 +286,11 @@ export function asyncDerived<T, U>(
 /**
  * Create memoized store for expensive computations.
  * 
- * Combines Lattice's fine-grained reactivity with automatic memoization
- * for optimal performance on expensive calculations.
+ * Combines Lattice's fine-grained reactivity with automatic memoization.
+ * The expensive function only re-runs when the slice's dependencies change.
  * 
  * @param slice - A Lattice slice handle
  * @param fn - Expensive function to memoize
- * @param options - Memoization options
  * @returns Svelte readable store with memoized computation
  * 
  * @example
@@ -302,15 +301,13 @@ export function asyncDerived<T, U>(
  *   // Expensive computation that's memoized
  *   const fibonacci = memoized(
  *     counterSlice,
- *     counter => expensiveFibonacci(counter.value()),
- *     { maxSize: 50, ttl: 60000 }
+ *     counter => expensiveFibonacci(counter.value())
  *   );
  *   
- *   // Heavy data processing with cache
+ *   // Heavy data processing with automatic cache invalidation
  *   const processedData = memoized(
  *     dataSlice,
- *     data => heavyDataProcessing(data.items()),
- *     { maxSize: 20 }
+ *     data => heavyDataProcessing(data.items())
  *   );
  * </script>
  * 
@@ -327,40 +324,26 @@ export function asyncDerived<T, U>(
  */
 export function memoized<T, U>(
   slice: SliceHandle<T>,
-  fn: (value: T) => U,
-  options: { maxSize?: number; ttl?: number } = {}
+  fn: (value: T) => U
 ): Readable<U> {
-  const { maxSize = 100, ttl = Infinity } = options;
-  const cache = new Map<string, { result: U; timestamp: number }>();
+  // Simple memoization: cache until slice dependencies change
+  let cachedResult: U | undefined;
+  let hasCache = false;
   
-  const memoizedFn = (value: T): U => {
-    const key = JSON.stringify(value);
-    const cached = cache.get(key);
-    
-    // Check if we have a valid cached result
-    if (cached && Date.now() - cached.timestamp < ttl) {
-      return cached.result;
+  const compute = (): U => {
+    if (hasCache && cachedResult !== undefined) {
+      return cachedResult;
     }
     
-    // Compute new result
-    const result = fn(value);
-    
-    // LRU eviction: remove oldest entry if cache is full
-    if (cache.size >= maxSize) {
-      const firstKey = cache.keys().next().value;
-      if (firstKey !== undefined) {
-        cache.delete(firstKey);
-      }
-    }
-    
-    // Store in cache with timestamp
-    cache.set(key, { result, timestamp: Date.now() });
+    const result = fn(slice());
+    cachedResult = result;
+    hasCache = true;
     return result;
   };
   
   const metadata = getSliceMetadata(slice);
   
-  return readable(memoizedFn(slice()), (set) => {
+  return readable(compute(), (set) => {
     if (!metadata?.subscribe) {
       if (process.env.NODE_ENV !== 'production') {
         console.warn('[memoized] No subscription metadata found for slice. Store will not be reactive.');
@@ -369,8 +352,9 @@ export function memoized<T, U>(
     }
     
     return metadata.subscribe(() => {
-      // When slice dependencies change, recompute with fresh memoization
-      set(memoizedFn(slice()));
+      // When slice dependencies change, invalidate cache and recompute
+      hasCache = false;
+      set(compute());
     });
   });
 }
