@@ -99,7 +99,13 @@ export function sliceDerived<T, U>(
     }
     
     return metadata.subscribe(() => {
-      set(fn(slice()));
+      try {
+        set(fn(slice()));
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('[sliceDerived] Error in derived function:', error);
+        }
+      }
     });
   });
 }
@@ -150,7 +156,7 @@ export function combineSlices<T extends readonly SliceHandle<any>[], U>(
   slices: T,
   fn: (...values: InferSliceTypes<T>) => U
 ): Readable<U> {
-  const calculate = () => fn(...slices.map(s => s()) as any);
+  const calculate = () => fn(...slices.map(s => s()) as InferSliceTypes<T>);
   
   return readable(calculate(), (set) => {
     const unsubscribes = slices.map(slice => {
@@ -163,7 +169,13 @@ export function combineSlices<T extends readonly SliceHandle<any>[], U>(
       }
       
       return metadata.subscribe(() => {
-        set(calculate());
+        try {
+          set(calculate());
+        } catch (error) {
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('[combineSlices] Error in combine function:', error);
+          }
+        }
       });
     });
     
@@ -316,23 +328,34 @@ export function asyncDerived<T, U>(
 export function memoized<T, U>(
   slice: SliceHandle<T>,
   fn: (value: T) => U,
-  _options: { maxSize?: number; ttl?: number } = {}
+  options: { maxSize?: number; ttl?: number } = {}
 ): Readable<U> {
-  // Simplified memoization using slice subscription invalidation
-  let lastResult: U;
-  let hasCachedResult = false;
+  const { maxSize = 100, ttl = Infinity } = options;
+  const cache = new Map<string, { result: U; timestamp: number }>();
   
   const memoizedFn = (value: T): U => {
-    // For the first call or when the slice changes (via subscription), compute new result
-    if (!hasCachedResult) {
-      lastResult = fn(value);
-      hasCachedResult = true;
-      return lastResult;
+    const key = JSON.stringify(value);
+    const cached = cache.get(key);
+    
+    // Check if we have a valid cached result
+    if (cached && Date.now() - cached.timestamp < ttl) {
+      return cached.result;
     }
     
-    // For subsequent calls with the same slice state, return cached result
-    // The subscription system will reset hasCachedResult when dependencies change
-    return lastResult;
+    // Compute new result
+    const result = fn(value);
+    
+    // LRU eviction: remove oldest entry if cache is full
+    if (cache.size >= maxSize) {
+      const firstKey = cache.keys().next().value;
+      if (firstKey !== undefined) {
+        cache.delete(firstKey);
+      }
+    }
+    
+    // Store in cache with timestamp
+    cache.set(key, { result, timestamp: Date.now() });
+    return result;
   };
   
   const metadata = getSliceMetadata(slice);
@@ -346,8 +369,7 @@ export function memoized<T, U>(
     }
     
     return metadata.subscribe(() => {
-      // Reset cache when slice dependencies change
-      hasCachedResult = false;
+      // When slice dependencies change, recompute with fresh memoization
       set(memoizedFn(slice()));
     });
   });
