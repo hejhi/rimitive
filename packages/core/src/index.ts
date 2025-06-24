@@ -3,8 +3,8 @@
 // Export memoization utilities
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
-// Export slice metadata utilities
-export { getSliceMetadata } from './utils';
+// Export slice metadata utilities and convenience functions
+export { getSliceMetadata, select } from './utils';
 
 // Export internal metadata functions for framework packages
 export { 
