@@ -24,6 +24,10 @@
     "./svelte": {
       "import": "./dist/svelte.js",
       "types": "./dist/svelte.d.ts"
+    },
+    "./runes": {
+      "import": "./dist/runes.svelte.js",
+      "types": "./dist/runes.svelte.d.ts"
     }
   },
   "files": [

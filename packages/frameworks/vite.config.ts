@@ -7,8 +7,8 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       outDir: 'dist',
-      include: ['src/**/*.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts']
+      include: ['src/**/*.ts', 'src/**/*.svelte.ts'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts', 'src/**/*.test.svelte.ts']
     })
   ],
   build: {
@@ -17,7 +17,8 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         react: resolve(__dirname, 'src/react.ts'),
         vue: resolve(__dirname, 'src/vue.ts'),
-        svelte: resolve(__dirname, 'src/svelte.ts')
+        svelte: resolve(__dirname, 'src/svelte.ts'),
+        'runes.svelte': resolve(__dirname, 'src/runes.svelte.ts')
       },
       formats: ['es']
     },
