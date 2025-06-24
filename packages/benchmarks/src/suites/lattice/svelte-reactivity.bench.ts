@@ -17,7 +17,7 @@
 import { describe, bench } from 'vitest';
 import { writable, derived, get } from 'svelte/store';
 import { createStore, select as $ } from '@lattice/core';
-import { combineSlices, sliceDerived } from '@lattice/frameworks/svelte';
+import { combineSlices, derived as sliceDerived } from '@lattice/frameworks/svelte';
 
 // Memory and performance tracking utilities
 function measureMemoryAndPerformance<T>(fn: () => T): {

@@ -11,12 +11,15 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createLatticeStore, select as $ } from '@lattice/core';
-import {
-  createSvelteSlices,
-  combineSlices,
-  svelteRunesAdapter,
+import { createLatticeStore, select, vanillaAdapter } from '@lattice/core';
+import { 
+  slice as runesSlice,
+  combineSlices as runesCombineSlices 
 } from '@lattice/frameworks/runes';
+import { 
+  slice as directSlice,
+  combineSlices as directCombineSlices 
+} from '@lattice/frameworks/svelte';
 
 // Complex business calculation for realistic benchmarking
 function calculateBusinessMetrics(
@@ -101,13 +104,11 @@ describe('Runes Performance Comparison - Complex Business Dashboard', () => {
 
   // CURRENT: Lattice runtime-based approach (performance bottleneck)
   bench('Lattice Runtime - dashboard with adapter overhead', () => {
-    const state = $state(structuredClone(INITIAL_STATE));
-    const adapter = svelteRunesAdapter(state);
-    const createSlice = createLatticeStore(adapter);
+    const createSlice = createLatticeStore(vanillaAdapter(structuredClone(INITIAL_STATE)));
 
     // Analytics slice - using new concise syntax
     const analyticsSlice = createSlice(
-      $('analytics'),
+      select('analytics'),
       ({ analytics }, set) => ({
         pageViews: () => analytics().pageViews,
         users: () => analytics().users,
@@ -122,7 +123,7 @@ describe('Runes Performance Comparison - Complex Business Dashboard', () => {
     );
 
     // Sales slice
-    const salesSlice = createSlice($('sales'), ({ sales }, set) => ({
+    const salesSlice = createSlice(select('sales'), ({ sales }, set) => ({
       revenue: () => sales().revenue,
       orders: () => sales().orders,
       updateMetrics: () =>
@@ -135,7 +136,7 @@ describe('Runes Performance Comparison - Complex Business Dashboard', () => {
     }));
 
     // UI slice
-    const uiSlice = createSlice($('ui'), ({ ui }, set) => ({
+    const uiSlice = createSlice(select('ui'), ({ ui }, set) => ({
       theme: () => ui().theme,
       toggleTheme: () =>
         set(({ ui }) => ({
@@ -149,7 +150,7 @@ describe('Runes Performance Comparison - Complex Business Dashboard', () => {
     // Business metrics slice
     let computations = 0;
     const businessSlice = createSlice(
-      $('analytics', 'sales'),
+      select('analytics', 'sales'),
       ({ analytics, sales }) => ({
         metrics: () => {
           computations++;
@@ -184,45 +185,141 @@ describe('Runes Performance Comparison - Complex Business Dashboard', () => {
     }
   });
 
-  // NEW: Lattice runes-native approach (zero overhead)
-  bench('Lattice Runes-Native - zero overhead dashboard', () => {
-    const createSlice = createSvelteSlices(structuredClone(INITIAL_STATE));
+  // NEW: Lattice runes integration approach (optimized for runes)
+  bench('Lattice Runes Integration - dashboard with slice() wrapper', () => {
+    const createSlice = createLatticeStore(vanillaAdapter(structuredClone(INITIAL_STATE)));
 
-    // Analytics slice
-    const analytics = createSlice($('analytics'), ({ analytics }, { set }) => ({
-      pageViews: () => analytics.pageViews,
-      users: () => analytics.users,
+    // Create core slices first
+    const analyticsSlice = createSlice(
+      select('analytics'),
+      ({ analytics }, set) => ({
+        pageViews: () => analytics().pageViews,
+        users: () => analytics().users,
+        updateMetrics: () =>
+          set(({ analytics }) => ({
+            analytics: {
+              pageViews: analytics().pageViews + 10,
+              users: analytics().users + 2,
+            },
+          })),
+      })
+    );
+
+    const salesSlice = createSlice(select('sales'), ({ sales }, set) => ({
+      revenue: () => sales().revenue,
+      orders: () => sales().orders,
       updateMetrics: () =>
-        set('analytics', {
-          pageViews: analytics.pageViews + 10,
-          users: analytics.users + 2,
-        }),
+        set(({ sales }) => ({
+          sales: {
+            revenue: sales().revenue + 1000,
+            orders: sales().orders + 3,
+          },
+        })),
     }));
 
-    // Sales slice
-    const sales = createSlice($('sales'), ({ sales }, { set }) => ({
-      revenue: () => sales.revenue,
-      orders: () => sales.orders,
-      updateMetrics: () =>
-        set('sales', {
-          revenue: sales.revenue + 1000,
-          orders: sales.orders + 3,
-        }),
-    }));
-
-    // UI slice
-    const ui = createSlice($('ui'), ({ ui }, { set }) => ({
-      theme: () => ui.theme,
+    const uiSlice = createSlice(select('ui'), ({ ui }, set) => ({
+      theme: () => ui().theme,
       toggleTheme: () =>
-        set('ui', {
-          ...ui,
-          theme: ui.theme === 'light' ? 'dark' : 'light',
-        }),
+        set(({ ui }) => ({
+          ui: {
+            ...ui(),
+            theme: ui().theme === 'light' ? 'dark' : 'light',
+          },
+        })),
     }));
 
-    // Business metrics slice using combineSlices
+    // Convert to runes-compatible functions
+    const analytics = runesSlice(analyticsSlice);
+    const sales = runesSlice(salesSlice);
+    const ui = runesSlice(uiSlice);
+
+    // Business metrics using combineSlices
     let computations = 0;
-    const businessMetrics = combineSlices(
+    const businessMetrics = runesCombineSlices(
+      { analytics, sales },
+      ({ analytics: analyticsData, sales: salesData }) => {
+        computations++;
+        return calculateBusinessMetrics(
+          analyticsData.pageViews(),
+          salesData.revenue(),
+          salesData.orders(),
+          analyticsData.users()
+        );
+      }
+    );
+
+    // Same update pattern
+    for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+      const updateType = i % 4;
+      switch (updateType) {
+        case 0:
+          analytics().updateMetrics(); // Relevant
+          break;
+        case 1:
+          sales().updateMetrics(); // Relevant
+          break;
+        case 2:
+        case 3:
+          ui().toggleTheme(); // Irrelevant
+          break;
+      }
+
+      // Force evaluation
+      businessMetrics();
+    }
+  });
+
+  // NEW: Lattice direct Svelte integration (no stores or runes)
+  bench('Lattice Direct Svelte - dashboard with direct integration', () => {
+    const createSlice = createLatticeStore(vanillaAdapter(structuredClone(INITIAL_STATE)));
+
+    // Create core slices first
+    const analyticsSlice = createSlice(
+      select('analytics'),
+      ({ analytics }, set) => ({
+        pageViews: () => analytics().pageViews,
+        users: () => analytics().users,
+        updateMetrics: () =>
+          set(({ analytics }) => ({
+            analytics: {
+              pageViews: analytics().pageViews + 10,
+              users: analytics().users + 2,
+            },
+          })),
+      })
+    );
+
+    const salesSlice = createSlice(select('sales'), ({ sales }, set) => ({
+      revenue: () => sales().revenue,
+      orders: () => sales().orders,
+      updateMetrics: () =>
+        set(({ sales }) => ({
+          sales: {
+            revenue: sales().revenue + 1000,
+            orders: sales().orders + 3,
+          },
+        })),
+    }));
+
+    const uiSlice = createSlice(select('ui'), ({ ui }, set) => ({
+      theme: () => ui().theme,
+      toggleTheme: () =>
+        set(({ ui }) => ({
+          ui: {
+            ...ui(),
+            theme: ui().theme === 'light' ? 'dark' : 'light',
+          },
+        })),
+    }));
+
+    // Direct Svelte integration
+    const analytics = directSlice(analyticsSlice);
+    const sales = directSlice(salesSlice);
+    const ui = directSlice(uiSlice);
+
+    // Business metrics using combineSlices
+    let computations = 0;
+    const businessMetrics = directCombineSlices(
       { analytics, sales },
       ({ analytics: analyticsData, sales: salesData }) => {
         computations++;
@@ -283,12 +380,10 @@ describe('Runes Performance Comparison - Simple Counter', () => {
   });
 
   bench('Lattice Runtime - simple counter', () => {
-    const state = $state({ count: 0, irrelevant: 'data' });
-    const adapter = svelteRunesAdapter(state);
-    const createSlice = createLatticeStore(adapter);
+    const createSlice = createLatticeStore(vanillaAdapter({ count: 0, irrelevant: 'data' }));
 
     let computations = 0;
-    const counterSlice = createSlice($('count'), ({ count }, set) => ({
+    const counterSlice = createSlice(select('count'), ({ count }, set) => ({
       value: () => count(),
       doubled: () => {
         computations++;
@@ -298,7 +393,7 @@ describe('Runes Performance Comparison - Simple Counter', () => {
     }));
 
     const irrelevantSlice = createSlice(
-      $('irrelevant'),
+      select('irrelevant'),
       ({ irrelevant }, set) => ({
         value: () => irrelevant(),
         change: (newValue: string) => set(() => ({ irrelevant: newValue })),
@@ -316,27 +411,69 @@ describe('Runes Performance Comparison - Simple Counter', () => {
     }
   });
 
-  bench('Lattice Runes-Native - simple counter', () => {
-    const createSlice = createSvelteSlices({ count: 0, irrelevant: 'data' });
+  bench('Lattice Runes Integration - simple counter', () => {
+    const createSlice = createLatticeStore(vanillaAdapter({ count: 0, irrelevant: 'data' }));
 
+    // Create core slices
     let computations = 0;
-    const counter = createSlice($('count'), ({ count }, { set }) => ({
-      value: () => count,
+    const counterSlice = createSlice(select('count'), ({ count }, set) => ({
+      value: () => count(),
       doubled: () => {
         computations++;
-        return count * 2;
+        return count() * 2;
       },
-      increment: () => set('count', count + 1),
+      increment: () => set(({ count }) => ({ count: count() + 1 })),
     }));
 
-    const irrelevant = createSlice(
-      $('irrelevant'),
-      ({ irrelevant }, { set }) => ({
-        value: () => irrelevant,
-        change: (newValue: string) => set('irrelevant', newValue),
+    const irrelevantSlice = createSlice(
+      select('irrelevant'),
+      ({ irrelevant }, set) => ({
+        value: () => irrelevant(),
+        change: (newValue: string) => set(() => ({ irrelevant: newValue })),
       })
     );
 
+    // Convert to runes-compatible functions
+    const counter = runesSlice(counterSlice);
+    const irrelevant = runesSlice(irrelevantSlice);
+    
+    for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+      if (i % 2 === 0) {
+        counter().increment(); // Relevant
+      } else {
+        irrelevant().change(`data-${i}`); // Irrelevant
+      }
+
+      counter().doubled(); // Force evaluation
+    }
+  });
+
+  bench('Lattice Direct Svelte - simple counter', () => {
+    const createSlice = createLatticeStore(vanillaAdapter({ count: 0, irrelevant: 'data' }));
+
+    // Create core slices
+    let computations = 0;
+    const counterSlice = createSlice(select('count'), ({ count }, set) => ({
+      value: () => count(),
+      doubled: () => {
+        computations++;
+        return count() * 2;
+      },
+      increment: () => set(({ count }) => ({ count: count() + 1 })),
+    }));
+
+    const irrelevantSlice = createSlice(
+      select('irrelevant'),
+      ({ irrelevant }, set) => ({
+        value: () => irrelevant(),
+        change: (newValue: string) => set(() => ({ irrelevant: newValue })),
+      })
+    );
+
+    // Direct Svelte integration
+    const counter = directSlice(counterSlice);
+    const irrelevant = directSlice(irrelevantSlice);
+    
     for (let i = 0; i < UPDATE_ITERATIONS; i++) {
       if (i % 2 === 0) {
         counter().increment(); // Relevant
