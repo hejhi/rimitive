@@ -18,7 +18,6 @@ describe('React hooks', () => {
       ({ count }, set) => ({
         value: () => count(),
         increment: () => set(
-          (selectors) => ({ count: selectors.count }),
           ({ count }) => ({ count: count() + 1 })
         ),
         isEven: () => count() % 2 === 0,
@@ -30,7 +29,6 @@ describe('React hooks', () => {
       ({ name }, set) => ({
         name: () => name(),
         setName: (newName: string) => set(
-          (selectors) => ({ name: selectors.name }),
           () => ({ name: newName })
         ),
       })
@@ -41,7 +39,6 @@ describe('React hooks', () => {
       ({ items }, set) => ({
         all: () => items(),
         add: (item: string) => set(
-          (selectors) => ({ items: selectors.items }),
           ({ items }) => ({ items: [...items(), item] })
         ),
         count: () => items().length,

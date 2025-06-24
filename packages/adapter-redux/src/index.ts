@@ -130,7 +130,6 @@ export const latticeReducer = createReduxSlice({
  *   ({ count }, set) => ({
  *     value: () => count(),
  *     increment: () => set(
- *       (selectors) => ({ count: selectors.count }),
  *       ({ count }) => ({ count: count() + 1 })
  *     )
  *   })

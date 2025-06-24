@@ -16,22 +16,18 @@ describe('Zustand Adapter - New Architecture', () => {
         (_, set) => ({
           increment: () =>
             set(
-              (selectors) => ({ count: selectors.count }),
               ({ count }) => ({ count: count() + 1 })
             ),
           decrement: () =>
             set(
-              (selectors) => ({ count: selectors.count }),
               ({ count }) => ({ count: count() - 1 })
             ),
           reset: () =>
             set(
-              () => ({}),
               () => ({ count: 0 })
             ),
           setCount: (value: number) =>
             set(
-              () => ({}),
               () => ({ count: value })
             ),
         })
@@ -138,10 +134,6 @@ describe('Zustand Adapter - New Architecture', () => {
         (_, set) => ({
           setValue: (newValue: number) =>
             set(
-              (selectors) => ({
-                value: selectors.value,
-                history: selectors.history,
-              }),
               ({ history }) => ({
                 value: newValue,
                 history: [...history(), newValue],
@@ -149,10 +141,6 @@ describe('Zustand Adapter - New Architecture', () => {
             ),
           increment: () =>
             set(
-              (selectors) => ({
-                value: selectors.value,
-                history: selectors.history,
-              }),
               ({ value, history }) => {
                 const newValue = value() + 1;
                 return {
@@ -163,7 +151,6 @@ describe('Zustand Adapter - New Architecture', () => {
             ),
           reset: () =>
             set(
-              () => ({}),
               () => ({ value: 0, history: [] })
             ),
         })
@@ -416,7 +403,6 @@ describe('Zustand Adapter - New Architecture', () => {
         (_, set) => ({
           increment: () =>
             set(
-              (selectors) => ({ count: selectors.count }),
               ({ count }) => ({
                 count: count() + 1,
                 lastAction: 'increment',
@@ -424,7 +410,6 @@ describe('Zustand Adapter - New Architecture', () => {
             ),
           decrement: () =>
             set(
-              (selectors) => ({ count: selectors.count }),
               ({ count }) => ({
                 count: count() - 1,
                 lastAction: 'decrement',
@@ -525,7 +510,6 @@ describe('Zustand Adapter - New Architecture', () => {
             const currentUser = user();
             if (currentUser) {
               set(
-                () => ({}),
                 () => ({ user: { ...currentUser, name } })
               );
             }

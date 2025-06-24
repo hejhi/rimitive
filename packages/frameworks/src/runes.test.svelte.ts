@@ -18,7 +18,6 @@ describe('Runes-powered Lattice Store (Experimental)', () => {
         value: () => count(),
         increment: () =>
           set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
         doubled: () => count() * 2,

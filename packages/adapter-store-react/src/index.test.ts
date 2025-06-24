@@ -32,11 +32,9 @@ describe('store-react adapter', () => {
           ({ count }, set) => ({
             count: () => count(),
             increment: () => set(
-              (selectors) => ({ count: selectors.count }),
               ({ count }) => ({ count: count() + 1 })
             ),
             decrement: () => set(
-              (selectors) => ({ count: selectors.count }),
               ({ count }) => ({ count: count() - 1 })
             ),
           })
@@ -66,7 +64,6 @@ describe('store-react adapter', () => {
           () => ({}),
           (_, set) => ({
             setValue: (value: string) => set(
-              () => ({}),
               () => ({ value })
             ),
           })
@@ -170,7 +167,6 @@ describe('store-react adapter', () => {
           (selectors) => ({ count: selectors.count }),
           (_, set) => ({
             increment: () => set(
-              (selectors) => ({ count: selectors.count }),
               ({ count }) => ({ count: count() + 1 })
             ),
           })
@@ -360,7 +356,6 @@ describe('store-react adapter', () => {
           (selectors) => ({ value: selectors.value }),
           (_, set) => ({
             increment: () => set(
-              (selectors) => ({ value: selectors.value }),
               ({ value }) => ({ value: value() + 1 })
             ),
           })

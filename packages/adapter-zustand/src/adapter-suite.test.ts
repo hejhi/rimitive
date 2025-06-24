@@ -24,7 +24,6 @@ describe('Zustand Adapter Contract', () => {
         ({ count }, set) => ({
           value: () => count(),
           increment: () => set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
         })
@@ -61,7 +60,6 @@ describe('Zustand Adapter Contract', () => {
         ({ value }, set) => ({
           getValue: () => value(),
           setValue: (newValue: number) => set(
-            (selectors) => ({ value: selectors.value }),
             () => ({ value: newValue })
           ),
         })
@@ -89,7 +87,6 @@ describe('Zustand Adapter Contract', () => {
         ({ count }, set) => ({
           value: () => count(),
           increment: () => set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
         })

@@ -4,25 +4,29 @@ import { latticeReducer, reduxAdapter } from './index';
 import type { Selectors } from '@lattice/core';
 
 // Common selector factories for reuse across tests
-const selectCounter = <T extends { counter: any }>(selectors: Selectors<T>) => 
-  ({ counter: selectors.counter });
+const selectCounter = <T extends { counter: any }>(
+  selectors: Selectors<T>
+) => ({ counter: selectors.counter });
 
-const selectUser = <T extends { user: any }>(selectors: Selectors<T>) => 
-  ({ user: selectors.user });
+const selectUser = <T extends { user: any }>(selectors: Selectors<T>) => ({
+  user: selectors.user,
+});
 
-const selectValue = <T extends { value: any }>(selectors: Selectors<T>) => 
-  ({ value: selectors.value });
+const selectValue = <T extends { value: any }>(selectors: Selectors<T>) => ({
+  value: selectors.value,
+});
 
-const selectTodos = <T extends { todos: any }>(selectors: Selectors<T>) => 
-  ({ todos: selectors.todos });
+const selectTodos = <T extends { todos: any }>(selectors: Selectors<T>) => ({
+  todos: selectors.todos,
+});
 
-const selectUI = <T extends { ui: any }>(selectors: Selectors<T>) => 
-  ({ ui: selectors.ui });
+const selectUI = <T extends { ui: any }>(selectors: Selectors<T>) => ({
+  ui: selectors.ui,
+});
 
-const selectCount = <T extends { count: any }>(selectors: Selectors<T>) => 
-  ({ count: selectors.count });
-
-const selectNone = () => ({});
+const selectCount = <T extends { count: any }>(selectors: Selectors<T>) => ({
+  count: selectors.count,
+});
 
 describe('Redux Adapter', () => {
   it('should create a Redux store with Lattice slices', () => {
@@ -35,26 +39,17 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ counter: { value: number } }>(store);
 
-    const counter = createSlice(
-      selectCounter,
-      ({ counter }, set) => ({
-        count: () => counter().value,
-        increment: () =>
-          set(
-            selectCounter,
-            ({ counter }) => ({
-              counter: { value: counter().value + 1 },
-            })
-          ),
-        decrement: () =>
-          set(
-            selectCounter,
-            ({ counter }) => ({
-              counter: { value: counter().value - 1 },
-            })
-          ),
-      })
-    );
+    const counter = createSlice(selectCounter, ({ counter }, set) => ({
+      count: () => counter().value,
+      increment: () =>
+        set(({ counter }) => ({
+          counter: { value: counter().value + 1 },
+        })),
+      decrement: () =>
+        set(({ counter }) => ({
+          counter: { value: counter().value - 1 },
+        })),
+    }));
 
     // Test initial state
     expect(counter().count()).toBe(0);
@@ -85,41 +80,26 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<CountStore>(store);
 
-    const counter = createSlice(
-      selectCounter,
-      ({ counter }, set) => ({
-        value: () => counter().value,
-        increment: () =>
-          set(
-            selectCounter,
-            ({ counter }) => ({
-              counter: { value: counter().value + 1 },
-            })
-          ),
-      })
-    );
+    const counter = createSlice(selectCounter, ({ counter }, set) => ({
+      value: () => counter().value,
+      increment: () =>
+        set(({ counter }) => ({
+          counter: { value: counter().value + 1 },
+        })),
+    }));
 
-    const user = createSlice(
-      selectUser,
-      ({ user }, set) => ({
-        getName: () => user().name,
-        isLoggedIn: () => user().loggedIn,
-        login: (name: string) =>
-          set(
-            selectNone,
-            () => ({
-              user: { name, loggedIn: true },
-            })
-          ),
-        logout: () =>
-          set(
-            selectNone,
-            () => ({
-              user: { name: '', loggedIn: false },
-            })
-          ),
-      })
-    );
+    const user = createSlice(selectUser, ({ user }, set) => ({
+      getName: () => user().name,
+      isLoggedIn: () => user().loggedIn,
+      login: (name: string) =>
+        set(() => ({
+          user: { name, loggedIn: true },
+        })),
+      logout: () =>
+        set(() => ({
+          user: { name: '', loggedIn: false },
+        })),
+    }));
 
     // Test both slices work independently
     counter().increment();
@@ -144,21 +124,15 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ value: number }>(store);
 
-    const state = createSlice(
-      selectValue,
-      ({ value }, set) => ({
-        value: () => value(),
-        setValue: (newValue: number) => set(
-          selectNone,
-          () => ({ value: newValue })
-        ),
-      })
-    );
+    const state = createSlice(selectValue, ({ value }, set) => ({
+      value: () => value(),
+      setValue: (newValue: number) => set(() => ({ value: newValue })),
+    }));
 
     // Import getSliceMetadata for subscription access
     const { getSliceMetadata } = await import('@lattice/core');
     const metadata = getSliceMetadata(state);
-    
+
     const callback = vi.fn();
     const unsubscribe = metadata!.subscribe(callback);
 
@@ -184,19 +158,13 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ counter: { value: number } }>(store);
 
-    const counter = createSlice(
-      selectCounter,
-      ({ counter }, set) => ({
-        value: () => counter().value,
-        increment: () =>
-          set(
-            selectCounter,
-            ({ counter }) => ({
-              counter: { value: counter().value + 1 },
-            })
-          ),
-      })
-    );
+    const counter = createSlice(selectCounter, ({ counter }, set) => ({
+      value: () => counter().value,
+      increment: () =>
+        set(({ counter }) => ({
+          counter: { value: counter().value + 1 },
+        })),
+    }));
 
     // DevTools will see 'lattice/updateState' actions
     counter().increment();
@@ -231,59 +199,47 @@ describe('Redux Adapter', () => {
     }>(store);
 
     let nextId = 1;
-    const todos = createSlice(
-      selectTodos,
-      ({ todos }, set) => ({
-        getAll: () => todos().items,
-        getActive: () => todos().items.filter((t) => !t.completed),
-        getCompleted: () => todos().items.filter((t) => t.completed),
+    const todos = createSlice(selectTodos, ({ todos }, set) => ({
+      getAll: () => todos().items,
+      getActive: () => todos().items.filter((t) => !t.completed),
+      getCompleted: () => todos().items.filter((t) => t.completed),
 
-        addTodo: (text: string) => {
-          set(
-            selectTodos,
-            ({ todos }) => ({
-              todos: {
-                ...todos(),
-                items: [
-                  ...todos().items,
-                  {
-                    id: nextId++,
-                    text,
-                    completed: false,
-                  },
-                ],
+      addTodo: (text: string) => {
+        set(({ todos }) => ({
+          todos: {
+            ...todos(),
+            items: [
+              ...todos().items,
+              {
+                id: nextId++,
+                text,
+                completed: false,
               },
-            })
-          );
-        },
+            ],
+          },
+        }));
+      },
 
-        toggleTodo: (id: number) => {
-          set(
-            selectTodos,
-            ({ todos }) => ({
-              todos: {
-                ...todos(),
-                items: todos().items.map((todo) =>
-                  todo.id === id ? { ...todo, completed: !todo.completed } : todo
-                ),
-              },
-            })
-          );
-        },
+      toggleTodo: (id: number) => {
+        set(({ todos }) => ({
+          todos: {
+            ...todos(),
+            items: todos().items.map((todo) =>
+              todo.id === id ? { ...todo, completed: !todo.completed } : todo
+            ),
+          },
+        }));
+      },
 
-        setFilter: (filter: 'all' | 'active' | 'completed') => {
-          set(
-            selectTodos,
-            ({ todos }) => ({
-              todos: {
-                ...todos(),
-                filter,
-              },
-            })
-          );
-        },
-      })
-    );
+      setFilter: (filter: 'all' | 'active' | 'completed') => {
+        set(({ todos }) => ({
+          todos: {
+            ...todos(),
+            filter,
+          },
+        }));
+      },
+    }));
 
     // Add todos
     todos().addTodo('Learn Lattice');
@@ -320,16 +276,10 @@ describe('Redux Adapter', () => {
       onError: (error) => errors.push(error),
     });
 
-    const state = createSlice(
-      selectValue,
-      ({ value }, set) => ({
-        value: () => value(),
-        setValue: (newValue: number) => set(
-          selectNone,
-          () => ({ value: newValue })
-        ),
-      })
-    );
+    const state = createSlice(selectValue, ({ value }, set) => ({
+      value: () => value(),
+      setValue: (newValue: number) => set(() => ({ value: newValue })),
+    }));
 
     // Import getSliceMetadata for subscription access
     const { getSliceMetadata } = await import('@lattice/core');
@@ -379,50 +329,38 @@ describe('Redux Adapter', () => {
       };
     }>(store);
 
-    const ui = createSlice(
-      selectUI,
-      ({ ui }, set) => ({
-        isModalOpen: () => ui().modal.isOpen,
-        getModalContent: () => ui().modal.content,
-        getTheme: () => ui().theme,
+    const ui = createSlice(selectUI, ({ ui }, set) => ({
+      isModalOpen: () => ui().modal.isOpen,
+      getModalContent: () => ui().modal.content,
+      getTheme: () => ui().theme,
 
-        openModal: (content: string) => {
-          set(
-            selectUI,
-            ({ ui }) => ({
-              ui: {
-                ...ui(),
-                modal: { isOpen: true, content },
-              },
-            })
-          );
-        },
+      openModal: (content: string) => {
+        set(({ ui }) => ({
+          ui: {
+            ...ui(),
+            modal: { isOpen: true, content },
+          },
+        }));
+      },
 
-        closeModal: () => {
-          set(
-            selectUI,
-            ({ ui }) => ({
-              ui: {
-                ...ui(),
-                modal: { isOpen: false, content: null },
-              },
-            })
-          );
-        },
+      closeModal: () => {
+        set(({ ui }) => ({
+          ui: {
+            ...ui(),
+            modal: { isOpen: false, content: null },
+          },
+        }));
+      },
 
-        toggleTheme: () => {
-          set(
-            selectUI,
-            ({ ui }) => ({
-              ui: {
-                ...ui(),
-                theme: ui().theme === 'light' ? 'dark' : 'light',
-              },
-            })
-          );
-        },
-      })
-    );
+      toggleTheme: () => {
+        set(({ ui }) => ({
+          ui: {
+            ...ui(),
+            theme: ui().theme === 'light' ? 'dark' : 'light',
+          },
+        }));
+      },
+    }));
 
     // Test modal operations
     expect(ui().isModalOpen()).toBe(false);
@@ -460,16 +398,10 @@ describe('Redux Adapter', () => {
       user: { name: string };
     }>(store, { slice: 'app' });
 
-    const counter = createSlice(
-      selectCount,
-      ({ count }, set) => ({
-        value: () => count(),
-        increment: () => set(
-          selectCount,
-          ({ count }) => ({ count: count() + 1 })
-        ),
-      })
-    );
+    const counter = createSlice(selectCount, ({ count }, set) => ({
+      value: () => count(),
+      increment: () => set(({ count }) => ({ count: count() + 1 })),
+    }));
 
     expect(counter().value()).toBe(0);
     counter().increment();

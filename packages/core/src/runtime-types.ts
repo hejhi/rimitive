@@ -22,13 +22,10 @@ export type Selectors<State> = {
 };
 
 /**
- * Function to update state using a two-phase approach:
- * 1. Select dependencies
- * 2. Compute updates based on dependencies
+ * Function to update state with all selectors provided automatically
  */
-export type SetState<State> = <Deps>(
-  depsFn: (selectors: Selectors<State>) => Deps,
-  updateFn: (deps: Deps) => Partial<State>
+export type SetState<State> = (
+  updateFn: (selectors: Selectors<State>) => Partial<State>
 ) => void;
 
 /**

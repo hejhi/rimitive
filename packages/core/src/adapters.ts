@@ -26,7 +26,6 @@ import type { ReactiveSliceFactory } from './runtime-types';
  *   (selectors) => ({ count: selectors.count }),
  *   ({ count }, set) => ({
  *     increment: () => set(
- *       (selectors) => ({ count: selectors.count }),
  *       ({ count }) => ({ count: count() + 1 })
  *     )
  *   })

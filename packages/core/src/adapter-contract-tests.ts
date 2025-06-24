@@ -317,11 +317,9 @@ export function createAdapterTestSuite(
             ({ count }, set) => ({
               count: () => count(),
               increment: () => set(
-                (selectors) => ({ count: selectors.count }),
                 ({ count }) => ({ count: count() + 1 })
               ),
               decrement: () => set(
-                (selectors) => ({ count: selectors.count }),
                 ({ count }) => ({ count: count() - 1 })
               ),
             })
@@ -332,11 +330,9 @@ export function createAdapterTestSuite(
             ({ text }, set) => ({
               text: () => text(),
               setText: (newText: string) => set(
-                (selectors) => ({ text: selectors.text }),
                 () => ({ text: newText })
               ),
               append: (suffix: string) => set(
-                (selectors) => ({ text: selectors.text }),
                 ({ text }) => ({ text: text() + suffix })
               ),
             })
@@ -400,15 +396,12 @@ export function createAdapterTestSuite(
             () => ({}),
             (_, set) => ({
               setCount: (count: number) => set(
-                (selectors) => ({ count: selectors.count }),
                 () => ({ count })
               ),
               setText: (text: string) => set(
-                (selectors) => ({ text: selectors.text }),
                 () => ({ text })
               ),
               reset: () => set(
-                (selectors) => ({ count: selectors.count, text: selectors.text }),
                 () => createInitialState()
               ),
           }));

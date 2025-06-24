@@ -9,6 +9,7 @@ import type { ReactiveSliceFactory, Selector, Selectors, SetState, SliceHandle }
 import { storeSliceMetadata, storeCompositionMetadata, getCompositionMetadata } from './lib/metadata';
 import { type StoreAdapter } from './adapter-contract';
 
+
 /**
  * Component factory receives slice factory and returns the component's slices
  */
@@ -108,11 +109,24 @@ export function createLatticeStore<State>(
   adapter.subscribe(() => {
     const newState = adapter.getState();
     const changedKeys = new Set<string>();
+    const nextCurrentState = {} as State;
     
-    // Compare old and new state to find actual changes
+    // Compare old and new state to find actual changes, building new currentState
     for (const key in newState) {
-      if (!Object.is(currentState[key], newState[key])) {
+      const newValue = newState[key];
+      nextCurrentState[key] = newValue; // Build new state object during iteration
+      
+      if (!Object.is(currentState[key], newValue)) {
         changedKeys.add(key);
+      }
+      
+      // Check for new keys and update root selectors
+      if (!(key in rootSelectors)) {
+        const k = key as Extract<keyof State, string>;
+        rootSelectors[k] = createSelector(
+          () => adapter.getState()[k],
+          k
+        );
       }
     }
     
@@ -123,18 +137,7 @@ export function createLatticeStore<State>(
       }
     }
     
-    // Check for new keys and update root selectors
-    for (const key in newState) {
-      if (!(key in rootSelectors)) {
-        const k = key as Extract<keyof State, string>;
-        rootSelectors[k] = createSelector(
-          () => adapter.getState()[k],
-          k
-        );
-      }
-    }
-    
-    currentState = { ...newState }; // Clone to maintain immutability
+    currentState = nextCurrentState;
     
     if (changedKeys.size > 0) {
       notifyListeners(changedKeys);
@@ -185,9 +188,8 @@ export function createLatticeStore<State>(
     }
     
     // Create set function that writes back to the adapter
-    const set: SetState<State> = (depsFn, updateFn) => {
-      const deps = depsFn(rootSelectors);
-      const updates = updateFn(deps);
+    const set: SetState<State> = (updateFn) => {
+      const updates = updateFn(rootSelectors);
       adapter.setState(updates);
     };
     

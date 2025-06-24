@@ -18,7 +18,6 @@ describe('Vue Lattice composables - New slice-based API', () => {
       ({ count }, set) => ({
         value: () => count(),
         increment: () => set(
-          (selectors) => ({ count: selectors.count }),
           ({ count }) => ({ count: count() + 1 })
         ),
         doubled: () => count() * 2,
@@ -31,7 +30,6 @@ describe('Vue Lattice composables - New slice-based API', () => {
       ({ name }, set) => ({
         name: () => name(),
         setName: (newName: string) => set(
-          (selectors) => ({ name: selectors.name }),
           () => ({ name: newName })
         ),
       })
@@ -42,7 +40,6 @@ describe('Vue Lattice composables - New slice-based API', () => {
       ({ items }, set) => ({
         all: () => items(),
         add: (item: string) => set(
-          (selectors) => ({ items: selectors.items }),
           ({ items }) => ({ items: [...items(), item] })
         ),
       })

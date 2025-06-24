@@ -110,7 +110,6 @@ describe('slice composition patterns', () => {
         ({ count }, set) => ({
           count: () => count(),
           increment: () => set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
         })
@@ -121,7 +120,6 @@ describe('slice composition patterns', () => {
         ({ name }, set) => ({
           name: () => name(),
           setName: (newName: string) => set(
-            (selectors) => ({ name: selectors.name }),
             () => ({ name: newName })
           ),
         })
@@ -181,7 +179,6 @@ describe('slice composition patterns', () => {
         ({ value }, set) => ({
           getValue: () => value(),
           setValue: (newValue: number) => set(
-            (selectors) => ({ value: selectors.value }),
             () => ({ value: newValue })
           ),
         })

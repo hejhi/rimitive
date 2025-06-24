@@ -24,7 +24,6 @@ describe('Svelte utilities - New slice-based API', () => {
         value: () => count(),
         increment: () =>
           set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
         doubled: () => count() * 2,
@@ -37,7 +36,6 @@ describe('Svelte utilities - New slice-based API', () => {
         name: () => name(),
         setName: (newName: string) =>
           set(
-            (selectors) => ({ name: selectors.name }),
             () => ({ name: newName })
           ),
       })
@@ -49,7 +47,6 @@ describe('Svelte utilities - New slice-based API', () => {
         all: () => items(),
         add: (item: string) =>
           set(
-            (selectors) => ({ items: selectors.items }),
             ({ items }) => ({ items: [...items(), item] })
           ),
       })

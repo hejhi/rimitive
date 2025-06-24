@@ -53,7 +53,6 @@ export interface ZustandAdapterOptions {
  *     ({ count }, set) => ({
  *       value: () => count(),
  *       increment: () => set(
- *         (selectors) => ({ count: selectors.count }),
  *         ({ count }) => ({ count: count() + 1 })
  *       )
  *     })

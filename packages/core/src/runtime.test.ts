@@ -29,11 +29,9 @@ describe('createLatticeStore - adapter bridge', () => {
         ({ count }, set) => ({
           value: () => count(),
           increment: () => set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
           decrement: () => set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() - 1 })
           ),
         })
@@ -93,11 +91,9 @@ describe('createLatticeStore - adapter bridge', () => {
           count: () => count(),
           multiplier: () => multiplier(), // Expose multiplier to avoid unused variable warning
           increment: () => set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
           multiply: () => set(
-            (selectors) => ({ count: selectors.count, multiplier: selectors.multiplier }),
             ({ count, multiplier }) => ({ count: count() * multiplier() })
           ),
         })
@@ -108,7 +104,6 @@ describe('createLatticeStore - adapter bridge', () => {
         ({ multiplier }, set) => ({
           multiplier: () => multiplier(),
           setMultiplier: (value: number) => set(
-            (selectors) => ({ multiplier: selectors.multiplier }),
             () => ({ multiplier: value })
           ),
         })
@@ -158,7 +153,6 @@ describe('createLatticeStore - adapter bridge', () => {
         ({ count }, set) => ({
           value: () => count(),
           increment: () => set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
         })
@@ -169,7 +163,6 @@ describe('createLatticeStore - adapter bridge', () => {
         ({ name }, set) => ({
           name: () => name(),
           setName: (newName: string) => set(
-            (selectors) => ({ name: selectors.name }),
             () => ({ name: newName })
           ),
         })
@@ -285,7 +278,6 @@ describe('createLatticeStore - adapter bridge', () => {
         ({ count }, set) => ({
           value: () => count(),
           increment: () => set(
-            (selectors) => ({ count: selectors.count }),
             ({ count }) => ({ count: count() + 1 })
           ),
         })
