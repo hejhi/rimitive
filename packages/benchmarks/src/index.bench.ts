@@ -1,23 +1,4 @@
-/**
- * @fileoverview Main benchmark suite for Lattice framework
- * 
- * Benchmarks cover:
- * 1. Adapter overhead (raw vs with Lattice)
- * 2. Library comparisons (store-react vs zustand)
- * 3. Adapter performance rankings
- * 4. Real-world scenarios
- */
-
 import { describe, bench } from 'vitest';
-
-// Import benchmarks
-import './suites/overhead.bench';
-import './suites/head-to-head.bench';
-import './suites/adapter-rankings.bench';
-import './suites/real-world.bench';
-import './suites/memory.bench';
-import './suites/react-transitions.bench';
-import './suites/context-vs-store.bench';
 
 describe('Lattice Benchmarks', () => {
   bench('warmup', () => {

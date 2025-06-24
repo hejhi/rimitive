@@ -1,148 +1,195 @@
 # Lattice Performance Benchmarks
 
-Performance benchmarks for the Lattice framework, focusing on runtime characteristics that impact real application performance.
+Comprehensive performance benchmarks comparing Lattice against other reactive state management solutions.
 
-## Benchmark Categories
+## 🎯 What These Benchmarks Measure
 
-### 1. Adapter Overhead
-Measures the performance impact of using Lattice wrappers around native state management libraries:
-- Raw Zustand vs Zustand + Lattice
-- Raw Redux vs Redux + Lattice
-- Raw Svelte stores vs Svelte + Lattice
-- State updates, subscriptions, and store creation
+### Performance Metrics
 
-### 2. Head-to-Head Comparisons
-Direct performance comparisons between similar libraries:
-- store-react vs Zustand (React hooks)
-- store-react vs Zustand (vanilla)
-- Hook creation, updates, and subscription performance
+**1. Execution Time** (via Vitest benchmarks)
+- Raw operations per second
+- Update cycle performance
+- Subscription notification overhead
 
-### 3. Adapter Rankings
-Compares all Lattice adapters against each other:
-- State update performance
-- Complex state operations
-- Subscription handling
-- Store creation speed
+**2. Memory Usage**
+- Heap allocation during setup
+- Memory growth during operations  
+- Cleanup efficiency
+- Memory retention patterns
 
-### 4. Real-World Scenarios
-Simulates actual application usage patterns:
-- **E-commerce Cart**: Product management, cart operations, user sessions, checkout flow
-- **Todo App**: CRUD operations, filtering, search, tag management
+**3. Bundle Size Impact**
+- Core library size contribution
+- Tree-shaking effectiveness
+- Real-world bundle impact
 
-### 5. Memory Usage Patterns
-Tests memory characteristics and potential leaks:
-- Large state trees (1000+ items)
-- Subscription cleanup
-- Rapid store creation/destruction
+**4. Reactivity Efficiency**
+- Unnecessary computation prevention
+- Subscription granularity
+- Update propagation costs
 
-## Running Benchmarks
+## 🔧 Running Benchmarks
 
-### Basic Commands
-
+### Quick Start
 ```bash
-# Run all benchmarks
+# Run all benchmarks with enhanced metrics
+pnpm bench:all
+
+# Memory-focused benchmarks (requires Node.js --expose-gc)
+pnpm bench:memory
+
+# Bundle size analysis
+pnpm bench:bundle
+
+# Standard performance benchmarks
 pnpm bench
-
-# Run benchmarks without memoization (raw performance)
-pnpm bench:raw
-
-# Run benchmarks with memoization (real-world performance)
-pnpm bench:real
 ```
 
-### CI Commands
-
+### Individual Benchmark Suites
 ```bash
-# Run benchmarks and output JSON results
-pnpm bench:ci
+# Lattice-specific benchmarks
+pnpm bench:lattice
 
-# Compare benchmark results
-pnpm bench:compare bench-results.json
-
-# Generate HTML report
-pnpm bench:report
+# React store adapter benchmarks  
+pnpm bench:store-react
 ```
 
-### Running Specific Benchmarks
-
+### Detailed Memory Analysis
 ```bash
-# Run only overhead benchmarks
-pnpm vitest bench src/suites/overhead.bench.ts
+# Enable full memory tracking (recommended)
+node --expose-gc scripts/run-chunked-benchmarks.js real lattice
 
-# Run only adapter rankings
-pnpm vitest bench src/suites/adapter-rankings.bench.ts
+# With verbose output for debugging
+pnpm bench:lattice --reporter=verbose
 ```
 
-## Understanding Results
+## 📊 Understanding Results
 
-### Key Metrics
+### Execution Time
+- **Higher ops/sec = Better performance**
+- Look for consistent performance across iterations
+- Compare relative performance between solutions
 
-1. **ops/sec**: Operations per second (higher is better)
-2. **±%**: Margin of error
-3. **samples**: Number of samples taken
+### Memory Usage
+- **Lower memory delta = Better efficiency**
+- Monitor memory growth patterns
+- Check for memory leaks in teardown
 
-### What to Look For
+### Bundle Size
+- **Smaller size = Better for production**
+- Consider gzipped size for realistic impact
+- Evaluate size vs. feature trade-offs
 
-- **Overhead**: Lattice should add minimal overhead (<5%) to raw adapters
-- **store-react vs Zustand**: store-react should be competitive or faster for React use cases
-- **Adapter Rankings**: Performance differences between adapters should reflect their underlying implementations
+### Computation Efficiency
+- **Fewer computations = Better optimization**
+- Ideal: Only relevant updates trigger recalculation
+- Watch for over-reactive patterns
 
-### Performance Goals
+## 🧪 Benchmark Scenarios
 
-1. **Minimal Overhead**: Lattice abstractions should not significantly impact performance
-2. **Predictable Performance**: Consistent performance across different usage patterns
-3. **Memory Efficiency**: No memory leaks or excessive allocations
-4. **Scalability**: Performance should scale linearly with state size
+### Fine-Grained Reactivity
+**File:** `fine-grained-reactivity.bench.ts`
 
-## Benchmark Implementation Notes
+Tests how well each system handles selective updates in large state trees.
 
-### Warmup
-Each benchmark suite includes a warmup phase to ensure JIT optimization.
+**Scenario:** 100 independent counters, cyclical updates
+- **Lattice:** Slice-based subscriptions
+- **MobX:** Computed observables per counter
+- **Focus:** Memory efficiency and update targeting
 
-### Iterations
-- Simple operations: 10,000 iterations
-- Complex operations: 100-1,000 iterations
-- Memory tests: Scaled appropriately
+### Svelte Integration
+**File:** `svelte-reactivity.bench.ts` 
 
-### Fair Comparisons
-- Same operations across all adapters
-- Equivalent state structures
-- Identical business logic
+Compares Lattice's Svelte utilities against native Svelte stores.
 
-## Adding New Benchmarks
+**Scenario:** Complex dashboard state with mixed update patterns
+- **Svelte:** Traditional derived stores
+- **Lattice:** combineSlices utilities
+- **Focus:** Over-reactivity prevention
 
-1. Create a new file in `src/suites/`
-2. Import it in `src/index.bench.ts`
-3. Follow the existing patterns:
-   ```typescript
-   describe('Category', () => {
-     bench('adapter - operation', () => {
-       // Setup
-       // Operations
-       // Return result for verification
-     });
-   });
+### Svelte 5 Runes
+**File:** `svelte-runes.bench.svelte.ts`
+
+Modern Svelte 5 runes vs Lattice slice patterns.
+
+**Scenario:** Dashboard with business metrics calculations
+- **Runes:** $derived with fine-grained access
+- **Lattice:** Slice composition with $derived
+- **Focus:** Realistic computation patterns
+
+## 📈 Performance Optimization Tips
+
+### For Accurate Results
+
+1. **Use --expose-gc flag**
+   ```bash
+   node --expose-gc scripts/run-chunked-benchmarks.js real
    ```
 
-## Interpreting Results
+2. **Run multiple iterations**
+   ```bash
+   # Run benchmark suite 3 times and average results
+   for i in {1..3}; do pnpm bench:lattice; done
+   ```
 
-### Expected Patterns
+3. **Isolate system resources**
+   - Close other applications
+   - Use consistent Node.js versions
+   - Avoid running during high system load
 
-1. **Zustand**: Generally fastest due to minimal abstraction
-2. **Redux**: Slower due to immutability and middleware
-3. **store-react**: Optimized for React, competitive with Zustand
-4. **Svelte**: Expected to perform well due to compile-time optimizations and native reactivity
+### Interpreting Variations
 
-### Red Flags
+- **±10% variance:** Normal for JavaScript benchmarks
+- **>25% variance:** May indicate inconsistent test conditions
+- **Memory spikes:** Often due to garbage collection timing
 
-- Lattice overhead >10%
-- Memory benchmarks showing growth patterns
-- Subscription performance degradation with scale
+## ⚖️ Benchmark Fairness
 
-## Contributing
+### Implementation Standards
 
-When adding new features to Lattice:
-1. Add corresponding benchmarks
-2. Run benchmarks before and after changes
-3. Document any performance impacts
-4. Optimize if regression >5%
+1. **Realistic Usage Patterns**
+   - Based on actual application scenarios
+   - No artificial optimizations for any library
+   - Comparable setup complexity
+
+2. **Fair Comparisons**
+   - Same computation workloads
+   - Equivalent subscription patterns
+   - Similar API complexity
+
+3. **Measurement Accuracy**
+   - Multiple benchmark runs
+   - Memory isolation between tests
+   - Cleanup verification
+
+### What These Benchmarks Don't Cover
+
+- **Developer Experience:** API ergonomics, TypeScript support
+- **Ecosystem:** Plugin availability, community size  
+- **Edge Cases:** Error handling, complex async patterns
+- **Framework Integration:** SSR, hydration, dev tools
+
+## 🔍 Analyzing Specific Results
+
+### When Lattice Performs Well
+- Complex state with fine-grained subscriptions
+- Selective update patterns
+- Composition-heavy architectures
+
+### When Alternatives May Excel
+- Simple state management needs
+- Coarse-grained reactive patterns
+- Minimal bundle size requirements
+
+### Red Flags to Watch For
+- **Memory leaks:** Growing memory without cleanup
+- **Over-reactivity:** Computations > expected updates
+- **Degradation:** Performance drops with scale
+
+## 🚀 Contributing Benchmarks
+
+1. **Focus on realistic scenarios** that users actually encounter
+2. **Ensure fairness** across all implementations
+3. **Document assumptions** and measurement methodology
+4. **Test edge cases** where libraries might show different characteristics
+
+See [Contributing Guidelines](../../CONTRIBUTING.md) for detailed standards.

@@ -10,17 +10,18 @@ export default defineConfig({
     benchmark: {
       // Include benchmark files
       include: ['src/**/*.bench.{ts,tsx,svelte.ts}'],
-      // Output JSON results when specified via CLI
-      // outputJson: 'bench-results.json', // Can be overridden via CLI
-      // reporters: ['default', 'json'], // Available reporters
+      // Enhanced reporting for performance analysis with memory tracking
+      reporters: ['verbose'],
     },
-    // Pool options for benchmarks
+    // Pool options for benchmarks - use separate processes for memory isolation
     pool: 'forks',
     poolOptions: {
       forks: {
-        singleFork: true,
+        singleFork: false, // Allow multiple forks for better memory isolation
       },
     },
+    // Enable memory tracking in Node.js
+    setupFiles: ['./vitest.setup.ts'],
   },
   resolve: {
     // Enable browser conditions for Svelte 5 runes

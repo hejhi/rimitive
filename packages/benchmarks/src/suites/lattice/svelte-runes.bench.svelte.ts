@@ -1,371 +1,350 @@
 /**
- * @fileoverview Svelte 5 Runes Over-Reactivity Performance Benchmark
+ * @fileoverview Runes-Native vs Runtime vs Raw Svelte Performance Comparison
  *
- * Compares plain Svelte 5 runes $derived against Lattice slices in scenarios where
- * traditional $derived over-triggers due to unrelated state changes.
+ * This benchmark compares three approaches:
+ * 1. Raw Svelte 5 runes (baseline performance)
+ * 2. Lattice runtime-based approach (current implementation)
+ * 3. Lattice runes-native approach (new zero-overhead implementation)
  *
- * Key insight: $derived recalculates when ANY dependency changes.
- * Lattice slices only recalculate when their specific dependencies change.
+ * Goal: Demonstrate that runes-native approach matches or exceeds raw Svelte
+ * performance while providing Lattice's organizational benefits.
  */
 
 import { describe, bench } from 'vitest';
-import { createStore } from '@lattice/core';
+import { createLatticeStore, select as $ } from '@lattice/core';
+import {
+  createSvelteSlices,
+  combineSlices,
+  svelteRunesAdapter,
+} from '@lattice/frameworks/runes';
 
-// Test scenario: Dashboard with multiple independent data streams
-const INITIAL_DASHBOARD = {
-  analytics: { pageViews: 1000, uniqueUsers: 250 },
+// Complex business calculation for realistic benchmarking
+function calculateBusinessMetrics(
+  pageViews: number,
+  revenue: number,
+  orders: number,
+  users: number
+): { conversion: number; rpu: number; complex: number } {
+  let complex = 0;
+  for (let i = 1; i <= 100; i++) {
+    complex += (pageViews * revenue) / (i * users + 1);
+  }
+
+  return {
+    conversion: orders / users,
+    rpu: revenue / users,
+    complex,
+  };
+}
+
+// Shared test data
+const INITIAL_STATE = {
+  analytics: { pageViews: 1000, users: 250 },
   sales: { revenue: 50000, orders: 125 },
-  system: { cpu: 45, memory: 60, disk: 80 },
-  notifications: { unread: 5, alerts: 2 },
   ui: { theme: 'light', sidebar: true },
 };
 
-const UPDATE_ITERATIONS = 500;
+const UPDATE_ITERATIONS = 300;
 
-describe('Svelte 5 Runes - Complex Dashboard Reactivity', () => {
-  // Baseline: Plain runes with $derived (over-reactive)
-  bench('Runes $derived - complex state (over-reactive)', () => {
-    const dashboard = $state(structuredClone(INITIAL_DASHBOARD));
+describe('Runes Performance Comparison - Complex Business Dashboard', () => {
+  // BASELINE: Raw Svelte 5 runes (optimal performance)
+  bench('Raw Svelte Runes - dashboard with business logic', () => {
+    const state = $state(structuredClone(INITIAL_STATE));
 
-    // Expensive computation that only needs analytics and sales data
-    // Problem: Will recalculate when ANY dashboard property changes
-    let expensiveComputations = 0;
+    // Business metrics computation using pure $derived
+    let computations = 0;
     const businessMetrics = $derived(() => {
-      expensiveComputations++;
-
-      // Expensive computation combining analytics and sales
-      let result = 0;
-      for (let i = 0; i < 1000; i++) {
-        result += Math.sqrt(
-          (dashboard.analytics.pageViews + dashboard.sales.revenue) * i
-        );
-      }
-
-      return {
-        conversionRate:
-          dashboard.sales.orders / dashboard.analytics.uniqueUsers,
-        revenuePerView: dashboard.sales.revenue / dashboard.analytics.pageViews,
-        expensiveMetric: result,
-      };
+      computations++;
+      return calculateBusinessMetrics(
+        state.analytics.pageViews,
+        state.sales.revenue,
+        state.sales.orders,
+        state.analytics.users
+      );
     });
 
-    // Update functions that match Lattice pattern
+    // Update functions
     const updateAnalytics = () => {
-      dashboard.analytics.pageViews += 10;
-      dashboard.analytics.uniqueUsers += 2;
+      state.analytics.pageViews += 10;
+      state.analytics.users += 2;
     };
 
     const updateSales = () => {
-      dashboard.sales.revenue += 1000;
-      dashboard.sales.orders += 3;
-    };
-
-    const updateSystem = () => {
-      dashboard.system.cpu = Math.random() * 100;
-      dashboard.system.memory = Math.random() * 100;
-    };
-
-    const updateNotifications = () => {
-      dashboard.notifications.unread += 1;
-      dashboard.notifications.alerts = Math.floor(Math.random() * 5);
+      state.sales.revenue += 1000;
+      state.sales.orders += 3;
     };
 
     const updateUI = () => {
-      dashboard.ui.theme = dashboard.ui.theme === 'light' ? 'dark' : 'light';
-      dashboard.ui.sidebar = !dashboard.ui.sidebar;
+      state.ui.theme = state.ui.theme === 'light' ? 'dark' : 'light';
     };
 
-    // Mix of relevant and irrelevant updates
+    // Realistic update pattern
     for (let i = 0; i < UPDATE_ITERATIONS; i++) {
-      const updateType = i % 5;
+      const updateType = i % 4;
       switch (updateType) {
         case 0:
-          updateAnalytics();
-          break; // Relevant - should trigger computation
+          updateAnalytics(); // Relevant - will trigger computation
+          break;
         case 1:
-          updateSales();
-          break; // Relevant - should trigger computation
+          updateSales(); // Relevant - will trigger computation
+          break;
         case 2:
-          updateSystem();
-          break; // Irrelevant - but WILL trigger computation
         case 3:
-          updateNotifications();
-          break; // Irrelevant - but WILL trigger computation
-        case 4:
-          updateUI();
-          break; // Irrelevant - but WILL trigger computation
+          updateUI(); // Irrelevant - should NOT trigger computation
+          break;
       }
 
-      // Force evaluation to simulate component access
-      businessMetrics;
+      // Force evaluation
+      businessMetrics().conversion;
     }
   });
 
-  // Lattice: Fine-grained slices (prevents over-reactivity)
-  bench('Lattice slices - complex state (fine-grained)', () => {
-    const createSlice = createStore(INITIAL_DASHBOARD);
+  // CURRENT: Lattice runtime-based approach (performance bottleneck)
+  bench('Lattice Runtime - dashboard with adapter overhead', () => {
+    const state = $state(structuredClone(INITIAL_STATE));
+    const adapter = svelteRunesAdapter(state);
+    const createSlice = createLatticeStore(adapter);
 
-    // Analytics slice - only tracks analytics data
+    // Analytics slice - using new concise syntax
     const analyticsSlice = createSlice(
-      (selectors) => ({ analytics: selectors.analytics }),
+      $('analytics'),
       ({ analytics }, set) => ({
         pageViews: () => analytics().pageViews,
-        uniqueUsers: () => analytics().uniqueUsers,
+        users: () => analytics().users,
         updateMetrics: () =>
-          set(
-            (selectors) => ({ analytics: selectors.analytics }),
-            ({ analytics }) => ({
-              analytics: {
-                pageViews: analytics().pageViews + 10,
-                uniqueUsers: analytics().uniqueUsers + 2,
-              },
-            })
-          ),
+          set(({ analytics }) => ({
+            analytics: {
+              pageViews: analytics().pageViews + 10,
+              users: analytics().users + 2,
+            },
+          })),
       })
     );
 
-    // Sales slice - only tracks sales data
-    const salesSlice = createSlice(
-      (selectors) => ({ sales: selectors.sales }),
-      ({ sales }, set) => ({
-        revenue: () => sales().revenue,
-        orders: () => sales().orders,
-        updateMetrics: () =>
-          set(
-            (selectors) => ({ sales: selectors.sales }),
-            ({ sales }) => ({
-              sales: {
-                revenue: sales().revenue + 1000,
-                orders: sales().orders + 3,
-              },
-            })
-          ),
+    // Sales slice
+    const salesSlice = createSlice($('sales'), ({ sales }, set) => ({
+      revenue: () => sales().revenue,
+      orders: () => sales().orders,
+      updateMetrics: () =>
+        set(({ sales }) => ({
+          sales: {
+            revenue: sales().revenue + 1000,
+            orders: sales().orders + 3,
+          },
+        })),
+    }));
+
+    // UI slice
+    const uiSlice = createSlice($('ui'), ({ ui }, set) => ({
+      theme: () => ui().theme,
+      toggleTheme: () =>
+        set(({ ui }) => ({
+          ui: {
+            ...ui(),
+            theme: ui().theme === 'light' ? 'dark' : 'light',
+          },
+        })),
+    }));
+
+    // Business metrics slice
+    let computations = 0;
+    const businessSlice = createSlice(
+      $('analytics', 'sales'),
+      ({ analytics, sales }) => ({
+        metrics: () => {
+          computations++;
+          return calculateBusinessMetrics(
+            analytics().pageViews,
+            sales().revenue,
+            sales().orders,
+            analytics().users
+          );
+        },
       })
     );
 
-    // System slice - tracks system data (separate from business logic)
-    const systemSlice = createSlice(
-      (selectors) => ({ system: selectors.system }),
-      (_, set) => ({
-        updateMetrics: () =>
-          set(
-            (selectors) => ({ system: selectors.system }),
-            () => ({
-              system: {
-                cpu: Math.random() * 100,
-                memory: Math.random() * 100,
-                disk: 80,
-              },
-            })
-          ),
-      })
-    );
-
-    // Notifications slice - separate from business logic
-    const notificationsSlice = createSlice(
-      (selectors) => ({ notifications: selectors.notifications }),
-      (_, set) => ({
-        updateMetrics: () =>
-          set(
-            (selectors) => ({ notifications: selectors.notifications }),
-            ({ notifications }) => ({
-              notifications: {
-                unread: notifications().unread + 1,
-                alerts: Math.floor(Math.random() * 5),
-              },
-            })
-          ),
-      })
-    );
-
-    // UI slice - separate from business logic
-    const uiSlice = createSlice(
-      (selectors) => ({ ui: selectors.ui }),
-      (_, set) => ({
-        updateTheme: () =>
-          set(
-            (selectors) => ({ ui: selectors.ui }),
-            ({ ui }) => ({
-              ui: {
-                theme: ui().theme === 'light' ? 'dark' : 'light',
-                sidebar: !ui().sidebar,
-              },
-            })
-          ),
-      })
-    );
-
-    // Expensive computation - ONLY depends on analytics and sales slices
-    let expensiveComputations = 0;
-    const businessMetrics = $derived(() => {
-      const analytics = analyticsSlice();
-      const sales = salesSlice();
-      expensiveComputations++;
-
-      // Same expensive computation
-      let result = 0;
-      for (let i = 0; i < 1000; i++) {
-        result += Math.sqrt((analytics.pageViews() + sales.revenue()) * i);
-      }
-
-      return {
-        conversionRate: sales.orders() / analytics.uniqueUsers(),
-        revenuePerView: sales.revenue() / analytics.pageViews(),
-        expensiveMetric: result,
-      };
-    });
-
-    // Same update pattern - mix of relevant and irrelevant updates
+    // Same update pattern
     for (let i = 0; i < UPDATE_ITERATIONS; i++) {
-      const updateType = i % 5;
+      const updateType = i % 4;
       switch (updateType) {
         case 0:
-          analyticsSlice().updateMetrics();
-          break; // Relevant - will trigger computation
+          analyticsSlice().updateMetrics(); // Relevant
+          break;
         case 1:
-          salesSlice().updateMetrics();
-          break; // Relevant - will trigger computation
+          salesSlice().updateMetrics(); // Relevant
+          break;
         case 2:
-          systemSlice().updateMetrics();
-          break; // Irrelevant - WON'T trigger computation ✓
         case 3:
-          notificationsSlice().updateMetrics();
-          break; // Irrelevant - WON'T trigger computation ✓
-        case 4:
-          uiSlice().updateTheme();
-          break; // Irrelevant - WON'T trigger computation ✓
+          uiSlice().toggleTheme(); // Irrelevant
+          break;
       }
 
-      // Force evaluation to simulate component access
-      businessMetrics;
+      // Force evaluation
+      businessSlice().metrics();
+    }
+  });
+
+  // NEW: Lattice runes-native approach (zero overhead)
+  bench('Lattice Runes-Native - zero overhead dashboard', () => {
+    const createSlice = createSvelteSlices(structuredClone(INITIAL_STATE));
+
+    // Analytics slice
+    const analytics = createSlice($('analytics'), ({ analytics }, { set }) => ({
+      pageViews: () => analytics.pageViews,
+      users: () => analytics.users,
+      updateMetrics: () =>
+        set('analytics', {
+          pageViews: analytics.pageViews + 10,
+          users: analytics.users + 2,
+        }),
+    }));
+
+    // Sales slice
+    const sales = createSlice($('sales'), ({ sales }, { set }) => ({
+      revenue: () => sales.revenue,
+      orders: () => sales.orders,
+      updateMetrics: () =>
+        set('sales', {
+          revenue: sales.revenue + 1000,
+          orders: sales.orders + 3,
+        }),
+    }));
+
+    // UI slice
+    const ui = createSlice($('ui'), ({ ui }, { set }) => ({
+      theme: () => ui.theme,
+      toggleTheme: () =>
+        set('ui', {
+          ...ui,
+          theme: ui.theme === 'light' ? 'dark' : 'light',
+        }),
+    }));
+
+    // Business metrics slice using combineSlices
+    let computations = 0;
+    const businessMetrics = combineSlices(
+      { analytics, sales },
+      ({ analytics: analyticsData, sales: salesData }) => {
+        computations++;
+        return calculateBusinessMetrics(
+          analyticsData.pageViews(),
+          salesData.revenue(),
+          salesData.orders(),
+          analyticsData.users()
+        );
+      }
+    );
+
+    // Same update pattern
+    for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+      const updateType = i % 4;
+      switch (updateType) {
+        case 0:
+          analytics().updateMetrics(); // Relevant
+          break;
+        case 1:
+          sales().updateMetrics(); // Relevant
+          break;
+        case 2:
+        case 3:
+          ui().toggleTheme(); // Irrelevant
+          break;
+      }
+
+      // Force evaluation
+      businessMetrics();
     }
   });
 });
 
-describe('Runes Reactivity Efficiency - Computation Analysis', () => {
-  // Analysis: Count over-reactive computations with plain runes
-  bench('Analysis: Runes $derived over-reactive computations', () => {
-    const data = $state({
-      critical: 0,
-      metadata: 'info',
-      config: { theme: 'light', lang: 'en' },
-    });
+describe('Runes Performance Comparison - Simple Counter', () => {
+  // Simpler test to isolate the overhead differences
+
+  bench('Raw Svelte Runes - simple counter', () => {
+    const state = $state({ count: 0, irrelevant: 'data' });
 
     let computations = 0;
-    const expensiveAnalysis = $derived(() => {
+    const doubled = $derived(() => {
       computations++;
-      // Expensive computation that only needs 'critical' data
-      let result = 0;
-      for (let i = 0; i < 2000; i++) {
-        result += Math.sqrt(data.critical * i);
-      }
-      return {
-        processedValue: result,
-        timestamp: Date.now(),
-      };
+      return state.count * 2;
     });
 
-    // Update mix: mostly irrelevant changes that trigger unnecessary computations
-    for (let i = 0; i < 150; i++) {
-      if (i % 4 === 0) {
-        data.critical++; // Relevant - should trigger computation
-      } else if (i % 4 === 1) {
-        data.metadata = `info-${i}`; // Irrelevant - but WILL trigger computation
-      } else if (i % 4 === 2) {
-        data.config.theme = data.config.theme === 'light' ? 'dark' : 'light'; // Irrelevant - but WILL trigger
+    for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+      if (i % 2 === 0) {
+        state.count++; // Relevant
       } else {
-        data.config.lang = `lang-${i % 3}`; // Irrelevant - but WILL trigger
+        state.irrelevant = `data-${i}`; // Irrelevant
       }
 
-      expensiveAnalysis; // Force evaluation
+      // Access the derived value to force evaluation
+      const _ = doubled;
+      void _;
     }
   });
 
-  // Analysis: Count fine-grained computations with Lattice slices
-  bench('Analysis: Lattice slices fine-grained computations', () => {
-    const createSlice = createStore({
-      critical: 0,
-      metadata: 'info',
-      config: { theme: 'light', lang: 'en' },
-    });
-
-    // Critical data slice - only tracks what matters for computation
-    const criticalSlice = createSlice(
-      (selectors) => ({ critical: selectors.critical }),
-      ({ critical }, set) => ({
-        value: () => critical(),
-        increment: () =>
-          set(
-            (selectors) => ({ critical: selectors.critical }),
-            ({ critical }) => ({ critical: critical() + 1 })
-          ),
-      })
-    );
-
-    // Metadata slice - separate from critical computation
-    const metadataSlice = createSlice(
-      (selectors) => ({ metadata: selectors.metadata }),
-      (_, set) => ({
-        update: (value: string) =>
-          set(
-            (selectors) => ({ metadata: selectors.metadata }),
-            () => ({ metadata: value })
-          ),
-      })
-    );
-
-    // Config slice - separate from critical computation
-    const configSlice = createSlice(
-      (selectors) => ({ config: selectors.config }),
-      (_, set) => ({
-        updateTheme: () =>
-          set(
-            (selectors) => ({ config: selectors.config }),
-            ({ config }) => ({
-              config: {
-                ...config(),
-                theme: config().theme === 'light' ? 'dark' : 'light',
-              },
-            })
-          ),
-        updateLang: (lang: string) =>
-          set(
-            (selectors) => ({ config: selectors.config }),
-            ({ config }) => ({
-              config: { ...config(), lang },
-            })
-          ),
-      })
-    );
+  bench('Lattice Runtime - simple counter', () => {
+    const state = $state({ count: 0, irrelevant: 'data' });
+    const adapter = svelteRunesAdapter(state);
+    const createSlice = createLatticeStore(adapter);
 
     let computations = 0;
-    const expensiveAnalysis = $derived(() => {
-      const critical = criticalSlice();
-      computations++;
-      // Same expensive computation - only depends on critical slice
-      let result = 0;
-      for (let i = 0; i < 2000; i++) {
-        result += Math.sqrt(critical.value() * i);
-      }
-      return {
-        processedValue: result,
-        timestamp: Date.now(),
-      };
-    });
+    const counterSlice = createSlice($('count'), ({ count }, set) => ({
+      value: () => count(),
+      doubled: () => {
+        computations++;
+        return count() * 2;
+      },
+      increment: () => set(({ count }) => ({ count: count() + 1 })),
+    }));
 
-    // Same update pattern - but irrelevant changes don't trigger computation
-    for (let i = 0; i < 150; i++) {
-      if (i % 4 === 0) {
-        criticalSlice().increment(); // Relevant - will trigger computation
-      } else if (i % 4 === 1) {
-        metadataSlice().update(`info-${i}`); // Irrelevant - WON'T trigger computation ✓
-      } else if (i % 4 === 2) {
-        configSlice().updateTheme(); // Irrelevant - WON'T trigger computation ✓
+    const irrelevantSlice = createSlice(
+      $('irrelevant'),
+      ({ irrelevant }, set) => ({
+        value: () => irrelevant(),
+        change: (newValue: string) => set(() => ({ irrelevant: newValue })),
+      })
+    );
+
+    for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+      if (i % 2 === 0) {
+        counterSlice().increment(); // Relevant
       } else {
-        configSlice().updateLang(`lang-${i % 3}`); // Irrelevant - WON'T trigger computation ✓
+        irrelevantSlice().change(`data-${i}`); // Irrelevant
       }
 
-      expensiveAnalysis; // Access - only recalculates when needed
+      counterSlice().doubled(); // Force evaluation
+    }
+  });
+
+  bench('Lattice Runes-Native - simple counter', () => {
+    const createSlice = createSvelteSlices({ count: 0, irrelevant: 'data' });
+
+    let computations = 0;
+    const counter = createSlice($('count'), ({ count }, { set }) => ({
+      value: () => count,
+      doubled: () => {
+        computations++;
+        return count * 2;
+      },
+      increment: () => set('count', count + 1),
+    }));
+
+    const irrelevant = createSlice(
+      $('irrelevant'),
+      ({ irrelevant }, { set }) => ({
+        value: () => irrelevant,
+        change: (newValue: string) => set('irrelevant', newValue),
+      })
+    );
+
+    for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+      if (i % 2 === 0) {
+        counter().increment(); // Relevant
+      } else {
+        irrelevant().change(`data-${i}`); // Irrelevant
+      }
+
+      counter().doubled(); // Force evaluation
     }
   });
 });

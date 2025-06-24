@@ -24,7 +24,7 @@ const BENCHMARK_SUITES = {
   lattice: [
     'fine-grained-reactivity',
     'svelte-reactivity',
-    'svelte-runes',
+    'svelte-runes'
   ],
   'store-react': [
     'context-vs-store',
@@ -38,7 +38,7 @@ const BENCHMARK_SUITES = {
 
 // Configuration
 const CONFIG = {
-  outputDir: 'dist/benchmarks',
+  outputDir: 'dist',
   maxOldSpaceSize: 4096,
   disableMemoization: process.env.LATTICE_DISABLE_MEMOIZATION === 'true',
   mode: process.argv[2] || 'real', // 'raw' or 'real'
@@ -65,26 +65,57 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
   
   // Determine file extension based on suite name
   const isReactFile = ['context-vs-store', 'react-integration', 'real-world', 'core-performance', 'store-react-apis'].includes(suiteName) && category === 'store-react';
-  const isSvelteFile = suiteName === 'svelte-runes' && category === 'lattice';
+  const isSvelteFile = ['svelte-runes'].includes(suiteName) && category === 'lattice';
   const extension = isReactFile ? '.tsx' : isSvelteFile ? '.svelte.ts' : '.ts';
   
   const args = [
+    'exec',
     'vitest',
     'bench',
     '--run',
+    `--reporter=verbose`,
     `--outputJson=${outputPath}`,
     `src/suites/${category}/${suiteName}.bench${extension}`
   ];
   
-  return new Promise((resolve, reject) => {
+  // Add Node.js options for the spawned process
+  if (!env.NODE_OPTIONS) {
+    env.NODE_OPTIONS = '--expose-gc';
+  } else if (!env.NODE_OPTIONS.includes('--expose-gc')) {
+    env.NODE_OPTIONS += ' --expose-gc';
+  }
+  
+  return new Promise((resolve) => {
+    let stdout = '';
+    let stderr = '';
+    
     const child = spawn('pnpm', args, {
       cwd: projectRoot,
       env,
-      stdio: 'inherit'
+      stdio: ['inherit', 'pipe', 'pipe']
     });
     
-    child.on('close', (code) => {
+    child.stdout.on('data', (data) => {
+      const output = data.toString();
+      stdout += output;
+      process.stdout.write(output); // Still show output to user
+    });
+    
+    child.stderr.on('data', (data) => {
+      const output = data.toString();
+      stderr += output;
+      process.stderr.write(output); // Still show output to user
+    });
+    
+    child.on('close', async (code) => {
       if (code === 0) {
+        // Parse memory information from stdout and enhance JSON output
+        try {
+          await enhanceJsonWithMemoryData(outputPath, stdout);
+        } catch (error) {
+          console.warn(`⚠️ Could not enhance ${suiteName} with memory data:`, error.message);
+        }
+        
         console.log(`✅ ${suiteName} benchmark completed`);
         resolve({ suite: suiteName, outputFile, status: 'success' });
       } else {
@@ -101,6 +132,99 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
 }
 
 /**
+ * Enhance JSON output with memory data from stdout
+ */
+async function enhanceJsonWithMemoryData(outputPath, stdout) {
+  try {
+    // Read the existing JSON output
+    const jsonContent = await fs.readFile(outputPath, 'utf8');
+    const data = JSON.parse(jsonContent);
+    
+    // Parse memory information from stdout
+    const memoryData = parseMemoryFromOutput(stdout);
+    
+    // Enhance the JSON with memory information
+    const enhancedData = {
+      ...data,
+      memoryTracking: {
+        enabled: true,
+        parsedFromOutput: true,
+        memoryMeasurements: memoryData
+      }
+    };
+    
+    // Enhance individual benchmark results
+    if (enhancedData.files) {
+      enhancedData.files = enhancedData.files.map(file => ({
+        ...file,
+        groups: file.groups?.map(group => ({
+          ...group,
+          benchmarks: group.benchmarks?.map(benchmark => {
+            const memInfo = memoryData.find(m => m.benchmarkName === benchmark.name);
+            return {
+              ...benchmark,
+              memoryUsage: memInfo || null
+            };
+          })
+        }))
+      }));
+    }
+    
+    // Write enhanced JSON back
+    await fs.writeFile(outputPath, JSON.stringify(enhancedData, null, 2));
+  } catch (error) {
+    console.warn('Failed to enhance JSON with memory data:', error.message);
+  }
+}
+
+/**
+ * Parse memory measurements from stdout
+ */
+function parseMemoryFromOutput(stdout) {
+  const memoryMeasurements = [];
+  const lines = stdout.split('\n');
+  
+  for (const line of lines) {
+    // Look for memory log patterns
+    const setupMatch = line.match(/(\w+.*?) setup memory: ([\d.]+\s*\w+)/);
+    const deltaMatch = line.match(/(\w+.*?) memory delta: ([\d.]+\s*\w+)/);
+    const totalMatch = line.match(/(\w+.*?) total memory: ([\d.]+\s*\w+)/);
+    
+    if (setupMatch) {
+      const [, benchmarkName, memoryValue] = setupMatch;
+      let existing = memoryMeasurements.find(m => m.benchmarkName.includes(benchmarkName.trim()));
+      if (!existing) {
+        existing = { benchmarkName: benchmarkName.trim(), measurements: {} };
+        memoryMeasurements.push(existing);
+      }
+      existing.measurements.setup = memoryValue.trim();
+    }
+    
+    if (deltaMatch) {
+      const [, benchmarkName, memoryValue] = deltaMatch;
+      let existing = memoryMeasurements.find(m => m.benchmarkName.includes(benchmarkName.trim()));
+      if (!existing) {
+        existing = { benchmarkName: benchmarkName.trim(), measurements: {} };
+        memoryMeasurements.push(existing);
+      }
+      existing.measurements.delta = memoryValue.trim();
+    }
+    
+    if (totalMatch) {
+      const [, benchmarkName, memoryValue] = totalMatch;
+      let existing = memoryMeasurements.find(m => m.benchmarkName.includes(benchmarkName.trim()));
+      if (!existing) {
+        existing = { benchmarkName: benchmarkName.trim(), measurements: {} };
+        memoryMeasurements.push(existing);
+      }
+      existing.measurements.total = memoryValue.trim();
+    }
+  }
+  
+  return memoryMeasurements;
+}
+
+/**
  * Create directory structure
  */
 async function setupDirectories(timestamp) {
@@ -114,10 +238,26 @@ async function setupDirectories(timestamp) {
 }
 
 /**
+ * Generate human-readable timestamp for directory naming
+ * Format: YYYY-MM-DD|HH:MM:SS (newest first when sorted alphabetically)
+ */
+function generateTimestamp() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}|${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Main execution
  */
 async function main() {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+  const timestamp = generateTimestamp();
   
   console.log('🚀 Starting chunked benchmark run');
   console.log(`Suite: ${CONFIG.suite}`);
@@ -152,7 +292,7 @@ async function main() {
     console.log('\n📊 Benchmark Run Complete!');
     console.log(`✅ Successful: ${successful}`);
     console.log(`❌ Failed: ${failed}`);
-    console.log(`📁 Results directory: ${path.join(CONFIG.outputDir, timestamp)}`);
+    console.log(`📁 Results directory: ${timestamp}`);
   } catch (error) {
     console.error('❌ Fatal error:', error);
     process.exit(1);
