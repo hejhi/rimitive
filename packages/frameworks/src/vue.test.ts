@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, computed, watch, nextTick } from 'vue';
 import { createStore } from '@lattice/core';
-import { useLatticeRef, useLatticeReactive, provideLatticeSlice, injectLatticeSlice } from './vue.js';
+import { useSlice, useLatticeReactive, provideLatticeSlice, injectLatticeSlice } from './vue.js';
 
 describe('Vue Lattice composables - New slice-based API', () => {
   // Create test slices
@@ -48,14 +48,14 @@ describe('Vue Lattice composables - New slice-based API', () => {
     return { counterSlice, userSlice, itemsSlice };
   };
 
-  describe('useLatticeRef', () => {
+  describe('useSlice', () => {
     it('should return a reactive ref that updates when slice changes', async () => {
       const { counterSlice } = createTestSlices();
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useLatticeRef(counterSlice, c => c.value());
-          const doubled = useLatticeRef(counterSlice, c => c.doubled());
+          const count = useSlice(counterSlice, c => c.value());
+          const doubled = useSlice(counterSlice, c => c.doubled());
 
           return { count, doubled };
         },
@@ -81,7 +81,7 @@ describe('Vue Lattice composables - New slice-based API', () => {
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useLatticeRef(counterSlice, c => c.value());
+          const count = useSlice(counterSlice, c => c.value());
           const tripled = computed(() => count.value * 3);
           
           watch(count, (newVal) => {
@@ -113,7 +113,7 @@ describe('Vue Lattice composables - New slice-based API', () => {
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useLatticeRef(counterSlice, c => {
+          const count = useSlice(counterSlice, c => {
             renderCount++;
             return c.value();
           });
@@ -207,7 +207,7 @@ describe('Vue Lattice composables - New slice-based API', () => {
       const ChildComponent = defineComponent({
         setup() {
           const counter = injectLatticeSlice<ReturnType<CounterSlice>>('test-counter');
-          const count = useLatticeRef(counter, (c: any) => c.value());
+          const count = useSlice(counter, (c: any) => c.value());
           
           return { count, counter };
         },
@@ -255,8 +255,8 @@ describe('Vue Lattice composables - New slice-based API', () => {
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useLatticeRef(counterSlice, c => c.value());
-          const doubled = useLatticeRef(counterSlice, c => c.doubled());
+          const count = useSlice(counterSlice, c => c.value());
+          const doubled = useSlice(counterSlice, c => c.doubled());
           
           watch([count, doubled], ([newCount, newDoubled]) => {
             watchedValues.push(newCount, newDoubled);
@@ -292,7 +292,7 @@ describe('Vue Lattice composables - New slice-based API', () => {
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useLatticeRef(counterSlice, c => c.value());
+          const count = useSlice(counterSlice, c => c.value());
           return { count };
         },
         template: '<div>{{ count }}</div>',

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { get } from 'svelte/store';
 import { createStore } from '@lattice/core';
 import {
-  asStore,
+  slice,
   sliceDerived,
   combineSlices,
   asyncDerived,
@@ -55,10 +55,10 @@ describe('Svelte utilities - New slice-based API', () => {
     return { counterSlice, userSlice, itemsSlice };
   };
 
-  describe('asStore', () => {
+  describe('slice', () => {
     it('should convert slice to Svelte store', () => {
       const { counterSlice } = createTestSlices();
-      const counterStore = asStore(counterSlice);
+      const counterStore = slice(counterSlice);
 
       // Initial value
       expect(get(counterStore).value()).toBe(0);
@@ -72,7 +72,7 @@ describe('Svelte utilities - New slice-based API', () => {
 
     it('should be reactive to slice changes', () => {
       const { userSlice } = createTestSlices();
-      const userStore = asStore(userSlice);
+      const userStore = slice(userSlice);
       const values: string[] = [];
 
       // Subscribe to store changes

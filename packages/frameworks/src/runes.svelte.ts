@@ -15,7 +15,58 @@
  * Lattice's compositional benefits.
  */
 
-import type { StoreAdapter } from '@lattice/core';
+import type { StoreAdapter, SliceHandle } from '@lattice/core';
+
+/**
+ * Convert a Lattice slice to a runes-compatible reactive function.
+ *
+ * Uses Svelte 5's $derived for zero-overhead reactivity that integrates
+ * seamlessly with the runes system.
+ *
+ * @param sliceHandle - A Lattice slice handle
+ * @param selector - Optional function to select specific values from the slice
+ * @returns Function that returns the slice value or selected value
+ *
+ * @example
+ * ```svelte
+ * <script>
+ *   import { slice } from '@lattice/frameworks/runes';
+ *
+ *   // Use entire slice - returns reactive function
+ *   const counter = slice(counterSlice);
+ *   const user = slice(userSlice);
+ *
+ *   // Use with selector for fine-grained reactivity
+ *   const count = slice(counterSlice, c => c.value());
+ *   const userName = slice(userSlice, u => u.name());
+ *
+ *   // Use in derived expressions
+ *   const doubled = $derived(count() * 2);
+ * </script>
+ *
+ * <div>Count: {count()}</div>
+ * <div>User: {userName()}</div>
+ * <div>Doubled: {doubled}</div>
+ * <button onclick={() => counter().increment()}>+</button>
+ * ```
+ */
+export function slice<T>(sliceHandle: SliceHandle<T>): () => T;
+export function slice<T, U>(
+  sliceHandle: SliceHandle<T>,
+  selector: (value: T) => U
+): () => U;
+export function slice<T, U = T>(
+  sliceHandle: SliceHandle<T>,
+  selector?: (value: T) => U
+): () => U {
+  const actualSelector = selector || ((value: T) => value as unknown as U);
+
+  // For runes, we create a $derived value that tracks slice changes
+  const derivedValue = $derived(actualSelector(sliceHandle()));
+
+  // Return a function that accesses the derived value
+  return () => derivedValue;
+}
 
 /**
  * Actions interface for state mutations

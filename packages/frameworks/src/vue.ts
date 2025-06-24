@@ -42,21 +42,25 @@ function getOrCreateSliceKey<T>(key: string): InjectionKey<SliceHandle<T>> {
 }
 
 /**
- * Creates a Vue ref from a Lattice slice selector with fine-grained reactivity.
+ * Vue hook for using reactive slices with fine-grained reactivity.
  *
  * This is the core utility that bridges Lattice slices to Vue's reactivity system.
  * The returned ref will only update when the slice's dependencies change, leveraging
  * Lattice's fine-grained subscription system.
  *
  * @param slice - A Lattice slice handle
- * @param selector - Function that extracts a value from the slice's computed properties
+ * @param selector - Optional function that extracts a value from the slice's computed properties
  * @returns ComputedRef that updates when the slice's dependencies change
  *
  * @example
  * ```vue
  * <script setup>
- * const count = useLatticeRef(counterSlice, c => c.value())
- * const doubled = useLatticeRef(counterSlice, c => c.doubled())
+ * // Use entire slice
+ * const counter = useSlice(counterSlice)
+ * 
+ * // Use with selector for fine-grained reactivity
+ * const count = useSlice(counterSlice, c => c.value())
+ * const doubled = useSlice(counterSlice, c => c.doubled())
  * 
  * // Use with any Vue API
  * const tripled = computed(() => count.value * 3)
@@ -70,25 +74,34 @@ function getOrCreateSliceKey<T>(key: string): InjectionKey<SliceHandle<T>> {
  * </template>
  * ```
  */
-export function useLatticeRef<Computed, T>(
+export function useSlice<Computed>(
+  slice: SliceHandle<Computed>
+): ComputedRef<Computed>;
+export function useSlice<Computed, T>(
   slice: SliceHandle<Computed>,
   selector: (computed: Computed) => T
+): ComputedRef<T>;
+export function useSlice<Computed, T = Computed>(
+  slice: SliceHandle<Computed>,
+  selector?: (computed: Computed) => T
 ): ComputedRef<T> {
+  const actualSelector = selector || ((computed: Computed) => computed as unknown as T);
+  
   const metadata = getSliceMetadata(slice);
   
   if (!metadata?.subscribe) {
     if (process.env.NODE_ENV !== 'production') {
-      throw new Error('[useLatticeRef] No subscription metadata found for slice. This is likely a bug - ensure you\'re passing a valid slice handle.');
+      throw new Error('[useSlice] No subscription metadata found for slice. This is likely a bug - ensure you\'re passing a valid slice handle.');
     }
   }
 
   // Use Vue's reactivity directly - create a ref that gets updated
-  const result = ref(selector(slice()));
+  const result = ref(actualSelector(slice()));
   
   if (metadata?.subscribe) {
     const unsubscribe = metadata.subscribe(() => {
       // Direct update when slice dependencies change
-      result.value = selector(slice());
+      result.value = actualSelector(slice());
     });
     onUnmounted(unsubscribe);
   }
@@ -96,6 +109,7 @@ export function useLatticeRef<Computed, T>(
   // Return as computed ref for proper typing and Vue ecosystem compatibility
   return computed(() => result.value);
 }
+
 
 /**
  * Creates a reactive object from a Lattice slice selector with fine-grained reactivity.

@@ -26,36 +26,57 @@ type InferSliceTypes<T extends readonly SliceHandle<any>[]> = {
  * Unlike regular Svelte stores, this only updates when the slice's actual
  * dependencies change, not on every state mutation.
  * 
- * @param slice - A Lattice slice handle
+ * @param sliceHandle - A Lattice slice handle
+ * @param selector - Optional function to select specific values from the slice
  * @returns Svelte readable store that updates with slice dependencies
  * 
  * @example
  * ```svelte
  * <script>
- *   import { asStore } from '@lattice/frameworks/svelte';
+ *   import { slice } from '@lattice/frameworks/svelte';
  *   
- *   const counter = asStore(counterSlice);
- *   const user = asStore(userSlice);
+ *   // Use entire slice
+ *   const counter = slice(counterSlice);
+ *   const user = slice(userSlice);
+ * 
+ *   // Use with selector for fine-grained reactivity  
+ *   const count = slice(counterSlice, c => c.value());
+ *   const userName = slice(userSlice, u => u.name());
  * </script>
  * 
- * <div>Count: {$counter.value()}</div>
- * <div>User: {$user.name()}</div>
+ * <div>Count: {$count}</div>
+ * <div>User: {$userName}</div>
  * <button on:click={() => $counter.increment()}>+</button>
  * ```
  */
-export function asStore<T>(slice: SliceHandle<T>): Readable<T> {
-  const metadata = getSliceMetadata(slice);
+export function slice<T>(sliceHandle: SliceHandle<T>): Readable<T>;
+export function slice<T, U>(
+  sliceHandle: SliceHandle<T>,
+  selector: (value: T) => U
+): Readable<U>;
+export function slice<T, U = T>(
+  sliceHandle: SliceHandle<T>,
+  selector?: (value: T) => U
+): Readable<U> {
+  const actualSelector = selector || ((value: T) => value as unknown as U);
+  const metadata = getSliceMetadata(sliceHandle);
   
-  return readable(slice(), (set) => {
+  return readable(actualSelector(sliceHandle()), (set) => {
     if (!metadata?.subscribe) {
       if (process.env.NODE_ENV !== 'production') {
-        console.warn('[asStore] No subscription metadata found for slice. Store will not be reactive.');
+        console.warn('[slice] No subscription metadata found for slice. Store will not be reactive.');
       }
       return;
     }
     
     return metadata.subscribe(() => {
-      set(slice());
+      try {
+        set(actualSelector(sliceHandle()));
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('[slice] Error in selector function:', error);
+        }
+      }
     });
   });
 }
