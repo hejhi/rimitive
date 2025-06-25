@@ -182,13 +182,10 @@ describe('store-react adapter', () => {
       const createComponent = (
         createSlice: RuntimeSliceFactory<{ count: number; enhanced: boolean }>
       ) => {
-        const queries = createSlice(
-          (selectors) => ({ count: selectors.count, enhanced: selectors.enhanced }),
-          ({ count, enhanced }) => ({
-            count: () => count(),
-            enhanced: () => enhanced(),
-          })
-        );
+        const queries = createSlice(({ count, enhanced }) => ({
+          count, // count is already a signal
+          enhanced, // enhanced is already a signal
+        }));
 
         return { queries };
       };

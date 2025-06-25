@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
-import { createStore } from '@lattice/core';
+import { createStore, computed } from '@lattice/core';
 import { useSlice, useSlices } from './react';
 
 describe('React hooks', () => {
@@ -13,37 +13,22 @@ describe('React hooks', () => {
       items: [] as string[],
     });
 
-    const counterSlice = createSlice(
-      (selectors) => ({ count: selectors.count }),
-      ({ count }, set) => ({
-        value: () => count(),
-        increment: () => set(
-          ({ count }) => ({ count: count() + 1 })
-        ),
-        isEven: () => count() % 2 === 0,
-      })
-    );
+    const counterSlice = createSlice(({ count }) => ({
+      value: count, // count is already a signal
+      increment: () => count(count() + 1),
+      isEven: computed(() => count() % 2 === 0),
+    }));
 
-    const userSlice = createSlice(
-      (selectors) => ({ name: selectors.name }),
-      ({ name }, set) => ({
-        name: () => name(),
-        setName: (newName: string) => set(
-          () => ({ name: newName })
-        ),
-      })
-    );
+    const userSlice = createSlice(({ name }) => ({
+      name, // name is already a signal
+      setName: (newName: string) => name(newName),
+    }));
 
-    const itemsSlice = createSlice(
-      (selectors) => ({ items: selectors.items }),
-      ({ items }, set) => ({
-        all: () => items(),
-        add: (item: string) => set(
-          ({ items }) => ({ items: [...items(), item] })
-        ),
-        count: () => items().length,
-      })
-    );
+    const itemsSlice = createSlice(({ items }) => ({
+      all: items, // items is already a signal
+      add: (item: string) => items([...items(), item]),
+      count: computed(() => items().length),
+    }));
 
     return { counterSlice, userSlice, itemsSlice };
   };

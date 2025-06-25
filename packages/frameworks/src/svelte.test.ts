@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { get } from 'svelte/store';
-import { createStore } from '@lattice/core';
+import { createStore, computed } from '@lattice/core';
 import {
   slice,
   derived,
@@ -16,39 +16,21 @@ describe('Svelte utilities - New slice-based API', () => {
       items: [] as string[],
     });
 
-    const counterSlice = createSlice(
-      (selectors) => ({ count: selectors.count }),
-      ({ count }, set) => ({
-        value: () => count(),
-        increment: () =>
-          set(
-            ({ count }) => ({ count: count() + 1 })
-          ),
-        doubled: () => count() * 2,
-      })
-    );
+    const counterSlice = createSlice(({ count }) => ({
+      value: count, // count is already a signal
+      increment: () => count(count() + 1),
+      doubled: computed(() => count() * 2),
+    }));
 
-    const userSlice = createSlice(
-      (selectors) => ({ name: selectors.name }),
-      ({ name }, set) => ({
-        name: () => name(),
-        setName: (newName: string) =>
-          set(
-            () => ({ name: newName })
-          ),
-      })
-    );
+    const userSlice = createSlice(({ name }) => ({
+      name, // name is already a signal
+      setName: (newName: string) => name(newName),
+    }));
 
-    const itemsSlice = createSlice(
-      (selectors) => ({ items: selectors.items }),
-      ({ items }, set) => ({
-        all: () => items(),
-        add: (item: string) =>
-          set(
-            ({ items }) => ({ items: [...items(), item] })
-          ),
-      })
-    );
+    const itemsSlice = createSlice(({ items }) => ({
+      all: items, // items is already a signal
+      add: (item: string) => items([...items(), item]),
+    }));
 
     return { counterSlice, userSlice, itemsSlice };
   };

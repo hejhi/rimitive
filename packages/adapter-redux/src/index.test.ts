@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { latticeReducer, reduxAdapter } from './index';
-import type { SignalState } from '@lattice/core';
 
 describe('Redux Adapter', () => {
   it('should create a Redux store with Lattice slices', () => {
