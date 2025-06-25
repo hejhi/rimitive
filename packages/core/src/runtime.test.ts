@@ -12,11 +12,21 @@ describe('createLatticeStore - adapter bridge', () => {
     const adapterFactory = (initialState: any) => {
       capturedInitialState = initialState;
       mockState = { ...initialState };
+      let subscriber: ((state: any) => void) | null = null;
 
       const mockAdapter: StoreAdapter<typeof initialState> = {
         getState: vi.fn(() => mockState),
-        setState: vi.fn((updates) => Object.assign(mockState, updates)),
-        subscribe: vi.fn(() => () => {}),
+        setState: vi.fn((updates) => {
+          Object.assign(mockState, updates);
+          // Notify subscriber of state change
+          if (subscriber) {
+            subscriber(mockState);
+          }
+        }),
+        subscribe: vi.fn((callback) => {
+          subscriber = callback;
+          return () => { subscriber = null; };
+        }),
       };
 
       return mockAdapter;
@@ -69,14 +79,23 @@ describe('createLatticeStore - adapter bridge', () => {
 
   it('should work with composed slices', () => {
     let mockState: any;
+    let subscriber: ((state: any) => void) | null = null;
 
     const adapterFactory = (initialState: any) => {
       mockState = { ...initialState };
 
       const mockAdapter: StoreAdapter<typeof initialState> = {
         getState: () => mockState,
-        setState: (updates) => Object.assign(mockState, updates),
-        subscribe: vi.fn(() => () => {}),
+        setState: (updates) => {
+          Object.assign(mockState, updates);
+          if (subscriber) {
+            subscriber(mockState);
+          }
+        },
+        subscribe: vi.fn((callback) => {
+          subscriber = callback;
+          return () => { subscriber = null; };
+        }),
       };
 
       return mockAdapter;

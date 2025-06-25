@@ -28,6 +28,10 @@
     "./runes": {
       "import": "./dist/runes.svelte.js",
       "types": "./dist/runes.svelte.d.ts"
+    },
+    "./svelte-minimal": {
+      "import": "./dist/svelte-minimal.js",
+      "types": "./dist/svelte-minimal.d.ts"
     }
   },
   "files": [

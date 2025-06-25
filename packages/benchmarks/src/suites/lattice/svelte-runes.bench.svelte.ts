@@ -56,15 +56,14 @@ describe('Runes Performance Comparison - Complex Business Dashboard', () => {
 
     // Business metrics computation using pure $derived
     let computations = 0;
-    const businessMetrics = $derived(() => {
-      computations++;
-      return calculateBusinessMetrics(
+    const businessMetrics = $derived(
+      calculateBusinessMetrics(
         state.analytics.pageViews,
         state.sales.revenue,
         state.sales.orders,
         state.analytics.users
-      );
-    });
+      )
+    );
 
     // Update functions
     const updateAnalytics = () => {
@@ -98,7 +97,7 @@ describe('Runes Performance Comparison - Complex Business Dashboard', () => {
       }
 
       // Force evaluation
-      businessMetrics().conversion;
+      businessMetrics.conversion;
     }
   });
 
@@ -361,10 +360,7 @@ describe('Runes Performance Comparison - Simple Counter', () => {
     const state = $state({ count: 0, irrelevant: 'data' });
 
     let computations = 0;
-    const doubled = $derived(() => {
-      computations++;
-      return state.count * 2;
-    });
+    const doubled = $derived(state.count * 2);
 
     for (let i = 0; i < UPDATE_ITERATIONS; i++) {
       if (i % 2 === 0) {
