@@ -7,6 +7,7 @@
 
 import type { StoreAdapter } from './adapter-contract';
 import type { ReactiveSliceFactory } from './runtime-types';
+import { createLatticeStore } from './runtime';
 
 /**
  * Creates a simple in-memory adapter for Lattice stores.
@@ -89,8 +90,7 @@ export function vanillaAdapter<State extends Record<string, unknown>>(
 export function createStore<State extends Record<string, unknown>>(
   initialState: State
 ): ReactiveSliceFactory<State> {
-  // Import here to avoid circular dependency
-  const { createLatticeStore } = require('./runtime') as typeof import('./runtime');
   const adapter = vanillaAdapter(initialState);
   return createLatticeStore(adapter);
 }
+

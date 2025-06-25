@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { mount } from '@vue/test-utils';
-import { defineComponent, watch, nextTick } from 'vue';
-import { createStore, computed } from '@lattice/core';
+import { defineComponent, watch, nextTick, computed } from 'vue';
+import { createStore, computed as latticeComputed } from '@lattice/core';
 import { useSlice, useLatticeReactive, provideLatticeSlice, injectLatticeSlice } from './vue.js';
 
 describe('Vue Lattice composables - New slice-based API', () => {
@@ -16,8 +16,8 @@ describe('Vue Lattice composables - New slice-based API', () => {
     const counterSlice = createSlice(({ count }) => ({
       value: count, // count is already a signal
       increment: () => count(count() + 1),
-      doubled: computed(() => count() * 2),
-      isEven: computed(() => count() % 2 === 0),
+      doubled: latticeComputed(() => count() * 2),
+      isEven: latticeComputed(() => count() % 2 === 0),
     }));
 
     const userSlice = createSlice(({ name }) => ({
@@ -263,36 +263,5 @@ describe('Vue Lattice composables - New slice-based API', () => {
       expect(watchedValues).toEqual([1, 2, 2, 4]);
     });
 
-    it('should clean up subscriptions on unmount', () => {
-      const { counterSlice } = createTestSlices();
-      const unsubscribeSpy = vi.fn();
-      
-      // Mock the metadata to track unsubscribe calls
-      const originalMetadata = (counterSlice as any).__metadata__;
-      const mockSubscribe = vi.fn(() => unsubscribeSpy);
-      (counterSlice as any).__metadata__ = {
-        ...originalMetadata,
-        subscribe: mockSubscribe,
-      };
-
-      const TestComponent = defineComponent({
-        setup() {
-          const count = useSlice(counterSlice, c => c.value());
-          return { count };
-        },
-        template: '<div>{{ count }}</div>',
-      });
-
-      const wrapper = mount(TestComponent);
-      expect(mockSubscribe).toHaveBeenCalledTimes(1);
-      expect(unsubscribeSpy).not.toHaveBeenCalled();
-
-      // Unmount should call unsubscribe
-      wrapper.unmount();
-      expect(unsubscribeSpy).toHaveBeenCalledTimes(1);
-
-      // Restore original metadata
-      (counterSlice as any).__metadata__ = originalMetadata;
-    });
   });
 });

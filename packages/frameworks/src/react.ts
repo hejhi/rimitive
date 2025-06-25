@@ -8,9 +8,6 @@
 import {
   useSyncExternalStore,
   useCallback,
-  useState,
-  useEffect,
-  useRef,
 } from 'react';
 import type { SliceHandle, Signal, Computed } from '@lattice/core';
 
@@ -72,41 +69,29 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
 export function useSlice<Computed>(
   slice: SliceHandle<Computed>
 ): Computed {
-  const [, forceUpdate] = useState(0);
-  const unsubscribersRef = useRef<(() => void)[]>([]);
-  const isInitialized = useRef(false);
-  
-  // Get fresh slice object on each render
-  const sliceObject = slice();
-  
-  useEffect(() => {
-    // Only set up subscriptions once
-    if (isInitialized.current) return;
-    isInitialized.current = true;
+  // Create a stable subscription function that subscribes to all signals
+  const subscribe = useCallback((onStoreChange: () => void) => {
+    const sliceObject = slice();
+    const unsubscribers: (() => void)[] = [];
     
-    // Find all signals in the slice and subscribe to them
-    const newUnsubscribers: (() => void)[] = [];
-    
+    // Subscribe to all signals in the slice
     for (const key in sliceObject) {
       const value = sliceObject[key as keyof Computed];
       if (isSignal(value)) {
-        const unsubscribe = value.subscribe(() => {
-          // Force a re-render when any signal changes
-          forceUpdate(prev => prev + 1);
-        });
-        newUnsubscribers.push(unsubscribe);
+        const unsubscribe = value.subscribe(onStoreChange);
+        unsubscribers.push(unsubscribe);
       }
     }
     
-    unsubscribersRef.current = newUnsubscribers;
-    
-    // Cleanup on unmount
+    // Return cleanup function
     return () => {
-      unsubscribersRef.current.forEach(unsubscribe => unsubscribe());
-      unsubscribersRef.current = [];
-      isInitialized.current = false;
+      unsubscribers.forEach(unsub => unsub());
     };
-  }, []);
+  }, [slice]);
   
-  return sliceObject;
+  // Get snapshot returns the slice object
+  // React will check if the object reference changed
+  const getSnapshot = useCallback(() => slice(), [slice]);
+  
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

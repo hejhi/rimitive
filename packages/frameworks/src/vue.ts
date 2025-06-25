@@ -1,7 +1,7 @@
 /**
  * @fileoverview Vue composables for Lattice - New slice-based API
  *
- * This module provides Vue 3 composables that leverage Lattice's fine-grained 
+ * This module provides Vue 3 composables that leverage Lattice's fine-grained
  * reactivity system. Unlike the old store-based approach, these composables
  * work directly with slice handles and provide native Vue ref integration.
  *
@@ -14,18 +14,17 @@
  * - Consistent error handling with development warnings
  */
 
-import { 
-  ref, 
-  computed, 
-  inject, 
-  provide, 
-  onUnmounted, 
+import {
+  ref,
+  computed,
+  inject,
+  provide,
+  onUnmounted,
   type ComputedRef,
-  type InjectionKey 
+  type InjectionKey,
 } from 'vue';
 
-import { getSliceMetadata } from '@lattice/core';
-import type { SliceHandle } from '@lattice/core';
+import type { SliceHandle, Signal, Computed } from '@lattice/core';
 
 // Map for injection keys - bounded by string keys used in app
 const SLICE_INJECTION_KEYS = new Map<string, InjectionKey<any>>();
@@ -36,9 +35,24 @@ const SLICE_INJECTION_KEYS = new Map<string, InjectionKey<any>>();
  */
 function getOrCreateSliceKey<T>(key: string): InjectionKey<SliceHandle<T>> {
   if (!SLICE_INJECTION_KEYS.has(key)) {
-    SLICE_INJECTION_KEYS.set(key, Symbol(`lattice-slice-${key}`) as InjectionKey<SliceHandle<T>>);
+    SLICE_INJECTION_KEYS.set(
+      key,
+      Symbol(`lattice-slice-${key}`) as InjectionKey<SliceHandle<T>>
+    );
   }
   return SLICE_INJECTION_KEYS.get(key) as InjectionKey<SliceHandle<T>>;
+}
+
+/**
+ * Check if a value is a signal or computed (has subscribe method)
+ */
+function isSignal(
+  value: unknown
+): value is Signal<unknown> | Computed<unknown> {
+  return (
+    typeof value === 'function' &&
+    typeof (value as any).subscribe === 'function'
+  );
 }
 
 /**
@@ -57,11 +71,11 @@ function getOrCreateSliceKey<T>(key: string): InjectionKey<SliceHandle<T>> {
  * <script setup>
  * // Use entire slice
  * const counter = useSlice(counterSlice)
- * 
+ *
  * // Use with selector for fine-grained reactivity
  * const count = useSlice(counterSlice, c => c.value())
  * const doubled = useSlice(counterSlice, c => c.doubled())
- * 
+ *
  * // Use with any Vue API
  * const tripled = computed(() => count.value * 3)
  * watch(count, (newVal) => console.log('Count changed:', newVal))
@@ -85,31 +99,39 @@ export function useSlice<Computed, T = Computed>(
   slice: SliceHandle<Computed>,
   selector?: (computed: Computed) => T
 ): ComputedRef<T> {
-  const actualSelector = selector || ((computed: Computed) => computed as unknown as T);
-  
-  const metadata = getSliceMetadata(slice);
-  
-  if (!metadata?.subscribe) {
-    if (process.env.NODE_ENV !== 'production') {
-      throw new Error('[useSlice] No subscription metadata found for slice. This is likely a bug - ensure you\'re passing a valid slice handle.');
+  const actualSelector =
+    selector || ((computed: Computed) => computed as unknown as T);
+
+  // Get slice object and set up subscriptions - like React approach
+  const sliceObject = slice();
+  const version = ref(0);
+
+  const unsubscribers: (() => void)[] = [];
+
+  // Subscribe to all signals directly
+  for (const key in sliceObject) {
+    const value = sliceObject[key as keyof Computed];
+    if (isSignal(value)) {
+      const unsubscribe = value.subscribe(() => {
+        version.value++;
+      });
+      unsubscribers.push(unsubscribe);
     }
   }
 
-  // Use Vue's reactivity directly - create a ref that gets updated
-  const result = ref(actualSelector(slice()));
-  
-  if (metadata?.subscribe) {
-    const unsubscribe = metadata.subscribe(() => {
-      // Direct update when slice dependencies change
-      result.value = actualSelector(slice());
-    });
-    onUnmounted(unsubscribe);
-  }
+  // Cleanup on unmount
+  onUnmounted(() => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
+  });
 
-  // Return as computed ref for proper typing and Vue ecosystem compatibility
-  return computed(() => result.value);
+  // Computed depends on version, fresh evaluation each time
+  return computed(() => {
+    version.value; // Establish Vue dependency
+    const freshSlice = slice();
+    const result = actualSelector(freshSlice);
+    return result;
+  }) as ComputedRef<T>;
 }
-
 
 /**
  * Creates a reactive object from a Lattice slice selector with fine-grained reactivity.
@@ -118,7 +140,7 @@ export function useSlice<Computed, T = Computed>(
  * The returned ref contains an object with the selected properties, and only
  * updates when the slice's dependencies change.
  *
- * @param slice - A Lattice slice handle  
+ * @param slice - A Lattice slice handle
  * @param selector - Function that extracts an object from the slice's computed properties
  * @returns ComputedRef containing the selected object
  *
@@ -127,10 +149,10 @@ export function useSlice<Computed, T = Computed>(
  * <script setup>
  * const counter = useLatticeReactive(counterSlice, c => ({
  *   value: c.value(),
- *   doubled: c.doubled(), 
+ *   doubled: c.doubled(),
  *   isEven: c.value() % 2 === 0
  * }))
- * 
+ *
  * // Access properties directly
  * const tripled = computed(() => counter.value.value * 3)
  * </script>
@@ -146,27 +168,33 @@ export function useLatticeReactive<Computed, T extends Record<string, unknown>>(
   slice: SliceHandle<Computed>,
   selector: (computed: Computed) => T
 ): ComputedRef<T> {
-  const metadata = getSliceMetadata(slice);
-  
-  if (!metadata?.subscribe) {
-    if (process.env.NODE_ENV !== 'production') {
-      throw new Error('[useLatticeReactive] No subscription metadata found for slice. This is likely a bug - ensure you\'re passing a valid slice handle.');
+  // Get slice object and set up subscriptions - like React approach
+  const sliceObject = slice();
+  const version = ref(0);
+
+  const unsubscribers: (() => void)[] = [];
+
+  // Subscribe to all signals directly
+  for (const key in sliceObject) {
+    const value = sliceObject[key as keyof Computed];
+    if (isSignal(value)) {
+      const unsubscribe = value.subscribe(() => {
+        version.value++;
+      });
+      unsubscribers.push(unsubscribe);
     }
   }
 
-  // Use Vue's reactivity directly - create a ref that gets updated
-  const result = ref(selector(slice()));
-  
-  if (metadata?.subscribe) {
-    const unsubscribe = metadata.subscribe(() => {
-      // Direct update when slice dependencies change
-      result.value = selector(slice());
-    });
-    onUnmounted(unsubscribe);
-  }
+  // Cleanup on unmount
+  onUnmounted(() => {
+    unsubscribers.forEach((unsubscribe) => unsubscribe());
+  });
 
-  // Return as computed ref for proper typing and Vue ecosystem compatibility
-  return computed(() => result.value);
+  // Computed depends on version, fresh evaluation each time
+  return computed(() => {
+    version.value; // Establish Vue dependency
+    return selector(slice()); // Fresh slice evaluation
+  }) as ComputedRef<T>;
 }
 
 /**
@@ -191,7 +219,10 @@ export function useLatticeReactive<Computed, T extends Record<string, unknown>>(
  * </template>
  * ```
  */
-export function provideLatticeSlice<T>(key: string, slice: SliceHandle<T>): void {
+export function provideLatticeSlice<T>(
+  key: string,
+  slice: SliceHandle<T>
+): void {
   const injectionKey = getOrCreateSliceKey<T>(key);
   provide(injectionKey, slice);
 }
@@ -212,7 +243,7 @@ export function provideLatticeSlice<T>(key: string, slice: SliceHandle<T>): void
  * <script setup>
  * const counterSlice = injectLatticeSlice('counter')
  * const count = useLatticeRef(counterSlice, c => c.value())
- * 
+ *
  * const increment = () => counterSlice().increment()
  * </script>
  *
@@ -224,11 +255,12 @@ export function provideLatticeSlice<T>(key: string, slice: SliceHandle<T>): void
 export function injectLatticeSlice<T>(key: string): SliceHandle<T> {
   const injectionKey = getOrCreateSliceKey<T>(key);
   const slice = inject(injectionKey);
-  
+
   if (!slice) {
-    throw new Error(`Lattice slice with key "${key}" was not found in the component tree. Make sure it's provided by a parent component using provideLatticeSlice().`);
+    throw new Error(
+      `Lattice slice with key "${key}" was not found in the component tree. Make sure it's provided by a parent component using provideLatticeSlice().`
+    );
   }
-  
+
   return slice;
 }
-

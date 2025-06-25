@@ -19,6 +19,9 @@ export { createLatticeStore, type ComponentFactory, signal, computed } from './r
 // Export built-in adapters
 export { vanillaAdapter, createStore } from './adapters';
 
+// Export Svelte-specific store creator
+export { createSvelteStore } from './svelte';
+
 // Export adapter contract
 export {
   type StoreAdapter,

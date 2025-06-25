@@ -169,22 +169,35 @@ function createSignalState<State>(adapter: StoreAdapter<State>): SignalState<Sta
   const state = adapter.getState();
   const signals = {} as SignalState<State>;
   
+  // Track initialization state to prevent circular updates
+  let isInitializing = true;
+  let isSyncingFromAdapter = false;
+  
   // Create signals for each state property
   for (const key in state) {
     const sig = signal(state[key]);
-    
-    // When signal changes, update the store
-    sig.subscribe(() => {
-      adapter.setState({ [key]: sig() } as unknown as Partial<State>);
-    });
-    
     signals[key] = sig;
+  }
+  
+  // Set up bidirectional sync after all signals are created
+  for (const key in signals) {
+    const sig = signals[key];
+    
+    // When signal changes, update the store (unless we're syncing from adapter)
+    sig.subscribe(() => {
+      if (!isSyncingFromAdapter) {
+        adapter.setState({ [key]: sig() } as unknown as Partial<State>);
+      }
+    });
   }
   
   // When store changes, update signals
   adapter.subscribe(() => {
+    isSyncingFromAdapter = true;
     runBatched(() => {
       const newState = adapter.getState();
+      
+      // Update existing signals
       for (const key in newState) {
         if (signals[key] && !Object.is(signals[key](), newState[key])) {
           signals[key](newState[key]);
@@ -195,14 +208,22 @@ function createSignalState<State>(adapter: StoreAdapter<State>): SignalState<Sta
       for (const key in newState) {
         if (!signals[key]) {
           const sig = signal(newState[key]);
-          sig.subscribe(() => {
-            adapter.setState({ [key]: sig() } as unknown as Partial<State>);
-          });
           signals[key] = sig;
+          
+          // Set up sync for the new signal
+          sig.subscribe(() => {
+            if (!isSyncingFromAdapter) {
+              adapter.setState({ [key]: sig() } as unknown as Partial<State>);
+            }
+          });
         }
       }
     });
+    isSyncingFromAdapter = false;
   });
+  
+  // Mark initialization as complete
+  isInitializing = false;
   
   return signals;
 }
