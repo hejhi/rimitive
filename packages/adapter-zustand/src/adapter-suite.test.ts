@@ -7,7 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { zustandAdapter } from './index';
 import { createStore as zustandCreateStore } from 'zustand/vanilla';
-import type { ReactiveSliceFactory } from '@lattice/core';
+import type { RuntimeSliceFactory } from '@lattice/core';
 
 describe('Zustand Adapter Contract', () => {
   it('should correctly wrap a Zustand store', () => {
@@ -15,19 +15,14 @@ describe('Zustand Adapter Contract', () => {
     const store = zustandCreateStore<{ count: number }>(() => ({ count: 0 }));
 
     // Wrap it with the adapter
-    const createSlice: ReactiveSliceFactory<{ count: number }> = zustandAdapter(store);
+    const createSlice: RuntimeSliceFactory<{ count: number }> = zustandAdapter(store);
 
-    // Create a simple component using two-phase pattern
+    // Create a simple component using signals-first pattern
     const component = (() => {
-      const slice = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        ({ count }, set) => ({
-          value: () => count(),
-          increment: () => set(
-            ({ count }) => ({ count: count() + 1 })
-          ),
-        })
-      );
+      const slice = createSlice(({ count }) => ({
+        value: count, // count is already a signal
+        increment: () => count(count() + 1),
+      }));
       return slice;
     })();
 
@@ -55,15 +50,10 @@ describe('Zustand Adapter Contract', () => {
     const createSlice = zustandAdapter(store);
 
     const component = (() => {
-      const slice = createSlice(
-        (selectors) => ({ value: selectors.value }),
-        ({ value }, set) => ({
-          getValue: () => value(),
-          setValue: (newValue: number) => set(
-            () => ({ value: newValue })
-          ),
-        })
-      );
+      const slice = createSlice(({ value }) => ({
+        getValue: value, // value is already a signal
+        setValue: (newValue: number) => value(newValue),
+      }));
       return slice;
     })();
 
@@ -77,29 +67,20 @@ describe('Zustand Adapter Contract', () => {
     expect(stateChanges[0]).toEqual({ value: 42 });
   });
 
-  it('should handle subscriptions correctly', async () => {
+  it('should handle subscriptions correctly', () => {
     const store = zustandCreateStore<{ count: number }>(() => ({ count: 0 }));
     const createSlice = zustandAdapter(store);
 
     const component = (() => {
-      const slice = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        ({ count }, set) => ({
-          value: () => count(),
-          increment: () => set(
-            ({ count }) => ({ count: count() + 1 })
-          ),
-        })
-      );
+      const slice = createSlice(({ count }) => ({
+        value: count, // count is already a signal
+        increment: () => count(count() + 1),
+      }));
       return slice;
     })();
 
-    // Import getSliceMetadata to access subscriptions
-    const { getSliceMetadata } = await import('@lattice/core');
-    const metadata = getSliceMetadata(component);
-    
     const listener = vi.fn();
-    const unsubscribe = metadata!.subscribe(listener);
+    const unsubscribe = component().value.subscribe(listener);
 
     component().increment();
     expect(listener).toHaveBeenCalledTimes(1);
@@ -109,7 +90,7 @@ describe('Zustand Adapter Contract', () => {
     expect(listener).toHaveBeenCalledTimes(1); // Still 1, not called after unsubscribe
   });
 
-  it('should support fine-grained subscriptions', async () => {
+  it('should support fine-grained subscriptions', () => {
     const store = zustandCreateStore<{ 
       a: number; 
       b: number; 
@@ -119,50 +100,51 @@ describe('Zustand Adapter Contract', () => {
     const createSlice = zustandAdapter(store);
 
     // Create slices with different dependencies
-    const sliceA = createSlice(
-      (selectors) => ({ a: selectors.a }),
-      ({ a }) => ({ value: () => a() })
-    );
+    const sliceA = createSlice(({ a }) => ({ 
+      value: a, // a is already a signal 
+    }));
     
-    const sliceB = createSlice(
-      (selectors) => ({ b: selectors.b }),
-      ({ b }) => ({ value: () => b() })
-    );
+    const sliceB = createSlice(({ b }) => ({ 
+      value: b, // b is already a signal 
+    }));
     
-    const sliceAB = createSlice(
-      (selectors) => ({ a: selectors.a, b: selectors.b }),
-      ({ a, b }) => ({ sum: () => a() + b() })
-    );
+    const sliceAB = createSlice(({ a, b }) => ({ 
+      sum: () => a() + b(),
+      a, // expose signal for subscription
+      b, // expose signal for subscription
+    }));
 
-    // Get metadata for subscriptions
-    const { getSliceMetadata } = await import('@lattice/core');
-    
-    // Track notifications
+    // Track notifications - need to track when any dependency of sliceAB changes
     const aListener = vi.fn();
     const bListener = vi.fn();
-    const abListener = vi.fn();
+    const abAListener = vi.fn(); // Listen to 'a' changes in AB slice
+    const abBListener = vi.fn(); // Listen to 'b' changes in AB slice
     
-    getSliceMetadata(sliceA)!.subscribe(aListener);
-    getSliceMetadata(sliceB)!.subscribe(bListener);
-    getSliceMetadata(sliceAB)!.subscribe(abListener);
+    sliceA().value.subscribe(aListener);
+    sliceB().value.subscribe(bListener);
+    sliceAB().a.subscribe(abAListener); // Subscribe to 'a' signal in AB slice
+    sliceAB().b.subscribe(abBListener); // Subscribe to 'b' signal in AB slice
     
-    // Change only 'a' - should notify sliceA and sliceAB, but not sliceB
+    // Change only 'a' - should notify sliceA and sliceAB (a signal), but not sliceB
     store.setState({ a: 10 });
     expect(aListener).toHaveBeenCalledTimes(1);
     expect(bListener).toHaveBeenCalledTimes(0);
-    expect(abListener).toHaveBeenCalledTimes(1);
+    expect(abAListener).toHaveBeenCalledTimes(1);
+    expect(abBListener).toHaveBeenCalledTimes(0);
     
-    // Change only 'b' - should notify sliceB and sliceAB, but not sliceA
+    // Change only 'b' - should notify sliceB and sliceAB (b signal), but not sliceA
     store.setState({ b: 20 });
     expect(aListener).toHaveBeenCalledTimes(1); // Still 1
     expect(bListener).toHaveBeenCalledTimes(1);
-    expect(abListener).toHaveBeenCalledTimes(2);
+    expect(abAListener).toHaveBeenCalledTimes(1); // Still 1
+    expect(abBListener).toHaveBeenCalledTimes(1);
     
     // Change 'c' - should not notify any slice (no dependencies on c)
     store.setState({ c: 30 });
     expect(aListener).toHaveBeenCalledTimes(1);
     expect(bListener).toHaveBeenCalledTimes(1);
-    expect(abListener).toHaveBeenCalledTimes(2);
+    expect(abAListener).toHaveBeenCalledTimes(1);
+    expect(abBListener).toHaveBeenCalledTimes(1);
     
     // Verify values are correct
     expect(sliceA().value()).toBe(10);

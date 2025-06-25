@@ -312,31 +312,17 @@ export function createAdapterTestSuite(
         const createComponent = (
           createSlice: RuntimeSliceFactory<TestState>
         ) => {
-          const counter = createSlice(
-            (selectors) => ({ count: selectors.count }),
-            ({ count }, set) => ({
-              count: () => count(),
-              increment: () => set(
-                ({ count }) => ({ count: count() + 1 })
-              ),
-              decrement: () => set(
-                ({ count }) => ({ count: count() - 1 })
-              ),
-            })
-          );
+          const counter = createSlice(({ count }) => ({
+            count, // count is already a signal
+            increment: () => count(count() + 1),
+            decrement: () => count(count() - 1),
+          }));
 
-          const textEditor = createSlice(
-            (selectors) => ({ text: selectors.text }),
-            ({ text }, set) => ({
-              text: () => text(),
-              setText: (newText: string) => set(
-                () => ({ text: newText })
-              ),
-              append: (suffix: string) => set(
-                ({ text }) => ({ text: text() + suffix })
-              ),
-            })
-          );
+          const textEditor = createSlice(({ text }) => ({
+            text, // text is already a signal
+            setText: (newText: string) => text(newText),
+            append: (suffix: string) => text(text() + suffix),
+          }));
 
           return { counter, textEditor };
         };
@@ -359,14 +345,11 @@ export function createAdapterTestSuite(
         component.textEditor().append(' world');
         expect(component.textEditor().text()).toBe('goodbye world');
 
-        // Test subscriptions
+        // Test signal subscriptions (more granular than old slice subscriptions)
         const listener = vi.fn();
-        const { getSliceMetadata } = await import('./utils');
-        const counterMeta = getSliceMetadata(component.counter);
-        const unsubscribe = counterMeta!.subscribe(listener);
+        const unsubscribe = component.counter().count.subscribe(listener);
 
         component.counter().increment();
-        // Note: Due to adapter limitations, all state changes trigger all listeners
         expect(listener).toHaveBeenCalled();
 
         unsubscribe();
@@ -383,27 +366,20 @@ export function createAdapterTestSuite(
         const createComponent = (
           createSlice: RuntimeSliceFactory<TestState>
         ) => {
-          const reader = createSlice(
-            (selectors) => ({ count: selectors.count, text: selectors.text }),
-            ({ count, text }) => ({
-              getAll: () => ({ count: count(), text: text() }),
-              getCount: () => count(),
-              getText: () => text(),
-            })
-          );
+          const reader = createSlice(({ count, text }) => ({
+            getAll: () => ({ count: count(), text: text() }),
+            getCount: () => count(),
+            getText: () => text(),
+          }));
 
-          const writer = createSlice(
-            () => ({}),
-            (_, set) => ({
-              setCount: (count: number) => set(
-                () => ({ count })
-              ),
-              setText: (text: string) => set(
-                () => ({ text })
-              ),
-              reset: () => set(
-                () => createInitialState()
-              ),
+          const writer = createSlice(({ count, text }) => ({
+            setCount: (newCount: number) => count(newCount),
+            setText: (newText: string) => text(newText), 
+            reset: () => {
+              const initial = createInitialState();
+              count(initial.count);
+              text(initial.text);
+            },
           }));
 
           return { reader, writer };

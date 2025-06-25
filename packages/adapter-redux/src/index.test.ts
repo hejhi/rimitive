@@ -1,32 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 import { latticeReducer, reduxAdapter } from './index';
-import type { Selectors } from '@lattice/core';
-
-// Common selector factories for reuse across tests
-const selectCounter = <T extends { counter: any }>(
-  selectors: Selectors<T>
-) => ({ counter: selectors.counter });
-
-const selectUser = <T extends { user: any }>(selectors: Selectors<T>) => ({
-  user: selectors.user,
-});
-
-const selectValue = <T extends { value: any }>(selectors: Selectors<T>) => ({
-  value: selectors.value,
-});
-
-const selectTodos = <T extends { todos: any }>(selectors: Selectors<T>) => ({
-  todos: selectors.todos,
-});
-
-const selectUI = <T extends { ui: any }>(selectors: Selectors<T>) => ({
-  ui: selectors.ui,
-});
-
-const selectCount = <T extends { count: any }>(selectors: Selectors<T>) => ({
-  count: selectors.count,
-});
+import type { SignalState } from '@lattice/core';
 
 describe('Redux Adapter', () => {
   it('should create a Redux store with Lattice slices', () => {
@@ -39,16 +14,10 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ counter: { value: number } }>(store);
 
-    const counter = createSlice(selectCounter, ({ counter }, set) => ({
-      count: () => counter().value,
-      increment: () =>
-        set(({ counter }) => ({
-          counter: { value: counter().value + 1 },
-        })),
-      decrement: () =>
-        set(({ counter }) => ({
-          counter: { value: counter().value - 1 },
-        })),
+    const counter = createSlice(({ counter }) => ({
+      count: () => counter().value, // computed from signal
+      increment: () => counter({ value: counter().value + 1 }),
+      decrement: () => counter({ value: counter().value - 1 }),
     }));
 
     // Test initial state
@@ -80,25 +49,16 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<CountStore>(store);
 
-    const counter = createSlice(selectCounter, ({ counter }, set) => ({
+    const counter = createSlice(({ counter }) => ({
       value: () => counter().value,
-      increment: () =>
-        set(({ counter }) => ({
-          counter: { value: counter().value + 1 },
-        })),
+      increment: () => counter({ value: counter().value + 1 }),
     }));
 
-    const user = createSlice(selectUser, ({ user }, set) => ({
+    const user = createSlice(({ user }) => ({
       getName: () => user().name,
       isLoggedIn: () => user().loggedIn,
-      login: (name: string) =>
-        set(() => ({
-          user: { name, loggedIn: true },
-        })),
-      logout: () =>
-        set(() => ({
-          user: { name: '', loggedIn: false },
-        })),
+      login: (name: string) => user({ name, loggedIn: true }),
+      logout: () => user({ name: '', loggedIn: false }),
     }));
 
     // Test both slices work independently
@@ -124,17 +84,13 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ value: number }>(store);
 
-    const state = createSlice(selectValue, ({ value }, set) => ({
-      value: () => value(),
-      setValue: (newValue: number) => set(() => ({ value: newValue })),
+    const state = createSlice(({ value }) => ({
+      value,
+      setValue: (newValue: number) => value(newValue),
     }));
 
-    // Import getSliceMetadata for subscription access
-    const { getSliceMetadata } = await import('@lattice/core');
-    const metadata = getSliceMetadata(state);
-
     const callback = vi.fn();
-    const unsubscribe = metadata!.subscribe(callback);
+    const unsubscribe = state().value.subscribe(callback);
 
     // Trigger state change
     state().setValue(1);
@@ -158,12 +114,9 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ counter: { value: number } }>(store);
 
-    const counter = createSlice(selectCounter, ({ counter }, set) => ({
+    const counter = createSlice(({ counter }) => ({
       value: () => counter().value,
-      increment: () =>
-        set(({ counter }) => ({
-          counter: { value: counter().value + 1 },
-        })),
+      increment: () => counter({ value: counter().value + 1 }),
     }));
 
     // DevTools will see 'lattice/updateState' actions
@@ -199,45 +152,39 @@ describe('Redux Adapter', () => {
     }>(store);
 
     let nextId = 1;
-    const todos = createSlice(selectTodos, ({ todos }, set) => ({
+    const todos = createSlice(({ todos }) => ({
       getAll: () => todos().items,
       getActive: () => todos().items.filter((t) => !t.completed),
       getCompleted: () => todos().items.filter((t) => t.completed),
 
       addTodo: (text: string) => {
-        set(({ todos }) => ({
-          todos: {
-            ...todos(),
-            items: [
-              ...todos().items,
-              {
-                id: nextId++,
-                text,
-                completed: false,
-              },
-            ],
-          },
-        }));
+        todos({
+          ...todos(),
+          items: [
+            ...todos().items,
+            {
+              id: nextId++,
+              text,
+              completed: false,
+            },
+          ],
+        });
       },
 
       toggleTodo: (id: number) => {
-        set(({ todos }) => ({
-          todos: {
-            ...todos(),
-            items: todos().items.map((todo) =>
-              todo.id === id ? { ...todo, completed: !todo.completed } : todo
-            ),
-          },
-        }));
+        todos({
+          ...todos(),
+          items: todos().items.map((todo) =>
+            todo.id === id ? { ...todo, completed: !todo.completed } : todo
+          ),
+        });
       },
 
       setFilter: (filter: 'all' | 'active' | 'completed') => {
-        set(({ todos }) => ({
-          todos: {
-            ...todos(),
-            filter,
-          },
-        }));
+        todos({
+          ...todos(),
+          filter,
+        });
       },
     }));
 
@@ -276,33 +223,27 @@ describe('Redux Adapter', () => {
       onError: (error) => errors.push(error),
     });
 
-    const state = createSlice(selectValue, ({ value }, set) => ({
-      value: () => value(),
-      setValue: (newValue: number) => set(() => ({ value: newValue })),
+    const state = createSlice(({ value }) => ({
+      value,
+      setValue: (newValue: number) => value(newValue),
     }));
-
-    // Import getSliceMetadata for subscription access
-    const { getSliceMetadata } = await import('@lattice/core');
-    const metadata = getSliceMetadata(state);
 
     // Subscribe with a normal listener first
     const normalListener = vi.fn();
-    metadata!.subscribe(normalListener);
+    state().value.subscribe(normalListener);
 
     // Subscribe with a listener that throws
     const errorListener = vi.fn(() => {
       throw new Error('Listener error');
     });
-    metadata!.subscribe(errorListener);
+    state().value.subscribe(errorListener);
 
-    // Trigger state change
-    state().setValue(1);
+    // Trigger state change - in signals-first API, errors in signal listeners will throw
+    expect(() => state().setValue(1)).toThrow('Listener error');
 
-    // Both listeners should be called
+    // Normal listener should be called before error occurs
     expect(normalListener).toHaveBeenCalledTimes(1);
     expect(errorListener).toHaveBeenCalledTimes(1);
-    // Error should be caught by adapter's error handler
-    expect(errors.length).toBeGreaterThan(0);
   });
 
   it('should handle nested state updates', () => {
@@ -329,36 +270,30 @@ describe('Redux Adapter', () => {
       };
     }>(store);
 
-    const ui = createSlice(selectUI, ({ ui }, set) => ({
+    const ui = createSlice(({ ui }) => ({
       isModalOpen: () => ui().modal.isOpen,
       getModalContent: () => ui().modal.content,
       getTheme: () => ui().theme,
 
       openModal: (content: string) => {
-        set(({ ui }) => ({
-          ui: {
-            ...ui(),
-            modal: { isOpen: true, content },
-          },
-        }));
+        ui({
+          ...ui(),
+          modal: { isOpen: true, content },
+        });
       },
 
       closeModal: () => {
-        set(({ ui }) => ({
-          ui: {
-            ...ui(),
-            modal: { isOpen: false, content: null },
-          },
-        }));
+        ui({
+          ...ui(),
+          modal: { isOpen: false, content: null },
+        });
       },
 
       toggleTheme: () => {
-        set(({ ui }) => ({
-          ui: {
-            ...ui(),
-            theme: ui().theme === 'light' ? 'dark' : 'light',
-          },
-        }));
+        ui({
+          ...ui(),
+          theme: ui().theme === 'light' ? 'dark' : 'light',
+        });
       },
     }));
 
@@ -398,9 +333,9 @@ describe('Redux Adapter', () => {
       user: { name: string };
     }>(store, { slice: 'app' });
 
-    const counter = createSlice(selectCount, ({ count }, set) => ({
+    const counter = createSlice(({ count }) => ({
       value: () => count(),
-      increment: () => set(({ count }) => ({ count: count() + 1 })),
+      increment: () => count(count() + 1),
     }));
 
     expect(counter().value()).toBe(0);

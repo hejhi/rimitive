@@ -6,63 +6,42 @@ import { zustandAdapter } from '.';
 
 describe('Zustand Adapter - New Architecture', () => {
   it('should demonstrate basic store creation and slice patterns', () => {
-    // Define a simple counter component using the two-phase API
+    // Define a simple counter component using the signals-first API
     const createComponent = (
       createSlice: RuntimeSliceFactory<{ count: number }>
     ) => {
       // Actions slice - methods that mutate state
-      const actions = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        (_, set) => ({
-          increment: () =>
-            set(
-              ({ count }) => ({ count: count() + 1 })
-            ),
-          decrement: () =>
-            set(
-              ({ count }) => ({ count: count() - 1 })
-            ),
-          reset: () =>
-            set(
-              () => ({ count: 0 })
-            ),
-          setCount: (value: number) =>
-            set(
-              () => ({ count: value })
-            ),
-        })
-      );
+      const actions = createSlice(({ count }) => ({
+        increment: () => count(count() + 1),
+        decrement: () => count(count() - 1),
+        reset: () => count(0),
+        setCount: (value: number) => count(value),
+      }));
 
       // Query slice - methods that read state
-      const queries = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        ({ count }) => ({
-          count: () => count(),
-          isPositive: () => count() > 0,
-          isNegative: () => count() < 0,
-          isZero: () => count() === 0,
-        })
-      );
+      const queries = createSlice(({ count }) => ({
+        count, // count is already a signal
+        isPositive: () => count() > 0,
+        isNegative: () => count() < 0,
+        isZero: () => count() === 0,
+      }));
 
       // View slices that compute values
-      const views = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        ({ count }) => ({
-          // Direct computed values as methods
-          computed: () => ({
-            value: count(),
-            label: `Count: ${count()}`,
-            sign: count() > 0 ? 'positive' : count() < 0 ? 'negative' : 'zero',
-          }),
-          // Parameterized view
-          display: (format: 'short' | 'long') => {
-            const val = count();
-            return format === 'short'
-              ? `${val}`
-              : `The current count is ${val} (${val > 0 ? 'positive' : val < 0 ? 'negative' : 'zero'})`;
-          },
-        })
-      );
+      const views = createSlice(({ count }) => ({
+        // Direct computed values as methods
+        computed: () => ({
+          value: count(),
+          label: `Count: ${count()}`,
+          sign: count() > 0 ? 'positive' : count() < 0 ? 'negative' : 'zero',
+        }),
+        // Parameterized view
+        display: (format: 'short' | 'long') => {
+          const val = count();
+          return format === 'short'
+            ? `${val}`
+            : `The current count is ${val} (${val > 0 ? 'positive' : val < 0 ? 'negative' : 'zero'})`;
+        },
+      }));
 
       return {
         actions,
@@ -122,55 +101,36 @@ describe('Zustand Adapter - New Architecture', () => {
     expect(store.views().computed().sign).toBe('negative');
   });
 
-  it('should support subscriptions and demonstrate reactivity', async () => {
+  it('should support subscriptions and demonstrate reactivity', () => {
     const createComponent = (
       createSlice: RuntimeSliceFactory<{ value: number; history: number[] }>
     ) => {
-      const actions = createSlice(
-        (selectors) => ({
-          value: selectors.value,
-          history: selectors.history,
-        }),
-        (_, set) => ({
-          setValue: (newValue: number) =>
-            set(
-              ({ history }) => ({
-                value: newValue,
-                history: [...history(), newValue],
-              })
-            ),
-          increment: () =>
-            set(
-              ({ value, history }) => {
-                const newValue = value() + 1;
-                return {
-                  value: newValue,
-                  history: [...history(), newValue],
-                };
-              }
-            ),
-          reset: () =>
-            set(
-              () => ({ value: 0, history: [] })
-            ),
-        })
-      );
+      const actions = createSlice(({ value, history }) => ({
+        setValue: (newValue: number) => {
+          value(newValue);
+          history([...history(), newValue]);
+        },
+        increment: () => {
+          const newValue = value() + 1;
+          value(newValue);
+          history([...history(), newValue]);
+        },
+        reset: () => {
+          value(0);
+          history([]);
+        },
+      }));
 
-      const queries = createSlice(
-        (selectors) => ({
-          value: selectors.value,
-          history: selectors.history,
-        }),
-        ({ value, history }) => ({
-          current: () => value(),
-          history: () => history(),
-          hasHistory: () => history().length > 0,
-          lastValue: () => {
-            const hist = history();
-            return hist.length > 1 ? hist[hist.length - 2] : null;
-          },
-        })
-      );
+      const queries = createSlice(({ value, history }) => ({
+        value, // value is already a signal
+        history, // history is already a signal
+        current: () => value(),
+        hasHistory: () => history().length > 0,
+        lastValue: () => {
+          const hist = history();
+          return hist.length > 1 ? hist[hist.length - 2] : null;
+        },
+      }));
 
       return { actions, queries };
     };
@@ -185,13 +145,9 @@ describe('Zustand Adapter - New Architecture', () => {
     const createSlice = zustandAdapter(vanillaStore);
     const store = createComponent(createSlice);
 
-    // Import getSliceMetadata for subscription access
-    const { getSliceMetadata } = await import('@lattice/core');
-
     // Track subscription calls
     const listener = vi.fn();
-    const metadata = getSliceMetadata(store.actions);
-    const unsubscribe = metadata!.subscribe(listener);
+    const unsubscribe = store.queries().value.subscribe(listener);
 
     // Initial state
     expect(store.queries().current()).toBe(0);
@@ -214,8 +170,8 @@ describe('Zustand Adapter - New Architecture', () => {
     // Multiple listeners
     const listener2 = vi.fn();
     const listener3 = vi.fn();
-    const unsub2 = metadata!.subscribe(listener2);
-    const unsub3 = metadata!.subscribe(listener3);
+    const unsub2 = store.queries().value.subscribe(listener2);
+    const unsub3 = store.queries().value.subscribe(listener3);
 
     store.actions().setValue(100);
     expect(listener).toHaveBeenCalledTimes(3);
@@ -248,84 +204,68 @@ describe('Zustand Adapter - New Architecture', () => {
       }>
     ) => {
       // Product queries
-      const products = createSlice(
-        (selectors) => ({ products: selectors.products }),
-        ({ products }) => ({
-          all: () => products(),
-          byId: (id: string) => products().find((p) => p.id === id),
-          byCategory: (category: string) =>
-            products().filter((p) => p.category === category),
-        })
-      );
+      const products = createSlice(({ products }) => ({
+        all: () => products(),
+        byId: (id: string) => products().find((p) => p.id === id),
+        byCategory: (category: string) =>
+          products().filter((p) => p.category === category),
+      }));
 
       // Pricing calculations
-      const pricing = createSlice(
-        (selectors) => ({
-          taxRate: selectors.taxRate,
-          discount: selectors.discount,
-        }),
-        ({ taxRate, discount }) => ({
-          taxRate: () => taxRate(),
-          discount: () => discount(),
-          calculatePrice: (basePrice: number) => {
-            const discounted = basePrice * (1 - discount());
-            return discounted * (1 + taxRate());
-          },
-        })
-      );
+      const pricing = createSlice(({ taxRate, discount }) => ({
+        taxRate, // taxRate is already a signal
+        discount, // discount is already a signal
+        calculatePrice: (basePrice: number) => {
+          const discounted = basePrice * (1 - discount());
+          return discounted * (1 + taxRate());
+        },
+      }));
 
       // Create catalog views
-      const catalog = createSlice(
-        (selectors) => ({
-          products: selectors.products,
-          taxRate: selectors.taxRate,
-          discount: selectors.discount,
-        }),
-        ({ products, taxRate, discount }) => ({
-          // Direct computed values
-          totalProducts: () => products().length,
-          categories: () => [...new Set(products().map((p) => p.category))],
+      const catalog = createSlice(({ products, taxRate, discount }) => ({
+        // Direct computed values
+        totalProducts: () => products().length,
+        categories: () => [...new Set(products().map((p) => p.category))],
 
-          // Parameterized selector for product details
-          getProductDetails: (id: string) => {
-            const product = products().find((p) => p.id === id);
-            if (!product) return null;
+        // Parameterized selector for product details
+        getProductDetails: (id: string) => {
+          const product = products().find((p) => p.id === id);
+          if (!product) return null;
 
-            const discountVal = discount();
-            const taxRateVal = taxRate();
-            const discountedPrice = product.price * (1 - discountVal);
-            const finalPrice = discountedPrice * (1 + taxRateVal);
+          const discountVal = discount();
+          const taxRateVal = taxRate();
+          const discountedPrice = product.price * (1 - discountVal);
+          const finalPrice = discountedPrice * (1 + taxRateVal);
 
-            return {
-              ...product,
-              finalPrice,
-              savings: product.price * discountVal,
-              tax: discountedPrice * taxRateVal,
-            };
-          },
+          return {
+            ...product,
+            finalPrice,
+            savings: product.price * discountVal,
+            tax: discountedPrice * taxRateVal,
+          };
+        },
 
-          // Category summary factory
-          getCategorySummary: (category: string) => {
-            const items = products().filter((p) => p.category === category);
-            const discountVal = discount();
-            const taxRateVal = taxRate();
+        // Category summary factory
+        getCategorySummary: (category: string) => {
+          const items = products().filter((p) => p.category === category);
+          const discountVal = discount();
+          const taxRateVal = taxRate();
 
-            const totalBase = items.reduce((sum, p) => sum + p.price, 0);
-            const totalFinal = items.reduce((sum, p) => {
-              const discounted = p.price * (1 - discountVal);
-              return sum + discounted * (1 + taxRateVal);
-            }, 0);
+          const totalBase = items.reduce((sum, p) => sum + p.price, 0);
+          const totalFinal = items.reduce((sum, p) => {
+            const discounted = p.price * (1 - discountVal);
+            return sum + discounted * (1 + taxRateVal);
+          }, 0);
 
-            return {
-              category,
-              itemCount: items.length,
-              totalBasePrice: totalBase,
-              totalFinalPrice: totalFinal,
-              totalSavings: totalBase - totalFinal / (1 + taxRateVal),
-            };
-          },
-        })
-      );
+          return {
+            category,
+            itemCount: items.length,
+            totalBasePrice: totalBase,
+            totalFinalPrice: totalFinal,
+            totalSavings: totalBase - totalFinal / (1 + taxRateVal),
+          };
+        },
+      }));
 
       return { products, pricing, catalog };
     };
@@ -395,40 +335,22 @@ describe('Zustand Adapter - New Architecture', () => {
 
     // Create component with the adapter
     const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
-      const actions = createSlice(
-        (selectors) => ({
-          count: selectors.count,
-          lastAction: selectors.lastAction,
-        }),
-        (_, set) => ({
-          increment: () =>
-            set(
-              ({ count }) => ({
-                count: count() + 1,
-                lastAction: 'increment',
-              })
-            ),
-          decrement: () =>
-            set(
-              ({ count }) => ({
-                count: count() - 1,
-                lastAction: 'decrement',
-              })
-            ),
-        })
-      );
+      const actions = createSlice(({ count, lastAction }) => ({
+        increment: () => {
+          count(count() + 1);
+          lastAction('increment');
+        },
+        decrement: () => {
+          count(count() - 1);
+          lastAction('decrement');
+        },
+      }));
 
-      const queries = createSlice(
-        (selectors) => ({
-          count: selectors.count,
-          lastAction: selectors.lastAction,
-        }),
-        ({ count, lastAction }) => ({
-          state: () => ({ count: count(), lastAction: lastAction() }),
-          count: () => count(),
-          lastAction: () => lastAction(),
-        })
-      );
+      const queries = createSlice(({ count, lastAction }) => ({
+        state: () => ({ count: count(), lastAction: lastAction() }),
+        count, // count is already a signal
+        lastAction, // lastAction is already a signal
+      }));
 
       return { actions, queries };
     };
@@ -483,39 +405,26 @@ describe('Zustand Adapter - New Architecture', () => {
       createSlice: RuntimeSliceFactory<UserState>
     ) => {
       // Create queries slice
-      const auth = createSlice(
-        (selectors) => ({
-          user: selectors.user,
-          isAuthenticated: selectors.isAuthenticated,
-          login: selectors.login,
-          logout: selectors.logout,
-        }),
-        ({ user, isAuthenticated, login, logout }) => ({
-          // Expose queries
-          user: () => user(),
-          isAuthenticated: () => isAuthenticated(),
-          userName: () => user()?.name ?? 'Guest',
+      const auth = createSlice(({ user, isAuthenticated, login, logout }) => ({
+        // Expose queries
+        user, // user is already a signal
+        isAuthenticated, // isAuthenticated is already a signal
+        userName: () => user()?.name ?? 'Guest',
 
-          // Can also expose the store's actions if needed
-          login: () => login(),
-          logout: () => logout(),
-        })
-      );
+        // Can also expose the store's actions if needed
+        login: () => login(),
+        logout: () => logout(),
+      }));
 
       // Or create new Lattice-style actions
-      const actions = createSlice(
-        (selectors) => ({ user: selectors.user }),
-        ({ user }, set) => ({
-          updateUserName: (name: string) => {
-            const currentUser = user();
-            if (currentUser) {
-              set(
-                () => ({ user: { ...currentUser, name } })
-              );
-            }
-          },
-        })
-      );
+      const actions = createSlice(({ user }) => ({
+        updateUserName: (name: string) => {
+          const currentUser = user();
+          if (currentUser) {
+            user({ ...currentUser, name });
+          }
+        },
+      }));
 
       return { auth, actions };
     };
