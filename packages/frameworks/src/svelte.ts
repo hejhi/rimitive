@@ -12,610 +12,250 @@
  */
 
 import { getSliceMetadata, type SliceHandle } from '@lattice/core';
-import { onDestroy } from 'svelte';
-import { readable, type Readable } from 'svelte/store';
 
 // Type helpers
 type InferSliceObject<
-  T extends Record<string, SliceHandle<any> | (() => any)>,
+  T extends Record<string, SliceHandle<any> | SliceStore<any>>,
 > = {
   [K in keyof T]: T[K] extends SliceHandle<infer V>
     ? V
-    : T[K] extends () => infer V
+    : T[K] extends SliceStore<infer V>
       ? V
       : never;
 };
 
-type InferSliceTypes<T extends readonly SliceHandle<any>[]> = {
-  [K in keyof T]: T[K] extends SliceHandle<infer V> ? V : never;
-};
-
-// Track active subscriptions for the current component
-let activeSubscriptions: Set<() => void> | null = null;
-
-/**
- * Set up subscription tracking for a Svelte component.
- * Call this in onMount and clean up in onDestroy.
- */
-export function setupSliceTracking() {
-  activeSubscriptions = new Set();
-
-  onDestroy(() => {
-    if (activeSubscriptions) {
-      activeSubscriptions.forEach((cleanup) => cleanup());
-      activeSubscriptions = null;
-    }
-  });
+// Minimal store contract for Svelte compatibility
+export interface SliceStore<T> {
+  subscribe(callback: (value: T) => void): () => void;
 }
 
+
 /**
- * Subscribe to a Lattice slice with direct reactivity.
+ * Subscribe to a Lattice slice with Svelte reactivity.
  *
- * Returns a function that always gets the current slice value. This leverages
- * Lattice's existing reactivity system directly without any wrapper overhead.
+ * Returns a minimal store-compatible object that integrates with Svelte's
+ * reactive system. Can be used with Svelte's $ syntax for automatic subscriptions.
  *
  * @param sliceHandle - A Lattice slice handle
  * @param selector - Optional function to select specific values from the slice
- * @returns Function that returns the current slice value or selected value
+ * @returns Store-compatible object with subscribe method
  *
  * @example
  * ```svelte
  * <script>
- *   import { slice, setupSliceTracking } from '@lattice/frameworks/svelte';
- *   import { onMount } from 'svelte';
+ *   import { slice } from '@lattice/frameworks/svelte';
  *
- *   let counter, user, count;
+ *   // Use entire slice with $ syntax
+ *   const counter = slice(counterSlice);
+ *   const user = slice(userSlice);
  *
- *   onMount(() => {
- *     setupSliceTracking();
- *
- *     // Use entire slice - returns function
- *     counter = slice(counterSlice);
- *     user = slice(userSlice);
- *
- *     // Use with selector for fine-grained reactivity
- *     count = slice(counterSlice, c => c.value());
- *   });
+ *   // Use with selector for fine-grained reactivity
+ *   const count = slice(counterSlice, c => c.value());
+ *   const doubled = slice(counterSlice, c => c.doubled());
  * </script>
  *
- * <div>Count: {count ? count() : 0}</div>
- * <div>User: {user ? user().name() : ''}</div>
- * <button on:click={() => counter && counter().increment()}>+</button>
+ * <div>Count: {$count}</div>
+ * <div>Doubled: {$doubled}</div>
+ * <div>User: {$user.name()}</div>
+ * <button on:click={() => $counter.increment()}>+</button>
  * ```
  */
-export function slice<T>(sliceHandle: SliceHandle<T>): () => T;
+export function slice<T>(sliceHandle: SliceHandle<T>): SliceStore<T>;
 export function slice<T, U>(
   sliceHandle: SliceHandle<T>,
   selector: (value: T) => U
-): () => U;
+): SliceStore<U>;
 export function slice<T, U = T>(
   sliceHandle: SliceHandle<T>,
   selector?: (value: T) => U
-): () => U {
+): SliceStore<U> {
   const actualSelector = selector || ((value: T) => value as unknown as U);
-
-  // For benchmarks or non-component usage, return direct function
-  if (!activeSubscriptions) {
-    return () => actualSelector(sliceHandle());
-  }
-
-  // In components with tracking, set up reactive subscriptions
   let currentValue = actualSelector(sliceHandle());
-  let invalidated = false;
+  
+  // Store subscriber management
+  const subscribers = new Set<(value: U) => void>();
+  let cleanupFn: (() => void) | null = null;
 
-  const metadata = getSliceMetadata(sliceHandle);
-  if (metadata?.subscribe) {
-    const unsubscribe = metadata.subscribe(() => {
-      currentValue = actualSelector(sliceHandle());
-      invalidated = true;
-      // In a real Svelte integration, we'd trigger component update here
-      // For benchmarks, the invalidation flag is enough
-    });
-    activeSubscriptions.add(unsubscribe);
-  }
-
-  // Return getter that always provides fresh value
-  return () => {
-    if (invalidated) {
-      invalidated = false;
+  // Create store contract implementation
+  const store: SliceStore<U> = {
+    subscribe(callback: (value: U) => void) {
+      subscribers.add(callback);
+      
+      // Set up Lattice subscription on first subscriber
+      if (subscribers.size === 1) {
+        const metadata = getSliceMetadata(sliceHandle);
+        if (metadata?.subscribe) {
+          cleanupFn = metadata.subscribe(() => {
+            const newValue = actualSelector(sliceHandle());
+            currentValue = newValue;
+            // Always notify subscribers when slice dependencies change
+            subscribers.forEach(cb => cb(currentValue));
+          });
+        }
+      }
+      
+      // Call immediately as per Svelte store contract
+      callback(currentValue);
+      
+      // Return unsubscribe function
+      return () => {
+        subscribers.delete(callback);
+        
+        // Clean up Lattice subscription when no more subscribers
+        if (subscribers.size === 0 && cleanupFn) {
+          cleanupFn();
+          cleanupFn = null;
+        }
+      };
     }
-    return currentValue;
   };
+
+  return store;
 }
 
 /**
  * Combine multiple slices into a single reactive value.
  *
- * Returns a function that computes the combined value on demand.
- * This leverages Lattice's existing dependency tracking without overhead.
+ * Returns a store-compatible object that computes the combined value reactively.
+ * Can be used with Svelte's $ syntax for automatic subscriptions.
  *
- * @param slices - Object mapping keys to slice handles or slice functions
+ * @param slices - Object mapping keys to slice handles or slice stores
  * @param combineFn - Function to combine slice values
- * @returns Function that returns the combined value
+ * @returns Store-compatible object with subscribe method
  *
  * @example
  * ```svelte
  * <script>
- *   import { combineSlices, setupSliceTracking } from '@lattice/frameworks/svelte';
- *   import { onMount } from 'svelte';
+ *   import { combineSlices } from '@lattice/frameworks/svelte';
  *
- *   let dashboard;
- *
- *   onMount(() => {
- *     setupSliceTracking();
- *
- *     dashboard = combineSlices(
- *       { counter: counterSlice, user: userSlice, cart: cartSlice },
- *       ({ counter, user, cart }) => ({
- *         greeting: `Welcome ${user.name()}!`,
- *         stats: `${counter.value()} clicks, ${cart.itemCount()} items`,
- *         canCheckout: cart.itemCount() > 0 && user.isLoggedIn()
- *       })
- *     );
- *   });
+ *   const dashboard = combineSlices(
+ *     { counter: counterSlice, user: userSlice, cart: cartSlice },
+ *     ({ counter, user, cart }) => ({
+ *       greeting: `Welcome ${user.name()}!`,
+ *       stats: `${counter.value()} clicks, ${cart.itemCount()} items`,
+ *       canCheckout: cart.itemCount() > 0 && user.isLoggedIn()
+ *     })
+ *   );
  * </script>
  *
  * <div>
- *   <h2>{dashboard ? dashboard().greeting : ''}</h2>
- *   <p>{dashboard ? dashboard().stats : ''}</p>
- *   {#if dashboard && dashboard().canCheckout}
+ *   <h2>{$dashboard.greeting}</h2>
+ *   <p>{$dashboard.stats}</p>
+ *   {#if $dashboard.canCheckout}
  *     <button>Checkout</button>
  *   {/if}
  * </div>
  * ```
  */
 export function combineSlices<
-  TSlices extends Record<string, SliceHandle<any> | (() => any)>,
+  TSlices extends Record<string, SliceHandle<any> | SliceStore<any>>,
   TResult,
 >(
   slices: TSlices,
   combineFn: (values: InferSliceObject<TSlices>) => TResult
-): () => TResult {
-  // Helper to get current values from all slices
-  const getValues = (): InferSliceObject<TSlices> => {
-    const values: any = {};
-    for (const [key, sliceOrFn] of Object.entries(slices)) {
-      values[key] =
-        typeof sliceOrFn === 'function' && sliceOrFn.length === 0
-          ? sliceOrFn()
-          : (sliceOrFn as SliceHandle<any>)();
-    }
-    return values;
-  };
-
-  // For benchmarks or non-component usage
-  if (!activeSubscriptions) {
-    return () => combineFn(getValues());
-  }
-
-  // In components with tracking, set up reactive subscriptions
-  let currentResult = combineFn(getValues());
-  let invalidated = false;
-
-  // Subscribe to all slice handles
-  for (const [key, sliceOrFn] of Object.entries(slices)) {
-    // Only subscribe to SliceHandles, not already-wrapped functions
-    if (typeof sliceOrFn === 'function' && sliceOrFn.length === 0) {
-      continue; // Skip already-wrapped slice functions
-    }
-
-    const metadata = getSliceMetadata(sliceOrFn as SliceHandle<any>);
-    if (metadata?.subscribe) {
-      const unsubscribe = metadata.subscribe(() => {
-        currentResult = combineFn(getValues());
-        invalidated = true;
-      });
-      activeSubscriptions.add(unsubscribe);
+): SliceStore<TResult> {
+  // Track current values for all slices/stores
+  const currentValues: any = {};
+  
+  // Initialize values
+  for (const [key, sliceOrStore] of Object.entries(slices)) {
+    if (typeof sliceOrStore === 'function') {
+      currentValues[key] = sliceOrStore();
+    } else {
+      // For stores, we'll get the initial value on first subscription
+      currentValues[key] = undefined;
     }
   }
 
-  // Return getter that provides current combined value
-  return () => {
-    if (invalidated) {
-      invalidated = false;
-    }
-    return currentResult;
-  };
-}
+  let currentResult: TResult;
+  const subscribers = new Set<(value: TResult) => void>();
+  const unsubscribers: (() => void)[] = [];
 
-// Keep the original store-based APIs for backwards compatibility
+  const store: SliceStore<TResult> = {
+    subscribe(callback: (value: TResult) => void) {
+      subscribers.add(callback);
 
-/**
- * Convert a Lattice slice to a Svelte store with fine-grained reactivity.
- *
- * Unlike regular Svelte stores, this only updates when the slice's actual
- * dependencies change, not on every state mutation.
- *
- * @param slice - A Lattice slice handle
- * @returns Svelte readable store that updates with slice dependencies
- *
- * @example
- * ```svelte
- * <script>
- *   import { asStore } from '@lattice/frameworks/svelte';
- *
- *   const counter = asStore(counterSlice);
- *   const user = asStore(userSlice);
- * </script>
- *
- * <div>Count: {$counter.value()}</div>
- * <div>User: {$user.name()}</div>
- * <button on:click={() => $counter.increment()}>+</button>
- * ```
- */
-export function asStore<T>(slice: SliceHandle<T>): Readable<T> {
-  const metadata = getSliceMetadata(slice);
-
-  return readable(slice(), (set) => {
-    if (!metadata?.subscribe) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(
-          '[asStore] No subscription metadata found for slice. Store will not be reactive.'
-        );
-      }
-      return;
-    }
-
-    return metadata.subscribe(() => {
-      set(slice());
-    });
-  });
-}
-
-/**
- * Create a derived store that only updates when slice dependencies change.
- *
- * This is like Svelte's `derived` but with Lattice's fine-grained reactivity.
- * The function only re-runs when the slice's tracked dependencies actually change.
- *
- * @param slice - A Lattice slice handle
- * @param fn - Function to derive new value from slice
- * @returns Svelte readable store with derived value
- *
- * @example
- * ```svelte
- * <script>
- *   import { sliceDerived } from '@lattice/frameworks/svelte';
- *
- *   // Only updates when counter dependencies change (not user, cart, etc.)
- *   const doubled = sliceDerived(counterSlice, c => c.value() * 2);
- *   const isEven = sliceDerived(counterSlice, c => c.value() % 2 === 0);
- * </script>
- *
- * <div>Count doubled: {$doubled}</div>
- * <div>Is even: {$isEven}</div>
- * ```
- */
-export function sliceDerived<T, U>(
-  slice: SliceHandle<T>,
-  fn: (value: T) => U
-): Readable<U> {
-  const metadata = getSliceMetadata(slice);
-
-  return readable(fn(slice()), (set) => {
-    if (!metadata?.subscribe) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(
-          '[sliceDerived] No subscription metadata found for slice. Store will not be reactive.'
-        );
-      }
-      return;
-    }
-
-    return metadata.subscribe(() => {
-      try {
-        set(fn(slice()));
-      } catch (error) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.error('[sliceDerived] Error in derived function:', error);
-        }
-      }
-    });
-  });
-}
-
-/**
- * Combine multiple slices with optimal reactivity using stores.
- *
- * Only recalculates when ANY of the input slices' dependencies change.
- * This enables performant composition of complex state.
- *
- * @param slices - Array of slice handles to combine
- * @param fn - Function to combine slice values
- * @returns Svelte readable store with combined value
- *
- * @example
- * ```svelte
- * <script>
- *   import { combineSlicesAsStore } from '@lattice/frameworks/svelte';
- *
- *   // Only updates when counter OR user changes (not cart, auth, etc.)
- *   const summary = combineSlicesAsStore(
- *     [counterSlice, userSlice],
- *     (counter, user) => `${user.name()}: ${counter.value()}`
- *   );
- *
- *   // Complex dashboard that only updates when needed
- *   const dashboard = combineSlicesAsStore(
- *     [counterSlice, userSlice, cartSlice],
- *     (counter, user, cart) => ({
- *       greeting: `Welcome back, ${user.name()}!`,
- *       stats: `${counter.value()} clicks, ${cart.itemCount()} items`,
- *       isVip: user.isVip() && cart.total() > 100
- *     })
- *   );
- * </script>
- *
- * <div class="summary">{$summary}</div>
- * <div class="dashboard">
- *   <h2>{$dashboard.greeting}</h2>
- *   <p>{$dashboard.stats}</p>
- *   {#if $dashboard.isVip}
- *     <div class="vip-badge">VIP Customer</div>
- *   {/if}
- * </div>
- * ```
- */
-export function combineSlicesAsStore<T extends readonly SliceHandle<any>[], U>(
-  slices: T,
-  fn: (...values: InferSliceTypes<T>) => U
-): Readable<U> {
-  const calculate = () => fn(...(slices.map((s) => s()) as InferSliceTypes<T>));
-
-  return readable(calculate(), (set) => {
-    const unsubscribes = slices.map((slice) => {
-      const metadata = getSliceMetadata(slice);
-      if (!metadata?.subscribe) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            '[combineSlicesAsStore] No subscription metadata found for one or more slices. Store may not be fully reactive.'
-          );
-        }
-        return () => {};
-      }
-
-      return metadata.subscribe(() => {
-        try {
-          set(calculate());
-        } catch (error) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.error(
-              '[combineSlicesAsStore] Error in combine function:',
-              error
-            );
+      // Set up subscriptions on first subscriber
+      if (subscribers.size === 1) {
+        // Subscribe to all slices/stores
+        for (const [key, sliceOrStore] of Object.entries(slices)) {
+          if (typeof sliceOrStore === 'function') {
+            // It's a SliceHandle
+            const metadata = getSliceMetadata(sliceOrStore as SliceHandle<any>);
+            if (metadata?.subscribe) {
+              const unsub = metadata.subscribe(() => {
+                currentValues[key] = sliceOrStore();
+                currentResult = combineFn(currentValues);
+                subscribers.forEach(cb => cb(currentResult));
+              });
+              unsubscribers.push(unsub);
+            }
+          } else if (sliceOrStore && typeof sliceOrStore.subscribe === 'function') {
+            // It's a store
+            const unsub = sliceOrStore.subscribe((value: any) => {
+              currentValues[key] = value;
+              currentResult = combineFn(currentValues);
+              // Don't notify during initial subscription setup
+              if (subscribers.size > 0) {
+                subscribers.forEach(cb => cb(currentResult));
+              }
+            });
+            unsubscribers.push(unsub);
           }
         }
-      });
-    });
+        
+        // Compute initial result after all subscriptions are set up
+        currentResult = combineFn(currentValues);
+      }
 
-    return () => unsubscribes.forEach((unsub) => unsub());
-  });
+      // Call immediately as per Svelte store contract
+      callback(currentResult);
+
+      // Return unsubscribe function
+      return () => {
+        subscribers.delete(callback);
+
+        // Clean up all subscriptions when no more subscribers
+        if (subscribers.size === 0) {
+          unsubscribers.forEach(unsub => unsub());
+          unsubscribers.length = 0;
+        }
+      };
+    }
+  };
+
+  return store;
 }
 
 /**
- * Create a derived value from a slice using direct integration.
+ * Create a derived value from a slice.
  *
- * Returns a function that computes the derived value on demand,
- * only re-computing when the slice's dependencies change.
+ * Returns a store-compatible object that computes the derived value reactively.
+ * Can be used with Svelte's $ syntax for automatic subscriptions.
  *
  * @param sliceHandle - Source slice handle
  * @param deriveFn - Function to derive new value from slice
- * @returns Function that returns the derived value
+ * @returns Store-compatible object with subscribe method
  *
  * @example
  * ```svelte
  * <script>
- *   import { derived, setupSliceTracking } from '@lattice/frameworks/svelte';
- *   import { onMount } from 'svelte';
+ *   import { derived } from '@lattice/frameworks/svelte';
  *
- *   let doubled, isEven, fullName;
- *
- *   onMount(() => {
- *     setupSliceTracking();
- *
- *     doubled = derived(counterSlice, c => c.value() * 2);
- *     isEven = derived(counterSlice, c => c.value() % 2 === 0);
- *     fullName = derived(userSlice, u => `${u.firstName()} ${u.lastName()}`);
- *   });
+ *   const doubled = derived(counterSlice, c => c.value() * 2);
+ *   const isEven = derived(counterSlice, c => c.value() % 2 === 0);
+ *   const fullName = derived(userSlice, u => `${u.firstName()} ${u.lastName()}`);
  * </script>
  *
- * <div>Doubled: {doubled ? doubled() : 0}</div>
- * <div>Is even: {isEven ? isEven() : false}</div>
- * <div>Name: {fullName ? fullName() : ''}</div>
+ * <div>Doubled: {$doubled}</div>
+ * <div>Is even: {$isEven}</div>
+ * <div>Name: {$fullName}</div>
  * ```
  */
 export function derived<T, U>(
   sliceHandle: SliceHandle<T>,
   deriveFn: (value: T) => U
-): () => U {
+): SliceStore<U> {
   // Use slice with selector for automatic dependency tracking
   return slice(sliceHandle, deriveFn);
-}
-
-/**
- * Create async derived store with slice reactivity.
- *
- * Automatically handles loading states and only re-runs async operations
- * when slice dependencies actually change.
- *
- * @param slice - A Lattice slice handle
- * @param fn - Async function to derive value from slice
- * @param initial - Initial value for data
- * @returns Svelte readable store with async state
- *
- * @example
- * ```svelte
- * <script>
- *   import { asyncDerived } from '@lattice/frameworks/svelte';
- *
- *   // Only refetches when user slice dependencies change
- *   const userData = asyncDerived(userSlice, async user => {
- *     const response = await fetch(`/api/users/${user.id()}`);
- *     return response.json();
- *   });
- *
- *   // Search results that update when search slice changes
- *   const searchResults = asyncDerived(searchSlice, async search => {
- *     const response = await fetch(`/api/search?q=${search.query()}`);
- *     return response.json();
- *   }, []);
- * </script>
- *
- * <div class="user">
- *   {#if $userData.loading}
- *     Loading user data...
- *   {:else if $userData.error}
- *     Error: {$userData.error.message}
- *   {:else if $userData.data}
- *     Email: {$userData.data.email}
- *   {/if}
- * </div>
- *
- * <div class="search">
- *   {#if $searchResults.loading}
- *     Searching...
- *   {:else}
- *     {#each $searchResults.data as result}
- *       <div>{result.title}</div>
- *     {/each}
- *   {/if}
- * </div>
- * ```
- */
-export function asyncDerived<T, U>(
-  slice: SliceHandle<T>,
-  fn: (value: T) => Promise<U>,
-  initial?: U
-): Readable<{ data: U | undefined; loading: boolean; error: Error | null }> {
-  const metadata = getSliceMetadata(slice);
-
-  return readable(
-    { data: initial, loading: false, error: null } as {
-      data: U | undefined;
-      loading: boolean;
-      error: Error | null;
-    },
-    (set) => {
-      if (!metadata?.subscribe) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.warn(
-            '[asyncDerived] No subscription metadata found for slice. Store will not be reactive.'
-          );
-        }
-        return;
-      }
-
-      let cancelled = false;
-
-      const runAsync = async () => {
-        set({ data: initial, loading: true, error: null } as any);
-
-        try {
-          const result = await fn(slice());
-          if (!cancelled) {
-            set({ data: result, loading: false, error: null });
-          }
-        } catch (error) {
-          if (!cancelled) {
-            set({
-              data: initial,
-              loading: false,
-              error: error as Error,
-            } as any);
-          }
-        }
-      };
-
-      // Run initially
-      runAsync();
-
-      // Subscribe to slice changes
-      const unsubscribe = metadata.subscribe(() => {
-        runAsync();
-      });
-
-      return () => {
-        cancelled = true;
-        unsubscribe();
-      };
-    }
-  );
-}
-
-/**
- * Create memoized store for expensive computations.
- *
- * Combines Lattice's fine-grained reactivity with automatic memoization.
- * The expensive function only re-runs when the slice's dependencies change.
- *
- * @param slice - A Lattice slice handle
- * @param fn - Expensive function to memoize
- * @returns Svelte readable store with memoized computation
- *
- * @example
- * ```svelte
- * <script>
- *   import { memoized } from '@lattice/frameworks/svelte';
- *
- *   // Expensive computation that's memoized
- *   const fibonacci = memoized(
- *     counterSlice,
- *     counter => expensiveFibonacci(counter.value())
- *   );
- *
- *   // Heavy data processing with automatic cache invalidation
- *   const processedData = memoized(
- *     dataSlice,
- *     data => heavyDataProcessing(data.items())
- *   );
- * </script>
- *
- * <div class="expensive">
- *   Fibonacci: {$fibonacci}
- * </div>
- *
- * <div class="processed">
- *   {#each $processedData as item}
- *     <div>{item.processed}</div>
- *   {/each}
- * </div>
- * ```
- */
-export function memoized<T, U>(
-  slice: SliceHandle<T>,
-  fn: (value: T) => U
-): Readable<U> {
-  // Simple memoization: cache until slice dependencies change
-  let cachedResult: U | undefined;
-  let hasCache = false;
-
-  const compute = (): U => {
-    if (hasCache && cachedResult !== undefined) {
-      return cachedResult;
-    }
-
-    const result = fn(slice());
-    cachedResult = result;
-    hasCache = true;
-    return result;
-  };
-
-  const metadata = getSliceMetadata(slice);
-
-  return readable(compute(), (set) => {
-    if (!metadata?.subscribe) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn(
-          '[memoized] No subscription metadata found for slice. Store will not be reactive.'
-        );
-      }
-      return;
-    }
-
-    return metadata.subscribe(() => {
-      // When slice dependencies change, invalidate cache and recompute
-      hasCache = false;
-      set(compute());
-    });
-  });
 }
