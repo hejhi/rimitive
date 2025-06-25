@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
 import { createStore, computed } from '@lattice/core';
-import { useSlice, useSlices } from './react';
+import { useSlice, useSignal } from './react';
 
 describe('React hooks', () => {
   // Create test slices using the new API
@@ -34,11 +34,12 @@ describe('React hooks', () => {
   };
 
   describe('useSlice', () => {
-    it('should return entire slice when no selector provided', () => {
+    it('should return slice with signals accessible directly', () => {
       const { counterSlice } = createTestSlices();
 
       const { result } = renderHook(() => useSlice(counterSlice));
 
+      // Signals are accessed by calling them
       expect(result.current.value()).toBe(0);
       expect(result.current.isEven()).toBe(true);
       
@@ -49,140 +50,68 @@ describe('React hooks', () => {
       expect(result.current.value()).toBe(1);
       expect(result.current.isEven()).toBe(false);
     });
+  });
 
-    it('should return selected value when selector provided', () => {
+  describe('useSignal', () => {
+    it('should subscribe to signal and return current value', () => {
       const { counterSlice } = createTestSlices();
+      const slice = counterSlice();
 
-      const { result } = renderHook(() => 
-        useSlice(counterSlice, c => c.value())
-      );
+      const { result } = renderHook(() => useSignal(slice.value));
 
       expect(result.current).toBe(0);
+      
+      act(() => {
+        slice.increment();
+      });
+
+      expect(result.current).toBe(1);
     });
 
-    it('should re-render only when selected value changes', () => {
+    it('should re-render only when signal changes', () => {
       const { counterSlice, userSlice } = createTestSlices();
+      const counter = counterSlice();
+      const user = userSlice();
+      
       let renderCount = 0;
 
       const { result } = renderHook(() => {
         renderCount++;
-        return useSlice(counterSlice, c => c.value());
+        return useSignal(counter.value);
       });
 
       expect(renderCount).toBe(1);
       expect(result.current).toBe(0);
-
-      // Change different slice - should not re-render
+      
       act(() => {
-        userSlice().setName('alice');
-      });
-
-      expect(renderCount).toBe(1);
-
-      // Change selected value - should re-render
-      act(() => {
-        counterSlice().increment();
+        counter.increment();
       });
 
       expect(renderCount).toBe(2);
       expect(result.current).toBe(1);
-    });
 
-    it('should support complex selectors', () => {
-      const { itemsSlice } = createTestSlices();
-
-      const { result } = renderHook(() =>
-        useSlice(itemsSlice, items => ({
-          count: items.count(),
-          isEmpty: items.all().length === 0,
-        }))
-      );
-
-      expect(result.current).toEqual({ count: 0, isEmpty: true });
-
+      // Changing unrelated signal should not re-render
       act(() => {
-        itemsSlice().add('apple');
+        user.setName('alice');
       });
 
-      expect(result.current).toEqual({ count: 1, isEmpty: false });
-    });
-  });
-
-  describe('useSlices', () => {
-    it('should handle multiple slices with selectors', () => {
-      const { counterSlice, userSlice, itemsSlice } = createTestSlices();
-
-      const { result } = renderHook(() =>
-        useSlices({
-          count: [counterSlice, c => c.value()],
-          userName: [userSlice, u => u.name()],
-          itemCount: [itemsSlice, i => i.count()],
-        })
-      );
-
-      expect(result.current).toEqual({
-        count: 0,
-        userName: 'test',
-        itemCount: 0,
-      });
-
-      act(() => {
-        counterSlice().increment();
-        userSlice().setName('alice');
-        itemsSlice().add('apple');
-      });
-
-      expect(result.current).toEqual({
-        count: 1,
-        userName: 'alice',
-        itemCount: 1,
-      });
+      expect(renderCount).toBe(2); // No additional render
+      expect(result.current).toBe(1);
     });
 
-    it('should handle entire slice selection', () => {
+    it('should work with computed signals', () => {
       const { counterSlice } = createTestSlices();
+      const slice = counterSlice();
 
-      const { result } = renderHook(() =>
-        useSlices({
-          counter: [counterSlice, c => c],
-        })
-      );
+      const { result } = renderHook(() => useSignal(slice.isEven));
 
-      expect(result.current.counter.value()).toBe(0);
+      expect(result.current).toBe(true);
       
       act(() => {
-        result.current.counter.increment();
+        slice.increment();
       });
 
-      expect(result.current.counter.value()).toBe(1);
-    });
-
-    it('should optimize re-renders with shallow equality', () => {
-      const { counterSlice, userSlice } = createTestSlices();
-      let renderCount = 0;
-
-      renderHook(() => {
-        renderCount++;
-        return useSlices({
-          count: [counterSlice, c => c.value()],
-        });
-      });
-
-      expect(renderCount).toBe(1);
-
-      // Change unrelated slice - should not re-render
-      act(() => {
-        userSlice().setName('alice');
-      });
-
-      expect(renderCount).toBe(1);
-
-      // Change selected value - should re-render
-      act(() => {
-        counterSlice().increment();
-      });
-
-      expect(renderCount).toBe(2);
+      expect(result.current).toBe(false);
     });
   });
 });

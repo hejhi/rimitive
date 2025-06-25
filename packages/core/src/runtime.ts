@@ -92,40 +92,50 @@ export function signal<T>(initialValue: T): Signal<T> {
 export function computed<T>(computeFn: () => T): Computed<T> {
   let value: T;
   let isStale = true;
+  let isComputing = false; // Prevent infinite recomputation loops
   let unsubscribers: (() => void)[] = [];
   const listeners = new Set<() => void>();
   
   const recompute = () => {
-    // Clean up old dependency subscriptions
-    unsubscribers.forEach(unsub => unsub());
-    unsubscribers = [];
-    
-    // Track dependencies during computation
-    const dependencies = new Set<Signal<any>>();
-    const prevContext = trackingContext;
-    trackingContext = dependencies;
+    if (isComputing) return; // Prevent infinite loops
+    isComputing = true;
     
     try {
-      value = computeFn();
+      // Clean up old dependency subscriptions
+      unsubscribers.forEach(unsub => unsub());
+      unsubscribers = [];
       
-      // Subscribe to new dependencies
-      dependencies.forEach(dep => {
-        const unsub = dep.subscribe(() => {
-          isStale = true;
-          if (isBatching) {
-            // Add notifications to batch
-            listeners.forEach(listener => batchedUpdates.add(listener));
-          } else {
-            // Immediate notifications
-            listeners.forEach(listener => listener());
-          }
+      // Track dependencies during computation
+      const dependencies = new Set<Signal<any>>();
+      const prevContext = trackingContext;
+      trackingContext = dependencies;
+      
+      try {
+        value = computeFn();
+        
+        // Subscribe to new dependencies
+        dependencies.forEach(dep => {
+          const unsub = dep.subscribe(() => {
+            if (!isComputing) { // Only mark stale if not currently computing
+              isStale = true;
+              if (isBatching) {
+                // Add notifications to batch
+                listeners.forEach(listener => batchedUpdates.add(listener));
+              } else {
+                // Immediate notifications
+                listeners.forEach(listener => listener());
+              }
+            }
+          });
+          unsubscribers.push(unsub);
         });
-        unsubscribers.push(unsub);
-      });
-      
-      isStale = false;
+        
+        isStale = false;
+      } finally {
+        trackingContext = prevContext;
+      }
     } finally {
-      trackingContext = prevContext;
+      isComputing = false;
     }
   };
   
@@ -136,7 +146,7 @@ export function computed<T>(computeFn: () => T): Computed<T> {
     }
     
     // Recompute if stale
-    if (isStale) {
+    if (isStale && !isComputing) {
       recompute();
     }
     

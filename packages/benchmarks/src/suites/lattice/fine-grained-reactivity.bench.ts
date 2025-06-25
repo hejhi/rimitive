@@ -13,8 +13,8 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createStore, select as $ } from '@lattice/core';
-import { observable, action, computed } from 'mobx';
+import { createStore, computed } from '@lattice/core';
+import { observable, action, computed as mobxComputed } from 'mobx';
 import {
   initMemoryTracking,
   measureMemory,
@@ -49,12 +49,12 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
 
       // Create slice for each counter (fine-grained subscriptions)
       const counterSlices = counterIds.map((id) =>
-        createSlice($('counters'), ({ counters }, set) => ({
-          value: () => counters()[id] || 0,
-          increment: () =>
-            set(({ counters }) => ({
-              counters: { [id]: (counters()[id] || 0) + 1 },
-            })),
+        createSlice(({ counters }) => ({
+          value: computed(() => counters()[id] || 0),
+          increment: () => {
+            const current = counters();
+            counters({ ...current, [id]: (current[id] || 0) + 1 });
+          },
         }))
       );
 
@@ -115,7 +115,7 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
       // Create computed values for each counter (fine-grained subscriptions)
       // These only recalculate when their specific counter changes
       const counterComputeds = counterIds.map((id) =>
-        computed(() => store.counters[id] || 0)
+        mobxComputed(() => store.counters[id] || 0)
       );
 
       return {
@@ -184,11 +184,11 @@ describe('Large State Memory Usage Comparison', () => {
         counters: largeInitialCounters,
       });
 
-      const updateSlice = createSlice($('counters'), (_deps, set) => ({
-        increment: (id: string) =>
-          set(({ counters }) => ({
-            counters: { [id]: (counters()[id] || 0) + 1 },
-          })),
+      const updateSlice = createSlice(({ counters }) => ({
+        increment: (id: string) => {
+          const current = counters();
+          counters({ ...current, [id]: (current[id] || 0) + 1 });
+        },
       }));
 
       return updateSlice;
@@ -236,7 +236,7 @@ describe('Large State Memory Usage Comparison', () => {
       });
 
       // Create computed for accessing counter values (matches Lattice slice pattern)
-      const getCounter = computed(
+      const getCounter = mobxComputed(
         () => (id: string) => store.counters[id] || 0
       );
 
