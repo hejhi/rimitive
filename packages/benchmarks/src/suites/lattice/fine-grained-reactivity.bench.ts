@@ -54,7 +54,7 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
           increment: () => {
             // Use function form for surgical update
             set(({ counters }) => ({
-              counters: { [id]: (counters()[id] || 0) + 1 }
+              counters: { [id]: (counters()[id] || 0) + 1 },
             }));
           },
         }))
@@ -186,11 +186,11 @@ describe('Large State Memory Usage Comparison', () => {
         counters: largeInitialCounters,
       });
 
-      const updateSlice = createSlice(({ counters }, set) => ({
+      const updateSlice = createSlice((_, set) => ({
         increment: (id: string) => {
           // Use function form for surgical update
           set(({ counters }) => ({
-            counters: { [id]: (counters()[id] || 0) + 1 }
+            counters: { [id]: (counters()[id] || 0) + 1 },
           }));
         },
       }));
