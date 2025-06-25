@@ -40,9 +40,10 @@ export function createSvelteStore<State extends Record<string, unknown>>(
     computeFn: (state: SignalState<State>, set: SetState<State>) => Computed
   ): SliceHandle<Computed> {
     // Since we're using signals directly without adapters, set updates the signals
-    const set: SetState<State> = (updates: Partial<State>) => {
-      for (const key in updates) {
-        const value = updates[key];
+    const set: SetState<State> = (updates: Partial<State> | ((state: SignalState<State>) => Partial<State>)) => {
+      const actualUpdates = typeof updates === 'function' ? updates(signals) : updates;
+      for (const key in actualUpdates) {
+        const value = actualUpdates[key];
         if (value !== undefined && signals[key]) {
           (signals[key] as any)(value);
         }

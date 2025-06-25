@@ -49,11 +49,13 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
 
       // Create slice for each counter (fine-grained subscriptions)
       const counterSlices = counterIds.map((id) =>
-        createSlice(({ counters }) => ({
+        createSlice(({ counters }, set) => ({
           value: computed(() => counters()[id] || 0),
           increment: () => {
-            const current = counters();
-            counters({ ...current, [id]: (current[id] || 0) + 1 });
+            // Use function form for surgical update
+            set(({ counters }) => ({
+              counters: { [id]: (counters()[id] || 0) + 1 }
+            }));
           },
         }))
       );
@@ -184,10 +186,12 @@ describe('Large State Memory Usage Comparison', () => {
         counters: largeInitialCounters,
       });
 
-      const updateSlice = createSlice(({ counters }) => ({
+      const updateSlice = createSlice(({ counters }, set) => ({
         increment: (id: string) => {
-          const current = counters();
-          counters({ ...current, [id]: (current[id] || 0) + 1 });
+          // Use function form for surgical update
+          set(({ counters }) => ({
+            counters: { [id]: (counters()[id] || 0) + 1 }
+          }));
         },
       }));
 

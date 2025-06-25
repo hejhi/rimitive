@@ -14,7 +14,7 @@ export {
 } from './lib/metadata';
 
 // Export runtime - now using the simple cache implementation as default
-export { createLatticeStore, type ComponentFactory, signal, computed } from './runtime';
+export { createLatticeStore, type ComponentFactory, signal, computed, partial } from './runtime';
 
 // Export built-in adapters
 export { vanillaAdapter, createStore } from './adapters';

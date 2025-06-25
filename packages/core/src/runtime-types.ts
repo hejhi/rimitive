@@ -43,9 +43,9 @@ export interface SliceHandle<Computed> {
 }
 
 /**
- * Function to update state
+ * Function to update state - supports both direct updates and computed updates
  */
-export type SetState<State> = (updates: Partial<State>) => void;
+export type SetState<State> = (updates: Partial<State> | ((state: SignalState<State>) => Partial<State>)) => void;
 
 /**
  * Factory function for creating reactive slices using signals

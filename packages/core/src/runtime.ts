@@ -12,6 +12,14 @@ import type { ReactiveSliceFactory, Signal, Computed, SignalState, SliceHandle, 
 import { storeSliceMetadata, storeCompositionMetadata } from './lib/metadata';
 import { type StoreAdapter } from './adapter-contract';
 
+/**
+ * Helper for creating partial updates with structural sharing
+ * Enables surgical updates similar to main branch
+ */
+export function partial<T extends Record<string, any>>(key: keyof T, value: any): Partial<T> {
+  return { [key]: value } as Partial<T>;
+}
+
 // Global dependency tracking context
 let trackingContext: Set<Signal<any>> | null = null;
 
@@ -241,9 +249,16 @@ export function createLatticeStore<State>(
   return function createSlice<Computed>(
     computeFn: (state: SignalState<State>, set: SetState<State>) => Computed
   ): SliceHandle<Computed> {
-    // Create set function that updates adapter directly
-    const set: SetState<State> = (updates: Partial<State>) => {
-      adapter.setState(updates);
+    // Create set function that supports both full and partial updates
+    const set: SetState<State> = (updates: Partial<State> | ((state: SignalState<State>) => Partial<State>)) => {
+      if (typeof updates === 'function') {
+        // Function form - compute minimal updates
+        const partialUpdates = updates(signalState);
+        adapter.setState(partialUpdates);
+      } else {
+        // Direct object form
+        adapter.setState(updates);
+      }
     };
     // Execute the computation function - it will automatically track signal dependencies
     const computedResult = computeFn(signalState, set);
