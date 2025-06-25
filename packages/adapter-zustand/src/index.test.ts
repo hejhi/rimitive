@@ -11,15 +11,15 @@ describe('Zustand Adapter - New Architecture', () => {
       createSlice: RuntimeSliceFactory<{ count: number }>
     ) => {
       // Actions slice - methods that mutate state
-      const actions = createSlice(({ count }) => ({
-        increment: () => count(count() + 1),
-        decrement: () => count(count() - 1),
-        reset: () => count(0),
-        setCount: (value: number) => count(value),
+      const actions = createSlice(({ count }, set) => ({
+        increment: () => set({ count: count() + 1 }),
+        decrement: () => set({ count: count() - 1 }),
+        reset: () => set({ count: 0 }),
+        setCount: (value: number) => set({ count: value }),
       }));
 
       // Query slice - methods that read state
-      const queries = createSlice(({ count }) => ({
+      const queries = createSlice(({ count }, _set) => ({
         count, // count is already a signal
         isPositive: () => count() > 0,
         isNegative: () => count() < 0,
@@ -27,7 +27,7 @@ describe('Zustand Adapter - New Architecture', () => {
       }));
 
       // View slices that compute values
-      const views = createSlice(({ count }) => ({
+      const views = createSlice(({ count }, _set) => ({
         // Direct computed values as methods
         computed: () => ({
           value: count(),
@@ -105,23 +105,29 @@ describe('Zustand Adapter - New Architecture', () => {
     const createComponent = (
       createSlice: RuntimeSliceFactory<{ value: number; history: number[] }>
     ) => {
-      const actions = createSlice(({ value, history }) => ({
+      const actions = createSlice(({ value, history }, set) => ({
         setValue: (newValue: number) => {
-          value(newValue);
-          history([...history(), newValue]);
+          set({ 
+            value: newValue,
+            history: [...history(), newValue]
+          });
         },
         increment: () => {
           const newValue = value() + 1;
-          value(newValue);
-          history([...history(), newValue]);
+          set({
+            value: newValue,
+            history: [...history(), newValue]
+          });
         },
         reset: () => {
-          value(0);
-          history([]);
+          set({
+            value: 0,
+            history: []
+          });
         },
       }));
 
-      const queries = createSlice(({ value, history }) => ({
+      const queries = createSlice(({ value, history }, _set) => ({
         value, // value is already a signal
         history, // history is already a signal
         current: () => value(),
@@ -204,7 +210,7 @@ describe('Zustand Adapter - New Architecture', () => {
       }>
     ) => {
       // Product queries
-      const products = createSlice(({ products }) => ({
+      const products = createSlice(({ products }, _set) => ({
         all: () => products(),
         byId: (id: string) => products().find((p) => p.id === id),
         byCategory: (category: string) =>
@@ -212,7 +218,7 @@ describe('Zustand Adapter - New Architecture', () => {
       }));
 
       // Pricing calculations
-      const pricing = createSlice(({ taxRate, discount }) => ({
+      const pricing = createSlice(({ taxRate, discount }, _set) => ({
         taxRate, // taxRate is already a signal
         discount, // discount is already a signal
         calculatePrice: (basePrice: number) => {
@@ -222,7 +228,7 @@ describe('Zustand Adapter - New Architecture', () => {
       }));
 
       // Create catalog views
-      const catalog = createSlice(({ products, taxRate, discount }) => ({
+      const catalog = createSlice(({ products, taxRate, discount }, _set) => ({
         // Direct computed values
         totalProducts: () => products().length,
         categories: () => [...new Set(products().map((p) => p.category))],
@@ -335,18 +341,22 @@ describe('Zustand Adapter - New Architecture', () => {
 
     // Create component with the adapter
     const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
-      const actions = createSlice(({ count, lastAction }) => ({
+      const actions = createSlice(({ count }, set) => ({
         increment: () => {
-          count(count() + 1);
-          lastAction('increment');
+          set({
+            count: count() + 1,
+            lastAction: 'increment'
+          });
         },
         decrement: () => {
-          count(count() - 1);
-          lastAction('decrement');
+          set({
+            count: count() - 1,
+            lastAction: 'decrement'
+          });
         },
       }));
 
-      const queries = createSlice(({ count, lastAction }) => ({
+      const queries = createSlice(({ count, lastAction }, _set) => ({
         state: () => ({ count: count(), lastAction: lastAction() }),
         count, // count is already a signal
         lastAction, // lastAction is already a signal
@@ -405,7 +415,7 @@ describe('Zustand Adapter - New Architecture', () => {
       createSlice: RuntimeSliceFactory<UserState>
     ) => {
       // Create queries slice
-      const auth = createSlice(({ user, isAuthenticated, login, logout }) => ({
+      const auth = createSlice(({ user, isAuthenticated, login, logout }, _set) => ({
         // Expose queries
         user, // user is already a signal
         isAuthenticated, // isAuthenticated is already a signal
@@ -417,11 +427,11 @@ describe('Zustand Adapter - New Architecture', () => {
       }));
 
       // Or create new Lattice-style actions
-      const actions = createSlice(({ user }) => ({
+      const actions = createSlice(({ user }, set) => ({
         updateUserName: (name: string) => {
           const currentUser = user();
           if (currentUser) {
-            user({ ...currentUser, name });
+            set({ user: { ...currentUser, name } });
           }
         },
       }));

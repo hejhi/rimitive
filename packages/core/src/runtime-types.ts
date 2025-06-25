@@ -43,9 +43,14 @@ export interface SliceHandle<Computed> {
 }
 
 /**
+ * Function to update state
+ */
+export type SetState<State> = (updates: Partial<State>) => void;
+
+/**
  * Factory function for creating reactive slices using signals
- * Much simpler than before - just provide the computation function
+ * Provides read-only signals and a set function for updates
  */
 export type ReactiveSliceFactory<State> = <Computed>(
-  computeFn: (state: SignalState<State>) => Computed
+  computeFn: (state: SignalState<State>, set: SetState<State>) => Computed
 ) => SliceHandle<Computed>;

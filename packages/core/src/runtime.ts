@@ -8,7 +8,7 @@
  * - No proxies, uses function overloading and context tracking
  */
 
-import type { ReactiveSliceFactory, Signal, Computed, SignalState, SliceHandle } from './runtime-types';
+import type { ReactiveSliceFactory, Signal, Computed, SignalState, SliceHandle, SetState } from './runtime-types';
 import { storeSliceMetadata, storeCompositionMetadata } from './lib/metadata';
 import { type StoreAdapter } from './adapter-contract';
 
@@ -162,68 +162,70 @@ export function computed<T>(computeFn: () => T): Computed<T> {
 }
 
 /**
- * Creates a signal state object from a store adapter
- * Provides bidirectional sync between signals and the underlying store
+ * Creates read-only signals that mirror adapter state
+ * Provides unidirectional sync from adapter to signals only
  */
-function createSignalState<State>(adapter: StoreAdapter<State>): SignalState<State> {
+function createReadOnlySignals<State>(adapter: StoreAdapter<State>): SignalState<State> {
   const state = adapter.getState();
   const signals = {} as SignalState<State>;
+  const internalSignals = {} as Record<keyof State, Signal<State[keyof State]>>;
   
-  // Track initialization state to prevent circular updates
-  let isInitializing = true;
-  let isSyncingFromAdapter = false;
-  
-  // Create signals for each state property
+  // Create internal writable signals and expose read-only versions
   for (const key in state) {
-    const sig = signal(state[key]);
-    signals[key] = sig;
-  }
-  
-  // Set up bidirectional sync after all signals are created
-  for (const key in signals) {
-    const sig = signals[key];
+    const internalSig = signal(state[key]);
+    (internalSignals as any)[key] = internalSig;
     
-    // When signal changes, update the store (unless we're syncing from adapter)
-    sig.subscribe(() => {
-      if (!isSyncingFromAdapter) {
-        adapter.setState({ [key]: sig() } as unknown as Partial<State>);
+    // Create read-only wrapper
+    signals[key] = Object.assign(
+      () => {
+        // Track dependencies when accessed
+        if (trackingContext) {
+          trackingContext.add(signals[key]);
+        }
+        return internalSig();
+      },
+      {
+        subscribe: internalSig.subscribe,
+        readonly: true
       }
-    });
+    ) as Signal<State[typeof key]>;
   }
   
-  // When store changes, update signals
+  // Unidirectional sync: adapter changes update signals
   adapter.subscribe(() => {
-    isSyncingFromAdapter = true;
     runBatched(() => {
       const newState = adapter.getState();
       
       // Update existing signals
       for (const key in newState) {
-        if (signals[key] && !Object.is(signals[key](), newState[key])) {
-          signals[key](newState[key]);
+        if (internalSignals[key] && !Object.is(internalSignals[key](), newState[key])) {
+          internalSignals[key](newState[key]);
         }
       }
       
       // Add new signals for any new keys
       for (const key in newState) {
-        if (!signals[key]) {
-          const sig = signal(newState[key]);
-          signals[key] = sig;
+        if (!internalSignals[key]) {
+          const internalSig = signal(newState[key]);
+          (internalSignals as any)[key] = internalSig;
           
-          // Set up sync for the new signal
-          sig.subscribe(() => {
-            if (!isSyncingFromAdapter) {
-              adapter.setState({ [key]: sig() } as unknown as Partial<State>);
+          // Create read-only wrapper for new signal
+          signals[key] = Object.assign(
+            () => {
+              if (trackingContext) {
+                trackingContext.add(signals[key]);
+              }
+              return internalSig();
+            },
+            {
+              subscribe: internalSig.subscribe,
+              readonly: true
             }
-          });
+          ) as Signal<State[typeof key]>;
         }
       }
     });
-    isSyncingFromAdapter = false;
   });
-  
-  // Mark initialization as complete
-  isInitializing = false;
   
   return signals;
 }
@@ -234,13 +236,17 @@ function createSignalState<State>(adapter: StoreAdapter<State>): SignalState<Sta
 export function createLatticeStore<State>(
   adapter: StoreAdapter<State>
 ): ReactiveSliceFactory<State> {
-  const signalState = createSignalState(adapter);
+  const signalState = createReadOnlySignals(adapter);
   
   return function createSlice<Computed>(
-    computeFn: (state: SignalState<State>) => Computed
+    computeFn: (state: SignalState<State>, set: SetState<State>) => Computed
   ): SliceHandle<Computed> {
+    // Create set function that updates adapter directly
+    const set: SetState<State> = (updates: Partial<State>) => {
+      adapter.setState(updates);
+    };
     // Execute the computation function - it will automatically track signal dependencies
-    const computedResult = computeFn(signalState);
+    const computedResult = computeFn(signalState, set);
     
     // Create the slice handle with composition capability
     function slice(): Computed;

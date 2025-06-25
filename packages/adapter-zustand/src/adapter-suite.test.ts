@@ -19,9 +19,9 @@ describe('Zustand Adapter Contract', () => {
 
     // Create a simple component using signals-first pattern
     const component = (() => {
-      const slice = createSlice(({ count }) => ({
+      const slice = createSlice(({ count }, set) => ({
         value: count, // count is already a signal
-        increment: () => count(count() + 1),
+        increment: () => set({ count: count() + 1 }),
       }));
       return slice;
     })();
@@ -50,9 +50,9 @@ describe('Zustand Adapter Contract', () => {
     const createSlice = zustandAdapter(store);
 
     const component = (() => {
-      const slice = createSlice(({ value }) => ({
+      const slice = createSlice(({ value }, set) => ({
         getValue: value, // value is already a signal
-        setValue: (newValue: number) => value(newValue),
+        setValue: (newValue: number) => set({ value: newValue }),
       }));
       return slice;
     })();
@@ -72,9 +72,9 @@ describe('Zustand Adapter Contract', () => {
     const createSlice = zustandAdapter(store);
 
     const component = (() => {
-      const slice = createSlice(({ count }) => ({
+      const slice = createSlice(({ count }, set) => ({
         value: count, // count is already a signal
-        increment: () => count(count() + 1),
+        increment: () => set({ count: count() + 1 }),
       }));
       return slice;
     })();

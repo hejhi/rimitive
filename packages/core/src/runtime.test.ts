@@ -34,10 +34,10 @@ describe('createLatticeStore - adapter bridge', () => {
 
     // Create a component using the new reactive API
     const createComponent = (createSlice: ReactiveSliceFactory<{ count: number }>) => {
-      const counter = createSlice(({ count }) => ({
+      const counter = createSlice(({ count }, set) => ({
         value: count,
-        increment: () => count(count() + 1),
-        decrement: () => count(count() - 1),
+        increment: () => set({ count: count() + 1 }),
+        decrement: () => set({ count: count() - 1 }),
       }));
 
       return { counter };
@@ -97,16 +97,16 @@ describe('createLatticeStore - adapter bridge', () => {
     const createComponent = (
       createSlice: ReactiveSliceFactory<{ count: number; multiplier: number }>
     ) => {
-      const counter = createSlice(({ count, multiplier }) => ({
+      const counter = createSlice(({ count, multiplier }, set) => ({
         count,
         multiplier,
-        increment: () => count(count() + 1),
-        multiply: () => count(count() * multiplier()),
+        increment: () => set({ count: count() + 1 }),
+        multiply: () => set({ count: count() * multiplier() }),
       }));
 
-      const config = createSlice(({ multiplier }) => ({
+      const config = createSlice(({ multiplier }, set) => ({
         multiplier,
-        setMultiplier: (value: number) => multiplier(value),
+        setMultiplier: (value: number) => set({ multiplier: value }),
       }));
 
       return { counter, config };
@@ -148,14 +148,14 @@ describe('createLatticeStore - adapter bridge', () => {
     type State = { count: number; name: string };
 
     const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
-      const counter = createSlice(({ count }) => ({
+      const counter = createSlice(({ count }, set) => ({
         value: count,
-        increment: () => count(count() + 1),
+        increment: () => set({ count: count() + 1 }),
       }));
 
-      const user = createSlice(({ name }) => ({
+      const user = createSlice(({ name }, set) => ({
         name,
-        setName: (newName: string) => name(newName),
+        setName: (newName: string) => set({ name: newName }),
       }));
 
       return { counter, user };
@@ -212,15 +212,15 @@ describe('createLatticeStore - adapter bridge', () => {
     const createSlice = createLatticeStore<State>(mockAdapter);
     
     // Create slices with different dependencies
-    const sliceA = createSlice(({ a }) => ({ 
+    const sliceA = createSlice(({ a }, _set) => ({ 
       value: a 
     }));
     
-    const sliceBC = createSlice(({ b, c }) => ({ 
+    const sliceBC = createSlice(({ b, c }, _set) => ({ 
       sum: computed(() => b() + c()) 
     }));
     
-    const sliceD = createSlice(({ d }) => ({ 
+    const sliceD = createSlice(({ d }, _set) => ({ 
       value: d 
     }));
     
@@ -261,9 +261,9 @@ describe('createLatticeStore - adapter bridge', () => {
     };
 
     const createComponent = (createSlice: ReactiveSliceFactory<{ count: number }>) => {
-      const counter = createSlice(({ count }) => ({
+      const counter = createSlice(({ count }, set) => ({
         value: count,
-        increment: () => count(count() + 1),
+        increment: () => set({ count: count() + 1 }),
       }));
 
       return { counter };

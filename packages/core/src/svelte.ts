@@ -5,7 +5,7 @@
  * without the circular dependency issues caused by adapter synchronization.
  */
 
-import type { ReactiveSliceFactory, SignalState, SliceHandle } from './runtime-types';
+import type { ReactiveSliceFactory, SignalState, SliceHandle, SetState } from './runtime-types';
 import { signal } from './runtime';
 
 /**
@@ -37,9 +37,18 @@ export function createSvelteStore<State extends Record<string, unknown>>(
   }
   
   return function createSlice<Computed>(
-    computeFn: (state: SignalState<State>) => Computed
+    computeFn: (state: SignalState<State>, set: SetState<State>) => Computed
   ): SliceHandle<Computed> {
-    const computed = computeFn(signals);
+    // Since we're using signals directly without adapters, set updates the signals
+    const set: SetState<State> = (updates: Partial<State>) => {
+      for (const key in updates) {
+        const value = updates[key];
+        if (value !== undefined && signals[key]) {
+          (signals[key] as any)(value);
+        }
+      }
+    };
+    const computed = computeFn(signals, set);
     
     function slice(): Computed;
     function slice<ChildDeps>(childFn: (parent: Computed) => ChildDeps): ChildDeps;

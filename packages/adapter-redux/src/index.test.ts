@@ -13,10 +13,10 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ counter: { value: number } }>(store);
 
-    const counter = createSlice(({ counter }) => ({
+    const counter = createSlice(({ counter }, set) => ({
       count: () => counter().value, // computed from signal
-      increment: () => counter({ value: counter().value + 1 }),
-      decrement: () => counter({ value: counter().value - 1 }),
+      increment: () => set({ counter: { value: counter().value + 1 } }),
+      decrement: () => set({ counter: { value: counter().value - 1 } }),
     }));
 
     // Test initial state
@@ -48,16 +48,16 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<CountStore>(store);
 
-    const counter = createSlice(({ counter }) => ({
+    const counter = createSlice(({ counter }, set) => ({
       value: () => counter().value,
-      increment: () => counter({ value: counter().value + 1 }),
+      increment: () => set({ counter: { value: counter().value + 1 } }),
     }));
 
-    const user = createSlice(({ user }) => ({
+    const user = createSlice(({ user }, set) => ({
       getName: () => user().name,
       isLoggedIn: () => user().loggedIn,
-      login: (name: string) => user({ name, loggedIn: true }),
-      logout: () => user({ name: '', loggedIn: false }),
+      login: (name: string) => set({ user: { name, loggedIn: true } }),
+      logout: () => set({ user: { name: '', loggedIn: false } }),
     }));
 
     // Test both slices work independently
@@ -83,9 +83,9 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ value: number }>(store);
 
-    const state = createSlice(({ value }) => ({
+    const state = createSlice(({ value }, set) => ({
       value,
-      setValue: (newValue: number) => value(newValue),
+      setValue: (newValue: number) => set({ value: newValue }),
     }));
 
     const callback = vi.fn();
@@ -113,9 +113,9 @@ describe('Redux Adapter', () => {
 
     const createSlice = reduxAdapter<{ counter: { value: number } }>(store);
 
-    const counter = createSlice(({ counter }) => ({
+    const counter = createSlice(({ counter }, set) => ({
       value: () => counter().value,
-      increment: () => counter({ value: counter().value + 1 }),
+      increment: () => set({ counter: { value: counter().value + 1 } }),
     }));
 
     // DevTools will see 'lattice/updateState' actions
@@ -151,38 +151,44 @@ describe('Redux Adapter', () => {
     }>(store);
 
     let nextId = 1;
-    const todos = createSlice(({ todos }) => ({
+    const todos = createSlice(({ todos }, set) => ({
       getAll: () => todos().items,
       getActive: () => todos().items.filter((t) => !t.completed),
       getCompleted: () => todos().items.filter((t) => t.completed),
 
       addTodo: (text: string) => {
-        todos({
-          ...todos(),
-          items: [
-            ...todos().items,
-            {
-              id: nextId++,
-              text,
-              completed: false,
-            },
-          ],
+        set({
+          todos: {
+            ...todos(),
+            items: [
+              ...todos().items,
+              {
+                id: nextId++,
+                text,
+                completed: false,
+              },
+            ],
+          },
         });
       },
 
       toggleTodo: (id: number) => {
-        todos({
-          ...todos(),
-          items: todos().items.map((todo) =>
-            todo.id === id ? { ...todo, completed: !todo.completed } : todo
-          ),
+        set({
+          todos: {
+            ...todos(),
+            items: todos().items.map((todo) =>
+              todo.id === id ? { ...todo, completed: !todo.completed } : todo
+            ),
+          },
         });
       },
 
       setFilter: (filter: 'all' | 'active' | 'completed') => {
-        todos({
-          ...todos(),
-          filter,
+        set({
+          todos: {
+            ...todos(),
+            filter,
+          },
         });
       },
     }));
@@ -222,9 +228,9 @@ describe('Redux Adapter', () => {
       onError: (error) => errors.push(error),
     });
 
-    const state = createSlice(({ value }) => ({
+    const state = createSlice(({ value }, set) => ({
       value,
-      setValue: (newValue: number) => value(newValue),
+      setValue: (newValue: number) => set({ value: newValue }),
     }));
 
     // Subscribe with a normal listener first
@@ -237,12 +243,17 @@ describe('Redux Adapter', () => {
     });
     state().value.subscribe(errorListener);
 
-    // Trigger state change - in signals-first API, errors in signal listeners will throw
-    expect(() => state().setValue(1)).toThrow('Listener error');
+    // Trigger state change - errors are caught by adapter
+    state().setValue(1);
 
-    // Normal listener should be called before error occurs
+    // Both listeners should be called
     expect(normalListener).toHaveBeenCalledTimes(1);
     expect(errorListener).toHaveBeenCalledTimes(1);
+    
+    // Check that error was reported
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBeInstanceOf(Error);
+    expect((errors[0] as Error).message).toBe('Listener error');
   });
 
   it('should handle nested state updates', () => {
@@ -269,29 +280,35 @@ describe('Redux Adapter', () => {
       };
     }>(store);
 
-    const ui = createSlice(({ ui }) => ({
+    const ui = createSlice(({ ui }, set) => ({
       isModalOpen: () => ui().modal.isOpen,
       getModalContent: () => ui().modal.content,
       getTheme: () => ui().theme,
 
       openModal: (content: string) => {
-        ui({
-          ...ui(),
-          modal: { isOpen: true, content },
+        set({
+          ui: {
+            ...ui(),
+            modal: { isOpen: true, content },
+          },
         });
       },
 
       closeModal: () => {
-        ui({
-          ...ui(),
-          modal: { isOpen: false, content: null },
+        set({
+          ui: {
+            ...ui(),
+            modal: { isOpen: false, content: null },
+          },
         });
       },
 
       toggleTheme: () => {
-        ui({
-          ...ui(),
-          theme: ui().theme === 'light' ? 'dark' : 'light',
+        set({
+          ui: {
+            ...ui(),
+            theme: ui().theme === 'light' ? 'dark' : 'light',
+          },
         });
       },
     }));
@@ -332,9 +349,9 @@ describe('Redux Adapter', () => {
       user: { name: string };
     }>(store, { slice: 'app' });
 
-    const counter = createSlice(({ count }) => ({
+    const counter = createSlice(({ count }, set) => ({
       value: () => count(),
-      increment: () => count(count() + 1),
+      increment: () => set({ count: count() + 1 }),
     }));
 
     expect(counter().value()).toBe(0);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createLatticeStore, computed } from './runtime';
+import { createLatticeStore, computed, signal } from './runtime';
 import type { StoreAdapter } from './adapter-contract';
 
 describe('runtime integration', () => {
@@ -27,10 +27,10 @@ describe('runtime integration', () => {
     const adapter = createTestAdapter({ count: 0, name: 'test' });
     const createSlice = createLatticeStore(adapter);
 
-    const counter = createSlice(({ count }) => ({
+    const counter = createSlice(({ count }, set) => ({
       value: count,
-      increment: () => count(count() + 1),
-      decrement: () => count(count() - 1),
+      increment: () => set({ count: count() + 1 }),
+      decrement: () => set({ count: count() - 1 }),
     }));
 
     // Test initial values
@@ -44,22 +44,23 @@ describe('runtime integration', () => {
     expect(counter().value()).toBe(0);
   });
 
-  it('should sync signals with adapter bidirectionally', () => {
+  it('should sync signals with adapter unidirectionally', () => {
     const adapter = createTestAdapter({ count: 5 });
     const createSlice = createLatticeStore(adapter);
 
-    const counter = createSlice(({ count }) => ({
+    const counter = createSlice(({ count }, set) => ({
       value: count,
-      setValue: (v: number) => count(v),
+      setValue: (v: number) => set({ count: v }),
     }));
 
     // Initial value from adapter
     expect(counter().value()).toBe(5);
     expect(adapter.getState().count).toBe(5);
 
-    // Signal change updates adapter
+    // Set updates adapter, which then updates signal
     counter().setValue(10);
     expect(adapter.getState().count).toBe(10);
+    expect(counter().value()).toBe(10);
 
     // Adapter change updates signal
     adapter.setState({ count: 15 });
@@ -70,7 +71,7 @@ describe('runtime integration', () => {
     const adapter = createTestAdapter({ first: 'Hello', last: 'World' });
     const createSlice = createLatticeStore(adapter);
 
-    const nameSlice = createSlice(({ first, last }) => {
+    const nameSlice = createSlice(({ first, last }, set) => {
       const fullName = computed(() => `${first()} ${last()}`);
       const initials = computed(() => `${first()[0]}.${last()[0]}.`);
 
@@ -79,8 +80,8 @@ describe('runtime integration', () => {
         last,
         fullName,
         initials,
-        setFirst: (value: string) => first(value),
-        setLast: (value: string) => last(value),
+        setFirst: (value: string) => set({ first: value }),
+        setLast: (value: string) => set({ last: value }),
       };
     });
 
@@ -103,13 +104,13 @@ describe('runtime integration', () => {
     const createSlice = createLatticeStore(adapter);
 
     // Base counter slice
-    const counter = createSlice(({ count }) => ({
+    const counter = createSlice(({ count }, set) => ({
       value: count,
-      increment: () => count(count() + 1),
+      increment: () => set({ count: count() + 1 }),
     }));
 
     // Multiplier slice that composes counter
-    const multiplied = createSlice(({ multiplier }) => {
+    const multiplied = createSlice(({ multiplier }, set) => {
       // Extract specific methods from counter for composition
       const { value: counterValue } = counter(c => ({ value: c.value }));
       
@@ -119,7 +120,7 @@ describe('runtime integration', () => {
         result,
         counterValue,
         multiplier,
-        setMultiplier: (v: number) => multiplier(v),
+        setMultiplier: (v: number) => set({ multiplier: v }),
       };
     });
 
@@ -141,9 +142,9 @@ describe('runtime integration', () => {
     const adapter = createTestAdapter({ count: 0 });
     const createSlice = createLatticeStore(adapter);
 
-    const counter = createSlice(({ count }) => ({
+    const counter = createSlice(({ count }, set) => ({
       value: count,
-      increment: () => count(count() + 1),
+      increment: () => set({ count: count() + 1 }),
     }));
 
     let notificationCount = 0;
@@ -163,17 +164,17 @@ describe('runtime integration', () => {
   });
 
   it('should handle new state properties dynamically', () => {
-    const adapter = createTestAdapter({ count: 0 });
+    const adapter = createTestAdapter({ count: 0 } as { count: number; name?: string });
     const createSlice = createLatticeStore(adapter);
 
     // Add new property to state
-    adapter.setState({ count: 0, name: 'test' } as any);
+    adapter.setState({ name: 'test' });
 
     // Create new slice that can access the new property
-    const newSlice = createSlice((state: any) => ({
-      name: state.name,
+    const newSlice = createSlice((state, set) => ({
+      name: state.name || signal(''),
       count: state.count,
-      setName: (v: string) => state.name(v),
+      setName: (v: string) => set({ name: v }),
     }));
 
     expect(newSlice().name()).toBe('test');

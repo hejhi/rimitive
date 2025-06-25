@@ -312,16 +312,16 @@ export function createAdapterTestSuite(
         const createComponent = (
           createSlice: RuntimeSliceFactory<TestState>
         ) => {
-          const counter = createSlice(({ count }) => ({
+          const counter = createSlice(({ count }, set) => ({
             count, // count is already a signal
-            increment: () => count(count() + 1),
-            decrement: () => count(count() - 1),
+            increment: () => set({ count: count() + 1 }),
+            decrement: () => set({ count: count() - 1 }),
           }));
 
-          const textEditor = createSlice(({ text }) => ({
+          const textEditor = createSlice(({ text }, set) => ({
             text, // text is already a signal
-            setText: (newText: string) => text(newText),
-            append: (suffix: string) => text(text() + suffix),
+            setText: (newText: string) => set({ text: newText }),
+            append: (suffix: string) => set({ text: text() + suffix }),
           }));
 
           return { counter, textEditor };
@@ -366,19 +366,18 @@ export function createAdapterTestSuite(
         const createComponent = (
           createSlice: RuntimeSliceFactory<TestState>
         ) => {
-          const reader = createSlice(({ count, text }) => ({
+          const reader = createSlice(({ count, text }, _set) => ({
             getAll: () => ({ count: count(), text: text() }),
             getCount: () => count(),
             getText: () => text(),
           }));
 
-          const writer = createSlice(({ count, text }) => ({
-            setCount: (newCount: number) => count(newCount),
-            setText: (newText: string) => text(newText), 
+          const writer = createSlice((_state, set) => ({
+            setCount: (newCount: number) => set({ count: newCount }),
+            setText: (newText: string) => set({ text: newText }), 
             reset: () => {
               const initial = createInitialState();
-              count(initial.count);
-              text(initial.text);
+              set({ count: initial.count, text: initial.text });
             },
           }));
 

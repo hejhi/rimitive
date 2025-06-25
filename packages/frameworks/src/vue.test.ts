@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, watch, nextTick, computed } from 'vue';
 import { createStore, computed as latticeComputed } from '@lattice/core';
@@ -13,21 +13,21 @@ describe('Vue Lattice composables - New slice-based API', () => {
       items: [] as string[],
     });
 
-    const counterSlice = createSlice(({ count }) => ({
+    const counterSlice = createSlice(({ count }, set) => ({
       value: count, // count is already a signal
-      increment: () => count(count() + 1),
+      increment: () => set({ count: count() + 1 }),
       doubled: latticeComputed(() => count() * 2),
       isEven: latticeComputed(() => count() % 2 === 0),
     }));
 
-    const userSlice = createSlice(({ name }) => ({
+    const userSlice = createSlice(({ name }, set) => ({
       name, // name is already a signal
-      setName: (newName: string) => name(newName),
+      setName: (newName: string) => set({ name: newName }),
     }));
 
-    const itemsSlice = createSlice(({ items }) => ({
+    const itemsSlice = createSlice(({ items }, set) => ({
       all: items, // items is already a signal
-      add: (item: string) => items([...items(), item]),
+      add: (item: string) => set({ items: [...items(), item] }),
     }));
 
     return { counterSlice, userSlice, itemsSlice };

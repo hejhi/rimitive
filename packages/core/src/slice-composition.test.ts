@@ -32,14 +32,14 @@ describe('slice composition patterns', () => {
 
     const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
       // Product queries slice
-      const products = createSlice(({ products }) => ({
+      const products = createSlice(({ products }, _set) => ({
         all: () => products(),
         byId: (id: string) => products().find((p: { id: string; category: string; price: number }) => p.id === id),
         byCategory: (category: string) => products().filter((p: { id: string; category: string; price: number }) => p.category === category),
       }));
 
       // Pricing calculations slice that spreads products methods
-      const pricing = createSlice(({ taxRate, discount }) => {
+      const pricing = createSlice(({ taxRate, discount }, _set) => {
         // Extract specific methods from products for composition
         const { all, byId, byCategory } = products(({ all, byId, byCategory }) => ({ all, byId, byCategory }));
         
@@ -98,14 +98,14 @@ describe('slice composition patterns', () => {
     type State = { count: number; name: string };
 
     const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
-      const counter = createSlice(({ count }) => ({
+      const counter = createSlice(({ count }, set) => ({
         count,
-        increment: () => count(count() + 1),
+        increment: () => set({ count: count() + 1 }),
       }));
 
-      const user = createSlice(({ name }) => ({
+      const user = createSlice(({ name }, set) => ({
         name,
-        setName: (newName: string) => name(newName),
+        setName: (newName: string) => set({ name: newName }),
       }));
 
       return { counter, user };
@@ -151,13 +151,13 @@ describe('slice composition patterns', () => {
     type State = { value: number };
 
     const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
-      const base = createSlice(({ value }) => ({
+      const base = createSlice(({ value }, set) => ({
         getValue: value,
-        setValue: (newValue: number) => value(newValue),
+        setValue: (newValue: number) => set({ value: newValue }),
       }));
 
       // Create two different composed slices that include base
-      const sliceA = createSlice(({ value }) => {
+      const sliceA = createSlice(({ value }, _set) => {
         // Compose base
         const { getValue, setValue } = base(({ getValue, setValue }) => ({ getValue, setValue }));
         
@@ -169,7 +169,7 @@ describe('slice composition patterns', () => {
         };
       });
 
-      const sliceB = createSlice(({ value }) => {
+      const sliceB = createSlice(({ value }, _set) => {
         // Compose base
         const { getValue, setValue } = base(({ getValue, setValue }) => ({ getValue, setValue }));
         

@@ -13,20 +13,20 @@ describe('React hooks', () => {
       items: [] as string[],
     });
 
-    const counterSlice = createSlice(({ count }) => ({
+    const counterSlice = createSlice(({ count }, set) => ({
       value: count, // count is already a signal
-      increment: () => count(count() + 1),
+      increment: () => set({ count: count() + 1 }),
       isEven: computed(() => count() % 2 === 0),
     }));
 
-    const userSlice = createSlice(({ name }) => ({
+    const userSlice = createSlice(({ name }, set) => ({
       name, // name is already a signal
-      setName: (newName: string) => name(newName),
+      setName: (newName: string) => set({ name: newName }),
     }));
 
-    const itemsSlice = createSlice(({ items }) => ({
+    const itemsSlice = createSlice(({ items }, set) => ({
       all: items, // items is already a signal
-      add: (item: string) => items([...items(), item]),
+      add: (item: string) => set({ items: [...items(), item] }),
       count: computed(() => items().length),
     }));
 

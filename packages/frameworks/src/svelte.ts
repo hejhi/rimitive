@@ -38,8 +38,8 @@ export function useSlice<Computed>(
   // Find all signals in the slice and subscribe to them
   for (const key in sliceObject) {
     const value = sliceObject[key as keyof Computed];
-    if (typeof value === 'function' && 'subscribe' in value) {
-      const unsubscribe = value.subscribe(() => {
+    if (typeof value === 'function' && 'subscribe' in value && typeof (value as any).subscribe === 'function') {
+      const unsubscribe = (value as any).subscribe(() => {
         // Notify all subscribers when any signal changes
         subscribers.forEach(fn => fn(slice()));
       });

@@ -8,8 +8,12 @@ export default defineConfig({
       insertTypesEntry: true,
       outDir: 'dist',
       include: ['src/**/*.ts', 'src/**/*.svelte.ts'],
-      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts', 'src/**/*.test.svelte.ts']
-    })
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.test.d.ts',
+        'src/**/*.test.svelte.ts',
+      ],
+    }),
   ],
   build: {
     lib: {
@@ -18,18 +22,17 @@ export default defineConfig({
         react: resolve(__dirname, 'src/react.ts'),
         vue: resolve(__dirname, 'src/vue.ts'),
         svelte: resolve(__dirname, 'src/svelte.ts'),
-        'runes.svelte': resolve(__dirname, 'src/runes.svelte.ts')
       },
-      formats: ['es']
+      formats: ['es'],
     },
     rollupOptions: {
       external: ['@lattice/core', 'react', 'vue', 'svelte', 'svelte/store'],
       output: {
         preserveModules: false,
-        entryFileNames: '[name].js'
-      }
+        entryFileNames: '[name].js',
+      },
     },
     sourcemap: true,
-    target: 'es2022' // Support for top-level await
-  }
+    target: 'es2022', // Support for top-level await
+  },
 });
