@@ -23,16 +23,8 @@ const projectRoot = path.resolve(__dirname, '..');
 const BENCHMARK_SUITES = {
   lattice: [
     'fine-grained-reactivity',
-    'svelte-vs-lattice'
+    'svelte-vs-lattice',
   ],
-  'store-react': [
-    'context-vs-store',
-    'core-performance',
-    'react-integration',
-    'real-world',
-    'scalability',
-    'store-react-apis'
-  ]
 };
 
 // Configuration

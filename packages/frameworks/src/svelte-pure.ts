@@ -1,20 +1,20 @@
 /**
  * @fileoverview Pure Svelte integration for Lattice - Direct reactivity binding
- * 
+ *
  * This provides the most direct integration possible between Lattice and Svelte,
  * returning slice functions that can be called directly in templates.
- * 
+ *
  * Key approach:
  * - No stores, no runes, no wrappers
  * - Direct function calls in templates
  * - Svelte's compiler tracks the function calls
  * - Lattice's reactivity triggers Svelte re-renders
- * 
+ *
  * Performance: Should match raw Lattice runtime (9000+ hz)
  */
 
 import { tick } from 'svelte';
-import { getSliceMetadata, type SliceHandle } from '@lattice/core';
+import { type SliceHandle } from '@lattice/core';
 
 // Global registry of components using slices
 const activeComponents = new WeakSet<any>();
@@ -62,7 +62,7 @@ export function slice<T, U = T>(
   selector?: (value: T) => U
 ): () => U {
   const actualSelector = selector || ((value: T) => value as unknown as U);
-  
+
   // Return a function that directly accesses the slice
   // This is what gives us the 9000+ hz performance
   return () => actualSelector(sliceHandle());
@@ -78,14 +78,14 @@ export function slice<T, U = T>(
  */
 export function bindSlices(component: any): void {
   if (!component || activeComponents.has(component)) return;
-  
+
   activeComponents.add(component);
-  
+
   // In a real implementation, we would:
   // 1. Track which slices are accessed during render
   // 2. Subscribe only to those slices
   // 3. Trigger component updates when they change
-  
+
   // For now, we'll use Svelte's tick() to trigger updates
   const triggerUpdate = () => {
     if (activeComponents.has(component)) {
@@ -94,7 +94,7 @@ export function bindSlices(component: any): void {
       tick();
     }
   };
-  
+
   // Store the update function for this component
   componentSlices.set(component, new Set([triggerUpdate]));
 }
@@ -136,12 +136,12 @@ export function withSlices(component: any): void {
   if (component && component.$$) {
     // Hook into component lifecycle
     const originalDestroy = component.$destroy;
-    
+
     // Bind on creation
     bindSlices(component);
-    
+
     // Unbind on destroy
-    component.$destroy = function() {
+    component.$destroy = function () {
       unbindSlices(component);
       originalDestroy?.call(this);
     };
@@ -154,7 +154,7 @@ export function withSlices(component: any): void {
  * Returns a function that computes the combined value on each call.
  * This maintains Lattice's fine-grained reactivity without any overhead.
  *
- * @param slices - Object mapping keys to slice handles  
+ * @param slices - Object mapping keys to slice handles
  * @param combineFn - Function to combine slice values
  * @returns Function that returns the combined value
  *
@@ -182,7 +182,7 @@ export function withSlices(component: any): void {
  */
 export function combineSlices<
   TSlices extends Record<string, SliceHandle<any>>,
-  TResult
+  TResult,
 >(
   slices: TSlices,
   combineFn: (values: {

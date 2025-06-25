@@ -16,7 +16,6 @@
  */
 
 import type { SliceHandle } from '@lattice/core';
-import { getSliceMetadata } from '@lattice/core';
 
 /**
  * Convert a Lattice slice to a runes-compatible reactive function.

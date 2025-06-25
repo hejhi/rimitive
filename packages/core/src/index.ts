@@ -7,18 +7,14 @@ export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 export { getSliceMetadata, select } from './utils';
 
 // Export internal metadata functions for framework packages
-export { 
-  storeSliceMetadata, 
-  storeCompositionMetadata, 
-  getCompositionMetadata 
+export {
+  storeSliceMetadata,
+  storeCompositionMetadata,
+  getCompositionMetadata,
 } from './lib/metadata';
 
 // Export runtime - now using the simple cache implementation as default
-export { createLatticeStore, type ComponentFactory } from './runtime-simple-cache';
-
-// Export alternative runtime implementations for benchmarking
-export { createLatticeStore as createLatticeStoreOriginal } from './runtime';
-export { createLatticeStore as createLatticeStoreCached } from './runtime-cached';
+export { createLatticeStore, type ComponentFactory } from './runtime';
 
 // Export built-in adapters
 export { vanillaAdapter, createStore } from './adapters';
