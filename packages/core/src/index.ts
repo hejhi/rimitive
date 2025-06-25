@@ -34,9 +34,9 @@ export type SubscribableStore = {
 
 // Export types that are needed by the runtime
 export type {
-  Selector,
-  Selectors,
-  SetState,
+  Signal,
+  Computed,
+  SignalState,
   ReactiveSliceFactory,
   SliceHandle,
 } from './runtime-types';

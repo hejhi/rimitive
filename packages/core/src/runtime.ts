@@ -1,22 +1,40 @@
 /**
- * @fileoverview Lattice runtime with simple, efficient caching
+ * @fileoverview Signals-based Lattice runtime
  * 
- * This implementation adds minimal-overhead caching using a different approach:
- * - Creates stable cached functions once during slice creation
- * - Uses version tracking for efficient invalidation
- * - No proxies or function wrapping on each call
+ * This implementation provides signals-first reactivity with automatic dependency tracking:
+ * - signal<T>(value) creates writable reactive primitives
+ * - computed<T>(fn) creates derived reactive values with auto dependency tracking
+ * - Global tracking context for automatic dependency detection
+ * - No proxies, uses function overloading and context tracking
  */
 
-import type { ReactiveSliceFactory, Selector, Selectors, SetState, SliceHandle } from './runtime-types';
-import { storeSliceMetadata, storeCompositionMetadata, getCompositionMetadata } from './lib/metadata';
+import type { ReactiveSliceFactory, Signal, Computed, SignalState, SliceHandle } from './runtime-types';
+import { storeSliceMetadata, storeCompositionMetadata } from './lib/metadata';
 import { type StoreAdapter } from './adapter-contract';
 
-// Global version counter for tracking state changes
-let globalVersion = 0;
-const dependencyVersions = new WeakMap<StoreAdapter<any>, Map<string, number>>();
+// Global dependency tracking context
+let trackingContext: Set<Signal<any>> | null = null;
 
-// WeakMap to store caches for each slice - allows GC when slice is no longer referenced
-const sliceCaches = new WeakMap<SliceHandle<any>, WeakMap<Function, { value: any; version: number }>>();
+// Batching system for signal updates
+let isBatching = false;
+const batchedUpdates = new Set<() => void>();
+
+function runBatched(fn: () => void) {
+  if (isBatching) {
+    fn();
+    return;
+  }
+  
+  isBatching = true;
+  try {
+    fn();
+    // Run all batched notifications
+    batchedUpdates.forEach(update => update());
+    batchedUpdates.clear();
+  } finally {
+    isBatching = false;
+  }
+}
 
 /**
  * Component factory receives slice factory and returns the component's slices
@@ -26,257 +44,203 @@ export type ComponentFactory<Component, State> = (
 ) => Component;
 
 /**
- * Creates a reactive slice factory with simple caching.
+ * Creates a writable signal that notifies subscribers when its value changes
+ */
+// Symbol to distinguish read vs write operations
+const READ_SIGNAL = Symbol('read');
+
+export function signal<T>(initialValue: T): Signal<T> {
+  let value = initialValue;
+  const listeners = new Set<() => void>();
+  
+  const sig = function(newValue?: T | typeof READ_SIGNAL) {
+    if (arguments.length === 0) {
+      // Reading - register as dependency if we're tracking
+      if (trackingContext) {
+        trackingContext.add(sig);
+      }
+      return value;
+    } else {
+      // Writing - update value and notify if changed
+      if (!Object.is(value, newValue)) {
+        value = newValue as T;
+        
+        if (isBatching) {
+          // Add notifications to batch
+          listeners.forEach(listener => batchedUpdates.add(listener));
+        } else {
+          // Immediate notifications
+          listeners.forEach(listener => listener());
+        }
+      }
+      return; // Explicit return undefined for setter case
+    }
+  } as Signal<T>;
+  
+  sig.subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  };
+  
+  return sig;
+}
+
+/**
+ * Creates a computed signal that derives its value from other signals
+ * Dependencies are tracked automatically when the computation runs
+ */
+export function computed<T>(computeFn: () => T): Computed<T> {
+  let value: T;
+  let isStale = true;
+  let unsubscribers: (() => void)[] = [];
+  const listeners = new Set<() => void>();
+  
+  const recompute = () => {
+    // Clean up old dependency subscriptions
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
+    
+    // Track dependencies during computation
+    const dependencies = new Set<Signal<any>>();
+    const prevContext = trackingContext;
+    trackingContext = dependencies;
+    
+    try {
+      value = computeFn();
+      
+      // Subscribe to new dependencies
+      dependencies.forEach(dep => {
+        const unsub = dep.subscribe(() => {
+          isStale = true;
+          if (isBatching) {
+            // Add notifications to batch
+            listeners.forEach(listener => batchedUpdates.add(listener));
+          } else {
+            // Immediate notifications
+            listeners.forEach(listener => listener());
+          }
+        });
+        unsubscribers.push(unsub);
+      });
+      
+      isStale = false;
+    } finally {
+      trackingContext = prevContext;
+    }
+  };
+  
+  const comp = (() => {
+    // Register this computed as a dependency if we're in a tracking context
+    if (trackingContext) {
+      trackingContext.add(comp);
+    }
+    
+    // Recompute if stale
+    if (isStale) {
+      recompute();
+    }
+    
+    return value;
+  }) as Computed<T>;
+  
+  comp.subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+  };
+  
+  return comp;
+}
+
+/**
+ * Creates a signal state object from a store adapter
+ * Provides bidirectional sync between signals and the underlying store
+ */
+function createSignalState<State>(adapter: StoreAdapter<State>): SignalState<State> {
+  const state = adapter.getState();
+  const signals = {} as SignalState<State>;
+  
+  // Create signals for each state property
+  for (const key in state) {
+    const sig = signal(state[key]);
+    
+    // When signal changes, update the store
+    sig.subscribe(() => {
+      adapter.setState({ [key]: sig() } as unknown as Partial<State>);
+    });
+    
+    signals[key] = sig;
+  }
+  
+  // When store changes, update signals
+  adapter.subscribe(() => {
+    runBatched(() => {
+      const newState = adapter.getState();
+      for (const key in newState) {
+        if (signals[key] && !Object.is(signals[key](), newState[key])) {
+          signals[key](newState[key]);
+        }
+      }
+      
+      // Add new signals for any new keys
+      for (const key in newState) {
+        if (!signals[key]) {
+          const sig = signal(newState[key]);
+          sig.subscribe(() => {
+            adapter.setState({ [key]: sig() } as unknown as Partial<State>);
+          });
+          signals[key] = sig;
+        }
+      }
+    });
+  });
+  
+  return signals;
+}
+
+/**
+ * Creates a reactive slice factory using signals-based reactivity
  */
 export function createLatticeStore<State>(
   adapter: StoreAdapter<State>
 ): ReactiveSliceFactory<State> {
-  // Initialize version tracking
-  if (!dependencyVersions.has(adapter)) {
-    const versions = new Map<string, number>();
-    const initialState = adapter.getState();
-    for (const key in initialState) {
-      versions.set(key, 0);
-    }
-    dependencyVersions.set(adapter, versions);
-  }
+  const signalState = createSignalState(adapter);
   
-  let currentState = { ...adapter.getState() };
-  const listeners = new Map<string, Set<() => void>>();
-  const keySetToString = (keys: Set<string>) => [...keys].sort().join('|');
-  
-  // Helper to create a selector
-  function createSelector<T>(
-    getValue: () => T,
-    key: string
-  ): Selector<T> {
-    const selector = () => getValue();
-    
-    selector.subscribe = (listener: () => void) => {
-      const keyString = key;
-      if (!listeners.has(keyString)) {
-        listeners.set(keyString, new Set());
-      }
-      listeners.get(keyString)!.add(listener);
-      
-      return () => {
-        const keyListeners = listeners.get(keyString);
-        if (keyListeners) {
-          keyListeners.delete(listener);
-          if (keyListeners.size === 0) {
-            listeners.delete(keyString);
-          }
-        }
-      };
-    };
-    
-    selector._dependencies = new Set([key]);
-    
-    return selector as Selector<T>;
-  }
-  
-  // Initialize root selectors
-  const rootSelectors = {} as Selectors<State>;
-  for (const key in currentState) {
-    const k = key as Extract<keyof State, string>;
-    rootSelectors[k] = createSelector(
-      () => adapter.getState()[k],
-      k
-    );
-  }
-  
-  // Helper to notify listeners
-  const notifyListeners = (changedKeys: Set<string>) => {
-    for (const [keyString, keyListeners] of listeners) {
-      const keys = keyString.split('|');
-      const shouldNotify = keys.some(key => changedKeys.has(key));
-      if (shouldNotify) {
-        keyListeners.forEach(listener => listener());
-      }
-    }
-  };
-  
-  // Subscribe to adapter changes
-  adapter.subscribe(() => {
-    const newState = adapter.getState();
-    const changedKeys = new Set<string>();
-    const nextCurrentState = {} as State;
-    const versions = dependencyVersions.get(adapter)!;
-    
-    // Find changes and update versions
-    for (const key in newState) {
-      const newValue = newState[key];
-      nextCurrentState[key] = newValue;
-      
-      if (!Object.is(currentState[key], newValue)) {
-        changedKeys.add(key);
-        versions.set(key, ++globalVersion);
-      }
-      
-      // Add new selectors if needed
-      if (!(key in rootSelectors)) {
-        const k = key as Extract<keyof State, string>;
-        rootSelectors[k] = createSelector(
-          () => adapter.getState()[k],
-          k
-        );
-        versions.set(key, globalVersion);
-      }
-    }
-    
-    // Check for removed keys
-    for (const key in currentState) {
-      if (!Object.prototype.hasOwnProperty.call(newState, key)) {
-        changedKeys.add(key);
-        versions.delete(key);
-      }
-    }
-    
-    currentState = nextCurrentState;
-    
-    if (changedKeys.size > 0) {
-      notifyListeners(changedKeys);
-    }
-  });
-  
-  // Return the reactive slice factory
-  return function createSlice<Deps, Computed>(
-    depsFn: (selectors: Selectors<State>) => Deps,
-    computeFn: (deps: Deps, set: SetState<State>) => Computed
+  return function createSlice<Computed>(
+    computeFn: (state: SignalState<State>) => Computed
   ): SliceHandle<Computed> {
-    const dependencies = new Set<string>();
+    // Execute the computation function - it will automatically track signal dependencies
+    const computedResult = computeFn(signalState);
     
-    // Track dependencies
-    let isTracking = true;
-    const trackingSelectors = {} as Selectors<State>;
-    
-    for (const key in currentState) {
-      Object.defineProperty(trackingSelectors, key, {
-        get() {
-          if (isTracking) {
-            dependencies.add(key);
-          }
-          return rootSelectors[key];
-        },
-        enumerable: true,
-        configurable: true
-      });
-    }
-    
-    // Build dependency model
-    const deps = depsFn(trackingSelectors);
-    isTracking = false;
-    
-    // Check for composed dependencies
-    for (const key in deps) {
-      const value = deps[key];
-      if (typeof value === 'function') {
-        const composedInfo = getCompositionMetadata(value);
-        if (composedInfo) {
-          for (const dep of composedInfo.dependencies) {
-            dependencies.add(dep);
-          }
-        }
-      }
-    }
-    
-    // Create set function
-    const set: SetState<State> = (updateFn) => {
-      const updates = updateFn(rootSelectors);
-      adapter.setState(updates);
-    };
-    
-    // Create computed values
-    const computedRaw = computeFn(deps, set);
-    
-    // Create cached version of computed values
-    const computed: any = {};
-    const getterCache = new WeakMap<Function, { value: any; version: number }>();
-    
-    // Process each property of computedRaw
-    for (const key in computedRaw) {
-      const value = computedRaw[key as keyof typeof computedRaw];
-      
-      if (typeof value === 'function') {
-        // Check if it's likely a getter (no parameters)
-        const fn = value as Function;
-        if (fn.length === 0) {
-          // Create a cached version
-          computed[key] = function cachedGetter(this: any) {
-            const versions = dependencyVersions.get(adapter)!;
-            
-            // Calculate current version based on dependencies
-            let currentVersion = 0;
-            for (const dep of dependencies) {
-              currentVersion += versions.get(dep) || 0;
-            }
-            
-            // Check cache
-            const cached = getterCache.get(fn);
-            if (cached && cached.version === currentVersion) {
-              return cached.value;
-            }
-            
-            // Compute and cache
-            const result = fn.call(this);
-            getterCache.set(fn, { value: result, version: currentVersion });
-            return result;
-          };
-        } else {
-          // Not a getter, pass through as-is
-          computed[key] = value;
-        }
-      } else {
-        // Not a function, pass through
-        computed[key] = value;
-      }
-    }
-    
-    // Subscribe function
-    const subscribe = (listener: () => void) => {
-      const keyString = keySetToString(dependencies);
-      if (!listeners.has(keyString)) {
-        listeners.set(keyString, new Set());
-      }
-      listeners.get(keyString)!.add(listener);
-      
-      return () => {
-        const keyListeners = listeners.get(keyString);
-        if (keyListeners) {
-          keyListeners.delete(listener);
-          if (keyListeners.size === 0) {
-            listeners.delete(keyString);
-          }
-        }
-      };
-    };
-    
-    // Create the slice handle
+    // Create the slice handle with composition capability
     function slice(): Computed;
-    function slice<ChildDeps>(childDepsFn: (parent: Computed) => ChildDeps): ChildDeps;
-    function slice<ChildDeps>(childDepsFn?: (parent: Computed) => ChildDeps) {
-      if (!childDepsFn) {
-        return computed as Computed;
+    function slice<ChildDeps>(childFn: (parent: Computed) => ChildDeps): ChildDeps;
+    function slice<ChildDeps>(childFn?: (parent: Computed) => ChildDeps) {
+      if (!childFn) {
+        return computedResult as Computed;
       }
       
-      const childDeps = childDepsFn(computed as Computed);
+      // Execute the child function - it will extract specific parts for composition
+      const childDeps = childFn(computedResult as Computed);
       
-      // Store composition metadata
+      // Store composition metadata for any functions in the result
       for (const key in childDeps) {
         const value = childDeps[key];
         if (typeof value === 'function') {
-          storeCompositionMetadata(value, { slice: slice as SliceHandle<unknown>, dependencies });
+          storeCompositionMetadata(value, { 
+            slice: slice as SliceHandle<unknown>, 
+            dependencies: new Set() // Will be tracked by signal system
+          });
         }
       }
       
       return childDeps;
     }
     
-    // Store cache reference for this slice (allows GC when slice is no longer used)
-    sliceCaches.set(slice as SliceHandle<Computed>, getterCache);
-    
-    // Store metadata
-    storeSliceMetadata(slice as SliceHandle<Computed>, { dependencies, subscribe });
+    // Store metadata for the slice
+    storeSliceMetadata(slice as SliceHandle<Computed>, { 
+      dependencies: new Set(), // Dependencies tracked by signals now
+      subscribe: () => () => {} // TODO: Implement slice-level subscription if needed
+    });
     
     return slice as SliceHandle<Computed>;
   };

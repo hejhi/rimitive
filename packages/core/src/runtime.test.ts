@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createLatticeStore } from './runtime';
+import { createLatticeStore, computed } from './runtime';
 import type { ReactiveSliceFactory, StoreAdapter } from './index';
 
 describe('createLatticeStore - adapter bridge', () => {
@@ -34,18 +34,11 @@ describe('createLatticeStore - adapter bridge', () => {
 
     // Create a component using the new reactive API
     const createComponent = (createSlice: ReactiveSliceFactory<{ count: number }>) => {
-      const counter = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        ({ count }, set) => ({
-          value: () => count(),
-          increment: () => set(
-            ({ count }) => ({ count: count() + 1 })
-          ),
-          decrement: () => set(
-            ({ count }) => ({ count: count() - 1 })
-          ),
-        })
-      );
+      const counter = createSlice(({ count }) => ({
+        value: count,
+        increment: () => count(count() + 1),
+        decrement: () => count(count() - 1),
+      }));
 
       return { counter };
     };
@@ -104,29 +97,17 @@ describe('createLatticeStore - adapter bridge', () => {
     const createComponent = (
       createSlice: ReactiveSliceFactory<{ count: number; multiplier: number }>
     ) => {
-      const counter = createSlice(
-        (selectors) => ({ count: selectors.count, multiplier: selectors.multiplier }),
-        ({ count, multiplier }, set) => ({
-          count: () => count(),
-          multiplier: () => multiplier(), // Expose multiplier to avoid unused variable warning
-          increment: () => set(
-            ({ count }) => ({ count: count() + 1 })
-          ),
-          multiply: () => set(
-            ({ count, multiplier }) => ({ count: count() * multiplier() })
-          ),
-        })
-      );
+      const counter = createSlice(({ count, multiplier }) => ({
+        count,
+        multiplier,
+        increment: () => count(count() + 1),
+        multiply: () => count(count() * multiplier()),
+      }));
 
-      const config = createSlice(
-        (selectors) => ({ multiplier: selectors.multiplier }),
-        ({ multiplier }, set) => ({
-          multiplier: () => multiplier(),
-          setMultiplier: (value: number) => set(
-            () => ({ multiplier: value })
-          ),
-        })
-      );
+      const config = createSlice(({ multiplier }) => ({
+        multiplier,
+        setMultiplier: (value: number) => multiplier(value),
+      }));
 
       return { counter, config };
     };
@@ -167,25 +148,15 @@ describe('createLatticeStore - adapter bridge', () => {
     type State = { count: number; name: string };
 
     const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
-      const counter = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        ({ count }, set) => ({
-          value: () => count(),
-          increment: () => set(
-            ({ count }) => ({ count: count() + 1 })
-          ),
-        })
-      );
+      const counter = createSlice(({ count }) => ({
+        value: count,
+        increment: () => count(count() + 1),
+      }));
 
-      const user = createSlice(
-        (selectors) => ({ name: selectors.name }),
-        ({ name }, set) => ({
-          name: () => name(),
-          setName: (newName: string) => set(
-            () => ({ name: newName })
-          ),
-        })
-      );
+      const user = createSlice(({ name }) => ({
+        name,
+        setName: (newName: string) => name(newName),
+      }));
 
       return { counter, user };
     };
@@ -194,26 +165,21 @@ describe('createLatticeStore - adapter bridge', () => {
     const createSlice = createLatticeStore(mockAdapter);
     const component = createComponent(createSlice);
 
-    // Get slice metadata to access fine-grained subscriptions
-    const { getSliceMetadata } = await import('./utils');
-    const counterMeta = getSliceMetadata(component.counter);
-    const userMeta = getSliceMetadata(component.user);
-
-    // Subscribe to slices
+    // Subscribe directly to signals for fine-grained subscriptions
     const counterListener = vi.fn();
     const userListener = vi.fn();
 
-    const unsubCounter = counterMeta!.subscribe(counterListener);
-    userMeta!.subscribe(userListener);
+    const unsubCounter = component.counter().value.subscribe(counterListener);
+    const unsubUser = component.user().name.subscribe(userListener);
 
     // Change counter state
     component.counter().increment();
     expect(counterListener).toHaveBeenCalledTimes(1);
-    expect(userListener).toHaveBeenCalledTimes(0); // Fine-grained: user slice not notified
+    expect(userListener).toHaveBeenCalledTimes(0); // Fine-grained: user signal not notified
 
     // Change user state
     component.user().setName('Bob');
-    expect(counterListener).toHaveBeenCalledTimes(1); // Fine-grained: counter not notified
+    expect(counterListener).toHaveBeenCalledTimes(1); // Fine-grained: counter signal not notified
     expect(userListener).toHaveBeenCalledTimes(1);
 
     // Unsubscribe and verify
@@ -221,6 +187,8 @@ describe('createLatticeStore - adapter bridge', () => {
     component.counter().increment();
     expect(counterListener).toHaveBeenCalledTimes(1); // Not called after unsubscribe
     expect(userListener).toHaveBeenCalledTimes(1); // Fine-grained: not called
+    
+    unsubUser();
   });
 
   it('should demonstrate fine-grained subscriptions with multiple slices', async () => {
@@ -244,28 +212,29 @@ describe('createLatticeStore - adapter bridge', () => {
     const createSlice = createLatticeStore<State>(mockAdapter);
     
     // Create slices with different dependencies
-    const sliceA = createSlice(
-      (selectors) => ({ a: selectors.a }),
-      ({ a }) => ({ value: () => a() })
-    );
+    const sliceA = createSlice(({ a }) => ({ 
+      value: a 
+    }));
     
-    const sliceBC = createSlice(
-      (selectors) => ({ b: selectors.b, c: selectors.c }),
-      ({ b, c }) => ({ sum: () => b() + c() })
-    );
+    const sliceBC = createSlice(({ b, c }) => ({ 
+      sum: computed(() => b() + c()) 
+    }));
     
-    const sliceD = createSlice(
-      (selectors) => ({ d: selectors.d }),
-      ({ d }) => ({ value: () => d() })
-    );
+    const sliceD = createSlice(({ d }) => ({ 
+      value: d 
+    }));
     
-    // Track notifications
+    // Track notifications by subscribing to specific signals
     const notifications = { a: 0, bc: 0, d: 0 };
     
-    const { getSliceMetadata } = await import('./utils');
-    getSliceMetadata(sliceA)!.subscribe(() => notifications.a++);
-    getSliceMetadata(sliceBC)!.subscribe(() => notifications.bc++);
-    getSliceMetadata(sliceD)!.subscribe(() => notifications.d++);
+    // Read computed values first to set up dependencies
+    sliceA().value();
+    sliceBC().sum();
+    sliceD().value();
+    
+    sliceA().value.subscribe(() => notifications.a++);
+    sliceBC().sum.subscribe(() => notifications.bc++);
+    sliceD().value.subscribe(() => notifications.d++);
     
     // Change only 'a' - should only notify sliceA
     mockAdapter.setState({ a: 10 });
@@ -284,7 +253,7 @@ describe('createLatticeStore - adapter bridge', () => {
     expect(notifications).toEqual({ a: 2, bc: 2, d: 2 });
   });
 
-  it('should expose subscription capability on slices', async () => {
+  it('should expose subscription capability on signals', async () => {
     const mockAdapter: StoreAdapter<any> = {
       getState: () => ({ count: 0 }),
       setState: () => {},
@@ -292,15 +261,10 @@ describe('createLatticeStore - adapter bridge', () => {
     };
 
     const createComponent = (createSlice: ReactiveSliceFactory<{ count: number }>) => {
-      const counter = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        ({ count }, set) => ({
-          value: () => count(),
-          increment: () => set(
-            ({ count }) => ({ count: count() + 1 })
-          ),
-        })
-      );
+      const counter = createSlice(({ count }) => ({
+        value: count,
+        increment: () => count(count() + 1),
+      }));
 
       return { counter };
     };
@@ -308,12 +272,8 @@ describe('createLatticeStore - adapter bridge', () => {
     const createSlice = createLatticeStore(mockAdapter);
     const component = createComponent(createSlice);
 
-    // Slices should have metadata with subscribe capability
-    const { getSliceMetadata } = await import('./utils');
-    const metadata = getSliceMetadata(component.counter);
-    
-    expect(metadata).toBeDefined();
-    expect(metadata?.dependencies).toEqual(new Set(['count']));
-    expect(typeof metadata?.subscribe).toBe('function');
+    // Signals should have subscribe capability directly
+    expect(typeof component.counter().value.subscribe).toBe('function');
+    expect(typeof component.counter().value).toBe('function'); // Signal is callable
   });
 });

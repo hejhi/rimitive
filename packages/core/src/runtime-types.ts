@@ -1,32 +1,35 @@
 /**
- * @fileoverview Runtime types for the reactive slice system
+ * @fileoverview Runtime types for the signals-based reactive slice system
  * 
- * These types define the core interfaces for Lattice's reactive system.
+ * These types define the core interfaces for Lattice's signals-first reactive system.
  * They are used by both the runtime and adapters.
  */
 
 /**
- * A selector provides access to a single state value with subscription capabilities
+ * A signal is a reactive primitive that can be read and written
+ * Reading a signal automatically registers it as a dependency in tracking contexts
  */
-export type Selector<T> = {
-  (): T;
-  subscribe: (listener: () => void) => () => void;
-  _dependencies: Set<string>;
-};
+export interface Signal<T> {
+  (): T;                                           // Read current value
+  (value: T): void;                               // Write new value (if writable)
+  subscribe: (listener: () => void) => () => void; // Subscribe to changes
+}
 
 /**
- * Collection of selectors for each state property
+ * A computed signal is read-only and derives its value from other signals
+ * Dependencies are tracked automatically when the computation function runs
  */
-export type Selectors<State> = {
-  [K in keyof State]: Selector<State[K]>;
-};
+export interface Computed<T> extends Omit<Signal<T>, 'call'> {
+  (): T;                                           // Read computed value
+  subscribe: (listener: () => void) => () => void; // Subscribe to changes
+}
 
 /**
- * Function to update state with all selectors provided automatically
+ * State represented as signals - each property is a reactive signal
  */
-export type SetState<State> = (
-  updateFn: (selectors: Selectors<State>) => Partial<State>
-) => void;
+export type SignalState<State> = {
+  [K in keyof State]: Signal<State[K]>;
+};
 
 /**
  * A handle to a reactive slice that provides dual functionality:
@@ -40,9 +43,9 @@ export interface SliceHandle<Computed> {
 }
 
 /**
- * Factory function for creating reactive slices
+ * Factory function for creating reactive slices using signals
+ * Much simpler than before - just provide the computation function
  */
-export type ReactiveSliceFactory<State> = <Deps, Computed>(
-  depsFn: (selectors: Selectors<State>) => Deps,
-  computeFn: (deps: Deps, set: SetState<State>) => Computed
+export type ReactiveSliceFactory<State> = <Computed>(
+  computeFn: (state: SignalState<State>) => Computed
 ) => SliceHandle<Computed>;

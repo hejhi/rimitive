@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createLatticeStore } from './runtime';
-import type { StoreAdapter, RuntimeSliceFactory } from './index';
+import { createLatticeStore, computed } from './runtime';
+import type { StoreAdapter, ReactiveSliceFactory } from './index';
 
 describe('slice composition patterns', () => {
   // Helper to create a test adapter
@@ -30,29 +30,22 @@ describe('slice composition patterns', () => {
       discount: number;
     };
 
-    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
+    const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
       // Product queries slice
-      const products = createSlice(
-        (selectors) => ({ products: selectors.products }),
-        ({ products }) => ({
-          all: () => products(),
-          byId: (id: string) => products().find((p: { id: string; category: string; price: number }) => p.id === id),
-          byCategory: (category: string) =>
-            products().filter((p: { id: string; category: string; price: number }) => p.category === category),
-        })
-      );
+      const products = createSlice(({ products }) => ({
+        all: () => products(),
+        byId: (id: string) => products().find((p: { id: string; category: string; price: number }) => p.id === id),
+        byCategory: (category: string) => products().filter((p: { id: string; category: string; price: number }) => p.category === category),
+      }));
 
       // Pricing calculations slice that spreads products methods
-      const pricing = createSlice(
-        (selectors) => ({
-          taxRate: selectors.taxRate,
-          discount: selectors.discount,
-          // Spread all products methods by composing
-          ...products(({ all, byId, byCategory }) => ({ all, byId, byCategory }))
-        }),
-        ({ taxRate, discount, all, byId, byCategory }) => ({
-          taxRate: () => taxRate(),
-          discount: () => discount(),
+      const pricing = createSlice(({ taxRate, discount }) => {
+        // Extract specific methods from products for composition
+        const { all, byId, byCategory } = products(({ all, byId, byCategory }) => ({ all, byId, byCategory }));
+        
+        return {
+          taxRate,
+          discount,
           calculatePrice: (basePrice: number) => {
             const discounted = basePrice * (1 - discount());
             return discounted * (1 + taxRate());
@@ -61,8 +54,8 @@ describe('slice composition patterns', () => {
           all,
           byId,
           byCategory
-        })
-      );
+        };
+      });
 
       return { products, pricing };
     };
@@ -101,29 +94,19 @@ describe('slice composition patterns', () => {
     expect(component.pricing().calculatePrice(100)).toBe(88); // 100 * 0.8 * 1.1
   });
 
-  it('should allow slice-level subscriptions', async () => {
+  it('should allow fine-grained signal subscriptions', async () => {
     type State = { count: number; name: string };
 
-    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
-      const counter = createSlice(
-        (selectors) => ({ count: selectors.count }),
-        ({ count }, set) => ({
-          count: () => count(),
-          increment: () => set(
-            ({ count }) => ({ count: count() + 1 })
-          ),
-        })
-      );
+    const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
+      const counter = createSlice(({ count }) => ({
+        count,
+        increment: () => count(count() + 1),
+      }));
 
-      const user = createSlice(
-        (selectors) => ({ name: selectors.name }),
-        ({ name }, set) => ({
-          name: () => name(),
-          setName: (newName: string) => set(
-            () => ({ name: newName })
-          ),
-        })
-      );
+      const user = createSlice(({ name }) => ({
+        name,
+        setName: (newName: string) => name(newName),
+      }));
 
       return { counter, user };
     };
@@ -132,20 +115,14 @@ describe('slice composition patterns', () => {
     const createSlice = createLatticeStore(adapter);
     const component = createComponent(createSlice);
 
-    // Get slice metadata for subscriptions
-    const { getSliceMetadata } = await import('./utils');
-    const counterMeta = getSliceMetadata(component.counter);
-    const userMeta = getSliceMetadata(component.user);
-
-    // Subscribe to counter slice
+    // Subscribe directly to signals for fine-grained reactivity
     let counterUpdates = 0;
-    const unsubscribeCounter = counterMeta!.subscribe(() => {
+    const unsubscribeCounter = component.counter().count.subscribe(() => {
       counterUpdates++;
     });
 
-    // Subscribe to user slice
     let userUpdates = 0;
-    const unsubscribeUser = userMeta!.subscribe(() => {
+    const unsubscribeUser = component.user().name.subscribe(() => {
       userUpdates++;
     });
 
@@ -162,7 +139,7 @@ describe('slice composition patterns', () => {
     // Unsubscribe counter
     unsubscribeCounter();
 
-    // Update counter again - no subscriptions should fire
+    // Update counter again - counter subscription should not fire
     component.counter().increment();
     expect(counterUpdates).toBe(1); // No change
     expect(userUpdates).toBe(1); // No change
@@ -173,45 +150,36 @@ describe('slice composition patterns', () => {
   it('should correctly rebind slices when composing', () => {
     type State = { value: number };
 
-    const createComponent = (createSlice: RuntimeSliceFactory<State>) => {
-      const base = createSlice(
-        (selectors) => ({ value: selectors.value }),
-        ({ value }, set) => ({
-          getValue: () => value(),
-          setValue: (newValue: number) => set(
-            () => ({ value: newValue })
-          ),
-        })
-      );
+    const createComponent = (createSlice: ReactiveSliceFactory<State>) => {
+      const base = createSlice(({ value }) => ({
+        getValue: value,
+        setValue: (newValue: number) => value(newValue),
+      }));
 
       // Create two different composed slices that include base
-      const sliceA = createSlice(
-        (selectors) => ({
-          value: selectors.value,
-          // Compose base
-          ...base(({ getValue, setValue }) => ({ getValue, setValue }))
-        }),
-        ({ value, getValue, setValue }) => ({
-          doubleValue: () => value() * 2,
+      const sliceA = createSlice(({ value }) => {
+        // Compose base
+        const { getValue, setValue } = base(({ getValue, setValue }) => ({ getValue, setValue }));
+        
+        return {
+          doubleValue: computed(() => value() * 2),
           // Re-expose composed methods
           getValue,
           setValue
-        })
-      );
+        };
+      });
 
-      const sliceB = createSlice(
-        (selectors) => ({
-          value: selectors.value,
-          // Compose base
-          ...base(({ getValue, setValue }) => ({ getValue, setValue }))
-        }),
-        ({ value, getValue, setValue }) => ({
-          tripleValue: () => value() * 3,
+      const sliceB = createSlice(({ value }) => {
+        // Compose base
+        const { getValue, setValue } = base(({ getValue, setValue }) => ({ getValue, setValue }));
+        
+        return {
+          tripleValue: computed(() => value() * 3),
           // Re-expose composed methods
           getValue,
           setValue
-        })
-      );
+        };
+      });
 
       return { base, sliceA, sliceB };
     };
