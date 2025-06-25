@@ -7,14 +7,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "bench": "pnpm bench:report:real",
-    "bench:store-react": "node --expose-gc scripts/run-chunked-benchmarks.js real store-react",
+    "build:all": "cd ../ && pnpm build && cd benchmarks",
+    "bench": "pnpm build:all && node --expose-gc scripts/run-chunked-benchmarks.js real",
     "bench:lattice": "node --expose-gc scripts/run-chunked-benchmarks.js real lattice",
-    "bench:report:raw": "LATTICE_DISABLE_MEMOIZATION=true node --expose-gc scripts/run-chunked-benchmarks.js raw",
     "bench:report:real": "node --expose-gc scripts/run-chunked-benchmarks.js real",
-    "bench:bundle": "node scripts/analyze-bundle-size.js",
-    "bench:all": "pnpm bench:bundle && pnpm bench",
-    "dashboard": "vite --config vite.config.dashboard.ts",
     "typecheck": "tsc --noEmit",
     "check": "pnpm typecheck"
   },
