@@ -13,8 +13,12 @@ export {
   getCompositionMetadata 
 } from './lib/metadata';
 
-// Export runtime
-export { createLatticeStore, type ComponentFactory } from './runtime';
+// Export runtime - now using the simple cache implementation as default
+export { createLatticeStore, type ComponentFactory } from './runtime-simple-cache';
+
+// Export alternative runtime implementations for benchmarking
+export { createLatticeStore as createLatticeStoreOriginal } from './runtime';
+export { createLatticeStore as createLatticeStoreCached } from './runtime-cached';
 
 // Export built-in adapters
 export { vanillaAdapter, createStore } from './adapters';

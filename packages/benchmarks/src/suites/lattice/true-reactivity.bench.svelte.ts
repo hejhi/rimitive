@@ -55,8 +55,8 @@ describe('True Reactivity Comparison - Lazy vs Eager Evaluation', () => {
     console.log(`[SVELTE LAZY] Computations: ${computations}, Accesses: ${accesses}, Ratio: ${(computations/accesses).toFixed(2)}`);
   });
 
-  // TEST 2: Lattice - always computes on access
-  bench('Lattice Runtime - eager evaluation on access', () => {
+  // TEST 2: Lattice - with caching should only compute when state changes
+  bench('Lattice Runtime - cached evaluation', () => {
     let computations = 0;
     let accesses = 0;
 
@@ -74,30 +74,33 @@ describe('True Reactivity Comparison - Lazy vs Eager Evaluation', () => {
       setData: (data: string) => set(() => ({ unrelated: data })),
     }));
 
+    // Get the slice instance once
+    const counter = counterSlice();
+    const unrelated = unrelatedSlice();
     let finalValue = 0;
 
     // Same access pattern as Svelte test
     for (let i = 0; i < ITERATIONS; i++) {
       if (i % 4 === 0) {
         // 25% of iterations: update count and access
-        counterSlice().setCount(i);
-        finalValue = counterSlice().doubled();
+        counter.setCount(i);
+        finalValue = counter.doubled();
         accesses++;
       } else if (i % 4 === 1) {
         // 25% of iterations: just access without state change
-        finalValue = counterSlice().doubled();
+        finalValue = counter.doubled();
         accesses++;
       } else if (i % 4 === 2) {
         // 25% of iterations: update unrelated state
-        unrelatedSlice().setData(`data-${i}`);
+        unrelated.setData(`data-${i}`);
       } else {
         // 25% of iterations: update count but don't access
-        counterSlice().setCount(i);
+        counter.setCount(i);
       }
     }
 
-    // With eager evaluation, computations should equal accesses
-    console.log(`[LATTICE EAGER] Computations: ${computations}, Accesses: ${accesses}, Ratio: ${(computations/accesses).toFixed(2)}`);
+    // With caching, computations should be less than accesses
+    console.log(`[LATTICE CACHED] Computations: ${computations}, Accesses: ${accesses}, Ratio: ${(computations/accesses).toFixed(2)}`);
   });
 });
 
