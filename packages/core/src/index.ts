@@ -3,15 +3,9 @@
 // Export memoization utilities
 export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
-// Export slice metadata utilities and convenience functions
-export { getSliceMetadata, select } from './utils';
+// Export convenience functions
+export { select } from './utils';
 
-// Export internal metadata functions for framework packages
-export {
-  storeSliceMetadata,
-  storeCompositionMetadata,
-  getCompositionMetadata,
-} from './lib/metadata';
 
 // Export runtime - now using the simple cache implementation as default
 export { createLatticeStore, type ComponentFactory, signal, computed, partial } from './runtime';

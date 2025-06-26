@@ -211,15 +211,9 @@ export async function demonstrateUsage() {
   // Redux store is automatically synchronized
   console.log('\nRedux state:', store.getState());
 
-  // Subscribe to changes using slice metadata
-  const { getSliceMetadata } = await import('@lattice/core');
-  const metadata = getSliceMetadata(counter);
-  const unsubscribe = metadata?.subscribe(() => {
-    console.log('Counter changed to:', counter().value());
-  });
-
+  // Update the counter
   counter().setValue(10);
-  if (unsubscribe) unsubscribe();
+  console.log('Counter changed to:', counter().value());
 }
 
 // Benefits of the new pattern:
