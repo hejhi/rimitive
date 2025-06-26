@@ -20,10 +20,8 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        testing: resolve(__dirname, 'src/testing.ts'),
-        base: resolve(__dirname, 'src/base.ts'),
-        runtime: resolve(__dirname, 'src/runtime.ts'),
-        core: resolve(__dirname, 'src/core.ts'),
+        component: resolve(__dirname, 'src/component.ts'),
+        'lattice-context': resolve(__dirname, 'src/lattice-context.ts'),
       },
       formats: ['es'],
     },

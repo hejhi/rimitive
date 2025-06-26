@@ -70,14 +70,17 @@ export interface LatticeContext<State = any> {
  * Returns slices (signals, computeds, and methods)
  */
 export type ComponentFactory<State, Slices> = (
-  state: SignalState<State>, 
-  set: SetState<State>,
-  lattice: Omit<LatticeContext<State>, 'set'>
+  state: SignalState<State>,
+  lattice: LatticeContext<State>
 ) => Slices;
 
 /**
  * Creates a component factory with proper typing
+ * Infers return type from factory function
  */
-export type CreateComponent = <State = {}, Slices = {}>(
-  factory: ComponentFactory<State, Slices>
-) => ComponentFactory<State, Slices>;
+export type CreateComponent = <State extends Record<string, any>>(
+  factory: <L extends LatticeContext<State>>(
+    state: SignalState<State>,
+    lattice: L
+  ) => any
+) => ComponentFactory<State, ReturnType<typeof factory>>;

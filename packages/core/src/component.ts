@@ -10,17 +10,24 @@ import type {
   SetState,
   SignalState,
   Signal,
+  LatticeContext,
 } from './runtime-types';
 import { createLatticeContext } from './lattice-context';
 import { type StoreAdapter } from './adapter-contract';
 
 /**
  * Creates a component factory with proper typing
+ * Only requires State type - return type is inferred
  */
-export function createComponent<State extends Record<string, any>, Slices>(
-  factory: ComponentFactory<State, Slices>
-): ComponentFactory<State, Slices> {
-  return factory;
+export function createComponent<State extends Record<string, any>>() {
+  return <Slices>(
+    factory: (
+      state: SignalState<State>,
+      lattice: LatticeContext<State>
+    ) => Slices
+  ): ComponentFactory<State, Slices> => {
+    return factory;
+  };
 }
 
 /**
@@ -80,8 +87,8 @@ export function createStore<State extends Record<string, any>, Slices>(
     }
   };
   
-  // Create component slices - pass state signals, set, and lattice utilities
-  const slices = component(stateSignals, set, { signal: lattice.signal, computed: lattice.computed });
+  // Create component slices - pass state signals and full lattice context
+  const slices = component(stateSignals, { signal: lattice.signal, computed: lattice.computed, set });
   
   // Add store methods
   return {
@@ -161,6 +168,6 @@ export function createStoreWithAdapter<State extends Record<string, any>, Slices
   };
   
   
-  // Create component slices - pass state signals, set, and lattice utilities
-  return component(stateSignals, set, { signal: lattice.signal, computed: lattice.computed });
+  // Create component slices - pass state signals and full lattice context
+  return component(stateSignals, { signal: lattice.signal, computed: lattice.computed, set });
 }

@@ -1,19 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createComponent, createStore } from './component';
-import type { Signal, Computed } from './runtime-types';
 
 describe('Component API', () => {
   it('should create a basic component with signals', () => {
     type CounterState = { count: number };
     
-    interface CounterSlices {
-      count: Signal<number>;
-      doubled: Computed<number>;
-      increment: () => void;
-      reset: () => void;
-    }
-    
-    const Counter = createComponent<CounterState, CounterSlices>(({ count }, set, { computed }) => {
+    const Counter = createComponent<CounterState>()(({ count }, { computed, set }) => {
       const doubled = computed(() => count() * 2);
       
       return {
@@ -40,12 +32,8 @@ describe('Component API', () => {
   
   it('should support component composition', () => {
     type CounterState = { count: number };
-    interface CounterSlices {
-      count: Signal<number>;
-      increment: () => void;
-    }
     
-    const Counter = createComponent<CounterState, CounterSlices>(({ count }, set) => {
+    const Counter = createComponent<CounterState>()(({ count }, { set }) => {
       return {
         count,
         increment: () => set({ count: count() + 1 })
@@ -53,19 +41,12 @@ describe('Component API', () => {
     });
     
     type AppState = { count: number; multiplier: number };
-    interface AppSlices {
-      subCount: Signal<number>;
-      multiplier: Signal<number>;
-      total: Computed<number>;
-      increment: () => void;
-      setMultiplier: (n: number) => void;
-    }
     
-    const App = createComponent<AppState, AppSlices>((state, set, lattice) => {
-      const { computed } = lattice;
+    const App = createComponent<AppState>()((state, lattice) => {
+      const { computed, set } = lattice;
       
       // Compose Counter
-      const { count: subCount, increment } = Counter(state, set, lattice);
+      const { count: subCount, increment } = Counter(state, lattice);
       
       // Local state - using passed-in state
       const { multiplier } = state;
@@ -99,15 +80,8 @@ describe('Component API', () => {
   
   it('should properly track dependencies in computed values', () => {
     type TodoState = { todos: string[]; filter: 'all' | 'active' | 'done' };
-    interface TodoSlices {
-      todos: Signal<string[]>;
-      filter: Signal<'all' | 'active' | 'done'>;
-      filtered: Computed<string[]>;
-      addTodo: (text: string) => void;
-      setFilter: (f: 'all' | 'active' | 'done') => void;
-    }
     
-    const TodoApp = createComponent<TodoState, TodoSlices>(({ todos, filter }, set, { computed }) => {
+    const TodoApp = createComponent<TodoState>()(({ todos, filter }, { computed, set }) => {
       const filtered = computed(() => {
         const f = filter();
         const t = todos();
@@ -141,14 +115,8 @@ describe('Component API', () => {
   
   it('should support fine-grained subscriptions', () => {
     type CounterState = { count: number; name: string };
-    interface CounterSlices {
-      count: Signal<number>;
-      name: Signal<string>;
-      increment: () => void;
-      setName: (n: string) => void;
-    }
     
-    const Counter = createComponent<CounterState, CounterSlices>(({ count, name }, set) => {
+    const Counter = createComponent<CounterState>()(({ count, name }, { set }) => {
       return {
         count,
         name,
