@@ -54,3 +54,30 @@ export type SetState<State> = (updates: Partial<State> | ((state: SignalState<St
 export type ReactiveSliceFactory<State> = <Computed>(
   computeFn: (state: SignalState<State>, set: SetState<State>) => Computed
 ) => SliceHandle<Computed>;
+
+/**
+ * Lattice context provides scoped signal/computed factories
+ * Each component tree gets its own context to avoid global conflicts
+ */
+export interface LatticeContext<State = any> {
+  signal: <T>(initialValue: T) => Signal<T>;
+  computed: <T>(computeFn: () => T) => Computed<T>;
+  set: SetState<State>;
+}
+
+/**
+ * Component factory function that receives state signals and lattice context
+ * Returns slices (signals, computeds, and methods)
+ */
+export type ComponentFactory<State, Slices> = (
+  state: SignalState<State>, 
+  set: SetState<State>,
+  lattice: Omit<LatticeContext<State>, 'set'>
+) => Slices;
+
+/**
+ * Creates a component factory with proper typing
+ */
+export type CreateComponent = <State = {}, Slices = {}>(
+  factory: ComponentFactory<State, Slices>
+) => ComponentFactory<State, Slices>;

@@ -1,20 +1,24 @@
-// Lattice Core API - Pure state management with slices
+// Lattice Core API - Component-based state management
 
-// Export memoization utilities
-export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
+// Export component API
+export { 
+  createComponent, 
+  createStore, 
+  createStoreWithAdapter,
+  partial 
+} from './component';
 
-// Export convenience functions
-export { select } from './utils';
+// Note: signal and computed are provided via component context, not exported globally
 
-
-// Export runtime - now using the simple cache implementation as default
-export { createLatticeStore, type ComponentFactory, signal, computed, partial } from './runtime';
-
-// Export built-in adapters
-export { vanillaAdapter, createStore } from './adapters';
-
-// Export Svelte-specific store creator
-export { createSvelteStore } from './svelte';
+// Export types
+export type {
+  Signal,
+  Computed,
+  SignalState,
+  LatticeContext,
+  ComponentFactory,
+  SetState,
+} from './runtime-types';
 
 // Export adapter contract
 export {
@@ -24,22 +28,14 @@ export {
   isAdapterFactory,
 } from './adapter-contract';
 
-// Export subscription types (kept for adapter compatibility)
-export type SubscribableStore = {
-  subscribe: (listener: () => void) => () => void;
-};
+// Export built-in adapters
+export { vanillaAdapter } from './adapters';
 
-// Export types that are needed by the runtime
-export type {
-  Signal,
-  Computed,
-  SignalState,
-  ReactiveSliceFactory,
-  SliceHandle,
-} from './runtime-types';
+// Export Svelte-specific store creator
+export { createSvelteStore } from './svelte';
 
-// Import types needed for interfaces
-import type { ReactiveSliceFactory } from './runtime-types';
+// Export memoization utilities
+export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
-// Re-export ReactiveSliceFactory for backwards compatibility
-export type RuntimeSliceFactory<State> = ReactiveSliceFactory<State>;
+// Export convenience functions
+export { select } from './utils';
