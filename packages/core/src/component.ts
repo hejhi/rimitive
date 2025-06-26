@@ -8,6 +8,7 @@
 import type {
   ComponentFactory,
   ComponentContext,
+  ComponentMiddleware,
   SetState,
   SignalState,
   Signal,
@@ -17,13 +18,23 @@ import { type StoreAdapter } from './adapter-contract';
 
 /**
  * Creates a component factory with proper typing
- * Only requires State type - return type is inferred
+ * Accepts middleware functions that can enhance the context
  */
-export function createComponent<State extends Record<string, any>>() {
+export function createComponent<State extends Record<string, any>>(
+  ...middleware: ComponentMiddleware<State>[]
+) {
   return <Slices>(
     factory: (context: ComponentContext<State>) => Slices
-  ): ComponentFactory<State, Slices> => {
-    return factory;
+  ): ComponentFactory<State, {}, Slices> => {
+    // Return a wrapped factory that applies middleware
+    return (context: ComponentContext<State>) => {
+      // Apply middleware in order
+      const enhancedContext = middleware.reduce(
+        (ctx, mw) => mw(ctx),
+        context
+      );
+      return factory(enhancedContext);
+    };
   };
 }
 
@@ -42,7 +53,7 @@ export function partial<T extends Record<string, any>>(
  * Creates a store from a component factory and initial state
  */
 export function createStore<State extends Record<string, any>, Slices>(
-  component: ComponentFactory<State, Slices>,
+  component: ComponentFactory<State, {}, Slices>,
   initialState: State
 ): Slices & { _getState: () => State; _subscribe: (fn: () => void) => () => void } {
   // Create internal state management
@@ -91,7 +102,7 @@ export function createStore<State extends Record<string, any>, Slices>(
     computed: lattice.computed,
     set
   };
-  const slices = component(context);
+  const slices = component(context, {});
   
   // Add store methods
   return {
@@ -108,7 +119,7 @@ export function createStore<State extends Record<string, any>, Slices>(
  * Creates a store from a component factory using an existing adapter
  */
 export function createStoreWithAdapter<State extends Record<string, any>, Slices>(
-  component: ComponentFactory<State, Slices>,
+  component: ComponentFactory<State, {}, Slices>,
   adapter: StoreAdapter<State>
 ): Slices {
   // Create scoped lattice context
@@ -178,5 +189,5 @@ export function createStoreWithAdapter<State extends Record<string, any>, Slices
     computed: lattice.computed,
     set
   };
-  return component(context);
+  return component(context, {});
 }

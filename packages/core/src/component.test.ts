@@ -46,7 +46,7 @@ describe('Component API', () => {
       const { store, computed, set } = context;
       
       // Compose Counter
-      const { count: subCount, increment } = Counter(context);
+      const { count: subCount, increment } = Counter(context, {});
       
       // Computed that uses composed state
       const total = computed(() => subCount() * store.multiplier());

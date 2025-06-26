@@ -39,3 +39,6 @@ export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 
 // Export convenience functions
 export { select } from './utils';
+
+// Export middleware
+export { logger, devtools, persist } from './middleware';

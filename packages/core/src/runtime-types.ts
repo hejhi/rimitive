@@ -74,12 +74,21 @@ export interface ComponentContext<State> extends LatticeContext<State> {
 }
 
 /**
- * Component factory function that receives a merged context
+ * Component factory function that receives context and props
  * Returns slices (signals, computeds, and methods)
  */
-export type ComponentFactory<State, Slices> = (
-  context: ComponentContext<State>
+export type ComponentFactory<State, Props, Slices> = (
+  context: ComponentContext<State>,
+  props: Props
 ) => Slices;
+
+/**
+ * Middleware receives the component context and can enhance/modify it
+ */
+export type ComponentMiddleware<State> = (
+  context: ComponentContext<State>
+) => ComponentContext<State>;
+
 
 /**
  * Creates a component factory with proper typing
@@ -90,4 +99,4 @@ export type CreateComponent = <State extends Record<string, any>>(
     state: SignalState<State>,
     lattice: L
   ) => any
-) => ComponentFactory<State, ReturnType<typeof factory>>;
+) => ComponentFactory<State, any, ReturnType<typeof factory>>;
