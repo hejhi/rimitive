@@ -66,12 +66,19 @@ export interface LatticeContext<State = any> {
 }
 
 /**
- * Component factory function that receives state signals and lattice context
+ * Component context includes state signals under 'store' and lattice utilities
+ * This is what component factories receive as their single parameter
+ */
+export interface ComponentContext<State> extends LatticeContext<State> {
+  store: SignalState<State>;
+}
+
+/**
+ * Component factory function that receives a merged context
  * Returns slices (signals, computeds, and methods)
  */
 export type ComponentFactory<State, Slices> = (
-  state: SignalState<State>,
-  lattice: LatticeContext<State>
+  context: ComponentContext<State>
 ) => Slices;
 
 /**

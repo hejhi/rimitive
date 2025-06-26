@@ -5,13 +5,13 @@ describe('Component API', () => {
   it('should create a basic component with signals', () => {
     type CounterState = { count: number };
     
-    const Counter = createComponent<CounterState>()(({ count }, { computed, set }) => {
-      const doubled = computed(() => count() * 2);
+    const Counter = createComponent<CounterState>()(({ store, computed, set }) => {
+      const doubled = computed(() => store.count() * 2);
       
       return {
-        count,
+        count: store.count,
         doubled,
-        increment: () => set({ count: count() + 1 }),
+        increment: () => set({ count: store.count() + 1 }),
         reset: () => set({ count: 0 })
       };
     });
@@ -33,30 +33,27 @@ describe('Component API', () => {
   it('should support component composition', () => {
     type CounterState = { count: number };
     
-    const Counter = createComponent<CounterState>()(({ count }, { set }) => {
+    const Counter = createComponent<CounterState>()(({ store, set }) => {
       return {
-        count,
-        increment: () => set({ count: count() + 1 })
+        count: store.count,
+        increment: () => set({ count: store.count() + 1 })
       };
     });
     
     type AppState = { count: number; multiplier: number };
     
-    const App = createComponent<AppState>()((state, lattice) => {
-      const { computed, set } = lattice;
+    const App = createComponent<AppState>()((context) => {
+      const { store, computed, set } = context;
       
       // Compose Counter
-      const { count: subCount, increment } = Counter(state, lattice);
-      
-      // Local state - using passed-in state
-      const { multiplier } = state;
+      const { count: subCount, increment } = Counter(context);
       
       // Computed that uses composed state
-      const total = computed(() => subCount() * multiplier());
+      const total = computed(() => subCount() * store.multiplier());
       
       return {
         subCount,
-        multiplier,
+        multiplier: store.multiplier,
         total,
         increment,
         setMultiplier: (n: number) => set({ multiplier: n })
@@ -81,20 +78,20 @@ describe('Component API', () => {
   it('should properly track dependencies in computed values', () => {
     type TodoState = { todos: string[]; filter: 'all' | 'active' | 'done' };
     
-    const TodoApp = createComponent<TodoState>()(({ todos, filter }, { computed, set }) => {
+    const TodoApp = createComponent<TodoState>()(({ store, computed, set }) => {
       const filtered = computed(() => {
-        const f = filter();
-        const t = todos();
+        const f = store.filter();
+        const t = store.todos();
         if (f === 'all') return t;
         // Simplified for test
         return t.filter((todo: string) => f === 'active' ? !todo.includes('[done]') : todo.includes('[done]'));
       });
       
       return {
-        todos,
-        filter,
+        todos: store.todos,
+        filter: store.filter,
         filtered,
-        addTodo: (text: string) => set({ todos: [...todos(), text] }),
+        addTodo: (text: string) => set({ todos: [...store.todos(), text] }),
         setFilter: (f: 'all' | 'active' | 'done') => set({ filter: f })
       };
     });
@@ -116,11 +113,11 @@ describe('Component API', () => {
   it('should support fine-grained subscriptions', () => {
     type CounterState = { count: number; name: string };
     
-    const Counter = createComponent<CounterState>()(({ count, name }, { set }) => {
+    const Counter = createComponent<CounterState>()(({ store, set }) => {
       return {
-        count,
-        name,
-        increment: () => set({ count: count() + 1 }),
+        count: store.count,
+        name: store.name,
+        increment: () => set({ count: store.count() + 1 }),
         setName: (n: string) => set({ name: n })
       };
     });
