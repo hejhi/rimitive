@@ -1,10 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { createComponent, from, createStore } from './component';
+import { describe, it, expect, vi } from 'vitest';
+import { createComponent, withState, createStore } from './component';
+import { withLogger } from './middleware';
 
 describe('Component API', () => {
   it('should create a component with inferred state from callback', () => {
     const Counter = createComponent(
-      from(() => ({ count: 0 })),
+      withState(() => ({ count: 0 })),
       ({ store, computed, set }) => {
         const doubled = computed(() => store.count() * 2);
         
@@ -31,28 +32,30 @@ describe('Component API', () => {
     expect(store.doubled()).toBe(0);
   });
   
-  it('should support explicit type with middleware', () => {
-    type TodoState = { todos: string[]; filter: 'all' | 'active' };
-    
-    const mockLogger = () => <T>(ctx: T) => ctx;
-    
-    const TodoList = createComponent(
-      from<TodoState>(mockLogger()),
+  it('should support middleware composition with new pattern', () => {
+    const Counter = createComponent(
+      withLogger(withState(() => ({ count: 0 }))),
       ({ store, set }) => ({
-        todos: store.todos,
-        filter: store.filter,
-        addTodo: (text: string) => set({ todos: [...store.todos(), text] })
+        count: store.count,
+        increment: () => set({ count: store.count() + 1 })
       })
     );
     
-    const store = createStore(TodoList, { todos: [], filter: 'all' });
-    store.addTodo('Test');
-    expect(store.todos()).toEqual(['Test']);
+    const store = createStore(Counter, { count: 5 });
+    
+    // Spy on console.log to verify logger works
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    
+    store.increment();
+    expect(store.count()).toBe(6);
+    expect(consoleSpy).toHaveBeenCalledWith('[Lattice Logger] State update:', { count: 6 });
+    
+    consoleSpy.mockRestore();
   });
   
   it('should support composition with new API', () => {
     const SubCounter = createComponent(
-      from(() => ({ subCount: 0 })),
+      withState(() => ({ subCount: 0 })),
       ({ store, set }) => ({
         value: store.subCount,
         inc: () => set({ subCount: store.subCount() + 1 })
@@ -60,7 +63,7 @@ describe('Component API', () => {
     );
     
     const App = createComponent(
-      from(() => ({ subCount: 0, multiplier: 2 })),
+      withState(() => ({ subCount: 0, multiplier: 2 })),
       (context) => {
         const sub = SubCounter(context);
         const total = context.computed(() => sub.value() * context.store.multiplier());
@@ -88,7 +91,7 @@ describe('Component API', () => {
     type TodoState = { todos: string[]; filter: 'all' | 'active' | 'done' };
     
     const TodoApp = createComponent(
-      from<TodoState>(),
+      withState<TodoState>(),
       ({ store, computed, set }) => {
         const filtered = computed(() => {
           const f = store.filter();
@@ -126,7 +129,7 @@ describe('Component API', () => {
     type CounterState = { count: number; name: string };
     
     const Counter = createComponent(
-      from<CounterState>(),
+      withState<CounterState>(),
       ({ store, set }) => {
         return {
           count: store.count,

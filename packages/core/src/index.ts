@@ -3,7 +3,7 @@
 // Export component API
 export { 
   createComponent,
-  from,
+  withState,
   createStore, 
   createStoreWithAdapter,
   partial 

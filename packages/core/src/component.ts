@@ -8,61 +8,38 @@
 import type {
   ComponentFactory,
   ComponentContext,
-  ComponentMiddleware,
   SetState,
   SignalState,
   Signal,
 } from './runtime-types';
 import { createLatticeContext } from './lattice-context';
 import { type StoreAdapter } from './adapter-contract';
+import type { FromMarker } from './component-types';
 
 /**
- * Marker interface that carries state type and middleware information
+ * Creates a state marker with optional initializer
  */
-interface FromMarker<State> {
-  _state: State;
-  _initial: State;
-  _middleware: ComponentMiddleware<State>[];
-}
-
-/**
- * Creates a state marker with optional initializer and middleware
- */
-export function from<State extends Record<string, any>>(
-  initializer: () => State,
-  ...middleware: ComponentMiddleware<State>[]
+export function withState<State extends Record<string, any>>(
+  initializer: () => State
 ): FromMarker<State>;
 
-export function from<State extends Record<string, any>>(
-  ...middleware: ComponentMiddleware<State>[]
-): FromMarker<State>;
+export function withState<State extends Record<string, any>>(): FromMarker<State>;
 
-export function from<State extends Record<string, any>>(
-  initializerOrMiddleware?: (() => State) | ComponentMiddleware<State>,
-  ...restMiddleware: ComponentMiddleware<State>[]
+export function withState<State extends Record<string, any>>(
+  initializer?: () => State
 ): FromMarker<State> {
-  // Check if it's an initializer function (has no parameters)
-  const isInitializer = typeof initializerOrMiddleware === 'function' && 
-    initializerOrMiddleware.length === 0 &&
-    !('_middleware' in initializerOrMiddleware);
-    
-  if (isInitializer) {
-    // Safe to call as initializer
-    const initial = (initializerOrMiddleware as () => State)();
+  if (initializer) {
+    const initial = initializer();
     return {
       _state: initial,
       _initial: initial,
-      _middleware: restMiddleware
+      _middleware: []
     };
   } else {
-    // It's middleware or nothing
-    const middleware = initializerOrMiddleware 
-      ? [initializerOrMiddleware as ComponentMiddleware<State>, ...restMiddleware]
-      : restMiddleware;
     return {
       _state: {} as State,
       _initial: {} as State,
-      _middleware: middleware
+      _middleware: []
     };
   }
 }
