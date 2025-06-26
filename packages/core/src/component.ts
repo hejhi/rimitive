@@ -19,7 +19,7 @@ import { type StoreAdapter } from './adapter-contract';
 /**
  * Marker interface that carries state type and middleware information
  */
-interface InitMarker<State> {
+interface FromMarker<State> {
   _state: State;
   _initial: State;
   _middleware: ComponentMiddleware<State>[];
@@ -28,19 +28,19 @@ interface InitMarker<State> {
 /**
  * Creates a state marker with optional initializer and middleware
  */
-export function init<State extends Record<string, any>>(
+export function from<State extends Record<string, any>>(
   initializer: () => State,
   ...middleware: ComponentMiddleware<State>[]
-): InitMarker<State>;
+): FromMarker<State>;
 
-export function init<State extends Record<string, any>>(
+export function from<State extends Record<string, any>>(
   ...middleware: ComponentMiddleware<State>[]
-): InitMarker<State>;
+): FromMarker<State>;
 
-export function init<State extends Record<string, any>>(
+export function from<State extends Record<string, any>>(
   initializerOrMiddleware?: (() => State) | ComponentMiddleware<State>,
   ...restMiddleware: ComponentMiddleware<State>[]
-): InitMarker<State> {
+): FromMarker<State> {
   // Check if it's an initializer function (has no parameters)
   const isInitializer = typeof initializerOrMiddleware === 'function' && 
     initializerOrMiddleware.length === 0 &&
@@ -70,7 +70,7 @@ export function init<State extends Record<string, any>>(
 /**
  * Creates a component factory from a state marker and factory function
  */
-export function createComponent<Marker extends InitMarker<any>, Slices>(
+export function createComponent<Marker extends FromMarker<any>, Slices>(
   marker: Marker,
   factory: (ctx: ComponentContext<Marker['_state']>) => Slices
 ): ComponentFactory<Marker['_state'], Slices> {

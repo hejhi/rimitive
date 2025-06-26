@@ -1,6 +1,6 @@
 /**
  * @fileoverview Runtime types for the signals-based reactive slice system
- * 
+ *
  * These types define the core interfaces for Lattice's signals-first reactive system.
  * They are used by both the runtime and adapters.
  */
@@ -10,8 +10,8 @@
  * Reading a signal automatically registers it as a dependency in tracking contexts
  */
 export interface Signal<T> {
-  (): T;                                           // Read current value
-  (value: T): void;                               // Write new value (if writable)
+  (): T; // Read current value
+  (value: T): void; // Write new value (if writable)
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
 }
 
@@ -20,7 +20,7 @@ export interface Signal<T> {
  * Dependencies are tracked automatically when the computation function runs
  */
 export interface Computed<T> extends Omit<Signal<T>, 'call'> {
-  (): T;                                           // Read computed value
+  (): T; // Read computed value
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
 }
 
@@ -33,7 +33,7 @@ export type SignalState<State> = {
 
 /**
  * A handle to a reactive slice that provides dual functionality:
- * 
+ *
  * 1. When called with no arguments, returns the computed values and methods
  * 2. When called with a selector function, extracts values for composition with other slices
  */
@@ -45,7 +45,9 @@ export interface SliceHandle<Computed> {
 /**
  * Function to update state - supports both direct updates and computed updates
  */
-export type SetState<State> = (updates: Partial<State> | ((state: SignalState<State>) => Partial<State>)) => void;
+export type SetState<State> = (
+  updates: Partial<State> | ((state: SignalState<State>) => Partial<State>)
+) => void;
 
 /**
  * Factory function for creating reactive slices using signals
@@ -87,5 +89,3 @@ export type ComponentFactory<State, Slices> = (
 export type ComponentMiddleware<State> = (
   context: ComponentContext<State>
 ) => ComponentContext<State>;
-
-

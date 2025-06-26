@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createComponent, init, createStore } from './component';
-import { logger } from './middleware';
+import { createComponent, from, createStore } from './component';
+import { withLogger } from './middleware';
 
 describe('Component Middleware', () => {
   it('should apply logger middleware', () => {
@@ -9,7 +9,7 @@ describe('Component Middleware', () => {
     type CounterState = { count: number };
     
     const Counter = createComponent(
-      init<CounterState>(logger<CounterState>()),
+      from<CounterState>(withLogger<CounterState>()),
       ({ store, set }) => {
         return {
           count: store.count,
@@ -32,7 +32,7 @@ describe('Component Middleware', () => {
     type CounterState = { count: number };
     
     const Counter = createComponent(
-      init<CounterState>(),
+      from<CounterState>(),
       ({ store, set }) => {
         return {
           count: store.count,
@@ -74,7 +74,7 @@ describe('Component Middleware', () => {
     type CounterState = { count: number };
     
     const Counter = createComponent(
-      init<CounterState>(middleware1(), middleware2()),
+      from<CounterState>(middleware1(), middleware2()),
       ({ store, set }) => {
         return {
           count: store.count,

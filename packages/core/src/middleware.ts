@@ -7,7 +7,7 @@ import type { ComponentMiddleware } from './runtime-types';
 /**
  * Logger middleware - logs all state changes
  */
-export function logger<State>(): ComponentMiddleware<State> {
+export function withLogger<State>(): ComponentMiddleware<State> {
   return (context) => {
     const originalSet = context.set;
     
@@ -28,7 +28,7 @@ export function logger<State>(): ComponentMiddleware<State> {
 /**
  * DevTools middleware - integrates with Redux DevTools Extension
  */
-export function devtools<State>(name = 'Lattice Store'): ComponentMiddleware<State> {
+export function withDevtools<State>(name = 'Lattice Store'): ComponentMiddleware<State> {
   return (context) => {
     // Check if devtools extension is available
     const devtoolsExt = (window as any).__REDUX_DEVTOOLS_EXTENSION__;
@@ -72,7 +72,7 @@ export function devtools<State>(name = 'Lattice Store'): ComponentMiddleware<Sta
 /**
  * Persist middleware - saves state to localStorage
  */
-export function persist<State>(key: string): ComponentMiddleware<State> {
+export function withPersistence<State>(key: string): ComponentMiddleware<State> {
   return (context) => {
     // Try to load initial state from localStorage
     const stored = localStorage.getItem(key);

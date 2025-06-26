@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createComponent, init, createStore } from './component';
+import { createComponent, from, createStore } from './component';
 
 describe('Component API', () => {
   it('should create a component with inferred state from callback', () => {
     const Counter = createComponent(
-      init(() => ({ count: 0 })),
+      from(() => ({ count: 0 })),
       ({ store, computed, set }) => {
         const doubled = computed(() => store.count() * 2);
         
@@ -37,7 +37,7 @@ describe('Component API', () => {
     const mockLogger = () => <T>(ctx: T) => ctx;
     
     const TodoList = createComponent(
-      init<TodoState>(mockLogger()),
+      from<TodoState>(mockLogger()),
       ({ store, set }) => ({
         todos: store.todos,
         filter: store.filter,
@@ -52,7 +52,7 @@ describe('Component API', () => {
   
   it('should support composition with new API', () => {
     const SubCounter = createComponent(
-      init(() => ({ subCount: 0 })),
+      from(() => ({ subCount: 0 })),
       ({ store, set }) => ({
         value: store.subCount,
         inc: () => set({ subCount: store.subCount() + 1 })
@@ -60,7 +60,7 @@ describe('Component API', () => {
     );
     
     const App = createComponent(
-      init(() => ({ subCount: 0, multiplier: 2 })),
+      from(() => ({ subCount: 0, multiplier: 2 })),
       (context) => {
         const sub = SubCounter(context);
         const total = context.computed(() => sub.value() * context.store.multiplier());
@@ -88,7 +88,7 @@ describe('Component API', () => {
     type TodoState = { todos: string[]; filter: 'all' | 'active' | 'done' };
     
     const TodoApp = createComponent(
-      init<TodoState>(),
+      from<TodoState>(),
       ({ store, computed, set }) => {
         const filtered = computed(() => {
           const f = store.filter();
@@ -126,7 +126,7 @@ describe('Component API', () => {
     type CounterState = { count: number; name: string };
     
     const Counter = createComponent(
-      init<CounterState>(),
+      from<CounterState>(),
       ({ store, set }) => {
         return {
           count: store.count,

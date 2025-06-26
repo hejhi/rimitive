@@ -2,7 +2,8 @@
 
 // Export component API
 export { 
-  createComponent, 
+  createComponent,
+  from,
   createStore, 
   createStoreWithAdapter,
   partial 
@@ -41,4 +42,4 @@ export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 export { select } from './utils';
 
 // Export middleware
-export { logger, devtools, persist } from './middleware';
+export { withLogger, withDevtools, withPersistence } from './middleware';
