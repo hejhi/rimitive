@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createComponent, createStore } from './component';
+import { createComponent, init, createStore } from './component';
 import { logger } from './middleware';
 
 describe('Component Middleware', () => {
@@ -8,12 +8,15 @@ describe('Component Middleware', () => {
     
     type CounterState = { count: number };
     
-    const Counter = createComponent<CounterState>(logger())(({ store, set }) => {
-      return {
-        count: store.count,
-        increment: () => set({ count: store.count() + 1 })
-      };
-    });
+    const Counter = createComponent(
+      init<CounterState>(logger<CounterState>()),
+      ({ store, set }) => {
+        return {
+          count: store.count,
+          increment: () => set({ count: store.count() + 1 })
+        };
+      }
+    );
     
     const store = createStore(Counter, { count: 0 });
     
@@ -28,12 +31,15 @@ describe('Component Middleware', () => {
   it('should work without middleware', () => {
     type CounterState = { count: number };
     
-    const Counter = createComponent<CounterState>()(({ store, set }) => {
-      return {
-        count: store.count,
-        increment: () => set({ count: store.count() + 1 })
-      };
-    });
+    const Counter = createComponent(
+      init<CounterState>(),
+      ({ store, set }) => {
+        return {
+          count: store.count,
+          increment: () => set({ count: store.count() + 1 })
+        };
+      }
+    );
     
     const store = createStore(Counter, { count: 0 });
     
@@ -67,15 +73,15 @@ describe('Component Middleware', () => {
     
     type CounterState = { count: number };
     
-    const Counter = createComponent<CounterState>(
-      middleware1(),
-      middleware2()
-    )(({ store, set }) => {
-      return {
-        count: store.count,
-        increment: () => set({ count: store.count() + 1 })
-      };
-    });
+    const Counter = createComponent(
+      init<CounterState>(middleware1(), middleware2()),
+      ({ store, set }) => {
+        return {
+          count: store.count,
+          increment: () => set({ count: store.count() + 1 })
+        };
+      }
+    );
     
     const store = createStore(Counter, { count: 0 });
     

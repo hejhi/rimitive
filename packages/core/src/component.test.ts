@@ -1,20 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { createComponent, createStore } from './component';
+import { createComponent, init, createStore } from './component';
 
 describe('Component API', () => {
-  it('should create a basic component with signals', () => {
-    type CounterState = { count: number };
-    
-    const Counter = createComponent<CounterState>()(({ store, computed, set }) => {
-      const doubled = computed(() => store.count() * 2);
-      
-      return {
-        count: store.count,
-        doubled,
-        increment: () => set({ count: store.count() + 1 }),
-        reset: () => set({ count: 0 })
-      };
-    });
+  it('should create a component with inferred state from callback', () => {
+    const Counter = createComponent(
+      init(() => ({ count: 0 })),
+      ({ store, computed, set }) => {
+        const doubled = computed(() => store.count() * 2);
+        
+        return {
+          count: store.count,
+          doubled,
+          increment: () => set({ count: store.count() + 1 }),
+          reset: () => set({ count: 0 })
+        };
+      }
+    );
     
     const store = createStore(Counter, { count: 5 });
     
@@ -30,71 +31,82 @@ describe('Component API', () => {
     expect(store.doubled()).toBe(0);
   });
   
-  it('should support component composition', () => {
-    type CounterState = { count: number };
+  it('should support explicit type with middleware', () => {
+    type TodoState = { todos: string[]; filter: 'all' | 'active' };
     
-    const Counter = createComponent<CounterState>()(({ store, set }) => {
-      return {
-        count: store.count,
-        increment: () => set({ count: store.count() + 1 })
-      };
-    });
+    const mockLogger = () => <T>(ctx: T) => ctx;
     
-    type AppState = { count: number; multiplier: number };
+    const TodoList = createComponent(
+      init<TodoState>(mockLogger()),
+      ({ store, set }) => ({
+        todos: store.todos,
+        filter: store.filter,
+        addTodo: (text: string) => set({ todos: [...store.todos(), text] })
+      })
+    );
     
-    const App = createComponent<AppState>()((context) => {
-      const { store, computed, set } = context;
-      
-      // Compose Counter
-      const { count: subCount, increment } = Counter(context, {});
-      
-      // Computed that uses composed state
-      const total = computed(() => subCount() * store.multiplier());
-      
-      return {
-        subCount,
-        multiplier: store.multiplier,
-        total,
-        increment,
-        setMultiplier: (n: number) => set({ multiplier: n })
-      };
-    });
+    const store = createStore(TodoList, { todos: [], filter: 'all' });
+    store.addTodo('Test');
+    expect(store.todos()).toEqual(['Test']);
+  });
+  
+  it('should support composition with new API', () => {
+    const SubCounter = createComponent(
+      init(() => ({ subCount: 0 })),
+      ({ store, set }) => ({
+        value: store.subCount,
+        inc: () => set({ subCount: store.subCount() + 1 })
+      })
+    );
     
-    const store = createStore(App, { count: 3, multiplier: 4 });
+    const App = createComponent(
+      init(() => ({ subCount: 0, multiplier: 2 })),
+      (context) => {
+        const sub = SubCounter(context);
+        const total = context.computed(() => sub.value() * context.store.multiplier());
+        
+        return {
+          counter: sub,
+          multiplier: context.store.multiplier,
+          total,
+          setMultiplier: (n: number) => context.set({ multiplier: n })
+        };
+      }
+    );
     
-    expect(store.subCount()).toBe(3);
-    expect(store.multiplier()).toBe(4);
-    expect(store.total()).toBe(12);
+    const store = createStore(App, { subCount: 5, multiplier: 3 });
+    expect(store.total()).toBe(15);
     
-    store.increment();
-    expect(store.subCount()).toBe(4);
-    expect(store.total()).toBe(16);
+    store.counter.inc();
+    expect(store.total()).toBe(18);
     
-    store.setMultiplier(3);
-    expect(store.multiplier()).toBe(3);
+    store.setMultiplier(2);
     expect(store.total()).toBe(12);
   });
   
   it('should properly track dependencies in computed values', () => {
     type TodoState = { todos: string[]; filter: 'all' | 'active' | 'done' };
     
-    const TodoApp = createComponent<TodoState>()(({ store, computed, set }) => {
-      const filtered = computed(() => {
-        const f = store.filter();
-        const t = store.todos();
-        if (f === 'all') return t;
-        // Simplified for test
-        return t.filter((todo: string) => f === 'active' ? !todo.includes('[done]') : todo.includes('[done]'));
-      });
-      
-      return {
-        todos: store.todos,
-        filter: store.filter,
-        filtered,
-        addTodo: (text: string) => set({ todos: [...store.todos(), text] }),
-        setFilter: (f: 'all' | 'active' | 'done') => set({ filter: f })
-      };
-    });
+    const TodoApp = createComponent(
+      init<TodoState>(),
+      ({ store, computed, set }) => {
+        const filtered = computed(() => {
+          const f = store.filter();
+          const t = store.todos();
+          if (f === 'all') return t;
+          // Simplified for test
+          return t.filter((todo: string) => f === 'active' ? !todo.includes('[done]') : todo.includes('[done]'));
+        });
+        
+        return {
+          todos: store.todos,
+          filter: store.filter,
+          filtered,
+          addTodo: (text: string) => set({ todos: [...store.todos(), text] }),
+          setFilter: (f: 'all' | 'active' | 'done') => set({ filter: f })
+        };
+      }
+    );
     
     const store = createStore(TodoApp, { todos: [], filter: 'all' });
     
@@ -113,14 +125,17 @@ describe('Component API', () => {
   it('should support fine-grained subscriptions', () => {
     type CounterState = { count: number; name: string };
     
-    const Counter = createComponent<CounterState>()(({ store, set }) => {
-      return {
-        count: store.count,
-        name: store.name,
-        increment: () => set({ count: store.count() + 1 }),
-        setName: (n: string) => set({ name: n })
-      };
-    });
+    const Counter = createComponent(
+      init<CounterState>(),
+      ({ store, set }) => {
+        return {
+          count: store.count,
+          name: store.name,
+          increment: () => set({ count: store.count() + 1 }),
+          setName: (n: string) => set({ name: n })
+        };
+      }
+    );
     
     const store = createStore(Counter, { count: 0, name: 'initial' });
     

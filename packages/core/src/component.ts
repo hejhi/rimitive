@@ -17,24 +17,74 @@ import { createLatticeContext } from './lattice-context';
 import { type StoreAdapter } from './adapter-contract';
 
 /**
- * Creates a component factory with proper typing
- * Accepts middleware functions that can enhance the context
+ * Marker interface that carries state type and middleware information
  */
-export function createComponent<State extends Record<string, any>>(
+interface InitMarker<State> {
+  _state: State;
+  _initial: State;
+  _middleware: ComponentMiddleware<State>[];
+}
+
+/**
+ * Creates a state marker with optional initializer and middleware
+ */
+export function init<State extends Record<string, any>>(
+  initializer: () => State,
   ...middleware: ComponentMiddleware<State>[]
-) {
-  return <Slices>(
-    factory: (context: ComponentContext<State>) => Slices
-  ): ComponentFactory<State, {}, Slices> => {
-    // Return a wrapped factory that applies middleware
-    return (context: ComponentContext<State>) => {
-      // Apply middleware in order
-      const enhancedContext = middleware.reduce(
-        (ctx, mw) => mw(ctx),
-        context
-      );
-      return factory(enhancedContext);
+): InitMarker<State>;
+
+export function init<State extends Record<string, any>>(
+  ...middleware: ComponentMiddleware<State>[]
+): InitMarker<State>;
+
+export function init<State extends Record<string, any>>(
+  initializerOrMiddleware?: (() => State) | ComponentMiddleware<State>,
+  ...restMiddleware: ComponentMiddleware<State>[]
+): InitMarker<State> {
+  // Check if it's an initializer function (has no parameters)
+  const isInitializer = typeof initializerOrMiddleware === 'function' && 
+    initializerOrMiddleware.length === 0 &&
+    !('_middleware' in initializerOrMiddleware);
+    
+  if (isInitializer) {
+    // Safe to call as initializer
+    const initial = (initializerOrMiddleware as () => State)();
+    return {
+      _state: initial,
+      _initial: initial,
+      _middleware: restMiddleware
     };
+  } else {
+    // It's middleware or nothing
+    const middleware = initializerOrMiddleware 
+      ? [initializerOrMiddleware as ComponentMiddleware<State>, ...restMiddleware]
+      : restMiddleware;
+    return {
+      _state: {} as State,
+      _initial: {} as State,
+      _middleware: middleware
+    };
+  }
+}
+
+/**
+ * Creates a component factory from a state marker and factory function
+ */
+export function createComponent<Marker extends InitMarker<any>, Slices>(
+  marker: Marker,
+  factory: (ctx: ComponentContext<Marker['_state']>) => Slices
+): ComponentFactory<Marker['_state'], Slices> {
+  type State = Marker['_state'];
+  const middleware = marker._middleware;
+  
+  // Return wrapped factory that applies middleware
+  return (context: ComponentContext<State>) => {
+    // Apply middleware in order
+    const enhancedContext = middleware.reduce(
+      (ctx, mw) => mw(ctx),
+      context
+    );
+    return factory(enhancedContext);
   };
 }
 
@@ -53,7 +103,7 @@ export function partial<T extends Record<string, any>>(
  * Creates a store from a component factory and initial state
  */
 export function createStore<State extends Record<string, any>, Slices>(
-  component: ComponentFactory<State, {}, Slices>,
+  component: ComponentFactory<State, Slices>,
   initialState: State
 ): Slices & { _getState: () => State; _subscribe: (fn: () => void) => () => void } {
   // Create internal state management
@@ -102,7 +152,7 @@ export function createStore<State extends Record<string, any>, Slices>(
     computed: lattice.computed,
     set
   };
-  const slices = component(context, {});
+  const slices = component(context);
   
   // Add store methods
   return {
@@ -119,7 +169,7 @@ export function createStore<State extends Record<string, any>, Slices>(
  * Creates a store from a component factory using an existing adapter
  */
 export function createStoreWithAdapter<State extends Record<string, any>, Slices>(
-  component: ComponentFactory<State, {}, Slices>,
+  component: ComponentFactory<State, Slices>,
   adapter: StoreAdapter<State>
 ): Slices {
   // Create scoped lattice context
@@ -189,5 +239,5 @@ export function createStoreWithAdapter<State extends Record<string, any>, Slices
     computed: lattice.computed,
     set
   };
-  return component(context, {});
+  return component(context);
 }
