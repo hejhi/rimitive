@@ -9,7 +9,7 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createLatticeStore, vanillaAdapter, computed } from '@lattice/core';
+import { createComponent, withState, createStore } from '@lattice/core';
 
 const ITERATIONS = 1000;
 
@@ -26,13 +26,15 @@ describe('Svelte Runes vs Lattice - Comprehensive Comparison', () => {
     });
 
     bench('Lattice - simple counter with derived value', () => {
-      const createSlice = createLatticeStore(vanillaAdapter({ count: 0 }));
-      const slice = createSlice(({ count }) => ({
-        doubled: computed(() => count() * 2),
-        setCount: (n: number) => count(n),
-      }));
+      const Counter = createComponent(
+        withState(() => ({ count: 0 })),
+        ({ store, computed, set }) => ({
+          doubled: computed(() => store.count() * 2),
+          setCount: (n: number) => set({ count: n }),
+        })
+      );
 
-      const counter = slice();
+      const counter = createStore(Counter, { count: 0 });
 
       for (let i = 0; i < ITERATIONS; i++) {
         counter.setCount(i);
@@ -61,16 +63,18 @@ describe('Svelte Runes vs Lattice - Comprehensive Comparison', () => {
 
     bench('Lattice - multiple accesses without state change', () => {
       let computations = 0;
-      const createSlice = createLatticeStore(vanillaAdapter({ value: 1 }));
-      const slice = createSlice(({ value }) => ({
-        expensive: computed(() => {
-          computations++;
-          return value() * value() * value();
-        }),
-        setValue: (n: number) => value(n),
-      }));
+      const ExpensiveComponent = createComponent(
+        withState(() => ({ value: 1 })),
+        ({ store, computed, set }) => ({
+          expensive: computed(() => {
+            computations++;
+            return store.value() * store.value() * store.value();
+          }),
+          setValue: (n: number) => set({ value: n }),
+        })
+      );
 
-      const s = slice();
+      const s = createStore(ExpensiveComponent, { value: 1 });
 
       // Same pattern: change once, access many times
       for (let i = 0; i < 10; i++) {
@@ -137,57 +141,57 @@ describe('Svelte Runes vs Lattice - Comprehensive Comparison', () => {
 
     bench('Lattice - multi-slice dashboard simulation', () => {
       // Same dashboard structure
-      const createSlice = createLatticeStore(
-        vanillaAdapter({
+      const DashboardComponent = createComponent(
+        withState(() => ({
           user: { name: 'John', role: 'admin', lastLogin: Date.now() },
           metrics: { views: 1000, clicks: 50, revenue: 5000 },
           settings: { theme: 'dark', notifications: true },
+        })),
+        ({ store, computed, set }) => ({
+          // User slice
+          isAdmin: computed(() => store.user().role === 'admin'),
+          updateLastLogin: () => {
+            const current = store.user();
+            set({ user: { ...current, lastLogin: Date.now() } });
+          },
+          
+          // Metrics slice
+          ctr: computed(() => store.metrics().clicks / store.metrics().views),
+          revenuePerClick: computed(() => store.metrics().revenue / store.metrics().clicks),
+          recordView: () => {
+            const current = store.metrics();
+            set({
+              metrics: {
+                ...current,
+                views: current.views + 10,
+                clicks: current.clicks + 1,
+              }
+            });
+          },
+          recordRevenue: () => {
+            const current = store.metrics();
+            set({ metrics: { ...current, revenue: current.revenue + 100 } });
+          },
+          
+          // Settings slice
+          theme: computed(() => store.settings().theme),
+          toggleTheme: () => {
+            const current = store.settings();
+            set({
+              settings: {
+                ...current,
+                theme: current.theme === 'dark' ? 'light' : 'dark',
+              }
+            });
+          },
         })
       );
 
-      // User slice
-      const userSlice = createSlice(({ user }) => ({
-        isAdmin: computed(() => user().role === 'admin'),
-        updateLastLogin: () => {
-          const current = user();
-          user({ ...current, lastLogin: Date.now() });
-        },
-      }));
-
-      // Metrics slice
-      const metricsSlice = createSlice(({ metrics }) => ({
-        ctr: computed(() => metrics().clicks / metrics().views),
-        revenuePerClick: computed(() => metrics().revenue / metrics().clicks),
-        recordView: () => {
-          const current = metrics();
-          metrics({
-            ...current,
-            views: current.views + 10,
-            clicks: current.clicks + 1,
-          });
-        },
-        recordRevenue: () => {
-          const current = metrics();
-          metrics({ ...current, revenue: current.revenue + 100 });
-        },
-      }));
-
-      // Settings slice
-      const settingsSlice = createSlice(({ settings }) => ({
-        theme: computed(() => settings().theme),
-        toggleTheme: () => {
-          const current = settings();
-          settings({
-            ...current,
-            theme: current.theme === 'dark' ? 'light' : 'dark',
-          });
-        },
-      }));
-
-      // Get instances
-      const user = userSlice();
-      const metrics = metricsSlice();
-      const settings = settingsSlice();
+      const dashboard = createStore(DashboardComponent, {
+        user: { name: 'John', role: 'admin', lastLogin: Date.now() },
+        metrics: { views: 1000, clicks: 50, revenue: 5000 },
+        settings: { theme: 'dark', notifications: true },
+      });
 
       // Same realistic update pattern
       for (let i = 0; i < COMPLEX_ITERATIONS; i++) {
@@ -195,27 +199,27 @@ describe('Svelte Runes vs Lattice - Comprehensive Comparison', () => {
 
         switch (action) {
           case 0: // User action
-            user.updateLastLogin();
-            void user.isAdmin();
+            dashboard.updateLastLogin();
+            void dashboard.isAdmin();
             break;
           case 1: // Metrics update
-            metrics.recordView();
-            void metrics.ctr();
-            void metrics.revenuePerClick();
+            dashboard.recordView();
+            void dashboard.ctr();
+            void dashboard.revenuePerClick();
             break;
           case 2: // Revenue update
-            metrics.recordRevenue();
-            void metrics.revenuePerClick();
+            dashboard.recordRevenue();
+            void dashboard.revenuePerClick();
             break;
           case 3: // Settings change
-            settings.toggleTheme();
-            void settings.theme();
+            dashboard.toggleTheme();
+            void dashboard.theme();
             break;
           case 4: // Read all
-            void metrics.ctr();
-            void metrics.revenuePerClick();
-            void user.isAdmin();
-            void settings.theme();
+            void dashboard.ctr();
+            void dashboard.revenuePerClick();
+            void dashboard.isAdmin();
+            void dashboard.theme();
             break;
         }
       }
@@ -268,29 +272,32 @@ describe('Svelte Runes vs Lattice - Comprehensive Comparison', () => {
     });
 
     bench('Lattice - form with validation', () => {
-      const createSlice = createLatticeStore(
-        vanillaAdapter({
+      const FormComponent = createComponent(
+        withState(() => ({
           email: '',
           password: '',
           confirmPassword: '',
+        })),
+        ({ store, computed, set }) => ({
+          emailValid: computed(() => store.email().includes('@')),
+          passwordValid: computed(() => store.password().length >= 8),
+          passwordsMatch: computed(() => store.password() === store.confirmPassword()),
+          canSubmit: computed(() =>
+            store.email().includes('@') &&
+            store.password().length >= 8 &&
+            store.password() === store.confirmPassword()
+          ),
+          setEmail: (value: string) => set({ email: value }),
+          setPassword: (value: string) => set({ password: value }),
+          setConfirmPassword: (value: string) => set({ confirmPassword: value }),
         })
       );
 
-      const formSlice = createSlice(({ email, password, confirmPassword }) => ({
-        emailValid: computed(() => email().includes('@')),
-        passwordValid: computed(() => password().length >= 8),
-        passwordsMatch: computed(() => password() === confirmPassword()),
-        canSubmit: computed(() =>
-          email().includes('@') &&
-          password().length >= 8 &&
-          password() === confirmPassword()
-        ),
-        setEmail: (value: string) => email(value),
-        setPassword: (value: string) => password(value),
-        setConfirmPassword: (value: string) => confirmPassword(value),
-      }));
-
-      const form = formSlice();
+      const form = createStore(FormComponent, {
+        email: '',
+        password: '',
+        confirmPassword: '',
+      });
 
       // Same simulation
       const testEmails = ['a', 'ab', 'abc', 'abc@', 'abc@d', 'abc@def.com'];

@@ -36,9 +36,6 @@ export { vanillaAdapter } from './adapters';
 // Export Svelte-specific store creator
 export { createSvelteStore } from './svelte';
 
-// Export memoization utilities
-export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
-
 // Export convenience functions
 export { select } from './utils';
 

@@ -13,7 +13,7 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createStore, computed } from '@lattice/core';
+import { createComponent, withState, createStore } from '@lattice/core';
 import { observable, action, computed as mobxComputed } from 'mobx';
 import {
   initMemoryTracking,
@@ -43,30 +43,40 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
   // Lattice with fine-grained subscriptions
   {
     const setupLattice = () => {
-      const createSlice = createStore({
+      // Create component with counters state
+      const CountersComponent = createComponent(
+        withState<{ counters: Record<string, number> }>(),
+        ({ store, computed, set }) => {
+          // Create slice for each counter (fine-grained subscriptions)
+          const counterSlices = counterIds.map((id) => ({
+            value: computed(() => store.counters()[id] || 0),
+            increment: () => {
+              const current = store.counters();
+              set({
+                counters: { ...current, [id]: (current[id] || 0) + 1 },
+              });
+            },
+          }));
+
+          return {
+            slices: counterSlices,
+            incrementCounter: (index: number) => {
+              const slice = counterSlices[index];
+              if (slice) slice.increment();
+            },
+          };
+        }
+      );
+
+      const store = createStore(CountersComponent, {
         counters: initialCounters,
       });
 
-      // Create slice for each counter (fine-grained subscriptions)
-      const counterSlices = counterIds.map((id) =>
-        createSlice(({ counters }, set) => ({
-          value: computed(() => counters()[id] || 0),
-          increment: () => {
-            // Use function form for surgical update
-            set(({ counters }) => ({
-              counters: { [id]: (counters()[id] || 0) + 1 },
-            }));
-          },
-        }))
-      );
+      const counterSlices = store.slices;
 
       return {
         slices: counterSlices,
-        incrementCounter: (index: number) => {
-          const slice = counterSlices[index];
-
-          if (slice) slice().increment();
-        },
+        incrementCounter: store.incrementCounter,
       };
     };
 
@@ -182,20 +192,23 @@ describe('Large State Memory Usage Comparison', () => {
 
   {
     const setupLargeLattice = () => {
-      const createSlice = createStore({
+      const LargeCountersComponent = createComponent(
+        withState<{ counters: Record<string, number> }>(),
+        ({ store, set }) => ({
+          increment: (id: string) => {
+            const current = store.counters();
+            set({
+              counters: { ...current, [id]: (current[id] || 0) + 1 },
+            });
+          },
+        })
+      );
+
+      const store = createStore(LargeCountersComponent, {
         counters: largeInitialCounters,
       });
 
-      const updateSlice = createSlice((_, set) => ({
-        increment: (id: string) => {
-          // Use function form for surgical update
-          set(({ counters }) => ({
-            counters: { [id]: (counters()[id] || 0) + 1 },
-          }));
-        },
-      }));
-
-      return updateSlice;
+      return store;
     };
 
     let largeSetup: ReturnType<typeof setupLargeLattice>;
@@ -208,7 +221,7 @@ describe('Large State Memory Usage Comparison', () => {
         for (let i = 0; i < 100; i++) {
           const randomId =
             largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
-          largeSetup().increment(randomId);
+          largeSetup.increment(randomId);
         }
       },
       {
