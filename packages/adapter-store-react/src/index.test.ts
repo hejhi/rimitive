@@ -9,6 +9,7 @@ import {
   createStore,
   wrapStoreReact,
   createStoreAdapter,
+  type StoreEnhancer,
 } from './index';
 import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
 // Internal store API type (previously from @lattice/store/react)
@@ -134,12 +135,12 @@ describe('store-react adapter', () => {
       const mockStore = {
         getState: () => ({ count: 0 }),
         setState: vi.fn(),
-        subscribe: vi.fn((listener) => {
+        subscribe: vi.fn((listener: () => void) => {
           // Store the listener so we can trigger it with an error
           mockStore._listener = listener;
           return () => {};
         }),
-        _listener: null as any
+        _listener: null as (() => void) | null
       };
 
       // Wrap with error handling
@@ -161,7 +162,9 @@ describe('store-react adapter', () => {
       // Since the adapter wraps listeners, let's verify the error handler works
       // by calling the wrapped listener that the adapter created
       const wrappedListener = mockStore.subscribe.mock.calls[0]?.[0];
-      wrappedListener(); // This should trigger badListener through error handler
+      if (wrappedListener) {
+        wrappedListener(); // This should trigger badListener through error handler
+      }
       
       // Verify error handler was called
       expect(errorHandler).toHaveBeenCalledWith(expect.any(Error));
@@ -169,8 +172,9 @@ describe('store-react adapter', () => {
 
     it('should support enhancers', () => {
       // Create a simple enhancer that adds a flag
-      const enhancer = (stateCreator: any, createStore: any) => {
-        const store = createStore((set: any, get: any) => {
+      type TestState = { count: number; enhanced: boolean };
+      const enhancer: StoreEnhancer<TestState> = (stateCreator, createStore) => {
+        const store = createStore((set, get) => {
           const state = stateCreator(set, get);
           return { ...state, enhanced: true };
         });

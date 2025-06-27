@@ -39,7 +39,7 @@ describe('Zustand Adapter Contract', () => {
   it('should work with Zustand stores created with middleware', () => {
     // Test that adapter works with any Zustand store, including those with middleware
     // Here we'll use subscribeWithSelector middleware as an example
-    let stateChanges: any[] = [];
+    let stateChanges: Array<{ value: number }> = [];
 
     const store = zustandCreateStore<{ value: number }>(() => ({
       value: 0,

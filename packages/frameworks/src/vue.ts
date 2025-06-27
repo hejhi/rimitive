@@ -27,7 +27,7 @@ import {
 import type { Signal, Computed } from '@lattice/core';
 
 // Map for injection keys - bounded by string keys used in app
-const STORE_INJECTION_KEYS = new Map<string, InjectionKey<any>>();
+const STORE_INJECTION_KEYS = new Map<string, InjectionKey<unknown>>();
 
 /**
  * Creates or retrieves an injection key for a given store key.
@@ -104,7 +104,7 @@ export function useStore<T, R>(
 export function useStore<T, R = T>(
   store: T,
   selector?: (store: T) => R
-): ComputedRef<R> {
+): ComputedRef<T | R> {
   // Set up reactive tracking
   const version = ref(0);
   const unsubscribers: (() => void)[] = [];
@@ -140,7 +140,7 @@ export function useStore<T, R = T>(
       // Selector returns a signal - create a wrapper that forces re-render
       const result = vueComputed(() => {
         version.value; // Track version to trigger re-evaluation
-        const signal = selector(store) as Signal<any>;
+        const signal = selector(store) as Signal<unknown>;
         // Return a new wrapper function each time to force Vue to re-render
         return () => signal();
       }) as ComputedRef<R>;
@@ -173,7 +173,7 @@ export function useStore<T, R = T>(
     version.value; // Track version to trigger re-evaluation
     
     // Create a shallow copy with getters that maintain reactivity
-    const reactiveStore = {} as any;
+    const reactiveStore = {} as T;
     for (const key in store) {
       const value = store[key];
       if (isSignal(value)) {
@@ -192,14 +192,14 @@ export function useStore<T, R = T>(
     }
     
     return reactiveStore;
-  }) as ComputedRef<R>;
+  });
 
   // Cleanup on unmount
   onUnmounted(() => {
     unsubscribers.forEach((unsubscribe) => unsubscribe());
   });
 
-  return result;
+  return result as ComputedRef<T>;
 }
 
 /**

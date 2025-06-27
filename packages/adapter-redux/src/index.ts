@@ -45,54 +45,24 @@ export interface ReduxAdapterOptions {
  */
 export const latticeReducer = createReduxSlice({
   name: 'lattice',
-  initialState: {} as any,
+  initialState: {} satisfies Record<string, unknown>,
   reducers: {
     /**
      * Updates the state with partial updates
      */
-    updateState: (state, action: PayloadAction<any>) => {
+    updateState: (state, action: PayloadAction<Record<string, unknown>>) => {
       // Optimized: Direct property assignment for better Immer performance
       const updates = action.payload;
       if (updates && typeof updates === 'object') {
-        for (const key in updates) {
-          if (Object.prototype.hasOwnProperty.call(updates, key)) {
-            (state as any)[key] = updates[key];
-          }
-        }
+        Object.assign(state, updates);
       }
     },
 
     /**
      * Replaces the entire state
      */
-    replaceState: (_state, action: PayloadAction<any>) => {
+    replaceState: (_state, action: PayloadAction<Record<string, unknown>>) => {
       return action.payload;
-    },
-
-    /**
-     * Updates a nested path in the state
-     */
-    updateNested: (state, action: PayloadAction<{ path: string[]; value: any }>) => {
-      const { path, value } = action.payload;
-
-      if (path.length === 0) {
-        return value;
-      }
-
-      // Use Immer's draft state for efficient nested updates
-      let current: any = state;
-
-      for (let i = 0; i < path.length - 1; i++) {
-        const key = path[i];
-        if (key !== undefined) {
-          current = current[key];
-        }
-      }
-
-      const lastKey = path[path.length - 1];
-      if (lastKey !== undefined) {
-        current[lastKey] = value;
-      }
     },
   },
 });
@@ -177,18 +147,19 @@ export function reduxAdapter<State>(
   const pendingUnsubscribes = new Set<() => void>();
   let isNotifying = false;
 
-  // Performance optimization: Pre-bind getState for slice path
-  const getState = slicePath
-    ? () => (store.getState() as any)[slicePath] as State
-    : () => store.getState() as State;
+  // Simple getState that handles slices
+  const getState = (): State => {
+    const fullState = store.getState();
+    return slicePath ? fullState[slicePath] : fullState;
+  };
 
-  // Performance optimization: Create action objects directly
-  // This avoids Redux Toolkit's action creator overhead
+  // Dispatch updates using the generic lattice reducer
   const dispatchUpdate = (updates: Partial<State>) => {
     if (slicePath) {
-      // When using a slice, we need to update the full Redux state
-      const fullState = store.getState() as any;
-      const newSliceState = { ...fullState[slicePath], ...updates };
+      // When using a slice, merge at the slice level
+      const fullState = store.getState();
+      const currentSlice = fullState[slicePath] || {};
+      const newSliceState = { ...currentSlice, ...updates };
       store.dispatch(latticeReducer.actions.updateState({ [slicePath]: newSliceState }));
     } else {
       store.dispatch(latticeReducer.actions.updateState(updates));
