@@ -10,7 +10,7 @@ import {
   wrapStoreReact,
   createStoreAdapter,
 } from './index';
-import type { RuntimeSliceFactory } from '@lattice/core';
+import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
 // Internal store API type (previously from @lattice/store/react)
 interface StoreReactApi<T> {
   getState: () => T;
@@ -22,60 +22,51 @@ interface StoreReactApi<T> {
 describe('store-react adapter', () => {
   describe('createStore', () => {
     it('should create a working store', () => {
-      const createSlice = createStore({ count: 0 });
+      const adapter = createStore({ count: 0 });
 
-      const createComponent = (createSlice: RuntimeSliceFactory<{ count: number }>) => {
-        const counter = createSlice(({ count }, set) => ({
-          count, // count is already a signal
-          increment: () => set({ count: count() + 1 }),
-          decrement: () => set({ count: count() - 1 }),
-        }));
+      const Counter = createComponent(
+        withState<{ count: number }>(),
+        ({ store, set }) => ({
+          count: store.count,
+          increment: () => set({ count: store.count() + 1 }),
+          decrement: () => set({ count: store.count() - 1 }),
+        })
+      );
 
-        return { counter };
-      };
+      const counter = createStoreWithAdapter(Counter, adapter);
 
-      const store = createComponent(createSlice);
+      expect(counter.count()).toBe(0);
 
-      const counterSlice = store.counter();
-      expect(counterSlice.count()).toBe(0);
+      counter.increment();
+      expect(counter.count()).toBe(1);
 
-      counterSlice.increment();
-      expect(counterSlice.count()).toBe(1);
-
-      counterSlice.decrement();
-      expect(counterSlice.count()).toBe(0);
+      counter.decrement();
+      expect(counter.count()).toBe(0);
     });
 
     it('should support subscriptions', () => {
-      const createSlice = createStore({ value: 'initial' });
+      const adapter = createStore({ value: 'initial' });
 
-      const createComponent = (createSlice: RuntimeSliceFactory<{ value: string }>) => {
-        const actions = createSlice((_state, set) => ({
+      const Component = createComponent(
+        withState<{ value: string }>(),
+        ({ store, set }) => ({
+          value: store.value,
           setValue: (newValue: string) => set({ value: newValue }),
-        }));
+        })
+      );
 
-        const queries = createSlice(({ value }, _set) => ({
-          value, // value is already a signal
-        }));
-
-        return { actions, queries };
-      };
-
-      const store = createComponent(createSlice);
+      const store = createStoreWithAdapter(Component, adapter);
       const listener = vi.fn();
       
-      // Subscribe to signal directly (new signals-first approach)
-      const unsubscribe = store.queries().value.subscribe(listener);
+      // Subscribe to signal directly
+      const unsubscribe = store.value.subscribe(listener);
 
-      const actionsSlice = store.actions();
-      actionsSlice.setValue('changed');
+      store.setValue('changed');
       expect(listener).toHaveBeenCalledTimes(1);
-      
-      const queriesSlice = store.queries();
-      expect(queriesSlice.value()).toBe('changed');
+      expect(store.value()).toBe('changed');
 
       unsubscribe();
-      actionsSlice.setValue('changed again');
+      store.setValue('changed again');
       expect(listener).toHaveBeenCalledTimes(1); // Should not be called again
     });
 
@@ -186,24 +177,20 @@ describe('store-react adapter', () => {
         return store;
       };
 
-      const createSlice = createStore({ count: 0, enhanced: false }, { enhancer });
+      const adapter = createStore({ count: 0, enhanced: false }, { enhancer });
 
-      const createComponent = (
-        createSlice: RuntimeSliceFactory<{ count: number; enhanced: boolean }>
-      ) => {
-        const queries = createSlice(({ count, enhanced }, _set) => ({
-          count, // count is already a signal
-          enhanced, // enhanced is already a signal
-        }));
+      const Component = createComponent(
+        withState<{ count: number; enhanced: boolean }>(),
+        ({ store }) => ({
+          count: store.count,
+          enhanced: store.enhanced,
+        })
+      );
 
-        return { queries };
-      };
+      const store = createStoreWithAdapter(Component, adapter);
 
-      const store = createComponent(createSlice);
-
-      const queriesSlice = store.queries();
-      expect(queriesSlice.count()).toBe(0);
-      expect(queriesSlice.enhanced()).toBe(true);
+      expect(store.count()).toBe(0);
+      expect(store.enhanced()).toBe(true);
     });
   });
 
@@ -332,33 +319,31 @@ describe('store-react adapter', () => {
 
   describe('destroy functionality', () => {
     it('should clean up when unsubscribe is called', () => {
-      const createSlice = createStore({ value: 0 });
+      const adapter = createStore({ value: 0 });
 
-      const createComponent = (createSlice: RuntimeSliceFactory<{ value: number }>) => {
-        const actions = createSlice(({ value }, set) => ({
-          // Return the signal itself, not a wrapper function
-          value: value,
-          increment: () => set({ value: value() + 1 }),
-        }));
+      const Component = createComponent(
+        withState<{ value: number }>(),
+        ({ store, set }) => ({
+          value: store.value,
+          increment: () => set({ value: store.value() + 1 }),
+        })
+      );
 
-        return { actions };
-      };
-
-      const store = createComponent(createSlice);
+      const store = createStoreWithAdapter(Component, adapter);
       const listener = vi.fn();
 
       // Subscribe to the signal directly
-      const unsubscribe = store.actions().value.subscribe(listener);
+      const unsubscribe = store.value.subscribe(listener);
       
-      // Trigger a change through the action
-      store.actions().increment();
+      // Trigger a change
+      store.increment();
       
       // The listener should be called when the adapter updates the signal
       expect(listener).toHaveBeenCalledTimes(1);
 
       // Test unsubscribe
       unsubscribe();
-      store.actions().increment();
+      store.increment();
       
       // Should not be called again after unsubscribe
       expect(listener).toHaveBeenCalledTimes(1);

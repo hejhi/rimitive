@@ -7,8 +7,7 @@
  */
 
 import type { StoreApi } from 'zustand';
-import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
-import { createLatticeStore } from '@lattice/core';
+import type { StoreAdapter } from '@lattice/core';
 
 /**
  * Configuration options for the Zustand adapter
@@ -30,12 +29,13 @@ export interface ZustandAdapterOptions {
  *
  * @param store - An existing Zustand store created with zustand/vanilla or zustand
  * @param options - Optional configuration for error handling
- * @returns A RuntimeSliceFactory for creating Lattice slices
+ * @returns A StoreAdapter for use with Lattice components
  *
  * @example
  * ```typescript
  * import { create } from 'zustand';
  * import { zustandAdapter } from '@lattice/adapter-zustand';
+ * import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
  *
  * // Create a Zustand store with native API
  * const useStore = create((set) => ({
@@ -44,21 +44,19 @@ export interface ZustandAdapterOptions {
  * }));
  *
  * // Wrap it for use with Lattice components
- * const createSlice = zustandAdapter(useStore);
+ * const adapter = zustandAdapter(useStore);
  *
- * // Use in a Lattice component with two-phase pattern
- * const createComponent = (createSlice) => {
- *   const counter = createSlice(
- *     (selectors) => ({ count: selectors.count }),
- *     ({ count }, set) => ({
- *       value: () => count(),
- *       increment: () => set(
- *         ({ count }) => ({ count: count() + 1 })
- *       )
- *     })
- *   );
- *   return { counter };
- * };
+ * // Create a Lattice component
+ * const Counter = createComponent(
+ *   withState<{ count: number }>(),
+ *   ({ store, set }) => ({
+ *     value: store.count,
+ *     increment: () => set({ count: store.count() + 1 })
+ *   })
+ * );
+ *
+ * // Create store with adapter
+ * const counter = createStoreWithAdapter(Counter, adapter);
  * ```
  *
  * @example With middleware
@@ -76,13 +74,13 @@ export interface ZustandAdapterOptions {
  *   )
  * );
  *
- * const createSlice = zustandAdapter(useStore);
+ * const adapter = zustandAdapter(useStore);
  * ```
  */
 export function zustandAdapter<State>(
   store: StoreApi<State>,
   options?: ZustandAdapterOptions
-): RuntimeSliceFactory<State> {
+): StoreAdapter<State> {
   const handleError =
     options?.onError ??
     ((error) => {
@@ -130,5 +128,5 @@ export function zustandAdapter<State>(
     },
   };
 
-  return createLatticeStore(adapter);
+  return adapter;
 }
