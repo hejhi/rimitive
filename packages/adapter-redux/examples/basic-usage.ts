@@ -5,7 +5,7 @@
  */
 
 import { configureStore } from '@reduxjs/toolkit';
-import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
+import { createLatticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import { select as $ } from '@lattice/core';
 
 // Define your state shape
@@ -24,7 +24,7 @@ interface AppState {
 
 // NEW PATTERN: Create your Redux store separately with Redux's native API
 const store = configureStore({
-  reducer: latticeReducer.reducer,
+  reducer: createLatticeReducer<AppState>(),
   preloadedState: {
     counter: { value: 0 },
     todos: { items: [], filter: 'all' },
@@ -146,7 +146,7 @@ export function advancedExample() {
   const advancedStore = configureStore({
     reducer: {
       // Lattice manages this slice
-      app: latticeReducer.reducer,
+      app: createLatticeReducer<AppState>(),
       // Other Redux slices can coexist
       // auth: authSlice.reducer,
       // api: apiSlice.reducer,

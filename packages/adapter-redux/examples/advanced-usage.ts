@@ -8,7 +8,7 @@ import {
   configureStore,
   createSlice as createReduxSlice,
 } from '@reduxjs/toolkit';
-import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
+import { createLatticeReducer, reduxAdapter } from '@lattice/adapter-redux';
 import { select as $ } from '@lattice/core';
 
 interface AppState {
@@ -26,7 +26,7 @@ interface AppState {
 export function basicUsage() {
   // You create your own Redux store
   const store = configureStore({
-    reducer: latticeReducer.reducer,
+    reducer: createLatticeReducer<AppState>(),
     preloadedState: {
       count: 0,
       user: { name: '', loggedIn: false },
@@ -51,7 +51,7 @@ export function basicUsage() {
 export function withMiddleware() {
   // You have full control over middleware
   const store = configureStore({
-    reducer: latticeReducer.reducer,
+    reducer: createLatticeReducer<AppState>(),
     preloadedState: {
       count: 0,
       user: { name: '', loggedIn: false },
@@ -96,7 +96,7 @@ export function withMultipleSlices() {
   const store = configureStore({
     reducer: {
       // Lattice manages this part
-      app: latticeReducer.reducer,
+      app: createLatticeReducer<AppState>(),
       // Your existing Redux slices
       auth: authSlice.reducer,
     },
