@@ -232,22 +232,5 @@ export function reduxAdapter<State>(
   return adapter;
 }
 
-/**
- * Creates an optimized Redux adapter that bypasses some of Redux Toolkit's overhead.
- * This is a performance-focused alternative that maintains the same API.
- *
- * @param store - An existing Redux store
- * @param options - Optional configuration
- * @returns A StoreAdapter with optimized performance
- */
-export function createOptimizedReduxAdapter<State>(
-  store: Store,
-  options?: ReduxAdapterOptions
-): StoreAdapter<State> {
-  // For future use: This function currently delegates to reduxAdapter
-  // but provides a hook for future optimizations without breaking API
-  return reduxAdapter(store, options);
-}
-
 // Re-export types for convenience
 export type { StoreAdapter } from '@lattice/core';

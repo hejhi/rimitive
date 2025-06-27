@@ -5,13 +5,14 @@
  */
 
 import { createAdapterTestSuite } from '@lattice/core/testing';
-import { createStoreAdapter } from './index';
+import { createStore, storeReactAdapter } from './index';
 
 // Create a factory that matches the expected signature
 const createTestAdapter = <State>(initialState?: State) => {
   // Use a default empty object if no initial state provided
   const state = initialState ?? ({} as State);
-  return createStoreAdapter<State>()(state);
+  const store = createStore(state);
+  return storeReactAdapter(store);
 };
 
 // Run the shared adapter test suite

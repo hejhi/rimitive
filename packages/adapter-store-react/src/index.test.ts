@@ -7,8 +7,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   createStore,
-  wrapStoreReact,
-  createStoreAdapter,
+  storeReactAdapter,
   type StoreEnhancer,
 } from './index';
 import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
@@ -23,7 +22,8 @@ interface StoreReactApi<T> {
 describe('store-react adapter', () => {
   describe('createStore', () => {
     it('should create a working store', () => {
-      const adapter = createStore({ count: 0 });
+      const store = createStore({ count: 0 });
+      const adapter = storeReactAdapter(store);
 
       const Counter = createComponent(
         withState<{ count: number }>(),
@@ -46,7 +46,8 @@ describe('store-react adapter', () => {
     });
 
     it('should support subscriptions', () => {
-      const adapter = createStore({ value: 'initial' });
+      const store = createStore({ value: 'initial' });
+      const adapter = storeReactAdapter(store);
 
       const Component = createComponent(
         withState<{ value: string }>(),
@@ -56,18 +57,18 @@ describe('store-react adapter', () => {
         })
       );
 
-      const store = createStoreWithAdapter(Component, adapter);
+      const component = createStoreWithAdapter(Component, adapter);
       const listener = vi.fn();
       
       // Subscribe to signal directly
-      const unsubscribe = store.value.subscribe(listener);
+      const unsubscribe = component.value.subscribe(listener);
 
-      store.setValue('changed');
+      component.setValue('changed');
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(store.value()).toBe('changed');
+      expect(component.value()).toBe('changed');
 
       unsubscribe();
-      store.setValue('changed again');
+      component.setValue('changed again');
       expect(listener).toHaveBeenCalledTimes(1); // Should not be called again
     });
 
@@ -106,7 +107,7 @@ describe('store-react adapter', () => {
         .spyOn(console, 'error')
         .mockImplementation(() => {});
 
-      const adapter = wrapStoreReact(mockStore);
+      const adapter = storeReactAdapter(mockStore);
 
       const goodListener = vi.fn();
       const badListener = vi.fn(() => {
@@ -144,7 +145,7 @@ describe('store-react adapter', () => {
       };
 
       // Wrap with error handling
-      const adapter = wrapStoreReact(mockStore, { onError: errorHandler });
+      const adapter = storeReactAdapter(mockStore, { onError: errorHandler });
       
       // Subscribe with a bad listener through the adapter
       const badListener = vi.fn(() => {
@@ -181,7 +182,8 @@ describe('store-react adapter', () => {
         return store;
       };
 
-      const adapter = createStore({ count: 0, enhanced: false }, { enhancer });
+      const store = createStore({ count: 0, enhanced: false }, enhancer);
+      const adapter = storeReactAdapter(store);
 
       const Component = createComponent(
         withState<{ count: number; enhanced: boolean }>(),
@@ -191,14 +193,14 @@ describe('store-react adapter', () => {
         })
       );
 
-      const store = createStoreWithAdapter(Component, adapter);
+      const component = createStoreWithAdapter(Component, adapter);
 
-      expect(store.count()).toBe(0);
-      expect(store.enhanced()).toBe(true);
+      expect(component.count()).toBe(0);
+      expect(component.enhanced()).toBe(true);
     });
   });
 
-  describe('wrapStoreReact', () => {
+  describe('storeReactAdapter', () => {
     it('should wrap an existing store-react store', () => {
       // Create a mock store-react store
       const listeners = new Set<() => void>();
@@ -219,7 +221,7 @@ describe('store-react adapter', () => {
         destroy: () => listeners.clear(),
       };
 
-      const adapter = wrapStoreReact(mockStore);
+      const adapter = storeReactAdapter(mockStore);
 
       expect(adapter.getState()).toEqual({ count: 0 });
 
@@ -256,7 +258,7 @@ describe('store-react adapter', () => {
         destroy: () => listeners.clear(),
       };
 
-      const adapter = wrapStoreReact(mockStore);
+      const adapter = storeReactAdapter(mockStore);
 
       let unsubscribe2: (() => void) | null = null;
       const listener1 = vi.fn(() => {
@@ -283,47 +285,11 @@ describe('store-react adapter', () => {
     });
   });
 
-  describe('createStoreAdapter', () => {
-    it('should create a store adapter factory', () => {
-      const adapterFactory = createStoreAdapter<{ count: number }>();
-      const adapter = adapterFactory({ count: 5 });
-
-      expect(adapter.getState()).toEqual({ count: 5 });
-
-      adapter.setState({ count: 10 });
-      expect(adapter.getState()).toEqual({ count: 10 });
-    });
-
-    it('should notify on every setState call per adapter contract', () => {
-      const adapterFactory = createStoreAdapter<{
-        count: number;
-        name: string;
-      }>();
-      const adapter = adapterFactory({ count: 0, name: 'test' });
-
-      const listener = vi.fn();
-      adapter.subscribe(listener);
-
-      // Update with same values - should still notify per adapter contract
-      adapter.setState({ count: 0 });
-      expect(listener).toHaveBeenCalledTimes(1);
-
-      // Update with different value - should notify
-      adapter.setState({ count: 1 });
-      expect(listener).toHaveBeenCalledTimes(2);
-
-      // Update multiple fields, no change - should still notify
-      adapter.setState({ count: 1, name: 'test' });
-      expect(listener).toHaveBeenCalledTimes(3);
-
-      adapter.setState({ count: 1, name: 'changed' });
-      expect(listener).toHaveBeenCalledTimes(4);
-    });
-  });
 
   describe('destroy functionality', () => {
     it('should clean up when unsubscribe is called', () => {
-      const adapter = createStore({ value: 0 });
+      const store = createStore({ value: 0 });
+      const adapter = storeReactAdapter(store);
 
       const Component = createComponent(
         withState<{ value: number }>(),
@@ -333,21 +299,21 @@ describe('store-react adapter', () => {
         })
       );
 
-      const store = createStoreWithAdapter(Component, adapter);
+      const component = createStoreWithAdapter(Component, adapter);
       const listener = vi.fn();
 
       // Subscribe to the signal directly
-      const unsubscribe = store.value.subscribe(listener);
+      const unsubscribe = component.value.subscribe(listener);
       
       // Trigger a change
-      store.increment();
+      component.increment();
       
       // The listener should be called when the adapter updates the signal
       expect(listener).toHaveBeenCalledTimes(1);
 
       // Test unsubscribe
       unsubscribe();
-      store.increment();
+      component.increment();
       
       // Should not be called again after unsubscribe
       expect(listener).toHaveBeenCalledTimes(1);

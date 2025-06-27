@@ -41,68 +41,22 @@ export type StoreEnhancer<State> = (
 ) => StoreReactApi<State>;
 
 /**
- * Creates a Lattice adapter using store-react for state management.
+ * Creates a store-react compatible store instance.
+ * This is an internal implementation that provides the store-react API.
  *
  * @param initialState - The initial state for the store
- * @param options - Optional configuration including enhancer
- * @returns A StoreAdapter for use with Lattice components
- *
- * @example
- * ```typescript
- * import { createStore } from '@lattice/adapter-store-react';
- * import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
- *
- * const adapter = createStore({ count: 0 });
- *
- * const Counter = createComponent(
- *   withState<{ count: number }>(),
- *   ({ store, set }) => ({
- *     count: store.count,
- *     increment: () => set({ count: store.count() + 1 })
- *   })
- * );
- *
- * const counter = createStoreWithAdapter(Counter, adapter);
- * counter.increment();
- * ```
+ * @param enhancer - Optional store enhancer for customization
+ * @returns A store instance compatible with store-react API
+ * @internal
  */
 export function createStore<State>(
   initialState: State,
-  options?: AdapterOptions & { enhancer?: StoreEnhancer<State> }
-): StoreAdapter<State> {
-  // Create a store creator function that returns the initial state
+  enhancer?: StoreEnhancer<State>
+): StoreReactApi<State> {
   const stateCreator: StoreCreator<State> = () => initialState;
-
-  // Create the store using our custom creation function
-  const store = createStoreReactStore(stateCreator, options?.enhancer);
-
-  return wrapStoreReact(store, options);
+  return createStoreReactStore(stateCreator, enhancer);
 }
 
-/**
- * Creates a store-react adapter for a Lattice component.
- *
- * @deprecated Use createStore instead for the new adapter-first API
- *
- * @param componentFactory - The Lattice component factory
- * @param enhancer - Optional store enhancer for customization
- * @param options - Optional configuration for the adapter
- * @returns A Lattice store backed by store-react
- */
-export function createStoreReactAdapter<Component, State>(
-  componentFactory: (
-    createStore: (initialState: State) => StoreAdapter<State>
-  ) => Component,
-  enhancer?: StoreEnhancer<State>,
-  options?: AdapterOptions
-) {
-  // For backwards compatibility, create a function that mimics the old API
-  const createStoreFunction = (initialState: State) => {
-    return createStore(initialState, { ...options, enhancer });
-  };
-
-  return componentFactory(createStoreFunction);
-}
 
 /**
  * Creates a store-react store outside of React components
@@ -174,22 +128,39 @@ function createStoreReactStore<State>(
 }
 
 /**
- * Wraps an existing store-react store as a minimal adapter
+ * Creates a Lattice adapter from a store-react compatible store.
  *
- * This allows you to use an existing store-react store with Lattice.
+ * This adapter wraps any store that implements the store-react API
+ * for use with Lattice components.
  *
- * @param store - An existing store-react store
+ * @param store - A store instance with store-react compatible API
  * @param options - Optional configuration for the adapter
- * @returns A minimal store adapter
+ * @returns A StoreAdapter for use with Lattice components
  *
  * @example
  * ```typescript
- * const storeReactStore = createStoreReactStore(...);
- * const adapter = wrapStoreReact(storeReactStore);
- * const store = createLatticeStore(component, adapter);
+ * import { createStore, storeReactAdapter } from '@lattice/adapter-store-react';
+ * import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
+ *
+ * // Create a store using the built-in implementation
+ * const store = createStore({ count: 0 });
+ *
+ * // Create adapter
+ * const adapter = storeReactAdapter(store);
+ *
+ * // Use with Lattice components
+ * const Counter = createComponent(
+ *   withState<{ count: number }>(),
+ *   ({ store, set }) => ({
+ *     value: store.count,
+ *     increment: () => set({ count: store.count() + 1 })
+ *   })
+ * );
+ *
+ * const counter = createStoreWithAdapter(Counter, adapter);
  * ```
  */
-export function wrapStoreReact<State>(
+export function storeReactAdapter<State>(
   store: StoreReactApi<State>,
   options?: AdapterOptions
 ): StoreAdapter<State> {
@@ -222,21 +193,3 @@ export function wrapStoreReact<State>(
   };
 }
 
-/**
- * Creates a minimal adapter using store-react's core API
- *
- * This creates a new store-react compatible store with minimal wrapping.
- * Similar to createStoreAdapter but works directly with the state.
- *
- * @param options - Optional configuration for the adapter
- * @returns A store adapter factory
- */
-export function createStoreAdapter<State>(
-  options?: AdapterOptions
-): (initialState: State) => StoreAdapter<State> {
-  return (initialState: State) => {
-    const stateCreator: StoreCreator<State> = () => initialState;
-    const store = createStoreReactStore(stateCreator);
-    return wrapStoreReact(store, options);
-  };
-}
