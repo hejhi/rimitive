@@ -18,8 +18,8 @@ describe('Redux Adapter', () => {
       withState<{ counter: { value: number } }>(),
       ({ store, set }) => ({
         count: () => store.counter().value,
-        increment: () => set(state => ({ counter: { value: state.counter().value + 1 } })),
-        decrement: () => set(state => ({ counter: { value: state.counter().value - 1 } })),
+        increment: () => set(state => ({ counter: { value: state.counter.value + 1 } })),
+        decrement: () => set(state => ({ counter: { value: state.counter.value - 1 } })),
       })
     );
 
@@ -59,7 +59,7 @@ describe('Redux Adapter', () => {
       ({ store, set }) => ({
         count: () => store.counter().value,
         increment: () => set(state => ({ 
-          counter: { value: state.counter().value + 1 } 
+          counter: { value: state.counter.value + 1 } 
         })),
       })
     );
@@ -155,8 +155,8 @@ describe('Redux Adapter', () => {
         }),
         incrementBoth: () => set(state => ({
           counter: {
-            a: state.counter().a + 1,
-            b: state.counter().b + 1,
+            a: state.counter.a + 1,
+            b: state.counter.b + 1,
           },
         })),
       })
@@ -207,11 +207,11 @@ describe('Redux Adapter', () => {
             : todos.filter(t => t.done);
         }),
         addTodo: (text: string) => set(state => ({
-          todos: [...state.todos(), { id: state.nextId(), text, done: false }],
-          nextId: state.nextId() + 1,
+          todos: [...state.todos, { id: state.nextId, text, done: false }],
+          nextId: state.nextId + 1,
         })),
         toggleTodo: (id: number) => set(state => ({
-          todos: state.todos().map(todo =>
+          todos: state.todos.map(todo =>
             todo.id === id ? { ...todo, done: !todo.done } : todo
           ),
         })),
@@ -329,10 +329,10 @@ describe('Redux Adapter', () => {
         theme: store.theme,
         sidebarOpen: store.sidebarOpen,
         toggleTheme: () => set(state => ({
-          theme: state.theme() === 'light' ? 'dark' : 'light',
+          theme: state.theme === 'light' ? 'dark' : 'light',
         })),
         toggleSidebar: () => set(state => ({
-          sidebarOpen: !state.sidebarOpen(),
+          sidebarOpen: !state.sidebarOpen,
         })),
       })
     );
@@ -400,10 +400,10 @@ describe('Redux Adapter', () => {
         multiplier: store.multiplier,
         product: computed(() => store.count() * store.multiplier()),
         doubleCount: () => set(state => ({
-          count: state.count() * 2,
+          count: state.count * 2,
         })),
         incrementMultiplier: () => set(state => ({
-          multiplier: state.multiplier() + 1,
+          multiplier: state.multiplier + 1,
         })),
       })
     );

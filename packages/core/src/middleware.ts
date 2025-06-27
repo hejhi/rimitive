@@ -17,12 +17,16 @@ export function withLogger<State>(marker: FromMarker<State>): FromMarker<State> 
     
     // Wrap set to log changes
     context.set = (updates) => {
-      const updateObj = typeof updates === 'function' 
-        ? updates(context.store) 
-        : updates;
-      
-      console.log('[Lattice Logger] State update:', updateObj);
-      originalSet(updates);
+      // For logging, we need to evaluate the updates
+      // The original set will handle passing the correct state
+      originalSet((state) => {
+        const updateObj = typeof updates === 'function' 
+          ? updates(state) 
+          : updates;
+        
+        console.log('[Lattice Logger] State update:', updateObj);
+        return updateObj;
+      });
     };
     
     return context;
@@ -56,13 +60,16 @@ export function withDevtools<State>(name = 'Lattice Store') {
       
       // Wrap set to send actions to devtools
       context.set = (updates) => {
-        const updateObj = typeof updates === 'function' 
-          ? updates(context.store) 
-          : updates;
+        let updateObj: Partial<State>;
         
-        originalSet(updates);
+        originalSet((state) => {
+          updateObj = typeof updates === 'function' 
+            ? updates(state) 
+            : updates;
+          return updateObj;
+        });
         
-        // Get current state
+        // Get current state after update
         const currentState: any = {};
         for (const key in context.store) {
           currentState[key] = context.store[key]();
@@ -70,7 +77,7 @@ export function withDevtools<State>(name = 'Lattice Store') {
         
         // Send action to devtools
         devtools.send(
-          { type: 'SET_STATE', payload: updateObj },
+          { type: 'SET_STATE', payload: updateObj! },
           currentState
         );
       };

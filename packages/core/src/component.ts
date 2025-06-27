@@ -98,7 +98,8 @@ export function createStore<State extends Record<string, any>, Slices>(
   
   // Create set function that updates state
   const set: SetState<State> = (updates) => {
-    const newUpdates = typeof updates === 'function' ? updates(stateSignals) : updates;
+    // Pass the actual state object directly - no signal reads needed
+    const newUpdates = typeof updates === 'function' ? updates(state) : updates;
     
     lattice._batch(() => {
       // Update internal state and signals
@@ -204,7 +205,9 @@ export function createStoreWithAdapter<State extends Record<string, any>, Slices
   
   // Create set function that delegates to adapter
   const set: SetState<State> = (updates) => {
-    const newUpdates = typeof updates === 'function' ? updates(stateSignals) : updates;
+    // Get current state from adapter directly - no signal reads needed
+    const currentState = adapter.getState();
+    const newUpdates = typeof updates === 'function' ? updates(currentState) : updates;
     adapter.setState(newUpdates);
   };
   

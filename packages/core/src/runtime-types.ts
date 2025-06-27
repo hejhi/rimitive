@@ -44,9 +44,10 @@ export interface SliceHandle<Computed> {
 
 /**
  * Function to update state - supports both direct updates and computed updates
+ * The function callback receives dereferenced state values for safety and performance
  */
 export type SetState<State> = (
-  updates: Partial<State> | ((state: SignalState<State>) => Partial<State>)
+  updates: Partial<State> | ((state: State) => Partial<State>)
 ) => void;
 
 /**
