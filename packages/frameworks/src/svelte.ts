@@ -5,58 +5,91 @@
  * already implement Svelte's store contract.
  */
 
-import type { SliceHandle } from '@lattice/core';
+import type { Signal, Computed } from '@lattice/core';
+import type { Readable } from 'svelte/store';
 
 /**
- * Use a Lattice slice in Svelte components.
+ * Check if a value is a signal or computed (has subscribe method)
+ */
+function isSignal(value: unknown): value is Signal<unknown> | Computed<unknown> {
+  return typeof value === 'function' && 
+         value !== null &&
+         'subscribe' in value &&
+         typeof value.subscribe === 'function';
+}
+
+/**
+ * Use a Lattice store in Svelte components.
  * 
- * Returns a store-compatible wrapper around the slice that updates when
- * any signal in the slice changes.
+ * Returns a store-compatible wrapper that updates when
+ * any signal in the store changes.
  *
- * @param slice - A reactive slice handle
- * @returns A Svelte store containing the slice's computed object
+ * @param store - A Lattice store
+ * @returns A Svelte store containing the store object
  *
  * @example
  * ```svelte
  * <script>
- *   import { useSlice } from '@lattice/frameworks/svelte';
+ *   import { useStore } from '@lattice/frameworks/svelte';
+ *   import { counterStore } from './stores';
  *
- *   const counter = useSlice(counterSlice);
+ *   const counter = useStore(counterStore);
  * </script>
  *
  * <div>Count: {$counter.value()}</div>
  * <button on:click={() => $counter.increment()}>+</button>
  * ```
  */
-export function useSlice<Computed>(
-  slice: SliceHandle<Computed>
-): { subscribe: (fn: (value: Computed) => void) => () => void } {
-  const sliceObject = slice();
-  const subscribers = new Set<(value: Computed) => void>();
-  const unsubscribers: (() => void)[] = [];
+export function useStore<T extends Record<string, any>>(
+  store: T
+): Readable<T> {
+  const subscribers = new Set<(value: T) => void>();
+  let unsubscribers: (() => void)[] = [];
   
-  // Find all signals in the slice and subscribe to them
-  for (const key in sliceObject) {
-    const value = sliceObject[key as keyof Computed];
-    if (typeof value === 'function' && 'subscribe' in value && typeof (value as any).subscribe === 'function') {
-      const unsubscribe = (value as any).subscribe(() => {
-        // Notify all subscribers when any signal changes
-        subscribers.forEach(fn => fn(slice()));
+  function setupSubscriptions() {
+    // Clean up existing subscriptions
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
+    
+    // Check if store has _subscribe method - use that instead of individual signals
+    if (store !== null && 
+        typeof store === 'object' && 
+        '_subscribe' in store && 
+        typeof store._subscribe === 'function') {
+      const unsubscribe = store._subscribe(() => {
+        subscribers.forEach(fn => fn(store));
       });
       unsubscribers.push(unsubscribe);
+    } else {
+      // Fall back to subscribing to individual signals
+      for (const key in store) {
+        const value = store[key];
+        if (isSignal(value)) {
+          const unsubscribe = value.subscribe(() => {
+            // Notify all subscribers when any signal changes
+            subscribers.forEach(fn => fn(store));
+          });
+          unsubscribers.push(unsubscribe);
+        }
+      }
     }
   }
   
   return {
-    subscribe(fn: (value: Computed) => void) {
+    subscribe(fn: (value: T) => void) {
+      if (subscribers.size === 0) {
+        setupSubscriptions();
+      }
+      
       subscribers.add(fn);
-      fn(slice()); // Call immediately with current value
+      fn(store); // Call immediately with current value
       
       return () => {
         subscribers.delete(fn);
         if (subscribers.size === 0) {
           // Clean up signal subscriptions when no more subscribers
           unsubscribers.forEach(unsub => unsub());
+          unsubscribers = [];
         }
       };
     }
@@ -64,29 +97,36 @@ export function useSlice<Computed>(
 }
 
 /**
- * Create a derived value that's compatible with Svelte.
- * 
- * This is a convenience wrapper around slice selectors.
+ * Direct access to signals - they already implement Svelte's store contract
  *
- * @param slice - A reactive slice handle  
- * @param selector - Function to derive a value from the slice
- * @returns The selected value (which is a signal/store if it's reactive)
+ * @param signal - A Lattice signal or computed
+ * @returns The signal itself (it's already a Svelte store)
  *
  * @example
  * ```svelte
  * <script>
- *   import { useSlice, derive } from '@lattice/frameworks/svelte';
+ *   import { useSignal } from '@lattice/frameworks/svelte';
+ *   import { counterStore } from './stores';
  *
- *   const counter = useSlice(counterSlice);
- *   const doubled = derive(counterSlice, c => c.doubled);
+ *   const count = useSignal(counterStore.value);
  * </script>
  *
- * <div>Doubled: {$doubled}</div>
+ * <div>Count: {$count}</div>
  * ```
  */
-export function derive<Computed, T>(
-  slice: SliceHandle<Computed>,
-  selector: (computed: Computed) => T
-): T {
-  return selector(slice());
+export function useSignal<T>(signal: Signal<T> | Computed<T>): Readable<T> {
+  // Create a Svelte-compatible store from the signal
+  return {
+    subscribe(run: (value: T) => void, _invalidate?: () => void) {
+      // Initial value
+      run(signal());
+      
+      // Subscribe to changes
+      const unsubscribe = signal.subscribe(() => {
+        run(signal());
+      });
+      
+      return unsubscribe;
+    }
+  };
 }

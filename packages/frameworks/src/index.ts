@@ -8,4 +8,4 @@
 export { createComponent, createStore, createStoreWithAdapter } from '@lattice/core';
 
 // Type exports that might be useful across frameworks
-export type { ComponentFactory, Signal, Computed, LatticeContext } from '@lattice/core';
+export type { ComponentFactory, Signal, Computed, ComponentContext } from '@lattice/core';

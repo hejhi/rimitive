@@ -1,12 +1,12 @@
 // Lattice Core API - Component-based state management
 
 // Export component API
-export { 
+export {
   createComponent,
   withState,
-  createStore, 
+  createStore,
   createStoreWithAdapter,
-  partial 
+  partial,
 } from './component';
 
 // Note: signal and computed are provided via component context, not exported globally
@@ -16,8 +16,9 @@ export type {
   Signal,
   Computed,
   SignalState,
-  LatticeContext,
+  ComponentContext,
   ComponentFactory,
+  ComponentMiddleware,
   SetState,
 } from './runtime-types';
 
@@ -42,4 +43,4 @@ export { memoizeParameterizedView, type MemoizeOptions } from './utils/memoize';
 export { select } from './utils';
 
 // Export middleware
-export { withLogger, withDevtools, withPersistence } from './middleware';
+export { withDevtools, withLogger, withPersistence } from './middleware';

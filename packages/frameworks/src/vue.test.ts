@@ -1,267 +1,213 @@
 import { describe, it, expect } from 'vitest';
 import { mount } from '@vue/test-utils';
 import { defineComponent, watch, nextTick, computed } from 'vue';
-import { createStore, computed as latticeComputed } from '@lattice/core';
-import { useSlice, useLatticeReactive, provideLatticeSlice, injectLatticeSlice } from './vue.js';
+import { createComponent, withState, createStore } from '@lattice/core';
+import { useStore, useSignal, provideLatticeStore, injectLatticeStore } from './vue.js';
 
-describe('Vue Lattice composables - New slice-based API', () => {
-  // Create test slices
-  const createTestSlices = () => {
-    const createSlice = createStore({
-      count: 0,
-      name: 'test',
-      items: [] as string[],
-    });
+describe('Vue Lattice composables', () => {
+  // Create test components
+  const createTestStores = () => {
+    const Counter = createComponent(
+      withState(() => ({ count: 0 })),
+      ({ store, computed, set }) => ({
+        value: store.count,
+        increment: () => set({ count: store.count() + 1 }),
+        doubled: computed(() => store.count() * 2),
+        isEven: computed(() => store.count() % 2 === 0),
+      })
+    );
 
-    const counterSlice = createSlice(({ count }, set) => ({
-      value: count, // count is already a signal
-      increment: () => set({ count: count() + 1 }),
-      doubled: latticeComputed(() => count() * 2),
-      isEven: latticeComputed(() => count() % 2 === 0),
-    }));
+    const User = createComponent(
+      withState(() => ({ name: 'test' })),
+      ({ store, set }) => ({
+        name: store.name,
+        setName: (newName: string) => set({ name: newName }),
+      })
+    );
 
-    const userSlice = createSlice(({ name }, set) => ({
-      name, // name is already a signal
-      setName: (newName: string) => set({ name: newName }),
-    }));
+    const Items = createComponent(
+      withState(() => ({ items: [] as string[] })),
+      ({ store, computed, set }) => ({
+        all: store.items,
+        add: (item: string) => set({ items: [...store.items(), item] }),
+        count: computed(() => store.items().length),
+        first: computed(() => store.items()[0] || null),
+      })
+    );
 
-    const itemsSlice = createSlice(({ items }, set) => ({
-      all: items, // items is already a signal
-      add: (item: string) => set({ items: [...items(), item] }),
-    }));
-
-    return { counterSlice, userSlice, itemsSlice };
+    return {
+      counterStore: createStore(Counter, { count: 0 }),
+      userStore: createStore(User, { name: 'test' }),
+      itemsStore: createStore(Items, { items: [] }),
+    };
   };
 
-  describe('useSlice', () => {
-    it('should return a reactive ref that updates when slice changes', async () => {
-      const { counterSlice } = createTestSlices();
+  describe('useStore', () => {
+    it('should make store reactive and track dependencies', async () => {
+      const { counterStore } = createTestStores();
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useSlice(counterSlice, c => c.value());
-          const doubled = useSlice(counterSlice, c => c.doubled());
-
-          return { count, doubled };
+          const store = useStore(counterStore);
+          const doubleComputed = computed(() => store.value.value() * 2);
+          return { store, doubleComputed };
         },
-        template: '<div>{{ count }} {{ doubled }}</div>',
+        template: '<div>{{ store.value() }} - {{ doubleComputed }}</div>',
       });
 
       const wrapper = mount(TestComponent);
-      expect(wrapper.text()).toBe('0 0');
+      expect(wrapper.text()).toBe('0 - 0');
 
-      // Trigger slice action
-      counterSlice().increment();
+      counterStore.increment();
       await nextTick();
-      expect(wrapper.text()).toBe('1 2');
+      expect(wrapper.text()).toBe('1 - 2');
 
-      counterSlice().increment();
+      counterStore.increment();
       await nextTick();
-      expect(wrapper.text()).toBe('2 4');
+      expect(wrapper.text()).toBe('2 - 4');
     });
 
-    it('should work with Vue computed and watch', async () => {
-      const { counterSlice } = createTestSlices();
-      const watchedValues: number[] = [];
+    it('should work with watch', async () => {
+      const { userStore } = createTestStores();
+      const watchedValues: string[] = [];
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useSlice(counterSlice, c => c.value());
-          const tripled = computed(() => count.value * 3);
+          const store = useStore(userStore);
           
-          watch(count, (newVal) => {
-            watchedValues.push(newVal);
-          });
-
-          return { count, tripled };
+          watch(
+            () => store.value.name(),
+            (newVal) => {
+              watchedValues.push(newVal);
+            }
+          );
+          
+          return { store };
         },
-        template: '<div>{{ count }} {{ tripled }}</div>',
+        template: '<div>{{ store.name() }}</div>',
       });
 
-      const wrapper = mount(TestComponent);
-      expect(wrapper.text()).toBe('0 0');
-
-      counterSlice().increment();
+      mount(TestComponent);
+      
+      userStore.setName('Alice');
       await nextTick();
-      expect(wrapper.text()).toBe('1 3');
-      expect(watchedValues).toEqual([1]);
-
-      counterSlice().increment();
+      
+      userStore.setName('Bob');
       await nextTick();
-      expect(wrapper.text()).toBe('2 6');
-      expect(watchedValues).toEqual([1, 2]);
+      
+      expect(watchedValues).toEqual(['Alice', 'Bob']);
     });
 
-    it('should have fine-grained reactivity (not update for unrelated changes)', async () => {
-      const { counterSlice, userSlice } = createTestSlices();
-      let renderCount = 0;
+    it('should work with selectors', async () => {
+      const { itemsStore } = createTestStores();
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useSlice(counterSlice, c => {
-            renderCount++;
-            return c.value();
-          });
-
-          return { count };
+          const count = useStore(itemsStore, s => s.count);
+          const first = useStore(itemsStore, s => s.first);
+          
+          return { count, first };
         },
-        template: '<div>{{ count }}</div>',
+        template: '<div>Count: {{ count() }}, First: {{ first() || "none" }}</div>',
       });
 
       const wrapper = mount(TestComponent);
-      expect(wrapper.text()).toBe('0');
-      expect(renderCount).toBe(1);
+      expect(wrapper.text()).toBe('Count: 0, First: none');
 
-      // Change unrelated slice - should NOT trigger re-render
-      userSlice().setName('alice');
+      itemsStore.add('apple');
       await nextTick();
-      expect(wrapper.text()).toBe('0');
-      expect(renderCount).toBe(1); // Still 1!
+      expect(wrapper.text()).toBe('Count: 1, First: apple');
 
-      // Change related slice - should trigger re-render
-      counterSlice().increment();
+      itemsStore.add('banana');
       await nextTick();
-      expect(wrapper.text()).toBe('1');
-      expect(renderCount).toBe(2); // Now 2
+      expect(wrapper.text()).toBe('Count: 2, First: apple');
     });
   });
 
-  describe('useLatticeReactive', () => {
-    it('should return reactive object with multiple values', async () => {
-      const { counterSlice } = createTestSlices();
+  describe('useSignal', () => {
+    it('should make individual signals reactive', async () => {
+      const { counterStore } = createTestStores();
 
       const TestComponent = defineComponent({
         setup() {
-          const counter = useLatticeReactive(counterSlice, c => ({
-            value: c.value(),
-            doubled: c.doubled(),
-            isEven: c.isEven(),
-          }));
-
-          return { counter };
+          const value = useSignal(counterStore.value);
+          const doubled = useSignal(counterStore.doubled);
+          
+          return { value, doubled };
         },
-        template: '<div>{{ counter.value }} {{ counter.doubled }} {{ counter.isEven }}</div>',
+        template: '<div>{{ value }} - {{ doubled }}</div>',
       });
 
       const wrapper = mount(TestComponent);
-      expect(wrapper.text()).toBe('0 0 true');
+      expect(wrapper.text()).toBe('0 - 0');
 
-      counterSlice().increment();
+      counterStore.increment();
       await nextTick();
-      expect(wrapper.text()).toBe('1 2 false');
-
-      counterSlice().increment();
-      await nextTick();
-      expect(wrapper.text()).toBe('2 4 true');
-    });
-
-    it('should work with computed refs based on reactive object', async () => {
-      const { counterSlice } = createTestSlices();
-
-      const TestComponent = defineComponent({
-        setup() {
-          const counter = useLatticeReactive(counterSlice, c => ({
-            value: c.value(),
-            doubled: c.doubled(),
-          }));
-
-          const tripled = computed(() => counter.value.value * 3);
-          const quadrupled = computed(() => counter.value.doubled * 2);
-
-          return { counter, tripled, quadrupled };
-        },
-        template: '<div>{{ counter.value }} {{ tripled }} {{ quadrupled }}</div>',
-      });
-
-      const wrapper = mount(TestComponent);
-      expect(wrapper.text()).toBe('0 0 0');
-
-      counterSlice().increment();
-      await nextTick();
-      expect(wrapper.text()).toBe('1 3 4');
+      expect(wrapper.text()).toBe('1 - 2');
     });
   });
 
-  describe('Dependency injection', () => {
-    it('should provide and inject slices across component tree', async () => {
-      const { counterSlice } = createTestSlices();
-
-      // Define proper type for the slice
-      type CounterSlice = typeof counterSlice;
+  describe('provide/inject', () => {
+    it('should share store across components', async () => {
+      const { counterStore } = createTestStores();
 
       const ChildComponent = defineComponent({
         setup() {
-          const counter = injectLatticeSlice<ReturnType<CounterSlice>>('test-counter');
-          const count = useSlice(counter, (c: any) => c.value());
-          
-          return { count, counter };
+          const injectedStore = injectLatticeStore<typeof counterStore>('counter');
+          const store = useStore(injectedStore);
+          return { store };
         },
-        template: '<button @click="counter().increment()">{{ count }}</button>',
+        template: '<div>Child: {{ store.value() }}</div>',
       });
 
       const ParentComponent = defineComponent({
-        setup() {
-          provideLatticeSlice('test-counter', counterSlice);
-          return {};
-        },
-        template: '<ChildComponent />',
         components: { ChildComponent },
+        setup() {
+          provideLatticeStore('counter', counterStore);
+          const store = useStore(counterStore);
+          return { store };
+        },
+        template: '<div>Parent: {{ store.value() }} <ChildComponent /></div>',
       });
 
       const wrapper = mount(ParentComponent);
-      expect(wrapper.text()).toBe('0');
+      expect(wrapper.text()).toBe('Parent: 0 Child: 0');
 
-      // Click button to increment
-      await wrapper.find('button').trigger('click');
+      counterStore.increment();
       await nextTick();
-      expect(wrapper.text()).toBe('1');
-    });
-
-    it('should throw error when injecting non-provided slice', () => {
-      const TestComponent = defineComponent({
-        setup() {
-          expect(() => {
-            injectLatticeSlice('non-existent');
-          }).toThrow('Lattice slice with key "non-existent" was not found in the component tree');
-          
-          return {};
-        },
-        template: '<div></div>',
-      });
-
-      mount(TestComponent);
+      expect(wrapper.text()).toBe('Parent: 1 Child: 1');
     });
   });
 
-  describe('Vue ecosystem integration', () => {
-    it('should work seamlessly with watch', async () => {
-      const { counterSlice } = createTestSlices();
-      const watchedValues: number[] = [];
+  describe('cleanup', () => {
+    it('should unsubscribe when component unmounts', async () => {
+      const { counterStore } = createTestStores();
+      let subscriptionCount = 0;
+      
+      // Spy on subscribe method
+      const originalSubscribe = counterStore.value.subscribe;
+      counterStore.value.subscribe = (fn: () => void) => {
+        subscriptionCount++;
+        const unsub = originalSubscribe.call(counterStore.value, fn);
+        return () => {
+          subscriptionCount--;
+          unsub();
+        };
+      };
 
       const TestComponent = defineComponent({
         setup() {
-          const count = useSlice(counterSlice, c => c.value());
-          const doubled = useSlice(counterSlice, c => c.doubled());
-          
-          watch([count, doubled], ([newCount, newDoubled]) => {
-            watchedValues.push(newCount, newDoubled);
-          });
-
-          return { count, doubled };
+          const value = useSignal(counterStore.value);
+          return { value };
         },
-        template: '<div>{{ count }} {{ doubled }}</div>',
+        template: '<div>{{ value }}</div>',
       });
 
-      mount(TestComponent);
+      const wrapper = mount(TestComponent);
+      expect(subscriptionCount).toBe(1);
 
-      counterSlice().increment();
-      await nextTick();
-      expect(watchedValues).toEqual([1, 2]);
-
-      counterSlice().increment();
-      await nextTick();
-      expect(watchedValues).toEqual([1, 2, 2, 4]);
+      wrapper.unmount();
+      expect(subscriptionCount).toBe(0);
     });
-
   });
 });

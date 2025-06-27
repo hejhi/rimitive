@@ -8,15 +8,19 @@
 import {
   useSyncExternalStore,
   useCallback,
+  useState,
+  useEffect,
 } from 'react';
-import type { SliceHandle, Signal, Computed } from '@lattice/core';
+import type { Signal, Computed } from '@lattice/core';
 
 /**
  * Check if a value is a signal or computed (has subscribe method)
  */
 function isSignal(value: unknown): value is Signal<unknown> | Computed<unknown> {
   return typeof value === 'function' && 
-         typeof (value as any).subscribe === 'function';
+         value !== null &&
+         'subscribe' in value &&
+         typeof value.subscribe === 'function';
 }
 
 /**
@@ -29,8 +33,8 @@ function isSignal(value: unknown): value is Signal<unknown> | Computed<unknown> 
  * @example
  * ```tsx
  * function CountDisplay() {
- *   const slice = counterSlice();
- *   const count = useSignal(slice.value);
+ *   const counter = useStore(counterStore);
+ *   const count = useSignal(counter.value);
  *   return <div>Count: {count}</div>;
  * }
  * ```
@@ -48,16 +52,43 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
 }
 
 /**
- * React hook for using Lattice slices.
- * Subscribes to all signals in the slice and triggers re-renders when any change.
+ * React hook for using Lattice stores.
+ * Returns the store object with all signals and actions.
+ * Does NOT automatically subscribe to signals - use useSignal for that.
  *
- * @param slice - A reactive slice handle
- * @returns The computed object with signals and actions
+ * @param store - A Lattice store
+ * @returns The store object with signals and actions
  *
  * @example
  * ```tsx
  * function Counter() {
- *   const counter = useSlice(counterSlice);
+ *   const counter = useStore(counterStore);
+ *   const count = useSignal(counter.value);
+ *   return (
+ *     <button onClick={counter.increment}>
+ *       Count: {count}
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export function useStore<T>(store: T): T {
+  // For now, just return the store as-is
+  // The user needs to use useSignal to subscribe to individual signals
+  return store;
+}
+
+/**
+ * React hook that automatically subscribes to all signals in a store.
+ * Re-renders when any signal in the store changes.
+ *
+ * @param store - A Lattice store
+ * @returns The store object
+ *
+ * @example
+ * ```tsx
+ * function Counter() {
+ *   const counter = useAutoStore(counterStore);
  *   return (
  *     <button onClick={counter.increment}>
  *       Count: {counter.value()}
@@ -66,32 +97,43 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
  * }
  * ```
  */
-export function useSlice<Computed>(
-  slice: SliceHandle<Computed>
-): Computed {
-  // Create a stable subscription function that subscribes to all signals
-  const subscribe = useCallback((onStoreChange: () => void) => {
-    const sliceObject = slice();
+export function useAutoStore<T extends Record<string, any>>(store: T): T {
+  // Create a version counter to force React updates
+  const [version, setVersion] = useState(0);
+  
+  useEffect(() => {
     const unsubscribers: (() => void)[] = [];
     
-    // Subscribe to all signals in the slice
-    for (const key in sliceObject) {
-      const value = sliceObject[key as keyof Computed];
+    // Subscribe to all signals
+    for (const key in store) {
+      const value = store[key];
       if (isSignal(value)) {
-        const unsubscribe = value.subscribe(onStoreChange);
+        const unsubscribe = value.subscribe(() => {
+          setVersion(v => v + 1);
+        });
         unsubscribers.push(unsubscribe);
       }
+    }
+    
+    // Also subscribe to store changes if available
+    if (store !== null && 
+        typeof store === 'object' && 
+        '_subscribe' in store && 
+        typeof store._subscribe === 'function') {
+      const unsubscribe = store._subscribe(() => {
+        setVersion(v => v + 1);
+      });
+      unsubscribers.push(unsubscribe);
     }
     
     // Return cleanup function
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [slice]);
+  }, [store]);
   
-  // Get snapshot returns the slice object
-  // React will check if the object reference changed
-  const getSnapshot = useCallback(() => slice(), [slice]);
+  // Force re-render when version changes
+  version;
   
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+  return store;
 }
