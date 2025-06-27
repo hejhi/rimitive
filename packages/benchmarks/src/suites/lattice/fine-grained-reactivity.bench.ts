@@ -51,10 +51,10 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
           const counterSlices = counterIds.map((id) => ({
             value: computed(() => store.counters()[id] || 0),
             increment: () => {
-              const current = store.counters();
-              set({
-                counters: { ...current, [id]: (current[id] || 0) + 1 },
-              });
+              // Use function form for surgical update
+              set(({ counters }) => ({
+                counters: { [id]: (counters()[id] || 0) + 1 },
+              }));
             },
           }));
 
@@ -194,12 +194,12 @@ describe('Large State Memory Usage Comparison', () => {
     const setupLargeLattice = () => {
       const LargeCountersComponent = createComponent(
         withState<{ counters: Record<string, number> }>(),
-        ({ store, set }) => ({
+        ({ set }) => ({
           increment: (id: string) => {
-            const current = store.counters();
-            set({
-              counters: { ...current, [id]: (current[id] || 0) + 1 },
-            });
+            // Use function form for surgical update
+            set(({ counters }) => ({
+              counters: { [id]: (counters()[id] || 0) + 1 },
+            }));
           },
         })
       );
