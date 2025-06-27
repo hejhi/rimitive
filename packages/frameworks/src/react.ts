@@ -108,7 +108,8 @@ export function useAutoStore<T extends Record<string, any>>(store: T): T {
     for (const key in store) {
       const value = store[key];
       if (isSignal(value)) {
-        const unsubscribe = value.subscribe(() => {
+        const signal = value as Signal<unknown> | Computed<unknown>;
+        const unsubscribe = signal.subscribe(() => {
           setVersion(v => v + 1);
         });
         unsubscribers.push(unsubscribe);

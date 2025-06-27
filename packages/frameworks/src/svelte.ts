@@ -65,7 +65,8 @@ export function useStore<T extends Record<string, any>>(
       for (const key in store) {
         const value = store[key];
         if (isSignal(value)) {
-          const unsubscribe = value.subscribe(() => {
+          const signal = value as Signal<unknown> | Computed<unknown>;
+          const unsubscribe = signal.subscribe(() => {
             // Notify all subscribers when any signal changes
             subscribers.forEach(fn => fn(store));
           });
