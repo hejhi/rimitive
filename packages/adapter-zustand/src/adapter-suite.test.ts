@@ -8,6 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { zustandAdapter } from './index';
 import { createStore as zustandCreateStore } from 'zustand/vanilla';
 import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
+import { createAdapterTestSuite } from '@lattice/core/testing';
 
 describe('Zustand Adapter Contract', () => {
   it('should correctly wrap a Zustand store', () => {
@@ -171,3 +172,11 @@ describe('Zustand Adapter Contract', () => {
     expect(sliceAB.sum()).toBe(30);
   });
 });
+
+// Run the shared adapter test suite
+const createTestAdapter = <State>(initialState?: State) => {
+  const store = zustandCreateStore<State>(() => initialState ?? ({} as State));
+  return zustandAdapter(store);
+};
+
+createAdapterTestSuite('Zustand', createTestAdapter);
