@@ -6,9 +6,8 @@
  * API and wrap them with this adapter.
  */
 
-import type { Store, AnyAction } from 'redux';
-import type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
-import { createLatticeStore } from '@lattice/core';
+import type { Store } from 'redux';
+import type { StoreAdapter } from '@lattice/core';
 import { createSlice as createReduxSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 /**
@@ -28,8 +27,6 @@ export interface ReduxAdapterOptions {
   onError?: (error: unknown) => void;
 }
 
-// Performance optimization: Pre-define action types as constants
-const LATTICE_UPDATE_STATE = 'lattice/updateState' as const;
 
 /**
  * Optimized Lattice reducer that handles generic state updates.
@@ -108,12 +105,13 @@ export const latticeReducer = createReduxSlice({
  *
  * @param store - An existing Redux store
  * @param options - Optional configuration for slice selection and error handling
- * @returns A RuntimeSliceFactory for creating Lattice slices
+ * @returns A StoreAdapter for use with Lattice components
  *
  * @example Basic usage
  * ```typescript
  * import { configureStore } from '@reduxjs/toolkit';
  * import { latticeReducer, reduxAdapter } from '@lattice/adapter-redux';
+ * import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
  *
  * // Create a Redux store with Lattice reducer
  * const store = configureStore({
@@ -121,24 +119,25 @@ export const latticeReducer = createReduxSlice({
  *   preloadedState: { count: 0, user: { name: '' } }
  * });
  *
- * // Wrap it for use with Lattice components
- * const createSlice = reduxAdapter(store);
+ * // Create an adapter
+ * const adapter = reduxAdapter(store);
  *
- * // Use in a Lattice component with two-phase pattern
- * const counter = createSlice(
- *   (selectors) => ({ count: selectors.count }),
- *   ({ count }, set) => ({
- *     value: () => count(),
- *     increment: () => set(
- *       ({ count }) => ({ count: count() + 1 })
- *     )
+ * // Create a Lattice component
+ * const Counter = createComponent(
+ *   withState<{ count: number }>(),
+ *   ({ store, set }) => ({
+ *     value: store.count,
+ *     increment: () => set({ count: store.count() + 1 })
  *   })
  * );
  *
+ * // Create store with adapter
+ * const counter = createStoreWithAdapter(Counter, adapter);
+ *
  * // Usage
- * console.log(counter().value()); // 0
- * counter().increment();
- * console.log(counter().value()); // 1
+ * console.log(counter.value()); // 0
+ * counter.increment();
+ * console.log(counter.value()); // 1
  * ```
  *
  * @example With middleware and multiple slices
@@ -165,7 +164,7 @@ export const latticeReducer = createReduxSlice({
 export function reduxAdapter<State>(
   store: Store,
   options?: ReduxAdapterOptions
-): RuntimeSliceFactory<State> {
+): StoreAdapter<State> {
   const slicePath = options?.slice;
   const handleError =
     options?.onError ??
@@ -186,10 +185,14 @@ export function reduxAdapter<State>(
   // Performance optimization: Create action objects directly
   // This avoids Redux Toolkit's action creator overhead
   const dispatchUpdate = (updates: Partial<State>) => {
-    store.dispatch({
-      type: LATTICE_UPDATE_STATE,
-      payload: updates
-    } as AnyAction);
+    if (slicePath) {
+      // When using a slice, we need to update the full Redux state
+      const fullState = store.getState() as any;
+      const newSliceState = { ...fullState[slicePath], ...updates };
+      store.dispatch(latticeReducer.actions.updateState({ [slicePath]: newSliceState }));
+    } else {
+      store.dispatch(latticeReducer.actions.updateState(updates));
+    }
   };
 
   // Subscribe to Redux store once
@@ -228,7 +231,7 @@ export function reduxAdapter<State>(
     },
   };
 
-  return createLatticeStore(adapter);
+  return adapter;
 }
 
 /**
@@ -237,16 +240,16 @@ export function reduxAdapter<State>(
  *
  * @param store - An existing Redux store
  * @param options - Optional configuration
- * @returns A RuntimeSliceFactory with optimized performance
+ * @returns A StoreAdapter with optimized performance
  */
 export function createOptimizedReduxAdapter<State>(
   store: Store,
   options?: ReduxAdapterOptions
-): RuntimeSliceFactory<State> {
+): StoreAdapter<State> {
   // For future use: This function currently delegates to reduxAdapter
   // but provides a hook for future optimizations without breaking API
   return reduxAdapter(store, options);
 }
 
 // Re-export types for convenience
-export type { StoreAdapter, RuntimeSliceFactory } from '@lattice/core';
+export type { StoreAdapter } from '@lattice/core';
