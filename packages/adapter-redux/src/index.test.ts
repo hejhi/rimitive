@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
-import { latticeReducer, reduxAdapter } from './index';
+import { createLatticeReducer, reduxAdapter } from './index';
 import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
 
 describe('Redux Adapter', () => {
   it('should create a Redux store with Lattice components', () => {
     const store = configureStore({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<{ counter: { value: number } }>(),
       preloadedState: {
         counter: { value: 0 },
       },
@@ -45,7 +45,7 @@ describe('Redux Adapter', () => {
     };
 
     const store = configureStore<CountStore>({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<CountStore>(),
       preloadedState: {
         counter: { value: 0 },
         user: { name: '', loggedIn: false },
@@ -102,7 +102,7 @@ describe('Redux Adapter', () => {
     };
 
     const store = configureStore<AppState>({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<AppState>(),
       preloadedState: { value: 5 },
     });
 
@@ -136,7 +136,7 @@ describe('Redux Adapter', () => {
     };
 
     const store = configureStore<CounterState>({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<CounterState>(),
       preloadedState: {
         counter: { a: 0, b: 0 },
       },
@@ -183,7 +183,7 @@ describe('Redux Adapter', () => {
     };
 
     const store = configureStore<TodoState>({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<TodoState>(),
       preloadedState: {
         todos: [],
         filter: 'all',
@@ -259,7 +259,7 @@ describe('Redux Adapter', () => {
     };
 
     const store = configureStore<State>({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<State>(),
       preloadedState: { value: 0 },
     });
 
@@ -285,7 +285,7 @@ describe('Redux Adapter', () => {
   it('should handle errors in listeners', () => {
     const errorHandler = vi.fn();
     const store = configureStore({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<{ value: number }>(),
       preloadedState: { value: 0 },
     });
 
@@ -313,7 +313,7 @@ describe('Redux Adapter', () => {
     };
 
     const store = configureStore<FullState>({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<FullState>(),
       preloadedState: {
         ui: { theme: 'light', sidebarOpen: false },
         data: { items: [] },
@@ -357,7 +357,7 @@ describe('Redux Adapter', () => {
 
   it('should handle concurrent updates during notification', () => {
     const store = configureStore({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<{ value: number }>(),
       preloadedState: { value: 0 },
     });
 
@@ -387,7 +387,7 @@ describe('Redux Adapter', () => {
     };
 
     const store = configureStore<State>({
-      reducer: latticeReducer.reducer,
+      reducer: createLatticeReducer<State>(),
       preloadedState: { count: 5, multiplier: 2 },
     });
 

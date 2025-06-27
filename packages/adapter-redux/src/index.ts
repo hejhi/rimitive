@@ -6,9 +6,8 @@
  * API and wrap them with this adapter.
  */
 
-import type { Store } from 'redux';
+import type { Store, UnknownAction } from 'redux';
 import type { StoreAdapter } from '@lattice/core';
-import { createSlice as createReduxSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 /**
  * Configuration options for the Redux adapter
@@ -27,45 +26,73 @@ export interface ReduxAdapterOptions {
   onError?: (error: unknown) => void;
 }
 
+/**
+ * Action types for Lattice state updates
+ */
+const LATTICE_UPDATE_STATE = 'lattice/updateState';
+const LATTICE_REPLACE_STATE = 'lattice/replaceState';
+
+interface LatticeUpdateAction extends UnknownAction {
+  type: typeof LATTICE_UPDATE_STATE;
+  payload: Record<string, unknown>;
+}
+
+interface LatticeReplaceAction extends UnknownAction {
+  type: typeof LATTICE_REPLACE_STATE;
+  payload: Record<string, unknown>;
+}
+
+type LatticeAction = LatticeUpdateAction | LatticeReplaceAction;
 
 /**
- * Optimized Lattice reducer that handles generic state updates.
- * Include this in your Redux store configuration to enable Lattice integration.
+ * Creates a properly typed Lattice reducer for your Redux store.
+ * This reducer handles generic state updates from Lattice components.
  *
  * @example
  * ```typescript
  * import { configureStore } from '@reduxjs/toolkit';
- * import { latticeReducer } from '@lattice/adapter-redux';
+ * import { createLatticeReducer } from '@lattice/adapter-redux';
  *
+ * type AppState = { count: number };
+ * 
  * const store = configureStore({
- *   reducer: latticeReducer.reducer,
+ *   reducer: createLatticeReducer<AppState>(),
  *   preloadedState: { count: 0 }
  * });
  * ```
  */
-export const latticeReducer = createReduxSlice({
-  name: 'lattice',
-  initialState: {} satisfies Record<string, unknown>,
-  reducers: {
-    /**
-     * Updates the state with partial updates
-     */
-    updateState: (state, action: PayloadAction<Record<string, unknown>>) => {
-      // Optimized: Direct property assignment for better Immer performance
-      const updates = action.payload;
-      if (updates && typeof updates === 'object') {
-        Object.assign(state, updates);
-      }
-    },
+export function createLatticeReducer<State extends Record<string, unknown> = Record<string, unknown>>(): import('redux').Reducer<State> {
+  return (state = {} as State, action: unknown): State => {
+    const latticeAction = action as LatticeAction;
+    
+    switch (latticeAction.type) {
+      case LATTICE_UPDATE_STATE:
+        // Simple object spread for updates
+        return { ...state, ...latticeAction.payload } as State;
+      
+      case LATTICE_REPLACE_STATE:
+        // Replace entire state
+        return latticeAction.payload as State;
+      
+      default:
+        return state;
+    }
+  };
+}
 
-    /**
-     * Replaces the entire state
-     */
-    replaceState: (_state, action: PayloadAction<Record<string, unknown>>) => {
-      return action.payload;
-    },
-  },
-});
+/**
+ * Action creators for internal use
+ */
+const latticeActions = {
+  updateState: (payload: Record<string, unknown>): LatticeUpdateAction => ({
+    type: LATTICE_UPDATE_STATE,
+    payload
+  }),
+  replaceState: (payload: Record<string, unknown>): LatticeReplaceAction => ({
+    type: LATTICE_REPLACE_STATE,
+    payload
+  })
+};
 
 /**
  * Creates a Lattice adapter from an existing Redux store.
@@ -160,9 +187,9 @@ export function reduxAdapter<State>(
       const fullState = store.getState();
       const currentSlice = fullState[slicePath] || {};
       const newSliceState = { ...currentSlice, ...updates };
-      store.dispatch(latticeReducer.actions.updateState({ [slicePath]: newSliceState }));
+      store.dispatch(latticeActions.updateState({ [slicePath]: newSliceState }));
     } else {
-      store.dispatch(latticeReducer.actions.updateState(updates));
+      store.dispatch(latticeActions.updateState(updates as Record<string, unknown>));
     }
   };
 
