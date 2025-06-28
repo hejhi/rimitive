@@ -111,11 +111,11 @@ export function createLatticeContext<State>(): LatticeContext<State> & { _batch:
         
         // Handle array updates
         if (Array.isArray(value)) {
-          const index = value.findIndex(finder);
+          const index = value.findIndex((item, idx) => finder(item, idx));
           if (index !== -1) {
             const newArray = [...value];
             const oldItem = value[index];
-            const newItem = updater(oldItem);
+            const newItem = updater(oldItem, index);
             
             // Only update if item actually changed
             if (!Object.is(oldItem, newItem)) {

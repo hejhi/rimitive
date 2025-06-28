@@ -15,8 +15,8 @@ export interface Signal<T> {
   (value: T): void; // Write new value (if writable)
   // Smart update for arrays
   <K extends T extends (infer U)[] ? U : never>(
-    finder: (item: K) => boolean,
-    updater: (item: K) => K
+    finder: (item: K, index: number) => boolean,
+    updater: (item: K, index: number) => K
   ): void;
   // Smart update for objects
   <K extends keyof T>(

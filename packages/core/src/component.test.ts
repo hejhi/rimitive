@@ -226,6 +226,64 @@ describe('Component API', () => {
     expect(store.completed()).toBe(1);
   });
 
+  it('should support index-based smart updates', () => {
+    interface ListState {
+      items: string[];
+    }
+
+    const List = createComponent(
+      withState<ListState>(),
+      ({ store }) => ({
+        items: store.items,
+        // Update by index directly
+        updateByIndex: (index: number, newValue: string) => {
+          store.items(
+            (_, idx) => idx === index,  // Use index in finder
+            () => newValue               // Simple replacement
+          );
+        },
+        // Insert after specific index
+        insertAfter: (index: number, newValue: string) => {
+          store.items(
+            (_, idx) => idx === index,
+            (item, idx) => {
+              // This is a bit hacky - we're using the updater to insert
+              // In reality, we'd need a different API for insertions
+              return item;
+            }
+          );
+          // For now, just use regular set for insertion
+          const items = store.items();
+          store.items([...items.slice(0, index + 1), newValue, ...items.slice(index + 1)]);
+        },
+        // Swap items by index
+        swap: (indexA: number, indexB: number) => {
+          const items = [...store.items()];
+          if (indexA >= 0 && indexA < items.length && indexB >= 0 && indexB < items.length) {
+            [items[indexA], items[indexB]] = [items[indexB]!, items[indexA]!];
+            store.items(items);
+          }
+        }
+      })
+    );
+
+    const store = createStore(List, {
+      items: ['first', 'second', 'third', 'fourth']
+    });
+
+    // Update by index
+    store.updateByIndex(1, 'SECOND');
+    expect(store.items()).toEqual(['first', 'SECOND', 'third', 'fourth']);
+
+    // Insert after index
+    store.insertAfter(1, 'inserted');
+    expect(store.items()).toEqual(['first', 'SECOND', 'inserted', 'third', 'fourth']);
+
+    // Swap items
+    store.swap(0, 4);
+    expect(store.items()).toEqual(['fourth', 'SECOND', 'inserted', 'third', 'first']);
+  });
+
   it('should support smart updates for objects', () => {
     interface UserState {
       user: {
