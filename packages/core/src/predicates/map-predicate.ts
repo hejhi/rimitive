@@ -1,5 +1,5 @@
 /**
- * @fileoverview Map finder module for smart updates
+ * @fileoverview Map predicate module for smart updates
  * 
  * Provides functionality to find and update entries in Maps using
  * key-based lookups and predicate functions.
@@ -8,7 +8,7 @@
 export type MapKeyPredicate<K> = (key: K) => boolean;
 export type MapValuePredicate<V> = (value: V, key: any) => boolean;
 export type MapEntryPredicate<K, V> = (value: V, key: K) => boolean;
-export type MapValueUpdater<V> = (value: V, key: any) => V;
+export type MapValueUpdate<V> = (value: V, key: any) => V;
 
 /**
  * Updates a specific entry in a Map by key
@@ -17,14 +17,14 @@ export type MapValueUpdater<V> = (value: V, key: any) => V;
 export function findAndUpdateMapByKey<K, V>(
   map: Map<K, V>,
   key: K,
-  updater: (value: V) => V
+  update: (value: V) => V
 ): { updated: boolean; value: Map<K, V> } {
   if (!map.has(key)) {
     return { updated: false, value: map };
   }
   
   const oldValue = map.get(key)!;
-  const newValue = updater(oldValue);
+  const newValue = update(oldValue);
   
   if (Object.is(oldValue, newValue)) {
     return { updated: false, value: map };
@@ -37,20 +37,20 @@ export function findAndUpdateMapByKey<K, V>(
 }
 
 /**
- * Finds entries in a Map where keys match the predicate and applies the updater
+ * Finds entries in a Map where keys match the predicate and applies the update function
  * @returns A new Map with updated entries, or the original if no changes
  */
 export function findAndUpdateMapByKeyPredicate<K, V>(
   map: Map<K, V>,
-  finder: MapKeyPredicate<K>,
-  updater: MapValueUpdater<V>
+  predicate: MapKeyPredicate<K>,
+  update: MapValueUpdate<V>
 ): { updated: boolean; value: Map<K, V> } {
   let hasUpdates = false;
   const newMap = new Map<K, V>();
   
   for (const [key, value] of map) {
-    if (finder(key)) {
-      const newValue = updater(value, key);
+    if (predicate(key)) {
+      const newValue = update(value, key);
       if (!Object.is(value, newValue)) {
         hasUpdates = true;
         newMap.set(key, newValue);
@@ -66,17 +66,17 @@ export function findAndUpdateMapByKeyPredicate<K, V>(
 }
 
 /**
- * Finds the first entry in a Map where the value matches the predicate and applies the updater
+ * Finds the first entry in a Map where the value matches the predicate and applies the update function
  * @returns A new Map with the updated entry, or the original if no match found
  */
 export function findAndUpdateMapByValuePredicate<K, V>(
   map: Map<K, V>,
-  finder: MapValuePredicate<V>,
-  updater: MapValueUpdater<V>
+  predicate: MapValuePredicate<V>,
+  update: MapValueUpdate<V>
 ): { updated: boolean; value: Map<K, V> } {
   for (const [key, value] of map) {
-    if (finder(value, key)) {
-      const newValue = updater(value, key);
+    if (predicate(value, key)) {
+      const newValue = update(value, key);
       
       if (Object.is(value, newValue)) {
         return { updated: false, value: map };

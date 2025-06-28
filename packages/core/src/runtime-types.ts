@@ -18,23 +18,23 @@ export interface Signal<T> {
   
   // ==== Array Operations ====
   // Update items matching predicate
-  (finder: T extends (infer U)[] ? (item: U, index: number) => boolean : never,
-   updater: T extends (infer U)[] ? (item: U, index: number) => U : never): void;
+  (predicate: T extends (infer U)[] ? (item: U, index: number) => boolean : never,
+   update: T extends (infer U)[] ? (item: U, index: number) => U : never): void;
   
   // ==== Object Operations ====
   // Update property by key
-  <K extends keyof T>(key: K, updater: (value: T[K]) => T[K]): void;
+  <K extends keyof T>(key: K, update: (value: T[K]) => T[K]): void;
   // Update properties matching predicate
-  (finder: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never,
-   updater: T extends Record<string, infer U> ? (value: U, key: string) => U : never): void;
+  (predicate: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never,
+   update: T extends Record<string, infer U> ? (value: U, key: string) => U : never): void;
   
   // ==== Map Operations ====
   // Update value by key
   (key: T extends Map<infer K, any> ? K : never,
-   updater: T extends Map<any, infer V> ? (value: V) => V : never): void;
+   update: T extends Map<any, infer V> ? (value: V) => V : never): void;
   // Update entries matching predicate
-  (finder: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never,
-   updater: T extends Map<any, infer V> ? (value: V, key: any) => V : never): void;
+  (predicate: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never,
+   update: T extends Map<any, infer V> ? (value: V, key: any) => V : never): void;
   
   // ==== Set Operations ====
   // Add single item
@@ -46,8 +46,8 @@ export interface Signal<T> {
   (command: T extends Set<any> ? 'delete' : never,
    predicate: T extends Set<infer U> ? (value: U) => boolean : never): void;
   // Update items matching predicate
-  (finder: T extends Set<infer U> ? (value: U) => boolean : never,
-   updater: T extends Set<infer U> ? (value: U) => U : never): void;
+  (predicate: T extends Set<infer U> ? (value: U) => boolean : never,
+   update: T extends Set<infer U> ? (value: U) => U : never): void;
 }
 
 /**

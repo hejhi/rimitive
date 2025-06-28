@@ -1,13 +1,13 @@
 /**
- * @fileoverview Object finder module for smart updates
+ * @fileoverview Object predicate module for smart updates
  * 
  * Provides functionality to find and update properties in objects using
  * key-based lookups and predicate functions.
  */
 
 export type ObjectPredicate<T> = (value: T, key: string) => boolean;
-export type ObjectUpdater<T> = (value: T, key: string) => T;
-export type KeyUpdater<T> = (value: T) => T;
+export type ObjectUpdate<T> = (value: T, key: string) => T;
+export type KeyUpdate<T> = (value: T) => T;
 
 /**
  * Updates a specific property in an object by key
@@ -16,14 +16,14 @@ export type KeyUpdater<T> = (value: T) => T;
 export function findAndUpdateByKey<T extends Record<string, any>, K extends keyof T>(
   obj: T,
   key: K,
-  updater: KeyUpdater<T[K]>
+  update: KeyUpdate<T[K]>
 ): { updated: boolean; value: T } {
   if (!(key in obj)) {
     return { updated: false, value: obj };
   }
   
   const oldValue = obj[key];
-  const newValue = updater(oldValue);
+  const newValue = update(oldValue);
   
   if (Object.is(oldValue, newValue)) {
     return { updated: false, value: obj };
@@ -36,19 +36,19 @@ export function findAndUpdateByKey<T extends Record<string, any>, K extends keyo
 }
 
 /**
- * Finds the first property in an object matching the predicate and applies the updater
+ * Finds the first property in an object matching the predicate and applies the update function
  * @returns A new object with the updated property, or the original if no match found
  */
 export function findAndUpdateByPredicate<T extends Record<string, any>>(
   obj: T,
-  finder: ObjectPredicate<T[keyof T]>,
-  updater: ObjectUpdater<T[keyof T]>
+  predicate: ObjectPredicate<T[keyof T]>,
+  update: ObjectUpdate<T[keyof T]>
 ): { updated: boolean; value: T } {
   const entries = Object.entries(obj);
   
   for (const [key, val] of entries) {
-    if (finder(val, key)) {
-      const newValue = updater(val, key);
+    if (predicate(val, key)) {
+      const newValue = update(val, key);
       
       if (Object.is(val, newValue)) {
         return { updated: false, value: obj };
@@ -87,17 +87,17 @@ export function nestedValuePredicate<T extends object, K extends keyof T>(
 }
 
 /**
- * Creates an updater that replaces the entire value
+ * Creates an update function that replaces the entire value
  */
-export function replaceValueUpdater<T>(newValue: T): ObjectUpdater<T> {
+export function replaceValueUpdate<T>(newValue: T): ObjectUpdate<T> {
   return () => newValue;
 }
 
 /**
- * Creates an updater that merges properties into an object value
+ * Creates an update function that merges properties into an object value
  */
-export function mergeValueUpdater<T extends object>(
+export function mergeValueUpdate<T extends object>(
   updates: Partial<T>
-): ObjectUpdater<T> {
+): ObjectUpdate<T> {
   return (value) => ({ ...value, ...updates });
 }

@@ -18,7 +18,7 @@ import {
   addToSet,
   deleteFromSet,
   toggleInSet,
-} from './finders';
+} from './predicates';
 
 /**
  * Creates a signal factory bound to the given tracking and batching contexts
@@ -47,11 +47,11 @@ export function createSignalFactory(
         typeof args[0] === 'function' &&
         typeof args[1] === 'function'
       ) {
-        const [finder, updater] = args;
+        const [predicate, update] = args;
 
         // Handle array updates
         if (Array.isArray(value)) {
-          const result = findAndUpdateArray(value, finder, updater);
+          const result = findAndUpdateArray(value, predicate, update);
           if (result.updated) {
             value = result.value as T;
 
@@ -72,8 +72,8 @@ export function createSignalFactory(
           if (value instanceof Map) {
             const result = findAndUpdateMapByValuePredicate(
               value,
-              finder,
-              updater
+              predicate,
+              update
             );
             if (result.updated) {
               value = result.value as T;
@@ -87,7 +87,7 @@ export function createSignalFactory(
 
           // Handle Set updates
           if (value instanceof Set) {
-            const result = findAndUpdateSetFirst(value, finder, updater);
+            const result = findAndUpdateSetFirst(value, predicate, update);
             if (result.updated) {
               value = result.value as T;
 
@@ -99,7 +99,7 @@ export function createSignalFactory(
           }
 
           // Handle regular object updates
-          const result = findAndUpdateByPredicate(value, finder, updater);
+          const result = findAndUpdateByPredicate(value, predicate, update);
           if (result.updated) {
             value = result.value as T;
 
@@ -175,13 +175,13 @@ export function createSignalFactory(
         }
       }
 
-      // Smart update for objects/Maps - key and updater
+      // Smart update for objects/Maps - key and update
       if (arguments.length === 2 && typeof args[1] === 'function') {
-        const [key, updater] = args;
+        const [key, update] = args;
 
         // Handle Map key updates
         if (value instanceof Map) {
-          const result = findAndUpdateMapByKey(value as any, key, updater);
+          const result = findAndUpdateMapByKey(value as any, key, update);
           if (result.updated) {
             value = result.value as T;
 
@@ -198,7 +198,7 @@ export function createSignalFactory(
           typeof value === 'object' &&
           value !== null
         ) {
-          const result = findAndUpdateByKey(value as any, key, updater);
+          const result = findAndUpdateByKey(value as any, key, update);
           if (result.updated) {
             value = result.value as T;
 

@@ -1,29 +1,29 @@
 /**
- * @fileoverview Set finder module for smart updates
+ * @fileoverview Set predicate module for smart updates
  * 
  * Provides functionality to find and update items in Sets using
  * predicate functions and value-based operations.
  */
 
 export type SetPredicate<T> = (value: T) => boolean;
-export type SetUpdater<T> = (value: T) => T;
+export type SetUpdate<T> = (value: T) => T;
 
 /**
- * Finds items in a Set matching the predicate and applies the updater
+ * Finds items in a Set matching the predicate and applies the update function
  * Since Sets require unique values, this replaces matching items
  * @returns A new Set with updated items, or the original if no changes
  */
 export function findAndUpdateSet<T>(
   set: Set<T>,
-  finder: SetPredicate<T>,
-  updater: SetUpdater<T>
+  predicate: SetPredicate<T>,
+  update: SetUpdate<T>
 ): { updated: boolean; value: Set<T> } {
   let hasUpdates = false;
   const newSet = new Set<T>();
   
   for (const value of set) {
-    if (finder(value)) {
-      const newValue = updater(value);
+    if (predicate(value)) {
+      const newValue = update(value);
       if (!Object.is(value, newValue)) {
         hasUpdates = true;
         newSet.add(newValue);
@@ -39,17 +39,17 @@ export function findAndUpdateSet<T>(
 }
 
 /**
- * Finds the first item in a Set matching the predicate and applies the updater
+ * Finds the first item in a Set matching the predicate and applies the update function
  * @returns A new Set with the updated item, or the original if no match found
  */
 export function findAndUpdateSetFirst<T>(
   set: Set<T>,
-  finder: SetPredicate<T>,
-  updater: SetUpdater<T>
+  predicate: SetPredicate<T>,
+  update: SetUpdate<T>
 ): { updated: boolean; value: Set<T> } {
   for (const value of set) {
-    if (finder(value)) {
-      const newValue = updater(value);
+    if (predicate(value)) {
+      const newValue = update(value);
       
       if (Object.is(value, newValue)) {
         return { updated: false, value: set };
