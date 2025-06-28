@@ -8,6 +8,7 @@
 import type { Signal } from './runtime-types';
 import type { TrackingContext } from './tracking';
 import type { BatchingSystem } from './batching';
+import { findAndUpdateArray, findAndUpdateByKey, findAndUpdateByPredicate } from './finders';
 
 /**
  * Creates a signal factory bound to the given tracking and batching contexts
@@ -36,40 +37,25 @@ export function createSignalFactory(
         
         // Handle array updates
         if (Array.isArray(value)) {
-          const index = value.findIndex((item, idx) => finder(item, idx));
-          if (index !== -1) {
-            const newArray = [...value];
-            const oldItem = value[index];
-            const newItem = updater(oldItem, index);
+          const result = findAndUpdateArray(value, finder, updater);
+          if (result.updated) {
+            value = result.value as T;
             
-            // Only update if item actually changed
-            if (!Object.is(oldItem, newItem)) {
-              newArray[index] = newItem;
-              value = newArray as T;
-              
-              for (const listener of listeners) {
-                batching.scheduleUpdate(listener);
-              }
+            for (const listener of listeners) {
+              batching.scheduleUpdate(listener);
             }
           }
           return;
         }
         
-        // Handle object updates - finder returns the key to update
+        // Handle object updates with predicate
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-          // For objects, the finder should return the key to update
-          const entries = Object.entries(value);
-          for (const [key, val] of entries) {
-            if (finder(val, key)) {
-              const newValue = updater(val, key);
-              if (!Object.is(val, newValue)) {
-                value = { ...value, [key]: newValue } as T;
-                
-                for (const listener of listeners) {
-                  batching.scheduleUpdate(listener);
-                }
-              }
-              return; // Only update first matching entry
+          const result = findAndUpdateByPredicate(value, finder, updater);
+          if (result.updated) {
+            value = result.value as T;
+            
+            for (const listener of listeners) {
+              batching.scheduleUpdate(listener);
             }
           }
         }
@@ -81,12 +67,10 @@ export function createSignalFactory(
       if (arguments.length === 2 && typeof args[0] === 'string' && typeof args[1] === 'function') {
         const [key, updater] = args;
         
-        if (typeof value === 'object' && value !== null && key in value) {
-          const oldValue = (value as any)[key];
-          const newFieldValue = updater(oldValue);
-          
-          if (!Object.is(oldValue, newFieldValue)) {
-            value = { ...value, [key]: newFieldValue } as T;
+        if (typeof value === 'object' && value !== null) {
+          const result = findAndUpdateByKey(value as any, key, updater);
+          if (result.updated) {
+            value = result.value as T;
             
             for (const listener of listeners) {
               batching.scheduleUpdate(listener);
