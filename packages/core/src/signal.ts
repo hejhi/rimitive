@@ -9,12 +9,8 @@ import type { Signal } from './runtime-types';
 import type { TrackingContext } from './tracking';
 import type { BatchingSystem } from './batching';
 import {
-  findAndUpdateArray,
   findAndUpdateByKey,
-  findAndUpdateByPredicate,
   findAndUpdateMapByKey,
-  findAndUpdateMapByValuePredicate,
-  findAndUpdateSetFirst,
   addToSet,
   deleteFromSet,
   toggleInSet,

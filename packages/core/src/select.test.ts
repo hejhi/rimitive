@@ -63,11 +63,11 @@ describe('Select API Caching', () => {
 
     // Update via ID selector
     store.updateUserById('1', { age: 26 });
-    expect(store.users()[0].age).toBe(26);
+    expect(store.users()[0]?.age).toBe(26);
 
     // Update via email selector (different selector, same object)
     store.updateUserByEmail('alice@example.com', { name: 'Alice Smith' });
-    expect(store.users()[0].name).toBe('Alice Smith');
+    expect(store.users()[0]?.name).toBe('Alice Smith');
   });
 
   it('should maintain cache across immutable updates that preserve references', () => {

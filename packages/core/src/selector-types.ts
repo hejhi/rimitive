@@ -34,9 +34,10 @@ export type SelectFunction = <TArgs extends any[], TResult>(
  * Metadata stored in WeakMap for cached objects
  */
 export interface SelectorMetadata {
-  signal: any; // Source signal
-  predicate: Function; // Original predicate
+  signal?: any; // Source signal (optional for now)
+  predicate?: Function; // Original predicate (optional for now) 
   lastAccess: number; // For debugging/profiling
+  selectorId?: string; // Selector function string
 }
 
 /**

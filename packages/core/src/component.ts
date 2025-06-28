@@ -87,9 +87,10 @@ export function createStore<State extends Record<string, any>, Slices>(
   // Create internal state management
   let state = { ...initialState };
   const listeners = new Set<() => void>();
+  let generation = 0; // Increment on every update
   
-  // Create component-level cache for selectors (will be used when caching is implemented)
-  // const selectorCache = new WeakMap<object, SelectorMetadata>();
+  // Create component-level cache for selectors
+  const selectorCache = new WeakMap<object, SelectorMetadata & { generation: number }>();
   
   // Create scoped lattice context
   const lattice = createLatticeContext<State>();
@@ -131,6 +132,7 @@ export function createStore<State extends Record<string, any>, Slices>(
               newArray[index] = { ...currentValue[index], ...updates };
             }
             signal(newArray);
+            generation++; // Increment generation after update
             return;
           }
         } else if (currentValue instanceof Set && currentValue.has(selector.value)) {
@@ -142,6 +144,7 @@ export function createStore<State extends Record<string, any>, Slices>(
             newSet.add({ ...selector.value, ...updates });
           }
           signal(newSet);
+          generation++;
           return;
         } else if (currentValue instanceof Map) {
           for (const [k, v] of currentValue) {
@@ -152,6 +155,7 @@ export function createStore<State extends Record<string, any>, Slices>(
                 currentValue.set(k, { ...v, ...updates });
               }
               signal(new Map(currentValue));
+              generation++;
               return;
             }
           }
@@ -161,11 +165,12 @@ export function createStore<State extends Record<string, any>, Slices>(
           } else {
             signal({ ...currentValue, ...updates });
           }
+          generation++;
           return;
         }
       }
       
-      console.warn('Could not find selector value in any signal');
+      // Could not find selector value in any signal
       return;
     }
     
@@ -175,6 +180,7 @@ export function createStore<State extends Record<string, any>, Slices>(
     
     lattice._batch(() => {
       // Update internal state and signals
+      let hasUpdates = false;
       for (const key in newUpdates) {
         if (!Object.is(state[key], newUpdates[key])) {
           state[key] = newUpdates[key]!;
@@ -185,7 +191,11 @@ export function createStore<State extends Record<string, any>, Slices>(
           } else {
             stateSignals[key] = lattice.signal(newUpdates[key]!);
           }
+          hasUpdates = true;
         }
+      }
+      if (hasUpdates) {
+        generation++;
       }
     });
     
@@ -199,10 +209,48 @@ export function createStore<State extends Record<string, any>, Slices>(
   const select = <TArgs extends any[], TResult>(
     selectorFn: (...args: TArgs) => TResult | undefined
   ) => {
+    // Each selector maintains its last result
+    let lastValue: TResult | undefined;
+    let lastGeneration = -1;
+    
     return (...args: TArgs) => {
-      // TODO: Implement caching logic here
-      // For now, just use the basic implementation
-      return lattice.select(selectorFn)(...args);
+      // Check if our cached value is still valid
+      if (lastValue && 
+          typeof lastValue === 'object' && 
+          lastGeneration === generation &&
+          selectorCache.has(lastValue)) {
+        const cached = selectorCache.get(lastValue);
+        if (cached && cached.generation === generation) {
+          // Cache hit!
+          return {
+            __selector: true as const,
+            value: lastValue,
+            signal: null,
+            predicate: () => true,
+          };
+        }
+      }
+      
+      // Cache miss - run the selector function
+      const value = selectorFn(...args);
+      lastValue = value;
+      lastGeneration = generation;
+      
+      // Store in WeakMap if it's an object
+      if (value && typeof value === 'object') {
+        selectorCache.set(value, {
+          lastAccess: Date.now(),
+          selectorId: selectorFn.toString(),
+          generation: generation,
+        });
+      }
+      
+      return {
+        __selector: true as const,
+        value,
+        signal: null,
+        predicate: () => true,
+      };
     };
   };
   
