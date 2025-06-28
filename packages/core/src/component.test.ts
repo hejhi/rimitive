@@ -178,22 +178,26 @@ describe('Component API', () => {
     const TodoApp = createComponent(
       withState<TodoState>(),
       ({ store, computed, set }) => {
-        const completed = computed(() => 
-          store.todos().filter(t => t.completed).length
+        const completed = computed(
+          () => store.todos().filter((t) => t.completed).length
         );
 
         return {
           todos: store.todos,
           completed,
           addTodo: (text: string) => {
-            const newTodo = { id: Date.now().toString(), text, completed: false };
+            const newTodo = {
+              id: Date.now().toString(),
+              text,
+              completed: false,
+            };
             set({ todos: [...store.todos(), newTodo] });
           },
           // Use smart update to toggle a specific todo
           toggleTodo: (id: string) => {
             store.todos(
-              t => t.id === id,
-              t => ({ ...t, completed: !t.completed })
+              (t) => t.id === id,
+              (t) => ({ ...t, completed: !t.completed })
             );
           },
         };
@@ -205,7 +209,7 @@ describe('Component API', () => {
         { id: '1', text: 'First', completed: false },
         { id: '2', text: 'Second', completed: true },
         { id: '3', text: 'Third', completed: false },
-      ]
+      ],
     });
 
     expect(store.completed()).toBe(1);
@@ -231,44 +235,50 @@ describe('Component API', () => {
       items: string[];
     }
 
-    const List = createComponent(
-      withState<ListState>(),
-      ({ store }) => ({
-        items: store.items,
-        // Update by index directly
-        updateByIndex: (index: number, newValue: string) => {
-          store.items(
-            (_, idx) => idx === index,  // Use index in finder
-            () => newValue               // Simple replacement
-          );
-        },
-        // Insert after specific index
-        insertAfter: (index: number, newValue: string) => {
-          store.items(
-            (_, idx) => idx === index,
-            (item, idx) => {
-              // This is a bit hacky - we're using the updater to insert
-              // In reality, we'd need a different API for insertions
-              return item;
-            }
-          );
-          // For now, just use regular set for insertion
-          const items = store.items();
-          store.items([...items.slice(0, index + 1), newValue, ...items.slice(index + 1)]);
-        },
-        // Swap items by index
-        swap: (indexA: number, indexB: number) => {
-          const items = [...store.items()];
-          if (indexA >= 0 && indexA < items.length && indexB >= 0 && indexB < items.length) {
-            [items[indexA], items[indexB]] = [items[indexB]!, items[indexA]!];
-            store.items(items);
+    const List = createComponent(withState<ListState>(), ({ store }) => ({
+      items: store.items,
+      // Update by index directly
+      updateByIndex: (index: number, newValue: string) => {
+        store.items(
+          (_, idx) => idx === index, // Use index in finder
+          () => newValue // Simple replacement
+        );
+      },
+      // Insert after specific index
+      insertAfter: (index: number, newValue: string) => {
+        store.items(
+          (_, idx) => idx === index,
+          (item) => {
+            // This is a bit hacky - we're using the updater to insert
+            // In reality, we'd need a different API for insertions
+            return item;
           }
+        );
+        // For now, just use regular set for insertion
+        const items = store.items();
+        store.items([
+          ...items.slice(0, index + 1),
+          newValue,
+          ...items.slice(index + 1),
+        ]);
+      },
+      // Swap items by index
+      swap: (indexA: number, indexB: number) => {
+        const items = [...store.items()];
+        if (
+          indexA >= 0 &&
+          indexA < items.length &&
+          indexB >= 0 &&
+          indexB < items.length
+        ) {
+          [items[indexA], items[indexB]] = [items[indexB]!, items[indexA]!];
+          store.items(items);
         }
-      })
-    );
+      },
+    }));
 
     const store = createStore(List, {
-      items: ['first', 'second', 'third', 'fourth']
+      items: ['first', 'second', 'third', 'fourth'],
     });
 
     // Update by index
@@ -277,11 +287,23 @@ describe('Component API', () => {
 
     // Insert after index
     store.insertAfter(1, 'inserted');
-    expect(store.items()).toEqual(['first', 'SECOND', 'inserted', 'third', 'fourth']);
+    expect(store.items()).toEqual([
+      'first',
+      'SECOND',
+      'inserted',
+      'third',
+      'fourth',
+    ]);
 
     // Swap items
     store.swap(0, 4);
-    expect(store.items()).toEqual(['fourth', 'SECOND', 'inserted', 'third', 'first']);
+    expect(store.items()).toEqual([
+      'fourth',
+      'SECOND',
+      'inserted',
+      'third',
+      'first',
+    ]);
   });
 
   it('should support smart updates for objects', () => {
@@ -304,12 +326,12 @@ describe('Component API', () => {
           store.user('name', () => name);
         },
         incrementAge: () => {
-          store.user('age', age => age + 1);
+          store.user('age', (age) => age + 1);
         },
         toggleNotifications: () => {
-          store.user('settings', settings => ({
+          store.user('settings', (settings) => ({
             ...settings,
-            notifications: !settings.notifications
+            notifications: !settings.notifications,
           }));
         },
       })
@@ -321,9 +343,9 @@ describe('Component API', () => {
         age: 30,
         settings: {
           theme: 'dark',
-          notifications: true
-        }
-      }
+          notifications: true,
+        },
+      },
     });
 
     expect(store.user().name).toBe('John');
@@ -351,47 +373,51 @@ describe('Component API', () => {
         // Update user by finding with predicate
         deactivateOldUsers: (maxAge: number) => {
           store.users(
-            (user, userId) => user.age > maxAge && user.active,
+            (user) => user.age > maxAge && user.active,
             (user) => ({ ...user, active: false })
           );
         },
         // Update specific user by key using string selector
         updateUserAge: (userId: string, age: number) => {
-          store.users(userId, user => ({ ...user, age }));
+          store.users(userId, (user) => ({ ...user, age }));
         },
         // Find and update by property value
         promoteUser: (name: string) => {
           store.users(
             (user) => user.name === name,
-            (user, userId) => ({ ...user, name: `${user.name} (promoted)`, age: user.age + 1 })
+            (user) => ({
+              ...user,
+              name: `${user.name} (promoted)`,
+              age: user.age + 1,
+            })
           );
-        }
+        },
       })
     );
 
     const store = createStore(UsersManager, {
       users: {
-        'user1': { name: 'Alice', age: 25, active: true },
-        'user2': { name: 'Bob', age: 35, active: true },
-        'user3': { name: 'Charlie', age: 45, active: true },
-        'user4': { name: 'Dave', age: 55, active: true }
-      }
+        user1: { name: 'Alice', age: 25, active: true },
+        user2: { name: 'Bob', age: 35, active: true },
+        user3: { name: 'Charlie', age: 45, active: true },
+        user4: { name: 'Dave', age: 55, active: true },
+      },
     });
 
     // Deactivate users over 40
     store.deactivateOldUsers(40);
-    expect(store.users().user1.active).toBe(true);
-    expect(store.users().user2.active).toBe(true);
-    expect(store.users().user3.active).toBe(false); // First match only
-    expect(store.users().user4.active).toBe(true);  // Not updated
+    expect(store.users().user1?.active).toBe(true);
+    expect(store.users().user2?.active).toBe(true);
+    expect(store.users().user3?.active).toBe(false); // First match only
+    expect(store.users().user4?.active).toBe(true); // Not updated
 
     // Update specific user by key
     store.updateUserAge('user2', 36);
-    expect(store.users().user2.age).toBe(36);
+    expect(store.users().user2?.age).toBe(36);
 
     // Find and update by name
     store.promoteUser('Alice');
-    expect(store.users().user1.name).toBe('Alice (promoted)');
-    expect(store.users().user1.age).toBe(26);
+    expect(store.users().user1?.name).toBe('Alice (promoted)');
+    expect(store.users().user1?.age).toBe(26);
   });
 });

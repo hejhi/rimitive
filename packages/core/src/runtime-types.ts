@@ -14,15 +14,16 @@ export interface Signal<T> {
   (): T; // Read current value
   (value: T): void; // Write new value (if writable)
   // Smart update for arrays
-  <K extends T extends (infer U)[] ? U : never>(
-    finder: (item: K, index: number) => boolean,
-    updater: (item: K, index: number) => K
-  ): void;
-  // Smart update for objects
+  (finder: T extends (infer U)[] ? (item: U, index: number) => boolean : never,
+   updater: T extends (infer U)[] ? (item: U, index: number) => U : never): void;
+  // Smart update for objects by property key
   <K extends keyof T>(
     selector: K,
     updater: (value: T[K]) => T[K]
   ): void;
+  // Smart update for object collections (Record types)
+  (finder: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never,
+   updater: T extends Record<string, infer U> ? (value: U, key: string) => U : never): void;
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
 }
 
