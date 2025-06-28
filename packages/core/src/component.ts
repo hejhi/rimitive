@@ -12,6 +12,7 @@ import type {
   SignalState,
   Signal,
 } from './runtime-types';
+import { isSelectorResult } from './selector-types';
 import { createLatticeContext } from './lattice-context';
 import { type StoreAdapter } from './adapter-contract';
 import type { FromMarker } from './component-types';
@@ -97,8 +98,27 @@ export function createStore<State extends Record<string, any>, Slices>(
   }
   
   // Create set function that updates state
-  const set: SetState<State> = (updates) => {
-    // Pass the actual state object directly - no signal reads needed
+  const set: SetState<State> = ((arg1: any, arg2?: any) => {
+    // Check if first argument is a selector result
+    if (isSelectorResult(arg1)) {
+      // Selector-based update
+      const selector = arg1;
+      const updates = arg2;
+      
+      if (!selector.value) {
+        // Nothing to update if selector didn't find anything
+        return;
+      }
+      
+      // For now, we need to figure out how to update the found object
+      // This is where we need the connection to the signal
+      // TODO: Implement proper selector-based updates
+      console.warn('Selector-based updates not fully implemented yet');
+      return;
+    }
+    
+    // Original behavior - direct state update
+    const updates = arg1;
     const newUpdates = typeof updates === 'function' ? updates(state) : updates;
     
     lattice._batch(() => {
@@ -121,14 +141,15 @@ export function createStore<State extends Record<string, any>, Slices>(
     for (const listener of listeners) {
       listener();
     }
-  };
+  }) as SetState<State>;
   
   // Create component slices with merged context
   const context: ComponentContext<State> = {
     store: stateSignals,
     signal: lattice.signal,
     computed: lattice.computed,
-    set
+    set,
+    select: lattice.select
   };
   const slices = component(context);
   
@@ -217,7 +238,8 @@ export function createStoreWithAdapter<State extends Record<string, any>, Slices
     store: stateSignals,
     signal: lattice.signal,
     computed: lattice.computed,
-    set
+    set,
+    select: lattice.select
   };
   return component(context);
 }

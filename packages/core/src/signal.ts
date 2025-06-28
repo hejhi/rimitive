@@ -41,7 +41,7 @@ export function createSignalFactory(
         return value;
       }
 
-      // Predicate-based update - returns update function
+      // Predicate-based find - returns found object
       if (
         arguments.length === 1 &&
         typeof args[0] === 'function' &&
@@ -49,90 +49,46 @@ export function createSignalFactory(
           (typeof value === 'object' && value !== null))
       ) {
         const predicate = args[0];
+        
+        // Track the signal read
+        tracking.track(sig);
 
-        // Return update function
-        return function(updateArg: any) {
-          let updateFn: (item: any, index?: any) => any;
-          
-          // Handle partial object update
-          if (typeof updateArg === 'object' && 
-              updateArg !== null && 
-              !Array.isArray(updateArg) &&
-              typeof updateArg === 'object') {
-            // For arrays, objects, and maps - allow partial updates
-            updateFn = (item: any) => {
-              if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
-                return { ...item, ...updateArg };
-              }
-              // If item is not an object, fall back to replacement
-              return updateArg;
-            };
-          } else if (typeof updateArg === 'function') {
-            updateFn = updateArg;
-          } else {
-            throw new Error('Update argument must be a function or object');
-          }
+        // Find and return the object
+        if (Array.isArray(value)) {
+          return value.find((item, index) => predicate(item, index));
+        }
 
-          // Handle array updates
-          if (Array.isArray(value)) {
-            const result = findAndUpdateArray(value, predicate, updateFn);
-            if (result.updated) {
-              value = result.value as T;
-
-              for (const listener of listeners) {
-                batching.scheduleUpdate(listener);
-              }
-            }
-            return;
-          }
-
-          // Handle object updates with predicate
-          if (
-            typeof value === 'object' &&
-            value !== null &&
-            !Array.isArray(value)
-          ) {
-            // Handle Map updates
-            if (value instanceof Map) {
-              const result = findAndUpdateMapByValuePredicate(
-                value,
-                predicate,
-                updateFn
-              );
-              if (result.updated) {
-                value = result.value as T;
-
-                for (const listener of listeners) {
-                  batching.scheduleUpdate(listener);
-                }
-              }
-              return;
-            }
-
-            // Handle Set updates
-            if (value instanceof Set) {
-              const result = findAndUpdateSetFirst(value, predicate, updateFn);
-              if (result.updated) {
-                value = result.value as T;
-
-                for (const listener of listeners) {
-                  batching.scheduleUpdate(listener);
-                }
-              }
-              return;
-            }
-
-            // Handle regular object updates
-            const result = findAndUpdateByPredicate(value, predicate, updateFn);
-            if (result.updated) {
-              value = result.value as T;
-
-              for (const listener of listeners) {
-                batching.scheduleUpdate(listener);
-              }
+        // Handle Map searches
+        if (value instanceof Map) {
+          for (const [key, val] of value) {
+            if (predicate(val, key)) {
+              return val;
             }
           }
-        };
+          return undefined;
+        }
+
+        // Handle Set searches
+        if (value instanceof Set) {
+          for (const val of value) {
+            if (predicate(val)) {
+              return val;
+            }
+          }
+          return undefined;
+        }
+
+        // Handle regular object searches
+        if (typeof value === 'object' && value !== null) {
+          for (const [key, val] of Object.entries(value)) {
+            if (predicate(val, key)) {
+              return val;
+            }
+          }
+          return undefined;
+        }
+
+        return undefined;
       }
 
       // Special Set operations - single argument

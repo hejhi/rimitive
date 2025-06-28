@@ -5,25 +5,6 @@
  * They are used by both the runtime and adapters.
  */
 
-/**
- * Update function returned when calling signal with predicate
- */
-export interface UpdateFunction<T> {
-  // Full update with function
-  (update: (value: T) => T): void;
-  // Partial update with object (for object types only)
-  (update: T extends object ? Partial<T> : never): void;
-}
-
-export interface ArrayUpdateFunction<T> {
-  (update: (item: T, index: number) => T): void;
-  (update: T extends object ? Partial<T> : never): void;
-}
-
-export interface ObjectUpdateFunction<T> {
-  (update: (value: T, key: string) => T): void;
-  (update: T extends object ? Partial<T> : never): void;
-}
 
 /**
  * A signal is a reactive primitive that can be read and written
@@ -37,21 +18,21 @@ export interface Signal<T> {
   subscribe: (listener: () => void) => () => void;
   
   // ==== Array Operations ====
-  // Returns update function for items matching predicate
-  (predicate: T extends (infer U)[] ? (item: U, index: number) => boolean : never): T extends (infer U)[] ? ArrayUpdateFunction<U> : never;
+  // Find item matching predicate
+  (predicate: T extends (infer U)[] ? (item: U, index: number) => boolean : never): T extends (infer U)[] ? U | undefined : never;
   
   // ==== Object Operations ====
   // Update property by key
   <K extends keyof T>(key: K, update: (value: T[K]) => T[K]): void;
-  // Returns update function for properties matching predicate
-  (predicate: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never): T extends Record<string, infer U> ? ObjectUpdateFunction<U> : never;
+  // Find property matching predicate
+  (predicate: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never): T extends Record<string, infer U> ? U | undefined : never;
   
   // ==== Map Operations ====
   // Update value by key
   (key: T extends Map<infer K, any> ? K : never,
    update: T extends Map<any, infer V> ? (value: V) => V : never): void;
-  // Returns update function for entries matching predicate
-  (predicate: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never): T extends Map<any, infer V> ? UpdateFunction<V> : never;
+  // Find entry matching predicate
+  (predicate: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never): T extends Map<any, infer V> ? V | undefined : never;
   
   // ==== Set Operations ====
   // Add single item
@@ -62,8 +43,8 @@ export interface Signal<T> {
   // Command: delete by predicate
   (command: T extends Set<any> ? 'delete' : never,
    predicate: T extends Set<infer U> ? (value: U) => boolean : never): void;
-  // Returns update function for items matching predicate
-  (predicate: T extends Set<infer U> ? (value: U) => boolean : never): T extends Set<infer U> ? UpdateFunction<U> : never;
+  // Find item matching predicate
+  (predicate: T extends Set<infer U> ? (value: U) => boolean : never): T extends Set<infer U> ? U | undefined : never;
 }
 
 /**
@@ -97,9 +78,12 @@ export interface SliceHandle<Computed> {
  * Function to update state - supports both direct updates and computed updates
  * The function callback receives dereferenced state values for safety and performance
  */
-export type SetState<State> = (
-  updates: Partial<State> | ((state: State) => Partial<State>)
-) => void;
+export type SetState<State> = {
+  // Original signature
+  (updates: Partial<State> | ((state: State) => Partial<State>)): void;
+  // Selector-based update
+  <T>(selector: import('./selector-types').SelectorResult<T>, updates: Partial<T> | ((value: T) => Partial<T>)): void;
+};
 
 /**
  * Factory function for creating reactive slices using signals
@@ -117,6 +101,9 @@ export interface LatticeContext<State = any> {
   signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(computeFn: () => T) => Computed<T>;
   set: SetState<State>;
+  select: <TArgs extends any[], TResult>(
+    selectorFn: (...args: TArgs) => TResult | undefined
+  ) => (...args: TArgs) => import('./selector-types').SelectorResult<TResult>;
 }
 
 /**

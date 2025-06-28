@@ -195,8 +195,16 @@ describe('Component API', () => {
           },
           // Use smart update to toggle a specific todo
           toggleTodo: (id: string) => {
-            const update = store.todos((t) => t.id === id);
-            update((t) => ({ ...t, completed: !t.completed }));
+            const todo = store.todos((t) => t.id === id);
+            if (todo) {
+              const todos = store.todos();
+              const index = todos.findIndex(t => t.id === id);
+              if (index >= 0) {
+                const updated = [...todos];
+                updated[index] = { ...todo, completed: !todo.completed };
+                store.todos(updated);
+              }
+            }
           },
         };
       }
@@ -237,18 +245,15 @@ describe('Component API', () => {
       items: store.items,
       // Update by index directly
       updateByIndex: (index: number, newValue: string) => {
-        const update = store.items((_, idx) => idx === index);
-        update(() => newValue);
+        const items = [...store.items()];
+        if (index >= 0 && index < items.length) {
+          items[index] = newValue;
+          store.items(items);
+        }
       },
       // Insert after specific index
       insertAfter: (index: number, newValue: string) => {
-        const update = store.items((_, idx) => idx === index);
-        update((item) => {
-          // This is a bit hacky - we're using the updater to insert
-          // In reality, we'd need a different API for insertions
-          return item;
-        });
-        // For now, just use regular set for insertion
+        // Just use regular set for insertion
         const items = store.items();
         store.items([
           ...items.slice(0, index + 1),
@@ -366,8 +371,13 @@ describe('Component API', () => {
         users: store.users,
         // Update user by finding with predicate
         deactivateOldUsers: (maxAge: number) => {
-          const update = store.users((user) => user.age > maxAge && user.active);
-          update({ active: false });
+          const users = store.users();
+          const userKey = Object.keys(users).find(
+            key => users[key]!.age > maxAge && users[key]!.active
+          );
+          if (userKey) {
+            store.users({ ...users, [userKey]: { ...users[userKey]!, active: false } });
+          }
         },
         // Update specific user by key using string selector
         updateUserAge: (userId: string, age: number) => {
@@ -375,12 +385,21 @@ describe('Component API', () => {
         },
         // Find and update by property value
         promoteUser: (name: string) => {
-          const update = store.users((user) => user.name === name);
-          update((user) => ({
-            ...user,
-            name: `${user.name} (promoted)`,
-            age: user.age + 1,
-          }));
+          const users = store.users();
+          const userKey = Object.keys(users).find(
+            key => users[key]!.name === name
+          );
+          if (userKey) {
+            const user = users[userKey]!;
+            store.users({
+              ...users,
+              [userKey]: {
+                ...user,
+                name: `${user.name} (promoted)`,
+                age: user.age + 1,
+              }
+            });
+          }
         },
       })
     );
@@ -432,8 +451,17 @@ describe('Component API', () => {
         },
         // Find and update by value predicate
         promoteAllManagers: () => {
-          const update = store.userRoles((role) => role === 'manager');
-          update(() => 'senior-manager');
+          const role = store.userRoles((role) => role === 'manager');
+          if (role !== undefined) {
+            const userRoles = new Map(store.userRoles());
+            for (const [key, val] of userRoles) {
+              if (val === 'manager') {
+                userRoles.set(key, 'senior-manager');
+                break; // Only first match
+              }
+            }
+            store.userRoles(userRoles);
+          }
         },
       })
     );
@@ -495,8 +523,13 @@ describe('Component API', () => {
         },
         // Update matching items
         uppercaseTag: (target: string) => {
-          const update = store.tags((tag) => tag === target);
-          update((tag) => tag.toUpperCase());
+          const found = store.tags((tag) => tag === target);
+          if (found) {
+            const tags = new Set(store.tags());
+            tags.delete(found);
+            tags.add(found.toUpperCase());
+            store.tags(tags);
+          }
         },
       })
     );
