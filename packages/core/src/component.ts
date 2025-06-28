@@ -12,7 +12,7 @@ import type {
   SignalState,
   Signal,
 } from './runtime-types';
-import { isSelectorResult } from './selector-types';
+import { isSelectorResult, SelectorMetadata } from './selector-types';
 import { createLatticeContext } from './lattice-context';
 import { type StoreAdapter } from './adapter-contract';
 import type { FromMarker } from './component-types';
@@ -88,6 +88,9 @@ export function createStore<State extends Record<string, any>, Slices>(
   let state = { ...initialState };
   const listeners = new Set<() => void>();
   
+  // Create component-level cache for selectors (will be used when caching is implemented)
+  // const selectorCache = new WeakMap<object, SelectorMetadata>();
+  
   // Create scoped lattice context
   const lattice = createLatticeContext<State>();
   
@@ -110,10 +113,59 @@ export function createStore<State extends Record<string, any>, Slices>(
         return;
       }
       
-      // For now, we need to figure out how to update the found object
-      // This is where we need the connection to the signal
-      // TODO: Implement proper selector-based updates
-      console.warn('Selector-based updates not fully implemented yet');
+      // We need to find the value in the store and update it
+      // This is O(n) but necessary since we don't have the signal/predicate info yet
+      
+      // Search through all signals to find and update the object
+      for (const key in stateSignals) {
+        const signal = stateSignals[key];
+        const currentValue = signal();
+        
+        if (Array.isArray(currentValue)) {
+          const index = currentValue.indexOf(selector.value);
+          if (index !== -1) {
+            const newArray = [...currentValue];
+            if (typeof updates === 'function') {
+              newArray[index] = updates(currentValue[index]);
+            } else {
+              newArray[index] = { ...currentValue[index], ...updates };
+            }
+            signal(newArray);
+            return;
+          }
+        } else if (currentValue instanceof Set && currentValue.has(selector.value)) {
+          const newSet = new Set(currentValue);
+          newSet.delete(selector.value);
+          if (typeof updates === 'function') {
+            newSet.add(updates(selector.value));
+          } else {
+            newSet.add({ ...selector.value, ...updates });
+          }
+          signal(newSet);
+          return;
+        } else if (currentValue instanceof Map) {
+          for (const [k, v] of currentValue) {
+            if (v === selector.value) {
+              if (typeof updates === 'function') {
+                currentValue.set(k, updates(v));
+              } else {
+                currentValue.set(k, { ...v, ...updates });
+              }
+              signal(new Map(currentValue));
+              return;
+            }
+          }
+        } else if (currentValue === selector.value) {
+          if (typeof updates === 'function') {
+            signal(updates(currentValue));
+          } else {
+            signal({ ...currentValue, ...updates });
+          }
+          return;
+        }
+      }
+      
+      console.warn('Could not find selector value in any signal');
       return;
     }
     
@@ -143,13 +195,24 @@ export function createStore<State extends Record<string, any>, Slices>(
     }
   }) as SetState<State>;
   
+  // Create cached select function
+  const select = <TArgs extends any[], TResult>(
+    selectorFn: (...args: TArgs) => TResult | undefined
+  ) => {
+    return (...args: TArgs) => {
+      // TODO: Implement caching logic here
+      // For now, just use the basic implementation
+      return lattice.select(selectorFn)(...args);
+    };
+  };
+  
   // Create component slices with merged context
   const context: ComponentContext<State> = {
     store: stateSignals,
     signal: lattice.signal,
     computed: lattice.computed,
     set,
-    select: lattice.select
+    select
   };
   const slices = component(context);
   
