@@ -140,7 +140,8 @@ export function createSignalFactory(
         const arg = args[0];
 
         // Handle Set.add operation
-        if (typeof arg !== 'function') {
+        // Skip if the argument is a Set (full replacement)
+        if (typeof arg !== 'function' && !(arg instanceof Set)) {
           const result = addToSet(value as any, arg);
           if (result.updated) {
             value = result.value as T;
