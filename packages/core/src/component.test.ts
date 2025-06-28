@@ -420,4 +420,130 @@ describe('Component API', () => {
     expect(store.users().user1?.name).toBe('Alice (promoted)');
     expect(store.users().user1?.age).toBe(26);
   });
+
+  it('should support smart updates for Maps', () => {
+    interface MapState {
+      userRoles: Map<string, string>;
+      scores: Map<string, number>;
+    }
+
+    const MapExample = createComponent(
+      withState<MapState>(),
+      ({ store }) => ({
+        userRoles: store.userRoles,
+        scores: store.scores,
+        // Update by key
+        setUserRole: (userId: string, role: string) => {
+          store.userRoles(userId, () => role);
+        },
+        // Update score with computation
+        incrementScore: (userId: string, points: number) => {
+          store.scores(userId, (current) => current + points);
+        },
+        // Find and update by value predicate
+        promoteAllManagers: () => {
+          store.userRoles(
+            (role) => role === 'manager',
+            () => 'senior-manager'
+          );
+        },
+      })
+    );
+
+    const store = createStore(MapExample, {
+      userRoles: new Map([
+        ['user1', 'admin'],
+        ['user2', 'manager'],
+        ['user3', 'viewer'],
+        ['user4', 'manager'],
+      ]),
+      scores: new Map([
+        ['user1', 100],
+        ['user2', 50],
+        ['user3', 25],
+      ]),
+    });
+
+    // Update by key
+    store.setUserRole('user3', 'editor');
+    expect(store.userRoles().get('user3')).toBe('editor');
+
+    // Update with computation
+    store.incrementScore('user2', 30);
+    expect(store.scores().get('user2')).toBe(80);
+
+    // Update by predicate (only first match)
+    store.promoteAllManagers();
+    expect(store.userRoles().get('user2')).toBe('senior-manager');
+    expect(store.userRoles().get('user4')).toBe('manager'); // Not updated (only first match)
+  });
+
+  it('should support smart updates for Sets', () => {
+    interface SetState {
+      tags: Set<string>;
+      selectedIds: Set<number>;
+    }
+
+    const SetExample = createComponent(
+      withState<SetState>(),
+      ({ store }) => ({
+        tags: store.tags,
+        selectedIds: store.selectedIds,
+        // Add single item
+        addTag: (tag: string) => {
+          store.tags(tag); // Single argument add
+        },
+        // Add with command
+        addSelectedId: (id: number) => {
+          store.selectedIds('add', id);
+        },
+        // Toggle item
+        toggleTag: (tag: string) => {
+          store.tags('toggle', tag);
+        },
+        // Delete by predicate
+        removeShortTags: () => {
+          store.tags('delete', (tag: string) => tag.length < 3);
+        },
+        // Update matching items
+        uppercaseTag: (target: string) => {
+          store.tags(
+            (tag) => tag === target,
+            (tag) => tag.toUpperCase()
+          );
+        },
+      })
+    );
+
+    const store = createStore(SetExample, {
+      tags: new Set(['react', 'js', 'ts', 'vue']),
+      selectedIds: new Set([1, 2, 3]),
+    });
+
+    // Add tag
+    store.addTag('angular');
+    expect(store.tags().has('angular')).toBe(true);
+    expect(store.tags().size).toBe(5);
+
+    // Toggle tag (remove existing)
+    store.toggleTag('vue');
+    expect(store.tags().has('vue')).toBe(false);
+    expect(store.tags().size).toBe(4);
+
+    // Toggle tag (add non-existing)
+    store.toggleTag('svelte');
+    expect(store.tags().has('svelte')).toBe(true);
+    expect(store.tags().size).toBe(5);
+
+    // Delete by predicate
+    store.removeShortTags();
+    expect(store.tags().has('js')).toBe(false);
+    expect(store.tags().has('ts')).toBe(false);
+    expect(store.tags().has('react')).toBe(true);
+
+    // Update matching item
+    store.uppercaseTag('react');
+    expect(store.tags().has('react')).toBe(false);
+    expect(store.tags().has('REACT')).toBe(true);
+  });
 });

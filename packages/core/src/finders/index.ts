@@ -7,7 +7,5 @@
 
 export * from './array-finder';
 export * from './object-finder';
-
-// Future exports:
-// export * from './map-finder';
-// export * from './set-finder';
+export * from './map-finder';
+export * from './set-finder';

@@ -24,6 +24,22 @@ export interface Signal<T> {
   // Smart update for object collections (Record types)
   (finder: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never,
    updater: T extends Record<string, infer U> ? (value: U, key: string) => U : never): void;
+  // Map operations - key update
+  (key: T extends Map<infer K, any> ? K : never, 
+   updater: T extends Map<any, infer V> ? (value: V) => V : never): void;
+  // Map operations - predicate update
+  (finder: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never,
+   updater: T extends Map<any, infer V> ? (value: V, key: any) => V : never): void;
+  // Set operations - add single value
+  (value: T extends Set<infer U> ? U : never): void;
+  // Set operations - commands
+  (command: T extends Set<any> ? 'add' | 'toggle' : never, 
+   value: T extends Set<infer U> ? U : never): void;
+  (command: T extends Set<any> ? 'delete' : never, 
+   predicate: T extends Set<infer U> ? (value: U) => boolean : never): void;
+  // Set operations - update by predicate
+  (finder: T extends Set<infer U> ? (value: U) => boolean : never,
+   updater: T extends Set<infer U> ? (value: U) => U : never): void;
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
 }
 
