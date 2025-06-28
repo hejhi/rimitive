@@ -6,6 +6,26 @@
  */
 
 /**
+ * Update function returned when calling signal with predicate
+ */
+export interface UpdateFunction<T> {
+  // Full update with function
+  (update: (value: T) => T): void;
+  // Partial update with object (for object types only)
+  (update: T extends object ? Partial<T> : never): void;
+}
+
+export interface ArrayUpdateFunction<T> {
+  (update: (item: T, index: number) => T): void;
+  (update: T extends object ? Partial<T> : never): void;
+}
+
+export interface ObjectUpdateFunction<T> {
+  (update: (value: T, key: string) => T): void;
+  (update: T extends object ? Partial<T> : never): void;
+}
+
+/**
  * A signal is a reactive primitive that can be read and written
  * Reading a signal automatically registers it as a dependency in tracking contexts
  * Supports smart updates for collections
@@ -17,24 +37,21 @@ export interface Signal<T> {
   subscribe: (listener: () => void) => () => void;
   
   // ==== Array Operations ====
-  // Update items matching predicate
-  (predicate: T extends (infer U)[] ? (item: U, index: number) => boolean : never,
-   update: T extends (infer U)[] ? (item: U, index: number) => U : never): void;
+  // Returns update function for items matching predicate
+  (predicate: T extends (infer U)[] ? (item: U, index: number) => boolean : never): T extends (infer U)[] ? ArrayUpdateFunction<U> : never;
   
   // ==== Object Operations ====
   // Update property by key
   <K extends keyof T>(key: K, update: (value: T[K]) => T[K]): void;
-  // Update properties matching predicate
-  (predicate: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never,
-   update: T extends Record<string, infer U> ? (value: U, key: string) => U : never): void;
+  // Returns update function for properties matching predicate
+  (predicate: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never): T extends Record<string, infer U> ? ObjectUpdateFunction<U> : never;
   
   // ==== Map Operations ====
   // Update value by key
   (key: T extends Map<infer K, any> ? K : never,
    update: T extends Map<any, infer V> ? (value: V) => V : never): void;
-  // Update entries matching predicate
-  (predicate: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never,
-   update: T extends Map<any, infer V> ? (value: V, key: any) => V : never): void;
+  // Returns update function for entries matching predicate
+  (predicate: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never): T extends Map<any, infer V> ? UpdateFunction<V> : never;
   
   // ==== Set Operations ====
   // Add single item
@@ -45,9 +62,8 @@ export interface Signal<T> {
   // Command: delete by predicate
   (command: T extends Set<any> ? 'delete' : never,
    predicate: T extends Set<infer U> ? (value: U) => boolean : never): void;
-  // Update items matching predicate
-  (predicate: T extends Set<infer U> ? (value: U) => boolean : never,
-   update: T extends Set<infer U> ? (value: U) => U : never): void;
+  // Returns update function for items matching predicate
+  (predicate: T extends Set<infer U> ? (value: U) => boolean : never): T extends Set<infer U> ? UpdateFunction<U> : never;
 }
 
 /**

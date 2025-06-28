@@ -41,40 +41,41 @@ export function createSignalFactory(
         return value;
       }
 
-      // Smart update - two functions passed
+      // Predicate-based update - returns update function
       if (
-        arguments.length === 2 &&
+        arguments.length === 1 &&
         typeof args[0] === 'function' &&
-        typeof args[1] === 'function'
+        (Array.isArray(value) ||
+          (typeof value === 'object' && value !== null))
       ) {
-        const [predicate, update] = args;
+        const predicate = args[0];
 
-        // Handle array updates
-        if (Array.isArray(value)) {
-          const result = findAndUpdateArray(value, predicate, update);
-          if (result.updated) {
-            value = result.value as T;
-
-            for (const listener of listeners) {
-              batching.scheduleUpdate(listener);
-            }
+        // Return update function
+        return function(updateArg: any) {
+          let updateFn: (item: any, index?: any) => any;
+          
+          // Handle partial object update
+          if (typeof updateArg === 'object' && 
+              updateArg !== null && 
+              !Array.isArray(updateArg) &&
+              typeof updateArg === 'object') {
+            // For arrays, objects, and maps - allow partial updates
+            updateFn = (item: any) => {
+              if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+                return { ...item, ...updateArg };
+              }
+              // If item is not an object, fall back to replacement
+              return updateArg;
+            };
+          } else if (typeof updateArg === 'function') {
+            updateFn = updateArg;
+          } else {
+            throw new Error('Update argument must be a function or object');
           }
-          return;
-        }
 
-        // Handle object updates with predicate
-        if (
-          typeof value === 'object' &&
-          value !== null &&
-          !Array.isArray(value)
-        ) {
-          // Handle Map updates
-          if (value instanceof Map) {
-            const result = findAndUpdateMapByValuePredicate(
-              value,
-              predicate,
-              update
-            );
+          // Handle array updates
+          if (Array.isArray(value)) {
+            const result = findAndUpdateArray(value, predicate, updateFn);
             if (result.updated) {
               value = result.value as T;
 
@@ -85,9 +86,44 @@ export function createSignalFactory(
             return;
           }
 
-          // Handle Set updates
-          if (value instanceof Set) {
-            const result = findAndUpdateSetFirst(value, predicate, update);
+          // Handle object updates with predicate
+          if (
+            typeof value === 'object' &&
+            value !== null &&
+            !Array.isArray(value)
+          ) {
+            // Handle Map updates
+            if (value instanceof Map) {
+              const result = findAndUpdateMapByValuePredicate(
+                value,
+                predicate,
+                updateFn
+              );
+              if (result.updated) {
+                value = result.value as T;
+
+                for (const listener of listeners) {
+                  batching.scheduleUpdate(listener);
+                }
+              }
+              return;
+            }
+
+            // Handle Set updates
+            if (value instanceof Set) {
+              const result = findAndUpdateSetFirst(value, predicate, updateFn);
+              if (result.updated) {
+                value = result.value as T;
+
+                for (const listener of listeners) {
+                  batching.scheduleUpdate(listener);
+                }
+              }
+              return;
+            }
+
+            // Handle regular object updates
+            const result = findAndUpdateByPredicate(value, predicate, updateFn);
             if (result.updated) {
               value = result.value as T;
 
@@ -95,21 +131,8 @@ export function createSignalFactory(
                 batching.scheduleUpdate(listener);
               }
             }
-            return;
           }
-
-          // Handle regular object updates
-          const result = findAndUpdateByPredicate(value, predicate, update);
-          if (result.updated) {
-            value = result.value as T;
-
-            for (const listener of listeners) {
-              batching.scheduleUpdate(listener);
-            }
-          }
-        }
-
-        return;
+        };
       }
 
       // Special Set operations - single argument

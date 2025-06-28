@@ -195,10 +195,8 @@ describe('Component API', () => {
           },
           // Use smart update to toggle a specific todo
           toggleTodo: (id: string) => {
-            store.todos(
-              (t) => t.id === id,
-              (t) => ({ ...t, completed: !t.completed })
-            );
+            const update = store.todos((t) => t.id === id);
+            update((t) => ({ ...t, completed: !t.completed }));
           },
         };
       }
@@ -239,21 +237,17 @@ describe('Component API', () => {
       items: store.items,
       // Update by index directly
       updateByIndex: (index: number, newValue: string) => {
-        store.items(
-          (_, idx) => idx === index, // Use index in finder
-          () => newValue // Simple replacement
-        );
+        const update = store.items((_, idx) => idx === index);
+        update(() => newValue);
       },
       // Insert after specific index
       insertAfter: (index: number, newValue: string) => {
-        store.items(
-          (_, idx) => idx === index,
-          (item) => {
-            // This is a bit hacky - we're using the updater to insert
-            // In reality, we'd need a different API for insertions
-            return item;
-          }
-        );
+        const update = store.items((_, idx) => idx === index);
+        update((item) => {
+          // This is a bit hacky - we're using the updater to insert
+          // In reality, we'd need a different API for insertions
+          return item;
+        });
         // For now, just use regular set for insertion
         const items = store.items();
         store.items([
@@ -372,10 +366,8 @@ describe('Component API', () => {
         users: store.users,
         // Update user by finding with predicate
         deactivateOldUsers: (maxAge: number) => {
-          store.users(
-            (user) => user.age > maxAge && user.active,
-            (user) => ({ ...user, active: false })
-          );
+          const update = store.users((user) => user.age > maxAge && user.active);
+          update({ active: false });
         },
         // Update specific user by key using string selector
         updateUserAge: (userId: string, age: number) => {
@@ -383,14 +375,12 @@ describe('Component API', () => {
         },
         // Find and update by property value
         promoteUser: (name: string) => {
-          store.users(
-            (user) => user.name === name,
-            (user) => ({
-              ...user,
-              name: `${user.name} (promoted)`,
-              age: user.age + 1,
-            })
-          );
+          const update = store.users((user) => user.name === name);
+          update((user) => ({
+            ...user,
+            name: `${user.name} (promoted)`,
+            age: user.age + 1,
+          }));
         },
       })
     );
@@ -442,10 +432,8 @@ describe('Component API', () => {
         },
         // Find and update by value predicate
         promoteAllManagers: () => {
-          store.userRoles(
-            (role) => role === 'manager',
-            () => 'senior-manager'
-          );
+          const update = store.userRoles((role) => role === 'manager');
+          update(() => 'senior-manager');
         },
       })
     );
@@ -507,10 +495,8 @@ describe('Component API', () => {
         },
         // Update matching items
         uppercaseTag: (target: string) => {
-          store.tags(
-            (tag) => tag === target,
-            (tag) => tag.toUpperCase()
-          );
+          const update = store.tags((tag) => tag === target);
+          update((tag) => tag.toUpperCase());
         },
       })
     );

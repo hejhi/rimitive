@@ -1,5 +1,4 @@
-one of those "emergent properties" that comes from the clean separation of
-concerns in the architecture:
+One of those "emergent properties" that comes from the clean separation of concerns in the architecture:
 
 Why This "Just Works"
 
@@ -16,20 +15,20 @@ withState(() => ({ /_ ... _/ })),
 const nav = NavComponent(context);
 const auth = AuthComponent(context);
 
-      // You can even do conditional composition!
-      return {
-        nav,
-        auth,
-        // Computed can depend on nested signals
-        userName: computed(() => auth.user().name),
-        // You can even have methods that coordinate between components
-        logout: () => {
-          auth.signOut();
-          nav.goToHome();
-        }
-      };
-    }
+    // You can even do conditional composition!
+    return {
+      nav,
+      auth,
+      // Computed can depend on nested signals
+      userName: computed(() => auth.user().name),
+      // You can even have methods that coordinate between components
+      logout: () => {
+        auth.signOut();
+        nav.goToHome();
+      }
+    };
 
+}
 );
 
 The Hidden Superpower
@@ -54,8 +53,6 @@ const App = createComponent(..., (ctx) => ({
 projects: ctx.store.projects().map(proj => Project(ctx))
 }));
 
-Each level has the same pattern, same reactivity, same type safety. It's turtles all the way
-down! 🐢
+Each level has the same pattern, same reactivity, same type safety. It's turtles all the way down! 🐢
 
-This wasn't even explicitly designed - it just emerged from making components simple functions
-that return objects. Sometimes the best features are the ones you don't have to build!
+This wasn't even explicitly designed - it just emerged from making components simple functions that return objects. Sometimes the best features are the ones you don't have to build!
