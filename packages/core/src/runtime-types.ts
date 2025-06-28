@@ -11,43 +11,50 @@
  * Supports smart updates for collections
  */
 export interface Signal<T> {
-  (): T; // Read current value
-  (value: T): void; // Write new value (if writable)
-  // Smart update for arrays
+  // ==== Core Operations ====
+  (): T;
+  (value: T): void;
+  subscribe: (listener: () => void) => () => void;
+  
+  // ==== Array Operations ====
+  // Update items matching predicate
   (finder: T extends (infer U)[] ? (item: U, index: number) => boolean : never,
    updater: T extends (infer U)[] ? (item: U, index: number) => U : never): void;
-  // Smart update for objects by property key
-  <K extends keyof T>(
-    selector: K,
-    updater: (value: T[K]) => T[K]
-  ): void;
-  // Smart update for object collections (Record types)
+  
+  // ==== Object Operations ====
+  // Update property by key
+  <K extends keyof T>(key: K, updater: (value: T[K]) => T[K]): void;
+  // Update properties matching predicate
   (finder: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never,
    updater: T extends Record<string, infer U> ? (value: U, key: string) => U : never): void;
-  // Map operations - key update
-  (key: T extends Map<infer K, any> ? K : never, 
+  
+  // ==== Map Operations ====
+  // Update value by key
+  (key: T extends Map<infer K, any> ? K : never,
    updater: T extends Map<any, infer V> ? (value: V) => V : never): void;
-  // Map operations - predicate update
+  // Update entries matching predicate
   (finder: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never,
    updater: T extends Map<any, infer V> ? (value: V, key: any) => V : never): void;
-  // Set operations - add single value
+  
+  // ==== Set Operations ====
+  // Add single item
   (value: T extends Set<infer U> ? U : never): void;
-  // Set operations - commands
-  (command: T extends Set<any> ? 'add' | 'toggle' : never, 
+  // Commands: add, toggle
+  (command: T extends Set<any> ? 'add' | 'toggle' : never,
    value: T extends Set<infer U> ? U : never): void;
-  (command: T extends Set<any> ? 'delete' : never, 
+  // Command: delete by predicate
+  (command: T extends Set<any> ? 'delete' : never,
    predicate: T extends Set<infer U> ? (value: U) => boolean : never): void;
-  // Set operations - update by predicate
+  // Update items matching predicate
   (finder: T extends Set<infer U> ? (value: U) => boolean : never,
    updater: T extends Set<infer U> ? (value: U) => U : never): void;
-  subscribe: (listener: () => void) => () => void; // Subscribe to changes
 }
 
 /**
  * A computed signal is read-only and derives its value from other signals
  * Dependencies are tracked automatically when the computation function runs
  */
-export interface Computed<T> extends Omit<Signal<T>, 'call'> {
+export interface Computed<T> {
   (): T; // Read computed value
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
 }
