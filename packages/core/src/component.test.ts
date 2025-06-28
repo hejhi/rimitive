@@ -169,4 +169,115 @@ describe('Component API', () => {
     expect(countUpdates).toBe(1);
     expect(nameUpdates).toBe(1);
   });
+
+  it('should support smart updates for arrays', () => {
+    interface TodoState {
+      todos: Array<{ id: string; text: string; completed: boolean }>;
+    }
+
+    const TodoApp = createComponent(
+      withState<TodoState>(),
+      ({ store, computed, set }) => {
+        const completed = computed(() => 
+          store.todos().filter(t => t.completed).length
+        );
+
+        return {
+          todos: store.todos,
+          completed,
+          addTodo: (text: string) => {
+            const newTodo = { id: Date.now().toString(), text, completed: false };
+            set({ todos: [...store.todos(), newTodo] });
+          },
+          // Use smart update to toggle a specific todo
+          toggleTodo: (id: string) => {
+            store.todos(
+              t => t.id === id,
+              t => ({ ...t, completed: !t.completed })
+            );
+          },
+        };
+      }
+    );
+
+    const store = createStore(TodoApp, {
+      todos: [
+        { id: '1', text: 'First', completed: false },
+        { id: '2', text: 'Second', completed: true },
+        { id: '3', text: 'Third', completed: false },
+      ]
+    });
+
+    expect(store.completed()).toBe(1);
+
+    // Toggle first todo
+    store.toggleTodo('1');
+    expect(store.todos()[0]!.completed).toBe(true);
+    expect(store.completed()).toBe(2);
+
+    // Toggle second todo
+    store.toggleTodo('2');
+    expect(store.todos()[1]!.completed).toBe(false);
+    expect(store.completed()).toBe(1);
+
+    // Add new todo
+    store.addTodo('Fourth');
+    expect(store.todos().length).toBe(4);
+    expect(store.completed()).toBe(1);
+  });
+
+  it('should support smart updates for objects', () => {
+    interface UserState {
+      user: {
+        name: string;
+        age: number;
+        settings: {
+          theme: string;
+          notifications: boolean;
+        };
+      };
+    }
+
+    const UserProfile = createComponent(
+      withState<UserState>(),
+      ({ store }) => ({
+        user: store.user,
+        updateName: (name: string) => {
+          store.user('name', () => name);
+        },
+        incrementAge: () => {
+          store.user('age', age => age + 1);
+        },
+        toggleNotifications: () => {
+          store.user('settings', settings => ({
+            ...settings,
+            notifications: !settings.notifications
+          }));
+        },
+      })
+    );
+
+    const store = createStore(UserProfile, {
+      user: {
+        name: 'John',
+        age: 30,
+        settings: {
+          theme: 'dark',
+          notifications: true
+        }
+      }
+    });
+
+    expect(store.user().name).toBe('John');
+    expect(store.user().age).toBe(30);
+
+    store.updateName('Jane');
+    expect(store.user().name).toBe('Jane');
+
+    store.incrementAge();
+    expect(store.user().age).toBe(31);
+
+    store.toggleNotifications();
+    expect(store.user().settings.notifications).toBe(false);
+  });
 });

@@ -98,17 +98,66 @@ export function createLatticeContext<State>(): LatticeContext<State> & { _batch:
     let value = initialValue;
     const listeners = new Set<() => void>();
     
-    const sig = function (newValue?: T) {
+    const sig = function (...args: any[]) {
       if (arguments.length === 0) {
         // Reading - register as dependency if we're tracking
         tracking.track(sig);
         return value;
       }
       
+      // Smart update - two functions passed
+      if (arguments.length === 2 && typeof args[0] === 'function' && typeof args[1] === 'function') {
+        const [finder, updater] = args;
+        
+        // Handle array updates
+        if (Array.isArray(value)) {
+          const index = value.findIndex(finder);
+          if (index !== -1) {
+            const newArray = [...value];
+            const oldItem = value[index];
+            const newItem = updater(oldItem);
+            
+            // Only update if item actually changed
+            if (!Object.is(oldItem, newItem)) {
+              newArray[index] = newItem;
+              value = newArray as T;
+              
+              for (const listener of listeners) {
+                batching.scheduleUpdate(listener);
+              }
+            }
+          }
+          return;
+        }
+        
+        // Could extend to handle object updates here
+        return;
+      }
+      
+      // Smart update for objects - property key and updater
+      if (arguments.length === 2 && typeof args[0] === 'string' && typeof args[1] === 'function') {
+        const [key, updater] = args;
+        
+        if (typeof value === 'object' && value !== null && key in value) {
+          const oldValue = (value as any)[key];
+          const newFieldValue = updater(oldValue);
+          
+          if (!Object.is(oldValue, newFieldValue)) {
+            value = { ...value, [key]: newFieldValue } as T;
+            
+            for (const listener of listeners) {
+              batching.scheduleUpdate(listener);
+            }
+          }
+        }
+        return;
+      }
+      
+      // Regular write
+      const newValue = args[0];
       if (Object.is(value, newValue)) return;
       
-      // Writing - update value and notify if changed
-      value = newValue!;
+      value = newValue;
       
       for (const listener of listeners) {
         batching.scheduleUpdate(listener);

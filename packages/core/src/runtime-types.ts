@@ -8,10 +8,21 @@
 /**
  * A signal is a reactive primitive that can be read and written
  * Reading a signal automatically registers it as a dependency in tracking contexts
+ * Supports smart updates for collections
  */
 export interface Signal<T> {
   (): T; // Read current value
   (value: T): void; // Write new value (if writable)
+  // Smart update for arrays
+  <K extends T extends (infer U)[] ? U : never>(
+    finder: (item: K) => boolean,
+    updater: (item: K) => K
+  ): void;
+  // Smart update for objects
+  <K extends keyof T>(
+    selector: K,
+    updater: (value: T[K]) => T[K]
+  ): void;
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
 }
 
