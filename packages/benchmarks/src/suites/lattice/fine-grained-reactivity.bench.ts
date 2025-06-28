@@ -40,23 +40,28 @@ const counterIds = Array.from(
 const initialCounters = Object.fromEntries(counterIds.map((id) => [id, 0]));
 
 describe('Fine-Grained Reactivity - Performance & Memory', () => {
-  // Lattice with fine-grained subscriptions
+  // Lattice with fine-grained subscriptions - component composition with flat state
   {
     const setupLattice = () => {
-      // Create component with counters state
+      // Type for our flat counter state
+      type CounterState = { [K in (typeof counterIds)[number]]: number };
+
+      // Define a Counter slice factory that creates counter behavior for a specific ID
+      const createCounterSlice = (id: string) => 
+        createComponent(
+          withState<CounterState>(),
+          ({ store, computed, set }) => ({
+            value: computed(() => store[id]?.() || 0),
+            increment: () => set({ [id]: (store[id]?.() || 0) + 1 }),
+          })
+        );
+
+      // Define the main Counters component that composes counter slices
       const CountersComponent = createComponent(
-        withState<{ counters: Record<string, number> }>(),
-        ({ store, computed, set }) => {
-          // Create slice for each counter (fine-grained subscriptions)
-          const counterSlices = counterIds.map((id) => ({
-            value: computed(() => store.counters()[id] || 0),
-            increment: () => {
-              // Use function form for surgical update
-              set(({ counters }) => ({
-                counters: { [id]: (counters[id] || 0) + 1 },
-              }));
-            },
-          }));
+        withState<CounterState>(),
+        (context) => {
+          // Create a counter slice for each ID
+          const counterSlices = counterIds.map(id => createCounterSlice(id)(context));
 
           return {
             slices: counterSlices,
@@ -68,14 +73,13 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
         }
       );
 
-      const store = createStore(CountersComponent, {
-        counters: initialCounters,
-      });
-
-      const counterSlices = store.slices;
+      const store = createStore(
+        CountersComponent,
+        initialCounters as CounterState
+      );
 
       return {
-        slices: counterSlices,
+        slices: store.slices,
         incrementCounter: store.incrementCounter,
       };
     };
@@ -192,21 +196,25 @@ describe('Large State Memory Usage Comparison', () => {
 
   {
     const setupLargeLattice = () => {
+      // Use flat state structure for O(1) updates
+      type LargeCounterState = {
+        [K in (typeof largeCounterIds)[number]]: number;
+      };
+
       const LargeCountersComponent = createComponent(
-        withState<{ counters: Record<string, number> }>(),
-        ({ set }) => ({
+        withState<LargeCounterState>(),
+        ({ store, set }) => ({
           increment: (id: string) => {
-            // Use function form for surgical update
-            set(({ counters }) => ({
-              counters: { [id]: (counters[id] || 0) + 1 },
-            }));
+            // O(1) update - only updating a single property!
+            set({ [id]: (store[id as keyof LargeCounterState]?.() || 0) + 1 });
           },
         })
       );
 
-      const store = createStore(LargeCountersComponent, {
-        counters: largeInitialCounters,
-      });
+      const store = createStore(
+        LargeCountersComponent,
+        largeInitialCounters as LargeCounterState
+      );
 
       return store;
     };

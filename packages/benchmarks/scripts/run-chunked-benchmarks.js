@@ -24,6 +24,7 @@ const BENCHMARK_SUITES = {
   lattice: [
     'fine-grained-reactivity',
     'svelte-vs-lattice',
+    'todo-list-composition',
   ],
 };
 
