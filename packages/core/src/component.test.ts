@@ -338,4 +338,60 @@ describe('Component API', () => {
     store.toggleNotifications();
     expect(store.user().settings.notifications).toBe(false);
   });
+
+  it('should support smart updates for object collections', () => {
+    interface UsersState {
+      users: Record<string, { name: string; age: number; active: boolean }>;
+    }
+
+    const UsersManager = createComponent(
+      withState<UsersState>(),
+      ({ store }) => ({
+        users: store.users,
+        // Update user by finding with predicate
+        deactivateOldUsers: (maxAge: number) => {
+          store.users(
+            (user, userId) => user.age > maxAge && user.active,
+            (user) => ({ ...user, active: false })
+          );
+        },
+        // Update specific user by key using string selector
+        updateUserAge: (userId: string, age: number) => {
+          store.users(userId, user => ({ ...user, age }));
+        },
+        // Find and update by property value
+        promoteUser: (name: string) => {
+          store.users(
+            (user) => user.name === name,
+            (user, userId) => ({ ...user, name: `${user.name} (promoted)`, age: user.age + 1 })
+          );
+        }
+      })
+    );
+
+    const store = createStore(UsersManager, {
+      users: {
+        'user1': { name: 'Alice', age: 25, active: true },
+        'user2': { name: 'Bob', age: 35, active: true },
+        'user3': { name: 'Charlie', age: 45, active: true },
+        'user4': { name: 'Dave', age: 55, active: true }
+      }
+    });
+
+    // Deactivate users over 40
+    store.deactivateOldUsers(40);
+    expect(store.users().user1.active).toBe(true);
+    expect(store.users().user2.active).toBe(true);
+    expect(store.users().user3.active).toBe(false); // First match only
+    expect(store.users().user4.active).toBe(true);  // Not updated
+
+    // Update specific user by key
+    store.updateUserAge('user2', 36);
+    expect(store.users().user2.age).toBe(36);
+
+    // Find and update by name
+    store.promoteUser('Alice');
+    expect(store.users().user1.name).toBe('Alice (promoted)');
+    expect(store.users().user1.age).toBe(26);
+  });
 });

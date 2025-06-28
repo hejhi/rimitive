@@ -130,7 +130,25 @@ export function createLatticeContext<State>(): LatticeContext<State> & { _batch:
           return;
         }
         
-        // Could extend to handle object updates here
+        // Handle object updates - finder returns the key to update
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+          // For objects, the finder should return the key to update
+          const entries = Object.entries(value);
+          for (const [key, val] of entries) {
+            if (finder(val, key)) {
+              const newValue = updater(val, key);
+              if (!Object.is(val, newValue)) {
+                value = { ...value, [key]: newValue } as T;
+                
+                for (const listener of listeners) {
+                  batching.scheduleUpdate(listener);
+                }
+              }
+              return; // Only update first matching entry
+            }
+          }
+        }
+        
         return;
       }
       
