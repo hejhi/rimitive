@@ -2,15 +2,16 @@
 
 ## Problem
 
-Right now, predicate-based updates have O(n) performance every time:
+Right now, predicate-based lookups have O(n) performance every time:
 
 ```typescript
-// This searches through ALL users twice
-store.users((user) => user.id === '123')({ name: 'Alice' });
-store.users((user) => user.id === '123')({ age: 25 }); // Same search again!
+// This searches through ALL users three times!
+const user1 = store.users((user) => user.id === '123');
+set(store.users((user) => user.id === '123'), { name: 'Alice' });
+set(store.users((user) => user.id === '123'), { age: 25 });
 ```
 
-This doesn't scale. We need MobX-level performance without the complexity.
+This doesn't scale. We need better performance through selector reuse.
 
 ## Solution: `select`
 
@@ -22,19 +23,26 @@ Add a `select` function to the component context that creates cached selectors f
 const UserStore = createComponent(
   withState<{ users: User[] }>(),
   ({ store, select, set }) => {
-    // Create a cached selector
+    // Create reusable cached selectors
     const userById = select((id: string) =>
       store.users((user) => user.id === id)
     );
+    
+    const userByEmail = select((email: string) =>
+      store.users((user) => user.email === email)
+    );
 
     return {
+      // Export selectors for direct use
+      userById,
+      userByEmail,
+      
+      // Reuse selectors in methods - O(1) after first call!
       updateUser: (id: string, updates: Partial<User>) => {
-        // Use with set - cached lookup!
         set(userById(id), updates);
       },
 
       promoteUser: (id: string) => {
-        // Works with function updates too
         set(userById(id), (user) => ({
           ...user,
           role: 'admin',
@@ -48,75 +56,176 @@ const UserStore = createComponent(
 
 ### How It Works
 
-1. **Object-Based Caching**: When a selector runs, it stores the returned object (object/array/map/set/etc, cannot "select" primitives) in a WeakMap, as well as at the selector level itself.
-2. **Reference Equality**: when the selector runs again, before it executes its actual selector function, it checks if the previous value is present in the WeakMap, and if so, returns it instantly (as if it's present, it means it wasn't updated)
-3. **Signal Agnostic**: Selectors don't care about signals - they just cache object references
-4. **Automatic Cleanup**: WeakMap ensures garbage collection when objects are removed
+1. **Selector-Level Caching**: Each selector caches its results based on the arguments passed
+2. **Generation Tracking**: A global generation counter increments on every update
+3. **Cache Validation**: Selectors check if their cached result is from the current generation
+4. **Automatic Invalidation**: Any update invalidates all selector caches via generation increment
+5. **Reference Stability**: Objects maintain same reference until explicitly updated
 
-### The Magic
+### The Key Pattern: Selector Reuse
 
 ```typescript
-// Component-level WeakMap for all found objects
-const foundObjectsCache = new WeakMap<object, SelectorMetadata>();
+const UserStore = createComponent(
+  withState<{ users: User[] }>(),
+  ({ store, select, set }) => {
+    // Create selectors ONCE
+    const userById = select((id: string) => 
+      store.users((user) => user.id === id)
+    );
 
-const userById = select((id: string) => store.users((user) => user.id === id));
+    return {
+      userById,
+      
+      // Multiple methods reuse the SAME selector
+      getUser: (id: string) => userById(id),
+      
+      updateUser: (id: string, updates: Partial<User>) => {
+        set(userById(id), updates); // Reuses cached result!
+      },
+      
+      deleteUser: (id: string) => {
+        const user = userById(id); // Reuses cached result!
+        // ... deletion logic
+      }
+    };
+  }
+);
 
-// First call - searches array, finds users[5]
-const selector1 = userById('123'); // O(n) search, caches users[5]
+// First call - O(n) search
+const user = store.userById('123');
 
-// Second call - different predicate, same object!
-const selector2 = userByEmail('alice@example.com'); // Also finds users[5]
-
-// Since users[5] is in the WeakMap, selector2 returns instantly!
-set(selector2, { active: false }); // O(1)!
+// All subsequent uses of same selector+args - O(1)!
+store.updateUser('123', { name: 'Updated' }); // Cache hit!
+const sameUser = store.getUser('123'); // Cache hit!
 ```
 
 ### Performance Characteristics
 
 ```typescript
-// First search for user - O(n)
-set(userById('123'), { name: 'Alice' });
+// First search with selector - O(n)
+const user1 = store.userById('123');
 
-// Same user, same selector - O(1)
-set(userById('123'), { age: 25 });
+// Same selector, same args - O(1) from cache!
+const user2 = store.userById('123');
+store.updateUser('123', { age: 25 }); // Still O(1)!
 
-// Same user, DIFFERENT selector - still O(1)!
-set(userByEmail('alice@example.com'), { verified: true });
+// Different selector = different cache - O(n) first time
+const user3 = store.userByEmail('alice@example.com');
 
-// After immutable update that preserves references
-store.users((users) =>
-  users.map(
-    (u) => (u.id === '456' ? { ...u, name: 'Bob' } : u) // alice's reference unchanged
-  )
-);
+// But now that selector is also cached for its args
+const user4 = store.userByEmail('alice@example.com'); // O(1)!
 
-// Alice lookups still O(1) because her object reference is the same!
-set(userById('123'), { lastSeen: Date.now() });
+// After any update, generation increments and caches invalidate
+store.users([...store.users(), newUser]);
+
+// Next lookup must search again - O(n)
+const user5 = store.userById('123');
+// But subsequent calls are cached again - O(1)
+const user6 = store.userById('123');
+```
+
+### What DOESN'T Work
+
+```typescript
+// Creating selectors inline = no caching benefit!
+updateUser: (id: string) => {
+  const user = store.users(u => u.id === id); // O(n) every time!
+  // ...
+}
+
+// Different selectors don't share cache
+const byId = store.userById('123'); // O(n) 
+const byEmail = store.userByEmail('alice@example.com'); // O(n) - can't know it's same user
 ```
 
 ### Implementation Notes
 
-- Each selector stores its last result internally and in the WeakMap
-- Global WeakMap stores all found objects → selector metadata
-- When selector runs, check previous value against WeakMap first
-- Only works with object types (not primitives)
-- Leverages React/Vue best practices of preserving references
+- Each selector maintains its own cache keyed by arguments
+- Generation counter ensures cache validity across updates
+- WeakMap stores found objects with their generation
+- Cache hits only when generation matches current
+- Encourages creating reusable selectors rather than inline lookups
 
 ### Benefits
 
-1. **Cross-Selector Caching**: Different selectors finding same object share cache
-2. **Zero Configuration**: Just works with immutable update patterns
+1. **Predictable Performance**: Same selector + same args = O(1) after first call
+2. **Zero Configuration**: Just wrap lookups with `select()`
 3. **Memory Safe**: WeakMap allows garbage collection
-4. **Framework Aligned**: Rewards proper React/Vue patterns
-5. **Simple Mental Model**: "Same object = instant lookup"
+4. **Encourages Good Patterns**: Reusable selectors over scattered lookups
+5. **Simple Mental Model**: "Create once, reuse everywhere"
 
 ### NO Backwards Compatibility
 
 There is no migration. we are pre-launch and have no users, so we do NOT need to worry about breaking existing users code.
 
+### Best Practices
+
+1. **Create selectors at component initialization**, not in methods
+2. **Export selectors** from your store for external use
+3. **Compose selectors** with `set()` for updates
+4. **Name selectors clearly** (e.g., `userById`, `activeUsers`)
+5. **Avoid inline predicates** - they bypass caching entirely
+
+### Reactive Patterns with Selectors
+
+Selectors compose naturally with `computed` for reactive behavior:
+
+```typescript
+const UserDashboard = createComponent(
+  withState<{ users: User[]; currentUserId: string }>(),
+  ({ store, select, computed, set }) => {
+    // Create reusable selector
+    const userById = select((id: string) => 
+      store.users((user) => user.id === id)
+    );
+
+    return {
+      // Export the selector
+      userById,
+      
+      // Reactive computed using selector - auto-updates when users change!
+      currentUser: computed(() => {
+        const result = userById(store.currentUserId());
+        return result.value;
+      }),
+      
+      // Derived reactive values
+      currentUserName: computed(() => {
+        const result = userById(store.currentUserId());
+        return result.value?.name || 'Anonymous';
+      }),
+      
+      isCurrentUserAdmin: computed(() => {
+        const result = userById(store.currentUserId());
+        return result.value?.role === 'admin';
+      }),
+      
+      // Methods can use reactive values
+      promoteCurrentUser: () => {
+        const userId = store.currentUserId();
+        set(userById(userId), { role: 'admin' });
+      }
+    };
+  }
+);
+
+// Usage - reactive values auto-update!
+store.currentUserName(); // "Alice"
+store.users([...store.users(), { id: 'current', name: 'Bob' }]);
+store.currentUserName(); // "Bob" - automatically updated!
+```
+
+Key benefits:
+- Selectors provide efficient lookups (O(1) after first call)
+- Computeds provide reactivity and dependency tracking
+- Natural composition without special APIs
+- Shared selectors across multiple reactive computeds
+
 ### Edge Cases
 
-A user could have one selector selecting deeper than another. That _should_ be ok, as we're doing controlled mutations at different levels. Which means if a child property changes, and the parent property returns, it should return the most up-to-date child property as well. changes to parents will cause the whole state tree to re-run.
+- Selectors returning primitives still work but can't benefit from reference equality
+- Deeply nested updates invalidate all caches (generation increments)
+- Each unique selector function creates its own cache namespace
 
 ### Next Steps
 
