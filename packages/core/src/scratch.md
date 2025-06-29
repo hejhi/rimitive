@@ -323,6 +323,42 @@ what we don't have:
 
 ---
 
+## Updated Understanding: Selected as a Reactive Primitive
+
+User is right - caching at selector level doesn't make sense. Instead:
+
+`select` should create a reactive primitive like `computed` does.
+
+```typescript
+// Current (wrong):
+const userById = select((id) => store.users(u => u.id === id));
+// userById is just a caching function
+
+// Should be:
+const userById = select((id) => store.users(u => u.id === id));
+// userById is a REACTIVE PRIMITIVE that:
+// - Tracks dependencies (store.users)
+// - Invalidates when deps change
+// - Caches its result
+// - Can be used in other computeds
+
+// Like computed:
+const currentUser = computed(() => {
+  return userById(store.currentUserId()); // tracks both userById AND currentUserId!
+});
+```
+
+Key insight: `selected` is to lookups what `computed` is to derivations
+
+So instead of generation++, we:
+1. Track what signals the selector reads
+2. Invalidate only when those specific signals change
+3. Component-level coordination, not selector-level
+
+This fits the reactive model much better!
+
+---
+
 ## Using selectors reactively
 
 User asks: can selectors be used like signals? react to them?
@@ -532,3 +568,65 @@ updateUser: (id: string) => {
   set(userById(id), updates); // Leverages cache!
 }
 ```
+
+---
+
+## New approach: Computed indexes!
+
+User suggests completely different approach:
+- Use computed to build reactive Map indexes
+- select just queries the indexes (O(1))
+- No complex caching needed!
+
+Example:
+```typescript
+const usersById = computed(() => 
+  new Map(store.users().map(u => [u.id, u]))
+);
+const userById = select((id: string) => usersById().get(id));
+```
+
+This is SO much cleaner!
+- O(n) only when building/rebuilding index
+- O(1) for all lookups
+- Leverages existing reactive system
+- No WeakMap caching complexity
+
+Current implementation has all this complex caching logic that can be removed.
+
+Next steps:
+1. Remove all the selectorCache/generation stuff from component.ts
+2. Simplify select to just return SelectorResult
+3. Update tests to show computed index pattern
+4. Document this pattern clearly
+
+The beauty is it leverages what we already have:
+- computed already does dependency tracking
+- computed already caches results
+- computed already invalidates when deps change
+- Maps give us O(1) lookups
+
+No need for generations, WeakMaps, or complex cache invalidation!
+
+Actually, looking at the tests, they all expect caching behavior that we just removed.
+Since we're moving to computed indexes approach, we should remove these caching tests entirely and replace with tests showing the computed pattern.
+
+## Summary of changes made:
+
+1. **Removed all caching logic** from component.ts:
+   - No more selectorCache WeakMap
+   - No more generation counter
+   - No more cache invalidation logic
+
+2. **Simplified select function** to just return SelectorResult:
+   - No caching
+   - Just runs the selector function and returns result
+   - Clean and simple
+
+3. **Replaced all tests** to show computed index pattern:
+   - Using computed() to build Map indexes
+   - O(1) lookups via Map.get()
+   - Reactive updates when source data changes
+   - Multiple index types (by id, by email, compound keys, etc)
+
+The new approach is much cleaner and leverages existing reactive primitives!

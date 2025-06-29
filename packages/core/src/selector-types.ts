@@ -14,6 +14,7 @@ export interface SelectorResult<T> {
   readonly value: T | undefined;
   readonly signal: any; // Will be Signal<T[]> but avoiding circular dep
   readonly predicate: (item: T, index?: number) => boolean;
+  readonly _updateCache?: (value: T) => void; // Internal method for set to update cache
 }
 
 /**

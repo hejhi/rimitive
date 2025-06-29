@@ -13,23 +13,32 @@ set(store.users((user) => user.id === '123'), { age: 25 });
 
 This doesn't scale. We need better performance through selector reuse.
 
-## Solution: `select`
+## Solution: `select` with Computed Indexes
 
-Add a `select` function to the component context that creates cached selectors for predicate-based lookups.
+Use `computed` to build reactive indexes, then `select` to query them. This provides true O(1) lookups without complex caching.
 
 ### API
 
 ```typescript
 const UserStore = createComponent(
   withState<{ users: User[] }>(),
-  ({ store, select, set }) => {
-    // Create reusable cached selectors
-    const userById = select((id: string) =>
-      store.users((user) => user.id === id)
+  ({ store, select, computed, set }) => {
+    // Build reactive indexes using computed - O(n) once, then cached
+    const usersById = computed(() =>
+      new Map(store.users().map(user => [user.id, user]))
+    );
+    
+    const usersByEmail = computed(() =>
+      new Map(store.users().map(user => [user.email, user]))
+    );
+    
+    // Create selectors that use the indexes - always O(1)!
+    const userById = select((id: string) => 
+      usersById().get(id)
     );
     
     const userByEmail = select((email: string) =>
-      store.users((user) => user.email === email)
+      usersByEmail().get(email)
     );
 
     return {
@@ -37,7 +46,7 @@ const UserStore = createComponent(
       userById,
       userByEmail,
       
-      // Reuse selectors in methods - O(1) after first call!
+      // All lookups are now O(1)!
       updateUser: (id: string, updates: Partial<User>) => {
         set(userById(id), updates);
       },
@@ -56,103 +65,126 @@ const UserStore = createComponent(
 
 ### How It Works
 
-1. **Selector-Level Caching**: Each selector caches its results based on the arguments passed
-2. **Generation Tracking**: A global generation counter increments on every update
-3. **Cache Validation**: Selectors check if their cached result is from the current generation
-4. **Automatic Invalidation**: Any update invalidates all selector caches via generation increment
-5. **Reference Stability**: Objects maintain same reference until explicitly updated
+1. **Computed Indexes**: `computed` creates reactive Maps that rebuild when source data changes
+2. **O(1) Lookups**: Map.get() provides constant-time access by key
+3. **Automatic Updates**: When users array changes, computed rebuilds the index
+4. **Reference Stability**: Objects maintain same reference until explicitly updated
+5. **No Complex Caching**: Leverages existing computed caching mechanism
 
-### The Key Pattern: Selector Reuse
+### The Key Pattern: Index Once, Lookup Many
 
 ```typescript
 const UserStore = createComponent(
   withState<{ users: User[] }>(),
-  ({ store, select, set }) => {
-    // Create selectors ONCE
-    const userById = select((id: string) => 
-      store.users((user) => user.id === id)
+  ({ store, select, computed, set }) => {
+    // Create index ONCE at component initialization
+    const usersById = computed(() => 
+      new Map(store.users().map(u => [u.id, u]))
     );
+
+    const userById = select((id: string) => usersById().get(id));
 
     return {
       userById,
       
-      // Multiple methods reuse the SAME selector
-      getUser: (id: string) => userById(id),
+      // All methods get O(1) lookups
+      getUser: (id: string) => userById(id).value,
       
       updateUser: (id: string, updates: Partial<User>) => {
-        set(userById(id), updates); // Reuses cached result!
+        set(userById(id), updates); // O(1) lookup!
       },
       
       deleteUser: (id: string) => {
-        const user = userById(id); // Reuses cached result!
-        // ... deletion logic
+        const user = userById(id); // O(1) lookup!
+        if (user.value) {
+          set({ users: store.users().filter(u => u.id !== id) });
+        }
       }
     };
   }
 );
 
-// First call - O(n) search
+// Every lookup is O(1) from the Map
 const user = store.userById('123');
+store.updateUser('123', { name: 'Updated' });
+const sameUser = store.userById('123'); // Still O(1)!
 
-// All subsequent uses of same selector+args - O(1)!
-store.updateUser('123', { name: 'Updated' }); // Cache hit!
-const sameUser = store.getUser('123'); // Cache hit!
+// After array changes, index auto-rebuilds
+store.users([...store.users(), newUser]);
+const anotherUser = store.userById('456'); // Still O(1) from new index!
 ```
 
 ### Performance Characteristics
 
 ```typescript
-// First search with selector - O(n)
-const user1 = store.userById('123');
+// Without indexes - O(n) for every lookup
+store.users((u) => u.id === '123'); // Searches all users
+store.users((u) => u.id === '456'); // Searches all users again
 
-// Same selector, same args - O(1) from cache!
-const user2 = store.userById('123');
-store.updateUser('123', { age: 25 }); // Still O(1)!
+// With computed indexes - O(1) for every lookup!
+const usersById = computed(() => 
+  new Map(store.users().map(u => [u.id, u]))
+);
 
-// Different selector = different cache - O(n) first time
-const user3 = store.userByEmail('alice@example.com');
+usersById().get('123'); // Direct map access
+usersById().get('456'); // Direct map access
 
-// But now that selector is also cached for its args
-const user4 = store.userByEmail('alice@example.com'); // O(1)!
+// Index rebuild is O(n) but only happens when users array changes
+store.users([...store.users(), newUser]); // Triggers index rebuild
+usersById().get('789'); // Still O(1) from rebuilt index
 
-// After any update, generation increments and caches invalidate
-store.users([...store.users(), newUser]);
-
-// Next lookup must search again - O(n)
-const user5 = store.userById('123');
-// But subsequent calls are cached again - O(1)
-const user6 = store.userById('123');
+// Compare approaches:
+// ❌ Predicate search: O(n) × number of lookups
+// ✅ Computed index: O(n) once + O(1) × number of lookups
 ```
 
-### What DOESN'T Work
+### Common Patterns
 
 ```typescript
-// Creating selectors inline = no caching benefit!
-updateUser: (id: string) => {
-  const user = store.users(u => u.id === id); // O(n) every time!
-  // ...
-}
+// Single-value indexes for unique lookups
+const usersById = computed(() => 
+  new Map(store.users().map(u => [u.id, u]))
+);
 
-// Different selectors don't share cache
-const byId = store.userById('123'); // O(n) 
-const byEmail = store.userByEmail('alice@example.com'); // O(n) - can't know it's same user
+// Multi-value indexes for one-to-many relationships
+const usersByRole = computed(() => {
+  const map = new Map<string, User[]>();
+  for (const user of store.users()) {
+    const list = map.get(user.role) || [];
+    list.push(user);
+    map.set(user.role, list);
+  }
+  return map;
+});
+
+// Compound key indexes
+const usersByCompoundKey = computed(() => 
+  new Map(store.users().map(u => [`${u.companyId}-${u.departmentId}`, u]))
+);
+
+// Set indexes for existence checks
+const userIdSet = computed(() => 
+  new Set(store.users().map(u => u.id))
+);
+
+const hasUser = select((id: string) => userIdSet().has(id));
 ```
 
 ### Implementation Notes
 
-- Each selector maintains its own cache keyed by arguments
-- Generation counter ensures cache validity across updates
-- WeakMap stores found objects with their generation
-- Cache hits only when generation matches current
-- Encourages creating reusable selectors rather than inline lookups
+- `select` is a simple wrapper that returns SelectorResult for `set` compatibility
+- No complex caching needed - computed handles all caching
+- Indexes rebuild automatically when dependencies change
+- Object references are preserved (same object in array = same object in Map)
+- Memory usage: O(n) for each index (same as the source array)
 
 ### Benefits
 
-1. **Predictable Performance**: Same selector + same args = O(1) after first call
-2. **Zero Configuration**: Just wrap lookups with `select()`
-3. **Memory Safe**: WeakMap allows garbage collection
-4. **Encourages Good Patterns**: Reusable selectors over scattered lookups
-5. **Simple Mental Model**: "Create once, reuse everywhere"
+1. **True O(1) Performance**: Map lookups are always constant time
+2. **Simple Implementation**: No caching logic needed in select
+3. **Leverages Existing APIs**: computed + select work together naturally
+4. **Type Safe**: Full TypeScript inference for Map types
+5. **Predictable Memory**: Index size = source array size
 
 ### NO Backwards Compatibility
 
@@ -160,47 +192,45 @@ There is no migration. we are pre-launch and have no users, so we do NOT need to
 
 ### Best Practices
 
-1. **Create selectors at component initialization**, not in methods
-2. **Export selectors** from your store for external use
-3. **Compose selectors** with `set()` for updates
-4. **Name selectors clearly** (e.g., `userById`, `activeUsers`)
-5. **Avoid inline predicates** - they bypass caching entirely
+1. **Create indexes at component initialization** using computed
+2. **Choose appropriate data structures** (Map for lookups, Set for existence)
+3. **Name indexes clearly** (e.g., `usersById`, `usersByRole`)
+4. **Keep indexes simple** - one index per access pattern
+5. **Let computed handle caching** - don't add your own
 
-### Reactive Patterns with Selectors
+### Reactive Patterns
 
-Selectors compose naturally with `computed` for reactive behavior:
+Everything composes naturally since indexes are just computed values:
 
 ```typescript
 const UserDashboard = createComponent(
   withState<{ users: User[]; currentUserId: string }>(),
   ({ store, select, computed, set }) => {
-    // Create reusable selector
-    const userById = select((id: string) => 
-      store.users((user) => user.id === id)
+    // Create index
+    const usersById = computed(() => 
+      new Map(store.users().map(u => [u.id, u]))
     );
+    
+    const userById = select((id: string) => usersById().get(id));
 
     return {
-      // Export the selector
       userById,
       
-      // Reactive computed using selector - auto-updates when users change!
-      currentUser: computed(() => {
-        const result = userById(store.currentUserId());
-        return result.value;
-      }),
+      // Reactive current user - auto-updates when users OR currentUserId change
+      currentUser: computed(() => 
+        usersById().get(store.currentUserId())
+      ),
       
-      // Derived reactive values
-      currentUserName: computed(() => {
-        const result = userById(store.currentUserId());
-        return result.value?.name || 'Anonymous';
-      }),
+      // Derived values stay reactive
+      currentUserName: computed(() => 
+        usersById().get(store.currentUserId())?.name || 'Anonymous'
+      ),
       
-      isCurrentUserAdmin: computed(() => {
-        const result = userById(store.currentUserId());
-        return result.value?.role === 'admin';
-      }),
+      isCurrentUserAdmin: computed(() => 
+        usersById().get(store.currentUserId())?.role === 'admin'
+      ),
       
-      // Methods can use reactive values
+      // Updates work seamlessly
       promoteCurrentUser: () => {
         const userId = store.currentUserId();
         set(userById(userId), { role: 'admin' });
@@ -209,28 +239,29 @@ const UserDashboard = createComponent(
   }
 );
 
-// Usage - reactive values auto-update!
+// Everything stays reactive!
 store.currentUserName(); // "Alice"
-store.users([...store.users(), { id: 'current', name: 'Bob' }]);
+store.currentUserId('456');
 store.currentUserName(); // "Bob" - automatically updated!
 ```
 
 Key benefits:
-- Selectors provide efficient lookups (O(1) after first call)
-- Computeds provide reactivity and dependency tracking
-- Natural composition without special APIs
-- Shared selectors across multiple reactive computeds
+- Indexes are reactive and auto-update
+- All lookups are O(1)
+- Natural composition with computed
+- No special caching logic needed
 
 ### Edge Cases
 
-- Selectors returning primitives still work but can't benefit from reference equality
-- Deeply nested updates invalidate all caches (generation increments)
-- Each unique selector function creates its own cache namespace
+- Empty arrays produce empty Maps/Sets
+- Duplicate keys in Map use last value (standard Map behavior)
+- Undefined/null values can be used as Map keys if needed
+- Very large arrays may have memory impact (consider virtualization)
 
 ### Next Steps
 
-1. Implement `select` in lattice-context
-2. Enhance `set` to work with selectors
-3. Add tests for caching behavior
-4. Performance benchmarks vs current approach
-5. Documentation and examples
+1. Simplify `select` implementation (remove caching)
+2. Update documentation to show computed index pattern
+3. Add examples of common index patterns
+4. Performance benchmarks comparing approaches
+5. Consider helper functions for common index types

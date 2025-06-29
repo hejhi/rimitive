@@ -11,30 +11,31 @@ export type { FromMarker } from './component-types';
 /**
  * Logger middleware - logs all state changes
  */
-export function withLogger<State>(marker: FromMarker<State>): FromMarker<State> {
+export function withLogger<State>(
+  marker: FromMarker<State>
+): FromMarker<State> {
   const loggerMiddleware: ComponentMiddleware<State> = (context) => {
     const originalSet = context.set;
-    
+
     // Wrap set to log changes
-    context.set = (updates) => {
+    context.set = ((updates: any) => {
       // For logging, we need to evaluate the updates
       // The original set will handle passing the correct state
       originalSet((state) => {
-        const updateObj = typeof updates === 'function' 
-          ? updates(state) 
-          : updates;
-        
+        const updateObj =
+          typeof updates === 'function' ? updates(state) : updates;
+
         console.log('[Lattice Logger] State update:', updateObj);
         return updateObj;
       });
-    };
-    
+    }) as typeof context.set;
+
     return context;
   };
-  
+
   return {
     ...marker,
-    _middleware: [...marker._middleware, loggerMiddleware]
+    _middleware: [...marker._middleware, loggerMiddleware],
   };
 }
 
@@ -47,47 +48,42 @@ export function withDevtools<State>(name = 'Lattice Store') {
       // Check if devtools extension is available
       const devtoolsExt = (window as any).__REDUX_DEVTOOLS_EXTENSION__;
       if (!devtoolsExt) return context;
-      
+
       const devtools = devtoolsExt.connect({ name });
       const originalSet = context.set;
-      
+
       // Send initial state
       const initialState: any = {};
       for (const key in context.store) {
         initialState[key] = context.store[key]();
       }
       devtools.init(initialState);
-      
+
       // Wrap set to send actions to devtools
-      context.set = (updates) => {
+      context.set = (updates: any) => {
         let updateObj: Partial<State>;
-        
+
         originalSet((state) => {
-          updateObj = typeof updates === 'function' 
-            ? updates(state) 
-            : updates;
+          updateObj = typeof updates === 'function' ? updates(state) : updates;
           return updateObj;
         });
-        
+
         // Get current state after update
         const currentState: any = {};
         for (const key in context.store) {
           currentState[key] = context.store[key]();
         }
-        
+
         // Send action to devtools
-        devtools.send(
-          { type: 'SET_STATE', payload: updateObj! },
-          currentState
-        );
+        devtools.send({ type: 'SET_STATE', payload: updateObj! }, currentState);
       };
-      
+
       return context;
     };
-    
+
     return {
       ...marker,
-      _middleware: [...marker._middleware, devtoolsMiddleware]
+      _middleware: [...marker._middleware, devtoolsMiddleware],
     };
   };
 }
@@ -106,35 +102,39 @@ export function withPersistence<State>(key: string) {
           // Update initial state
           context.set(parsed);
         } catch (e) {
-          console.warn(`[Lattice Persist] Failed to parse stored state for key "${key}"`);
+          console.warn(
+            `[Lattice Persist] Failed to parse stored state for key "${key}"`
+          );
         }
       }
-      
+
       const originalSet = context.set;
-      
+
       // Wrap set to persist changes
       context.set = (updates) => {
         originalSet(updates);
-        
+
         // Get current state and save to localStorage
         const currentState: Record<string, any> = {};
         for (const key in context.store) {
           currentState[key] = context.store[key]();
         }
-        
+
         try {
           localStorage.setItem(key, JSON.stringify(currentState));
         } catch (e) {
-          console.warn(`[Lattice Persist] Failed to save state to localStorage`);
+          console.warn(
+            `[Lattice Persist] Failed to save state to localStorage`
+          );
         }
       };
-      
+
       return context;
     };
-    
+
     return {
       ...marker,
-      _middleware: [...marker._middleware, persistMiddleware]
+      _middleware: [...marker._middleware, persistMiddleware],
     };
   };
 }

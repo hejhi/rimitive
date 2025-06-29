@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { createComponent, withState, createStore } from './component';
 
-describe('Select API Caching', () => {
-  it('should cache objects and provide O(1) lookups', () => {
+describe('Select API with Computed Indexes', () => {
+  it('should demonstrate O(1) lookups using computed indexes', () => {
     interface User {
       id: string;
       name: string;
@@ -16,21 +16,30 @@ describe('Select API Caching', () => {
 
     const UserStore = createComponent(
       withState<State>(),
-      ({ store, select, set }) => {
-        // Create selectors
+      ({ store, select, computed, set }) => {
+        // Build reactive indexes using computed - O(n) once, then cached
+        const usersById = computed(() =>
+          new Map(store.users().map(user => [user.id, user]))
+        );
+        
+        const usersByEmail = computed(() =>
+          new Map(store.users().map(user => [user.email, user]))
+        );
+        
+        // Create selectors that use the indexes - always O(1)!
         const userById = select((id: string) => 
-          store.users((user: User) => user.id === id)
+          usersById().get(id)
         );
         
         const userByEmail = select((email: string) =>
-          store.users((user: User) => user.email === email)
+          usersByEmail().get(email)
         );
 
         return {
           users: store.users,
-          getUserById: userById,
-          getUserByEmail: userByEmail,
-          updateUserById: (id: string, updates: Partial<User>) => {
+          userById,
+          userByEmail,
+          updateUser: (id: string, updates: Partial<User>) => {
             set(userById(id), updates);
           },
           updateUserByEmail: (email: string, updates: Partial<User>) => {
@@ -48,8 +57,8 @@ describe('Select API Caching', () => {
       ],
     });
 
-    // First lookup by ID - O(n)
-    const user1 = store.getUserById('1');
+    // All lookups are O(1) from the Map
+    const user1 = store.userById('1');
     expect(user1.value).toEqual({
       id: '1',
       name: 'Alice',
@@ -57,42 +66,40 @@ describe('Select API Caching', () => {
       age: 25,
     });
 
-    // Lookup same user by email - should be O(1) due to cache!
-    const user1ByEmail = store.getUserByEmail('alice@example.com');
+    // Different selector, but still O(1) from its own index
+    const user1ByEmail = store.userByEmail('alice@example.com');
     expect(user1ByEmail.value).toBe(user1.value); // Same reference!
 
     // Update via ID selector
-    store.updateUserById('1', { age: 26 });
+    store.updateUser('1', { age: 26 });
     expect(store.users()[0]?.age).toBe(26);
 
-    // Update via email selector (different selector, same object)
+    // Update via email selector
     store.updateUserByEmail('alice@example.com', { name: 'Alice Smith' });
     expect(store.users()[0]?.name).toBe('Alice Smith');
   });
 
-  it('should maintain cache across immutable updates that preserve references', () => {
+  it('should maintain O(1) lookups after array updates', () => {
     interface State {
       users: Array<{ id: string; name: string; active: boolean }>;
     }
 
     const Store = createComponent(
       withState<State>(),
-      ({ store, select, set }) => {
-        const userById = select((id: string) =>
-          store.users((u) => u.id === id)
+      ({ store, select, computed, set }) => {
+        // Index rebuilds automatically when users array changes
+        const usersById = computed(() =>
+          new Map(store.users().map(u => [u.id, u]))
         );
+
+        const userById = select((id: string) => usersById().get(id));
 
         return {
           users: store.users,
           getUserById: userById,
           updateUser: (id: string, updates: any) => set(userById(id), updates),
-          deactivateUser: (targetId: string) => {
-            // Immutable update that preserves other references
-            store.users(
-              store.users().map(u => 
-                u.id === targetId ? { ...u, active: false } : u
-              )
-            );
+          addUser: (user: any) => {
+            store.users([...store.users(), user]);
           },
         };
       }
@@ -105,52 +112,174 @@ describe('Select API Caching', () => {
       ],
     });
 
-    // Cache user 2
+    // Initial lookup - O(1) from Map
     const user2 = store.getUserById('2');
     expect(user2.value?.name).toBe('Bob');
 
-    // Deactivate user 1 (should preserve user 2's reference)
-    store.deactivateUser('1');
+    // Add new user - index rebuilds
+    store.addUser({ id: '3', name: 'Charlie', active: false });
 
-    // User 2 lookup should still be O(1) from cache
+    // Old user still accessible - O(1) from rebuilt index
     const user2Again = store.getUserById('2');
-    expect(user2Again.value).toBe(user2.value); // Same reference preserved!
+    expect(user2Again.value?.name).toBe('Bob');
+
+    // New user also accessible - O(1)
+    const user3 = store.getUserById('3');
+    expect(user3.value?.name).toBe('Charlie');
   });
 
-  it('should clear cache when references change', () => {
+  it('should support multiple index types for different access patterns', () => {
+    interface User {
+      id: string;
+      name: string;
+      role: string;
+      companyId: string;
+      departmentId: string;
+    }
+
     interface State {
-      items: string[];
+      users: User[];
     }
 
     const Store = createComponent(
       withState<State>(),
-      ({ store, select }) => {
-        const itemAt = select((index: number) => {
-          const items = store.items();
-          return items[index];
+      ({ store, select, computed }) => {
+        // Single-value index for unique lookups
+        const usersById = computed(() =>
+          new Map(store.users().map(u => [u.id, u]))
+        );
+
+        // Multi-value index for one-to-many relationships  
+        const usersByRole = computed(() => {
+          const map = new Map<string, User[]>();
+          for (const user of store.users()) {
+            const list = map.get(user.role) || [];
+            list.push(user);
+            map.set(user.role, list);
+          }
+          return map;
         });
 
+        // Compound key index
+        const usersByCompoundKey = computed(() =>
+          new Map(store.users().map(u => 
+            [`${u.companyId}-${u.departmentId}`, u]
+          ))
+        );
+
+        // Set index for existence checks
+        const userIdSet = computed(() =>
+          new Set(store.users().map(u => u.id))
+        );
+
         return {
-          items: store.items,
-          getItemAt: itemAt,
-          replaceItems: (newItems: string[]) => store.items(newItems),
+          // All lookups are O(1)!
+          getUserById: select((id: string) => usersById().get(id)),
+          getUsersByRole: select((role: string) => usersByRole().get(role) || []),
+          getUserByCompoundKey: select((companyId: string, deptId: string) =>
+            usersByCompoundKey().get(`${companyId}-${deptId}`)
+          ),
+          hasUser: select((id: string) => userIdSet().has(id)),
         };
       }
     );
 
     const store = createStore(Store, {
-      items: ['a', 'b', 'c'],
+      users: [
+        { id: '1', name: 'Alice', role: 'admin', companyId: 'acme', departmentId: 'eng' },
+        { id: '2', name: 'Bob', role: 'user', companyId: 'acme', departmentId: 'sales' },
+        { id: '3', name: 'Charlie', role: 'admin', companyId: 'globex', departmentId: 'eng' },
+      ],
     });
 
-    // This won't cache because strings are primitives
-    const item = store.getItemAt(1);
-    expect(item.value).toBe('b');
+    // Single value lookup - O(1)
+    expect(store.getUserById('1').value?.name).toBe('Alice');
 
-    // Replace array entirely
-    store.replaceItems(['x', 'y', 'z']);
-    
-    // Should get new value
-    const newItem = store.getItemAt(1);
-    expect(newItem.value).toBe('y');
+    // Multi-value lookup - O(1)  
+    const admins = store.getUsersByRole('admin').value;
+    expect(admins).toHaveLength(2);
+    expect(admins?.[0]?.name).toBe('Alice');
+    expect(admins?.[1]?.name).toBe('Charlie');
+
+    // Compound key lookup - O(1)
+    const engUser = store.getUserByCompoundKey('acme', 'eng').value;
+    expect(engUser?.name).toBe('Alice');
+
+    // Existence check - O(1)
+    expect(store.hasUser('1').value).toBe(true);
+    expect(store.hasUser('999').value).toBe(false);
+  });
+
+  it('should compose with other reactive primitives', () => {
+    interface State {
+      users: User[];
+      currentUserId: string;
+    }
+
+    interface User {
+      id: string;
+      name: string;
+      role: string;
+    }
+
+    const UserDashboard = createComponent(
+      withState<State>(),
+      ({ store, select, computed, set }) => {
+        // Create index
+        const usersById = computed(() =>
+          new Map(store.users().map(u => [u.id, u]))
+        );
+        
+        const userById = select((id: string) => usersById().get(id));
+
+        return {
+          userById,
+          
+          // Reactive current user - auto-updates when users OR currentUserId change
+          currentUser: computed(() => 
+            usersById().get(store.currentUserId())
+          ),
+          
+          // Derived values stay reactive
+          currentUserName: computed(() => 
+            usersById().get(store.currentUserId())?.name || 'Anonymous'
+          ),
+          
+          isCurrentUserAdmin: computed(() => 
+            usersById().get(store.currentUserId())?.role === 'admin'
+          ),
+          
+          // Updates work seamlessly
+          promoteCurrentUser: () => {
+            const userId = store.currentUserId();
+            set(userById(userId), { role: 'admin' });
+          },
+          
+          setCurrentUserId: (id: string) => set({ currentUserId: id }),
+        };
+      }
+    );
+
+    const store = createStore(UserDashboard, {
+      users: [
+        { id: '1', name: 'Alice', role: 'user' },
+        { id: '2', name: 'Bob', role: 'admin' },
+      ],
+      currentUserId: '1',
+    });
+
+    // Everything stays reactive!
+    expect(store.currentUserName()).toBe('Alice');
+    expect(store.isCurrentUserAdmin()).toBe(false);
+
+    // Change current user
+    store.setCurrentUserId('2');
+    expect(store.currentUserName()).toBe('Bob');
+    expect(store.isCurrentUserAdmin()).toBe(true);
+
+    // Promote user
+    store.setCurrentUserId('1');
+    store.promoteCurrentUser();
+    expect(store.isCurrentUserAdmin()).toBe(true);
   });
 });

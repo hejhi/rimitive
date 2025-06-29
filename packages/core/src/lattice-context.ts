@@ -16,7 +16,7 @@ import { createComputedFactory } from './computed';
 /**
  * Creates a scoped lattice context for a component tree
  */
-export function createLatticeContext<State>(): LatticeContext<State> & { _batch: (fn: () => void) => void } {
+export function createLatticeContext<State>(): LatticeContext<State> & { _batch: (fn: () => void) => void; _tracking: ReturnType<typeof createTrackingContext> } {
   const tracking = createTrackingContext();
   const batching = createBatchingSystem();
   
@@ -56,5 +56,6 @@ export function createLatticeContext<State>(): LatticeContext<State> & { _batch:
     select,
     // Internal method for store integration
     _batch: batching.batch,
+    _tracking: tracking,
   };
 }

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Component-scoped Lattice implementation
- * 
+ *
  * Provides component factories that receive scoped lattice contexts,
  * enabling proper composition and isolation between component trees.
  */
@@ -12,7 +12,7 @@ import type {
   SignalState,
   Signal,
 } from './runtime-types';
-import { isSelectorResult, SelectorMetadata } from './selector-types';
+import { isSelectorResult, SelectorResult } from './selector-types';
 import { createLatticeContext } from './lattice-context';
 import { type StoreAdapter } from './adapter-contract';
 import type { FromMarker } from './component-types';
@@ -24,7 +24,9 @@ export function withState<State extends Record<string, any>>(
   initializer: () => State
 ): FromMarker<State>;
 
-export function withState<State extends Record<string, any>>(): FromMarker<State>;
+export function withState<
+  State extends Record<string, any>,
+>(): FromMarker<State>;
 
 export function withState<State extends Record<string, any>>(
   initializer?: () => State
@@ -34,13 +36,13 @@ export function withState<State extends Record<string, any>>(
     return {
       _state: initial,
       _initial: initial,
-      _middleware: []
+      _middleware: [],
     };
   } else {
     return {
       _state: {} as State,
       _initial: {} as State,
-      _middleware: []
+      _middleware: [],
     };
   }
 }
@@ -54,14 +56,11 @@ export function createComponent<Marker extends FromMarker<any>, Slices>(
 ): ComponentFactory<Marker['_state'], Slices> {
   type State = Marker['_state'];
   const middleware = marker._middleware;
-  
+
   // Return wrapped factory that applies middleware
   return (context: ComponentContext<State>) => {
     // Apply middleware in order
-    const enhancedContext = middleware.reduce(
-      (ctx, mw) => mw(ctx),
-      context
-    );
+    const enhancedContext = middleware.reduce((ctx, mw) => mw(ctx), context);
     return factory(enhancedContext);
   };
 }
@@ -83,24 +82,24 @@ export function partial<T extends Record<string, any>>(
 export function createStore<State extends Record<string, any>, Slices>(
   component: ComponentFactory<State, Slices>,
   initialState: State
-): Slices & { _getState: () => State; _subscribe: (fn: () => void) => () => void } {
+): Slices & {
+  _getState: () => State;
+  _subscribe: (fn: () => void) => () => void;
+} {
   // Create internal state management
   let state = { ...initialState };
   const listeners = new Set<() => void>();
-  let generation = 0; // Increment on every update
-  
-  // Create component-level cache for selectors
-  const selectorCache = new WeakMap<object, SelectorMetadata & { generation: number }>();
-  
+
+
   // Create scoped lattice context
   const lattice = createLatticeContext<State>();
-  
+
   // Create state signals
   const stateSignals = {} as SignalState<State>;
   for (const key in state) {
     stateSignals[key] = lattice.signal(state[key]);
   }
-  
+
   // Create set function that updates state
   const set: SetState<State> = ((arg1: any, arg2?: any) => {
     // Check if first argument is a selector result
@@ -108,20 +107,20 @@ export function createStore<State extends Record<string, any>, Slices>(
       // Selector-based update
       const selector = arg1;
       const updates = arg2;
-      
+
       if (!selector.value) {
         // Nothing to update if selector didn't find anything
         return;
       }
-      
+
       // We need to find the value in the store and update it
       // This is O(n) but necessary since we don't have the signal/predicate info yet
-      
+
       // Search through all signals to find and update the object
       for (const key in stateSignals) {
         const signal = stateSignals[key];
         const currentValue = signal();
-        
+
         if (Array.isArray(currentValue)) {
           const index = currentValue.indexOf(selector.value);
           if (index !== -1) {
@@ -131,120 +130,89 @@ export function createStore<State extends Record<string, any>, Slices>(
             } else {
               newArray[index] = { ...currentValue[index], ...updates };
             }
-            signal(newArray);
-            generation++; // Increment generation after update
+            (signal as (value: any) => void)(newArray);
             return;
           }
-        } else if (currentValue instanceof Set && currentValue.has(selector.value)) {
+        } else if (
+          currentValue && typeof currentValue === 'object' && (currentValue as any) instanceof Set &&
+          (currentValue as Set<any>).has(selector.value)
+        ) {
           const newSet = new Set(currentValue);
           newSet.delete(selector.value);
+          let newItem: any;
           if (typeof updates === 'function') {
-            newSet.add(updates(selector.value));
+            newItem = updates(selector.value);
           } else {
-            newSet.add({ ...selector.value, ...updates });
+            newItem = { ...selector.value, ...updates };
           }
-          signal(newSet);
-          generation++;
+          newSet.add(newItem);
+          (signal as (value: any) => void)(newSet);
           return;
-        } else if (currentValue instanceof Map) {
-          for (const [k, v] of currentValue) {
+        } else if (currentValue && typeof currentValue === 'object' && (currentValue as any) instanceof Map) {
+          for (const [k, v] of currentValue as Map<any, any>) {
             if (v === selector.value) {
+              let newItem: any;
               if (typeof updates === 'function') {
-                currentValue.set(k, updates(v));
+                newItem = updates(v);
               } else {
-                currentValue.set(k, { ...v, ...updates });
+                newItem = { ...v, ...updates };
               }
-              signal(new Map(currentValue));
-              generation++;
+              currentValue.set(k, newItem);
+              (signal as (value: any) => void)(new Map(currentValue));
               return;
             }
           }
         } else if (currentValue === selector.value) {
+          let newItem: any;
           if (typeof updates === 'function') {
-            signal(updates(currentValue));
+            newItem = updates(currentValue);
           } else {
-            signal({ ...currentValue, ...updates });
+            newItem = { ...currentValue, ...updates };
           }
-          generation++;
+          signal(newItem);
           return;
         }
       }
-      
+
       // Could not find selector value in any signal
       return;
     }
-    
+
     // Original behavior - direct state update
     const updates = arg1;
     const newUpdates = typeof updates === 'function' ? updates(state) : updates;
-    
+
     lattice._batch(() => {
       // Update internal state and signals
-      let hasUpdates = false;
       for (const key in newUpdates) {
         if (!Object.is(state[key], newUpdates[key])) {
-          state[key] = newUpdates[key]!;
-          
+          (state as any)[key] = newUpdates[key]!;
+
           // Update existing signal or create new one
           if (stateSignals[key]) {
             stateSignals[key](newUpdates[key]!);
           } else {
-            stateSignals[key] = lattice.signal(newUpdates[key]!);
+            (stateSignals as any)[key] = lattice.signal(newUpdates[key]!);
           }
-          hasUpdates = true;
         }
       }
-      if (hasUpdates) {
-        generation++;
-      }
     });
-    
+
     // Notify subscribers
     for (const listener of listeners) {
       listener();
     }
   }) as SetState<State>;
-  
-  // Create cached select function
+
+  // Create select function - simple wrapper for selector functions
   const select = <TArgs extends any[], TResult>(
     selectorFn: (...args: TArgs) => TResult | undefined
   ) => {
-    // Each selector maintains its last result
-    let lastValue: TResult | undefined;
-    let lastGeneration = -1;
-    
-    return (...args: TArgs) => {
-      // Check if our cached value is still valid
-      if (lastValue && 
-          typeof lastValue === 'object' && 
-          lastGeneration === generation &&
-          selectorCache.has(lastValue)) {
-        const cached = selectorCache.get(lastValue);
-        if (cached && cached.generation === generation) {
-          // Cache hit!
-          return {
-            __selector: true as const,
-            value: lastValue,
-            signal: null,
-            predicate: () => true,
-          };
-        }
-      }
-      
-      // Cache miss - run the selector function
+    return (...args: TArgs): SelectorResult<TResult> => {
+      // Run the selector function to find the value
       const value = selectorFn(...args);
-      lastValue = value;
-      lastGeneration = generation;
       
-      // Store in WeakMap if it's an object
-      if (value && typeof value === 'object') {
-        selectorCache.set(value, {
-          lastAccess: Date.now(),
-          selectorId: selectorFn.toString(),
-          generation: generation,
-        });
-      }
-      
+      // Return a selector result for use with set()
       return {
         __selector: true as const,
         value,
@@ -253,17 +221,17 @@ export function createStore<State extends Record<string, any>, Slices>(
       };
     };
   };
-  
+
   // Create component slices with merged context
   const context: ComponentContext<State> = {
     store: stateSignals,
     signal: lattice.signal,
     computed: lattice.computed,
     set,
-    select
+    select,
   };
   const slices = component(context);
-  
+
   // Add store methods
   return {
     ...slices,
@@ -278,21 +246,24 @@ export function createStore<State extends Record<string, any>, Slices>(
 /**
  * Creates a store from a component factory using an existing adapter
  */
-export function createStoreWithAdapter<State extends Record<string, any>, Slices>(
+export function createStoreWithAdapter<
+  State extends Record<string, any>,
+  Slices,
+>(
   component: ComponentFactory<State, Slices>,
   adapter: StoreAdapter<State>
 ): Slices {
   // Create scoped lattice context
   const lattice = createLatticeContext<State>();
-  
+
   // Create read-only signals that mirror adapter state
   const state = adapter.getState();
   const stateSignals = {} as SignalState<State>;
-  
+
   // Create internal signals map - these are writable
   type StateKey = Extract<keyof State, string>;
   const internalSignals = new Map<StateKey, Signal<State[StateKey]>>();
-  
+
   // Helper to create a read-only signal wrapper for a specific key
   function createReadOnlySignal<K extends StateKey>(
     internalSig: Signal<State[K]>
@@ -302,24 +273,24 @@ export function createStoreWithAdapter<State extends Record<string, any>, Slices
     wrapper.subscribe = internalSig.subscribe;
     return wrapper;
   }
-  
+
   // Initialize signals for all state keys
-  (Object.keys(state) as StateKey[]).forEach(key => {
+  (Object.keys(state) as StateKey[]).forEach((key) => {
     const internalSig = lattice.signal(state[key]);
     internalSignals.set(key, internalSig);
     stateSignals[key] = createReadOnlySignal(internalSig);
   });
-  
+
   // Subscribe to adapter changes
   adapter.subscribe(() => {
     lattice._batch(() => {
       const newState = adapter.getState();
-      
+
       // Update signals with new state
-      (Object.keys(newState) as StateKey[]).forEach(key => {
+      (Object.keys(newState) as StateKey[]).forEach((key) => {
         const newVal = newState[key];
         const existingSig = internalSignals.get(key);
-        
+
         if (existingSig) {
           if (!Object.is(existingSig(), newVal)) {
             // Update the internal writable signal
@@ -334,23 +305,30 @@ export function createStoreWithAdapter<State extends Record<string, any>, Slices
       });
     });
   });
-  
+
   // Create set function that delegates to adapter
-  const set: SetState<State> = (updates) => {
-    // Get current state from adapter directly - no signal reads needed
+  const set: SetState<State> = ((arg1: any) => {
+    // Check if first argument is a selector result
+    if (isSelectorResult(arg1)) {
+      // Selector-based updates not implemented for adapter stores yet
+      throw new Error('Selector-based updates not yet supported in adapter stores');
+    }
+    
+    // Original behavior - direct state update
+    const updates = arg1;
     const currentState = adapter.getState();
-    const newUpdates = typeof updates === 'function' ? updates(currentState) : updates;
+    const newUpdates =
+      typeof updates === 'function' ? updates(currentState) : updates;
     adapter.setState(newUpdates);
-  };
-  
-  
+  }) as SetState<State>;
+
   // Create component slices with merged context
   const context: ComponentContext<State> = {
     store: stateSignals,
     signal: lattice.signal,
     computed: lattice.computed,
     set,
-    select: lattice.select
+    select: lattice.select,
   };
   return component(context);
 }
