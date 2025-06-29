@@ -13,7 +13,7 @@ describe('Component Middleware', () => {
       ({ store, set }) => {
         return {
           count: store.count,
-          increment: () => set({ count: store.count() + 1 }),
+          increment: () => set(store.count, store.count() + 1),
         };
       }
     );
@@ -38,7 +38,7 @@ describe('Component Middleware', () => {
       ({ store, set }) => {
         return {
           count: store.count,
-          increment: () => set({ count: store.count() + 1 }),
+          increment: () => set(store.count, store.count() + 1),
         };
       }
     );
@@ -57,9 +57,9 @@ describe('Component Middleware', () => {
       const mw = (context: any) => {
         middleware1Calls.push('init');
         const originalSet = context.set;
-        context.set = (updates: any) => {
+        context.set = (signal: any, updates: any) => {
           middleware1Calls.push('set');
-          originalSet(updates);
+          originalSet(signal, updates);
         };
         return context;
       };
@@ -73,9 +73,9 @@ describe('Component Middleware', () => {
       const mw = (context: any) => {
         middleware2Calls.push('init');
         const originalSet = context.set;
-        context.set = (updates: any) => {
+        context.set = (signal: any, updates: any) => {
           middleware2Calls.push('set');
-          originalSet(updates);
+          originalSet(signal, updates);
         };
         return context;
       };
@@ -92,7 +92,7 @@ describe('Component Middleware', () => {
       ({ store, set }) => {
         return {
           count: store.count,
-          increment: () => set({ count: store.count!() + 1 }),
+          increment: () => set(store.count, store.count() + 1),
         };
       }
     );

@@ -13,7 +13,7 @@ describe('Component API', () => {
           count: store.count,
           doubled,
           increment: () => set(store.count, store.count() + 1),
-          reset: () => set({ count: 0 }),
+          reset: () => set(store.count, 0),
         };
       }
     );
@@ -37,7 +37,7 @@ describe('Component API', () => {
       withLogger(withState(() => ({ count: 0 }))),
       ({ store, set }) => ({
         count: store.count,
-        increment: () => set({ count: store.count() + 1 }),
+        increment: () => set(store.count, store.count() + 1),
       })
     );
 
@@ -60,7 +60,7 @@ describe('Component API', () => {
       withState(() => ({ subCount: 0 })),
       ({ store, set }) => ({
         value: store.subCount,
-        inc: () => set({ subCount: store.subCount() + 1 }),
+        inc: () => set(store.subCount, store.subCount() + 1),
       })
     );
 
@@ -76,7 +76,7 @@ describe('Component API', () => {
           counter: sub,
           multiplier: context.store.multiplier,
           total,
-          setMultiplier: (n: number) => context.set({ multiplier: n }),
+          setMultiplier: (n: number) => context.set(context.store.multiplier, n),
         };
       }
     );
@@ -111,8 +111,8 @@ describe('Component API', () => {
           todos: store.todos,
           filter: store.filter,
           filtered,
-          addTodo: (text: string) => set({ todos: [...store.todos(), text] }),
-          setFilter: (f: 'all' | 'active' | 'done') => set({ filter: f }),
+          addTodo: (text: string) => set(store.todos, [...store.todos(), text]),
+          setFilter: (f: 'all' | 'active' | 'done') => set(store.filter, f),
         };
       }
     );
@@ -140,8 +140,8 @@ describe('Component API', () => {
         return {
           count: store.count,
           name: store.name,
-          increment: () => set({ count: store.count() + 1 }),
-          setName: (n: string) => set({ name: n }),
+          increment: () => set(store.count, store.count() + 1),
+          setName: (n: string) => set(store.name, n),
         };
       }
     );
@@ -191,19 +191,15 @@ describe('Component API', () => {
               text,
               completed: false,
             };
-            set({ todos: [...store.todos(), newTodo] });
+            set(store.todos, [...store.todos(), newTodo]);
           },
           // Use smart update to toggle a specific todo
           toggleTodo: (id: string) => {
-            const todo = store.todos((t) => t.id === id);
+            const todoSignal = store.todos((t: { id: string; text: string; completed: boolean }) => t.id === id);
+            const todo = todoSignal();
             if (todo) {
-              const todos = store.todos();
-              const index = todos.findIndex(t => t.id === id);
-              if (index >= 0) {
-                const updated = [...todos];
-                updated[index] = { ...todo, completed: !todo.completed };
-                store.todos(updated);
-              }
+              // Use set on the derived signal directly for O(1) update
+              set(todoSignal, { ...todo, completed: !todo.completed });
             }
           },
         };
@@ -241,21 +237,21 @@ describe('Component API', () => {
       items: string[];
     }
 
-    const List = createComponent(withState<ListState>(), ({ store }) => ({
+    const List = createComponent(withState<ListState>(), ({ store, set }) => ({
       items: store.items,
       // Update by index directly
       updateByIndex: (index: number, newValue: string) => {
         const items = [...store.items()];
         if (index >= 0 && index < items.length) {
           items[index] = newValue;
-          store.items(items);
+          set(store.items, items);
         }
       },
       // Insert after specific index
       insertAfter: (index: number, newValue: string) => {
         // Just use regular set for insertion
         const items = store.items();
-        store.items([
+        set(store.items, [
           ...items.slice(0, index + 1),
           newValue,
           ...items.slice(index + 1),
@@ -271,7 +267,7 @@ describe('Component API', () => {
           indexB < items.length
         ) {
           [items[indexA], items[indexB]] = [items[indexB]!, items[indexA]!];
-          store.items(items);
+          set(store.items, items);
         }
       },
     }));
@@ -319,19 +315,24 @@ describe('Component API', () => {
 
     const UserProfile = createComponent(
       withState<UserState>(),
-      ({ store }) => ({
+      ({ store, set }) => ({
         user: store.user,
         updateName: (name: string) => {
-          store.user('name', () => name);
+          set(store.user, { ...store.user(), name });
         },
         incrementAge: () => {
-          store.user('age', (age) => age + 1);
+          const user = store.user();
+          set(store.user, { ...user, age: user.age + 1 });
         },
         toggleNotifications: () => {
-          store.user('settings', (settings) => ({
-            ...settings,
-            notifications: !settings.notifications,
-          }));
+          const user = store.user();
+          set(store.user, {
+            ...user,
+            settings: {
+              ...user.settings,
+              notifications: !user.settings.notifications,
+            },
+          });
         },
       })
     );
@@ -367,7 +368,7 @@ describe('Component API', () => {
 
     const UsersManager = createComponent(
       withState<UsersState>(),
-      ({ store }) => ({
+      ({ store, set }) => ({
         users: store.users,
         // Update user by finding with predicate
         deactivateOldUsers: (maxAge: number) => {
@@ -376,12 +377,18 @@ describe('Component API', () => {
             key => users[key]!.age > maxAge && users[key]!.active
           );
           if (userKey) {
-            store.users({ ...users, [userKey]: { ...users[userKey]!, active: false } });
+            set(store.users, { ...users, [userKey]: { ...users[userKey]!, active: false } });
           }
         },
-        // Update specific user by key using string selector
+        // Update specific user by key
         updateUserAge: (userId: string, age: number) => {
-          store.users(userId, (user) => ({ ...user, age }));
+          const users = store.users();
+          if (users[userId]) {
+            set(store.users, {
+              ...users,
+              [userId]: { ...users[userId]!, age }
+            });
+          }
         },
         // Find and update by property value
         promoteUser: (name: string) => {
@@ -391,7 +398,7 @@ describe('Component API', () => {
           );
           if (userKey) {
             const user = users[userKey]!;
-            store.users({
+            set(store.users, {
               ...users,
               [userKey]: {
                 ...user,
@@ -438,29 +445,31 @@ describe('Component API', () => {
 
     const MapExample = createComponent(
       withState<MapState>(),
-      ({ store }) => ({
+      ({ store, set }) => ({
         userRoles: store.userRoles,
         scores: store.scores,
         // Update by key
         setUserRole: (userId: string, role: string) => {
-          store.userRoles(userId, () => role);
+          const userRoles = new Map(store.userRoles());
+          userRoles.set(userId, role);
+          set(store.userRoles, userRoles);
         },
         // Update score with computation
         incrementScore: (userId: string, points: number) => {
-          store.scores(userId, (current) => current + points);
+          const scores = new Map(store.scores());
+          const current = scores.get(userId) || 0;
+          scores.set(userId, current + points);
+          set(store.scores, scores);
         },
         // Find and update by value predicate
         promoteAllManagers: () => {
-          const role = store.userRoles((role) => role === 'manager');
-          if (role !== undefined) {
-            const userRoles = new Map(store.userRoles());
-            for (const [key, val] of userRoles) {
-              if (val === 'manager') {
-                userRoles.set(key, 'senior-manager');
-                break; // Only first match
-              }
+          const userRoles = new Map(store.userRoles());
+          for (const [key, val] of userRoles) {
+            if (val === 'manager') {
+              userRoles.set(key, 'senior-manager');
+              set(store.userRoles, userRoles);
+              break; // Only first match
             }
-            store.userRoles(userRoles);
           }
         },
       })
@@ -502,33 +511,50 @@ describe('Component API', () => {
 
     const SetExample = createComponent(
       withState<SetState>(),
-      ({ store }) => ({
+      ({ store, set }) => ({
         tags: store.tags,
         selectedIds: store.selectedIds,
         // Add single item
         addTag: (tag: string) => {
-          store.tags(tag); // Single argument add
+          const tags = new Set(store.tags());
+          tags.add(tag);
+          set(store.tags, tags);
         },
         // Add with command
         addSelectedId: (id: number) => {
-          store.selectedIds('add', id);
+          const selectedIds = new Set(store.selectedIds());
+          selectedIds.add(id);
+          set(store.selectedIds, selectedIds);
         },
         // Toggle item
         toggleTag: (tag: string) => {
-          store.tags('toggle', tag);
+          const tags = new Set(store.tags());
+          if (tags.has(tag)) {
+            tags.delete(tag);
+          } else {
+            tags.add(tag);
+          }
+          set(store.tags, tags);
         },
         // Delete by predicate
         removeShortTags: () => {
-          store.tags('delete', (tag: string) => tag.length < 3);
+          const tags = new Set(store.tags());
+          for (const tag of tags) {
+            if (tag.length < 3) {
+              tags.delete(tag);
+            }
+          }
+          set(store.tags, tags);
         },
         // Update matching items
         uppercaseTag: (target: string) => {
-          const found = store.tags((tag) => tag === target);
+          const foundSignal = store.tags((tag: string) => tag === target);
+          const found = foundSignal();
           if (found) {
             const tags = new Set(store.tags());
             tags.delete(found);
             tags.add(found.toUpperCase());
-            store.tags(tags);
+            set(store.tags, tags);
           }
         },
       })

@@ -10,13 +10,19 @@ import type { TrackingContext } from './tracking';
 import type { BatchingSystem } from './batching';
 
 /**
+ * Valid cache key types for collections
+ */
+type CacheKey = number | string | symbol;
+
+/**
  * Derived signal maintains a reference to its source and cached position
  */
-interface DerivedSignal<T, U> extends Signal<U | undefined> {
+export interface DerivedSignal<T, U> extends Signal<U | undefined> {
   _source: Signal<T>;
-  _predicate: (value: any, key?: any) => boolean;
-  _cachedIndex?: number | string | any; // Position/key in source
+  _predicate: (value: T extends Array<infer E> ? E : T extends Set<infer E> ? E : T extends Map<infer K, infer V> ? [K, V] : T[keyof T], key?: CacheKey) => boolean;
+  _cachedIndex?: CacheKey; // Position/key in source
   _sourceVersion: number; // Version of source when cached
+  _unsubscribeFromSource?: () => void; // Cleanup function
 }
 
 /**
@@ -36,13 +42,13 @@ export function createSignalFactory(
   batching: BatchingSystem
 ) {
   // WeakMap to store keyed selector caches
-  const keyedSelectorCaches = new WeakMap<Signal<any>, Map<any, Map<any, Signal<any>>>>();
+  const keyedSelectorCaches = new WeakMap<Signal<unknown>, Map<Function, Map<unknown, Signal<unknown>>>>();
   
   /**
    * Creates a read-only signal within this context
    */
   return function signal<T>(initialValue: T): Signal<T> {
-    const sig = function (this: any, ...args: any[]) {
+    const sig = function (this: unknown, ...args: unknown[]) {
       // Read operation
       if (arguments.length === 0) {
         tracking.track(sig);
@@ -71,11 +77,11 @@ export function createSignalFactory(
         const keyCache = signalCache.get(keyFn)!;
         
         // Return function that creates/returns cached derived signals
-        return (key: any) => {
+        return (key: unknown) => {
           if (!keyCache.has(key)) {
             const derivedSig = createDerivedSignal(
               sig as BaseSignal<T>, 
-              (item: any, k?: any) => predicate(item, key),
+              (item: unknown) => predicate(item, key),
               tracking,
               batching
             );
@@ -107,7 +113,7 @@ export function createSignalFactory(
  */
 function createDerivedSignal<T, U>(
   source: BaseSignal<T>,
-  predicate: (value: any, key?: any) => boolean,
+  predicate: (value: unknown, key?: CacheKey) => boolean,
   tracking: TrackingContext,
   batching: BatchingSystem
 ): DerivedSignal<T, U> {
@@ -134,7 +140,7 @@ function createDerivedSignal<T, U>(
         // Sets don't have stable indices, always re-search
       } else if (typeof sourceValue === 'object' && sourceValue !== null) {
         const key = derived._cachedIndex as string;
-        const item = (sourceValue as any)[key];
+        const item = sourceValue[key as keyof typeof sourceValue];
         if (item !== undefined && predicate(item, key)) {
           return item as U;
         }
@@ -199,15 +205,15 @@ function createDerivedSignal<T, U>(
         }
       });
       // Store unsubscribe for cleanup
-      (derived as any)._unsubscribeFromSource = unsubscribe;
+      derived._unsubscribeFromSource = unsubscribe;
     }
     
     return () => {
       listeners.delete(listener);
       // Unsubscribe from source if no more listeners
-      if (listeners.size === 0 && (derived as any)._unsubscribeFromSource) {
-        (derived as any)._unsubscribeFromSource();
-        delete (derived as any)._unsubscribeFromSource;
+      if (listeners.size === 0 && derived._unsubscribeFromSource) {
+        derived._unsubscribeFromSource();
+        delete derived._unsubscribeFromSource;
       }
     };
   };
@@ -238,8 +244,8 @@ export function updateSignalValue<T>(
 /**
  * Get the underlying source signal from a derived signal
  */
-export function getSourceSignal<T>(signal: Signal<T>): Signal<any> | undefined {
-  return (signal as any)._source;
+export function getSourceSignal<T>(signal: Signal<T>): Signal<unknown> | undefined {
+  return (signal as unknown as DerivedSignal<unknown, unknown>)._source;
 }
 
 /**

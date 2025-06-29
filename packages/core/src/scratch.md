@@ -46,3 +46,44 @@ stopping here - core implementation is done. remaining work:
 - fix all tests (lots of mechanical changes)
 - update computed.ts if needed
 - check adapters work correctly
+
+phase 2 - fixing type safety and implementation bugs
+
+task 1 - create proper internal types
+looking at signal.ts - already has DerivedSignal and BaseSignal interfaces
+good, no any type in _cachedIndex anymore, using number | string | any
+wait that's still any, need to fix this
+actually the any is for object keys which could be anything
+let me define proper type: CacheKey = number | string | symbol
+updated DerivedSignal interface to use CacheKey type instead of any
+fixed all any casts in signal.ts:
+- added _unsubscribeFromSource to DerivedSignal interface
+- replaced all 'as any' with proper type assertions
+- used unknown instead of any where appropriate
+- isDerivedSignal already has proper type guard
+
+task 2 - fix set() function parameter types
+found the issue - SetState type only accepts signals now but component.ts set() 
+implementation still expects old API where you could pass property key updates
+the tests are calling set({ count: 0 }) which is old API
+need to update set() implementation to only accept signals as first param
+fixed type issues - exported DerivedSignal, added proper type casts
+issue remains: tests use old API set({ count: 0 }) but new API needs set(store.count, 0)
+
+task 8 - fixing component.test.ts
+need to update all tests to use new set API:
+- set({ count: 0 }) -> set(store.count, 0)
+- set({ count: store.count() + 1 }) -> set(store.count, store.count() + 1)
+- store.items(value) -> set(store.items, value)
+- store.todos(predicate) now returns signal, not value
+- need to pass set to component callbacks
+many tests using old collection operations API that no longer exists
+fixing remaining type errors in component.test.ts - middleware is broken
+middleware expects old set API, need to fix
+fixed middleware to work with new API
+all component and middleware tests passing
+
+remaining issues:
+- adapter-contract-tests.ts uses old set API (313, 314, 322, 323, 376, 377, 378)
+- type narrowing issues in component.ts with update functions
+- need to properly handle Partial<T> case without any casts

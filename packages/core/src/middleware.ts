@@ -2,7 +2,7 @@
  * @fileoverview Built-in middleware for Lattice components
  */
 
-import type { ComponentMiddleware } from './runtime-types';
+import type { ComponentMiddleware, Signal } from './runtime-types';
 import type { FromMarker } from './component-types';
 
 // Re-export the FromMarker type from component
@@ -18,16 +18,38 @@ export function withLogger<State>(
     const originalSet = context.set;
 
     // Wrap set to log changes
-    context.set = ((updates: any) => {
-      // For logging, we need to evaluate the updates
-      // The original set will handle passing the correct state
-      originalSet((state) => {
-        const updateObj =
-          typeof updates === 'function' ? updates(state) : updates;
-
-        console.log('[Lattice Logger] State update:', updateObj);
-        return updateObj;
-      });
+    context.set = (<T>(signal: Signal<T>, updates: T | ((current: T) => T) | Partial<T>) => {
+      const currentValue = signal();
+      let newValue: T;
+      
+      if (typeof updates === 'function') {
+        newValue = (updates as (current: T) => T)(currentValue);
+      } else if (typeof updates === 'object' && updates !== null && 
+                 typeof currentValue === 'object' && currentValue !== null &&
+                 !Array.isArray(currentValue) && !(currentValue instanceof Set) && 
+                 !(currentValue instanceof Map)) {
+        // Partial update for objects
+        newValue = { ...currentValue, ...updates };
+      } else {
+        newValue = updates as T;
+      }
+      
+      // Log the update in a format that matches what was applied
+      // For store properties, extract the property name from the signal
+      const storeSignals = context.store;
+      let updateLog: any = newValue;
+      
+      // Check if this is a store signal
+      for (const [key, storeSignal] of Object.entries(storeSignals)) {
+        if (storeSignal === signal) {
+          updateLog = { [key]: newValue };
+          break;
+        }
+      }
+      
+      console.log('[Lattice Logger] State update:', updateLog);
+      
+      originalSet(signal, newValue);
     }) as typeof context.set;
 
     return context;
