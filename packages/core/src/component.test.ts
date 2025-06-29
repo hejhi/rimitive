@@ -12,7 +12,7 @@ describe('Component API', () => {
         return {
           count: store.count,
           doubled,
-          increment: () => store.count(store.count() + 1),
+          increment: () => set(store.count, store.count() + 1),
           reset: () => set({ count: 0 }),
         };
       }

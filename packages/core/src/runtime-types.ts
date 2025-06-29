@@ -7,44 +7,40 @@
 
 
 /**
- * A signal is a reactive primitive that can be read and written
+ * A signal is a read-only reactive primitive that can create derived signals
  * Reading a signal automatically registers it as a dependency in tracking contexts
- * Supports smart updates for collections
+ * All updates must go through the set() function
  */
 export interface Signal<T> {
-  // ==== Core Operations ====
+  // Read value
   (): T;
-  (value: T): void;
+  
+  // Subscribe to changes
   subscribe: (listener: () => void) => () => void;
   
-  // ==== Array Operations ====
-  // Find item matching predicate
-  (predicate: T extends (infer U)[] ? (item: U, index: number) => boolean : never): T extends (infer U)[] ? U | undefined : never;
+  // Create derived signal with predicate (for arrays)
+  <U>(predicate: T extends (infer U)[] ? (item: U, index: number) => boolean : never): T extends (infer U)[] ? Signal<U | undefined> : never;
   
-  // ==== Object Operations ====
-  // Update property by key
-  <K extends keyof T>(key: K, update: (value: T[K]) => T[K]): void;
-  // Find property matching predicate
-  (predicate: T extends Record<string, infer U> ? (value: U, key: string) => boolean : never): T extends Record<string, infer U> ? U | undefined : never;
+  // Create derived signal with predicate (for objects)
+  <V>(predicate: T extends Record<string, infer V> ? (value: V, key: string) => boolean : never): T extends Record<string, infer V> ? Signal<V | undefined> : never;
   
-  // ==== Map Operations ====
-  // Update value by key
-  (key: T extends Map<infer K, any> ? K : never,
-   update: T extends Map<any, infer V> ? (value: V) => V : never): void;
-  // Find entry matching predicate
-  (predicate: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never): T extends Map<any, infer V> ? V | undefined : never;
+  // Create derived signal with predicate (for Maps)
+  <V>(predicate: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never): T extends Map<any, infer V> ? Signal<V | undefined> : never;
   
-  // ==== Set Operations ====
-  // Add single item
-  (value: T extends Set<infer U> ? U : never): void;
-  // Commands: add, toggle
-  (command: T extends Set<any> ? 'add' | 'toggle' : never,
-   value: T extends Set<infer U> ? U : never): void;
-  // Command: delete by predicate
-  (command: T extends Set<any> ? 'delete' : never,
-   predicate: T extends Set<infer U> ? (value: U) => boolean : never): void;
-  // Find item matching predicate
-  (predicate: T extends Set<infer U> ? (value: U) => boolean : never): T extends Set<infer U> ? U | undefined : never;
+  // Create derived signal with predicate (for Sets)
+  <U>(predicate: T extends Set<infer U> ? (value: U) => boolean : never): T extends Set<infer U> ? Signal<U | undefined> : never;
+  
+  // Create keyed selector (for arrays)
+  <K, U>(
+    keyFn: T extends (infer U)[] ? (key: K) => K : never,
+    predicate: T extends (infer U)[] ? (item: U, key: K) => boolean : never
+  ): T extends (infer U)[] ? (key: K) => Signal<U | undefined> : never;
+  
+  // Create keyed selector (for objects)
+  <K, V>(
+    keyFn: T extends Record<string, infer V> ? (key: K) => K : never,
+    predicate: T extends Record<string, infer V> ? (value: V, key: K) => boolean : never
+  ): T extends Record<string, infer V> ? (key: K) => Signal<V | undefined> : never;
 }
 
 /**
@@ -75,14 +71,18 @@ export interface SliceHandle<Computed> {
 }
 
 /**
- * Function to update state - supports both direct updates and computed updates
- * The function callback receives dereferenced state values for safety and performance
+ * Function to update state through signals
+ * All state updates must go through this function
  */
 export type SetState<State> = {
-  // Original signature
-  (updates: Partial<State> | ((state: State) => Partial<State>)): void;
-  // Selector-based update
-  <T>(selector: import('./selector-types').SelectorResult<T>, updates: Partial<T> | ((value: T) => Partial<T>)): void;
+  // Set signal value directly
+  <T>(signal: Signal<T>, value: T): void;
+  
+  // Update signal with function
+  <T>(signal: Signal<T>, updater: (current: T) => T): void;
+  
+  // Partial updates for objects
+  <T extends object>(signal: Signal<T>, updates: Partial<T>): void;
 };
 
 /**
@@ -101,9 +101,6 @@ export interface LatticeContext<State = any> {
   signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(computeFn: () => T) => Computed<T>;
   set: SetState<State>;
-  select: <TArgs extends any[], TResult>(
-    selectorFn: (...args: TArgs) => TResult | undefined
-  ) => (...args: TArgs) => import('./selector-types').SelectorResult<TResult>;
 }
 
 /**
