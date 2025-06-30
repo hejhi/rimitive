@@ -30,12 +30,13 @@ describe('Memory Optimization', () => {
         id: `item-${i}`,
         value: i,
       })),
-    })(DataStore);
+    });
+    const component = DataStore(store);
 
     // Create multiple derived signals
-    const signal1 = store.itemById('item-0');
-    const signal2 = store.itemById('item-5');
-    const signal3 = store.itemById('item-0'); // Should return same as signal1
+    const signal1 = component.itemById('item-0');
+    const signal2 = component.itemById('item-5');
+    const signal3 = component.itemById('item-0'); // Should return same as signal1
 
     // Verify they work
     expect(signal1()?.value).toBe(0);
@@ -65,12 +66,13 @@ describe('Memory Optimization', () => {
       };
     };
 
-    const store = createStore({ data: ['a', 'b', 'c'] })(TestStore);
+    const store = createStore({ data: ['a', 'b', 'c'] });
+    const component = TestStore(store);
 
     // Create signals but don't hold references
-    store.getByValue('a')();
-    store.getByValue('b')();
-    store.getByValue('c')();
+    component.getByValue('a')();
+    component.getByValue('b')();
+    component.getByValue('c')();
 
     // Fast-forward past cleanup interval (30 seconds)
     vi.advanceTimersByTime(31000);
@@ -114,21 +116,22 @@ describe('Memory Optimization', () => {
         id: `user-${i}`,
         name: `User ${i}`,
       })),
-    })(LargeStore);
+    });
+    const component = LargeStore(store);
 
     // First access - O(n)
     const start1 = performance.now();
-    store.userById('user-5000')();
+    component.userById('user-5000')();
     const time1 = performance.now() - start1;
 
     // Second access - O(1) from cache
     const start2 = performance.now();
-    store.userById('user-5000')();
+    component.userById('user-5000')();
     const time2 = performance.now() - start2;
 
     // Update - O(1)
     const start3 = performance.now();
-    store.updateUser('user-5000', 'Updated User');
+    component.updateUser('user-5000', 'Updated User');
     const time3 = performance.now() - start3;
 
     // Second access should be much faster
@@ -136,7 +139,7 @@ describe('Memory Optimization', () => {
     expect(time3).toBeLessThan(1);
 
     // Verify update worked
-    expect(store.userById('user-5000')()?.name).toBe('Updated User');
+    expect(component.userById('user-5000')()?.name).toBe('Updated User');
   });
 
   it('should handle cache misses gracefully', () => {
@@ -156,11 +159,12 @@ describe('Memory Optimization', () => {
       };
     };
 
-    const store = createStore({ items: [1, 2, 3] })(Store);
+    const store = createStore({ items: [1, 2, 3] });
+    const component = Store(store);
 
     // Access item multiple times
-    const item1a = store.getItem(2);
-    const item1b = store.getItem(2);
+    const item1a = component.getItem(2);
+    const item1b = component.getItem(2);
 
     // Should return same signal instance (from WeakRef cache)
     expect(item1a).toBe(item1b);

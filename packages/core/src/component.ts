@@ -34,16 +34,15 @@ export function partial<T extends Record<string, any>>(
 }
 
 /**
- * Creates a store from a component factory and initial state
+ * Creates a store from initial state
  */
 export function createStore<State extends Record<string, any>>(
   initialState: State,
   middleware?: Array<(ctx: ComponentContext<State>) => ComponentContext<State>>
-) {
-  return <Slices>(component: (context: ComponentContext<State>) => Slices): Slices & {
-    _getState: () => State;
-    _subscribe: (fn: () => void) => () => void;
-  } => {
+): ComponentContext<State> & {
+  _getState: () => State;
+  _subscribe: (fn: () => void) => () => void;
+} {
   // Create internal state management
   let state = { ...initialState };
   const listeners = new Set<() => void>();
@@ -219,7 +218,7 @@ export function createStore<State extends Record<string, any>>(
     }
   }) as SetState;
 
-  // Create component slices with merged context
+  // Create component context with merged functionality
   let context: ComponentContext<State> = {
     store: stateSignals,
     signal: lattice.signal,
@@ -231,29 +230,24 @@ export function createStore<State extends Record<string, any>>(
   if (middleware && middleware.length > 0) {
     context = middleware.reduce((ctx, mw) => mw(ctx), context);
   }
-  
-  const slices = component(context);
 
-  // Add store methods
-    return {
-      ...slices,
-      _getState: () => ({ ...state }),
-      _subscribe: (fn: () => void) => {
-        listeners.add(fn);
-        return () => listeners.delete(fn);
-      },
-    };
-  };
+  // Add store methods to context
+  return Object.assign(context, {
+    _getState: () => ({ ...state }),
+    _subscribe: (fn: () => void) => {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+  });
 }
 
 /**
- * Creates a store from a component factory using an existing adapter
+ * Creates a store using an existing adapter
  */
 export function createStoreWithAdapter<State extends Record<string, any>>(
   adapter: StoreAdapter<State>,
   middleware?: Array<(ctx: ComponentContext<State>) => ComponentContext<State>>
-) {
-  return <Slices>(component: (context: ComponentContext<State>) => Slices): Slices => {
+): ComponentContext<State> {
   // Create scoped lattice context
   const lattice = createLatticeContext();
 
@@ -351,7 +345,7 @@ export function createStoreWithAdapter<State extends Record<string, any>>(
     adapter.setState({ [stateKey]: newValue } as Partial<State>);
   }) as SetState;
 
-  // Create component slices with merged context
+  // Create component context with merged functionality
   let context: ComponentContext<State> = {
     store: stateSignals,
     signal: lattice.signal,
@@ -364,6 +358,5 @@ export function createStoreWithAdapter<State extends Record<string, any>>(
     context = middleware.reduce((ctx, mw) => mw(ctx), context);
   }
   
-    return component(context);
-  };
+  return context;
 }

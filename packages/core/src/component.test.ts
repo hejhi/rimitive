@@ -5,7 +5,13 @@ import type { ComponentContext } from './runtime-types';
 
 describe('Component API', () => {
   it('should create a component with inferred state from callback', () => {
-    const store = createStore({ count: 5 })(({ store, computed, set }) => {
+    type CounterState = { count: number; name: string };
+    const store = createStore({ count: 5, name: 'John' });
+    const TodoApp = ({
+      store,
+      computed,
+      set,
+    }: ComponentContext<CounterState>) => {
       const doubled = computed(() => store.count() * 2);
 
       return {
@@ -14,33 +20,36 @@ describe('Component API', () => {
         increment: () => set(store.count, store.count() + 1),
         reset: () => set(store.count, 0),
       };
-    });
+    };
+    const component = TodoApp(store);
 
-    expect(store.count()).toBe(5);
-    expect(store.doubled()).toBe(10);
+    expect(component.count()).toBe(5);
+    expect(component.doubled()).toBe(10);
 
-    store.increment();
-    expect(store.count()).toBe(6);
-    expect(store.doubled()).toBe(12);
+    component.increment();
+    expect(component.count()).toBe(6);
+    expect(component.doubled()).toBe(12);
 
-    store.reset();
-    expect(store.count()).toBe(0);
-    expect(store.doubled()).toBe(0);
+    component.reset();
+    expect(component.count()).toBe(0);
+    expect(component.doubled()).toBe(0);
   });
 
   it('should support middleware composition with new pattern', () => {
-    const store = createStore({ count: 5 }, [withLogger()])(
-      ({ store, set }) => ({
-        count: store.count,
-        increment: () => set(store.count, store.count() + 1),
-      })
-    );
+    type CountState = { count: number };
+    const store = createStore({ count: 5 }, [withLogger()]);
+    const Component = ({ store, set }: ComponentContext<CountState>) => ({
+      count: store.count,
+      increment: () => set(store.count, store.count() + 1),
+    });
+
+    const component = Component(store);
 
     // Spy on console.log to verify logger works
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    store.increment();
-    expect(store.count()).toBe(6);
+    component.increment();
+    expect(component.count()).toBe(6);
     expect(consoleSpy).toHaveBeenCalledWith('[Lattice Logger] State update:', {
       count: 6,
     });
@@ -57,7 +66,8 @@ describe('Component API', () => {
       inc: () => set(store.subCount, store.subCount() + 1),
     });
 
-    const store = createStore({ subCount: 5, multiplier: 3 })((context) => {
+    const store = createStore({ subCount: 5, multiplier: 3 });
+    const component = ((context: typeof store) => {
       const sub = SubCounter(context);
       const total = context.computed(
         () => sub.value() * context.store.multiplier()
@@ -69,14 +79,14 @@ describe('Component API', () => {
         total,
         setMultiplier: (n: number) => context.set(context.store.multiplier, n),
       };
-    });
-    expect(store.total()).toBe(15);
+    })(store);
+    expect(component.total()).toBe(15);
 
-    store.counter.inc();
-    expect(store.total()).toBe(18);
+    component.counter.inc();
+    expect(component.total()).toBe(18);
 
-    store.setMultiplier(2);
-    expect(store.total()).toBe(12);
+    component.setMultiplier(2);
+    expect(component.total()).toBe(12);
   });
 
   it('should properly track dependencies in computed values', () => {
@@ -102,18 +112,19 @@ describe('Component API', () => {
       };
     };
 
-    const store = createStore<TodoState>({ todos: [], filter: 'all' })(TodoApp);
+    const store = createStore<TodoState>({ todos: [], filter: 'all' });
+    const component = TodoApp(store);
 
-    store.addTodo('Buy milk');
-    store.addTodo('[done] Read book');
+    component.addTodo('Buy milk');
+    component.addTodo('[done] Read book');
 
-    expect(store.filtered()).toEqual(['Buy milk', '[done] Read book']);
+    expect(component.filtered()).toEqual(['Buy milk', '[done] Read book']);
 
-    store.setFilter('active');
-    expect(store.filtered()).toEqual(['Buy milk']);
+    component.setFilter('active');
+    expect(component.filtered()).toEqual(['Buy milk']);
 
-    store.setFilter('done');
-    expect(store.filtered()).toEqual(['[done] Read book']);
+    component.setFilter('done');
+    expect(component.filtered()).toEqual(['[done] Read book']);
   });
 
   it('should support fine-grained subscriptions', () => {
@@ -128,26 +139,27 @@ describe('Component API', () => {
       };
     };
 
-    const store = createStore({ count: 0, name: 'initial' })(Counter);
+    const store = createStore({ count: 0, name: 'initial' });
+    const component = Counter(store);
 
     let countUpdates = 0;
     let nameUpdates = 0;
 
-    const unsubCount = store.count.subscribe(() => countUpdates++);
-    const unsubName = store.name.subscribe(() => nameUpdates++);
+    const unsubCount = component.count.subscribe(() => countUpdates++);
+    const unsubName = component.name.subscribe(() => nameUpdates++);
 
-    store.increment();
+    component.increment();
     expect(countUpdates).toBe(1);
     expect(nameUpdates).toBe(0);
 
-    store.setName('updated');
+    component.setName('updated');
     expect(countUpdates).toBe(1);
     expect(nameUpdates).toBe(1);
 
     unsubCount();
     unsubName();
 
-    store.increment();
+    component.increment();
     expect(countUpdates).toBe(1);
     expect(nameUpdates).toBe(1);
   });
@@ -192,24 +204,25 @@ describe('Component API', () => {
         { id: '2', text: 'Second', completed: true },
         { id: '3', text: 'Third', completed: false },
       ],
-    })(TodoApp);
+    });
+    const component = TodoApp(store);
 
-    expect(store.completed()).toBe(1);
+    expect(component.completed()).toBe(1);
 
     // Toggle first todo
-    store.toggleTodo('1');
-    expect(store.todos()[0]!.completed).toBe(true);
-    expect(store.completed()).toBe(2);
+    component.toggleTodo('1');
+    expect(component.todos()[0]!.completed).toBe(true);
+    expect(component.completed()).toBe(2);
 
     // Toggle second todo
-    store.toggleTodo('2');
-    expect(store.todos()[1]!.completed).toBe(false);
-    expect(store.completed()).toBe(1);
+    component.toggleTodo('2');
+    expect(component.todos()[1]!.completed).toBe(false);
+    expect(component.completed()).toBe(1);
 
     // Add new todo
-    store.addTodo('Fourth');
-    expect(store.todos().length).toBe(4);
-    expect(store.completed()).toBe(1);
+    component.addTodo('Fourth');
+    expect(component.todos().length).toBe(4);
+    expect(component.completed()).toBe(1);
   });
 
   it('should support partial updates for derived signals', () => {
@@ -273,11 +286,12 @@ describe('Component API', () => {
           lastSeen: 3000,
         },
       ],
-    })(UserManager);
+    });
+    const component = UserManager(store);
 
     // Test partial update on derived signal - only lastSeen should change
-    store.updateActiveUserLastSeen();
-    const updatedActiveUser = store.users()[0];
+    component.updateActiveUserLastSeen();
+    const updatedActiveUser = component.users()[0];
 
     expect(updatedActiveUser!.id).toBe('1');
     expect(updatedActiveUser!.name).toBe('Alice');
@@ -286,8 +300,8 @@ describe('Component API', () => {
     expect(updatedActiveUser!.lastSeen).toBeGreaterThan(1000);
 
     // Test partial update with multiple fields
-    store.updateUserByIdPartial('2', 'Robert', 'robert@example.com');
-    const updatedUser2 = store.users()[1];
+    component.updateUserByIdPartial('2', 'Robert', 'robert@example.com');
+    const updatedUser2 = component.users()[1];
 
     expect(updatedUser2!.id).toBe('2');
     expect(updatedUser2!.name).toBe('Robert');
@@ -296,9 +310,9 @@ describe('Component API', () => {
     expect(updatedUser2!.lastSeen).toBe(2000); // Should remain unchanged
 
     // Test update function pattern
-    const beforeDeactivate = store.users()[2];
-    store.deactivateUserById('3');
-    const afterDeactivate = store.users()[2];
+    const beforeDeactivate = component.users()[2];
+    component.deactivateUserById('3');
+    const afterDeactivate = component.users()[2];
 
     expect(afterDeactivate!.id).toBe('3');
     expect(afterDeactivate!.name).toBe('Charlie'); // Should remain unchanged
@@ -351,15 +365,16 @@ describe('Component API', () => {
 
     const store = createStore({
       items: ['first', 'second', 'third', 'fourth'],
-    })(List);
+    });
+    const component = List(store);
 
     // Update by index
-    store.updateByIndex(1, 'SECOND');
-    expect(store.items()).toEqual(['first', 'SECOND', 'third', 'fourth']);
+    component.updateByIndex(1, 'SECOND');
+    expect(component.items()).toEqual(['first', 'SECOND', 'third', 'fourth']);
 
     // Insert after index
-    store.insertAfter(1, 'inserted');
-    expect(store.items()).toEqual([
+    component.insertAfter(1, 'inserted');
+    expect(component.items()).toEqual([
       'first',
       'SECOND',
       'inserted',
@@ -368,8 +383,8 @@ describe('Component API', () => {
     ]);
 
     // Swap items
-    store.swap(0, 4);
-    expect(store.items()).toEqual([
+    component.swap(0, 4);
+    expect(component.items()).toEqual([
       'fourth',
       'SECOND',
       'inserted',
@@ -418,19 +433,20 @@ describe('Component API', () => {
           notifications: true,
         },
       },
-    })(UserProfile);
+    });
+    const component = UserProfile(store);
 
-    expect(store.user().name).toBe('John');
-    expect(store.user().age).toBe(30);
+    expect(component.user().name).toBe('John');
+    expect(component.user().age).toBe(30);
 
-    store.updateName('Jane');
-    expect(store.user().name).toBe('Jane');
+    component.updateName('Jane');
+    expect(component.user().name).toBe('Jane');
 
-    store.incrementAge();
-    expect(store.user().age).toBe(31);
+    component.incrementAge();
+    expect(component.user().age).toBe(31);
 
-    store.toggleNotifications();
-    expect(store.user().settings.notifications).toBe(false);
+    component.toggleNotifications();
+    expect(component.user().settings.notifications).toBe(false);
   });
 
   it('should support partial updates for object signals', () => {
@@ -485,11 +501,12 @@ describe('Component API', () => {
           language: 'en',
         },
       },
-    })(UserComponent);
+    });
+    const component = UserComponent(store);
 
     // Test partial update - only lastSeen should change
-    store.updateLastSeen();
-    const afterLastSeen = store.user();
+    component.updateLastSeen();
+    const afterLastSeen = component.user();
     expect(afterLastSeen.id).toBe('123');
     expect(afterLastSeen.name).toBe('John Doe');
     expect(afterLastSeen.email).toBe('john@example.com');
@@ -500,8 +517,8 @@ describe('Component API', () => {
     });
 
     // Test partial update with multiple fields
-    store.updateProfile('Jane Doe', 'jane@example.com');
-    const afterProfile = store.user();
+    component.updateProfile('Jane Doe', 'jane@example.com');
+    const afterProfile = component.user();
     expect(afterProfile.id).toBe('123');
     expect(afterProfile.name).toBe('Jane Doe');
     expect(afterProfile.email).toBe('jane@example.com');
@@ -512,14 +529,14 @@ describe('Component API', () => {
     });
 
     // Test nested partial update
-    store.updateTheme('dark');
-    const afterTheme = store.user();
+    component.updateTheme('dark');
+    const afterTheme = component.user();
     expect(afterTheme.preferences.theme).toBe('dark');
     expect(afterTheme.preferences.language).toBe('en'); // Should remain unchanged
 
     // Test update function pattern
-    store.updateLanguageWithFunction('es');
-    const afterLanguage = store.user();
+    component.updateLanguageWithFunction('es');
+    const afterLanguage = component.user();
     expect(afterLanguage.preferences.language).toBe('es');
     expect(afterLanguage.preferences.theme).toBe('dark'); // Should remain unchanged
   });
@@ -578,23 +595,24 @@ describe('Component API', () => {
         user3: { name: 'Charlie', age: 45, active: true },
         user4: { name: 'Dave', age: 55, active: true },
       },
-    })(UsersManager);
+    });
+    const component = UsersManager(store);
 
     // Deactivate users over 40
-    store.deactivateOldUsers(40);
-    expect(store.users().user1?.active).toBe(true);
-    expect(store.users().user2?.active).toBe(true);
-    expect(store.users().user3?.active).toBe(false); // First match only
-    expect(store.users().user4?.active).toBe(true); // Not updated
+    component.deactivateOldUsers(40);
+    expect(component.users().user1?.active).toBe(true);
+    expect(component.users().user2?.active).toBe(true);
+    expect(component.users().user3?.active).toBe(false); // First match only
+    expect(component.users().user4?.active).toBe(true); // Not updated
 
     // Update specific user by key
-    store.updateUserAge('user2', 36);
-    expect(store.users().user2?.age).toBe(36);
+    component.updateUserAge('user2', 36);
+    expect(component.users().user2?.age).toBe(36);
 
     // Find and update by name
-    store.promoteUser('Alice');
-    expect(store.users().user1?.name).toBe('Alice (promoted)');
-    expect(store.users().user1?.age).toBe(26);
+    component.promoteUser('Alice');
+    expect(component.users().user1?.name).toBe('Alice (promoted)');
+    expect(component.users().user1?.age).toBe(26);
   });
 
   it('should support smart updates for Maps', () => {
@@ -644,20 +662,21 @@ describe('Component API', () => {
         ['user2', 50],
         ['user3', 25],
       ]),
-    })(MapExample);
+    });
+    const component = MapExample(store);
 
     // Update by key
-    store.setUserRole('user3', 'editor');
-    expect(store.userRoles().get('user3')).toBe('editor');
+    component.setUserRole('user3', 'editor');
+    expect(component.userRoles().get('user3')).toBe('editor');
 
     // Update with computation
-    store.incrementScore('user2', 30);
-    expect(store.scores().get('user2')).toBe(80);
+    component.incrementScore('user2', 30);
+    expect(component.scores().get('user2')).toBe(80);
 
     // Update by predicate (only first match)
-    store.promoteAllManagers();
-    expect(store.userRoles().get('user2')).toBe('senior-manager');
-    expect(store.userRoles().get('user4')).toBe('manager'); // Not updated (only first match)
+    component.promoteAllManagers();
+    expect(component.userRoles().get('user2')).toBe('senior-manager');
+    expect(component.userRoles().get('user4')).toBe('manager'); // Not updated (only first match)
   });
 
   it('should support smart updates for Sets', () => {
@@ -717,33 +736,34 @@ describe('Component API', () => {
     const store = createStore({
       tags: new Set(['react', 'js', 'ts', 'vue']),
       selectedIds: new Set([1, 2, 3]),
-    })(SetExample);
+    });
+    const component = SetExample(store);
 
     // Add tag
-    store.addTag('angular');
-    expect(store.tags().has('angular')).toBe(true);
-    expect(store.tags().size).toBe(5);
+    component.addTag('angular');
+    expect(component.tags().has('angular')).toBe(true);
+    expect(component.tags().size).toBe(5);
 
     // Toggle tag (remove existing)
-    store.toggleTag('vue');
-    expect(store.tags().has('vue')).toBe(false);
-    expect(store.tags().size).toBe(4);
+    component.toggleTag('vue');
+    expect(component.tags().has('vue')).toBe(false);
+    expect(component.tags().size).toBe(4);
 
     // Toggle tag (add non-existing)
-    store.toggleTag('svelte');
-    expect(store.tags().has('svelte')).toBe(true);
-    expect(store.tags().size).toBe(5);
+    component.toggleTag('svelte');
+    expect(component.tags().has('svelte')).toBe(true);
+    expect(component.tags().size).toBe(5);
 
     // Delete by predicate
-    store.removeShortTags();
-    expect(store.tags().has('js')).toBe(false);
-    expect(store.tags().has('ts')).toBe(false);
-    expect(store.tags().has('react')).toBe(true);
+    component.removeShortTags();
+    expect(component.tags().has('js')).toBe(false);
+    expect(component.tags().has('ts')).toBe(false);
+    expect(component.tags().has('react')).toBe(true);
 
     // Update matching item
-    store.uppercaseTag('react');
-    expect(store.tags().has('react')).toBe(false);
-    expect(store.tags().has('REACT')).toBe(true);
+    component.uppercaseTag('react');
+    expect(component.tags().has('react')).toBe(false);
+    expect(component.tags().has('REACT')).toBe(true);
   });
 
   describe('Derived Signal Performance', () => {
@@ -787,30 +807,31 @@ describe('Component API', () => {
           text: `Task ${i}`,
           completed: false,
         })),
-      })(TodoApp);
+      });
+      const component = TodoApp(store);
 
       // First access - O(n) to find and cache position
-      const todo1 = store.targetTodo();
+      const todo1 = component.targetTodo();
       expect(todo1?.id).toBe('todo-5000');
       expect(todo1?.completed).toBe(false);
 
       // Measure update performance - should be O(1)
       const start = performance.now();
-      store.updateTarget();
+      component.updateTarget();
       const updateTime = performance.now() - start;
 
       // Verify update worked
-      const todo2 = store.targetTodo();
+      const todo2 = component.targetTodo();
       expect(todo2?.completed).toBe(true);
 
       // Update time should be very fast (< 1ms) regardless of array size
       expect(updateTime).toBeLessThan(1);
 
       // After moving, cache should be invalidated
-      store.moveTarget();
-      const todo3 = store.targetTodo();
+      component.moveTarget();
+      const todo3 = component.targetTodo();
       expect(todo3?.id).toBe('todo-5000');
-      expect(store.todos()[0]?.id).toBe('todo-5000');
+      expect(component.todos()[0]?.id).toBe('todo-5000');
     });
 
     it('should handle keyed selectors with O(1) updates', () => {
@@ -818,7 +839,7 @@ describe('Component API', () => {
         users: Array<{ id: string; name: string; score: number }>;
       }
 
-      const UserStore = ({ store, set }: ComponentContext<UserState>) => {
+      const User = ({ store, set }: ComponentContext<UserState>) => {
         // Keyed selector for efficient lookups
         const userById = store.users(
           (id: string) => id,
@@ -843,12 +864,13 @@ describe('Component API', () => {
           name: `User ${i}`,
           score: i,
         })),
-      })(UserStore);
+      });
+      const component = User(store);
 
       // Multiple keyed lookups should each be cached
-      const user1 = store.userById('user-100')();
-      const user2 = store.userById('user-500')();
-      const user3 = store.userById('user-900')();
+      const user1 = component.userById('user-100')();
+      const user2 = component.userById('user-500')();
+      const user3 = component.userById('user-900')();
 
       expect(user1?.name).toBe('User 100');
       expect(user2?.name).toBe('User 500');
@@ -859,7 +881,7 @@ describe('Component API', () => {
 
       for (const id of ['user-100', 'user-500', 'user-900']) {
         const start = performance.now();
-        store.updateUserScore(id, 999);
+        component.updateUserScore(id, 999);
         times.push(performance.now() - start);
       }
 
@@ -867,9 +889,9 @@ describe('Component API', () => {
       times.forEach((time) => expect(time).toBeLessThan(1));
 
       // Verify updates
-      expect(store.userById('user-100')()?.score).toBe(999);
-      expect(store.userById('user-500')()?.score).toBe(999);
-      expect(store.userById('user-900')()?.score).toBe(999);
+      expect(component.userById('user-100')()?.score).toBe(999);
+      expect(component.userById('user-500')()?.score).toBe(999);
+      expect(component.userById('user-900')()?.score).toBe(999);
     });
 
     it('should handle cache invalidation when source changes', () => {
@@ -877,7 +899,7 @@ describe('Component API', () => {
         items: Array<{ id: number; name: string }>;
       }
 
-      const ItemStore = ({ store, set }: ComponentContext<ItemState>) => {
+      const Item = ({ store, set }: ComponentContext<ItemState>) => {
         const item2 = store.items((item) => item.id === 2);
 
         return {
@@ -900,33 +922,35 @@ describe('Component API', () => {
           { id: 2, name: 'Item 2' },
           { id: 3, name: 'Item 3' },
         ],
-      })(ItemStore);
+      });
+
+      const component = Item(store);
 
       // Initial access
-      expect(store.item2()?.name).toBe('Item 2');
+      expect(component.item2()?.name).toBe('Item 2');
 
       // Update through derived signal
-      store.updateItem2('Updated Item 2');
-      expect(store.item2()?.name).toBe('Updated Item 2');
+      component.updateItem2('Updated Item 2');
+      expect(component.item2()?.name).toBe('Updated Item 2');
 
       // Replace entire array - cache should handle gracefully
-      store.replaceItems([
+      component.replaceItems([
         { id: 4, name: 'Item 4' },
         { id: 2, name: 'New Item 2' },
         { id: 5, name: 'Item 5' },
       ]);
 
       // Should find new item with id 2
-      expect(store.item2()?.name).toBe('New Item 2');
+      expect(component.item2()?.name).toBe('New Item 2');
 
       // Remove item 2
-      store.replaceItems([
+      component.replaceItems([
         { id: 4, name: 'Item 4' },
         { id: 5, name: 'Item 5' },
       ]);
 
       // Should return undefined
-      expect(store.item2()).toBeUndefined();
+      expect(component.item2()).toBeUndefined();
     });
 
     it('should handle error cases gracefully', () => {
@@ -934,7 +958,7 @@ describe('Component API', () => {
         items: Array<{ id: number; value: number }>;
       }
 
-      const ErrorStore = ({ store, set }: ComponentContext<ErrorState>) => {
+      const ErrorComponent = ({ store, set }: ComponentContext<ErrorState>) => {
         // Predicate that can throw
         const riskyItem = store.items((item) => {
           if (item.value === 20) {
@@ -972,18 +996,20 @@ describe('Component API', () => {
           { id: 2, value: 20 },
           { id: 3, value: 30 },
         ],
-      })(ErrorStore);
+      });
+
+      const component = ErrorComponent(store);
 
       // Non-existent item should return undefined
-      expect(store.missingItem()).toBeUndefined();
+      expect(component.missingItem()).toBeUndefined();
 
       // Updating non-existent item should be a no-op
-      store.updateMissing();
-      expect(store.items().length).toBe(3);
+      component.updateMissing();
+      expect(component.items().length).toBe(3);
 
       // Predicate that throws should propagate error
-      expect(() => store.riskyItem()).toThrow('Test error in predicate');
-      expect(store.getRisky()).toBeNull();
+      expect(() => component.riskyItem()).toThrow('Test error in predicate');
+      expect(component.getRisky()).toBeNull();
     });
 
     it('should handle concurrent updates correctly', () => {
@@ -992,7 +1018,7 @@ describe('Component API', () => {
         items: Array<{ id: number; count: number }>;
       }
 
-      const ConcurrentStore = ({
+      const Concurrent = ({
         store,
         set,
       }: ComponentContext<ConcurrentState>) => {
@@ -1028,19 +1054,21 @@ describe('Component API', () => {
           { id: 1, count: 0 },
           { id: 2, count: 0 },
         ],
-      })(ConcurrentStore);
+      });
+
+      const component = Concurrent(store);
 
       // Concurrent updates to different items
-      store.updateBoth();
-      expect(store.item1()?.count).toBe(1);
-      expect(store.item2()?.count).toBe(1);
+      component.updateBoth();
+      expect(component.item1()?.count).toBe(1);
+      expect(component.item2()?.count).toBe(1);
 
       // Multiple updates in same batch
-      store.updateCounter();
-      expect(store.counter().value).toBe(3);
+      component.updateCounter();
+      expect(component.counter().value).toBe(3);
 
       // Verify items array is still consistent
-      const items = store.items();
+      const items = component.items();
       expect(items[0]?.count).toBe(1);
       expect(items[1]?.count).toBe(1);
     });

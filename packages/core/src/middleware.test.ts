@@ -16,14 +16,15 @@ describe('Component Middleware', () => {
       };
     };
 
-    const store = createStore({ count: 0 }, [withLogger<CounterState>()])(Counter);
+    const store = createStore({ count: 0 }, [withLogger<CounterState>()]);
+    const component = Counter(store);
 
-    store.increment();
+    component.increment();
 
     expect(consoleSpy).toHaveBeenCalledWith('[Lattice Logger] State update:', {
       count: 1,
     });
-    expect(store.count()).toBe(1);
+    expect(component.count()).toBe(1);
 
     consoleSpy.mockRestore();
   });
@@ -38,10 +39,11 @@ describe('Component Middleware', () => {
       };
     };
 
-    const store = createStore({ count: 0 })(Counter);
+    const store = createStore({ count: 0 });
+    const component = Counter(store);
 
-    store.increment();
-    expect(store.count()).toBe(1);
+    component.increment();
+    expect(component.count()).toBe(1);
   });
 
   it('should compose multiple middleware', () => {
@@ -82,17 +84,18 @@ describe('Component Middleware', () => {
     const store = createStore({ count: 0 }, [
       middleware1<CounterState>(),
       middleware2<CounterState>()
-    ])(Counter);
+    ]);
+    const component = Counter(store);
 
     // Both middleware should initialize
     expect(middleware1Calls).toContain('init');
     expect(middleware2Calls).toContain('init');
 
-    store.increment();
+    component.increment();
 
     // Both should wrap set (in reverse order - middleware2 wraps middleware1)
     expect(middleware2Calls).toContain('set');
     expect(middleware1Calls).toContain('set');
-    expect(store.count()).toBe(1);
+    expect(component.count()).toBe(1);
   });
 });

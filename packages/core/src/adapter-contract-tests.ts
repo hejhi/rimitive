@@ -321,8 +321,10 @@ export function createAdapterTestSuite(
           append: (suffix: string) => set(store.text, store.text() + suffix),
         });
 
-        const counter = createStoreWithAdapter(adapter)(Counter);
-        const textEditor = createStoreWithAdapter(adapter)(TextEditor);
+        const counterStore = createStoreWithAdapter(adapter);
+        const counter = Counter(counterStore);
+        const textStore = createStoreWithAdapter(adapter);
+        const textEditor = TextEditor(textStore);
 
         // Test initial state
         expect(counter.count()).toBe(0);
@@ -376,8 +378,10 @@ export function createAdapterTestSuite(
           },
         });
 
-        const reader = createStoreWithAdapter(adapter)(Reader);
-        const writer = createStoreWithAdapter(adapter)(Writer);
+        const readerStore = createStoreWithAdapter(adapter);
+        const reader = Reader(readerStore);
+        const writerStore = createStoreWithAdapter(adapter);
+        const writer = Writer(writerStore);
 
         // Modify through writer
         writer.setCount(10);
