@@ -150,3 +150,11 @@ export type ComponentFactory<State> = (
 export type ComponentMiddleware<State> = (
   context: ComponentContext<State>
 ) => ComponentContext<State>;
+
+/**
+ * Configuration for creating a store with optional middleware enhancement
+ */
+export interface StoreConfig<State> {
+  state: State;
+  enhancer?: (context: ComponentContext<State>) => ComponentContext<State>;
+}

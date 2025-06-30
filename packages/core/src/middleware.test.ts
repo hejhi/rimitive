@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStore } from './component';
 import { withLogger } from './middleware';
-import type { ComponentMiddleware, ComponentFactory } from './runtime-types';
+import type { ComponentFactory, StoreConfig } from './runtime-types';
 
 describe('Component Middleware', () => {
   it('should apply logger middleware', () => {
@@ -16,7 +16,7 @@ describe('Component Middleware', () => {
       };
     };
 
-    const store = createStore({ count: 0 }, [withLogger<CounterState>()]);
+    const store = createStore(withLogger({ count: 0 }));
     const component = Counter(store);
 
     component.increment();
@@ -50,8 +50,11 @@ describe('Component Middleware', () => {
     const middleware1Calls: string[] = [];
     const middleware2Calls: string[] = [];
 
-    const middleware1 = <State extends Record<string, any>>(): ComponentMiddleware<State> => 
-      (context) => {
+    const withMiddleware1 = <State extends Record<string, any>>(
+      state: State
+    ): StoreConfig<State> => ({
+      state,
+      enhancer: (context) => {
         middleware1Calls.push('init');
         const originalSet = context.set;
         context.set = ((signal: any, updates: any) => {
@@ -59,10 +62,14 @@ describe('Component Middleware', () => {
           originalSet(signal, updates);
         }) as typeof context.set;
         return context;
-      };
+      },
+    });
 
-    const middleware2 = <State extends Record<string, any>>(): ComponentMiddleware<State> => 
-      (context) => {
+    const withMiddleware2 = <State extends Record<string, any>>(
+      state: State
+    ): StoreConfig<State> => ({
+      state,
+      enhancer: (context) => {
         middleware2Calls.push('init');
         const originalSet = context.set;
         context.set = ((signal: any, updates: any) => {
@@ -70,7 +77,8 @@ describe('Component Middleware', () => {
           originalSet(signal, updates);
         }) as typeof context.set;
         return context;
-      };
+      },
+    });
 
     type CounterState = { count: number };
 
@@ -81,10 +89,17 @@ describe('Component Middleware', () => {
       };
     };
 
-    const store = createStore({ count: 0 }, [
-      middleware1<CounterState>(),
-      middleware2<CounterState>()
-    ]);
+    // For now, manually compose the enhancers
+    const config1 = withMiddleware1({ count: 0 });
+    const config2 = withMiddleware2({ count: 0 });
+    
+    const store = createStore({
+      state: config1.state,
+      enhancer: (ctx) => {
+        const ctx1 = config1.enhancer ? config1.enhancer(ctx) : ctx;
+        return config2.enhancer ? config2.enhancer(ctx1) : ctx1;
+      }
+    });
     const component = Counter(store);
 
     // Both middleware should initialize

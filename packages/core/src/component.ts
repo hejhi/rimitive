@@ -10,6 +10,7 @@ import type {
   SetState,
   SignalState,
   Signal,
+  StoreConfig,
 } from './runtime-types';
 import { createLatticeContext } from './lattice-context';
 import { type StoreAdapter } from './adapter-contract';
@@ -34,15 +35,20 @@ export function partial<T extends Record<string, any>>(
 }
 
 /**
- * Creates a store from initial state
+ * Creates a store from initial state or configuration
  */
 export function createStore<State extends Record<string, any>>(
-  initialState: State,
-  middleware?: Array<(ctx: ComponentContext<State>) => ComponentContext<State>>
+  config: State | StoreConfig<State>
 ): ComponentContext<State> & {
   _getState: () => State;
   _subscribe: (fn: () => void) => () => void;
 } {
+  // Extract state and enhancer from config
+  const isConfig = (val: any): val is StoreConfig<State> => 
+    val && typeof val === 'object' && 'state' in val;
+  
+  const initialState = isConfig(config) ? config.state : config;
+  const enhancer = isConfig(config) ? config.enhancer : undefined;
   // Create internal state management
   let state = { ...initialState };
   const listeners = new Set<() => void>();
@@ -226,9 +232,9 @@ export function createStore<State extends Record<string, any>>(
     set,
   };
   
-  // Apply middleware if provided
-  if (middleware && middleware.length > 0) {
-    context = middleware.reduce((ctx, mw) => mw(ctx), context);
+  // Apply enhancer if provided
+  if (enhancer) {
+    context = enhancer(context);
   }
 
   // Add store methods to context
@@ -245,8 +251,7 @@ export function createStore<State extends Record<string, any>>(
  * Creates a store using an existing adapter
  */
 export function createStoreWithAdapter<State extends Record<string, any>>(
-  adapter: StoreAdapter<State>,
-  middleware?: Array<(ctx: ComponentContext<State>) => ComponentContext<State>>
+  adapter: StoreAdapter<State>
 ): ComponentContext<State> {
   // Create scoped lattice context
   const lattice = createLatticeContext();
@@ -346,17 +351,12 @@ export function createStoreWithAdapter<State extends Record<string, any>>(
   }) as SetState;
 
   // Create component context with merged functionality
-  let context: ComponentContext<State> = {
+  const context: ComponentContext<State> = {
     store: stateSignals,
     signal: lattice.signal,
     computed: lattice.computed,
     set,
   };
-  
-  // Apply middleware if provided
-  if (middleware && middleware.length > 0) {
-    context = middleware.reduce((ctx, mw) => mw(ctx), context);
-  }
   
   return context;
 }

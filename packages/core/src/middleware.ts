@@ -2,13 +2,17 @@
  * @fileoverview Built-in middleware for Lattice components
  */
 
-import type { ComponentMiddleware, Signal } from './runtime-types';
+import type { ComponentContext, Signal, StoreConfig } from './runtime-types';
 
 /**
  * Logger middleware - logs all state changes
  */
-export function withLogger<State>(): ComponentMiddleware<State> {
-  return (context) => {
+export function withLogger<State extends Record<string, any>>(
+  state: State
+): StoreConfig<State> {
+  return {
+    state,
+    enhancer: (context: ComponentContext<State>) => {
     const originalSet = context.set;
 
     // Wrap set to log changes
@@ -54,15 +58,21 @@ export function withLogger<State>(): ComponentMiddleware<State> {
       originalSet(signal, newValue);
     }) as typeof context.set;
 
-    return context;
+      return context;
+    },
   };
 }
 
 /**
  * DevTools middleware - integrates with Redux DevTools Extension
  */
-export function withDevtools<State>(name = 'Lattice Store'): ComponentMiddleware<State> {
-  return (context) => {
+export function withDevtools<State extends Record<string, any>>(
+  state: State,
+  name = 'Lattice Store'
+): StoreConfig<State> {
+  return {
+    state,
+    enhancer: (context: ComponentContext<State>) => {
       // Check if devtools extension is available
       const devtoolsExt = (window as any).__REDUX_DEVTOOLS_EXTENSION__;
       if (!devtoolsExt) return context;
@@ -106,14 +116,20 @@ export function withDevtools<State>(name = 'Lattice Store'): ComponentMiddleware
       }) as any;
 
       return context;
+    },
   };
 }
 
 /**
  * Persist middleware - saves state to localStorage
  */
-export function withPersistence<State>(key: string): ComponentMiddleware<State> {
-  return (context) => {
+export function withPersistence<State extends Record<string, any>>(
+  state: State,
+  key: string
+): StoreConfig<State> {
+  return {
+    state,
+    enhancer: (context: ComponentContext<State>) => {
       // Try to load initial state from localStorage
       const stored = localStorage.getItem(key);
       if (stored) {
@@ -154,5 +170,6 @@ export function withPersistence<State>(key: string): ComponentMiddleware<State> 
       }) as any;
 
       return context;
+    },
   };
 }

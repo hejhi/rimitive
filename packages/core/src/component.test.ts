@@ -37,7 +37,7 @@ describe('Component API', () => {
 
   it('should support middleware composition with new pattern', () => {
     type CountState = { count: number };
-    const store = createStore({ count: 5 }, [withLogger()]);
+    const store = createStore(withLogger({ count: 5 }));
     const Component = ({ store, set }: ComponentContext<CountState>) => ({
       count: store.count,
       increment: () => set(store.count, store.count() + 1),
