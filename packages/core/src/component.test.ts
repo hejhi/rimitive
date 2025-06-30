@@ -55,7 +55,7 @@ describe('Component API', () => {
     consoleSpy.mockRestore();
   });
 
-  it('should support composition with new API', () => {
+  it('should support composition', () => {
     const SubCounter = createComponent(
       withState(() => ({ subCount: 0 })),
       ({ store, set }) => ({
