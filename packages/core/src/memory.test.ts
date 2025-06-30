@@ -1,34 +1,36 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createComponent, withState, createStore } from './component';
+import { createStore } from './component';
+import type { ComponentFactory } from './runtime-types';
 
 describe('Memory Optimization', () => {
   it('should create WeakRef-cached keyed selectors', () => {
-    const DataStore = createComponent(
-      withState(() => ({
-        items: Array.from({ length: 100 }, (_, i) => ({
-          id: `item-${i}`,
-          value: i,
-        })),
-      })),
-      ({ store }) => {
-        const itemById = store.items(
-          (id: string) => id,
-          (item, id) => item.id === id
-        );
+    interface Item {
+      id: string;
+      value: number;
+    }
 
-        return {
-          items: store.items,
-          itemById,
-        };
-      }
-    );
+    interface DataState {
+      items: Item[];
+    }
 
-    const store = createStore(DataStore, {
+    const DataStore: ComponentFactory<DataState> = ({ store }) => {
+      const itemById = store.items(
+        (id: string) => id,
+        (item: Item, id: string) => item.id === id
+      );
+
+      return {
+        items: store.items,
+        itemById,
+      };
+    };
+
+    const store = createStore({
       items: Array.from({ length: 100 }, (_, i) => ({
         id: `item-${i}`,
         value: i,
       })),
-    });
+    })(DataStore);
 
     // Create multiple derived signals
     const signal1 = store.itemById('item-0');
@@ -47,22 +49,23 @@ describe('Memory Optimization', () => {
     // Mock timers
     vi.useFakeTimers();
 
-    const TestStore = createComponent(
-      withState(() => ({ data: ['a', 'b', 'c'] })),
-      ({ store }) => {
-        const getByValue = store.data(
-          (val: string) => val,
-          (item, val) => item === val
-        );
+    interface TestState {
+      data: string[];
+    }
 
-        return {
-          data: store.data,
-          getByValue,
-        };
-      }
-    );
+    const TestStore: ComponentFactory<TestState> = ({ store }) => {
+      const getByValue = store.data(
+        (val: string) => val,
+        (item: string, val: string) => item === val
+      );
 
-    const store = createStore(TestStore, { data: ['a', 'b', 'c'] });
+      return {
+        data: store.data,
+        getByValue,
+      };
+    };
+
+    const store = createStore({ data: ['a', 'b', 'c'] })(TestStore);
 
     // Create signals but don't hold references
     store.getByValue('a')();
@@ -79,38 +82,39 @@ describe('Memory Optimization', () => {
   });
 
   it('should maintain O(1) performance with WeakRef cache', () => {
-    const LargeStore = createComponent(
-      withState(() => ({
-        users: Array.from({ length: 10000 }, (_, i) => ({
-          id: `user-${i}`,
-          name: `User ${i}`,
-        })),
-      })),
-      ({ store, set }) => {
-        const userById = store.users(
-          (id: string) => id,
-          (user, id) => user.id === id
-        );
+    interface User {
+      id: string;
+      name: string;
+    }
 
-        return {
-          users: store.users,
-          userById,
-          updateUser: (id: string, name: string) => {
-            const user = userById(id)();
-            if (user) {
-              set(userById(id), { ...user, name });
-            }
-          },
-        };
-      }
-    );
+    interface LargeState {
+      users: User[];
+    }
 
-    const store = createStore(LargeStore, {
+    const LargeStore: ComponentFactory<LargeState> = ({ store, set }) => {
+      const userById = store.users(
+        (id: string) => id,
+        (user: User, id: string) => user.id === id
+      );
+
+      return {
+        users: store.users,
+        userById,
+        updateUser: (id: string, name: string) => {
+          const user = userById(id)();
+          if (user) {
+            set(userById(id), { ...user, name });
+          }
+        },
+      };
+    };
+
+    const store = createStore({
       users: Array.from({ length: 10000 }, (_, i) => ({
         id: `user-${i}`,
         name: `User ${i}`,
       })),
-    });
+    })(LargeStore);
 
     // First access - O(n)
     const start1 = performance.now();
@@ -136,22 +140,23 @@ describe('Memory Optimization', () => {
   });
 
   it('should handle cache misses gracefully', () => {
-    const Store = createComponent(
-      withState(() => ({ items: [1, 2, 3] })),
-      ({ store }) => {
-        const getItem = store.items(
-          (val: number) => val,
-          (item, val) => item === val
-        );
+    interface StoreState {
+      items: number[];
+    }
 
-        return {
-          items: store.items,
-          getItem,
-        };
-      }
-    );
+    const Store: ComponentFactory<StoreState> = ({ store }) => {
+      const getItem = store.items(
+        (val: number) => val,
+        (item: number, val: number) => item === val
+      );
 
-    const store = createStore(Store, { items: [1, 2, 3] });
+      return {
+        items: store.items,
+        getItem,
+      };
+    };
+
+    const store = createStore({ items: [1, 2, 3] })(Store);
 
     // Access item multiple times
     const item1a = store.getItem(2);

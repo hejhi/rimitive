@@ -3,18 +3,12 @@
  */
 
 import type { ComponentMiddleware, Signal } from './runtime-types';
-import type { FromMarker } from './component-types';
-
-// Re-export the FromMarker type from component
-export type { FromMarker } from './component-types';
 
 /**
  * Logger middleware - logs all state changes
  */
-export function withLogger<State>(
-  marker: FromMarker<State>
-): FromMarker<State> {
-  const loggerMiddleware: ComponentMiddleware<State> = (context) => {
+export function withLogger<State>(): ComponentMiddleware<State> {
+  return (context) => {
     const originalSet = context.set;
 
     // Wrap set to log changes
@@ -62,19 +56,13 @@ export function withLogger<State>(
 
     return context;
   };
-
-  return {
-    ...marker,
-    _middleware: [...marker._middleware, loggerMiddleware],
-  };
 }
 
 /**
  * DevTools middleware - integrates with Redux DevTools Extension
  */
-export function withDevtools<State>(name = 'Lattice Store') {
-  return (marker: FromMarker<State>): FromMarker<State> => {
-    const devtoolsMiddleware: ComponentMiddleware<State> = (context) => {
+export function withDevtools<State>(name = 'Lattice Store'): ComponentMiddleware<State> {
+  return (context) => {
       // Check if devtools extension is available
       const devtoolsExt = (window as any).__REDUX_DEVTOOLS_EXTENSION__;
       if (!devtoolsExt) return context;
@@ -118,21 +106,14 @@ export function withDevtools<State>(name = 'Lattice Store') {
       }) as any;
 
       return context;
-    };
-
-    return {
-      ...marker,
-      _middleware: [...marker._middleware, devtoolsMiddleware],
-    };
   };
 }
 
 /**
  * Persist middleware - saves state to localStorage
  */
-export function withPersistence<State>(key: string) {
-  return (marker: FromMarker<State>): FromMarker<State> => {
-    const persistMiddleware: ComponentMiddleware<State> = (context) => {
+export function withPersistence<State>(key: string): ComponentMiddleware<State> {
+  return (context) => {
       // Try to load initial state from localStorage
       const stored = localStorage.getItem(key);
       if (stored) {
@@ -173,11 +154,5 @@ export function withPersistence<State>(key: string) {
       }) as any;
 
       return context;
-    };
-
-    return {
-      ...marker,
-      _middleware: [...marker._middleware, persistMiddleware],
-    };
   };
 }

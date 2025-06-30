@@ -1,24 +1,20 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createComponent, withState, createStore } from './component';
+import { createStore } from './component';
 import { withLogger } from './middleware';
+import type { ComponentContext } from './runtime-types';
 
 describe('Component API', () => {
   it('should create a component with inferred state from callback', () => {
-    const Counter = createComponent(
-      withState(() => ({ count: 0 })),
-      ({ store, computed, set }) => {
-        const doubled = computed(() => store.count() * 2);
+    const store = createStore({ count: 5 })(({ store, computed, set }) => {
+      const doubled = computed(() => store.count() * 2);
 
-        return {
-          count: store.count,
-          doubled,
-          increment: () => set(store.count, store.count() + 1),
-          reset: () => set(store.count, 0),
-        };
-      }
-    );
-
-    const store = createStore(Counter, { count: 5 });
+      return {
+        count: store.count,
+        doubled,
+        increment: () => set(store.count, store.count() + 1),
+        reset: () => set(store.count, 0),
+      };
+    });
 
     expect(store.count()).toBe(5);
     expect(store.doubled()).toBe(10);
@@ -33,15 +29,12 @@ describe('Component API', () => {
   });
 
   it('should support middleware composition with new pattern', () => {
-    const Counter = createComponent(
-      withLogger(withState(() => ({ count: 0 }))),
+    const store = createStore({ count: 5 }, [withLogger()])(
       ({ store, set }) => ({
         count: store.count,
         increment: () => set(store.count, store.count() + 1),
       })
     );
-
-    const store = createStore(Counter, { count: 5 });
 
     // Spy on console.log to verify logger works
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -56,33 +49,27 @@ describe('Component API', () => {
   });
 
   it('should support composition', () => {
-    const SubCounter = createComponent(
-      withState(() => ({ subCount: 0 })),
-      ({ store, set }) => ({
-        value: store.subCount,
-        inc: () => set(store.subCount, store.subCount() + 1),
-      })
-    );
+    const SubCounter = ({
+      store,
+      set,
+    }: ComponentContext<{ subCount: number }>) => ({
+      value: store.subCount,
+      inc: () => set(store.subCount, store.subCount() + 1),
+    });
 
-    const App = createComponent(
-      withState(() => ({ subCount: 0, multiplier: 2 })),
-      (context) => {
-        const sub = SubCounter(context);
-        const total = context.computed(
-          () => sub.value() * context.store.multiplier()
-        );
+    const store = createStore({ subCount: 5, multiplier: 3 })((context) => {
+      const sub = SubCounter(context);
+      const total = context.computed(
+        () => sub.value() * context.store.multiplier()
+      );
 
-        return {
-          counter: sub,
-          multiplier: context.store.multiplier,
-          total,
-          setMultiplier: (n: number) =>
-            context.set(context.store.multiplier, n),
-        };
-      }
-    );
-
-    const store = createStore(App, { subCount: 5, multiplier: 3 });
+      return {
+        counter: sub,
+        multiplier: context.store.multiplier,
+        total,
+        setMultiplier: (n: number) => context.set(context.store.multiplier, n),
+      };
+    });
     expect(store.total()).toBe(15);
 
     store.counter.inc();
@@ -95,30 +82,27 @@ describe('Component API', () => {
   it('should properly track dependencies in computed values', () => {
     type TodoState = { todos: string[]; filter: 'all' | 'active' | 'done' };
 
-    const TodoApp = createComponent(
-      withState<TodoState>(),
-      ({ store, computed, set }) => {
-        const filtered = computed(() => {
-          const f = store.filter();
-          const t = store.todos();
-          if (f === 'all') return t;
-          // Simplified for test
-          return t.filter((todo: string) =>
-            f === 'active' ? !todo.includes('[done]') : todo.includes('[done]')
-          );
-        });
+    const TodoApp = ({ store, computed, set }: ComponentContext<TodoState>) => {
+      const filtered = computed(() => {
+        const f = store.filter();
+        const t = store.todos();
+        if (f === 'all') return t;
+        // Simplified for test
+        return t.filter((todo: string) =>
+          f === 'active' ? !todo.includes('[done]') : todo.includes('[done]')
+        );
+      });
 
-        return {
-          todos: store.todos,
-          filter: store.filter,
-          filtered,
-          addTodo: (text: string) => set(store.todos, [...store.todos(), text]),
-          setFilter: (f: 'all' | 'active' | 'done') => set(store.filter, f),
-        };
-      }
-    );
+      return {
+        todos: store.todos,
+        filter: store.filter,
+        filtered,
+        addTodo: (text: string) => set(store.todos, [...store.todos(), text]),
+        setFilter: (f: 'all' | 'active' | 'done') => set(store.filter, f),
+      };
+    };
 
-    const store = createStore(TodoApp, { todos: [], filter: 'all' });
+    const store = createStore<TodoState>({ todos: [], filter: 'all' })(TodoApp);
 
     store.addTodo('Buy milk');
     store.addTodo('[done] Read book');
@@ -135,19 +119,16 @@ describe('Component API', () => {
   it('should support fine-grained subscriptions', () => {
     type CounterState = { count: number; name: string };
 
-    const Counter = createComponent(
-      withState<CounterState>(),
-      ({ store, set }) => {
-        return {
-          count: store.count,
-          name: store.name,
-          increment: () => set(store.count, store.count() + 1),
-          setName: (n: string) => set(store.name, n),
-        };
-      }
-    );
+    const Counter = ({ store, set }: ComponentContext<CounterState>) => {
+      return {
+        count: store.count,
+        name: store.name,
+        increment: () => set(store.count, store.count() + 1),
+        setName: (n: string) => set(store.name, n),
+      };
+    };
 
-    const store = createStore(Counter, { count: 0, name: 'initial' });
+    const store = createStore({ count: 0, name: 'initial' })(Counter);
 
     let countUpdates = 0;
     let nameUpdates = 0;
@@ -176,46 +157,42 @@ describe('Component API', () => {
       todos: Array<{ id: string; text: string; completed: boolean }>;
     }
 
-    const TodoApp = createComponent(
-      withState<TodoState>(),
-      ({ store, computed, set }) => {
-        const completed = computed(
-          () => store.todos().filter((t) => t.completed).length
-        );
+    const TodoApp = ({ store, computed, set }: ComponentContext<TodoState>) => {
+      const completed = computed(
+        () => store.todos().filter((t) => t.completed).length
+      );
 
-        return {
-          todos: store.todos,
-          completed,
-          addTodo: (text: string) => {
-            const newTodo = {
-              id: Date.now().toString(),
-              text,
-              completed: false,
-            };
-            set(store.todos, [...store.todos(), newTodo]);
-          },
-          // Use smart update to toggle a specific todo
-          toggleTodo: (id: string) => {
-            const todoSignal = store.todos(
-              (t: { id: string; text: string; completed: boolean }) =>
-                t.id === id
-            );
-            const todo = todoSignal();
+      return {
+        todos: store.todos,
+        completed,
+        addTodo: (text: string) => {
+          const newTodo = {
+            id: Date.now().toString(),
+            text,
+            completed: false,
+          };
+          set(store.todos, [...store.todos(), newTodo]);
+        },
+        // Use smart update to toggle a specific todo
+        toggleTodo: (id: string) => {
+          const todoSignal = store.todos(
+            (t: { id: string; text: string; completed: boolean }) => t.id === id
+          );
+          const todo = todoSignal();
 
-            // Use set on the derived signal directly for O(1) update
-            set(todoSignal, { completed: !todo?.completed });
-          },
-        };
-      }
-    );
+          // Use set on the derived signal directly for O(1) update
+          set(todoSignal, { completed: !todo?.completed });
+        },
+      };
+    };
 
-    const store = createStore(TodoApp, {
+    const store = createStore({
       todos: [
         { id: '1', text: 'First', completed: false },
         { id: '2', text: 'Second', completed: true },
         { id: '3', text: 'Third', completed: false },
       ],
-    });
+    })(TodoApp);
 
     expect(store.completed()).toBe(1);
 
@@ -246,36 +223,33 @@ describe('Component API', () => {
       }>;
     }
 
-    const UserManager = createComponent(
-      withState<State>(),
-      ({ store, set }) => ({
-        users: store.users,
-        // Test partial update on derived signal
-        updateActiveUserLastSeen: () => {
-          const activeUser = store.users((u) => u.active);
-          // This should do a partial update, keeping other fields intact
-          set(activeUser, { lastSeen: Date.now() });
-        },
-        // Test partial update with multiple fields on derived signal
-        updateUserByIdPartial: (id: string, name: string, email: string) => {
-          const userSignal = store.users((u) => u.id === id);
-          // Update only name and email, preserving other fields
-          set(userSignal, { name, email });
-        },
-        // Test update function on derived signal for comparison
-        deactivateUserById: (id: string) => {
-          const userSignal = store.users((u) => u.id === id);
+    const UserManager = ({ store, set }: ComponentContext<State>) => ({
+      users: store.users,
+      // Test partial update on derived signal
+      updateActiveUserLastSeen: () => {
+        const activeUser = store.users((u) => u.active);
+        // This should do a partial update, keeping other fields intact
+        set(activeUser, { lastSeen: Date.now() });
+      },
+      // Test partial update with multiple fields on derived signal
+      updateUserByIdPartial: (id: string, name: string, email: string) => {
+        const userSignal = store.users((u) => u.id === id);
+        // Update only name and email, preserving other fields
+        set(userSignal, { name, email });
+      },
+      // Test update function on derived signal for comparison
+      deactivateUserById: (id: string) => {
+        const userSignal = store.users((u) => u.id === id);
 
-          set(userSignal, (u) => ({
-            ...u,
-            active: false,
-            lastSeen: Date.now(),
-          }));
-        },
-      })
-    );
+        set(userSignal, (u) => ({
+          ...u,
+          active: false,
+          lastSeen: Date.now(),
+        }));
+      },
+    });
 
-    const store = createStore(UserManager, {
+    const store = createStore({
       users: [
         {
           id: '1',
@@ -299,7 +273,7 @@ describe('Component API', () => {
           lastSeen: 3000,
         },
       ],
-    });
+    })(UserManager);
 
     // Test partial update on derived signal - only lastSeen should change
     store.updateActiveUserLastSeen();
@@ -340,7 +314,7 @@ describe('Component API', () => {
       items: string[];
     }
 
-    const List = createComponent(withState<ListState>(), ({ store, set }) => ({
+    const List = ({ store, set }: ComponentContext<ListState>) => ({
       items: store.items,
       // Update by index directly
       updateByIndex: (index: number, newValue: string) => {
@@ -373,11 +347,11 @@ describe('Component API', () => {
           set(store.items, items);
         }
       },
-    }));
-
-    const store = createStore(List, {
-      items: ['first', 'second', 'third', 'fourth'],
     });
+
+    const store = createStore({
+      items: ['first', 'second', 'third', 'fourth'],
+    })(List);
 
     // Update by index
     store.updateByIndex(1, 'SECOND');
@@ -416,29 +390,26 @@ describe('Component API', () => {
       };
     }
 
-    const UserProfile = createComponent(
-      withState<UserState>(),
-      ({ store, set }) => ({
-        user: store.user,
-        updateName: (name: string) => {
-          set(store.user, { name });
-        },
-        incrementAge: () => {
-          set(store.user, (user) => ({ ...user, age: user.age + 1 }));
-        },
-        toggleNotifications: () => {
-          set(store.user, (user) => ({
-            ...user,
-            settings: {
-              ...user.settings,
-              notifications: !user.settings.notifications,
-            },
-          }));
-        },
-      })
-    );
+    const UserProfile = ({ store, set }: ComponentContext<UserState>) => ({
+      user: store.user,
+      updateName: (name: string) => {
+        set(store.user, { name });
+      },
+      incrementAge: () => {
+        set(store.user, (user) => ({ ...user, age: user.age + 1 }));
+      },
+      toggleNotifications: () => {
+        set(store.user, (user) => ({
+          ...user,
+          settings: {
+            ...user.settings,
+            notifications: !user.settings.notifications,
+          },
+        }));
+      },
+    });
 
-    const store = createStore(UserProfile, {
+    const store = createStore({
       user: {
         name: 'John',
         age: 30,
@@ -447,7 +418,7 @@ describe('Component API', () => {
           notifications: true,
         },
       },
-    });
+    })(UserProfile);
 
     expect(store.user().name).toBe('John');
     expect(store.user().age).toBe(30);
@@ -476,37 +447,34 @@ describe('Component API', () => {
       };
     }
 
-    const UserComponent = createComponent(
-      withState<UserState>(),
-      ({ store, set }) => ({
-        user: store.user,
-        // Test partial update - only updating specific fields
-        updateLastSeen: () => {
-          set(store.user, { lastSeen: Date.now() });
-        },
-        // Test partial update with nested object
-        updateTheme: (theme: 'light' | 'dark') => {
-          set(store.user, {
-            // You shouldn't normally do this (reading store.user() unnecessarily)
-            // but good to test anyway
-            preferences: { ...store.user().preferences, theme },
-          });
-        },
-        // Test partial update with multiple fields
-        updateProfile: (name: string, email: string) => {
-          set(store.user, { name, email });
-        },
-        // Test update function pattern for comparison
-        updateLanguageWithFunction: (language: string) => {
-          set(store.user, (user) => ({
-            ...user,
-            preferences: { ...user.preferences, language },
-          }));
-        },
-      })
-    );
+    const UserComponent = ({ store, set }: ComponentContext<UserState>) => ({
+      user: store.user,
+      // Test partial update - only updating specific fields
+      updateLastSeen: () => {
+        set(store.user, { lastSeen: Date.now() });
+      },
+      // Test partial update with nested object
+      updateTheme: (theme: 'light' | 'dark') => {
+        set(store.user, {
+          // You shouldn't normally do this (reading store.user() unnecessarily)
+          // but good to test anyway
+          preferences: { ...store.user().preferences, theme },
+        });
+      },
+      // Test partial update with multiple fields
+      updateProfile: (name: string, email: string) => {
+        set(store.user, { name, email });
+      },
+      // Test update function pattern for comparison
+      updateLanguageWithFunction: (language: string) => {
+        set(store.user, (user) => ({
+          ...user,
+          preferences: { ...user.preferences, language },
+        }));
+      },
+    });
 
-    const store = createStore(UserComponent, {
+    const store = createStore<UserState>({
       user: {
         id: '123',
         name: 'John Doe',
@@ -517,7 +485,7 @@ describe('Component API', () => {
           language: 'en',
         },
       },
-    });
+    })(UserComponent);
 
     // Test partial update - only lastSeen should change
     store.updateLastSeen();
@@ -561,59 +529,56 @@ describe('Component API', () => {
       users: Record<string, { name: string; age: number; active: boolean }>;
     }
 
-    const UsersManager = createComponent(
-      withState<UsersState>(),
-      ({ store, set }) => ({
-        users: store.users,
-        // Update user by finding with predicate
-        deactivateOldUsers: (maxAge: number) => {
-          const users = store.users();
-          const userKey = Object.keys(users).find(
-            (key) => users[key]!.age > maxAge && users[key]!.active
-          );
-          if (userKey) {
-            set(store.users, (users) => ({
-              ...users,
-              [userKey]: { ...users[userKey]!, active: false },
-            }));
-          }
-        },
-        // Update specific user by key
-        updateUserAge: (userId: string, age: number) => {
+    const UsersManager = ({ store, set }: ComponentContext<UsersState>) => ({
+      users: store.users,
+      // Update user by finding with predicate
+      deactivateOldUsers: (maxAge: number) => {
+        const users = store.users();
+        const userKey = Object.keys(users).find(
+          (key) => users[key]!.age > maxAge && users[key]!.active
+        );
+        if (userKey) {
           set(store.users, (users) => ({
             ...users,
-            [userId]: { ...users[userId]!, age },
+            [userKey]: { ...users[userKey]!, active: false },
           }));
-        },
-        // Find and update by property value
-        promoteUser: (name: string) => {
-          const users = store.users();
-          const userKey = Object.keys(users).find(
-            (key) => users[key]!.name === name
-          );
-          if (userKey) {
-            const user = users[userKey]!;
-            set(store.users, {
-              ...users,
-              [userKey]: {
-                ...user,
-                name: `${user.name} (promoted)`,
-                age: user.age + 1,
-              },
-            });
-          }
-        },
-      })
-    );
+        }
+      },
+      // Update specific user by key
+      updateUserAge: (userId: string, age: number) => {
+        set(store.users, (users) => ({
+          ...users,
+          [userId]: { ...users[userId]!, age },
+        }));
+      },
+      // Find and update by property value
+      promoteUser: (name: string) => {
+        const users = store.users();
+        const userKey = Object.keys(users).find(
+          (key) => users[key]!.name === name
+        );
+        if (userKey) {
+          const user = users[userKey]!;
+          set(store.users, {
+            ...users,
+            [userKey]: {
+              ...user,
+              name: `${user.name} (promoted)`,
+              age: user.age + 1,
+            },
+          });
+        }
+      },
+    });
 
-    const store = createStore(UsersManager, {
+    const store = createStore({
       users: {
         user1: { name: 'Alice', age: 25, active: true },
         user2: { name: 'Bob', age: 35, active: true },
         user3: { name: 'Charlie', age: 45, active: true },
         user4: { name: 'Dave', age: 55, active: true },
       },
-    });
+    })(UsersManager);
 
     // Deactivate users over 40
     store.deactivateOldUsers(40);
@@ -638,39 +603,36 @@ describe('Component API', () => {
       scores: Map<string, number>;
     }
 
-    const MapExample = createComponent(
-      withState<MapState>(),
-      ({ store, set }) => ({
-        userRoles: store.userRoles,
-        scores: store.scores,
-        // Update by key
-        setUserRole: (userId: string, role: string) => {
-          const userRoles = new Map(store.userRoles());
-          userRoles.set(userId, role);
-          set(store.userRoles, userRoles);
-        },
-        // Update score with computation
-        incrementScore: (userId: string, points: number) => {
-          const scores = new Map(store.scores());
-          const current = scores.get(userId) || 0;
-          scores.set(userId, current + points);
-          set(store.scores, scores);
-        },
-        // Find and update by value predicate
-        promoteAllManagers: () => {
-          const userRoles = new Map(store.userRoles());
-          for (const [key, val] of userRoles) {
-            if (val === 'manager') {
-              userRoles.set(key, 'senior-manager');
-              set(store.userRoles, userRoles);
-              break; // Only first match
-            }
+    const MapExample = ({ store, set }: ComponentContext<MapState>) => ({
+      userRoles: store.userRoles,
+      scores: store.scores,
+      // Update by key
+      setUserRole: (userId: string, role: string) => {
+        const userRoles = new Map(store.userRoles());
+        userRoles.set(userId, role);
+        set(store.userRoles, userRoles);
+      },
+      // Update score with computation
+      incrementScore: (userId: string, points: number) => {
+        const scores = new Map(store.scores());
+        const current = scores.get(userId) || 0;
+        scores.set(userId, current + points);
+        set(store.scores, scores);
+      },
+      // Find and update by value predicate
+      promoteAllManagers: () => {
+        const userRoles = new Map(store.userRoles());
+        for (const [key, val] of userRoles) {
+          if (val === 'manager') {
+            userRoles.set(key, 'senior-manager');
+            set(store.userRoles, userRoles);
+            break; // Only first match
           }
-        },
-      })
-    );
+        }
+      },
+    });
 
-    const store = createStore(MapExample, {
+    const store = createStore({
       userRoles: new Map([
         ['user1', 'admin'],
         ['user2', 'manager'],
@@ -682,7 +644,7 @@ describe('Component API', () => {
         ['user2', 50],
         ['user3', 25],
       ]),
-    });
+    })(MapExample);
 
     // Update by key
     store.setUserRole('user3', 'editor');
@@ -704,61 +666,58 @@ describe('Component API', () => {
       selectedIds: Set<number>;
     }
 
-    const SetExample = createComponent(
-      withState<SetState>(),
-      ({ store, set }) => ({
-        tags: store.tags,
-        selectedIds: store.selectedIds,
-        // Add single item
-        addTag: (tag: string) => {
-          const tags = new Set(store.tags());
+    const SetExample = ({ store, set }: ComponentContext<SetState>) => ({
+      tags: store.tags,
+      selectedIds: store.selectedIds,
+      // Add single item
+      addTag: (tag: string) => {
+        const tags = new Set(store.tags());
+        tags.add(tag);
+        set(store.tags, tags);
+      },
+      // Add with command
+      addSelectedId: (id: number) => {
+        const selectedIds = new Set(store.selectedIds());
+        selectedIds.add(id);
+        set(store.selectedIds, selectedIds);
+      },
+      // Toggle item
+      toggleTag: (tag: string) => {
+        const tags = new Set(store.tags());
+        if (tags.has(tag)) {
+          tags.delete(tag);
+        } else {
           tags.add(tag);
-          set(store.tags, tags);
-        },
-        // Add with command
-        addSelectedId: (id: number) => {
-          const selectedIds = new Set(store.selectedIds());
-          selectedIds.add(id);
-          set(store.selectedIds, selectedIds);
-        },
-        // Toggle item
-        toggleTag: (tag: string) => {
-          const tags = new Set(store.tags());
-          if (tags.has(tag)) {
+        }
+        set(store.tags, tags);
+      },
+      // Delete by predicate
+      removeShortTags: () => {
+        const tags = new Set(store.tags());
+        for (const tag of tags) {
+          if (tag.length < 3) {
             tags.delete(tag);
-          } else {
-            tags.add(tag);
           }
-          set(store.tags, tags);
-        },
-        // Delete by predicate
-        removeShortTags: () => {
+        }
+        set(store.tags, tags);
+      },
+      // Update matching items
+      uppercaseTag: (target: string) => {
+        const foundSignal = store.tags((tag: string) => tag === target);
+        const found = foundSignal();
+        if (found) {
           const tags = new Set(store.tags());
-          for (const tag of tags) {
-            if (tag.length < 3) {
-              tags.delete(tag);
-            }
-          }
+          tags.delete(found);
+          tags.add(found.toUpperCase());
           set(store.tags, tags);
-        },
-        // Update matching items
-        uppercaseTag: (target: string) => {
-          const foundSignal = store.tags((tag: string) => tag === target);
-          const found = foundSignal();
-          if (found) {
-            const tags = new Set(store.tags());
-            tags.delete(found);
-            tags.add(found.toUpperCase());
-            set(store.tags, tags);
-          }
-        },
-      })
-    );
+        }
+      },
+    });
 
-    const store = createStore(SetExample, {
+    const store = createStore({
       tags: new Set(['react', 'js', 'ts', 'vue']),
       selectedIds: new Set([1, 2, 3]),
-    });
+    })(SetExample);
 
     // Add tag
     store.addTag('angular');
@@ -789,51 +748,46 @@ describe('Component API', () => {
 
   describe('Derived Signal Performance', () => {
     it('should update derived signals in O(1) time with cached position', () => {
-      const TodoApp = createComponent(
-        withState(() => ({
-          todos: Array.from({ length: 10000 }, (_, i) => ({
-            id: `todo-${i}`,
-            text: `Task ${i}`,
-            completed: false,
-          })),
-        })),
-        ({ store, set }) => {
-          // Create derived signal for specific todo
-          const targetTodo = store.todos((t) => t.id === 'todo-5000');
+      interface TodoState {
+        todos: Array<{ id: string; text: string; completed: boolean }>;
+      }
 
-          return {
-            todos: store.todos,
-            targetTodo,
-            updateTarget: () => {
-              // This should be O(1) after first access
-              const current = targetTodo();
-              if (current) {
-                set(targetTodo, { ...current, completed: true });
-              }
-            },
-            moveTarget: () => {
-              // Move todo to different position, cache should invalidate
-              const todos = store.todos();
-              const idx = todos.findIndex((t) => t.id === 'todo-5000');
-              if (idx !== -1) {
-                const todo = todos[idx];
-                const newTodos = [...todos];
-                newTodos.splice(idx, 1);
-                todo && newTodos.unshift(todo);
-                set(store.todos, newTodos);
-              }
-            },
-          };
-        }
-      );
+      const TodoApp = ({ store, set }: ComponentContext<TodoState>) => {
+        // Create derived signal for specific todo
+        const targetTodo = store.todos((t) => t.id === 'todo-5000');
 
-      const store = createStore(TodoApp, {
+        return {
+          todos: store.todos,
+          targetTodo,
+          updateTarget: () => {
+            // This should be O(1) after first access
+            const current = targetTodo();
+            if (current) {
+              set(targetTodo, { ...current, completed: true });
+            }
+          },
+          moveTarget: () => {
+            // Move todo to different position, cache should invalidate
+            const todos = store.todos();
+            const idx = todos.findIndex((t) => t.id === 'todo-5000');
+            if (idx !== -1) {
+              const todo = todos[idx];
+              const newTodos = [...todos];
+              newTodos.splice(idx, 1);
+              todo && newTodos.unshift(todo);
+              set(store.todos, newTodos);
+            }
+          },
+        };
+      };
+
+      const store = createStore({
         todos: Array.from({ length: 10000 }, (_, i) => ({
           id: `todo-${i}`,
           text: `Task ${i}`,
           completed: false,
         })),
-      });
+      })(TodoApp);
 
       // First access - O(n) to find and cache position
       const todo1 = store.targetTodo();
@@ -860,41 +814,36 @@ describe('Component API', () => {
     });
 
     it('should handle keyed selectors with O(1) updates', () => {
-      const UserStore = createComponent(
-        withState(() => ({
-          users: Array.from({ length: 1000 }, (_, i) => ({
-            id: `user-${i}`,
-            name: `User ${i}`,
-            score: i,
-          })),
-        })),
-        ({ store, set }) => {
-          // Keyed selector for efficient lookups
-          const userById = store.users(
-            (id: string) => id,
-            (user, id) => user.id === id
-          );
+      interface UserState {
+        users: Array<{ id: string; name: string; score: number }>;
+      }
 
-          return {
-            users: store.users,
-            userById,
-            updateUserScore: (id: string, score: number) => {
-              const user = userById(id)();
-              if (user) {
-                set(userById(id), { ...user, score });
-              }
-            },
-          };
-        }
-      );
+      const UserStore = ({ store, set }: ComponentContext<UserState>) => {
+        // Keyed selector for efficient lookups
+        const userById = store.users(
+          (id: string) => id,
+          (user, id) => user.id === id
+        );
 
-      const store = createStore(UserStore, {
+        return {
+          users: store.users,
+          userById,
+          updateUserScore: (id: string, score: number) => {
+            const user = userById(id)();
+            if (user) {
+              set(userById(id), { ...user, score });
+            }
+          },
+        };
+      };
+
+      const store = createStore({
         users: Array.from({ length: 1000 }, (_, i) => ({
           id: `user-${i}`,
           name: `User ${i}`,
           score: i,
         })),
-      });
+      })(UserStore);
 
       // Multiple keyed lookups should each be cached
       const user1 = store.userById('user-100')();
@@ -924,39 +873,34 @@ describe('Component API', () => {
     });
 
     it('should handle cache invalidation when source changes', () => {
-      const ItemStore = createComponent(
-        withState(() => ({
-          items: [
-            { id: 1, name: 'Item 1' },
-            { id: 2, name: 'Item 2' },
-            { id: 3, name: 'Item 3' },
-          ],
-        })),
-        ({ store, set }) => {
-          const item2 = store.items((item) => item.id === 2);
+      interface ItemState {
+        items: Array<{ id: number; name: string }>;
+      }
 
-          return {
-            items: store.items,
-            item2,
-            updateItem2: (name: string) => {
-              const current = item2();
-              if (current) {
-                set(item2, { ...current, name });
-              }
-            },
-            replaceItems: (items: { id: number; name: string }[]) =>
-              set(store.items, items),
-          };
-        }
-      );
+      const ItemStore = ({ store, set }: ComponentContext<ItemState>) => {
+        const item2 = store.items((item) => item.id === 2);
 
-      const store = createStore(ItemStore, {
+        return {
+          items: store.items,
+          item2,
+          updateItem2: (name: string) => {
+            const current = item2();
+            if (current) {
+              set(item2, { ...current, name });
+            }
+          },
+          replaceItems: (items: { id: number; name: string }[]) =>
+            set(store.items, items),
+        };
+      };
+
+      const store = createStore({
         items: [
           { id: 1, name: 'Item 1' },
           { id: 2, name: 'Item 2' },
           { id: 3, name: 'Item 3' },
         ],
-      });
+      })(ItemStore);
 
       // Initial access
       expect(store.item2()?.name).toBe('Item 2');
@@ -986,54 +930,49 @@ describe('Component API', () => {
     });
 
     it('should handle error cases gracefully', () => {
-      const ErrorStore = createComponent(
-        withState(() => ({
-          items: [
-            { id: 1, value: 10 },
-            { id: 2, value: 20 },
-            { id: 3, value: 30 },
-          ],
-        })),
-        ({ store, set }) => {
-          // Predicate that can throw
-          const riskyItem = store.items((item) => {
-            if (item.value === 20) {
-              throw new Error('Test error in predicate');
+      interface ErrorState {
+        items: Array<{ id: number; value: number }>;
+      }
+
+      const ErrorStore = ({ store, set }: ComponentContext<ErrorState>) => {
+        // Predicate that can throw
+        const riskyItem = store.items((item) => {
+          if (item.value === 20) {
+            throw new Error('Test error in predicate');
+          }
+          return item.id === 2;
+        });
+
+        // Non-existent item
+        const missingItem = store.items((item) => item.id === 999);
+
+        return {
+          items: store.items,
+          riskyItem,
+          missingItem,
+          updateMissing: () => {
+            const item = missingItem();
+            if (item) {
+              set(missingItem, { ...item, value: 100 });
             }
-            return item.id === 2;
-          });
+          },
+          getRisky: () => {
+            try {
+              return riskyItem();
+            } catch (e) {
+              return null;
+            }
+          },
+        };
+      };
 
-          // Non-existent item
-          const missingItem = store.items((item) => item.id === 999);
-
-          return {
-            items: store.items,
-            riskyItem,
-            missingItem,
-            updateMissing: () => {
-              const item = missingItem();
-              if (item) {
-                set(missingItem, { ...item, value: 100 });
-              }
-            },
-            getRisky: () => {
-              try {
-                return riskyItem();
-              } catch (e) {
-                return null;
-              }
-            },
-          };
-        }
-      );
-
-      const store = createStore(ErrorStore, {
+      const store = createStore({
         items: [
           { id: 1, value: 10 },
           { id: 2, value: 20 },
           { id: 3, value: 30 },
         ],
-      });
+      })(ErrorStore);
 
       // Non-existent item should return undefined
       expect(store.missingItem()).toBeUndefined();
@@ -1048,49 +987,48 @@ describe('Component API', () => {
     });
 
     it('should handle concurrent updates correctly', () => {
-      const ConcurrentStore = createComponent(
-        withState(() => ({
-          counter: { value: 0 },
-          items: [
-            { id: 1, count: 0 },
-            { id: 2, count: 0 },
-          ],
-        })),
-        ({ store, set }) => {
-          const item1 = store.items((item) => item.id === 1);
-          const item2 = store.items((item) => item.id === 2);
+      interface ConcurrentState {
+        counter: { value: number };
+        items: Array<{ id: number; count: number }>;
+      }
 
-          return {
-            counter: store.counter,
-            items: store.items,
-            item1,
-            item2,
-            updateBoth: () => {
-              // Concurrent updates to different derived signals
-              const i1 = item1();
-              const i2 = item2();
-              if (i1 && i2) {
-                set(item1, { ...i1, count: i1.count + 1 });
-                set(item2, { ...i2, count: i2.count + 1 });
-              }
-            },
-            updateCounter: () => {
-              // Multiple updates to same signal
-              set(store.counter, { value: store.counter().value + 1 });
-              set(store.counter, { value: store.counter().value + 1 });
-              set(store.counter, { value: store.counter().value + 1 });
-            },
-          };
-        }
-      );
+      const ConcurrentStore = ({
+        store,
+        set,
+      }: ComponentContext<ConcurrentState>) => {
+        const item1 = store.items((item) => item.id === 1);
+        const item2 = store.items((item) => item.id === 2);
 
-      const store = createStore(ConcurrentStore, {
+        return {
+          counter: store.counter,
+          items: store.items,
+          item1,
+          item2,
+          updateBoth: () => {
+            // Concurrent updates to different derived signals
+            const i1 = item1();
+            const i2 = item2();
+            if (i1 && i2) {
+              set(item1, { ...i1, count: i1.count + 1 });
+              set(item2, { ...i2, count: i2.count + 1 });
+            }
+          },
+          updateCounter: () => {
+            // Multiple updates to same signal
+            set(store.counter, { value: store.counter().value + 1 });
+            set(store.counter, { value: store.counter().value + 1 });
+            set(store.counter, { value: store.counter().value + 1 });
+          },
+        };
+      };
+
+      const store = createStore({
         counter: { value: 0 },
         items: [
           { id: 1, count: 0 },
           { id: 2, count: 0 },
         ],
-      });
+      })(ConcurrentStore);
 
       // Concurrent updates to different items
       store.updateBoth();

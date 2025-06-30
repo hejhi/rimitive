@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createComponent, withState, createStore } from './component';
+import { createStore } from './component';
 import { withLogger } from './middleware';
-import type { ComponentMiddleware } from './runtime-types';
-import type { FromMarker } from './component-types';
+import type { ComponentMiddleware, ComponentFactory } from './runtime-types';
 
 describe('Component Middleware', () => {
   it('should apply logger middleware', () => {
@@ -10,17 +9,14 @@ describe('Component Middleware', () => {
 
     type CounterState = { count: number };
 
-    const Counter = createComponent(
-      withLogger(withState<CounterState>()),
-      ({ store, set }) => {
-        return {
-          count: store.count,
-          increment: () => set(store.count, store.count() + 1),
-        };
-      }
-    );
+    const Counter: ComponentFactory<CounterState> = ({ store, set }) => {
+      return {
+        count: store.count,
+        increment: () => set(store.count, store.count() + 1),
+      };
+    };
 
-    const store = createStore(Counter, { count: 0 });
+    const store = createStore({ count: 0 }, [withLogger<CounterState>()])(Counter);
 
     store.increment();
 
@@ -35,17 +31,14 @@ describe('Component Middleware', () => {
   it('should work without middleware', () => {
     type CounterState = { count: number };
 
-    const Counter = createComponent(
-      withState<CounterState>(),
-      ({ store, set }) => {
-        return {
-          count: store.count,
-          increment: () => set(store.count, store.count() + 1),
-        };
-      }
-    );
+    const Counter: ComponentFactory<CounterState> = ({ store, set }) => {
+      return {
+        count: store.count,
+        increment: () => set(store.count, store.count() + 1),
+      };
+    };
 
-    const store = createStore(Counter, { count: 0 });
+    const store = createStore({ count: 0 })(Counter);
 
     store.increment();
     expect(store.count()).toBe(1);
@@ -55,57 +48,41 @@ describe('Component Middleware', () => {
     const middleware1Calls: string[] = [];
     const middleware2Calls: string[] = [];
 
-    const middleware1 =
-      <State extends Record<string, any>>() =>
-      (marker: FromMarker<State>) => {
-        const mw: ComponentMiddleware<State> = (context) => {
-          middleware1Calls.push('init');
-          const originalSet = context.set;
-          context.set = ((signal: any, updates: any) => {
-            middleware1Calls.push('set');
-            originalSet(signal, updates);
-          }) as typeof context.set;
-          return context;
-        };
-        return {
-          ...marker,
-          _middleware: [...marker._middleware, mw],
-        };
+    const middleware1 = <State extends Record<string, any>>(): ComponentMiddleware<State> => 
+      (context) => {
+        middleware1Calls.push('init');
+        const originalSet = context.set;
+        context.set = ((signal: any, updates: any) => {
+          middleware1Calls.push('set');
+          originalSet(signal, updates);
+        }) as typeof context.set;
+        return context;
       };
 
-    const middleware2 =
-      <State extends Record<string, any>>() =>
-      (marker: FromMarker<State>) => {
-        const mw: ComponentMiddleware<State> = (context) => {
-          middleware2Calls.push('init');
-          const originalSet = context.set;
-          context.set = ((signal: any, updates: any) => {
-            middleware2Calls.push('set');
-            originalSet(signal, updates);
-          }) as typeof context.set;
-          return context;
-        };
-        return {
-          ...marker,
-          _middleware: [...marker._middleware, mw],
-        };
+    const middleware2 = <State extends Record<string, any>>(): ComponentMiddleware<State> => 
+      (context) => {
+        middleware2Calls.push('init');
+        const originalSet = context.set;
+        context.set = ((signal: any, updates: any) => {
+          middleware2Calls.push('set');
+          originalSet(signal, updates);
+        }) as typeof context.set;
+        return context;
       };
 
     type CounterState = { count: number };
 
-    const Counter = createComponent(
-      middleware2<CounterState>()(
-        middleware1<CounterState>()(withState<CounterState>())
-      ),
-      ({ store, set }) => {
-        return {
-          count: store.count,
-          increment: () => set(store.count, store.count() + 1),
-        };
-      }
-    );
+    const Counter: ComponentFactory<CounterState> = ({ store, set }) => {
+      return {
+        count: store.count,
+        increment: () => set(store.count, store.count() + 1),
+      };
+    };
 
-    const store = createStore(Counter, { count: 0 });
+    const store = createStore({ count: 0 }, [
+      middleware1<CounterState>(),
+      middleware2<CounterState>()
+    ])(Counter);
 
     // Both middleware should initialize
     expect(middleware1Calls).toContain('init');
@@ -116,6 +93,6 @@ describe('Component Middleware', () => {
     // Both should wrap set (in reverse order - middleware2 wraps middleware1)
     expect(middleware2Calls).toContain('set');
     expect(middleware1Calls).toContain('set');
-    expect(store.count!()).toBe(1);
+    expect(store.count()).toBe(1);
   });
 });

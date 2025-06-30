@@ -35,7 +35,7 @@ export interface ZustandAdapterOptions {
  * ```typescript
  * import { create } from 'zustand';
  * import { zustandAdapter } from '@lattice/adapter-zustand';
- * import { createComponent, withState, createStoreWithAdapter } from '@lattice/core';
+ * import { createStoreWithAdapter, type ComponentFactory } from '@lattice/core';
  *
  * // Create a Zustand store with native API
  * const useStore = create((set) => ({
@@ -47,13 +47,10 @@ export interface ZustandAdapterOptions {
  * const adapter = zustandAdapter(useStore);
  *
  * // Create a Lattice component
- * const Counter = createComponent(
- *   withState<{ count: number }>(),
- *   ({ store, set }) => ({
- *     value: store.count,
- *     increment: () => set({ count: store.count() + 1 })
- *   })
- * );
+ * const Counter: ComponentFactory<{ count: number }, any> = ({ store, set }) => ({
+ *   value: store.count,
+ *   increment: () => set(store.count, store.count() + 1)
+ * });
  *
  * // Create store with adapter
  * const counter = createStoreWithAdapter(Counter, adapter);

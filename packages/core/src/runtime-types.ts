@@ -140,9 +140,9 @@ export interface ComponentContext<State> extends LatticeContext {
  * Component factory function that receives a merged context
  * Returns slices (signals, computeds, and methods)
  */
-export type ComponentFactory<State, Slices> = (
+export type ComponentFactory<State> = (
   context: ComponentContext<State>
-) => Slices;
+) => any;
 
 /**
  * Middleware receives the component context and can enhance/modify it

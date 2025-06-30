@@ -12,10 +12,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StoreAdapter } from './adapter-contract';
 import { isStoreAdapter } from './adapter-contract';
 import {
-  createComponent,
-  withState,
   createStoreWithAdapter,
 } from './component';
+import type { ComponentFactory } from './runtime-types';
 
 /**
  * Test state shape used throughout the adapter tests
@@ -310,26 +309,20 @@ export function createAdapterTestSuite(
       it('should work with createStoreWithAdapter', () => {
         const adapter = createAdapter(createInitialState());
 
-        const Counter = createComponent(
-          withState<TestState>(),
-          ({ store, set }) => ({
-            count: store.count,
-            increment: () => set(store.count, store.count() + 1),
-            decrement: () => set(store.count, store.count() - 1),
-          })
-        );
+        const Counter: ComponentFactory<TestState> = ({ store, set }) => ({
+          count: store.count,
+          increment: () => set(store.count, store.count() + 1),
+          decrement: () => set(store.count, store.count() - 1),
+        });
 
-        const TextEditor = createComponent(
-          withState<TestState>(),
-          ({ store, set }) => ({
-            text: store.text,
-            setText: (text: string) => set(store.text, text),
-            append: (suffix: string) => set(store.text, store.text() + suffix),
-          })
-        );
+        const TextEditor: ComponentFactory<TestState> = ({ store, set }) => ({
+          text: store.text,
+          setText: (text: string) => set(store.text, text),
+          append: (suffix: string) => set(store.text, store.text() + suffix),
+        });
 
-        const counter = createStoreWithAdapter(Counter, adapter);
-        const textEditor = createStoreWithAdapter(TextEditor, adapter);
+        const counter = createStoreWithAdapter(adapter)(Counter);
+        const textEditor = createStoreWithAdapter(adapter)(TextEditor);
 
         // Test initial state
         expect(counter.count()).toBe(0);
@@ -360,37 +353,31 @@ export function createAdapterTestSuite(
       it('should maintain state consistency across components', () => {
         const adapter = createAdapter(createInitialState());
 
-        const Reader = createComponent(
-          withState<TestState>(),
-          ({ store, computed }) => ({
-            getAll: computed(() => ({
-              count: store.count(),
-              text: store.text(),
-              nested: store.nested(),
-              list: store.list(),
-            })),
-            getCount: store.count,
-            getText: store.text,
-          })
-        );
+        const Reader: ComponentFactory<TestState> = ({ store, computed }) => ({
+          getAll: computed(() => ({
+            count: store.count(),
+            text: store.text(),
+            nested: store.nested(),
+            list: store.list(),
+          })),
+          getCount: store.count,
+          getText: store.text,
+        });
 
-        const Writer = createComponent(
-          withState<TestState>(),
-          ({ store, set }) => ({
-            setCount: (count: number) => set(store.count, count),
-            setText: (text: string) => set(store.text, text),
-            reset: () => {
-              const initial = createInitialState();
-              set(store.count, initial.count);
-              set(store.text, initial.text);
-              set(store.nested, initial.nested);
-              set(store.list, initial.list);
-            },
-          })
-        );
+        const Writer: ComponentFactory<TestState> = ({ store, set }) => ({
+          setCount: (count: number) => set(store.count, count),
+          setText: (text: string) => set(store.text, text),
+          reset: () => {
+            const initial = createInitialState();
+            set(store.count, initial.count);
+            set(store.text, initial.text);
+            set(store.nested, initial.nested);
+            set(store.list, initial.list);
+          },
+        });
 
-        const reader = createStoreWithAdapter(Reader, adapter);
-        const writer = createStoreWithAdapter(Writer, adapter);
+        const reader = createStoreWithAdapter(adapter)(Reader);
+        const writer = createStoreWithAdapter(adapter)(Writer);
 
         // Modify through writer
         writer.setCount(10);

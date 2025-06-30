@@ -1,37 +1,28 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
-import { createComponent, withState, createStore } from '@lattice/core';
+import { createStore, type ComponentFactory } from '@lattice/core';
 import { useStore, useSignal, useAutoStore } from './react';
 
 describe('React hooks', () => {
   // Create test components using the new API
   const createTestStores = () => {
-    const Counter = createComponent(
-      withState(() => ({ count: 0 })),
-      ({ store, computed, set }) => ({
-        value: store.count,
-        increment: () => set({ count: store.count() + 1 }),
-        isEven: computed(() => store.count() % 2 === 0),
-      })
-    );
+    const Counter: ComponentFactory<{ count: number }, any> = ({ store, computed, set }) => ({
+      value: store.count,
+      increment: () => set(store.count, store.count() + 1),
+      isEven: computed(() => store.count() % 2 === 0),
+    });
 
-    const User = createComponent(
-      withState(() => ({ name: 'test' })),
-      ({ store, set }) => ({
-        name: store.name,
-        setName: (newName: string) => set({ name: newName }),
-      })
-    );
+    const User: ComponentFactory<{ name: string }, any> = ({ store, set }) => ({
+      name: store.name,
+      setName: (newName: string) => set(store.name, newName),
+    });
 
-    const Items = createComponent(
-      withState(() => ({ items: [] as string[] })),
-      ({ store, computed, set }) => ({
-        all: store.items,
-        add: (item: string) => set({ items: [...store.items(), item] }),
-        count: computed(() => store.items().length),
-      })
-    );
+    const Items: ComponentFactory<{ items: string[] }, any> = ({ store, computed, set }) => ({
+      all: store.items,
+      add: (item: string) => set(store.items, [...store.items(), item]),
+      count: computed(() => store.items().length),
+    });
 
     return { 
       counterStore: createStore(Counter, { count: 0 }),
