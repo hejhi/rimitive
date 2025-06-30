@@ -236,6 +236,88 @@ describe('Component API', () => {
     expect(store.completed()).toBe(1);
   });
 
+  it('should support partial updates for derived signals', () => {
+    interface State {
+      users: Array<{
+        id: string;
+        name: string;
+        email: string;
+        active: boolean;
+        lastSeen: number;
+      }>;
+    }
+
+    const UserManager = createComponent(
+      withState<State>(),
+      ({ store, set }) => ({
+        users: store.users,
+        // Test partial update on derived signal
+        updateActiveUserLastSeen: () => {
+          const activeUser = store.users(u => u.active);
+          if (activeUser()) {
+            // This should do a partial update, keeping other fields intact
+            set(activeUser, { lastSeen: Date.now() });
+          }
+        },
+        // Test partial update with multiple fields on derived signal
+        updateUserByIdPartial: (id: string, name: string, email: string) => {
+          const user = store.users(u => u.id === id);
+          if (user()) {
+            // Update only name and email, preserving other fields
+            set(user, { name, email });
+          }
+        },
+        // Test update function on derived signal for comparison
+        deactivateUserById: (id: string) => {
+          const user = store.users(u => u.id === id);
+          if (user()) {
+            set(user, u => ({ ...u, active: false, lastSeen: Date.now() }));
+          }
+        },
+      })
+    );
+
+    const store = createStore(UserManager, {
+      users: [
+        { id: '1', name: 'Alice', email: 'alice@example.com', active: true, lastSeen: 1000 },
+        { id: '2', name: 'Bob', email: 'bob@example.com', active: false, lastSeen: 2000 },
+        { id: '3', name: 'Charlie', email: 'charlie@example.com', active: false, lastSeen: 3000 },
+      ],
+    });
+
+    // Test partial update on derived signal - only lastSeen should change
+    const initialActiveUser = store.users()[0];
+    store.updateActiveUserLastSeen();
+    const updatedActiveUser = store.users()[0];
+    
+    expect(updatedActiveUser.id).toBe('1');
+    expect(updatedActiveUser.name).toBe('Alice');
+    expect(updatedActiveUser.email).toBe('alice@example.com');
+    expect(updatedActiveUser.active).toBe(true);
+    expect(updatedActiveUser.lastSeen).toBeGreaterThan(1000);
+
+    // Test partial update with multiple fields
+    store.updateUserByIdPartial('2', 'Robert', 'robert@example.com');
+    const updatedUser2 = store.users()[1];
+    
+    expect(updatedUser2.id).toBe('2');
+    expect(updatedUser2.name).toBe('Robert');
+    expect(updatedUser2.email).toBe('robert@example.com');
+    expect(updatedUser2.active).toBe(false); // Should remain unchanged
+    expect(updatedUser2.lastSeen).toBe(2000); // Should remain unchanged
+
+    // Test update function pattern
+    const beforeDeactivate = store.users()[2];
+    store.deactivateUserById('3');
+    const afterDeactivate = store.users()[2];
+    
+    expect(afterDeactivate.id).toBe('3');
+    expect(afterDeactivate.name).toBe('Charlie'); // Should remain unchanged
+    expect(afterDeactivate.email).toBe('charlie@example.com'); // Should remain unchanged
+    expect(afterDeactivate.active).toBe(false);
+    expect(afterDeactivate.lastSeen).toBeGreaterThan(beforeDeactivate.lastSeen);
+  });
+
   it('should support index-based smart updates', () => {
     interface ListState {
       items: string[];
@@ -363,6 +445,99 @@ describe('Component API', () => {
 
     store.toggleNotifications();
     expect(store.user().settings.notifications).toBe(false);
+  });
+
+  it('should support partial updates for object signals', () => {
+    interface UserState {
+      user: {
+        id: string;
+        name: string;
+        email: string;
+        lastSeen: number;
+        preferences: {
+          theme: 'light' | 'dark';
+          language: string;
+        };
+      };
+    }
+
+    const UserComponent = createComponent(
+      withState<UserState>(),
+      ({ store, set }) => ({
+        user: store.user,
+        // Test partial update - only updating specific fields
+        updateLastSeen: () => {
+          set(store.user, { lastSeen: Date.now() });
+        },
+        // Test partial update with nested object
+        updateTheme: (theme: 'light' | 'dark') => {
+          set(store.user, { 
+            preferences: { ...store.user().preferences, theme } 
+          });
+        },
+        // Test partial update with multiple fields
+        updateProfile: (name: string, email: string) => {
+          set(store.user, { name, email });
+        },
+        // Test update function pattern for comparison
+        updateLanguageWithFunction: (language: string) => {
+          set(store.user, user => ({
+            ...user,
+            preferences: { ...user.preferences, language }
+          }));
+        },
+      })
+    );
+
+    const store = createStore(UserComponent, {
+      user: {
+        id: '123',
+        name: 'John Doe',
+        email: 'john@example.com',
+        lastSeen: 1000,
+        preferences: {
+          theme: 'light',
+          language: 'en',
+        },
+      },
+    });
+
+    
+    // Test partial update - only lastSeen should change
+    store.updateLastSeen();
+    const afterLastSeen = store.user();
+    expect(afterLastSeen.id).toBe('123');
+    expect(afterLastSeen.name).toBe('John Doe');
+    expect(afterLastSeen.email).toBe('john@example.com');
+    expect(afterLastSeen.lastSeen).toBeGreaterThan(1000);
+    expect(afterLastSeen.preferences).toEqual({
+      theme: 'light',
+      language: 'en',
+    });
+
+    // Test partial update with multiple fields
+    store.updateProfile('Jane Doe', 'jane@example.com');
+    const afterProfile = store.user();
+    expect(afterProfile.id).toBe('123');
+    expect(afterProfile.name).toBe('Jane Doe');
+    expect(afterProfile.email).toBe('jane@example.com');
+    expect(afterProfile.lastSeen).toBe(afterLastSeen.lastSeen); // Should remain unchanged
+    expect(afterProfile.preferences).toEqual({
+      theme: 'light',
+      language: 'en',
+    });
+
+    // Test nested partial update
+    store.updateTheme('dark');
+    const afterTheme = store.user();
+    expect(afterTheme.preferences.theme).toBe('dark');
+    expect(afterTheme.preferences.language).toBe('en'); // Should remain unchanged
+    
+    // Test update function pattern
+    store.updateLanguageWithFunction('es');
+    const afterLanguage = store.user();
+    expect(afterLanguage.preferences.language).toBe('es');
+    expect(afterLanguage.preferences.theme).toBe('dark'); // Should remain unchanged
   });
 
   it('should support smart updates for object collections', () => {
