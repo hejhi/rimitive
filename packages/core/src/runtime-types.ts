@@ -91,17 +91,24 @@ export interface SliceHandle<Computed> {
  * Function to update state through signals
  * All state updates must go through this function
  */
-export type SetState = {
-  // Set signal value directly
-  <T>(signal: Signal<T>, value: T): void;
+export interface SetState {
+  // Update signal with function (for signals that might be undefined)
+  // Note: updater is only called if current value is not undefined
+  <T>(signal: Signal<T | undefined>, updater: (current: T) => T): void;
 
   // Update signal with function
   <T>(signal: Signal<T>, updater: (current: T) => T): void;
 
-  // Partial updates for objects (including signals that might be undefined)
+  // Partial updates for objects (for signals that might be undefined)
+  // Note: updates are only applied if current value is not undefined
   <T extends object>(signal: Signal<T | undefined>, updates: Partial<T>): void;
+  
+  // Partial updates for objects
   <T extends object>(signal: Signal<T>, updates: Partial<T>): void;
-};
+
+  // Set signal value directly
+  <T>(signal: Signal<T>, value: T): void;
+}
 
 /**
  * Factory function for creating reactive slices using signals

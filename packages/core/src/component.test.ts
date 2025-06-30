@@ -201,10 +201,9 @@ describe('Component API', () => {
                 t.id === id
             );
             const todo = todoSignal();
-            if (todo) {
-              // Use set on the derived signal directly for O(1) update
-              set(todoSignal, { ...todo, completed: !todo.completed });
-            }
+
+            // Use set on the derived signal directly for O(1) update
+            set(todoSignal, { completed: !todo?.completed });
           },
         };
       }
@@ -254,29 +253,24 @@ describe('Component API', () => {
         // Test partial update on derived signal
         updateActiveUserLastSeen: () => {
           const activeUser = store.users((u) => u.active);
-          if (activeUser) {
-            // This should do a partial update, keeping other fields intact
-            set(activeUser, { lastSeen: Date.now() });
-          }
+          // This should do a partial update, keeping other fields intact
+          set(activeUser, { lastSeen: Date.now() });
         },
         // Test partial update with multiple fields on derived signal
         updateUserByIdPartial: (id: string, name: string, email: string) => {
           const userSignal = store.users((u) => u.id === id);
-          if (userSignal) {
-            // Update only name and email, preserving other fields
-            set(userSignal, { name, email });
-          }
+          // Update only name and email, preserving other fields
+          set(userSignal, { name, email });
         },
         // Test update function on derived signal for comparison
         deactivateUserById: (id: string) => {
           const userSignal = store.users((u) => u.id === id);
-          if (userSignal) {
-            set(userSignal, (u) => ({
-              ...u,
-              active: false,
-              lastSeen: Date.now(),
-            }));
-          }
+
+          set(userSignal, (u) => ({
+            ...u,
+            active: false,
+            lastSeen: Date.now(),
+          }));
         },
       })
     );
@@ -368,7 +362,7 @@ describe('Component API', () => {
       },
       // Swap items by index
       swap: (indexA: number, indexB: number) => {
-        const items = [...store.items()];
+        const items = store.items();
         if (
           indexA >= 0 &&
           indexA < items.length &&
@@ -427,21 +421,19 @@ describe('Component API', () => {
       ({ store, set }) => ({
         user: store.user,
         updateName: (name: string) => {
-          set(store.user, { ...store.user(), name });
+          set(store.user, { name });
         },
         incrementAge: () => {
-          const user = store.user();
-          set(store.user, { ...user, age: user.age + 1 });
+          set(store.user, (user) => ({ ...user, age: user.age + 1 }));
         },
         toggleNotifications: () => {
-          const user = store.user();
-          set(store.user, {
+          set(store.user, (user) => ({
             ...user,
             settings: {
               ...user.settings,
               notifications: !user.settings.notifications,
             },
-          });
+          }));
         },
       })
     );
@@ -495,6 +487,8 @@ describe('Component API', () => {
         // Test partial update with nested object
         updateTheme: (theme: 'light' | 'dark') => {
           set(store.user, {
+            // You shouldn't normally do this (reading store.user() unnecessarily)
+            // but good to test anyway
             preferences: { ...store.user().preferences, theme },
           });
         },
@@ -578,21 +572,18 @@ describe('Component API', () => {
             (key) => users[key]!.age > maxAge && users[key]!.active
           );
           if (userKey) {
-            set(store.users, {
+            set(store.users, (users) => ({
               ...users,
               [userKey]: { ...users[userKey]!, active: false },
-            });
+            }));
           }
         },
         // Update specific user by key
         updateUserAge: (userId: string, age: number) => {
-          const users = store.users();
-          if (users[userId]) {
-            set(store.users, {
-              ...users,
-              [userId]: { ...users[userId]!, age },
-            });
-          }
+          set(store.users, (users) => ({
+            ...users,
+            [userId]: { ...users[userId]!, age },
+          }));
         },
         // Find and update by property value
         promoteUser: (name: string) => {
