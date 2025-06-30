@@ -198,13 +198,13 @@ export function createStore<State extends Record<string, any>, Slices>(
         let newValue: T;
         
         if (isUpdateFunction(updates)) {
-          newValue = updates(currentValue);
+          newValue = updates(currentValue) as T;
         } else if (typeof updates === 'object' && updates !== null && 
                    typeof currentValue === 'object' && currentValue !== null &&
                    !Array.isArray(currentValue) && !(currentValue instanceof Set) && 
                    !(currentValue instanceof Map)) {
           // Partial update for objects
-          newValue = { ...currentValue, ...updates };
+          newValue = { ...currentValue, ...updates } as T;
         } else {
           newValue = updates as T;
         }

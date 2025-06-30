@@ -57,7 +57,7 @@ export function createSignalFactory(
 
       // Single predicate - create derived signal
       if (arguments.length === 1 && typeof args[0] === 'function') {
-        return createDerivedSignal(sig as BaseSignal<T>, args[0], tracking, batching);
+        return createDerivedSignal(sig as BaseSignal<T>, args[0] as (value: unknown, key?: CacheKey) => boolean, tracking, batching);
       }
 
       // Keyed selector - keyFn and predicate
@@ -65,10 +65,10 @@ export function createSignalFactory(
         const [keyFn, predicate] = args;
         
         // Get or create cache for this signal
-        if (!keyedSelectorCaches.has(sig)) {
-          keyedSelectorCaches.set(sig, new Map());
+        if (!keyedSelectorCaches.has(sig as unknown as Signal<unknown>)) {
+          keyedSelectorCaches.set(sig as unknown as Signal<unknown>, new Map());
         }
-        const signalCache = keyedSelectorCaches.get(sig)!;
+        const signalCache = keyedSelectorCaches.get(sig as unknown as Signal<unknown>)!;
         
         // Get or create cache for this keyFn
         if (!signalCache.has(keyFn)) {

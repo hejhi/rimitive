@@ -76,7 +76,8 @@ describe('Component API', () => {
           counter: sub,
           multiplier: context.store.multiplier,
           total,
-          setMultiplier: (n: number) => context.set(context.store.multiplier, n),
+          setMultiplier: (n: number) =>
+            context.set(context.store.multiplier, n),
         };
       }
     );
@@ -195,7 +196,10 @@ describe('Component API', () => {
           },
           // Use smart update to toggle a specific todo
           toggleTodo: (id: string) => {
-            const todoSignal = store.todos((t: { id: string; text: string; completed: boolean }) => t.id === id);
+            const todoSignal = store.todos(
+              (t: { id: string; text: string; completed: boolean }) =>
+                t.id === id
+            );
             const todo = todoSignal();
             if (todo) {
               // Use set on the derived signal directly for O(1) update
@@ -374,10 +378,13 @@ describe('Component API', () => {
         deactivateOldUsers: (maxAge: number) => {
           const users = store.users();
           const userKey = Object.keys(users).find(
-            key => users[key]!.age > maxAge && users[key]!.active
+            (key) => users[key]!.age > maxAge && users[key]!.active
           );
           if (userKey) {
-            set(store.users, { ...users, [userKey]: { ...users[userKey]!, active: false } });
+            set(store.users, {
+              ...users,
+              [userKey]: { ...users[userKey]!, active: false },
+            });
           }
         },
         // Update specific user by key
@@ -386,7 +393,7 @@ describe('Component API', () => {
           if (users[userId]) {
             set(store.users, {
               ...users,
-              [userId]: { ...users[userId]!, age }
+              [userId]: { ...users[userId]!, age },
             });
           }
         },
@@ -394,7 +401,7 @@ describe('Component API', () => {
         promoteUser: (name: string) => {
           const users = store.users();
           const userKey = Object.keys(users).find(
-            key => users[key]!.name === name
+            (key) => users[key]!.name === name
           );
           if (userKey) {
             const user = users[userKey]!;
@@ -404,7 +411,7 @@ describe('Component API', () => {
                 ...user,
                 name: `${user.name} (promoted)`,
                 age: user.age + 1,
-              }
+              },
             });
           }
         },
@@ -590,5 +597,326 @@ describe('Component API', () => {
     store.uppercaseTag('react');
     expect(store.tags().has('react')).toBe(false);
     expect(store.tags().has('REACT')).toBe(true);
+  });
+
+  describe('Derived Signal Performance', () => {
+    it('should update derived signals in O(1) time with cached position', () => {
+      const TodoApp = createComponent(
+        withState(() => ({
+          todos: Array.from({ length: 10000 }, (_, i) => ({
+            id: `todo-${i}`,
+            text: `Task ${i}`,
+            completed: false,
+          })),
+        })),
+        ({ store, set }) => {
+          // Create derived signal for specific todo
+          const targetTodo = store.todos((t) => t.id === 'todo-5000');
+
+          return {
+            todos: store.todos,
+            targetTodo,
+            updateTarget: () => {
+              // This should be O(1) after first access
+              const current = targetTodo();
+              if (current) {
+                set(targetTodo, { ...current, completed: true });
+              }
+            },
+            moveTarget: () => {
+              // Move todo to different position, cache should invalidate
+              const todos = store.todos();
+              const idx = todos.findIndex((t) => t.id === 'todo-5000');
+              if (idx !== -1) {
+                const todo = todos[idx];
+                const newTodos = [...todos];
+                newTodos.splice(idx, 1);
+                todo && newTodos.unshift(todo);
+                set(store.todos, newTodos);
+              }
+            },
+          };
+        }
+      );
+
+      const store = createStore(TodoApp, {
+        todos: Array.from({ length: 10000 }, (_, i) => ({
+          id: `todo-${i}`,
+          text: `Task ${i}`,
+          completed: false,
+        })),
+      });
+
+      // First access - O(n) to find and cache position
+      const todo1 = store.targetTodo();
+      expect(todo1?.id).toBe('todo-5000');
+      expect(todo1?.completed).toBe(false);
+
+      // Measure update performance - should be O(1)
+      const start = performance.now();
+      store.updateTarget();
+      const updateTime = performance.now() - start;
+
+      // Verify update worked
+      const todo2 = store.targetTodo();
+      expect(todo2?.completed).toBe(true);
+
+      // Update time should be very fast (< 1ms) regardless of array size
+      expect(updateTime).toBeLessThan(1);
+
+      // After moving, cache should be invalidated
+      store.moveTarget();
+      const todo3 = store.targetTodo();
+      expect(todo3?.id).toBe('todo-5000');
+      expect(store.todos()[0]?.id).toBe('todo-5000');
+    });
+
+    it('should handle keyed selectors with O(1) updates', () => {
+      const UserStore = createComponent(
+        withState(() => ({
+          users: Array.from({ length: 1000 }, (_, i) => ({
+            id: `user-${i}`,
+            name: `User ${i}`,
+            score: i,
+          })),
+        })),
+        ({ store, set }) => {
+          // Keyed selector for efficient lookups
+          const userById = store.users(
+            (id: string) => id,
+            (user, id) => user.id === id
+          );
+
+          return {
+            users: store.users,
+            userById,
+            updateUserScore: (id: string, score: number) => {
+              const user = userById(id)();
+              if (user) {
+                set(userById(id), { ...user, score });
+              }
+            },
+          };
+        }
+      );
+
+      const store = createStore(UserStore, {
+        users: Array.from({ length: 1000 }, (_, i) => ({
+          id: `user-${i}`,
+          name: `User ${i}`,
+          score: i,
+        })),
+      });
+
+      // Multiple keyed lookups should each be cached
+      const user1 = store.userById('user-100')();
+      const user2 = store.userById('user-500')();
+      const user3 = store.userById('user-900')();
+
+      expect(user1?.name).toBe('User 100');
+      expect(user2?.name).toBe('User 500');
+      expect(user3?.name).toBe('User 900');
+
+      // Update multiple users - each should be O(1)
+      const times: number[] = [];
+
+      for (const id of ['user-100', 'user-500', 'user-900']) {
+        const start = performance.now();
+        store.updateUserScore(id, 999);
+        times.push(performance.now() - start);
+      }
+
+      // All updates should be fast
+      times.forEach((time) => expect(time).toBeLessThan(1));
+
+      // Verify updates
+      expect(store.userById('user-100')()?.score).toBe(999);
+      expect(store.userById('user-500')()?.score).toBe(999);
+      expect(store.userById('user-900')()?.score).toBe(999);
+    });
+
+    it('should handle cache invalidation when source changes', () => {
+      const ItemStore = createComponent(
+        withState(() => ({
+          items: [
+            { id: 1, name: 'Item 1' },
+            { id: 2, name: 'Item 2' },
+            { id: 3, name: 'Item 3' },
+          ],
+        })),
+        ({ store, set }) => {
+          const item2 = store.items((item) => item.id === 2);
+
+          return {
+            items: store.items,
+            item2,
+            updateItem2: (name: string) => {
+              const current = item2();
+              if (current) {
+                set(item2, { ...current, name });
+              }
+            },
+            replaceItems: (items: { id: number; name: string }[]) =>
+              set(store.items, items),
+          };
+        }
+      );
+
+      const store = createStore(ItemStore, {
+        items: [
+          { id: 1, name: 'Item 1' },
+          { id: 2, name: 'Item 2' },
+          { id: 3, name: 'Item 3' },
+        ],
+      });
+
+      // Initial access
+      expect(store.item2()?.name).toBe('Item 2');
+
+      // Update through derived signal
+      store.updateItem2('Updated Item 2');
+      expect(store.item2()?.name).toBe('Updated Item 2');
+
+      // Replace entire array - cache should handle gracefully
+      store.replaceItems([
+        { id: 4, name: 'Item 4' },
+        { id: 2, name: 'New Item 2' },
+        { id: 5, name: 'Item 5' },
+      ]);
+
+      // Should find new item with id 2
+      expect(store.item2()?.name).toBe('New Item 2');
+
+      // Remove item 2
+      store.replaceItems([
+        { id: 4, name: 'Item 4' },
+        { id: 5, name: 'Item 5' },
+      ]);
+
+      // Should return undefined
+      expect(store.item2()).toBeUndefined();
+    });
+
+    it('should handle error cases gracefully', () => {
+      const ErrorStore = createComponent(
+        withState(() => ({
+          items: [
+            { id: 1, value: 10 },
+            { id: 2, value: 20 },
+            { id: 3, value: 30 },
+          ],
+        })),
+        ({ store, set }) => {
+          // Predicate that can throw
+          const riskyItem = store.items((item) => {
+            if (item.value === 20) {
+              throw new Error('Test error in predicate');
+            }
+            return item.id === 2;
+          });
+
+          // Non-existent item
+          const missingItem = store.items((item) => item.id === 999);
+
+          return {
+            items: store.items,
+            riskyItem,
+            missingItem,
+            updateMissing: () => {
+              const item = missingItem();
+              if (item) {
+                set(missingItem, { ...item, value: 100 });
+              }
+            },
+            getRisky: () => {
+              try {
+                return riskyItem();
+              } catch (e) {
+                return null;
+              }
+            },
+          };
+        }
+      );
+
+      const store = createStore(ErrorStore, {
+        items: [
+          { id: 1, value: 10 },
+          { id: 2, value: 20 },
+          { id: 3, value: 30 },
+        ],
+      });
+
+      // Non-existent item should return undefined
+      expect(store.missingItem()).toBeUndefined();
+
+      // Updating non-existent item should be a no-op
+      store.updateMissing();
+      expect(store.items().length).toBe(3);
+
+      // Predicate that throws should propagate error
+      expect(() => store.riskyItem()).toThrow('Test error in predicate');
+      expect(store.getRisky()).toBeNull();
+    });
+
+    it('should handle concurrent updates correctly', () => {
+      const ConcurrentStore = createComponent(
+        withState(() => ({
+          counter: { value: 0 },
+          items: [
+            { id: 1, count: 0 },
+            { id: 2, count: 0 },
+          ],
+        })),
+        ({ store, set }) => {
+          const item1 = store.items((item) => item.id === 1);
+          const item2 = store.items((item) => item.id === 2);
+
+          return {
+            counter: store.counter,
+            items: store.items,
+            item1,
+            item2,
+            updateBoth: () => {
+              // Concurrent updates to different derived signals
+              const i1 = item1();
+              const i2 = item2();
+              if (i1 && i2) {
+                set(item1, { ...i1, count: i1.count + 1 });
+                set(item2, { ...i2, count: i2.count + 1 });
+              }
+            },
+            updateCounter: () => {
+              // Multiple updates to same signal
+              set(store.counter, { value: store.counter().value + 1 });
+              set(store.counter, { value: store.counter().value + 1 });
+              set(store.counter, { value: store.counter().value + 1 });
+            },
+          };
+        }
+      );
+
+      const store = createStore(ConcurrentStore, {
+        counter: { value: 0 },
+        items: [
+          { id: 1, count: 0 },
+          { id: 2, count: 0 },
+        ],
+      });
+
+      // Concurrent updates to different items
+      store.updateBoth();
+      expect(store.item1()?.count).toBe(1);
+      expect(store.item2()?.count).toBe(1);
+
+      // Multiple updates in same batch
+      store.updateCounter();
+      expect(store.counter().value).toBe(3);
+
+      // Verify items array is still consistent
+      const items = store.items();
+      expect(items[0]?.count).toBe(1);
+      expect(items[1]?.count).toBe(1);
+    });
   });
 });

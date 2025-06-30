@@ -31,13 +31,13 @@ export interface Signal<T> {
   <U>(predicate: T extends Set<infer U> ? (value: U) => boolean : never): T extends Set<infer U> ? Signal<U | undefined> : never;
   
   // Create keyed selector (for arrays)
-  <K, U>(
+  <K>(
     keyFn: T extends (infer U)[] ? (key: K) => K : never,
     predicate: T extends (infer U)[] ? (item: U, key: K) => boolean : never
   ): T extends (infer U)[] ? (key: K) => Signal<U | undefined> : never;
   
   // Create keyed selector (for objects)
-  <K, V>(
+  <K>(
     keyFn: T extends Record<string, infer V> ? (key: K) => K : never,
     predicate: T extends Record<string, infer V> ? (value: V, key: K) => boolean : never
   ): T extends Record<string, infer V> ? (key: K) => Signal<V | undefined> : never;
@@ -74,7 +74,7 @@ export interface SliceHandle<Computed> {
  * Function to update state through signals
  * All state updates must go through this function
  */
-export type SetState<State> = {
+export type SetState<State = any> = {
   // Set signal value directly
   <T>(signal: Signal<T>, value: T): void;
   

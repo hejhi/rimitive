@@ -310,8 +310,8 @@ export function createAdapterTestSuite(
           withState<TestState>(),
           ({ store, set }) => ({
             count: store.count,
-            increment: () => set({ count: store.count() + 1 }),
-            decrement: () => set({ count: store.count() - 1 }),
+            increment: () => set(store.count, store.count() + 1),
+            decrement: () => set(store.count, store.count() - 1),
           })
         );
 
@@ -319,8 +319,8 @@ export function createAdapterTestSuite(
           withState<TestState>(),
           ({ store, set }) => ({
             text: store.text,
-            setText: (text: string) => set({ text }),
-            append: (suffix: string) => set({ text: store.text() + suffix }),
+            setText: (text: string) => set(store.text, text),
+            append: (suffix: string) => set(store.text, store.text() + suffix),
           })
         );
 
@@ -372,10 +372,16 @@ export function createAdapterTestSuite(
 
         const Writer = createComponent(
           withState<TestState>(),
-          ({ set }) => ({
-            setCount: (count: number) => set({ count }),
-            setText: (text: string) => set({ text }),
-            reset: () => set(createInitialState()),
+          ({ store, set }) => ({
+            setCount: (count: number) => set(store.count, count),
+            setText: (text: string) => set(store.text, text),
+            reset: () => {
+              const initial = createInitialState();
+              set(store.count, initial.count);
+              set(store.text, initial.text);
+              set(store.nested, initial.nested);
+              set(store.list, initial.list);
+            },
           })
         );
 

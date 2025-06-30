@@ -82,13 +82,21 @@ export function withDevtools<State>(name = 'Lattice Store') {
       devtools.init(initialState);
 
       // Wrap set to send actions to devtools
-      context.set = (updates: any) => {
-        let updateObj: Partial<State>;
+      context.set = ((signal: any, updates: any) => {
+        // Call original set
+        originalSet(signal, updates);
 
-        originalSet((state) => {
-          updateObj = typeof updates === 'function' ? updates(state) : updates;
-          return updateObj;
-        });
+        // Find which property was updated
+        let updatedKey: string | undefined;
+        let updateValue: any;
+        
+        for (const key in context.store) {
+          if (context.store[key] === signal) {
+            updatedKey = key;
+            updateValue = signal();
+            break;
+          }
+        }
 
         // Get current state after update
         const currentState: any = {};
@@ -97,8 +105,9 @@ export function withDevtools<State>(name = 'Lattice Store') {
         }
 
         // Send action to devtools
-        devtools.send({ type: 'SET_STATE', payload: updateObj! }, currentState);
-      };
+        const payload = updatedKey ? { [updatedKey]: updateValue } : {};
+        devtools.send({ type: 'SET_STATE', payload }, currentState);
+      }) as any;
 
       return context;
     };
@@ -121,8 +130,12 @@ export function withPersistence<State>(key: string) {
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
-          // Update initial state
-          context.set(parsed);
+          // Update initial state - set each property individually
+          for (const prop in parsed) {
+            if (prop in context.store) {
+              context.set(context.store[prop as keyof State], parsed[prop]);
+            }
+          }
         } catch (e) {
           console.warn(
             `[Lattice Persist] Failed to parse stored state for key "${key}"`
@@ -133,8 +146,8 @@ export function withPersistence<State>(key: string) {
       const originalSet = context.set;
 
       // Wrap set to persist changes
-      context.set = (updates) => {
-        originalSet(updates);
+      context.set = ((signal: any, updates: any) => {
+        originalSet(signal, updates);
 
         // Get current state and save to localStorage
         const currentState: Record<string, any> = {};
@@ -149,7 +162,7 @@ export function withPersistence<State>(key: string) {
             `[Lattice Persist] Failed to save state to localStorage`
           );
         }
-      };
+      }) as any;
 
       return context;
     };
