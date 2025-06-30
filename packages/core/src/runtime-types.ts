@@ -98,7 +98,8 @@ export type SetState = {
   // Update signal with function
   <T>(signal: Signal<T>, updater: (current: T) => T): void;
 
-  // Partial updates for objects
+  // Partial updates for objects (including signals that might be undefined)
+  <T extends object>(signal: Signal<T | undefined>, updates: Partial<T>): void;
   <T extends object>(signal: Signal<T>, updates: Partial<T>): void;
 };
 
