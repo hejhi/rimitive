@@ -2,8 +2,7 @@
 
 // Export component API
 export {
-  createStore,
-  createStoreWithAdapter,
+  createComponent,
   partial,
 } from './component';
 

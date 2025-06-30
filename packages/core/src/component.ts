@@ -10,7 +10,6 @@ import type {
   SetState,
   SignalState,
   Signal,
-  StoreConfig,
 } from './runtime-types';
 import { createLatticeContext } from './lattice-context';
 import { type StoreAdapter } from './adapter-contract';
@@ -35,224 +34,12 @@ export function partial<T extends Record<string, any>>(
 }
 
 /**
- * Creates a store from initial state or configuration
+ * Creates a component context from a store adapter
  */
-export function createStore<State extends Record<string, any>>(
-  config: State | StoreConfig<State>
-): ComponentContext<State> & {
-  _getState: () => State;
-  _subscribe: (fn: () => void) => () => void;
-} {
-  // Extract state and enhancer from config
-  const isConfig = (val: any): val is StoreConfig<State> => 
-    val && typeof val === 'object' && 'state' in val;
-  
-  const initialState = isConfig(config) ? config.state : config;
-  const enhancer = isConfig(config) ? config.enhancer : undefined;
-  // Create internal state management
-  let state = { ...initialState };
-  const listeners = new Set<() => void>();
-
-  // Create scoped lattice context
-  const lattice = createLatticeContext();
-
-  // Create state signals
-  const stateSignals = {} as SignalState<State>;
-  for (const key in state) {
-    stateSignals[key] = lattice.signal(state[key]);
-  }
-
-  // Type guard for update functions
-  function isUpdateFunction<T>(value: unknown): value is (current: T) => T {
-    return typeof value === 'function';
-  }
-
-  // Create set function that updates signals
-  const set: SetState = (<T>(
-    signal: Signal<T>,
-    updates: T | ((current: T) => T) | Partial<T>
-  ) => {
-    lattice._batch(() => {
-      // Handle derived signals - update through source
-      if (isDerivedSignal(signal)) {
-        const source = getSourceSignal(signal);
-        if (!source) return;
-
-        const currentValue = signal();
-        if (currentValue === undefined) return;
-
-        // Get the source collection
-        const sourceValue = source();
-
-        // Find and update in source collection
-        if (Array.isArray(sourceValue)) {
-          // Use cached index if available
-          const cachedIndex = (signal as DerivedSignal<unknown, unknown>)
-            ._cachedIndex as number;
-          if (
-            cachedIndex !== undefined &&
-            sourceValue[cachedIndex] === currentValue
-          ) {
-            // O(1) update using cached position
-            const newArray = [...sourceValue];
-            if (isUpdateFunction(updates)) {
-              newArray[cachedIndex] = updates(currentValue);
-            } else if (
-              typeof currentValue === 'object' &&
-              currentValue !== null
-            ) {
-              newArray[cachedIndex] = { ...currentValue, ...updates };
-            } else {
-              newArray[cachedIndex] = updates;
-            }
-            updateSignalValue(source, newArray, lattice._batching);
-          } else {
-            // Fallback to O(n) search
-            const index = sourceValue.indexOf(currentValue);
-            if (index !== -1) {
-              const newArray = [...sourceValue];
-              if (isUpdateFunction(updates)) {
-                newArray[index] = updates(currentValue);
-              } else if (
-                typeof currentValue === 'object' &&
-                currentValue !== null
-              ) {
-                newArray[index] = { ...currentValue, ...updates };
-              } else {
-                newArray[index] = updates;
-              }
-              updateSignalValue(source, newArray, lattice._batching);
-            }
-          }
-        } else if (sourceValue instanceof Map) {
-          const cachedKey = (signal as DerivedSignal<unknown, unknown>)
-            ._cachedIndex;
-          if (
-            cachedKey !== undefined &&
-            sourceValue.get(cachedKey) === currentValue
-          ) {
-            // O(1) update using cached key
-            const newMap = new Map(sourceValue);
-            if (isUpdateFunction(updates)) {
-              newMap.set(cachedKey, updates(currentValue));
-            } else if (
-              typeof currentValue === 'object' &&
-              currentValue !== null
-            ) {
-              newMap.set(cachedKey, { ...currentValue, ...updates });
-            } else {
-              newMap.set(cachedKey, updates);
-            }
-            updateSignalValue(source, newMap, lattice._batching);
-          }
-        } else if (sourceValue instanceof Set) {
-          // Sets need special handling - remove old, add new
-          const newSet = new Set(sourceValue);
-          newSet.delete(currentValue);
-          if (isUpdateFunction(updates)) {
-            newSet.add(updates(currentValue));
-          } else if (
-            typeof currentValue === 'object' &&
-            currentValue !== null
-          ) {
-            newSet.add({ ...currentValue, ...updates });
-          } else {
-            newSet.add(updates);
-          }
-          updateSignalValue(source, newSet, lattice._batching);
-        } else if (typeof sourceValue === 'object' && sourceValue !== null) {
-          // Object update
-          const cachedKey = (signal as DerivedSignal<unknown, unknown>)
-            ._cachedIndex as string;
-          const sourceObj = sourceValue as Record<string, unknown>;
-          if (
-            cachedKey !== undefined &&
-            sourceObj[cachedKey] === currentValue
-          ) {
-            // O(1) update using cached key
-            const newObj = { ...sourceObj };
-            if (isUpdateFunction(updates)) {
-              newObj[cachedKey] = updates(currentValue);
-            } else if (
-              typeof currentValue === 'object' &&
-              currentValue !== null
-            ) {
-              newObj[cachedKey] = { ...currentValue, ...updates };
-            } else {
-              newObj[cachedKey] = updates;
-            }
-            updateSignalValue(source, newObj, lattice._batching);
-          }
-        }
-      } else {
-        // Regular signal update
-        const currentValue = signal();
-        let newValue: T;
-
-        if (isUpdateFunction(updates)) {
-          newValue = updates(currentValue) as T;
-        } else if (
-          typeof updates === 'object' &&
-          updates !== null &&
-          typeof currentValue === 'object' &&
-          currentValue !== null &&
-          !Array.isArray(currentValue) &&
-          !(currentValue instanceof Set) &&
-          !(currentValue instanceof Map)
-        ) {
-          // Partial update for objects
-          newValue = { ...currentValue, ...updates } as T;
-        } else {
-          newValue = updates as T;
-        }
-
-        updateSignalValue(signal, newValue, lattice._batching);
-
-        // Also update internal state if this is a store signal
-        for (const key in stateSignals) {
-          if (stateSignals[key] === signal) {
-            (state as any)[key] = newValue;
-            break;
-          }
-        }
-      }
-    });
-
-    // Notify subscribers
-    for (const listener of listeners) {
-      listener();
-    }
-  }) as SetState;
-
-  // Create component context with merged functionality
-  let context: ComponentContext<State> = {
-    store: stateSignals,
-    signal: lattice.signal,
-    computed: lattice.computed,
-    set,
-  };
-  
-  // Apply enhancer if provided
-  if (enhancer) {
-    context = enhancer(context);
-  }
-
-  // Add store methods to context
-  return Object.assign(context, {
-    _getState: () => ({ ...state }),
-    _subscribe: (fn: () => void) => {
-      listeners.add(fn);
-      return () => listeners.delete(fn);
-    },
-  });
-}
-
-/**
- * Creates a store using an existing adapter
- */
-export function createStoreWithAdapter<State extends Record<string, any>>(
+export function createComponent<State extends Record<string, any>>(
   adapter: StoreAdapter<State>
 ): ComponentContext<State> {
+
   // Create scoped lattice context
   const lattice = createLatticeContext();
 
@@ -268,8 +55,11 @@ export function createStoreWithAdapter<State extends Record<string, any>>(
   function createReadOnlySignal<K extends StateKey>(
     internalSig: Signal<State[K]>
   ): Signal<State[K]> {
-    // Create read-only wrapper that tracks dependencies
-    const wrapper = (() => internalSig()) as Signal<State[K]>;
+    // Create read-only wrapper that tracks dependencies and forwards all operations
+    const wrapper = ((...args: any[]) => {
+      // Forward all arguments to the internal signal
+      return (internalSig as any)(...args);
+    }) as Signal<State[K]>;
     wrapper.subscribe = internalSig.subscribe;
     return wrapper;
   }
@@ -304,7 +94,8 @@ export function createStoreWithAdapter<State extends Record<string, any>>(
         }
       });
     });
-  });
+  })
+
 
   // Create set function that delegates to adapter
   const set: SetState = ((signal: Signal<any>, updates: any) => {
@@ -312,13 +103,23 @@ export function createStoreWithAdapter<State extends Record<string, any>>(
     // Find which state key this signal belongs to
     let stateKey: string | undefined;
     for (const key in stateSignals) {
-      if (
-        stateSignals[key] === signal ||
-        (isDerivedSignal(signal) &&
-          getSourceSignal(signal) === stateSignals[key])
-      ) {
+      if (stateSignals[key] === signal) {
         stateKey = key;
         break;
+      }
+      // Check if it's a derived signal from this state key
+      if (isDerivedSignal(signal)) {
+        const source = getSourceSignal(signal);
+        if (source === stateSignals[key]) {
+          stateKey = key;
+          break;
+        }
+        // Also check if source is a wrapper pointing to the same internal signal
+        const internalSig = internalSignals.get(key as StateKey);
+        if (internalSig && source === internalSig) {
+          stateKey = key;
+          break;
+        }
       }
     }
 
@@ -326,6 +127,52 @@ export function createStoreWithAdapter<State extends Record<string, any>>(
       throw new Error('Signal not found in store');
     }
 
+    // Handle derived signals specially
+    if (isDerivedSignal(signal)) {
+      const derivedSig = signal as DerivedSignal<any, any>;
+      const sourceSignal = stateSignals[stateKey as keyof State];
+      const sourceValue = sourceSignal();
+      
+      // Ensure the derived signal has been evaluated to find its target
+      const currentDerivedValue = signal();
+      if (currentDerivedValue === undefined) {
+        // Item not found, nothing to update
+        return;
+      }
+      
+      // For arrays, update the specific item
+      if (Array.isArray(sourceValue) && derivedSig._cachedIndex !== undefined) {
+        const newArray = [...sourceValue];
+        const currentItem = newArray[derivedSig._cachedIndex as number];
+        
+        if (currentItem !== undefined) {
+          let newItem: any;
+          if (typeof updates === 'function') {
+            newItem = updates(currentItem);
+          } else if (
+            typeof updates === 'object' &&
+            updates !== null &&
+            typeof currentItem === 'object' &&
+            currentItem !== null &&
+            !Array.isArray(currentItem)
+          ) {
+            // Partial update for objects
+            newItem = { ...currentItem, ...updates };
+          } else {
+            newItem = updates;
+          }
+          
+          newArray[derivedSig._cachedIndex as number] = newItem;
+          adapter.setState({ [stateKey]: newArray } as Partial<State>);
+          return;
+        }
+      }
+      
+      // For other collection types, fall through to regular handling
+      // This would need similar special handling for Maps, Sets, etc.
+    }
+    
+    // Regular signal update
     const currentValue = signal();
 
     let newValue: any;

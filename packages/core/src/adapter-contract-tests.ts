@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StoreAdapter } from './adapter-contract';
 import { isStoreAdapter } from './adapter-contract';
 import {
-  createStoreWithAdapter,
+  createComponent,
 } from './component';
 import type { ComponentFactory } from './runtime-types';
 
@@ -306,7 +306,7 @@ export function createAdapterTestSuite(
     });
 
     describe('Component Integration', () => {
-      it('should work with createStoreWithAdapter', () => {
+      it('should work with createComponent', () => {
         const adapter = createAdapter(createInitialState());
 
         const Counter: ComponentFactory<TestState> = ({ store, set }) => ({
@@ -321,9 +321,9 @@ export function createAdapterTestSuite(
           append: (suffix: string) => set(store.text, store.text() + suffix),
         });
 
-        const counterStore = createStoreWithAdapter(adapter);
+        const counterStore = createComponent(adapter);
         const counter = Counter(counterStore);
-        const textStore = createStoreWithAdapter(adapter);
+        const textStore = createComponent(adapter);
         const textEditor = TextEditor(textStore);
 
         // Test initial state
@@ -378,9 +378,9 @@ export function createAdapterTestSuite(
           },
         });
 
-        const readerStore = createStoreWithAdapter(adapter);
+        const readerStore = createComponent(adapter);
         const reader = Reader(readerStore);
-        const writerStore = createStoreWithAdapter(adapter);
+        const writerStore = createComponent(adapter);
         const writer = Writer(writerStore);
 
         // Modify through writer
