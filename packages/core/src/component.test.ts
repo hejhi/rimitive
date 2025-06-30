@@ -254,24 +254,27 @@ describe('Component API', () => {
         // Test partial update on derived signal
         updateActiveUserLastSeen: () => {
           const activeUser = store.users(u => u.active);
-          if (activeUser()) {
+          const user = activeUser();
+          if (user) {
             // This should do a partial update, keeping other fields intact
-            set(activeUser, { lastSeen: Date.now() });
+            set(activeUser, { ...user, lastSeen: Date.now() });
           }
         },
         // Test partial update with multiple fields on derived signal
         updateUserByIdPartial: (id: string, name: string, email: string) => {
-          const user = store.users(u => u.id === id);
-          if (user()) {
+          const userSignal = store.users(u => u.id === id);
+          const user = userSignal();
+          if (user) {
             // Update only name and email, preserving other fields
-            set(user, { name, email });
+            set(userSignal, { ...user, name, email });
           }
         },
         // Test update function on derived signal for comparison
         deactivateUserById: (id: string) => {
-          const user = store.users(u => u.id === id);
-          if (user()) {
-            set(user, u => ({ ...u, active: false, lastSeen: Date.now() }));
+          const userSignal = store.users(u => u.id === id);
+          const user = userSignal();
+          if (user) {
+            set(userSignal, u => ({ ...u!, active: false, lastSeen: Date.now() }));
           }
         },
       })
@@ -286,36 +289,35 @@ describe('Component API', () => {
     });
 
     // Test partial update on derived signal - only lastSeen should change
-    const initialActiveUser = store.users()[0];
     store.updateActiveUserLastSeen();
     const updatedActiveUser = store.users()[0];
     
-    expect(updatedActiveUser.id).toBe('1');
-    expect(updatedActiveUser.name).toBe('Alice');
-    expect(updatedActiveUser.email).toBe('alice@example.com');
-    expect(updatedActiveUser.active).toBe(true);
-    expect(updatedActiveUser.lastSeen).toBeGreaterThan(1000);
+    expect(updatedActiveUser!.id).toBe('1');
+    expect(updatedActiveUser!.name).toBe('Alice');
+    expect(updatedActiveUser!.email).toBe('alice@example.com');
+    expect(updatedActiveUser!.active).toBe(true);
+    expect(updatedActiveUser!.lastSeen).toBeGreaterThan(1000);
 
     // Test partial update with multiple fields
     store.updateUserByIdPartial('2', 'Robert', 'robert@example.com');
     const updatedUser2 = store.users()[1];
     
-    expect(updatedUser2.id).toBe('2');
-    expect(updatedUser2.name).toBe('Robert');
-    expect(updatedUser2.email).toBe('robert@example.com');
-    expect(updatedUser2.active).toBe(false); // Should remain unchanged
-    expect(updatedUser2.lastSeen).toBe(2000); // Should remain unchanged
+    expect(updatedUser2!.id).toBe('2');
+    expect(updatedUser2!.name).toBe('Robert');
+    expect(updatedUser2!.email).toBe('robert@example.com');
+    expect(updatedUser2!.active).toBe(false); // Should remain unchanged
+    expect(updatedUser2!.lastSeen).toBe(2000); // Should remain unchanged
 
     // Test update function pattern
     const beforeDeactivate = store.users()[2];
     store.deactivateUserById('3');
     const afterDeactivate = store.users()[2];
     
-    expect(afterDeactivate.id).toBe('3');
-    expect(afterDeactivate.name).toBe('Charlie'); // Should remain unchanged
-    expect(afterDeactivate.email).toBe('charlie@example.com'); // Should remain unchanged
-    expect(afterDeactivate.active).toBe(false);
-    expect(afterDeactivate.lastSeen).toBeGreaterThan(beforeDeactivate.lastSeen);
+    expect(afterDeactivate!.id).toBe('3');
+    expect(afterDeactivate!.name).toBe('Charlie'); // Should remain unchanged
+    expect(afterDeactivate!.email).toBe('charlie@example.com'); // Should remain unchanged
+    expect(afterDeactivate!.active).toBe(false);
+    expect(afterDeactivate!.lastSeen).toBeGreaterThan(beforeDeactivate!.lastSeen);
   });
 
   it('should support index-based smart updates', () => {

@@ -28,7 +28,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "pnpm typecheck && vite build",
     "dev": "vite build --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
