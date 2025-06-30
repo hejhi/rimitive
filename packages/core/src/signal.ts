@@ -19,7 +19,16 @@ type CacheKey = number | string | symbol;
  */
 export interface DerivedSignal<T, U> extends Signal<U | undefined> {
   _source: Signal<T>;
-  _predicate: (value: T extends Array<infer E> ? E : T extends Set<infer E> ? E : T extends Map<infer K, infer V> ? [K, V] : T[keyof T], key?: CacheKey) => boolean;
+  _predicate: (
+    value: T extends Array<infer E>
+      ? E
+      : T extends Set<infer E>
+        ? E
+        : T extends Map<infer K, infer V>
+          ? [K, V]
+          : T[keyof T],
+    key?: CacheKey
+  ) => boolean;
   _cachedIndex?: CacheKey; // Position/key in source
   _sourceVersion: number; // Version of source when cached
   _unsubscribeFromSource?: () => void; // Cleanup function
@@ -42,8 +51,11 @@ export function createSignalFactory(
   batching: BatchingSystem
 ) {
   // WeakMap to store keyed selector caches
-  const keyedSelectorCaches = new WeakMap<Signal<unknown>, Map<Function, Map<unknown, Signal<unknown>>>>();
-  
+  const keyedSelectorCaches = new WeakMap<
+    Signal<unknown>,
+    Map<Function, Map<unknown, WeakRef<Signal<unknown>>>>
+  >();
+
   /**
    * Creates a read-only signal within this context
    */
@@ -57,90 +69,65 @@ export function createSignalFactory(
 
       // Single predicate - create derived signal
       if (arguments.length === 1 && typeof args[0] === 'function') {
-        return createDerivedSignal(sig as BaseSignal<T>, args[0] as (value: unknown, key?: CacheKey) => boolean, tracking, batching);
+        return createDerivedSignal(
+          sig as BaseSignal<T>,
+          args[0] as (value: unknown, key?: CacheKey) => boolean,
+          tracking,
+          batching
+        );
       }
 
       // Keyed selector - keyFn and predicate
-      if (arguments.length === 2 && typeof args[0] === 'function' && typeof args[1] === 'function') {
+      if (
+        arguments.length === 2 &&
+        typeof args[0] === 'function' &&
+        typeof args[1] === 'function'
+      ) {
         const [keyFn, predicate] = args;
-        
+
         // Get or create cache for this signal
         if (!keyedSelectorCaches.has(sig as unknown as Signal<unknown>)) {
           keyedSelectorCaches.set(sig as unknown as Signal<unknown>, new Map());
         }
-        const signalCache = keyedSelectorCaches.get(sig as unknown as Signal<unknown>)!;
-        
+        const signalCache = keyedSelectorCaches.get(
+          sig as unknown as Signal<unknown>
+        )!;
+
         // Get or create cache for this keyFn
         if (!signalCache.has(keyFn)) {
-          const keyedCache = new Map<unknown, WeakRef<Signal<any>>>();
-          let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
-          
-          // Cleanup function for dead WeakRefs
-          const cleanupDeadRefs = () => {
-            for (const [key, ref] of keyedCache) {
-              if (!ref.deref()) {
-                keyedCache.delete(key);
-              }
-            }
-            // Only reschedule if cache still has entries
-            if (keyedCache.size > 0) {
-              cleanupTimer = setTimeout(cleanupDeadRefs, 30000); // 30 second cleanup interval
-            } else {
-              cleanupTimer = undefined;
-            }
-          };
-          
+          const keyedCache = new Map<unknown, WeakRef<Signal<unknown>>>();
           signalCache.set(keyFn, keyedCache);
         }
-        const keyCache = signalCache.get(keyFn)! as Map<unknown, WeakRef<Signal<any>>>;
-        
+        const keyCache = signalCache.get(keyFn);
+
         // Return function that creates/returns cached derived signals
         return (key: unknown) => {
-          const ref = keyCache.get(key);
+          const ref = keyCache?.get(key);
           let signal = ref?.deref();
-          
+
+          if (ref && !signal) {
+            // WeakRef is dead, remove it
+            keyCache?.delete(key);
+          }
+
           if (!signal) {
             // Create new derived signal
             signal = createDerivedSignal(
-              sig as BaseSignal<T>, 
+              sig as BaseSignal<T>,
               (item: unknown) => predicate(item, key),
               tracking,
               batching
             );
-            keyCache.set(key, new WeakRef(signal));
-            
-            // Start cleanup timer if not already running
-            if (keyCache.size === 1) { // First entry
-              setTimeout(() => {
-                // Initial cleanup after 30 seconds
-                for (const [k, r] of keyCache) {
-                  if (!r.deref()) {
-                    keyCache.delete(k);
-                  }
-                }
-                // Continue periodic cleanup if entries remain
-                if (keyCache.size > 0) {
-                  const cleanup = () => {
-                    for (const [k, r] of keyCache) {
-                      if (!r.deref()) {
-                        keyCache.delete(k);
-                      }
-                    }
-                    if (keyCache.size > 0) {
-                      setTimeout(cleanup, 30000);
-                    }
-                  };
-                  setTimeout(cleanup, 30000);
-                }
-              }, 30000);
-            }
+            keyCache?.set(key, new WeakRef(signal));
           }
-          
+
           return signal;
         };
       }
 
-      throw new Error('Invalid signal operation. Signals are read-only. Use set() to update.');
+      throw new Error(
+        'Invalid signal operation. Signals are read-only. Use set() to update.'
+      );
     } as BaseSignal<T>;
 
     // Initialize signal properties
@@ -166,14 +153,17 @@ function createDerivedSignal<T, U>(
   tracking: TrackingContext,
   batching: BatchingSystem
 ): DerivedSignal<T, U> {
-  const derived = function() {
+  const derived = function () {
     tracking.track(derived);
-    
+
     const sourceValue = source._value;
     const currentVersion = source._version;
-    
+
     // Check if cache is still valid
-    if (derived._sourceVersion === currentVersion && derived._cachedIndex !== undefined) {
+    if (
+      derived._sourceVersion === currentVersion &&
+      derived._cachedIndex !== undefined
+    ) {
       // Try to use cached position
       if (Array.isArray(sourceValue)) {
         const item = sourceValue[derived._cachedIndex as number];
@@ -195,7 +185,7 @@ function createDerivedSignal<T, U>(
         }
       }
     }
-    
+
     // Cache miss or invalid - search for item
     if (Array.isArray(sourceValue)) {
       const index = sourceValue.findIndex((item, i) => predicate(item, i));
@@ -229,7 +219,7 @@ function createDerivedSignal<T, U>(
         }
       }
     }
-    
+
     // Not found
     derived._cachedIndex = undefined;
     derived._sourceVersion = currentVersion;
@@ -256,7 +246,7 @@ function createDerivedSignal<T, U>(
       // Store unsubscribe for cleanup
       derived._unsubscribeFromSource = unsubscribe;
     }
-    
+
     return () => {
       listeners.delete(listener);
       // Unsubscribe from source if no more listeners
@@ -281,10 +271,10 @@ export function updateSignalValue<T>(
 ): void {
   const baseSignal = signal as BaseSignal<T>;
   if (Object.is(baseSignal._value, newValue)) return;
-  
+
   baseSignal._value = newValue;
   baseSignal._version++;
-  
+
   for (const listener of baseSignal._listeners) {
     batching.scheduleUpdate(listener);
   }
@@ -293,13 +283,17 @@ export function updateSignalValue<T>(
 /**
  * Get the underlying source signal from a derived signal
  */
-export function getSourceSignal<T>(signal: Signal<T>): Signal<unknown> | undefined {
+export function getSourceSignal<T>(
+  signal: Signal<T>
+): Signal<unknown> | undefined {
   return (signal as unknown as DerivedSignal<unknown, unknown>)._source;
 }
 
 /**
  * Check if a signal is a derived signal
  */
-export function isDerivedSignal<T>(signal: Signal<T>): signal is DerivedSignal<any, any> {
+export function isDerivedSignal<T>(
+  signal: Signal<T>
+): signal is DerivedSignal<any, any> {
   return '_source' in signal && '_predicate' in signal;
 }
