@@ -32,13 +32,13 @@ export interface Signal<T> {
   
   // Create keyed selector (for arrays)
   <K>(
-    keyFn: T extends (infer U)[] ? (key: K) => K : never,
+    keyFn: T extends unknown[] ? (key: K) => K : never,
     predicate: T extends (infer U)[] ? (item: U, key: K) => boolean : never
   ): T extends (infer U)[] ? (key: K) => Signal<U | undefined> : never;
   
   // Create keyed selector (for objects)
   <K>(
-    keyFn: T extends Record<string, infer V> ? (key: K) => K : never,
+    keyFn: T extends Record<string, unknown> ? (key: K) => K : never,
     predicate: T extends Record<string, infer V> ? (value: V, key: K) => boolean : never
   ): T extends Record<string, infer V> ? (key: K) => Signal<V | undefined> : never;
 }
@@ -74,7 +74,7 @@ export interface SliceHandle<Computed> {
  * Function to update state through signals
  * All state updates must go through this function
  */
-export type SetState<State = any> = {
+export type SetState = {
   // Set signal value directly
   <T>(signal: Signal<T>, value: T): void;
   
@@ -90,24 +90,24 @@ export type SetState<State = any> = {
  * Provides read-only signals and a set function for updates
  */
 export type ReactiveSliceFactory<State> = <Computed>(
-  computeFn: (state: SignalState<State>, set: SetState<State>) => Computed
+  computeFn: (state: SignalState<State>, set: SetState) => Computed
 ) => SliceHandle<Computed>;
 
 /**
  * Lattice context provides scoped signal/computed factories
  * Each component tree gets its own context to avoid global conflicts
  */
-export interface LatticeContext<State = any> {
+export interface LatticeContext {
   signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(computeFn: () => T) => Computed<T>;
-  set: SetState<State>;
+  set: SetState;
 }
 
 /**
  * Component context includes state signals under 'store' and lattice utilities
  * This is what component factories receive as their single parameter
  */
-export interface ComponentContext<State> extends LatticeContext<State> {
+export interface ComponentContext<State> extends LatticeContext {
   store: SignalState<State>;
 }
 

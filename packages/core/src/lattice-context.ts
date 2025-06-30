@@ -15,7 +15,7 @@ import { createComputedFactory } from './computed';
 /**
  * Creates a scoped lattice context for a component tree
  */
-export function createLatticeContext<State>(): LatticeContext<State> & { _batch: (fn: () => void) => void; _tracking: ReturnType<typeof createTrackingContext>; _batching: ReturnType<typeof createBatchingSystem> } {
+export function createLatticeContext(): LatticeContext & { _batch: (fn: () => void) => void; _tracking: ReturnType<typeof createTrackingContext>; _batching: ReturnType<typeof createBatchingSystem> } {
   const tracking = createTrackingContext();
   const batching = createBatchingSystem();
   
@@ -24,7 +24,7 @@ export function createLatticeContext<State>(): LatticeContext<State> & { _batch:
   const computed = createComputedFactory(tracking, batching);
   
   // Placeholder set function - will be provided when creating store
-  const set: SetState<State> = () => {
+  const set: SetState = () => {
     throw new Error('set() is only available when component is connected to a store');
   };
   

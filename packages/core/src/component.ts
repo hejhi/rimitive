@@ -92,7 +92,7 @@ export function createStore<State extends Record<string, any>, Slices>(
 
 
   // Create scoped lattice context
-  const lattice = createLatticeContext<State>();
+  const lattice = createLatticeContext();
 
   // Create state signals
   const stateSignals = {} as SignalState<State>;
@@ -106,7 +106,7 @@ export function createStore<State extends Record<string, any>, Slices>(
   }
 
   // Create set function that updates signals
-  const set: SetState<State> = (<T>(signal: Signal<T>, updates: T | ((current: T) => T) | Partial<T>) => {
+  const set: SetState = (<T>(signal: Signal<T>, updates: T | ((current: T) => T) | Partial<T>) => {
     lattice._batch(() => {
       // Handle derived signals - update through source
       if (isDerivedSignal(signal)) {
@@ -225,7 +225,7 @@ export function createStore<State extends Record<string, any>, Slices>(
     for (const listener of listeners) {
       listener();
     }
-  }) as SetState<State>;
+  }) as SetState;
 
 
   // Create component slices with merged context
@@ -259,7 +259,7 @@ export function createStoreWithAdapter<
   adapter: StoreAdapter<State>
 ): Slices {
   // Create scoped lattice context
-  const lattice = createLatticeContext<State>();
+  const lattice = createLatticeContext();
 
   // Create read-only signals that mirror adapter state
   const state = adapter.getState();
@@ -312,7 +312,7 @@ export function createStoreWithAdapter<
   });
 
   // Create set function that delegates to adapter
-  const set: SetState<State> = ((signal: Signal<any>, updates: any) => {
+  const set: SetState = ((signal: Signal<any>, updates: any) => {
     // For adapter stores, we need to update through the adapter
     // Find which state key this signal belongs to
     let stateKey: string | undefined;
@@ -345,7 +345,7 @@ export function createStoreWithAdapter<
     
     // Update through adapter
     adapter.setState({ [stateKey]: newValue } as Partial<State>);
-  }) as SetState<State>;
+  }) as SetState;
 
   // Create component slices with merged context
   const context: ComponentContext<State> = {
