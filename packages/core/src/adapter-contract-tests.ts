@@ -11,7 +11,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StoreAdapter } from './adapter-contract';
 import { isStoreAdapter } from './adapter-contract';
-import { createComponent, withState, createStoreWithAdapter } from './component';
+import {
+  createComponent,
+  withState,
+  createStoreWithAdapter,
+} from './component';
 
 /**
  * Test state shape used throughout the adapter tests
@@ -363,7 +367,7 @@ export function createAdapterTestSuite(
               count: store.count(),
               text: store.text(),
               nested: store.nested(),
-              list: store.list()
+              list: store.list(),
             })),
             getCount: store.count,
             getText: store.text,

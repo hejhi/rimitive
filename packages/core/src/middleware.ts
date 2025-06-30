@@ -18,27 +18,35 @@ export function withLogger<State>(
     const originalSet = context.set;
 
     // Wrap set to log changes
-    context.set = (<T>(signal: Signal<T>, updates: T | ((current: T) => T) | Partial<T>) => {
+    context.set = (<T>(
+      signal: Signal<T>,
+      updates: T | ((current: T) => T) | Partial<T>
+    ) => {
       const currentValue = signal();
       let newValue: T;
-      
+
       if (typeof updates === 'function') {
         newValue = (updates as (current: T) => T)(currentValue);
-      } else if (typeof updates === 'object' && updates !== null && 
-                 typeof currentValue === 'object' && currentValue !== null &&
-                 !Array.isArray(currentValue) && !(currentValue instanceof Set) && 
-                 !(currentValue instanceof Map)) {
+      } else if (
+        typeof updates === 'object' &&
+        updates !== null &&
+        typeof currentValue === 'object' &&
+        currentValue !== null &&
+        !Array.isArray(currentValue) &&
+        !(currentValue instanceof Set) &&
+        !(currentValue instanceof Map)
+      ) {
         // Partial update for objects
         newValue = { ...currentValue, ...updates };
       } else {
         newValue = updates as T;
       }
-      
+
       // Log the update in a format that matches what was applied
       // For store properties, extract the property name from the signal
       const storeSignals = context.store;
       let updateLog: any = newValue;
-      
+
       // Check if this is a store signal
       for (const [key, storeSignal] of Object.entries(storeSignals)) {
         if (storeSignal === signal) {
@@ -46,9 +54,9 @@ export function withLogger<State>(
           break;
         }
       }
-      
+
       console.log('[Lattice Logger] State update:', updateLog);
-      
+
       originalSet(signal, newValue);
     }) as typeof context.set;
 
@@ -89,7 +97,7 @@ export function withDevtools<State>(name = 'Lattice Store') {
         // Find which property was updated
         let updatedKey: string | undefined;
         let updateValue: any;
-        
+
         for (const key in context.store) {
           if (context.store[key] === signal) {
             updatedKey = key;

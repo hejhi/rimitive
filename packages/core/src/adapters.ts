@@ -7,7 +7,7 @@ import type { StoreAdapter } from './adapter-contract';
 /**
  * Creates a simple in-memory adapter for Lattice stores.
  * This is the most basic adapter - stores state in memory with no persistence.
- * 
+ *
  * @param initialState - The initial state for the store
  * @returns A StoreAdapter that can be used with createStoreWithAdapter
  */

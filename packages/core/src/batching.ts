@@ -1,6 +1,6 @@
 /**
  * @fileoverview Update batching system for efficient signal updates
- * 
+ *
  * Batches multiple signal updates to prevent redundant recomputations
  * and improve performance in reactive systems.
  */
@@ -17,13 +17,13 @@ export interface BatchingSystem {
 export function createBatchingSystem(): BatchingSystem {
   let isBatching = false;
   const batchedUpdates = new Set<() => void>();
-  
+
   function batch(fn: () => void): void {
     if (isBatching) {
       fn();
       return;
     }
-    
+
     isBatching = true;
     try {
       fn();
@@ -36,7 +36,7 @@ export function createBatchingSystem(): BatchingSystem {
       isBatching = false;
     }
   }
-  
+
   function scheduleUpdate(listener: () => void): void {
     if (isBatching) {
       batchedUpdates.add(listener);
@@ -44,10 +44,12 @@ export function createBatchingSystem(): BatchingSystem {
       listener();
     }
   }
-  
-  return { 
-    batch, 
+
+  return {
+    batch,
     scheduleUpdate,
-    get batching() { return isBatching; }
+    get batching() {
+      return isBatching;
+    },
   };
 }

@@ -5,7 +5,6 @@
  * They are used by both the runtime and adapters.
  */
 
-
 /**
  * A signal is a read-only reactive primitive that can create derived signals
  * Reading a signal automatically registers it as a dependency in tracking contexts
@@ -14,33 +13,51 @@
 export interface Signal<T> {
   // Read value
   (): T;
-  
+
   // Subscribe to changes
   subscribe: (listener: () => void) => () => void;
-  
+
   // Create derived signal with predicate (for arrays)
-  <U>(predicate: T extends (infer U)[] ? (item: U, index: number) => boolean : never): T extends (infer U)[] ? Signal<U | undefined> : never;
-  
+  <U>(
+    predicate: T extends (infer U)[]
+      ? (item: U, index: number) => boolean
+      : never
+  ): T extends (infer U)[] ? Signal<U | undefined> : never;
+
   // Create derived signal with predicate (for objects)
-  <V>(predicate: T extends Record<string, infer V> ? (value: V, key: string) => boolean : never): T extends Record<string, infer V> ? Signal<V | undefined> : never;
-  
+  <V>(
+    predicate: T extends Record<string, infer V>
+      ? (value: V, key: string) => boolean
+      : never
+  ): T extends Record<string, infer V> ? Signal<V | undefined> : never;
+
   // Create derived signal with predicate (for Maps)
-  <V>(predicate: T extends Map<any, infer V> ? (value: V, key: any) => boolean : never): T extends Map<any, infer V> ? Signal<V | undefined> : never;
-  
+  <V>(
+    predicate: T extends Map<any, infer V>
+      ? (value: V, key: any) => boolean
+      : never
+  ): T extends Map<any, infer V> ? Signal<V | undefined> : never;
+
   // Create derived signal with predicate (for Sets)
-  <U>(predicate: T extends Set<infer U> ? (value: U) => boolean : never): T extends Set<infer U> ? Signal<U | undefined> : never;
-  
+  <U>(
+    predicate: T extends Set<infer U> ? (value: U) => boolean : never
+  ): T extends Set<infer U> ? Signal<U | undefined> : never;
+
   // Create keyed selector (for arrays)
   <K>(
     keyFn: T extends unknown[] ? (key: K) => K : never,
     predicate: T extends (infer U)[] ? (item: U, key: K) => boolean : never
   ): T extends (infer U)[] ? (key: K) => Signal<U | undefined> : never;
-  
+
   // Create keyed selector (for objects)
   <K>(
     keyFn: T extends Record<string, unknown> ? (key: K) => K : never,
-    predicate: T extends Record<string, infer V> ? (value: V, key: K) => boolean : never
-  ): T extends Record<string, infer V> ? (key: K) => Signal<V | undefined> : never;
+    predicate: T extends Record<string, infer V>
+      ? (value: V, key: K) => boolean
+      : never
+  ): T extends Record<string, infer V>
+    ? (key: K) => Signal<V | undefined>
+    : never;
 }
 
 /**
@@ -77,10 +94,10 @@ export interface SliceHandle<Computed> {
 export type SetState = {
   // Set signal value directly
   <T>(signal: Signal<T>, value: T): void;
-  
+
   // Update signal with function
   <T>(signal: Signal<T>, updater: (current: T) => T): void;
-  
+
   // Partial updates for objects
   <T extends object>(signal: Signal<T>, updates: Partial<T>): void;
 };

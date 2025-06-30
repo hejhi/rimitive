@@ -36,7 +36,9 @@ export interface StoreAdapter<State> {
  * This allows adapters that need initial state at creation time (e.g., for middleware)
  * to defer their creation until the initial state is known.
  */
-export type AdapterFactory<State> = (initialState: State) => StoreAdapter<State>;
+export type AdapterFactory<State> = (
+  initialState: State
+) => StoreAdapter<State>;
 
 /**
  * Type guard to check if a value is a store adapter

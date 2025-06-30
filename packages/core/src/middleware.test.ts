@@ -55,42 +55,48 @@ describe('Component Middleware', () => {
     const middleware1Calls: string[] = [];
     const middleware2Calls: string[] = [];
 
-    const middleware1 = <State extends Record<string, any>>() => (marker: FromMarker<State>) => {
-      const mw: ComponentMiddleware<State> = (context) => {
-        middleware1Calls.push('init');
-        const originalSet = context.set;
-        context.set = ((signal: any, updates: any) => {
-          middleware1Calls.push('set');
-          originalSet(signal, updates);
-        }) as typeof context.set;
-        return context;
+    const middleware1 =
+      <State extends Record<string, any>>() =>
+      (marker: FromMarker<State>) => {
+        const mw: ComponentMiddleware<State> = (context) => {
+          middleware1Calls.push('init');
+          const originalSet = context.set;
+          context.set = ((signal: any, updates: any) => {
+            middleware1Calls.push('set');
+            originalSet(signal, updates);
+          }) as typeof context.set;
+          return context;
+        };
+        return {
+          ...marker,
+          _middleware: [...marker._middleware, mw],
+        };
       };
-      return {
-        ...marker,
-        _middleware: [...marker._middleware, mw],
-      };
-    };
 
-    const middleware2 = <State extends Record<string, any>>() => (marker: FromMarker<State>) => {
-      const mw: ComponentMiddleware<State> = (context) => {
-        middleware2Calls.push('init');
-        const originalSet = context.set;
-        context.set = ((signal: any, updates: any) => {
-          middleware2Calls.push('set');
-          originalSet(signal, updates);
-        }) as typeof context.set;
-        return context;
+    const middleware2 =
+      <State extends Record<string, any>>() =>
+      (marker: FromMarker<State>) => {
+        const mw: ComponentMiddleware<State> = (context) => {
+          middleware2Calls.push('init');
+          const originalSet = context.set;
+          context.set = ((signal: any, updates: any) => {
+            middleware2Calls.push('set');
+            originalSet(signal, updates);
+          }) as typeof context.set;
+          return context;
+        };
+        return {
+          ...marker,
+          _middleware: [...marker._middleware, mw],
+        };
       };
-      return {
-        ...marker,
-        _middleware: [...marker._middleware, mw],
-      };
-    };
 
     type CounterState = { count: number };
 
     const Counter = createComponent(
-      middleware2<CounterState>()(middleware1<CounterState>()(withState<CounterState>())),
+      middleware2<CounterState>()(
+        middleware1<CounterState>()(withState<CounterState>())
+      ),
       ({ store, set }) => {
         return {
           count: store.count,
