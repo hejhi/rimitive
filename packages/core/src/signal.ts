@@ -72,22 +72,71 @@ export function createSignalFactory(
         
         // Get or create cache for this keyFn
         if (!signalCache.has(keyFn)) {
-          signalCache.set(keyFn, new Map());
+          const keyedCache = new Map<unknown, WeakRef<Signal<any>>>();
+          let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+          
+          // Cleanup function for dead WeakRefs
+          const cleanupDeadRefs = () => {
+            for (const [key, ref] of keyedCache) {
+              if (!ref.deref()) {
+                keyedCache.delete(key);
+              }
+            }
+            // Only reschedule if cache still has entries
+            if (keyedCache.size > 0) {
+              cleanupTimer = setTimeout(cleanupDeadRefs, 30000); // 30 second cleanup interval
+            } else {
+              cleanupTimer = undefined;
+            }
+          };
+          
+          signalCache.set(keyFn, keyedCache);
         }
-        const keyCache = signalCache.get(keyFn)!;
+        const keyCache = signalCache.get(keyFn)! as Map<unknown, WeakRef<Signal<any>>>;
         
         // Return function that creates/returns cached derived signals
         return (key: unknown) => {
-          if (!keyCache.has(key)) {
-            const derivedSig = createDerivedSignal(
+          const ref = keyCache.get(key);
+          let signal = ref?.deref();
+          
+          if (!signal) {
+            // Create new derived signal
+            signal = createDerivedSignal(
               sig as BaseSignal<T>, 
               (item: unknown) => predicate(item, key),
               tracking,
               batching
             );
-            keyCache.set(key, derivedSig);
+            keyCache.set(key, new WeakRef(signal));
+            
+            // Start cleanup timer if not already running
+            if (keyCache.size === 1) { // First entry
+              setTimeout(() => {
+                // Initial cleanup after 30 seconds
+                for (const [k, r] of keyCache) {
+                  if (!r.deref()) {
+                    keyCache.delete(k);
+                  }
+                }
+                // Continue periodic cleanup if entries remain
+                if (keyCache.size > 0) {
+                  const cleanup = () => {
+                    for (const [k, r] of keyCache) {
+                      if (!r.deref()) {
+                        keyCache.delete(k);
+                      }
+                    }
+                    if (keyCache.size > 0) {
+                      setTimeout(cleanup, 30000);
+                    }
+                  };
+                  setTimeout(cleanup, 30000);
+                }
+              }, 30000);
+            }
           }
-          return keyCache.get(key)!;
+          
+          return signal;
         };
       }
 
