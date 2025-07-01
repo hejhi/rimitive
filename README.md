@@ -344,7 +344,7 @@ const count = store.count();
 set(store.count, 5);
 set(store.count, (n) => n + 1);
 
-// Smart updates: create derived signals with predicates
+// Smart updates: create signal selectors with predicates
 const activeUser = store.users((u) => u.id === userId);
 const todo = store.todos((t) => t.id === todoId);
 
@@ -376,6 +376,7 @@ const stats = computed(() => ({
 ```
 
 Computed values in Lattice are reactive signals with a hybrid execution model:
+
 - **Eager notification**: When dependencies change, computed values immediately notify their subscribers (e.g., UI frameworks)
 - **Lazy evaluation**: The actual recomputation only happens when the value is read
 - This gives you the best of both worlds: immediate UI reactivity without wasted computations

@@ -2,12 +2,12 @@
  * @fileoverview Utilities for handling state updates
  *
  * This module contains shared logic for processing state updates,
- * including handling of derived signals, partial updates, and
+ * including handling of signal selectors, partial updates, and
  * collection operations.
  */
 
-import type { Signal } from './types';
-import { isDerivedSignal, type DerivedSignal } from '../core/signal';
+import type { Signal, SignalSelector, SignalState } from './types';
+import { getSourceSignal, isSignalSelector } from '../core/signal';
 
 /**
  * Applies an update to a value, handling functions and partial object updates
@@ -35,28 +35,28 @@ export function applyUpdate<T>(
 }
 
 /**
- * Handles updates to derived signals that represent collection items
+ * Handles updates to signal selectors that represent collection items
  */
-export function handleDerivedSignalUpdate<T, Item>(
-  signal: DerivedSignal<T, Item>,
+export function handleSignalSelectorUpdate<T, Item>(
+  selector: SignalSelector<T, Item>,
   sourceValue: T,
   updates: Item | ((current: Item) => Item) | Partial<Item>
 ): { key: string; value: T } | null {
-  // Ensure the derived signal has been evaluated to find its target
-  const currentDerivedValue = signal();
-  if (currentDerivedValue === undefined) {
+  // Ensure the selector has been evaluated to find its target
+  const currentValue = selector();
+  if (currentValue === undefined) {
     // Item not found, nothing to update
     return null;
   }
 
   // For arrays, update the specific item
-  if (Array.isArray(sourceValue) && signal._cachedIndex !== undefined) {
+  if (Array.isArray(sourceValue) && selector._cachedIndex !== undefined) {
     const newArray = [...sourceValue];
-    const currentItem = newArray[signal._cachedIndex as number];
+    const currentItem = newArray[selector._cachedIndex as number];
 
     if (currentItem !== undefined) {
       const newItem = applyUpdate(currentItem, updates);
-      newArray[signal._cachedIndex as number] = newItem;
+      newArray[selector._cachedIndex as number] = newItem;
       return { key: '', value: newArray as T };
     }
   }
@@ -70,19 +70,18 @@ export function handleDerivedSignalUpdate<T, Item>(
  * Identifies which state key a signal belongs to
  */
 export function findSignalStateKey<State extends Record<string, any>>(
-  signal: Signal<any>,
-  stateSignals: Record<keyof State, Signal<State[keyof State]>>
+  signal: Signal<any> | SignalSelector<any, any>,
+  stateSignals: SignalState<State>
 ): keyof State | undefined {
   for (const key in stateSignals) {
-    if (stateSignals[key] === signal) {
+    if (stateSignals[key] === signal) return key;
+
+    // Check if it's a selector from this state key
+    if (
+      isSignalSelector(signal) &&
+      getSourceSignal(signal) === stateSignals[key]
+    ) {
       return key;
-    }
-    // Check if it's a derived signal from this state key
-    if (isDerivedSignal(signal)) {
-      const source = (signal as DerivedSignal<any, any>)._source;
-      if (source === stateSignals[key]) {
-        return key;
-      }
     }
   }
   return undefined;

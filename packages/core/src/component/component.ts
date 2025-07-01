@@ -13,10 +13,10 @@ import type {
   ComponentMiddleware,
 } from './types';
 import { createLatticeContext } from './context';
-import { updateSignalValue, isDerivedSignal } from '../core/signal';
+import { updateSignalValue, isSignalSelector } from '../core/signal';
 import {
   applyUpdate,
-  handleDerivedSignalUpdate,
+  handleSignalSelectorUpdate,
   findSignalStateKey,
 } from './state-updates';
 
@@ -90,8 +90,8 @@ export function createComponent<State extends Record<string, any>>(
     // Single signal update
     const signal = target as Signal<any>;
 
-    // Handle derived signals specially
-    if (isDerivedSignal(signal)) {
+    // Handle signal selectors specially
+    if (isSignalSelector(signal)) {
       let stateKey = signalToKeyMap.get(signal);
       if (!stateKey) {
         const foundKey = findSignalStateKey(signal, stateSignals);
@@ -101,7 +101,7 @@ export function createComponent<State extends Record<string, any>>(
 
       const sourceSignal = stateSignals[stateKey as keyof State];
       const sourceValue = sourceSignal();
-      const result = handleDerivedSignalUpdate(signal, sourceValue, updates);
+      const result = handleSignalSelectorUpdate(signal, sourceValue, updates);
 
       if (result) {
         updateSignalValue(sourceSignal, result.value, lattice._batching);

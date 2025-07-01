@@ -1,11 +1,11 @@
 /**
  * @fileoverview Signal implementation for reactive state management
  *
- * Provides read-only signals that can create derived signals with predicates.
+ * Provides read-only signals that can create signal selectors with predicates.
  * All updates must go through the set() function.
  */
 
-import type { Signal } from '../component/types';
+import type { Signal, SignalSelector } from '../component/types';
 import type { TrackingContext } from './tracking';
 import type { BatchingSystem } from './batching';
 
@@ -13,26 +13,6 @@ import type { BatchingSystem } from './batching';
  * Valid cache key types for collections
  */
 type CacheKey = number | string | symbol;
-
-/**
- * Derived signal maintains a reference to its source and cached position
- */
-export interface DerivedSignal<T, U> extends Signal<U | undefined> {
-  _source: Signal<T>;
-  _predicate: (
-    value: T extends Array<infer E>
-      ? E
-      : T extends Set<infer E>
-        ? E
-        : T extends Map<infer K, infer V>
-          ? [K, V]
-          : T[keyof T],
-    key?: CacheKey
-  ) => boolean;
-  _cachedIndex?: CacheKey; // Position/key in source
-  _sourceVersion: number; // Version of source when cached
-  _unsubscribeFromSource?: () => void; // Cleanup function
-}
 
 /**
  * Base signal with version tracking for cache invalidation
@@ -50,34 +30,35 @@ export function createSignalFactory(
   tracking: TrackingContext,
   batching: BatchingSystem
 ) {
-  // WeakMap to store keyed selector caches
-  const keyedSelectorCaches = new WeakMap<
-    Signal<unknown>,
-    Map<Function, Map<unknown, WeakRef<Signal<unknown>>>>
+  // WeakMap to store keyed signal selector caches
+  // The key is the signal instance itself (type parameter doesn't matter for identity)
+  const keyedSignalSelectorCaches = new WeakMap<
+    BaseSignal<any>,
+    Map<Function, Map<unknown, WeakRef<SignalSelector<any, any>>>>
   >();
 
   /**
    * Creates a read-only signal within this context
    */
   return function signal<T>(initialValue: T): Signal<T> {
-    const sig = function (this: unknown, ...args: unknown[]) {
+    const baseSignal = function (this: unknown, ...args: unknown[]) {
       // Read operation
       if (arguments.length === 0) {
-        tracking.track(sig);
-        return (sig as BaseSignal<T>)._value;
+        tracking.track(baseSignal);
+        return (baseSignal as BaseSignal<T>)._value;
       }
 
-      // Single predicate - create derived signal
+      // Single predicate - create signal selector
       if (arguments.length === 1 && typeof args[0] === 'function') {
-        return createDerivedSignal(
-          sig as BaseSignal<T>,
+        return createSelector(
+          baseSignal,
           args[0] as (value: unknown, key?: CacheKey) => boolean,
           tracking,
           batching
         );
       }
 
-      // Keyed selector - keyFn and predicate
+      // Keyed signal selector - keyFn and predicate
       if (
         arguments.length === 2 &&
         typeof args[0] === 'function' &&
@@ -86,42 +67,41 @@ export function createSignalFactory(
         const [keyFn, predicate] = args;
 
         // Get or create cache for this signal
-        if (!keyedSelectorCaches.has(sig as unknown as Signal<unknown>)) {
-          keyedSelectorCaches.set(sig as unknown as Signal<unknown>, new Map());
+        if (!keyedSignalSelectorCaches.has(baseSignal)) {
+          keyedSignalSelectorCaches.set(baseSignal, new Map());
         }
-        const signalCache = keyedSelectorCaches.get(
-          sig as unknown as Signal<unknown>
-        )!;
+
+        const signalCache = keyedSignalSelectorCaches.get(baseSignal)!;
 
         // Get or create cache for this keyFn
         if (!signalCache.has(keyFn)) {
-          const keyedCache = new Map<unknown, WeakRef<Signal<unknown>>>();
+          const keyedCache = new Map<
+            unknown,
+            WeakRef<SignalSelector<unknown, unknown>>
+          >();
           signalCache.set(keyFn, keyedCache);
         }
+
         const keyCache = signalCache.get(keyFn);
 
-        // Return function that creates/returns cached derived signals
+        // Return function that creates/returns cached signal selectors
         return (key: unknown) => {
           const ref = keyCache?.get(key);
-          let signal = ref?.deref();
+          const existingSignal = ref?.deref();
 
-          if (ref && !signal) {
-            // WeakRef is dead, remove it
-            keyCache?.delete(key);
-          }
+          // WeakRef is dead, remove it
+          if (ref && !existingSignal) keyCache?.delete(key);
+          if (existingSignal) return existingSignal;
 
-          if (!signal) {
-            // Create new derived signal
-            signal = createDerivedSignal(
-              sig as BaseSignal<T>,
-              (item: unknown) => predicate(item, key),
-              tracking,
-              batching
-            );
-            keyCache?.set(key, new WeakRef(signal));
-          }
-
-          return signal;
+          // Create new signal selector
+          const selector = createSelector(
+            baseSignal,
+            (item: unknown) => predicate(item, key),
+            tracking,
+            batching
+          );
+          keyCache?.set(key, new WeakRef(selector));
+          return selector;
         };
       }
 
@@ -131,54 +111,54 @@ export function createSignalFactory(
     } as BaseSignal<T>;
 
     // Initialize signal properties
-    sig._value = initialValue;
-    sig._version = 0;
-    sig._listeners = new Set<() => void>();
+    baseSignal._value = initialValue;
+    baseSignal._version = 0;
+    baseSignal._listeners = new Set<() => void>();
 
-    sig.subscribe = (listener: () => void) => {
-      sig._listeners.add(listener);
-      return () => sig._listeners.delete(listener);
+    baseSignal.subscribe = (listener: () => void) => {
+      baseSignal._listeners.add(listener);
+      return () => baseSignal._listeners.delete(listener);
     };
 
-    return sig as Signal<T>;
+    return baseSignal;
   };
 }
 
 /**
- * Creates a derived signal that tracks a predicate result
+ * Creates a selector that queries items from a collection signal
  */
-function createDerivedSignal<T, U>(
+function createSelector<T, U>(
   source: BaseSignal<T>,
   predicate: (value: unknown, key?: CacheKey) => boolean,
   tracking: TrackingContext,
   batching: BatchingSystem
-): DerivedSignal<T, U> {
-  const derived = function () {
-    tracking.track(derived);
+): SignalSelector<T, U> {
+  const selector = function () {
+    tracking.track(selector);
 
     const sourceValue = source._value;
     const currentVersion = source._version;
 
     // Check if cache is still valid
     if (
-      derived._sourceVersion === currentVersion &&
-      derived._cachedIndex !== undefined
+      selector._sourceVersion === currentVersion &&
+      selector._cachedIndex !== undefined
     ) {
       // Try to use cached position
       if (Array.isArray(sourceValue)) {
-        const item = sourceValue[derived._cachedIndex as number];
-        if (item !== undefined && predicate(item, derived._cachedIndex)) {
+        const item = sourceValue[selector._cachedIndex as number];
+        if (item !== undefined && predicate(item, selector._cachedIndex)) {
           return item as U;
         }
       } else if (sourceValue instanceof Map) {
-        const item = sourceValue.get(derived._cachedIndex);
-        if (item !== undefined && predicate(item, derived._cachedIndex)) {
+        const item = sourceValue.get(selector._cachedIndex);
+        if (item !== undefined && predicate(item, selector._cachedIndex)) {
           return item as U;
         }
       } else if (sourceValue instanceof Set) {
         // Sets don't have stable indices, always re-search
       } else if (typeof sourceValue === 'object' && sourceValue !== null) {
-        const key = derived._cachedIndex as string;
+        const key = selector._cachedIndex as string;
         const item = sourceValue[key as keyof typeof sourceValue];
         if (item !== undefined && predicate(item, key)) {
           return item as U;
@@ -190,15 +170,15 @@ function createDerivedSignal<T, U>(
     if (Array.isArray(sourceValue)) {
       const index = sourceValue.findIndex((item, i) => predicate(item, i));
       if (index !== -1) {
-        derived._cachedIndex = index;
-        derived._sourceVersion = currentVersion;
+        selector._cachedIndex = index;
+        selector._sourceVersion = currentVersion;
         return sourceValue[index] as U;
       }
     } else if (sourceValue instanceof Map) {
       for (const [key, val] of sourceValue) {
         if (predicate(val, key)) {
-          derived._cachedIndex = key;
-          derived._sourceVersion = currentVersion;
+          selector._cachedIndex = key;
+          selector._sourceVersion = currentVersion;
           return val as U;
         }
       }
@@ -206,58 +186,58 @@ function createDerivedSignal<T, U>(
       for (const val of sourceValue) {
         if (predicate(val)) {
           // Can't cache position in Set
-          derived._sourceVersion = currentVersion;
+          selector._sourceVersion = currentVersion;
           return val as U;
         }
       }
     } else if (typeof sourceValue === 'object' && sourceValue !== null) {
       for (const [key, val] of Object.entries(sourceValue)) {
         if (predicate(val, key)) {
-          derived._cachedIndex = key;
-          derived._sourceVersion = currentVersion;
+          selector._cachedIndex = key;
+          selector._sourceVersion = currentVersion;
           return val as U;
         }
       }
     }
 
     // Not found
-    derived._cachedIndex = undefined;
-    derived._sourceVersion = currentVersion;
+    selector._cachedIndex = undefined;
+    selector._sourceVersion = currentVersion;
     return undefined;
-  } as DerivedSignal<T, U>;
+  } as SignalSelector<T, U>;
 
-  // Initialize derived signal properties
-  derived._source = source;
-  derived._predicate = predicate;
-  derived._sourceVersion = -1; // Force initial search
+  // Initialize selector properties
+  selector._source = source as Signal<T>;
+  selector._predicate = predicate;
+  selector._sourceVersion = -1; // Force initial search
 
   // Subscribe to source changes
   const listeners = new Set<() => void>();
-  derived.subscribe = (listener: () => void) => {
+  selector.subscribe = (listener: () => void) => {
     listeners.add(listener);
     // Also subscribe to source if this is first listener
     if (listeners.size === 1) {
       const unsubscribe = source.subscribe(() => {
-        // Notify all derived listeners
+        // Notify all selector listeners
         for (const l of listeners) {
           batching.scheduleUpdate(l);
         }
       });
       // Store unsubscribe for cleanup
-      derived._unsubscribeFromSource = unsubscribe;
+      selector._unsubscribeFromSource = unsubscribe;
     }
 
     return () => {
       listeners.delete(listener);
       // Unsubscribe from source if no more listeners
-      if (listeners.size === 0 && derived._unsubscribeFromSource) {
-        derived._unsubscribeFromSource();
-        delete derived._unsubscribeFromSource;
+      if (listeners.size === 0 && selector._unsubscribeFromSource) {
+        selector._unsubscribeFromSource();
+        delete selector._unsubscribeFromSource;
       }
     };
   };
 
-  return derived;
+  return selector;
 }
 
 /**
@@ -286,19 +266,24 @@ export function updateSignalValue<T>(
 }
 
 /**
- * Get the underlying source signal from a derived signal
+ * Get the underlying source signal from a signal selector
  */
 export function getSourceSignal<T>(
-  signal: Signal<T>
+  signal: Signal<T> | SignalSelector<any, T>
 ): Signal<unknown> | undefined {
-  return (signal as unknown as DerivedSignal<unknown, unknown>)._source;
+  return (signal as unknown as SignalSelector<unknown, unknown>)._source;
 }
 
 /**
- * Check if a signal is a derived signal
+ * Check if a value is a signal selector
  */
-export function isDerivedSignal<T>(
-  signal: Signal<T>
-): signal is DerivedSignal<any, any> {
-  return '_source' in signal && '_predicate' in signal;
+export function isSignalSelector<T>(
+  value: unknown
+): value is SignalSelector<any, T> {
+  return (
+    typeof value === 'function' &&
+    '_source' in value &&
+    '_predicate' in value &&
+    'subscribe' in value
+  );
 }

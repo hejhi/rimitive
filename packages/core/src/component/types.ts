@@ -6,7 +6,7 @@
  */
 
 /**
- * A signal is a read-only reactive primitive that can create derived signals
+ * A signal is a read-only reactive primitive that can create signal selectors
  * Reading a signal automatically registers it as a dependency in tracking contexts
  * All updates must go through the set() function
  */
@@ -17,46 +17,46 @@ export interface Signal<T> {
   // Subscribe to changes
   subscribe: (listener: () => void) => () => void;
 
-  // Create derived signal with predicate (for arrays)
+  // Create signal selector with predicate (for arrays)
   <U>(
     predicate: T extends (infer U)[]
       ? (item: U, index: number) => boolean
       : never
-  ): T extends (infer U)[] ? Signal<U | undefined> : never;
+  ): T extends (infer U)[] ? SignalSelector<T, U> : never;
 
-  // Create derived signal with predicate (for objects)
+  // Create signal selector with predicate (for objects)
   <V>(
     predicate: T extends Record<string, infer V>
       ? (value: V, key: string) => boolean
       : never
-  ): T extends Record<string, infer V> ? Signal<V | undefined> : never;
+  ): T extends Record<string, infer V> ? SignalSelector<T, V> : never;
 
-  // Create derived signal with predicate (for Maps)
+  // Create signal selector with predicate (for Maps)
   <V>(
     predicate: T extends Map<any, infer V>
       ? (value: V, key: any) => boolean
       : never
-  ): T extends Map<any, infer V> ? Signal<V | undefined> : never;
+  ): T extends Map<any, infer V> ? SignalSelector<T, V> : never;
 
-  // Create derived signal with predicate (for Sets)
+  // Create signal selector with predicate (for Sets)
   <U>(
     predicate: T extends Set<infer U> ? (value: U) => boolean : never
-  ): T extends Set<infer U> ? Signal<U | undefined> : never;
+  ): T extends Set<infer U> ? SignalSelector<T, U> : never;
 
-  // Create keyed selector (for arrays)
+  // Create keyed signal selector (for arrays)
   <K>(
     keyFn: T extends unknown[] ? (key: K) => K : never,
     predicate: T extends (infer U)[] ? (item: U, key: K) => boolean : never
-  ): T extends (infer U)[] ? (key: K) => Signal<U | undefined> : never;
+  ): T extends (infer U)[] ? (key: K) => SignalSelector<T, U> : never;
 
-  // Create keyed selector (for objects)
+  // Create keyed signal selector (for objects)
   <K>(
     keyFn: T extends Record<string, unknown> ? (key: K) => K : never,
     predicate: T extends Record<string, infer V>
       ? (value: V, key: K) => boolean
       : never
   ): T extends Record<string, infer V>
-    ? (key: K) => Signal<V | undefined>
+    ? (key: K) => SignalSelector<T, V>
     : never;
 }
 
@@ -67,6 +67,27 @@ export interface Signal<T> {
 export interface Computed<T> {
   (): T; // Read computed value
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
+}
+
+/**
+ * A signal selector is a computed value that queries items from a collection signal
+ * It maintains a cached position for efficient re-reads and enables smart updates
+ */
+export interface SignalSelector<T, U> extends Computed<U | undefined> {
+  _source: Signal<T>;
+  _predicate: (
+    value: T extends Array<infer E>
+      ? E
+      : T extends Set<infer E>
+        ? E
+        : T extends Map<infer K, infer V>
+          ? [K, V]
+          : T[keyof T],
+    key?: number | string | symbol
+  ) => boolean;
+  _cachedIndex?: number | string | symbol; // Position/key in source
+  _sourceVersion: number; // Version of source when cached
+  _unsubscribeFromSource?: () => void; // Cleanup function
 }
 
 /**
@@ -98,22 +119,34 @@ export interface SetState {
     updates: Partial<State> | ((current: State) => Partial<State>)
   ): void;
 
-  // Update signal with function (for signals that might be undefined)
+  // Update signal/signal selector with function (for values that might be undefined)
   // Note: updater is only called if current value is not undefined
-  <T>(signal: Signal<T | undefined>, updater: (current: T) => T): void;
+  <T>(
+    signal: Signal<T | undefined> | SignalSelector<any, T>,
+    updater: (current: T) => T
+  ): void;
 
-  // Update signal with function
-  <T>(signal: Signal<T>, updater: (current: T) => T): void;
+  // Update signal/signal selector with function
+  <T>(
+    signal: Signal<T> | SignalSelector<any, T>,
+    updater: (current: T) => T
+  ): void;
 
-  // Partial updates for objects (for signals that might be undefined)
+  // Partial updates for objects (for values that might be undefined)
   // Note: updates are only applied if current value is not undefined
-  <T extends object>(signal: Signal<T | undefined>, updates: Partial<T>): void;
+  <T extends object>(
+    signal: Signal<T | undefined> | SignalSelector<any, T>,
+    updates: Partial<T>
+  ): void;
 
   // Partial updates for objects
-  <T extends object>(signal: Signal<T>, updates: Partial<T>): void;
+  <T extends object>(
+    signal: Signal<T> | SignalSelector<any, T>,
+    updates: Partial<T>
+  ): void;
 
-  // Set signal value directly
-  <T>(signal: Signal<T>, value: T): void;
+  // Set signal/signal selector value directly
+  <T>(signal: Signal<T> | SignalSelector<any, T>, value: T): void;
 }
 
 /**

@@ -3,7 +3,7 @@ import { createComponent } from '../component/component';
 import type { ComponentFactory } from '../component/types';
 
 describe('Memory Optimization', () => {
-  it('should create WeakRef-cached keyed selectors', () => {
+  it('should create WeakRef-cached keyed signal selectors', () => {
     interface Item {
       id: string;
       value: number;
@@ -33,7 +33,7 @@ describe('Memory Optimization', () => {
     });
     const component = DataStore(store);
 
-    // Create multiple derived signals
+    // Create multiple signal selectors
     const signal1 = component.itemById('item-0');
     const signal2 = component.itemById('item-5');
     const signal3 = component.itemById('item-0'); // Should return same as signal1

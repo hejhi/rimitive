@@ -39,9 +39,9 @@ describe('Smart Updates', () => {
         };
       };
 
-      const store = createTestComponent({
+      const store = createTestComponent<TodoState>({
         todos: generateTodos(3),
-        filter: 'all' as const,
+        filter: 'all',
       });
       const component = TodoApp(store);
 
@@ -58,7 +58,7 @@ describe('Smart Updates', () => {
       expect(component.completed()).toBe(1);
     });
 
-    it('should support partial updates for derived array signals', () => {
+    it('should support partial updates for signal selector arrays', () => {
       interface State {
         users: Array<{
           id: string;
@@ -221,7 +221,7 @@ describe('Smart Updates', () => {
       }
 
       const LargeComponent = ({ store, set }: ComponentContext<LargeState>) => {
-        // Create derived signal for specific item
+        // Create signal selector for specific item
         const item5000 = store.items((item) => item.id === 'item-5000');
 
         return {
