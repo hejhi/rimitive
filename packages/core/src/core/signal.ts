@@ -275,8 +275,16 @@ export function updateSignalValue<T>(
   baseSignal._value = newValue;
   baseSignal._version++;
 
-  for (const listener of baseSignal._listeners) {
-    batching.scheduleUpdate(listener);
+  // Notify listeners with guard to prevent re-entrant subscriptions
+  if (!baseSignal._listeners.size) return;
+
+  batching.enterNotification();
+  try {
+    for (const listener of baseSignal._listeners) {
+      batching.scheduleUpdate(listener);
+    }
+  } finally {
+    batching.exitNotification();
   }
 }
 

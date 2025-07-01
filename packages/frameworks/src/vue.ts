@@ -1,17 +1,8 @@
 /**
- * @fileoverview Vue composables for Lattice
+ * @fileoverview Vue composables for Lattice behavioral components
  *
- * This module provides Vue 3 composables that leverage Lattice's fine-grained
- * reactivity system. These composables work directly with Lattice stores
- * and provide native Vue ref integration.
- *
- * Key features:
- * - Fine-grained reactivity using signal-level subscriptions
- * - Native Vue ref integration (works with computed, watch, etc.)
- * - Dependency injection for clean store management
- * - Full TypeScript inference from store types to Vue refs
- * - Minimal API that covers 90% of use cases
- * - Consistent error handling with development warnings
+ * Provides idiomatic Vue 3 integration for Lattice's signal-based component system.
+ * Components are composed from behavioral logic and reactive state.
  */
 
 import {
@@ -24,23 +15,22 @@ import {
   type InjectionKey,
 } from 'vue';
 
-import type { Signal, Computed } from '@lattice/core';
+import type { Signal, Computed, ComponentContext, ComponentFactory } from '@lattice/core';
 
 // Map for injection keys - bounded by string keys used in app
-const STORE_INJECTION_KEYS = new Map<string, InjectionKey<unknown>>();
+const COMPONENT_INJECTION_KEYS = new Map<string, InjectionKey<unknown>>();
 
 /**
- * Creates or retrieves an injection key for a given store key.
- * Uses Map since we need string keys, but this is bounded by actual usage.
+ * Creates or retrieves an injection key for a given component key.
  */
-function getOrCreateStoreKey<T>(key: string): InjectionKey<T> {
-  if (!STORE_INJECTION_KEYS.has(key)) {
-    STORE_INJECTION_KEYS.set(
+function getOrCreateComponentKey<T>(key: string): InjectionKey<T> {
+  if (!COMPONENT_INJECTION_KEYS.has(key)) {
+    COMPONENT_INJECTION_KEYS.set(
       key,
-      Symbol(`lattice-store-${key}`) as InjectionKey<T>
+      Symbol(`lattice-component-${key}`) as InjectionKey<T>
     );
   }
-  return STORE_INJECTION_KEYS.get(key) as InjectionKey<T>;
+  return COMPONENT_INJECTION_KEYS.get(key) as InjectionKey<T>;
 }
 
 /**
@@ -58,152 +48,101 @@ function isSignal(
 }
 
 /**
- * Vue hook for using reactive stores with fine-grained reactivity.
+ * Vue composable for using Lattice behavioral components.
  *
- * This is the core utility that bridges Lattice stores to Vue's reactivity system.
- * The returned ref will only update when the store's dependencies change, leveraging
- * Lattice's fine-grained subscription system.
+ * This composable bridges Lattice's signal-based reactivity with Vue's reactivity system.
+ * It creates and manages a component instance with automatic subscription to all signals.
  *
- * @param store - A Lattice store
- * @param selector - Optional function that extracts a value from the store
- * @returns ComputedRef that updates when the store's dependencies change
+ * @param context - A component context created with createComponent
+ * @param factory - A component factory function that defines behavior
+ * @returns ComputedRef containing the component instance
  *
  * @example
  * ```vue
  * <script setup>
- * import { useStore } from '@lattice/frameworks/vue'
- * import { counterStore } from './stores'
+ * import { createComponent } from '@lattice/core';
+ * import { useComponent } from '@lattice/frameworks/vue';
  * 
- * // Use entire store
- * const counter = useStore(counterStore)
- *
- * // Use with selector for fine-grained reactivity
- * const count = useStore(counterStore, s => s.value())
- * const doubled = useStore(counterStore, s => s.doubled())
- *
- * // Use with any Vue API
- * const tripled = computed(() => count.value * 3)
- * watch(count, (newVal) => console.log('Count changed:', newVal))
+ * // Create component context
+ * const dialogContext = createComponent({
+ *   isOpen: false,
+ *   title: 'Welcome',
+ * });
+ * 
+ * // Define component behavior
+ * const Dialog = ({ store, computed, set }) => ({
+ *   isOpen: store.isOpen,
+ *   title: store.title,
+ *   
+ *   triggerProps: computed(() => ({
+ *     'aria-haspopup': 'dialog',
+ *     'aria-expanded': store.isOpen(),
+ *     onClick: () => set(store.isOpen, true),
+ *   })),
+ *   
+ *   open: () => set(store.isOpen, true),
+ *   close: () => set(store.isOpen, false),
+ * });
+ * 
+ * // Use in Vue component
+ * const dialog = useComponent(dialogContext, Dialog);
  * </script>
  *
  * <template>
- *   <div>Count: {{ count }}</div>
- *   <div>Doubled: {{ doubled }}</div>
- *   <div>Tripled: {{ tripled }}</div>
- *   <button @click="counter.value.increment()">Increment</button>
+ *   <button v-bind="dialog.triggerProps()">Open Dialog</button>
+ *   <div v-if="dialog.isOpen()" role="dialog">
+ *     <h2>{{ dialog.title() }}</h2>
+ *     <button @click="dialog.close">Close</button>
+ *   </div>
  * </template>
  * ```
  */
-export function useStore<T>(
-  store: T
-): ComputedRef<T>;
-export function useStore<T, R>(
-  store: T,
-  selector: (store: T) => R
-): ComputedRef<R>;
-export function useStore<T, R = T>(
-  store: T,
-  selector?: (store: T) => R
-): ComputedRef<T | R> {
-  // Set up reactive tracking
+export function useComponent<State extends Record<string, any>, Component>(
+  context: ComponentContext<State>,
+  factory: ComponentFactory<State>
+): ComputedRef<Component> {
+  // Create version ref to trigger Vue updates
   const version = ref(0);
   const unsubscribers: (() => void)[] = [];
-
-  // Subscribe to all signals in the store
-  for (const key in store) {
-    const value = store[key];
+  
+  // Create component instance
+  const component = factory(context);
+  
+  // Subscribe to all signals
+  const subscribeToValue = (value: any) => {
     if (isSignal(value)) {
       const unsubscribe = value.subscribe(() => {
         version.value++;
       });
       unsubscribers.push(unsubscribe);
     }
-  }
-
-  // Also subscribe to store changes if available
-  if (store !== null && 
-      typeof store === 'object' && 
-      '_subscribe' in store && 
-      typeof store._subscribe === 'function') {
-    const unsubscribe = store._subscribe(() => {
-      version.value++;
-    });
-    unsubscribers.push(unsubscribe);
-  }
-
-  // If selector provided, use it
-  if (selector) {
-    // Check what the selector returns to handle it appropriately
-    const sampleResult = selector(store);
-    
-    if (isSignal(sampleResult)) {
-      // Selector returns a signal - create a wrapper that forces re-render
-      const result = vueComputed(() => {
-        version.value; // Track version to trigger re-evaluation
-        const signal = selector(store) as Signal<unknown>;
-        // Return a new wrapper function each time to force Vue to re-render
-        return () => signal();
-      }) as ComputedRef<R>;
-
-      // Cleanup on unmount
-      onUnmounted(() => {
-        unsubscribers.forEach((unsubscribe) => unsubscribe());
-      });
-
-      return result;
-    } else {
-      // Selector returns a regular value
-      const result = vueComputed(() => {
-        version.value; // Track version to trigger re-evaluation
-        return selector(store);
-      }) as ComputedRef<R>;
-
-      // Cleanup on unmount
-      onUnmounted(() => {
-        unsubscribers.forEach((unsubscribe) => unsubscribe());
-      });
-
-      return result;
-    }
-  }
-
-  // No selector - create a reactive wrapper that re-evaluates
-  // This ensures Vue tracks changes when signals are called in templates
-  const result = vueComputed(() => {
+  };
+  
+  // Subscribe to store signals
+  Object.values(context.store).forEach(subscribeToValue);
+  
+  // Subscribe to component signals/computeds
+  Object.values(component as any).forEach(subscribeToValue);
+  
+  // Create reactive computed that tracks version
+  const reactiveComponent = vueComputed(() => {
     version.value; // Track version to trigger re-evaluation
-    
-    // Create a shallow copy with getters that maintain reactivity
-    const reactiveStore = {} as T;
-    for (const key in store) {
-      const value = store[key];
-      if (isSignal(value)) {
-        // For signals, create a getter that calls the signal
-        // This ensures the value is fresh when accessed in templates
-        Object.defineProperty(reactiveStore, key, {
-          get() {
-            return value;
-          },
-          enumerable: true
-        });
-      } else {
-        // For non-signals, just copy the value
-        reactiveStore[key] = value;
-      }
-    }
-    
-    return reactiveStore;
+    return component;
   });
-
+  
   // Cleanup on unmount
   onUnmounted(() => {
     unsubscribers.forEach((unsubscribe) => unsubscribe());
   });
-
-  return result as ComputedRef<T>;
+  
+  return reactiveComponent;
 }
 
 /**
- * Vue hook for using individual signals with Vue's reactivity system.
+ * Vue composable for using individual signals.
+ *
+ * This provides a direct way to use Lattice signals in Vue templates
+ * with automatic reactivity.
  *
  * @param signal - A Lattice signal or computed
  * @returns ComputedRef that updates when the signal changes
@@ -211,11 +150,10 @@ export function useStore<T, R = T>(
  * @example
  * ```vue
  * <script setup>
- * import { useSignal } from '@lattice/frameworks/vue'
- * import { counterStore } from './stores'
+ * import { useSignal } from '@lattice/frameworks/vue';
  * 
- * const count = useSignal(counterStore.value)
- * const doubled = useSignal(counterStore.doubled)
+ * const count = useSignal(myCountSignal);
+ * const doubled = useSignal(myDoubledComputed);
  * </script>
  *
  * <template>
@@ -242,22 +180,27 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): ComputedRef<T> {
 }
 
 /**
- * Provides a Lattice store to the component tree for dependency injection.
+ * Provides a Lattice component context for dependency injection.
  *
- * This enables clean separation of store creation from usage, allowing child
- * components to access stores without prop drilling.
+ * This enables clean separation of component creation from usage, allowing child
+ * components to access contexts without prop drilling.
  *
- * @param key - Unique string key for the store
- * @param store - The store to provide
+ * @param key - Unique string key for the component
+ * @param context - The component context to provide
  *
  * @example
  * ```vue
  * <!-- Parent component -->
  * <script setup>
- * import { provideLatticeStore } from '@lattice/frameworks/vue'
- * import { counterStore } from './stores'
+ * import { createComponent } from '@lattice/core';
+ * import { provideComponent } from '@lattice/frameworks/vue';
  * 
- * provideLatticeStore('counter', counterStore)
+ * const dialogContext = createComponent({
+ *   isOpen: false,
+ *   title: '',
+ * });
+ * 
+ * provideComponent('dialog', dialogContext);
  * </script>
  *
  * <template>
@@ -265,48 +208,100 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): ComputedRef<T> {
  * </template>
  * ```
  */
-export function provideLatticeStore<T>(
+export function provideComponent<T>(
   key: string,
-  store: T
+  context: T
 ): void {
-  const injectionKey = getOrCreateStoreKey<T>(key);
-  provide(injectionKey, store);
+  const injectionKey = getOrCreateComponentKey<T>(key);
+  provide(injectionKey, context);
 }
 
 /**
- * Injects a Lattice store from the component tree using dependency injection.
+ * Injects a Lattice component context from the component tree.
  *
- * This allows child components to access stores provided by parent components
+ * This allows child components to access contexts provided by parent components
  * without explicit prop passing.
  *
- * @param key - Unique string key for the store
- * @returns The injected store
- * @throws Error if store was not provided
+ * @param key - Unique string key for the component
+ * @returns The injected component context
+ * @throws Error if context was not provided
  *
  * @example
  * ```vue
  * <!-- Child component -->
  * <script setup>
- * import { injectLatticeStore, useStore } from '@lattice/frameworks/vue'
+ * import { injectComponent, useComponent } from '@lattice/frameworks/vue';
+ * import { Dialog } from './components';
  * 
- * const counterStore = injectLatticeStore('counter')
- * const count = useStore(counterStore, s => s.value())
+ * const dialogContext = injectComponent('dialog');
+ * const dialog = useComponent(dialogContext, Dialog);
  * </script>
  *
  * <template>
- *   <button @click="counterStore.increment()">{{ count }}</button>
+ *   <button @click="dialog.open">Open Dialog</button>
  * </template>
  * ```
  */
-export function injectLatticeStore<T>(key: string): T {
-  const injectionKey = getOrCreateStoreKey<T>(key);
-  const store = inject(injectionKey);
+export function injectComponent<T>(key: string): T {
+  const injectionKey = getOrCreateComponentKey<T>(key);
+  const context = inject(injectionKey);
 
-  if (!store) {
+  if (!context) {
     throw new Error(
-      `Lattice store with key "${key}" was not found in the component tree. Make sure it's provided by a parent component using provideLatticeStore().`
+      `Lattice component context with key "${key}" was not found in the component tree. Make sure it's provided by a parent component using provideComponent().`
     );
   }
 
-  return store;
+  return context;
+}
+
+/**
+ * Vue composable for creating derived state from signals.
+ * 
+ * This is useful for creating computed values that depend on multiple signals
+ * or for transforming signal values for display.
+ *
+ * @param compute - A function that computes a value from signals
+ * @param signals - Signal dependencies to track
+ * @returns ComputedRef with the computed value
+ *
+ * @example
+ * ```vue
+ * <script setup>
+ * import { useComputed } from '@lattice/frameworks/vue';
+ * 
+ * const totalPrice = useComputed(
+ *   () => priceSignal() * (1 + taxRateSignal()),
+ *   [priceSignal, taxRateSignal]
+ * );
+ * </script>
+ *
+ * <template>
+ *   <div>Total: ${{ totalPrice.toFixed(2) }}</div>
+ * </template>
+ * ```
+ */
+export function useComputed<T>(
+  compute: () => T,
+  signals: (Signal<any> | Computed<any>)[]
+): ComputedRef<T> {
+  const version = ref(0);
+  const unsubscribers: (() => void)[] = [];
+
+  // Subscribe to all provided signals
+  signals.forEach(signal => {
+    const unsubscribe = signal.subscribe(() => {
+      version.value++;
+    });
+    unsubscribers.push(unsubscribe);
+  });
+
+  onUnmounted(() => {
+    unsubscribers.forEach(unsub => unsub());
+  });
+
+  return vueComputed(() => {
+    version.value; // Track version for reactivity
+    return compute();
+  });
 }

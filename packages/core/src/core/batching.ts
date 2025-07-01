@@ -9,6 +9,9 @@ export interface BatchingSystem {
   batch(fn: () => void): void;
   scheduleUpdate(listener: () => void): void;
   readonly batching: boolean;
+  readonly notifying: boolean;
+  enterNotification(): void;
+  exitNotification(): void;
 }
 
 /**
@@ -16,7 +19,19 @@ export interface BatchingSystem {
  */
 export function createBatchingSystem(): BatchingSystem {
   let isBatching = false;
-  const batchedUpdates = new Set<() => void>();
+  let isNotifying = false;
+  let batchedUpdates = new Set<() => void>();
+
+  function runUpdates() {
+    if (!batchedUpdates.size) return;
+
+    const updates = batchedUpdates;
+    batchedUpdates = new Set<() => void>();
+
+    for (const update of updates) {
+      update();
+    }
+  }
 
   function batch(fn: () => void): void {
     if (isBatching) {
@@ -25,31 +40,46 @@ export function createBatchingSystem(): BatchingSystem {
     }
 
     isBatching = true;
+
     try {
       fn();
-      // Run all batched notifications
-      for (const update of batchedUpdates) {
-        update();
-      }
-      batchedUpdates.clear();
+      runUpdates();
     } finally {
       isBatching = false;
     }
   }
 
   function scheduleUpdate(listener: () => void): void {
-    if (isBatching) {
+    // If we're batching OR notifying, defer the update
+    if (isBatching || isNotifying) {
       batchedUpdates.add(listener);
-    } else {
-      listener();
+      return;
     }
+
+    listener();
+  }
+
+  function enterNotification(): void {
+    isNotifying = true;
+  }
+
+  function exitNotification(): void {
+    isNotifying = false;
+
+    // Process any deferred updates from re-entrant subscriptions
+    if (!isBatching) runUpdates();
   }
 
   return {
     batch,
     scheduleUpdate,
+    enterNotification,
+    exitNotification,
     get batching() {
       return isBatching;
+    },
+    get notifying() {
+      return isNotifying;
     },
   };
 }

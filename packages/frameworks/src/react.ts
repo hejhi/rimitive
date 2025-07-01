@@ -1,140 +1,165 @@
 /**
- * @fileoverview React hooks for Lattice signals-first API
+ * @fileoverview React hooks for Lattice behavioral components
  *
- * Provides minimal, idiomatic React integration for Lattice headless components.
- * Signals work directly as reactive values in React components.
+ * Provides idiomatic React integration for Lattice's signal-based component system.
+ * Supports both component-scoped and shared/global behavior patterns with fine-grained reactivity.
  */
 
 import {
   useSyncExternalStore,
   useCallback,
-  useState,
-  useEffect,
+  useMemo,
 } from 'react';
-import type { Signal, Computed } from '@lattice/core';
+import { createComponent, type Signal, type Computed, type ComponentFactory } from '@lattice/core';
 
 /**
- * Check if a value is a signal or computed (has subscribe method)
+ * React hook for creating component-scoped Lattice behavioral components.
+ * 
+ * This hook creates a new component instance with its own state that is scoped
+ * to the React component's lifecycle. Perfect for UI components that need
+ * isolated state management.
+ *
+ * @param initialState - The initial state for the component
+ * @param factory - A component factory function that defines behavior
+ * @returns The component instance with all behaviors and reactive state
+ *
+ * @example
+ * ```tsx
+ * import { useComponent, useSignal } from '@lattice/frameworks/react';
+ * 
+ * // Define component behavior
+ * const Dialog = ({ store, computed, set }) => ({
+ *   isOpen: store.isOpen,
+ *   title: store.title,
+ *   
+ *   triggerProps: computed(() => ({
+ *     'aria-haspopup': 'dialog',
+ *     'aria-expanded': store.isOpen(),
+ *     onClick: () => set(store.isOpen, true),
+ *   })),
+ *   
+ *   open: () => set(store.isOpen, true),
+ *   close: () => set(store.isOpen, false),
+ * });
+ * 
+ * // Use in React component with component-scoped state
+ * function MyDialog() {
+ *   const dialog = useComponent(
+ *     { isOpen: false, title: 'Welcome' },
+ *     Dialog
+ *   );
+ *   const isOpen = useSignal(dialog.isOpen);
+ *   
+ *   return (
+ *     <>
+ *       <button {...dialog.triggerProps()}>Open Dialog</button>
+ *       {isOpen && (
+ *         <div role="dialog">
+ *           <h2>{dialog.title()}</h2>
+ *           <button onClick={dialog.close}>Close</button>
+ *         </div>
+ *       )}
+ *     </>
+ *   );
+ * }
+ * ```
  */
-function isSignal(value: unknown): value is Signal<unknown> | Computed<unknown> {
-  return typeof value === 'function' && 
-         value !== null &&
-         'subscribe' in value &&
-         typeof value.subscribe === 'function';
+export function useComponent<State extends Record<string, any>, Component>(
+  initialState: State,
+  factory: ComponentFactory<State>
+): Component {
+  // Create component context and instance, memoized for lifecycle
+  const component = useMemo(() => {
+    const context = createComponent(initialState);
+    return factory(context);
+  }, []); // Empty deps - we want this to be created once per component instance
+
+  return component;
 }
 
 /**
  * React hook that subscribes to a signal and returns its current value.
- * Re-renders the component when the signal changes.
+ * Re-renders the component only when this specific signal changes.
+ *
+ * This is the key to Lattice's fine-grained reactivity in React.
+ * Only subscribe to the signals you actually use in your render.
  *
  * @param signal - A signal or computed value
  * @returns The current value of the signal
  *
  * @example
  * ```tsx
- * function CountDisplay() {
- *   const counter = useStore(counterStore);
- *   const count = useSignal(counter.value);
- *   return <div>Count: {count}</div>;
+ * import { useSignal } from '@lattice/frameworks/react';
+ * 
+ * function UserProfile({ userStore }) {
+ *   // Only re-renders when the name changes
+ *   const name = useSignal(userStore.name);
+ *   
+ *   // Does NOT re-render when email changes
+ *   return <h1>Welcome, {name}!</h1>;
+ * }
+ * ```
+ * 
+ * @example
+ * ```tsx
+ * // Using with shared/global state
+ * const authContext = createComponent({ user: null });
+ * const auth = Auth(authContext);
+ * 
+ * function NavBar() {
+ *   const user = useSignal(auth.user);
+ *   return user ? <div>Welcome {user.name}</div> : <Login />;
  * }
  * ```
  */
 export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
-  const subscribe = useCallback(
-    (onStoreChange: () => void) => signal.subscribe(onStoreChange),
-    [signal]
+  return useSyncExternalStore(
+    useCallback((onStoreChange) => signal.subscribe(onStoreChange), [signal]),
+    useCallback(() => signal(), [signal]),
+    useCallback(() => signal(), [signal])
+  );
+}
+
+/**
+ * React hook for creating derived state from signals.
+ * 
+ * This is useful for creating computed values that depend on multiple signals
+ * or for transforming signal values for display. The component will only
+ * re-render when one of the dependent signals changes.
+ *
+ * @param compute - A function that computes a value from signals
+ * @param deps - Signal dependencies to track
+ * @returns The computed value, updated when dependencies change
+ *
+ * @example
+ * ```tsx
+ * function Cart({ cartStore }) {
+ *   const totalPrice = useComputed(
+ *     () => {
+ *       const items = cartStore.items();
+ *       const taxRate = cartStore.taxRate();
+ *       const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+ *       return subtotal * (1 + taxRate);
+ *     },
+ *     [cartStore.items, cartStore.taxRate]
+ *   );
+ *   
+ *   return <div>Total: ${totalPrice.toFixed(2)}</div>;
+ * }
+ * ```
+ */
+export function useComputed<T>(
+  compute: () => T,
+  deps: (Signal<any> | Computed<any>)[]
+): T {
+  // Create a stable subscribe function that doesn't change unless deps change
+  const subscribe = useMemo(
+    () => (onStoreChange: () => void) => {
+      const unsubscribers = deps.map(dep => dep.subscribe(onStoreChange));
+      return () => unsubscribers.forEach(unsub => unsub());
+    },
+    deps
   );
   
-  const getSnapshot = useCallback(() => signal(), [signal]);
-  const getServerSnapshot = getSnapshot;
-  
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-}
-
-/**
- * React hook for using Lattice stores.
- * Returns the store object with all signals and actions.
- * Does NOT automatically subscribe to signals - use useSignal for that.
- *
- * @param store - A Lattice store
- * @returns The store object with signals and actions
- *
- * @example
- * ```tsx
- * function Counter() {
- *   const counter = useStore(counterStore);
- *   const count = useSignal(counter.value);
- *   return (
- *     <button onClick={counter.increment}>
- *       Count: {count}
- *     </button>
- *   );
- * }
- * ```
- */
-export function useStore<T>(store: T): T {
-  // For now, just return the store as-is
-  // The user needs to use useSignal to subscribe to individual signals
-  return store;
-}
-
-/**
- * React hook that automatically subscribes to all signals in a store.
- * Re-renders when any signal in the store changes.
- *
- * @param store - A Lattice store
- * @returns The store object
- *
- * @example
- * ```tsx
- * function Counter() {
- *   const counter = useAutoStore(counterStore);
- *   return (
- *     <button onClick={counter.increment}>
- *       Count: {counter.value()}
- *     </button>
- *   );
- * }
- * ```
- */
-export function useAutoStore<T extends Record<string, any>>(store: T): T {
-  // Create a version counter to force React updates
-  const [version, setVersion] = useState(0);
-  
-  useEffect(() => {
-    const unsubscribers: (() => void)[] = [];
-    
-    // Subscribe to all signals
-    for (const key in store) {
-      const value = store[key];
-      if (isSignal(value)) {
-        const signal = value as Signal<unknown> | Computed<unknown>;
-        const unsubscribe = signal.subscribe(() => {
-          setVersion(v => v + 1);
-        });
-        unsubscribers.push(unsubscribe);
-      }
-    }
-    
-    // Also subscribe to store changes if available
-    if (store !== null && 
-        typeof store === 'object' && 
-        '_subscribe' in store && 
-        typeof store._subscribe === 'function') {
-      const unsubscribe = store._subscribe(() => {
-        setVersion(v => v + 1);
-      });
-      unsubscribers.push(unsubscribe);
-    }
-    
-    // Return cleanup function
-    return () => {
-      unsubscribers.forEach(unsub => unsub());
-    };
-  }, [store]);
-  
-  // Force re-render when version changes
-  version;
-  
-  return store;
+  return useSyncExternalStore(subscribe, compute, compute);
 }
