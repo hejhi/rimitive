@@ -105,36 +105,56 @@ export function createComponent<State extends Record<string, any>>(
     });
   });
 
-  // Create set function with optimized direct updates
-  const set: SetState = (signal: Signal<any>, updates: any) => {
-    // O(1) lookup instead of O(n) search
-    let stateKey = signalToKeyMap.get(signal);
-
-    if (!stateKey) {
-      // Fallback to search for derived signals
-      const foundKey = findSignalStateKey(signal, stateSignals);
-      if (!foundKey) throw new Error('Signal not found in store');
-      stateKey = foundKey;
+  // Create set function that writes directly to signals
+  const set: SetState = (target: Signal<any> | SignalState<State>, updates: any) => {
+    // Check if it's a batch update on the store
+    if (target === stateSignals) {
+      // Batch update - update multiple signals at once
+      lattice._batch(() => {
+        // Get current state from all signals
+        const currentState = {} as State;
+        (Object.keys(stateSignals) as (keyof State)[]).forEach(key => {
+          currentState[key] = stateSignals[key]();
+        });
+        
+        // Calculate new state
+        const newState = typeof updates === 'function' ? updates(currentState) : updates;
+        
+        // Update each changed signal
+        (Object.entries(newState) as [keyof State, any][]).forEach(([key, value]) => {
+          if (key in stateSignals && !Object.is(stateSignals[key](), value)) {
+            updateSignalValue(stateSignals[key], value, lattice._batching);
+          }
+        });
+      });
+      return;
     }
 
+    // Single signal update
+    const signal = target as Signal<any>;
+    
     // Handle derived signals specially
     if (isDerivedSignal(signal)) {
+      let stateKey = signalToKeyMap.get(signal);
+      if (!stateKey) {
+        const foundKey = findSignalStateKey(signal, stateSignals);
+        if (!foundKey) throw new Error('Signal not found in store');
+        stateKey = foundKey;
+      }
+      
       const sourceSignal = stateSignals[stateKey as keyof State];
       const sourceValue = sourceSignal();
       const result = handleDerivedSignalUpdate(signal, sourceValue, updates);
 
       if (result) {
-        // Update only the adapter - let subscription handle signal updates
-        adapter.setState({ [stateKey as keyof State]: result.value } as Partial<State>);
+        updateSignalValue(sourceSignal, result.value, lattice._batching);
         return;
       }
     }
 
     // Regular signal update
     const newValue = applyUpdate(signal(), updates);
-
-    // Update only the adapter - let subscription handle signal updates
-    adapter.setState({ [stateKey as keyof State]: newValue } as Partial<State>);
+    updateSignalValue(signal, newValue, lattice._batching);
   };
 
   // Create component context with merged functionality
