@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createComponent } from '../component/component';
-import { vanillaAdapter } from '../adapters/vanilla';
 import type { ComponentFactory } from '../component/types';
 
 describe('Memory Optimization', () => {
@@ -26,14 +25,12 @@ describe('Memory Optimization', () => {
       };
     };
 
-    const store = createComponent(
-      vanillaAdapter({
-        items: Array.from({ length: 100 }, (_, i) => ({
-          id: `item-${i}`,
-          value: i,
-        })),
-      })
-    );
+    const store = createComponent({
+      items: Array.from({ length: 100 }, (_, i) => ({
+        id: `item-${i}`,
+        value: i,
+      })),
+    });
     const component = DataStore(store);
 
     // Create multiple derived signals
@@ -69,7 +66,7 @@ describe('Memory Optimization', () => {
       };
     };
 
-    const store = createComponent(vanillaAdapter({ data: ['a', 'b', 'c'] }));
+    const store = createComponent({ data: ['a', 'b', 'c'] });
     const component = TestStore(store);
 
     // Create signals but don't hold references
@@ -114,14 +111,12 @@ describe('Memory Optimization', () => {
       };
     };
 
-    const store = createComponent(
-      vanillaAdapter({
-        users: Array.from({ length: 10000 }, (_, i) => ({
-          id: `user-${i}`,
-          name: `User ${i}`,
-        })),
-      })
-    );
+    const store = createComponent({
+      users: Array.from({ length: 10000 }, (_, i) => ({
+        id: `user-${i}`,
+        name: `User ${i}`,
+      })),
+    });
     const component = LargeStore(store);
 
     // First access - O(n)
@@ -164,7 +159,7 @@ describe('Memory Optimization', () => {
       };
     };
 
-    const store = createComponent(vanillaAdapter({ items: [1, 2, 3] }));
+    const store = createComponent({ items: [1, 2, 3] });
     const component = Store(store);
 
     // Access item multiple times

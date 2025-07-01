@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createComponent } from './component';
-import { vanillaAdapter } from '../adapters/vanilla';
 import { withLogger } from '../middleware';
 import type { ComponentContext } from './types';
 import { 
@@ -30,7 +29,7 @@ describe('Component API', () => {
   it('should support middleware composition with new pattern', () => {
     const loggerConfig = withLogger({ count: 5 });
     const store = createComponent(
-      vanillaAdapter(loggerConfig.state),
+      loggerConfig.state,
       loggerConfig.enhancer
     );
     const Component = ({ store, set }: ComponentContext<CounterState>) => ({

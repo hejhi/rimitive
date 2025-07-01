@@ -15,9 +15,7 @@
     "check": "pnpm typecheck"
   },
   "devDependencies": {
-    "@lattice/adapter-redux": "workspace:*",
     "@lattice/adapter-store-react": "workspace:*",
-    "@lattice/adapter-zustand": "workspace:*",
     "@lattice/core": "workspace:*",
     "@lattice/frameworks": "workspace:*",
     "@reduxjs/toolkit": "^2.8.2",

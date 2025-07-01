@@ -13,7 +13,6 @@ import type {
   ComponentMiddleware,
 } from './types';
 import { createLatticeContext } from './context';
-import { type StoreAdapter } from '../adapters/contract';
 import { updateSignalValue, isDerivedSignal } from '../core/signal';
 import {
   applyUpdate,
@@ -33,76 +32,28 @@ export function partial<T extends Record<string, any>>(
 }
 
 /**
- * Creates a component context from a store adapter
+ * Creates a component context with reactive state
  */
 export function createComponent<State extends Record<string, any>>(
-  adapter: StoreAdapter<State>,
+  initialState: State,
   enhancer?: ComponentMiddleware<State>
 ): ComponentContext<State> {
   // Create scoped lattice context
   const lattice = createLatticeContext();
 
-  // Create signals that mirror adapter state
-  const state = adapter.getState();
+  // Create signals for state
   const stateSignals = {} as SignalState<State>;
-
+  
   // Create a WeakMap to store signal -> key mappings for O(1) lookup
   const signalToKeyMap = new WeakMap<Signal<any>, keyof State>();
 
   // Initialize signals for all state keys
   type StateKey = Extract<keyof State, string>;
 
-  (Object.keys(state) as StateKey[]).forEach((key) => {
-    stateSignals[key] = lattice.signal(state[key]);
+  (Object.keys(initialState) as StateKey[]).forEach((key) => {
+    stateSignals[key] = lattice.signal(initialState[key]);
     // Add to map for O(1) lookup
     signalToKeyMap.set(stateSignals[key], key);
-  });
-
-  // Subscribe to adapter changes
-  adapter.subscribe(() => {
-    lattice._batch(() => {
-      const newState = adapter.getState();
-
-      // Check if adapter supports tracking changed keys
-      const changedKeys = (adapter as any)._getLastChangedKeys?.() as StateKey[] | undefined;
-      
-      if (changedKeys && changedKeys.length > 0) {
-        // Optimized path: only update changed keys
-        changedKeys.forEach((key) => {
-          const newVal = newState[key];
-          const existingSig = stateSignals[key];
-
-          if (existingSig) {
-            if (!Object.is(existingSig(), newVal)) {
-              // Update the signal value and notify listeners
-              updateSignalValue(existingSig, newVal, lattice._batching);
-            }
-          } else {
-            // Create new signal for new key
-            stateSignals[key] = lattice.signal(newVal);
-            signalToKeyMap.set(stateSignals[key], key);
-          }
-        });
-      } else {
-        // Fallback: check all keys (for adapters that don't track changes)
-        (Object.keys(newState) as StateKey[]).forEach((key) => {
-          const newVal = newState[key];
-          const existingSig = stateSignals[key];
-
-          if (existingSig) {
-            if (!Object.is(existingSig(), newVal)) {
-              // Update the signal value and notify listeners
-              updateSignalValue(existingSig, newVal, lattice._batching);
-            }
-            return;
-          }
-
-          // Create new signal for new key
-          stateSignals[key] = lattice.signal(newVal);
-          signalToKeyMap.set(stateSignals[key], key);
-        });
-      }
-    });
   });
 
   // Create set function that writes directly to signals
@@ -162,6 +113,7 @@ export function createComponent<State extends Record<string, any>>(
     store: stateSignals,
     signal: lattice.signal,
     computed: lattice.computed,
+    effect: lattice.effect,
     set,
   };
 

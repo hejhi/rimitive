@@ -3,4 +3,3 @@
  */
 
 export * from './test-utils';
-export { createAdapterTestSuite } from './adapter-test-suite';

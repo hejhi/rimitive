@@ -125,6 +125,7 @@ export type ReactiveSliceFactory<State> = <Computed>(
 export interface LatticeContext {
   signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(computeFn: () => T) => Computed<T>;
+  effect: (effectFn: () => void | (() => void)) => () => void;
   set: SetState;
 }
 

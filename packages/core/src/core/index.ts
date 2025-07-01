@@ -5,5 +5,6 @@
 
 export { createSignalFactory } from './signal';
 export { createComputedFactory } from './computed';
+export { createEffectFactory } from './effect';
 export { createTrackingContext } from './tracking';
 export { createBatchingSystem } from './batching';

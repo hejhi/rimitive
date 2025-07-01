@@ -1,5 +1,4 @@
 import { createComponent } from '../src/component/component';
-import { vanillaAdapter } from '../src/adapters/vanilla';
 import type { ComponentContext } from '../src/component/types';
 
 // Common test state types
@@ -29,7 +28,7 @@ export function createTestComponent<State extends Record<string, any>>(
   initialState: State,
   enhancer?: any
 ) {
-  return createComponent(vanillaAdapter(initialState), enhancer);
+  return createComponent(initialState, enhancer);
 }
 
 // Common test components

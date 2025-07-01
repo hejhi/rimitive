@@ -13,7 +13,7 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createComponent, vanillaAdapter } from '@lattice/core';
+import { createComponent } from '@lattice/core';
 import type { ComponentContext } from '@lattice/core';
 import { observable, action, computed as mobxComputed } from 'mobx';
 import {
@@ -47,9 +47,8 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
       // Type for our flat counter state
       type CounterState = { [K in (typeof counterIds)[number]]: number };
 
-      // Create adapter with initial state
-      const adapter = vanillaAdapter(initialCounters as CounterState);
-      const store = createComponent(adapter);
+      // Create component with initial state
+      const store = createComponent(initialCounters as CounterState);
 
       // Define the main Counters component with direct signal access
       const CountersComponent = ({
@@ -205,8 +204,7 @@ describe('Large State Memory Usage Comparison', () => {
         [K in (typeof largeCounterIds)[number]]: number;
       };
 
-      const adapter = vanillaAdapter(largeInitialCounters as LargeCounterState);
-      const store = createComponent(adapter);
+      const store = createComponent(largeInitialCounters as LargeCounterState);
 
       const LargeCountersComponent = ({
         store,

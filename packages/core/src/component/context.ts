@@ -10,6 +10,7 @@ import { createTrackingContext } from '../core/tracking';
 import { createBatchingSystem } from '../core/batching';
 import { createSignalFactory } from '../core/signal';
 import { createComputedFactory } from '../core/computed';
+import { createEffectFactory } from '../core/effect';
 
 /**
  * Creates a scoped lattice context for a component tree
@@ -25,6 +26,7 @@ export function createLatticeContext(): LatticeContext & {
   // Create bound factory functions
   const signal = createSignalFactory(tracking, batching);
   const computed = createComputedFactory(tracking, batching);
+  const effect = createEffectFactory(tracking, batching);
 
   // Placeholder set function - will be provided when creating store
   const set: SetState = () => {
@@ -36,6 +38,7 @@ export function createLatticeContext(): LatticeContext & {
   return {
     signal,
     computed,
+    effect,
     set,
     // Internal method for store integration
     _batch: batching.batch,

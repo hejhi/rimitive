@@ -1,7 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createComponent } from '../component/component';
-import { vanillaAdapter } from '../adapters/vanilla';
-// import { withLogger } from './';
 import type { ComponentFactory } from '../component/types';
 
 describe('Component Middleware', () => {
@@ -18,7 +16,7 @@ describe('Component Middleware', () => {
     };
 
     // TODO: Update middleware to work with adapters
-    const store = createComponent(vanillaAdapter({ count: 0 }));
+    const store = createComponent({ count: 0 });
     const component = Counter(store);
 
     component.increment();
@@ -41,7 +39,7 @@ describe('Component Middleware', () => {
       };
     };
 
-    const store = createComponent(vanillaAdapter({ count: 0 }));
+    const store = createComponent({ count: 0 });
     const component = Counter(store);
 
     component.increment();
@@ -96,7 +94,7 @@ describe('Component Middleware', () => {
     // const config2 = withMiddleware2({ count: 0 });
 
     // TODO: Update middleware composition to work with adapters
-    const store = createComponent(vanillaAdapter({ count: 0 }));
+    const store = createComponent({ count: 0 });
     const component = Counter(store);
 
     // Both middleware should initialize
