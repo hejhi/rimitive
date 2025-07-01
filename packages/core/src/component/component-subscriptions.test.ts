@@ -4,7 +4,7 @@ import {
   createTestComponent,
   CounterComponent,
   type NamedCounterState,
-} from '../testing/test-utils';
+} from '../../testing/test-utils';
 
 describe('Component Subscriptions', () => {
   it('should support fine-grained subscriptions', () => {

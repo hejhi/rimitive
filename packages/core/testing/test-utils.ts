@@ -1,6 +1,6 @@
-import { createComponent } from '../component/component';
-import { vanillaAdapter } from '../adapters/vanilla';
-import type { ComponentContext } from '../component/types';
+import { createComponent } from '../src/component/component';
+import { vanillaAdapter } from '../src/adapters/vanilla';
+import type { ComponentContext } from '../src/component/types';
 
 // Common test state types
 export interface CounterState {

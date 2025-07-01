@@ -7,7 +7,7 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       outDir: 'dist',
-      include: ['src/**/*.ts'],
+      include: ['src/**/*.ts', 'testing/**/*.ts'],
       exclude: [
         'src/**/*.test.ts',
         'src/**/*.test.d.ts',
@@ -20,7 +20,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        testing: resolve(__dirname, 'src/testing/index.ts'),
+        testing: resolve(__dirname, 'testing/index.ts'),
       },
       formats: ['es'],
     },

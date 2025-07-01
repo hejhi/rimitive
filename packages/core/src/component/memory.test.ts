@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createComponent } from './component';
+import { createComponent } from '../component/component';
 import { vanillaAdapter } from '../adapters/vanilla';
-import type { ComponentFactory } from './types';
+import type { ComponentFactory } from '../component/types';
 
 describe('Memory Optimization', () => {
   it('should create WeakRef-cached keyed selectors', () => {

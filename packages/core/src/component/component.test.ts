@@ -8,7 +8,7 @@ import {
   NamedCounterComponent,
   type CounterState,
   type NamedCounterState 
-} from '../testing/test-utils';
+} from '../../testing/test-utils';
 
 describe('Component API', () => {
   it('should create a component with inferred state from callback', () => {

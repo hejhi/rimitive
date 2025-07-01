@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { ComponentContext } from './types';
-import { createTestComponent, type TodoState } from '../testing/test-utils';
+import { createTestComponent, type TodoState } from '../../testing/test-utils';
 
 describe('Component Composition', () => {
   it('should support composition', () => {

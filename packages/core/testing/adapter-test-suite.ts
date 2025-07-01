@@ -9,10 +9,10 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { StoreAdapter } from '../adapters/contract';
-import { isStoreAdapter } from '../adapters/contract';
-import { createComponent } from '../component/component';
-import type { ComponentFactory } from '../component/types';
+import type { StoreAdapter } from '../src/adapters/contract';
+import { isStoreAdapter } from '../src/adapters/contract';
+import { createComponent } from '../src/component/component';
+import type { ComponentFactory } from '../src/component/types';
 
 /**
  * Test state shape used throughout the adapter tests

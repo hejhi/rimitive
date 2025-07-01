@@ -4,7 +4,7 @@ import {
   createTestComponent,
   generateTodos,
   type TodoState,
-} from '../testing/test-utils';
+} from '../../testing/test-utils';
 
 describe('Smart Updates', () => {
   describe('Array updates', () => {
