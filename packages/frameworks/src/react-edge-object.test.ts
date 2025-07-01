@@ -6,17 +6,22 @@ import { useSignal } from './react';
 
 describe('React object mutations test', () => {
   it('should handle complex object mutations correctly', () => {
-    const context = createComponent({ 
-      user: { name: 'Alice', age: 30, preferences: { theme: 'light' } } 
-    });
-    
-    const UserComponent = ({ store, set }: ComponentContext<typeof context.store>) => ({
+    const UserComponent = ({ 
+      store, 
+      set 
+    }: ComponentContext<{ 
+      user: { name: string; age: number; preferences: { theme: string } } 
+    }>) => ({
       user: store.user,
       updateName: (name: string) => set(store.user, current => ({ ...current, name })),
       updateTheme: (theme: string) => set(store.user, current => ({
         ...current,
         preferences: { ...current.preferences, theme }
       })),
+    });
+    
+    const context = createComponent({ 
+      user: { name: 'Alice', age: 30, preferences: { theme: 'light' } } 
     });
     
     const component = UserComponent(context);
