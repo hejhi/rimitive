@@ -1,28 +1,133 @@
 # Lattice
 
-Pure signal-based state management that's fast, simple, and framework-agnostic.
+Build headless, composable components with pure behavior—once. Use them everywhere.
 
 ## What is Lattice?
 
-Lattice is a minimalist reactive state management library that uses signals for fine-grained reactivity. Define your state and logic once, use it anywhere—React, Vue, Svelte, or vanilla JS.
+Lattice is a behavioral component system that lets you build framework-agnostic, composable UI logic. Create accessible, reusable components as pure behavior, then render them idiomatically in React, Vue, Svelte, or vanilla JS.
+
+Think of it as "Headless UI Components as a Pattern" - define complex UI behavior once, use it anywhere.
 
 ```typescript
 import { createComponent } from '@lattice/core';
 
-// Create reactive state
-const store = createComponent({ count: 0 });
-
-// Define your component logic
-const Counter = ({ store, set }) => ({
-  count: store.count,
-  increment: () => set(store.count, store.count() + 1),
-  decrement: () => set(store.count, store.count() - 1),
-  reset: () => set(store.count, 0),
+// Define a headless Dialog component with full accessibility
+const Dialog = ({ store, computed, set }) => ({
+  // Reactive state
+  isOpen: store.isOpen,
+  
+  // ARIA-compliant props for your trigger button
+  triggerProps: computed(() => ({
+    'aria-haspopup': 'dialog',
+    'aria-expanded': store.isOpen(),
+    onClick: () => set(store.isOpen, true),
+  })),
+  
+  // Accessible dialog container props
+  dialogProps: computed(() => ({
+    role: 'dialog',
+    'aria-modal': true,
+    'aria-labelledby': store.titleId(),
+    'aria-describedby': store.descriptionId(),
+  })),
+  
+  // Actions
+  open: () => set(store.isOpen, true),
+  close: () => set(store.isOpen, false),
 });
 
-// Use in any framework
-const counter = Counter(store);
+// Create a store and use in React
+const dialogStore = createComponent({ 
+  isOpen: false,
+  titleId: 'dialog-title',
+  descriptionId: 'dialog-desc'
+});
+
+// React usage
+function MyModal() {
+  const dialog = useComponent(dialogStore, Dialog);
+  
+  return (
+    <>
+      <button {...dialog.triggerProps()}>Open Modal</button>
+      {dialog.isOpen() && (
+        <div {...dialog.dialogProps()}>
+          <h2 id="dialog-title">My Accessible Modal</h2>
+          <p id="dialog-desc">This modal is fully accessible!</p>
+          <button onClick={dialog.close}>Close</button>
+        </div>
+      )}
+    </>
+  );
+}
 ```
+
+## The Power of Behavioral Composition
+
+Lattice shines when building complex, accessible UI components. Compose behaviors like building blocks:
+
+```typescript
+// Start with accessible Dialog behavior
+const Dialog = ({ store, computed, set }) => ({
+  isOpen: store.isOpen,
+  triggerProps: computed(() => ({
+    'aria-haspopup': 'dialog',
+    'aria-expanded': store.isOpen(),
+  })),
+  // ... full dialog implementation
+});
+
+// Compose Dialog into a Popover with positioning
+const Popover = (context) => {
+  const dialog = Dialog(context);
+  const { computed } = context;
+  
+  return {
+    ...dialog,
+    placement: context.store.placement,
+    popoverProps: computed(() => ({
+      ...dialog.dialogProps(),
+      style: calculatePosition(context.store.anchor(), context.store.placement()),
+    })),
+  };
+};
+
+// Further compose into a Select component
+const Select = (context) => {
+  const popover = Popover(context);
+  const { computed, set, store } = context;
+  
+  return {
+    ...popover,
+    selected: store.selected,
+    options: store.options,
+    selectProps: computed(() => ({
+      ...popover.triggerProps(),
+      'aria-haspopup': 'listbox',
+      'aria-activedescendant': store.highlightedId(),
+    })),
+    select: (option) => {
+      set(store.selected, option);
+      popover.close();
+    },
+  };
+};
+
+// One store, multiple behavioral views
+const selectStore = createComponent({
+  isOpen: false,
+  anchor: null,
+  placement: 'bottom',
+  selected: null,
+  options: [],
+  highlightedId: null,
+});
+
+// Use the fully accessible Select in any framework
+const select = useComponent(selectStore, Select);
+```
+
+Build once. Compose freely. Use anywhere. Full accessibility included.
 
 ## Performance
 
@@ -42,6 +147,16 @@ npm install @lattice/react    # React 16.8+
 npm install @lattice/vue      # Vue 3
 npm install @lattice/svelte   # Svelte 5
 ```
+
+## Use Cases
+
+Lattice excels at:
+
+- **Headless Design Systems**: Build accessible components once, themed per framework
+- **Cross-Framework Libraries**: Share complex UI logic across React, Vue, and Svelte apps
+- **Accessible UI Patterns**: Modals, dropdowns, selects, tooltips with proper ARIA support
+- **Complex State Logic**: Forms, data tables, filtering, sorting—without framework lock-in
+- **Micro-Frontend Architecture**: Share stateful components across different framework boundaries
 
 ## Quick Start
 
@@ -351,21 +466,25 @@ const enhancedStore = createComponent(
 
 ## Why Lattice?
 
+- **True Headless Components**: Build accessible UI behavior once, use it in any framework
+- **Behavioral Composition**: Compose complex components from simple, reusable behaviors
+- **Framework Agnostic**: Same component logic works in React, Vue, Svelte, HTMX, or vanilla JS
+- **Accessibility First**: Build ARIA-compliant components with proper keyboard and screen reader support
 - **Blazing Fast**: Up to 11x faster than other state management solutions
-- **Simple**: Just signals, computed values, and effects - no complex abstractions
-- **Framework Agnostic**: Same code works in React, Vue, Svelte, or vanilla JS
 - **TypeScript Native**: Full type inference from state through to component usage
 - **Tiny**: ~3KB core that does one thing really well
-- **Composable**: Build complex behaviors from simple, testable pieces
+- **Design System Ready**: Perfect for building accessible, headless design systems
 
 ## Examples
 
 Check out the [examples](./examples) directory for:
 
-- [Todo App](./examples/todo-app)
-- [Data Table](./examples/data-table)
-- [Form Validation](./examples/form-validation)
-- [Modal System](./examples/modal)
+- [Accessible Modal](./examples/modal) - Fully accessible dialog with focus management
+- [Combobox](./examples/combobox) - Searchable select with keyboard navigation
+- [Data Table](./examples/data-table) - Sortable, filterable table with selection
+- [Form System](./examples/form-validation) - Type-safe forms with validation
+- [Toast Notifications](./examples/toast) - Accessible notifications with queue management
+- [Command Palette](./examples/command-palette) - Spotlight-style command interface
 
 ## Documentation
 
