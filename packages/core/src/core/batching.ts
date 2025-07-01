@@ -35,19 +35,19 @@ enum BatchState {
 export function createBatchingSystem(): BatchingSystem {
   let state = BatchState.IDLE;
   let batchedUpdates = new Set<() => void>();
-  
+
   // Stack to handle nested state transitions
   const stateStack: BatchState[] = [];
 
   function runUpdates() {
     if (!batchedUpdates.size) return;
-    
+
     // Can't process updates if already processing
     if (state === BatchState.PROCESSING) return;
-    
+
     const previousState = state;
     const wasInBatch = state === BatchState.BATCHING;
-    
+
     // Save state and transition to processing
     if (wasInBatch) {
       stateStack.push(state);
@@ -69,11 +69,10 @@ export function createBatchingSystem(): BatchingSystem {
       }
     } finally {
       // Restore previous state
-      if (wasInBatch && stateStack.length > 0) {
-        state = stateStack.pop()!;
-      } else {
-        state = previousState;
-      }
+      state =
+        wasInBatch && stateStack.length
+          ? (stateStack.pop() ?? previousState)
+          : previousState;
     }
   }
 
@@ -94,9 +93,7 @@ export function createBatchingSystem(): BatchingSystem {
       state = previousState;
 
       // Process any remaining updates after batch completes
-      if (batchedUpdates.size && state === BatchState.IDLE) {
-        runUpdates();
-      }
+      if (batchedUpdates.size && state === BatchState.IDLE) runUpdates();
     }
   }
 
@@ -117,11 +114,8 @@ export function createBatchingSystem(): BatchingSystem {
 
   function exitNotification(): void {
     const previousState = stateStack.pop();
-    if (previousState !== undefined) {
-      state = previousState;
-    } else {
-      state = BatchState.IDLE;
-    }
+
+    state = previousState ?? BatchState.IDLE;
 
     // Process any deferred updates from re-entrant subscriptions
     // Only if we're back in IDLE state (prevents recursion during processing)
