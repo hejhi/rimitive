@@ -1,12 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
-import { type ComponentFactory } from '@lattice/core';
+import { type ComponentContext } from '@lattice/core';
 import { useComponent, useSignal } from './react';
 
 describe('React useComponent test', () => {
   it('should create component', () => {
-    const Counter: ComponentFactory<{ count: number }> = ({ store, set }) => ({
+    interface CounterComponent {
+      value: () => number;
+      increment: () => void;
+    }
+    
+    const Counter = ({ store, set }: ComponentContext<{ count: number }>): CounterComponent => ({
       value: store.count,
       increment: () => set(store.count, store.count() + 1),
     });
@@ -25,7 +30,12 @@ describe('React useComponent test', () => {
   });
   
   it('should work with useSignal', () => {
-    const Counter: ComponentFactory<{ count: number }> = ({ store, set }) => ({
+    interface CounterComponent {
+      value: () => number;
+      increment: () => void;
+    }
+    
+    const Counter = ({ store, set }: ComponentContext<{ count: number }>): CounterComponent => ({
       value: store.count,
       increment: () => set(store.count, store.count() + 1),
     });
