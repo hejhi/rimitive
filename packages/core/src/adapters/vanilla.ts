@@ -14,27 +14,34 @@ import type { ChangeTrackingAdapter } from './contract';
 export function vanillaAdapter<State extends Record<string, any>>(
   initialState: State
 ): ChangeTrackingAdapter<State> {
-  let state = { ...initialState };
+  // Create state object once, mutate in place
+  const state = { ...initialState };
   const listeners = new Set<() => void>();
   let lastChangedKeys: (keyof State)[] = [];
 
   return {
-    getState: () => ({ ...state }),
+    getState: () => state, // Return reference directly - caller must not mutate!
     setState: (updates) => {
       // Track which keys actually changed
       lastChangedKeys = [];
-      const prevState = state;
-      state = { ...state, ...updates };
       
-      // Only track keys where the value actually changed
+      // Update state in place, only for changed values
       for (const key in updates) {
-        if (!Object.is(prevState[key], state[key])) {
-          lastChangedKeys.push(key as keyof State);
+        if (Object.prototype.hasOwnProperty.call(updates, key)) {
+          const typedKey = key as keyof State;
+          const newValue = updates[typedKey];
+          if (!Object.is(state[typedKey], newValue)) {
+            (state as any)[typedKey] = newValue;
+            lastChangedKeys.push(typedKey);
+          }
         }
       }
       
-      for (const listener of listeners) {
-        listener();
+      // Only notify if something actually changed
+      if (lastChangedKeys.length > 0) {
+        for (const listener of listeners) {
+          listener();
+        }
       }
     },
     subscribe: (listener) => {
