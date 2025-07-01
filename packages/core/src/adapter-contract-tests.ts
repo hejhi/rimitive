@@ -11,9 +11,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { StoreAdapter } from './adapter-contract';
 import { isStoreAdapter } from './adapter-contract';
-import {
-  createComponent,
-} from './component';
+import { createComponent } from './component';
 import type { ComponentFactory } from './runtime-types';
 
 /**

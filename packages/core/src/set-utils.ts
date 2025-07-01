@@ -1,6 +1,6 @@
 /**
  * @fileoverview Utilities for handling state updates
- * 
+ *
  * This module contains shared logic for processing state updates,
  * including handling of derived signals, partial updates, and
  * collection operations.

@@ -26,12 +26,14 @@ describe('Memory Optimization', () => {
       };
     };
 
-    const store = createComponent(vanillaAdapter({
-      items: Array.from({ length: 100 }, (_, i) => ({
-        id: `item-${i}`,
-        value: i,
-      })),
-    }));
+    const store = createComponent(
+      vanillaAdapter({
+        items: Array.from({ length: 100 }, (_, i) => ({
+          id: `item-${i}`,
+          value: i,
+        })),
+      })
+    );
     const component = DataStore(store);
 
     // Create multiple derived signals
@@ -112,12 +114,14 @@ describe('Memory Optimization', () => {
       };
     };
 
-    const store = createComponent(vanillaAdapter({
-      users: Array.from({ length: 10000 }, (_, i) => ({
-        id: `user-${i}`,
-        name: `User ${i}`,
-      })),
-    }));
+    const store = createComponent(
+      vanillaAdapter({
+        users: Array.from({ length: 10000 }, (_, i) => ({
+          id: `user-${i}`,
+          name: `User ${i}`,
+        })),
+      })
+    );
     const component = LargeStore(store);
 
     // First access - O(n)

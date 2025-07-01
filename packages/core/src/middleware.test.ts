@@ -94,7 +94,7 @@ describe('Component Middleware', () => {
     // For now, manually compose the enhancers
     // const config1 = withMiddleware1({ count: 0 });
     // const config2 = withMiddleware2({ count: 0 });
-    
+
     // TODO: Update middleware composition to work with adapters
     const store = createComponent(vanillaAdapter({ count: 0 }));
     const component = Counter(store);

@@ -102,7 +102,7 @@ export interface SetState {
   // Partial updates for objects (for signals that might be undefined)
   // Note: updates are only applied if current value is not undefined
   <T extends object>(signal: Signal<T | undefined>, updates: Partial<T>): void;
-  
+
   // Partial updates for objects
   <T extends object>(signal: Signal<T>, updates: Partial<T>): void;
 
@@ -140,9 +140,7 @@ export interface ComponentContext<State> extends LatticeContext {
  * Component factory function that receives a merged context
  * Returns slices (signals, computeds, and methods)
  */
-export type ComponentFactory<State> = (
-  context: ComponentContext<State>
-) => any;
+export type ComponentFactory<State> = (context: ComponentContext<State>) => any;
 
 /**
  * Middleware receives the component context and can enhance/modify it

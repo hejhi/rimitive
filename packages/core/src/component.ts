@@ -68,10 +68,11 @@ export function createComponent<State extends Record<string, any>>(
             // Update the signal directly
             updateSignalValue(existingSig, newVal, lattice._batching);
           }
-        } else {
-          // Create new signal for new key
-          stateSignals[key] = lattice.signal(newVal);
+          return;
         }
+
+        // Create new signal for new key
+        stateSignals[key] = lattice.signal(newVal);
       });
     });
   });
