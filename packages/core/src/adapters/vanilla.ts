@@ -2,7 +2,7 @@
  * @fileoverview Built-in adapters for common use cases
  */
 
-import type { StoreAdapter } from './contract';
+import type { ChangeTrackingAdapter } from './contract';
 
 /**
  * Creates a simple in-memory adapter for Lattice stores.
@@ -13,14 +13,26 @@ import type { StoreAdapter } from './contract';
  */
 export function vanillaAdapter<State extends Record<string, any>>(
   initialState: State
-): StoreAdapter<State> {
+): ChangeTrackingAdapter<State> {
   let state = { ...initialState };
   const listeners = new Set<() => void>();
+  let lastChangedKeys: (keyof State)[] = [];
 
   return {
     getState: () => ({ ...state }),
     setState: (updates) => {
+      // Track which keys actually changed
+      lastChangedKeys = [];
+      const prevState = state;
       state = { ...state, ...updates };
+      
+      // Only track keys where the value actually changed
+      for (const key in updates) {
+        if (!Object.is(prevState[key], state[key])) {
+          lastChangedKeys.push(key as keyof State);
+        }
+      }
+      
       for (const listener of listeners) {
         listener();
       }
@@ -29,5 +41,7 @@ export function vanillaAdapter<State extends Record<string, any>>(
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    // Extension to get changed keys (not part of standard interface)
+    _getLastChangedKeys: () => lastChangedKeys,
   };
 }

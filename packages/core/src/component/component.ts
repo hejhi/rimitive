@@ -46,43 +46,82 @@ export function createComponent<State extends Record<string, any>>(
   const state = adapter.getState();
   const stateSignals = {} as SignalState<State>;
 
+  // Create a WeakMap to store signal -> key mappings for O(1) lookup
+  const signalToKeyMap = new WeakMap<Signal<any>, keyof State>();
+  
+  // Track whether we're in an internal update to prevent loops
+  let isInternalUpdate = false;
+
   // Initialize signals for all state keys
   type StateKey = Extract<keyof State, string>;
 
   (Object.keys(state) as StateKey[]).forEach((key) => {
     stateSignals[key] = lattice.signal(state[key]);
+    // Add to map for O(1) lookup
+    signalToKeyMap.set(stateSignals[key], key);
   });
 
   // Subscribe to adapter changes
   adapter.subscribe(() => {
+    // Skip if this is an internal update to prevent double updates
+    if (isInternalUpdate) return;
+    
     lattice._batch(() => {
       const newState = adapter.getState();
 
-      // Update signals with new state
-      (Object.keys(newState) as StateKey[]).forEach((key) => {
-        const newVal = newState[key];
-        const existingSig = stateSignals[key];
+      // Check if adapter supports tracking changed keys
+      const changedKeys = (adapter as any)._getLastChangedKeys?.() as StateKey[] | undefined;
+      
+      if (changedKeys && changedKeys.length > 0) {
+        // Optimized path: only update changed keys
+        changedKeys.forEach((key) => {
+          const newVal = newState[key];
+          const existingSig = stateSignals[key];
 
-        if (existingSig) {
-          if (!Object.is(existingSig(), newVal)) {
-            // Update the signal directly
-            updateSignalValue(existingSig, newVal, lattice._batching);
+          if (existingSig) {
+            if (!Object.is(existingSig(), newVal)) {
+              // Update the signal directly
+              updateSignalValue(existingSig, newVal, lattice._batching);
+            }
+          } else {
+            // Create new signal for new key
+            stateSignals[key] = lattice.signal(newVal);
+            signalToKeyMap.set(stateSignals[key], key);
           }
-          return;
-        }
+        });
+      } else {
+        // Fallback: check all keys (for adapters that don't track changes)
+        (Object.keys(newState) as StateKey[]).forEach((key) => {
+          const newVal = newState[key];
+          const existingSig = stateSignals[key];
 
-        // Create new signal for new key
-        stateSignals[key] = lattice.signal(newVal);
-      });
+          if (existingSig) {
+            if (!Object.is(existingSig(), newVal)) {
+              // Update the signal directly
+              updateSignalValue(existingSig, newVal, lattice._batching);
+            }
+            return;
+          }
+
+          // Create new signal for new key
+          stateSignals[key] = lattice.signal(newVal);
+          signalToKeyMap.set(stateSignals[key], key);
+        });
+      }
     });
   });
 
-  // Create set function that delegates to adapter
+  // Create set function with optimized direct updates
   const set: SetState = (signal: Signal<any>, updates: any) => {
-    // Find which state key this signal belongs to
-    const stateKey = findSignalStateKey(signal, stateSignals);
+    // O(1) lookup instead of O(n) search
+    let stateKey = signalToKeyMap.get(signal);
 
-    if (!stateKey) throw new Error('Signal not found in store');
+    if (!stateKey) {
+      // Fallback to search for derived signals
+      const foundKey = findSignalStateKey(signal, stateSignals);
+      if (!foundKey) throw new Error('Signal not found in store');
+      stateKey = foundKey;
+    }
 
     // Handle derived signals specially
     if (isDerivedSignal(signal)) {
@@ -91,7 +130,11 @@ export function createComponent<State extends Record<string, any>>(
       const result = handleDerivedSignalUpdate(signal, sourceValue, updates);
 
       if (result) {
-        adapter.setState({ [stateKey]: result.value } as Partial<State>);
+        // Use internal update for derived signals too
+        isInternalUpdate = true;
+        updateSignalValue(sourceSignal, result.value, lattice._batching);
+        adapter.setState({ [stateKey as keyof State]: result.value } as Partial<State>);
+        isInternalUpdate = false;
         return;
       }
     }
@@ -99,8 +142,13 @@ export function createComponent<State extends Record<string, any>>(
     // Regular signal update
     const newValue = applyUpdate(signal(), updates);
 
-    // Update through adapter
-    adapter.setState({ [stateKey]: newValue } as Partial<State>);
+    // Direct signal update - bypass adapter for internal updates
+    isInternalUpdate = true;
+    updateSignalValue(signal, newValue, lattice._batching);
+    
+    // Still update adapter to keep external subscribers in sync
+    adapter.setState({ [stateKey as keyof State]: newValue } as Partial<State>);
+    isInternalUpdate = false;
   };
 
   // Create component context with merged functionality

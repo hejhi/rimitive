@@ -66,3 +66,26 @@ export function isAdapterFactory<State>(
 ): value is AdapterFactory<State> {
   return typeof value === 'function';
 }
+
+/**
+ * Extended adapter interface that supports change tracking
+ * This is an optional optimization - adapters can implement this
+ * to enable more efficient updates by tracking which keys changed
+ */
+export interface ChangeTrackingAdapter<State> extends StoreAdapter<State> {
+  /**
+   * Get the keys that were changed in the last setState call
+   * This is used by Lattice to optimize signal updates
+   */
+  _getLastChangedKeys(): (keyof State)[];
+}
+
+/**
+ * Type guard to check if an adapter supports change tracking
+ */
+export function hasChangeTracking<State>(
+  adapter: StoreAdapter<State>
+): adapter is ChangeTrackingAdapter<State> {
+  return '_getLastChangedKeys' in adapter && 
+    typeof (adapter as any)._getLastChangedKeys === 'function';
+}
