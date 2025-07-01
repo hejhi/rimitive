@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createComponent } from './component';
-import { vanillaAdapter } from './adapters';
-// import { withLogger } from './middleware';
-import type { ComponentFactory } from './runtime-types';
+import { createComponent } from '../component/component';
+import { vanillaAdapter } from '../adapters/vanilla';
+// import { withLogger } from './';
+import type { ComponentFactory } from '../component/types';
 
 describe('Component Middleware', () => {
   it.skip('should apply logger middleware', () => {

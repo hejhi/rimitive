@@ -1,10 +1,7 @@
 // Lattice Core API - Component-based state management
 
 // Export component API
-export {
-  createComponent,
-  partial,
-} from './component';
+export { createComponent, partial } from './component/component';
 
 // Note: signal and computed are provided via component context, not exported globally
 
@@ -17,7 +14,7 @@ export type {
   ComponentFactory,
   ComponentMiddleware,
   SetState,
-} from './runtime-types';
+} from './component/types';
 
 // Export adapter contract
 export {
@@ -25,16 +22,10 @@ export {
   type AdapterFactory,
   isStoreAdapter,
   isAdapterFactory,
-} from './adapter-contract';
+} from './adapters/contract';
 
 // Export built-in adapters
-export { vanillaAdapter } from './adapters';
-
-// Export Svelte-specific store creator
-export { createSvelteStore } from './svelte';
-
-// Export convenience functions
-export { select } from './utils';
+export { vanillaAdapter } from './adapters/vanilla';
 
 // Export middleware
-export { withDevtools, withLogger, withPersistence } from './middleware';
+export { withDevtools, withLogger, withPersistence } from './middleware/index';

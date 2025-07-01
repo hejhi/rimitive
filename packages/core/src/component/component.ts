@@ -11,15 +11,15 @@ import type {
   SignalState,
   Signal,
   ComponentMiddleware,
-} from './runtime-types';
-import { createLatticeContext } from './lattice-context';
-import { type StoreAdapter } from './adapter-contract';
-import { updateSignalValue, isDerivedSignal } from './signal';
+} from './types';
+import { createLatticeContext } from './context';
+import { type StoreAdapter } from '../adapters/contract';
+import { updateSignalValue, isDerivedSignal } from '../core/signal';
 import {
   applyUpdate,
   handleDerivedSignalUpdate,
   findSignalStateKey,
-} from './set-utils';
+} from './state-updates';
 
 /**
  * Helper for creating partial updates with structural sharing

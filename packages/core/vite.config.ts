@@ -12,6 +12,7 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/*.test.d.ts',
         'src/**/test-*.ts',
+        'src/adapters/contract.test.ts',
       ],
     }),
   ],
@@ -19,10 +20,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        component: resolve(__dirname, 'src/component.ts'),
-        'lattice-context': resolve(__dirname, 'src/lattice-context.ts'),
-        testing: resolve(__dirname, 'src/testing.ts'),
-        utils: resolve(__dirname, 'src/utils.ts'),
+        testing: resolve(__dirname, 'src/testing/index.ts'),
       },
       formats: ['es'],
     },

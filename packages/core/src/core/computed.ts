@@ -5,7 +5,7 @@
  * recompute when those dependencies change.
  */
 
-import type { Computed } from './runtime-types';
+import type { Computed } from '../component/types';
 import type { TrackingContext } from './tracking';
 import type { BatchingSystem } from './batching';
 

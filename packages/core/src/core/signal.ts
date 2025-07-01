@@ -5,7 +5,7 @@
  * All updates must go through the set() function.
  */
 
-import type { Signal } from './runtime-types';
+import type { Signal } from '../component/types';
 import type { TrackingContext } from './tracking';
 import type { BatchingSystem } from './batching';
 

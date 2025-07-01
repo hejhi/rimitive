@@ -5,5 +5,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     includeSource: ['./src/**/*.{js,ts}'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/adapters/contract.test.ts', // This is a test suite generator, not tests
+    ],
   },
 });

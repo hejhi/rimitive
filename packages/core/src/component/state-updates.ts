@@ -6,8 +6,8 @@
  * collection operations.
  */
 
-import type { Signal } from './runtime-types';
-import { isDerivedSignal, type DerivedSignal } from './signal';
+import type { Signal } from './types';
+import { isDerivedSignal, type DerivedSignal } from '../core/signal';
 
 /**
  * Applies an update to a value, handling functions and partial object updates

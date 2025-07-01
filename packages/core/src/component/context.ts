@@ -5,11 +5,11 @@
  * eliminating global state conflicts and enabling proper composition.
  */
 
-import type { LatticeContext, SetState } from './runtime-types';
-import { createTrackingContext } from './tracking';
-import { createBatchingSystem } from './batching';
-import { createSignalFactory } from './signal';
-import { createComputedFactory } from './computed';
+import type { LatticeContext, SetState } from './types';
+import { createTrackingContext } from '../core/tracking';
+import { createBatchingSystem } from '../core/batching';
+import { createSignalFactory } from '../core/signal';
+import { createComputedFactory } from '../core/computed';
 
 /**
  * Creates a scoped lattice context for a component tree

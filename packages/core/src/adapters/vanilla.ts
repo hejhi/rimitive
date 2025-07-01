@@ -2,7 +2,7 @@
  * @fileoverview Built-in adapters for common use cases
  */
 
-import type { StoreAdapter } from './adapter-contract';
+import type { StoreAdapter } from './contract';
 
 /**
  * Creates a simple in-memory adapter for Lattice stores.
