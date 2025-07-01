@@ -375,6 +375,11 @@ const stats = computed(() => ({
 }));
 ```
 
+Computed values in Lattice are reactive signals with a hybrid execution model:
+- **Eager notification**: When dependencies change, computed values immediately notify their subscribers (e.g., UI frameworks)
+- **Lazy evaluation**: The actual recomputation only happens when the value is read
+- This gives you the best of both worlds: immediate UI reactivity without wasted computations
+
 ### Effects
 
 Run side effects that automatically track dependencies:

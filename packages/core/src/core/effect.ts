@@ -32,7 +32,8 @@ export function createEffectFactory(
     let unsubscribers: (() => void)[] = [];
     let cleanupFn: (() => void) | void;
 
-    const runEffect = () => {
+    // Named function for better debugging
+    function runEffect() {
       if (isRunning) return; // Prevent infinite loops
       isRunning = true;
 
@@ -66,7 +67,7 @@ export function createEffectFactory(
       } finally {
         isRunning = false;
       }
-    };
+    }
 
     // Run immediately
     runEffect();
