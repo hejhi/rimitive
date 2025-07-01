@@ -10,6 +10,18 @@ import type { TrackingContext } from './tracking';
 import type { BatchingSystem } from './batching';
 
 /**
+ * State machine states for computed values
+ */
+enum ComputedState {
+  /** Value is up-to-date with current dependencies */
+  FRESH = 'FRESH',
+  /** Dependencies changed, value needs recomputation */
+  STALE = 'STALE',
+  /** Currently recomputing the value */
+  COMPUTING = 'COMPUTING',
+}
+
+/**
  * Creates a computed factory bound to the given tracking and batching contexts
  */
 export function createComputedFactory(
@@ -22,14 +34,13 @@ export function createComputedFactory(
    */
   return function computed<T>(computeFn: () => T): Computed<T> {
     let value: T;
-    let isStale = true;
-    let isComputing = false; // Prevent infinite recomputation loops
+    let state = ComputedState.STALE;
     let unsubscribers: (() => void)[] = [];
     const listeners = new Set<() => void>();
 
     const recompute = () => {
-      if (isComputing) return; // Prevent infinite loops
-      isComputing = true;
+      if (state === ComputedState.COMPUTING) return; // Prevent infinite loops
+      state = ComputedState.COMPUTING;
 
       try {
         // Clean up old dependency subscriptions
@@ -45,10 +56,10 @@ export function createComputedFactory(
         // Subscribe to new dependencies
         for (const dep of deps) {
           const unsub = dep.subscribe(() => {
-            if (isComputing) return;
+            // Don't mark stale while computing
+            if (state === ComputedState.COMPUTING) return;
 
-            // Only mark stale if not currently computing
-            isStale = true;
+            state = ComputedState.STALE;
 
             // Use notification guard to prevent re-entrant updates
             batching.notify(() => {
@@ -60,9 +71,12 @@ export function createComputedFactory(
           unsubscribers.push(unsub);
         }
 
-        isStale = false;
+        state = ComputedState.FRESH;
       } finally {
-        isComputing = false;
+        // If we somehow failed, ensure we're not stuck in COMPUTING
+        if (state === ComputedState.COMPUTING) {
+          state = ComputedState.STALE;
+        }
       }
     };
 
@@ -74,7 +88,7 @@ export function createComputedFactory(
       if (batching.notifying) return value;
 
       // Recompute if stale
-      if (isStale && !isComputing) recompute();
+      if (state === ComputedState.STALE) recompute();
 
       return value;
     }) as Computed<T>;
