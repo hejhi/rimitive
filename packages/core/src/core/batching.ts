@@ -16,67 +16,93 @@ export interface BatchingSystem {
 }
 
 /**
+ * State machine states for the batching system
+ */
+enum BatchState {
+  /** Normal operation - updates run immediately */
+  IDLE = 'IDLE',
+  /** Collecting updates to run together after batch completes */
+  BATCHING = 'BATCHING',
+  /** Inside a notification callback - prevents re-entrant reads */
+  NOTIFYING = 'NOTIFYING',
+  /** Processing queued updates */
+  PROCESSING = 'PROCESSING',
+}
+
+/**
  * Creates a batching system for signal updates - scoped per context
  */
 export function createBatchingSystem(): BatchingSystem {
-  let isBatching = false;
-  let isNotifying = false;
-  let isRunningUpdates = false;
+  let state = BatchState.IDLE;
   let batchedUpdates = new Set<() => void>();
+  
+  // Stack to handle nested state transitions
+  const stateStack: BatchState[] = [];
 
   function runUpdates() {
     if (!batchedUpdates.size) return;
+    
+    // Can't process updates if already processing
+    if (state === BatchState.PROCESSING) return;
+    
+    const previousState = state;
+    const wasInBatch = state === BatchState.BATCHING;
+    
+    // Save state and transition to processing
+    if (wasInBatch) {
+      stateStack.push(state);
+    }
+    state = BatchState.PROCESSING;
 
-    const wasBatching = isBatching;
+    try {
+      // Process all updates in a loop until there are no more
+      while (batchedUpdates.size) {
+        const updates = batchedUpdates;
+        batchedUpdates = new Set<() => void>();
 
-    // Process all updates in a loop until there are no more
-    while (batchedUpdates.size) {
-      isRunningUpdates = true;
-      const updates = batchedUpdates;
-      batchedUpdates = new Set<() => void>();
-
-      // Run updates with batching context cleared
-      const wasNotifying = isNotifying;
-      isBatching = false;
-      isNotifying = false;
-
-      try {
         for (const update of updates) {
           update();
         }
-      } finally {
-        isBatching = wasBatching;
-        isNotifying = wasNotifying;
-        isRunningUpdates = false;
-      }
 
-      // If we were originally in a batch, stop processing and let the batch handle remaining updates
-      if (wasBatching) break;
+        // If we were originally in a batch, only do one iteration
+        if (wasInBatch) break;
+      }
+    } finally {
+      // Restore previous state
+      if (wasInBatch && stateStack.length > 0) {
+        state = stateStack.pop()!;
+      } else {
+        state = previousState;
+      }
     }
   }
 
   function batch(fn: () => void): void {
-    if (isBatching) {
+    if (state === BatchState.BATCHING) {
+      // Already batching, just run the function
       fn();
       return;
     }
 
-    isBatching = true;
+    const previousState = state;
+    state = BatchState.BATCHING;
 
     try {
       fn();
       runUpdates();
     } finally {
-      isBatching = false;
+      state = previousState;
 
       // Process any remaining updates after batch completes
-      if (batchedUpdates.size) runUpdates();
+      if (batchedUpdates.size && state === BatchState.IDLE) {
+        runUpdates();
+      }
     }
   }
 
   function scheduleUpdate(listener: () => void): void {
-    // If we're batching OR notifying, defer the update
-    if (isBatching || isNotifying) {
+    // Defer updates unless we're in IDLE state
+    if (state !== BatchState.IDLE) {
       batchedUpdates.add(listener);
       return;
     }
@@ -85,15 +111,23 @@ export function createBatchingSystem(): BatchingSystem {
   }
 
   function enterNotification(): void {
-    isNotifying = true;
+    stateStack.push(state);
+    state = BatchState.NOTIFYING;
   }
 
   function exitNotification(): void {
-    isNotifying = false;
+    const previousState = stateStack.pop();
+    if (previousState !== undefined) {
+      state = previousState;
+    } else {
+      state = BatchState.IDLE;
+    }
 
     // Process any deferred updates from re-entrant subscriptions
-    // But not if we're already running updates (prevents recursion)
-    if (!isBatching && !isRunningUpdates) runUpdates();
+    // Only if we're back in IDLE state (prevents recursion during processing)
+    if (state === BatchState.IDLE && batchedUpdates.size) {
+      runUpdates();
+    }
   }
 
   /**
@@ -116,10 +150,10 @@ export function createBatchingSystem(): BatchingSystem {
     enterNotification,
     exitNotification,
     get batching() {
-      return isBatching;
+      return state === BatchState.BATCHING;
     },
     get notifying() {
-      return isNotifying;
+      return state === BatchState.NOTIFYING;
     },
   };
 }
