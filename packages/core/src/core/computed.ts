@@ -51,14 +51,11 @@ export function createComputedFactory(
             isStale = true;
 
             // Use notification guard to prevent re-entrant updates
-            batching.enterNotification();
-            try {
+            batching.notify(() => {
               for (const listener of listeners) {
                 batching.scheduleUpdate(listener);
               }
-            } finally {
-              batching.exitNotification();
-            }
+            });
           });
           unsubscribers.push(unsub);
         }
@@ -74,9 +71,7 @@ export function createComputedFactory(
       tracking.track(comp);
 
       // During notification phase, return stale value to prevent re-entrant reads
-      if (batching.notifying) {
-        return value;
-      }
+      if (batching.notifying) return value;
 
       // Recompute if stale
       if (isStale && !isComputing) recompute();

@@ -8,6 +8,7 @@
 export interface BatchingSystem {
   batch(fn: () => void): void;
   scheduleUpdate(listener: () => void): void;
+  notify(fn: () => void): void;
   readonly batching: boolean;
   readonly notifying: boolean;
   enterNotification(): void;
@@ -70,9 +71,23 @@ export function createBatchingSystem(): BatchingSystem {
     if (!isBatching) runUpdates();
   }
 
+  /**
+   * Wraps a notification callback to prevent re-entrant reads during updates.
+   * This prevents infinite loops when reactive values notify their listeners.
+   */
+  function notify(fn: () => void): void {
+    enterNotification();
+    try {
+      fn();
+    } finally {
+      exitNotification();
+    }
+  }
+
   return {
     batch,
     scheduleUpdate,
+    notify,
     enterNotification,
     exitNotification,
     get batching() {

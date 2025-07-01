@@ -278,14 +278,11 @@ export function updateSignalValue<T>(
   // Notify listeners with guard to prevent re-entrant subscriptions
   if (!baseSignal._listeners.size) return;
 
-  batching.enterNotification();
-  try {
+  batching.notify(() => {
     for (const listener of baseSignal._listeners) {
       batching.scheduleUpdate(listener);
     }
-  } finally {
-    batching.exitNotification();
-  }
+  });
 }
 
 /**

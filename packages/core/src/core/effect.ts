@@ -56,7 +56,10 @@ export function createEffectFactory(
         for (const dep of deps) {
           const unsub = dep.subscribe(() => {
             if (isRunning) return;
-            batching.scheduleUpdate(runEffect);
+            // Prevent re-entrant effect execution during notification phase
+            batching.notify(() => {
+              batching.scheduleUpdate(runEffect);
+            });
           });
           unsubscribers.push(unsub);
         }
