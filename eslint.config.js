@@ -5,28 +5,61 @@ import react from 'eslint-plugin-react';
 import storybookPlugin from 'eslint-plugin-storybook';
 
 export default tseslint.config(
-  eslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
+  // Global ignores
   {
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/*.d.ts',
+      '**/*.d.ts.map',
+      '**/coverage/**',
+      '**/temp/**',
+      '**/.turbo/**',
+    ],
+  },
+  // Base JS/TS configuration
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  // TypeScript type-checked rules only for TS files
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.json'],
+        project: ['./tsconfig.json', './packages/*/tsconfig.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
   },
+  // React-specific configuration
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.tsx'],
     plugins: {
       react,
       'react-hooks': reactHooks,
     },
     rules: {
-      // Add React-specific rules
       'react/prop-types': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
     },
   },
-  storybookPlugin.configs.recommended,
+  // JavaScript files configuration (no type checking)
+  {
+    files: ['**/*.js', '**/*.mjs'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        setTimeout: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        Buffer: 'readonly',
+        global: 'readonly',
+      },
+    },
+  },
+  // Storybook configuration
+  ...storybookPlugin.configs['flat/recommended'],
 );
