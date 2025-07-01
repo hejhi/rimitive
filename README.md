@@ -9,22 +9,24 @@ Lattice is a minimalist reactive framework that lets you describe complex behavi
 Think of Lattice components as pure functions that transform state into reactive behaviors—they don't own state or render UI, they just describe what happens.
 
 ```typescript
-import { createComponent, withState } from '@lattice/core';
+import { createComponent, vanillaAdapter } from '@lattice/core';
 
-// Define once
-const Counter = createComponent(
-  withState(() => ({ count: 0 })),
-  ({ store, set }) => ({
-    count: store.count,
-    increment: () => set(store.count, store.count() + 1),
-    decrement: () => set(store.count, store.count() - 1),
-    reset: () => set(store.count, 0),
-  })
-);
+// Create an adapter (or use existing state management)
+const adapter = vanillaAdapter({ count: 0 });
 
-// Use anywhere
-import { useComponent } from '@lattice/react';
-const counter = useComponent(Counter);
+// Create the component context
+const store = createComponent(adapter);
+
+// Define your component logic
+const Counter = ({ store, set }) => ({
+  count: store.count,
+  increment: () => set(store.count, store.count() + 1),
+  decrement: () => set(store.count, store.count() - 1),
+  reset: () => set(store.count, 0),
+});
+
+// Use in any framework
+const counter = Counter(store);
 ```
 
 ## What Makes Lattice Different?
@@ -52,56 +54,68 @@ npm install @lattice/svelte   # Svelte 5
 ### 1. Create a Component
 
 ```typescript
-import { createComponent, withState } from '@lattice/core';
+import { createComponent, vanillaAdapter } from '@lattice/core';
 
-const TodoList = createComponent(
-  withState(() => ({
-    todos: [],
-    filter: 'all', // 'all' | 'active' | 'completed'
-  })),
-  ({ store, computed, set }) => {
-    const filtered = computed(() => {
-      const todos = store.todos();
-      const filter = store.filter();
+// Define your state shape
+interface TodoState {
+  todos: Array<{ id: number; text: string; done: boolean }>;
+  filter: 'all' | 'active' | 'completed';
+}
 
-      switch (filter) {
-        case 'active':
-          return todos.filter((t) => !t.done);
-        case 'completed':
-          return todos.filter((t) => t.done);
-        default:
-          return todos;
+// Create an adapter with initial state
+const adapter = vanillaAdapter<TodoState>({
+  todos: [],
+  filter: 'all',
+});
+
+// Create the component context
+const todoStore = createComponent(adapter);
+
+// Define your component logic
+const TodoList = ({ store, computed, set }) => {
+  const filtered = computed(() => {
+    const todos = store.todos();
+    const filter = store.filter();
+
+    switch (filter) {
+      case 'active':
+        return todos.filter((t) => !t.done);
+      case 'completed':
+        return todos.filter((t) => t.done);
+      default:
+        return todos;
+    }
+  });
+
+  return {
+    todos: filtered,
+    filter: store.filter,
+
+    addTodo: (text: string) => {
+      set(store.todos, [
+        ...store.todos(),
+        {
+          id: Date.now(),
+          text,
+          done: false,
+        },
+      ]);
+    },
+
+    toggleTodo: (id: number) => {
+      // Smart update: find and update specific todo
+      const todoSignal = store.todos((t) => t.id === id);
+      const todo = todoSignal();
+      if (todo) {
+        set(todoSignal, { done: !todo.done });
       }
-    });
+    },
 
-    return {
-      todos: filtered,
-      filter: store.filter,
-
-      addTodo: (text: string) => {
-        set(store.todos, [
-          ...store.todos(),
-          {
-            id: Date.now(),
-            text,
-            done: false,
-          },
-        ]);
-      },
-
-      toggleTodo: (id: number) => {
-        const todo = store.todos((t) => t.id === id);
-        if (todo()) {
-          set(todo, { ...todo(), done: !todo().done });
-        }
-      },
-
-      setFilter: (filter: 'all' | 'active' | 'completed') => {
-        set(store.filter, filter);
-      },
-    };
-  }
-);
+    setFilter: (filter: 'all' | 'active' | 'completed') => {
+      set(store.filter, filter);
+    },
+  };
+};
 ```
 
 ### 2. Use in Your Framework
@@ -112,7 +126,8 @@ const TodoList = createComponent(
 import { useComponent } from '@lattice/react';
 
 function App() {
-  const todos = useComponent(TodoList);
+  // Pass the todoStore created above
+  const todos = useComponent(todoStore, TodoList);
 
   return (
     <div>
@@ -145,9 +160,9 @@ function App() {
 ```vue
 <script setup>
 import { useComponent } from '@lattice/vue';
-import { TodoList } from './components';
+import { todoStore, TodoList } from './todos';
 
-const todos = useComponent(TodoList);
+const todos = useComponent(todoStore, TodoList);
 </script>
 
 <template>
@@ -182,9 +197,9 @@ const todos = useComponent(TodoList);
 ```svelte
 <script>
 import { component } from '@lattice/svelte';
-import { TodoList } from './components';
+import { todoStore, TodoList } from './todos';
 
-const todos = component(TodoList);
+const todos = component(todoStore, TodoList);
 </script>
 
 <input on:keydown={(e) => {
@@ -220,11 +235,20 @@ const count = store.count();
 set(store.count, 5);
 set(store.count, (n) => n + 1);
 
-// Create derived signals with predicates
-const activeUser = store.users((u) => u.active);
-set(activeUser, { lastSeen: Date.now() }); // Partial update
+// Smart updates: create derived signals with predicates
+const activeUser = store.users((u) => u.id === userId);
+const todo = store.todos((t) => t.id === todoId);
+
+// Partial updates (only specified properties change)
+set(activeUser, { lastSeen: Date.now() });
+set(todo, { done: true });
+
 // Or use update function
 set(activeUser, (user) => ({ ...user, lastSeen: Date.now() }));
+
+// Use the partial helper for single property updates
+import { partial } from '@lattice/core';
+set(store.user, partial('name', 'Jane'));
 ```
 
 ### Computed Values
@@ -244,32 +268,85 @@ const stats = computed(() => ({
 Build complex components from simple ones:
 
 ```typescript
-const Toggle = createComponent(
-  withState(() => ({ isOpen: false })),
-  ({ store, set }) => ({
-    isOpen: store.isOpen,
-    toggle: () => set(store.isOpen, !store.isOpen()),
-  })
+// Simple toggle component
+const Toggle = ({ store, set }) => ({
+  isOpen: store.isOpen,
+  toggle: () => set(store.isOpen, !store.isOpen()),
+  open: () => set(store.isOpen, true),
+  close: () => set(store.isOpen, false),
+});
+
+// Dropdown composes Toggle
+const Dropdown = (context) => {
+  // Reuse Toggle logic with the same context
+  const toggle = Toggle(context);
+  
+  return {
+    ...toggle,
+    items: context.store.items,
+    selected: context.store.selected,
+    select: (item) => {
+      context.set(context.store.selected, item);
+      toggle.close();
+    },
+  };
+};
+
+// Create stores for components
+const toggleStore = createComponent(vanillaAdapter({ isOpen: false }));
+const dropdownStore = createComponent(vanillaAdapter({
+  isOpen: false,
+  selected: null,
+  items: ['Option 1', 'Option 2', 'Option 3'],
+}));
+```
+
+## Adapters
+
+Lattice works with any state management solution through adapters:
+
+```typescript
+// Built-in vanilla adapter for simple in-memory state
+import { vanillaAdapter } from '@lattice/core';
+
+const store = createComponent(vanillaAdapter({ count: 0 }));
+
+// Or integrate with existing state management
+// Example: Redux adapter
+const reduxAdapter = {
+  getState: () => store.getState(),
+  setState: (updates) => store.dispatch(updateAction(updates)),
+  subscribe: (listener) => store.subscribe(listener),
+};
+
+// Example: Zustand adapter
+const zustandAdapter = {
+  getState: () => useStore.getState(),
+  setState: (updates) => useStore.setState(updates),
+  subscribe: (listener) => useStore.subscribe(listener),
+};
+```
+
+## Middleware
+
+Enhance components with cross-cutting concerns:
+
+```typescript
+import { withLogger, withDevtools, withPersistence } from '@lattice/core';
+
+// Logger middleware
+const store = createComponent(
+  vanillaAdapter({ count: 0 }),
+  withLogger({ count: 0 }).enhancer
 );
 
-const Dropdown = createComponent(
-  withState(() => ({
-    isOpen: false,
-    selected: null,
-    items: [],
-  })),
+// Chain multiple middleware
+const enhancedStore = createComponent(
+  vanillaAdapter({ todos: [] }),
   (context) => {
-    const toggle = Toggle.create(context);
-
-    return {
-      ...toggle,
-      items: context.store.items,
-      selected: context.store.selected,
-      select: (item) => {
-        set(context.store.selected, item);
-        toggle.close();
-      },
-    };
+    context = withLogger({ todos: [] }).enhancer(context);
+    context = withDevtools('TodoApp').enhancer(context);
+    return context;
   }
 );
 ```

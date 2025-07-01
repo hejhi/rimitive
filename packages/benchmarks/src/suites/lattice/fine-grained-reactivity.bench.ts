@@ -13,7 +13,8 @@
  */
 
 import { describe, bench } from 'vitest';
-import { createComponent, withState, createStore } from '@lattice/core';
+import { createComponent, vanillaAdapter } from '@lattice/core';
+import type { ComponentContext } from '@lattice/core';
 import { observable, action, computed as mobxComputed } from 'mobx';
 import {
   initMemoryTracking,
@@ -46,41 +47,37 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
       // Type for our flat counter state
       type CounterState = { [K in (typeof counterIds)[number]]: number };
 
-      // Define a Counter slice factory that creates counter behavior for a specific ID
-      const createCounterSlice = (id: string) => 
-        createComponent(
-          withState<CounterState>(),
-          ({ store, computed, set }) => ({
-            value: computed(() => store[id]?.() || 0),
-            increment: () => set({ [id]: (store[id]?.() || 0) + 1 }),
-          })
-        );
+      // Create adapter with initial state
+      const adapter = vanillaAdapter(initialCounters as CounterState);
+      const store = createComponent(adapter);
 
-      // Define the main Counters component that composes counter slices
-      const CountersComponent = createComponent(
-        withState<CounterState>(),
-        (context) => {
-          // Create a counter slice for each ID
-          const counterSlices = counterIds.map(id => createCounterSlice(id)(context));
+      // Define the main Counters component with direct signal access
+      const CountersComponent = ({
+        store,
+        set,
+      }: ComponentContext<CounterState>) => {
+        return {
+          // Direct access to signals without pre-creating computeds
+          getCounter: (index: number) => {
+            const id = counterIds[index];
+            const signal = store[id as keyof CounterState];
+            return signal ? signal() : 0;
+          },
+          incrementCounter: (index: number) => {
+            const id = counterIds[index];
+            const signal = store[id as keyof CounterState];
+            if (signal) {
+              set(signal, (state) => state + 1);
+            }
+          },
+        };
+      };
 
-          return {
-            slices: counterSlices,
-            incrementCounter: (index: number) => {
-              const slice = counterSlices[index];
-              if (slice) slice.increment();
-            },
-          };
-        }
-      );
-
-      const store = createStore(
-        CountersComponent,
-        initialCounters as CounterState
-      );
+      const counters = CountersComponent(store);
 
       return {
-        slices: store.slices,
-        incrementCounter: store.incrementCounter,
+        getCounter: counters.getCounter,
+        incrementCounter: counters.incrementCounter,
       };
     };
 
@@ -94,6 +91,13 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
         for (let i = 0; i < UPDATE_ITERATIONS; i++) {
           const counterIndex = i % COUNTER_COUNT;
           latticeSetup.incrementCounter(counterIndex);
+
+          // Match MobX pattern: access the updated counter value
+          latticeSetup.getCounter(counterIndex);
+
+          // Access adjacent counter to simulate realistic component behavior
+          const adjacentIndex = (counterIndex + 1) % COUNTER_COUNT;
+          latticeSetup.getCounter(adjacentIndex);
         }
       },
       {
@@ -201,22 +205,28 @@ describe('Large State Memory Usage Comparison', () => {
         [K in (typeof largeCounterIds)[number]]: number;
       };
 
-      const LargeCountersComponent = createComponent(
-        withState<LargeCounterState>(),
-        ({ store, set }) => ({
-          increment: (id: string) => {
-            // O(1) update - only updating a single property!
-            set({ [id]: (store[id as keyof LargeCounterState]?.() || 0) + 1 });
-          },
-        })
-      );
+      const adapter = vanillaAdapter(largeInitialCounters as LargeCounterState);
+      const store = createComponent(adapter);
 
-      const store = createStore(
-        LargeCountersComponent,
-        largeInitialCounters as LargeCounterState
-      );
+      const LargeCountersComponent = ({
+        store,
+        set,
+      }: ComponentContext<LargeCounterState>) => ({
+        increment: (id: string) => {
+          // O(1) update - only updating a single property!
+          const signal = store[id as keyof LargeCounterState];
+          if (signal) {
+            const current = signal() || 0;
+            set(signal, current + 1);
+          }
+        },
+        getCounter: (id: string) => {
+          const signal = store[id as keyof LargeCounterState];
+          return signal ? signal() : 0;
+        },
+      });
 
-      return store;
+      return LargeCountersComponent(store);
     };
 
     let largeSetup: ReturnType<typeof setupLargeLattice>;
@@ -230,6 +240,9 @@ describe('Large State Memory Usage Comparison', () => {
           const randomId =
             largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
           largeSetup.increment(randomId);
+
+          // Match MobX pattern: access the value after update
+          largeSetup.getCounter(randomId);
         }
       },
       {
