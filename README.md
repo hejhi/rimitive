@@ -15,14 +15,14 @@ import { createComponent } from '@lattice/core';
 const Dialog = ({ store, computed, set }) => ({
   // Reactive state
   isOpen: store.isOpen,
-  
+
   // ARIA-compliant props for your trigger button
   triggerProps: computed(() => ({
     'aria-haspopup': 'dialog',
     'aria-expanded': store.isOpen(),
     onClick: () => set(store.isOpen, true),
   })),
-  
+
   // Accessible dialog container props
   dialogProps: computed(() => ({
     role: 'dialog',
@@ -30,14 +30,14 @@ const Dialog = ({ store, computed, set }) => ({
     'aria-labelledby': store.titleId(),
     'aria-describedby': store.descriptionId(),
   })),
-  
+
   // Actions
   open: () => set(store.isOpen, true),
   close: () => set(store.isOpen, false),
 });
 
 // Create a store and use in React
-const dialogStore = createComponent({ 
+const dialogStore = createComponent({
   isOpen: false,
   titleId: 'dialog-title',
   descriptionId: 'dialog-desc'
@@ -46,7 +46,7 @@ const dialogStore = createComponent({
 // React usage
 function MyModal() {
   const dialog = useComponent(dialogStore, Dialog);
-  
+
   return (
     <>
       <button {...dialog.triggerProps()}>Open Modal</button>
@@ -81,13 +81,16 @@ const Dialog = ({ store, computed, set }) => ({
 const Popover = (context) => {
   const dialog = Dialog(context);
   const { computed } = context;
-  
+
   return {
     ...dialog,
     placement: context.store.placement,
     popoverProps: computed(() => ({
       ...dialog.dialogProps(),
-      style: calculatePosition(context.store.anchor(), context.store.placement()),
+      style: calculatePosition(
+        context.store.anchor(),
+        context.store.placement()
+      ),
     })),
   };
 };
@@ -96,7 +99,7 @@ const Popover = (context) => {
 const Select = (context) => {
   const popover = Popover(context);
   const { computed, set, store } = context;
-  
+
   return {
     ...popover,
     selected: store.selected,
@@ -127,11 +130,12 @@ const selectStore = createComponent({
 const select = useComponent(selectStore, Select);
 ```
 
-Build once. Compose freely. Use anywhere. Full accessibility included.
+Build once. Compose freely. Use anywhere.
 
 ## Performance
 
-Lattice is built for speed. Our benchmarks show:
+Lattice is built for speed, with a _tiny_ footprint (<1kb, gzipped). Our benchmarks show:
+
 - **11.27x faster** than MobX for fine-grained updates
 - **5.25x faster** than MobX for large state trees (1000+ properties)
 - **116,748 ops/sec** for partial state updates
@@ -379,7 +383,7 @@ Run side effects that automatically track dependencies:
 // Effects re-run when dependencies change
 const cleanup = effect(() => {
   console.log('Count is now:', store.count());
-  
+
   // Optional: return cleanup function
   return () => console.log('Cleaning up');
 });
@@ -405,7 +409,7 @@ const Toggle = ({ store, set }) => ({
 const Dropdown = (context) => {
   // Reuse Toggle logic with the same context
   const toggle = Toggle(context);
-  
+
   return {
     ...toggle,
     items: context.store.items,
@@ -445,23 +449,17 @@ import { withLogger, withDevtools, withPersistence } from '@lattice/core';
 
 // Logger middleware
 const loggerConfig = withLogger({ count: 0 });
-const store = createComponent(
-  loggerConfig.state,
-  loggerConfig.enhancer
-);
+const store = createComponent(loggerConfig.state, loggerConfig.enhancer);
 
 // Chain multiple middleware
 const config1 = withLogger({ todos: [] });
 const config2 = withDevtools('TodoApp');
 
-const enhancedStore = createComponent(
-  config1.state,
-  (context) => {
-    context = config1.enhancer(context);
-    context = config2.enhancer(context);
-    return context;
-  }
-);
+const enhancedStore = createComponent(config1.state, (context) => {
+  context = config1.enhancer(context);
+  context = config2.enhancer(context);
+  return context;
+});
 ```
 
 ## Why Lattice?
@@ -469,11 +467,9 @@ const enhancedStore = createComponent(
 - **True Headless Components**: Build accessible UI behavior once, use it in any framework
 - **Behavioral Composition**: Compose complex components from simple, reusable behaviors
 - **Framework Agnostic**: Same component logic works in React, Vue, Svelte, HTMX, or vanilla JS
-- **Accessibility First**: Build ARIA-compliant components with proper keyboard and screen reader support
 - **Blazing Fast**: Up to 11x faster than other state management solutions
 - **TypeScript Native**: Full type inference from state through to component usage
-- **Tiny**: ~3KB core that does one thing really well
-- **Design System Ready**: Perfect for building accessible, headless design systems
+- **Tiny**: <1kb core that does one thing really well
 
 ## Examples
 
