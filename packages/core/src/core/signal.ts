@@ -37,6 +37,25 @@ export function createSignalFactory(
     Map<Function, Map<unknown, WeakRef<SignalSelector<any, any>>>>
   >();
 
+  // Registry to track cleanup functions for automatic garbage collection
+  // This prevents memory leaks by ensuring dead WeakRefs are cleaned up
+  // even if the key is never requested again
+  const cleanupRegistry = new FinalizationRegistry<{
+    signalCache: Map<Function, Map<unknown, WeakRef<SignalSelector<any, any>>>>;
+    keyFn: Function;
+    key: unknown;
+  }>((heldValue) => {
+    // When a selector is garbage collected, clean up its WeakRef entry
+    const keyCache = heldValue.signalCache.get(heldValue.keyFn);
+    if (keyCache) {
+      keyCache.delete(heldValue.key);
+      // If the keyCache is now empty, remove it
+      if (keyCache.size === 0) {
+        heldValue.signalCache.delete(heldValue.keyFn);
+      }
+    }
+  });
+
   /**
    * Creates a read-only signal within this context
    */
@@ -90,8 +109,11 @@ export function createSignalFactory(
           const existingSignal = ref?.deref();
 
           // WeakRef is dead, remove it
-          if (ref && !existingSignal) keyCache?.delete(key);
-          if (existingSignal) return existingSignal;
+          if (ref && !existingSignal) {
+            keyCache?.delete(key);
+          } else if (existingSignal) {
+            return existingSignal;
+          }
 
           // Create new signal selector
           const selector = createSelector(
@@ -100,7 +122,18 @@ export function createSignalFactory(
             tracking,
             batching
           );
-          keyCache?.set(key, new WeakRef(selector));
+          
+          // Create WeakRef and register for cleanup
+          const weakRef = new WeakRef(selector);
+          keyCache?.set(key, weakRef);
+          
+          // Register the selector with FinalizationRegistry for automatic cleanup
+          cleanupRegistry.register(selector, {
+            signalCache: signalCache,
+            keyFn: keyFn,
+            key: key
+          });
+          
           return selector;
         };
       }
