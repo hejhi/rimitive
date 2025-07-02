@@ -50,18 +50,6 @@ const counter = computed(() => store.counter);
 export { store, increment, counter };
     `,
   },
-  svelte: {
-    name: 'Svelte Stores',
-    code: `
-import { writable, derived } from 'svelte/store';
-
-const counter = writable(0);
-const increment = () => counter.update(n => n + 1);
-const doubled = derived(counter, c => c * 2);
-
-export { counter, increment, doubled };
-    `,
-  },
 };
 
 /**

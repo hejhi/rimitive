@@ -59,23 +59,6 @@ You've built an amazing dropdown component for your React app. Now your Vue team
     </template>
     ```
   </TabItem>
-  <TabItem label="Svelte">
-    ```svelte
-    <script>
-    import { sliceValues } from '@lattice/runtime/svelte';
-    import { createDropdown } from './behaviors/dropdown';
-
-    const { isOpen, toggle } = sliceValues(createDropdown);
-    </script>
-
-    <div>
-      <button on:click={toggle}>Menu</button>
-      {#if $isOpen}
-        <div>Content</div>
-      {/if}
-    </div>
-    ```
-  </TabItem>
 </Tabs>
 
 The **same behavior code** powers all three components. Write once, test once, maintain once.

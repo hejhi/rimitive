@@ -23,7 +23,6 @@ const projectRoot = path.resolve(__dirname, '..');
 const BENCHMARK_SUITES = {
   lattice: [
     'fine-grained-reactivity',
-    'svelte-vs-lattice',
     'todo-list-composition',
   ],
 };
@@ -57,8 +56,7 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
   
   // Determine file extension based on suite name
   const isReactFile = ['context-vs-store', 'react-integration', 'real-world', 'core-performance', 'store-react-apis'].includes(suiteName) && category === 'store-react';
-  const isSvelteFile = ['svelte-vs-lattice'].includes(suiteName) && category === 'lattice';
-  const extension = isReactFile ? '.tsx' : isSvelteFile ? '.svelte.ts' : '.ts';
+  const extension = isReactFile ? '.tsx' : '.ts';
   
   const args = [
     'exec',

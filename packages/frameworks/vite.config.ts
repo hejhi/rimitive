@@ -7,12 +7,8 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       outDir: 'dist',
-      include: ['src/**/*.ts', 'src/**/*.svelte.ts'],
-      exclude: [
-        'src/**/*.test.ts',
-        'src/**/*.test.d.ts',
-        'src/**/*.test.svelte.ts',
-      ],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: ['src/**/*.test.ts', 'src/**/*.test.d.ts'],
     }),
   ],
   build: {
@@ -21,12 +17,12 @@ export default defineConfig({
         index: resolve(__dirname, 'src/index.ts'),
         react: resolve(__dirname, 'src/react.ts'),
         vue: resolve(__dirname, 'src/vue.ts'),
-        svelte: resolve(__dirname, 'src/svelte.ts'),
+        solid: resolve(__dirname, 'src/solid.ts'),
       },
       formats: ['es'],
     },
     rollupOptions: {
-      external: ['@lattice/core', 'react', 'vue', 'svelte', 'svelte/store'],
+      external: ['@lattice/core', 'react', 'vue', 'solid-js'],
       output: {
         preserveModules: false,
         entryFileNames: '[name].js',

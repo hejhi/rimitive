@@ -1,15 +1,14 @@
 import { defineConfig } from 'vitest/config';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 export default defineConfig({
-  plugins: [svelte()],
+  plugins: [],
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/**/*.bench.{ts,tsx,svelte.ts}'],
+    include: ['src/**/*.bench.{ts,tsx}'],
     benchmark: {
       // Include benchmark files
-      include: ['src/**/*.bench.{ts,tsx,svelte.ts}'],
+      include: ['src/**/*.bench.{ts,tsx}'],
       // Enhanced reporting for performance analysis with memory tracking
       reporters: ['verbose'],
     },

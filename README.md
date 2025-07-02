@@ -149,7 +149,6 @@ npm install @lattice/core
 # Pick your framework
 npm install @lattice/react    # React 16.8+
 npm install @lattice/vue      # Vue 3
-npm install @lattice/svelte   # Svelte 5
 ```
 
 ## Use Cases
@@ -299,35 +298,6 @@ const todos = useComponent(todoStore, TodoList);
     <button @click="todos.setFilter('completed')">Completed</button>
   </div>
 </template>
-```
-
-#### Svelte 5
-
-```svelte
-<script>
-import { component } from '@lattice/svelte';
-import { todoStore, TodoList } from './todos';
-
-const todos = component(todoStore, TodoList);
-</script>
-
-<input on:keydown={(e) => {
-  if (e.key === 'Enter') {
-    todos.addTodo(e.target.value);
-    e.target.value = '';
-  }
-}} />
-
-{#each todos.todos() as todo}
-  <div on:click={() => todos.toggleTodo(todo.id)}>
-    <input type="checkbox" checked={todo.done} />
-    {todo.text}
-  </div>
-{/each}
-
-<button on:click={() => todos.setFilter('all')}>All</button>
-<button on:click={() => todos.setFilter('active')}>Active</button>
-<button on:click={() => todos.setFilter('completed')}>Completed</button>
 ```
 
 ## Core Concepts

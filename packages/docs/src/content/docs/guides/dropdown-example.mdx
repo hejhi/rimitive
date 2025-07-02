@@ -177,45 +177,6 @@ Now let's use this dropdown in different frameworks:
     </template>
     ```
   </TabItem>
-  
-  <TabItem label="Svelte">
-    ```svelte
-    <script>
-    import { sliceValues, createStore } from '@lattice/runtime/svelte';
-    import { createDropdown } from './dropdown';
-    
-    export let items;
-    export let onSelect;
-    
-    const store = createStore(createDropdown, { items });
-    const { isOpen, toggle, highlightedIndex, handleKeyDown } = sliceValues(store);
-    </script>
-
-    <div class="dropdown" on:keydown={handleKeyDown}>
-      <button on:click={toggle} aria-expanded={$isOpen}>
-        Select an option
-      </button>
-      
-      {#if $isOpen}
-        <ul role="listbox">
-          {#each items as item, index}
-            <li
-              role="option"
-              aria-selected={index === $highlightedIndex}
-              class:highlighted={index === $highlightedIndex}
-              on:click={() => {
-                onSelect(item);
-                store.actions.close();
-              }}
-            >
-              {item}
-            </li>
-          {/each}
-        </ul>
-      {/if}
-    </div>
-    ```
-  </TabItem>
 </Tabs>
 
 ## Testing Once, Working Everywhere
