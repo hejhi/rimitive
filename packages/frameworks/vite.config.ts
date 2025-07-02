@@ -1,9 +1,11 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
+import solidPlugin from 'vite-plugin-solid';
 
 export default defineConfig({
   plugins: [
+    solidPlugin(),
     dts({
       insertTypesEntry: true,
       outDir: 'dist',
@@ -29,6 +31,10 @@ export default defineConfig({
       },
     },
     sourcemap: true,
-    target: 'es2022', // Support for top-level await
+    target: 'esnext',
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
   },
 });

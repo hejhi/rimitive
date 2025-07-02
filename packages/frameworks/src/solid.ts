@@ -1,31 +1,197 @@
 /**
- * @fileoverview Solid.js bindings for Lattice behavioral components
+ * @fileoverview Solid-native Lattice implementation
  *
- * Provides idiomatic Solid integration for Lattice's signal-based component system.
- * Leverages Solid's fine-grained reactivity to create seamless integration.
+ * Provides Lattice's component patterns using Solid's native reactivity primitives.
+ * This eliminates the double-reactivity overhead and provides seamless Solid integration.
  */
 
 import {
   createSignal,
   createMemo,
   createEffect,
-  onCleanup,
+  batch,
+  createRoot,
   type Accessor,
   type Setter,
 } from 'solid-js';
-import {
-  createComponent,
-  type Signal,
-  type Computed,
-  type ComponentContext,
+import type {
+  ComponentContext,
+  ComponentFactory,
+  SetState,
+  Signal,
+  SignalState,
+  Computed,
 } from '@lattice/core';
+
+// Internal type to track setter
+interface SignalWithSetter<T> extends Signal<T> {
+  _setter: Setter<T>;
+}
+
+/**
+ * Wraps a Solid signal to match Lattice's Signal interface
+ */
+function wrapSolidSignal<T>(accessor: Accessor<T>, setter: Setter<T>): Signal<T> {
+  const signal = Object.assign(accessor, {
+    subscribe: (listener: () => void) => {
+      let dispose: (() => void) | undefined;
+      
+      createRoot((rootDispose) => {
+        let isFirst = true;
+        createEffect(() => {
+          accessor(); // Track the signal
+          if (!isFirst) {
+            listener();
+          }
+          isFirst = false;
+        });
+        dispose = rootDispose;
+      });
+      
+      return dispose || (() => {});
+    },
+    _setter: setter,
+  }) as SignalWithSetter<T>;
+  
+  return signal;
+}
+
+/**
+ * Wraps a Solid memo to match Lattice's Computed interface
+ */
+function wrapSolidMemo<T>(accessor: Accessor<T>): Computed<T> {
+  return Object.assign(accessor, {
+    subscribe: (listener: () => void) => {
+      let dispose: (() => void) | undefined;
+      
+      createRoot((rootDispose) => {
+        let isFirst = true;
+        createEffect(() => {
+          accessor(); // Track the memo
+          if (!isFirst) {
+            listener();
+          }
+          isFirst = false;
+        });
+        dispose = rootDispose;
+      });
+      
+      return dispose || (() => {});
+    },
+  }) as Computed<T>;
+}
+
+/**
+ * Creates a Solid-native component context that matches Lattice's interface
+ */
+function createSolidContext<State extends object>(
+  initialState: State
+): ComponentContext<State> {
+  // Create signals for state
+  const stateSignals = {} as SignalState<State>;
+  const setters = {} as Record<keyof State, Setter<State[keyof State]>>;
+  
+  // Initialize signals for all state keys
+  (Object.keys(initialState) as (keyof State)[]).forEach((key) => {
+    const [accessor, setter] = createSignal(initialState[key]);
+    stateSignals[key] = wrapSolidSignal(accessor, setter);
+    setters[key] = setter;
+  });
+  
+  // Create set function that matches Lattice's API
+  const set: SetState = ((
+    target: Signal<unknown> | SignalState<State>,
+    updates?: unknown
+  ) => {
+    // Batch update on the store
+    if (target === stateSignals) {
+      batch(() => {
+        // Get current state
+        const currentState = {} as State;
+        (Object.keys(stateSignals) as (keyof State)[]).forEach((key) => {
+          currentState[key] = stateSignals[key]();
+        });
+        
+        // Calculate new state
+        const newState =
+          typeof updates === 'function'
+            ? (updates as (prev: State) => Partial<State>)(currentState)
+            : updates as Partial<State>;
+        
+        // Update each changed signal
+        (Object.entries(newState) as [keyof State, State[keyof State]][]).forEach(
+          ([key, value]) => {
+            if (key in setters && !Object.is(stateSignals[key](), value)) {
+              setters[key](() => value);
+            }
+          }
+        );
+      });
+      return;
+    }
+    
+    // Single signal update
+    const signal = target as SignalWithSetter<unknown>;
+    const setter = signal._setter;
+    
+    if (!setter) {
+      throw new Error('Cannot set a computed or read-only signal');
+    }
+    
+    if (typeof updates === 'function') {
+      setter((prev) => {
+        if (prev === undefined) return prev;
+        return (updates as (prev: unknown) => unknown)(prev);
+      });
+    } else if (typeof updates === 'object' && updates !== null && !Array.isArray(updates)) {
+      // Partial update for objects
+      setter((prev) => {
+        if (prev === undefined || typeof prev !== 'object' || prev === null) return prev;
+        return { ...prev, ...updates };
+      });
+    } else {
+      // Direct value set
+      setter(() => updates);
+    }
+  }) as SetState;
+  
+  // Create context with Solid primitives
+  const context: ComponentContext<State> = {
+    store: stateSignals,
+    signal: <T>(initialValue: T) => {
+      const [accessor, setter] = createSignal(initialValue);
+      return wrapSolidSignal(accessor, setter);
+    },
+    computed: <T>(computeFn: () => T) => {
+      const memo = createMemo(computeFn);
+      return wrapSolidMemo(memo);
+    },
+    effect: (effectFn: () => void | (() => void)) => {
+      let cleanup: void | (() => void);
+      let dispose: (() => void) | undefined;
+      
+      createRoot((rootDispose) => {
+        createEffect(() => {
+          if (cleanup) cleanup();
+          cleanup = effectFn();
+        });
+        dispose = rootDispose;
+      });
+      
+      return () => {
+        if (cleanup) cleanup();
+        if (dispose) dispose();
+      };
+    },
+    set,
+  };
+  
+  return context;
+}
 
 /**
  * Solid hook for creating component-scoped Lattice behavioral components.
- *
- * This hook creates a new component instance with its own state that is scoped
- * to the Solid component's lifecycle. Perfect for UI components that need
- * isolated state management.
+ * Uses Solid's reactivity primitives natively.
  *
  * @param initialState - The initial state for the component
  * @param factory - A component factory function that defines behavior
@@ -34,7 +200,6 @@ import {
  * @example
  * ```tsx
  * import { useComponent } from '@lattice/frameworks/solid';
- * import { createSignal } from 'solid-js';
  *
  * // Define component behavior
  * const Dialog = ({ store, computed, set }) => ({
@@ -51,7 +216,7 @@ import {
  *   close: () => set(store.isOpen, false),
  * });
  *
- * // Use in Solid component with component-scoped state
+ * // Use in Solid component
  * function MyDialog() {
  *   const dialog = useComponent(
  *     { isOpen: false, title: 'Welcome' },
@@ -74,124 +239,15 @@ import {
  */
 export function useComponent<State extends Record<string, unknown>, Component>(
   initialState: State,
-  factory: (context: ComponentContext<State>) => Component
+  factory: ComponentFactory<State>
 ): Component {
-  const context = createComponent(initialState);
-  return factory(context);
+  const context = createSolidContext(initialState);
+  return factory(context) as Component;
 }
 
 /**
- * Creates a Solid signal that syncs with a Lattice signal.
- * Returns a tuple of [accessor, setter] matching Solid's createSignal pattern.
- *
- * @param signal - A Lattice signal
- * @param setter - Optional setter function for two-way binding
- * @returns A Solid signal tuple [accessor, setter]
- *
- * @example
- * ```tsx
- * import { createSyncedSignal } from '@lattice/frameworks/solid';
- *
- * function Counter() {
- *   const counter = useComponent({ count: 0 }, CounterFactory);
- *   const [count, setCount] = createSyncedSignal(
- *     counter.count,
- *     counter.setCount
- *   );
- *
- *   // Can use either Solid or Lattice APIs
- *   return (
- *     <div>
- *       <span>{count()}</span>
- *       <button onClick={() => setCount(c => c + 1)}>+</button>
- *       <button onClick={counter.increment}>+</button>
- *     </div>
- *   );
- * }
- * ```
- */
-export function createSyncedSignal<T>(
-  signal: Signal<T> | Computed<T>,
-  setter?: (value: T | ((prev: T) => T)) => void
-): [Accessor<T>, Setter<T>] {
-  // Create a Solid signal initialized with Lattice signal value
-  const [value, setValue] = createSignal<T>(signal());
-  
-  // Sync Lattice changes to Solid
-  const unsubscribe = signal.subscribe(() => {
-    setValue(() => signal());
-  });
-  
-  onCleanup(() => unsubscribe());
-  
-  // Create setter that updates both if provided
-  const syncedSetter: Setter<T> = setter
-    ? ((v: T | ((prev: T) => T)) => {
-        const newValue = typeof v === 'function' 
-          ? (v as (prev: T) => T)(signal())
-          : v;
-        setter(newValue);
-        setValue(() => newValue);
-      }) as Setter<T>
-    : setValue;
-  
-  return [value, syncedSetter];
-}
-
-/**
- * Creates a derived value using Solid's reactivity with Lattice signals.
- * Unlike React's useComputed, this leverages Solid's createMemo directly.
- *
- * @param compute - A function that computes a value from signals
- * @returns A Solid accessor for the computed value
- *
- * @example
- * ```tsx
- * function Cart({ cartStore }) {
- *   const totalPrice = createComputed(() => {
- *     const items = cartStore.items();
- *     const taxRate = cartStore.taxRate();
- *     const subtotal = items.reduce((sum, item) => sum + item.price, 0);
- *     return subtotal * (1 + taxRate);
- *   });
- *
- *   return <div>Total: ${totalPrice().toFixed(2)}</div>;
- * }
- * ```
- */
-export function createComputed<T>(compute: () => T): Accessor<T> {
-  return createMemo(compute);
-}
-
-/**
- * Creates an effect that runs when Lattice signals change.
- * Wraps Solid's createEffect for consistency.
- *
- * @param effect - The effect function to run
- *
- * @example
- * ```tsx
- * function AuthGuard() {
- *   const auth = useAuth();
- *   const navigate = useNavigate();
- *
- *   createLatticeEffect(() => {
- *     if (!auth.isAuthenticated()) {
- *       navigate('/login');
- *     }
- *   });
- *
- *   return <Outlet />;
- * }
- * ```
- */
-export function createLatticeEffect(effect: () => void): void {
-  createEffect(effect);
-}
-
-/**
- * Utility for creating a Lattice component outside of a Solid component.
- * Useful for global stores or when you need to create components dynamically.
+ * Creates a Lattice component with Solid primitives.
+ * Useful for global stores or dynamic component creation.
  *
  * @param initialState - The initial state
  * @param factory - The component factory
@@ -207,12 +263,10 @@ export function createLatticeEffect(effect: () => void): void {
  *
  * // Use in any component
  * function NavBar() {
- *   const [user] = createSyncedSignal(auth.user);
- *   
  *   return (
  *     <nav>
- *       {user() ? (
- *         <UserMenu user={user()} onLogout={auth.logout} />
+ *       {auth.user() ? (
+ *         <UserMenu user={auth.user()} onLogout={auth.logout} />
  *       ) : (
  *         <LoginButton onClick={auth.login} />
  *       )}
@@ -223,36 +277,39 @@ export function createLatticeEffect(effect: () => void): void {
  */
 export function createLatticeComponent<State extends Record<string, unknown>, Component>(
   initialState: State,
-  factory: (context: ComponentContext<State>) => Component
+  factory: ComponentFactory<State>
 ): Component {
-  const context = createComponent(initialState);
-  return factory(context);
+  const context = createSolidContext(initialState);
+  return factory(context) as Component;
 }
 
 /**
- * Creates a reactive binding for use with Solid's model directives.
- * Perfect for form inputs and two-way data binding.
+ * Creates a reactive binding for use with form inputs.
+ * Returns props for two-way data binding.
  *
  * @param signal - A Lattice signal
- * @param setter - The setter function
- * @returns An object with getter/setter for Solid's model binding
+ * @param setter - The setter function (can be derived from set)
+ * @returns An object with value and onInput props
  *
  * @example
  * ```tsx
  * function Form() {
  *   const form = useComponent(
  *     { name: '', email: '' },
- *     FormFactory
+ *     ({ store, set }) => ({
+ *       name: store.name,
+ *       email: store.email,
+ *       setName: (v: string) => set(store.name, v),
+ *       setEmail: (v: string) => set(store.email, v),
+ *     })
  *   );
  *
  *   return (
  *     <form>
  *       <input
  *         type="text"
- *         value={form.name()}
- *         onInput={(e) => form.setName(e.currentTarget.value)}
+ *         {...model(form.name, form.setName)}
  *       />
- *       <!-- Or with model binding -->
  *       <input
  *         type="email"
  *         {...model(form.email, form.setEmail)}
@@ -296,42 +353,11 @@ export function model<T>(
 export type LatticeProps<T> = T;
 
 /**
- * Creates a store that can be used with Solid's context API
- *
- * @example
- * ```tsx
- * // Create context
- * const ThemeContext = createContext<ThemeStore>();
- *
- * // Create provider
- * export function ThemeProvider(props) {
- *   const theme = useComponent(
- *     { mode: 'light', primary: '#007bff' },
- *     ThemeFactory
- *   );
- *
- *   return (
- *     <ThemeContext.Provider value={theme}>
- *       {props.children}
- *     </ThemeContext.Provider>
- *   );
- * }
- *
- * // Use in components
- * function ThemedButton() {
- *   const theme = useContext(ThemeContext);
- *   
- *   return (
- *     <button
- *       style={{
- *         background: theme.primary(),
- *         color: theme.mode() === 'dark' ? 'white' : 'black'
- *       }}
- *     >
- *       Click me
- *     </button>
- *   );
- * }
- * ```
+ * Re-export Solid's context API for convenience
  */
 export { createContext, useContext } from 'solid-js';
+
+/**
+ * Re-export common Solid utilities that work well with Lattice
+ */
+export { batch, onCleanup, onMount } from 'solid-js';
