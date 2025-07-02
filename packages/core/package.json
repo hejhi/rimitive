@@ -28,7 +28,8 @@
     "dev": "vite build --watch",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck && pnpm test",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
     "test": "vitest run"
   },
   "devDependencies": {

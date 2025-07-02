@@ -37,7 +37,7 @@
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "check": "pnpm typecheck && pnpm test",
+    "check": "pnpm typecheck && pnpm test && pnpm lint",
     "test": "vitest run"
   },
   "dependencies": {

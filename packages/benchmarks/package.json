@@ -12,7 +12,8 @@
     "bench:lattice": "node --expose-gc scripts/run-chunked-benchmarks.js real lattice",
     "bench:report:real": "node --expose-gc scripts/run-chunked-benchmarks.js real",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm typecheck"
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm lint"
   },
   "devDependencies": {
     "@lattice/core": "workspace:*",
