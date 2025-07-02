@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { act } from 'react';
-import * as React from 'react';
 import { createComponent, type ComponentContext } from '@lattice/core';
 import { useComponent, useSignal, useComputed } from './react';
 
@@ -41,20 +40,22 @@ describe('React hooks', () => {
   describe('useComponent', () => {
     it('should create component-scoped instance', () => {
       const { result } = renderHook(() => useComponent({ count: 0 }, Counter));
+      
+      const counter = result.current as ReturnType<typeof Counter>;
 
       // Initial state
-      expect(result.current.value()).toBe(0);
-      expect(result.current.isEven()).toBe(true);
-      expect(result.current.isPositive()).toBe(false);
+      expect(counter.value()).toBe(0);
+      expect(counter.isEven()).toBe(true);
+      expect(counter.isPositive()).toBe(false);
 
       // Update state
       act(() => {
-        result.current.increment();
+        counter.increment();
       });
 
-      expect(result.current.value()).toBe(1);
-      expect(result.current.isEven()).toBe(false);
-      expect(result.current.isPositive()).toBe(true);
+      expect(counter.value()).toBe(1);
+      expect(counter.isEven()).toBe(false);
+      expect(counter.isPositive()).toBe(true);
     });
 
     it('should create isolated instances per component', () => {
@@ -66,14 +67,17 @@ describe('React hooks', () => {
         useComponent({ count: 0 }, Counter)
       );
 
+      const counter1 = result1.current as ReturnType<typeof Counter>;
+      const counter2 = result2.current as ReturnType<typeof Counter>;
+
       // Modify first instance
       act(() => {
-        result1.current.increment();
+        counter1.increment();
       });
 
       // Instances are isolated
-      expect(result1.current.value()).toBe(1);
-      expect(result2.current.value()).toBe(0);
+      expect(counter1.value()).toBe(1);
+      expect(counter2.value()).toBe(0);
     });
   });
 
@@ -128,22 +132,10 @@ describe('React hooks', () => {
       const context = createComponent({ count: 0 });
       const counter = Counter(context);
 
-      let valueRenderCount = 0;
-      let isEvenRenderCount = 0;
-
       // Use a single renderHook with multiple signals
       const { result } = renderHook(() => {
         const value = useSignal(counter.value);
         const isEven = useSignal(counter.isEven);
-
-        // Track renders separately
-        React.useEffect(() => {
-          valueRenderCount++;
-        }, [value]);
-
-        React.useEffect(() => {
-          isEvenRenderCount++;
-        }, [isEven]);
 
         return { value, isEven };
       });
@@ -173,14 +165,16 @@ describe('React hooks', () => {
         useComponent({ isOpen: false, title: 'Test' }, Dialog)
       );
 
+      const dialog = componentResult.current as ReturnType<typeof Dialog>;
+      
       const { result: isOpenResult } = renderHook(() =>
-        useSignal(componentResult.current.isOpen)
+        useSignal(dialog.isOpen)
       );
 
       expect(isOpenResult.current).toBe(false);
 
       act(() => {
-        componentResult.current.open();
+        dialog.open();
       });
 
       expect(isOpenResult.current).toBe(true);
@@ -314,11 +308,13 @@ describe('React hooks', () => {
         useComponent({ isOpen: false, title: 'Themed Dialog' }, Dialog)
       );
 
+      const dialog = dialogResult.current as ReturnType<typeof Dialog>;
+
       const { result: isDarkResult } = renderHook(() =>
         useSignal(theme.isDark)
       );
       const { result: isOpenResult } = renderHook(() =>
-        useSignal(dialogResult.current.isOpen)
+        useSignal(dialog.isOpen)
       );
 
       expect(isDarkResult.current).toBe(false);
@@ -333,7 +329,7 @@ describe('React hooks', () => {
 
       // Toggle dialog - only affects this component
       act(() => {
-        dialogResult.current.open();
+        dialog.open();
       });
 
       expect(isOpenResult.current).toBe(true);

@@ -7,5 +7,7 @@ describe('Lattice Benchmarks', () => {
     for (let i = 0; i < 1000; i++) {
       sum += i;
     }
+    // Use sum to avoid unused variable warning
+    void sum;
   });
 });

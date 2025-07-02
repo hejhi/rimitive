@@ -10,9 +10,9 @@ interface MemoryMeasurement {
 }
 
 interface BenchmarkMemoryData {
-  setup: MemoryMeasurement | null;
-  teardown: MemoryMeasurement | null;
-  executions: MemoryMeasurement[];
+  setup?: MemoryMeasurement;
+  teardown?: MemoryMeasurement;
+  executions?: MemoryMeasurement[];
 }
 
 // Global memory tracking storage
@@ -21,8 +21,6 @@ const memoryData = new Map<string, BenchmarkMemoryData>();
 export function initMemoryTracking(benchmarkName: string) {
   if (!memoryData.has(benchmarkName)) {
     memoryData.set(benchmarkName, {
-      setup: null,
-      teardown: null,
       executions: []
     });
   }
@@ -61,6 +59,7 @@ export function measureMemory(operation: 'setup' | 'teardown' | 'execution', ben
     } else if (operation === 'teardown') {
       data.teardown = measurement;
     } else {
+      if (!data.executions) data.executions = [];
       data.executions.push(measurement);
     }
   }

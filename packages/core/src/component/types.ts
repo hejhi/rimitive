@@ -18,44 +18,44 @@ export interface Signal<T> {
   subscribe: (listener: () => void) => () => void;
 
   // Create signal selector with predicate (for arrays)
-  <U>(
-    predicate: T extends (infer U)[]
+  <U = T extends (infer Item)[] ? Item : never>(
+    predicate: T extends unknown[]
       ? (item: U, index: number) => boolean
       : never
-  ): T extends (infer U)[] ? SignalSelector<T, U> : never;
+  ): T extends unknown[] ? SignalSelector<T, U> : never;
 
   // Create signal selector with predicate (for objects)
-  <V>(
-    predicate: T extends Record<string, infer V>
+  <V = T extends Record<string, infer Value> ? Value : never>(
+    predicate: T extends Record<string, unknown>
       ? (value: V, key: string) => boolean
       : never
-  ): T extends Record<string, infer V> ? SignalSelector<T, V> : never;
+  ): T extends Record<string, unknown> ? SignalSelector<T, V> : never;
 
   // Create signal selector with predicate (for Maps)
-  <V>(
-    predicate: T extends Map<any, infer V>
-      ? (value: V, key: any) => boolean
+  <V = T extends Map<unknown, infer Value> ? Value : never>(
+    predicate: T extends Map<unknown, unknown>
+      ? (value: V, key: unknown) => boolean
       : never
-  ): T extends Map<any, infer V> ? SignalSelector<T, V> : never;
+  ): T extends Map<unknown, unknown> ? SignalSelector<T, V> : never;
 
   // Create signal selector with predicate (for Sets)
-  <U>(
-    predicate: T extends Set<infer U> ? (value: U) => boolean : never
-  ): T extends Set<infer U> ? SignalSelector<T, U> : never;
+  <U = T extends Set<infer Item> ? Item : never>(
+    predicate: T extends Set<unknown> ? (value: U) => boolean : never
+  ): T extends Set<unknown> ? SignalSelector<T, U> : never;
 
   // Create keyed signal selector (for arrays)
-  <K>(
+  <K, U = T extends (infer Item)[] ? Item : never>(
     keyFn: T extends unknown[] ? (key: K) => K : never,
-    predicate: T extends (infer U)[] ? (item: U, key: K) => boolean : never
-  ): T extends (infer U)[] ? (key: K) => SignalSelector<T, U> : never;
+    predicate: T extends unknown[] ? (item: U, key: K) => boolean : never
+  ): T extends unknown[] ? (key: K) => SignalSelector<T, U> : never;
 
   // Create keyed signal selector (for objects)
-  <K>(
+  <K, V = T extends Record<string, infer Value> ? Value : never>(
     keyFn: T extends Record<string, unknown> ? (key: K) => K : never,
-    predicate: T extends Record<string, infer V>
+    predicate: T extends Record<string, unknown>
       ? (value: V, key: K) => boolean
       : never
-  ): T extends Record<string, infer V>
+  ): T extends Record<string, unknown>
     ? (key: K) => SignalSelector<T, V>
     : never;
 }
@@ -80,8 +80,8 @@ export interface SignalSelector<T, U> extends Computed<U | undefined> {
       ? E
       : T extends Set<infer E>
         ? E
-        : T extends Map<infer K, infer V>
-          ? [K, V]
+        : T extends Map<unknown, infer V>
+          ? [unknown, V]
           : T[keyof T],
     key?: number | string | symbol
   ) => boolean;
@@ -114,39 +114,39 @@ export interface SliceHandle<Computed> {
  */
 export interface SetState {
   // Batch update multiple signals at once
-  <State extends Record<string, any>>(
+  <State>(
     store: SignalState<State>,
     updates: Partial<State> | ((current: State) => Partial<State>)
   ): void;
 
   // Update signal/signal selector with function (for values that might be undefined)
   // Note: updater is only called if current value is not undefined
-  <T>(
-    signal: Signal<T | undefined> | SignalSelector<any, T>,
+  <T, S = unknown>(
+    signal: Signal<T | undefined> | SignalSelector<S, T>,
     updater: (current: T) => T
   ): void;
 
   // Update signal/signal selector with function
-  <T>(
-    signal: Signal<T> | SignalSelector<any, T>,
+  <T, S = unknown>(
+    signal: Signal<T> | SignalSelector<S, T>,
     updater: (current: T) => T
   ): void;
 
   // Partial updates for objects (for values that might be undefined)
   // Note: updates are only applied if current value is not undefined
-  <T extends object>(
-    signal: Signal<T | undefined> | SignalSelector<any, T>,
+  <T extends object, S = unknown>(
+    signal: Signal<T | undefined> | SignalSelector<S, T>,
     updates: Partial<T>
   ): void;
 
   // Partial updates for objects
-  <T extends object>(
-    signal: Signal<T> | SignalSelector<any, T>,
+  <T extends object, S = unknown>(
+    signal: Signal<T> | SignalSelector<S, T>,
     updates: Partial<T>
   ): void;
 
   // Set signal/signal selector value directly
-  <T>(signal: Signal<T> | SignalSelector<any, T>, value: T): void;
+  <T, S = unknown>(signal: Signal<T> | SignalSelector<S, T>, value: T): void;
 }
 
 /**
@@ -180,7 +180,7 @@ export interface ComponentContext<State> extends LatticeContext {
  * Component factory function that receives a merged context
  * Returns slices (signals, computeds, and methods)
  */
-export type ComponentFactory<State> = (context: ComponentContext<State>) => any;
+export type ComponentFactory<State> = (context: ComponentContext<State>) => unknown;
 
 /**
  * Middleware receives the component context and can enhance/modify it

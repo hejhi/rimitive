@@ -24,9 +24,9 @@ import {
  * Helper for creating partial updates with structural sharing
  * Re-exported from runtime for convenience
  */
-export function partial<T extends Record<string, any>>(
+export function partial<T>(
   key: keyof T,
-  value: any
+  value: T[keyof T]
 ): Partial<T> {
   return { [key]: value } as Partial<T>;
 }
@@ -34,7 +34,7 @@ export function partial<T extends Record<string, any>>(
 /**
  * Creates a component context with reactive state
  */
-export function createComponent<State extends Record<string, any>>(
+export function createComponent<State extends object>(
   initialState: State,
   middleware?: ComponentMiddleware<State>
 ): ComponentContext<State> {
@@ -45,21 +45,19 @@ export function createComponent<State extends Record<string, any>>(
   const stateSignals = {} as SignalState<State>;
 
   // Create a WeakMap to store signal -> key mappings for O(1) lookup
-  const signalToKeyMap = new WeakMap<Signal<any>, keyof State>();
+  const signalToKeyMap = new WeakMap<Signal<unknown>, keyof State>();
 
   // Initialize signals for all state keys
-  type StateKey = Extract<keyof State, string>;
-
-  (Object.keys(initialState) as StateKey[]).forEach((key) => {
+  (Object.keys(initialState) as (keyof State)[]).forEach((key) => {
     stateSignals[key] = lattice.signal(initialState[key]);
     // Add to map for O(1) lookup
-    signalToKeyMap.set(stateSignals[key], key);
+    signalToKeyMap.set(stateSignals[key] as Signal<unknown>, key);
   });
 
   // Create set function that writes directly to signals
-  const set: SetState = (
-    target: Signal<any> | SignalState<State>,
-    updates: any
+  const set: SetState = ((
+    target: Signal<unknown> | SignalState<State>,
+    updates?: unknown
   ) => {
     // Check if it's a batch update on the store
     if (target === stateSignals) {
@@ -73,10 +71,12 @@ export function createComponent<State extends Record<string, any>>(
 
         // Calculate new state
         const newState =
-          typeof updates === 'function' ? updates(currentState) : updates;
+          typeof updates === 'function' 
+            ? (updates as (prev: State) => Partial<State>)(currentState) 
+            : updates as Partial<State>;
 
         // Update each changed signal
-        (Object.entries(newState) as [keyof State, any][]).forEach(
+        (Object.entries(newState) as [keyof State, State[keyof State]][]).forEach(
           ([key, value]) => {
             if (key in stateSignals && !Object.is(stateSignals[key](), value)) {
               updateSignalValue(stateSignals[key], value, lattice._batching);
@@ -88,7 +88,7 @@ export function createComponent<State extends Record<string, any>>(
     }
 
     // Single signal update
-    const signal = target as Signal<any>;
+    const signal = target as Signal<unknown>;
 
     // Handle signal selectors specially
     if (isSignalSelector(signal)) {
@@ -99,20 +99,21 @@ export function createComponent<State extends Record<string, any>>(
         stateKey = foundKey;
       }
 
-      const sourceSignal = stateSignals[stateKey as keyof State];
+      const sourceSignal = stateSignals[stateKey];
       const sourceValue = sourceSignal();
       const result = handleSignalSelectorUpdate(signal, sourceValue, updates);
 
       if (result) {
-        updateSignalValue(sourceSignal, result.value, lattice._batching);
+        updateSignalValue(sourceSignal as Signal<unknown>, result.value, lattice._batching);
         return;
       }
     }
 
     // Regular signal update
-    const newValue = applyUpdate(signal(), updates);
+    const currentValue = signal();
+    const newValue = applyUpdate(currentValue, updates);
     updateSignalValue(signal, newValue, lattice._batching);
-  };
+  }) as SetState;
 
   // Create component context with merged functionality
   const context: ComponentContext<State> = {

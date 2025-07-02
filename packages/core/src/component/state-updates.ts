@@ -69,8 +69,8 @@ export function handleSignalSelectorUpdate<T, Item>(
 /**
  * Identifies which state key a signal belongs to
  */
-export function findSignalStateKey<State extends Record<string, any>>(
-  signal: Signal<any> | SignalSelector<any, any>,
+export function findSignalStateKey<State>(
+  signal: Signal<unknown> | SignalSelector<unknown, unknown>,
   stateSignals: SignalState<State>
 ): keyof State | undefined {
   for (const key in stateSignals) {

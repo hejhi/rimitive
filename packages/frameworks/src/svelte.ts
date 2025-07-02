@@ -70,12 +70,12 @@ function isSignal(value: unknown): value is Signal<unknown> | Computed<unknown> 
  * {/if}
  * ```
  */
-export function component<State extends Record<string, any>, Component>(
+export function component<State, Component>(
   context: ComponentContext<State>,
   factory: ComponentFactory<State>
 ): Readable<Component> {
   // Create component instance
-  const componentInstance = factory(context);
+  const componentInstance = factory(context) as Component;
   
   const subscribers = new Set<(value: Component) => void>();
   let unsubscribers: (() => void)[] = [];
@@ -86,7 +86,7 @@ export function component<State extends Record<string, any>, Component>(
     unsubscribers = [];
     
     // Subscribe to all signals in the component
-    const subscribeToValue = (value: any) => {
+    const subscribeToValue = (value: unknown) => {
       if (isSignal(value)) {
         const unsubscribe = value.subscribe(() => {
           // Notify all subscribers when any signal changes
@@ -100,7 +100,7 @@ export function component<State extends Record<string, any>, Component>(
     Object.values(context.store).forEach(subscribeToValue);
     
     // Subscribe to component signals/computeds
-    Object.values(componentInstance as any).forEach(subscribeToValue);
+    Object.values(componentInstance as Record<string, unknown>).forEach(subscribeToValue);
   }
   
   return {
@@ -148,7 +148,7 @@ export function component<State extends Record<string, any>, Component>(
  */
 export function signal<T>(signal: Signal<T> | Computed<T>): Readable<T> {
   return {
-    subscribe(run: (value: T) => void, _invalidate?: () => void) {
+    subscribe(run: (value: T) => void) {
       // Initial value
       run(signal());
       
@@ -187,8 +187,8 @@ export function signal<T>(signal: Signal<T> | Computed<T>): Readable<T> {
  * ```
  */
 export function derived<R>(
-  signals: (Signal<any> | Computed<any>)[],
-  fn: (values: any[]) => R
+  signals: (Signal<unknown> | Computed<unknown>)[],
+  fn: (values: unknown[]) => R
 ): Readable<R> {
   const subscribers = new Set<(value: R) => void>();
   let unsubscribers: (() => void)[] = [];

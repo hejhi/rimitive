@@ -117,7 +117,7 @@ async function analyzeBundleSize(name, code) {
     // Cleanup
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (cleanupError) {
+    } catch {
       // Ignore cleanup errors
     }
   }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createComponent } from '../component/component';
-import type { ComponentFactory } from '../component/types';
+import type { ComponentFactory, Signal } from '../component/types';
 
 describe('Memory Optimization', () => {
   it('should create WeakRef-cached keyed signal selectors', () => {
@@ -31,12 +31,17 @@ describe('Memory Optimization', () => {
         value: i,
       })),
     });
-    const component = DataStore(store);
+    const component = DataStore(store) as {
+      itemById: (
+        id: string
+      ) => Signal<{ id: string; value: number } | undefined>;
+    };
 
     // Create multiple signal selectors
-    const signal1 = component.itemById('item-0');
-    const signal2 = component.itemById('item-5');
-    const signal3 = component.itemById('item-0'); // Should return same as signal1
+    const itemByIdGetter = component.itemById;
+    const signal1 = itemByIdGetter('item-0');
+    const signal2 = itemByIdGetter('item-5');
+    const signal3 = itemByIdGetter('item-0'); // Should return same as signal1
 
     // Verify they work
     expect(signal1()?.value).toBe(0);
@@ -46,7 +51,7 @@ describe('Memory Optimization', () => {
     expect(signal1).toBe(signal3);
   });
 
-  it('should clean up dead WeakRefs periodically', async () => {
+  it('should clean up dead WeakRefs periodically', () => {
     // Mock timers
     vi.useFakeTimers();
 
@@ -67,7 +72,10 @@ describe('Memory Optimization', () => {
     };
 
     const store = createComponent({ data: ['a', 'b', 'c'] });
-    const component = TestStore(store);
+    const component = TestStore(store) as {
+      data: Signal<string[]>;
+      getByValue: (value: string) => Signal<string | undefined>;
+    };
 
     // Create signals but don't hold references
     component.getByValue('a')();
@@ -117,7 +125,12 @@ describe('Memory Optimization', () => {
         name: `User ${i}`,
       })),
     });
-    const component = LargeStore(store);
+    const component = LargeStore(store) as {
+      userById: (
+        id: string
+      ) => Signal<{ id: string; name: string } | undefined>;
+      updateUser: (id: string, name: string) => void;
+    };
 
     // First access - O(n)
     const start1 = performance.now();
@@ -160,7 +173,10 @@ describe('Memory Optimization', () => {
     };
 
     const store = createComponent({ items: [1, 2, 3] });
-    const component = Store(store);
+    const component = Store(store) as {
+      items: Signal<number[]>;
+      getItem: (val: number) => Signal<number | undefined>;
+    };
 
     // Access item multiple times
     const item1a = component.getItem(2);

@@ -65,14 +65,14 @@ import {
  * }
  * ```
  */
-export function useComponent<State extends Record<string, any>>(
+export function useComponent<State extends Record<string, unknown>, Component>(
   initialState: State,
   factory: ComponentFactory<State>
-) {
+): Component {
   // Create component context and instance, memoized for lifecycle
   const component = useMemo(() => {
     const context = createComponent(initialState);
-    return factory(context);
+    return factory(context) as Component;
   }, []); // Empty deps - we want this to be created once per component instance
 
   return component;
@@ -151,7 +151,7 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
  */
 export function useComputed<T>(
   compute: () => T,
-  deps: (Signal<any> | Computed<any>)[]
+  deps: (Signal<unknown> | Computed<unknown>)[]
 ): T {
   // Create a stable subscribe function that doesn't change unless deps change
   const subscribe = useMemo(

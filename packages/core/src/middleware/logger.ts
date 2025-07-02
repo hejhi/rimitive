@@ -2,12 +2,12 @@
  * @fileoverview Logger middleware - logs all state changes
  */
 
-import type { ComponentContext, Signal, StoreConfig } from '../component/types';
+import type { ComponentContext, StoreConfig, SetState } from '../component/types';
 
 /**
  * Logger middleware - logs all state changes
  */
-export function withLogger<State extends Record<string, any>>(
+export function withLogger<State extends Record<string, unknown>>(
   state: State
 ): StoreConfig<State> {
   return {
@@ -16,47 +16,39 @@ export function withLogger<State extends Record<string, any>>(
       const originalSet = context.set;
 
       // Wrap set to log changes
-      context.set = (<T>(
-        signal: Signal<T>,
-        updates: T | ((current: T) => T) | Partial<T>
-      ) => {
-        const currentValue = signal();
-        let newValue: T;
-
-        if (typeof updates === 'function') {
-          newValue = (updates as (current: T) => T)(currentValue);
-        } else if (
-          typeof updates === 'object' &&
-          updates !== null &&
-          typeof currentValue === 'object' &&
-          currentValue !== null &&
-          !Array.isArray(currentValue) &&
-          !(currentValue instanceof Set) &&
-          !(currentValue instanceof Map)
-        ) {
-          // Partial update for objects
-          newValue = { ...currentValue, ...updates };
-        } else {
-          newValue = updates as T;
+      const enhancedSet: SetState = ((signal: Parameters<SetState>[0], updates?: Parameters<SetState>[1]) => {
+        // Get current state before update
+        const stateBefore: Record<string, unknown> = {};
+        for (const key in context.store) {
+          stateBefore[key] = context.store[key]();
         }
 
-        // Log the update in a format that matches what was applied
-        // For store properties, extract the property name from the signal
-        const storeSignals = context.store;
-        let updateLog: any = newValue;
+        // Call original set
+        originalSet(signal, updates);
 
-        // Check if this is a store signal
-        for (const [key, storeSignal] of Object.entries(storeSignals)) {
-          if (storeSignal === signal) {
-            updateLog = { [key]: newValue };
-            break;
+        // Get state after update
+        const stateAfter: Record<string, unknown> = {};
+        const changedKeys: string[] = [];
+        
+        for (const key in context.store) {
+          stateAfter[key] = context.store[key]();
+          if (stateBefore[key] !== stateAfter[key]) {
+            changedKeys.push(key);
           }
         }
 
-        console.log('[Lattice Logger] State update:', updateLog);
+        // Log only changed values
+        const changes: Record<string, unknown> = {};
+        for (const key of changedKeys) {
+          changes[key] = stateAfter[key];
+        }
 
-        originalSet(signal, newValue);
-      }) as typeof context.set;
+        if (Object.keys(changes).length > 0) {
+          console.log('[Lattice Logger] State update:', changes);
+        }
+      }) as SetState;
+
+      context.set = enhancedSet;
 
       return context;
     },

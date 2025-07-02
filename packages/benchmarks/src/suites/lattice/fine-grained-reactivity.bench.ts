@@ -80,7 +80,7 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
       };
     };
 
-    let latticeSetup: ReturnType<typeof setupLattice>;
+    let latticeSetup: ReturnType<typeof setupLattice> | undefined;
     const benchmarkName = 'Lattice - partial updates (fine-grained)';
 
     bench(
@@ -89,14 +89,14 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
         // Update different counters cyclically
         for (let i = 0; i < UPDATE_ITERATIONS; i++) {
           const counterIndex = i % COUNTER_COUNT;
-          latticeSetup.incrementCounter(counterIndex);
+          latticeSetup?.incrementCounter(counterIndex);
 
           // Match MobX pattern: access the updated counter value
-          latticeSetup.getCounter(counterIndex);
+          latticeSetup?.getCounter(counterIndex);
 
           // Access adjacent counter to simulate realistic component behavior
           const adjacentIndex = (counterIndex + 1) % COUNTER_COUNT;
-          latticeSetup.getCounter(adjacentIndex);
+          latticeSetup?.getCounter(adjacentIndex);
         }
       },
       {
@@ -111,7 +111,7 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
         teardown: () => {
           // Measure final memory footprint
           measureMemory('teardown', benchmarkName, () => {
-            latticeSetup = null as any;
+            latticeSetup = undefined;
           });
         },
       }
@@ -144,7 +144,7 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
       };
     };
 
-    let mobxSetup: ReturnType<typeof setupMobX>;
+    let mobxSetup: ReturnType<typeof setupMobX> | undefined;
     const mobxBenchmarkName =
       'MobX - partial updates (fine-grained reactivity)';
 
@@ -155,15 +155,15 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
         for (let i = 0; i < UPDATE_ITERATIONS; i++) {
           const counterIndex = i % COUNTER_COUNT;
           const counterId = counterIds[counterIndex]!;
-          mobxSetup.increment(counterId);
+          mobxSetup?.increment(counterId);
 
           // Realistic access pattern: only access the counter that was updated
           // Plus 1-2 adjacent counters to simulate realistic UI context
-          mobxSetup.counterComputeds[counterIndex]?.get(); // The updated counter
+          mobxSetup?.counterComputeds[counterIndex]?.get(); // The updated counter
 
           // Access adjacent counter to simulate realistic component behavior
           const adjacentIndex = (counterIndex + 1) % COUNTER_COUNT;
-          mobxSetup.counterComputeds[adjacentIndex]?.get();
+          mobxSetup?.counterComputeds[adjacentIndex]?.get();
         }
       },
       {
@@ -178,7 +178,7 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
         teardown: () => {
           // Measure final memory footprint
           measureMemory('teardown', mobxBenchmarkName, () => {
-            mobxSetup = null as any;
+            mobxSetup = undefined;
           });
         },
       }
@@ -212,14 +212,14 @@ describe('Large State Memory Usage Comparison', () => {
       }: ComponentContext<LargeCounterState>) => ({
         increment: (id: string) => {
           // O(1) update - only updating a single property!
-          const signal = store[id as keyof LargeCounterState];
+          const signal = store[id];
           if (signal) {
             const current = signal() || 0;
             set(signal, current + 1);
           }
         },
         getCounter: (id: string) => {
-          const signal = store[id as keyof LargeCounterState];
+          const signal = store[id];
           return signal ? signal() : 0;
         },
       });
@@ -227,7 +227,7 @@ describe('Large State Memory Usage Comparison', () => {
       return LargeCountersComponent(store);
     };
 
-    let largeSetup: ReturnType<typeof setupLargeLattice>;
+    let largeSetup: ReturnType<typeof setupLargeLattice> | undefined;
     const largeLatticesBenchmarkName = 'Lattice - large state (1000 counters)';
 
     bench(
@@ -237,10 +237,10 @@ describe('Large State Memory Usage Comparison', () => {
         for (let i = 0; i < 100; i++) {
           const randomId =
             largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
-          largeSetup.increment(randomId);
+          largeSetup?.increment(randomId);
 
           // Match MobX pattern: access the value after update
-          largeSetup.getCounter(randomId);
+          largeSetup?.getCounter(randomId);
         }
       },
       {
@@ -254,7 +254,7 @@ describe('Large State Memory Usage Comparison', () => {
         },
         teardown: () => {
           measureMemory('teardown', largeLatticesBenchmarkName, () => {
-            largeSetup = null as any;
+            largeSetup = undefined;
           });
         },
       }
@@ -279,7 +279,7 @@ describe('Large State Memory Usage Comparison', () => {
       return { store, increment, getCounter };
     };
 
-    let largeMobXSetup: ReturnType<typeof setupLargeMobX>;
+    let largeMobXSetup: ReturnType<typeof setupLargeMobX> | undefined;
     const largeMobXBenchmarkName = 'MobX - large state (1000 counters)';
 
     bench(
@@ -289,10 +289,10 @@ describe('Large State Memory Usage Comparison', () => {
         for (let i = 0; i < 100; i++) {
           const randomId =
             largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
-          largeMobXSetup.increment(randomId);
+          largeMobXSetup?.increment(randomId);
 
           // Access computed value to simulate subscription usage
-          largeMobXSetup.getCounter.get()(randomId);
+          largeMobXSetup?.getCounter.get()(randomId);
         }
       },
       {
@@ -306,7 +306,7 @@ describe('Large State Memory Usage Comparison', () => {
         },
         teardown: () => {
           measureMemory('teardown', largeMobXBenchmarkName, () => {
-            largeMobXSetup = null as any;
+            largeMobXSetup = undefined;
           });
         },
       }

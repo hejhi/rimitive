@@ -79,7 +79,6 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
   
   return new Promise((resolve) => {
     let stdout = '';
-    let stderr = '';
     
     const child = spawn('pnpm', args, {
       cwd: projectRoot,
@@ -95,7 +94,6 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
     
     child.stderr.on('data', (data) => {
       const output = data.toString();
-      stderr += output;
       process.stderr.write(output); // Still show output to user
     });
     

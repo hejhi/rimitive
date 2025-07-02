@@ -3,8 +3,37 @@
  */
 
 import type { Reporter } from 'vitest/reporters';
+import type { File, Task } from 'vitest';
 import { promises as fs } from 'fs';
 import { getAllMemoryData, formatMemorySize } from './memory-reporter.js';
+
+interface MemoryMeasurement {
+  beforeHeap: number;
+  afterHeap: number;
+  delta: number;
+  deltaFormatted?: string;
+}
+
+interface BenchmarkMemoryData {
+  setup?: MemoryMeasurement;
+  teardown?: MemoryMeasurement;
+  executions?: MemoryMeasurement[];
+}
+
+type EnhancedTask = Task & {
+  memoryUsage?: {
+    setup?: MemoryMeasurement;
+    teardown?: MemoryMeasurement;
+    executions?: MemoryMeasurement[];
+    summary?: {
+      totalMemoryDelta: number;
+      totalMemoryDeltaFormatted: string;
+      avgExecutionDelta: number;
+      avgExecutionDeltaFormatted: string;
+    };
+  };
+  tasks?: EnhancedTask[];
+}
 
 export class MemoryJsonReporter implements Reporter {
   private outputFile?: string;
@@ -17,7 +46,7 @@ export class MemoryJsonReporter implements Reporter {
     // Reporter initialized
   }
 
-  async onFinished(files: any[]) {
+  async onFinished(files: File[] = []) {
     if (!this.outputFile) return;
 
     const memoryData = getAllMemoryData();
@@ -25,9 +54,9 @@ export class MemoryJsonReporter implements Reporter {
     // Enhance results with memory data
     const enhancedFiles = files.map((file) => ({
       ...file,
-      tasks: file.tasks?.map((task: any) =>
+      tasks: file.tasks?.map((task: Task) =>
         this.enhanceTaskWithMemory(task, memoryData)
-      ),
+      ) as EnhancedTask[] | undefined,
     }));
 
     // Create enhanced benchmark report
@@ -50,22 +79,32 @@ export class MemoryJsonReporter implements Reporter {
     }
   }
 
-  private enhanceTaskWithMemory(task: any, memoryData: Map<string, any>): any {
-    if (task.type !== 'benchmark') {
-      return {
-        ...task,
-        tasks: task.tasks?.map((subtask: any) =>
-          this.enhanceTaskWithMemory(subtask, memoryData)
-        ),
-      };
+  private enhanceTaskWithMemory(
+    task: Task,
+    memoryData: Map<string, BenchmarkMemoryData>
+  ): EnhancedTask {
+    if (!task || typeof task !== 'object') {
+      return task as EnhancedTask;
     }
 
-    const benchmarkMemory = memoryData.get(task.name);
-    if (!benchmarkMemory) {
-      return task;
+    const enhancedTask = { ...task } as EnhancedTask;
+
+    // Handle tasks with subtasks (suites)
+    if ('tasks' in task && Array.isArray(task.tasks)) {
+      enhancedTask.tasks = task.tasks.map((subtask) =>
+        this.enhanceTaskWithMemory(subtask, memoryData)
+      );
     }
 
-    const memoryUsage: any = {};
+    // Handle benchmark tasks
+    if (task.type === 'test' && task.name) {
+      const benchmarkName = task.name;
+      const benchmarkMemory = memoryData.get(benchmarkName);
+      if (!benchmarkMemory) {
+        return enhancedTask;
+      }
+
+    const memoryUsage: EnhancedTask['memoryUsage'] = {};
 
     if (benchmarkMemory.setup) {
       memoryUsage.setup = {
@@ -85,8 +124,8 @@ export class MemoryJsonReporter implements Reporter {
       };
     }
 
-    if (benchmarkMemory.executions?.length > 0) {
-      memoryUsage.executions = benchmarkMemory.executions.map((exec: any) => ({
+    if (benchmarkMemory.executions && benchmarkMemory.executions.length > 0) {
+      memoryUsage.executions = benchmarkMemory.executions.map((exec) => ({
         beforeHeap: exec.beforeHeap,
         afterHeap: exec.afterHeap,
         delta: exec.delta,
@@ -95,7 +134,7 @@ export class MemoryJsonReporter implements Reporter {
 
       // Calculate summary statistics
       const totalDelta = benchmarkMemory.executions.reduce(
-        (sum: number, exec: any) => sum + exec.delta,
+        (sum, exec) => sum + exec.delta,
         0
       );
       const avgDelta = totalDelta / benchmarkMemory.executions.length;
@@ -108,13 +147,13 @@ export class MemoryJsonReporter implements Reporter {
       };
     }
 
-    return {
-      ...task,
-      memoryUsage,
-    };
+      enhancedTask.memoryUsage = memoryUsage;
+    }
+
+    return enhancedTask;
   }
 
-  private createMemorySummary(memoryData: Map<string, any>) {
+  private createMemorySummary(memoryData: Map<string, BenchmarkMemoryData>) {
     const summary = {
       benchmarksWithMemoryData: 0,
       totalSetupMemory: 0,
@@ -133,9 +172,9 @@ export class MemoryJsonReporter implements Reporter {
         summary.totalTeardownMemory += data.teardown.delta;
       }
 
-      if (data.executions?.length > 0) {
+      if (data.executions && data.executions.length > 0) {
         summary.totalExecutionMemory += data.executions.reduce(
-          (sum: number, exec: any) => sum + exec.delta,
+          (sum, exec) => sum + exec.delta,
           0
         );
       }

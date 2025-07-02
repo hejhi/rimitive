@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createComponent } from '../component/component';
-import type { ComponentFactory } from '../component/types';
+import type { ComponentFactory, Signal } from '../component/types';
 
 describe('Component Middleware', () => {
   it.skip('should apply logger middleware', () => {
@@ -17,7 +17,10 @@ describe('Component Middleware', () => {
 
     // TODO: Update middleware to work with adapters
     const store = createComponent({ count: 0 });
-    const component = Counter(store);
+    const component = Counter(store) as {
+      count: Signal<number>;
+      increment: () => void;
+    };
 
     component.increment();
 
@@ -40,7 +43,10 @@ describe('Component Middleware', () => {
     };
 
     const store = createComponent({ count: 0 });
-    const component = Counter(store);
+    const component = Counter(store) as {
+      count: Signal<number>;
+      increment: () => void;
+    };
 
     component.increment();
     expect(component.count()).toBe(1);
@@ -95,7 +101,10 @@ describe('Component Middleware', () => {
 
     // TODO: Update middleware composition to work with adapters
     const store = createComponent({ count: 0 });
-    const component = Counter(store);
+    const component = Counter(store) as {
+      count: Signal<number>;
+      increment: () => void;
+    };
 
     // Both middleware should initialize
     expect(middleware1Calls).toContain('init');

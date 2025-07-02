@@ -7,7 +7,7 @@ import type { ComponentContext, StoreConfig } from '../component/types';
 /**
  * Persist middleware - saves state to localStorage
  */
-export function withPersistence<State extends Record<string, any>>(
+export function withPersistence<State>(
   state: State,
   key: string
 ): StoreConfig<State> {
@@ -18,14 +18,17 @@ export function withPersistence<State extends Record<string, any>>(
       const stored = localStorage.getItem(key);
       if (stored) {
         try {
-          const parsed = JSON.parse(stored);
+          const parsed = JSON.parse(stored) as Partial<State>;
           // Update initial state - set each property individually
           for (const prop in parsed) {
             if (prop in context.store) {
-              context.set(context.store[prop as keyof State], parsed[prop]);
+              const value = parsed[prop];
+              if (value !== undefined) {
+                context.set(context.store[prop as keyof State], value);
+              }
             }
           }
-        } catch (e) {
+        } catch {
           console.warn(
             `[Lattice Persist] Failed to parse stored state for key "${key}"`
           );
@@ -35,23 +38,24 @@ export function withPersistence<State extends Record<string, any>>(
       const originalSet = context.set;
 
       // Wrap set to persist changes
-      context.set = (signal: any, updates: any) => {
-        originalSet(signal, updates);
+      context.set = ((...args: Parameters<typeof originalSet>) => {
+        // Apply the original set function
+        (originalSet as (...args: unknown[]) => void)(...args);
 
         // Get current state and save to localStorage
-        const currentState: Record<string, any> = {};
+        const currentState: Record<string, unknown> = {};
         for (const key in context.store) {
           currentState[key] = context.store[key]();
         }
 
         try {
           localStorage.setItem(key, JSON.stringify(currentState));
-        } catch (e) {
+        } catch {
           console.warn(
             `[Lattice Persist] Failed to save state to localStorage`
           );
         }
-      };
+      }) as typeof originalSet;
 
       return context;
     },

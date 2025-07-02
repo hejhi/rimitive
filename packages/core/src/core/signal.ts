@@ -33,16 +33,16 @@ export function createSignalFactory(
   // WeakMap to store keyed signal selector caches
   // The key is the signal instance itself (type parameter doesn't matter for identity)
   const keyedSignalSelectorCaches = new WeakMap<
-    BaseSignal<any>,
-    Map<Function, Map<unknown, WeakRef<SignalSelector<any, any>>>>
+    BaseSignal<unknown>,
+    Map<(key: unknown) => unknown, Map<unknown, WeakRef<SignalSelector<unknown, unknown>>>>
   >();
 
   // Registry to track cleanup functions for automatic garbage collection
   // This prevents memory leaks by ensuring dead WeakRefs are cleaned up
   // even if the key is never requested again
   const cleanupRegistry = new FinalizationRegistry<{
-    signalCache: Map<Function, Map<unknown, WeakRef<SignalSelector<any, any>>>>;
-    keyFn: Function;
+    signalCache: Map<(key: unknown) => unknown, Map<unknown, WeakRef<SignalSelector<unknown, unknown>>>>;
+    keyFn: (key: unknown) => unknown;
     key: unknown;
   }>((heldValue) => {
     // When a selector is garbage collected, clean up its WeakRef entry
@@ -64,7 +64,7 @@ export function createSignalFactory(
       // Read operation
       if (arguments.length === 0) {
         tracking.track(baseSignal);
-        return (baseSignal as BaseSignal<T>)._value;
+        return baseSignal._value;
       }
 
       // Single predicate - create signal selector
@@ -83,14 +83,16 @@ export function createSignalFactory(
         typeof args[0] === 'function' &&
         typeof args[1] === 'function'
       ) {
-        const [keyFn, predicate] = args;
+        const keyFn = args[0] as (key: unknown) => unknown;
+        const predicate = args[1] as (value: unknown, key?: CacheKey) => boolean;
 
         // Get or create cache for this signal
-        if (!keyedSignalSelectorCaches.has(baseSignal)) {
-          keyedSignalSelectorCaches.set(baseSignal, new Map());
+        const signalKey = baseSignal as BaseSignal<unknown>;
+        if (!keyedSignalSelectorCaches.has(signalKey)) {
+          keyedSignalSelectorCaches.set(signalKey, new Map());
         }
 
-        const signalCache = keyedSignalSelectorCaches.get(baseSignal)!;
+        const signalCache = keyedSignalSelectorCaches.get(signalKey)!;
 
         // Get or create cache for this keyFn
         if (!signalCache.has(keyFn)) {
@@ -118,13 +120,13 @@ export function createSignalFactory(
           // Create new signal selector
           const selector = createSelector(
             baseSignal,
-            (item: unknown) => predicate(item, key),
+            (item: unknown) => predicate(item, key as CacheKey),
             tracking,
             batching
           );
           
           // Create WeakRef and register for cleanup
-          const weakRef = new WeakRef(selector);
+          const weakRef = new WeakRef(selector as SignalSelector<unknown, unknown>);
           keyCache?.set(key, weakRef);
           
           // Register the selector with FinalizationRegistry for automatic cleanup
@@ -179,13 +181,15 @@ function createSelector<T, U>(
     ) {
       // Try to use cached position
       if (Array.isArray(sourceValue)) {
-        const item = sourceValue[selector._cachedIndex as number];
-        if (item !== undefined && predicate(item, selector._cachedIndex)) {
+        const index = selector._cachedIndex as number;
+        const item = sourceValue[index] as unknown;
+        if (item !== undefined && predicate(item, index)) {
           return item as U;
         }
       } else if (sourceValue instanceof Map) {
-        const item = sourceValue.get(selector._cachedIndex);
-        if (item !== undefined && predicate(item, selector._cachedIndex)) {
+        const key = selector._cachedIndex;
+        const item = sourceValue.get(key) as unknown;
+        if (item !== undefined && predicate(item, key)) {
           return item as U;
         }
       } else if (sourceValue instanceof Set) {
@@ -209,8 +213,8 @@ function createSelector<T, U>(
       }
     } else if (sourceValue instanceof Map) {
       for (const [key, val] of sourceValue) {
-        if (predicate(val, key)) {
-          selector._cachedIndex = key;
+        if (predicate(val, key as CacheKey)) {
+          selector._cachedIndex = key as CacheKey;
           selector._sourceVersion = currentVersion;
           return val as U;
         }
@@ -226,7 +230,7 @@ function createSelector<T, U>(
     } else if (typeof sourceValue === 'object' && sourceValue !== null) {
       for (const [key, val] of Object.entries(sourceValue)) {
         if (predicate(val, key)) {
-          selector._cachedIndex = key;
+          selector._cachedIndex = key as CacheKey;
           selector._sourceVersion = currentVersion;
           return val as U;
         }
@@ -302,7 +306,7 @@ export function updateSignalValue<T>(
  * Get the underlying source signal from a signal selector
  */
 export function getSourceSignal<T>(
-  signal: Signal<T> | SignalSelector<any, T>
+  signal: Signal<T> | SignalSelector<unknown, T>
 ): Signal<unknown> | undefined {
   return (signal as unknown as SignalSelector<unknown, unknown>)._source;
 }
@@ -312,7 +316,7 @@ export function getSourceSignal<T>(
  */
 export function isSignalSelector<T>(
   value: unknown
-): value is SignalSelector<any, T> {
+): value is SignalSelector<unknown, T> {
   return (
     typeof value === 'function' &&
     '_source' in value &&

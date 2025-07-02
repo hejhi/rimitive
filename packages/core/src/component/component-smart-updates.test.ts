@@ -161,32 +161,43 @@ describe('Smart Updates', () => {
             ['key1', 'value1'],
             ['key2', 'value2'],
           ]),
-        update: (map: Map<string, string>, key: string, value: string) => {
+        update: (collection: Map<string, string> | Set<string>, key: string, value: string) => {
+          const map = collection as Map<string, string>;
           const newMap = new Map(map);
           newMap.set(key, value);
           return newMap;
         },
-        get: (map: Map<string, string>, key: string) => map.get(key),
-        has: (map: Map<string, string>, key: string) => map.has(key),
+        get: (collection: Map<string, string> | Set<string>, key: string) => {
+          const map = collection as Map<string, string>;
+          return map.get(key);
+        },
+        has: (collection: Map<string, string> | Set<string>, key: string) => {
+          const map = collection as Map<string, string>;
+          return map.has(key);
+        },
       },
     ],
     [
       'Set',
       {
         create: () => new Set(['item1', 'item2', 'item3']),
-        update: (set: Set<string>, _key: string, value: string) => {
+        update: (collection: Map<string, string> | Set<string>, _key: string, value: string) => {
+          const set = collection as Set<string>;
           const newSet = new Set(set);
           newSet.add(value);
           return newSet;
         },
-        get: (_set: Set<string>, _key: string) => true,
-        has: (set: Set<string>, value: string) => set.has(value),
+        get: () => true,
+        has: (collection: Map<string, string> | Set<string>, value: string) => {
+          const set = collection as Set<string>;
+          return set.has(value);
+        },
       },
     ],
   ])('%s updates', (collectionType, { create, update, has }) => {
     it(`should support updates for ${collectionType}`, () => {
       interface CollectionState {
-        collection: any;
+        collection: Map<string, string> | Set<string>;
       }
 
       const CollectionComponent = ({
@@ -195,7 +206,14 @@ describe('Smart Updates', () => {
       }: ComponentContext<CollectionState>) => ({
         collection: store.collection,
         add: (key: string, value: string) => {
-          set(store.collection, update(store.collection(), key, value));
+          const current = store.collection();
+          if (current instanceof Map) {
+            const updatedValue = update(current, key, value);
+            set(store.collection, updatedValue);
+          } else if (current instanceof Set) {
+            const updatedValue = update(current, key, value);
+            set(store.collection, updatedValue);
+          }
         },
       });
 
@@ -205,11 +223,12 @@ describe('Smart Updates', () => {
       component.add('newKey', 'newValue');
 
       // For Map, check if the key exists; for Set, check if the value exists
-      if (collectionType === 'Map') {
-        expect(has(component.collection(), 'newKey')).toBe(true);
-        expect(component.collection().get('newKey')).toBe('newValue');
-      } else {
-        expect(has(component.collection(), 'newValue')).toBe(true);
+      const collection = component.collection();
+      if (collectionType === 'Map' && collection instanceof Map) {
+        expect(has(collection, 'newKey')).toBe(true);
+        expect(collection.get('newKey')).toBe('newValue');
+      } else if (collection instanceof Set) {
+        expect(has(collection, 'newValue')).toBe(true);
       }
     });
   });

@@ -41,7 +41,7 @@ export function createLatticeContext(): LatticeContext & {
     effect,
     set,
     // Internal method for store integration
-    _batch: batching.batch,
+    _batch: batching.batch.bind(batching),
     _tracking: tracking,
     _batching: batching,
   };

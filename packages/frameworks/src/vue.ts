@@ -97,7 +97,7 @@ function isSignal(
  * </template>
  * ```
  */
-export function useComponent<State extends Record<string, any>, Component>(
+export function useComponent<State, Component>(
   context: ComponentContext<State>,
   factory: ComponentFactory<State>
 ): ComputedRef<Component> {
@@ -106,10 +106,10 @@ export function useComponent<State extends Record<string, any>, Component>(
   const unsubscribers: (() => void)[] = [];
   
   // Create component instance
-  const component = factory(context);
+  const component = factory(context) as Component;
   
   // Subscribe to all signals
-  const subscribeToValue = (value: any) => {
+  const subscribeToValue = (value: unknown) => {
     if (isSignal(value)) {
       const unsubscribe = value.subscribe(() => {
         version.value++;
@@ -122,11 +122,13 @@ export function useComponent<State extends Record<string, any>, Component>(
   Object.values(context.store).forEach(subscribeToValue);
   
   // Subscribe to component signals/computeds
-  Object.values(component as any).forEach(subscribeToValue);
+  if (component && typeof component === 'object') {
+    Object.values(component).forEach(subscribeToValue);
+  }
   
   // Create reactive computed that tracks version
   const reactiveComponent = vueComputed(() => {
-    version.value; // Track version to trigger re-evaluation
+    void version.value; // Track version to trigger re-evaluation
     return component;
   });
   
@@ -174,7 +176,7 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): ComputedRef<T> {
   });
 
   return vueComputed(() => {
-    version.value; // Establish Vue dependency
+    void version.value; // Establish Vue dependency
     return signal();
   });
 }
@@ -283,7 +285,7 @@ export function injectComponent<T>(key: string): T {
  */
 export function useComputed<T>(
   compute: () => T,
-  signals: (Signal<any> | Computed<any>)[]
+  signals: (Signal<unknown> | Computed<unknown>)[]
 ): ComputedRef<T> {
   const version = ref(0);
   const unsubscribers: (() => void)[] = [];
@@ -301,7 +303,7 @@ export function useComputed<T>(
   });
 
   return vueComputed(() => {
-    version.value; // Track version for reactivity
+    void version.value; // Track version for reactivity
     return compute();
   });
 }
