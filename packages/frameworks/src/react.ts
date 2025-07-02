@@ -73,7 +73,7 @@ export function useComponent<State extends Record<string, unknown>, Component>(
   const component = useMemo(() => {
     const context = createComponent(initialState);
     return factory(context) as Component;
-  }, []); // Empty deps - we want this to be created once per component instance
+  }, [factory]);
 
   return component;
 }
@@ -153,6 +153,9 @@ export function useComputed<T>(
   compute: () => T,
   deps: (Signal<unknown> | Computed<unknown>)[]
 ): T {
+  // Memoize the compute function to avoid recreating it if it's stable
+  const memoizedCompute = useCallback(compute, [compute, ...deps]);
+
   // Create a stable subscribe function that doesn't change unless deps change
   const subscribe = useMemo(
     () => (onStoreChange: () => void) => {
@@ -162,5 +165,5 @@ export function useComputed<T>(
     deps
   );
 
-  return useSyncExternalStore(subscribe, compute, compute);
+  return useSyncExternalStore(subscribe, memoizedCompute, memoizedCompute);
 }

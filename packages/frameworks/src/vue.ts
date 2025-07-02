@@ -1,309 +1,331 @@
 /**
- * @fileoverview Vue composables for Lattice behavioral components
+ * @fileoverview Vue 3 Composition API bindings for Lattice behavioral components
  *
- * Provides idiomatic Vue 3 integration for Lattice's signal-based component system.
- * Components are composed from behavioral logic and reactive state.
+ * Provides idiomatic Vue integration for Lattice's signal-based component system.
+ * Supports both component-scoped and shared/global behavior patterns with fine-grained reactivity.
  */
 
-import {
-  ref,
+import { 
+  shallowRef, 
+  watchEffect, 
+  onScopeDispose,
   computed as vueComputed,
-  inject,
-  provide,
-  onUnmounted,
   type ComputedRef,
-  type InjectionKey,
+  type ShallowRef
 } from 'vue';
-
-import type { Signal, Computed, ComponentContext, ComponentFactory } from '@lattice/core';
-
-// Map for injection keys - bounded by string keys used in app
-const COMPONENT_INJECTION_KEYS = new Map<string, InjectionKey<unknown>>();
-
-/**
- * Creates or retrieves an injection key for a given component key.
- */
-function getOrCreateComponentKey<T>(key: string): InjectionKey<T> {
-  if (!COMPONENT_INJECTION_KEYS.has(key)) {
-    COMPONENT_INJECTION_KEYS.set(
-      key,
-      Symbol(`lattice-component-${key}`) as InjectionKey<T>
-    );
-  }
-  return COMPONENT_INJECTION_KEYS.get(key) as InjectionKey<T>;
-}
+import {
+  createComponent,
+  type Signal,
+  type Computed,
+  type ComponentFactory,
+} from '@lattice/core';
 
 /**
- * Check if a value is a signal or computed (has subscribe method)
- */
-function isSignal(
-  value: unknown
-): value is Signal<unknown> | Computed<unknown> {
-  return (
-    typeof value === 'function' &&
-    value !== null &&
-    'subscribe' in value &&
-    typeof value.subscribe === 'function'
-  );
-}
-
-/**
- * Vue composable for using Lattice behavioral components.
+ * Vue composable for creating component-scoped Lattice behavioral components.
  *
- * This composable bridges Lattice's signal-based reactivity with Vue's reactivity system.
- * It creates and manages a component instance with automatic subscription to all signals.
+ * This composable creates a new component instance with its own state that is scoped
+ * to the Vue component's lifecycle. Perfect for UI components that need
+ * isolated state management.
  *
- * @param context - A component context created with createComponent
+ * @param initialState - The initial state for the component
  * @param factory - A component factory function that defines behavior
- * @returns ComputedRef containing the component instance
+ * @returns The component instance with all behaviors and reactive state
  *
  * @example
  * ```vue
- * <script setup>
- * import { createComponent } from '@lattice/core';
- * import { useComponent } from '@lattice/frameworks/vue';
- * 
- * // Create component context
- * const dialogContext = createComponent({
- *   isOpen: false,
- *   title: 'Welcome',
- * });
- * 
+ * <script setup lang="ts">
+ * import { useComponent, toRef } from '@lattice/frameworks/vue';
+ *
  * // Define component behavior
  * const Dialog = ({ store, computed, set }) => ({
  *   isOpen: store.isOpen,
  *   title: store.title,
- *   
+ *
  *   triggerProps: computed(() => ({
  *     'aria-haspopup': 'dialog',
  *     'aria-expanded': store.isOpen(),
  *     onClick: () => set(store.isOpen, true),
  *   })),
- *   
+ *
  *   open: () => set(store.isOpen, true),
  *   close: () => set(store.isOpen, false),
  * });
+ *
+ * // Use in Vue component with component-scoped state
+ * const dialog = useComponent(
+ *   { isOpen: false, title: 'Welcome' },
+ *   Dialog
+ * );
  * 
- * // Use in Vue component
- * const dialog = useComponent(dialogContext, Dialog);
+ * // Convert signals to Vue refs for template usage
+ * const isOpen = toRef(dialog.isOpen);
+ * const triggerProps = toRef(dialog.triggerProps);
  * </script>
  *
  * <template>
- *   <button v-bind="dialog.triggerProps()">Open Dialog</button>
- *   <div v-if="dialog.isOpen()" role="dialog">
+ *   <button v-bind="triggerProps">Open Dialog</button>
+ *   <div v-if="isOpen" role="dialog">
  *     <h2>{{ dialog.title() }}</h2>
  *     <button @click="dialog.close">Close</button>
  *   </div>
  * </template>
  * ```
  */
-export function useComponent<State, Component>(
-  context: ComponentContext<State>,
+export function useComponent<State extends Record<string, unknown>, Component = unknown>(
+  initialState: State,
   factory: ComponentFactory<State>
-): ComputedRef<Component> {
-  // Create version ref to trigger Vue updates
-  const version = ref(0);
-  const unsubscribers: (() => void)[] = [];
-  
-  // Create component instance
+): Component {
+  // Create component context and instance
+  const context = createComponent(initialState);
   const component = factory(context) as Component;
   
-  // Subscribe to all signals
-  const subscribeToValue = (value: unknown) => {
-    if (isSignal(value)) {
-      const unsubscribe = value.subscribe(() => {
-        version.value++;
-      });
-      unsubscribers.push(unsubscribe);
-    }
-  };
-  
-  // Subscribe to store signals
-  Object.values(context.store).forEach(subscribeToValue);
-  
-  // Subscribe to component signals/computeds
-  if (component && typeof component === 'object') {
-    Object.values(component).forEach(subscribeToValue);
-  }
-  
-  // Create reactive computed that tracks version
-  const reactiveComponent = vueComputed(() => {
-    void version.value; // Track version to trigger re-evaluation
-    return component;
-  });
-  
-  // Cleanup on unmount
-  onUnmounted(() => {
-    unsubscribers.forEach((unsubscribe) => unsubscribe());
-  });
-  
-  return reactiveComponent;
+  // Cleanup will be handled by Vue's component lifecycle
+  return component;
 }
 
 /**
- * Vue composable for using individual signals.
+ * Converts a Lattice signal to a Vue ref for reactive template usage.
+ * Re-renders the component only when this specific signal changes.
  *
- * This provides a direct way to use Lattice signals in Vue templates
- * with automatic reactivity.
+ * This is the key to Lattice's fine-grained reactivity in Vue.
+ * Only convert the signals you actually use in your template.
  *
- * @param signal - A Lattice signal or computed
- * @returns ComputedRef that updates when the signal changes
+ * @param signal - A signal or computed value
+ * @returns A Vue ref that tracks the signal value
  *
  * @example
  * ```vue
- * <script setup>
- * import { useSignal } from '@lattice/frameworks/vue';
+ * <script setup lang="ts">
+ * import { toRef } from '@lattice/frameworks/vue';
+ *
+ * const props = defineProps<{ userStore: UserStore }>();
  * 
- * const count = useSignal(myCountSignal);
- * const doubled = useSignal(myDoubledComputed);
+ * // Only re-renders when the name changes
+ * const name = toRef(props.userStore.name);
  * </script>
  *
  * <template>
- *   <div>Count: {{ count }}</div>
- *   <div>Doubled: {{ doubled }}</div>
+ *   <!-- Does NOT re-render when email changes -->
+ *   <h1>Welcome, {{ name }}!</h1>
+ * </template>
+ * ```
+ *
+ * @example
+ * ```vue
+ * <script setup lang="ts">
+ * // Using with shared/global state
+ * const authContext = createComponent({ user: null });
+ * const auth = Auth(authContext);
+ * 
+ * const user = toRef(auth.user);
+ * </script>
+ *
+ * <template>
+ *   <div v-if="user">Welcome {{ user.name }}</div>
+ *   <Login v-else />
  * </template>
  * ```
  */
-export function useSignal<T>(signal: Signal<T> | Computed<T>): ComputedRef<T> {
-  const version = ref(0);
+export function toRef<T>(signal: Signal<T> | Computed<T>): ComputedRef<T> {
+  // Use shallowRef for better performance with objects
+  const ref = shallowRef(signal());
   
+  // Set up subscription with automatic cleanup
   const unsubscribe = signal.subscribe(() => {
-    version.value++;
+    ref.value = signal();
   });
-
-  onUnmounted(() => {
-    unsubscribe();
-  });
-
-  return vueComputed(() => {
-    void version.value; // Establish Vue dependency
-    return signal();
-  });
+  
+  // Clean up subscription when component is destroyed
+  onScopeDispose(unsubscribe);
+  
+  // Return as a computed ref to maintain readonly behavior and proper typing
+  return vueComputed<T>(() => ref.value as T);
 }
 
 /**
- * Provides a Lattice component context for dependency injection.
+ * Alternative to toRef that returns a writable ref.
+ * Changes to the ref will update the underlying signal.
  *
- * This enables clean separation of component creation from usage, allowing child
- * components to access contexts without prop drilling.
- *
- * @param key - Unique string key for the component
- * @param context - The component context to provide
+ * @param signal - A signal (not computed) value
+ * @returns A two-way bound Vue ref
  *
  * @example
  * ```vue
- * <!-- Parent component -->
- * <script setup>
- * import { createComponent } from '@lattice/core';
- * import { provideComponent } from '@lattice/frameworks/vue';
- * 
- * const dialogContext = createComponent({
- *   isOpen: false,
- *   title: '',
- * });
- * 
- * provideComponent('dialog', dialogContext);
+ * <script setup lang="ts">
+ * import { toWritableRef } from '@lattice/frameworks/vue';
+ *
+ * const settings = useComponent({ theme: 'light' }, Settings);
+ * const theme = toWritableRef(settings.theme, settings.setTheme);
  * </script>
  *
  * <template>
- *   <ChildComponent />
+ *   <select v-model="theme">
+ *     <option value="light">Light</option>
+ *     <option value="dark">Dark</option>
+ *   </select>
  * </template>
  * ```
  */
-export function provideComponent<T>(
-  key: string,
-  context: T
-): void {
-  const injectionKey = getOrCreateComponentKey<T>(key);
-  provide(injectionKey, context);
-}
-
-/**
- * Injects a Lattice component context from the component tree.
- *
- * This allows child components to access contexts provided by parent components
- * without explicit prop passing.
- *
- * @param key - Unique string key for the component
- * @returns The injected component context
- * @throws Error if context was not provided
- *
- * @example
- * ```vue
- * <!-- Child component -->
- * <script setup>
- * import { injectComponent, useComponent } from '@lattice/frameworks/vue';
- * import { Dialog } from './components';
- * 
- * const dialogContext = injectComponent('dialog');
- * const dialog = useComponent(dialogContext, Dialog);
- * </script>
- *
- * <template>
- *   <button @click="dialog.open">Open Dialog</button>
- * </template>
- * ```
- */
-export function injectComponent<T>(key: string): T {
-  const injectionKey = getOrCreateComponentKey<T>(key);
-  const context = inject(injectionKey);
-
-  if (!context) {
-    throw new Error(
-      `Lattice component context with key "${key}" was not found in the component tree. Make sure it's provided by a parent component using provideComponent().`
-    );
-  }
-
-  return context;
+export function toWritableRef<T>(
+  signal: Signal<T>,
+  setter: (value: T) => void
+): ShallowRef<T> {
+  const ref = shallowRef<T>(signal());
+  
+  // Subscribe to signal changes
+  const unsubscribe = signal.subscribe(() => {
+    ref.value = signal();
+  });
+  
+  // Watch ref changes and update signal
+  watchEffect(() => {
+    setter(ref.value as T);
+  });
+  
+  onScopeDispose(unsubscribe);
+  
+  return ref;
 }
 
 /**
  * Vue composable for creating derived state from signals.
- * 
- * This is useful for creating computed values that depend on multiple signals
- * or for transforming signal values for display.
+ *
+ * This is a convenience wrapper that creates a Lattice computed and converts it to a Vue ref.
+ * For most cases, you can use `toRef` with a Lattice computed directly.
  *
  * @param compute - A function that computes a value from signals
- * @param signals - Signal dependencies to track
- * @returns ComputedRef with the computed value
+ * @returns A Vue computed ref with the derived value
  *
  * @example
  * ```vue
- * <script setup>
- * import { useComputed } from '@lattice/frameworks/vue';
- * 
- * const totalPrice = useComputed(
- *   () => priceSignal() * (1 + taxRateSignal()),
- *   [priceSignal, taxRateSignal]
- * );
+ * <script setup lang="ts">
+ * import { useComputed, useComponent } from '@lattice/frameworks/vue';
+ *
+ * const cart = useComponent({ items: [], taxRate: 0.08 }, CartStore);
+ *
+ * // Using useComputed (creates a Lattice computed internally)
+ * const totalPrice = useComputed(() => {
+ *   const items = cart.items();
+ *   const taxRate = cart.taxRate();
+ *   const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+ *   return subtotal * (1 + taxRate);
+ * });
  * </script>
  *
  * <template>
  *   <div>Total: ${{ totalPrice.toFixed(2) }}</div>
  * </template>
  * ```
+ *
+ * @example
+ * ```vue
+ * <script setup lang="ts">
+ * // Alternative: Define computed in the component factory
+ * const CartWithTotal = ({ store, computed }) => ({
+ *   items: store.items,
+ *   taxRate: store.taxRate,
+ *   total: computed(() => {
+ *     const items = store.items();
+ *     const taxRate = store.taxRate();
+ *     const subtotal = items.reduce((sum, item) => sum + item.price, 0);
+ *     return subtotal * (1 + taxRate);
+ *   })
+ * });
+ *
+ * const cart = useComponent({ items: [], taxRate: 0.08 }, CartWithTotal);
+ * const total = toRef(cart.total); // Convert to Vue ref
+ * </script>
+ * ```
  */
-export function useComputed<T>(
-  compute: () => T,
-  signals: (Signal<unknown> | Computed<unknown>)[]
-): ComputedRef<T> {
-  const version = ref(0);
-  const unsubscribers: (() => void)[] = [];
-
-  // Subscribe to all provided signals
-  signals.forEach(signal => {
-    const unsubscribe = signal.subscribe(() => {
-      version.value++;
-    });
-    unsubscribers.push(unsubscribe);
-  });
-
-  onUnmounted(() => {
-    unsubscribers.forEach(unsub => unsub());
-  });
-
-  return vueComputed(() => {
-    void version.value; // Track version for reactivity
-    return compute();
-  });
+export function useComputed<T>(compute: () => T): ComputedRef<T> {
+  // Create a Lattice computed using a temporary context
+  const context = createComponent({});
+  const latticeComputed = context.computed(compute);
+  
+  // Convert to Vue ref
+  return toRef(latticeComputed);
 }
+
+/**
+ * Vue composable that runs a side effect whenever signals change.
+ * 
+ * This creates a Lattice effect that properly tracks signal dependencies.
+ * The effect will re-run whenever any accessed signals change.
+ *
+ * @param effect - The effect function to run
+ * @param options - Optional configuration
+ *
+ * @example
+ * ```vue
+ * <script setup lang="ts">
+ * import { useSignalEffect, useComponent } from '@lattice/frameworks/vue';
+ *
+ * const auth = useComponent({ isAuthenticated: false }, AuthStore);
+ * const router = useRouter();
+ *
+ * useSignalEffect(() => {
+ *   if (!auth.isAuthenticated()) {
+ *     router.push('/login');
+ *   }
+ * });
+ * </script>
+ * ```
+ */
+export function useSignalEffect(
+  effect: () => void,
+  options?: { immediate?: boolean }
+): void {
+  // Create a Lattice context to get the effect function
+  const context = createComponent({});
+  
+  if (options?.immediate === false) {
+    // Defer initial execution
+    let isFirst = true;
+    const stop = context.effect(() => {
+      if (isFirst) {
+        isFirst = false;
+        return;
+      }
+      effect();
+    });
+    onScopeDispose(stop);
+  } else {
+    // Run immediately and on changes
+    const stop = context.effect(effect);
+    onScopeDispose(stop);
+  }
+}
+
+/**
+ * Type helper for props that accept Lattice components
+ *
+ * @example
+ * ```vue
+ * <script setup lang="ts">
+ * import type { LatticeProps } from '@lattice/frameworks/vue';
+ * import type { TodoStore } from './stores';
+ *
+ * defineProps<{
+ *   todo: LatticeProps<TodoStore>
+ * }>();
+ * </script>
+ * ```
+ */
+export type LatticeProps<T> = T;
+
+/**
+ * Type helper for emits that work with Lattice events
+ *
+ * @example
+ * ```vue
+ * <script setup lang="ts">
+ * import type { LatticeEmits } from '@lattice/frameworks/vue';
+ *
+ * const emit = defineEmits<{
+ *   change: LatticeEmits<[value: string]>
+ *   close: LatticeEmits<[]>
+ * }>();
+ * </script>
+ * ```
+ */
+export type LatticeEmits<T extends unknown[]> = (...args: T) => void;
