@@ -9,8 +9,7 @@ export type {
   SignalState,
   ComponentContext,
   ComponentFactory,
-  ComponentMiddleware,
   SetState,
   StoreConfig,
-  LatticeContext
+  LatticeContext,
 } from './types';

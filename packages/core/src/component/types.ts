@@ -19,9 +19,7 @@ export interface Signal<T> {
 
   // Create signal selector with predicate (for arrays)
   <U = T extends (infer Item)[] ? Item : never>(
-    predicate: T extends unknown[]
-      ? (item: U, index: number) => boolean
-      : never
+    predicate: T extends unknown[] ? (item: U, index: number) => boolean : never
   ): T extends unknown[] ? SignalSelector<T, U> : never;
 
   // Create signal selector with predicate (for objects)
@@ -180,19 +178,13 @@ export interface ComponentContext<State> extends LatticeContext {
  * Component factory function that receives a merged context
  * Returns slices (signals, computeds, and methods)
  */
-export type ComponentFactory<State> = (context: ComponentContext<State>) => unknown;
-
-/**
- * Middleware receives the component context and can enhance/modify it
- */
-export type ComponentMiddleware<State> = (
+export type ComponentFactory<State> = (
   context: ComponentContext<State>
-) => ComponentContext<State>;
+) => unknown;
 
 /**
  * Configuration for creating a store with optional middleware enhancement
  */
 export interface StoreConfig<State> {
   state: State;
-  enhancer?: (context: ComponentContext<State>) => ComponentContext<State>;
 }

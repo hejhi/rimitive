@@ -5,13 +5,7 @@
  * enabling proper composition and isolation between component trees.
  */
 
-import type {
-  ComponentContext,
-  SetState,
-  SignalState,
-  Signal,
-  ComponentMiddleware,
-} from './types';
+import type { ComponentContext, SetState, SignalState, Signal } from './types';
 import { createLatticeContext } from './context';
 import { updateSignalValue, isSignalSelector } from '../core/signal';
 import {
@@ -24,10 +18,7 @@ import {
  * Helper for creating partial updates with structural sharing
  * Re-exported from runtime for convenience
  */
-export function partial<T>(
-  key: keyof T,
-  value: T[keyof T]
-): Partial<T> {
+export function partial<T>(key: keyof T, value: T[keyof T]): Partial<T> {
   return { [key]: value } as Partial<T>;
 }
 
@@ -35,8 +26,7 @@ export function partial<T>(
  * Creates a component context with reactive state
  */
 export function createComponent<State extends object>(
-  initialState: State,
-  middleware?: ComponentMiddleware<State>
+  initialState: State
 ): ComponentContext<State> {
   // Create scoped lattice context
   const lattice = createLatticeContext();
@@ -71,18 +61,18 @@ export function createComponent<State extends object>(
 
         // Calculate new state
         const newState =
-          typeof updates === 'function' 
-            ? (updates as (prev: State) => Partial<State>)(currentState) 
-            : updates as Partial<State>;
+          typeof updates === 'function'
+            ? (updates as (prev: State) => Partial<State>)(currentState)
+            : (updates as Partial<State>);
 
         // Update each changed signal
-        (Object.entries(newState) as [keyof State, State[keyof State]][]).forEach(
-          ([key, value]) => {
-            if (key in stateSignals && !Object.is(stateSignals[key](), value)) {
-              updateSignalValue(stateSignals[key], value, lattice._batching);
-            }
+        (
+          Object.entries(newState) as [keyof State, State[keyof State]][]
+        ).forEach(([key, value]) => {
+          if (key in stateSignals && !Object.is(stateSignals[key](), value)) {
+            updateSignalValue(stateSignals[key], value, lattice._batching);
           }
-        );
+        });
       });
       return;
     }
@@ -104,7 +94,11 @@ export function createComponent<State extends object>(
       const result = handleSignalSelectorUpdate(signal, sourceValue, updates);
 
       if (result) {
-        updateSignalValue(sourceSignal as Signal<unknown>, result.value, lattice._batching);
+        updateSignalValue(
+          sourceSignal as Signal<unknown>,
+          result.value,
+          lattice._batching
+        );
         return;
       }
     }
@@ -124,5 +118,5 @@ export function createComponent<State extends object>(
     set,
   };
 
-  return middleware ? middleware(context) : context;
+  return context;
 }

@@ -2,16 +2,19 @@ import { describe, it, expect, vi } from 'vitest';
 import { createComponent } from './component';
 import { withLogger } from '../middleware';
 import type { ComponentContext } from './types';
-import { 
-  createTestComponent, 
+import {
+  createTestComponent,
   NamedCounterComponent,
   type CounterState,
-  type NamedCounterState 
+  type NamedCounterState,
 } from '../../testing/test-utils';
 
 describe('Component API', () => {
   it('should create a component with inferred state from callback', () => {
-    const store = createTestComponent<NamedCounterState>({ count: 5, name: 'John' });
+    const store = createTestComponent<NamedCounterState>({
+      count: 5,
+      name: 'John',
+    });
     const component = NamedCounterComponent(store);
 
     expect(component.count()).toBe(5);
@@ -27,17 +30,13 @@ describe('Component API', () => {
   });
 
   it('should support middleware composition with new pattern', () => {
-    const loggerConfig = withLogger({ count: 5 });
-    const store = createComponent(
-      loggerConfig.state,
-      loggerConfig.enhancer
-    );
+    const store = createComponent({ count: 5 });
     const Component = ({ store, set }: ComponentContext<CounterState>) => ({
       count: store.count,
       increment: () => set(store.count, store.count() + 1),
     });
 
-    const component = Component(store);
+    const component = Component(withLogger(store));
 
     // Spy on console.log to verify logger works
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -53,7 +52,10 @@ describe('Component API', () => {
 
   it('should handle state updates through adapter', () => {
     const store = createTestComponent({ value: 10 });
-    const Component = ({ store, set }: ComponentContext<{ value: number }>) => ({
+    const Component = ({
+      store,
+      set,
+    }: ComponentContext<{ value: number }>) => ({
       value: store.value,
       double: () => set(store.value, store.value() * 2),
       setValue: (n: number) => set(store.value, n),
@@ -76,9 +78,13 @@ describe('Component API', () => {
     }
 
     const store = createTestComponent<MultiState>({ a: 1, b: 2, c: 3 });
-    const Component = ({ store, computed, set }: ComponentContext<MultiState>) => {
+    const Component = ({
+      store,
+      computed,
+      set,
+    }: ComponentContext<MultiState>) => {
       const sum = computed(() => store.a() + store.b() + store.c());
-      
+
       return {
         sum,
         updateAll: () => {
@@ -91,17 +97,17 @@ describe('Component API', () => {
 
     const component = Component(store);
     let computeCount = 0;
-    
+
     const unsubscribe = component.sum.subscribe(() => computeCount++);
-    
+
     expect(component.sum()).toBe(6);
-    
+
     component.updateAll();
-    
+
     // Each update triggers a recomputation in the current implementation
     expect(computeCount).toBe(3);
     expect(component.sum()).toBe(60);
-    
+
     unsubscribe();
   });
 

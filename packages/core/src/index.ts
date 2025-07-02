@@ -12,7 +12,6 @@ export type {
   SignalState,
   ComponentContext,
   ComponentFactory,
-  ComponentMiddleware,
   SetState,
 } from './component/types';
 

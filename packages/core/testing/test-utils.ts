@@ -1,5 +1,5 @@
 import { createComponent } from '../src/component/component';
-import type { ComponentContext, ComponentMiddleware } from '../src/component/types';
+import type { ComponentContext } from '../src/component/types';
 
 // Common test state types
 export interface CounterState {
@@ -24,11 +24,8 @@ export interface UserState {
 }
 
 // Factory functions for creating test components
-export function createTestComponent<State extends object>(
-  initialState: State,
-  enhancer?: ComponentMiddleware<State>
-) {
-  return createComponent(initialState, enhancer);
+export function createTestComponent<State extends object>(initialState: State) {
+  return createComponent(initialState);
 }
 
 // Common test components
