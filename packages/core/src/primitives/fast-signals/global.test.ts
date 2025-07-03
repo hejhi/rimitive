@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { setCurrentComputed, getCurrentComputed } from './global';
 import { computed } from './computed';
 import { effect } from './effect';
-import { signal } from './signal';
+import { signal, writeSignal } from './signal';
 import { resetGlobalState } from './index';
 
 describe('Global State Management', () => {
@@ -37,12 +37,12 @@ describe('Global State Management', () => {
       expect(computeCount).toBe(1);
 
       // Change s1 - should increment global version
-      s1(10);
+      writeSignal(s1, 10);
       expect(c()).toBe(12);
       expect(computeCount).toBe(2);
 
       // Change s2 - should increment global version again
-      s2(20);
+      writeSignal(s2, 20);
       expect(c()).toBe(30);
       expect(computeCount).toBe(3);
     });
@@ -69,7 +69,7 @@ describe('Global State Management', () => {
       expect(compute2Count).toBe(1);
 
       // Change signal - both computeds should know something changed globally
-      s(5);
+      writeSignal(s, 5);
       expect(c1()).toBe(10);
       expect(c2()).toBe(15);
       expect(compute1Count).toBe(2);
@@ -100,7 +100,10 @@ describe('Global State Management', () => {
 
     it('should handle nested computed execution', () => {
       const s = signal(1);
-      const captures: Array<{ type: string; current: ReturnType<typeof getCurrentComputed> }> = [];
+      const captures: Array<{
+        type: string;
+        current: ReturnType<typeof getCurrentComputed>;
+      }> = [];
 
       const inner = computed(() => {
         captures.push({ type: 'inner', current: getCurrentComputed() });
@@ -201,7 +204,7 @@ describe('Global State Management', () => {
       expect(capturedDuring).toBe(c);
 
       // Execution with error
-      s(10);
+      writeSignal(s, 10);
       capturedBefore = getCurrentComputed();
 
       expect(() => c()).toThrow('Test error');
@@ -242,7 +245,7 @@ describe('Global State Management', () => {
       // When computed executes, it becomes current and tracks dependencies
       c();
       expect(dependencyAdded).toBe(true);
-      
+
       // After execution, current computed should be cleared
       expect(getCurrentComputed()).toBe(null);
     });
@@ -255,9 +258,9 @@ describe('Global State Management', () => {
 
       // Trigger some version increments
       c();
-      s(2);
-      s(3);
-      s(4);
+      writeSignal(s, 2);
+      writeSignal(s, 3);
+      writeSignal(s, 4);
 
       // Reset
       resetGlobalState();
@@ -289,7 +292,7 @@ describe('Global State Management', () => {
       resetGlobalState();
 
       // Existing reactive values should still work
-      s(10);
+      writeSignal(s, 10);
       expect(c()).toBe(30);
     });
   });
@@ -307,7 +310,7 @@ describe('Global State Management', () => {
       expect(combined()).toBe(12); // (1+2+3) + (1*2*3) = 6 + 6 = 12
 
       // Change one signal
-      a(2);
+      writeSignal(a, 2);
       expect(combined()).toBe(19); // (2+2+3) + (2*2*3) = 7 + 12 = 19
     });
 
@@ -322,13 +325,13 @@ describe('Global State Management', () => {
 
       expect(effectCount).toBe(1);
 
-      s(1);
+      writeSignal(s, 1);
       expect(effectCount).toBe(2);
 
       dispose();
 
       // After disposal, changes shouldn't trigger effect
-      s(2);
+      writeSignal(s, 2);
       expect(effectCount).toBe(2);
 
       // Global state should be clean
@@ -358,7 +361,7 @@ describe('Global State Management', () => {
       values.length = 0;
 
       // Update source
-      source(2);
+      writeSignal(source, 2);
 
       // All computeds should recompute on next access
       computeds.forEach((c, i) => {

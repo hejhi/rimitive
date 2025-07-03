@@ -19,4 +19,3 @@ export type {
 export { withDevtools, withLogger, withPersistence } from './middleware/index';
 
 // Temporary export for benchmarking fast-signals
-export { createComponentFast } from './component/component-fast';

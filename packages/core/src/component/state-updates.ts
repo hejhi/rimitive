@@ -7,7 +7,7 @@
  */
 
 import type { Signal, SignalSelector, SignalState } from './types';
-import { getSourceSignal, isSignalSelector } from '../core/signal';
+import { isSignalSelector, getSourceSignal } from '../primitives/fast-signals/lattice-integration';
 
 /**
  * Applies an update to a value, handling functions and partial object updates

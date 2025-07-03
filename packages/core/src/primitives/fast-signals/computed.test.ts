@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { computed } from './computed';
-import { signal } from './signal';
+import { signal, writeSignal } from './signal';
 import { batch } from './batch';
 import { effect } from './effect';
 import { clearPool } from './node';
@@ -25,10 +25,10 @@ describe('computed.ts', () => {
 
       expect(doubled()).toBe(2);
 
-      count(5);
+      writeSignal(count, 5);
       expect(doubled()).toBe(10);
 
-      count(0);
+      writeSignal(count, 0);
       expect(doubled()).toBe(0);
     });
 
@@ -40,13 +40,13 @@ describe('computed.ts', () => {
 
       expect(sum()).toBe(6);
 
-      a(10);
+      writeSignal(a, 10);
       expect(sum()).toBe(15);
 
-      b(20);
+      writeSignal(b, 20);
       expect(sum()).toBe(33);
 
-      c(30);
+      writeSignal(c, 30);
       expect(sum()).toBe(60);
     });
 
@@ -90,11 +90,11 @@ describe('computed.ts', () => {
       expect(doubled()).toBe(2);
       expect(fn).toHaveBeenCalledTimes(1);
 
-      a(2);
+      writeSignal(a, 2);
       expect(doubled()).toBe(4);
       expect(fn).toHaveBeenCalledTimes(2);
 
-      a(3);
+      writeSignal(a, 3);
       expect(doubled()).toBe(6);
       expect(fn).toHaveBeenCalledTimes(3);
     });
@@ -109,12 +109,12 @@ describe('computed.ts', () => {
       expect(fn).toHaveBeenCalledTimes(1);
 
       // Update only one dependency
-      a(10);
+      writeSignal(a, 10);
       expect(sum()).toBe(12);
       expect(fn).toHaveBeenCalledTimes(2);
 
       // Update the other dependency
-      b(20);
+      writeSignal(b, 20);
       expect(sum()).toBe(30);
       expect(fn).toHaveBeenCalledTimes(3);
     });
@@ -125,34 +125,34 @@ describe('computed.ts', () => {
       const condition = signal(true);
       const a = signal(1);
       const b = signal(2);
-      const fn = vi.fn(() => condition() ? a() : b());
+      const fn = vi.fn(() => (condition() ? a() : b()));
       const result = computed(fn);
 
       expect(result()).toBe(1);
       expect(fn).toHaveBeenCalledTimes(1);
 
       // Update non-active branch - should not recompute
-      b(10);
+      writeSignal(b, 10);
       expect(result()).toBe(1);
       expect(fn).toHaveBeenCalledTimes(1);
 
       // Update active branch - should recompute
-      a(5);
+      writeSignal(a, 5);
       expect(result()).toBe(5);
       expect(fn).toHaveBeenCalledTimes(2);
 
       // Switch condition
-      condition(false);
+      writeSignal(condition, false);
       expect(result()).toBe(10);
       expect(fn).toHaveBeenCalledTimes(3);
 
       // Now updating 'a' should not cause recomputation
-      a(100);
+      writeSignal(a, 100);
       expect(result()).toBe(10);
       expect(fn).toHaveBeenCalledTimes(3);
 
       // But updating 'b' should
-      b(20);
+      writeSignal(b, 20);
       expect(result()).toBe(20);
       expect(fn).toHaveBeenCalledTimes(4);
     });
@@ -162,7 +162,7 @@ describe('computed.ts', () => {
       const a = signal(1);
       const b = signal(2);
       const c = signal(3);
-      
+
       const sum = computed(() => {
         let result = a() + c();
         if (includeB()) {
@@ -174,23 +174,23 @@ describe('computed.ts', () => {
       expect(sum()).toBe(4); // 1 + 3
 
       // Update b - should not trigger recomputation
-      b(10);
+      writeSignal(b, 10);
       expect(sum()).toBe(4);
 
       // Include b in computation
-      includeB(true);
+      writeSignal(includeB, true);
       expect(sum()).toBe(14); // 1 + 10 + 3
 
       // Now b updates should trigger recomputation
-      b(20);
+      writeSignal(b, 20);
       expect(sum()).toBe(24); // 1 + 20 + 3
 
       // Remove b from computation again
-      includeB(false);
+      writeSignal(includeB, false);
       expect(sum()).toBe(4); // 1 + 3
 
       // b updates should no longer trigger recomputation
-      b(100);
+      writeSignal(b, 100);
       expect(sum()).toBe(4);
     });
   });
@@ -206,7 +206,7 @@ describe('computed.ts', () => {
       expect(quadrupled()).toBe(4);
       expect(octupled()).toBe(8);
 
-      a(5);
+      writeSignal(a, 5);
       // Note: Computed values lazily update when accessed
       expect(doubled()).toBe(10);
       expect(quadrupled()).toBe(20);
@@ -224,10 +224,10 @@ describe('computed.ts', () => {
 
       expect(sum()).toBe(11); // (1+2) + (2+3) + 3
 
-      b(10);
+      writeSignal(b, 10);
       expect(sum()).toBe(27); // ab(1+10) + bc(10+3) + c(3) = 11 + 13 + 3
 
-      c(5);
+      writeSignal(c, 5);
       expect(sum()).toBe(31); // ab(1+10) + bc(10+5) + c(5) = 11 + 15 + 5
     });
   });
@@ -268,10 +268,10 @@ describe('computed.ts', () => {
 
       expect(() => bad()).toThrow('Computation error');
 
-      a(-1);
+      writeSignal(a, -1);
       expect(bad()).toBe(-1);
 
-      a(2);
+      writeSignal(a, 2);
       expect(() => bad()).toThrow('Computation error');
     });
   });
@@ -289,8 +289,8 @@ describe('computed.ts', () => {
       sum.dispose();
 
       // Changes should not trigger recomputation
-      a(10);
-      b(20);
+      writeSignal(a, 10);
+      writeSignal(b, 20);
 
       // Accessing should throw
       expect(() => sum()).toThrow('Computed is disposed');
@@ -307,8 +307,8 @@ describe('computed.ts', () => {
 
       // doubled should still work
       expect(doubled()).toBe(2);
-      
-      a(5);
+
+      writeSignal(a, 5);
       expect(doubled()).toBe(10);
 
       // But quadrupled should throw
@@ -331,8 +331,8 @@ describe('computed.ts', () => {
       expect(results).toEqual([3]);
 
       batch(() => {
-        a(10);
-        b(20);
+        writeSignal(a, 10);
+        writeSignal(b, 20);
         // Should not recompute yet
         expect(fn).toHaveBeenCalledTimes(1);
       });
@@ -353,15 +353,15 @@ describe('computed.ts', () => {
       expect(fn).toHaveBeenCalledTimes(1);
 
       batch(() => {
-        a(2);
+        writeSignal(a, 2);
         batch(() => {
-          a(3);
+          writeSignal(a, 3);
           batch(() => {
-            a(4);
+            writeSignal(a, 4);
           });
-          a(5);
+          writeSignal(a, 5);
         });
-        a(6);
+        writeSignal(a, 6);
       });
 
       // Should only recompute once after all batches complete
@@ -381,7 +381,7 @@ describe('computed.ts', () => {
       expect(final()).toBe(5); // (1 * 2 * 2) + 1
       expect(fn).toHaveBeenCalledTimes(1);
 
-      count(3);
+      writeSignal(count, 3);
       expect(final()).toBe(13); // (3 * 2 * 2) + 1
       expect(fn).toHaveBeenCalledTimes(2);
     });
@@ -400,7 +400,7 @@ describe('computed.ts', () => {
       expect(bNotifications).toEqual([2]);
       expect(cNotifications).toEqual([4]);
 
-      a(5);
+      writeSignal(a, 5);
 
       expect(bNotifications).toEqual([2, 10]);
       expect(cNotifications).toEqual([4, 20]);
@@ -415,11 +415,11 @@ describe('computed.ts', () => {
 
     it('should handle computation that returns different types', () => {
       const toggle = signal(true);
-      const mixed = computed(() => toggle() ? 42 : 'hello');
+      const mixed = computed(() => (toggle() ? 42 : 'hello'));
 
       expect(mixed()).toBe(42);
-      
-      toggle(false);
+
+      writeSignal(toggle, false);
       expect(mixed()).toBe('hello');
     });
 
@@ -435,7 +435,7 @@ describe('computed.ts', () => {
 
       expect(current()).toBe(101);
 
-      source(5);
+      writeSignal(source, 5);
       expect(current()).toBe(105);
     });
 
@@ -450,19 +450,19 @@ describe('computed.ts', () => {
 
       // Rapidly change which signal we depend on
       for (let i = 1; i < 10; i++) {
-        index(i);
+        writeSignal(index, i);
         expect(value()).toBe(i);
       }
 
       expect(fn).toHaveBeenCalledTimes(10);
 
       // Update a signal we no longer depend on
-      signals[0]!(100);
+      writeSignal(signals[0]!, 100);
       expect(value()).toBe(9); // Still 9, not recomputed
       expect(fn).toHaveBeenCalledTimes(10);
 
       // Update the current dependency
-      signals[9]!(99);
+      writeSignal(signals[9]!, 99);
       expect(value()).toBe(99);
       expect(fn).toHaveBeenCalledTimes(11);
     });

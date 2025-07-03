@@ -12,7 +12,6 @@ export interface DependencyNode {
 
 export interface Signal<T = unknown> {
   (): T;
-  (value: T): void;
   _value: T;
   _version: number;
   _targets?: DependencyNode;

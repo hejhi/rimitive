@@ -8,7 +8,7 @@
 import type { LatticeContext, SetState } from './types';
 import { createTrackingContext } from '../core/tracking';
 import { createBatchingSystem } from '../core/batching';
-import { createSignalFactory } from '../core/signal';
+import { createFastSignalFactory, setupFastSignalTracking } from '../primitives/fast-signals/lattice-integration';
 import { createComputedFactory } from '../core/computed';
 import { createEffectFactory } from '../core/effect';
 
@@ -23,8 +23,11 @@ export function createLatticeContext(): LatticeContext & {
   const tracking = createTrackingContext();
   const batching = createBatchingSystem();
 
+  // Set up fast-signal tracking integration
+  setupFastSignalTracking(tracking);
+
   // Create bound factory functions
-  const signal = createSignalFactory(tracking, batching);
+  const signal = createFastSignalFactory(tracking, batching);
   const computed = createComputedFactory(tracking, batching);
   const effect = createEffectFactory(tracking, batching);
 

@@ -11,40 +11,39 @@ import {
 import { getBatchDepth } from './batch';
 
 export function signal<T>(value: T): Signal<T> {
-  const s: Signal<T> = function (newValue?: T) {
-    if (arguments.length === 0) {
-      // Read path
-      const current = getCurrentComputed();
-      if (current && current._flags & RUNNING) {
-        addDependency(s, current);
-      }
-      return s._value;
-    } else {
-      // Write path
-      if (s._value !== newValue) {
-        s._value = newValue!;
-        s._version++;
-        incrementGlobalVersion();
-
-        if (!getBatchDepth()) {
-          notifyTargets(s);
-        } else {
-          // In batch - just mark targets as outdated
-          let node = s._targets;
-          while (node) {
-            node.target._notify();
-            node = node.nextTarget;
-          }
-        }
-      }
+  const s: Signal<T> = function () {
+    // Read-only path
+    const current = getCurrentComputed();
+    if (current && current._flags & RUNNING) {
+      addDependency(s, current);
     }
-    return undefined;
+    return s._value;
   } as Signal<T>;
 
   s._value = value;
   s._version = 0;
 
   return s;
+}
+
+// Write to a signal (internal use only for set() function)
+export function writeSignal<T>(signal: Signal<T>, value: T): void {
+  if (signal._value !== value) {
+    signal._value = value;
+    signal._version++;
+    incrementGlobalVersion();
+
+    if (!getBatchDepth()) {
+      notifyTargets(signal);
+    } else {
+      // In batch - just mark targets as outdated
+      let node = signal._targets;
+      while (node) {
+        node.target._notify();
+        node = node.nextTarget;
+      }
+    }
+  }
 }
 
 // Utility functions for signals

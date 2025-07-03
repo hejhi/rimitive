@@ -7,7 +7,7 @@
 
 import type { ComponentContext, SetState, SignalState, Signal } from './types';
 import { createLatticeContext } from './context';
-import { updateSignalValue, isSignalSelector } from '../core/signal';
+import { updateFastSignalValue, isSignalSelector } from '../primitives/fast-signals/lattice-integration';
 import {
   applyUpdate,
   handleSignalSelectorUpdate,
@@ -70,7 +70,7 @@ export function createComponent<State extends object>(
           Object.entries(newState) as [keyof State, State[keyof State]][]
         ).forEach(([key, value]) => {
           if (key in stateSignals && !Object.is(stateSignals[key](), value)) {
-            updateSignalValue(stateSignals[key], value, lattice._batching);
+            updateFastSignalValue(stateSignals[key], value, lattice._batching);
           }
         });
       });
@@ -94,7 +94,7 @@ export function createComponent<State extends object>(
       const result = handleSignalSelectorUpdate(signal, sourceValue, updates);
 
       if (result) {
-        updateSignalValue(
+        updateFastSignalValue(
           sourceSignal as Signal<unknown>,
           result.value,
           lattice._batching
@@ -106,7 +106,7 @@ export function createComponent<State extends object>(
     // Regular signal update
     const currentValue = signal();
     const newValue = applyUpdate(currentValue, updates);
-    updateSignalValue(signal, newValue, lattice._batching);
+    updateFastSignalValue(signal, newValue, lattice._batching);
   }) as SetState;
 
   // Create component context with merged functionality
