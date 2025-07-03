@@ -1,4 +1,4 @@
-// Fast signals public API
+// Signals public API
 
 export { signal, peek, untrack, writeSignal } from './signal';
 export { computed, isOutdated } from './computed';
@@ -11,13 +11,12 @@ export type { Signal, Computed, Effect } from './types';
 
 // Lattice integration
 export { 
-  createFastSignalFactory,
-  createFastComputedFactory,
-  createFastEffectFactory,
-  createFastBatchFunction,
-  updateFastSignalValue,
-  isFastSignal,
-  setupFastSignalTracking
+  createSignalFactory,
+  createComputedFactory,
+  createEffectFactory,
+  createBatchFunction,
+  updateSignalValue,
+  isSignal
 } from './lattice-integration';
 
 // Testing utilities

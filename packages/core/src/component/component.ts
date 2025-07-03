@@ -7,7 +7,7 @@
 
 import type { ComponentContext, SetState, SignalState, Signal } from './types';
 import { createLatticeContext } from './context';
-import { updateFastSignalValue } from '../primitives/fast-signals/lattice-integration';
+import { updateSignalValue } from '../primitives/signals/lattice-integration';
 import { applyUpdate } from './state-updates';
 
 /**
@@ -66,7 +66,7 @@ export function createComponent<State extends object>(
           Object.entries(newState) as [keyof State, State[keyof State]][]
         ).forEach(([key, value]) => {
           if (key in stateSignals && !Object.is(stateSignals[key](), value)) {
-            updateFastSignalValue(stateSignals[key], value);
+            updateSignalValue(stateSignals[key], value);
           }
         });
       });
@@ -77,7 +77,7 @@ export function createComponent<State extends object>(
     const signal = target as Signal<unknown>;
     const currentValue = signal();
     const newValue = applyUpdate(currentValue, updates);
-    updateFastSignalValue(signal, newValue);
+    updateSignalValue(signal, newValue);
   }) as SetState;
 
   // Create component context with merged functionality

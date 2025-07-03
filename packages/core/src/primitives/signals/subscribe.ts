@@ -1,4 +1,4 @@
-// Subscribe utility for fast-signals
+// Subscribe utility for signals
 // Provides a simple way to listen for signal/computed changes
 
 import { effect } from './effect';

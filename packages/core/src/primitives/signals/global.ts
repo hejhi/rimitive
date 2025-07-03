@@ -1,4 +1,4 @@
-// Global state management for fast-signals
+// Global state management for signals
 
 import type { Computed, Effect } from './types';
 

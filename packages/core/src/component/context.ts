@@ -8,13 +8,12 @@
 import type { LatticeContext, SetState } from './types';
 import { createTrackingContext } from '../core/tracking';
 import { createBatchingSystem } from '../core/batching';
-import { 
-  createFastSignalFactory, 
-  createFastComputedFactory,
-  createFastEffectFactory,
-  createFastBatchFunction,
-  setupFastSignalTracking 
-} from '../primitives/fast-signals/lattice-integration';
+import {
+  createSignalFactory,
+  createComputedFactory,
+  createEffectFactory,
+  createBatchFunction,
+} from '../primitives/signals/lattice-integration';
 
 /**
  * Creates a scoped lattice context for a component tree
@@ -27,13 +26,10 @@ export function createLatticeContext(): LatticeContext & {
   const tracking = createTrackingContext();
   const batching = createBatchingSystem();
 
-  // Set up fast-signal tracking integration
-  setupFastSignalTracking();
-
-  // Create bound factory functions using fast-signals
-  const signal = createFastSignalFactory();
-  const computed = createFastComputedFactory();
-  const effect = createFastEffectFactory();
+  // Create bound factory functions using signals
+  const signal = createSignalFactory();
+  const computed = createComputedFactory();
+  const effect = createEffectFactory();
 
   // Placeholder set function - will be provided when creating store
   const set: SetState = () => {
@@ -42,15 +38,15 @@ export function createLatticeContext(): LatticeContext & {
     );
   };
 
-  // Create fast-signal batch function
-  const batch = createFastBatchFunction();
+  // Create signal batch function
+  const batch = createBatchFunction();
 
   return {
     signal,
     computed,
     effect,
     set,
-    // Internal method for store integration - use fast-signal batch
+    // Internal method for store integration - use signal batch
     _batch: batch,
     _tracking: tracking,
     _batching: batching,

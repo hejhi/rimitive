@@ -1,4 +1,4 @@
-// Shared types for fast-signals implementation
+// Shared types for signals implementation
 
 export interface DependencyNode {
   source: Signal | Computed;

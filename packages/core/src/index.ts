@@ -18,4 +18,4 @@ export type {
 // Export middleware
 export { withDevtools, withLogger, withPersistence } from './middleware/index';
 
-// Temporary export for benchmarking fast-signals
+// Export signals for benchmarking
