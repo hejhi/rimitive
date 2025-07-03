@@ -1,15 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, peek, untrack, writeSignal } from './signal';
-import { computed } from './computed';
-import { effect } from './effect';
-import { batch } from './batch';
-import { resetGlobalState, clearPool } from './index';
+import { signal, peek, untrack, writeSignal, computed, effect, batch, resetGlobalState } from './test-setup';
 
 describe('signal', () => {
   beforeEach(() => {
     // Clean state between tests
     resetGlobalState();
-    clearPool();
   });
 
   it('should create a signal with initial value', () => {

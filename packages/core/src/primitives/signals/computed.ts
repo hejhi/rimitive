@@ -27,7 +27,7 @@ export function createComputedScope(
         node.addDependency(c, current);
       }
 
-      if (c._globalVersion !== scope.globalVersion) {
+      if (c._globalVersion !== scope.getGlobalVersion()) {
         // Something changed globally, check our sources
         let outdated = false;
         let node = c._sources;
@@ -43,7 +43,7 @@ export function createComputedScope(
         if (outdated) {
           c._flags |= OUTDATED;
         }
-        c._globalVersion = scope.globalVersion;
+        c._globalVersion = scope.getGlobalVersion();
       }
 
       if (c._flags & OUTDATED) {

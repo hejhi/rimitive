@@ -3,12 +3,11 @@
 import type { Computed, Effect } from './types';
 
 export type SignalScope = {
-  globalVersion: number;
-  currentComputed: null;
   incrementGlobalVersion: () => void;
   setCurrentComputed: (computed: Computed | Effect | null) => void;
   getCurrentComputed: () => Computed | Effect | null;
   resetGlobalState: () => void;
+  getGlobalVersion: () => number;
 };
 
 export function createSignalScope(): SignalScope {
@@ -34,12 +33,15 @@ export function createSignalScope(): SignalScope {
     currentComputed = null;
   }
 
+  function getGlobalVersion(): number {
+    return globalVersion;
+  }
+
   return {
-    globalVersion,
-    currentComputed,
     incrementGlobalVersion,
     setCurrentComputed,
     getCurrentComputed,
     resetGlobalState,
+    getGlobalVersion,
   };
 }

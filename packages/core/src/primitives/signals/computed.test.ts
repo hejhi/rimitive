@@ -1,13 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { computed } from './computed';
-import { signal, writeSignal } from './signal';
-import { batch } from './batch';
-import { effect } from './effect';
-import { clearPool } from './node';
+import { computed, signal, writeSignal, batch, effect, resetGlobalState } from './test-setup';
 
 describe('computed.ts', () => {
   beforeEach(() => {
-    clearPool();
+    resetGlobalState();
   });
 
   describe('basic functionality', () => {

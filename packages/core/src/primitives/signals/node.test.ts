@@ -9,7 +9,8 @@ import {
   notifyTargets,
   getPoolSize,
   clearPool,
-} from './node';
+  resetGlobalState,
+} from './test-setup';
 import type { Signal, Computed, DependencyNode } from './types';
 
 // Mock signal factory
@@ -48,7 +49,7 @@ function createMockComputed<T>(fn: () => T): Computed<T> {
 
 describe('node.ts', () => {
   beforeEach(() => {
-    clearPool();
+    resetGlobalState();
   });
 
   describe('acquireNode', () => {

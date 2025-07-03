@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { setCurrentComputed, getCurrentComputed } from './scope';
-import { computed } from './computed';
-import { effect } from './effect';
-import { signal, writeSignal } from './signal';
-import { resetGlobalState } from './index';
+import { setCurrentComputed, getCurrentComputed, computed, effect, signal, writeSignal, resetGlobalState } from './test-setup';
 
 describe('Global State Management', () => {
   beforeEach(() => {
