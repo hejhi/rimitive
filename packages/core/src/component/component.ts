@@ -7,12 +7,8 @@
 
 import type { ComponentContext, SetState, SignalState, Signal } from './types';
 import { createLatticeContext } from './context';
-import { updateFastSignalValue, isSignalSelector } from '../primitives/fast-signals/lattice-integration';
-import {
-  applyUpdate,
-  handleSignalSelectorUpdate,
-  findSignalStateKey,
-} from './state-updates';
+import { updateFastSignalValue } from '../primitives/fast-signals/lattice-integration';
+import { applyUpdate } from './state-updates';
 
 /**
  * Helper for creating partial updates with structural sharing
@@ -70,7 +66,7 @@ export function createComponent<State extends object>(
           Object.entries(newState) as [keyof State, State[keyof State]][]
         ).forEach(([key, value]) => {
           if (key in stateSignals && !Object.is(stateSignals[key](), value)) {
-            updateFastSignalValue(stateSignals[key], value, lattice._batching);
+            updateFastSignalValue(stateSignals[key], value);
           }
         });
       });
@@ -79,34 +75,9 @@ export function createComponent<State extends object>(
 
     // Single signal update
     const signal = target as Signal<unknown>;
-
-    // Handle signal selectors specially
-    if (isSignalSelector(signal)) {
-      let stateKey = signalToKeyMap.get(signal);
-      if (!stateKey) {
-        const foundKey = findSignalStateKey(signal, stateSignals);
-        if (!foundKey) throw new Error('Signal not found in store');
-        stateKey = foundKey;
-      }
-
-      const sourceSignal = stateSignals[stateKey];
-      const sourceValue = sourceSignal();
-      const result = handleSignalSelectorUpdate(signal, sourceValue, updates);
-
-      if (result) {
-        updateFastSignalValue(
-          sourceSignal as Signal<unknown>,
-          result.value,
-          lattice._batching
-        );
-        return;
-      }
-    }
-
-    // Regular signal update
     const currentValue = signal();
     const newValue = applyUpdate(currentValue, updates);
-    updateFastSignalValue(signal, newValue, lattice._batching);
+    updateFastSignalValue(signal, newValue);
   }) as SetState;
 
   // Create component context with merged functionality

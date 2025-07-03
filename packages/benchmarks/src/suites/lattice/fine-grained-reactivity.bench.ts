@@ -247,7 +247,7 @@ describe('Computed Values - Performance & Memory', () => {
 
       const CountersComponent = ({ store, set, computed }: ComponentContext<{ counters: Record<string, number> }>) => {
         // Create computed values that depend on multiple signals
-        const computeds = counterIds.map((id, index) => 
+        const computeds = counterIds.map((_id, index) => 
           computed(() => {
             let sum = 0;
             for (let i = 0; i < COMPUTED_DEPENDENCIES; i++) {
@@ -315,7 +315,7 @@ describe('Computed Values - Performance & Memory', () => {
       const store = observable({ counters });
 
       // Create computed values with same dependency pattern
-      const computeds = counterIds.map((id, index) =>
+      const computeds = counterIds.map((_id, index) =>
         mobxComputed(() => {
           let sum = 0;
           for (let i = 0; i < COMPUTED_DEPENDENCIES; i++) {
@@ -380,7 +380,7 @@ describe('Computed Values - Performance & Memory', () => {
       const store = signal({ counters });
 
       // Create computed values with same dependency pattern
-      const computeds = counterIds.map((id, index) =>
+      const computeds = counterIds.map((_id, index) =>
         preactComputed(() => {
           let sum = 0;
           for (let i = 0; i < COMPUTED_DEPENDENCIES; i++) {

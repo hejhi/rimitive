@@ -3,8 +3,11 @@
  * Note: These are internal implementations and not part of the public API
  */
 
-export { createSignalFactory } from './signal';
-export { createComputedFactory } from './computed';
-export { createEffectFactory } from './effect';
+// Fast-signals are now used for all reactive primitives
+export { 
+  createFastSignalFactory as createSignalFactory,
+  createFastComputedFactory as createComputedFactory,
+  createFastEffectFactory as createEffectFactory 
+} from '../primitives/fast-signals/lattice-integration';
 export { createTrackingContext } from './tracking';
 export { createBatchingSystem } from './batching';

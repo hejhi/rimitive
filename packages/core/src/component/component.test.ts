@@ -115,8 +115,8 @@ describe('Component API', () => {
     const store = createTestComponent({ count: 5 });
     const Component = ({ store, set }: ComponentContext<CounterState>) => ({
       count: store.count,
-      increment: () => set(store.count, (c) => c + 1),
-      multiplyBy: (n: number) => set(store.count, (c) => c * n),
+      increment: () => set(store.count, (c: number) => c + 1),
+      multiplyBy: (n: number) => set(store.count, (c: number) => c * n),
     });
 
     const component = Component(store);
