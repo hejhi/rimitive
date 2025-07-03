@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { setCurrentComputed, getCurrentComputed } from './global';
+import { setCurrentComputed, getCurrentComputed } from './scope';
 import { computed } from './computed';
 import { effect } from './effect';
 import { signal, writeSignal } from './signal';

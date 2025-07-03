@@ -58,29 +58,17 @@ export interface SetState {
 
   // Update signal with function (for values that might be undefined)
   // Note: updater is only called if current value is not undefined
-  <T>(
-    signal: Signal<T | undefined>,
-    updater: (current: T) => T
-  ): void;
+  <T>(signal: Signal<T | undefined>, updater: (current: T) => T): void;
 
   // Update signal with function
-  <T>(
-    signal: Signal<T>,
-    updater: (current: T) => T
-  ): void;
+  <T>(signal: Signal<T>, updater: (current: T) => T): void;
 
   // Partial updates for objects (for values that might be undefined)
   // Note: updates are only applied if current value is not undefined
-  <T extends object>(
-    signal: Signal<T | undefined>,
-    updates: Partial<T>
-  ): void;
+  <T extends object>(signal: Signal<T | undefined>, updates: Partial<T>): void;
 
   // Partial updates for objects
-  <T extends object>(
-    signal: Signal<T>,
-    updates: Partial<T>
-  ): void;
+  <T extends object>(signal: Signal<T>, updates: Partial<T>): void;
 
   // Set signal value directly
   <T>(signal: Signal<T>, value: T): void;
