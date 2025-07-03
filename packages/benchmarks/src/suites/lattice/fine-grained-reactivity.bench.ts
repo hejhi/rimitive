@@ -1,21 +1,23 @@
 /**
  * @fileoverview Fine-Grained Reactivity Performance Benchmark
  *
- * Compares fine-grained reactive state management systems on partial update efficiency.
- * Measures how well each system handles updates that only affect a subset of subscribers,
- * focusing on fair apples-to-apples comparisons between systems with similar architectures.
- *
- * Metrics measured:
- * - Execution time (via Vitest benchmark)
- * - Memory allocation patterns
- * - Subscription efficiency
- * - Update propagation overhead
+ * Fair comparison of reactive state management systems with two benchmark suites:
+ * 
+ * 1. Direct Signal Access - Measures raw signal read/write performance
+ * 2. Computed Values - Measures derived state performance with dependencies
+ * 
+ * Each benchmark ensures:
+ * - Identical data structures across all systems
+ * - Equivalent access patterns and abstractions
+ * - Same number of operations and complexity
+ * - Fair memory measurement methodology
  */
 
 import { describe, bench } from 'vitest';
 import { createComponent } from '@lattice/core';
 import type { ComponentContext } from '@lattice/core';
 import { observable, action, computed as mobxComputed } from 'mobx';
+import { signal, computed as preactComputed } from '@preact/signals-core';
 import {
   initMemoryTracking,
   measureMemory,
@@ -28,75 +30,64 @@ function forceGC() {
   }
 }
 
-// Test state: 100 independent counters
-
+// Benchmark configuration
 const COUNTER_COUNT = 100;
-const UPDATE_ITERATIONS = 100; // Reduced for fair comparison without React batching
+const UPDATE_ITERATIONS = 100;
+const COMPUTED_DEPENDENCIES = 3; // Each computed depends on 3 signals
 
 // Generate counter IDs outside benchmarks
 const counterIds = Array.from(
   { length: COUNTER_COUNT },
   (_, i) => `counter_${i}`
 );
-const initialCounters = Object.fromEntries(counterIds.map((id) => [id, 0]));
 
-describe('Fine-Grained Reactivity - Performance & Memory', () => {
-  // Lattice with fine-grained subscriptions - component composition with flat state
+describe('Direct Signal Access - Performance & Memory', () => {
+  // This benchmark compares raw signal read/write performance
+  // All systems use flat objects with direct property access
+  // No computed values are created to ensure fair comparison
+  // Lattice - Direct signal access
   {
     const setupLattice = () => {
-      // Type for our flat counter state
-      type CounterState = { [K in (typeof counterIds)[number]]: number };
+      // Create flat object structure (same as MobX/Preact)
+      const counters: Record<string, number> = {};
+      counterIds.forEach(id => counters[id] = 0);
+      
+      const store = createComponent({ counters });
 
-      // Create component with initial state
-      const store = createComponent(initialCounters as CounterState);
-
-      // Define the main Counters component with direct signal access
-      const CountersComponent = ({
-        store,
-        set,
-      }: ComponentContext<CounterState>) => {
+      const CountersComponent = ({ store, set }: ComponentContext<{ counters: Record<string, number> }>) => {
         return {
-          // Direct access to signals without pre-creating computeds
-          getCounter: (index: number) => {
-            const id = counterIds[index];
-            const signal = store[id as keyof CounterState];
-            return signal ? signal() : 0;
+          getCounter: (id: string) => {
+            return store.counters()[id] || 0;
           },
-          incrementCounter: (index: number) => {
-            const id = counterIds[index];
-            const signal = store[id as keyof CounterState];
-            if (signal) {
-              set(signal, (state) => state + 1);
-            }
+          incrementCounter: (id: string) => {
+            set(store.counters, prev => ({
+              ...prev,
+              [id]: (prev[id] || 0) + 1
+            }));
           },
         };
       };
 
-      const counters = CountersComponent(store);
-
-      return {
-        getCounter: counters.getCounter,
-        incrementCounter: counters.incrementCounter,
-      };
+      return CountersComponent(store);
     };
 
     let latticeSetup: ReturnType<typeof setupLattice> | undefined;
-    const benchmarkName = 'Lattice - partial updates (fine-grained)';
+    const benchmarkName = 'Lattice - direct signal access';
 
     bench(
       benchmarkName,
       () => {
         // Update different counters cyclically
         for (let i = 0; i < UPDATE_ITERATIONS; i++) {
-          const counterIndex = i % COUNTER_COUNT;
-          latticeSetup?.incrementCounter(counterIndex);
+          const counterId = counterIds[i % COUNTER_COUNT]!;
+          latticeSetup?.incrementCounter(counterId);
 
-          // Match MobX pattern: access the updated counter value
-          latticeSetup?.getCounter(counterIndex);
+          // Access the updated counter
+          latticeSetup?.getCounter(counterId);
 
-          // Access adjacent counter to simulate realistic component behavior
-          const adjacentIndex = (counterIndex + 1) % COUNTER_COUNT;
-          latticeSetup?.getCounter(adjacentIndex);
+          // Access adjacent counter
+          const adjacentId = counterIds[(i + 1) % COUNTER_COUNT]!;
+          latticeSetup?.getCounter(adjacentId);
         }
       },
       {
@@ -118,52 +109,46 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
     );
   }
 
-  // MobX with fine-grained reactivity (comparable to Lattice)
+  // MobX - Direct signal access
   {
     const setupMobX = () => {
-      // Create observable store
-      const store = observable({
-        counters: { ...initialCounters },
-      });
+      // Create observable store with same structure as Lattice
+      const counters: Record<string, number> = {};
+      counterIds.forEach(id => counters[id] = 0);
+      
+      const store = observable({ counters });
 
-      // Create action for incrementing
-      const increment = action((id: string) => {
+      const incrementCounter = action((id: string) => {
         store.counters[id] = (store.counters[id] || 0) + 1;
       });
 
-      // Create computed values for each counter (fine-grained subscriptions)
-      // These only recalculate when their specific counter changes
-      const counterComputeds = counterIds.map((id) =>
-        mobxComputed(() => store.counters[id] || 0)
-      );
+      const getCounter = (id: string) => {
+        return store.counters[id] || 0;
+      };
 
       return {
-        store,
-        increment,
-        counterComputeds,
+        getCounter,
+        incrementCounter,
       };
     };
 
     let mobxSetup: ReturnType<typeof setupMobX> | undefined;
-    const mobxBenchmarkName =
-      'MobX - partial updates (fine-grained reactivity)';
+    const mobxBenchmarkName = 'MobX - direct signal access';
 
     bench(
       mobxBenchmarkName,
       () => {
-        // Same update pattern as others
+        // Same update pattern as Lattice
         for (let i = 0; i < UPDATE_ITERATIONS; i++) {
-          const counterIndex = i % COUNTER_COUNT;
-          const counterId = counterIds[counterIndex]!;
-          mobxSetup?.increment(counterId);
+          const counterId = counterIds[i % COUNTER_COUNT]!;
+          mobxSetup?.incrementCounter(counterId);
 
-          // Realistic access pattern: only access the counter that was updated
-          // Plus 1-2 adjacent counters to simulate realistic UI context
-          mobxSetup?.counterComputeds[counterIndex]?.get(); // The updated counter
+          // Access the updated counter
+          mobxSetup?.getCounter(counterId);
 
-          // Access adjacent counter to simulate realistic component behavior
-          const adjacentIndex = (counterIndex + 1) % COUNTER_COUNT;
-          mobxSetup?.counterComputeds[adjacentIndex]?.get();
+          // Access adjacent counter
+          const adjacentId = counterIds[(i + 1) % COUNTER_COUNT]!;
+          mobxSetup?.getCounter(adjacentId);
         }
       },
       {
@@ -184,43 +169,300 @@ describe('Fine-Grained Reactivity - Performance & Memory', () => {
       }
     );
   }
+
+  // Preact Signals - Direct signal access
+  {
+    const setupPreact = () => {
+      // Use same immutable pattern as Lattice
+      const counters: Record<string, number> = {};
+      counterIds.forEach(id => counters[id] = 0);
+      
+      const store = signal({ counters });
+
+      return {
+        getCounter: (id: string) => {
+          return store.value.counters[id] || 0;
+        },
+        incrementCounter: (id: string) => {
+          // Use immutable update like Lattice
+          store.value = {
+            counters: {
+              ...store.value.counters,
+              [id]: (store.value.counters[id] || 0) + 1
+            }
+          };
+        },
+      };
+    };
+
+    let preactSetup: ReturnType<typeof setupPreact> | undefined;
+    const preactBenchmarkName = 'Preact Signals - direct signal access';
+
+    bench(
+      preactBenchmarkName,
+      () => {
+        // Same update pattern as others
+        for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+          const counterId = counterIds[i % COUNTER_COUNT]!;
+          preactSetup?.incrementCounter(counterId);
+
+          // Access the updated counter
+          preactSetup?.getCounter(counterId);
+
+          // Access adjacent counter
+          const adjacentId = counterIds[(i + 1) % COUNTER_COUNT]!;
+          preactSetup?.getCounter(adjacentId);
+        }
+      },
+      {
+        setup: () => {
+          initMemoryTracking(preactBenchmarkName);
+          forceGC();
+
+          measureMemory('setup', preactBenchmarkName, () => {
+            preactSetup = setupPreact();
+          });
+        },
+        teardown: () => {
+          measureMemory('teardown', preactBenchmarkName, () => {
+            preactSetup = undefined;
+          });
+        },
+      }
+    );
+  }
 });
 
-describe('Large State Memory Usage Comparison', () => {
-  // Test memory usage with large state trees
-  const LARGE_COUNTER_COUNT = 1000;
-  const largeCounterIds = Array.from(
-    { length: LARGE_COUNTER_COUNT },
-    (_, i) => `counter_${i}`
-  );
-  const largeInitialCounters = Object.fromEntries(
-    largeCounterIds.map((id) => [id, 0])
-  );
+describe('Computed Values - Performance & Memory', () => {
+  // This benchmark compares computed/derived value performance
+  // All systems create the same number of computed values with identical dependency patterns
 
+  // Lattice - Computed values
   {
-    const setupLargeLattice = () => {
-      // Use flat state structure for O(1) updates
-      type LargeCounterState = {
-        [K in (typeof largeCounterIds)[number]]: number;
+    const setupLattice = () => {
+      // Create signals
+      const counters: Record<string, number> = {};
+      counterIds.forEach(id => counters[id] = 0);
+      const store = createComponent({ counters });
+
+      const CountersComponent = ({ store, set, computed }: ComponentContext<{ counters: Record<string, number> }>) => {
+        // Create computed values that depend on multiple signals
+        const computeds = counterIds.map((id, index) => 
+          computed(() => {
+            let sum = 0;
+            for (let i = 0; i < COMPUTED_DEPENDENCIES; i++) {
+              const depIndex = (index + i) % COUNTER_COUNT;
+              const depId = counterIds[depIndex]!;
+              sum += store.counters()[depId] || 0;
+            }
+            return sum;
+          })
+        );
+
+        return {
+          getComputed: (index: number) => computeds[index]?.(),
+          incrementCounter: (id: string) => {
+            set(store.counters, prev => ({
+              ...prev,
+              [id]: (prev[id] || 0) + 1
+            }));
+          },
+        };
       };
 
-      const store = createComponent(largeInitialCounters as LargeCounterState);
+      return CountersComponent(store);
+    };
 
-      const LargeCountersComponent = ({
-        store,
-        set,
-      }: ComponentContext<LargeCounterState>) => ({
-        increment: (id: string) => {
-          // O(1) update - only updating a single property!
-          const signal = store[id];
-          if (signal) {
-            const current = signal() || 0;
-            set(signal, current + 1);
+    let latticeSetup: ReturnType<typeof setupLattice> | undefined;
+    const benchmarkName = 'Lattice - computed values';
+
+    bench(
+      benchmarkName,
+      () => {
+        for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+          const counterId = counterIds[i % COUNTER_COUNT]!;
+          latticeSetup?.incrementCounter(counterId);
+
+          // Access affected computed values
+          for (let j = 0; j < COMPUTED_DEPENDENCIES; j++) {
+            const affectedIndex = (i - j + COUNTER_COUNT) % COUNTER_COUNT;
+            latticeSetup?.getComputed(affectedIndex);
           }
+        }
+      },
+      {
+        setup: () => {
+          initMemoryTracking(benchmarkName);
+          forceGC();
+          measureMemory('setup', benchmarkName, () => {
+            latticeSetup = setupLattice();
+          });
+        },
+        teardown: () => {
+          measureMemory('teardown', benchmarkName, () => {
+            latticeSetup = undefined;
+          });
+        },
+      }
+    );
+  }
+
+  // MobX - Computed values
+  {
+    const setupMobX = () => {
+      const counters: Record<string, number> = {};
+      counterIds.forEach(id => counters[id] = 0);
+      const store = observable({ counters });
+
+      // Create computed values with same dependency pattern
+      const computeds = counterIds.map((id, index) =>
+        mobxComputed(() => {
+          let sum = 0;
+          for (let i = 0; i < COMPUTED_DEPENDENCIES; i++) {
+            const depIndex = (index + i) % COUNTER_COUNT;
+            const depId = counterIds[depIndex]!;
+            sum += store.counters[depId] || 0;
+          }
+          return sum;
+        })
+      );
+
+      const incrementCounter = action((id: string) => {
+        store.counters[id] = (store.counters[id] || 0) + 1;
+      });
+
+      return {
+        getComputed: (index: number) => computeds[index]?.get(),
+        incrementCounter,
+      };
+    };
+
+    let mobxSetup: ReturnType<typeof setupMobX> | undefined;
+    const benchmarkName = 'MobX - computed values';
+
+    bench(
+      benchmarkName,
+      () => {
+        for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+          const counterId = counterIds[i % COUNTER_COUNT]!;
+          mobxSetup?.incrementCounter(counterId);
+
+          // Access affected computed values
+          for (let j = 0; j < COMPUTED_DEPENDENCIES; j++) {
+            const affectedIndex = (i - j + COUNTER_COUNT) % COUNTER_COUNT;
+            mobxSetup?.getComputed(affectedIndex);
+          }
+        }
+      },
+      {
+        setup: () => {
+          initMemoryTracking(benchmarkName);
+          forceGC();
+          measureMemory('setup', benchmarkName, () => {
+            mobxSetup = setupMobX();
+          });
+        },
+        teardown: () => {
+          measureMemory('teardown', benchmarkName, () => {
+            mobxSetup = undefined;
+          });
+        },
+      }
+    );
+  }
+
+  // Preact Signals - Computed values
+  {
+    const setupPreact = () => {
+      // Use immutable pattern matching Lattice
+      const counters: Record<string, number> = {};
+      counterIds.forEach(id => counters[id] = 0);
+      const store = signal({ counters });
+
+      // Create computed values with same dependency pattern
+      const computeds = counterIds.map((id, index) =>
+        preactComputed(() => {
+          let sum = 0;
+          for (let i = 0; i < COMPUTED_DEPENDENCIES; i++) {
+            const depIndex = (index + i) % COUNTER_COUNT;
+            const depId = counterIds[depIndex]!;
+            sum += store.value.counters[depId] || 0;
+          }
+          return sum;
+        })
+      );
+
+      return {
+        getComputed: (index: number) => computeds[index]?.value,
+        incrementCounter: (id: string) => {
+          // Use immutable update
+          store.value = {
+            counters: {
+              ...store.value.counters,
+              [id]: (store.value.counters[id] || 0) + 1
+            }
+          };
+        },
+      };
+    };
+
+    let preactSetup: ReturnType<typeof setupPreact> | undefined;
+    const benchmarkName = 'Preact Signals - computed values';
+
+    bench(
+      benchmarkName,
+      () => {
+        for (let i = 0; i < UPDATE_ITERATIONS; i++) {
+          const counterId = counterIds[i % COUNTER_COUNT]!;
+          preactSetup?.incrementCounter(counterId);
+
+          // Access affected computed values
+          for (let j = 0; j < COMPUTED_DEPENDENCIES; j++) {
+            const affectedIndex = (i - j + COUNTER_COUNT) % COUNTER_COUNT;
+            preactSetup?.getComputed(affectedIndex);
+          }
+        }
+      },
+      {
+        setup: () => {
+          initMemoryTracking(benchmarkName);
+          forceGC();
+          measureMemory('setup', benchmarkName, () => {
+            preactSetup = setupPreact();
+          });
+        },
+        teardown: () => {
+          measureMemory('teardown', benchmarkName, () => {
+            preactSetup = undefined;
+          });
+        },
+      }
+    );
+  }
+});
+
+describe('Large State Memory Usage', () => {
+  const LARGE_COUNTER_COUNT = 1000;
+
+  // Lattice - Large state
+  {
+    const setupLargeLattice = () => {
+      const counters: Record<string, number> = {};
+      for (let i = 0; i < LARGE_COUNTER_COUNT; i++) {
+        counters[`counter_${i}`] = 0;
+      }
+      
+      const store = createComponent({ counters });
+
+      const LargeCountersComponent = ({ store, set }: ComponentContext<{ counters: Record<string, number> }>) => ({
+        increment: (id: string) => {
+          set(store.counters, prev => ({
+            ...prev,
+            [id]: (prev[id] || 0) + 1
+          }));
         },
         getCounter: (id: string) => {
-          const signal = store[id];
-          return signal ? signal() : 0;
+          return store.counters()[id] || 0;
         },
       });
 
@@ -228,32 +470,28 @@ describe('Large State Memory Usage Comparison', () => {
     };
 
     let largeSetup: ReturnType<typeof setupLargeLattice> | undefined;
-    const largeLatticesBenchmarkName = 'Lattice - large state (1000 counters)';
+    const benchmarkName = 'Lattice - large state (1000 counters)';
 
     bench(
-      largeLatticesBenchmarkName,
+      benchmarkName,
       () => {
         // Update 100 random counters
         for (let i = 0; i < 100; i++) {
-          const randomId =
-            largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
+          const randomId = `counter_${Math.floor(Math.random() * LARGE_COUNTER_COUNT)}`;
           largeSetup?.increment(randomId);
-
-          // Match MobX pattern: access the value after update
           largeSetup?.getCounter(randomId);
         }
       },
       {
         setup: () => {
-          initMemoryTracking(largeLatticesBenchmarkName);
+          initMemoryTracking(benchmarkName);
           forceGC();
-
-          measureMemory('setup', largeLatticesBenchmarkName, () => {
+          measureMemory('setup', benchmarkName, () => {
             largeSetup = setupLargeLattice();
           });
         },
         teardown: () => {
-          measureMemory('teardown', largeLatticesBenchmarkName, () => {
+          measureMemory('teardown', benchmarkName, () => {
             largeSetup = undefined;
           });
         },
@@ -261,52 +499,108 @@ describe('Large State Memory Usage Comparison', () => {
     );
   }
 
+  // MobX - Large state
   {
     const setupLargeMobX = () => {
-      const store = observable({
-        counters: { ...largeInitialCounters },
-      });
+      const counters: Record<string, number> = {};
+      for (let i = 0; i < LARGE_COUNTER_COUNT; i++) {
+        counters[`counter_${i}`] = 0;
+      }
+      
+      const store = observable({ counters });
 
       const increment = action((id: string) => {
         store.counters[id] = (store.counters[id] || 0) + 1;
       });
 
-      // Create computed for accessing counter values (matches Lattice slice pattern)
-      const getCounter = mobxComputed(
-        () => (id: string) => store.counters[id] || 0
-      );
+      const getCounter = (id: string) => {
+        return store.counters[id] || 0;
+      };
 
-      return { store, increment, getCounter };
+      return { increment, getCounter };
     };
 
     let largeMobXSetup: ReturnType<typeof setupLargeMobX> | undefined;
-    const largeMobXBenchmarkName = 'MobX - large state (1000 counters)';
+    const benchmarkName = 'MobX - large state (1000 counters)';
 
     bench(
-      largeMobXBenchmarkName,
+      benchmarkName,
       () => {
-        // Same update pattern
+        // Same update pattern as Lattice
         for (let i = 0; i < 100; i++) {
-          const randomId =
-            largeCounterIds[Math.floor(Math.random() * LARGE_COUNTER_COUNT)]!;
+          const randomId = `counter_${Math.floor(Math.random() * LARGE_COUNTER_COUNT)}`;
           largeMobXSetup?.increment(randomId);
-
-          // Access computed value to simulate subscription usage
-          largeMobXSetup?.getCounter.get()(randomId);
+          largeMobXSetup?.getCounter(randomId);
         }
       },
       {
         setup: () => {
-          initMemoryTracking(largeMobXBenchmarkName);
+          initMemoryTracking(benchmarkName);
           forceGC();
-
-          measureMemory('setup', largeMobXBenchmarkName, () => {
+          measureMemory('setup', benchmarkName, () => {
             largeMobXSetup = setupLargeMobX();
           });
         },
         teardown: () => {
-          measureMemory('teardown', largeMobXBenchmarkName, () => {
+          measureMemory('teardown', benchmarkName, () => {
             largeMobXSetup = undefined;
+          });
+        },
+      }
+    );
+  }
+
+  // Preact Signals - Large state
+  {
+    const setupLargePreact = () => {
+      // Use immutable pattern with 1000 counters
+      const counters: Record<string, number> = {};
+      for (let i = 0; i < LARGE_COUNTER_COUNT; i++) {
+        counters[`counter_${i}`] = 0;
+      }
+      
+      const store = signal({ counters });
+
+      return {
+        increment: (id: string) => {
+          // Immutable update with object spread
+          store.value = {
+            counters: {
+              ...store.value.counters,
+              [id]: (store.value.counters[id] || 0) + 1
+            }
+          };
+        },
+        getCounter: (id: string) => {
+          return store.value.counters[id] || 0;
+        },
+      };
+    };
+
+    let largePreactSetup: ReturnType<typeof setupLargePreact> | undefined;
+    const benchmarkName = 'Preact Signals - large state (1000 counters)';
+
+    bench(
+      benchmarkName,
+      () => {
+        // Same update pattern as others
+        for (let i = 0; i < 100; i++) {
+          const randomId = `counter_${Math.floor(Math.random() * LARGE_COUNTER_COUNT)}`;
+          largePreactSetup?.increment(randomId);
+          largePreactSetup?.getCounter(randomId);
+        }
+      },
+      {
+        setup: () => {
+          initMemoryTracking(benchmarkName);
+          forceGC();
+          measureMemory('setup', benchmarkName, () => {
+            largePreactSetup = setupLargePreact();
+          });
+        },
+        teardown: () => {
+          measureMemory('teardown', benchmarkName, () => {
+            largePreactSetup = undefined;
           });
         },
       }
