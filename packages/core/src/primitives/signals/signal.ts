@@ -13,9 +13,10 @@ export function createScopedSignalFactory(
 ) {
   function signal<T>(value: T): Signal<T> {
     const s: Signal<T> = function () {
-      // Read-only path
-      const current = scope.getCurrentComputed();
-      if (current && current._flags & RUNNING) {
+      // Ultra-fast read path with minimized branching
+      // Only check if we have a current computed (most common case: no tracking)
+      const current = scope.currentComputed;
+      if (current !== null && (current._flags & RUNNING)) {
         node.addDependency(s, current);
       }
       return s._value;
@@ -34,7 +35,7 @@ export function createScopedSignalFactory(
       signal._version++;
       scope.incrementGlobalVersion();
 
-      if (!batch.getBatchDepth()) {
+      if (!batch.batchDepth) {
         node.notifyTargets(signal);
       } else {
         // In batch - just mark targets as outdated
@@ -48,13 +49,13 @@ export function createScopedSignalFactory(
   }
 
   function untrack<T>(fn: () => T): T {
-    const prev = scope.getCurrentComputed();
+    const prev = scope.currentComputed;
     try {
       // Temporarily disable tracking
-      scope.setCurrentComputed(null);
+      scope.currentComputed = null;
       return fn();
     } finally {
-      scope.setCurrentComputed(prev);
+      scope.currentComputed = prev;
     }
   }
 

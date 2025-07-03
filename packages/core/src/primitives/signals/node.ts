@@ -1,6 +1,7 @@
 // Dependency node management for efficient linked-list based tracking
 
 import type { DependencyNode, Signal, Computed, Effect } from './types';
+import { TRACKING, IS_COMPUTED } from './types';
 
 export type NodeScope = {
   acquireNode: <S = unknown, T = unknown>(
@@ -87,6 +88,11 @@ export function createNodeScope() {
     node.nextTarget = source._targets;
     if (source._targets) {
       source._targets.prevTarget = node;
+    } else {
+      // First target - set TRACKING flag if it's a computed
+      if ('_flags' in source && (source._flags & IS_COMPUTED)) {
+        source._flags |= TRACKING;
+      }
     }
     source._targets = node;
   }
@@ -126,6 +132,11 @@ export function createNodeScope() {
         if (node.nextTarget) {
           node.nextTarget.prevTarget = node.prevTarget;
         }
+        
+        // If this was the last target, clear TRACKING flag
+        if (!node.source._targets && '_flags' in node.source && (node.source._flags & IS_COMPUTED)) {
+          node.source._flags &= ~TRACKING;
+        }
 
         releaseNode(node);
       } else {
@@ -150,6 +161,11 @@ export function createNodeScope() {
       }
       if (node.nextTarget) {
         node.nextTarget.prevTarget = node.prevTarget;
+      }
+      
+      // If this was the last target, clear TRACKING flag
+      if (!node.source._targets && '_flags' in node.source && (node.source._flags & IS_COMPUTED)) {
+        node.source._flags &= ~TRACKING;
       }
 
       releaseNode(node);

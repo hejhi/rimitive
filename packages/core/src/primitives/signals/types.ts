@@ -46,3 +46,5 @@ export const NOTIFIED = 1 << 0;
 export const OUTDATED = 1 << 1;
 export const RUNNING = 1 << 2;
 export const DISPOSED = 1 << 3;
+export const TRACKING = 1 << 4;  // Has active subscribers/targets
+export const IS_COMPUTED = 1 << 5;  // Type discriminator for computed values

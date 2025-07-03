@@ -28,7 +28,7 @@ export function createEffectScope(
       _notify() {
         if (!(e._flags & NOTIFIED)) {
           e._flags |= NOTIFIED | OUTDATED;
-          if (!batch.getBatchDepth()) {
+          if (!batch.batchDepth) {
             e._run();
           } else {
             batch.addToBatch(e);
@@ -45,13 +45,13 @@ export function createEffectScope(
 
         node.prepareSources(e);
 
-        const prevComputed = scope.getCurrentComputed();
-        scope.setCurrentComputed(e);
+        const prevComputed = scope.currentComputed;
+        scope.currentComputed = e;
 
         try {
           e._fn();
         } finally {
-          scope.setCurrentComputed(prevComputed);
+          scope.currentComputed = prevComputed;
           e._flags &= ~RUNNING;
         }
 

@@ -1,7 +1,7 @@
 // Computed value implementation
 
-import type { Computed } from './types';
-import { NOTIFIED, OUTDATED, RUNNING, DISPOSED } from './types';
+import type { Computed, DependencyNode } from './types';
+import { NOTIFIED, OUTDATED, RUNNING, DISPOSED, TRACKING, IS_COMPUTED } from './types';
 import { SignalScope } from './scope';
 import { NodeScope } from './node';
 
@@ -16,51 +16,66 @@ export function createComputedScope(
 ): ComputedScope {
   function computed<T>(fn: () => T): Computed<T> {
     const c: Computed<T> = function () {
-      // Check if we need to recompute
-      if (c._flags & DISPOSED) {
+      // Ultra-fast path: Most common case - not disposed, tracking, and not outdated
+      const flags = c._flags;
+      if ((flags & (DISPOSED | OUTDATED | TRACKING)) === TRACKING) {
+        // Still need to track dependency if we're being tracked
+        const current = scope.currentComputed;
+        if (current !== null && (current._flags & RUNNING)) {
+          node.addDependency(c, current);
+        }
+        return c._value!;
+      }
+      
+      // Check if disposed (less common)
+      if (flags & DISPOSED) {
         throw new Error('Computed is disposed');
       }
 
-      // Register as dependency if being tracked
-      const current = scope.getCurrentComputed();
-      if (current && current._flags & RUNNING) {
+      // Always track dependency first (if we're being tracked)
+      const current = scope.currentComputed;
+      if (current !== null && (current._flags & RUNNING)) {
         node.addDependency(c, current);
       }
 
-      if (c._globalVersion !== scope.getGlobalVersion()) {
-        // Something changed globally, check our sources
-        let outdated = false;
-        let node = c._sources;
-
-        while (node) {
-          if (node.version !== node.source._version) {
-            outdated = true;
-            break;
-          }
-          node = node.nextSource;
-        }
-
-        if (outdated) {
-          c._flags |= OUTDATED;
-        }
-        c._globalVersion = scope.getGlobalVersion();
-      }
-
+      // If already marked outdated, skip all version checks
       if (c._flags & OUTDATED) {
         return c._recompute();
       }
 
+      // Not outdated but need to check if anything changed
+      // Check if global version changed (always update our version)
+      if (c._globalVersion !== scope.globalVersion) {
+        c._globalVersion = scope.globalVersion;
+        
+        // Only check sources if we have any
+        if (c._sources) {
+          let sourceNode: DependencyNode | undefined = c._sources;
+          while (sourceNode) {
+            if (sourceNode.version !== sourceNode.source._version) {
+              // Found outdated source - mark and recompute immediately
+              c._flags |= OUTDATED;
+              return c._recompute();
+            }
+            sourceNode = sourceNode.nextSource;
+          }
+        }
+      }
+
+      // Everything is up to date - return cached value
       return c._value!;
     } as Computed<T>;
 
     c._fn = fn;
     c._version = 0;
     c._globalVersion = 0;
-    c._flags = OUTDATED;
+    c._flags = OUTDATED | IS_COMPUTED;
 
     c._notify = function () {
       if (!(c._flags & NOTIFIED)) {
         c._flags |= NOTIFIED | OUTDATED;
+        // Reset global version to force recheck
+        c._globalVersion = 0;
         // Propagate notification to our targets
         node.notifyTargets(c);
       }
@@ -77,14 +92,14 @@ export function createComputedScope(
       // Prepare sources for potential cleanup
       node.prepareSources(c);
 
-      const prevComputed = scope.getCurrentComputed();
-      scope.setCurrentComputed(c);
+      const prevComputed = scope.currentComputed;
+      scope.currentComputed = c;
 
       try {
         c._value = c._fn();
         c._version++;
       } finally {
-        scope.setCurrentComputed(prevComputed);
+        scope.currentComputed = prevComputed;
         c._flags &= ~(RUNNING | OUTDATED);
       }
 

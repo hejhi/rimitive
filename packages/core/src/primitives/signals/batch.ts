@@ -4,7 +4,11 @@ import type { Effect } from './types';
 import { OUTDATED } from './types';
 
 export type BatchScope = {
-  getBatchDepth: () => number;
+  // Direct property access for hot path performance
+  batchDepth: number;
+  batchedEffects: Effect | null;
+  
+  // Methods
   batch: <T>(fn: () => T) => T;
   startBatch: () => void;
   endBatch: () => void;
@@ -14,44 +18,15 @@ export type BatchScope = {
 };
 
 export function createBatchScope(): BatchScope {
-  let batchDepth = 0;
-  let batchedEffects: Effect | null = null;
-
-  function getBatchDepth(): number {
-    return batchDepth;
-  }
-
-  function batch<T>(fn: () => T): T {
-    if (batchDepth > 0) return fn();
-
-    batchDepth++;
-    try {
-      return fn();
-    } finally {
-      if (--batchDepth === 0) {
-        runBatchedEffects();
-      }
-    }
-  }
-
-  function startBatch(): void {
-    batchDepth++;
-  }
-
-  function endBatch(): void {
-    if (batchDepth > 0 && --batchDepth === 0) {
-      runBatchedEffects();
-    }
-  }
-
-  function addToBatch(effect: Effect): void {
-    effect._nextBatchedEffect = batchedEffects ?? undefined;
-    batchedEffects = effect;
-  }
-
+  const scope: BatchScope = {
+    // Initialize properties
+    batchDepth: 0,
+    batchedEffects: null,
+  } as BatchScope;
+  
   function runBatchedEffects(): void {
-    let effect = batchedEffects;
-    batchedEffects = null;
+    let effect = scope.batchedEffects;
+    scope.batchedEffects = null;
 
     let iterations = 0;
     const maxIterations = 100; // Prevent infinite loops
@@ -64,7 +39,7 @@ export function createBatchScope(): BatchScope {
         effect._run();
       }
 
-      effect = next ?? null;
+      effect = next || null;
       iterations++;
     }
 
@@ -72,24 +47,44 @@ export function createBatchScope(): BatchScope {
       throw new Error('Batch effect limit exceeded - possible infinite loop');
     }
   }
+  
+  scope.batch = function<T>(fn: () => T): T {
+      if (scope.batchDepth > 0) return fn();
 
-  // For testing
-  function hasPendingEffects(): boolean {
-    return batchedEffects !== null;
-  }
+      scope.batchDepth++;
+      try {
+        return fn();
+      } finally {
+        if (--scope.batchDepth === 0) {
+          runBatchedEffects();
+        }
+      }
+    };
 
-  function clearBatch(): void {
-    batchedEffects = null;
-    batchDepth = 0;
-  }
+    scope.startBatch = function(): void {
+      scope.batchDepth++;
+    };
 
-  return {
-    getBatchDepth,
-    batch,
-    startBatch,
-    endBatch,
-    addToBatch,
-    hasPendingEffects,
-    clearBatch,
-  };
+    scope.endBatch = function(): void {
+      if (scope.batchDepth > 0 && --scope.batchDepth === 0) {
+        runBatchedEffects();
+      }
+    };
+
+    scope.addToBatch = function(effect: Effect): void {
+      effect._nextBatchedEffect = scope.batchedEffects || undefined;
+      scope.batchedEffects = effect;
+    };
+
+    // For testing
+    scope.hasPendingEffects = function(): boolean {
+      return scope.batchedEffects !== null;
+    };
+
+    scope.clearBatch = function(): void {
+      scope.batchedEffects = null;
+      scope.batchDepth = 0;
+    };
+
+  return scope;
 }

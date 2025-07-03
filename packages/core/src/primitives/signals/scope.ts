@@ -3,45 +3,32 @@
 import type { Computed, Effect } from './types';
 
 export type SignalScope = {
+  // Direct property access for hot path performance
+  globalVersion: number;
+  currentComputed: Computed | Effect | null;
+  
+  // Methods that modify state
   incrementGlobalVersion: () => void;
-  setCurrentComputed: (computed: Computed | Effect | null) => void;
-  getCurrentComputed: () => Computed | Effect | null;
   resetGlobalState: () => void;
-  getGlobalVersion: () => number;
 };
 
 export function createSignalScope(): SignalScope {
-  // Global tracking state
-  let globalVersion = 0;
-  let currentComputed: Computed | Effect | null = null;
-
-  function incrementGlobalVersion(): void {
-    globalVersion++;
-  }
-
-  function setCurrentComputed(computed: Computed | Effect | null): void {
-    currentComputed = computed;
-  }
-
-  function getCurrentComputed(): Computed | Effect | null {
-    return currentComputed;
-  }
-
-  // For testing
-  function resetGlobalState(): void {
-    globalVersion = 0;
-    currentComputed = null;
-  }
-
-  function getGlobalVersion(): number {
-    return globalVersion;
-  }
-
-  return {
-    incrementGlobalVersion,
-    setCurrentComputed,
-    getCurrentComputed,
-    resetGlobalState,
-    getGlobalVersion,
+  const scope: SignalScope = {
+    // Initialize properties
+    globalVersion: 0,
+    currentComputed: null,
+    
+    // Methods
+    incrementGlobalVersion(): void {
+      scope.globalVersion++;
+    },
+    
+    // For testing
+    resetGlobalState(): void {
+      scope.globalVersion = 0;
+      scope.currentComputed = null;
+    },
   };
+  
+  return scope;
 }

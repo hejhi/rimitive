@@ -1,6 +1,7 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
+import type { Computed, Effect } from './types';
 import { createBatchScope } from './batch';
 import { createComputedScope } from './computed';
 import { createEffectScope } from './effect';
@@ -38,7 +39,7 @@ export function createTestInstance() {
     batch: batch.batch,
     startBatch: batch.startBatch,
     endBatch: batch.endBatch,
-    getBatchDepth: batch.getBatchDepth,
+    getBatchDepth: () => batch.batchDepth,
     hasPendingEffects: batch.hasPendingEffects,
     clearBatch: batch.clearBatch,
     
@@ -54,10 +55,10 @@ export function createTestInstance() {
     clearPool: node.clearPool,
     
     // Scope functions
-    setCurrentComputed: scope.setCurrentComputed,
-    getCurrentComputed: scope.getCurrentComputed,
+    setCurrentComputed: (computed: Computed | Effect | null) => { scope.currentComputed = computed; },
+    getCurrentComputed: () => scope.currentComputed,
     resetGlobalState: scope.resetGlobalState,
-    getGlobalVersion: scope.getGlobalVersion,
+    getGlobalVersion: () => scope.globalVersion,
   };
 }
 
@@ -74,7 +75,7 @@ export const effect = defaultInstance.effect;
 export const batch = defaultInstance.batch;
 export const startBatch = defaultInstance.startBatch;
 export const endBatch = defaultInstance.endBatch;
-export const getBatchDepth = defaultInstance.getBatchDepth;
+export const getBatchDepth = () => defaultInstance.getBatchDepth();
 export const hasPendingEffects = defaultInstance.hasPendingEffects;
 export const clearBatch = defaultInstance.clearBatch;
 export const acquireNode = defaultInstance.acquireNode;
@@ -105,7 +106,7 @@ export function resetGlobalState() {
     batch: defaultInstance.batch,
     startBatch: defaultInstance.startBatch,
     endBatch: defaultInstance.endBatch,
-    getBatchDepth: defaultInstance.getBatchDepth,
+    getBatchDepth: () => defaultInstance.getBatchDepth(),
     hasPendingEffects: defaultInstance.hasPendingEffects,
     clearBatch: defaultInstance.clearBatch,
     acquireNode: defaultInstance.acquireNode,
