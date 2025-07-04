@@ -12,7 +12,7 @@ describe('Component Subscriptions', () => {
       return {
         count: store.count,
         name: store.name,
-        increment: () => set(store.count, store.count() + 1),
+        increment: () => set(store.count, store.count.value + 1),
         setName: (n: string) => set(store.name, n),
       };
     };
@@ -49,15 +49,15 @@ describe('Component Subscriptions', () => {
     }
 
     const Multi = ({ store, computed, set }: ComponentContext<MultiState>) => {
-      const sum = computed(() => store.a() + store.b());
+      const sum = computed(() => store.a.value + store.b.value);
 
       return {
         a: store.a,
         b: store.b,
         sum,
         updateBoth: () => {
-          set(store.a, store.a() + 1);
-          set(store.b, store.b() + 1);
+          set(store.a, store.a.value + 1);
+          set(store.b, store.b.value + 1);
         },
       };
     };
@@ -65,14 +65,14 @@ describe('Component Subscriptions', () => {
     const store = createTestComponent({ a: 1, b: 2 });
     const component = Multi(store);
 
-    expect(component.sum()).toBe(3);
+    expect(component.sum.value).toBe(3);
 
     component.updateBoth();
-    expect(component.sum()).toBe(5);
+    expect(component.sum.value).toBe(5);
 
     // Verify individual updates work too
     store.set(store.store.a, 10);
-    expect(component.sum()).toBe(13); // 10 + 3 (b is still 3 from updateBoth)
+    expect(component.sum.value).toBe(13); // 10 + 3 (b is still 3 from updateBoth)
   });
 
   it('should handle subscription cleanup', () => {
@@ -114,7 +114,7 @@ describe('Component Subscriptions', () => {
 
     const Filtered = ({ store, computed }: ComponentContext<State>) => {
       const filtered = computed(() =>
-        store.items().filter((item) => item.includes(store.filter()))
+        store.items.value.filter((item) => item.includes(store.filter.value))
       );
 
       return {
@@ -133,17 +133,17 @@ describe('Component Subscriptions', () => {
     let filterUpdates = 0;
     const unsubscribe = component.filtered.subscribe(() => filterUpdates++);
 
-    expect(component.filtered()).toEqual(['apple', 'banana']);
+    expect(component.filtered.value).toEqual(['apple', 'banana']);
 
     // Changing filter should trigger update
     store.set(store.store.filter, 'e');
     expect(filterUpdates).toBe(1);
-    expect(component.filtered()).toEqual(['apple', 'cherry']);
+    expect(component.filtered.value).toEqual(['apple', 'cherry']);
 
     // Changing items should also trigger update
-    store.set(store.store.items, [...store.store.items(), 'elderberry']);
+    store.set(store.store.items, [...store.store.items.value, 'elderberry']);
     expect(filterUpdates).toBe(2);
-    expect(component.filtered()).toEqual(['apple', 'cherry', 'elderberry']);
+    expect(component.filtered.value).toEqual(['apple', 'cherry', 'elderberry']);
 
     unsubscribe();
   });
@@ -156,8 +156,8 @@ describe('Component Subscriptions', () => {
     }
 
     const Calculator = ({ store, computed, set }: ComponentContext<State>) => {
-      const result = computed(() => 
-        store.enabled() ? store.count() * store.multiplier() : 0
+      const result = computed(() =>
+        store.enabled.value ? store.count.value * store.multiplier.value : 0
       );
 
       return {
@@ -165,13 +165,17 @@ describe('Component Subscriptions', () => {
         multiplier: store.multiplier,
         enabled: store.enabled,
         result,
-        increment: () => set(store.count, store.count() + 1),
+        increment: () => set(store.count, store.count.value + 1),
         setMultiplier: (m: number) => set(store.multiplier, m),
-        toggle: () => set(store.enabled, !store.enabled()),
+        toggle: () => set(store.enabled, !store.enabled.value),
       };
     };
 
-    const store = createTestComponent({ count: 5, multiplier: 2, enabled: true });
+    const store = createTestComponent({
+      count: 5,
+      multiplier: 2,
+      enabled: true,
+    });
     const component = Calculator(store);
 
     let effectRuns = 0;
@@ -180,7 +184,7 @@ describe('Component Subscriptions', () => {
     // Use effect to track any accessed signals automatically
     const unsubscribe = store.effect(() => {
       // This will track whatever signals are accessed
-      lastResult = component.result();
+      lastResult = component.result.value;
       effectRuns++;
     });
 
@@ -219,27 +223,27 @@ describe('Component Subscriptions', () => {
 
   it('should batch effect runs when multiple dependencies change', () => {
     const ctx = createTestComponent({ a: 1, b: 2, c: 3 });
-    
+
     let effectRuns = 0;
     let lastSum = 0;
-    
+
     // Effect that depends on all three values
     const unsubscribe = ctx.effect(() => {
-      lastSum = ctx.store.a() + ctx.store.b() + ctx.store.c();
+      lastSum = ctx.store.a.value + ctx.store.b.value + ctx.store.c.value;
       effectRuns++;
     });
-    
+
     // Initial run
     expect(effectRuns).toBe(1);
     expect(lastSum).toBe(6);
-    
+
     // Update all three values in a batch
     ctx.set(ctx.store, { a: 10, b: 20, c: 30 });
-    
+
     // Effect should only run once despite three dependencies changing
     expect(effectRuns).toBe(2);
     expect(lastSum).toBe(60);
-    
+
     unsubscribe();
   });
 
@@ -255,7 +259,7 @@ describe('Component Subscriptions', () => {
       taxRate: store.taxRate,
       discountPercent: store.discountPercent,
       addItem: (item: { id: string; price: number; quantity: number }) =>
-        set(store.items, [...store.items(), item]),
+        set(store.items, [...store.items.value, item]),
       setTaxRate: (rate: number) => set(store.taxRate, rate),
       setDiscount: (percent: number) => set(store.discountPercent, percent),
     });
@@ -272,76 +276,81 @@ describe('Component Subscriptions', () => {
 
     // Create computed values at runtime using the context
     const subtotal = ctx.computed(() =>
-      cart.items().reduce((sum, item) => sum + item.price * item.quantity, 0)
+      cart.items.value.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      )
     );
 
-    const discountAmount = ctx.computed(() =>
-      (subtotal() * cart.discountPercent()) / 100
+    const discountAmount = ctx.computed(
+      () => (subtotal.value * cart.discountPercent.value) / 100
     );
 
-    const taxableAmount = ctx.computed(() => subtotal() - discountAmount());
+    const taxableAmount = ctx.computed(
+      () => subtotal.value - discountAmount.value
+    );
 
-    const tax = ctx.computed(() => taxableAmount() * cart.taxRate());
+    const tax = ctx.computed(() => taxableAmount.value * cart.taxRate.value);
 
-    const total = ctx.computed(() => taxableAmount() + tax());
+    const total = ctx.computed(() => taxableAmount.value + tax.value);
 
     // Verify initial calculations
-    expect(subtotal()).toBe(40); // (10*2) + (20*1)
-    expect(discountAmount()).toBe(4); // 40 * 10%
-    expect(taxableAmount()).toBe(36); // 40 - 4
-    expect(tax()).toBe(2.88); // 36 * 8%
-    expect(total()).toBe(38.88); // 36 + 2.88
+    expect(subtotal.value).toBe(40); // (10*2) + (20*1)
+    expect(discountAmount.value).toBe(4); // 40 * 10%
+    expect(taxableAmount.value).toBe(36); // 40 - 4
+    expect(tax.value).toBe(2.88); // 36 * 8%
+    expect(total.value).toBe(38.88); // 36 + 2.88
 
     // Track how many times computeds recalculate
     let subtotalCalcs = 0;
     let totalCalcs = 0;
-    
+
     const unsubSubtotal = subtotal.subscribe(() => subtotalCalcs++);
     const unsubTotal = total.subscribe(() => totalCalcs++);
 
     // Add a new item - should trigger recalculation chain
     cart.addItem({ id: 'c', price: 30, quantity: 1 });
-    
+
     expect(subtotalCalcs).toBe(1);
     // Total depends on subtotal through multiple computeds, may recalculate multiple times
     expect(totalCalcs).toBeGreaterThanOrEqual(1);
-    expect(subtotal()).toBe(70); // 40 + 30
-    expect(total()).toBeCloseTo(68.04); // (70 - 7) * 1.08
-    
+    expect(subtotal.value).toBe(70); // 40 + 30
+    expect(total.value).toBeCloseTo(68.04); // (70 - 7) * 1.08
+
     // Reset counters for clearer testing
     subtotalCalcs = 0;
     totalCalcs = 0;
 
     // Change discount - affects total but not subtotal
     cart.setDiscount(20);
-    
+
     expect(subtotalCalcs).toBe(0); // subtotal unchanged
     expect(totalCalcs).toBeGreaterThanOrEqual(1); // total recalculated
-    expect(discountAmount()).toBe(14); // 70 * 20%
-    expect(total()).toBeCloseTo(60.48); // (70 - 14) * 1.08
+    expect(discountAmount.value).toBe(14); // 70 * 20%
+    expect(total.value).toBeCloseTo(60.48); // (70 - 14) * 1.08
 
     // Reset counter
     totalCalcs = 0;
 
     // Change tax rate - affects total but not subtotal
-    cart.setTaxRate(0.10);
-    
+    cart.setTaxRate(0.1);
+
     expect(subtotalCalcs).toBe(0); // subtotal still unchanged
     expect(totalCalcs).toBeGreaterThanOrEqual(1); // total recalculated again
-    expect(total()).toBeCloseTo(61.6); // (70 - 14) * 1.10
+    expect(total.value).toBeCloseTo(61.6); // (70 - 14) * 1.10
 
     // Create a new computed at runtime that depends on existing computeds
-    const formattedTotal = ctx.computed(() => `$${total().toFixed(2)}`);
-    
-    expect(formattedTotal()).toBe('$61.60');
+    const formattedTotal = ctx.computed(() => `$${total.value.toFixed(2)}`);
+
+    expect(formattedTotal.value).toBe('$61.60');
 
     // Verify the new computed is reactive
     let formatCalcs = 0;
     const unsubFormat = formattedTotal.subscribe(() => formatCalcs++);
-    
+
     cart.setTaxRate(0.05);
     expect(formatCalcs).toBe(1);
-    expect(formattedTotal()).toBe('$58.80');
+    expect(formattedTotal.value).toBe('$58.80');
 
     // Cleanup
     unsubSubtotal();

@@ -51,7 +51,7 @@ export function createComponent<State extends object>(
         // Get current state from all signals
         const currentState = {} as State;
         (Object.keys(stateSignals) as (keyof State)[]).forEach((key) => {
-          currentState[key] = stateSignals[key]();
+          currentState[key] = stateSignals[key].value;
         });
 
         // Calculate new state
@@ -64,7 +64,7 @@ export function createComponent<State extends object>(
         (
           Object.entries(newState) as [keyof State, State[keyof State]][]
         ).forEach(([key, value]) => {
-          if (key in stateSignals && !Object.is(stateSignals[key](), value)) {
+          if (key in stateSignals && !Object.is(stateSignals[key].value, value)) {
             lattice.set(stateSignals[key], value);
           }
         });
@@ -74,7 +74,7 @@ export function createComponent<State extends object>(
 
     // Single signal update
     const signal = target as Signal<unknown>;
-    const currentValue = signal();
+    const currentValue = signal.value;
     const newValue = applyUpdate(currentValue, updates);
     lattice.set(signal, newValue);
   }) as SetState;

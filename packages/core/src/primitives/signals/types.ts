@@ -12,7 +12,7 @@ export interface DependencyNode {
 }
 
 export interface Signal<T = unknown> {
-  (): T;
+  readonly value: T;
   subscribe?: (listener: () => void) => () => void;
   _value: T;
   _version: number;
@@ -21,7 +21,7 @@ export interface Signal<T = unknown> {
 }
 
 export interface Computed<T = unknown> {
-  (): T;
+  readonly value: T;
   subscribe?: (listener: () => void) => () => void;
   _fn: () => T;
   _value: T | undefined;

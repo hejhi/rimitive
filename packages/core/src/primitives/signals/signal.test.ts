@@ -9,19 +9,19 @@ describe('signal', () => {
 
   it('should create a signal with initial value', () => {
     const s = signal(10);
-    expect(s()).toBe(10);
+    expect(s.value).toBe(10);
   });
 
   it('should update signal value', () => {
     const s = signal(5);
     writeSignal(s, 10);
-    expect(s()).toBe(10);
+    expect(s.value).toBe(10);
   });
 
   it('should update signal value with writeSignal', () => {
     const s = signal(5);
     writeSignal(s, 10);
-    expect(s()).toBe(10);
+    expect(s.value).toBe(10);
   });
 
   it('should not trigger updates when value is same', () => {
@@ -42,14 +42,14 @@ describe('signal', () => {
     const s1 = signal<number | null>(null);
     const s2 = signal<string | undefined>(undefined);
     
-    expect(s1()).toBe(null);
-    expect(s2()).toBe(undefined);
+    expect(s1.value).toBe(null);
+    expect(s2.value).toBe(undefined);
     
     writeSignal(s1, 42);
-    expect(s1()).toBe(42);
+    expect(s1.value).toBe(42);
     
     writeSignal(s1, null);
-    expect(s1()).toBe(null);
+    expect(s1.value).toBe(null);
   });
 
   it('should handle object values with reference equality', () => {
@@ -71,9 +71,9 @@ describe('signal', () => {
   it('should track dependencies when read inside computed', () => {
     const a = signal(5);
     const b = signal(10);
-    const sum = computed(() => a() + b());
+    const sum = computed(() => a.value + b.value);
     
-    expect(sum()).toBe(15);
+    expect(sum.value).toBe(15);
     
     // Should have created dependency nodes
     expect(a._targets).toBeDefined();
@@ -86,14 +86,14 @@ describe('signal', () => {
     
     const double = computed(() => {
       computeCount++;
-      return source() * 2;
+      return source.value * 2;
     });
     
-    expect(double()).toBe(20);
+    expect(double.value).toBe(20);
     expect(computeCount).toBe(1);
     
     writeSignal(source, 5);
-    expect(double()).toBe(10);
+    expect(double.value).toBe(10);
     expect(computeCount).toBe(2);
   });
 
@@ -105,20 +105,20 @@ describe('signal', () => {
       
       const result = computed(() => {
         computeCount++;
-        return a() + peek(b);
+        return a.value + peek(b);
       });
       
-      expect(result()).toBe(15);
+      expect(result.value).toBe(15);
       expect(computeCount).toBe(1);
       
       // Changing b should not trigger recompute
       writeSignal(b, 20);
-      expect(result()).toBe(15); // Still using old value
+      expect(result.value).toBe(15); // Still using old value
       expect(computeCount).toBe(1);
       
       // Changing a should trigger recompute
       writeSignal(a, 10);
-      expect(result()).toBe(30); // Now picks up new b value
+      expect(result.value).toBe(30); // Now picks up new b value
       expect(computeCount).toBe(2);
     });
   });
@@ -131,20 +131,20 @@ describe('signal', () => {
       
       const result = computed(() => {
         computeCount++;
-        return a() + untrack(() => b());
+        return a.value + untrack(() => b.value);
       });
       
-      expect(result()).toBe(15);
+      expect(result.value).toBe(15);
       expect(computeCount).toBe(1);
       
       // Changing b should not trigger recompute
       writeSignal(b, 20);
-      expect(result()).toBe(15);
+      expect(result.value).toBe(15);
       expect(computeCount).toBe(1);
       
       // Changing a should trigger recompute and pick up new b
       writeSignal(a, 10);
-      expect(result()).toBe(30);
+      expect(result.value).toBe(30);
       expect(computeCount).toBe(2);
     });
 
@@ -154,13 +154,13 @@ describe('signal', () => {
       const c = signal(3);
       
       const result = computed(() => {
-        const val1 = a();
-        const val2 = untrack(() => b());
-        const val3 = c();
+        const val1 = a.value;
+        const val2 = untrack(() => b.value);
+        const val3 = c.value;
         return val1 + val2 + val3;
       });
       
-      expect(result()).toBe(6);
+      expect(result.value).toBe(6);
       
       // Check dependencies - should have a and c, but not b
       expect(a._targets).toBeDefined();
@@ -175,7 +175,7 @@ describe('signal', () => {
       let effectRuns = 0;
       
       effect(() => {
-        s(); // Track dependency
+        void s.value; // Track dependency
         effectRuns++;
       });
       
@@ -189,7 +189,7 @@ describe('signal', () => {
       });
       
       expect(effectRuns).toBe(2); // Run once after batch
-      expect(s()).toBe(3);
+      expect(s.value).toBe(3);
     });
   });
 
@@ -200,19 +200,19 @@ describe('signal', () => {
       
       const sum = computed(() => {
         computeCount++;
-        return arr().reduce((a, b) => a + b, 0);
+        return arr.value.reduce((a, b) => a + b, 0);
       });
       
-      expect(sum()).toBe(6);
+      expect(sum.value).toBe(6);
       expect(computeCount).toBe(1);
       
       // New array reference triggers update
       writeSignal(arr, [1, 2, 3, 4]);
-      expect(sum()).toBe(10);
+      expect(sum.value).toBe(10);
       expect(computeCount).toBe(2);
       
       // Same array reference doesn't trigger
-      const current = arr();
+      const current = arr.value;
       writeSignal(arr, current);
       expect(computeCount).toBe(2);
     });
@@ -222,29 +222,29 @@ describe('signal', () => {
     it('should handle many dependents efficiently', () => {
       const source = signal(1);
       const computeds = Array.from({ length: 100 }, (_, i) => 
-        computed(() => source() * (i + 1))
+        computed(() => source.value * (i + 1))
       );
       
       // All should compute correctly
       computeds.forEach((c, i) => {
-        expect(c()).toBe(i + 1);
+        expect(c.value).toBe(i + 1);
       });
       
       // Update should propagate to all
       writeSignal(source, 2);
       computeds.forEach((c, i) => {
-        expect(c()).toBe(2 * (i + 1));
+        expect(c.value).toBe(2 * (i + 1));
       });
     });
 
     it('should handle simple computed chains', () => {
       const a = signal(1);
       const b = computed(() => {
-        const val = a();
+        const val = a.value;
         return val + 1;
       });
       
-      expect(b()).toBe(2);
+      expect(b.value).toBe(2);
       
       writeSignal(a, 5);
       // For now, just verify the computed tracks its dependencies

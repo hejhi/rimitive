@@ -34,7 +34,7 @@ export const CounterComponent = ({
   set,
 }: ComponentContext<CounterState>) => ({
   count: store.count,
-  increment: () => set(store.count, store.count() + 1),
+  increment: () => set(store.count, store.count.value + 1),
   reset: () => set(store.count, 0),
 });
 
@@ -43,13 +43,13 @@ export const NamedCounterComponent = ({
   computed,
   set,
 }: ComponentContext<NamedCounterState>) => {
-  const doubled = computed(() => store.count() * 2);
+  const doubled = computed(() => store.count.value * 2);
 
   return {
     count: store.count,
     name: store.name,
     doubled,
-    increment: () => set(store.count, store.count() + 1),
+    increment: () => set(store.count, store.count.value + 1),
     reset: () => set(store.count, 0),
     setName: (n: string) => set(store.name, n),
   };

@@ -34,7 +34,7 @@ export function withDevtools<State extends Record<string, unknown>>(
   // Send initial state
   const initialState: Record<string, unknown> = {};
   for (const key in context.store) {
-    initialState[key] = context.store[key]();
+    initialState[key] = context.store[key].value;
   }
   devtools.init(initialState);
 
@@ -59,7 +59,7 @@ export function withDevtools<State extends Record<string, unknown>>(
       for (const key in context.store) {
         if (context.store[key] === signal) {
           updatedKey = key;
-          updateValue = context.store[key]();
+          updateValue = context.store[key].value;
           break;
         }
       }
@@ -68,7 +68,7 @@ export function withDevtools<State extends Record<string, unknown>>(
     // Get current state after update
     const currentState: Record<string, unknown> = {};
     for (const key in context.store) {
-      currentState[key] = context.store[key]();
+      currentState[key] = context.store[key].value;
     }
 
     // Send action to devtools

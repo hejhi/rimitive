@@ -12,22 +12,22 @@ describe('Component Isolation', () => {
     const signal2 = context2.signal(20);
 
     // Create computed values that depend on the signals
-    const computed1 = context1.computed(() => signal1() * 2);
-    const computed2 = context2.computed(() => signal2() * 2);
+    const computed1 = context1.computed(() => signal1.value * 2);
+    const computed2 = context2.computed(() => signal2.value * 2);
 
     // Initial values
-    expect(computed1()).toBe(20);
-    expect(computed2()).toBe(40);
+    expect(computed1.value).toBe(20);
+    expect(computed2.value).toBe(40);
 
     // Update signal in context 1
     context1.set(signal1, 15);
-    expect(computed1()).toBe(30);
-    expect(computed2()).toBe(40); // Should not be affected
+    expect(computed1.value).toBe(30);
+    expect(computed2.value).toBe(40); // Should not be affected
 
     // Update signal in context 2
     context2.set(signal2, 25);
-    expect(computed1()).toBe(30); // Should not be affected
-    expect(computed2()).toBe(50);
+    expect(computed1.value).toBe(30); // Should not be affected
+    expect(computed2.value).toBe(50);
   });
 
   it('should isolate effects between components', () => {
@@ -42,12 +42,12 @@ describe('Component Isolation', () => {
 
     // Create effects in each context
     context1.effect(() => {
-      signal1(); // Subscribe to signal1
+      void signal1.value; // Subscribe to signal1
       effect1Count++;
     });
 
     context2.effect(() => {
-      signal2(); // Subscribe to signal2
+      void signal2.value; // Subscribe to signal2
       effect2Count++;
     });
 
@@ -80,17 +80,17 @@ describe('Component Isolation', () => {
 
     const computed1 = context1.computed(() => {
       compute1Count++;
-      return signal1a() + signal1b();
+      return signal1a.value + signal1b.value;
     });
 
     const computed2 = context2.computed(() => {
       compute2Count++;
-      return signal2a() + signal2b();
+      return signal2a.value + signal2b.value;
     });
 
     // Initial computation
-    expect(computed1()).toBe(3);
-    expect(computed2()).toBe(7);
+    expect(computed1.value).toBe(3);
+    expect(computed2.value).toBe(7);
     expect(compute1Count).toBe(1);
     expect(compute2Count).toBe(1);
 
@@ -101,8 +101,8 @@ describe('Component Isolation', () => {
     });
 
     // Check that only context 1 was affected
-    expect(computed1()).toBe(30);
-    expect(computed2()).toBe(7);
+    expect(computed1.value).toBe(30);
+    expect(computed2.value).toBe(7);
     expect(compute1Count).toBe(2);
     expect(compute2Count).toBe(1);
 
@@ -113,8 +113,8 @@ describe('Component Isolation', () => {
     });
 
     // Check that only context 2 was affected
-    expect(computed1()).toBe(30);
-    expect(computed2()).toBe(70);
+    expect(computed1.value).toBe(30);
+    expect(computed2.value).toBe(70);
     expect(compute1Count).toBe(2);
     expect(compute2Count).toBe(2);
   });
@@ -129,25 +129,25 @@ describe('Component Isolation', () => {
     const child2Signal = childContext2.signal('child2');
 
     // Create computed values that show independence
-    const parentComputed = parentContext.computed(() => `${parentSignal()}-computed`);
-    const child1Computed = childContext1.computed(() => `${child1Signal()}-computed`);
-    const child2Computed = childContext2.computed(() => `${child2Signal()}-computed`);
+    const parentComputed = parentContext.computed(() => `${parentSignal.value}-computed`);
+    const child1Computed = childContext1.computed(() => `${child1Signal.value}-computed`);
+    const child2Computed = childContext2.computed(() => `${child2Signal.value}-computed`);
 
-    expect(parentComputed()).toBe('parent-computed');
-    expect(child1Computed()).toBe('child1-computed');
-    expect(child2Computed()).toBe('child2-computed');
+    expect(parentComputed.value).toBe('parent-computed');
+    expect(child1Computed.value).toBe('child1-computed');
+    expect(child2Computed.value).toBe('child2-computed');
 
     // Update parent - children should not be affected
     parentContext.set(parentSignal, 'parent-updated');
-    expect(parentComputed()).toBe('parent-updated-computed');
-    expect(child1Computed()).toBe('child1-computed');
-    expect(child2Computed()).toBe('child2-computed');
+    expect(parentComputed.value).toBe('parent-updated-computed');
+    expect(child1Computed.value).toBe('child1-computed');
+    expect(child2Computed.value).toBe('child2-computed');
 
     // Update child1 - parent and child2 should not be affected
     childContext1.set(child1Signal, 'child1-updated');
-    expect(parentComputed()).toBe('parent-updated-computed');
-    expect(child1Computed()).toBe('child1-updated-computed');
-    expect(child2Computed()).toBe('child2-computed');
+    expect(parentComputed.value).toBe('parent-updated-computed');
+    expect(child1Computed.value).toBe('child1-updated-computed');
+    expect(child2Computed.value).toBe('child2-computed');
   });
 
   it('should not share dependency tracking between contexts', () => {
@@ -165,12 +165,12 @@ describe('Component Isolation', () => {
 
     // Effects that read from their respective signals
     context1.effect(() => {
-      void signal1().count;
+      void signal1.value.count;
       effect1Runs++;
     });
 
     context2.effect(() => {
-      void signal2().count;
+      void signal2.value.count;
       effect2Runs++;
     });
 

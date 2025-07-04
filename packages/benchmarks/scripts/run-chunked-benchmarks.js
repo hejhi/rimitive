@@ -14,18 +14,43 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { glob } from 'glob';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 
-// Benchmark suites to run
-const BENCHMARK_SUITES = {
-  lattice: [
-    'fine-grained-reactivity',
-    'todo-list-composition',
-  ],
-};
+// Dynamically discover benchmark suites
+async function discoverBenchmarkSuites() {
+  const suites = {};
+  const suitesDir = path.join(projectRoot, 'src/suites');
+  
+  try {
+    const categories = await fs.readdir(suitesDir);
+    
+    for (const category of categories) {
+      const categoryPath = path.join(suitesDir, category);
+      const stat = await fs.stat(categoryPath);
+      
+      if (stat.isDirectory()) {
+        // Find all .bench.ts and .bench.tsx files
+        const benchFiles = await glob('*.bench.{ts,tsx}', {
+          cwd: categoryPath,
+          absolute: false
+        });
+        
+        // Extract just the name part (remove .bench.ts/.bench.tsx)
+        suites[category] = benchFiles.map(file => 
+          file.replace(/\.bench\.(ts|tsx)$/, '')
+        );
+      }
+    }
+  } catch (err) {
+    console.error('Error discovering benchmark suites:', err);
+  }
+  
+  return suites;
+}
 
 // Configuration
 const CONFIG = {
@@ -257,11 +282,16 @@ async function main() {
     // Setup directories
     await setupDirectories(timestamp);
     
+    // Dynamically discover benchmark suites
+    const BENCHMARK_SUITES = await discoverBenchmarkSuites();
+    
     // Get the benchmark suites for the selected category
     const suites = BENCHMARK_SUITES[CONFIG.suite];
     if (!suites) {
       throw new Error(`Unknown suite: ${CONFIG.suite}. Valid options: ${Object.keys(BENCHMARK_SUITES).join(', ')}`);
     }
+    
+    console.log(`\nDiscovered ${suites.length} benchmarks in ${CONFIG.suite}:`, suites);
     
     // Run benchmarks sequentially to avoid memory issues
     const results = [];

@@ -42,7 +42,7 @@ export function withPersistence<State>(
     // Get current state and save to localStorage
     const currentState: Record<string, unknown> = {};
     for (const key in context.store) {
-      currentState[key] = context.store[key]();
+      currentState[key] = context.store[key].value;
     }
 
     try {

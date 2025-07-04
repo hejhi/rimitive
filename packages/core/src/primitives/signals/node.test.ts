@@ -15,34 +15,42 @@ import type { Signal, Computed, DependencyNode } from './types';
 
 // Mock signal factory
 function createMockSignal<T>(value: T): Signal<T> {
-  const signal = function (newValue?: T) {
-    if (arguments.length === 0) {
-      return signal._value;
-    }
-    signal._value = newValue!;
-    signal._version++;
-    return undefined;
+  const signal = {
+    get value() {
+      return this._value;
+    },
+    set value(newValue: T) {
+      this._value = newValue;
+      this._version++;
+    },
+    _value: value,
+    _version: 0,
+    _targets: undefined,
+    _targetsTail: undefined,
   } as Signal<T>;
 
-  signal._value = value;
-  signal._version = 0;
   return signal;
 }
 
 // Mock computed factory
 function createMockComputed<T>(fn: () => T): Computed<T> {
-  const computed = function () {
-    return computed._value;
+  const computed = {
+    get value() {
+      return this._value!;
+    },
+    _fn: fn,
+    _value: fn(),
+    _version: 0,
+    _globalVersion: 0,
+    _flags: 0,
+    _sources: undefined,
+    _sourcesTail: undefined,
+    _targets: undefined,
+    _targetsTail: undefined,
+    _notify: () => {},
+    _recompute: () => computed._value!,
+    dispose: () => {},
   } as Computed<T>;
-
-  computed._fn = fn;
-  computed._value = fn();
-  computed._version = 0;
-  computed._globalVersion = 0;
-  computed._flags = 0;
-  computed._notify = () => {};
-  computed._recompute = () => computed._value!;
-  computed.dispose = () => {};
 
   return computed;
 }
@@ -73,9 +81,9 @@ describe('node.ts', () => {
       const source1 = createMockSignal(1);
       const target1 = createMockComputed(() => 1);
       const node1 = acquireNode(source1, target1);
-      
+
       const poolSizeAfterAcquire = getPoolSize();
-      
+
       releaseNode(node1);
       expect(getPoolSize()).toBe(poolSizeAfterAcquire + 1);
 
@@ -127,7 +135,7 @@ describe('node.ts', () => {
     it('should add node to pool if under max size', () => {
       // Clear pool to test from empty state
       clearPool();
-      
+
       const source = createMockSignal(1);
       const target = createMockComputed(() => 1);
       const node = acquireNode(source, target);
@@ -161,7 +169,7 @@ describe('node.ts', () => {
   describe('addDependency', () => {
     it('should create new dependency node', () => {
       const source = createMockSignal(1);
-      const target = createMockComputed(() => source());
+      const target = createMockComputed(() => source.value);
 
       addDependency(source, target);
 
@@ -175,7 +183,7 @@ describe('node.ts', () => {
 
     it('should update version if dependency already exists', () => {
       const source = createMockSignal(1);
-      const target = createMockComputed(() => source());
+      const target = createMockComputed(() => source.value);
 
       addDependency(source, target);
       const firstNode = target._sources!;
@@ -191,7 +199,7 @@ describe('node.ts', () => {
     it('should handle multiple dependencies', () => {
       const source1 = createMockSignal(1);
       const source2 = createMockSignal(2);
-      const target = createMockComputed(() => source1() + source2());
+      const target = createMockComputed(() => source1.value + source2.value);
 
       addDependency(source1, target);
       addDependency(source2, target);
@@ -209,8 +217,8 @@ describe('node.ts', () => {
 
     it('should handle multiple targets for one source', () => {
       const source = createMockSignal(1);
-      const target1 = createMockComputed(() => source());
-      const target2 = createMockComputed(() => source());
+      const target1 = createMockComputed(() => source.value);
+      const target2 = createMockComputed(() => source.value);
 
       addDependency(source, target1);
       addDependency(source, target2);
@@ -231,7 +239,7 @@ describe('node.ts', () => {
     it('should mark all sources with version -1', () => {
       const source1 = createMockSignal(1);
       const source2 = createMockSignal(2);
-      const target = createMockComputed(() => source1() + source2());
+      const target = createMockComputed(() => source1.value + source2.value);
 
       addDependency(source1, target);
       addDependency(source2, target);
@@ -259,7 +267,7 @@ describe('node.ts', () => {
       const source2 = createMockSignal(2);
       const source3 = createMockSignal(3);
       const target = createMockComputed(
-        () => source1() + source2() + source3()
+        () => source1.value + source2.value + source3.value
       );
 
       addDependency(source1, target);
@@ -294,7 +302,7 @@ describe('node.ts', () => {
 
     it('should handle removing all sources', () => {
       const source = createMockSignal(1);
-      const target = createMockComputed(() => source());
+      const target = createMockComputed(() => source.value);
 
       addDependency(source, target);
       prepareSources(target);
@@ -306,7 +314,7 @@ describe('node.ts', () => {
 
     it('should return nodes to pool', () => {
       const source = createMockSignal(1);
-      const target = createMockComputed(() => source());
+      const target = createMockComputed(() => source.value);
 
       addDependency(source, target);
       const poolSizeBefore = getPoolSize();
@@ -322,7 +330,7 @@ describe('node.ts', () => {
     it('should remove all dependencies', () => {
       const source1 = createMockSignal(1);
       const source2 = createMockSignal(2);
-      const target = createMockComputed(() => source1() + source2());
+      const target = createMockComputed(() => source1.value + source2.value);
 
       addDependency(source1, target);
       addDependency(source2, target);
@@ -343,9 +351,9 @@ describe('node.ts', () => {
 
     it('should properly unlink from middle of target list', () => {
       const source = createMockSignal(1);
-      const target1 = createMockComputed(() => source());
-      const target2 = createMockComputed(() => source());
-      const target3 = createMockComputed(() => source());
+      const target1 = createMockComputed(() => source.value);
+      const target2 = createMockComputed(() => source.value);
+      const target3 = createMockComputed(() => source.value);
 
       addDependency(source, target1);
       addDependency(source, target2);
@@ -373,10 +381,10 @@ describe('node.ts', () => {
       const source = createMockSignal(1);
       const notifyCalls: Computed<number>[] = [];
 
-      const target1 = createMockComputed(() => source());
+      const target1 = createMockComputed(() => source.value);
       target1._notify = () => notifyCalls.push(target1);
 
-      const target2 = createMockComputed(() => source());
+      const target2 = createMockComputed(() => source.value);
       target2._notify = () => notifyCalls.push(target2);
 
       addDependency(source, target1);

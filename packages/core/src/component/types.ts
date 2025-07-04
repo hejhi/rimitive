@@ -12,7 +12,7 @@
  */
 export interface Signal<T> {
   // Read value
-  (): T;
+  readonly value: T;
 
   // Subscribe to changes
   subscribe: (listener: () => void) => () => void;
@@ -23,7 +23,7 @@ export interface Signal<T> {
  * Dependencies are tracked automatically when the computation function runs
  */
 export interface Computed<T> {
-  (): T; // Read computed value
+  readonly value: T; // Read computed value
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
 }
 

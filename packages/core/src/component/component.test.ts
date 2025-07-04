@@ -17,23 +17,23 @@ describe('Component API', () => {
     });
     const component = NamedCounterComponent(store);
 
-    expect(component.count()).toBe(5);
-    expect(component.doubled()).toBe(10);
+    expect(component.count.value).toBe(5);
+    expect(component.doubled.value).toBe(10);
 
     component.increment();
-    expect(component.count()).toBe(6);
-    expect(component.doubled()).toBe(12);
+    expect(component.count.value).toBe(6);
+    expect(component.doubled.value).toBe(12);
 
     component.reset();
-    expect(component.count()).toBe(0);
-    expect(component.doubled()).toBe(0);
+    expect(component.count.value).toBe(0);
+    expect(component.doubled.value).toBe(0);
   });
 
   it('should support middleware composition with new pattern', () => {
     const store = createComponent({ count: 5 });
     const Component = ({ store, set }: ComponentContext<CounterState>) => ({
       count: store.count,
-      increment: () => set(store.count, store.count() + 1),
+      increment: () => set(store.count, store.count.value + 1),
     });
 
     const component = Component(withLogger(store));
@@ -42,7 +42,7 @@ describe('Component API', () => {
     const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     component.increment();
-    expect(component.count()).toBe(6);
+    expect(component.count.value).toBe(6);
     expect(consoleSpy).toHaveBeenCalledWith('[Lattice Logger] State update:', {
       count: 6,
     });
@@ -57,17 +57,17 @@ describe('Component API', () => {
       set,
     }: ComponentContext<{ value: number }>) => ({
       value: store.value,
-      double: () => set(store.value, store.value() * 2),
+      double: () => set(store.value, store.value.value * 2),
       setValue: (n: number) => set(store.value, n),
     });
 
     const component = Component(store);
 
     component.double();
-    expect(component.value()).toBe(20);
+    expect(component.value.value).toBe(20);
 
     component.setValue(5);
-    expect(component.value()).toBe(5);
+    expect(component.value.value).toBe(5);
   });
 
   it('should batch multiple updates', () => {
@@ -83,7 +83,7 @@ describe('Component API', () => {
       computed,
       set,
     }: ComponentContext<MultiState>) => {
-      const sum = computed(() => store.a() + store.b() + store.c());
+      const sum = computed(() => store.a.value + store.b.value + store.c.value);
 
       return {
         sum,
@@ -100,13 +100,13 @@ describe('Component API', () => {
 
     const unsubscribe = component.sum.subscribe(() => computeCount++);
 
-    expect(component.sum()).toBe(6);
+    expect(component.sum.value).toBe(6);
 
     component.updateAll();
 
     // Each update triggers a recomputation in the current implementation
     expect(computeCount).toBe(3);
-    expect(component.sum()).toBe(60);
+    expect(component.sum.value).toBe(60);
 
     unsubscribe();
   });
@@ -122,9 +122,9 @@ describe('Component API', () => {
     const component = Component(store);
 
     component.increment();
-    expect(component.count()).toBe(6);
+    expect(component.count.value).toBe(6);
 
     component.multiplyBy(3);
-    expect(component.count()).toBe(18);
+    expect(component.count.value).toBe(18);
   });
 });

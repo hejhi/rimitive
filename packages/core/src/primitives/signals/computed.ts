@@ -113,27 +113,27 @@ export function createComputedScope(
   node: NodeScope
 ): ComputedScope {
   function computed<T>(fn: () => T): Computed<T> {
-    // Use a regular function but bind to stable helpers
-    const c = function computedRead() {
-      return readComputed(c, scope, node);
+    // Create object with stable shape
+    const c = {
+      _fn: fn,
+      _value: undefined,
+      _version: 0,
+      _globalVersion: 0,
+      _flags: OUTDATED | IS_COMPUTED,
+      _sources: undefined,
+      _sourcesTail: undefined,
+      _targets: undefined,
+      _targetsTail: undefined,
+      subscribe: undefined,
+      // Getter closes over the computed object, no 'this' needed
+      get value(): T {
+        return readComputed(c, scope, node);
+      },
+      // Pre-bound stable functions - no 'this' needed
+      _notify: () => notifyComputed(c, node),
+      _recompute: () => recomputeValue(c, scope, node),
+      dispose: () => disposeComputed(c, node)
     } as Computed<T>;
-    
-    // Initialize all properties in exact same order
-    c._fn = fn;
-    c._value = undefined;
-    c._version = 0;
-    c._globalVersion = 0;
-    c._flags = OUTDATED | IS_COMPUTED;
-    c._sources = undefined;
-    c._sourcesTail = undefined;
-    c._targets = undefined;
-    c._targetsTail = undefined;
-    c.subscribe = undefined;  // Pre-define to maintain stable shape
-
-    // Pre-bound stable functions - no 'this' needed
-    c._notify = () => notifyComputed(c, node);
-    c._recompute = () => recomputeValue(c, scope, node);
-    c.dispose = () => disposeComputed(c, node);
 
     return c;
   }

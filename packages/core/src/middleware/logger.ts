@@ -20,7 +20,7 @@ export function withLogger<State extends Record<string, unknown>>(
     // Get current state before update
     const stateBefore: Record<string, unknown> = {};
     for (const key in context.store) {
-      stateBefore[key] = context.store[key]();
+      stateBefore[key] = context.store[key].value;
     }
 
     // Call original set
@@ -31,7 +31,7 @@ export function withLogger<State extends Record<string, unknown>>(
     const changedKeys: string[] = [];
 
     for (const key in context.store) {
-      stateAfter[key] = context.store[key]();
+      stateAfter[key] = context.store[key].value;
       if (stateBefore[key] !== stateAfter[key]) {
         changedKeys.push(key);
       }

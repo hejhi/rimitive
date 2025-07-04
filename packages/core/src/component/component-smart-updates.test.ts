@@ -15,7 +15,7 @@ describe('Smart Updates', () => {
         set,
       }: ComponentContext<TodoState>) => {
         const completed = computed(
-          () => store.todos().filter((t) => t.completed).length
+          () => store.todos.value.filter((t) => t.completed).length
         );
 
         return {
@@ -27,10 +27,10 @@ describe('Smart Updates', () => {
               text,
               completed: false,
             };
-            set(store.todos, [...store.todos(), newTodo]);
+            set(store.todos, [...store.todos.value, newTodo]);
           },
           toggleTodo: (id: string) => {
-            set(store.todos, store.todos().map(t => 
+            set(store.todos, store.todos.value.map(t => 
               t.id === id ? { ...t, completed: !t.completed } : t
             ));
           },
@@ -43,17 +43,17 @@ describe('Smart Updates', () => {
       });
       const component = TodoApp(store);
 
-      expect(component.completed()).toBe(0);
+      expect(component.completed.value).toBe(0);
 
       // Toggle first todo
       component.toggleTodo('todo-0');
-      expect(component.todos()[0]?.completed).toBe(true);
-      expect(component.completed()).toBe(1);
+      expect(component.todos.value[0]?.completed).toBe(true);
+      expect(component.completed.value).toBe(1);
 
       // Add new todo
       component.addTodo('New task');
-      expect(component.todos()).toHaveLength(4);
-      expect(component.completed()).toBe(1);
+      expect(component.todos.value).toHaveLength(4);
+      expect(component.completed.value).toBe(1);
     });
   });
 
@@ -100,15 +100,15 @@ describe('Smart Updates', () => {
       const component = UserProfile(store);
 
       component.updateName('Jane');
-      expect(component.user().name).toBe('Jane');
-      expect(component.user().age).toBe(30); // Unchanged
+      expect(component.user.value.name).toBe('Jane');
+      expect(component.user.value.age).toBe(30); // Unchanged
 
       component.incrementAge();
-      expect(component.user().age).toBe(31);
+      expect(component.user.value.age).toBe(31);
 
       component.toggleNotifications();
-      expect(component.user().settings.notifications).toBe(false);
-      expect(component.user().settings.theme).toBe('dark'); // Unchanged
+      expect(component.user.value.settings.notifications).toBe(false);
+      expect(component.user.value.settings.theme).toBe('dark'); // Unchanged
     });
   });
 
@@ -166,7 +166,7 @@ describe('Smart Updates', () => {
       }: ComponentContext<CollectionState>) => ({
         collection: store.collection,
         add: (key: string, value: string) => {
-          const current = store.collection();
+          const current = store.collection.value;
           if (current instanceof Map) {
             const updatedValue = update(current, key, value);
             set(store.collection, updatedValue);
@@ -183,7 +183,7 @@ describe('Smart Updates', () => {
       component.add('newKey', 'newValue');
 
       // For Map, check if the key exists; for Set, check if the value exists
-      const collection = component.collection();
+      const collection = component.collection.value;
       if (collectionType === 'Map' && collection instanceof Map) {
         expect(has(collection, 'newKey')).toBe(true);
         expect(collection.get('newKey')).toBe('newValue');
