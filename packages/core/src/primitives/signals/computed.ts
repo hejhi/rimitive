@@ -182,21 +182,21 @@ Computed.prototype._refresh = function(): boolean {
     return false; // Cycle detected
   }
 
+  // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
+  // This is the most important optimization for diamond patterns
+  const scope = this._scope as UnifiedScope;
+  const globalVersion = scope?.globalVersion || 0;
+  
+  if (this._version > 0 && this._globalVersion === globalVersion) {
+    return true;
+  }
+
   // Fast path: tracking and not outdated
   if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) {
     return true;
   }
   
   this._flags &= ~OUTDATED;
-
-  const scope = this._scope as UnifiedScope;
-  const globalVersion = scope?.globalVersion || 0;
-  
-  // Critical optimization: Early exit if global version hasn't changed
-  // This MUST happen before setting RUNNING flag!
-  if (this._version > 0 && this._globalVersion === globalVersion) {
-    return true;
-  }
 
   // Mark as running before checking dependencies
   this._flags |= RUNNING;
