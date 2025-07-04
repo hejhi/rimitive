@@ -22,36 +22,10 @@ export type NodeScope = {
 };
 
 export function createNodeScope() {
-  // Node pool for recycling
-  const nodePool: DependencyNode[] = [];
-  const MAX_POOL_SIZE = 1000;
-  
-  // Pre-allocate nodes with stable shapes
-  for (let i = 0; i < 100; i++) {
-    nodePool.push({
-      source: undefined!,
-      target: undefined!,
-      prevSource: undefined,
-      nextSource: undefined,
-      prevTarget: undefined,
-      nextTarget: undefined,
-      version: -1,
-      rollbackNode: undefined,
-    });
-  }
-
   function acquireNode<S = unknown, T = unknown>(
     source: Signal<S> | Computed<S>,
     target: Computed<T> | Effect
   ): DependencyNode {
-    const node = nodePool.pop();
-    if (node) {
-      node.source = source as Signal | Computed;
-      node.target = target as Computed | Effect;
-      node.version = source._version;
-      return node;
-    }
-
     // Create new node with stable shape - all properties defined
     return {
       source: source as Signal | Computed,
@@ -66,27 +40,15 @@ export function createNodeScope() {
   }
 
   function releaseNode(node: DependencyNode): void {
-    node.source = undefined!;
-    node.target = undefined!;
-    node.prevSource = undefined;
-    node.nextSource = undefined;
-    node.prevTarget = undefined;
-    node.nextTarget = undefined;
-    node.version = -1;
-    node.rollbackNode = undefined;
-
-    if (nodePool.length < MAX_POOL_SIZE) {
-      nodePool.push(node);
-    }
+    // No-op - let GC handle it
   }
 
   function addDependency<S = unknown, T = unknown>(
     source: Signal<S> | Computed<S>,
     target: Computed<T> | Effect
   ): void {
-    let node = target._sources;
-
     // Check if we already depend on this source
+    let node = target._sources;
     while (node) {
       if (node.source === source) {
         node.version = source._version;
@@ -98,14 +60,14 @@ export function createNodeScope() {
     // Create new dependency
     node = acquireNode(source, target);
 
-    // Add to target's source list
+    // Add to target's source list (at head for better cache locality)
     node.nextSource = target._sources;
     if (target._sources) {
       target._sources.prevSource = node;
     }
     target._sources = node;
 
-    // Add to source's target list
+    // Add to source's target list (at head)
     node.nextTarget = source._targets;
     if (source._targets) {
       source._targets.prevTarget = node;
@@ -134,7 +96,7 @@ export function createNodeScope() {
       const next = node.nextSource;
 
       if (node.version === -1) {
-        // Remove this node
+        // This node was not reused - remove it
         if (prev) {
           prev.nextSource = next;
         } else {
@@ -206,11 +168,11 @@ export function createNodeScope() {
 
   // For testing - expose pool state
   function getPoolSize(): number {
-    return nodePool.length;
+    return 0; // No pool anymore
   }
 
   function clearPool(): void {
-    nodePool.length = 0;
+    // No-op - no pool to clear
   }
 
   return {

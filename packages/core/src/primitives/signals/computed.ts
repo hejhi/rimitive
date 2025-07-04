@@ -34,13 +34,19 @@ const Computed = ComputedImpl as unknown as {
 // Define the value property on the prototype
 Object.defineProperty(Computed.prototype, 'value', {
   get(this: Computed) {
-    // Ultra-fast path: Most common case - not disposed, tracking, and not outdated
+    // Cache property accesses to reduce overhead
+    const scope = this._scope;
+    const node = this._node;
     const flags = this._flags;
+    
+    // Ultra-fast path: Most common case - not disposed, tracking, and not outdated
     if ((flags & (DISPOSED | OUTDATED | TRACKING)) === TRACKING) {
       // Still need to track dependency if we're being tracked
-      const current = this._scope?.currentComputed;
-      if (current !== null && current !== undefined && (current._flags & RUNNING)) {
-        this._node.addDependency(this, current);
+      if (scope) {
+        const current = scope.currentComputed;
+        if (current && (current._flags & RUNNING)) {
+          node.addDependency(this, current);
+        }
       }
       return this._value!;
     }
@@ -51,38 +57,44 @@ Object.defineProperty(Computed.prototype, 'value', {
     }
 
     // Always track dependency first (if we're being tracked)
-    const current = this._scope?.currentComputed;
-    if (current !== null && current !== undefined && (current._flags & RUNNING)) {
-      this._node?.addDependency(this, current);
+    if (scope && node) {
+      const current = scope.currentComputed;
+      if (current && (current._flags & RUNNING)) {
+        node.addDependency(this, current);
+      }
     }
 
     // If already marked outdated, skip all version checks
-    if (this._flags & OUTDATED) {
+    if (flags & OUTDATED) {
       return this._recompute();
     }
 
     // Fast path: if global version hasn't changed, nothing to check
-    if (this._scope && this._globalVersion === this._scope.globalVersion) {
+    const globalVersion = scope?.globalVersion;
+    if (globalVersion !== undefined && this._globalVersion === globalVersion) {
       return this._value!;
     }
 
     // Not outdated but need to check if anything changed
     // Update our global version
-    if (this._scope) {
-      this._globalVersion = this._scope.globalVersion;
+    if (globalVersion !== undefined) {
+      this._globalVersion = globalVersion;
     }
     
     // Only check sources if we have any
-    if (this._sources) {
-      let sourceNode: DependencyNode | undefined = this._sources;
-      while (sourceNode) {
-        if (sourceNode.version !== sourceNode.source._version) {
+    const sources = this._sources;
+    if (sources) {
+      let sourceNode: DependencyNode | undefined = sources;
+      do {
+        // Inline version check for better performance
+        const source = sourceNode.source;
+        if (sourceNode.version !== source._version) {
           // Found outdated source - mark and recompute immediately
           this._flags |= OUTDATED;
           return this._recompute();
         }
         sourceNode = sourceNode.nextSource;
-      }
+      } while (sourceNode);
     }
 
     // Everything is up to date - return cached value
@@ -102,33 +114,42 @@ Computed.prototype._notify = function(this: Computed): void {
 };
 
 Computed.prototype._recompute = function<T>(this: Computed<T>): T {
-  if (this._flags & RUNNING) {
+  const flags = this._flags;
+  if (flags & RUNNING) {
     throw new Error('Cycle detected');
   }
 
-  this._flags |= RUNNING;
-  this._flags &= ~NOTIFIED;
+  // Cache property accesses
+  const scope = this._scope;
+  const node = this._node;
+  
+  // Update flags in one operation
+  this._flags = (flags | RUNNING) & ~(NOTIFIED | OUTDATED);
 
   // Prepare sources for potential cleanup
-  this._node?.prepareSources(this);
+  if (node) {
+    node.prepareSources(this);
+  }
 
-  const prevComputed = this._scope?.currentComputed;
-  if (this._scope) {
-    this._scope.currentComputed = this;
+  const prevComputed = scope?.currentComputed;
+  if (scope) {
+    scope.currentComputed = this;
   }
 
   try {
     this._value = this._fn();
     this._version++;
   } finally {
-    if (this._scope) {
-      this._scope.currentComputed = prevComputed;
+    if (scope) {
+      scope.currentComputed = prevComputed;
     }
-    this._flags &= ~(RUNNING | OUTDATED);
+    this._flags &= ~RUNNING;
   }
 
   // Clean up unused sources
-  this._node?.cleanupSources(this);
+  if (node) {
+    node.cleanupSources(this);
+  }
 
   return this._value;
 };

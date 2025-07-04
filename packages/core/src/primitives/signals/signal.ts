@@ -26,27 +26,40 @@ const Signal = SignalImpl as unknown as {
 // Define the value property on the prototype
 Object.defineProperty(Signal.prototype, 'value', {
   get(this: Signal) {
-    const current = this._scope?.currentComputed;
-    if (current !== null && current !== undefined && current._flags & RUNNING) {
-      this._node.addDependency(this, current);
+    // Cache property accesses
+    const scope = this._scope;
+    if (scope) {
+      const current = scope.currentComputed;
+      if (current && (current._flags & RUNNING)) {
+        this._node.addDependency(this, current);
+      }
     }
     return this._value;
   },
   set(this: Signal, value) {
-    if (this._value !== value) {
-      this._value = value;
-      this._version++;
-      this._scope?.incrementGlobalVersion();
+    // Early exit for no change
+    if (this._value === value) {
+      return;
+    }
+    
+    // Cache property accesses
+    const scope = this._scope;
+    const batch = this._batch;
+    const node = this._node;
+    
+    this._value = value;
+    this._version++;
+    scope?.incrementGlobalVersion();
 
-      if (!this._batch?.batchDepth) {
-        this._node?.notifyTargets(this);
-      } else {
-        // In batch - just mark targets as outdated
-        let node = this._targets;
-        while (node) {
-          node.target._notify();
-          node = node.nextTarget;
-        }
+    // Check batch depth once
+    if (!batch?.batchDepth) {
+      node?.notifyTargets(this);
+    } else {
+      // In batch - notify targets (they handle marking as outdated)
+      let targetNode = this._targets;
+      while (targetNode) {
+        targetNode.target._notify();
+        targetNode = targetNode.nextTarget;
       }
     }
   }
