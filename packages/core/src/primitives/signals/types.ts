@@ -12,12 +12,15 @@ export interface DependencyNode {
 }
 
 export interface Signal<T = unknown> {
-  readonly value: T;
+  value: T;  // Now read/write
   subscribe?: (listener: () => void) => () => void;
   _value: T;
   _version: number;
   _targets: DependencyNode | undefined;
   _targetsTail: DependencyNode | undefined;
+  _scope: any; // Reference to SignalScope
+  _batch: any; // Reference to BatchScope
+  _node: any;  // Reference to NodeScope
 }
 
 export interface Computed<T = unknown> {
@@ -35,6 +38,8 @@ export interface Computed<T = unknown> {
   _notify(): void;
   _recompute(): T;
   dispose(): void;
+  _scope: any; // Reference to SignalScope
+  _node: any;  // Reference to NodeScope
 }
 
 export interface Effect {

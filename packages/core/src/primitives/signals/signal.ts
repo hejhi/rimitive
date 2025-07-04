@@ -2,9 +2,60 @@
 
 import type { Signal } from './types';
 import { RUNNING } from './types';
-import { SignalScope } from './scope';
-import { BatchScope } from './batch';
-import { NodeScope } from './node';
+import type { SignalScope } from './scope';
+import type { BatchScope } from './batch';
+import type { NodeScope } from './node';
+
+// Signal constructor function
+function SignalImpl<T>(this: Signal<T>, value: T) {
+  this._value = value;
+  this._version = 0;
+  this._targets = undefined;
+  this._targetsTail = undefined;
+  this._scope = undefined;
+  this._batch = undefined;
+  this._node = undefined;
+}
+
+// Cast to get the right constructor type
+const Signal = SignalImpl as unknown as {
+  new <T>(value: T): Signal<T>;
+  prototype: Signal;
+};
+
+// Define the value property on the prototype
+Object.defineProperty(Signal.prototype, 'value', {
+  get(this: Signal) {
+    const current = this._scope?.currentComputed;
+    if (current !== null && current !== undefined && current._flags & RUNNING) {
+      this._node.addDependency(this, current);
+    }
+    return this._value;
+  },
+  set(this: Signal, value) {
+    if (this._value !== value) {
+      this._value = value;
+      this._version++;
+      this._scope?.incrementGlobalVersion();
+
+      if (!this._batch?.batchDepth) {
+        this._node?.notifyTargets(this);
+      } else {
+        // In batch - just mark targets as outdated
+        let node = this._targets;
+        while (node) {
+          node.target._notify();
+          node = node.nextTarget;
+        }
+      }
+    }
+  }
+});
+
+// Add subscribe method to prototype (will be overridden by subscribe scope)
+Signal.prototype.subscribe = function(this: Signal, _fn: (value: any) => void) {
+  return () => {};
+};
 
 export function createScopedSignalFactory(
   scope: SignalScope,
@@ -12,44 +63,17 @@ export function createScopedSignalFactory(
   node: NodeScope
 ) {
   function signal<T>(value: T): Signal<T> {
-    // Create object with stable shape
-    const s = {
-      _value: value,
-      _version: 0,
-      _targets: undefined,
-      _targetsTail: undefined,
-      subscribe: undefined,
-      // Getter closes over the signal object, no 'this' needed
-      get value(): T {
-        const current = scope.currentComputed;
-        if (current !== null && current._flags & RUNNING) {
-          node.addDependency(s, current);
-        }
-        return s._value;
-      },
-    } as Signal<T>;
-
+    const s = new Signal(value);
+    // Store scope references directly on the signal
+    s._scope = scope;
+    s._batch = batch;
+    s._node = node;
     return s;
   }
 
-  // Write to a signal (internal use only for set() function)
+  // Direct assignment is now supported via setter
   function writeSignal<T>(signal: Signal<T>, value: T): void {
-    if (signal._value !== value) {
-      signal._value = value;
-      signal._version++;
-      scope.incrementGlobalVersion();
-
-      if (!batch.batchDepth) {
-        node.notifyTargets(signal);
-      } else {
-        // In batch - just mark targets as outdated
-        let node = signal._targets;
-        while (node) {
-          node.target._notify();
-          node = node.nextTarget;
-        }
-      }
-    }
+    signal.value = value;
   }
 
   function untrack<T>(fn: () => T): T {

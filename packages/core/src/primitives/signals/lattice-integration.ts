@@ -18,7 +18,7 @@ export function createSignalFactory() {
   const scope = createSignalScope();
   const batch = createBatchScope();
   const node = createNodeScope();
-  const { signal: createSignal, writeSignal } = createScopedSignalFactory(
+  const { signal: createSignal } = createScopedSignalFactory(
     scope,
     batch,
     node
@@ -66,10 +66,8 @@ export function createSignalFactory() {
   }
 
   function set<T>(latticeSignal: LatticeSignal<T>, value: T): void {
-    writeSignal(
-      latticeSignal as unknown as Parameters<typeof writeSignal>[0],
-      value
-    );
+    // Direct assignment via setter
+    (latticeSignal as any).value = value;
   }
 
   return {

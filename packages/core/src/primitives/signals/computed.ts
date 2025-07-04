@@ -2,139 +2,159 @@
 
 import type { Computed, DependencyNode } from './types';
 import { NOTIFIED, OUTDATED, RUNNING, DISPOSED, TRACKING, IS_COMPUTED } from './types';
-import { SignalScope } from './scope';
-import { NodeScope } from './node';
+import type { SignalScope } from './scope';
+import type { NodeScope } from './node';
 
 export type ComputedScope = {
   computed: <T>(fn: () => T) => Computed<T>;
   isOutdated: <T>(computed: Computed<T>) => boolean;
 };
 
-// Stable helper functions - no 'this' binding
-function readComputed<T>(c: Computed<T>, scope: SignalScope, node: NodeScope): T {
-  // Ultra-fast path: Most common case - not disposed, tracking, and not outdated
-  const flags = c._flags;
-  if ((flags & (DISPOSED | OUTDATED | TRACKING)) === TRACKING) {
-    // Still need to track dependency if we're being tracked
-    const current = scope.currentComputed;
-    if (current !== null && (current._flags & RUNNING)) {
-      node.addDependency(c, current);
+// Computed constructor function
+function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
+  this._fn = fn;
+  this._value = undefined;
+  this._version = 0;
+  this._globalVersion = 0;
+  this._flags = OUTDATED | IS_COMPUTED;
+  this._sources = undefined;
+  this._sourcesTail = undefined;
+  this._targets = undefined;
+  this._targetsTail = undefined;
+  this._scope = undefined;
+  this._node = undefined;
+}
+
+// Cast to get the right constructor type
+const Computed = ComputedImpl as unknown as {
+  new <T>(fn: () => T): Computed<T>;
+  prototype: Computed;
+};
+
+// Define the value property on the prototype
+Object.defineProperty(Computed.prototype, 'value', {
+  get(this: Computed) {
+    // Ultra-fast path: Most common case - not disposed, tracking, and not outdated
+    const flags = this._flags;
+    if ((flags & (DISPOSED | OUTDATED | TRACKING)) === TRACKING) {
+      // Still need to track dependency if we're being tracked
+      const current = this._scope?.currentComputed;
+      if (current !== null && current !== undefined && (current._flags & RUNNING)) {
+        this._node.addDependency(this, current);
+      }
+      return this._value!;
     }
-    return c._value!;
-  }
-  
-  // Check if disposed (less common)
-  if (flags & DISPOSED) {
-    throw new Error('Computed is disposed');
-  }
+    
+    // Check if disposed (less common)
+    if (flags & DISPOSED) {
+      throw new Error('Computed is disposed');
+    }
 
-  // Always track dependency first (if we're being tracked)
-  const current = scope.currentComputed;
-  if (current !== null && (current._flags & RUNNING)) {
-    node.addDependency(c, current);
-  }
+    // Always track dependency first (if we're being tracked)
+    const current = this._scope?.currentComputed;
+    if (current !== null && current !== undefined && (current._flags & RUNNING)) {
+      this._node?.addDependency(this, current);
+    }
 
-  // If already marked outdated, skip all version checks
-  if (c._flags & OUTDATED) {
-    return recomputeValue(c, scope, node);
-  }
+    // If already marked outdated, skip all version checks
+    if (this._flags & OUTDATED) {
+      return this._recompute();
+    }
 
-  // Not outdated but need to check if anything changed
-  // Check if global version changed (always update our version)
-  if (c._globalVersion !== scope.globalVersion) {
-    c._globalVersion = scope.globalVersion;
+    // Fast path: if global version hasn't changed, nothing to check
+    if (this._scope && this._globalVersion === this._scope.globalVersion) {
+      return this._value!;
+    }
+
+    // Not outdated but need to check if anything changed
+    // Update our global version
+    if (this._scope) {
+      this._globalVersion = this._scope.globalVersion;
+    }
     
     // Only check sources if we have any
-    if (c._sources) {
-      let sourceNode: DependencyNode | undefined = c._sources;
+    if (this._sources) {
+      let sourceNode: DependencyNode | undefined = this._sources;
       while (sourceNode) {
         if (sourceNode.version !== sourceNode.source._version) {
           // Found outdated source - mark and recompute immediately
-          c._flags |= OUTDATED;
-          return recomputeValue(c, scope, node);
+          this._flags |= OUTDATED;
+          return this._recompute();
         }
         sourceNode = sourceNode.nextSource;
       }
     }
+
+    // Everything is up to date - return cached value
+    return this._value!;
   }
+});
 
-  // Everything is up to date - return cached value
-  return c._value!;
-}
-
-function notifyComputed(c: Computed<unknown>, node: NodeScope): void {
-  if (!(c._flags & NOTIFIED)) {
-    c._flags |= NOTIFIED | OUTDATED;
+// Add methods to the prototype
+Computed.prototype._notify = function(this: Computed): void {
+  if (!(this._flags & NOTIFIED)) {
+    this._flags |= NOTIFIED | OUTDATED;
     // Reset global version to force recheck
-    c._globalVersion = 0;
+    this._globalVersion = 0;
     // Propagate notification to our targets
-    node.notifyTargets(c);
+    this._node?.notifyTargets(this);
   }
-}
+};
 
-function recomputeValue<T>(c: Computed<T>, scope: SignalScope, node: NodeScope): T {
-  if (c._flags & RUNNING) {
+Computed.prototype._recompute = function<T>(this: Computed<T>): T {
+  if (this._flags & RUNNING) {
     throw new Error('Cycle detected');
   }
 
-  c._flags |= RUNNING;
-  c._flags &= ~NOTIFIED;
+  this._flags |= RUNNING;
+  this._flags &= ~NOTIFIED;
 
   // Prepare sources for potential cleanup
-  node.prepareSources(c);
+  this._node?.prepareSources(this);
 
-  const prevComputed = scope.currentComputed;
-  scope.currentComputed = c;
+  const prevComputed = this._scope?.currentComputed;
+  if (this._scope) {
+    this._scope.currentComputed = this;
+  }
 
   try {
-    c._value = c._fn();
-    c._version++;
+    this._value = this._fn();
+    this._version++;
   } finally {
-    scope.currentComputed = prevComputed;
-    c._flags &= ~(RUNNING | OUTDATED);
+    if (this._scope) {
+      this._scope.currentComputed = prevComputed;
+    }
+    this._flags &= ~(RUNNING | OUTDATED);
   }
 
   // Clean up unused sources
-  node.cleanupSources(c);
+  this._node?.cleanupSources(this);
 
-  return c._value;
-}
+  return this._value;
+};
 
-function disposeComputed(c: Computed<unknown>, node: NodeScope): void {
-  if (!(c._flags & DISPOSED)) {
-    c._flags |= DISPOSED;
-    node.disposeComputed(c);
-    c._value = undefined;
+Computed.prototype.dispose = function(this: Computed): void {
+  if (!(this._flags & DISPOSED)) {
+    this._flags |= DISPOSED;
+    this._node?.disposeComputed(this);
+    this._value = undefined;
   }
-}
+};
+
+// Add subscribe method to prototype (will be overridden by subscribe scope)
+Computed.prototype.subscribe = function(this: Computed, _fn: (value: any) => void) {
+  return () => {};
+};
 
 export function createComputedScope(
   scope: SignalScope,
   node: NodeScope
 ): ComputedScope {
   function computed<T>(fn: () => T): Computed<T> {
-    // Create object with stable shape
-    const c = {
-      _fn: fn,
-      _value: undefined,
-      _version: 0,
-      _globalVersion: 0,
-      _flags: OUTDATED | IS_COMPUTED,
-      _sources: undefined,
-      _sourcesTail: undefined,
-      _targets: undefined,
-      _targetsTail: undefined,
-      subscribe: undefined,
-      // Getter closes over the computed object, no 'this' needed
-      get value(): T {
-        return readComputed(c, scope, node);
-      },
-      // Pre-bound stable functions - no 'this' needed
-      _notify: () => notifyComputed(c, node),
-      _recompute: () => recomputeValue(c, scope, node),
-      dispose: () => disposeComputed(c, node)
-    } as Computed<T>;
-
+    const c = new Computed(fn);
+    // Store scope references directly on the computed
+    c._scope = scope;
+    c._node = node;
     return c;
   }
 
