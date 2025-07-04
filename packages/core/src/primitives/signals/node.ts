@@ -25,6 +25,20 @@ export function createNodeScope() {
   // Node pool for recycling
   const nodePool: DependencyNode[] = [];
   const MAX_POOL_SIZE = 1000;
+  
+  // Pre-allocate nodes with stable shapes
+  for (let i = 0; i < 100; i++) {
+    nodePool.push({
+      source: undefined!,
+      target: undefined!,
+      prevSource: undefined,
+      nextSource: undefined,
+      prevTarget: undefined,
+      nextTarget: undefined,
+      version: -1,
+      rollbackNode: undefined,
+    });
+  }
 
   function acquireNode<S = unknown, T = unknown>(
     source: Signal<S> | Computed<S>,
@@ -38,10 +52,16 @@ export function createNodeScope() {
       return node;
     }
 
+    // Create new node with stable shape - all properties defined
     return {
       source: source as Signal | Computed,
       target: target as Computed | Effect,
+      prevSource: undefined,
+      nextSource: undefined,
+      prevTarget: undefined,
+      nextTarget: undefined,
       version: source._version,
+      rollbackNode: undefined,
     };
   }
 
@@ -53,6 +73,7 @@ export function createNodeScope() {
     node.prevTarget = undefined;
     node.nextTarget = undefined;
     node.version = -1;
+    node.rollbackNode = undefined;
 
     if (nodePool.length < MAX_POOL_SIZE) {
       nodePool.push(node);

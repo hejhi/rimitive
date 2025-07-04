@@ -1,7 +1,8 @@
 // Effect implementation
 
 import type { Effect } from './types';
-import { NOTIFIED, OUTDATED, RUNNING, DISPOSED } from './types';
+import { OUTDATED } from './types';
+import { isNotified, isDisposed, isRunning, markStale, clearNotified, clearOutdated, setRunning, clearRunning, setDisposed } from './flags';
 import { NodeScope } from './node';
 import { SignalScope } from './scope';
 import { BatchScope } from './batch';
@@ -15,62 +16,72 @@ export type EffectScope = {
   ) => () => void;
 };
 
+// Stable helper functions - no 'this' binding
+function notifyEffect(effect: Effect, batch: BatchScope, scope: SignalScope, node: NodeScope): void {
+  if (!isNotified(effect._flags)) {
+    effect._flags = markStale(effect._flags);
+    if (!batch.batchDepth) {
+      runEffect(effect, scope, node);
+    } else {
+      batch.addToBatch(effect);
+    }
+  }
+}
+
+function runEffect(effect: Effect, scope: SignalScope, node: NodeScope): void {
+  if (isDisposed(effect._flags)) return;
+  if (isRunning(effect._flags)) return;
+
+  effect._flags = setRunning(effect._flags);
+  effect._flags = clearNotified(clearOutdated(effect._flags));
+
+  node.prepareSources(effect);
+
+  const prevComputed = scope.currentComputed;
+  scope.currentComputed = effect;
+
+  try {
+    effect._fn();
+  } finally {
+    scope.currentComputed = prevComputed;
+    effect._flags = clearRunning(effect._flags);
+  }
+
+  node.cleanupSources(effect);
+}
+
+function disposeEffect(effect: Effect, node: NodeScope): void {
+  if (!isDisposed(effect._flags)) {
+    effect._flags = setDisposed(effect._flags);
+    node.disposeComputed(effect);
+  }
+}
+
 export function createEffectScope(
   scope: SignalScope,
   batch: BatchScope,
   node: NodeScope
 ): EffectScope {
   function effect(fn: () => void): () => void {
+    // Create effect with stable shape - all properties defined upfront
     const e: Effect = {
       _fn: fn,
       _flags: OUTDATED,
-
-      _notify() {
-        if (!(e._flags & NOTIFIED)) {
-          e._flags |= NOTIFIED | OUTDATED;
-          if (!batch.batchDepth) {
-            e._run();
-          } else {
-            batch.addToBatch(e);
-          }
-        }
-      },
-
-      _run() {
-        if (e._flags & DISPOSED) return;
-        if (e._flags & RUNNING) return;
-
-        e._flags |= RUNNING;
-        e._flags &= ~(NOTIFIED | OUTDATED);
-
-        node.prepareSources(e);
-
-        const prevComputed = scope.currentComputed;
-        scope.currentComputed = e;
-
-        try {
-          e._fn();
-        } finally {
-          scope.currentComputed = prevComputed;
-          e._flags &= ~RUNNING;
-        }
-
-        node.cleanupSources(e);
-      },
-
-      dispose() {
-        if (!(e._flags & DISPOSED)) {
-          e._flags |= DISPOSED;
-          node.disposeComputed(e);
-        }
-      },
+      _sources: undefined,
+      _sourcesTail: undefined,
+      _nextBatchedEffect: undefined,
+      
+      // Pre-bound stable functions - no 'this' needed
+      _notify: () => notifyEffect(e, batch, scope, node),
+      _run: () => runEffect(e, scope, node),
+      dispose: () => disposeEffect(e, node),
     };
 
     // Run immediately
-    e._run();
+    runEffect(e, scope, node);
 
     // Return dispose function
-    return () => e.dispose();
+    return () => disposeEffect(e, node);
   }
 
   // Create an effect that runs once

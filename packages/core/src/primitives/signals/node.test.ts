@@ -69,12 +69,15 @@ describe('node.ts', () => {
     });
 
     it('should reuse node from pool when available', () => {
+      // If pool has pre-allocated nodes, acquiring one will decrease the count
       const source1 = createMockSignal(1);
       const target1 = createMockComputed(() => 1);
       const node1 = acquireNode(source1, target1);
-
+      
+      const poolSizeAfterAcquire = getPoolSize();
+      
       releaseNode(node1);
-      expect(getPoolSize()).toBe(1);
+      expect(getPoolSize()).toBe(poolSizeAfterAcquire + 1);
 
       const source2 = createMockSignal(2);
       const target2 = createMockComputed(() => 2);
@@ -122,6 +125,9 @@ describe('node.ts', () => {
     });
 
     it('should add node to pool if under max size', () => {
+      // Clear pool to test from empty state
+      clearPool();
+      
       const source = createMockSignal(1);
       const target = createMockComputed(() => 1);
       const node = acquireNode(source, target);
@@ -393,6 +399,8 @@ describe('node.ts', () => {
 
   describe('getPoolSize', () => {
     it('should return current pool size', () => {
+      // Clear pool to test from known state
+      clearPool();
       expect(getPoolSize()).toBe(0);
 
       const source = createMockSignal(1);

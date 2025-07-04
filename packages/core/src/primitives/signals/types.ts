@@ -3,29 +3,35 @@
 export interface DependencyNode {
   source: Signal | Computed;
   target: Computed | Effect;
-  prevSource?: DependencyNode;
-  nextSource?: DependencyNode;
-  prevTarget?: DependencyNode;
-  nextTarget?: DependencyNode;
+  prevSource: DependencyNode | undefined;
+  nextSource: DependencyNode | undefined;
+  prevTarget: DependencyNode | undefined;
+  nextTarget: DependencyNode | undefined;
   version: number;
+  rollbackNode: DependencyNode | undefined;
 }
 
 export interface Signal<T = unknown> {
   (): T;
+  subscribe?: (listener: () => void) => () => void;
   _value: T;
   _version: number;
-  _targets?: DependencyNode;
+  _targets: DependencyNode | undefined;
+  _targetsTail: DependencyNode | undefined;
 }
 
 export interface Computed<T = unknown> {
   (): T;
+  subscribe?: (listener: () => void) => () => void;
   _fn: () => T;
-  _value?: T;
+  _value: T | undefined;
   _version: number;
   _globalVersion: number;
   _flags: number;
-  _sources?: DependencyNode;
-  _targets?: DependencyNode;
+  _sources: DependencyNode | undefined;
+  _sourcesTail: DependencyNode | undefined;
+  _targets: DependencyNode | undefined;
+  _targetsTail: DependencyNode | undefined;
   _notify(): void;
   _recompute(): T;
   dispose(): void;
@@ -34,8 +40,9 @@ export interface Computed<T = unknown> {
 export interface Effect {
   _fn: () => void;
   _flags: number;
-  _sources?: DependencyNode;
-  _nextBatchedEffect?: Effect;
+  _sources: DependencyNode | undefined;
+  _sourcesTail: DependencyNode | undefined;
+  _nextBatchedEffect: Effect | undefined;
   _notify(): void;
   _run(): void;
   dispose(): void;

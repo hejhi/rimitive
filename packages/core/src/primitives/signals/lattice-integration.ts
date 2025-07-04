@@ -50,23 +50,19 @@ export function createSignalFactory() {
   function signal<T>(initialValue: T): LatticeSignal<T> {
     const signalInstance = createSignal(initialValue);
 
-    // Add subscribe method for framework compatibility
-    const latticeSignal = Object.assign(signalInstance, {
-      subscribe: (listener: () => void) => subscribe(signalInstance, listener),
-    }) as LatticeSignal<T>;
+    // Add subscribe method to the existing object (maintains stable shape)
+    signalInstance.subscribe = (listener: () => void) => subscribe(signalInstance, listener);
 
-    return latticeSignal;
+    return signalInstance as LatticeSignal<T>;
   }
 
   function computed<T>(computeFn: () => T): LatticeComputed<T> {
     const computedInstance = createComputed(computeFn);
 
-    const latticeComputed = Object.assign(computedInstance, {
-      subscribe: (listener: () => void) =>
-        subscribe(computedInstance, listener),
-    }) as LatticeComputed<T>;
+    // Add subscribe method to the existing object (maintains stable shape)
+    computedInstance.subscribe = (listener: () => void) => subscribe(computedInstance, listener);
 
-    return latticeComputed;
+    return computedInstance as LatticeComputed<T>;
   }
 
   function set<T>(latticeSignal: LatticeSignal<T>, value: T): void {

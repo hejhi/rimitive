@@ -6,25 +6,34 @@ import { SignalScope } from './scope';
 import { BatchScope } from './batch';
 import { NodeScope } from './node';
 
+// Stable helper function - no 'this' binding
+function readSignal<T>(s: Signal<T>, scope: SignalScope, node: NodeScope): T {
+  const current = scope.currentComputed;
+  if (current !== null && (current._flags & RUNNING)) {
+    node.addDependency(s, current);
+  }
+  return s._value;
+}
+
 export function createScopedSignalFactory(
   scope: SignalScope,
   batch: BatchScope,
   node: NodeScope
 ) {
   function signal<T>(value: T): Signal<T> {
-    const s: Signal<T> = function () {
-      // Ultra-fast read path with minimized branching
-      // Only check if we have a current computed (most common case: no tracking)
-      const current = scope.currentComputed;
-      if (current !== null && (current._flags & RUNNING)) {
-        node.addDependency(s, current);
-      }
-      return s._value;
+    // Create a bound function that references the stable helper
+    const s = function signalRead() {
+      return readSignal(s, scope, node);
     } as Signal<T>;
-
+    
+    // Initialize all properties in exact same order every time
+    // This ensures V8 creates the same hidden class for all signals
     s._value = value;
     s._version = 0;
-
+    s._targets = undefined;
+    s._targetsTail = undefined;
+    s.subscribe = undefined;  // Pre-define to maintain stable shape
+    
     return s;
   }
 
