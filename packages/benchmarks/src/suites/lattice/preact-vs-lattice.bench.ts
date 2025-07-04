@@ -245,7 +245,7 @@ describe('Batch Updates', () => {
       latticeBatch(() => {
         latticeSet(s1, i);
         latticeSet(s2, i * 2);
-        latticeSet(s1, i * 3);
+        latticeSet(s3, i * 3);
       });
       void sum.value; // Should recompute once per batch
     }
