@@ -84,116 +84,146 @@ Object.defineProperty(Computed.prototype, 'value', {
   },
 });
 
+// Helper: Prepare sources for re-evaluation
+function prepareSources(computed: Computed): void {
+  // Simply mark all current sources as potentially unused
+  for (
+    let node = computed._sources;
+    node !== undefined;
+    node = node.nextSource
+  ) {
+    node.version = -1; // Mark as potentially unused
+  }
+}
+
+// Helper: Clean up sources after re-evaluation  
+function cleanupSources(computed: Computed): void {
+  let node = computed._sources;
+  let prev: DependencyNode | undefined;
+
+  while (node !== undefined) {
+    const next = node.nextSource;
+    
+    if (node.version === -1) {
+      // This node was not re-used, remove it
+      
+      // Remove from sources list
+      if (prev !== undefined) {
+        prev.nextSource = next;
+      } else {
+        computed._sources = next;
+      }
+      if (next !== undefined) {
+        next.prevSource = prev;
+      }
+      
+      // Remove from source's targets
+      const source = node.source;
+      const prevTarget = node.prevTarget;
+      const nextTarget = node.nextTarget;
+      
+      if (prevTarget !== undefined) {
+        prevTarget.nextTarget = nextTarget;
+      } else {
+        source._targets = nextTarget;
+        // Clear tracking flag if no more targets
+        if (nextTarget === undefined && '_flags' in source) {
+          source._flags &= ~TRACKING;
+        }
+      }
+      
+      if (nextTarget !== undefined) {
+        nextTarget.prevTarget = prevTarget;
+      }
+    } else {
+      // This node was re-used, keep it
+      prev = node;
+    }
+    
+    node = next;
+  }
+}
+
+// Check if recomputation is needed
+function needsToRecompute(computed: Computed): boolean {
+  // Check dependencies in order of use
+  for (
+    let node = computed._sources;
+    node !== undefined;
+    node = node.nextSource
+  ) {
+    const source = node.source;
+    
+    // Three checks as in Preact:
+    // 1. Version already changed (fast path)
+    if (node.version !== source._version) {
+      return true;
+    }
+    
+    // 2. Try to refresh the source (handles nested computeds)
+    if (!source._refresh()) {
+      return true;
+    }
+    
+    // 3. Check if version changed after refresh
+    if (node.version !== source._version) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
 // Simplified refresh - inline everything for performance
 Computed.prototype._refresh = function(): boolean {
   this._flags &= ~NOTIFIED;
 
   if (this._flags & RUNNING) {
-    throw new Error('Cycle detected');
+    return false; // Cycle detected
   }
 
   // Fast path: tracking and not outdated
   if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) {
     return true;
   }
-
+  
   this._flags &= ~OUTDATED;
 
-  // Store global version but don't use it for early exit during computations
   const scope = this._scope as UnifiedScope;
   const globalVersion = scope?.globalVersion || 0;
   
-  this._flags |= RUNNING;
-
-  // Check if sources changed
-  if (this._version > 0) {
-    let needsRecompute = false;
-    let node = this._sources;
-    
-    while (node) {
-      const source = node.source;
-      // Refresh source if it's a computed
-      if (source._refresh) {
-        source._refresh();
-      }
-      // Check if version changed
-      if (node.version !== source._version) {
-        needsRecompute = true;
-        break;
-      }
-      node = node.nextSource;
-    }
-    
-    if (!needsRecompute) {
-      this._flags &= ~RUNNING;
-      return true;
-    }
+  // Critical optimization: Early exit if global version hasn't changed
+  // This MUST happen before setting RUNNING flag!
+  if (this._version > 0 && this._globalVersion === globalVersion) {
+    return true;
   }
 
-  // Recompute
+  // Mark as running before checking dependencies
+  this._flags |= RUNNING;
+  
+  // Check if we actually need to recompute
+  if (this._version > 0 && !needsToRecompute(this)) {
+    this._flags &= ~RUNNING;
+    return true;
+  }
+
+  // Recompute needed
   const prevComputed = scope?.currentComputed;
-  if (scope) scope.currentComputed = this;
-
   try {
-    // Mark sources for cleanup
-    let node = this._sources;
-    while (node) {
-      node.version = -1;
-      node = node.nextSource;
-    }
-
+    prepareSources(this);
+    if (scope) scope.currentComputed = this;
+    
     const value = this._fn();
     if (this._value !== value || this._version === 0) {
       this._value = value;
       this._version++;
     }
+    
     // Update global version after successful computation
     this._globalVersion = globalVersion;
   } finally {
     if (scope) scope.currentComputed = prevComputed;
-
-    // Cleanup unused sources
-    let node = this._sources;
-    let prev: DependencyNode | undefined;
-
-    while (node) {
-      const next = node.nextSource;
-
-      if (node.version === -1) {
-        // Remove unused
-        if (prev) {
-          prev.nextSource = next;
-        } else {
-          this._sources = next;
-        }
-        if (next) {
-          next.prevSource = prev;
-        }
-
-        // Remove from source's targets
-        const source = node.source;
-        const prevTarget = node.prevTarget;
-        const nextTarget = node.nextTarget;
-
-        if (prevTarget) {
-          prevTarget.nextTarget = nextTarget;
-        } else {
-          source._targets = nextTarget;
-          if (!nextTarget && '_flags' in source) {
-            source._flags &= ~TRACKING;
-          }
-        }
-
-        if (nextTarget) {
-          nextTarget.prevTarget = prevTarget;
-        }
-      } else {
-        prev = node;
-      }
-
-      node = next;
-    }
-
+    cleanupSources(this);
     this._flags &= ~RUNNING;
   }
 
