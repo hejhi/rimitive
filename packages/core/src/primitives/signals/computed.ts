@@ -21,6 +21,7 @@ function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
   this._sourcesTail = undefined;
   this._targets = undefined;
   this._targetsTail = undefined;
+  this._lastRefreshGeneration = 0;
   this._scope = undefined;
   this._node = undefined;
 }
@@ -90,13 +91,33 @@ Object.defineProperty(Computed.prototype, 'value', {
       }
     }
     
-    // Optimized refresh logic based on Preact's approach
-    return this._refresh();
+    // Start refresh cycle for diamond optimization
+    const needsCycleStart = scope && scope.refreshGeneration === 0;
+    if (needsCycleStart) {
+      scope.startRefreshCycle();
+    }
+    
+    try {
+      // Optimized refresh logic based on Preact's approach
+      return this._refresh();
+    } finally {
+      // End refresh cycle if we started it
+      if (needsCycleStart && scope) {
+        scope.endRefreshCycle();
+      }
+    }
   }
 });
 
 // Add optimized _refresh method based on Preact's approach
 Computed.prototype._refresh = function(this: Computed): boolean | any {
+  const scope = this._scope;
+  
+  // Check if we've already been refreshed in this generation
+  if (scope && scope.refreshGeneration > 0 && this._lastRefreshGeneration === scope.refreshGeneration) {
+    return this._value;
+  }
+  
   this._flags &= ~NOTIFIED;
   
   // Fast path: already running (cycle detection)
@@ -106,14 +127,16 @@ Computed.prototype._refresh = function(this: Computed): boolean | any {
   
   // Fast path: if tracking and not outdated, value is current
   if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) {
+    this._lastRefreshGeneration = scope?.refreshGeneration || 0;
     return this._value;
   }
   
   this._flags &= ~OUTDATED;
   
   // Fast path: global version check
-  const globalVersion = this._scope?.globalVersion;
+  const globalVersion = scope?.globalVersion;
   if (globalVersion !== undefined && this._globalVersion === globalVersion) {
+    this._lastRefreshGeneration = scope?.refreshGeneration || 0;
     return this._value;
   }
   
@@ -125,13 +148,14 @@ Computed.prototype._refresh = function(this: Computed): boolean | any {
   // Check if any sources changed
   if (this._version > 0 && !this._needsToRecompute()) {
     this._flags &= ~RUNNING;
+    this._lastRefreshGeneration = scope?.refreshGeneration || 0;
     return this._value;
   }
   
   // Recompute needed
-  const prevComputed = this._scope?.currentComputed;
-  if (this._scope) {
-    this._scope.currentComputed = this;
+  const prevComputed = scope?.currentComputed;
+  if (scope) {
+    scope.currentComputed = this;
   }
   
   try {
@@ -143,9 +167,11 @@ Computed.prototype._refresh = function(this: Computed): boolean | any {
       this._value = value;
       this._version++;
     }
+    
+    this._lastRefreshGeneration = scope?.refreshGeneration || 0;
   } finally {
-    if (this._scope) {
-      this._scope.currentComputed = prevComputed;
+    if (scope) {
+      scope.currentComputed = prevComputed;
     }
     
     // Cleanup unused sources
@@ -166,6 +192,7 @@ Computed.prototype._needsToRecompute = function(this: Computed): boolean {
     if (node.version !== source._version) {
       // Need to check if source itself needs refresh (for nested computeds)
       if ('_refresh' in source && typeof source._refresh === 'function') {
+        // The source's _refresh will handle caching internally
         if (!source._refresh() || node.version !== source._version) {
           return true;
         }
