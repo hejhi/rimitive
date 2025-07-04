@@ -1,23 +1,10 @@
-// Computed value implementation
+// Simplified Computed implementation - bare metal
 
 import type { Computed, DependencyNode } from './types';
-import {
-  NOTIFIED,
-  OUTDATED,
-  RUNNING,
-  DISPOSED,
-  TRACKING,
-  IS_COMPUTED,
-} from './types';
-import type { SignalScope } from './scope';
-import type { NodeScope } from './node';
+import { NOTIFIED, OUTDATED, RUNNING, DISPOSED, TRACKING, IS_COMPUTED } from './types';
+import type { UnifiedScope } from './scope';
 
-export type ComputedScope = {
-  computed: <T>(fn: () => T) => Computed<T>;
-  isOutdated: <T>(computed: Computed<T>) => boolean;
-};
-
-// Computed constructor function
+// Computed constructor
 function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
   this._fn = fn;
   this._value = undefined;
@@ -25,140 +12,174 @@ function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
   this._globalVersion = -1;
   this._flags = OUTDATED | IS_COMPUTED;
   this._sources = undefined;
-  this._sourcesTail = undefined;
   this._targets = undefined;
-  this._targetsTail = undefined;
   this._scope = undefined;
-  this._node = undefined;
 }
 
-// Cast to get the right constructor type
+// Cast to constructor type
 const Computed = ComputedImpl as unknown as {
   new <T>(fn: () => T): Computed<T>;
   prototype: Computed;
 };
 
-// Define the value property on the prototype
+// Value property - hot path optimized
 Object.defineProperty(Computed.prototype, 'value', {
   get(this: Computed) {
-    // Early exit for disposed
     if (this._flags & DISPOSED) {
       throw new Error('Computed is disposed');
     }
 
-    // Check if we're being tracked and inline dependency tracking
-    const scope = this._scope;
-    if (scope) {
-      const current = scope.currentComputed;
-      if (current && current._flags & RUNNING) {
-        // Inline addDependency logic for hot path
-        let node = current._sources;
-        let found = false;
-
-        // Fast check if we already track this dependency
-        while (node) {
-          if (node._source === this) {
-            node._version = this._version;
-            found = true;
-            break;
-          }
-          node = node._nextSource;
+    const scope = this._scope as UnifiedScope;
+    const current = scope?.currentComputed;
+    
+    // Track this computed as dependency if needed
+    if (current && current._flags & RUNNING) {
+      let node = current._sources;
+      while (node) {
+        if (node.source === this) {
+          node.version = this._version;
+          break;
         }
-
-        // Add new dependency if not found
-        if (!found) {
-          // Create node inline with minimal overhead
-          const newNode: DependencyNode = {
-            _source: this,
-            _target: current,
-            _version: this._version,
-            _prevSource: undefined,
-            _nextSource: current._sources,
-            _prevTarget: undefined,
-            _nextTarget: this._targets,
-            _rollbackNode: undefined,
-          };
-
-          // Link to target's sources
-          if (current._sources) {
-            current._sources._prevSource = newNode;
-          }
-          current._sources = newNode;
-
-          // Link to source's targets
-          if (this._targets) {
-            this._targets._prevTarget = newNode;
-          } else {
-            // First target - enable tracking
-            this._flags |= TRACKING;
-          }
-          this._targets = newNode;
+        node = node.nextSource;
+      }
+      
+      if (!node) {
+        const newNode: DependencyNode = {
+          source: this,
+          target: current,
+          version: this._version,
+          nextSource: current._sources,
+          nextTarget: this._targets,
+        };
+        
+        if (current._sources) {
+          current._sources.prevSource = newNode;
         }
+        current._sources = newNode;
+        
+        if (this._targets) {
+          this._targets.prevTarget = newNode;
+        } else {
+          this._flags |= TRACKING;
+        }
+        this._targets = newNode;
       }
     }
 
-    // Call refresh and return the value
     this._refresh();
     return this._value;
   },
 });
 
-// Add optimized _refresh method based on Preact's approach
-Computed.prototype._refresh = function (this: Computed): boolean | any {
+// Simplified refresh - inline everything for performance
+Computed.prototype._refresh = function(): boolean {
   this._flags &= ~NOTIFIED;
 
-  // Fast path: already running (cycle detection)
   if (this._flags & RUNNING) {
     throw new Error('Cycle detected');
   }
 
-  // Fast path: if tracking and not outdated, value is current
+  // Fast path: tracking and not outdated
   if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) {
     return true;
   }
 
   this._flags &= ~OUTDATED;
 
-  // Fast path: global version check - this is the diamond optimization!
-  // Only skip if we've been computed at least once
-  const globalVersion = this._scope?.globalVersion;
-  if (this._version > 0 && this._globalVersion === globalVersion) {
-    return true;
-  }
-
-  this._globalVersion = globalVersion || 0;
-
-  // Mark as running before checking dependencies
+  // Store global version but don't use it for early exit during computations
+  const scope = this._scope as UnifiedScope;
+  const globalVersion = scope?.globalVersion || 0;
+  
   this._flags |= RUNNING;
 
-  // Check if any sources changed
-  if (this._version > 0 && !this._needsToRecompute()) {
-    this._flags &= ~RUNNING;
-    return true;
+  // Check if sources changed
+  if (this._version > 0) {
+    let needsRecompute = false;
+    let node = this._sources;
+    
+    while (node) {
+      const source = node.source;
+      // Refresh source if it's a computed
+      if (source._refresh) {
+        source._refresh();
+      }
+      // Check if version changed
+      if (node.version !== source._version) {
+        needsRecompute = true;
+        break;
+      }
+      node = node.nextSource;
+    }
+    
+    if (!needsRecompute) {
+      this._flags &= ~RUNNING;
+      return true;
+    }
   }
 
-  // Recompute needed
-  const prevComputed = this._scope?.currentComputed;
-  if (this._scope) {
-    this._scope.currentComputed = this;
-  }
+  // Recompute
+  const prevComputed = scope?.currentComputed;
+  if (scope) scope.currentComputed = this;
 
   try {
-    // Prepare sources for cleanup
-    this._prepareSources();
+    // Mark sources for cleanup
+    let node = this._sources;
+    while (node) {
+      node.version = -1;
+      node = node.nextSource;
+    }
 
     const value = this._fn();
     if (this._value !== value || this._version === 0) {
       this._value = value;
       this._version++;
     }
+    // Update global version after successful computation
+    this._globalVersion = globalVersion;
   } finally {
-    if (this._scope) {
-      this._scope.currentComputed = prevComputed;
-    }
+    if (scope) scope.currentComputed = prevComputed;
 
     // Cleanup unused sources
-    this._cleanupSources();
+    let node = this._sources;
+    let prev: DependencyNode | undefined;
+
+    while (node) {
+      const next = node.nextSource;
+
+      if (node.version === -1) {
+        // Remove unused
+        if (prev) {
+          prev.nextSource = next;
+        } else {
+          this._sources = next;
+        }
+        if (next) {
+          next.prevSource = prev;
+        }
+
+        // Remove from source's targets
+        const source = node.source;
+        const prevTarget = node.prevTarget;
+        const nextTarget = node.nextTarget;
+
+        if (prevTarget) {
+          prevTarget.nextTarget = nextTarget;
+        } else {
+          source._targets = nextTarget;
+          if (!nextTarget && '_flags' in source) {
+            source._flags &= ~TRACKING;
+          }
+        }
+
+        if (nextTarget) {
+          nextTarget.prevTarget = prevTarget;
+        }
+      } else {
+        prev = node;
+      }
+
+      node = next;
+    }
 
     this._flags &= ~RUNNING;
   }
@@ -166,132 +187,65 @@ Computed.prototype._refresh = function (this: Computed): boolean | any {
   return true;
 };
 
-// Helper method to check if recomputation is needed
-Computed.prototype._needsToRecompute = function (this: Computed): boolean {
-  let node = this._sources;
-  while (node) {
-    const source = node._source;
-    // Check if source version changed
-    if (node._version !== source._version) {
-      // Need to check if source itself needs refresh (for nested computeds)
-      if ('_refresh' in source && typeof source._refresh === 'function') {
-        // Important: first refresh the source to get its current state
-        source._refresh();
-        // Then check if the version actually changed
-        if (node._version !== source._version) {
-          return true;
-        }
-      } else {
-        return true;
-      }
+// Notify targets
+Computed.prototype._notify = function(): void {
+  if (!(this._flags & NOTIFIED)) {
+    this._flags |= NOTIFIED | OUTDATED;
+    
+    let node = this._targets;
+    while (node) {
+      node.target._notify();
+      node = node.nextTarget;
     }
-    node = node._nextSource;
-  }
-  return false;
-};
-
-// Inline prepareSources for better performance
-Computed.prototype._prepareSources = function (this: Computed): void {
-  let node = this._sources;
-  while (node) {
-    node._version = -1; // Mark for potential cleanup
-    node = node._nextSource;
   }
 };
 
-// Inline cleanupSources for better performance
-Computed.prototype._cleanupSources = function (this: Computed): void {
-  let node = this._sources;
-  let prev: DependencyNode | undefined;
-
-  while (node) {
-    const next = node._nextSource;
-
-    if (node._version === -1) {
-      // Remove unused node
-      if (prev) {
-        prev._nextSource = next;
-      } else {
-        this._sources = next;
-      }
-      if (next) {
-        next._prevSource = prev;
-      }
-
-      // Remove from source's targets
-      const source = node._source;
-      const prevTarget = node._prevTarget;
-      const nextTarget = node._nextTarget;
+// Dispose
+Computed.prototype.dispose = function(): void {
+  if (!(this._flags & DISPOSED)) {
+    this._flags |= DISPOSED;
+    
+    // Clear all sources
+    let node = this._sources;
+    while (node) {
+      const next = node.nextSource;
+      const source = node.source;
+      const prevTarget = node.prevTarget;
+      const nextTarget = node.nextTarget;
 
       if (prevTarget) {
-        prevTarget._nextTarget = nextTarget;
+        prevTarget.nextTarget = nextTarget;
       } else {
         source._targets = nextTarget;
-        // If no more targets and it's a computed, clear tracking flag
-        if (!nextTarget && '_flags' in source) {
-          source._flags &= ~TRACKING;
-        }
       }
 
       if (nextTarget) {
-        nextTarget._prevTarget = prevTarget;
+        nextTarget.prevTarget = prevTarget;
       }
-    } else {
-      prev = node;
+
+      node = next;
     }
-
-    node = next;
-  }
-};
-
-// Add methods to the prototype
-Computed.prototype._notify = function (this: Computed): void {
-  if (!(this._flags & NOTIFIED)) {
-    this._flags |= NOTIFIED | OUTDATED;
-    // Propagate notification to our targets
-    let node = this._targets;
-    while (node) {
-      node._target._notify();
-      node = node._nextTarget;
-    }
-  }
-};
-
-Computed.prototype.dispose = function (this: Computed): void {
-  if (!(this._flags & DISPOSED)) {
-    this._flags |= DISPOSED;
-    this._node?.disposeComputed(this);
+    
+    this._sources = undefined;
     this._value = undefined;
   }
 };
 
-// Add subscribe method to prototype (will be overridden by subscribe scope)
-Computed.prototype.subscribe = function (
-  this: Computed,
-  _fn: (value: any) => void
-) {
+// Placeholder subscribe
+Computed.prototype.subscribe = function() {
   return () => {};
 };
 
-export function createComputedScope(
-  scope: SignalScope,
-  node: NodeScope
-): ComputedScope {
+export type ComputedScope = {
+  computed: <T>(fn: () => T) => Computed<T>;
+};
+
+export function createComputedScope(scope: UnifiedScope): ComputedScope {
   function computed<T>(fn: () => T): Computed<T> {
     const c = new Computed(fn);
-    // Store scope references directly on the computed
     c._scope = scope;
-    c._node = node;
     return c;
   }
 
-  // Utility function to check if a computed needs recalculation
-  function isOutdated<T>(computed: Computed<T>): boolean {
-    return !!(computed._flags & OUTDATED);
-  }
-
-  return {
-    computed,
-    isOutdated,
-  };
+  return { computed };
 }

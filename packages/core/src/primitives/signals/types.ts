@@ -1,26 +1,23 @@
 // Shared types for signals implementation
 
 export interface DependencyNode {
-  _source: Signal | Computed;
-  _target: Computed | Effect;
-  _prevSource: DependencyNode | undefined;
-  _nextSource: DependencyNode | undefined;
-  _prevTarget: DependencyNode | undefined;
-  _nextTarget: DependencyNode | undefined;
-  _version: number;
-  _rollbackNode: DependencyNode | undefined;
+  source: Signal | Computed;
+  target: Computed | Effect;
+  prevSource?: DependencyNode;
+  nextSource?: DependencyNode;
+  prevTarget?: DependencyNode;
+  nextTarget?: DependencyNode;
+  version: number;
+  rollbackNode?: DependencyNode;
 }
 
 export interface Signal<T = unknown> {
-  value: T;  // Now read/write
+  value: T;
   subscribe?: (listener: () => void) => () => void;
   _value: T;
   _version: number;
-  _targets: DependencyNode | undefined;
-  _targetsTail: DependencyNode | undefined;
-  _scope: any; // Reference to SignalScope
-  _batch: any; // Reference to BatchScope
-  _node: any;  // Reference to NodeScope
+  _targets?: DependencyNode;
+  _scope: unknown; // Single unified scope
   _refresh(): boolean;
 }
 
@@ -32,26 +29,19 @@ export interface Computed<T = unknown> {
   _version: number;
   _globalVersion: number;
   _flags: number;
-  _sources: DependencyNode | undefined;
-  _sourcesTail: DependencyNode | undefined;
-  _targets: DependencyNode | undefined;
-  _targetsTail: DependencyNode | undefined;
+  _sources?: DependencyNode;
+  _targets?: DependencyNode;
   _notify(): void;
-  _refresh(): T | boolean;
-  _needsToRecompute(): boolean;
-  _prepareSources(): void;
-  _cleanupSources(): void;
+  _refresh(): boolean;
   dispose(): void;
-  _scope: any; // Reference to SignalScope
-  _node: any;  // Reference to NodeScope
+  _scope: unknown; // Single unified scope
 }
 
 export interface Effect {
   _fn: () => void;
   _flags: number;
-  _sources: DependencyNode | undefined;
-  _sourcesTail: DependencyNode | undefined;
-  _nextBatchedEffect: Effect | undefined;
+  _sources?: DependencyNode;
+  _nextBatchedEffect?: Effect;
   _notify(): void;
   _run(): void;
   dispose(): void;

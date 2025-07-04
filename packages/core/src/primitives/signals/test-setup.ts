@@ -2,25 +2,17 @@
 // Provides global-like exports for test compatibility while using scoped implementation
 
 import type { Computed, Effect } from './types';
-import { createBatchScope } from './batch';
+import { createUnifiedScope } from './scope';
 import { createComputedScope } from './computed';
 import { createEffectScope } from './effect';
-import { createNodeScope } from './node';
-import { createSignalScope } from './scope';
 import { createScopedSignalFactory } from './signal';
 
 // Create a test instance
 export function createTestInstance() {
-  const scope = createSignalScope();
-  const batch = createBatchScope();
-  const node = createNodeScope();
-  const { signal: createSignal, writeSignal, peek, untrack } = createScopedSignalFactory(
-    scope,
-    batch,
-    node
-  );
-  const { effect: createEffect } = createEffectScope(scope, batch, node);
-  const { computed: createComputed } = createComputedScope(scope, node);
+  const scope = createUnifiedScope();
+  const { signal: createSignal, writeSignal, peek, untrack } = createScopedSignalFactory(scope);
+  const { effect: createEffect } = createEffectScope(scope);
+  const { computed: createComputed } = createComputedScope(scope);
 
   return {
     // Signal functions
@@ -36,28 +28,17 @@ export function createTestInstance() {
     effect: createEffect,
     
     // Batch functions
-    batch: batch.batch,
-    startBatch: batch.startBatch,
-    endBatch: batch.endBatch,
-    getBatchDepth: () => batch.batchDepth,
-    hasPendingEffects: batch.hasPendingEffects,
-    clearBatch: batch.clearBatch,
-    
-    // Node functions
-    acquireNode: node.acquireNode,
-    releaseNode: node.releaseNode,
-    addDependency: node.addDependency,
-    prepareSources: node.prepareSources,
-    cleanupSources: node.cleanupSources,
-    disposeComputed: node.disposeComputed,
-    notifyTargets: node.notifyTargets,
-    getPoolSize: node.getPoolSize,
-    clearPool: node.clearPool,
+    batch: (fn: () => void) => scope.batch(fn),
+    startBatch: () => scope.batchDepth++,
+    endBatch: () => { if (scope.batchDepth > 0) scope.batchDepth--; },
+    getBatchDepth: () => scope.batchDepth,
+    hasPendingEffects: () => scope.batchedEffects !== null,
+    clearBatch: () => { scope.batchedEffects = null; scope.batchDepth = 0; },
     
     // Scope functions
     setCurrentComputed: (computed: Computed | Effect | null) => { scope.currentComputed = computed; },
     getCurrentComputed: () => scope.currentComputed,
-    resetGlobalState: scope.resetGlobalState,
+    resetGlobalState: () => { scope.globalVersion = 0; scope.currentComputed = null; },
     getGlobalVersion: () => scope.globalVersion,
   };
 }
@@ -78,15 +59,6 @@ export const endBatch = defaultInstance.endBatch;
 export const getBatchDepth = () => defaultInstance.getBatchDepth();
 export const hasPendingEffects = defaultInstance.hasPendingEffects;
 export const clearBatch = defaultInstance.clearBatch;
-export const acquireNode = defaultInstance.acquireNode;
-export const releaseNode = defaultInstance.releaseNode;
-export const addDependency = defaultInstance.addDependency;
-export const prepareSources = defaultInstance.prepareSources;
-export const cleanupSources = defaultInstance.cleanupSources;
-export const disposeComputed = defaultInstance.disposeComputed;
-export const notifyTargets = defaultInstance.notifyTargets;
-export const getPoolSize = defaultInstance.getPoolSize;
-export const clearPool = defaultInstance.clearPool;
 export const setCurrentComputed = defaultInstance.setCurrentComputed;
 export const getCurrentComputed = defaultInstance.getCurrentComputed;
 export const getGlobalVersion = defaultInstance.getGlobalVersion;
@@ -109,15 +81,6 @@ export function resetGlobalState() {
     getBatchDepth: () => defaultInstance.getBatchDepth(),
     hasPendingEffects: defaultInstance.hasPendingEffects,
     clearBatch: defaultInstance.clearBatch,
-    acquireNode: defaultInstance.acquireNode,
-    releaseNode: defaultInstance.releaseNode,
-    addDependency: defaultInstance.addDependency,
-    prepareSources: defaultInstance.prepareSources,
-    cleanupSources: defaultInstance.cleanupSources,
-    disposeComputed: defaultInstance.disposeComputed,
-    notifyTargets: defaultInstance.notifyTargets,
-    getPoolSize: defaultInstance.getPoolSize,
-    clearPool: defaultInstance.clearPool,
     setCurrentComputed: defaultInstance.setCurrentComputed,
     getCurrentComputed: defaultInstance.getCurrentComputed,
     getGlobalVersion: defaultInstance.getGlobalVersion,

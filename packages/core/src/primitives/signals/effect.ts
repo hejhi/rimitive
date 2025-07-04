@@ -1,116 +1,154 @@
-// Effect implementation
+// Simplified Effect implementation - bare metal
 
-import type { Effect } from './types';
-import { OUTDATED } from './types';
-import { isNotified, isDisposed, isRunning, markStale, clearNotified, clearOutdated, setRunning, clearRunning, setDisposed } from './flags';
-import { NodeScope } from './node';
-import { SignalScope } from './scope';
-import { BatchScope } from './batch';
+import type { Effect, DependencyNode } from './types';
+import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
+import type { UnifiedScope } from './scope';
 
 export type EffectScope = {
   effect: (fn: () => void) => () => void;
-  runOnce: (fn: () => void) => void;
-  safeEffect: (
-    fn: () => void,
-    onError?: (error: unknown) => void
-  ) => () => void;
 };
 
-// Stable helper functions - no 'this' binding
-function notifyEffect(effect: Effect, batch: BatchScope, scope: SignalScope, node: NodeScope): void {
-  if (!isNotified(effect._flags)) {
-    effect._flags = markStale(effect._flags);
-    if (!batch.batchDepth) {
-      runEffect(effect, scope, node);
-    } else {
-      batch.addToBatch(effect);
-    }
-  }
-}
-
-function runEffect(effect: Effect, scope: SignalScope, node: NodeScope): void {
-  if (isDisposed(effect._flags)) return;
-  if (isRunning(effect._flags)) return;
-
-  effect._flags = setRunning(effect._flags);
-  effect._flags = clearNotified(clearOutdated(effect._flags));
-
-  node.prepareSources(effect);
-
-  const prevComputed = scope.currentComputed;
-  scope.currentComputed = effect;
-
-  try {
-    effect._fn();
-  } finally {
-    scope.currentComputed = prevComputed;
-    effect._flags = clearRunning(effect._flags);
-  }
-
-  node.cleanupSources(effect);
-}
-
-function disposeEffect(effect: Effect, node: NodeScope): void {
-  if (!isDisposed(effect._flags)) {
-    effect._flags = setDisposed(effect._flags);
-    node.disposeComputed(effect);
-  }
-}
-
-export function createEffectScope(
-  scope: SignalScope,
-  batch: BatchScope,
-  node: NodeScope
-): EffectScope {
+export function createEffectScope(scope: UnifiedScope): EffectScope {
   function effect(fn: () => void): () => void {
-    // Create effect with stable shape - all properties defined upfront
+    // Create effect with minimal structure
     const e: Effect = {
       _fn: fn,
       _flags: OUTDATED,
       _sources: undefined,
-      _sourcesTail: undefined,
       _nextBatchedEffect: undefined,
-      
-      // Pre-bound stable functions - no 'this' needed
-      _notify: () => notifyEffect(e, batch, scope, node),
-      _run: () => runEffect(e, scope, node),
-      dispose: () => disposeEffect(e, node),
+      _notify: (() => {}) as Effect['_notify'],
+      _run: (() => {}) as Effect['_run'],
+      dispose: (() => {}) as Effect['dispose'],
+    };
+
+    // Bind methods
+    e._notify = function() {
+      if (!(e._flags & NOTIFIED)) {
+        e._flags |= NOTIFIED | OUTDATED;
+        
+        if (scope.batchDepth > 0) {
+          e._nextBatchedEffect = scope.batchedEffects || undefined;
+          scope.batchedEffects = e;
+        } else {
+          // Run immediately if not in batch
+          scope.batchDepth++;
+          try {
+            e._run();
+          } finally {
+            scope.batchDepth--;
+            // Run any effects that were queued during this run
+            if (scope.batchDepth === 0 && scope.batchedEffects) {
+              let effect = scope.batchedEffects;
+              scope.batchedEffects = null;
+              while (effect) {
+                const next = effect._nextBatchedEffect;
+                effect._nextBatchedEffect = undefined;
+                effect._run();
+                effect = next!;
+              }
+            }
+          }
+        }
+      }
+    };
+
+    e._run = function() {
+      if (e._flags & (DISPOSED | RUNNING)) return;
+
+      e._flags = (e._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
+
+      // Mark sources for cleanup
+      let node = e._sources;
+      while (node) {
+        node.version = -1;
+        node = node.nextSource;
+      }
+
+      const prevComputed = scope.currentComputed;
+      scope.currentComputed = e;
+
+      try {
+        e._fn();
+      } finally {
+        scope.currentComputed = prevComputed;
+        e._flags &= ~RUNNING;
+
+        // Cleanup unused sources
+        let node = e._sources;
+        let prev: DependencyNode | undefined;
+
+        while (node) {
+          const next = node.nextSource;
+
+          if (node.version === -1) {
+            // Remove unused
+            if (prev) {
+              prev.nextSource = next;
+            } else {
+              e._sources = next;
+            }
+            if (next) {
+              next.prevSource = prev;
+            }
+
+            // Remove from source's targets
+            const source = node.source;
+            const prevTarget = node.prevTarget;
+            const nextTarget = node.nextTarget;
+
+            if (prevTarget) {
+              prevTarget.nextTarget = nextTarget;
+            } else {
+              source._targets = nextTarget;
+            }
+
+            if (nextTarget) {
+              nextTarget.prevTarget = prevTarget;
+            }
+          } else {
+            prev = node;
+          }
+
+          node = next;
+        }
+      }
+    };
+
+    e.dispose = function() {
+      if (!(e._flags & DISPOSED)) {
+        e._flags |= DISPOSED;
+        
+        // Clear all sources
+        let node = e._sources;
+        while (node) {
+          const next = node.nextSource;
+          const source = node.source;
+          const prevTarget = node.prevTarget;
+          const nextTarget = node.nextTarget;
+
+          if (prevTarget) {
+            prevTarget.nextTarget = nextTarget;
+          } else {
+            source._targets = nextTarget;
+          }
+
+          if (nextTarget) {
+            nextTarget.prevTarget = prevTarget;
+          }
+
+          node = next;
+        }
+        
+        e._sources = undefined;
+      }
     };
 
     // Run immediately
-    runEffect(e, scope, node);
+    e._run();
 
     // Return dispose function
-    return () => disposeEffect(e, node);
+    return () => e.dispose();
   }
 
-  // Create an effect that runs once
-  function runOnce(fn: () => void): void {
-    const dispose = effect(fn);
-    dispose();
-  }
-
-  // Create an effect with error handling
-  function safeEffect(
-    fn: () => void,
-    onError?: (error: unknown) => void
-  ): () => void {
-    return effect(() => {
-      try {
-        fn();
-      } catch (error) {
-        if (onError) {
-          onError(error);
-        } else {
-          console.error('Effect error:', error);
-        }
-      }
-    });
-  }
-
-  return {
-    effect,
-    runOnce,
-    safeEffect,
-  };
+  return { effect };
 }

@@ -5,26 +5,19 @@ import type {
   Signal as LatticeSignal,
   Computed as LatticeComputed,
 } from '../../component/types';
+import type { Signal as InternalSignal } from './types';
 import { createScopedSignalFactory } from './signal';
 import { createEffectScope } from './effect';
 import { createSubscribeScope } from './subscribe';
-import { createSignalScope } from './scope';
-import { createBatchScope } from './batch';
+import { createUnifiedScope } from './scope';
 import { createComputedScope } from './computed';
-import { createNodeScope } from './node';
 
 // Create the signal factory for Lattice context
 export function createSignalFactory() {
-  const scope = createSignalScope();
-  const batch = createBatchScope();
-  const node = createNodeScope();
-  const { signal: createSignal } = createScopedSignalFactory(
-    scope,
-    batch,
-    node
-  );
-  const { effect: createEffect } = createEffectScope(scope, batch, node);
-  const { computed: createComputed } = createComputedScope(scope, node);
+  const scope = createUnifiedScope();
+  const { signal: createSignal } = createScopedSignalFactory(scope);
+  const { effect: createEffect } = createEffectScope(scope);
+  const { computed: createComputed } = createComputedScope(scope);
 
   function effect(effectFn: () => void | (() => void)): () => void {
     let cleanupFn: (() => void) | void;
@@ -66,14 +59,14 @@ export function createSignalFactory() {
   }
 
   function set<T>(latticeSignal: LatticeSignal<T>, value: T): void {
-    // Direct assignment via setter
-    (latticeSignal as any).value = value;
+    // Direct assignment via setter using internal type
+    (latticeSignal as unknown as InternalSignal<T>).value = value;
   }
 
   return {
     signal,
     computed,
-    batch: batch.batch,
+    batch: (fn: () => void) => scope.batch(fn),
     effect,
     subscribe,
     set,

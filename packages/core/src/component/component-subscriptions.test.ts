@@ -315,7 +315,9 @@ describe('Component Subscriptions', () => {
     // Total depends on subtotal through multiple computeds, may recalculate multiple times
     expect(totalCalcs).toBeGreaterThanOrEqual(1);
     expect(subtotal.value).toBe(70); // 40 + 30
-    expect(total.value).toBeCloseTo(68.04); // (70 - 7) * 1.08
+    
+    // The calculation should be: (70 - 7) * 1.08 = 68.04
+    expect(total.value).toBeCloseTo(68.04);
 
     // Reset counters for clearer testing
     subtotalCalcs = 0;

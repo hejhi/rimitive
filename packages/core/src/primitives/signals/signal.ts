@@ -1,166 +1,120 @@
-// Signal implementation
+// Simplified Signal implementation - bare metal
 
-import type { Signal } from './types';
+import type { Signal, DependencyNode } from './types';
 import { RUNNING } from './types';
-import type { SignalScope } from './scope';
-import type { BatchScope } from './batch';
-import type { NodeScope } from './node';
+import type { UnifiedScope } from './scope';
 
-// Signal constructor function
+// Signal constructor
 function SignalImpl<T>(this: Signal<T>, value: T) {
   this._value = value;
   this._version = 0;
   this._targets = undefined;
-  this._targetsTail = undefined;
   this._scope = undefined;
-  this._batch = undefined;
-  this._node = undefined;
 }
 
-// Cast to get the right constructor type
+// Cast to constructor type
 const Signal = SignalImpl as unknown as {
   new <T>(value: T): Signal<T>;
   prototype: Signal;
 };
 
-// Define the value property on the prototype
+// Value property - hot path optimized
 Object.defineProperty(Signal.prototype, 'value', {
   get(this: Signal) {
-    // Inline dependency tracking for hot path
-    const scope = this._scope;
-    if (scope) {
-      const current = scope.currentComputed;
-      if (current && (current._flags & RUNNING)) {
-        // Inline addDependency logic
-        let node = current._sources;
-        let found = false;
-        
-        // Fast check if already tracking
-        while (node) {
-          if (node._source === this) {
-            node._version = this._version;
-            found = true;
-            break;
-          }
-          node = node._nextSource;
-        }
-        
-        // Add new dependency if not found
-        if (!found) {
-          // Create node inline
-          const newNode = {
-            _source: this,
-            _target: current,
-            _version: this._version,
-            _prevSource: undefined,
-            _nextSource: current._sources,
-            _prevTarget: undefined,
-            _nextTarget: this._targets,
-            _rollbackNode: undefined,
-          };
-          
-          // Link to target's sources
-          if (current._sources) {
-            current._sources._prevSource = newNode;
-          }
-          current._sources = newNode;
-          
-          // Link to source's targets
-          if (this._targets) {
-            this._targets._prevTarget = newNode;
-          }
-          this._targets = newNode;
-        }
-      }
-    }
-    return this._value;
-  },
-  set(this: Signal, value) {
-    // Early exit for no change
-    if (this._value === value) {
-      return;
+    const scope = this._scope as UnifiedScope;
+    const current = scope?.currentComputed;
+    
+    // Fast path: no tracking needed
+    if (!current || !(current._flags & RUNNING)) {
+      return this._value;
     }
     
-    // Cache property accesses
-    const scope = this._scope;
-    const batch = this._batch;
+    // Check if already tracking
+    let node = current._sources;
+    while (node) {
+      if (node.source === this) {
+        node.version = this._version;
+        return this._value;
+      }
+      node = node.nextSource;
+    }
+    
+    // Add new dependency - inline for performance
+    const newNode: DependencyNode = {
+      source: this,
+      target: current,
+      version: this._version,
+      nextSource: current._sources,
+      nextTarget: this._targets,
+    };
+    
+    if (current._sources) {
+      current._sources.prevSource = newNode;
+    }
+    current._sources = newNode;
+    
+    if (this._targets) {
+      this._targets.prevTarget = newNode;
+    }
+    this._targets = newNode;
+    
+    return this._value;
+  },
+  
+  set(this: Signal, value) {
+    if (this._value === value) return;
     
     this._value = value;
     this._version++;
-    scope?.incrementGlobalVersion();
-
-    // Always batch notifications like Preact does
-    if (batch && !batch.batchDepth) {
-      batch.startBatch();
-      try {
-        let targetNode = this._targets;
-        while (targetNode) {
-          targetNode._target._notify();
-          targetNode = targetNode._nextTarget;
-        }
-      } finally {
-        batch.endBatch();
-      }
-    } else {
-      // Already in batch - just notify
-      let targetNode = this._targets;
-      while (targetNode) {
-        targetNode._target._notify();
-        targetNode = targetNode._nextTarget;
+    
+    const scope = this._scope as UnifiedScope;
+    if (scope) {
+      scope.globalVersion++;
+      
+      // Notify all targets
+      let node = this._targets;
+      while (node) {
+        node.target._notify();
+        node = node.nextTarget;
       }
     }
   }
 });
 
-// Add _refresh method for compatibility with computed refresh checks
-Signal.prototype._refresh = function(this: Signal): boolean {
-  return true; // Signals are always "fresh"
+// Signals are always fresh
+Signal.prototype._refresh = function(): boolean {
+  return true;
 };
 
-// Add subscribe method to prototype (will be overridden by subscribe scope)
-Signal.prototype.subscribe = function(this: Signal, _fn: (value: any) => void) {
+// Placeholder subscribe
+Signal.prototype.subscribe = function() {
   return () => {};
 };
 
-export function createScopedSignalFactory(
-  scope: SignalScope,
-  batch: BatchScope,
-  node: NodeScope
-) {
+export function createScopedSignalFactory(scope: UnifiedScope) {
   function signal<T>(value: T): Signal<T> {
     const s = new Signal(value);
-    // Store scope references directly on the signal
     s._scope = scope;
-    s._batch = batch;
-    s._node = node;
     return s;
   }
 
-  // Direct assignment is now supported via setter
   function writeSignal<T>(signal: Signal<T>, value: T): void {
     signal.value = value;
   }
 
   function untrack<T>(fn: () => T): T {
     const prev = scope.currentComputed;
+    scope.currentComputed = null;
     try {
-      // Temporarily disable tracking
-      scope.currentComputed = null;
       return fn();
     } finally {
       scope.currentComputed = prev;
     }
   }
 
-  return {
-    signal,
-    writeSignal,
-    peek,
-    untrack,
-  };
+  return { signal, writeSignal, peek, untrack };
 }
 
-// Utility functions for signals
 export function peek<T>(signal: Signal<T>): T {
   return signal._value;
 }
