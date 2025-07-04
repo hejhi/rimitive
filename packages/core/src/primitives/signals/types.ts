@@ -17,6 +17,7 @@ export interface Signal<T = unknown> {
   _value: T;
   _version: number;
   _targets?: DependencyNode;
+  _node?: DependencyNode; // For node reuse pattern
   _scope: unknown; // Single unified scope
   _refresh(): boolean;
 }
@@ -31,6 +32,7 @@ export interface Computed<T = unknown> {
   _flags: number;
   _sources?: DependencyNode;
   _targets?: DependencyNode;
+  _node?: DependencyNode; // For node reuse pattern
   _notify(): void;
   _refresh(): boolean;
   dispose(): void;

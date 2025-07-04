@@ -9,6 +9,7 @@ function SignalImpl<T>(this: Signal<T>, value: T) {
   this._value = value;
   this._version = 0;
   this._targets = undefined;
+  this._node = undefined;
   this._scope = undefined;
 }
 
@@ -29,8 +30,16 @@ Object.defineProperty(Signal.prototype, 'value', {
       return this._value;
     }
     
-    // Check if already tracking
-    let node = current._sources;
+    // Node reuse pattern - check if we can reuse existing node
+    let node = this._node;
+    if (node !== undefined && node.target === current) {
+      // Reuse existing node - just update version
+      node.version = this._version;
+      return this._value;
+    }
+    
+    // Check if already tracking this signal in current computed
+    node = current._sources;
     while (node) {
       if (node.source === this) {
         node.version = this._version;
@@ -39,7 +48,7 @@ Object.defineProperty(Signal.prototype, 'value', {
       node = node.nextSource;
     }
     
-    // Add new dependency - inline for performance
+    // Create new dependency node
     const newNode: DependencyNode = {
       source: this,
       target: current,
@@ -57,6 +66,9 @@ Object.defineProperty(Signal.prototype, 'value', {
       this._targets.prevTarget = newNode;
     }
     this._targets = newNode;
+    
+    // Store node for reuse
+    this._node = newNode;
     
     return this._value;
   },

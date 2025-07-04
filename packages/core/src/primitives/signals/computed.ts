@@ -13,6 +13,7 @@ function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
   this._flags = OUTDATED | IS_COMPUTED;
   this._sources = undefined;
   this._targets = undefined;
+  this._node = undefined;
   this._scope = undefined;
 }
 
@@ -34,35 +35,47 @@ Object.defineProperty(Computed.prototype, 'value', {
     
     // Track this computed as dependency if needed
     if (current && current._flags & RUNNING) {
-      let node = current._sources;
-      while (node) {
-        if (node.source === this) {
-          node.version = this._version;
-          break;
+      // Node reuse pattern - check if we can reuse existing node
+      let node = this._node;
+      if (node !== undefined && node.target === current) {
+        // Reuse existing node - just update version
+        node.version = this._version;
+      } else {
+        // Check if already tracking this computed in current context
+        node = current._sources;
+        while (node) {
+          if (node.source === this) {
+            node.version = this._version;
+            break;
+          }
+          node = node.nextSource;
         }
-        node = node.nextSource;
-      }
-      
-      if (!node) {
-        const newNode: DependencyNode = {
-          source: this,
-          target: current,
-          version: this._version,
-          nextSource: current._sources,
-          nextTarget: this._targets,
-        };
         
-        if (current._sources) {
-          current._sources.prevSource = newNode;
+        if (!node) {
+          // Create new dependency node
+          const newNode: DependencyNode = {
+            source: this,
+            target: current,
+            version: this._version,
+            nextSource: current._sources,
+            nextTarget: this._targets,
+          };
+          
+          if (current._sources) {
+            current._sources.prevSource = newNode;
+          }
+          current._sources = newNode;
+          
+          if (this._targets) {
+            this._targets.prevTarget = newNode;
+          } else {
+            this._flags |= TRACKING;
+          }
+          this._targets = newNode;
+          
+          // Store node for reuse
+          this._node = newNode;
         }
-        current._sources = newNode;
-        
-        if (this._targets) {
-          this._targets.prevTarget = newNode;
-        } else {
-          this._flags |= TRACKING;
-        }
-        this._targets = newNode;
       }
     }
 
