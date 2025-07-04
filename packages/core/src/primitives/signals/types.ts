@@ -36,7 +36,6 @@ export interface Computed<T = unknown> {
   _sourcesTail: DependencyNode | undefined;
   _targets: DependencyNode | undefined;
   _targetsTail: DependencyNode | undefined;
-  _lastRefreshGeneration: number;
   _notify(): void;
   _refresh(): T | boolean;
   _needsToRecompute(): boolean;

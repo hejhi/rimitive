@@ -84,17 +84,25 @@ Object.defineProperty(Signal.prototype, 'value', {
     // Cache property accesses
     const scope = this._scope;
     const batch = this._batch;
-    const node = this._node;
     
     this._value = value;
     this._version++;
     scope?.incrementGlobalVersion();
 
-    // Check batch depth once
-    if (!batch?.batchDepth) {
-      node?.notifyTargets(this);
+    // Always batch notifications like Preact does
+    if (batch && !batch.batchDepth) {
+      batch.startBatch();
+      try {
+        let targetNode = this._targets;
+        while (targetNode) {
+          targetNode.target._notify();
+          targetNode = targetNode.nextTarget;
+        }
+      } finally {
+        batch.endBatch();
+      }
     } else {
-      // In batch - notify targets (they handle marking as outdated)
+      // Already in batch - just notify
       let targetNode = this._targets;
       while (targetNode) {
         targetNode.target._notify();

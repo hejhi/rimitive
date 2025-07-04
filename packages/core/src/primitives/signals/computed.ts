@@ -1,7 +1,14 @@
 // Computed value implementation
 
 import type { Computed, DependencyNode } from './types';
-import { NOTIFIED, OUTDATED, RUNNING, DISPOSED, TRACKING, IS_COMPUTED } from './types';
+import {
+  NOTIFIED,
+  OUTDATED,
+  RUNNING,
+  DISPOSED,
+  TRACKING,
+  IS_COMPUTED,
+} from './types';
 import type { SignalScope } from './scope';
 import type { NodeScope } from './node';
 
@@ -15,13 +22,12 @@ function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
   this._fn = fn;
   this._value = undefined;
   this._version = 0;
-  this._globalVersion = 0;
+  this._globalVersion = -1;
   this._flags = OUTDATED | IS_COMPUTED;
   this._sources = undefined;
   this._sourcesTail = undefined;
   this._targets = undefined;
   this._targetsTail = undefined;
-  this._lastRefreshGeneration = 0;
   this._scope = undefined;
   this._node = undefined;
 }
@@ -44,11 +50,11 @@ Object.defineProperty(Computed.prototype, 'value', {
     const scope = this._scope;
     if (scope) {
       const current = scope.currentComputed;
-      if (current && (current._flags & RUNNING)) {
+      if (current && current._flags & RUNNING) {
         // Inline addDependency logic for hot path
         let node = current._sources;
         let found = false;
-        
+
         // Fast check if we already track this dependency
         while (node) {
           if (node.source === this) {
@@ -58,7 +64,7 @@ Object.defineProperty(Computed.prototype, 'value', {
           }
           node = node.nextSource;
         }
-        
+
         // Add new dependency if not found
         if (!found) {
           // Create node inline with minimal overhead
@@ -72,13 +78,13 @@ Object.defineProperty(Computed.prototype, 'value', {
             nextTarget: this._targets,
             rollbackNode: undefined,
           };
-          
+
           // Link to target's sources
           if (current._sources) {
             current._sources.prevSource = newNode;
           }
           current._sources = newNode;
-          
+
           // Link to source's targets
           if (this._targets) {
             this._targets.prevTarget = newNode;
@@ -90,101 +96,78 @@ Object.defineProperty(Computed.prototype, 'value', {
         }
       }
     }
-    
-    // Start refresh cycle for diamond optimization
-    const needsCycleStart = scope && scope.refreshGeneration === 0;
-    if (needsCycleStart) {
-      scope.startRefreshCycle();
-    }
-    
-    try {
-      // Optimized refresh logic based on Preact's approach
-      return this._refresh();
-    } finally {
-      // End refresh cycle if we started it
-      if (needsCycleStart && scope) {
-        scope.endRefreshCycle();
-      }
-    }
-  }
+
+    // Call refresh and return the value
+    this._refresh();
+    return this._value;
+  },
 });
 
 // Add optimized _refresh method based on Preact's approach
-Computed.prototype._refresh = function(this: Computed): boolean | any {
-  const scope = this._scope;
-  
-  // Check if we've already been refreshed in this generation
-  if (scope && scope.refreshGeneration > 0 && this._lastRefreshGeneration === scope.refreshGeneration) {
-    return this._value;
-  }
-  
+Computed.prototype._refresh = function (this: Computed): boolean | any {
   this._flags &= ~NOTIFIED;
-  
+
   // Fast path: already running (cycle detection)
   if (this._flags & RUNNING) {
     throw new Error('Cycle detected');
   }
-  
+
   // Fast path: if tracking and not outdated, value is current
   if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) {
-    this._lastRefreshGeneration = scope?.refreshGeneration || 0;
-    return this._value;
+    return true;
   }
-  
+
   this._flags &= ~OUTDATED;
-  
-  // Fast path: global version check
-  const globalVersion = scope?.globalVersion;
-  if (globalVersion !== undefined && this._globalVersion === globalVersion) {
-    this._lastRefreshGeneration = scope?.refreshGeneration || 0;
-    return this._value;
+
+  // Fast path: global version check - this is the diamond optimization!
+  // Only skip if we've been computed at least once
+  const globalVersion = this._scope?.globalVersion;
+  if (this._version > 0 && this._globalVersion === globalVersion) {
+    return true;
   }
-  
+
   this._globalVersion = globalVersion || 0;
-  
+
   // Mark as running before checking dependencies
   this._flags |= RUNNING;
-  
+
   // Check if any sources changed
   if (this._version > 0 && !this._needsToRecompute()) {
     this._flags &= ~RUNNING;
-    this._lastRefreshGeneration = scope?.refreshGeneration || 0;
-    return this._value;
+    return true;
   }
-  
+
   // Recompute needed
-  const prevComputed = scope?.currentComputed;
-  if (scope) {
-    scope.currentComputed = this;
+  const prevComputed = this._scope?.currentComputed;
+  if (this._scope) {
+    this._scope.currentComputed = this;
   }
-  
+
   try {
     // Prepare sources for cleanup
     this._prepareSources();
-    
+
     const value = this._fn();
     if (this._value !== value || this._version === 0) {
       this._value = value;
       this._version++;
     }
-    
-    this._lastRefreshGeneration = scope?.refreshGeneration || 0;
   } finally {
-    if (scope) {
-      scope.currentComputed = prevComputed;
+    if (this._scope) {
+      this._scope.currentComputed = prevComputed;
     }
-    
+
     // Cleanup unused sources
     this._cleanupSources();
-    
+
     this._flags &= ~RUNNING;
   }
-  
-  return this._value;
+
+  return true;
 };
 
 // Helper method to check if recomputation is needed
-Computed.prototype._needsToRecompute = function(this: Computed): boolean {
+Computed.prototype._needsToRecompute = function (this: Computed): boolean {
   let node = this._sources;
   while (node) {
     const source = node.source;
@@ -192,8 +175,10 @@ Computed.prototype._needsToRecompute = function(this: Computed): boolean {
     if (node.version !== source._version) {
       // Need to check if source itself needs refresh (for nested computeds)
       if ('_refresh' in source && typeof source._refresh === 'function') {
-        // The source's _refresh will handle caching internally
-        if (!source._refresh() || node.version !== source._version) {
+        // Important: first refresh the source to get its current state
+        source._refresh();
+        // Then check if the version actually changed
+        if (node.version !== source._version) {
           return true;
         }
       } else {
@@ -206,7 +191,7 @@ Computed.prototype._needsToRecompute = function(this: Computed): boolean {
 };
 
 // Inline prepareSources for better performance
-Computed.prototype._prepareSources = function(this: Computed): void {
+Computed.prototype._prepareSources = function (this: Computed): void {
   let node = this._sources;
   while (node) {
     node.version = -1; // Mark for potential cleanup
@@ -215,13 +200,13 @@ Computed.prototype._prepareSources = function(this: Computed): void {
 };
 
 // Inline cleanupSources for better performance
-Computed.prototype._cleanupSources = function(this: Computed): void {
+Computed.prototype._cleanupSources = function (this: Computed): void {
   let node = this._sources;
   let prev: DependencyNode | undefined;
-  
+
   while (node) {
     const next = node.nextSource;
-    
+
     if (node.version === -1) {
       // Remove unused node
       if (prev) {
@@ -232,12 +217,12 @@ Computed.prototype._cleanupSources = function(this: Computed): void {
       if (next) {
         next.prevSource = prev;
       }
-      
+
       // Remove from source's targets
       const source = node.source;
       const prevTarget = node.prevTarget;
       const nextTarget = node.nextTarget;
-      
+
       if (prevTarget) {
         prevTarget.nextTarget = nextTarget;
       } else {
@@ -247,20 +232,20 @@ Computed.prototype._cleanupSources = function(this: Computed): void {
           source._flags &= ~TRACKING;
         }
       }
-      
+
       if (nextTarget) {
         nextTarget.prevTarget = prevTarget;
       }
     } else {
       prev = node;
     }
-    
+
     node = next;
   }
 };
 
 // Add methods to the prototype
-Computed.prototype._notify = function(this: Computed): void {
+Computed.prototype._notify = function (this: Computed): void {
   if (!(this._flags & NOTIFIED)) {
     this._flags |= NOTIFIED | OUTDATED;
     // Propagate notification to our targets
@@ -272,8 +257,7 @@ Computed.prototype._notify = function(this: Computed): void {
   }
 };
 
-
-Computed.prototype.dispose = function(this: Computed): void {
+Computed.prototype.dispose = function (this: Computed): void {
   if (!(this._flags & DISPOSED)) {
     this._flags |= DISPOSED;
     this._node?.disposeComputed(this);
@@ -282,7 +266,10 @@ Computed.prototype.dispose = function(this: Computed): void {
 };
 
 // Add subscribe method to prototype (will be overridden by subscribe scope)
-Computed.prototype.subscribe = function(this: Computed, _fn: (value: any) => void) {
+Computed.prototype.subscribe = function (
+  this: Computed,
+  _fn: (value: any) => void
+) {
   return () => {};
 };
 
