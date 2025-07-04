@@ -315,7 +315,7 @@ describe('Component Subscriptions', () => {
     // Total depends on subtotal through multiple computeds, may recalculate multiple times
     expect(totalCalcs).toBeGreaterThanOrEqual(1);
     expect(subtotal.value).toBe(70); // 40 + 30
-    
+
     // The calculation should be: (70 - 7) * 1.08 = 68.04
     expect(total.value).toBeCloseTo(68.04);
 
@@ -358,5 +358,67 @@ describe('Component Subscriptions', () => {
     unsubSubtotal();
     unsubTotal();
     unsubFormat();
+  });
+
+  describe('Component Subscriptions', () => {
+    it('unread intermediate computed with global version optimization', () => {
+      const ctx = createTestComponent({ x: 10, y: 3 });
+
+      // Create the EXACT same pattern as failing test:
+      // intermediate is used by BOTH dependent AND final
+      const intermediate = ctx.computed(() => ctx.store.x.value * 2); // 20
+      const dependent = ctx.computed(
+        () => intermediate.value + ctx.store.y.value
+      ); // 20 + 3
+      const final = ctx.computed(() => intermediate.value + dependent.value); // 20 + 23
+
+      // Read dependent but NOT intermediate (just like taxAmount but not afterDiscount)
+      expect(dependent.value).toBe(23); // (10 * 2) + 3 = 20 + 3
+
+      // Subscribe to final (enables tracking)
+      final.subscribe(() => {});
+
+      // Update x
+      ctx.set(ctx.store.x, 20);
+
+      // Should be: intermediate=40, dependent=43, final=83
+      // But gets: final=63 (using stale intermediate=20 + fresh dependent=43)
+      expect(final.value).toBe(83); // 40 + 43
+    });
+
+    it('same test WITHOUT reading dependent - should pass', () => {
+      const ctx = createTestComponent({ x: 10, y: 3 });
+
+      const intermediate = ctx.computed(() => ctx.store.x.value * 2);
+      const dependent = ctx.computed(
+        () => intermediate.value + ctx.store.y.value
+      );
+      const final = ctx.computed(() => intermediate.value + dependent.value);
+
+      // DON'T read dependent
+      // expect(dependent.value).toBe(23);
+
+      final.subscribe(() => {});
+      ctx.set(ctx.store.x, 20);
+      expect(final.value).toBe(83);
+    });
+
+    it('same test WITHOUT subscribing - should pass', () => {
+      const ctx = createTestComponent({ x: 10, y: 3 });
+
+      const intermediate = ctx.computed(() => ctx.store.x.value * 2);
+      const dependent = ctx.computed(
+        () => intermediate.value + ctx.store.y.value
+      );
+      const final = ctx.computed(() => intermediate.value + dependent.value);
+
+      expect(dependent.value).toBe(23);
+
+      // DON'T subscribe
+      // final.subscribe(() => {});
+
+      ctx.set(ctx.store.x, 20);
+      expect(final.value).toBe(83);
+    });
   });
 });
