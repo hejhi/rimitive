@@ -26,12 +26,51 @@ const Signal = SignalImpl as unknown as {
 // Define the value property on the prototype
 Object.defineProperty(Signal.prototype, 'value', {
   get(this: Signal) {
-    // Cache property accesses
+    // Inline dependency tracking for hot path
     const scope = this._scope;
     if (scope) {
       const current = scope.currentComputed;
       if (current && (current._flags & RUNNING)) {
-        this._node.addDependency(this, current);
+        // Inline addDependency logic
+        let node = current._sources;
+        let found = false;
+        
+        // Fast check if already tracking
+        while (node) {
+          if (node.source === this) {
+            node.version = this._version;
+            found = true;
+            break;
+          }
+          node = node.nextSource;
+        }
+        
+        // Add new dependency if not found
+        if (!found) {
+          // Create node inline
+          const newNode = {
+            source: this,
+            target: current,
+            version: this._version,
+            prevSource: undefined,
+            nextSource: current._sources,
+            prevTarget: undefined,
+            nextTarget: this._targets,
+            rollbackNode: undefined,
+          };
+          
+          // Link to target's sources
+          if (current._sources) {
+            current._sources.prevSource = newNode;
+          }
+          current._sources = newNode;
+          
+          // Link to source's targets
+          if (this._targets) {
+            this._targets.prevTarget = newNode;
+          }
+          this._targets = newNode;
+        }
       }
     }
     return this._value;
@@ -64,6 +103,11 @@ Object.defineProperty(Signal.prototype, 'value', {
     }
   }
 });
+
+// Add _refresh method for compatibility with computed refresh checks
+Signal.prototype._refresh = function(this: Signal): boolean {
+  return true; // Signals are always "fresh"
+};
 
 // Add subscribe method to prototype (will be overridden by subscribe scope)
 Signal.prototype.subscribe = function(this: Signal, _fn: (value: any) => void) {

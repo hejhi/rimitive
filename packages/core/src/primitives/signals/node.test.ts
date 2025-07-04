@@ -48,8 +48,13 @@ function createMockComputed<T>(fn: () => T): Computed<T> {
     _targets: undefined,
     _targetsTail: undefined,
     _notify: () => {},
-    _recompute: () => computed._value!,
+    _refresh: () => computed._value!,
+    _needsToRecompute: () => false,
+    _prepareSources: () => {},
+    _cleanupSources: () => {},
     dispose: () => {},
+    _scope: null,
+    _node: null,
   } as Computed<T>;
 
   return computed;

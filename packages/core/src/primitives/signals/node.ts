@@ -39,7 +39,7 @@ export function createNodeScope() {
     };
   }
 
-  function releaseNode(node: DependencyNode): void {
+  function releaseNode(_node: DependencyNode): void {
     // No-op - let GC handle it
   }
 

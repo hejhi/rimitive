@@ -21,6 +21,7 @@ export interface Signal<T = unknown> {
   _scope: any; // Reference to SignalScope
   _batch: any; // Reference to BatchScope
   _node: any;  // Reference to NodeScope
+  _refresh(): boolean;
 }
 
 export interface Computed<T = unknown> {
@@ -36,7 +37,10 @@ export interface Computed<T = unknown> {
   _targets: DependencyNode | undefined;
   _targetsTail: DependencyNode | undefined;
   _notify(): void;
-  _recompute(): T;
+  _refresh(): T | boolean;
+  _needsToRecompute(): boolean;
+  _prepareSources(): void;
+  _cleanupSources(): void;
   dispose(): void;
   _scope: any; // Reference to SignalScope
   _node: any;  // Reference to NodeScope
