@@ -1,14 +1,14 @@
 // Shared types for signals implementation
 
 export interface DependencyNode {
-  source: Signal | Computed;
-  target: Computed | Effect;
-  prevSource: DependencyNode | undefined;
-  nextSource: DependencyNode | undefined;
-  prevTarget: DependencyNode | undefined;
-  nextTarget: DependencyNode | undefined;
-  version: number;
-  rollbackNode: DependencyNode | undefined;
+  _source: Signal | Computed;
+  _target: Computed | Effect;
+  _prevSource: DependencyNode | undefined;
+  _nextSource: DependencyNode | undefined;
+  _prevTarget: DependencyNode | undefined;
+  _nextTarget: DependencyNode | undefined;
+  _version: number;
+  _rollbackNode: DependencyNode | undefined;
 }
 
 export interface Signal<T = unknown> {

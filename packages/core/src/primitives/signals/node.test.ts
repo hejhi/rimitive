@@ -72,13 +72,13 @@ describe('node.ts', () => {
 
       const node = acquireNode(source, target);
 
-      expect(node.source).toBe(source);
-      expect(node.target).toBe(target);
-      expect(node.version).toBe(0); // source._version is 0
-      expect(node.prevSource).toBeUndefined();
-      expect(node.nextSource).toBeUndefined();
-      expect(node.prevTarget).toBeUndefined();
-      expect(node.nextTarget).toBeUndefined();
+      expect(node._source).toBe(source);
+      expect(node._target).toBe(target);
+      expect(node._version).toBe(0); // source._version is 0
+      expect(node._prevSource).toBeUndefined();
+      expect(node._nextSource).toBeUndefined();
+      expect(node._prevTarget).toBeUndefined();
+      expect(node._nextTarget).toBeUndefined();
     });
 
     it('should reuse node from pool when available', () => {
@@ -98,9 +98,9 @@ describe('node.ts', () => {
 
       // Should be the same object reference
       expect(node2).toBe(node1);
-      expect(node2.source).toBe(source2);
-      expect(node2.target).toBe(target2);
-      expect(node2.version).toBe(0);
+      expect(node2._source).toBe(source2);
+      expect(node2._target).toBe(target2);
+      expect(node2._version).toBe(0);
     });
 
     it('should capture current source version', () => {
@@ -110,7 +110,7 @@ describe('node.ts', () => {
 
       const node = acquireNode(source, target);
 
-      expect(node.version).toBe(5);
+      expect(node._version).toBe(5);
     });
   });
 
@@ -121,20 +121,20 @@ describe('node.ts', () => {
       const node = acquireNode(source, target);
 
       // Set up some links
-      node.prevSource = {} as DependencyNode;
-      node.nextSource = {} as DependencyNode;
-      node.prevTarget = {} as DependencyNode;
-      node.nextTarget = {} as DependencyNode;
+      node._prevSource = {} as DependencyNode;
+      node._nextSource = {} as DependencyNode;
+      node._prevTarget = {} as DependencyNode;
+      node._nextTarget = {} as DependencyNode;
 
       releaseNode(node);
 
-      expect(node.source).toBeUndefined();
-      expect(node.target).toBeUndefined();
-      expect(node.prevSource).toBeUndefined();
-      expect(node.nextSource).toBeUndefined();
-      expect(node.prevTarget).toBeUndefined();
-      expect(node.nextTarget).toBeUndefined();
-      expect(node.version).toBe(-1);
+      expect(node._source).toBeUndefined();
+      expect(node._target).toBeUndefined();
+      expect(node._prevSource).toBeUndefined();
+      expect(node._nextSource).toBeUndefined();
+      expect(node._prevTarget).toBeUndefined();
+      expect(node._nextTarget).toBeUndefined();
+      expect(node._version).toBe(-1);
     });
 
     it('should add node to pool if under max size', () => {
@@ -179,11 +179,11 @@ describe('node.ts', () => {
       addDependency(source, target);
 
       expect(target._sources).toBeDefined();
-      expect(target._sources!.source).toBe(source);
-      expect(target._sources!.target).toBe(target);
+      expect(target._sources!._source).toBe(source);
+      expect(target._sources!._target).toBe(target);
       expect(source._targets).toBeDefined();
-      expect(source._targets!.source).toBe(source);
-      expect(source._targets!.target).toBe(target);
+      expect(source._targets!._source).toBe(source);
+      expect(source._targets!._target).toBe(target);
     });
 
     it('should update version if dependency already exists', () => {
@@ -198,7 +198,7 @@ describe('node.ts', () => {
 
       // Should be the same node, just updated version
       expect(target._sources).toBe(firstNode);
-      expect(target._sources!.version).toBe(5);
+      expect(target._sources!._version).toBe(5);
     });
 
     it('should handle multiple dependencies', () => {
@@ -214,8 +214,8 @@ describe('node.ts', () => {
       let node = target._sources;
       while (node) {
         count++;
-        expect(node.source === source1 || node.source === source2).toBe(true);
-        node = node.nextSource;
+        expect(node._source === source1 || node._source === source2).toBe(true);
+        node = node._nextSource;
       }
       expect(count).toBe(2);
     });
@@ -233,8 +233,8 @@ describe('node.ts', () => {
       let node = source._targets;
       while (node) {
         count++;
-        expect(node.target === target1 || node.target === target2).toBe(true);
-        node = node.nextTarget;
+        expect(node._target === target1 || node._target === target2).toBe(true);
+        node = node._nextTarget;
       }
       expect(count).toBe(2);
     });
@@ -253,8 +253,8 @@ describe('node.ts', () => {
 
       let node = target._sources;
       while (node) {
-        expect(node.version).toBe(-1);
-        node = node.nextSource;
+        expect(node._version).toBe(-1);
+        node = node._nextSource;
       }
     });
 
@@ -285,19 +285,19 @@ describe('node.ts', () => {
       // Keep source2 by updating its version
       let node = target._sources;
       while (node) {
-        if (node.source === source2) {
-          node.version = 1;
+        if (node._source === source2) {
+          node._version = 1;
           break;
         }
-        node = node.nextSource;
+        node = node._nextSource;
       }
 
       cleanupSources(target);
 
       // Should only have source2 left
       expect(target._sources).toBeDefined();
-      expect(target._sources!.source).toBe(source2);
-      expect(target._sources!.nextSource).toBeUndefined();
+      expect(target._sources!._source).toBe(source2);
+      expect(target._sources!._nextSource).toBeUndefined();
 
       // Check that source1 and source3 no longer have target
       expect(source1._targets).toBeUndefined();
@@ -371,9 +371,9 @@ describe('node.ts', () => {
         found3 = false;
       let node = source._targets;
       while (node) {
-        if (node.target === target1) found1 = true;
-        if (node.target === target3) found3 = true;
-        node = node.nextTarget;
+        if (node._target === target1) found1 = true;
+        if (node._target === target3) found3 = true;
+        node = node._nextTarget;
       }
 
       expect(found1).toBe(true);

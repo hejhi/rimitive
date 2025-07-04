@@ -57,37 +57,37 @@ Object.defineProperty(Computed.prototype, 'value', {
 
         // Fast check if we already track this dependency
         while (node) {
-          if (node.source === this) {
-            node.version = this._version;
+          if (node._source === this) {
+            node._version = this._version;
             found = true;
             break;
           }
-          node = node.nextSource;
+          node = node._nextSource;
         }
 
         // Add new dependency if not found
         if (!found) {
           // Create node inline with minimal overhead
           const newNode: DependencyNode = {
-            source: this,
-            target: current,
-            version: this._version,
-            prevSource: undefined,
-            nextSource: current._sources,
-            prevTarget: undefined,
-            nextTarget: this._targets,
-            rollbackNode: undefined,
+            _source: this,
+            _target: current,
+            _version: this._version,
+            _prevSource: undefined,
+            _nextSource: current._sources,
+            _prevTarget: undefined,
+            _nextTarget: this._targets,
+            _rollbackNode: undefined,
           };
 
           // Link to target's sources
           if (current._sources) {
-            current._sources.prevSource = newNode;
+            current._sources._prevSource = newNode;
           }
           current._sources = newNode;
 
           // Link to source's targets
           if (this._targets) {
-            this._targets.prevTarget = newNode;
+            this._targets._prevTarget = newNode;
           } else {
             // First target - enable tracking
             this._flags |= TRACKING;
@@ -170,22 +170,22 @@ Computed.prototype._refresh = function (this: Computed): boolean | any {
 Computed.prototype._needsToRecompute = function (this: Computed): boolean {
   let node = this._sources;
   while (node) {
-    const source = node.source;
+    const source = node._source;
     // Check if source version changed
-    if (node.version !== source._version) {
+    if (node._version !== source._version) {
       // Need to check if source itself needs refresh (for nested computeds)
       if ('_refresh' in source && typeof source._refresh === 'function') {
         // Important: first refresh the source to get its current state
         source._refresh();
         // Then check if the version actually changed
-        if (node.version !== source._version) {
+        if (node._version !== source._version) {
           return true;
         }
       } else {
         return true;
       }
     }
-    node = node.nextSource;
+    node = node._nextSource;
   }
   return false;
 };
@@ -194,8 +194,8 @@ Computed.prototype._needsToRecompute = function (this: Computed): boolean {
 Computed.prototype._prepareSources = function (this: Computed): void {
   let node = this._sources;
   while (node) {
-    node.version = -1; // Mark for potential cleanup
-    node = node.nextSource;
+    node._version = -1; // Mark for potential cleanup
+    node = node._nextSource;
   }
 };
 
@@ -205,26 +205,26 @@ Computed.prototype._cleanupSources = function (this: Computed): void {
   let prev: DependencyNode | undefined;
 
   while (node) {
-    const next = node.nextSource;
+    const next = node._nextSource;
 
-    if (node.version === -1) {
+    if (node._version === -1) {
       // Remove unused node
       if (prev) {
-        prev.nextSource = next;
+        prev._nextSource = next;
       } else {
         this._sources = next;
       }
       if (next) {
-        next.prevSource = prev;
+        next._prevSource = prev;
       }
 
       // Remove from source's targets
-      const source = node.source;
-      const prevTarget = node.prevTarget;
-      const nextTarget = node.nextTarget;
+      const source = node._source;
+      const prevTarget = node._prevTarget;
+      const nextTarget = node._nextTarget;
 
       if (prevTarget) {
-        prevTarget.nextTarget = nextTarget;
+        prevTarget._nextTarget = nextTarget;
       } else {
         source._targets = nextTarget;
         // If no more targets and it's a computed, clear tracking flag
@@ -234,7 +234,7 @@ Computed.prototype._cleanupSources = function (this: Computed): void {
       }
 
       if (nextTarget) {
-        nextTarget.prevTarget = prevTarget;
+        nextTarget._prevTarget = prevTarget;
       }
     } else {
       prev = node;
@@ -251,8 +251,8 @@ Computed.prototype._notify = function (this: Computed): void {
     // Propagate notification to our targets
     let node = this._targets;
     while (node) {
-      node.target._notify();
-      node = node.nextTarget;
+      node._target._notify();
+      node = node._nextTarget;
     }
   }
 };

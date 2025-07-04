@@ -28,14 +28,14 @@ export function createNodeScope() {
   ): DependencyNode {
     // Create new node with stable shape - all properties defined
     return {
-      source: source as Signal | Computed,
-      target: target as Computed | Effect,
-      prevSource: undefined,
-      nextSource: undefined,
-      prevTarget: undefined,
-      nextTarget: undefined,
-      version: source._version,
-      rollbackNode: undefined,
+      _source: source as Signal | Computed,
+      _target: target as Computed | Effect,
+      _prevSource: undefined,
+      _nextSource: undefined,
+      _prevTarget: undefined,
+      _nextTarget: undefined,
+      _version: source._version,
+      _rollbackNode: undefined,
     };
   }
 
@@ -50,27 +50,27 @@ export function createNodeScope() {
     // Check if we already depend on this source
     let node = target._sources;
     while (node) {
-      if (node.source === source) {
-        node.version = source._version;
+      if (node._source === source) {
+        node._version = source._version;
         return;
       }
-      node = node.nextSource;
+      node = node._nextSource;
     }
 
     // Create new dependency
     node = acquireNode(source, target);
 
     // Add to target's source list (at head for better cache locality)
-    node.nextSource = target._sources;
+    node._nextSource = target._sources;
     if (target._sources) {
-      target._sources.prevSource = node;
+      target._sources._prevSource = node;
     }
     target._sources = node;
 
     // Add to source's target list (at head)
-    node.nextTarget = source._targets;
+    node._nextTarget = source._targets;
     if (source._targets) {
-      source._targets.prevTarget = node;
+      source._targets._prevTarget = node;
     } else {
       // First target - set TRACKING flag if it's a computed
       if ('_flags' in source && (source._flags & IS_COMPUTED)) {
@@ -83,8 +83,8 @@ export function createNodeScope() {
   function prepareSources<T = unknown>(target: Computed<T> | Effect): void {
     let node = target._sources;
     while (node) {
-      node.version = -1; // Mark for potential cleanup
-      node = node.nextSource;
+      node._version = -1; // Mark for potential cleanup
+      node = node._nextSource;
     }
   }
 
@@ -93,32 +93,32 @@ export function createNodeScope() {
     let prev: DependencyNode | undefined;
 
     while (node) {
-      const next = node.nextSource;
+      const next = node._nextSource;
 
-      if (node.version === -1) {
+      if (node._version === -1) {
         // This node was not reused - remove it
         if (prev) {
-          prev.nextSource = next;
+          prev._nextSource = next;
         } else {
           target._sources = next;
         }
         if (next) {
-          next.prevSource = prev;
+          next._prevSource = prev;
         }
 
         // Remove from source's target list
-        if (node.prevTarget) {
-          node.prevTarget.nextTarget = node.nextTarget;
+        if (node._prevTarget) {
+          node._prevTarget._nextTarget = node._nextTarget;
         } else {
-          node.source._targets = node.nextTarget;
+          node._source._targets = node._nextTarget;
         }
-        if (node.nextTarget) {
-          node.nextTarget.prevTarget = node.prevTarget;
+        if (node._nextTarget) {
+          node._nextTarget._prevTarget = node._prevTarget;
         }
         
         // If this was the last target, clear TRACKING flag
-        if (!node.source._targets && '_flags' in node.source && (node.source._flags & IS_COMPUTED)) {
-          node.source._flags &= ~TRACKING;
+        if (!node._source._targets && '_flags' in node._source && (node._source._flags & IS_COMPUTED)) {
+          node._source._flags &= ~TRACKING;
         }
 
         releaseNode(node);
@@ -134,21 +134,21 @@ export function createNodeScope() {
     // Remove all source dependencies
     let node = target._sources;
     while (node) {
-      const next = node.nextSource;
+      const next = node._nextSource;
 
       // Remove from source's target list
-      if (node.prevTarget) {
-        node.prevTarget.nextTarget = node.nextTarget;
+      if (node._prevTarget) {
+        node._prevTarget._nextTarget = node._nextTarget;
       } else {
-        node.source._targets = node.nextTarget;
+        node._source._targets = node._nextTarget;
       }
-      if (node.nextTarget) {
-        node.nextTarget.prevTarget = node.prevTarget;
+      if (node._nextTarget) {
+        node._nextTarget._prevTarget = node._prevTarget;
       }
       
       // If this was the last target, clear TRACKING flag
-      if (!node.source._targets && '_flags' in node.source && (node.source._flags & IS_COMPUTED)) {
-        node.source._flags &= ~TRACKING;
+      if (!node._source._targets && '_flags' in node._source && (node._source._flags & IS_COMPUTED)) {
+        node._source._flags &= ~TRACKING;
       }
 
       releaseNode(node);
@@ -161,8 +161,8 @@ export function createNodeScope() {
   function notifyTargets<T = unknown>(source: Signal<T> | Computed<T>): void {
     let node = source._targets;
     while (node) {
-      node.target._notify();
-      node = node.nextTarget;
+      node._target._notify();
+      node = node._nextTarget;
     }
   }
 

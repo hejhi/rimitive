@@ -37,37 +37,37 @@ Object.defineProperty(Signal.prototype, 'value', {
         
         // Fast check if already tracking
         while (node) {
-          if (node.source === this) {
-            node.version = this._version;
+          if (node._source === this) {
+            node._version = this._version;
             found = true;
             break;
           }
-          node = node.nextSource;
+          node = node._nextSource;
         }
         
         // Add new dependency if not found
         if (!found) {
           // Create node inline
           const newNode = {
-            source: this,
-            target: current,
-            version: this._version,
-            prevSource: undefined,
-            nextSource: current._sources,
-            prevTarget: undefined,
-            nextTarget: this._targets,
-            rollbackNode: undefined,
+            _source: this,
+            _target: current,
+            _version: this._version,
+            _prevSource: undefined,
+            _nextSource: current._sources,
+            _prevTarget: undefined,
+            _nextTarget: this._targets,
+            _rollbackNode: undefined,
           };
           
           // Link to target's sources
           if (current._sources) {
-            current._sources.prevSource = newNode;
+            current._sources._prevSource = newNode;
           }
           current._sources = newNode;
           
           // Link to source's targets
           if (this._targets) {
-            this._targets.prevTarget = newNode;
+            this._targets._prevTarget = newNode;
           }
           this._targets = newNode;
         }
@@ -95,8 +95,8 @@ Object.defineProperty(Signal.prototype, 'value', {
       try {
         let targetNode = this._targets;
         while (targetNode) {
-          targetNode.target._notify();
-          targetNode = targetNode.nextTarget;
+          targetNode._target._notify();
+          targetNode = targetNode._nextTarget;
         }
       } finally {
         batch.endBatch();
@@ -105,8 +105,8 @@ Object.defineProperty(Signal.prototype, 'value', {
       // Already in batch - just notify
       let targetNode = this._targets;
       while (targetNode) {
-        targetNode.target._notify();
-        targetNode = targetNode.nextTarget;
+        targetNode._target._notify();
+        targetNode = targetNode._nextTarget;
       }
     }
   }
