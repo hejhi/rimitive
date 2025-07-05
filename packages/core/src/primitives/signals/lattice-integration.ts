@@ -44,7 +44,8 @@ export function createSignalFactory() {
     const signalInstance = createSignal(initialValue);
 
     // Add subscribe method to the existing object (maintains stable shape)
-    signalInstance.subscribe = (listener: () => void) => subscribe(signalInstance, listener);
+    signalInstance.subscribe = (listener: () => void) =>
+      subscribe(signalInstance, listener);
 
     return signalInstance as LatticeSignal<T>;
   }
@@ -53,14 +54,15 @@ export function createSignalFactory() {
     const computedInstance = createComputed(computeFn);
 
     // Add subscribe method to the existing object (maintains stable shape)
-    computedInstance.subscribe = (listener: () => void) => subscribe(computedInstance, listener);
+    computedInstance.subscribe = (listener: () => void) =>
+      subscribe(computedInstance, listener);
 
     return computedInstance as LatticeComputed<T>;
   }
 
   function set<T>(latticeSignal: LatticeSignal<T>, value: T): void {
     // Direct assignment via setter using internal type
-    (latticeSignal as unknown as InternalSignal<T>).value = value;
+    (latticeSignal as InternalSignal<T>).value = value;
   }
 
   return {

@@ -1,8 +1,12 @@
 // Simplified Signal implementation - bare metal
 
-import type { Signal, DependencyNode } from './types';
+import type { Signal, DependencyNode, Computed, Effect } from './types';
 import { RUNNING } from './types';
 import type { UnifiedScope } from './scope';
+
+// Global tracking state - eliminates scope lookup in hot path
+let globalCurrentComputed: Computed | Effect | null = null;
+let globalVersion = 0;
 
 // Signal constructor
 function SignalImpl<T>(this: Signal<T>, value: T) {
@@ -22,13 +26,12 @@ const Signal = SignalImpl as unknown as {
 // Value property - hot path optimized
 Object.defineProperty(Signal.prototype, 'value', {
   get(this: Signal) {
-    const scope = this._scope as UnifiedScope;
-    const current = scope?.currentComputed;
-    
-    // Fast path: no tracking needed
-    if (!current || !(current._flags & RUNNING)) {
+    // Fast path: no tracking needed (eliminated scope lookup)
+    if (!globalCurrentComputed || !(globalCurrentComputed._flags & RUNNING)) {
       return this._value;
     }
+    
+    const current = globalCurrentComputed;
     
     // Node reuse pattern - check if we can reuse existing node
     let node = this._node;
@@ -78,17 +81,13 @@ Object.defineProperty(Signal.prototype, 'value', {
     
     this._value = value;
     this._version++;
+    globalVersion++;
     
-    const scope = this._scope as UnifiedScope;
-    if (scope) {
-      scope.globalVersion++;
-      
-      // Notify all targets
-      let node = this._targets;
-      while (node) {
-        node.target._notify();
-        node = node.nextTarget;
-      }
+    // Notify all targets
+    let node = this._targets;
+    while (node) {
+      node.target._notify();
+      node = node.nextTarget;
     }
   }
 });
@@ -104,6 +103,9 @@ Signal.prototype.subscribe = function() {
 };
 
 export function createScopedSignalFactory(scope: UnifiedScope) {
+  // Note: scope.globalVersion is maintained separately from our global
+  // The scope still tracks its own version for batching
+  
   function signal<T>(value: T): Signal<T> {
     const s = new Signal(value);
     s._scope = scope;
@@ -115,16 +117,38 @@ export function createScopedSignalFactory(scope: UnifiedScope) {
   }
 
   function untrack<T>(fn: () => T): T {
-    const prev = scope.currentComputed;
-    scope.currentComputed = null;
+    const prev = globalCurrentComputed;
+    globalCurrentComputed = null;
     try {
       return fn();
     } finally {
-      scope.currentComputed = prev;
+      globalCurrentComputed = prev;
     }
   }
 
   return { signal, writeSignal, peek, untrack };
+}
+
+// Export for use by computed and effect
+export function setGlobalCurrentComputed(computed: Computed | Effect | null): void {
+  globalCurrentComputed = computed;
+}
+
+export function getGlobalCurrentComputed(): Computed | Effect | null {
+  return globalCurrentComputed;
+}
+
+export function getGlobalVersion(): number {
+  return globalVersion;
+}
+
+export function incrementGlobalVersion(): void {
+  globalVersion++;
+}
+
+export function resetGlobalTracking(): void {
+  globalCurrentComputed = null;
+  globalVersion = 0;
 }
 
 export function peek<T>(signal: Signal<T>): T {

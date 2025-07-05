@@ -3,6 +3,7 @@
 import type { Computed, DependencyNode } from './types';
 import { NOTIFIED, OUTDATED, RUNNING, DISPOSED, TRACKING, IS_COMPUTED } from './types';
 import type { UnifiedScope } from './scope';
+import { setGlobalCurrentComputed, getGlobalCurrentComputed, getGlobalVersion } from './signal';
 
 // Computed constructor
 function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
@@ -30,8 +31,7 @@ Object.defineProperty(Computed.prototype, 'value', {
       throw new Error('Computed is disposed');
     }
 
-    const scope = this._scope as UnifiedScope;
-    const current = scope?.currentComputed;
+    const current = getGlobalCurrentComputed();
     
     // Track this computed as dependency if needed
     if (current && current._flags & RUNNING) {
@@ -184,8 +184,7 @@ Computed.prototype._refresh = function(): boolean {
 
   // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
   // This is the most important optimization for diamond patterns
-  const scope = this._scope as UnifiedScope;
-  const globalVersion = scope?.globalVersion || 0;
+  const globalVersion = getGlobalVersion();
   
   // Only use global version optimization if we're not outdated
   if (!(this._flags & OUTDATED) && this._version > 0 && this._globalVersion === globalVersion) {
@@ -209,10 +208,10 @@ Computed.prototype._refresh = function(): boolean {
   }
 
   // Recompute needed
-  const prevComputed = scope?.currentComputed;
+  const prevComputed = getGlobalCurrentComputed();
   try {
     prepareSources(this);
-    if (scope) scope.currentComputed = this;
+    setGlobalCurrentComputed(this);
     
     const value = this._fn();
     if (this._value !== value || this._version === 0) {
@@ -223,7 +222,7 @@ Computed.prototype._refresh = function(): boolean {
     // Update global version after successful computation
     this._globalVersion = globalVersion;
   } finally {
-    if (scope) scope.currentComputed = prevComputed;
+    setGlobalCurrentComputed(prevComputed);
     cleanupSources(this);
     this._flags &= ~RUNNING;
   }

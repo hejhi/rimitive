@@ -1,11 +1,11 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { Computed, Effect } from './types';
+import type { Signal, Computed, Effect } from './types';
 import { createUnifiedScope } from './scope';
 import { createComputedScope } from './computed';
 import { createEffectScope } from './effect';
-import { createScopedSignalFactory } from './signal';
+import { createScopedSignalFactory, setGlobalCurrentComputed, getGlobalCurrentComputed, getGlobalVersion as getGlobalVersionFromSignal, resetGlobalTracking } from './signal';
 
 // Create a test instance
 export function createTestInstance() {
@@ -35,54 +35,35 @@ export function createTestInstance() {
     hasPendingEffects: () => scope.batchedEffects !== null,
     clearBatch: () => { scope.batchedEffects = null; scope.batchDepth = 0; },
     
-    // Scope functions
-    setCurrentComputed: (computed: Computed | Effect | null) => { scope.currentComputed = computed; },
-    getCurrentComputed: () => scope.currentComputed,
-    resetGlobalState: () => { scope.globalVersion = 0; scope.currentComputed = null; },
-    getGlobalVersion: () => scope.globalVersion,
+    // Scope functions - use global functions
+    setCurrentComputed: (computed: Computed | Effect | null) => { setGlobalCurrentComputed(computed); },
+    getCurrentComputed: () => getGlobalCurrentComputed(),
+    resetGlobalState: () => { resetGlobalTracking(); },
+    getGlobalVersion: () => getGlobalVersionFromSignal(),
   };
 }
 
 // Create default test instance for backward compatibility
 let defaultInstance = createTestInstance();
 
-// Export all functions from default instance
-export const signal = defaultInstance.signal;
-export const writeSignal = defaultInstance.writeSignal;
-export const peek = defaultInstance.peek;
-export const untrack = defaultInstance.untrack;
-export const computed = defaultInstance.computed;
-export const effect = defaultInstance.effect;
-export const batch = defaultInstance.batch;
-export const startBatch = defaultInstance.startBatch;
-export const endBatch = defaultInstance.endBatch;
+// Export all functions from default instance - use getters to always get current instance
+export const signal = <T>(value: T): Signal<T> => defaultInstance.signal(value);
+export const writeSignal = <T>(signal: Signal<T>, value: T): void => defaultInstance.writeSignal(signal, value);
+export const peek = <T>(signal: Signal<T>): T => defaultInstance.peek(signal);
+export const untrack = <T>(fn: () => T): T => defaultInstance.untrack(fn);
+export const computed = <T>(fn: () => T): Computed<T> => defaultInstance.computed(fn);
+export const effect = (fn: () => void): (() => void) => defaultInstance.effect(fn);
+export const batch = (...args: Parameters<typeof defaultInstance.batch>) => defaultInstance.batch(...args);
+export const startBatch = () => defaultInstance.startBatch();
+export const endBatch = () => defaultInstance.endBatch();
 export const getBatchDepth = () => defaultInstance.getBatchDepth();
-export const hasPendingEffects = defaultInstance.hasPendingEffects;
-export const clearBatch = defaultInstance.clearBatch;
-export const setCurrentComputed = defaultInstance.setCurrentComputed;
-export const getCurrentComputed = defaultInstance.getCurrentComputed;
-export const getGlobalVersion = defaultInstance.getGlobalVersion;
+export const hasPendingEffects = () => defaultInstance.hasPendingEffects();
+export const clearBatch = () => defaultInstance.clearBatch();
+export const setCurrentComputed = (...args: Parameters<typeof defaultInstance.setCurrentComputed>) => defaultInstance.setCurrentComputed(...args);
+export const getCurrentComputed = () => defaultInstance.getCurrentComputed();
+export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 
 // Reset function that recreates the default instance
 export function resetGlobalState() {
   defaultInstance = createTestInstance();
-  
-  // Re-bind all exports
-  Object.assign(exports, {
-    signal: defaultInstance.signal,
-    writeSignal: defaultInstance.writeSignal,
-    peek: defaultInstance.peek,
-    untrack: defaultInstance.untrack,
-    computed: defaultInstance.computed,
-    effect: defaultInstance.effect,
-    batch: defaultInstance.batch,
-    startBatch: defaultInstance.startBatch,
-    endBatch: defaultInstance.endBatch,
-    getBatchDepth: () => defaultInstance.getBatchDepth(),
-    hasPendingEffects: defaultInstance.hasPendingEffects,
-    clearBatch: defaultInstance.clearBatch,
-    setCurrentComputed: defaultInstance.setCurrentComputed,
-    getCurrentComputed: defaultInstance.getCurrentComputed,
-    getGlobalVersion: defaultInstance.getGlobalVersion,
-  });
 }

@@ -3,6 +3,7 @@
 import type { Effect, DependencyNode } from './types';
 import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
 import type { UnifiedScope } from './scope';
+import { setGlobalCurrentComputed, getGlobalCurrentComputed } from './signal';
 
 // Effect constructor
 function EffectImpl(this: Effect, fn: () => void) {
@@ -64,14 +65,13 @@ Effect.prototype._run = function(): void {
     node = node.nextSource;
   }
 
-  const scope = this._scope as UnifiedScope;
-  const prevComputed = scope.currentComputed;
-  scope.currentComputed = this;
+  const prevComputed = getGlobalCurrentComputed();
+  setGlobalCurrentComputed(this);
 
   try {
     this._fn();
   } finally {
-    scope.currentComputed = prevComputed;
+    setGlobalCurrentComputed(prevComputed);
     this._flags &= ~RUNNING;
 
     // Cleanup unused sources
