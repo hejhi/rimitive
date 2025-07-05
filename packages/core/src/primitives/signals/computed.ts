@@ -1,8 +1,19 @@
 // Simplified Computed implementation - bare metal
 
 import type { Computed, DependencyNode } from './types';
-import { NOTIFIED, OUTDATED, RUNNING, DISPOSED, TRACKING, IS_COMPUTED } from './types';
-import { setGlobalCurrentComputed, getGlobalCurrentComputed, getGlobalVersion } from './signal';
+import {
+  NOTIFIED,
+  OUTDATED,
+  RUNNING,
+  DISPOSED,
+  TRACKING,
+  IS_COMPUTED,
+} from './types';
+import {
+  setGlobalCurrentComputed,
+  getGlobalCurrentComputed,
+  getGlobalVersion,
+} from './signal';
 import { acquireNode, releaseNode } from './node-pool';
 
 // Computed constructor
@@ -26,53 +37,51 @@ const Computed = ComputedImpl as unknown as {
 // Value property - hot path optimized
 Object.defineProperty(Computed.prototype, 'value', {
   get(this: Computed) {
-    if (this._flags & DISPOSED) {
-      throw new Error('Computed is disposed');
-    }
-
     const current = getGlobalCurrentComputed();
-    
+
     // Track this computed as dependency if needed
     if (current && current._flags & RUNNING) {
+      const version = this._version;
+
       // Node reuse pattern - check if we can reuse existing node
       let node = this._node;
       if (node !== undefined && node.target === current) {
         // Reuse existing node - just update version
-        node.version = this._version;
+        node.version = version;
       } else {
         // Check if already tracking this computed in current context
         node = current._sources;
         while (node) {
           if (node.source === this) {
-            node.version = this._version;
+            node.version = version;
             break;
           }
           node = node.nextSource;
         }
-        
+
         if (!node) {
           // Create new dependency node using pool
           const newNode = acquireNode();
           newNode.source = this;
           newNode.target = current;
-          newNode.version = this._version;
+          newNode.version = version;
           newNode.nextSource = current._sources;
           newNode.nextTarget = this._targets;
           newNode.prevSource = undefined;
           newNode.prevTarget = undefined;
-          
+
           if (current._sources) {
             current._sources.prevSource = newNode;
           }
           current._sources = newNode;
-          
+
           if (this._targets) {
             this._targets.prevTarget = newNode;
           } else {
             this._flags |= TRACKING;
           }
           this._targets = newNode;
-          
+
           // Store node for reuse
           this._node = newNode;
         }
@@ -96,17 +105,17 @@ function prepareSources(computed: Computed): void {
   }
 }
 
-// Helper: Clean up sources after re-evaluation  
+// Helper: Clean up sources after re-evaluation
 function cleanupSources(computed: Computed): void {
   let node = computed._sources;
   let prev: DependencyNode | undefined;
 
   while (node !== undefined) {
     const next = node.nextSource;
-    
+
     if (node.version === -1) {
       // This node was not re-used, remove it
-      
+
       // Remove from sources list
       if (prev !== undefined) {
         prev.nextSource = next;
@@ -116,12 +125,12 @@ function cleanupSources(computed: Computed): void {
       if (next !== undefined) {
         next.prevSource = prev;
       }
-      
+
       // Remove from source's targets
       const source = node.source;
       const prevTarget = node.prevTarget;
       const nextTarget = node.nextTarget;
-      
+
       if (prevTarget !== undefined) {
         prevTarget.nextTarget = nextTarget;
       } else {
@@ -131,18 +140,18 @@ function cleanupSources(computed: Computed): void {
           source._flags &= ~TRACKING;
         }
       }
-      
+
       if (nextTarget !== undefined) {
         nextTarget.prevTarget = prevTarget;
       }
-      
+
       // Return node to pool
       releaseNode(node);
     } else {
       // This node was re-used, keep it
       prev = node;
     }
-    
+
     node = next;
   }
 }
@@ -156,54 +165,47 @@ function needsToRecompute(computed: Computed): boolean {
     node = node.nextSource
   ) {
     const source = node.source;
-    
+
     // Three checks as in Preact:
     // 1. Version already changed (fast path)
-    if (node.version !== source._version) {
-      return true;
-    }
-    
+    if (node.version !== source._version) return true;
+
     // 2. Try to refresh the source (handles nested computeds)
-    if (!source._refresh()) {
-      return true;
-    }
-    
+    if (!source._refresh()) return true;
+
     // 3. Check if version changed after refresh
-    if (node.version !== source._version) {
-      return true;
-    }
+    if (node.version !== source._version) return true;
   }
-  
+
   return false;
 }
 
 // Simplified refresh - inline everything for performance
-Computed.prototype._refresh = function(): boolean {
+Computed.prototype._refresh = function (): boolean {
   this._flags &= ~NOTIFIED;
 
-  if (this._flags & RUNNING) {
-    throw new Error('Cycle detected');
-  }
+  if (this._flags & RUNNING) throw new Error('Cycle detected');
 
   // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
   // This is the most important optimization for diamond patterns
   const globalVersion = getGlobalVersion();
-  
+
   // Only use global version optimization if we're not outdated
-  if (!(this._flags & OUTDATED) && this._version > 0 && this._globalVersion === globalVersion) {
+  if (
+    !(this._flags & OUTDATED) &&
+    this._version > 0 &&
+    this._globalVersion === globalVersion
+  )
     return true;
-  }
 
   // Fast path: tracking and not outdated
-  if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) {
-    return true;
-  }
-  
+  if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) return true;
+
   this._flags &= ~OUTDATED;
 
   // Mark as running before checking dependencies
   this._flags |= RUNNING;
-  
+
   // Check if we actually need to recompute
   if (this._version > 0 && !needsToRecompute(this)) {
     this._flags &= ~RUNNING;
@@ -215,13 +217,13 @@ Computed.prototype._refresh = function(): boolean {
   try {
     prepareSources(this);
     setGlobalCurrentComputed(this);
-    
+
     const value = this._fn();
     if (this._value !== value || this._version === 0) {
       this._value = value;
       this._version++;
     }
-    
+
     // Update global version after successful computation
     this._globalVersion = globalVersion;
   } finally {
@@ -234,27 +236,26 @@ Computed.prototype._refresh = function(): boolean {
 };
 
 // Notify targets
-Computed.prototype._notify = function(): void {
-  if (!(this._flags & NOTIFIED)) {
-    this._flags |= NOTIFIED | OUTDATED;
-    
-    let node = this._targets;
-    while (node) {
-      node.target._notify();
-      node = node.nextTarget;
-    }
+Computed.prototype._notify = function (): void {
+  if (this._flags & NOTIFIED) return;
+  this._flags |= NOTIFIED | OUTDATED;
+
+  let node = this._targets;
+  while (node) {
+    node.target._notify();
+    node = node.nextTarget;
   }
 };
 
 // Dispose
-Computed.prototype.dispose = function(): void {
+Computed.prototype.dispose = function (): void {
   if (!(this._flags & DISPOSED)) {
     this._flags |= DISPOSED;
-    
+
     // Clear all sources and return nodes to pool
     let node = this._sources;
     const nodesToRelease: DependencyNode[] = [];
-    
+
     while (node) {
       const next = node.nextSource;
       const source = node.source;
@@ -270,24 +271,24 @@ Computed.prototype.dispose = function(): void {
       if (nextTarget) {
         nextTarget.prevTarget = prevTarget;
       }
-      
+
       // Collect node for batch release
       nodesToRelease.push(node);
       node = next;
     }
-    
+
     // Batch release for better performance
     for (const nodeToRelease of nodesToRelease) {
       releaseNode(nodeToRelease);
     }
-    
+
     this._sources = undefined;
     this._value = undefined;
   }
 };
 
 // Placeholder subscribe
-Computed.prototype.subscribe = function() {
+Computed.prototype.subscribe = function () {
   return () => {};
 };
 
@@ -297,8 +298,7 @@ export type ComputedScope = {
 
 export function createComputedScope(): ComputedScope {
   function computed<T>(fn: () => T): Computed<T> {
-    const c = new Computed(fn);
-    return c;
+    return new Computed(fn);
   }
 
   return { computed };

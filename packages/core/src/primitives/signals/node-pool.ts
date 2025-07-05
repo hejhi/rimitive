@@ -19,7 +19,7 @@ let poolMisses = 0;
 
 // Initialize pool with pre-allocated nodes
 function initializePool(): void {
-  nodePool = new Array(INITIAL_POOL_SIZE);
+  nodePool = new Array(INITIAL_POOL_SIZE) as DependencyNode[];
   for (let i = 0; i < INITIAL_POOL_SIZE; i++) {
     nodePool[i] = {} as DependencyNode;
   }
@@ -29,12 +29,12 @@ function initializePool(): void {
 // Get a node from pool or create new one
 export function acquireNode(): DependencyNode {
   allocations++;
-  
-  if (poolSize > 0) {
+
+  if (poolSize) {
     poolHits++;
     return nodePool[--poolSize]!;
   }
-  
+
   poolMisses++;
   return {} as DependencyNode;
 }
@@ -42,10 +42,8 @@ export function acquireNode(): DependencyNode {
 // Return node to pool for reuse
 export function releaseNode(node: DependencyNode): void {
   // Only pool if under limit
-  if (poolSize >= MAX_POOL_SIZE) {
-    return;
-  }
-  
+  if (poolSize >= MAX_POOL_SIZE) return;
+
   // Clear all references to prevent memory leaks
   node.source = undefined!;
   node.target = undefined!;
@@ -54,7 +52,7 @@ export function releaseNode(node: DependencyNode): void {
   node.prevSource = undefined;
   node.nextTarget = undefined;
   node.prevTarget = undefined;
-  
+
   nodePool[poolSize++] = node;
 }
 
@@ -63,23 +61,22 @@ export function releaseNodes(nodes: DependencyNode[]): void {
   // Calculate how many we can actually pool
   const availableSpace = MAX_POOL_SIZE - poolSize;
   const nodesToPool = Math.min(nodes.length, availableSpace);
-  
+
   if (nodesToPool === 0) return;
-  
+
   // Clear and add to pool
   for (let i = 0; i < nodesToPool; i++) {
     const node = nodes[i];
-    if (node) {
-      node.source = undefined!;
-      node.target = undefined!;
-      node.version = 0;
-      node.nextSource = undefined;
-      node.prevSource = undefined;
-      node.nextTarget = undefined;
-      node.prevTarget = undefined;
-      
-      nodePool[poolSize++] = node;
-    }
+    if (!node) continue;
+    node.source = undefined!;
+    node.target = undefined!;
+    node.version = 0;
+    node.nextSource = undefined;
+    node.prevSource = undefined;
+    node.nextTarget = undefined;
+    node.prevTarget = undefined;
+
+    nodePool[poolSize++] = node;
   }
 }
 

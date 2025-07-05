@@ -20,9 +20,7 @@ export function createSubscribeScope(effect: (fn: () => void) => () => void) {
       void source.value; // Track the source
 
       // Skip the first run (just subscribing, not a change)
-      if (!firstRun) {
-        listener();
-      }
+      if (!firstRun) listener();
       firstRun = false;
     });
   }

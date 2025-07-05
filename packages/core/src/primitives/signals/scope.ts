@@ -4,7 +4,7 @@ import {
   startGlobalBatch,
   endGlobalBatch,
   getGlobalBatchedEffects,
-  setGlobalBatchedEffects
+  setGlobalBatchedEffects,
 } from './signal';
 
 export interface UnifiedScope {
@@ -13,13 +13,15 @@ export interface UnifiedScope {
 }
 
 export function createUnifiedScope(): UnifiedScope {
+  let next;
+
   // Run batched effects - now uses global state
   function runEffects(): void {
     let effect = getGlobalBatchedEffects();
     setGlobalBatchedEffects(null);
 
     while (effect) {
-      const next = effect._nextBatchedEffect;
+      next = effect._nextBatchedEffect;
       effect._nextBatchedEffect = undefined;
       effect._run();
       effect = next || null;
@@ -29,15 +31,13 @@ export function createUnifiedScope(): UnifiedScope {
   const scope: UnifiedScope = {
     // Methods
     batch<T>(fn: () => T): T {
-      if (getGlobalBatchDepth() > 0) return fn();
+      if (getGlobalBatchDepth()) return fn();
 
       startGlobalBatch();
       try {
         return fn();
       } finally {
-        if (endGlobalBatch()) {
-          runEffects();
-        }
+        if (endGlobalBatch()) runEffects();
       }
     },
   };

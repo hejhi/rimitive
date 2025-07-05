@@ -30,12 +30,11 @@ const Signal = SignalImpl as unknown as {
 Object.defineProperty(Signal.prototype, 'value', {
   get(this: Signal) {
     // Fast path: no tracking needed (eliminated scope lookup)
-    if (!globalCurrentComputed || !(globalCurrentComputed._flags & RUNNING)) {
+    if (!globalCurrentComputed || !(globalCurrentComputed._flags & RUNNING))
       return this._value;
-    }
-    
+
     const current = globalCurrentComputed;
-    
+
     // Node reuse pattern - check if we can reuse existing node
     let node = this._node;
     if (node !== undefined && node.target === current) {
@@ -43,7 +42,7 @@ Object.defineProperty(Signal.prototype, 'value', {
       node.version = this._version;
       return this._value;
     }
-    
+
     // Check if already tracking this signal in current computed
     node = current._sources;
     while (node) {
@@ -53,7 +52,7 @@ Object.defineProperty(Signal.prototype, 'value', {
       }
       node = node.nextSource;
     }
-    
+
     // Create new dependency node using pool
     const newNode = acquireNode();
     newNode.source = this;
@@ -63,46 +62,46 @@ Object.defineProperty(Signal.prototype, 'value', {
     newNode.nextTarget = this._targets;
     newNode.prevSource = undefined;
     newNode.prevTarget = undefined;
-    
+
     if (current._sources) {
       current._sources.prevSource = newNode;
     }
     current._sources = newNode;
-    
+
     if (this._targets) {
       this._targets.prevTarget = newNode;
     }
     this._targets = newNode;
-    
+
     // Store node for reuse
     this._node = newNode;
-    
+
     return this._value;
   },
-  
+
   set(this: Signal, value) {
     if (this._value === value) return;
-    
+
     this._value = value;
     this._version++;
     globalVersion++;
-    
+
     // Notify all targets
     let node = this._targets;
     while (node) {
       node.target._notify();
       node = node.nextTarget;
     }
-  }
+  },
 });
 
 // Signals are always fresh
-Signal.prototype._refresh = function(): boolean {
+Signal.prototype._refresh = function (): boolean {
   return true;
 };
 
 // Placeholder subscribe
-Signal.prototype.subscribe = function() {
+Signal.prototype.subscribe = function () {
   return () => {};
 };
 
@@ -130,7 +129,9 @@ export function createScopedSignalFactory() {
 }
 
 // Export for use by computed and effect
-export function setGlobalCurrentComputed(computed: Computed | Effect | null): void {
+export function setGlobalCurrentComputed(
+  computed: Computed | Effect | null
+): void {
   globalCurrentComputed = computed;
 }
 
