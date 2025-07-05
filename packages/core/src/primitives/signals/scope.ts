@@ -1,7 +1,17 @@
 // Unified scope for signals - combining all state management
 
 import type { Computed, Effect } from './types';
-import { setGlobalCurrentComputed, incrementGlobalVersion, getGlobalVersion, getGlobalCurrentComputed } from './signal';
+import { 
+  setGlobalCurrentComputed, 
+  incrementGlobalVersion, 
+  getGlobalVersion, 
+  getGlobalCurrentComputed,
+  getGlobalBatchDepth,
+  startGlobalBatch,
+  endGlobalBatch,
+  getGlobalBatchedEffects,
+  setGlobalBatchedEffects
+} from './signal';
 
 export interface UnifiedScope {
   // Global state
@@ -17,10 +27,10 @@ export interface UnifiedScope {
 }
 
 export function createUnifiedScope(): UnifiedScope {
-  // Run batched effects
+  // Run batched effects - now uses global state
   function runEffects(): void {
-    let effect = scope.batchedEffects;
-    scope.batchedEffects = null;
+    let effect = getGlobalBatchedEffects();
+    setGlobalBatchedEffects(null);
 
     while (effect) {
       const next = effect._nextBatchedEffect;
@@ -51,19 +61,30 @@ export function createUnifiedScope(): UnifiedScope {
       setGlobalCurrentComputed(value);
     },
     
-    // Batching state
-    batchDepth: 0,
-    batchedEffects: null,
+    // Batching state - now synced with global
+    get batchDepth() {
+      return getGlobalBatchDepth();
+    },
+    set batchDepth(_value) {
+      // This setter is for compatibility only - use global functions instead
+      console.warn('Direct batchDepth assignment is deprecated');
+    },
+    get batchedEffects() {
+      return getGlobalBatchedEffects();
+    },
+    set batchedEffects(value) {
+      setGlobalBatchedEffects(value);
+    },
 
     // Methods
     batch<T>(fn: () => T): T {
-      if (scope.batchDepth > 0) return fn();
+      if (getGlobalBatchDepth() > 0) return fn();
 
-      scope.batchDepth++;
+      startGlobalBatch();
       try {
         return fn();
       } finally {
-        if (--scope.batchDepth === 0) {
+        if (endGlobalBatch()) {
           runEffects();
         }
       }

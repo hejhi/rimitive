@@ -5,7 +5,18 @@ import type { Signal, Computed, Effect } from './types';
 import { createUnifiedScope } from './scope';
 import { createComputedScope } from './computed';
 import { createEffectScope } from './effect';
-import { createScopedSignalFactory, setGlobalCurrentComputed, getGlobalCurrentComputed, getGlobalVersion as getGlobalVersionFromSignal, resetGlobalTracking } from './signal';
+import { 
+  createScopedSignalFactory, 
+  setGlobalCurrentComputed, 
+  getGlobalCurrentComputed, 
+  getGlobalVersion as getGlobalVersionFromSignal, 
+  resetGlobalTracking,
+  getGlobalBatchDepth,
+  startGlobalBatch,
+  endGlobalBatch,
+  getGlobalBatchedEffects,
+  setGlobalBatchedEffects
+} from './signal';
 import { resetNodePool } from './node-pool';
 
 // Create a test instance
@@ -28,13 +39,19 @@ export function createTestInstance() {
     // Effect functions
     effect: createEffect,
     
-    // Batch functions
+    // Batch functions - now use global state
     batch: (fn: () => void) => scope.batch(fn),
-    startBatch: () => scope.batchDepth++,
-    endBatch: () => { if (scope.batchDepth > 0) scope.batchDepth--; },
-    getBatchDepth: () => scope.batchDepth,
-    hasPendingEffects: () => scope.batchedEffects !== null,
-    clearBatch: () => { scope.batchedEffects = null; scope.batchDepth = 0; },
+    startBatch: () => startGlobalBatch(),
+    endBatch: () => { if (getGlobalBatchDepth() > 0) endGlobalBatch(); },
+    getBatchDepth: () => getGlobalBatchDepth(),
+    hasPendingEffects: () => getGlobalBatchedEffects() !== null,
+    clearBatch: () => { 
+      setGlobalBatchedEffects(null);
+      // Reset batch depth safely
+      while (getGlobalBatchDepth() > 0) {
+        endGlobalBatch();
+      }
+    },
     
     // Scope functions - use global functions
     setCurrentComputed: (computed: Computed | Effect | null) => { setGlobalCurrentComputed(computed); },

@@ -3,7 +3,16 @@
 import type { Effect, DependencyNode } from './types';
 import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
 import type { UnifiedScope } from './scope';
-import { setGlobalCurrentComputed, getGlobalCurrentComputed } from './signal';
+import { 
+  setGlobalCurrentComputed, 
+  getGlobalCurrentComputed,
+  isInBatch,
+  startGlobalBatch,
+  endGlobalBatch,
+  addEffectToBatch,
+  getGlobalBatchedEffects,
+  setGlobalBatchedEffects
+} from './signal';
 import { releaseNode } from './node-pool';
 
 // Effect constructor
@@ -21,31 +30,32 @@ const Effect = EffectImpl as unknown as {
   prototype: Effect;
 };
 
-// Notify method
+// Notify method - now uses global batch state
 Effect.prototype._notify = function(): void {
   if (!(this._flags & NOTIFIED)) {
     this._flags |= NOTIFIED | OUTDATED;
     
-    const scope = this._scope as UnifiedScope;
-    if (scope.batchDepth > 0) {
-      this._nextBatchedEffect = scope.batchedEffects || undefined;
-      scope.batchedEffects = this;
+    if (isInBatch()) {
+      // Add to global batch queue
+      addEffectToBatch(this);
     } else {
       // Run immediately if not in batch
-      scope.batchDepth++;
+      startGlobalBatch();
       try {
         this._run();
       } finally {
-        scope.batchDepth--;
-        // Run any effects that were queued during this run
-        if (scope.batchDepth === 0 && scope.batchedEffects) {
-          let effect = scope.batchedEffects;
-          scope.batchedEffects = null;
-          while (effect) {
-            const next = effect._nextBatchedEffect;
-            effect._nextBatchedEffect = undefined;
-            effect._run();
-            effect = next!;
+        // endGlobalBatch returns true if batch depth reaches 0
+        if (endGlobalBatch()) {
+          // Run any effects that were queued during this run
+          let effect = getGlobalBatchedEffects();
+          if (effect) {
+            setGlobalBatchedEffects(null);
+            while (effect) {
+              const next: Effect | undefined = effect._nextBatchedEffect;
+              effect._nextBatchedEffect = undefined;
+              effect._run();
+              effect = next!;
+            }
           }
         }
       }

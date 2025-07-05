@@ -9,6 +9,10 @@ import { acquireNode } from './node-pool';
 let globalCurrentComputed: Computed | Effect | null = null;
 let globalVersion = 0;
 
+// Global batch state - eliminates scope lookup for batching
+let globalBatchDepth = 0;
+let globalBatchedEffects: Effect | null = null;
+
 // Signal constructor
 function SignalImpl<T>(this: Signal<T>, value: T) {
   this._value = value;
@@ -151,6 +155,38 @@ export function incrementGlobalVersion(): void {
 export function resetGlobalTracking(): void {
   globalCurrentComputed = null;
   globalVersion = 0;
+  globalBatchDepth = 0;
+  globalBatchedEffects = null;
+}
+
+// Batch state exports
+export function getGlobalBatchDepth(): number {
+  return globalBatchDepth;
+}
+
+export function isInBatch(): boolean {
+  return globalBatchDepth > 0;
+}
+
+export function startGlobalBatch(): void {
+  globalBatchDepth++;
+}
+
+export function endGlobalBatch(): boolean {
+  return --globalBatchDepth === 0;
+}
+
+export function getGlobalBatchedEffects(): Effect | null {
+  return globalBatchedEffects;
+}
+
+export function setGlobalBatchedEffects(effects: Effect | null): void {
+  globalBatchedEffects = effects;
+}
+
+export function addEffectToBatch(effect: Effect): void {
+  effect._nextBatchedEffect = globalBatchedEffects || undefined;
+  globalBatchedEffects = effect;
 }
 
 export function peek<T>(signal: Signal<T>): T {
