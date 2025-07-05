@@ -15,9 +15,9 @@ import { createComputedScope } from './computed';
 // Create the signal factory for Lattice context
 export function createSignalFactory() {
   const scope = createUnifiedScope();
-  const { signal: createSignal } = createScopedSignalFactory(scope);
-  const { effect: createEffect } = createEffectScope(scope);
-  const { computed: createComputed } = createComputedScope(scope);
+  const { signal: createSignal } = createScopedSignalFactory();
+  const { effect: createEffect } = createEffectScope();
+  const { computed: createComputed } = createComputedScope();
 
   function effect(effectFn: () => void | (() => void)): () => void {
     let cleanupFn: (() => void) | void;

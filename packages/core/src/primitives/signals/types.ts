@@ -18,7 +18,6 @@ export interface Signal<T = unknown> {
   _version: number;
   _targets?: DependencyNode;
   _node?: DependencyNode; // For node reuse pattern
-  _scope: unknown; // Single unified scope
   _refresh(): boolean;
 }
 
@@ -36,7 +35,6 @@ export interface Computed<T = unknown> {
   _notify(): void;
   _refresh(): boolean;
   dispose(): void;
-  _scope: unknown; // Single unified scope
 }
 
 export interface Effect {
@@ -44,7 +42,6 @@ export interface Effect {
   _flags: number;
   _sources?: DependencyNode;
   _nextBatchedEffect?: Effect;
-  _scope: unknown; // Single unified scope
   _notify(): void;
   _run(): void;
   dispose(): void;

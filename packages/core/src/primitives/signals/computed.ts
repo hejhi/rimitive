@@ -2,7 +2,6 @@
 
 import type { Computed, DependencyNode } from './types';
 import { NOTIFIED, OUTDATED, RUNNING, DISPOSED, TRACKING, IS_COMPUTED } from './types';
-import type { UnifiedScope } from './scope';
 import { setGlobalCurrentComputed, getGlobalCurrentComputed, getGlobalVersion } from './signal';
 import { acquireNode, releaseNode } from './node-pool';
 
@@ -16,7 +15,6 @@ function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
   this._sources = undefined;
   this._targets = undefined;
   this._node = undefined;
-  this._scope = undefined;
 }
 
 // Cast to constructor type
@@ -297,10 +295,9 @@ export type ComputedScope = {
   computed: <T>(fn: () => T) => Computed<T>;
 };
 
-export function createComputedScope(scope: UnifiedScope): ComputedScope {
+export function createComputedScope(): ComputedScope {
   function computed<T>(fn: () => T): Computed<T> {
     const c = new Computed(fn);
-    c._scope = scope;
     return c;
   }
 

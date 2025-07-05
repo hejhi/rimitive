@@ -2,7 +2,6 @@
 
 import type { Signal, Computed, Effect } from './types';
 import { RUNNING } from './types';
-import type { UnifiedScope } from './scope';
 import { acquireNode } from './node-pool';
 
 // Global tracking state - eliminates scope lookup in hot path
@@ -19,7 +18,6 @@ function SignalImpl<T>(this: Signal<T>, value: T) {
   this._version = 0;
   this._targets = undefined;
   this._node = undefined;
-  this._scope = undefined;
 }
 
 // Cast to constructor type
@@ -108,13 +106,9 @@ Signal.prototype.subscribe = function() {
   return () => {};
 };
 
-export function createScopedSignalFactory(scope: UnifiedScope) {
-  // Note: scope.globalVersion is maintained separately from our global
-  // The scope still tracks its own version for batching
-  
+export function createScopedSignalFactory() {
   function signal<T>(value: T): Signal<T> {
     const s = new Signal(value);
-    s._scope = scope;
     return s;
   }
 

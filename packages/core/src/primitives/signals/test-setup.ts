@@ -22,9 +22,9 @@ import { resetNodePool } from './node-pool';
 // Create a test instance
 export function createTestInstance() {
   const scope = createUnifiedScope();
-  const { signal: createSignal, writeSignal, peek, untrack } = createScopedSignalFactory(scope);
-  const { effect: createEffect } = createEffectScope(scope);
-  const { computed: createComputed } = createComputedScope(scope);
+  const { signal: createSignal, writeSignal, peek, untrack } = createScopedSignalFactory();
+  const { effect: createEffect } = createEffectScope();
+  const { computed: createComputed } = createComputedScope();
 
   return {
     // Signal functions

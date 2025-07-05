@@ -2,7 +2,6 @@
 
 import type { Effect, DependencyNode } from './types';
 import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
-import type { UnifiedScope } from './scope';
 import { 
   setGlobalCurrentComputed, 
   getGlobalCurrentComputed,
@@ -21,7 +20,6 @@ function EffectImpl(this: Effect, fn: () => void) {
   this._flags = OUTDATED;
   this._sources = undefined;
   this._nextBatchedEffect = undefined;
-  this._scope = undefined;
 }
 
 // Cast to constructor type
@@ -171,10 +169,9 @@ export type EffectScope = {
   effect: (fn: () => void) => () => void;
 };
 
-export function createEffectScope(scope: UnifiedScope): EffectScope {
+export function createEffectScope(): EffectScope {
   function effect(fn: () => void): () => void {
     const e = new Effect(fn);
-    e._scope = scope;
     
     // Run immediately
     e._run();
