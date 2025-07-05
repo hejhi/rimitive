@@ -16,13 +16,6 @@ export interface UnifiedScope {
 }
 
 export function createUnifiedScope(): UnifiedScope {
-  const scope: UnifiedScope = {
-    globalVersion: 0,
-    currentComputed: null,
-    batchDepth: 0,
-    batchedEffects: null,
-  } as UnifiedScope;
-
   // Run batched effects
   function runEffects(): void {
     let effect = scope.batchedEffects;
@@ -36,18 +29,28 @@ export function createUnifiedScope(): UnifiedScope {
     }
   }
 
-  // Batch function
-  scope.batch = function <T>(fn: () => T): T {
-    if (scope.batchDepth > 0) return fn();
+  const scope: UnifiedScope = {
+    // Global state
+    globalVersion: 0,
+    currentComputed: null,
+    
+    // Batching state
+    batchDepth: 0,
+    batchedEffects: null,
 
-    scope.batchDepth++;
-    try {
-      return fn();
-    } finally {
-      if (--scope.batchDepth === 0) {
-        runEffects();
+    // Methods
+    batch<T>(fn: () => T): T {
+      if (scope.batchDepth > 0) return fn();
+
+      scope.batchDepth++;
+      try {
+        return fn();
+      } finally {
+        if (--scope.batchDepth === 0) {
+          runEffects();
+        }
       }
-    }
+    },
   };
 
   return scope;
