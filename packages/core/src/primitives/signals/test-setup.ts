@@ -66,4 +66,6 @@ export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 // Reset function that recreates the default instance
 export function resetGlobalState() {
   defaultInstance = createTestInstance();
+  // CRITICAL: Also reset the actual global variables
+  resetGlobalTracking();
 }

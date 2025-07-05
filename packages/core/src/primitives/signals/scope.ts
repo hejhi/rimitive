@@ -1,7 +1,7 @@
 // Unified scope for signals - combining all state management
 
 import type { Computed, Effect } from './types';
-import { setGlobalCurrentComputed, incrementGlobalVersion } from './signal';
+import { setGlobalCurrentComputed, incrementGlobalVersion, getGlobalVersion, getGlobalCurrentComputed } from './signal';
 
 export interface UnifiedScope {
   // Global state
@@ -33,8 +33,8 @@ export function createUnifiedScope(): UnifiedScope {
   const scope: UnifiedScope = {
     // Global state
     get globalVersion() {
-      // This is only used for tracking scope-level version increments
-      return 0; // Not used anymore, kept for compatibility
+      // Return the actual global version
+      return getGlobalVersion();
     },
     set globalVersion(value) {
       // When scope tries to increment version, increment the global one
@@ -43,8 +43,8 @@ export function createUnifiedScope(): UnifiedScope {
       }
     },
     get currentComputed() {
-      // Always return global state
-      return null; // Not used anymore, kept for compatibility
+      // Return the actual global current computed
+      return getGlobalCurrentComputed();
     },
     set currentComputed(value) {
       // Sync with global state when set
