@@ -179,7 +179,7 @@ Computed.prototype._refresh = function(): boolean {
   this._flags &= ~NOTIFIED;
 
   if (this._flags & RUNNING) {
-    return false; // Cycle detected
+    throw new Error('Cycle detected');
   }
 
   // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
@@ -187,7 +187,8 @@ Computed.prototype._refresh = function(): boolean {
   const scope = this._scope as UnifiedScope;
   const globalVersion = scope?.globalVersion || 0;
   
-  if (this._version > 0 && this._globalVersion === globalVersion) {
+  // Only use global version optimization if we're not outdated
+  if (!(this._flags & OUTDATED) && this._version > 0 && this._globalVersion === globalVersion) {
     return true;
   }
 

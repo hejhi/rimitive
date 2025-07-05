@@ -44,9 +44,11 @@ export interface Effect {
   _flags: number;
   _sources?: DependencyNode;
   _nextBatchedEffect?: Effect;
+  _scope: unknown; // Single unified scope
   _notify(): void;
   _run(): void;
   dispose(): void;
+  subscribe?: (listener: () => void) => () => void;
 }
 
 // State flags
