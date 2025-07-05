@@ -6,6 +6,7 @@ import { createUnifiedScope } from './scope';
 import { createComputedScope } from './computed';
 import { createEffectScope } from './effect';
 import { createScopedSignalFactory, setGlobalCurrentComputed, getGlobalCurrentComputed, getGlobalVersion as getGlobalVersionFromSignal, resetGlobalTracking } from './signal';
+import { resetNodePool } from './node-pool';
 
 // Create a test instance
 export function createTestInstance() {
@@ -68,4 +69,6 @@ export function resetGlobalState() {
   defaultInstance = createTestInstance();
   // CRITICAL: Also reset the actual global variables
   resetGlobalTracking();
+  // Reset the node pool for test isolation
+  resetNodePool();
 }

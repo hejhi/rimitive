@@ -4,6 +4,7 @@ import type { Computed, DependencyNode } from './types';
 import { NOTIFIED, OUTDATED, RUNNING, DISPOSED, TRACKING, IS_COMPUTED } from './types';
 import type { UnifiedScope } from './scope';
 import { setGlobalCurrentComputed, getGlobalCurrentComputed, getGlobalVersion } from './signal';
+import { acquireNode, releaseNode } from './node-pool';
 
 // Computed constructor
 function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
@@ -52,14 +53,15 @@ Object.defineProperty(Computed.prototype, 'value', {
         }
         
         if (!node) {
-          // Create new dependency node
-          const newNode: DependencyNode = {
-            source: this,
-            target: current,
-            version: this._version,
-            nextSource: current._sources,
-            nextTarget: this._targets,
-          };
+          // Create new dependency node using pool
+          const newNode = acquireNode();
+          newNode.source = this;
+          newNode.target = current;
+          newNode.version = this._version;
+          newNode.nextSource = current._sources;
+          newNode.nextTarget = this._targets;
+          newNode.prevSource = undefined;
+          newNode.prevTarget = undefined;
           
           if (current._sources) {
             current._sources.prevSource = newNode;
@@ -135,6 +137,9 @@ function cleanupSources(computed: Computed): void {
       if (nextTarget !== undefined) {
         nextTarget.prevTarget = prevTarget;
       }
+      
+      // Return node to pool
+      releaseNode(node);
     } else {
       // This node was re-used, keep it
       prev = node;
@@ -248,8 +253,10 @@ Computed.prototype.dispose = function(): void {
   if (!(this._flags & DISPOSED)) {
     this._flags |= DISPOSED;
     
-    // Clear all sources
+    // Clear all sources and return nodes to pool
     let node = this._sources;
+    const nodesToRelease: DependencyNode[] = [];
+    
     while (node) {
       const next = node.nextSource;
       const source = node.source;
@@ -265,8 +272,15 @@ Computed.prototype.dispose = function(): void {
       if (nextTarget) {
         nextTarget.prevTarget = prevTarget;
       }
-
+      
+      // Collect node for batch release
+      nodesToRelease.push(node);
       node = next;
+    }
+    
+    // Batch release for better performance
+    for (const nodeToRelease of nodesToRelease) {
+      releaseNode(nodeToRelease);
     }
     
     this._sources = undefined;

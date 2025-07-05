@@ -4,6 +4,7 @@ import type { Effect, DependencyNode } from './types';
 import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
 import type { UnifiedScope } from './scope';
 import { setGlobalCurrentComputed, getGlobalCurrentComputed } from './signal';
+import { releaseNode } from './node-pool';
 
 // Effect constructor
 function EffectImpl(this: Effect, fn: () => void) {
@@ -106,6 +107,9 @@ Effect.prototype._run = function(): void {
         if (nextTarget) {
           nextTarget.prevTarget = prevTarget;
         }
+        
+        // Return node to pool
+        releaseNode(node);
       } else {
         prev = node;
       }
@@ -137,6 +141,9 @@ Effect.prototype.dispose = function(): void {
       if (nextTarget) {
         nextTarget.prevTarget = prevTarget;
       }
+      
+      // Return node to pool
+      releaseNode(node);
 
       node = next;
     }

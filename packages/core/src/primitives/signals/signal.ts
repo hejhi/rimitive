@@ -1,8 +1,9 @@
 // Simplified Signal implementation - bare metal
 
-import type { Signal, DependencyNode, Computed, Effect } from './types';
+import type { Signal, Computed, Effect } from './types';
 import { RUNNING } from './types';
 import type { UnifiedScope } from './scope';
+import { acquireNode } from './node-pool';
 
 // Global tracking state - eliminates scope lookup in hot path
 let globalCurrentComputed: Computed | Effect | null = null;
@@ -51,14 +52,15 @@ Object.defineProperty(Signal.prototype, 'value', {
       node = node.nextSource;
     }
     
-    // Create new dependency node
-    const newNode: DependencyNode = {
-      source: this,
-      target: current,
-      version: this._version,
-      nextSource: current._sources,
-      nextTarget: this._targets,
-    };
+    // Create new dependency node using pool
+    const newNode = acquireNode();
+    newNode.source = this;
+    newNode.target = current;
+    newNode.version = this._version;
+    newNode.nextSource = current._sources;
+    newNode.nextTarget = this._targets;
+    newNode.prevSource = undefined;
+    newNode.prevTarget = undefined;
     
     if (current._sources) {
       current._sources.prevSource = newNode;
