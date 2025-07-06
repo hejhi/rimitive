@@ -4,7 +4,7 @@ import type { Effect, DependencyNode } from './types';
 import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
 import {
   setGlobalCurrentComputed,
-  getGlobalCurrentComputed,
+  globalCurrentComputed,
   isInBatch,
   startGlobalBatch,
   endGlobalBatch,
@@ -74,7 +74,7 @@ Effect.prototype._run = function (): void {
     node = node.nextSource;
   }
 
-  const prevComputed = getGlobalCurrentComputed();
+  const prevComputed = globalCurrentComputed;
   setGlobalCurrentComputed(this);
 
   try {

@@ -5,7 +5,7 @@ import { RUNNING } from './types';
 import { acquireNode } from './node-pool';
 
 // Global tracking state - eliminates scope lookup in hot path
-let globalCurrentComputed: Computed | Effect | null = null;
+export let globalCurrentComputed: Computed | Effect | null = null;
 let globalVersion = 0;
 
 // Global batch state - eliminates scope lookup for batching
@@ -133,10 +133,6 @@ export function setGlobalCurrentComputed(
   computed: Computed | Effect | null
 ): void {
   globalCurrentComputed = computed;
-}
-
-export function getGlobalCurrentComputed(): Computed | Effect | null {
-  return globalCurrentComputed;
 }
 
 export function getGlobalVersion(): number {

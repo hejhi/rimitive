@@ -11,7 +11,7 @@ import {
 } from './types';
 import {
   setGlobalCurrentComputed,
-  getGlobalCurrentComputed,
+  globalCurrentComputed,
   getGlobalVersion,
 } from './signal';
 import { acquireNode, releaseNode } from './node-pool';
@@ -37,7 +37,7 @@ const Computed = ComputedImpl as unknown as {
 // Value property - hot path optimized
 Object.defineProperty(Computed.prototype, 'value', {
   get(this: Computed) {
-    const current = getGlobalCurrentComputed();
+    const current = globalCurrentComputed;
 
     // Track this computed as dependency if needed
     if (current && current._flags & RUNNING) {
@@ -213,7 +213,7 @@ Computed.prototype._refresh = function (): boolean {
   }
 
   // Recompute needed
-  const prevComputed = getGlobalCurrentComputed();
+  const prevComputed = globalCurrentComputed;
   try {
     prepareSources(this);
     setGlobalCurrentComputed(this);

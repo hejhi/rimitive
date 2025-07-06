@@ -5,24 +5,29 @@ import type { Signal, Computed, Effect } from './types';
 import { createUnifiedScope } from './scope';
 import { createComputedScope } from './computed';
 import { createEffectScope } from './effect';
-import { 
-  createScopedSignalFactory, 
-  setGlobalCurrentComputed, 
-  getGlobalCurrentComputed, 
-  getGlobalVersion as getGlobalVersionFromSignal, 
+import {
+  createScopedSignalFactory,
+  setGlobalCurrentComputed,
+  globalCurrentComputed,
+  getGlobalVersion as getGlobalVersionFromSignal,
   resetGlobalTracking,
   getGlobalBatchDepth,
   startGlobalBatch,
   endGlobalBatch,
   getGlobalBatchedEffects,
-  setGlobalBatchedEffects
+  setGlobalBatchedEffects,
 } from './signal';
 import { resetNodePool } from './node-pool';
 
 // Create a test instance
 export function createTestInstance() {
   const scope = createUnifiedScope();
-  const { signal: createSignal, writeSignal, peek, untrack } = createScopedSignalFactory();
+  const {
+    signal: createSignal,
+    writeSignal,
+    peek,
+    untrack,
+  } = createScopedSignalFactory();
   const { effect: createEffect } = createEffectScope();
   const { computed: createComputed } = createComputedScope();
 
@@ -32,31 +37,37 @@ export function createTestInstance() {
     writeSignal,
     peek,
     untrack,
-    
+
     // Computed functions
     computed: createComputed,
-    
+
     // Effect functions
     effect: createEffect,
-    
+
     // Batch functions - now use global state
     batch: (fn: () => void) => scope.batch(fn),
     startBatch: () => startGlobalBatch(),
-    endBatch: () => { if (getGlobalBatchDepth() > 0) endGlobalBatch(); },
+    endBatch: () => {
+      if (getGlobalBatchDepth() > 0) endGlobalBatch();
+    },
     getBatchDepth: () => getGlobalBatchDepth(),
     hasPendingEffects: () => getGlobalBatchedEffects() !== null,
-    clearBatch: () => { 
+    clearBatch: () => {
       setGlobalBatchedEffects(null);
       // Reset batch depth safely
       while (getGlobalBatchDepth() > 0) {
         endGlobalBatch();
       }
     },
-    
+
     // Scope functions - use global functions
-    setCurrentComputed: (computed: Computed | Effect | null) => { setGlobalCurrentComputed(computed); },
-    getCurrentComputed: () => getGlobalCurrentComputed(),
-    resetGlobalState: () => { resetGlobalTracking(); },
+    setCurrentComputed: (computed: Computed | Effect | null) => {
+      setGlobalCurrentComputed(computed);
+    },
+    getCurrentComputed: () => globalCurrentComputed,
+    resetGlobalState: () => {
+      resetGlobalTracking();
+    },
     getGlobalVersion: () => getGlobalVersionFromSignal(),
   };
 }
@@ -66,18 +77,24 @@ let defaultInstance = createTestInstance();
 
 // Export all functions from default instance - use getters to always get current instance
 export const signal = <T>(value: T): Signal<T> => defaultInstance.signal(value);
-export const writeSignal = <T>(signal: Signal<T>, value: T): void => defaultInstance.writeSignal(signal, value);
+export const writeSignal = <T>(signal: Signal<T>, value: T): void =>
+  defaultInstance.writeSignal(signal, value);
 export const peek = <T>(signal: Signal<T>): T => defaultInstance.peek(signal);
 export const untrack = <T>(fn: () => T): T => defaultInstance.untrack(fn);
-export const computed = <T>(fn: () => T): Computed<T> => defaultInstance.computed(fn);
-export const effect = (fn: () => void): (() => void) => defaultInstance.effect(fn);
-export const batch = (...args: Parameters<typeof defaultInstance.batch>) => defaultInstance.batch(...args);
+export const computed = <T>(fn: () => T): Computed<T> =>
+  defaultInstance.computed(fn);
+export const effect = (fn: () => void): (() => void) =>
+  defaultInstance.effect(fn);
+export const batch = (...args: Parameters<typeof defaultInstance.batch>) =>
+  defaultInstance.batch(...args);
 export const startBatch = () => defaultInstance.startBatch();
 export const endBatch = () => defaultInstance.endBatch();
 export const getBatchDepth = () => defaultInstance.getBatchDepth();
 export const hasPendingEffects = () => defaultInstance.hasPendingEffects();
 export const clearBatch = () => defaultInstance.clearBatch();
-export const setCurrentComputed = (...args: Parameters<typeof defaultInstance.setCurrentComputed>) => defaultInstance.setCurrentComputed(...args);
+export const setCurrentComputed = (
+  ...args: Parameters<typeof defaultInstance.setCurrentComputed>
+) => defaultInstance.setCurrentComputed(...args);
 export const getCurrentComputed = () => defaultInstance.getCurrentComputed();
 export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 
