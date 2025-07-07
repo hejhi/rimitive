@@ -5,7 +5,7 @@
  * enabling proper composition and isolation between component trees.
  */
 
-import type { ComponentContext, SignalState, Signal } from './types';
+import type { ComponentContext, SignalState, Signal, SetState } from './types';
 import { createLatticeContext } from './context';
 
 /**
@@ -39,35 +39,38 @@ export function createComponent<State extends object>(
   });
 
   // Create set function for batch updates only
-  const set = (
-    store: SignalState<State>,
-    updates: Partial<State> | ((current: State) => Partial<State>)
+  const set: SetState = <S>(
+    store: SignalState<S>,
+    updates: Partial<S> | ((current: S) => Partial<S>)
   ): void => {
-    // Only handle batch updates on the store
-    if (store !== stateSignals) {
+    // Only handle batch updates on the component's own store
+    if ((store as unknown) !== stateSignals) {
       throw new Error('set() can only be called on the component store');
     }
 
+    // Type assertion is safe because we verified store === stateSignals
+    const typedStore = store as unknown as SignalState<State>;
+
     // Batch update - update multiple signals at once
-    lattice._batch(() => {
+    lattice.batch(() => {
       // Get current state from all signals
       const currentState = {} as State;
-      (Object.keys(stateSignals) as (keyof State)[]).forEach((key) => {
-        currentState[key] = stateSignals[key].value;
+      (Object.keys(typedStore) as (keyof State)[]).forEach((key) => {
+        currentState[key] = typedStore[key].value;
       });
 
       // Calculate new state
       const newState =
         typeof updates === 'function'
-          ? updates(currentState)
-          : updates;
+          ? (updates as unknown as (current: State) => Partial<State>)(currentState)
+          : updates as unknown as Partial<State>;
 
       // Update each changed signal
       (
         Object.entries(newState) as [keyof State, State[keyof State]][]
       ).forEach(([key, value]) => {
-        if (key in stateSignals && !Object.is(stateSignals[key].value, value)) {
-          stateSignals[key].value = value;
+        if (key in typedStore && !Object.is(typedStore[key].value, value)) {
+          typedStore[key].value = value;
         }
       });
     });
@@ -79,7 +82,8 @@ export function createComponent<State extends object>(
     signal: lattice.signal,
     computed: lattice.computed,
     effect: lattice.effect,
-    set: set as ComponentContext<State>['set'],
+    batch: lattice.batch,
+    set,
   };
 
   return context;

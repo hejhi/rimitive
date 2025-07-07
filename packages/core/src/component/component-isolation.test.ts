@@ -95,7 +95,7 @@ describe('Component Isolation', () => {
     expect(compute2Count).toBe(1);
 
     // Batch updates in context 1
-    context1._batch(() => {
+    context1.batch(() => {
       signal1a.value = 10;
       signal1b.value = 20;
     });
@@ -107,7 +107,7 @@ describe('Component Isolation', () => {
     expect(compute2Count).toBe(1);
 
     // Batch updates in context 2
-    context2._batch(() => {
+    context2.batch(() => {
       signal2a.value = 30;
       signal2b.value = 40;
     });

@@ -11,9 +11,7 @@ import { createSignalFactory } from '../primitives/signals/lattice-integration';
 /**
  * Creates a scoped lattice context for a component tree
  */
-export function createLatticeContext(): Omit<LatticeContext, 'set'> & {
-  _batch: (fn: () => void) => void;
-} {
+export function createLatticeContext(): LatticeContext {
   // Create bound factory functions using signals
   const scoped = createSignalFactory();
 
@@ -21,7 +19,6 @@ export function createLatticeContext(): Omit<LatticeContext, 'set'> & {
     signal: scoped.signal,
     computed: scoped.computed,
     effect: scoped.effect,
-    // Internal method for store integration - use signal batch
-    _batch: scoped.batch,
+    batch: scoped.batch,
   };
 }

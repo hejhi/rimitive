@@ -95,7 +95,7 @@ export interface LatticeContext {
   signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(computeFn: () => T) => Computed<T>;
   effect: (effectFn: () => void | (() => void)) => () => void;
-  set: SetState;
+  batch: (fn: () => void) => void;
 }
 
 /**
@@ -104,6 +104,7 @@ export interface LatticeContext {
  */
 export interface ComponentContext<State> extends LatticeContext {
   store: SignalState<State>;
+  set: SetState;
 }
 
 /**
