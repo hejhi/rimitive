@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resetGlobalState } from './test-setup';
-import { signal, computed, set } from './index';
+import { signal, computed } from './index';
 
 describe('select', () => {
   beforeEach(() => {
@@ -26,19 +26,19 @@ describe('select', () => {
     // Update first todo - should NOT trigger
     const newTodos1 = [...todos.value];
     newTodos1[0] = { id: 1, text: 'Task 1', done: true };
-    set(todos, newTodos1);
+    todos.value = newTodos1;
     expect(subscribeCount).toBe(0);
     
     // Update second todo - SHOULD trigger
     const newTodos2 = [...todos.value];
     newTodos2[1] = { id: 2, text: 'Task 2', done: true };
-    set(todos, newTodos2);
+    todos.value = newTodos2;
     expect(subscribeCount).toBe(1);
     
     // Update third todo - should NOT trigger
     const newTodos3 = [...todos.value];
     newTodos3[2] = { id: 3, text: 'Task 3', done: true };
-    set(todos, newTodos3);
+    todos.value = newTodos3;
     expect(subscribeCount).toBe(1);
   });
 
@@ -59,21 +59,21 @@ describe('select', () => {
     userTheme.subscribe(() => themeCount++);
     
     // Update name - only name subscription fires
-    set(state, {
+    state.value = {
       ...state.value,
       user: { ...state.value.user, name: 'Jane' }
-    });
+    };
     expect(nameCount).toBe(1);
     expect(themeCount).toBe(0);
     
     // Update theme - only theme subscription fires
-    set(state, {
+    state.value = {
       ...state.value,
       user: { 
         ...state.value.user, 
         settings: { theme: 'light' } 
       }
-    });
+    };
     expect(nameCount).toBe(1);
     expect(themeCount).toBe(1);
   });
@@ -101,13 +101,13 @@ describe('select', () => {
     
     // Mark first todo as done - should trigger (different first done todo)
     const todo1Done = { ...todo1, done: true };
-    set(todosSignal, [todo1Done, todo2, todo3]);
+    todosSignal.value = [todo1Done, todo2, todo3];
     expect(firstDoneCount).toBe(1);
     expect(firstDone.value).toBe(todo1Done); // Now todo1 is first done
     
     // Update todo3 - should NOT trigger (first done todo still todo1Done)
     const todo3Updated = { ...todo3, text: 'Task 3 Updated' };
-    set(todosSignal, [todo1Done, todo2, todo3Updated]);
+    todosSignal.value = [todo1Done, todo2, todo3Updated];
     expect(firstDoneCount).toBe(1); // No change to first done todo
   });
 
@@ -121,11 +121,11 @@ describe('select', () => {
     config.subscribe(() => configCount++);
     
     // Same object reference - no trigger
-    set(state, { ...state.value, config: state.value.config });
+    state.value = { ...state.value, config: state.value.config };
     expect(configCount).toBe(0);
     
     // New object with same values - DOES trigger
-    set(state, { ...state.value, config: { theme: 'dark', fontSize: 14 } });
+    state.value = { ...state.value, config: { theme: 'dark', fontSize: 14 } };
     expect(configCount).toBe(1);
   });
   
@@ -149,7 +149,7 @@ describe('select', () => {
     // Update first user's level
     const users = [...state.value.users];
     users[0] = { ...users[0]!, role: { ...users[0]!.role, level: 2 } };
-    set(state, { ...state.value, users });
+    state.value = { ...state.value, users };
     
     expect(levelCount).toBe(1);
     expect(firstUserLevel.value).toBe(2);

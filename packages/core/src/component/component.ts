@@ -65,7 +65,7 @@ export function createComponent<State extends object>(
           Object.entries(newState) as [keyof State, State[keyof State]][]
         ).forEach(([key, value]) => {
           if (key in stateSignals && !Object.is(stateSignals[key].value, value)) {
-            lattice.set(stateSignals[key], value);
+            stateSignals[key].value = value;
           }
         });
       });
@@ -76,7 +76,7 @@ export function createComponent<State extends object>(
     const signal = target as Signal<unknown>;
     const currentValue = signal.value;
     const newValue = applyUpdate(currentValue, updates);
-    lattice.set(signal, newValue);
+    signal.value = newValue;
   }) as SetState;
 
   // Create component context with merged functionality

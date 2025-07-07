@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, computed, effect, set } from './index';
+import { signal, computed, effect } from './index';
 import { getPoolStats, resetNodePool } from './node-pool';
 
 describe('Node Pool Performance', () => {
@@ -87,7 +87,7 @@ describe('Node Pool Performance', () => {
     
     // Update source multiple times
     for (let i = 0; i < 100; i++) {
-      set(source, i);
+      source.value = i;
       void final.value;
     }
     

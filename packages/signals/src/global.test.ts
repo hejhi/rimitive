@@ -5,7 +5,7 @@ import {
   computed,
   effect,
   signal,
-  writeSignal,
+  
   resetGlobalState,
 } from './test-setup';
 
@@ -41,12 +41,12 @@ describe('Global State Management', () => {
       expect(computeCount).toBe(1);
 
       // Change s1 - should increment global version
-      writeSignal(s1, 10);
+      s1.value = 10;
       expect(c.value).toBe(12);
       expect(computeCount).toBe(2);
 
       // Change s2 - should increment global version again
-      writeSignal(s2, 20);
+      s2.value = 20;
       expect(c.value).toBe(30);
       expect(computeCount).toBe(3);
     });
@@ -73,7 +73,7 @@ describe('Global State Management', () => {
       expect(compute2Count).toBe(1);
 
       // Change signal - both computeds should know something changed globally
-      writeSignal(s, 5);
+      s.value = 5;
       expect(c1.value).toBe(10);
       expect(c2.value).toBe(15);
       expect(compute1Count).toBe(2);
@@ -208,7 +208,7 @@ describe('Global State Management', () => {
       expect(capturedDuring).toBe(c);
 
       // Execution with error
-      writeSignal(s, 10);
+      s.value = 10;
       capturedBefore = getCurrentComputed();
 
       expect(() => c.value).toThrow('Test error');
@@ -262,9 +262,9 @@ describe('Global State Management', () => {
 
       // Trigger some version increments
       void c.value;
-      writeSignal(s, 2);
-      writeSignal(s, 3);
-      writeSignal(s, 4);
+      s.value = 2;
+      s.value = 3;
+      s.value = 4;
 
       // Reset
       resetGlobalState();
@@ -296,7 +296,7 @@ describe('Global State Management', () => {
       resetGlobalState();
 
       // Existing reactive values should still work
-      writeSignal(s, 10);
+      s.value = 10;
       expect(c.value).toBe(30);
     });
   });
@@ -314,7 +314,7 @@ describe('Global State Management', () => {
       expect(combined.value).toBe(12); // (1+2+3) + (1*2*3) = 6 + 6 = 12
 
       // Change one signal
-      writeSignal(a, 2);
+      a.value = 2;
       expect(combined.value).toBe(19); // (2+2+3) + (2*2*3) = 7 + 12 = 19
     });
 
@@ -329,13 +329,13 @@ describe('Global State Management', () => {
 
       expect(effectCount).toBe(1);
 
-      writeSignal(s, 1);
+      s.value = 1;
       expect(effectCount).toBe(2);
 
       dispose();
 
       // After disposal, changes shouldn't trigger effect
-      writeSignal(s, 2);
+      s.value = 2;
       expect(effectCount).toBe(2);
 
       // Global state should be clean
@@ -365,7 +365,7 @@ describe('Global State Management', () => {
       values.length = 0;
 
       // Update source
-      writeSignal(source, 2);
+      source.value = 2;
 
       // All computeds should recompute on next access
       computeds.forEach((c, i) => {

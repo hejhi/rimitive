@@ -165,20 +165,31 @@ Effect.prototype.subscribe = function () {
   return () => {};
 };
 
-export type EffectScope = {
-  effect: (fn: () => void) => () => void;
-};
+// Direct export instead of factory pattern
+export function effect(effectFn: () => void | (() => void)): () => void {
+  let cleanupFn: (() => void) | void;
 
-export function createEffectScope(): EffectScope {
-  function effect(fn: () => void): () => void {
-    const e = new Effect(fn);
+  const e = new Effect(() => {
+    // Run previous cleanup if exists
+    if (cleanupFn && typeof cleanupFn === 'function') {
+      cleanupFn();
+    }
 
-    // Run immediately
-    e._run();
+    // Run effect and capture new cleanup
+    cleanupFn = effectFn();
+  });
 
-    // Return dispose function
-    return () => e.dispose();
-  }
+  // Run immediately
+  e._run();
 
-  return { effect };
+  // Return dispose function that also runs final cleanup
+  return () => {
+    e.dispose();
+    if (cleanupFn && typeof cleanupFn === 'function') {
+      cleanupFn();
+    }
+  };
 }
+
+// Export Effect constructor for external use
+export { Effect };

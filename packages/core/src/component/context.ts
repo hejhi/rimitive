@@ -5,13 +5,13 @@
  * eliminating global state conflicts and enabling proper composition.
  */
 
-import type { LatticeContext, SetState } from './types';
+import type { LatticeContext } from './types';
 import { createSignalFactory } from '../primitives/signals/lattice-integration';
 
 /**
  * Creates a scoped lattice context for a component tree
  */
-export function createLatticeContext(): LatticeContext & {
+export function createLatticeContext(): Omit<LatticeContext, 'set'> & {
   _batch: (fn: () => void) => void;
 } {
   // Create bound factory functions using signals
@@ -21,7 +21,6 @@ export function createLatticeContext(): LatticeContext & {
     signal: scoped.signal,
     computed: scoped.computed,
     effect: scoped.effect,
-    set: scoped.set as SetState,
     // Internal method for store integration - use signal batch
     _batch: scoped.batch,
   };

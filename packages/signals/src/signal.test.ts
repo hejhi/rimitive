@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, peek, untrack, writeSignal, computed, effect, batch, resetGlobalState } from './test-setup';
+import { signal, peek, untrack, computed, effect, batch, resetGlobalState } from './test-setup';
 
 describe('signal', () => {
   beforeEach(() => {
@@ -14,27 +14,27 @@ describe('signal', () => {
 
   it('should update signal value', () => {
     const s = signal(5);
-    writeSignal(s, 10);
+    s.value = 10;
     expect(s.value).toBe(10);
   });
 
-  it('should update signal value with writeSignal', () => {
+  it('should update signal value with direct assignment', () => {
     const s = signal(5);
-    writeSignal(s, 10);
+    s.value = 10;
     expect(s.value).toBe(10);
   });
 
   it('should not trigger updates when value is same', () => {
     const s = signal(5);
     const initialVersion = s._version;
-    writeSignal(s, 5);
+    s.value = 5;
     expect(s._version).toBe(initialVersion);
   });
 
   it('should increment version on value change', () => {
     const s = signal(5);
     const initialVersion = s._version;
-    writeSignal(s, 10);
+    s.value = 10;
     expect(s._version).toBe(initialVersion + 1);
   });
 
@@ -45,10 +45,10 @@ describe('signal', () => {
     expect(s1.value).toBe(null);
     expect(s2.value).toBe(undefined);
     
-    writeSignal(s1, 42);
+    s1.value = 42;
     expect(s1.value).toBe(42);
     
-    writeSignal(s1, null);
+    s1.value = null;
     expect(s1.value).toBe(null);
   });
 
@@ -60,11 +60,11 @@ describe('signal', () => {
     const initialVersion = s._version;
     
     // Same reference, no update
-    writeSignal(s, obj1);
+    s.value = obj1;
     expect(s._version).toBe(initialVersion);
     
     // Different reference, triggers update
-    writeSignal(s, obj2);
+    s.value = obj2;
     expect(s._version).toBe(initialVersion + 1);
   });
 
@@ -92,7 +92,7 @@ describe('signal', () => {
     expect(double.value).toBe(20);
     expect(computeCount).toBe(1);
     
-    writeSignal(source, 5);
+    source.value = 5;
     expect(double.value).toBe(10);
     expect(computeCount).toBe(2);
   });
@@ -112,12 +112,12 @@ describe('signal', () => {
       expect(computeCount).toBe(1);
       
       // Changing b should not trigger recompute
-      writeSignal(b, 20);
+      b.value = 20;
       expect(result.value).toBe(15); // Still using old value
       expect(computeCount).toBe(1);
       
       // Changing a should trigger recompute
-      writeSignal(a, 10);
+      a.value = 10;
       expect(result.value).toBe(30); // Now picks up new b value
       expect(computeCount).toBe(2);
     });
@@ -138,12 +138,12 @@ describe('signal', () => {
       expect(computeCount).toBe(1);
       
       // Changing b should not trigger recompute
-      writeSignal(b, 20);
+      b.value = 20;
       expect(result.value).toBe(15);
       expect(computeCount).toBe(1);
       
       // Changing a should trigger recompute and pick up new b
-      writeSignal(a, 10);
+      a.value = 10;
       expect(result.value).toBe(30);
       expect(computeCount).toBe(2);
     });
@@ -182,9 +182,9 @@ describe('signal', () => {
       expect(effectRuns).toBe(1);
       
       batch(() => {
-        writeSignal(s, 1);
-        writeSignal(s, 2);
-        writeSignal(s, 3);
+        s.value = 1;
+        s.value = 2;
+        s.value = 3;
         expect(effectRuns).toBe(1); // Not run yet
       });
       
@@ -207,13 +207,13 @@ describe('signal', () => {
       expect(computeCount).toBe(1);
       
       // New array reference triggers update
-      writeSignal(arr, [1, 2, 3, 4]);
+      arr.value = [1, 2, 3, 4];
       expect(sum.value).toBe(10);
       expect(computeCount).toBe(2);
       
       // Same array reference doesn't trigger
       const current = arr.value;
-      writeSignal(arr, current);
+      arr.value = current;
       expect(computeCount).toBe(2);
     });
   });
@@ -231,7 +231,7 @@ describe('signal', () => {
       });
       
       // Update should propagate to all
-      writeSignal(source, 2);
+      source.value = 2;
       computeds.forEach((c, i) => {
         expect(c.value).toBe(2 * (i + 1));
       });
@@ -246,7 +246,7 @@ describe('signal', () => {
       
       expect(b.value).toBe(2);
       
-      writeSignal(a, 5);
+      a.value = 5;
       // For now, just verify the computed tracks its dependencies
       expect(a._targets).toBeDefined();
     });

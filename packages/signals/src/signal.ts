@@ -98,29 +98,75 @@ Signal.prototype._refresh = function (): boolean {
   return true;
 };
 
-// Prototype methods are added in index.ts
-
-export function createScopedSignalFactory() {
-  function signal<T>(value: T): Signal<T> {
-    const s = new Signal(value);
-    return s;
+// Set method for updating nested values
+Signal.prototype.set = function <T>(
+  this: Signal<T>,
+  key: unknown,
+  value: unknown
+): void {
+  if (Array.isArray(this._value)) {
+    // For arrays, create new array with updated element
+    const arr = [...this._value];
+    const index = key as number;
+    arr[index] = value;
+    this.value = arr as T;
+  } else if (typeof this._value === 'object' && this._value !== null) {
+    // For objects, use spread
+    const objKey = key as keyof T;
+    this.value = { ...this._value, [objKey]: value } as T;
   }
+};
 
-  function writeSignal<T>(signal: Signal<T>, value: T): void {
-    signal.value = value;
+// Patch method for partial updates
+Signal.prototype.patch = function <T>(
+  this: Signal<T>,
+  key: unknown,
+  partial: unknown
+): void {
+  if (Array.isArray(this._value)) {
+    // For arrays, patch element at index
+    const arr = [...this._value];
+    const index = key as number;
+    const current = arr[index];
+    arr[index] =
+      typeof current === 'object' && current !== null
+        ? { ...current, ...(partial as object) }
+        : partial;
+    this.value = arr as T;
+  } else if (typeof this._value === 'object' && this._value !== null) {
+    // For objects, patch property
+    const objKey = key as keyof T;
+    const current = this._value[objKey];
+    this.value = {
+      ...this._value,
+      [objKey]:
+        typeof current === 'object' && current !== null
+          ? { ...current, ...(partial as object) }
+          : partial,
+    } as T;
   }
+};
 
-  function untrack<T>(fn: () => T): T {
-    const prev = globalCurrentComputed;
-    globalCurrentComputed = null;
-    try {
-      return fn();
-    } finally {
-      globalCurrentComputed = prev;
-    }
+// Additional prototype methods (subscribe, select) are added in index.ts
+
+// Direct exports instead of factory pattern
+export function signal<T>(value: T): Signal<T> {
+  return new Signal(value);
+}
+
+
+export function untrack<T>(fn: () => T): T {
+  const prev = globalCurrentComputed;
+  globalCurrentComputed = null;
+  try {
+    return fn();
+  } finally {
+    globalCurrentComputed = prev;
   }
+}
 
-  return { signal, writeSignal, peek, untrack };
+export function peek<T>(signal: Signal<T>): T {
+  return signal._value;
 }
 
 // Export for use by computed and effect
@@ -152,10 +198,6 @@ export function setGlobalBatchedEffects(effects: Effect | null): void {
 export function addEffectToBatch(effect: Effect): void {
   effect._nextBatchedEffect = globalBatchedEffects || undefined;
   globalBatchedEffects = effect;
-}
-
-export function peek<T>(signal: Signal<T>): T {
-  return signal._value;
 }
 
 // Export the Signal constructor for prototype extensions

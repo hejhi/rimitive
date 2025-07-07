@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, computed, set } from './index';
+import { signal, computed } from './index';
 import { resetGlobalState } from './test-setup';
 
 describe('select from computed', () => {
@@ -36,7 +36,10 @@ describe('select from computed', () => {
     expect(completedTodos.value).toHaveLength(3); // Now 3 completed
     
     // Mark todo 1 as done with priority 0 - changes first completed!
-    todos.set(0, { ...todos.value[0]!, done: true, priority: 0 });
+    todos.value = [
+      { ...todos.value[0]!, done: true, priority: 0 },
+      ...todos.value.slice(1)
+    ];
     
     expect(firstCompletedCount).toBe(1); // Changed!
     expect(firstCompleted.value).toEqual({ id: 1, text: 'Task 1', done: true, priority: 0 });
@@ -124,7 +127,7 @@ describe('select from computed', () => {
       assignee: 'John', 
       due: '2024-01-10' 
     };
-    set(tasks, [...tasks.value, urgentTask]);
+    tasks.value = [...tasks.value, urgentTask];
     
     expect(nextTaskCount).toBe(2); // Next task changed again
     expect(johnsNextTask.value?.text).toBe('Hotfix'); // Most urgent
@@ -163,7 +166,11 @@ describe('select from computed', () => {
     expect(leader.value?.name).toBe('Charlie'); // New leader
     
     // Bob becomes active with score 200
-    users.set(1, { ...users.value[1]!, active: true, score: 200 });
+    users.value = [
+      users.value[0]!,
+      { ...users.value[1]!, active: true, score: 200 },
+      ...users.value.slice(2)
+    ];
     
     expect(leaderCount).toBe(2); // Leader changed again
     expect(leader.value?.name).toBe('Bob'); // Bob is now leader

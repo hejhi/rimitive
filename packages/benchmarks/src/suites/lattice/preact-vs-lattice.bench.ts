@@ -15,7 +15,6 @@ import {
   signal as latticeSignal,
   computed as latticeComputed,
   batch as latticeBatch,
-  set as latticeSet,
 } from '@lattice/signals';
 
 const ITERATIONS = 10000;
@@ -39,14 +38,6 @@ describe('Single Signal Updates', () => {
     }
   });
 
-  bench('Lattice - single signal (set)', () => {
-    const count = latticeSignal(0);
-
-    for (let i = 0; i < ITERATIONS; i++) {
-      latticeSet(count, i);
-      void count.value; // Read
-    }
-  });
 });
 
 describe('Computed Chain (a → b → c)', () => {
@@ -78,7 +69,7 @@ describe('Computed Chain (a → b → c)', () => {
     const c = latticeComputed(() => b.value * 2);
 
     for (let i = 0; i < ITERATIONS; i++) {
-      latticeSet(a, i);
+      a.value = i;
       void c.value; // Force evaluation
     }
   });
@@ -152,7 +143,7 @@ describe('Deep Computed Tree', () => {
     const result = latticeComputed(() => c1.value + c2.value);
 
     for (let i = 0; i < ITERATIONS; i++) {
-      latticeSet(root, i + 1); // Avoid divide by zero
+      root.value = i + 1; // Avoid divide by zero
       void result.value;
     }
   });
@@ -196,7 +187,7 @@ describe('Diamond Pattern', () => {
     const d = latticeComputed(() => b.value + c.value);
 
     for (let i = 0; i < ITERATIONS; i++) {
-      latticeSet(a, i);
+      a.value = i;
       void d.value; // Should compute b and c once each
     }
   });
@@ -243,9 +234,9 @@ describe('Batch Updates', () => {
 
     for (let i = 0; i < ITERATIONS / 10; i++) {
       latticeBatch(() => {
-        latticeSet(s1, i);
-        latticeSet(s2, i * 2);
-        latticeSet(s3, i * 3);
+        s1.value = i;
+        s2.value = i * 2;
+        s3.value = i * 3;
       });
       void sum.value; // Should recompute once per batch
     }
@@ -300,7 +291,7 @@ describe('Large Dependency Graph', () => {
     for (let i = 0; i < ITERATIONS / 100; i++) {
       latticeBatch(() => {
         sigs.forEach((s, idx) => {
-          latticeSet(s, i * (idx + 1));
+          s.value = i * (idx + 1);
         });
       });
       void computed3.value;
@@ -329,7 +320,7 @@ describe('Rapid Updates Without Reads', () => {
     const count = latticeSignal(0);
 
     for (let i = 0; i < ITERATIONS * 2; i++) {
-      latticeSet(count, i);
+      count.value = i;
     }
   });
 });

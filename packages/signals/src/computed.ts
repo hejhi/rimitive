@@ -287,16 +287,9 @@ Computed.prototype.dispose = function (): void {
 
 // Subscribe will be added by the global computed factory
 
-export type ComputedScope = {
-  computed: <T>(fn: () => T) => Computed<T>;
-};
-
-export function createComputedScope(): ComputedScope {
-  function computed<T>(fn: () => T): Computed<T> {
-    return new Computed(fn);
-  }
-
-  return { computed };
+// Direct export instead of factory pattern
+export function computed<T>(fn: () => T): Computed<T> {
+  return new Computed(fn);
 }
 
 // Export the Computed constructor for prototype extensions

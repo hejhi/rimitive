@@ -2,11 +2,13 @@
 // Provides global-like exports for test compatibility while using scoped implementation
 
 import type { Signal, Computed, Effect } from './types';
-import { createComputedScope } from './computed';
-import { createEffectScope } from './effect';
-import { createBatchScope } from './batch';
+import { computed as createComputed } from './computed';
+import { effect as effectFn } from './effect';
+import { batch as batchFn } from './batch';
 import {
-  createScopedSignalFactory,
+  signal as createSignal,
+  peek as peekFn,
+  untrack as untrackFn,
   setGlobalCurrentComputed,
   globalCurrentComputed,
   globalVersion,
@@ -21,31 +23,21 @@ import { resetNodePool } from './node-pool';
 
 // Create a test instance
 export function createTestInstance() {
-  const {
-    signal: createSignal,
-    writeSignal,
-    peek,
-    untrack,
-  } = createScopedSignalFactory();
-  const { effect: createEffect } = createEffectScope();
-  const { computed: createComputed } = createComputedScope();
-  const { batch } = createBatchScope();
 
   return {
     // Signal functions
     signal: createSignal,
-    writeSignal,
-    peek,
-    untrack,
+    peek: peekFn,
+    untrack: untrackFn,
 
     // Computed functions
     computed: createComputed,
 
     // Effect functions
-    effect: createEffect,
+    effect: effectFn,
 
     // Batch functions - now use global state
-    batch,
+    batch: batchFn,
     startBatch: () => startGlobalBatch(),
     endBatch: () => {
       if (globalBatchDepth > 0) endGlobalBatch();
@@ -77,8 +69,6 @@ let defaultInstance = createTestInstance();
 
 // Export all functions from default instance - use getters to always get current instance
 export const signal = <T>(value: T): Signal<T> => defaultInstance.signal(value);
-export const writeSignal = <T>(signal: Signal<T>, value: T): void =>
-  defaultInstance.writeSignal(signal, value);
 export const peek = <T>(signal: Signal<T>): T => defaultInstance.peek(signal);
 export const untrack = <T>(fn: () => T): T => defaultInstance.untrack(fn);
 export const computed = <T>(fn: () => T): Computed<T> =>

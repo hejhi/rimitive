@@ -6,8 +6,7 @@ import {
   computed,
   effect,
   batch,
-  subscribe,
-  set
+  subscribe
 } from '@lattice/signals';
 
 // Create the signal factory for Lattice context
@@ -18,6 +17,5 @@ export function createSignalFactory() {
     batch,
     effect,
     subscribe,
-    set,
   };
 }
