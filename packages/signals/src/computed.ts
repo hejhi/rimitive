@@ -12,7 +12,7 @@ import {
 import {
   setGlobalCurrentComputed,
   globalCurrentComputed,
-  getGlobalVersion,
+  globalVersion,
 } from './signal';
 import { acquireNode, releaseNode } from './node-pool';
 
@@ -188,8 +188,6 @@ Computed.prototype._refresh = function (): boolean {
 
   // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
   // This is the most important optimization for diamond patterns
-  const globalVersion = getGlobalVersion();
-
   // Only use global version optimization if we're not outdated
   if (
     !(this._flags & OUTDATED) &&

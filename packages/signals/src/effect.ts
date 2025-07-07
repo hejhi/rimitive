@@ -9,7 +9,7 @@ import {
   startGlobalBatch,
   endGlobalBatch,
   addEffectToBatch,
-  getGlobalBatchedEffects,
+  globalBatchedEffects,
   setGlobalBatchedEffects,
 } from './signal';
 import { releaseNode } from './node-pool';
@@ -47,7 +47,7 @@ Effect.prototype._notify = function (): void {
     // endGlobalBatch returns true if batch depth reaches 0
     if (!endGlobalBatch()) {
       // Run any effects that were queued during this run
-      let effect = getGlobalBatchedEffects();
+      let effect = globalBatchedEffects;
       if (effect) {
         setGlobalBatchedEffects(null);
         while (effect) {

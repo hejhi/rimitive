@@ -2,26 +2,25 @@
 // Provides global-like exports for test compatibility while using scoped implementation
 
 import type { Signal, Computed, Effect } from './types';
-import { createUnifiedScope } from './scope';
 import { createComputedScope } from './computed';
 import { createEffectScope } from './effect';
+import { createBatchScope } from './batch';
 import {
   createScopedSignalFactory,
   setGlobalCurrentComputed,
   globalCurrentComputed,
-  getGlobalVersion as getGlobalVersionFromSignal,
+  globalVersion,
   resetGlobalTracking,
-  getGlobalBatchDepth,
+  globalBatchDepth,
   startGlobalBatch,
   endGlobalBatch,
-  getGlobalBatchedEffects,
+  globalBatchedEffects,
   setGlobalBatchedEffects,
 } from './signal';
 import { resetNodePool } from './node-pool';
 
 // Create a test instance
 export function createTestInstance() {
-  const scope = createUnifiedScope();
   const {
     signal: createSignal,
     writeSignal,
@@ -30,6 +29,7 @@ export function createTestInstance() {
   } = createScopedSignalFactory();
   const { effect: createEffect } = createEffectScope();
   const { computed: createComputed } = createComputedScope();
+  const { batch } = createBatchScope();
 
   return {
     // Signal functions
@@ -45,17 +45,17 @@ export function createTestInstance() {
     effect: createEffect,
 
     // Batch functions - now use global state
-    batch: (fn: () => void) => scope.batch(fn),
+    batch,
     startBatch: () => startGlobalBatch(),
     endBatch: () => {
-      if (getGlobalBatchDepth() > 0) endGlobalBatch();
+      if (globalBatchDepth > 0) endGlobalBatch();
     },
-    getBatchDepth: () => getGlobalBatchDepth(),
-    hasPendingEffects: () => getGlobalBatchedEffects() !== null,
+    getBatchDepth: () => globalBatchDepth,
+    hasPendingEffects: () => globalBatchedEffects !== null,
     clearBatch: () => {
       setGlobalBatchedEffects(null);
       // Reset batch depth safely
-      while (getGlobalBatchDepth() > 0) {
+      while (globalBatchDepth > 0) {
         endGlobalBatch();
       }
     },
@@ -68,7 +68,7 @@ export function createTestInstance() {
     resetGlobalState: () => {
       resetGlobalTracking();
     },
-    getGlobalVersion: () => getGlobalVersionFromSignal(),
+    getGlobalVersion: () => globalVersion,
   };
 }
 

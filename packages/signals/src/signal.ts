@@ -4,13 +4,11 @@ import type { Signal, Computed, Effect } from './types';
 import { RUNNING } from './types';
 import { acquireNode } from './node-pool';
 
-// Global tracking state - eliminates scope lookup in hot path
+// Global state for quick access via hot paths
 export let globalCurrentComputed: Computed | Effect | null = null;
-let globalVersion = 0;
-
-// Global batch state - eliminates scope lookup for batching
-let globalBatchDepth = 0;
-let globalBatchedEffects: Effect | null = null;
+export let globalVersion = 0;
+export let globalBatchDepth = 0;
+export let globalBatchedEffects: Effect | null = null;
 
 // Signal constructor
 function SignalImpl<T>(this: Signal<T>, value: T) {
@@ -132,10 +130,6 @@ export function setGlobalCurrentComputed(
   globalCurrentComputed = computed;
 }
 
-export function getGlobalVersion(): number {
-  return globalVersion;
-}
-
 export function incrementGlobalVersion(): void {
   globalVersion++;
 }
@@ -145,11 +139,6 @@ export function resetGlobalTracking(): void {
   globalVersion = 0;
   globalBatchDepth = 0;
   globalBatchedEffects = null;
-}
-
-// Batch state exports
-export function getGlobalBatchDepth(): number {
-  return globalBatchDepth;
 }
 
 export function isInBatch(): boolean {
@@ -162,10 +151,6 @@ export function startGlobalBatch(): void {
 
 export function endGlobalBatch(): boolean {
   return --globalBatchDepth === 0;
-}
-
-export function getGlobalBatchedEffects(): Effect | null {
-  return globalBatchedEffects;
 }
 
 export function setGlobalBatchedEffects(effects: Effect | null): void {

@@ -4,15 +4,14 @@ import { createEffectScope } from './effect';
 import { createComputedScope, Computed as ComputedConstructor } from './computed';
 import { createSubscribeScope } from './subscribe';
 import { createSelectFactory } from './select';
-import { createUnifiedScope } from './scope';
-import { set as setValue } from './signal-updates';
+import { createBatchScope } from './batch';
 import type { Signal, Computed, WritableSignal } from './types';
 
-// Create the global scope and factories
-const globalScope = createUnifiedScope();
+// Create the factories
 const { signal: createSignal } = createScopedSignalFactory();
 const { effect: createEffect } = createEffectScope();
 const { computed: createComputed } = createComputedScope();
+const { batch } = createBatchScope();
 
 // Create effect wrapper that handles cleanup
 function effect(effectFn: () => void | (() => void)): () => void {
@@ -102,18 +101,17 @@ export function computed<T>(computeFn: () => T): Computed<T> {
   return createComputed(computeFn);
 }
 
-// Export the batch function from scope
-export const batch = (fn: () => void) => globalScope.batch(fn);
+// Export batch
+export { batch };
 
 // Export set function for updating signals
 export function set<T>(signal: Signal<T> | WritableSignal<T>, value: T): void {
-  setValue(signal, value);
+  (signal as WritableSignal<T>).value = value;
 }
 
 // Re-export other utilities
 export { effect, subscribe };
 export { createSelectFactory, type Selected } from './select';
-export { createScope } from './scope';
 
 // Export types
 export type { 
