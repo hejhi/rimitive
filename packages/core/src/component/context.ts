@@ -6,19 +6,16 @@
  */
 
 import type { LatticeContext } from './types';
-import { createSignalFactory } from '../primitives/signals/lattice-integration';
+import { signal, computed, effect, batch } from '@lattice/signals';
 
 /**
  * Creates a scoped lattice context for a component tree
  */
 export function createLatticeContext(): LatticeContext {
-  // Create bound factory functions using signals
-  const scoped = createSignalFactory();
-
   return {
-    signal: scoped.signal,
-    computed: scoped.computed,
-    effect: scoped.effect,
-    batch: scoped.batch,
+    signal,
+    computed,
+    effect,
+    batch,
   };
 }
