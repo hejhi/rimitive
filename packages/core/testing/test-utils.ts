@@ -31,17 +31,15 @@ export function createTestComponent<State extends object>(initialState: State) {
 // Common test components
 export const CounterComponent = ({
   store,
-  set,
 }: ComponentContext<CounterState>) => ({
   count: store.count,
-  increment: () => set(store.count, store.count.value + 1),
-  reset: () => set(store.count, 0),
+  increment: () => store.count.value = store.count.value + 1,
+  reset: () => store.count.value = 0,
 });
 
 export const NamedCounterComponent = ({
   store,
   computed,
-  set,
 }: ComponentContext<NamedCounterState>) => {
   const doubled = computed(() => store.count.value * 2);
 
@@ -49,9 +47,9 @@ export const NamedCounterComponent = ({
     count: store.count,
     name: store.name,
     doubled,
-    increment: () => set(store.count, store.count.value + 1),
-    reset: () => set(store.count, 0),
-    setName: (n: string) => set(store.name, n),
+    increment: () => store.count.value = store.count.value + 1,
+    reset: () => store.count.value = 0,
+    setName: (n: string) => store.name.value = n,
   };
 };
 

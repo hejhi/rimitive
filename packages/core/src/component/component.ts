@@ -5,9 +5,8 @@
  * enabling proper composition and isolation between component trees.
  */
 
-import type { ComponentContext, SetState, SignalState, Signal } from './types';
+import type { ComponentContext, SignalState, Signal } from './types';
 import { createLatticeContext } from './context';
-import { applyUpdate } from './state-updates';
 
 /**
  * Helper for creating partial updates with structural sharing
@@ -39,45 +38,40 @@ export function createComponent<State extends object>(
     signalToKeyMap.set(stateSignals[key] as Signal<unknown>, key);
   });
 
-  // Create set function that writes directly to signals
-  const set: SetState = ((
-    target: Signal<unknown> | SignalState<State>,
-    updates?: unknown
-  ) => {
-    // Check if it's a batch update on the store
-    if (target === stateSignals) {
-      // Batch update - update multiple signals at once
-      lattice._batch(() => {
-        // Get current state from all signals
-        const currentState = {} as State;
-        (Object.keys(stateSignals) as (keyof State)[]).forEach((key) => {
-          currentState[key] = stateSignals[key].value;
-        });
-
-        // Calculate new state
-        const newState =
-          typeof updates === 'function'
-            ? (updates as (prev: State) => Partial<State>)(currentState)
-            : (updates as Partial<State>);
-
-        // Update each changed signal
-        (
-          Object.entries(newState) as [keyof State, State[keyof State]][]
-        ).forEach(([key, value]) => {
-          if (key in stateSignals && !Object.is(stateSignals[key].value, value)) {
-            stateSignals[key].value = value;
-          }
-        });
-      });
-      return;
+  // Create set function for batch updates only
+  const set = (
+    store: SignalState<State>,
+    updates: Partial<State> | ((current: State) => Partial<State>)
+  ): void => {
+    // Only handle batch updates on the store
+    if (store !== stateSignals) {
+      throw new Error('set() can only be called on the component store');
     }
 
-    // Single signal update
-    const signal = target as Signal<unknown>;
-    const currentValue = signal.value;
-    const newValue = applyUpdate(currentValue, updates);
-    signal.value = newValue;
-  }) as SetState;
+    // Batch update - update multiple signals at once
+    lattice._batch(() => {
+      // Get current state from all signals
+      const currentState = {} as State;
+      (Object.keys(stateSignals) as (keyof State)[]).forEach((key) => {
+        currentState[key] = stateSignals[key].value;
+      });
+
+      // Calculate new state
+      const newState =
+        typeof updates === 'function'
+          ? updates(currentState)
+          : updates;
+
+      // Update each changed signal
+      (
+        Object.entries(newState) as [keyof State, State[keyof State]][]
+      ).forEach(([key, value]) => {
+        if (key in stateSignals && !Object.is(stateSignals[key].value, value)) {
+          stateSignals[key].value = value;
+        }
+      });
+    });
+  };
 
   // Create component context with merged functionality
   const context: ComponentContext<State> = {
@@ -85,7 +79,7 @@ export function createComponent<State extends object>(
     signal: lattice.signal,
     computed: lattice.computed,
     effect: lattice.effect,
-    set,
+    set: set as ComponentContext<State>['set'],
   };
 
   return context;

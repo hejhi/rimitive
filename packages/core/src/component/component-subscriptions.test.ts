@@ -8,12 +8,12 @@ import {
 
 describe('Component Subscriptions', () => {
   it('should support fine-grained subscriptions', () => {
-    const Counter = ({ store, set }: ComponentContext<NamedCounterState>) => {
+    const Counter = ({ store }: ComponentContext<NamedCounterState>) => {
       return {
         count: store.count,
         name: store.name,
-        increment: () => set(store.count, store.count.value + 1),
-        setName: (n: string) => set(store.name, n),
+        increment: () => store.count.value = store.count.value + 1,
+        setName: (n: string) => store.name.value = n,
       };
     };
 
@@ -56,8 +56,7 @@ describe('Component Subscriptions', () => {
         b: store.b,
         sum,
         updateBoth: () => {
-          set(store.a, store.a.value + 1);
-          set(store.b, store.b.value + 1);
+          set(store, { a: store.a.value + 1, b: store.b.value + 1 });
         },
       };
     };
@@ -71,7 +70,7 @@ describe('Component Subscriptions', () => {
     expect(component.sum.value).toBe(5);
 
     // Verify individual updates work too
-    store.set(store.store.a, 10);
+    store.store.a.value = 10;
     expect(component.sum.value).toBe(13); // 10 + 3 (b is still 3 from updateBoth)
   });
 
@@ -136,12 +135,12 @@ describe('Component Subscriptions', () => {
     expect(component.filtered.value).toEqual(['apple', 'banana']);
 
     // Changing filter should trigger update
-    store.set(store.store.filter, 'e');
+    store.store.filter.value = 'e';
     expect(filterUpdates).toBe(1);
     expect(component.filtered.value).toEqual(['apple', 'cherry']);
 
     // Changing items should also trigger update
-    store.set(store.store.items, [...store.store.items.value, 'elderberry']);
+    store.store.items.value = [...store.store.items.value, 'elderberry'];
     expect(filterUpdates).toBe(2);
     expect(component.filtered.value).toEqual(['apple', 'cherry', 'elderberry']);
 
@@ -155,7 +154,7 @@ describe('Component Subscriptions', () => {
       enabled: boolean;
     }
 
-    const Calculator = ({ store, computed, set }: ComponentContext<State>) => {
+    const Calculator = ({ store, computed }: ComponentContext<State>) => {
       const result = computed(() =>
         store.enabled.value ? store.count.value * store.multiplier.value : 0
       );
@@ -165,9 +164,9 @@ describe('Component Subscriptions', () => {
         multiplier: store.multiplier,
         enabled: store.enabled,
         result,
-        increment: () => set(store.count, store.count.value + 1),
-        setMultiplier: (m: number) => set(store.multiplier, m),
-        toggle: () => set(store.enabled, !store.enabled.value),
+        increment: () => store.count.value = store.count.value + 1,
+        setMultiplier: (m: number) => store.multiplier.value = m,
+        toggle: () => store.enabled.value = !store.enabled.value,
       };
     };
 
@@ -254,14 +253,14 @@ describe('Component Subscriptions', () => {
       discountPercent: number;
     }
 
-    const Cart = ({ store, set }: ComponentContext<CartState>) => ({
+    const Cart = ({ store }: ComponentContext<CartState>) => ({
       items: store.items,
       taxRate: store.taxRate,
       discountPercent: store.discountPercent,
       addItem: (item: { id: string; price: number; quantity: number }) =>
-        set(store.items, [...store.items.value, item]),
-      setTaxRate: (rate: number) => set(store.taxRate, rate),
-      setDiscount: (percent: number) => set(store.discountPercent, percent),
+        store.items.value = [...store.items.value, item],
+      setTaxRate: (rate: number) => store.taxRate.value = rate,
+      setDiscount: (percent: number) => store.discountPercent.value = percent,
     });
 
     const ctx = createTestComponent<CartState>({
@@ -379,7 +378,7 @@ describe('Component Subscriptions', () => {
       final.subscribe(() => {});
 
       // Update x
-      ctx.set(ctx.store.x, 20);
+      ctx.store.x.value = 20;
 
       // Should be: intermediate=40, dependent=43, final=83
       // But gets: final=63 (using stale intermediate=20 + fresh dependent=43)
@@ -399,7 +398,7 @@ describe('Component Subscriptions', () => {
       // expect(dependent.value).toBe(23);
 
       final.subscribe(() => {});
-      ctx.set(ctx.store.x, 20);
+      ctx.store.x.value = 20;
       expect(final.value).toBe(83);
     });
 
@@ -417,7 +416,7 @@ describe('Component Subscriptions', () => {
       // DON'T subscribe
       // final.subscribe(() => {});
 
-      ctx.set(ctx.store.x, 20);
+      ctx.store.x.value = 20;
       expect(final.value).toBe(83);
     });
   });

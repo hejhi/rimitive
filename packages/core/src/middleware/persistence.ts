@@ -16,15 +16,8 @@ export function withPersistence<State>(
   if (stored) {
     try {
       const parsed = JSON.parse(stored) as Partial<State>;
-      // Update initial state - set each property individually
-      for (const prop in parsed) {
-        if (prop in context.store) {
-          const value = parsed[prop];
-          if (value !== undefined) {
-            context.set(context.store[prop as keyof State], value);
-          }
-        }
-      }
+      // Update initial state - batch update all properties
+      context.set(context.store, parsed);
     } catch {
       console.warn(
         `[Lattice Persist] Failed to parse stored state for key "${key}"`

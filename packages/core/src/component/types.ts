@@ -69,32 +69,14 @@ export interface SliceHandle<Computed> {
 }
 
 /**
- * Function to update state through signals
- * All state updates must go through this function
+ * Function to batch update state through signals
+ * Updates multiple signals atomically within a single batch
  */
 export interface SetState {
-  // Batch update multiple signals at once
   <State>(
     store: SignalState<State>,
     updates: Partial<State> | ((current: State) => Partial<State>)
   ): void;
-
-  // Update signal with function (for values that might be undefined)
-  // Note: updater is only called if current value is not undefined
-  <T>(signal: Signal<T | undefined>, updater: (current: T) => T): void;
-
-  // Update signal with function
-  <T>(signal: Signal<T>, updater: (current: T) => T): void;
-
-  // Partial updates for objects (for values that might be undefined)
-  // Note: updates are only applied if current value is not undefined
-  <T extends object>(signal: Signal<T | undefined>, updates: Partial<T>): void;
-
-  // Partial updates for objects
-  <T extends object>(signal: Signal<T>, updates: Partial<T>): void;
-
-  // Set signal value directly
-  <T>(signal: Signal<T>, value: T): void;
 }
 
 /**

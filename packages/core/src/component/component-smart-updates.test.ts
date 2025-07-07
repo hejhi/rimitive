@@ -12,7 +12,6 @@ describe('Smart Updates', () => {
       const TodoApp = ({
         store,
         computed,
-        set,
       }: ComponentContext<TodoState>) => {
         const completed = computed(
           () => store.todos.value.filter((t) => t.completed).length
@@ -27,12 +26,12 @@ describe('Smart Updates', () => {
               text,
               completed: false,
             };
-            set(store.todos, [...store.todos.value, newTodo]);
+            store.todos.value = [...store.todos.value, newTodo];
           },
           toggleTodo: (id: string) => {
-            set(store.todos, store.todos.value.map(t => 
+            store.todos.value = store.todos.value.map(t => 
               t.id === id ? { ...t, completed: !t.completed } : t
-            ));
+            );
           },
         };
       };
@@ -74,17 +73,17 @@ describe('Smart Updates', () => {
 
       const UserProfile = ({ store, set }: ComponentContext<UserState>) => ({
         user: store.user,
-        updateName: (name: string) => set(store.user, { name }),
+        updateName: (name: string) => set(store, { user: { ...store.user.value, name } }),
         incrementAge: () =>
-          set(store.user, (user: UserInfo) => ({ ...user, age: user.age + 1 })),
+          store.user.value = { ...store.user.value, age: store.user.value.age + 1 },
         toggleNotifications: () =>
-          set(store.user, (user: UserInfo) => ({
-            ...user,
+          store.user.value = {
+            ...store.user.value,
             settings: {
-              ...user.settings,
-              notifications: !user.settings.notifications,
+              ...store.user.value.settings,
+              notifications: !store.user.value.settings.notifications,
             },
-          })),
+          },
       });
 
       const store = createTestComponent({
@@ -162,17 +161,16 @@ describe('Smart Updates', () => {
 
       const CollectionComponent = ({
         store,
-        set,
       }: ComponentContext<CollectionState>) => ({
         collection: store.collection,
         add: (key: string, value: string) => {
           const current = store.collection.value;
           if (current instanceof Map) {
             const updatedValue = update(current, key, value);
-            set(store.collection, updatedValue);
+            store.collection.value = updatedValue;
           } else if (current instanceof Set) {
             const updatedValue = update(current, key, value);
-            set(store.collection, updatedValue);
+            store.collection.value = updatedValue;
           }
         },
       });

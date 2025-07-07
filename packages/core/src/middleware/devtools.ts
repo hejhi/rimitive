@@ -39,31 +39,12 @@ export function withDevtools<State extends Record<string, unknown>>(
   devtools.init(initialState);
 
   // Wrap set to send actions to devtools
-  const enhancedSet: SetState = ((
-    signal: Parameters<SetState>[0],
-    updates?: Parameters<SetState>[1]
+  const enhancedSet: SetState = (
+    store: Parameters<SetState>[0],
+    updates: Parameters<SetState>[1]
   ) => {
     // Call original set
-    originalSet(signal, updates);
-
-    // Find which property was updated
-    let updatedKey: string | undefined;
-    let updateValue: unknown;
-
-    if (signal === context.store) {
-      // Batch update
-      updatedKey = 'BATCH_UPDATE';
-      updateValue = updates;
-    } else {
-      // Single signal update
-      for (const key in context.store) {
-        if (context.store[key] === signal) {
-          updatedKey = key;
-          updateValue = context.store[key].value;
-          break;
-        }
-      }
-    }
+    originalSet(store, updates);
 
     // Get current state after update
     const currentState: Record<string, unknown> = {};
@@ -72,9 +53,8 @@ export function withDevtools<State extends Record<string, unknown>>(
     }
 
     // Send action to devtools
-    const payload = updatedKey ? { [updatedKey]: updateValue } : {};
-    devtools.send({ type: 'SET_STATE', payload }, currentState);
-  }) as SetState;
+    devtools.send({ type: 'SET_STATE', payload: updates }, currentState);
+  };
 
   context.set = enhancedSet;
 

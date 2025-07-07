@@ -6,10 +6,9 @@ describe('Component Composition', () => {
   it('should support composition', () => {
     const SubCounter = ({
       store,
-      set,
     }: ComponentContext<{ subCount: number }>) => ({
       value: store.subCount,
-      inc: () => set(store.subCount, store.subCount.value + 1),
+      inc: () => store.subCount.value = store.subCount.value + 1,
     });
 
     const store = createTestComponent({ subCount: 5, multiplier: 3 });
@@ -23,7 +22,7 @@ describe('Component Composition', () => {
         counter: sub,
         multiplier: context.store.multiplier,
         total,
-        setMultiplier: (n: number) => context.set(context.store.multiplier, n),
+        setMultiplier: (n: number) => context.store.multiplier.value = n,
       };
     })(store);
 
@@ -37,7 +36,7 @@ describe('Component Composition', () => {
   });
 
   it('should properly track dependencies in computed values', () => {
-    const TodoApp = ({ store, computed, set }: ComponentContext<TodoState>) => {
+    const TodoApp = ({ store, computed }: ComponentContext<TodoState>) => {
       const filtered = computed(() => {
         const f = store.filter.value;
         const t = store.todos.value;
@@ -52,15 +51,15 @@ describe('Component Composition', () => {
         filter: store.filter,
         filtered,
         addTodo: (text: string) =>
-          set(store.todos, [
+          store.todos.value = [
             ...store.todos.value,
             {
               id: Date.now().toString(),
               text,
               completed: false,
             },
-          ]),
-        setFilter: (f: 'all' | 'active' | 'done') => set(store.filter, f),
+          ],
+        setFilter: (f: 'all' | 'active' | 'done') => store.filter.value = f,
       };
     };
 
@@ -76,7 +75,7 @@ describe('Component Composition', () => {
     if (!todos[1]) return;
 
     todos[1] = { ...todos[1], completed: true };
-    store.set(store.store.todos, todos);
+    store.store.todos.value = todos;
 
     expect(component.filtered.value).toHaveLength(2);
 
@@ -97,22 +96,20 @@ describe('Component Composition', () => {
 
     const UserComponent = ({
       store,
-      set,
     }: ComponentContext<{ user: AppState['user'] }>) => ({
       user: store.user,
-      updateName: (name: string) => set(store.user, { ...store.user.value, name }),
+      updateName: (name: string) => store.user.value = { ...store.user.value, name },
     });
 
     const SettingsComponent = ({
       store,
-      set,
     }: ComponentContext<{ settings: AppState['settings'] }>) => ({
       settings: store.settings,
       toggleTheme: () =>
-        set(store.settings, {
+        store.settings.value = {
           ...store.settings.value,
           theme: store.settings.value.theme === 'light' ? 'dark' : 'light',
-        }),
+        },
     });
 
     const store = createTestComponent<AppState>({

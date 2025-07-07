@@ -13,9 +13,9 @@ export function withLogger<State extends Record<string, unknown>>(
   const originalSet = context.set;
 
   // Wrap set to log changes
-  const enhancedSet: SetState = ((
-    signal: Parameters<SetState>[0],
-    updates?: Parameters<SetState>[1]
+  const enhancedSet: SetState = (
+    store: Parameters<SetState>[0],
+    updates: Parameters<SetState>[1]
   ) => {
     // Get current state before update
     const stateBefore: Record<string, unknown> = {};
@@ -24,7 +24,7 @@ export function withLogger<State extends Record<string, unknown>>(
     }
 
     // Call original set
-    originalSet(signal, updates);
+    originalSet(store, updates);
 
     // Get state after update
     const stateAfter: Record<string, unknown> = {};
@@ -46,7 +46,7 @@ export function withLogger<State extends Record<string, unknown>>(
     if (Object.keys(changes).length > 0) {
       console.log('[Lattice Logger] State update:', changes);
     }
-  }) as SetState;
+  };
 
   context.set = enhancedSet;
 

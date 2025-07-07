@@ -33,7 +33,7 @@ describe('Component API', () => {
     const store = createComponent({ count: 5 });
     const Component = ({ store, set }: ComponentContext<CounterState>) => ({
       count: store.count,
-      increment: () => set(store.count, store.count.value + 1),
+      increment: () => set(store, { count: store.count.value + 1 }),
     });
 
     const component = Component(withLogger(store));
@@ -54,11 +54,10 @@ describe('Component API', () => {
     const store = createTestComponent({ value: 10 });
     const Component = ({
       store,
-      set,
     }: ComponentContext<{ value: number }>) => ({
       value: store.value,
-      double: () => set(store.value, store.value.value * 2),
-      setValue: (n: number) => set(store.value, n),
+      double: () => store.value.value = store.value.value * 2,
+      setValue: (n: number) => store.value.value = n,
     });
 
     const component = Component(store);
@@ -88,9 +87,7 @@ describe('Component API', () => {
       return {
         sum,
         updateAll: () => {
-          set(store.a, 10);
-          set(store.b, 20);
-          set(store.c, 30);
+          set(store, { a: 10, b: 20, c: 30 });
         },
       };
     };
@@ -104,8 +101,8 @@ describe('Component API', () => {
 
     component.updateAll();
 
-    // Each update triggers a recomputation in the current implementation
-    expect(computeCount).toBe(3);
+    // Batch update triggers only one recomputation
+    expect(computeCount).toBe(1);
     expect(component.sum.value).toBe(60);
 
     unsubscribe();
@@ -113,10 +110,10 @@ describe('Component API', () => {
 
   it('should support update functions', () => {
     const store = createTestComponent({ count: 5 });
-    const Component = ({ store, set }: ComponentContext<CounterState>) => ({
+    const Component = ({ store }: ComponentContext<CounterState>) => ({
       count: store.count,
-      increment: () => set(store.count, (c: number) => c + 1),
-      multiplyBy: (n: number) => set(store.count, (c: number) => c * n),
+      increment: () => store.count.value = store.count.value + 1,
+      multiplyBy: (n: number) => store.count.value = store.count.value * n,
     });
 
     const component = Component(store);
