@@ -105,6 +105,51 @@ Signal.prototype.subscribe = function () {
   return () => {};
 };
 
+// Add set method for property updates
+Signal.prototype.set = function <T, K extends keyof T>(this: Signal<T>, key: K, value: T[K]): void {
+  if (Array.isArray(this._value)) {
+    // For arrays, create new array with updated element
+    const arr = [...this._value] as any;
+    arr[key as any] = value;
+    this.value = arr as T;
+  } else {
+    // For objects, use spread
+    this.value = { ...this._value, [key]: value } as T;
+  }
+};
+
+// Add patch method for nested partial updates
+Signal.prototype.patch = function <T, K extends keyof T>(
+  this: Signal<T>,
+  key: K,
+  partial: T[K] extends object ? Partial<T[K]> : never
+): void {
+  if (Array.isArray(this._value)) {
+    // For arrays, patch element at index
+    const arr = [...this._value] as any;
+    const current = arr[key as any];
+    arr[key as any] = typeof current === 'object' && current !== null
+      ? { ...current, ...partial }
+      : partial;
+    this.value = arr as T;
+  } else {
+    // For objects, patch property
+    const current = this._value[key];
+    this.value = {
+      ...this._value,
+      [key]: typeof current === 'object' && current !== null
+        ? { ...current, ...partial }
+        : partial
+    } as T;
+  }
+};
+
+// Add select method for fine-grained subscriptions
+Signal.prototype.select = function <T, R>(this: Signal<T>, selector: (value: T) => R) {
+  // We'll implement this after importing createSelect
+  throw new Error('select not implemented - need to wire up after imports');
+};
+
 export function createScopedSignalFactory() {
   function signal<T>(value: T): Signal<T> {
     const s = new Signal(value);

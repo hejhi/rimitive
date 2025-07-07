@@ -19,6 +19,12 @@ export interface Signal<T = unknown> {
   _targets?: DependencyNode;
   _node?: DependencyNode; // For node reuse pattern
   _refresh(): boolean;
+  // Object/array update methods
+  set<K extends keyof T>(key: K, value: T[K]): void;
+  patch<K extends keyof T>(
+    key: K,
+    partial: T[K] extends object ? Partial<T[K]> : never
+  ): void;
 }
 
 export interface Computed<T = unknown> {

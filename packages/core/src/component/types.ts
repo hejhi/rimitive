@@ -6,6 +6,14 @@
  */
 
 /**
+ * A selected value derived from a signal or computed
+ */
+export interface Selected<T> {
+  readonly value: T;
+  subscribe(listener: () => void): () => void;
+}
+
+/**
  * A signal is a read-only reactive primitive
  * Reading a signal automatically registers it as a dependency in tracking contexts
  * All updates must go through the set() function
@@ -16,6 +24,9 @@ export interface Signal<T> {
 
   // Subscribe to changes
   subscribe: (listener: () => void) => () => void;
+  
+  // Create a fine-grained subscription to a selected value
+  select<R>(selector: (value: T) => R): Selected<R>;
 }
 
 /**
@@ -25,6 +36,9 @@ export interface Signal<T> {
 export interface Computed<T> {
   readonly value: T; // Read computed value
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
+  
+  // Create a fine-grained subscription to a selected value
+  select<R>(selector: (value: T) => R): Selected<R>;
 }
 
 /**

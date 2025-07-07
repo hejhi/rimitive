@@ -11,6 +11,7 @@ import { createEffectScope } from './effect';
 import { createSubscribeScope } from './subscribe';
 import { createUnifiedScope } from './scope';
 import { createComputedScope } from './computed';
+import { createSelectFactory } from './select';
 
 // Create the signal factory for Lattice context
 export function createSignalFactory() {
@@ -18,7 +19,6 @@ export function createSignalFactory() {
   const { signal: createSignal } = createScopedSignalFactory();
   const { effect: createEffect } = createEffectScope();
   const { computed: createComputed } = createComputedScope();
-
   function effect(effectFn: () => void | (() => void)): () => void {
     let cleanupFn: (() => void) | void;
 
@@ -39,6 +39,7 @@ export function createSignalFactory() {
   }
 
   const { subscribe } = createSubscribeScope(effect);
+  const createSelect = createSelectFactory(createComputed, subscribe);
 
   function signal<T>(initialValue: T): LatticeSignal<T> {
     const signalInstance = createSignal(initialValue);
@@ -46,6 +47,10 @@ export function createSignalFactory() {
     // Add subscribe method to the existing object (maintains stable shape)
     signalInstance.subscribe = (listener: () => void) =>
       subscribe(signalInstance, listener);
+      
+    // Add select method for fine-grained subscriptions
+    signalInstance.select = <R>(selector: (value: T) => R) =>
+      createSelect(signalInstance, selector);
 
     return signalInstance as LatticeSignal<T>;
   }
@@ -56,6 +61,10 @@ export function createSignalFactory() {
     // Add subscribe method to the existing object (maintains stable shape)
     computedInstance.subscribe = (listener: () => void) =>
       subscribe(computedInstance, listener);
+      
+    // Add select method for fine-grained subscriptions
+    computedInstance.select = <R>(selector: (value: T) => R) =>
+      createSelect(computedInstance, selector);
 
     return computedInstance as LatticeComputed<T>;
   }
