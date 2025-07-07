@@ -1,7 +1,13 @@
 // Global signal instances for direct usage
-import { createScopedSignalFactory, Signal as SignalConstructor } from './signal';
+import {
+  createScopedSignalFactory,
+  Signal as SignalConstructor,
+} from './signal';
 import { createEffectScope } from './effect';
-import { createComputedScope, Computed as ComputedConstructor } from './computed';
+import {
+  createComputedScope,
+  Computed as ComputedConstructor,
+} from './computed';
 import { createSubscribeScope } from './subscribe';
 import { createSelectFactory } from './select';
 import { createBatchScope } from './batch';
@@ -34,18 +40,25 @@ function effect(effectFn: () => void | (() => void)): () => void {
 }
 
 const { subscribe } = createSubscribeScope(effect);
-const createSelect = createSelectFactory(createComputed, subscribe);
+const createSelect = createSelectFactory(subscribe);
 
 // Add all methods to Signal prototype - done once at module load
-SignalConstructor.prototype.subscribe = function(listener: () => void) {
+SignalConstructor.prototype.subscribe = function (listener: () => void) {
   return subscribe(this, listener);
 };
 
-SignalConstructor.prototype.select = function<T, R>(this: Signal<T>, selector: (value: T) => R) {
+SignalConstructor.prototype.select = function <T, R>(
+  this: Signal<T>,
+  selector: (value: T) => R
+) {
   return createSelect(this, selector);
 };
 
-SignalConstructor.prototype.set = function <T>(this: Signal<T>, key: unknown, value: unknown): void {
+SignalConstructor.prototype.set = function <T>(
+  this: Signal<T>,
+  key: unknown,
+  value: unknown
+): void {
   if (Array.isArray(this._value)) {
     // For arrays, create new array with updated element
     const arr = [...this._value];
@@ -59,15 +72,20 @@ SignalConstructor.prototype.set = function <T>(this: Signal<T>, key: unknown, va
   }
 };
 
-SignalConstructor.prototype.patch = function <T>(this: Signal<T>, key: unknown, partial: unknown): void {
+SignalConstructor.prototype.patch = function <T>(
+  this: Signal<T>,
+  key: unknown,
+  partial: unknown
+): void {
   if (Array.isArray(this._value)) {
     // For arrays, patch element at index
     const arr = [...this._value];
     const index = key as number;
     const current = arr[index];
-    arr[index] = typeof current === 'object' && current !== null
-      ? { ...current, ...(partial as object) }
-      : partial;
+    arr[index] =
+      typeof current === 'object' && current !== null
+        ? { ...current, ...(partial as object) }
+        : partial;
     this.value = arr as T;
   } else if (typeof this._value === 'object' && this._value !== null) {
     // For objects, patch property
@@ -75,19 +93,23 @@ SignalConstructor.prototype.patch = function <T>(this: Signal<T>, key: unknown, 
     const current = this._value[objKey];
     this.value = {
       ...this._value,
-      [objKey]: typeof current === 'object' && current !== null
-        ? { ...current, ...(partial as object) }
-        : partial
+      [objKey]:
+        typeof current === 'object' && current !== null
+          ? { ...current, ...(partial as object) }
+          : partial,
     } as T;
   }
 };
 
 // Add subscribe and select to Computed prototype - done once at module load
-ComputedConstructor.prototype.subscribe = function(listener: () => void) {
+ComputedConstructor.prototype.subscribe = function (listener: () => void) {
   return subscribe(this, listener);
 };
 
-ComputedConstructor.prototype.select = function<T, R>(this: Computed<T>, selector: (value: T) => R) {
+ComputedConstructor.prototype.select = function <T, R>(
+  this: Computed<T>,
+  selector: (value: T) => R
+) {
   return createSelect(this, selector);
 };
 
@@ -114,13 +136,13 @@ export { effect, subscribe };
 export { createSelectFactory, type Selected } from './select';
 
 // Export types
-export type { 
-  Signal, 
+export type {
+  Signal,
   Computed,
   WritableSignal,
   ComputedOptions,
   EffectCleanup,
   Unsubscribe,
   SignalFactory,
-  Subscriber
+  Subscriber,
 } from './types';

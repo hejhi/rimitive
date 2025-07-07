@@ -12,8 +12,10 @@ export interface Selected<T> {
  * Unlike computed, this runs the selector on every source change but filters notifications
  */
 export function createSelectFactory(
-  _createComputed: <T>(fn: () => T) => Computed<T>, // Kept for API compatibility
-  subscribe: <T>(source: Signal<T> | Computed<T>, listener: () => void) => () => void
+  subscribe: <T>(
+    source: Signal<T> | Computed<T>,
+    listener: () => void
+  ) => () => void
 ) {
   return function createSelect<T, R>(
     source: Signal<T> | Computed<T>,
@@ -24,14 +26,14 @@ export function createSelectFactory(
         // Always get fresh value when accessed
         return selector(source.value);
       },
-      
+
       subscribe(listener: () => void) {
         let previousValue = selector(source.value);
-        
+
         // Subscribe to ALL source changes
         return subscribe(source, () => {
           const currentValue = selector(source.value);
-          
+
           // Only fire if selected value changed (using Object.is for comparison)
           if (!Object.is(currentValue, previousValue)) {
             listener();
@@ -39,13 +41,15 @@ export function createSelectFactory(
           }
         });
       },
-      
+
       select<S>(nextSelector: (value: R) => S): Selected<S> {
         // Chain selectors by composing them
-        return createSelect(source, (value: T) => nextSelector(selector(value)));
-      }
+        return createSelect(source, (value: T) =>
+          nextSelector(selector(value))
+        );
+      },
     };
-    
+
     return result;
   };
 }
