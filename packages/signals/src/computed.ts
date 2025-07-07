@@ -287,10 +287,7 @@ Computed.prototype.dispose = function (): void {
   }
 };
 
-// Placeholder subscribe
-Computed.prototype.subscribe = function () {
-  return () => {};
-};
+// Subscribe will be added by the global computed factory
 
 export type ComputedScope = {
   computed: <T>(fn: () => T) => Computed<T>;
@@ -303,3 +300,6 @@ export function createComputedScope(): ComputedScope {
 
   return { computed };
 }
+
+// Export the Computed constructor for prototype extensions
+export { Computed };

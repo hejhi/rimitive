@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resetGlobalState } from './test-setup';
-import { createSignalFactory } from './lattice-integration';
+import { signal, computed, set } from './index';
 
 describe('select', () => {
   beforeEach(() => {
@@ -8,8 +8,7 @@ describe('select', () => {
   });
 
   it('should only trigger when selected value changes', () => {
-    const factory = createSignalFactory();
-    const todos = factory.signal([
+    const todos = signal([
       { id: 1, text: 'Task 1', done: false },
       { id: 2, text: 'Task 2', done: false },
       { id: 3, text: 'Task 3', done: false }
@@ -27,25 +26,24 @@ describe('select', () => {
     // Update first todo - should NOT trigger
     const newTodos1 = [...todos.value];
     newTodos1[0] = { id: 1, text: 'Task 1', done: true };
-    factory.set(todos, newTodos1);
+    set(todos, newTodos1);
     expect(subscribeCount).toBe(0);
     
     // Update second todo - SHOULD trigger
     const newTodos2 = [...todos.value];
     newTodos2[1] = { id: 2, text: 'Task 2', done: true };
-    factory.set(todos, newTodos2);
+    set(todos, newTodos2);
     expect(subscribeCount).toBe(1);
     
     // Update third todo - should NOT trigger
     const newTodos3 = [...todos.value];
     newTodos3[2] = { id: 3, text: 'Task 3', done: true };
-    factory.set(todos, newTodos3);
+    set(todos, newTodos3);
     expect(subscribeCount).toBe(1);
   });
 
   it('should work with nested selectors', () => {
-    const factory = createSignalFactory();
-    const state = factory.signal({
+    const state = signal({
       user: { name: 'John', age: 30, settings: { theme: 'dark' } },
       todos: []
     });
@@ -61,7 +59,7 @@ describe('select', () => {
     userTheme.subscribe(() => themeCount++);
     
     // Update name - only name subscription fires
-    factory.set(state, {
+    set(state, {
       ...state.value,
       user: { ...state.value.user, name: 'Jane' }
     });
@@ -69,7 +67,7 @@ describe('select', () => {
     expect(themeCount).toBe(0);
     
     // Update theme - only theme subscription fires
-    factory.set(state, {
+    set(state, {
       ...state.value,
       user: { 
         ...state.value.user, 
@@ -81,15 +79,14 @@ describe('select', () => {
   });
 
   it('should support computed values with select', () => {
-    const factory = createSignalFactory();
     const todo1 = { id: 1, text: 'Task 1', done: false };
     const todo2 = { id: 2, text: 'Task 2', done: true };
     const todo3 = { id: 3, text: 'Task 3', done: false };
     
-    const todosSignal = factory.signal([todo1, todo2, todo3]);
+    const todosSignal = signal([todo1, todo2, todo3]);
 
     // Computed that filters done todos
-    const doneTodos = factory.computed(() => 
+    const doneTodos = computed(() => 
       todosSignal.value.filter(t => t.done)
     );
     
@@ -104,19 +101,18 @@ describe('select', () => {
     
     // Mark first todo as done - should trigger (different first done todo)
     const todo1Done = { ...todo1, done: true };
-    factory.set(todosSignal, [todo1Done, todo2, todo3]);
+    set(todosSignal, [todo1Done, todo2, todo3]);
     expect(firstDoneCount).toBe(1);
     expect(firstDone.value).toBe(todo1Done); // Now todo1 is first done
     
     // Update todo3 - should NOT trigger (first done todo still todo1Done)
     const todo3Updated = { ...todo3, text: 'Task 3 Updated' };
-    factory.set(todosSignal, [todo1Done, todo2, todo3Updated]);
+    set(todosSignal, [todo1Done, todo2, todo3Updated]);
     expect(firstDoneCount).toBe(1); // No change to first done todo
   });
 
   it('should use reference equality for comparison', () => {
-    const factory = createSignalFactory();
-    const state = factory.signal({
+    const state = signal({
       config: { theme: 'dark', fontSize: 14 }
     });
 
@@ -125,17 +121,16 @@ describe('select', () => {
     config.subscribe(() => configCount++);
     
     // Same object reference - no trigger
-    factory.set(state, { ...state.value, config: state.value.config });
+    set(state, { ...state.value, config: state.value.config });
     expect(configCount).toBe(0);
     
     // New object with same values - DOES trigger
-    factory.set(state, { ...state.value, config: { theme: 'dark', fontSize: 14 } });
+    set(state, { ...state.value, config: { theme: 'dark', fontSize: 14 } });
     expect(configCount).toBe(1);
   });
   
   it('chained selects should work', () => {
-    const factory = createSignalFactory();
-    const state = factory.signal({
+    const state = signal({
       users: [
         { id: 1, name: 'John', role: { type: 'admin', level: 1 } },
         { id: 2, name: 'Jane', role: { type: 'user', level: 0 } }
@@ -154,7 +149,7 @@ describe('select', () => {
     // Update first user's level
     const users = [...state.value.users];
     users[0] = { ...users[0]!, role: { ...users[0]!.role, level: 2 } };
-    factory.set(state, { ...state.value, users });
+    set(state, { ...state.value, users });
     
     expect(levelCount).toBe(1);
     expect(firstUserLevel.value).toBe(2);

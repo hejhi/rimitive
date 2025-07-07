@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSignalFactory } from './lattice-integration';
+import { signal, computed, set } from './index';
 import { resetGlobalState } from './test-setup';
 
 describe('select from computed', () => {
@@ -8,8 +8,7 @@ describe('select from computed', () => {
   });
 
   it('should allow selecting from computed values', () => {
-    const factory = createSignalFactory();
-    const todos = factory.signal([
+    const todos = signal([
       { id: 1, text: 'Task 1', done: false, priority: 2 },
       { id: 2, text: 'Task 2', done: true, priority: 1 },
       { id: 3, text: 'Task 3', done: false, priority: 3 },
@@ -17,7 +16,7 @@ describe('select from computed', () => {
     ]);
 
     // Computed that filters completed todos
-    const completedTodos = factory.computed(() => 
+    const completedTodos = computed(() => 
       todos.value.filter(t => t.done)
     );
     
@@ -44,8 +43,7 @@ describe('select from computed', () => {
   });
 
   it('should work with sorted computed and top N selection', () => {
-    const factory = createSignalFactory();
-    const todos = factory.signal([
+    const todos = signal([
       { id: 1, text: 'Low priority', priority: 3 },
       { id: 2, text: 'High priority', priority: 1 },
       { id: 3, text: 'Medium priority', priority: 2 },
@@ -53,7 +51,7 @@ describe('select from computed', () => {
     ]);
 
     // Computed that sorts by priority
-    const sortedTodos = factory.computed(() => 
+    const sortedTodos = computed(() => 
       [...todos.value].sort((a, b) => a.priority - b.priority)
     );
     
@@ -89,8 +87,7 @@ describe('select from computed', () => {
   });
 
   it('should handle complex filtering and selection', () => {
-    const factory = createSignalFactory();
-    const tasks = factory.signal([
+    const tasks = signal([
       { id: 1, text: 'Review PR', done: false, assignee: 'John', due: '2024-01-15' },
       { id: 2, text: 'Fix bug', done: false, assignee: 'Jane', due: '2024-01-14' },
       { id: 3, text: 'Deploy', done: true, assignee: 'John', due: '2024-01-13' },
@@ -98,7 +95,7 @@ describe('select from computed', () => {
     ]);
 
     // Computed: John's incomplete tasks sorted by due date
-    const johnsIncomplete = factory.computed(() => 
+    const johnsIncomplete = computed(() => 
       tasks.value
         .filter(t => t.assignee === 'John' && !t.done)
         .sort((a, b) => a.due.localeCompare(b.due))
@@ -127,15 +124,14 @@ describe('select from computed', () => {
       assignee: 'John', 
       due: '2024-01-10' 
     };
-    factory.set(tasks, [...tasks.value, urgentTask]);
+    set(tasks, [...tasks.value, urgentTask]);
     
     expect(nextTaskCount).toBe(2); // Next task changed again
     expect(johnsNextTask.value?.text).toBe('Hotfix'); // Most urgent
   });
 
   it('demonstrates chained computed + select', () => {
-    const factory = createSignalFactory();
-    const users = factory.signal([
+    const users = signal([
       { id: 1, name: 'Alice', score: 100, active: true },
       { id: 2, name: 'Bob', score: 85, active: false },
       { id: 3, name: 'Charlie', score: 95, active: true },
@@ -143,12 +139,12 @@ describe('select from computed', () => {
     ]);
 
     // First computed: active users
-    const activeUsers = factory.computed(() => 
+    const activeUsers = computed(() => 
       users.value.filter(u => u.active)
     );
     
     // Second computed: top scorers from active users
-    const topScorers = factory.computed(() => 
+    const topScorers = computed(() => 
       [...activeUsers.value].sort((a, b) => b.score - a.score).slice(0, 2)
     );
     

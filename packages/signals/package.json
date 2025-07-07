@@ -1,7 +1,7 @@
 {
-  "name": "@lattice/core",
+  "name": "@lattice/signals",
   "version": "0.0.1",
-  "description": "Core framework-agnostic behavior composition layer for Lattice components",
+  "description": "Reactive primitives for Lattice components",
   "author": "Lattice Team",
   "license": "MIT",
   "type": "module",
@@ -12,10 +12,6 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
-    },
-    "./testing": {
-      "import": "./dist/testing.js",
-      "types": "./dist/testing.d.ts"
     }
   },
   "files": [
@@ -31,9 +27,6 @@
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm test && pnpm lint",
     "test": "vitest run"
-  },
-  "dependencies": {
-    "@lattice/signals": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "^6.0.1",

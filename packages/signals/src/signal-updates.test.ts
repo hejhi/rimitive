@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, effect, resetGlobalState } from './test-setup';
+import { signal, effect } from './index';
+import { resetGlobalState } from './test-setup';
 
 describe('signal update methods', () => {
   beforeEach(() => {

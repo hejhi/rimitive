@@ -44,3 +44,6 @@ export function createUnifiedScope(): UnifiedScope {
 
   return scope;
 }
+
+// Alias for backwards compatibility
+export const createScope = createUnifiedScope;

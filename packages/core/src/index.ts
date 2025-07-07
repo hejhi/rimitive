@@ -17,6 +17,3 @@ export type {
 
 // Export middleware
 export { withDevtools, withLogger, withPersistence } from './middleware/index';
-
-// Export raw signal APIs for direct usage (bypasses component layer)
-export { signal, computed, effect, batch, set } from './primitives/signals/index';

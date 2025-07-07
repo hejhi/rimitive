@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSignalFactory } from './lattice-integration';
+import { signal, computed, effect, set } from './index';
 import { getPoolStats, resetNodePool } from './node-pool';
 
 describe('Node Pool Performance', () => {
@@ -8,7 +8,6 @@ describe('Node Pool Performance', () => {
   });
 
   it('should show pool efficiency with high dependency churn', () => {
-    const { signal, effect } = createSignalFactory();
     
     // Create signals
     const signals = Array.from({ length: 100 }, (_, i) => signal(i));
@@ -61,7 +60,6 @@ describe('Node Pool Performance', () => {
   });
 
   it('should reduce memory pressure in diamond patterns', () => {
-    const { signal, computed, set } = createSignalFactory();
     
     // Create a diamond dependency pattern
     const source = signal(1);

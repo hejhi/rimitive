@@ -100,51 +100,7 @@ Signal.prototype._refresh = function (): boolean {
   return true;
 };
 
-// Placeholder subscribe
-Signal.prototype.subscribe = function () {
-  return () => {};
-};
-
-// Add set method for property updates
-Signal.prototype.set = function <T>(this: Signal<T>, key: unknown, value: unknown): void {
-  if (Array.isArray(this._value)) {
-    // For arrays, create new array with updated element
-    const arr = [...this._value];
-    const index = key as number;
-    arr[index] = value;
-    this.value = arr as T;
-  } else if (typeof this._value === 'object' && this._value !== null) {
-    // For objects, use spread
-    const objKey = key as keyof T;
-    this.value = { ...this._value, [objKey]: value } as T;
-  }
-};
-
-// Add patch method for nested partial updates
-Signal.prototype.patch = function <T>(this: Signal<T>, key: unknown, partial: unknown): void {
-  if (Array.isArray(this._value)) {
-    // For arrays, patch element at index
-    const arr = [...this._value];
-    const index = key as number;
-    const current = arr[index];
-    arr[index] = typeof current === 'object' && current !== null
-      ? { ...current, ...(partial as object) }
-      : partial;
-    this.value = arr as T;
-  } else if (typeof this._value === 'object' && this._value !== null) {
-    // For objects, patch property
-    const objKey = key as keyof T;
-    const current = this._value[objKey];
-    this.value = {
-      ...this._value,
-      [objKey]: typeof current === 'object' && current !== null
-        ? { ...current, ...(partial as object) }
-        : partial
-    } as T;
-  }
-};
-
-// Select method is added in lattice-integration.ts
+// Prototype methods are added in index.ts
 
 export function createScopedSignalFactory() {
   function signal<T>(value: T): Signal<T> {
@@ -224,3 +180,6 @@ export function addEffectToBatch(effect: Effect): void {
 export function peek<T>(signal: Signal<T>): T {
   return signal._value;
 }
+
+// Export the Signal constructor for prototype extensions
+export { Signal };

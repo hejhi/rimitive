@@ -13,8 +13,8 @@ export interface DependencyNode {
 
 export interface Signal<T = unknown> {
   value: T;
-  subscribe?: (listener: () => void) => () => void;
-  select?: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
+  subscribe: (listener: () => void) => () => void;
+  select: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   _value: T;
   _version: number;
   _targets?: DependencyNode;
@@ -30,8 +30,8 @@ export interface Signal<T = unknown> {
 
 export interface Computed<T = unknown> {
   readonly value: T;
-  subscribe?: (listener: () => void) => () => void;
-  select?: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
+  subscribe: (listener: () => void) => () => void;
+  select: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   _fn: () => T;
   _value: T | undefined;
   _version: number;
@@ -63,3 +63,21 @@ export const RUNNING = 1 << 2;
 export const DISPOSED = 1 << 3;
 export const TRACKING = 1 << 4;  // Has active subscribers/targets
 export const IS_COMPUTED = 1 << 5;  // Type discriminator for computed values
+
+// Additional type exports
+export type WritableSignal<T = unknown> = Signal<T>;
+export type EffectCleanup = void | (() => void);
+export type Unsubscribe = () => void;
+export type Subscriber = () => void;
+
+export interface ComputedOptions {
+  equals?: (a: unknown, b: unknown) => boolean;
+}
+
+export interface SignalFactory {
+  signal: <T>(initialValue: T) => Signal<T>;
+  computed: <T>(fn: () => T, options?: ComputedOptions) => Computed<T>;
+  effect: (fn: () => EffectCleanup) => Unsubscribe;
+  batch: <T>(fn: () => T) => T;
+  set: <T>(signal: Signal<T>, value: T) => void;
+}
