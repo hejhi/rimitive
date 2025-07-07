@@ -14,14 +14,14 @@ describe('Node Pool Performance', () => {
     const signals = Array.from({ length: 100 }, (_, i) => signal(i));
     
     // Create a single effect that depends on many signals
-    let effectRunCount = 0;
     const dispose = effect(() => {
-      effectRunCount++;
       // Depend on all signals
       let sum = 0;
       for (const s of signals) {
         sum += s.value;
       }
+      // Use sum to avoid lint warning
+      void sum;
     });
     
     const initialStats = getPoolStats();
@@ -37,6 +37,8 @@ describe('Node Pool Performance', () => {
         for (const s of signals) {
           sum += s.value;
         }
+        // Use sum to avoid lint warning
+        void sum;
       });
       
       // Clean up for next iteration
@@ -59,7 +61,7 @@ describe('Node Pool Performance', () => {
   });
 
   it('should reduce memory pressure in diamond patterns', () => {
-    const { signal, computed } = createSignalFactory();
+    const { signal, computed, set } = createSignalFactory();
     
     // Create a diamond dependency pattern
     const source = signal(1);
@@ -87,7 +89,7 @@ describe('Node Pool Performance', () => {
     
     // Update source multiple times
     for (let i = 0; i < 100; i++) {
-      (source as any).value = i;
+      set(source, i);
       void final.value;
     }
     

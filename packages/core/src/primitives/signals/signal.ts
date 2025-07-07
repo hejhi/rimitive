@@ -106,49 +106,45 @@ Signal.prototype.subscribe = function () {
 };
 
 // Add set method for property updates
-Signal.prototype.set = function <T, K extends keyof T>(this: Signal<T>, key: K, value: T[K]): void {
+Signal.prototype.set = function <T>(this: Signal<T>, key: unknown, value: unknown): void {
   if (Array.isArray(this._value)) {
     // For arrays, create new array with updated element
-    const arr = [...this._value] as any;
-    arr[key as any] = value;
+    const arr = [...this._value];
+    const index = key as number;
+    arr[index] = value;
     this.value = arr as T;
-  } else {
+  } else if (typeof this._value === 'object' && this._value !== null) {
     // For objects, use spread
-    this.value = { ...this._value, [key]: value } as T;
+    const objKey = key as keyof T;
+    this.value = { ...this._value, [objKey]: value } as T;
   }
 };
 
 // Add patch method for nested partial updates
-Signal.prototype.patch = function <T, K extends keyof T>(
-  this: Signal<T>,
-  key: K,
-  partial: T[K] extends object ? Partial<T[K]> : never
-): void {
+Signal.prototype.patch = function <T>(this: Signal<T>, key: unknown, partial: unknown): void {
   if (Array.isArray(this._value)) {
     // For arrays, patch element at index
-    const arr = [...this._value] as any;
-    const current = arr[key as any];
-    arr[key as any] = typeof current === 'object' && current !== null
-      ? { ...current, ...partial }
+    const arr = [...this._value];
+    const index = key as number;
+    const current = arr[index];
+    arr[index] = typeof current === 'object' && current !== null
+      ? { ...current, ...(partial as object) }
       : partial;
     this.value = arr as T;
-  } else {
+  } else if (typeof this._value === 'object' && this._value !== null) {
     // For objects, patch property
-    const current = this._value[key];
+    const objKey = key as keyof T;
+    const current = this._value[objKey];
     this.value = {
       ...this._value,
-      [key]: typeof current === 'object' && current !== null
-        ? { ...current, ...partial }
+      [objKey]: typeof current === 'object' && current !== null
+        ? { ...current, ...(partial as object) }
         : partial
     } as T;
   }
 };
 
-// Add select method for fine-grained subscriptions
-Signal.prototype.select = function <T, R>(this: Signal<T>, selector: (value: T) => R) {
-  // We'll implement this after importing createSelect
-  throw new Error('select not implemented - need to wire up after imports');
-};
+// Select method is added in lattice-integration.ts
 
 export function createScopedSignalFactory() {
   function signal<T>(value: T): Signal<T> {

@@ -37,7 +37,7 @@ describe('select from computed', () => {
     expect(completedTodos.value).toHaveLength(3); // Now 3 completed
     
     // Mark todo 1 as done with priority 0 - changes first completed!
-    todos.set(0, { ...todos.value[0], done: true, priority: 0 });
+    todos.set(0, { ...todos.value[0]!, done: true, priority: 0 });
     
     expect(firstCompletedCount).toBe(1); // Changed!
     expect(firstCompleted.value).toEqual({ id: 1, text: 'Task 1', done: true, priority: 0 });
@@ -167,7 +167,7 @@ describe('select from computed', () => {
     expect(leader.value?.name).toBe('Charlie'); // New leader
     
     // Bob becomes active with score 200
-    users.set(1, { ...users.value[1], active: true, score: 200 });
+    users.set(1, { ...users.value[1]!, active: true, score: 200 });
     
     expect(leaderCount).toBe(2); // Leader changed again
     expect(leader.value?.name).toBe('Bob'); // Bob is now leader

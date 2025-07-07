@@ -52,7 +52,7 @@ export function createSignalFactory() {
     signalInstance.select = <R>(selector: (value: T) => R) =>
       createSelect(signalInstance, selector);
 
-    return signalInstance as LatticeSignal<T>;
+    return signalInstance as unknown as LatticeSignal<T>;
   }
 
   function computed<T>(computeFn: () => T): LatticeComputed<T> {
@@ -66,12 +66,12 @@ export function createSignalFactory() {
     computedInstance.select = <R>(selector: (value: T) => R) =>
       createSelect(computedInstance, selector);
 
-    return computedInstance as LatticeComputed<T>;
+    return computedInstance as unknown as LatticeComputed<T>;
   }
 
   function set<T>(latticeSignal: LatticeSignal<T>, value: T): void {
     // Direct assignment via setter using internal type
-    (latticeSignal as InternalSignal<T>).value = value;
+    (latticeSignal as unknown as InternalSignal<T>).value = value;
   }
 
   return {

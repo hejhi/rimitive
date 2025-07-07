@@ -11,22 +11,31 @@
 export interface Selected<T> {
   readonly value: T;
   subscribe(listener: () => void): () => void;
+  // Allow chaining selects
+  select<R>(selector: (value: T) => R): Selected<R>;
 }
 
 /**
- * A signal is a read-only reactive primitive
+ * A signal is a reactive primitive that holds a value
  * Reading a signal automatically registers it as a dependency in tracking contexts
- * All updates must go through the set() function
+ * Can be updated directly via .value = newValue or through the set() function
  */
 export interface Signal<T> {
-  // Read value
-  readonly value: T;
+  // Read/write value
+  value: T;
 
   // Subscribe to changes
   subscribe: (listener: () => void) => () => void;
   
   // Create a fine-grained subscription to a selected value
   select<R>(selector: (value: T) => R): Selected<R>;
+  
+  // Object/array update methods
+  set<K extends keyof T>(key: K, value: T[K]): void;
+  patch<K extends keyof T>(
+    key: K,
+    partial: T[K] extends object ? Partial<T[K]> : never
+  ): void;
 }
 
 /**

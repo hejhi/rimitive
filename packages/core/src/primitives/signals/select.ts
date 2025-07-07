@@ -12,7 +12,7 @@ export interface Selected<T> {
  * Unlike computed, this runs the selector on every source change but filters notifications
  */
 export function createSelectFactory(
-  createComputed: <T>(fn: () => T) => Computed<T>,
+  _createComputed: <T>(fn: () => T) => Computed<T>, // Kept for API compatibility
   subscribe: <T>(source: Signal<T> | Computed<T>, listener: () => void) => () => void
 ) {
   return function createSelect<T, R>(

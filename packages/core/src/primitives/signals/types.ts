@@ -14,6 +14,7 @@ export interface DependencyNode {
 export interface Signal<T = unknown> {
   value: T;
   subscribe?: (listener: () => void) => () => void;
+  select?: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   _value: T;
   _version: number;
   _targets?: DependencyNode;
@@ -30,6 +31,7 @@ export interface Signal<T = unknown> {
 export interface Computed<T = unknown> {
   readonly value: T;
   subscribe?: (listener: () => void) => () => void;
+  select?: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   _fn: () => T;
   _value: T | undefined;
   _version: number;

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, computed, resetGlobalState } from './test-setup';
+import { resetGlobalState } from './test-setup';
 import { createSignalFactory } from './lattice-integration';
 
 describe('select', () => {
@@ -25,15 +25,21 @@ describe('select', () => {
     });
     
     // Update first todo - should NOT trigger
-    todos.set(0, { id: 1, text: 'Task 1', done: true });
+    const newTodos1 = [...todos.value];
+    newTodos1[0] = { id: 1, text: 'Task 1', done: true };
+    factory.set(todos, newTodos1);
     expect(subscribeCount).toBe(0);
     
     // Update second todo - SHOULD trigger
-    todos.set(1, { id: 2, text: 'Task 2', done: true });
+    const newTodos2 = [...todos.value];
+    newTodos2[1] = { id: 2, text: 'Task 2', done: true };
+    factory.set(todos, newTodos2);
     expect(subscribeCount).toBe(1);
     
     // Update third todo - should NOT trigger
-    todos.set(2, { id: 3, text: 'Task 3', done: true });
+    const newTodos3 = [...todos.value];
+    newTodos3[2] = { id: 3, text: 'Task 3', done: true };
+    factory.set(todos, newTodos3);
     expect(subscribeCount).toBe(1);
   });
 
@@ -55,14 +61,20 @@ describe('select', () => {
     userTheme.subscribe(() => themeCount++);
     
     // Update name - only name subscription fires
-    state.patch('user', { name: 'Jane' });
+    factory.set(state, {
+      ...state.value,
+      user: { ...state.value.user, name: 'Jane' }
+    });
     expect(nameCount).toBe(1);
     expect(themeCount).toBe(0);
     
     // Update theme - only theme subscription fires
-    state.set('user', { 
-      ...state.value.user, 
-      settings: { theme: 'light' } 
+    factory.set(state, {
+      ...state.value,
+      user: { 
+        ...state.value.user, 
+        settings: { theme: 'light' } 
+      }
     });
     expect(nameCount).toBe(1);
     expect(themeCount).toBe(1);
@@ -113,11 +125,11 @@ describe('select', () => {
     config.subscribe(() => configCount++);
     
     // Same object reference - no trigger
-    state.set('config', state.value.config);
+    factory.set(state, { ...state.value, config: state.value.config });
     expect(configCount).toBe(0);
     
     // New object with same values - DOES trigger
-    state.set('config', { theme: 'dark', fontSize: 14 });
+    factory.set(state, { ...state.value, config: { theme: 'dark', fontSize: 14 } });
     expect(configCount).toBe(1);
   });
   
@@ -141,8 +153,8 @@ describe('select', () => {
     
     // Update first user's level
     const users = [...state.value.users];
-    users[0] = { ...users[0], role: { ...users[0].role, level: 2 } };
-    state.set('users', users);
+    users[0] = { ...users[0]!, role: { ...users[0]!.role, level: 2 } };
+    factory.set(state, { ...state.value, users });
     
     expect(levelCount).toBe(1);
     expect(firstUserLevel.value).toBe(2);
