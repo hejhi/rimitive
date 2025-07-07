@@ -5,7 +5,7 @@ import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
 import {
   setGlobalCurrentComputed,
   globalCurrentComputed,
-  isInBatch,
+  globalBatchDepth,
   startGlobalBatch,
   endGlobalBatch,
   addEffectToBatch,
@@ -33,7 +33,7 @@ Effect.prototype._notify = function (): void {
   if (this._flags & NOTIFIED) return;
   this._flags |= NOTIFIED | OUTDATED;
 
-  if (isInBatch()) {
+  if (globalBatchDepth > 0) {
     // Add to global batch queue
     addEffectToBatch(this);
     return;

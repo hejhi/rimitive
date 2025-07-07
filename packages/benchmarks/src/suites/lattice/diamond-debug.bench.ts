@@ -10,7 +10,7 @@ import {
 import {
   signal as latticeSignal,
   computed as latticeComputed,
-} from '@lattice/core';
+} from '@lattice/signals';
 
 const ITERATIONS = 1000;
 
@@ -20,7 +20,7 @@ describe('Diamond Pattern Debug', () => {
     let computeCountB = 0;
     let computeCountC = 0;
     let computeCountD = 0;
-    
+
     const a = preactSignal(0);
     const b = preactComputed(() => {
       computeCountB++;
@@ -39,10 +39,16 @@ describe('Diamond Pattern Debug', () => {
       a.value = i;
       void d.value;
     }
-    
+
     // Verify computation counts
-    if (computeCountB !== ITERATIONS || computeCountC !== ITERATIONS || computeCountD !== ITERATIONS) {
-      throw new Error(`Unexpected compute counts: B=${computeCountB}, C=${computeCountC}, D=${computeCountD}`);
+    if (
+      computeCountB !== ITERATIONS ||
+      computeCountC !== ITERATIONS ||
+      computeCountD !== ITERATIONS
+    ) {
+      throw new Error(
+        `Unexpected compute counts: B=${computeCountB}, C=${computeCountC}, D=${computeCountD}`
+      );
     }
   });
 
@@ -50,7 +56,7 @@ describe('Diamond Pattern Debug', () => {
     let computeCountB = 0;
     let computeCountC = 0;
     let computeCountD = 0;
-    
+
     const a = latticeSignal(0);
     const b = latticeComputed(() => {
       computeCountB++;
@@ -69,10 +75,16 @@ describe('Diamond Pattern Debug', () => {
       a.value = i;
       void d.value;
     }
-    
+
     // Verify computation counts
-    if (computeCountB !== ITERATIONS || computeCountC !== ITERATIONS || computeCountD !== ITERATIONS) {
-      throw new Error(`Unexpected compute counts: B=${computeCountB}, C=${computeCountC}, D=${computeCountD}`);
+    if (
+      computeCountB !== ITERATIONS ||
+      computeCountC !== ITERATIONS ||
+      computeCountD !== ITERATIONS
+    ) {
+      throw new Error(
+        `Unexpected compute counts: B=${computeCountB}, C=${computeCountC}, D=${computeCountD}`
+      );
     }
   });
 
@@ -82,7 +94,7 @@ describe('Diamond Pattern Debug', () => {
     const b = preactComputed(() => a.value * 2);
     const c = preactComputed(() => a.value * 3);
     const d = preactComputed(() => b.value + c.value);
-    
+
     // Warm up - establish all dependencies
     void d.value;
 
@@ -97,7 +109,7 @@ describe('Diamond Pattern Debug', () => {
     const b = latticeComputed(() => a.value * 2);
     const c = latticeComputed(() => a.value * 3);
     const d = latticeComputed(() => b.value + c.value);
-    
+
     // Warm up - establish all dependencies
     void d.value;
 
@@ -106,14 +118,14 @@ describe('Diamond Pattern Debug', () => {
       void d.value;
     }
   });
-  
+
   // Test notification without read
   bench('Preact - diamond notify only', () => {
     const a = preactSignal(0);
     const b = preactComputed(() => a.value * 2);
     const c = preactComputed(() => a.value * 3);
     const d = preactComputed(() => b.value + c.value);
-    
+
     // Establish dependencies
     void d.value;
 
@@ -128,7 +140,7 @@ describe('Diamond Pattern Debug', () => {
     const b = latticeComputed(() => a.value * 2);
     const c = latticeComputed(() => a.value * 3);
     const d = latticeComputed(() => b.value + c.value);
-    
+
     // Establish dependencies
     void d.value;
 

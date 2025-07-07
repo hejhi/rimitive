@@ -66,6 +66,9 @@ importers:
       '@lattice/frameworks':
         specifier: workspace:*
         version: link:../frameworks
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../signals
       '@preact/signals-core':
         specifier: ^1.8.0
         version: 1.11.0

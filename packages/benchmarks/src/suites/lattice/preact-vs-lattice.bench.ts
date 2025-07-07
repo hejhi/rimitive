@@ -16,7 +16,7 @@ import {
   computed as latticeComputed,
   batch as latticeBatch,
   set as latticeSet,
-} from '@lattice/core';
+} from '@lattice/signals';
 
 const ITERATIONS = 10000;
 

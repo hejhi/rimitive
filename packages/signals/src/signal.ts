@@ -130,19 +130,11 @@ export function setGlobalCurrentComputed(
   globalCurrentComputed = computed;
 }
 
-export function incrementGlobalVersion(): void {
-  globalVersion++;
-}
-
 export function resetGlobalTracking(): void {
   globalCurrentComputed = null;
   globalVersion = 0;
   globalBatchDepth = 0;
   globalBatchedEffects = null;
-}
-
-export function isInBatch(): boolean {
-  return globalBatchDepth > 0;
 }
 
 export function startGlobalBatch(): void {
