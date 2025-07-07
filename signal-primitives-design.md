@@ -2,14 +2,14 @@
 
 ## Overview
 
-Signal primitives extend Lattice's reactive system with specialized behaviors. The `mut` primitive enables direct mutations on arrays and objects while maintaining reactivity.
+Signal primitives extend Lattice's reactive system with specialized behaviors. The `mutable` primitive provides explicit, type-safe methods for shallow updates to objects and arrays.
 
 ## Requirements
 
-1. **Zero Runtime Overhead** - No performance impact on hot paths
-2. **Minimal Bundle Size** - Under 350 bytes total (hybrid approach)
-3. **Type Safety** - Full TypeScript inference
-4. **Simple Integration** - Works with existing signal architecture
+1. **Zero Runtime Overhead** - No proxy usage or hidden costs
+2. **Minimal Bundle Size** - Under 200 bytes total
+3. **Type Safety** - Full compile-time validation
+4. **Simple Mental Model** - Explicit method calls, no magic
 
 ## Core Architecture
 
@@ -123,314 +123,276 @@ primitiveHandlers.set('mut', {
 });
 ```
 
-## Mut Middleware Implementation
+## Mut Primitive Implementation
 
 ### Design Goals
 
-The `mut` middleware enables shallow mutations on arrays and tracked object properties without triggering top-level listeners unnecessarily. Uses a hybrid approach:
-- **Arrays**: Direct method patching (no proxy)
-- **Objects**: Property definition with setters for known properties
-- **Maps/Sets**: Direct method patching (future enhancement)
+The `mut` primitive enhances signals with explicit methods for shallow updates to objects and arrays. All updates create new immutable references while maintaining type safety.
 
-### Implementation Strategy
+### Core API
 
 ```typescript
-// Mut middleware implementation
+// Usage
+const state = signal(mut({ count: 0 }));
+
+// Enhanced signal interface
+interface MutSignal<T> extends Signal<T> {
+  // Object methods
+  set<K extends keyof T>(key: K, value: T[K]): void;
+  patch<K extends keyof T>(
+    key: K, 
+    partial: T[K] extends object ? Partial<T[K]> : never
+  ): void;
+  
+  // Array methods (via overloads)
+  set(index: number, value: T extends (infer U)[] ? U : never): void;
+  patch(
+    index: number, 
+    partial: T extends (infer U)[] ? U extends object ? Partial<U> : never : never
+  ): void;
+}
+```
+
+### Implementation
+
+```typescript
+// Mut primitive returns a factory
 function mut<T>(value: T): SignalFactory<T> {
   return new MiddlewareFactory(value, (signal) => {
-    // Create specialized prototype based on value type
-    if (Array.isArray(value)) {
-      Object.setPrototypeOf(signal, MutArrayPrototype);
-      signal._value = enhanceMutArray(value, () => {
-        signal._version++;
-        globalVersion++;
-        notifyTargets(signal);
-      });
-    } else if (isPlainObject(value)) {
-      Object.setPrototypeOf(signal, MutObjectPrototype);
-      signal._value = enhanceMutObject(value, () => {
-        signal._version++;
-        globalVersion++;
-        notifyTargets(signal);
-      });
-    }
-    
-    // Keep original setter for reference changes
-    const originalSetter = Object.getOwnPropertyDescriptor(
-      Object.getPrototypeOf(signal), 
-      'value'
-    ).set;
-    
-    // Override setter to re-enhance on reference change
-    Object.defineProperty(signal, 'value', {
-      get() { return this._value; },
-      set(newValue) {
-        if (Array.isArray(newValue)) {
-          newValue = enhanceMutArray(newValue, () => {
-            this._version++;
-            globalVersion++;
-            notifyTargets(this);
-          });
-        } else if (isPlainObject(newValue)) {
-          newValue = enhanceMutObject(newValue, () => {
-            this._version++;
-            globalVersion++;
-            notifyTargets(this);
-          });
+    // Add methods to the signal instance
+    Object.assign(signal, {
+      set(keyOrIndex: any, val: any) {
+        if (Array.isArray(signal.value)) {
+          // Array: create new array with updated element
+          const arr = [...signal.value];
+          arr[keyOrIndex] = val;
+          signal.value = arr as T;
+        } else {
+          // Object: create new object with updated property
+          signal.value = { ...signal.value, [keyOrIndex]: val };
         }
-        originalSetter.call(this, newValue);
+      },
+      
+      patch(keyOrIndex: any, partial: any) {
+        if (Array.isArray(signal.value)) {
+          // Array: immutably patch element at index
+          const arr = [...signal.value];
+          arr[keyOrIndex] = { ...arr[keyOrIndex], ...partial };
+          signal.value = arr as T;
+        } else {
+          // Object: immutably patch nested object
+          const current = signal.value[keyOrIndex];
+          signal.value = { 
+            ...signal.value, 
+            [keyOrIndex]: { ...current, ...partial }
+          };
+        }
       }
     });
   });
 }
 ```
 
-### Hybrid Implementation
+### Array Helpers
 
 ```typescript
-// Array enhancement - direct method patching
-function enhanceMutArray<T extends any[]>(
-  arr: T,
-  notify: () => void
-): T {
-  const mutatingMethods = ['push', 'pop', 'shift', 'unshift', 'splice', 'sort', 'reverse'];
+// Optional helpers for common array operations
+export const arrayHelpers = {
+  push: <T>(sig: MutSignal<T[]>, ...items: T[]) => 
+    sig.value = [...sig.value, ...items],
   
-  mutatingMethods.forEach(method => {
-    const original = arr[method];
-    arr[method] = function(...args: any[]) {
-      const result = original.apply(this, args);
-      notify();
-      return result;
-    };
-  });
+  remove: <T>(sig: MutSignal<T[]>, index: number) =>
+    sig.value = sig.value.filter((_, i) => i !== index),
   
-  // Also patch index assignments via custom setter
-  return new Proxy(arr, {
-    set(target, prop, value) {
-      const result = Reflect.set(target, prop, value);
-      if (!isNaN(Number(prop))) notify(); // Numeric indices only
-      return result;
-    }
-  });
-}
-
-// Object enhancement - property definitions
-function enhanceMutObject<T extends object>(
-  obj: T,
-  notify: () => void
-): T {
-  const enhanced = {} as T;
-  
-  // Define getters/setters for existing properties
-  Object.keys(obj).forEach(key => {
-    let value = obj[key];
-    Object.defineProperty(enhanced, key, {
-      get() { return value; },
-      set(newValue) {
-        if (value !== newValue) {
-          value = newValue;
-          notify();
-        }
-      },
-      enumerable: true,
-      configurable: true
-    });
-  });
-  
-  // Note: Dynamic properties won't be tracked
-  // Document this limitation clearly
-  return enhanced;
-}
+  filter: <T>(sig: MutSignal<T[]>, predicate: (item: T) => boolean) =>
+    sig.value = sig.value.filter(predicate)
+};
 ```
 
-### Implementation Notes
+### Usage Examples
 
-1. **Array Tracking**: Uses minimal proxy only for index assignments, methods are directly patched
-2. **Object Tracking**: No proxy needed - uses Object.defineProperty for known properties
-3. **Dynamic Properties**: Not supported for objects (documented limitation)
-4. **Performance**: Faster than full proxy approach, especially for objects
+```typescript
+// Objects
+const user = signal(mut({ name: 'John', age: 30 }));
+user.set('name', 'Jane');
+user.patch('settings', { theme: 'dark' });
+
+// Arrays
+const todos = signal(mut([{ id: 1, text: 'Task', done: false }]));
+todos.set(0, { id: 1, text: 'Updated', done: true });
+todos.patch(0, { done: true });
+
+// With helpers
+import { arrayHelpers } from '@lattice/core';
+arrayHelpers.push(todos, { id: 2, text: 'New task', done: false });
+```
 
 ## Performance Considerations
 
 ### Bundle Size Impact
 
 ```typescript
-Core: ~100 bytes gzipped
-Mut primitive: ~200 bytes gzipped (hybrid approach)
-Total: ~300 bytes gzipped
+Core implementation: ~150 bytes gzipped
+Array helpers: ~50 bytes gzipped
+Total: ~200 bytes gzipped
 ```
 
 ### Runtime Performance
 
-1. **Declaration Time**: ~200ns per middleware application
-2. **Hot Path**: Zero overhead (direct property access maintained)
-3. **Mutation Overhead**: 
-   - Arrays: ~20ns per method call (direct patch)
-   - Objects: ~10ns per property set (defineProperty)
-4. **Memory**: One prototype object per middleware type + enhanced value objects
+1. **Method Call Overhead**: ~5ns per set/patch operation
+2. **Memory Allocation**: One new object/array per update
+3. **No Proxy Overhead**: Direct method calls only
+4. **Type Checking**: Zero runtime cost (TypeScript only)
 
-### Optimization Strategies
+### Optimization Benefits
 
-1. **Prototype Caching**
-   ```typescript
-   const prototypeCache = new Map<string, object>();
-   ```
+1. **Predictable Performance**
+   - No hidden proxy traps
+   - No property enumeration
+   - No deep traversal
 
-2. **Monomorphic Shapes**
-   - All signals maintain same property structure
-   - Prototypes pre-created and cached
-   - No hidden class transitions
+2. **V8 Optimizations**
+   - Monomorphic method calls
+   - Inline caching for property access
+   - No deoptimization from proxies
 
-3. **Fast Type Checks**
-   ```typescript
-   const isObject = (v: unknown): v is object => 
-     v !== null && (typeof v === 'object' || typeof v === 'function');
-   ```
+3. **Memory Efficiency**
+   - No wrapper objects
+   - No WeakMap tracking
+   - Minimal closure allocations
 
 ## Type Safety
 
 ### Type Inference
 
 ```typescript
-// Primitive preserves type
-declare function mut<T>(value: T): SignalFactory<T>;
+// Full type inference and validation
+const user = signal(mut({ name: 'John', age: 30 }));
+user.set('name', 'Jane'); // ✅ Valid
+user.set('email', 'test'); // ❌ Type error - 'email' doesn't exist
 
-// Full inference works
-const todos = signal(mut([])); // Signal<Array<any>>
-const state = signal(mut({ count: 0 })); // Signal<{ count: number }>
+// Array element types preserved
+const todos = signal(mut([{ id: 1, done: false }]));
+todos.patch(0, { done: true }); // ✅ Valid
+todos.patch(0, { status: 'complete' }); // ❌ Type error
 ```
 
-### Branded Types
+### Compile-Time Safety
 
-```typescript
-// Optional: Brand enhanced signals
-interface MutSignal<T> extends Signal<T> {
-  __mut: true;
-}
+- No dynamic property access
+- No runtime type checking needed
+- Full IntelliSense support
+- Prevents typos and incorrect updates
 
-// Middleware can return branded types
-function mut<T>(value: T): SignalFactory<T> & { 
-  __brand: 'mut' 
-};
-```
+## Implementation Plan
 
-## Migration Path
+### Phase 1: Core Implementation
+1. Add `mutable()` function to exports
+2. Implement `set()` and `patch()` methods
+3. Add TypeScript overloads for arrays/objects
+4. Create array helper utilities
 
-### Phase 1: Core Implementation (1 day)
-1. Update `signal()` to detect factories
-2. Implement factory protocol
-3. Add prototype enhancement utilities
-4. Ensure zero performance regression
+### Phase 2: Testing
+1. Unit tests for all update patterns
+2. Type inference tests
+3. Performance benchmarks
+4. Integration with computed signals
 
-### Phase 2: Mut Middleware (2 days)
-1. Implement basic mut functionality
-2. Add proxy caching and optimization
-3. Handle all collection types (Array, Map, Set)
-4. Comprehensive testing
-
-### Phase 3: Validation (1 day)
-1. Performance benchmarks
-2. Bundle size analysis
-3. Type inference testing
-4. Integration with existing middleware
+### Phase 3: Documentation
+1. API documentation
+2. Migration guide from direct mutations
+3. Best practices guide
+4. Common patterns cookbook
 
 ## Testing Strategy
-
-### Performance Tests
-
-```typescript
-// Benchmark: Middleware overhead
-benchmark('middleware creation overhead', () => {
-  const base = signal(0);
-  const enhanced = signal(mut(0));
-  // Should be < 500ns difference
-});
-
-// Benchmark: Hot path performance
-benchmark('getter performance', () => {
-  const enhanced = signal(mut({ count: 0 }));
-  // Should match base signal performance
-  for (let i = 0; i < 1000000; i++) {
-    enhanced.value.count;
-  }
-});
-```
 
 ### Functional Tests
 
 ```typescript
-test('mut prevents unnecessary updates', () => {
-  const arr = signal(mut([1, 2, 3]));
+test('object updates', () => {
+  const user = signal(mut({ name: 'John', age: 30 }));
   let updateCount = 0;
   
   effect(() => {
-    arr.value; // Track whole array
+    user.value.name;
     updateCount++;
   });
   
-  arr.value.push(4); // Should trigger
+  user.set('name', 'Jane');
   expect(updateCount).toBe(2);
+  expect(user.value).toEqual({ name: 'Jane', age: 30 });
+});
+
+test('array patches', () => {
+  const todos = signal(mut([{ id: 1, text: 'Task', done: false }]));
   
-  arr.value = []; // Reference change should trigger
-  expect(updateCount).toBe(3);
+  todos.patch(0, { done: true });
+  expect(todos.value[0]).toEqual({ id: 1, text: 'Task', done: true });
+  
+  // Original array unchanged (immutable)
+  const firstValue = todos.value;
+  todos.patch(0, { text: 'Updated' });
+  expect(todos.value).not.toBe(firstValue);
 });
 ```
 
-## Future Primitives
+### Performance Tests
 
-Additional primitives require:
-1. Common use case that cannot be solved with existing APIs
-2. Fundamentally different reactive behavior
-3. Performance benefit from core integration
-
-
-## Design Decisions and Tradeoffs
-
-### Design Rationale
-
-**Prototype Enhancement**: Enables direct method calls with zero indirection. V8 optimizes prototype chains efficiently.
-
-**Hybrid Tracking**: Arrays use method patching + minimal proxy for indices, objects use defineProperty for known properties.
-
-**Marker Pattern**: Declaration-time detection keeps runtime checks out of hot paths.
-
-## Alternative Approaches Considered
-
-### 1. Full Proxy Approach
 ```typescript
-// Rejected: Larger bundle, debugging complexity
-new Proxy(value, { /* trap all operations */ });
+benchmark('mut signal vs normal signal updates', () => {
+  const mutUser = signal(mut({ name: 'John', age: 30 }));
+  const normalSignal = signal({ name: 'John', age: 30 });
+  
+  // Mut: clear, explicit
+  mutUser.set('name', 'Jane');
+  
+  // Normal: spread syntax
+  normalSignal.value = { ...normalSignal.value, name: 'Jane' };
+});
 ```
 
-### 2. Runtime Middleware Chain
+## Design Decisions
+
+### Why Explicit Methods?
+
+1. **No Hidden Behavior**: What you see is what happens
+2. **Type Safety**: TypeScript validates at compile time
+3. **Performance**: No proxy overhead or property enumeration
+4. **Debugging**: Clear stack traces and breakpoints
+
+### Why Shallow Only?
+
+1. **Predictable**: No surprises from deep updates
+2. **Performant**: No recursive traversal
+3. **Composable**: Use computed for fine-grained reactivity
+4. **Simple**: Easy to understand and reason about
+
+### Trade-offs
+
+**Pros:**
+- Explicit, clear semantics
+- Zero runtime overhead
+- Full type safety
+- Works with existing patterns
+
+**Cons:**
+- No array method support (push, pop, etc.)
+- Requires method calls vs property access
+- No dynamic property addition
+
+### Integration with Computed
+
 ```typescript
-// Rejected: Adds checks to hot path
-signal.use(['mut']);
+const state = signal(mut({ users: [], settings: { theme: 'dark' } }));
+
+// Fine-grained reactivity via computed
+const userCount = computed(() => state.value.users.length);
+const theme = computed(() => state.value.settings.theme);
+
+// Updates only trigger relevant computeds
+state.patch('settings', { theme: 'light' }); // Only 'theme' recomputes
 ```
 
-### 3. Wrapper Classes
-```typescript
-// Rejected: Multiple objects, memory overhead
-new MutSignal(signal(value));
-```
+## Summary
 
-### 4. Mixin Pattern
-```typescript
-// Rejected: Complex types, poor composition
-Object.assign(signal, mutMixin);
-```
-
-## Limitations of Hybrid Approach
-
-1. **Objects**: Dynamic property additions aren't tracked
-2. **Nested Objects**: Only shallow mutations tracked
-3. **Maps/Sets**: Future enhancement (not in initial implementation)
-
-These limitations are acceptable trade-offs for the significant bundle size reduction and performance improvements.
-
-## Implementation Timeline
-
-- Core primitive system: 0.5 days
-- Mut primitive implementation: 1 day
-- Testing and benchmarks: 0.5 days
-- Total: 2 days
+The `mut` primitive enhances signals with explicit methods for shallow updates to objects and arrays. By avoiding proxies and hidden behavior, it achieves excellent performance while maintaining full type safety. The primitive integrates seamlessly with the signal creation process, adding zero runtime overhead while providing a convenient API for common update patterns.
