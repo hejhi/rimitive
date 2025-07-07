@@ -249,7 +249,7 @@ describe('computed.ts', () => {
       expect(() => refs.b!.value).toThrow('Cycle detected');
     });
 
-    it('should throw error when accessing disposed computed', () => {
+    it('should not throw error when accessing disposed computed', () => {
       const a = signal(1);
       const doubled = computed(() => a.value * 2);
 
@@ -257,7 +257,9 @@ describe('computed.ts', () => {
 
       doubled.dispose();
 
-      expect(() => doubled.value).toThrow('Computed is disposed');
+      // After disposal, accessing value should not throw (performance optimization)
+      expect(() => doubled.value).not.toThrow();
+      expect(doubled.value).toBeUndefined(); // Disposal clears the value
     });
 
     it('should propagate errors from computation function', () => {
@@ -295,8 +297,10 @@ describe('computed.ts', () => {
       writeSignal(a, 10);
       writeSignal(b, 20);
 
-      // Accessing should throw
-      expect(() => sum.value).toThrow('Computed is disposed');
+      // After disposal, accessing value should not throw (performance optimization)
+      expect(() => sum.value).not.toThrow();
+      expect(sum.value).toBeUndefined(); // Disposal clears the value
+      expect(fn).toHaveBeenCalledTimes(1); // Should not recompute
     });
 
     it('should handle disposal of computed with computed dependencies', () => {
@@ -314,8 +318,9 @@ describe('computed.ts', () => {
       writeSignal(a, 5);
       expect(doubled.value).toBe(10);
 
-      // But quadrupled should throw
-      expect(() => quadrupled.value).toThrow('Computed is disposed');
+      // But quadrupled should not throw (performance optimization)
+      expect(() => quadrupled.value).not.toThrow();
+      expect(quadrupled.value).toBeUndefined(); // Disposal clears the value
     });
   });
 
