@@ -8,30 +8,18 @@ export default defineConfig({
 	integrations: [
 		starlight({
 			title: 'Lattice',
-			social: [
-				{ icon: 'github', label: 'GitHub', href: 'https://github.com/yourusername/lattice' },
-				{ icon: 'discord', label: 'Discord', href: '/discord' },
-			],
 			sidebar: [
 				{
 					label: 'Start Here',
-					items: [
-						{ label: 'Getting Started', slug: 'guides/getting-started' },
-						{ label: 'Bundle Size & Performance', slug: 'guides/bundle-size' },
-					],
+					items: [],
 				},
 				{
 					label: 'Examples',
-					items: [
-						{ label: 'Dropdown Component', slug: 'guides/dropdown-example' },
-					],
+					items: [],
 				},
 				{
 					label: 'Advanced',
-					items: [
-						{ label: 'Minimal Bundle', slug: 'guides/base-bundle' },
-						{ label: 'Import Patterns', slug: 'guides/import-patterns' },
-					],
+					items: [],
 				},
 			],
 			customCss: [
