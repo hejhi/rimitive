@@ -21,6 +21,14 @@ count.value++; // logs: count: 1, doubled: 2
 npm install @lattice/signals
 ```
 
+## Features
+
+- **Concurrent-safe** - Built-in context isolation for React 18+ concurrent features
+- **Minimal overhead** - Direct property access, no getters/setters
+- **Lazy evaluation** - Computed values only run when accessed
+- **Fine-grained updates** - Subscribe to specific nested properties with `select()`
+- **TypeScript-first** - Full type safety with inference
+
 ## Core Concepts
 
 ### Signals

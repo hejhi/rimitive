@@ -1,8 +1,7 @@
 // Simplified Signal implementation - bare metal
 
-import type { Signal, Computed, Effect } from './types';
+import type { Signal, Computed, Effect, DependencyNode } from './types';
 import { RUNNING } from './types';
-import { acquireNode } from './node-pool';
 
 // Context for tracking state
 interface SignalContext {
@@ -10,6 +9,25 @@ interface SignalContext {
   version: number;
   batchDepth: number;
   batchedEffects: Effect | null;
+  // Node pool state
+  nodePool: DependencyNode[];
+  poolSize: number;
+  allocations: number;
+  poolHits: number;
+  poolMisses: number;
+}
+
+// Pool configuration
+const MAX_POOL_SIZE = 1000;
+const INITIAL_POOL_SIZE = 100;
+
+// Initialize a node pool
+function initializeNodePool(): DependencyNode[] {
+  const pool = new Array(INITIAL_POOL_SIZE) as DependencyNode[];
+  for (let i = 0; i < INITIAL_POOL_SIZE; i++) {
+    pool[i] = {} as DependencyNode;
+  }
+  return pool;
 }
 
 // Active context - direct mutation for performance
@@ -17,7 +35,12 @@ let activeContext: SignalContext = {
   currentComputed: null,
   version: 0,
   batchDepth: 0,
-  batchedEffects: null
+  batchedEffects: null,
+  nodePool: initializeNodePool(),
+  poolSize: INITIAL_POOL_SIZE,
+  allocations: 0,
+  poolHits: 0,
+  poolMisses: 0
 };
 
 // Signal constructor
@@ -61,8 +84,11 @@ Object.defineProperty(Signal.prototype, 'value', {
       node = node.nextSource;
     }
 
-    // Create new dependency node using pool
-    const newNode = acquireNode();
+    // Create new dependency node using context pool
+    activeContext.allocations++;
+    const newNode = activeContext.poolSize > 0
+      ? (activeContext.poolHits++, activeContext.nodePool[--activeContext.poolSize]!)
+      : (activeContext.poolMisses++, {} as DependencyNode);
     newNode.source = this;
     newNode.target = current;
     newNode.version = this._version;
@@ -189,7 +215,12 @@ export function withContext<T>(fn: () => T): T {
     currentComputed: null,
     version: prevContext.version, // Preserve version across contexts
     batchDepth: 0,
-    batchedEffects: null
+    batchedEffects: null,
+    nodePool: initializeNodePool(),
+    poolSize: INITIAL_POOL_SIZE,
+    allocations: 0,
+    poolHits: 0,
+    poolMisses: 0
   };
   
   try {
@@ -204,7 +235,15 @@ export function resetTracking(): void {
   activeContext.version = 0;
   activeContext.batchDepth = 0;
   activeContext.batchedEffects = null;
+  activeContext.nodePool = initializeNodePool();
+  activeContext.poolSize = INITIAL_POOL_SIZE;
+  activeContext.allocations = 0;
+  activeContext.poolHits = 0;
+  activeContext.poolMisses = 0;
 }
+
+// Export MAX_POOL_SIZE for node-pool compatibility
+export { MAX_POOL_SIZE };
 
 // Export the Signal constructor for prototype extensions
 export { Signal };

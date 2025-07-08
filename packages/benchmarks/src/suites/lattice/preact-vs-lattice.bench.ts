@@ -37,7 +37,6 @@ describe('Single Signal Updates', () => {
       void count.value; // Read
     }
   });
-
 });
 
 describe('Computed Chain (a → b → c)', () => {
@@ -53,17 +52,6 @@ describe('Computed Chain (a → b → c)', () => {
   });
 
   bench('Lattice - computed chain', () => {
-    const a = latticeSignal(0);
-    const b = latticeComputed(() => a.value * 2);
-    const c = latticeComputed(() => b.value * 2);
-
-    for (let i = 0; i < ITERATIONS; i++) {
-      a.value = i;
-      void c.value; // Force evaluation
-    }
-  });
-
-  bench('Lattice - computed chain (set)', () => {
     const a = latticeSignal(0);
     const b = latticeComputed(() => a.value * 2);
     const c = latticeComputed(() => b.value * 2);
@@ -123,30 +111,6 @@ describe('Deep Computed Tree', () => {
       void result.value;
     }
   });
-
-  bench('Lattice - deep tree (set)', () => {
-    const root = latticeSignal(0);
-
-    // Level 1
-    const a1 = latticeComputed(() => root.value * 2);
-    const a2 = latticeComputed(() => root.value * 3);
-
-    // Level 2
-    const b1 = latticeComputed(() => a1.value + a2.value);
-    const b2 = latticeComputed(() => a1.value - a2.value);
-
-    // Level 3
-    const c1 = latticeComputed(() => b1.value * b2.value);
-    const c2 = latticeComputed(() => b1.value / (b2.value || 1));
-
-    // Final
-    const result = latticeComputed(() => c1.value + c2.value);
-
-    for (let i = 0; i < ITERATIONS; i++) {
-      root.value = i + 1; // Avoid divide by zero
-      void result.value;
-    }
-  });
 });
 
 describe('Diamond Pattern', () => {
@@ -179,18 +143,6 @@ describe('Diamond Pattern', () => {
       void d.value; // Should compute b and c once each
     }
   });
-
-  bench('Lattice - diamond (set)', () => {
-    const a = latticeSignal(0);
-    const b = latticeComputed(() => a.value * 2);
-    const c = latticeComputed(() => a.value * 3);
-    const d = latticeComputed(() => b.value + c.value);
-
-    for (let i = 0; i < ITERATIONS; i++) {
-      a.value = i;
-      void d.value; // Should compute b and c once each
-    }
-  });
 });
 
 describe('Batch Updates', () => {
@@ -211,22 +163,6 @@ describe('Batch Updates', () => {
   });
 
   bench('Lattice - batch updates', () => {
-    const s1 = latticeSignal(0);
-    const s2 = latticeSignal(0);
-    const s3 = latticeSignal(0);
-    const sum = latticeComputed(() => s1.value + s2.value + s3.value);
-
-    for (let i = 0; i < ITERATIONS / 10; i++) {
-      latticeBatch(() => {
-        s1.value = i;
-        s2.value = i * 2;
-        s3.value = i * 3;
-      });
-      void sum.value; // Should recompute once per batch
-    }
-  });
-
-  bench('Lattice - batch updates (set)', () => {
     const s1 = latticeSignal(0);
     const s2 = latticeSignal(0);
     const s3 = latticeSignal(0);
@@ -279,24 +215,6 @@ describe('Large Dependency Graph', () => {
       void computed3.value;
     }
   });
-
-  bench('Lattice - large graph (set)', () => {
-    const sigs = Array.from({ length: 10 }, (_, i) => latticeSignal(i));
-    const computed1 = latticeComputed(() =>
-      sigs.reduce((sum, s) => sum + s.value, 0)
-    );
-    const computed2 = latticeComputed(() => computed1.value * 2);
-    const computed3 = latticeComputed(() => computed2.value + computed1.value);
-
-    for (let i = 0; i < ITERATIONS / 100; i++) {
-      latticeBatch(() => {
-        sigs.forEach((s, idx) => {
-          s.value = i * (idx + 1);
-        });
-      });
-      void computed3.value;
-    }
-  });
 });
 
 describe('Rapid Updates Without Reads', () => {
@@ -309,14 +227,6 @@ describe('Rapid Updates Without Reads', () => {
   });
 
   bench('Lattice - rapid updates', () => {
-    const count = latticeSignal(0);
-
-    for (let i = 0; i < ITERATIONS * 2; i++) {
-      count.value = i;
-    }
-  });
-
-  bench('Lattice - rapid updates (set)', () => {
     const count = latticeSignal(0);
 
     for (let i = 0; i < ITERATIONS * 2; i++) {

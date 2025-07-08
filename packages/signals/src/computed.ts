@@ -10,7 +10,7 @@ import {
   IS_COMPUTED,
 } from './types';
 import { activeContext } from './signal';
-import { acquireNode, releaseNode } from './node-pool';
+import { releaseNode } from './node-pool';
 
 // Computed constructor
 function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
@@ -56,8 +56,11 @@ Object.defineProperty(Computed.prototype, 'value', {
         }
 
         if (!node) {
-          // Create new dependency node using pool
-          const newNode = acquireNode();
+          // Create new dependency node using context pool
+          activeContext.allocations++;
+          const newNode = activeContext.poolSize > 0
+            ? (activeContext.poolHits++, activeContext.nodePool[--activeContext.poolSize]!)
+            : (activeContext.poolMisses++, {} as DependencyNode);
           newNode.source = this;
           newNode.target = current;
           newNode.version = version;
