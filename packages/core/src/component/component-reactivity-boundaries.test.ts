@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createStore, type Store } from '../store';
-
-type Component<TState extends object, TReturn> = (
-  store: Store<TState>
-) => TReturn;
+import { createStore } from '../store';
+import { Component } from './types';
 
 describe('Component Reactivity Boundaries', () => {
   it('should demonstrate getter reactivity implications', () => {

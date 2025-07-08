@@ -1,12 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createStore, type Store } from '../store';
-
-/**
- * Modern component pattern - components receive stores directly
- */
-type Component<TState extends object, TReturn> = (
-  store: Store<TState>
-) => TReturn;
+import { createStore } from '../store';
+import { Component } from './types';
 
 describe('Component with Store Pattern', () => {
   it('should create a basic component with store', () => {
@@ -29,7 +23,7 @@ describe('Component with Store Pattern', () => {
         },
         increment: () => store.state.count.value++,
         decrement: () => store.state.count.value--,
-        reset: () => store.state.count.value = 0,
+        reset: () => (store.state.count.value = 0),
       };
     };
 
@@ -91,8 +85,8 @@ describe('Component with Store Pattern', () => {
         get product() {
           return product.value;
         },
-        setA: (value: number) => store.state.a.value = value,
-        setB: (value: number) => store.state.b.value = value,
+        setA: (value: number) => (store.state.a.value = value),
+        setB: (value: number) => (store.state.b.value = value),
       };
     };
 
@@ -213,8 +207,8 @@ describe('Component with Store Pattern', () => {
         get totalPrice() {
           return totalPrice.value;
         },
-        setBasePrice: (price: number) => store.state.basePrice.value = price,
-        setTaxRate: (rate: number) => store.state.taxRate.value = rate,
+        setBasePrice: (price: number) => (store.state.basePrice.value = price),
+        setTaxRate: (rate: number) => (store.state.taxRate.value = rate),
       };
     };
 
@@ -249,7 +243,7 @@ describe('Component with Store Pattern', () => {
         get totalValue() {
           return totalValue.value;
         },
-        setQuantity: (qty: number) => store.state.quantity.value = qty,
+        setQuantity: (qty: number) => (store.state.quantity.value = qty),
       };
     };
 

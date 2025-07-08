@@ -5,6 +5,8 @@
  * They are used by both the runtime and adapters.
  */
 
+import { Store } from '../store';
+
 /**
  * A selected value derived from a signal or computed
  */
@@ -105,3 +107,7 @@ export interface LatticeContext {
 export interface StoreConfig<State> {
   state: State;
 }
+
+export type Component<TState extends object, TReturn> = (
+  store: Store<TState>
+) => TReturn;
