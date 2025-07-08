@@ -27,9 +27,9 @@ describe('Component with Store Pattern', () => {
         get count() {
           return store.state.count.value;
         },
-        increment: () => store.set({ count: store.state.count.value + 1 }),
-        decrement: () => store.set({ count: store.state.count.value - 1 }),
-        reset: () => store.set({ count: 0 }),
+        increment: () => store.state.count.value++,
+        decrement: () => store.state.count.value--,
+        reset: () => store.state.count.value = 0,
       };
     };
 
@@ -91,8 +91,8 @@ describe('Component with Store Pattern', () => {
         get product() {
           return product.value;
         },
-        setA: (value: number) => store.set({ a: value }),
-        setB: (value: number) => store.set({ b: value }),
+        setA: (value: number) => store.state.a.value = value,
+        setB: (value: number) => store.state.b.value = value,
       };
     };
 
@@ -213,8 +213,8 @@ describe('Component with Store Pattern', () => {
         get totalPrice() {
           return totalPrice.value;
         },
-        setBasePrice: (price: number) => store.set({ basePrice: price }),
-        setTaxRate: (rate: number) => store.set({ taxRate: rate }),
+        setBasePrice: (price: number) => store.state.basePrice.value = price,
+        setTaxRate: (rate: number) => store.state.taxRate.value = rate,
       };
     };
 
@@ -249,7 +249,7 @@ describe('Component with Store Pattern', () => {
         get totalValue() {
           return totalValue.value;
         },
-        setQuantity: (qty: number) => store.set({ quantity: qty }),
+        setQuantity: (qty: number) => store.state.quantity.value = qty,
       };
     };
 
@@ -310,7 +310,7 @@ describe('Component with Store Pattern', () => {
         validate: () => {
           const email = store.state.email.value;
           const isValid = email.includes('@') && fullName.value.length > 0;
-          store.set({ isValid });
+          store.state.isValid.value = isValid;
         },
       };
     };
