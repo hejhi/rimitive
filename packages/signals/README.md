@@ -24,6 +24,7 @@ npm install @lattice/signals
 ## Features
 
 - **Concurrent-safe** - Built-in context isolation for React 18+ concurrent features
+- **SSR-ready** - Full server-side rendering support with request isolation
 - **Minimal overhead** - Direct property access, no getters/setters
 - **Lazy evaluation** - Computed values only run when accessed
 - **Fine-grained updates** - Subscribe to specific nested properties with `select()`
@@ -222,6 +223,51 @@ Batches signal updates. Effects only run once after all updates complete.
 - `signal.select(selector)` - Create a derived subscription
 - `signal.set(key, value)` - Update object property or array element
 - `signal.patch(key, partial)` - Partially update nested objects
+
+## Server-Side Rendering (SSR)
+
+For SSR, wrap each request in its own context to prevent state leakage between requests:
+
+```typescript
+import { withContext } from '@lattice/signals';
+
+// Next.js app directory
+export default withContext(async function Page() {
+  // Each request gets isolated signal context
+  const user = signal(await getUser());
+  return <Dashboard user={user} />;
+});
+
+// Express/Node.js
+app.get('*', (req, res) => {
+  withContext(() => {
+    const html = renderToString(<App />);
+    res.send(html);
+  });
+});
+```
+
+### React Server Components
+
+Signals work great for server-side computations:
+
+```typescript
+// app/stats/page.tsx
+export default withContext(async function StatsPage() {
+  const orders = signal(await db.orders.count());
+  const revenue = signal(await db.orders.sum('total'));
+  
+  // Computed values run on the server
+  const avgOrder = computed(() => revenue.value / orders.value);
+  
+  return (
+    <div>
+      <p>Orders: {orders.value}</p>
+      <p>Average: ${avgOrder.value.toFixed(2)}</p>
+    </div>
+  );
+});
+```
 
 ## License
 
