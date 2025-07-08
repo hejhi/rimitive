@@ -1,9 +1,9 @@
 // Lattice Core API - Pure signal-based state management
 
-// Export component API
-export { createLattice } from './component';
+// Export context API
+export { createLattice } from './context';
 
-// Note: signal, computed, and effect are provided via component context, not exported globally
+// Note: signal, computed, and effect are provided via context, not exported globally
 
 // Export types
 export type {
@@ -12,7 +12,7 @@ export type {
   SignalState,
   LatticeContext,
   SetState,
-} from './component/types';
+} from './types';
 
 // Export store API
 export { createStore, partial, type Store } from './store';

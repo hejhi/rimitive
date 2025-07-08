@@ -1,8 +1,7 @@
 /**
- * @fileoverview Runtime types for the signals-based reactive slice system
+ * @fileoverview Runtime types for Lattice core
  *
- * These types define the core interfaces for Lattice's signals-first reactive system.
- * They are used by both the runtime and adapters.
+ * These types define the core interfaces for Lattice's signals-based reactive system.
  */
 
 /**
@@ -58,17 +57,6 @@ export type SignalState<State> = {
 };
 
 /**
- * A handle to a reactive slice that provides dual functionality:
- *
- * 1. When called with no arguments, returns the computed values and methods
- * 2. When called with a selector function, extracts values for composition with other slices
- */
-export interface SliceHandle<Computed> {
-  (): Computed;
-  <ChildDeps>(depsFn: (parent: Computed) => ChildDeps): ChildDeps;
-}
-
-/**
  * Function to batch update state through signals
  * Updates multiple signals atomically within a single batch
  */
@@ -78,14 +66,6 @@ export interface SetState {
     updates: Partial<State> | ((current: State) => Partial<State>)
   ): void;
 }
-
-/**
- * Factory function for creating reactive slices using signals
- * Provides read-only signals and a set function for updates
- */
-export type ReactiveSliceFactory<State> = <Computed>(
-  computeFn: (state: SignalState<State>, set: SetState) => Computed
-) => SliceHandle<Computed>;
 
 /**
  * Lattice context provides scoped signal/computed factories
@@ -102,3 +82,6 @@ export interface LatticeContext {
 export interface StoreConfig<State> {
   state: State;
 }
+
+// Re-export store type from store module
+export type { Store } from './store';

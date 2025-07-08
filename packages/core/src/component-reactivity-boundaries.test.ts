@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStore, Store } from '../store';
+import { createStore, type Store } from './store';
 
 describe('Component Reactivity Boundaries', () => {
   it('should demonstrate getter reactivity implications', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStore, Store } from '../store';
+import { createStore, type Store } from './store';
 
 describe('Component with Store Pattern', () => {
   it('should create a basic component with store', () => {

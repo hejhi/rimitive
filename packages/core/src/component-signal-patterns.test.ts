@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStore, Store } from '../store';
+import { createStore, type Store } from './store';
 
 describe('Component Signal Patterns - Best Practices', () => {
   it('should use direct signal updates for single property changes (performance)', () => {

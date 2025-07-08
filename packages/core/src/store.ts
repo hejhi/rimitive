@@ -5,8 +5,8 @@
  * batched updates, built on top of Lattice context primitives.
  */
 
-import type { LatticeContext, SignalState } from '../component/types';
-import { createLattice } from '../component/context';
+import type { LatticeContext, SignalState } from './types';
+import { createLattice } from './context';
 
 /**
  * Helper for creating partial updates with structural sharing
