@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createLatticeContext } from './context';
+import { createLattice } from './context';
 
 describe('Context Lifecycle Example', () => {
   it('should demonstrate component-like lifecycle with automatic cleanup', () => {
     // Simulate a parent component
-    const appContext = createLatticeContext();
+    const appContext = createLattice();
 
     // App-level state
     const theme = appContext.signal('light');
@@ -18,7 +18,7 @@ describe('Context Lifecycle Example', () => {
     });
 
     // Simulate mounting a child component
-    const modalContext = createLatticeContext();
+    const modalContext = createLattice();
 
     // Modal-specific state
     const isOpen = modalContext.signal(true);
@@ -79,15 +79,15 @@ describe('Context Lifecycle Example', () => {
 
   it('should handle complex nested component hierarchies', () => {
     // Root app context
-    const app = createLatticeContext();
+    const app = createLattice();
     const appState = app.signal({ route: '/home' });
 
     // Page context
-    const page = createLatticeContext();
+    const page = createLattice();
 
     // Multiple widget contexts
-    const widget1 = createLatticeContext();
-    const widget2 = createLatticeContext();
+    const widget1 = createLattice();
+    const widget2 = createLattice();
 
     const widget1State = widget1.signal(0);
     const widget2State = widget2.signal(0);

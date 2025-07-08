@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createLatticeContext } from './context';
+import { createLattice } from './context';
 
 describe('Context Disposal', () => {
   it('should dispose all effects when context is disposed', () => {
-    const context = createLatticeContext();
+    const context = createLattice();
     const signal1 = context.signal(0);
     const signal2 = context.signal(0);
     
@@ -40,7 +40,7 @@ describe('Context Disposal', () => {
   });
 
   it('should dispose all computeds when context is disposed', () => {
-    const context = createLatticeContext();
+    const context = createLattice();
     const signal = context.signal(10);
     
     let computeRuns = 0;
@@ -69,7 +69,7 @@ describe('Context Disposal', () => {
   });
 
   it('should run effect cleanup functions on disposal', () => {
-    const context = createLatticeContext();
+    const context = createLattice();
     const cleanup = vi.fn();
     
     context.effect(() => {
@@ -84,7 +84,7 @@ describe('Context Disposal', () => {
   });
 
   it('should handle manual effect disposal', () => {
-    const context = createLatticeContext();
+    const context = createLattice();
     const signal = context.signal(0);
     
     let effectRuns = 0;
@@ -107,7 +107,7 @@ describe('Context Disposal', () => {
   });
 
   it('should prevent creating new primitives after disposal', () => {
-    const context = createLatticeContext();
+    const context = createLattice();
     context.dispose();
     
     expect(() => context.signal(0)).toThrow('Cannot create signal in disposed context');
@@ -116,9 +116,9 @@ describe('Context Disposal', () => {
   });
 
   it('should handle multiple independent contexts', () => {
-    const context1 = createLatticeContext();
-    const context2 = createLatticeContext();
-    const context3 = createLatticeContext();
+    const context1 = createLattice();
+    const context2 = createLattice();
+    const context3 = createLattice();
     
     const signal1 = context1.signal(0);
     const signal2 = context2.signal(0);

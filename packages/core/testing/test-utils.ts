@@ -1,5 +1,5 @@
-import { createComponent } from '../src/component/component';
-import type { ComponentContext } from '../src/component/types';
+import { createStore } from '../src/store';
+import type { ComponentContext } from '../src/component/component-types';
 
 // Common test state types
 export interface CounterState {
@@ -24,8 +24,12 @@ export interface UserState {
 }
 
 // Factory functions for creating test components
-export function createTestComponent<State extends object>(initialState: State) {
-  return createComponent(initialState);
+export function createTestComponent<State extends object>(
+  initialState: State
+): ComponentContext<State> {
+  const store = createStore(initialState);
+  const ctx = store.getContext();
+  return { ...ctx, store: store.state, set: store.set };
 }
 
 // Common test components

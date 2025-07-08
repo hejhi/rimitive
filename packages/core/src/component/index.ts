@@ -2,13 +2,11 @@
  * @fileoverview Component module exports
  */
 
-export { createComponent, partial } from './component';
+export { createLattice } from './context';
 export type {
   Signal,
   Computed,
   SignalState,
-  ComponentContext,
-  ComponentFactory,
   SetState,
   StoreConfig,
   LatticeContext,

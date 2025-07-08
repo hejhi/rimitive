@@ -26,10 +26,10 @@ export interface Signal<T> {
 
   // Subscribe to changes
   subscribe: (listener: () => void) => () => void;
-  
+
   // Create a fine-grained subscription to a selected value
   select<R>(selector: (value: T) => R): Selected<R>;
-  
+
   // Object/array update methods
   set<K extends keyof T>(key: K, value: T[K]): void;
   patch<K extends keyof T>(
@@ -45,7 +45,7 @@ export interface Signal<T> {
 export interface Computed<T> {
   readonly value: T; // Read computed value
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
-  
+
   // Create a fine-grained subscription to a selected value
   select<R>(selector: (value: T) => R): Selected<R>;
 }
@@ -96,24 +96,8 @@ export interface LatticeContext {
   computed: <T>(computeFn: () => T) => Computed<T>;
   effect: (effectFn: () => void | (() => void)) => () => void;
   batch: (fn: () => void) => void;
+  dispose(): void;
 }
-
-/**
- * Component context includes state signals under 'store' and lattice utilities
- * This is what component factories receive as their single parameter
- */
-export interface ComponentContext<State> extends LatticeContext {
-  store: SignalState<State>;
-  set: SetState;
-}
-
-/**
- * Component factory function that receives a merged context
- * Returns slices (signals, computeds, and methods)
- */
-export type ComponentFactory<State> = (
-  context: ComponentContext<State>
-) => unknown;
 
 /**
  * Configuration for creating a store with optional middleware enhancement

@@ -6,13 +6,13 @@
  */
 
 import type { LatticeContext } from './types';
-import { 
-  signal as globalSignal, 
-  computed as globalComputed, 
-  effect as globalEffect, 
+import {
+  signal as globalSignal,
+  computed as globalComputed,
+  effect as globalEffect,
   batch,
   type Signal,
-  type Computed
+  type Computed,
 } from '@lattice/signals';
 
 /**
@@ -36,7 +36,10 @@ interface LatticeContextImpl extends LatticeContext {
 /**
  * Tracks which signals belong to which context for boundary enforcement
  */
-const contextMap = new WeakMap<Signal<unknown> | Computed<unknown>, LatticeContextImpl>();
+const contextMap = new WeakMap<
+  Signal<unknown> | Computed<unknown>,
+  LatticeContextImpl
+>();
 
 /**
  * Context constructor function
@@ -59,7 +62,10 @@ const LatticeContextImplCtor = LatticeContextImplConstructor as unknown as {
 // Define the prototype
 const proto = LatticeContextImplCtor.prototype;
 
-proto.signal = function <T>(this: LatticeContextImpl, initialValue: T): Signal<T> {
+proto.signal = function <T>(
+  this: LatticeContextImpl,
+  initialValue: T
+): Signal<T> {
   if (this._state.disposed) {
     throw new Error('Cannot create signal in disposed context');
   }
@@ -70,7 +76,10 @@ proto.signal = function <T>(this: LatticeContextImpl, initialValue: T): Signal<T
   return sig;
 };
 
-proto.computed = function <T>(this: LatticeContextImpl, computeFn: () => T): Computed<T> {
+proto.computed = function <T>(
+  this: LatticeContextImpl,
+  computeFn: () => T
+): Computed<T> {
   if (this._state.disposed) {
     throw new Error('Cannot create computed in disposed context');
   }
@@ -81,7 +90,10 @@ proto.computed = function <T>(this: LatticeContextImpl, computeFn: () => T): Com
   return comp;
 };
 
-proto.effect = function (this: LatticeContextImpl, effectFn: () => void | (() => void)): () => void {
+proto.effect = function (
+  this: LatticeContextImpl,
+  effectFn: () => void | (() => void)
+): () => void {
   if (this._state.disposed) {
     throw new Error('Cannot create effect in disposed context');
   }
@@ -89,7 +101,7 @@ proto.effect = function (this: LatticeContextImpl, effectFn: () => void | (() =>
   const dispose = globalEffect(effectFn);
   const effectDisposers = this._state.effectDisposers;
   effectDisposers.add(dispose);
-  
+
   // Return a wrapped disposer that also removes from our tracking
   return () => {
     dispose();
@@ -127,10 +139,10 @@ proto.dispose = function (this: LatticeContextImpl): void {
 /**
  * Creates a scoped lattice context for a component tree
  */
-export function createLatticeContext(): LatticeContext & { dispose(): void } {
+export function createLattice(): LatticeContext & { dispose(): void } {
   // Create new context implementation
   const impl = new LatticeContextImplCtor();
-  
+
   // Create the public interface - bind methods to preserve 'this'
   return {
     signal: impl.signal.bind(impl),
