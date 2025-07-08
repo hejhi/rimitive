@@ -101,9 +101,6 @@ export interface LatticeContext {
   dispose(): void;
 }
 
-/**
- * Configuration for creating a store with optional middleware enhancement
- */
 export interface StoreConfig<State> {
   state: State;
 }

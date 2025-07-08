@@ -416,28 +416,6 @@ Lattice uses a pure signal-based architecture:
 - **Fine-grained reactivity** - Only components using changed signals re-render
 - **Zero dependencies** - No external state management libraries required
 
-## Middleware
-
-Enhance components with cross-cutting concerns:
-
-```typescript
-import { withLogger, withDevtools, withPersistence } from '@lattice/core';
-
-// Logger middleware
-const loggerConfig = withLogger({ count: 0 });
-const store = createComponent(loggerConfig.state, loggerConfig.enhancer);
-
-// Chain multiple middleware
-const config1 = withLogger({ todos: [] });
-const config2 = withDevtools('TodoApp');
-
-const enhancedStore = createComponent(config1.state, (context) => {
-  context = config1.enhancer(context);
-  context = config2.enhancer(context);
-  return context;
-});
-```
-
 ## Why Lattice?
 
 - **True Headless Components**: Build accessible UI behavior once, use it in any framework

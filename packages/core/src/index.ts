@@ -16,6 +16,3 @@ export type {
 
 // Export store API
 export { createStore, partial, type Store } from './store';
-
-// Export middleware
-export { withStoreLogger } from './middleware/index';
