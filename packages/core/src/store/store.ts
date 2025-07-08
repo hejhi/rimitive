@@ -25,9 +25,6 @@ export interface Store<T extends object> {
   /** Update state with automatic batching */
   set: (updates: Partial<T> | ((current: T) => Partial<T>)) => void;
 
-  /** Subscribe to state changes */
-  subscribe: (fn: () => void) => () => void;
-
   /** Get the underlying context */
   getContext: () => LatticeContext;
 
@@ -52,9 +49,10 @@ export interface Store<T extends object> {
  * // Update state (automatically batched)
  * store.set({ count: 1, name: 'Updated' });
  *
- * // Subscribe to changes
- * const unsubscribe = store.subscribe(() => {
- *   console.log('State changed!');
+ * // Use effects to react to changes
+ * const ctx = store.getContext();
+ * const unsubscribe = ctx.effect(() => {
+ *   console.log('Count is:', store.state.count.value);
  * });
  * ```
  */
@@ -104,7 +102,6 @@ export function createStore<T extends object>(
   return {
     state: signals,
     set,
-    subscribe: (fn: () => void) => ctx.effect(fn),
     getContext: () => ctx,
     dispose: () => ctx.dispose(),
   };

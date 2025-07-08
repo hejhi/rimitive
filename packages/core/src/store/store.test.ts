@@ -25,7 +25,17 @@ describe('Store', () => {
     const store = createStore({ a: 1, b: 2, c: 3 });
     let updateCount = 0;
     
-    const unsubscribe = store.subscribe(() => updateCount++);
+    const ctx = store.getContext();
+    const unsubscribe = ctx.effect(() => {
+      // Access all state to track changes
+      void store.state.a.value;
+      void store.state.b.value;
+      void store.state.c.value;
+      updateCount++;
+    });
+    
+    // Reset after initial run
+    updateCount = 0;
     
     store.set({ a: 10, b: 20, c: 30 });
     

@@ -113,7 +113,7 @@ describe('Component with Store Pattern', () => {
     store.dispose();
   });
 
-  it('should support effects and subscriptions', () => {
+  it('should support effects for reactive side effects', () => {
     interface TrackedState {
       value: number;
       lastChanged: number;
