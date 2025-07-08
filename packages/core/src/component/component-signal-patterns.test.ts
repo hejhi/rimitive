@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStore } from '../store';
-import { Component } from './types';
+import { createStore, Store } from '../store';
 
 describe('Component Signal Patterns - Best Practices', () => {
   it('should use direct signal updates for single property changes (performance)', () => {
@@ -9,16 +8,7 @@ describe('Component Signal Patterns - Best Practices', () => {
       lastUpdated: number;
     }
 
-    const Counter: Component<
-      CounterState,
-      {
-        count: number;
-        increment: () => void;
-        decrement: () => void;
-        reset: () => void;
-        incrementBoth: () => void;
-      }
-    > = (store) => {
+    const Counter = (store: Store<CounterState>) => {
       return {
         get count() {
           return store.state.count.value;
@@ -70,15 +60,7 @@ describe('Component Signal Patterns - Best Practices', () => {
       filter: 'all' | 'active' | 'done';
     }
 
-    const TodoList: Component<
-      TodoState,
-      {
-        todos: TodoState['todos'];
-        toggleTodo: (index: number) => void;
-        updateTodoText: (index: number, text: string) => void;
-        markAllDone: () => void;
-      }
-    > = (store) => {
+    const TodoList = (store: Store<TodoState>) => {
       return {
         get todos() {
           return store.state.todos.value;
@@ -142,17 +124,7 @@ describe('Component Signal Patterns - Best Practices', () => {
       isValid: boolean;
     }
 
-    const Form: Component<
-      FormState,
-      {
-        username: string;
-        email: string;
-        setUsername: (value: string) => void;
-        setEmail: (value: string) => void;
-        subscribeToUsername: (fn: () => void) => () => void;
-        subscribeToEmail: (fn: () => void) => () => void;
-      }
-    > = (store) => {
+    const Form = (store: Store<FormState>) => {
       return {
         get username() {
           return store.state.username.value;
@@ -232,16 +204,7 @@ describe('Component Signal Patterns - Best Practices', () => {
       refreshRate: number;
     }
 
-    const Dashboard: Component<
-      DashboardState,
-      {
-        activeUsers: number;
-        totalRevenue: number;
-        updateMetrics: (users: number, revenue: number) => void;
-        updateActiveUsers: (users: number) => void;
-        refresh: () => void;
-      }
-    > = (store) => {
+    const Dashboard = (store: Store<DashboardState>) => {
       const ctx = store.getContext();
 
       // Effects demonstrate automatic dependency tracking
@@ -315,20 +278,7 @@ describe('Component Signal Patterns - Best Practices', () => {
       discountPercent: number;
     }
 
-    const ShoppingCart: Component<
-      ShoppingCartState,
-      {
-        items: ShoppingCartState['items'];
-        subtotal: number;
-        tax: number;
-        discount: number;
-        total: number;
-        addItem: (item: ShoppingCartState['items'][0]) => void;
-        updateQuantity: (index: number, quantity: number) => void;
-        setTaxRate: (rate: number) => void;
-        setDiscount: (percent: number) => void;
-      }
-    > = (store) => {
+    const ShoppingCart = (store: Store<ShoppingCartState>) => {
       const ctx = store.getContext();
 
       // BEST PRACTICE: Computed values access signals directly
@@ -428,18 +378,7 @@ describe('Component Signal Patterns - Best Practices', () => {
       notifications: number;
     }
 
-    const App: Component<
-      AppState,
-      {
-        userName: string;
-        userRole: string;
-        theme: string;
-        hasNotifications: boolean;
-        updateUserName: (name: string) => void;
-        updateTheme: (theme: string) => void;
-        clearNotifications: () => void;
-      }
-    > = (store) => {
+    const App = (store: Store<AppState>) => {
       const ctx = store.getContext();
 
       // BEST PRACTICE: Use select for fine-grained reactivity

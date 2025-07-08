@@ -183,6 +183,11 @@ Signal.prototype.patch = function <T>(
   }
 };
 
+// Peek method - read value without tracking
+Signal.prototype.peek = function <T>(this: Signal<T>): T {
+  return this._value;
+};
+
 // Additional prototype methods (subscribe, select) are added in index.ts
 
 // Direct exports instead of factory pattern
@@ -199,10 +204,6 @@ export function untrack<T>(fn: () => T): T {
   } finally {
     activeContext.currentComputed = prev;
   }
-}
-
-export function peek<T>(signal: Signal<T>): T {
-  return signal._value;
 }
 
 // Export activeContext for direct access

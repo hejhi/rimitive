@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStore } from '../store';
-import { Component } from './types';
+import { createStore, Store } from '../store';
 
 describe('Component with Store Pattern', () => {
   it('should create a basic component with store', () => {
@@ -8,15 +7,7 @@ describe('Component with Store Pattern', () => {
       count: number;
     }
 
-    const Counter: Component<
-      CounterState,
-      {
-        count: number;
-        increment: () => void;
-        decrement: () => void;
-        reset: () => void;
-      }
-    > = (store) => {
+    const Counter = (store: Store<CounterState>) => {
       return {
         get count() {
           return store.state.count.value;
@@ -53,17 +44,7 @@ describe('Component with Store Pattern', () => {
       b: number;
     }
 
-    const Calculator: Component<
-      CalculatorState,
-      {
-        a: number;
-        b: number;
-        sum: number;
-        product: number;
-        setA: (value: number) => void;
-        setB: (value: number) => void;
-      }
-    > = (store) => {
+    const Calculator = (store: Store<CalculatorState>) => {
       const ctx = store.getContext();
 
       const sum = ctx.computed(() => store.state.a.value + store.state.b.value);
@@ -113,15 +94,7 @@ describe('Component with Store Pattern', () => {
       lastChanged: number;
     }
 
-    const TrackedValue: Component<
-      TrackedState,
-      {
-        value: number;
-        lastChanged: number;
-        updateValue: (value: number) => void;
-        history: number[];
-      }
-    > = (store) => {
+    const TrackedValue = (store: Store<TrackedState>) => {
       const ctx = store.getContext();
       const history: number[] = [];
 
@@ -179,16 +152,7 @@ describe('Component with Store Pattern', () => {
     }
 
     // Price calculator component (can be used independently)
-    const PriceCalculator: Component<
-      PriceState,
-      {
-        basePrice: number;
-        taxRate: number;
-        totalPrice: number;
-        setBasePrice: (price: number) => void;
-        setTaxRate: (rate: number) => void;
-      }
-    > = (store) => {
+    const PriceCalculator = (store: Store<PriceState>) => {
       const ctx = store.getContext();
 
       const totalPrice = ctx.computed(() => {
@@ -213,16 +177,7 @@ describe('Component with Store Pattern', () => {
     };
 
     // Product component that composes PriceCalculator
-    const Product: Component<
-      ProductState,
-      {
-        name: string;
-        quantity: number;
-        pricing: ReturnType<typeof PriceCalculator>;
-        totalValue: number;
-        setQuantity: (qty: number) => void;
-      }
-    > = (store) => {
+    const Product = (store: Store<ProductState>) => {
       const ctx = store.getContext();
 
       // Compose the pricing component with the same store
@@ -282,14 +237,7 @@ describe('Component with Store Pattern', () => {
       isValid: boolean;
     }
 
-    const Form: Component<
-      FormState,
-      {
-        fullName: string;
-        updateAll: (updates: Partial<FormState>) => void;
-        validate: () => void;
-      }
-    > = (store) => {
+    const Form = (store: Store<FormState>) => {
       const ctx = store.getContext();
 
       const fullName = ctx.computed(() =>

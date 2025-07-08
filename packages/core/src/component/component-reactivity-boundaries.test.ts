@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createStore } from '../store';
-import { Component } from './types';
+import { createStore, Store } from '../store';
 
 describe('Component Reactivity Boundaries', () => {
   it('should demonstrate getter reactivity implications', () => {
@@ -9,15 +8,7 @@ describe('Component Reactivity Boundaries', () => {
       multiplier: number;
     }
 
-    const Counter: Component<
-      CounterState,
-      {
-        count: number;
-        doubledCount: number;
-        getCountDirectly: () => number;
-        increment: () => void;
-      }
-    > = (store) => {
+    const Counter = (store: Store<CounterState>) => {
       const ctx = store.getContext();
 
       // This computed will be created ONCE when component is created
@@ -69,14 +60,7 @@ describe('Component Reactivity Boundaries', () => {
     }
 
     // Pattern 1: Getter (Reactive)
-    const ComponentWithGetters: Component<
-      State,
-      {
-        userName: string;
-        userAge: number;
-        theme: string;
-      }
-    > = (store) => {
+    const ComponentWithGetters = (store: Store<State>) => {
       return {
         // ✅ REACTIVE: Each access reads the signal
         get userName() {
@@ -92,14 +76,7 @@ describe('Component Reactivity Boundaries', () => {
     };
 
     // Pattern 2: Captured Values (NOT Reactive)
-    const ComponentWithValues: Component<
-      State,
-      {
-        userName: string;
-        userAge: number;
-        theme: string;
-      }
-    > = (store) => {
+    const ComponentWithValues = (store: Store<State>) => {
       // ❌ NOT REACTIVE: Values captured at creation time
       const user = store.state.user.value;
       const settings = store.state.settings.value;
@@ -149,12 +126,7 @@ describe('Component Reactivity Boundaries', () => {
     }
 
     // Pattern 1: Computed in getter (BAD - creates new computed each access!)
-    const BadPattern: Component<
-      State,
-      {
-        total: number;
-      }
-    > = (store) => {
+    const BadPattern = (store: Store<State>) => {
       const ctx = store.getContext();
 
       return {
@@ -169,12 +141,7 @@ describe('Component Reactivity Boundaries', () => {
     };
 
     // Pattern 2: Computed created once (GOOD)
-    const GoodPattern: Component<
-      State,
-      {
-        total: number;
-      }
-    > = (store) => {
+    const GoodPattern = (store: Store<State>) => {
       const ctx = store.getContext();
 
       // ✅ GOOD: Computed created once during component creation
@@ -213,15 +180,7 @@ describe('Component Reactivity Boundaries', () => {
       enabled: boolean;
     }
 
-    const Component: Component<
-      State,
-      {
-        count: number;
-        step: number;
-        counterObject: State['counter'];
-        increment: () => void;
-      }
-    > = (store) => {
+    const Component = (store: Store<State>) => {
       return {
         // Accessing nested property - tracks the counter signal
         get count() {
@@ -304,15 +263,7 @@ describe('Component Reactivity Boundaries', () => {
       user: { name: string; age: number; lastSeen: number };
     }
 
-    const Component: Component<
-      State,
-      {
-        userName: string;
-        userAge: number;
-        updateName: (name: string) => void;
-        touch: () => void;
-      }
-    > = (store) => {
+    const Component = (store: Store<State>) => {
       return {
         // Tracks entire user signal
         get userName() {

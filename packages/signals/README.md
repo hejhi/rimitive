@@ -219,6 +219,7 @@ Batches signal updates. Effects only run once after all updates complete.
 ### Signal Methods
 
 - `signal.value` - Get or set the current value
+- `signal.peek()` - Read value without tracking dependencies
 - `signal.subscribe(listener)` - Listen for changes
 - `signal.select(selector)` - Create a derived subscription
 - `signal.set(key, value)` - Update object property or array element
@@ -249,17 +250,17 @@ app.get('*', (req, res) => {
 
 ### React Server Components
 
-Signals work great for server-side computations:
+Signals work great for server-side computations or effects:
 
 ```typescript
 // app/stats/page.tsx
 export default withContext(async function StatsPage() {
   const orders = signal(await db.orders.count());
   const revenue = signal(await db.orders.sum('total'));
-  
+
   // Computed values run on the server
   const avgOrder = computed(() => revenue.value / orders.value);
-  
+
   return (
     <div>
       <p>Orders: {orders.value}</p>

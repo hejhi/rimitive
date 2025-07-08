@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, peek, untrack, computed, effect, batch, resetGlobalState } from './test-setup';
+import { signal, untrack, computed, effect, batch, resetGlobalState } from './test-setup';
 
 describe('signal', () => {
   beforeEach(() => {
@@ -105,7 +105,7 @@ describe('signal', () => {
       
       const result = computed(() => {
         computeCount++;
-        return a.value + peek(b);
+        return a.value + b.peek();
       });
       
       expect(result.value).toBe(15);

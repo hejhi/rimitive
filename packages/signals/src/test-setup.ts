@@ -7,7 +7,6 @@ import { effect as effectFn } from './effect';
 import { batch as batchFn } from './batch';
 import {
   signal as createSignal,
-  peek as peekFn,
   untrack as untrackFn,
   activeContext,
   resetTracking,
@@ -20,7 +19,6 @@ export function createTestInstance() {
   return {
     // Signal functions
     signal: createSignal,
-    peek: peekFn,
     untrack: untrackFn,
 
     // Computed functions
@@ -60,7 +58,6 @@ let defaultInstance = createTestInstance();
 
 // Export all functions from default instance - use getters to always get current instance
 export const signal = <T>(value: T): Signal<T> => defaultInstance.signal(value);
-export const peek = <T>(signal: Signal<T>): T => defaultInstance.peek(signal);
 export const untrack = <T>(fn: () => T): T => defaultInstance.untrack(fn);
 export const computed = <T>(fn: () => T): Computed<T> =>
   defaultInstance.computed(fn);
