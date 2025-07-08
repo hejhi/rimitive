@@ -4,11 +4,21 @@ import type { Signal, Computed, Effect } from './types';
 import { RUNNING } from './types';
 import { acquireNode } from './node-pool';
 
-// Global state for quick access via hot paths
-export let globalCurrentComputed: Computed | Effect | null = null;
-export let globalVersion = 0;
-export let globalBatchDepth = 0;
-export let globalBatchedEffects: Effect | null = null;
+// Context for tracking state
+interface SignalContext {
+  currentComputed: Computed | Effect | null;
+  version: number;
+  batchDepth: number;
+  batchedEffects: Effect | null;
+}
+
+// Active context - direct mutation for performance
+let activeContext: SignalContext = {
+  currentComputed: null,
+  version: 0,
+  batchDepth: 0,
+  batchedEffects: null
+};
 
 // Signal constructor
 function SignalImpl<T>(this: Signal<T>, value: T) {
@@ -27,11 +37,11 @@ const Signal = SignalImpl as unknown as {
 // Value property - hot path optimized
 Object.defineProperty(Signal.prototype, 'value', {
   get(this: Signal) {
-    // Fast path: no tracking needed (eliminated scope lookup)
-    if (!globalCurrentComputed || !(globalCurrentComputed._flags & RUNNING))
+    // Fast path: no tracking needed
+    if (!activeContext.currentComputed || !(activeContext.currentComputed._flags & RUNNING))
       return this._value;
 
-    const current = globalCurrentComputed;
+    const current = activeContext.currentComputed;
 
     // Node reuse pattern - check if we can reuse existing node
     let node = this._node;
@@ -82,7 +92,7 @@ Object.defineProperty(Signal.prototype, 'value', {
 
     this._value = value;
     this._version++;
-    globalVersion++;
+    activeContext.version++;
 
     // Notify all targets
     let node = this._targets;
@@ -156,12 +166,12 @@ export function signal<T>(value: T): Signal<T> {
 
 
 export function untrack<T>(fn: () => T): T {
-  const prev = globalCurrentComputed;
-  globalCurrentComputed = null;
+  const prev = activeContext.currentComputed;
+  activeContext.currentComputed = null;
   try {
     return fn();
   } finally {
-    globalCurrentComputed = prev;
+    activeContext.currentComputed = prev;
   }
 }
 
@@ -169,35 +179,31 @@ export function peek<T>(signal: Signal<T>): T {
   return signal._value;
 }
 
-// Export for use by computed and effect
-export function setGlobalCurrentComputed(
-  computed: Computed | Effect | null
-): void {
-  globalCurrentComputed = computed;
+// Export activeContext for direct access
+export { activeContext };
+
+// Context management
+export function withContext<T>(fn: () => T): T {
+  const prevContext = activeContext;
+  activeContext = {
+    currentComputed: null,
+    version: prevContext.version, // Preserve version across contexts
+    batchDepth: 0,
+    batchedEffects: null
+  };
+  
+  try {
+    return fn();
+  } finally {
+    activeContext = prevContext;
+  }
 }
 
-export function resetGlobalTracking(): void {
-  globalCurrentComputed = null;
-  globalVersion = 0;
-  globalBatchDepth = 0;
-  globalBatchedEffects = null;
-}
-
-export function startGlobalBatch(): void {
-  globalBatchDepth++;
-}
-
-export function endGlobalBatch(): boolean {
-  return --globalBatchDepth === 0;
-}
-
-export function setGlobalBatchedEffects(effects: Effect | null): void {
-  globalBatchedEffects = effects;
-}
-
-export function addEffectToBatch(effect: Effect): void {
-  effect._nextBatchedEffect = globalBatchedEffects || undefined;
-  globalBatchedEffects = effect;
+export function resetTracking(): void {
+  activeContext.currentComputed = null;
+  activeContext.version = 0;
+  activeContext.batchDepth = 0;
+  activeContext.batchedEffects = null;
 }
 
 // Export the Signal constructor for prototype extensions

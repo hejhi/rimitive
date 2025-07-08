@@ -9,15 +9,8 @@ import {
   signal as createSignal,
   peek as peekFn,
   untrack as untrackFn,
-  setGlobalCurrentComputed,
-  globalCurrentComputed,
-  globalVersion,
-  resetGlobalTracking,
-  globalBatchDepth,
-  startGlobalBatch,
-  endGlobalBatch,
-  globalBatchedEffects,
-  setGlobalBatchedEffects,
+  activeContext,
+  resetTracking,
 } from './signal';
 import { resetNodePool } from './node-pool';
 
@@ -36,31 +29,29 @@ export function createTestInstance() {
     // Effect functions
     effect: effectFn,
 
-    // Batch functions - now use global state
+    // Batch functions - now use activeContext
     batch: batchFn,
-    startBatch: () => startGlobalBatch(),
+    startBatch: () => activeContext.batchDepth++,
     endBatch: () => {
-      if (globalBatchDepth > 0) endGlobalBatch();
+      if (activeContext.batchDepth > 0) activeContext.batchDepth--;
     },
-    getBatchDepth: () => globalBatchDepth,
-    hasPendingEffects: () => globalBatchedEffects !== null,
+    getBatchDepth: () => activeContext.batchDepth,
+    hasPendingEffects: () => activeContext.batchedEffects !== null,
     clearBatch: () => {
-      setGlobalBatchedEffects(null);
+      activeContext.batchedEffects = null;
       // Reset batch depth safely
-      while (globalBatchDepth > 0) {
-        endGlobalBatch();
-      }
+      activeContext.batchDepth = 0;
     },
 
-    // Scope functions - use global functions
+    // Scope functions - use activeContext
     setCurrentComputed: (computed: Computed | Effect | null) => {
-      setGlobalCurrentComputed(computed);
+      activeContext.currentComputed = computed;
     },
-    getCurrentComputed: () => globalCurrentComputed,
+    getCurrentComputed: () => activeContext.currentComputed,
     resetGlobalState: () => {
-      resetGlobalTracking();
+      resetTracking();
     },
-    getGlobalVersion: () => globalVersion,
+    getGlobalVersion: () => activeContext.version,
   };
 }
 
@@ -91,8 +82,8 @@ export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 // Reset function that recreates the default instance
 export function resetGlobalState() {
   defaultInstance = createTestInstance();
-  // CRITICAL: Also reset the actual global variables
-  resetGlobalTracking();
+  // CRITICAL: Also reset the actual context
+  resetTracking();
   // Reset the node pool for test isolation
   resetNodePool();
 }

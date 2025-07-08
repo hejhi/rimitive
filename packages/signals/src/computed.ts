@@ -9,11 +9,7 @@ import {
   TRACKING,
   IS_COMPUTED,
 } from './types';
-import {
-  setGlobalCurrentComputed,
-  globalCurrentComputed,
-  globalVersion,
-} from './signal';
+import { activeContext } from './signal';
 import { acquireNode, releaseNode } from './node-pool';
 
 // Computed constructor
@@ -37,7 +33,7 @@ const Computed = ComputedImpl as unknown as {
 // Value property - hot path optimized
 Object.defineProperty(Computed.prototype, 'value', {
   get(this: Computed) {
-    const current = globalCurrentComputed;
+    const current = activeContext.currentComputed;
 
     // Track this computed as dependency if needed
     if (current && current._flags & RUNNING) {
@@ -192,7 +188,7 @@ Computed.prototype._refresh = function (): boolean {
   if (
     !(this._flags & OUTDATED) &&
     this._version > 0 &&
-    this._globalVersion === globalVersion
+    this._globalVersion === activeContext.version
   )
     return true;
 
@@ -211,10 +207,10 @@ Computed.prototype._refresh = function (): boolean {
   }
 
   // Recompute needed
-  const prevComputed = globalCurrentComputed;
+  const prevComputed = activeContext.currentComputed;
   try {
     prepareSources(this);
-    setGlobalCurrentComputed(this);
+    activeContext.currentComputed = this;
 
     const value = this._fn();
     if (this._value !== value || this._version === 0) {
@@ -223,9 +219,9 @@ Computed.prototype._refresh = function (): boolean {
     }
 
     // Update global version after successful computation
-    this._globalVersion = globalVersion;
+    this._globalVersion = activeContext.version;
   } finally {
-    setGlobalCurrentComputed(prevComputed);
+    activeContext.currentComputed = prevComputed;
     cleanupSources(this);
     this._flags &= ~RUNNING;
   }

@@ -1,24 +1,18 @@
 // Batch implementation for deferred effect execution
-import {
-  globalBatchDepth,
-  startGlobalBatch,
-  endGlobalBatch,
-  globalBatchedEffects,
-  setGlobalBatchedEffects,
-} from './signal';
+import { activeContext } from './signal';
 
 // Direct export instead of factory pattern
 export function batch<T>(fn: () => T): T {
-  if (globalBatchDepth) return fn();
+  if (activeContext.batchDepth) return fn();
 
-  startGlobalBatch();
+  activeContext.batchDepth++;
   try {
     return fn();
   } finally {
-    if (endGlobalBatch()) {
+    if (--activeContext.batchDepth === 0) {
       // Run batched effects
-      let effect = globalBatchedEffects;
-      setGlobalBatchedEffects(null);
+      let effect = activeContext.batchedEffects;
+      activeContext.batchedEffects = null;
 
       while (effect) {
         const next = effect._nextBatchedEffect;

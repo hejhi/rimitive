@@ -2,16 +2,7 @@
 
 import type { Effect, DependencyNode } from './types';
 import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
-import {
-  setGlobalCurrentComputed,
-  globalCurrentComputed,
-  globalBatchDepth,
-  startGlobalBatch,
-  endGlobalBatch,
-  addEffectToBatch,
-  globalBatchedEffects,
-  setGlobalBatchedEffects,
-} from './signal';
+import { activeContext } from './signal';
 import { releaseNode } from './node-pool';
 
 // Effect constructor
@@ -33,23 +24,23 @@ Effect.prototype._notify = function (): void {
   if (this._flags & NOTIFIED) return;
   this._flags |= NOTIFIED | OUTDATED;
 
-  if (globalBatchDepth > 0) {
-    // Add to global batch queue
-    addEffectToBatch(this);
+  if (activeContext.batchDepth > 0) {
+    // Add to batch queue
+    this._nextBatchedEffect = activeContext.batchedEffects || undefined;
+    activeContext.batchedEffects = this;
     return;
   }
 
   // Run immediately if not in batch
-  startGlobalBatch();
+  activeContext.batchDepth++;
   try {
     this._run();
   } finally {
-    // endGlobalBatch returns true if batch depth reaches 0
-    if (!endGlobalBatch()) {
+    if (--activeContext.batchDepth === 0) {
       // Run any effects that were queued during this run
-      let effect = globalBatchedEffects;
+      let effect = activeContext.batchedEffects;
       if (effect) {
-        setGlobalBatchedEffects(null);
+        activeContext.batchedEffects = null;
         while (effect) {
           const next: Effect | undefined = effect._nextBatchedEffect;
           effect._nextBatchedEffect = undefined;
@@ -74,13 +65,13 @@ Effect.prototype._run = function (): void {
     node = node.nextSource;
   }
 
-  const prevComputed = globalCurrentComputed;
-  setGlobalCurrentComputed(this);
+  const prevComputed = activeContext.currentComputed;
+  activeContext.currentComputed = this;
 
   try {
     this._fn();
   } finally {
-    setGlobalCurrentComputed(prevComputed);
+    activeContext.currentComputed = prevComputed;
     this._flags &= ~RUNNING;
 
     // Cleanup unused sources
