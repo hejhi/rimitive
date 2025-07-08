@@ -1,6 +1,8 @@
 # @lattice/core
 
-Build headless, portable, incredibly fast and reactive components that compose...without components. State management are stores of packaged signals that can scale from simple counters to complex applications. Components are just a functional pattern. Use like React Context, but with fine-grained updates, and in whatever framework you want.
+Build headless, portable, incredibly fast and reactive components that compose...without components.
+
+State management are context-driven stores of packaged signals that can scale from simple counters to complex applications. "Components" are just a functional pattern. Use like React Context, but with fine-grained updates, in whatever framework you want, even on the server.
 
 ```typescript
 import { createStore } from '@lattice/core';
