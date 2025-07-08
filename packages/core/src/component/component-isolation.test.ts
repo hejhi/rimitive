@@ -129,9 +129,15 @@ describe('Component Isolation', () => {
     const child2Signal = childContext2.signal('child2');
 
     // Create computed values that show independence
-    const parentComputed = parentContext.computed(() => `${parentSignal.value}-computed`);
-    const child1Computed = childContext1.computed(() => `${child1Signal.value}-computed`);
-    const child2Computed = childContext2.computed(() => `${child2Signal.value}-computed`);
+    const parentComputed = parentContext.computed(
+      () => `${parentSignal.value}-computed`
+    );
+    const child1Computed = childContext1.computed(
+      () => `${child1Signal.value}-computed`
+    );
+    const child2Computed = childContext2.computed(
+      () => `${child2Signal.value}-computed`
+    );
 
     expect(parentComputed.value).toBe('parent-computed');
     expect(child1Computed.value).toBe('child1-computed');
@@ -155,7 +161,7 @@ describe('Component Isolation', () => {
     const context2 = createLatticeContext();
 
     const sharedValue = { count: 0 };
-    
+
     // Create signals that reference the same object
     const signal1 = context1.signal(sharedValue);
     const signal2 = context2.signal(sharedValue);
