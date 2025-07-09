@@ -91,7 +91,6 @@
 .no-lattice code {
   background: #2d2d30;
   padding: 2px 6px;
-  border-radius: 3px;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
 }
@@ -132,7 +131,6 @@
   color: #cccccc;
   padding: 4px 8px;
   font-size: 12px;
-  border-radius: 3px;
 }
 
 .timeline-controls .toggle {
@@ -153,7 +151,6 @@
   align-items: center;
   gap: 10px;
   padding: 6px 10px;
-  border-radius: 3px;
   margin-bottom: 2px;
   font-size: 12px;
   transition: background 0.1s;
@@ -188,7 +185,6 @@
 .transaction .type {
   background: #3c3c3c;
   padding: 2px 6px;
-  border-radius: 3px;
   font-size: 11px;
   min-width: 100px;
   text-align: center;
@@ -198,6 +194,9 @@
   flex: 1;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .transaction .context {
@@ -205,6 +204,9 @@
   font-size: 10px;
   font-weight: 500;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .transaction .internal {
@@ -228,7 +230,6 @@
 
 .context {
   background: #2d2d30;
-  border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
   border: 1px solid transparent;
@@ -310,7 +311,6 @@
   gap: 10px;
   padding: 8px 12px;
   background: #2d2d30;
-  border-radius: 3px;
   font-size: 12px;
   border-left: 3px solid transparent;
 }
@@ -349,7 +349,6 @@
 
 .reactive-item .status {
   padding: 2px 8px;
-  border-radius: 3px;
   font-size: 11px;
 }
 
@@ -363,80 +362,4 @@
   color: #858585;
 }
 
-/* Time Travel Controls */
-.time-travel-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 20px;
-  background: #2d2d30;
-  border-bottom: 1px solid #3c3c3c;
-}
-
-.time-travel-controls button {
-  background: #3c3c3c;
-  border: 1px solid #464647;
-  color: #cccccc;
-  padding: 4px 12px;
-  cursor: pointer;
-  font-size: 12px;
-  border-radius: 3px;
-  transition: all 0.2s;
-}
-
-.time-travel-controls button:hover:not(:disabled) {
-  background: #464647;
-  border-color: #5a5a5a;
-}
-
-.time-travel-controls button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.time-travel-controls .slider-container {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.time-travel-controls input[type="range"] {
-  flex: 1;
-  height: 4px;
-  background: #3c3c3c;
-  outline: none;
-  -webkit-appearance: none;
-}
-
-.time-travel-controls input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
-  background: #007acc;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.time-travel-controls .snapshot-info {
-  font-size: 11px;
-  color: #969696;
-  min-width: 120px;
-}
-
-.time-travel-controls .toggle-effects {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-}
-
-.time-travel-indicator {
-  background: #d7ba7d;
-  color: #1e1e1e;
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: 2px;
-  margin-left: 10px;
-}
+/* Time Travel Controls - Removed */

@@ -3,7 +3,6 @@ import type { Signal, Computed } from '@lattice/signals';
 import {
   createLattice as originalCreateLattice,
 } from '@lattice/core';
-import { timeTravel, shouldSuppressEffects } from './time-travel';
 
 export interface DevToolsEvent {
   type: string;
@@ -76,8 +75,7 @@ let currentlyExecuting: {
 // Track internal operations
 let internalOperation: string | null = null;
 
-// Track transaction count for snapshots
-let transactionCount = 0;
+// Track transaction count for snapshots (removed - no longer needed)
 
 function emitEvent(event: Omit<DevToolsEvent, 'timestamp'>) {
   if (!devToolsEnabled) return;
@@ -98,16 +96,6 @@ function emitEvent(event: Omit<DevToolsEvent, 'timestamp'>) {
     (window as any).__LATTICE_DEVTOOLS_BRIDGE__.send(fullEvent);
   }
 
-  // Capture snapshots periodically during signal writes
-  if (event.type === 'SIGNAL_WRITE' && !timeTravel.isTimeTraveling()) {
-    transactionCount++;
-    
-    // Capture snapshot every 10 transactions or for important events
-    if (transactionCount % 10 === 0) {
-      const snapshot = timeTravel.captureSnapshot(event.contextId, eventBuffer.length - 1);
-      timeTravel.addSnapshot(snapshot);
-    }
-  }
 }
 
 export function enableDevTools(options: DevToolsOptions = {}) {
@@ -119,20 +107,6 @@ export function enableDevTools(options: DevToolsOptions = {}) {
       enabled: true,
       options,
       getEvents: () => eventBuffer,
-      timeTravel: {
-        goToSnapshot: (index: number) => timeTravel.goToSnapshot(index),
-        goToPrevious: () => timeTravel.goToPreviousSnapshot(),
-        goToNext: () => timeTravel.goToNextSnapshot(),
-        goToLatest: () => timeTravel.goToLatest(),
-        getSnapshots: () => timeTravel.getSnapshots(),
-        getState: () => timeTravel.getState(),
-        setSuppressEffects: (suppress: boolean) => timeTravel.setSuppressEffects(suppress),
-        captureSnapshot: (contextId: string) => {
-          const snapshot = timeTravel.captureSnapshot(contextId, eventBuffer.length - 1);
-          timeTravel.addSnapshot(snapshot);
-          return snapshot;
-        },
-      },
       getContexts: () => {
         // Return serializable context info
         const contexts: any[] = [];
@@ -178,6 +152,7 @@ export function createInstrumentedLattice(
     data: { name },
   });
 
+
   // Wrap signal factory
   const originalSignal = context.signal;
   (context as any).signal = function <T>(
@@ -196,8 +171,6 @@ export function createInstrumentedLattice(
       contextId,
     });
 
-    // Register signal with time travel
-    timeTravel.registerSignal(signalId, signal as Signal<any>);
 
     emitEvent({
       type: 'SIGNAL_CREATED',
@@ -339,11 +312,6 @@ export function createInstrumentedLattice(
     });
 
     const wrappedFn = () => {
-      // Skip effect execution during time travel if suppression is enabled
-      if (shouldSuppressEffects()) {
-        return undefined;
-      }
-
       const previouslyExecuting = currentlyExecuting;
       currentlyExecuting = { type: 'effect', id: effectId, name };
 
@@ -390,16 +358,6 @@ export function createInstrumentedLattice(
       contextId,
     });
 
-    // Unregister all signals from time travel
-    const meta = contextMetadata.get(context);
-    if (meta) {
-      meta.signals.forEach(signal => {
-        const signalMeta = signalMetadata.get(signal);
-        if (signalMeta) {
-          timeTravel.unregisterSignal(signalMeta.id);
-        }
-      });
-    }
 
     contextMetadata.delete(context);
     return originalDispose.call(this);
