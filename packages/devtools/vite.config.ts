@@ -22,5 +22,7 @@ export default defineConfig({
         preserveModulesRoot: 'src',
       },
     },
+    // Don't empty outDir in watch mode to prevent type resolution issues
+    emptyOutDir: !process.argv.includes('--watch'),
   },
 });

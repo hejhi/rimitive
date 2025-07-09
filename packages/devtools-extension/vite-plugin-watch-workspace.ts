@@ -1,7 +1,7 @@
-import { Plugin } from 'vite';
+import { PluginOption } from 'vite';
 import { resolve } from 'path';
 
-export function watchWorkspace(): Plugin {
+export function watchWorkspace(): PluginOption {
   return {
     name: 'watch-workspace',
     configureServer(server) {
@@ -13,13 +13,13 @@ export function watchWorkspace(): Plugin {
       ];
 
       // Add paths to watcher
-      workspacePaths.forEach(path => {
+      workspacePaths.forEach((path) => {
         server.watcher.add(path);
       });
 
       // Force full reload when workspace files change
       server.watcher.on('change', (file) => {
-        if (workspacePaths.some(path => file.startsWith(path))) {
+        if (workspacePaths.some((path) => file.startsWith(path))) {
           console.log(`[watch-workspace] Workspace file changed: ${file}`);
           server.ws.send({
             type: 'full-reload',

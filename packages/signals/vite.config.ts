@@ -32,5 +32,7 @@ export default defineConfig({
     },
     sourcemap: true,
     target: 'es2022',
+    // Don't empty outDir in watch mode to prevent type resolution issues
+    emptyOutDir: !process.argv.includes('--watch'),
   },
 });
