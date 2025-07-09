@@ -8,7 +8,7 @@ console.log('[DevTools Panel] main.tsx loading');
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
-  </React.StrictMode>,
+  </React.StrictMode>
 );
 
 console.log('[DevTools Panel] React app mounted');

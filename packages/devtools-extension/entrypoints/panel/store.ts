@@ -80,10 +80,10 @@ export interface NamedItemData {
   name?: string;
 }
 
-export type TransactionData = 
-  | SignalReadData 
-  | SignalWriteData 
-  | SignalCreatedData 
+export type TransactionData =
+  | SignalReadData
+  | SignalWriteData
+  | SignalCreatedData
   | NamedItemData
   | unknown;
 
@@ -97,62 +97,66 @@ export interface Transaction {
 }
 
 // Create the devtools store
-export const devtoolsStore = createStore<DevToolsState>({
-  connected: false,
-  contexts: [],
-  transactions: [],
-  selectedContext: null,
-  selectedTab: 'timeline',
-  filter: {
-    type: 'all',
-    search: '',
-    hideInternal: true,
+export const devtoolsStore = createStore<DevToolsState>(
+  {
+    connected: false,
+    contexts: [],
+    transactions: [],
+    selectedContext: null,
+    selectedTab: 'timeline',
+    filter: {
+      type: 'all',
+      search: '',
+      hideInternal: true,
+    },
   },
-}, devtoolsContext);
+  devtoolsContext
+);
 
 // Computed values
 export const filteredTransactions = devtoolsContext.computed(() => {
   const transactions = devtoolsStore.state.transactions.value;
   const filter = devtoolsStore.state.filter.value;
-  
+
   let filtered = transactions;
-  
+
   // Filter by type
   if (filter.type !== 'all') {
-    filtered = filtered.filter(t => t.type === filter.type);
+    filtered = filtered.filter((t) => t.type === filter.type);
   }
-  
+
   // Filter by search
   if (filter.search) {
     const search = filter.search.toLowerCase();
-    filtered = filtered.filter(t => 
-      t.eventType.toLowerCase().includes(search) ||
-      JSON.stringify(t.data).toLowerCase().includes(search)
+    filtered = filtered.filter(
+      (t) =>
+        t.eventType.toLowerCase().includes(search) ||
+        JSON.stringify(t.data).toLowerCase().includes(search)
     );
   }
-  
+
   // Filter internal reads if enabled
   if (filter.hideInternal) {
-    filtered = filtered.filter(t => {
+    filtered = filtered.filter((t) => {
       if (t.eventType !== 'SIGNAL_READ') return true;
       const data = t.data as SignalReadData;
       return !data.internal;
     });
   }
-  
+
   return filtered;
 });
 
 export const selectedContextData = devtoolsContext.computed(() => {
   const selectedId = devtoolsStore.state.selectedContext.value;
   if (!selectedId) return null;
-  
-  return devtoolsStore.state.contexts.value.find(c => c.id === selectedId);
+
+  return devtoolsStore.state.contexts.value.find((c) => c.id === selectedId);
 });
 
 export const stats = devtoolsContext.computed(() => {
   const contexts = devtoolsStore.state.contexts.value;
-  
+
   return {
     totalSignals: contexts.reduce((sum, c) => sum + c.signalCount, 0),
     totalComputeds: contexts.reduce((sum, c) => sum + c.computedCount, 0),
@@ -162,20 +166,20 @@ export const stats = devtoolsContext.computed(() => {
 });
 
 // Helper functions
-interface DevToolsMessage {
+export interface DevToolsMessage {
   type: string;
   data?: unknown;
 }
 
 export function handleDevToolsMessage(message: DevToolsMessage) {
   console.log('[DevTools Store] Handling message:', message);
-  
+
   switch (message.type) {
     case 'LATTICE_DETECTED':
       console.log('[DevTools Store] Setting connected to true');
       devtoolsStore.state.connected.value = true;
       break;
-      
+
     case 'STATE_UPDATE':
       console.log('[DevTools Store] Updating state with:', message.data);
       if (message.data && typeof message.data === 'object') {
@@ -199,7 +203,7 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
         }
       }
       break;
-      
+
     case 'TRANSACTION':
       if (message.data && typeof message.data === 'object') {
         const event = message.data as LatticeEvent;
@@ -211,13 +215,13 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
           eventType: event.type,
           data: event.data || {},
         };
-        
+
         // Add transaction (keep last 1000)
         devtoolsStore.state.transactions.value = [
           ...devtoolsStore.state.transactions.value.slice(-999),
           transaction,
         ];
-        
+
         // Update context metadata
         updateContextFromEvent(event);
       }
@@ -225,7 +229,9 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
   }
 }
 
-function getEventCategory(eventType: string): 'signal' | 'computed' | 'effect' | 'batch' {
+function getEventCategory(
+  eventType: string
+): 'signal' | 'computed' | 'effect' | 'batch' {
   if (eventType.startsWith('SIGNAL_')) return 'signal';
   if (eventType.startsWith('COMPUTED_')) return 'computed';
   if (eventType.startsWith('EFFECT_')) return 'effect';
@@ -241,8 +247,8 @@ interface LatticeEvent {
 
 function updateContextFromEvent(event: LatticeEvent) {
   const contexts = [...devtoolsStore.state.contexts.value];
-  const contextIndex = contexts.findIndex(c => c.id === event.contextId);
-  
+  const contextIndex = contexts.findIndex((c) => c.id === event.contextId);
+
   if (event.type === 'CONTEXT_CREATED' && contextIndex === -1) {
     contexts.push({
       id: event.contextId,
@@ -256,7 +262,7 @@ function updateContextFromEvent(event: LatticeEvent) {
     });
   } else if (contextIndex !== -1) {
     const context = { ...contexts[contextIndex] };
-    
+
     switch (event.type) {
       case 'SIGNAL_CREATED':
         context.signalCount++;
@@ -267,9 +273,11 @@ function updateContextFromEvent(event: LatticeEvent) {
           lastUpdated: event.timestamp || Date.now(),
         });
         break;
-        
+
       case 'SIGNAL_WRITE':
-        const signalIndex = context.signals.findIndex(s => s.id === event.data.id);
+        const signalIndex = context.signals.findIndex(
+          (s) => s.id === event.data.id
+        );
         if (signalIndex !== -1) {
           context.signals[signalIndex] = {
             ...context.signals[signalIndex],
@@ -278,7 +286,7 @@ function updateContextFromEvent(event: LatticeEvent) {
           };
         }
         break;
-        
+
       case 'COMPUTED_CREATED':
         context.computedCount++;
         context.computeds.push({
@@ -289,7 +297,7 @@ function updateContextFromEvent(event: LatticeEvent) {
           lastComputed: 0,
         });
         break;
-        
+
       case 'EFFECT_CREATED':
         context.effectCount++;
         context.effects.push({
@@ -300,10 +308,10 @@ function updateContextFromEvent(event: LatticeEvent) {
         });
         break;
     }
-    
+
     contexts[contextIndex] = context;
   }
-  
+
   devtoolsStore.state.contexts.value = contexts;
 }
 

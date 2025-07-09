@@ -6,6 +6,10 @@ import {
   selectedContextData,
   stats,
   type DevToolsMessage,
+  type SignalReadData,
+  type SignalWriteData,
+  type SignalCreatedData,
+  type NamedItemData,
 } from './store';
 import { useSignal } from './useLattice';
 import './App.css';
@@ -41,10 +45,10 @@ export function App() {
       tabId: tabId,
     });
 
-    const messageHandler = (message: unknown) => {
+    const messageHandler = (message: DevToolsMessage) => {
       console.log('[DevTools Panel] Received:', message);
       if (message && typeof message === 'object' && 'type' in message) {
-        handleDevToolsMessage(message as DevToolsMessage);
+        handleDevToolsMessage(message);
       }
     };
 
@@ -78,7 +82,6 @@ export function App() {
       }
     };
   }, []);
-
 
   if (!connected) {
     return (
@@ -150,7 +153,11 @@ export function App() {
                     devtoolsStore.set({
                       filter: {
                         ...devtoolsStore.state.filter.value,
-                        type: e.target.value as 'all' | 'signal' | 'computed' | 'effect',
+                        type: e.target.value as
+                          | 'all'
+                          | 'signal'
+                          | 'computed'
+                          | 'effect',
                       },
                     })
                   }
@@ -201,40 +208,48 @@ export function App() {
                   <span className="type">{tx.eventType}</span>
                   <span className="data">
                     {(() => {
-                      if (tx.eventType === 'SIGNAL_READ' || tx.eventType === 'SIGNAL_WRITE') {
-                        const signalName = tx.data.name || tx.data.id;
-                        if (tx.eventType === 'SIGNAL_READ') {
-                          return (
-                            <>
-                              {signalName}: {JSON.stringify(tx.data.value)}
-                              {tx.data.internal && (
-                                <span className="internal">
-                                  {' '}
-                                  [internal: {tx.data.internal}]
-                                </span>
-                              )}
-                              {tx.data.readContext && (
-                                <span className="context">
-                                  {' '}
-                                  [{tx.data.readContext.type}:{' '}
-                                  {tx.data.readContext.name || tx.data.readContext.id}
-                                  ]
-                                </span>
-                              )}
-                            </>
-                          );
-                        } else {
-                          return (
-                            <>
-                              {signalName}: {JSON.stringify(tx.data.oldValue)} → {JSON.stringify(tx.data.newValue)}
-                            </>
-                          );
-                        }
+                      if (tx.eventType === 'SIGNAL_READ') {
+                        const data = tx.data as SignalReadData;
+                        const signalName = data.name || data.id;
+                        return (
+                          <>
+                            {signalName}: {JSON.stringify(data.value)}
+                            {data.internal && (
+                              <span className="internal">
+                                {' '}
+                                [internal: {data.internal}]
+                              </span>
+                            )}
+                            {data.readContext && (
+                              <span className="context">
+                                {' '}
+                                [{data.readContext.type}:{' '}
+                                {data.readContext.name ||
+                                  data.readContext.id}
+                                ]
+                              </span>
+                            )}
+                          </>
+                        );
+                      } else if (tx.eventType === 'SIGNAL_WRITE') {
+                        const data = tx.data as SignalWriteData;
+                        const signalName = data.name || data.id;
+                        return (
+                          <>
+                            {signalName}: {JSON.stringify(data.oldValue)} →{' '}
+                            {JSON.stringify(data.newValue)}
+                          </>
+                        );
                       } else if (tx.eventType === 'SIGNAL_CREATED') {
-                        const signalName = tx.data.name || tx.data.id;
-                        return `${signalName} = ${JSON.stringify(tx.data.initialValue)}`;
-                      } else if (tx.eventType === 'COMPUTED_CREATED' || tx.eventType === 'EFFECT_CREATED') {
-                        return tx.data.name || tx.data.id;
+                        const data = tx.data as SignalCreatedData;
+                        const signalName = data.name || data.id;
+                        return `${signalName} = ${JSON.stringify(data.initialValue)}`;
+                      } else if (
+                        tx.eventType === 'COMPUTED_CREATED' ||
+                        tx.eventType === 'EFFECT_CREATED'
+                      ) {
+                        const data = tx.data as NamedItemData;
+                        return data.name || data.id;
                       } else {
                         return JSON.stringify(tx.data);
                       }

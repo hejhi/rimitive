@@ -7,9 +7,11 @@ chrome.devtools.panels.create(
   '/panel.html',
   (panel) => {
     console.log('Lattice DevTools panel created');
-    
+
     // Store panel reference for later use
-    const windowWithPanel = window as Window & { latticePanel?: chrome.devtools.panels.ExtensionPanel };
+    const windowWithPanel = window as Window & {
+      latticePanel?: chrome.devtools.panels.ExtensionPanel;
+    };
     windowWithPanel.latticePanel = panel;
   }
 );

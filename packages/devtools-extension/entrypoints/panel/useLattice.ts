@@ -15,7 +15,7 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
         // Trigger React re-render
         onStoreChange();
       });
-      
+
       return dispose;
     },
     () => signal.value,
