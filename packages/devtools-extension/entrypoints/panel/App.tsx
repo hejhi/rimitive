@@ -127,18 +127,6 @@ export function App() {
         >
           Timeline
         </button>
-        <button
-          className={selectedTab === 'graph' ? 'active' : ''}
-          onClick={() => (devtoolsStore.state.selectedTab.value = 'graph')}
-        >
-          Reactive Graph
-        </button>
-        <button
-          className={selectedTab === 'inspector' ? 'active' : ''}
-          onClick={() => (devtoolsStore.state.selectedTab.value = 'inspector')}
-        >
-          Inspector
-        </button>
       </div>
 
       <div className="content">
@@ -224,9 +212,7 @@ export function App() {
                               <span className="context">
                                 {' '}
                                 [{data.readContext.type}:{' '}
-                                {data.readContext.name ||
-                                  data.readContext.id}
-                                ]
+                                {data.readContext.name || data.readContext.id}]
                               </span>
                             )}
                           </>
@@ -258,111 +244,6 @@ export function App() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {selectedTab === 'graph' && (
-          <div className="graph">
-            <h2>Reactive Dependency Graph</h2>
-            <p>Interactive dependency visualization coming soon...</p>
-            <p>Will show:</p>
-            <ul>
-              <li>Signal → Computed dependencies</li>
-              <li>Computed → Effect relationships</li>
-              <li>Update propagation paths</li>
-              <li>Circular dependency detection</li>
-            </ul>
-          </div>
-        )}
-
-        {selectedTab === 'inspector' && (
-          <div className="inspector">
-            <div className="inspector-sidebar">
-              <h2>Contexts</h2>
-              <div className="context-list">
-                {contexts.map((ctx) => (
-                  <div
-                    key={ctx.id}
-                    className={`context ${selectedContext === ctx.id ? 'selected' : ''}`}
-                    onClick={() =>
-                      (devtoolsStore.state.selectedContext.value = ctx.id)
-                    }
-                  >
-                    <h3>{ctx.name}</h3>
-                    <div className="context-stats">
-                      <span>📊 {ctx.signalCount}</span>
-                      <span>🔄 {ctx.computedCount}</span>
-                      <span>⚡ {ctx.effectCount}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {contextData && (
-              <div className="inspector-main">
-                <h2>{contextData.name} Details</h2>
-
-                <div className="inspector-section">
-                  <h3>Signals ({contextData.signals.length})</h3>
-                  <div className="reactive-list">
-                    {contextData.signals.map((signal) => (
-                      <div key={signal.id} className="reactive-item signal">
-                        <span className="name">{signal.name || signal.id}</span>
-                        <span className="value">
-                          {JSON.stringify(signal.value)}
-                        </span>
-                        <span className="updated">
-                          {signal.lastUpdated
-                            ? new Date(signal.lastUpdated).toLocaleTimeString()
-                            : 'N/A'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="inspector-section">
-                  <h3>Computed ({contextData.computeds.length})</h3>
-                  <div className="reactive-list">
-                    {contextData.computeds.map((computed) => (
-                      <div key={computed.id} className="reactive-item computed">
-                        <span className="name">
-                          {computed.name || computed.id}
-                        </span>
-                        <span className="value">
-                          {JSON.stringify(computed.value)}
-                        </span>
-                        <span className="deps">
-                          {computed.dependencies.length} deps
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="inspector-section">
-                  <h3>Effects ({contextData.effects.length})</h3>
-                  <div className="reactive-list">
-                    {contextData.effects.map((effect) => (
-                      <div key={effect.id} className="reactive-item effect">
-                        <span className="name">{effect.name || effect.id}</span>
-                        <span
-                          className={`status ${effect.isActive ? 'active' : 'inactive'}`}
-                        >
-                          {effect.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                        {effect.lastRun > 0 && (
-                          <span className="updated">
-                            {new Date(effect.lastRun).toLocaleTimeString()}
-                          </span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>

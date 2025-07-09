@@ -8,7 +8,7 @@ export interface DevToolsState {
   contexts: ContextInfo[];
   transactions: Transaction[];
   selectedContext: string | null;
-  selectedTab: 'timeline' | 'graph' | 'inspector';
+  selectedTab: 'timeline';
   filter: {
     type: 'all' | 'signal' | 'computed' | 'effect';
     search: string;
