@@ -3,7 +3,6 @@ import {
   devtoolsStore,
   handleDevToolsMessage,
   filteredTransactions,
-  selectedContextData,
   stats,
   type DevToolsMessage,
   type SignalReadData,
@@ -21,9 +20,7 @@ export function App() {
   const connected = useSignal(devtoolsStore.state.connected);
   const contexts = useSignal(devtoolsStore.state.contexts);
   const selectedTab = useSignal(devtoolsStore.state.selectedTab);
-  const selectedContext = useSignal(devtoolsStore.state.selectedContext);
   const transactions = useSignal(filteredTransactions);
-  const contextData = useSignal(selectedContextData);
   const statsData = useSignal(stats);
 
   console.log('[DevTools Panel] Connected state:', connected);
