@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Lattice DevTools Test</title>
+</head>
+<body>
+  <h1>Lattice DevTools Test Page</h1>
+  <p>Open Chrome DevTools and look for the "Lattice" tab.</p>
+  <p>If you don't see it, make sure the extension is loaded.</p>
+  
+  <script type="module">
+    // Simulate Lattice being present
+    window.__LATTICE_DEVTOOLS__ = {
+      enabled: true,
+      options: {}
+    };
+    
+    console.log('Lattice DevTools test page loaded');
+  </script>
+</body>
+</html>
