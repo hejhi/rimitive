@@ -12,6 +12,7 @@ export interface DevToolsState {
   filter: {
     type: 'all' | 'signal' | 'computed' | 'effect';
     search: string;
+    hideInternal: boolean;
   };
 }
 
@@ -67,6 +68,7 @@ export const devtoolsStore = createStore<DevToolsState>({
   filter: {
     type: 'all',
     search: '',
+    hideInternal: true,
   },
 }, devtoolsContext);
 
@@ -88,6 +90,13 @@ export const filteredTransactions = devtoolsContext.computed(() => {
     filtered = filtered.filter(t => 
       t.eventType.toLowerCase().includes(search) ||
       JSON.stringify(t.data).toLowerCase().includes(search)
+    );
+  }
+  
+  // Filter internal reads if enabled
+  if (filter.hideInternal) {
+    filtered = filtered.filter(t => 
+      t.eventType !== 'SIGNAL_READ' || !t.data.internal
     );
   }
   

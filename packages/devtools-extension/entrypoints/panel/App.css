@@ -153,9 +153,17 @@
 }
 
 .transaction .context {
-  color: #858585;
-  font-style: italic;
-  font-size: 11px;
+  color: #ccc;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.transaction .internal {
+  color: #ccc;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
 }
 
 .transaction .changes {
@@ -171,7 +179,6 @@
 }
 
 .context {
-  padding: 15px;
   background: #2d2d30;
   border-radius: 4px;
   cursor: pointer;
@@ -213,6 +220,19 @@
 .timeline-controls {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+
+.timeline-controls .toggle {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.timeline-controls .toggle input {
+  cursor: pointer;
 }
 
 .timeline-controls select,
@@ -229,7 +249,6 @@
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 11px;
   color: #9cdcfe;
-  max-width: 300px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

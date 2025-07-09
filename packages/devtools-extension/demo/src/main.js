@@ -25,12 +25,12 @@ const todoStore = createStore({
 // Update UI when count changes
 counterStore.getContext().effect(() => {
   document.getElementById('count').textContent = counterStore.state.count.value;
-}, 'updateCountDisplay');
+}, 'update_count_display');
 
 // Update UI when doubled changes
 counterStore.getContext().effect(() => {
   document.getElementById('doubled').textContent = doubledComputed.value;
-}, 'updateDoubledDisplay');
+}, 'update_doubled_display');
 
 // Update UI when todos change
 todoStore.getContext().effect(() => {
