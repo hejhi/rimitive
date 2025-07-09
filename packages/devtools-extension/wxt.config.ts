@@ -17,6 +17,11 @@ export default defineConfig({
       },
     ],
   },
+  imports: {
+    eslintrc: {
+      enabled: 9, // Generate ESLint 9 compatible config
+    },
+  },
   vite: () => ({
     resolve: {
       alias: {
