@@ -51,21 +51,23 @@ const filteredTodos = todoContext.computed(() => {
 
   switch (filter) {
     case 'active':
-      return todos.filter(todo => !todo.completed);
+      return todos.filter((todo) => !todo.completed);
     case 'completed':
-      return todos.filter(todo => todo.completed);
+      return todos.filter((todo) => todo.completed);
     default:
       return todos;
   }
 });
 
 const activeTodoCount = todoContext.computed(() => {
-  return todoStore.state.todos.value.filter(todo => !todo.completed).length;
+  return todoStore.state.todos.value.filter((todo) => !todo.completed).length;
 });
 
 // UI Updates
 counterContext.effect(() => {
-  document.getElementById('count')!.textContent = String(counterStore.state.count.value);
+  document.getElementById('count')!.textContent = String(
+    counterStore.state.count.value
+  );
 });
 
 counterContext.effect(() => {
@@ -85,7 +87,7 @@ todoContext.effect(() => {
   } else {
     todoList.innerHTML = todos
       .map(
-        todo => `
+        (todo) => `
           <li class="todo-item ${todo.completed ? 'completed' : ''}">
             <input 
               type="checkbox" 
@@ -101,7 +103,9 @@ todoContext.effect(() => {
 });
 
 todoContext.effect(() => {
-  document.getElementById('activeTodoCount')!.textContent = String(activeTodoCount.value);
+  document.getElementById('activeTodoCount')!.textContent = String(
+    activeTodoCount.value
+  );
 });
 
 // Event Handlers
@@ -134,36 +138,41 @@ document.getElementById('addTodo')!.addEventListener('click', () => {
   }
 });
 
-document.getElementById('todoInput')!.addEventListener('keypress', e => {
+document.getElementById('todoInput')!.addEventListener('keypress', (e) => {
   if (e.key === 'Enter') {
     document.getElementById('addTodo')!.click();
   }
 });
 
 // Filter buttons
-document.querySelectorAll('.filter').forEach(button => {
-  button.addEventListener('click', e => {
+document.querySelectorAll('.filter').forEach((button) => {
+  button.addEventListener('click', (e) => {
     const target = e.target as HTMLButtonElement;
-    const filter = target.getAttribute('data-filter') as 'all' | 'active' | 'completed';
-    
+    const filter = target.getAttribute('data-filter') as
+      | 'all'
+      | 'active'
+      | 'completed';
+
     todoStore.set({ filter });
-    
+
     // Update active button
-    document.querySelectorAll('.filter').forEach(btn => btn.classList.remove('active'));
+    document
+      .querySelectorAll('.filter')
+      .forEach((btn) => btn.classList.remove('active'));
     target.classList.add('active');
   });
 });
 
 // Todo checkbox handling
-document.getElementById('todoList')!.addEventListener('change', e => {
+document.getElementById('todoList')!.addEventListener('change', (e) => {
   const target = e.target as HTMLInputElement;
   if (target.type === 'checkbox') {
     const todoId = Number(target.getAttribute('data-todo-id'));
     const todos = todoStore.state.todos.value;
-    const updatedTodos = todos.map(todo =>
+    const updatedTodos = todos.map((todo) =>
       todo.id === todoId ? { ...todo, completed: target.checked } : todo
     );
-    
+
     todoStore.set({ todos: updatedTodos });
   }
 });
