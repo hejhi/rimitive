@@ -28,6 +28,7 @@ export interface Signal<T> {
 
   // Create a fine-grained subscription to a selected value
   select<R>(selector: (value: T) => R): Selected<R>;
+  peek(): T;
 
   // Object/array update methods
   set<K extends keyof T>(key: K, value: T[K]): void;
@@ -44,6 +45,7 @@ export interface Signal<T> {
 export interface Computed<T> {
   readonly value: T; // Read computed value
   subscribe: (listener: () => void) => () => void; // Subscribe to changes
+  peek(): T; // Read value without reactive tracking
 
   // Create a fine-grained subscription to a selected value
   select<R>(selector: (value: T) => R): Selected<R>;

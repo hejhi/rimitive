@@ -1,13 +1,22 @@
 import type { LatticeContext, Store, SignalState } from '@lattice/core';
-import type { Signal as CoreSignal, Computed as CoreComputed } from '@lattice/core';
+import type {
+  Signal as CoreSignal,
+  Computed as CoreComputed,
+} from '@lattice/core';
 import { createLattice as originalCreateLattice } from '@lattice/core';
 
 // Define all possible event data types
-export type DevToolsEventData = 
+export type DevToolsEventData =
   | { enabled: boolean }
   | { name?: string }
   | { id: string; name?: string; initialValue: unknown }
-  | { id: string; name?: string; value: unknown; readContext?: { type: string; id: string; name?: string }; internal: string | null }
+  | {
+      id: string;
+      name?: string;
+      value: unknown;
+      readContext?: { type: string; id: string; name?: string };
+      internal: string | null;
+    }
   | { id: string; name?: string; oldValue: unknown; newValue: unknown }
   | { id: string; value?: unknown }
   | { id: string; updates: string | object }
@@ -92,9 +101,11 @@ function emitEvent(event: Omit<DevToolsEvent, 'timestamp'>) {
 
   // Send to devtools if connected
   if (typeof window !== 'undefined') {
-    const bridge = (window as Window & { 
-      __LATTICE_DEVTOOLS_BRIDGE__?: { send: (event: DevToolsEvent) => void } 
-    }).__LATTICE_DEVTOOLS_BRIDGE__;
+    const bridge = (
+      window as Window & {
+        __LATTICE_DEVTOOLS_BRIDGE__?: { send: (event: DevToolsEvent) => void };
+      }
+    ).__LATTICE_DEVTOOLS_BRIDGE__;
     if (bridge) {
       bridge.send(fullEvent);
     }
@@ -120,7 +131,7 @@ export function enableDevTools(options: DevToolsOptions = {}) {
         options: DevToolsOptions;
         getEvents: () => DevToolsEvent[];
         getContexts: () => SerializedContext[];
-      }
+      };
     };
 
     globalWindow.__LATTICE_DEVTOOLS__ = {
@@ -230,7 +241,7 @@ export function createInstrumentedLattice(
         if (prop === 'value') {
           internalOperation = 'devtools-oldvalue';
           const signalTarget = target as CoreSignal<T>;
-          const oldValue = signalTarget.value;
+          const oldValue = signalTarget.peek();
           internalOperation = null;
 
           signalTarget.value = value as T;
@@ -446,7 +457,7 @@ export function createInstrumentedStore<T extends object>(
           keyof T,
           CoreSignal<T[keyof T]>,
         ][]) {
-          current[key] = signal.value;
+          current[key] = signal.peek();
         }
 
         // Calculate new state
@@ -460,7 +471,7 @@ export function createInstrumentedStore<T extends object>(
         ][]) {
           if (key in signals) {
             const signal = signals[key];
-            if (signal && !Object.is(signal.value, value)) {
+            if (signal && !Object.is(signal.peek(), value)) {
               signal.value = value;
             }
           }

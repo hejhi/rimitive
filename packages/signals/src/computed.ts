@@ -58,9 +58,11 @@ Object.defineProperty(Computed.prototype, 'value', {
         if (!node) {
           // Create new dependency node using context pool
           activeContext.allocations++;
-          const newNode = activeContext.poolSize > 0
-            ? (activeContext.poolHits++, activeContext.nodePool[--activeContext.poolSize]!)
-            : (activeContext.poolMisses++, {} as DependencyNode);
+          const newNode =
+            activeContext.poolSize > 0
+              ? (activeContext.poolHits++,
+                activeContext.nodePool[--activeContext.poolSize]!)
+              : (activeContext.poolMisses++, {} as DependencyNode);
           newNode.source = this;
           newNode.target = current;
           newNode.version = version;
@@ -282,6 +284,12 @@ Computed.prototype.dispose = function (): void {
     this._sources = undefined;
     this._value = undefined;
   }
+};
+
+// Peek method - read value without tracking
+Computed.prototype.peek = function <T>(this: Computed<T>): T {
+  this._refresh();
+  return this._value!;
 };
 
 // Subscribe will be added by the global computed factory

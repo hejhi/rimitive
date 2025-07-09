@@ -32,7 +32,7 @@ export function createSelectFactory(
 
         // Subscribe to ALL source changes
         return subscribe(source, () => {
-          const currentValue = selector(source.value);
+          const currentValue = selector(source.peek());
 
           // Only fire if selected value changed (using Object.is for comparison)
           if (!Object.is(currentValue, previousValue)) {

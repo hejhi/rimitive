@@ -80,7 +80,7 @@ export function createStore<T extends object>(
         keyof T,
         SignalState<T>[keyof T],
       ][]) {
-        current[key] = signal.value;
+        current[key] = signal.peek();
       }
 
       // Calculate new state
@@ -92,7 +92,7 @@ export function createStore<T extends object>(
         keyof T,
         T[keyof T],
       ][]) {
-        if (key in signals && !Object.is(signals[key].value, value)) {
+        if (key in signals && !Object.is(signals[key].peek(), value)) {
           signals[key].value = value;
         }
       }

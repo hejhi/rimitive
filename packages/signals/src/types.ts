@@ -33,6 +33,7 @@ export interface Computed<T = unknown> {
   readonly value: T;
   subscribe: (listener: () => void) => () => void;
   select: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
+  peek: () => T;
   _fn: () => T;
   _value: T | undefined;
   _version: number;
