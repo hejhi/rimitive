@@ -49,13 +49,51 @@ export interface EffectInfo {
   lastRun: number;
 }
 
+// Transaction data types
+export interface SignalReadData {
+  id: string;
+  name?: string;
+  value: unknown;
+  internal?: string;
+  readContext?: {
+    type: string;
+    id: string;
+    name?: string;
+  };
+}
+
+export interface SignalWriteData {
+  id: string;
+  name?: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+export interface SignalCreatedData {
+  id: string;
+  name?: string;
+  initialValue: unknown;
+}
+
+export interface NamedItemData {
+  id: string;
+  name?: string;
+}
+
+export type TransactionData = 
+  | SignalReadData 
+  | SignalWriteData 
+  | SignalCreatedData 
+  | NamedItemData
+  | unknown;
+
 export interface Transaction {
   id: string;
   timestamp: number;
   contextId: string;
   type: 'signal' | 'computed' | 'effect' | 'batch';
   eventType: string;
-  data: unknown;
+  data: TransactionData;
 }
 
 // Create the devtools store
@@ -95,9 +133,11 @@ export const filteredTransactions = devtoolsContext.computed(() => {
   
   // Filter internal reads if enabled
   if (filter.hideInternal) {
-    filtered = filtered.filter(t => 
-      t.eventType !== 'SIGNAL_READ' || !t.data.internal
-    );
+    filtered = filtered.filter(t => {
+      if (t.eventType !== 'SIGNAL_READ') return true;
+      const data = t.data as SignalReadData;
+      return !data.internal;
+    });
   }
   
   return filtered;
@@ -138,39 +178,49 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
       
     case 'STATE_UPDATE':
       console.log('[DevTools Store] Updating state with:', message.data);
-      if (message.data.connected !== undefined) {
-        devtoolsStore.state.connected.value = message.data.connected;
-      }
-      if (message.data.contexts) {
-        devtoolsStore.state.contexts.value = message.data.contexts;
-      }
-      if (message.data.transactions) {
-        devtoolsStore.state.transactions.value = message.data.transactions;
-      }
-      if (message.data.selectedContext !== undefined) {
-        devtoolsStore.state.selectedContext.value = message.data.selectedContext;
+      if (message.data && typeof message.data === 'object') {
+        const stateData = message.data as {
+          connected?: boolean;
+          contexts?: ContextInfo[];
+          transactions?: Transaction[];
+          selectedContext?: string | null;
+        };
+        if (stateData.connected !== undefined) {
+          devtoolsStore.state.connected.value = stateData.connected;
+        }
+        if (stateData.contexts) {
+          devtoolsStore.state.contexts.value = stateData.contexts;
+        }
+        if (stateData.transactions) {
+          devtoolsStore.state.transactions.value = stateData.transactions;
+        }
+        if (stateData.selectedContext !== undefined) {
+          devtoolsStore.state.selectedContext.value = stateData.selectedContext;
+        }
       }
       break;
       
     case 'TRANSACTION':
-      const event = message.data;
-      const transaction: Transaction = {
-        id: `tx_${Date.now()}_${Math.random()}`,
-        timestamp: event.timestamp || Date.now(),
-        contextId: event.contextId,
-        type: getEventCategory(event.type),
-        eventType: event.type,
-        data: event.data,
-      };
-      
-      // Add transaction (keep last 1000)
-      devtoolsStore.state.transactions.value = [
-        ...devtoolsStore.state.transactions.value.slice(-999),
-        transaction,
-      ];
-      
-      // Update context metadata
-      updateContextFromEvent(event);
+      if (message.data && typeof message.data === 'object') {
+        const event = message.data as LatticeEvent;
+        const transaction: Transaction = {
+          id: `tx_${Date.now()}_${Math.random()}`,
+          timestamp: event.timestamp || Date.now(),
+          contextId: event.contextId,
+          type: getEventCategory(event.type),
+          eventType: event.type,
+          data: event.data || {},
+        };
+        
+        // Add transaction (keep last 1000)
+        devtoolsStore.state.transactions.value = [
+          ...devtoolsStore.state.transactions.value.slice(-999),
+          transaction,
+        ];
+        
+        // Update context metadata
+        updateContextFromEvent(event);
+      }
       break;
   }
 }
@@ -186,12 +236,7 @@ interface LatticeEvent {
   type: string;
   contextId: string;
   timestamp?: number;
-  data?: {
-    id?: string;
-    name?: string;
-    initialValue?: unknown;
-    newValue?: unknown;
-  };
+  data?: unknown;
 }
 
 function updateContextFromEvent(event: LatticeEvent) {

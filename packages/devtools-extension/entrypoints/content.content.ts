@@ -1,3 +1,5 @@
+import type { ScriptPublicPath } from 'wxt/browser';
+
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_start',
@@ -6,7 +8,7 @@ export default defineContentScript({
     
     // Use WXT's injectScript to inject the bridge script with proper URL
     try {
-      await injectScript('lattice-bridge.js');
+      await injectScript('lattice-bridge.js' as ScriptPublicPath);
       console.log('[Lattice DevTools Content] Bridge script injected');
     } catch (error) {
       console.error('[Lattice DevTools Content] Failed to inject bridge script:', error);
@@ -23,14 +25,14 @@ export default defineContentScript({
     
     // Listen for messages from the page
     window.addEventListener('message', (event) => {
-      if (event.source !== window || event.data.source !== 'lattice-devtools') {
+      if (event.source !== window || !event.data || typeof event.data !== 'object' || !('source' in event.data) || event.data.source !== 'lattice-devtools') {
         return;
       }
       
       console.log('[Lattice DevTools Content] Received message from page:', event.data);
       
       // Forward to background script
-      chrome.runtime.sendMessage({
+      void chrome.runtime.sendMessage({
         source: 'lattice-devtools-content',
         ...event.data,
       });
@@ -38,11 +40,12 @@ export default defineContentScript({
     
     // Listen for messages from devtools
     chrome.runtime.onMessage.addListener((message) => {
-      if (message.type === 'FROM_DEVTOOLS') {
+      if (message && typeof message === 'object' && 'type' in message && message.type === 'FROM_DEVTOOLS') {
         // Forward to page
+        const messageData = 'data' in message ? message.data : {};
         window.postMessage({
           source: 'lattice-devtools-response',
-          ...message.data,
+          ...(typeof messageData === 'object' && messageData !== null ? messageData : {}),
         }, '*');
       }
     });

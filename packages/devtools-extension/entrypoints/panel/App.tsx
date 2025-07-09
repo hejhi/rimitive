@@ -5,6 +5,7 @@ import {
   filteredTransactions,
   selectedContextData,
   stats,
+  type DevToolsMessage,
 } from './store';
 import { useSignal } from './useLattice';
 import './App.css';
@@ -40,9 +41,11 @@ export function App() {
       tabId: tabId,
     });
 
-    const messageHandler = (message: any) => {
+    const messageHandler = (message: unknown) => {
       console.log('[DevTools Panel] Received:', message);
-      handleDevToolsMessage(message);
+      if (message && typeof message === 'object' && 'type' in message) {
+        handleDevToolsMessage(message as DevToolsMessage);
+      }
     };
 
     port.onMessage.addListener(messageHandler);
@@ -147,7 +150,7 @@ export function App() {
                     devtoolsStore.set({
                       filter: {
                         ...devtoolsStore.state.filter.value,
-                        type: e.target.value as any,
+                        type: e.target.value as 'all' | 'signal' | 'computed' | 'effect',
                       },
                     })
                   }
