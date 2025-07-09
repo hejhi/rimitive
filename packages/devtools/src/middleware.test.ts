@@ -1,0 +1,272 @@
+/**
+ * @fileoverview Tests for DevTools middleware
+ */
+
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createLattice, createStore } from '@lattice/core';
+import { withDevTools } from './middleware';
+import { getDevToolsAPI } from './events';
+
+describe('withDevTools middleware', () => {
+  beforeEach(() => {
+    // Clear window.__LATTICE_DEVTOOLS__ before each test
+    if (typeof window !== 'undefined') {
+      delete (window as any).__LATTICE_DEVTOOLS__;
+    }
+    vi.clearAllMocks();
+  });
+
+  it('should initialize DevTools API on first use', () => {
+    expect(getDevToolsAPI()).toBeTruthy();
+    expect(getDevToolsAPI()?.enabled).toBe(true);
+    expect(getDevToolsAPI()?.version).toBe('1.0.0');
+  });
+
+  it('should emit CONTEXT_CREATED event', () => {
+    const context = createLattice();
+    withDevTools({ name: 'TestContext' })(context);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    const events = api.getEvents();
+
+    expect(events).toHaveLength(1);
+    expect(events[0]!.type).toBe('CONTEXT_CREATED');
+    expect(events[0]!.data).toMatchObject({
+      name: 'TestContext',
+    });
+  });
+
+  it('should instrument signal creation and updates', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools()(context);
+
+    const signal = instrumentedContext.signal(42);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    // Update signal
+    signal.value = 100;
+
+    const events = api.getEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]!.type).toBe('SIGNAL_WRITE');
+    expect(events[0]!.data).toMatchObject({
+      oldValue: 42,
+      newValue: 100,
+    });
+  });
+
+  it('should track signal reads when enabled', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools({ trackReads: true })(context);
+
+    const signal = instrumentedContext.signal(42);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    // Read signal
+    signal.peek();
+
+    const events = api.getEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]!.type).toBe('SIGNAL_READ');
+    expect(events[0]!.data).toMatchObject({
+      value: 42,
+    });
+  });
+
+  it('should instrument computed creation', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools()(context);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    instrumentedContext.computed(() => 42);
+
+    const events = api.getEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]!.type).toBe('COMPUTED_CREATED');
+    expect(events[0]!.data).toBeTruthy();
+  });
+
+  it('should track computed executions when enabled', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools({ trackComputations: true })(
+      context
+    );
+
+    let callCount = 0;
+    const computed = instrumentedContext.computed(() => {
+      callCount++;
+      return callCount * 10;
+    });
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    // Access computed to trigger execution
+    computed.value;
+
+    const events = api.getEvents();
+    expect(events.length).toBeGreaterThanOrEqual(2);
+
+    const startEvent = events.find((e) => e.type === 'COMPUTED_START');
+    const endEvent = events.find((e) => e.type === 'COMPUTED_END');
+
+    expect(startEvent).toBeTruthy();
+    expect(endEvent).toBeTruthy();
+    expect(endEvent?.data).toMatchObject({
+      value: 10,
+    });
+  });
+
+  it('should instrument effect creation and disposal', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools()(context);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    const dispose = instrumentedContext.effect(() => {
+      // Effect body
+    });
+
+    let events = api.getEvents();
+    expect(events).toHaveLength(3); // CREATED, START, END
+    expect(events[0]?.type).toBe('EFFECT_CREATED');
+    expect(events[1]?.type).toBe('EFFECT_START');
+    expect(events[2]?.type).toBe('EFFECT_END');
+
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+    dispose();
+
+    events = api.getEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.type).toBe('EFFECT_DISPOSED');
+  });
+
+  it('should track batch operations', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools()(context);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    let result = 0;
+    instrumentedContext.batch(() => {
+      result = 42;
+    });
+
+    expect(result).toBe(42);
+
+    const events = api.getEvents();
+    expect(events).toHaveLength(2);
+    expect(events[0]!.type).toBe('BATCH_START');
+    expect(events[1]!.type).toBe('BATCH_END');
+    expect(events[1]!.data).toMatchObject({
+      success: true,
+    });
+  });
+
+  it('should track batch errors', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools()(context);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    expect(() => {
+      instrumentedContext.batch(() => {
+        throw new Error('Batch error');
+      });
+    }).toThrow('Batch error');
+
+    const events = api.getEvents();
+    expect(events).toHaveLength(2);
+    expect(events[1]!.type).toBe('BATCH_END');
+    expect(events[1]!.data).toMatchObject({
+      success: false,
+      error: 'Batch error',
+    });
+  });
+
+  it('should work with createStore', () => {
+    const instrumentedContext = withDevTools({ name: 'StoreTest' })(
+      createLattice()
+    );
+    const store = createStore({ count: 0 }, instrumentedContext);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    const events = api.getEvents();
+
+    // Should have context creation and signal creation for count
+    const contextEvent = events.find((e) => e.type === 'CONTEXT_CREATED');
+    const signalEvent = events.find((e) => e.type === 'SIGNAL_CREATED');
+
+    expect(contextEvent).toBeTruthy();
+    expect(signalEvent).toBeTruthy();
+
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    // Update store
+    store.set({ count: 10 });
+
+    const updateEvents = api.getEvents();
+    // Should have batch start, signal write, batch end
+    expect(updateEvents.some((e) => e.type === 'BATCH_START')).toBe(true);
+    expect(updateEvents.some((e) => e.type === 'SIGNAL_WRITE')).toBe(true);
+    expect(updateEvents.some((e) => e.type === 'BATCH_END')).toBe(true);
+  });
+
+  it('should emit CONTEXT_DISPOSED on dispose', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools({ name: 'DisposableContext' })(
+      context
+    );
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    instrumentedContext.dispose();
+
+    const events = api.getEvents();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.type).toBe('CONTEXT_DISPOSED');
+    expect(events[0]?.data).toMatchObject({
+      name: 'DisposableContext',
+    });
+  });
+
+  it('should limit event buffer size', () => {
+    const context = createLattice();
+    const instrumentedContext = withDevTools()(context);
+
+    const api = getDevToolsAPI();
+    if (!api) throw new Error('DevTools API not initialized');
+    api.clearEvents();
+
+    // Create many signals to exceed buffer
+    for (let i = 0; i < 10100; i++) {
+      instrumentedContext.signal(i);
+    }
+
+    const events = api.getEvents();
+    expect(events.length).toBeLessThanOrEqual(10000);
+  });
+});

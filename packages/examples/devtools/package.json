@@ -1,7 +1,7 @@
 {
-  "name": "lattice-devtools-demo",
-  "private": true,
+  "name": "@lattice/example-devtools",
   "version": "0.0.1",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "@lattice/core": "workspace:*",
-    "@lattice/devtools": "workspace:*",
-    "@lattice/signals": "workspace:*"
+    "@lattice/devtools": "workspace:*"
   },
   "devDependencies": {
-    "vite": "^6.3.2"
+    "vite": "^6.0.5",
+    "typescript": "^5.8.3"
   }
 }

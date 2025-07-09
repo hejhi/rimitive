@@ -220,6 +220,28 @@ importers:
         specifier: ^0.32.5
         version: 0.32.6
 
+  packages/examples:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+
+  packages/examples/devtools:
+    dependencies:
+      '@lattice/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@lattice/devtools':
+        specifier: workspace:*
+        version: link:../../devtools
+    devDependencies:
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+      vite:
+        specifier: ^6.0.5
+        version: 6.3.5(@types/node@22.15.3)(jiti@2.4.2)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+
   packages/signals:
     devDependencies:
       rimraf:

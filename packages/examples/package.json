@@ -1,0 +1,15 @@
+{
+  "name": "@lattice/examples",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Example applications demonstrating Lattice features",
+  "type": "module",
+  "scripts": {
+    "dev:devtools": "cd ./devtools && pnpm dev",
+    "build:devtools": "pnpm --filter ./devtools build",
+    "preview:devtools": "pnpm --filter ./devtools preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

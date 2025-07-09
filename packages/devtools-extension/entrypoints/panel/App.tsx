@@ -165,21 +165,6 @@ export function App() {
                     })
                   }
                 />
-                <label className="toggle">
-                  <input
-                    type="checkbox"
-                    checked={devtoolsStore.state.filter.value.hideInternal}
-                    onChange={(e) =>
-                      devtoolsStore.set({
-                        filter: {
-                          ...devtoolsStore.state.filter.value,
-                          hideInternal: e.target.checked,
-                        },
-                      })
-                    }
-                  />
-                  Hide Internal
-                </label>
               </div>
             </div>
             <div className="transaction-list">
