@@ -1,8 +1,7 @@
-import type { LatticeContext, Store } from '@lattice/core';
+import type { LatticeContext, Store, SignalState } from '@lattice/core';
 import type { Signal, Computed } from '@lattice/signals';
 import {
   createLattice as originalCreateLattice,
-  createStore as originalCreateStore,
 } from '@lattice/core';
 
 export interface DevToolsEvent {
@@ -189,6 +188,7 @@ export function createInstrumentedLattice(
             contextId,
             data: {
               id: signalId,
+              name,
               value,
               readContext: currentlyExecuting
                 ? {
@@ -216,6 +216,7 @@ export function createInstrumentedLattice(
             contextId,
             data: {
               id: signalId,
+              name,
               oldValue,
               newValue: value,
             },
@@ -375,27 +376,19 @@ export function createInstrumentedStore<T extends object>(
     storeName = name;
   }
 
-  // Mark store creation as internal to catch initial state building
-  internalOperation = 'store-init';
-  const store = originalCreateStore(initialState, context);
-  internalOperation = null;
-
   const storeId = generateId('store');
   const contextId = contextMetadata.get(context)?.id || 'unknown';
 
-  emitEvent({
-    type: 'STORE_CREATED',
-    contextId,
-    data: {
-      id: storeId,
-      name: storeName,
-      initialState,
-    },
-  });
+  // Create signals manually with property names
+  const signals = {} as SignalState<T>;
+  for (const [key, value] of Object.entries(initialState) as [keyof T, T[keyof T]][]) {
+    // Pass the property name as the signal name
+    // Use the wrapped signal function that accepts a name
+    signals[key] = (context as any).signal(value, `${storeName ? storeName + '.' : ''}${String(key)}`);
+  }
 
-  // Wrap set method
-  const originalSet = store.set;
-  store.set = function (updates: Partial<T> | ((current: T) => Partial<T>)) {
+  // Implement batched set method
+  const set = (updates: Partial<T> | ((current: T) => Partial<T>)) => {
     emitEvent({
       type: 'STORE_UPDATE_START',
       contextId,
@@ -408,7 +401,27 @@ export function createInstrumentedStore<T extends object>(
     // Mark internal operations during store update
     internalOperation = 'store_update';
     try {
-      originalSet.call(this, updates);
+      context.batch(() => {
+        // Get current state from all signals
+        const current = {} as T;
+        for (const [key, signal] of Object.entries(signals) as [keyof T, Signal<T[keyof T]>][]) {
+          current[key] = signal.value;
+        }
+
+        // Calculate new state
+        const newState =
+          typeof updates === 'function' ? updates(current) : updates;
+
+        // Update changed signals
+        for (const [key, value] of Object.entries(newState) as [keyof T, T[keyof T]][]) {
+          if (key in signals) {
+            const signal = signals[key];
+            if (signal && !Object.is(signal.value, value)) {
+              signal.value = value;
+            }
+          }
+        }
+      });
     } finally {
       internalOperation = null;
     }
@@ -421,6 +434,24 @@ export function createInstrumentedStore<T extends object>(
       },
     });
   };
+
+  // Create the store object
+  const store: Store<T> = {
+    state: signals,
+    set,
+    getContext: () => context,
+    dispose: () => context.dispose(),
+  };
+
+  emitEvent({
+    type: 'STORE_CREATED',
+    contextId,
+    data: {
+      id: storeId,
+      name: storeName,
+      initialState,
+    },
+  });
 
   return store;
 }

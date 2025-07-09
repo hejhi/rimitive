@@ -196,30 +196,45 @@ export function App() {
                   </span>
                   <span className="type">{tx.eventType}</span>
                   <span className="data">
-                    {tx.eventType === 'SIGNAL_READ' ? (
-                      <>
-                        {JSON.stringify({
-                          id: tx.data.id,
-                          value: tx.data.value,
-                        })}
-                        {tx.data.internal && (
-                          <span className="internal">
-                            {' '}
-                            [internal: {tx.data.internal}]
-                          </span>
-                        )}
-                        {tx.data.readContext && (
-                          <span className="context">
-                            {' '}
-                            [{tx.data.readContext.type}:{' '}
-                            {tx.data.readContext.name || tx.data.readContext.id}
-                            ]
-                          </span>
-                        )}
-                      </>
-                    ) : (
-                      JSON.stringify(tx.data)
-                    )}
+                    {(() => {
+                      if (tx.eventType === 'SIGNAL_READ' || tx.eventType === 'SIGNAL_WRITE') {
+                        const signalName = tx.data.name || tx.data.id;
+                        if (tx.eventType === 'SIGNAL_READ') {
+                          return (
+                            <>
+                              {signalName}: {JSON.stringify(tx.data.value)}
+                              {tx.data.internal && (
+                                <span className="internal">
+                                  {' '}
+                                  [internal: {tx.data.internal}]
+                                </span>
+                              )}
+                              {tx.data.readContext && (
+                                <span className="context">
+                                  {' '}
+                                  [{tx.data.readContext.type}:{' '}
+                                  {tx.data.readContext.name || tx.data.readContext.id}
+                                  ]
+                                </span>
+                              )}
+                            </>
+                          );
+                        } else {
+                          return (
+                            <>
+                              {signalName}: {JSON.stringify(tx.data.oldValue)} → {JSON.stringify(tx.data.newValue)}
+                            </>
+                          );
+                        }
+                      } else if (tx.eventType === 'SIGNAL_CREATED') {
+                        const signalName = tx.data.name || tx.data.id;
+                        return `${signalName} = ${JSON.stringify(tx.data.initialValue)}`;
+                      } else if (tx.eventType === 'COMPUTED_CREATED' || tx.eventType === 'EFFECT_CREATED') {
+                        return tx.data.name || tx.data.id;
+                      } else {
+                        return JSON.stringify(tx.data);
+                      }
+                    })()}
                   </span>
                 </div>
               ))}
