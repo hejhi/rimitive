@@ -5,6 +5,8 @@ import {
   filteredTransactions,
   selectedContextData,
   stats,
+  requestTimeTravel,
+  updateTimeTravelState,
 } from './store';
 import { useSignal } from './useLattice';
 import './App.css';
@@ -20,6 +22,7 @@ export function App() {
   const transactions = useSignal(filteredTransactions);
   const contextData = useSignal(selectedContextData);
   const statsData = useSignal(stats);
+  const timeTravel = useSignal(devtoolsStore.state.timeTravel);
 
   console.log('[DevTools Panel] Connected state:', connected);
 
@@ -75,6 +78,17 @@ export function App() {
       }
     };
   }, []);
+
+  // Periodically update time travel state
+  useEffect(() => {
+    if (!connected) return;
+    
+    const intervalId = setInterval(() => {
+      updateTimeTravelState();
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [connected]);
 
   if (!connected) {
     return (
@@ -137,6 +151,64 @@ export function App() {
       <div className="content">
         {selectedTab === 'timeline' && (
           <div className="timeline">
+            {/* Time Travel Controls */}
+            <div className="time-travel-controls">
+              <button
+                onClick={() => requestTimeTravel('goToPrevious')}
+                disabled={timeTravel.currentIndex <= 0}
+              >
+                ← Previous
+              </button>
+              
+              <div className="slider-container">
+                <input
+                  type="range"
+                  min={0}
+                  max={Math.max(0, timeTravel.snapshots.length - 1)}
+                  value={timeTravel.currentIndex}
+                  onChange={(e) => requestTimeTravel('goToSnapshot', parseInt(e.target.value))}
+                  disabled={timeTravel.snapshots.length === 0}
+                />
+                <span className="snapshot-info">
+                  {timeTravel.currentIndex + 1} / {timeTravel.snapshots.length} snapshots
+                </span>
+              </div>
+              
+              <button
+                onClick={() => requestTimeTravel('goToNext')}
+                disabled={timeTravel.currentIndex >= timeTravel.snapshots.length - 1}
+              >
+                Next →
+              </button>
+              
+              <button
+                onClick={() => requestTimeTravel('goToLatest')}
+                disabled={timeTravel.currentIndex >= timeTravel.snapshots.length - 1}
+              >
+                Latest
+              </button>
+              
+              <div className="toggle-effects">
+                <input
+                  type="checkbox"
+                  id="suppress-effects"
+                  checked={timeTravel.suppressEffects}
+                  onChange={(e) => {
+                    requestTimeTravel('setSuppressEffects', e.target.checked);
+                    devtoolsStore.state.timeTravel.value = {
+                      ...timeTravel,
+                      suppressEffects: e.target.checked,
+                    };
+                  }}
+                />
+                <label htmlFor="suppress-effects">Suppress Effects</label>
+              </div>
+              
+              {timeTravel.isTimeTraveling && (
+                <span className="time-travel-indicator">TIME TRAVELING</span>
+              )}
+            </div>
+            
             <div className="timeline-header">
               <h2>Transaction Timeline</h2>
               <div className="timeline-controls">

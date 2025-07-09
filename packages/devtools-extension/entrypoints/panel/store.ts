@@ -14,6 +14,12 @@ export interface DevToolsState {
     search: string;
     hideInternal: boolean;
   };
+  timeTravel: {
+    snapshots: any[];
+    currentIndex: number;
+    isTimeTraveling: boolean;
+    suppressEffects: boolean;
+  };
 }
 
 export interface ContextInfo {
@@ -69,6 +75,12 @@ export const devtoolsStore = createStore<DevToolsState>({
     type: 'all',
     search: '',
     hideInternal: true,
+  },
+  timeTravel: {
+    snapshots: [],
+    currentIndex: -1,
+    isTimeTraveling: false,
+    suppressEffects: true,
   },
 }, devtoolsContext);
 
@@ -243,6 +255,43 @@ function updateContextFromEvent(event: any) {
   }
   
   devtoolsStore.state.contexts.value = contexts;
+}
+
+// Time travel helpers
+export function requestTimeTravel(action: string, data?: any) {
+  // Send message to content script to execute time travel
+  chrome.devtools.inspectedWindow.eval(`
+    if (window.__LATTICE_DEVTOOLS__ && window.__LATTICE_DEVTOOLS__.timeTravel) {
+      const tt = window.__LATTICE_DEVTOOLS__.timeTravel;
+      const result = tt.${action}${data !== undefined ? `(${JSON.stringify(data)})` : '()'};
+      if (result !== undefined) {
+        ${JSON.stringify({ type: 'TIME_TRAVEL_RESULT', action, result: true })};
+      }
+    }
+  `);
+}
+
+export function updateTimeTravelState() {
+  chrome.devtools.inspectedWindow.eval(`
+    if (window.__LATTICE_DEVTOOLS__ && window.__LATTICE_DEVTOOLS__.timeTravel) {
+      const state = window.__LATTICE_DEVTOOLS__.timeTravel.getState();
+      const snapshots = window.__LATTICE_DEVTOOLS__.timeTravel.getSnapshots();
+      ({ type: 'TIME_TRAVEL_STATE', state, snapshots });
+    }
+  `, (result, err) => {
+    if (!err && result) {
+      const data = eval(`(${result})`);
+      if (data.type === 'TIME_TRAVEL_STATE') {
+        devtoolsStore.set({
+          timeTravel: {
+            ...devtoolsStore.state.timeTravel.value,
+            ...data.state,
+            snapshots: data.snapshots,
+          },
+        });
+      }
+    }
+  });
 }
 
 // Export context for disposal
