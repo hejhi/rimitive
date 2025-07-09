@@ -31,5 +31,7 @@ export default defineConfig({
     },
     sourcemap: true,
     target: 'es2022', // Support for top-level await
+    // Don't empty outDir in watch mode to prevent type resolution issues
+    emptyOutDir: !process.argv.includes('--watch'),
   },
 });

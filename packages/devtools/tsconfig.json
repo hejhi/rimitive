@@ -11,9 +11,19 @@
     "noImplicitThis": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
-    "composite": true
+    "composite": true,
+    "paths": {
+      "@lattice/core": ["../core/src/index.ts"],
+      "@lattice/core/*": ["../core/src/*"],
+      "@lattice/signals": ["../signals/src/index.ts"],
+      "@lattice/signals/*": ["../signals/src/*"]
+    }
   },
   "include": [
     "src/**/*.ts"
+  ],
+  "references": [
+    { "path": "../core" },
+    { "path": "../signals" }
   ]
 }

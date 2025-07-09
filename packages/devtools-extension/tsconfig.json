@@ -5,6 +5,10 @@
     "jsx": "react-jsx",
     "types": ["chrome"]
   },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
   "exclude": [
     "node_modules",
     ".output",
@@ -12,5 +16,10 @@
     "dist",
     "public",
     "demo"
+  ],
+  "references": [
+    { "path": "../core" },
+    { "path": "../signals" },
+    { "path": "../devtools" }
   ]
 }
