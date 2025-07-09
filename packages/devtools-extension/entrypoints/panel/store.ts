@@ -84,8 +84,7 @@ export type TransactionData =
   | SignalReadData
   | SignalWriteData
   | SignalCreatedData
-  | NamedItemData
-  | unknown;
+  | NamedItemData;
 
 export interface Transaction {
   id: string;
@@ -171,6 +170,31 @@ export interface DevToolsMessage {
   data?: unknown;
 }
 
+interface ContextCreatedData {
+  name?: string;
+}
+
+interface SignalCreatedEventData {
+  id: string;
+  name?: string;
+  initialValue: unknown;
+}
+
+interface SignalWriteEventData {
+  id: string;
+  newValue: unknown;
+}
+
+interface ComputedCreatedEventData {
+  id: string;
+  name?: string;
+}
+
+interface EffectCreatedEventData {
+  id: string;
+  name?: string;
+}
+
 export function handleDevToolsMessage(message: DevToolsMessage) {
   console.log('[DevTools Store] Handling message:', message);
 
@@ -213,7 +237,7 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
           contextId: event.contextId,
           type: getEventCategory(event.type),
           eventType: event.type,
-          data: event.data || {},
+          data: event.data as TransactionData,
         };
 
         // Add transaction (keep last 1000)
@@ -250,9 +274,10 @@ function updateContextFromEvent(event: LatticeEvent) {
   const contextIndex = contexts.findIndex((c) => c.id === event.contextId);
 
   if (event.type === 'CONTEXT_CREATED' && contextIndex === -1) {
+    const contextData = event.data as ContextCreatedData | undefined;
     contexts.push({
       id: event.contextId,
-      name: event.data?.name || `Context ${event.contextId}`,
+      name: contextData?.name || `Context ${event.contextId}`,
       signalCount: 0,
       computedCount: 0,
       effectCount: 0,
@@ -264,49 +289,57 @@ function updateContextFromEvent(event: LatticeEvent) {
     const context = { ...contexts[contextIndex] };
 
     switch (event.type) {
-      case 'SIGNAL_CREATED':
+      case 'SIGNAL_CREATED': {
+        const signalData = event.data as SignalCreatedEventData;
         context.signalCount++;
         context.signals.push({
-          id: event.data.id,
-          name: event.data.name,
-          value: event.data.initialValue,
+          id: signalData.id,
+          name: signalData.name,
+          value: signalData.initialValue,
           lastUpdated: event.timestamp || Date.now(),
         });
         break;
+      }
 
-      case 'SIGNAL_WRITE':
+      case 'SIGNAL_WRITE': {
+        const writeData = event.data as SignalWriteEventData;
         const signalIndex = context.signals.findIndex(
-          (s) => s.id === event.data.id
+          (s) => s.id === writeData.id
         );
         if (signalIndex !== -1) {
           context.signals[signalIndex] = {
             ...context.signals[signalIndex],
-            value: event.data.newValue,
+            value: writeData.newValue,
             lastUpdated: event.timestamp || Date.now(),
           };
         }
         break;
+      }
 
-      case 'COMPUTED_CREATED':
+      case 'COMPUTED_CREATED': {
+        const computedData = event.data as ComputedCreatedEventData;
         context.computedCount++;
         context.computeds.push({
-          id: event.data.id,
-          name: event.data.name,
+          id: computedData.id,
+          name: computedData.name,
           value: undefined,
           dependencies: [],
           lastComputed: 0,
         });
         break;
+      }
 
-      case 'EFFECT_CREATED':
+      case 'EFFECT_CREATED': {
+        const effectData = event.data as EffectCreatedEventData;
         context.effectCount++;
         context.effects.push({
-          id: event.data.id,
-          name: event.data.name,
+          id: effectData.id,
+          name: effectData.name,
           isActive: true,
           lastRun: 0,
         });
         break;
+      }
     }
 
     contexts[contextIndex] = context;

@@ -28,38 +28,37 @@ export default defineContentScript({
 
     // Listen for messages from the page
     window.addEventListener('message', (event) => {
-      if (
-        event.source !== window ||
-        !event.data ||
-        typeof event.data !== 'object' ||
-        !('source' in event.data) ||
-        event.data.source !== 'lattice-devtools'
-      ) {
+      if (event.source !== window || !event.data || typeof event.data !== 'object') {
+        return;
+      }
+
+      const data = event.data as Record<string, unknown>;
+      if (!('source' in data) || data.source !== 'lattice-devtools') {
         return;
       }
 
       console.log(
         '[Lattice DevTools Content] Received message from page:',
-        event.data
+        data
       );
 
       // Forward to background script
       void chrome.runtime.sendMessage({
         source: 'lattice-devtools-content',
-        ...event.data,
+        ...data,
       });
     });
 
     // Listen for messages from devtools
     chrome.runtime.onMessage.addListener((message) => {
-      if (
-        message &&
-        typeof message === 'object' &&
-        'type' in message &&
-        message.type === 'FROM_DEVTOOLS'
-      ) {
+      if (!message || typeof message !== 'object') {
+        return;
+      }
+
+      const msg = message as Record<string, unknown>;
+      if ('type' in msg && msg.type === 'FROM_DEVTOOLS') {
         // Forward to page
-        const messageData = 'data' in message ? message.data : {};
+        const messageData = 'data' in msg ? msg.data : {};
         window.postMessage(
           {
             source: 'lattice-devtools-response',
