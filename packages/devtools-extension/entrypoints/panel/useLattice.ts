@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useSyncExternalStore } from 'react';
-import type { Signal, Computed } from '@lattice/signals';
+import { useSyncExternalStore } from 'react';
+import type { Signal, Computed } from '@lattice/core';
 import { devtoolsLatticeContext } from './store';
 
 // React hook to subscribe to Lattice signals/computed values
@@ -10,7 +10,8 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
       // Create an effect to watch the signal
       const dispose = devtoolsLatticeContext.effect(() => {
         // Read the signal value to track it
-        signal.value;
+        // Access value to track dependency
+        void signal.value;
         // Trigger React re-render
         onStoreChange();
       });
@@ -25,11 +26,7 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
 // Batch multiple signal updates
 export function useBatch() {
   return (fn: () => void) => {
-    // Since we're in the devtools context, we can use the global batch
-    if (typeof (globalThis as any).__latticeBatch === 'function') {
-      (globalThis as any).__latticeBatch(fn);
-    } else {
-      fn();
-    }
+    // Use the devtools context batch function
+    devtoolsLatticeContext.batch(fn);
   };
 }

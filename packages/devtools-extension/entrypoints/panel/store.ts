@@ -30,14 +30,14 @@ export interface ContextInfo {
 export interface SignalInfo {
   id: string;
   name?: string;
-  value: any;
+  value: unknown;
   lastUpdated: number;
 }
 
 export interface ComputedInfo {
   id: string;
   name?: string;
-  value: any;
+  value: unknown;
   dependencies: string[];
   lastComputed: number;
 }
@@ -55,7 +55,7 @@ export interface Transaction {
   contextId: string;
   type: 'signal' | 'computed' | 'effect' | 'batch';
   eventType: string;
-  data: any;
+  data: unknown;
 }
 
 // Create the devtools store
@@ -122,7 +122,12 @@ export const stats = devtoolsContext.computed(() => {
 });
 
 // Helper functions
-export function handleDevToolsMessage(message: any) {
+interface DevToolsMessage {
+  type: string;
+  data?: unknown;
+}
+
+export function handleDevToolsMessage(message: DevToolsMessage) {
   console.log('[DevTools Store] Handling message:', message);
   
   switch (message.type) {
@@ -177,7 +182,19 @@ function getEventCategory(eventType: string): 'signal' | 'computed' | 'effect' |
   return 'batch';
 }
 
-function updateContextFromEvent(event: any) {
+interface LatticeEvent {
+  type: string;
+  contextId: string;
+  timestamp?: number;
+  data?: {
+    id?: string;
+    name?: string;
+    initialValue?: unknown;
+    newValue?: unknown;
+  };
+}
+
+function updateContextFromEvent(event: LatticeEvent) {
   const contexts = [...devtoolsStore.state.contexts.value];
   const contextIndex = contexts.findIndex(c => c.id === event.contextId);
   

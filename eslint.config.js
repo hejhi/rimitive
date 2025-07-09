@@ -15,6 +15,11 @@ export default tseslint.config(
       '**/coverage/**',
       '**/temp/**',
       '**/.turbo/**',
+      // Devtools extension specific ignores
+      'packages/devtools-extension/.output/**',
+      'packages/devtools-extension/.wxt/**',
+      'packages/devtools-extension/public/**',
+      'packages/devtools-extension/demo/**',
     ],
   },
   // Base JS/TS configuration

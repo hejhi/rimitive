@@ -2,6 +2,15 @@
   "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
     "allowImportingTsExtensions": true,
-    "jsx": "react-jsx"
-  }
+    "jsx": "react-jsx",
+    "types": ["chrome"]
+  },
+  "exclude": [
+    "node_modules",
+    ".output",
+    ".wxt",
+    "dist",
+    "public",
+    "demo"
+  ]
 }

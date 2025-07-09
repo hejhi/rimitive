@@ -1,14 +1,25 @@
 import type { LatticeContext, Store, SignalState } from '@lattice/core';
-import type { Signal, Computed } from '@lattice/signals';
-import {
-  createLattice as originalCreateLattice,
-} from '@lattice/core';
+import type { Signal as CoreSignal, Computed as CoreComputed } from '@lattice/core';
+import { createLattice as originalCreateLattice } from '@lattice/core';
+
+// Define all possible event data types
+export type DevToolsEventData = 
+  | { enabled: boolean }
+  | { name?: string }
+  | { id: string; name?: string; initialValue: unknown }
+  | { id: string; name?: string; value: unknown; readContext?: { type: string; id: string; name?: string }; internal: string | null }
+  | { id: string; name?: string; oldValue: unknown; newValue: unknown }
+  | { id: string; value?: unknown }
+  | { id: string; updates: string | object }
+  | { id: string; name?: string; initialState: object }
+  | DevToolsOptions
+  | undefined;
 
 export interface DevToolsEvent {
   type: string;
   timestamp: number;
   contextId: string;
-  data?: any;
+  data?: DevToolsEventData;
 }
 
 export interface DevToolsOptions {
@@ -25,45 +36,36 @@ let idCounter = 0;
 const generateId = (prefix: string) => `${prefix}_${++idCounter}`;
 
 // Track context metadata - use Map instead of WeakMap for iteration
-const contextMetadata = new Map<
-  LatticeContext,
-  {
-    id: string;
-    name: string;
-    signals: Set<any>;
-    computeds: Set<any>;
-    effects: Set<() => void>;
-  }
->();
+interface ContextMetadata {
+  id: string;
+  name: string;
+  signals: Set<CoreSignal<unknown>>;
+  computeds: Set<CoreComputed<unknown>>;
+  effects: Set<() => void>;
+}
+
+const contextMetadata = new Map<LatticeContext, ContextMetadata>();
 
 // Track signal/computed metadata
-const signalMetadata = new WeakMap<
-  any,
-  {
-    id: string;
-    name?: string;
-    contextId: string;
-  }
->();
+interface SignalMetadata {
+  id: string;
+  name?: string;
+  contextId: string;
+}
 
-const computedMetadata = new WeakMap<
-  any,
-  {
-    id: string;
-    name?: string;
-    contextId: string;
-    dependencies: Set<any>;
-  }
->();
+interface ComputedMetadata extends SignalMetadata {
+  dependencies: Set<CoreSignal<unknown>>;
+}
 
-const effectMetadata = new WeakMap<
-  any,
-  {
-    id: string;
-    name?: string;
-    contextId: string;
-  }
->();
+interface EffectMetadata {
+  id: string;
+  name?: string;
+  contextId: string;
+}
+
+const signalMetadata = new WeakMap<CoreSignal<unknown>, SignalMetadata>();
+const computedMetadata = new WeakMap<CoreComputed<unknown>, ComputedMetadata>();
+const effectMetadata = new WeakMap<() => void, EffectMetadata>();
 
 // Track the currently executing computed/effect
 let currentlyExecuting: {
@@ -89,27 +91,45 @@ function emitEvent(event: Omit<DevToolsEvent, 'timestamp'>) {
   }
 
   // Send to devtools if connected
-  if (
-    typeof window !== 'undefined' &&
-    (window as any).__LATTICE_DEVTOOLS_BRIDGE__
-  ) {
-    (window as any).__LATTICE_DEVTOOLS_BRIDGE__.send(fullEvent);
+  if (typeof window !== 'undefined') {
+    const bridge = (window as Window & { 
+      __LATTICE_DEVTOOLS_BRIDGE__?: { send: (event: DevToolsEvent) => void } 
+    }).__LATTICE_DEVTOOLS_BRIDGE__;
+    if (bridge) {
+      bridge.send(fullEvent);
+    }
   }
-
 }
 
 export function enableDevTools(options: DevToolsOptions = {}) {
   devToolsEnabled = true;
 
   // Install global hook for extension to detect
+  interface SerializedContext {
+    id: string;
+    name: string;
+    signalCount: number;
+    computedCount: number;
+    effectCount: number;
+  }
+
   if (typeof window !== 'undefined') {
-    (window as any).__LATTICE_DEVTOOLS__ = {
+    const globalWindow = window as Window & {
+      __LATTICE_DEVTOOLS__?: {
+        enabled: boolean;
+        options: DevToolsOptions;
+        getEvents: () => DevToolsEvent[];
+        getContexts: () => SerializedContext[];
+      }
+    };
+
+    globalWindow.__LATTICE_DEVTOOLS__ = {
       enabled: true,
       options,
       getEvents: () => eventBuffer,
       getContexts: () => {
         // Return serializable context info
-        const contexts: any[] = [];
+        const contexts: SerializedContext[] = [];
         contextMetadata.forEach((meta) => {
           contexts.push({
             id: meta.id,
@@ -152,13 +172,9 @@ export function createInstrumentedLattice(
     data: { name },
   });
 
-
   // Wrap signal factory
   const originalSignal = context.signal;
-  (context as any).signal = function <T>(
-    initialValue: T,
-    name?: string
-  ): Signal<T> {
+  context.signal = function <T>(initialValue: T, name?: string): CoreSignal<T> {
     const signal = originalSignal.call(this, initialValue);
     const signalId = generateId('sig');
 
@@ -170,7 +186,6 @@ export function createInstrumentedLattice(
       name,
       contextId,
     });
-
 
     emitEvent({
       type: 'SIGNAL_CREATED',
@@ -184,9 +199,10 @@ export function createInstrumentedLattice(
 
     // Wrap signal to track reads/writes
     return new Proxy(signal, {
-      get(target, prop) {
+      get(target, prop: string | symbol) {
         if (prop === 'value') {
-          const value = (target as any).value;
+          const signalTarget = target as CoreSignal<T>;
+          const value = signalTarget.value;
 
           emitEvent({
             type: 'SIGNAL_READ',
@@ -194,7 +210,7 @@ export function createInstrumentedLattice(
             data: {
               id: signalId,
               name,
-              value,
+              value: value as unknown,
               readContext: currentlyExecuting
                 ? {
                     type: currentlyExecuting.type,
@@ -207,22 +223,24 @@ export function createInstrumentedLattice(
           });
           return value;
         }
-        return (target as any)[prop];
+        // Type-safe property access
+        return Reflect.get(target, prop) as unknown;
       },
-      set(target, prop, value) {
+      set(target, prop: string | symbol, value: unknown) {
         if (prop === 'value') {
           internalOperation = 'devtools-oldvalue';
-          const oldValue = (target as any).value;
+          const signalTarget = target as CoreSignal<T>;
+          const oldValue = signalTarget.value;
           internalOperation = null;
 
-          (target as any).value = value;
+          signalTarget.value = value as T;
           emitEvent({
             type: 'SIGNAL_WRITE',
             contextId,
             data: {
               id: signalId,
               name,
-              oldValue,
+              oldValue: oldValue as unknown,
               newValue: value,
             },
           });
@@ -230,15 +248,18 @@ export function createInstrumentedLattice(
         }
         return Reflect.set(target, prop, value);
       },
-    }) as Signal<T>;
+    }) as CoreSignal<T>;
   };
 
   // Wrap computed factory
   const originalComputed = context.computed;
-  (context as any).computed = function <T>(
+  const contextWithComputed = context as LatticeContext & {
+    computed: <T>(fn: () => T, name?: string) => CoreComputed<T>;
+  };
+  contextWithComputed.computed = function <T>(
     fn: () => T,
     name?: string
-  ): Computed<T> {
+  ): CoreComputed<T> {
     const computedId = generateId('comp');
 
     emitEvent({
@@ -269,7 +290,7 @@ export function createInstrumentedLattice(
           contextId,
           data: {
             id: computedId,
-            value: result,
+            value: result as unknown,
           },
         });
 
@@ -279,7 +300,7 @@ export function createInstrumentedLattice(
       }
     };
 
-    const computed = originalComputed.call(this, wrappedFn) as Computed<T>;
+    const computed = originalComputed.call(this, wrappedFn) as CoreComputed<T>;
 
     const meta = contextMetadata.get(context)!;
     meta.computeds.add(computed);
@@ -296,7 +317,10 @@ export function createInstrumentedLattice(
 
   // Wrap effect factory
   const originalEffect = context.effect;
-  (context as any).effect = function (
+  const contextWithEffect = context as LatticeContext & {
+    effect: (fn: () => void | (() => void), name?: string) => () => void;
+  };
+  contextWithEffect.effect = function (
     fn: () => void | (() => void),
     name?: string
   ): () => void {
@@ -358,7 +382,6 @@ export function createInstrumentedLattice(
       contextId,
     });
 
-
     contextMetadata.delete(context);
     return originalDispose.call(this);
   };
@@ -387,10 +410,19 @@ export function createInstrumentedStore<T extends object>(
 
   // Create signals manually with property names
   const signals = {} as SignalState<T>;
-  for (const [key, value] of Object.entries(initialState) as [keyof T, T[keyof T]][]) {
+  for (const [key, value] of Object.entries(initialState) as [
+    keyof T,
+    T[keyof T],
+  ][]) {
     // Pass the property name as the signal name
     // Use the wrapped signal function that accepts a name
-    signals[key] = (context as any).signal(value, `${storeName ? storeName + '.' : ''}${String(key)}`);
+    const contextWithSignal = context as LatticeContext & {
+      signal: <T>(value: T, name?: string) => CoreSignal<T>;
+    };
+    signals[key] = contextWithSignal.signal(
+      value,
+      `${storeName ? storeName + '.' : ''}${String(key)}`
+    );
   }
 
   // Implement batched set method
@@ -410,7 +442,10 @@ export function createInstrumentedStore<T extends object>(
       context.batch(() => {
         // Get current state from all signals
         const current = {} as T;
-        for (const [key, signal] of Object.entries(signals) as [keyof T, Signal<T[keyof T]>][]) {
+        for (const [key, signal] of Object.entries(signals) as [
+          keyof T,
+          CoreSignal<T[keyof T]>,
+        ][]) {
           current[key] = signal.value;
         }
 
@@ -419,7 +454,10 @@ export function createInstrumentedStore<T extends object>(
           typeof updates === 'function' ? updates(current) : updates;
 
         // Update changed signals
-        for (const [key, value] of Object.entries(newState) as [keyof T, T[keyof T]][]) {
+        for (const [key, value] of Object.entries(newState) as [
+          keyof T,
+          T[keyof T],
+        ][]) {
           if (key in signals) {
             const signal = signals[key];
             if (signal && !Object.is(signal.value, value)) {

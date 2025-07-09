@@ -1,3 +1,37 @@
+interface DevToolsMessage {
+  type: string;
+  tabId?: number;
+  payload?: unknown;
+  data?: unknown;
+}
+
+interface LatticeEvent {
+  type: string;
+  contextId?: string;
+  data?: {
+    name?: string;
+  };
+  contexts?: Array<{
+    id: string;
+    name: string;
+    signalCount: number;
+    computedCount: number;
+    effectCount: number;
+  }>;
+}
+
+interface TabState {
+  connected: boolean;
+  contexts: Array<{
+    id: string;
+    name: string;
+    signalCount: number;
+    computedCount: number;
+    effectCount: number;
+  }>;
+  transactions: unknown[];
+  selectedContext: string | null;
+}
 
 export default defineBackground(() => {
   console.log('[Background] Background script initializing');
@@ -6,7 +40,7 @@ export default defineBackground(() => {
   const devtoolsConnections = new Map<number, chrome.runtime.Port>();
   
   // Store Lattice state per tab
-  const tabStates = new Map<number, any>();
+  const tabStates = new Map<number, TabState>();
   
   // Listen for connections from devtools panels
   chrome.runtime.onConnect.addListener((port) => {
@@ -14,7 +48,7 @@ export default defineBackground(() => {
       // DevTools panels don't have a tab ID in sender, we need to get it from the message
       let tabId: number | undefined;
       
-      port.onMessage.addListener((msg) => {
+      port.onMessage.addListener((msg: DevToolsMessage) => {
         console.log('[Background] DevTools panel message:', msg);
         
         if (msg.type === 'INIT' && msg.tabId) {
@@ -80,7 +114,7 @@ export default defineBackground(() => {
   });
   
   // Listen for messages from content scripts
-  chrome.runtime.onMessage.addListener((message, sender) => {
+  chrome.runtime.onMessage.addListener((message: { source?: string; type?: string; payload?: unknown }, sender) => {
     console.log('[Background] onMessage listener received:', message, 'from tab:', sender.tab?.id, 'sender:', sender);
     
     const tabId = sender.tab?.id;
@@ -94,7 +128,7 @@ export default defineBackground(() => {
       
       // Handle messages from the page
       switch (message.type) {
-        case 'LATTICE_DETECTED':
+        case 'LATTICE_DETECTED': {
           console.log('[Background] Lattice detected in tab:', tabId);
           // Initialize state for this tab
           if (!tabStates.has(tabId)) {
@@ -107,7 +141,7 @@ export default defineBackground(() => {
             console.log('[Background] Created new state for tab:', tabId);
           } else {
             // Update existing state
-            const state = tabStates.get(tabId);
+            const state = tabStates.get(tabId)!;
             state.connected = true;
             tabStates.set(tabId, state);
             console.log('[Background] Updated existing state for tab:', tabId);
@@ -128,8 +162,9 @@ export default defineBackground(() => {
             });
           }
           break;
+        }
           
-        case 'EVENT':
+        case 'EVENT': {
           // Handle Lattice events
           const currentState = tabStates.get(tabId) || {
             connected: true,
@@ -139,7 +174,7 @@ export default defineBackground(() => {
           };
           
           // Update state based on event
-          const event = message.payload;
+          const event = message.payload as LatticeEvent;
           
           if (event.type === 'CONTEXTS_UPDATE' && event.contexts) {
             // Handle the initial contexts update
@@ -164,7 +199,7 @@ export default defineBackground(() => {
               effectCount: 0,
             });
           } else if (event.type === 'SIGNAL_CREATED') {
-            const context = currentState.contexts.find((c: any) => c.id === event.contextId);
+            const context = currentState.contexts.find((c) => c.id === event.contextId);
             if (context) {
               context.signalCount++;
             }
@@ -183,6 +218,7 @@ export default defineBackground(() => {
             });
           }
           break;
+        }
       }
     }
   });
