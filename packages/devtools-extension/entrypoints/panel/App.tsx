@@ -147,9 +147,18 @@ export function App() {
             <div className="transaction-list">
               {transactions.map(tx => (
                 <div key={tx.id} className={`transaction ${tx.type}`}>
-                  <span className="time">{new Date(tx.timestamp).toLocaleTimeString()}</span>
+                  <span className="time">{tx.timestamp ? new Date(tx.timestamp).toLocaleTimeString() : 'N/A'}</span>
                   <span className="type">{tx.eventType}</span>
-                  <span className="data">{JSON.stringify(tx.data)}</span>
+                  <span className="data">
+                    {tx.eventType === 'SIGNAL_READ' && tx.data.readContext ? (
+                      <>
+                        {JSON.stringify({ id: tx.data.id, value: tx.data.value })}
+                        <span className="context"> (from {tx.data.readContext.type}: {tx.data.readContext.name || tx.data.readContext.id})</span>
+                      </>
+                    ) : (
+                      JSON.stringify(tx.data)
+                    )}
+                  </span>
                 </div>
               ))}
             </div>
@@ -204,7 +213,7 @@ export function App() {
                         <span className="name">{signal.name || signal.id}</span>
                         <span className="value">{JSON.stringify(signal.value)}</span>
                         <span className="updated">
-                          {new Date(signal.lastUpdated).toLocaleTimeString()}
+                          {signal.lastUpdated ? new Date(signal.lastUpdated).toLocaleTimeString() : 'N/A'}
                         </span>
                       </div>
                     ))}

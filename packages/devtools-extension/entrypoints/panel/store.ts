@@ -142,7 +142,7 @@ export function handleDevToolsMessage(message: any) {
       const event = message.data;
       const transaction: Transaction = {
         id: `tx_${Date.now()}_${Math.random()}`,
-        timestamp: event.timestamp,
+        timestamp: event.timestamp || Date.now(),
         contextId: event.contextId,
         type: getEventCategory(event.type),
         eventType: event.type,
@@ -193,7 +193,7 @@ function updateContextFromEvent(event: any) {
           id: event.data.id,
           name: event.data.name,
           value: event.data.initialValue,
-          lastUpdated: event.timestamp,
+          lastUpdated: event.timestamp || Date.now(),
         });
         break;
         
@@ -203,7 +203,7 @@ function updateContextFromEvent(event: any) {
           context.signals[signalIndex] = {
             ...context.signals[signalIndex],
             value: event.data.newValue,
-            lastUpdated: event.timestamp,
+            lastUpdated: event.timestamp || Date.now(),
           };
         }
         break;

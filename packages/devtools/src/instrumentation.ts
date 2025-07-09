@@ -45,6 +45,15 @@ const computedMetadata = new WeakMap<any, {
   dependencies: Set<any>;
 }>();
 
+const effectMetadata = new WeakMap<any, {
+  id: string;
+  name?: string;
+  contextId: string;
+}>();
+
+// Track the currently executing computed/effect
+let currentlyExecuting: { type: 'computed' | 'effect'; id: string; name?: string } | null = null;
+
 function emitEvent(event: Omit<DevToolsEvent, 'timestamp'>) {
   if (!devToolsEnabled) return;
   
@@ -144,12 +153,18 @@ export function createInstrumentedLattice(name?: string): LatticeContext & { dis
       get(target, prop) {
         if (prop === 'value') {
           const value = (target as any).value;
+          
           emitEvent({
             type: 'SIGNAL_READ',
             contextId,
             data: {
               id: signalId,
               value,
+              readContext: currentlyExecuting ? {
+                type: currentlyExecuting.type,
+                id: currentlyExecuting.id,
+                name: currentlyExecuting.name
+              } : undefined,
             },
           });
           return value;
@@ -192,24 +207,31 @@ export function createInstrumentedLattice(name?: string): LatticeContext & { dis
     
     // Wrap the compute function to track execution
     const wrappedFn = () => {
+      const previouslyExecuting = currentlyExecuting;
+      currentlyExecuting = { type: 'computed', id: computedId, name };
+      
       emitEvent({
         type: 'COMPUTED_START',
         contextId,
         data: { id: computedId },
       });
       
-      const result = fn();
-      
-      emitEvent({
-        type: 'COMPUTED_END',
-        contextId,
-        data: {
-          id: computedId,
-          value: result,
-        },
-      });
-      
-      return result;
+      try {
+        const result = fn();
+        
+        emitEvent({
+          type: 'COMPUTED_END',
+          contextId,
+          data: {
+            id: computedId,
+            value: result,
+          },
+        });
+        
+        return result;
+      } finally {
+        currentlyExecuting = previouslyExecuting;
+      }
     };
     
     const computed = originalComputed.call(this, wrappedFn) as Computed<T>;
@@ -242,27 +264,40 @@ export function createInstrumentedLattice(name?: string): LatticeContext & { dis
     });
     
     const wrappedFn = () => {
+      const previouslyExecuting = currentlyExecuting;
+      currentlyExecuting = { type: 'effect', id: effectId, name };
+      
       emitEvent({
         type: 'EFFECT_START',
         contextId,
         data: { id: effectId },
       });
       
-      const cleanup = fn();
-      
-      emitEvent({
-        type: 'EFFECT_END',
-        contextId,
-        data: { id: effectId },
-      });
-      
-      return cleanup;
+      try {
+        const cleanup = fn();
+        
+        emitEvent({
+          type: 'EFFECT_END',
+          contextId,
+          data: { id: effectId },
+        });
+        
+        return cleanup;
+      } finally {
+        currentlyExecuting = previouslyExecuting;
+      }
     };
     
     const dispose = originalEffect.call(this, wrappedFn);
     
     const meta = contextMetadata.get(context)!;
     meta.effects.add(dispose);
+    
+    effectMetadata.set(dispose, {
+      id: effectId,
+      name,
+      contextId,
+    });
     
     return dispose;
   };

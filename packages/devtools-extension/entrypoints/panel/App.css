@@ -146,6 +146,18 @@
   font-size: 11px;
 }
 
+.transaction .data {
+  flex: 1;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+}
+
+.transaction .context {
+  color: #858585;
+  font-style: italic;
+  font-size: 11px;
+}
+
 .transaction .changes {
   margin-left: auto;
   font-size: 11px;
