@@ -1,6 +1,6 @@
 /**
  * @fileoverview DevTools middleware for Lattice contexts
- * 
+ *
  * Provides instrumentation for signals, computed values, and effects
  * without modifying the core Lattice implementation.
  */
@@ -21,11 +21,6 @@ export function withDevTools(options: DevToolsOptions = {}) {
     const contextId = `ctx_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const contextName = options.name || 'LatticeContext';
 
-    // Track created primitives for cleanup
-    const signalIds = new WeakMap<any, string>();
-    const computedIds = new WeakMap<any, string>();
-    const effectIds = new Set<string>();
-
     // Emit context creation
     emitEvent({
       type: 'CONTEXT_CREATED',
@@ -34,15 +29,14 @@ export function withDevTools(options: DevToolsOptions = {}) {
       data: {
         id: contextId,
         name: contextName,
-      }
+      },
     });
 
     return {
-      signal<T>(initialValue: T): Signal<T> {
+      signal<T>(initialValue: T, name?: string): Signal<T> {
         const signal = context.signal(initialValue);
-        const signalId = `sig_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        
-        signalIds.set(signal, signalId);
+        const signalId =
+          name ?? `sig_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
         // Emit signal creation
         emitEvent({
@@ -52,21 +46,24 @@ export function withDevTools(options: DevToolsOptions = {}) {
           data: {
             id: signalId,
             initialValue,
-          }
+          },
         });
 
         // Instrument the signal's value setter
         // The descriptor is on the prototype, not the instance
-        const prototypeDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(signal), 'value');
+        const prototypeDescriptor = Object.getOwnPropertyDescriptor(
+          Object.getPrototypeOf(signal),
+          'value'
+        );
         if (prototypeDescriptor?.set) {
           const originalSet = prototypeDescriptor.set;
           const originalGet = prototypeDescriptor.get;
-          
+
           // Override on the instance to intercept
           Object.defineProperty(signal, 'value', {
             get() {
               const value = originalGet!.call(this);
-              
+
               // Track reads if enabled
               if (options.trackReads) {
                 emitEvent({
@@ -76,18 +73,18 @@ export function withDevTools(options: DevToolsOptions = {}) {
                   data: {
                     id: signalId,
                     value,
-                  }
+                  },
                 });
               }
-              
+
               return value;
             },
             set(newValue: T) {
               const oldValue = originalGet!.call(this);
-              
+
               // Call original setter first
               const result = originalSet.call(this, newValue);
-              
+
               // Emit write event after successful update
               emitEvent({
                 type: 'SIGNAL_WRITE',
@@ -97,9 +94,9 @@ export function withDevTools(options: DevToolsOptions = {}) {
                   id: signalId,
                   oldValue,
                   newValue,
-                }
+                },
               });
-              
+
               return result;
             },
             enumerable: prototypeDescriptor.enumerable,
@@ -114,23 +111,23 @@ export function withDevTools(options: DevToolsOptions = {}) {
 
       computed<T>(fn: () => T): Computed<T> {
         const computedId = `comp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        
+
         // Wrap the compute function to track execution
-        const wrappedFn = options.trackComputations 
-          ? function(this: unknown) {
+        const wrappedFn = options.trackComputations
+          ? function (this: unknown) {
               const startTime = performance.now();
-              
+
               emitEvent({
                 type: 'COMPUTED_START',
                 contextId,
                 timestamp: Date.now(),
                 data: {
                   id: computedId,
-                }
+                },
               });
-              
+
               const result = fn.call(this);
-              
+
               emitEvent({
                 type: 'COMPUTED_END',
                 contextId,
@@ -139,15 +136,14 @@ export function withDevTools(options: DevToolsOptions = {}) {
                   id: computedId,
                   duration: performance.now() - startTime,
                   value: result,
-                }
+                },
               });
-              
+
               return result;
             }
           : fn;
 
         const computed = context.computed(wrappedFn);
-        computedIds.set(computed, computedId);
 
         // Emit computed creation
         emitEvent({
@@ -156,7 +152,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
           timestamp: Date.now(),
           data: {
             id: computedId,
-          }
+          },
         });
 
         return computed as Computed<T>;
@@ -164,23 +160,22 @@ export function withDevTools(options: DevToolsOptions = {}) {
 
       effect(fn: () => void | (() => void)): () => void {
         const effectId = `eff_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        effectIds.add(effectId);
 
         // Wrap the effect function to track execution
-        const wrappedFn = function(this: unknown) {
+        const wrappedFn = function (this: unknown) {
           const startTime = performance.now();
-          
+
           emitEvent({
             type: 'EFFECT_START',
             contextId,
             timestamp: Date.now(),
             data: {
               id: effectId,
-            }
+            },
           });
-          
+
           const cleanup = fn.call(this);
-          
+
           emitEvent({
             type: 'EFFECT_END',
             contextId,
@@ -189,9 +184,9 @@ export function withDevTools(options: DevToolsOptions = {}) {
               id: effectId,
               duration: performance.now() - startTime,
               hasCleanup: typeof cleanup === 'function',
-            }
+            },
           });
-          
+
           return cleanup;
         };
 
@@ -205,40 +200,39 @@ export function withDevTools(options: DevToolsOptions = {}) {
           timestamp: Date.now(),
           data: {
             id: effectId,
-          }
+          },
         });
 
         // Wrap the disposer to track cleanup
         return () => {
           dispose();
-          effectIds.delete(effectId);
-          
+
           emitEvent({
             type: 'EFFECT_DISPOSED',
             contextId,
             timestamp: Date.now(),
             data: {
               id: effectId,
-            }
+            },
           });
         };
       },
 
       batch(fn: () => void): void {
         const batchId = `batch_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        
+
         emitEvent({
           type: 'BATCH_START',
           contextId,
           timestamp: Date.now(),
           data: {
             id: batchId,
-          }
+          },
         });
-        
+
         try {
           context.batch(fn);
-          
+
           emitEvent({
             type: 'BATCH_END',
             contextId,
@@ -246,7 +240,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
             data: {
               id: batchId,
               success: true,
-            }
+            },
           });
         } catch (error) {
           emitEvent({
@@ -257,9 +251,9 @@ export function withDevTools(options: DevToolsOptions = {}) {
               id: batchId,
               success: false,
               error: error instanceof Error ? error.message : String(error),
-            }
+            },
           });
-          
+
           throw error;
         }
       },
@@ -273,15 +267,12 @@ export function withDevTools(options: DevToolsOptions = {}) {
           data: {
             id: contextId,
             name: contextName,
-          }
+          },
         });
-        
-        // Clear our tracking
-        effectIds.clear();
-        
+
         // Dispose the original context
         context.dispose();
-      }
+      },
     };
   };
 }

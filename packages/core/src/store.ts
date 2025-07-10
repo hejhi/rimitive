@@ -68,7 +68,7 @@ export function createStore<T extends object>(
     keyof T,
     T[keyof T],
   ][]) {
-    signals[key] = ctx.signal(value);
+    signals[key] = ctx.signal(value, key.toLocaleString());
   }
 
   // Batched update function

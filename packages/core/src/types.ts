@@ -74,7 +74,7 @@ export interface SetState {
  * Each component tree gets its own context to avoid global conflicts
  */
 export interface LatticeContext {
-  signal: <T>(initialValue: T) => Signal<T>;
+  signal: <T>(initialValue: T, name?: string) => Signal<T>;
   computed: <T>(computeFn: () => T) => Computed<T>;
   effect: (effectFn: () => void | (() => void)) => () => void;
   batch: (fn: () => void) => void;
