@@ -8,8 +8,26 @@ interface DevToolsMessage {
 interface LatticeEvent {
   type: string;
   contextId?: string;
+  timestamp?: number;
   data?: {
     name?: string;
+    id?: string;
+    dependencies?: Array<{ id: string; name?: string }>;
+    subscribers?: Array<{ id: string; name?: string }>;
+    nodes?: Array<{
+      id: string;
+      type: 'signal' | 'computed' | 'effect';
+      name?: string;
+      value?: unknown;
+      isActive: boolean;
+      isOutdated?: boolean;
+      hasSubscribers?: boolean;
+    }>;
+    edges?: Array<{
+      source: string;
+      target: string;
+      isActive: boolean;
+    }>;
   };
   contexts?: Array<{
     id: string;

@@ -4,9 +4,13 @@ import {
   handleDevToolsMessage,
   filteredTransactions,
   stats,
+  dependencyGraphData,
+  nodeDependencies,
   type DevToolsMessage,
   type SignalReadData,
   type SignalWriteData,
+  type DependencyUpdateData,
+  type GraphSnapshotData,
 } from './store';
 import { useSignal } from './useLattice';
 import {
@@ -25,7 +29,7 @@ import {
 import { Input } from '../../src/components/ui/input';
 import { Badge } from '../../src/components/ui/badge';
 import { Button } from '../../src/components/ui/button';
-import { Activity, Code2, Eye, EyeOff } from 'lucide-react';
+import { Activity, Code2, Eye, EyeOff, GitBranch } from 'lucide-react';
 
 export function App() {
   console.log('[DevTools Panel] App component rendering');
@@ -37,6 +41,8 @@ export function App() {
   const transactions = useSignal(filteredTransactions);
   const statsData = useSignal(stats);
   const filter = useSignal(devtoolsStore.state.filter);
+  const graphData = useSignal(dependencyGraphData);
+  const getDependencies = useSignal(nodeDependencies);
 
   console.log('[DevTools Panel] Connected state:', connected);
 
@@ -124,6 +130,9 @@ export function App() {
             <span>{statsData.totalComputeds} computed</span>
             <span>•</span>
             <span>{statsData.totalEffects} effects</span>
+            <span>•</span>
+            <GitBranch className="w-4 h-4" />
+            <span>{statsData.totalNodes} nodes</span>
           </div>
         </div>
       </div>
@@ -131,7 +140,7 @@ export function App() {
       <Tabs
         value={selectedTab}
         onValueChange={(value) =>
-          (devtoolsStore.state.selectedTab.value = value as 'timeline')
+          (devtoolsStore.state.selectedTab.value = value as 'timeline' | 'graph')
         }
       >
         <TabsList className="w-full rounded-none border-b h-auto p-0 justify-start">
@@ -140,6 +149,12 @@ export function App() {
             className="rounded-none data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary"
           >
             Timeline
+          </TabsTrigger>
+          <TabsTrigger
+            value="graph"
+            className="rounded-none data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary"
+          >
+            Dependency Graph
           </TabsTrigger>
         </TabsList>
 
@@ -236,6 +251,14 @@ export function App() {
                                         internal
                                       </Badge>
                                     )}
+                                    {data.executionContext && (
+                                      <Badge
+                                        variant="outline"
+                                        className="ml-2 text-xs"
+                                      >
+                                        {data.executionContext}
+                                      </Badge>
+                                    )}
                                   </>
                                 );
                               }
@@ -258,6 +281,39 @@ export function App() {
                                 };
                                 return <>{data.name || data.id} created</>;
                               }
+                              case 'DEPENDENCY_UPDATE': {
+                                const data = tx.data as DependencyUpdateData;
+                                return (
+                                  <>
+                                    {data.type} {data.id} - {data.trigger}
+                                    {data.dependencies.length > 0 && (
+                                      <Badge
+                                        variant="outline"
+                                        className="ml-2 text-xs"
+                                      >
+                                        {data.dependencies.length} deps
+                                      </Badge>
+                                    )}
+                                    {data.subscribers.length > 0 && (
+                                      <Badge
+                                        variant="outline"
+                                        className="ml-2 text-xs"
+                                      >
+                                        {data.subscribers.length} subs
+                                      </Badge>
+                                    )}
+                                  </>
+                                );
+                              }
+                              case 'GRAPH_SNAPSHOT': {
+                                const data = tx.data as GraphSnapshotData;
+                                return (
+                                  <>
+                                    Graph snapshot: {data.nodes.length} nodes,{' '}
+                                    {data.edges.length} edges
+                                  </>
+                                );
+                              }
                               default:
                                 return <>{JSON.stringify(tx.data)}</>;
                             }
@@ -268,6 +324,112 @@ export function App() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="graph" className="m-0">
+          <div className="flex flex-col h-[calc(100vh-8rem)]">
+            <div className="p-4 border-b">
+              <h3 className="text-sm font-medium mb-2">Dependency Graph</h3>
+              <p className="text-xs text-muted-foreground">
+                Shows the reactive dependency relationships between signals,
+                computed values, and effects.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              {(() => {
+                if (graphData.nodes.length === 0) {
+                  return (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                      No dependency data available yet...
+                    </div>
+                  );
+                }
+                return (
+                  <div className="space-y-4">
+                    {graphData.nodes.map((node) => {
+                      const deps = getDependencies(node.id);
+                      return (
+                        <div
+                          key={node.id}
+                          className="border rounded-lg p-4 space-y-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                node.type === 'signal'
+                                  ? 'default'
+                                  : node.type === 'computed'
+                                    ? 'secondary'
+                                    : 'outline'
+                              }
+                            >
+                              {node.type}
+                            </Badge>
+                            <span className="font-mono text-sm">
+                              {node.name || node.id}
+                            </span>
+                            {node.isActive && (
+                              <Badge variant="outline" className="text-xs">
+                                active
+                              </Badge>
+                            )}
+                            {node.isOutdated && (
+                              <Badge variant="destructive" className="text-xs">
+                                outdated
+                              </Badge>
+                            )}
+                          </div>
+                          {node.value !== undefined && (
+                            <div className="text-xs text-muted-foreground font-mono">
+                              value: {JSON.stringify(node.value)}
+                            </div>
+                          )}
+                          {deps.dependencies.length > 0 && (
+                            <div className="text-xs">
+                              <span className="text-muted-foreground">
+                                Dependencies:
+                              </span>
+                              <div className="ml-4 mt-1 space-y-1">
+                                {deps.dependencies.map(({ id, node: dep }) => (
+                                  <div key={id} className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      {dep?.type || 'unknown'}
+                                    </Badge>
+                                    <span className="font-mono">
+                                      {dep?.name || id}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {deps.subscribers.length > 0 && (
+                            <div className="text-xs">
+                              <span className="text-muted-foreground">
+                                Subscribers:
+                              </span>
+                              <div className="ml-4 mt-1 space-y-1">
+                                {deps.subscribers.map(({ id, node: sub }) => (
+                                  <div key={id} className="flex items-center gap-2">
+                                    <Badge variant="outline" className="text-xs">
+                                      {sub?.type || 'unknown'}
+                                    </Badge>
+                                    <span className="font-mono">
+                                      {sub?.name || id}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </TabsContent>
