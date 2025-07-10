@@ -56,13 +56,34 @@ export function withDevTools(options: DevToolsOptions = {}) {
         });
 
         // Instrument the signal's value setter
-        const descriptor = Object.getOwnPropertyDescriptor(signal, 'value');
-        if (descriptor?.set) {
-          const originalSet = descriptor.set;
+        // The descriptor is on the prototype, not the instance
+        const prototypeDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(signal), 'value');
+        if (prototypeDescriptor?.set) {
+          const originalSet = prototypeDescriptor.set;
+          const originalGet = prototypeDescriptor.get;
+          
+          // Override on the instance to intercept
           Object.defineProperty(signal, 'value', {
-            get: descriptor.get,
+            get() {
+              const value = originalGet!.call(this);
+              
+              // Track reads if enabled
+              if (options.trackReads) {
+                emitEvent({
+                  type: 'SIGNAL_READ',
+                  contextId,
+                  timestamp: Date.now(),
+                  data: {
+                    id: signalId,
+                    value,
+                  }
+                });
+              }
+              
+              return value;
+            },
             set(newValue: T) {
-              const oldValue = descriptor.get!.call(this);
+              const oldValue = originalGet!.call(this);
               
               // Call original setter first
               const result = originalSet.call(this, newValue);
@@ -81,31 +102,12 @@ export function withDevTools(options: DevToolsOptions = {}) {
               
               return result;
             },
-            enumerable: descriptor.enumerable,
-            configurable: descriptor.configurable,
+            enumerable: prototypeDescriptor.enumerable,
+            configurable: true,
           });
         }
 
-        // Track reads if we're in a tracking context
-        const originalPeek = signal.peek;
-        signal.peek = function() {
-          const value = originalPeek.call(this);
-          
-          // Emit read event for debugging
-          if (options.trackReads) {
-            emitEvent({
-              type: 'SIGNAL_READ',
-              contextId,
-              timestamp: Date.now(),
-              data: {
-                id: signalId,
-                value,
-              }
-            });
-          }
-          
-          return value;
-        };
+        // Note: We don't track peek() calls as they're meant for non-reactive reads
 
         return signal as Signal<T>;
       },

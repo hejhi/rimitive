@@ -8,7 +8,14 @@ import type { DevToolsEvent, DevToolsOptions, DevToolsAPI } from './types';
 
 let devToolsEnabled = false;
 let eventBuffer: DevToolsEvent[] = [];
-const contextMetadata = new Map<string, { id: string; name: string; created: number }>();
+const contextMetadata = new Map<string, { 
+  id: string; 
+  name: string; 
+  created: number;
+  signalCount: number;
+  computedCount: number;
+  effectCount: number;
+}>();
 
 const MAX_EVENTS = 10000;
 const EVENT_BATCH_SIZE = 100;
@@ -37,7 +44,14 @@ export function initializeDevTools(_options: DevToolsOptions = {}): void {
       eventBuffer = [];
     },
     
-    getContexts(): Array<{ id: string; name: string; created: number }> {
+    getContexts(): Array<{ 
+      id: string; 
+      name: string; 
+      created: number;
+      signalCount: number;
+      computedCount: number;
+      effectCount: number;
+    }> {
       return Array.from(contextMetadata.values());
     },
     
@@ -93,9 +107,26 @@ export function emitEvent(event: DevToolsEvent): void {
       id: event.contextId,
       name: data.name,
       created: event.timestamp,
+      signalCount: 0,
+      computedCount: 0,
+      effectCount: 0,
     });
-  } else if (event.type === 'CONTEXT_DISPOSED' && event.data) {
+  } else if (event.type === 'CONTEXT_DISPOSED') {
     contextMetadata.delete(event.contextId);
+  } else if (contextMetadata.has(event.contextId)) {
+    // Update counts based on event type
+    const context = contextMetadata.get(event.contextId)!;
+    switch (event.type) {
+      case 'SIGNAL_CREATED':
+        context.signalCount++;
+        break;
+      case 'COMPUTED_CREATED':
+        context.computedCount++;
+        break;
+      case 'EFFECT_CREATED':
+        context.effectCount++;
+        break;
+    }
   }
   
   // Trim buffer if needed
