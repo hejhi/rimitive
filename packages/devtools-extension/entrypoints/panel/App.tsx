@@ -7,11 +7,14 @@ import {
   type DevToolsMessage,
   type SignalReadData,
   type SignalWriteData,
-  type SignalCreatedData,
-  type NamedItemData,
 } from './store';
 import { useSignal } from './useLattice';
-import './App.css';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../src/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../src/components/ui/select';
+import { Input } from '../../src/components/ui/input';
+import { Badge } from '../../src/components/ui/badge';
+import { Button } from '../../src/components/ui/button';
+import { Activity, Code2, Eye, EyeOff } from 'lucide-react';
 
 export function App() {
   console.log('[DevTools Panel] App component rendering');
@@ -22,6 +25,7 @@ export function App() {
   const selectedTab = useSignal(devtoolsStore.state.selectedTab);
   const transactions = useSignal(filteredTransactions);
   const statsData = useSignal(stats);
+  const filter = useSignal(devtoolsStore.state.filter);
 
   console.log('[DevTools Panel] Connected state:', connected);
 
@@ -30,205 +34,218 @@ export function App() {
     let timeoutId: number | null = null;
 
     // Connect to background script
-    port = chrome.runtime.connect({ name: 'devtools-panel' });
+    try {
+      console.log('[DevTools Panel] Connecting to background script');
+      port = chrome.runtime.connect({ name: 'devtools-panel' });
 
-    // Get the inspected window tab ID
-    const tabId = chrome.devtools.inspectedWindow.tabId;
-    console.log('[DevTools Panel] Connecting for tab:', tabId);
+      // Send initialization message
+      port.postMessage({
+        type: 'INIT',
+        tabId: chrome.devtools.inspectedWindow.tabId,
+      });
 
-    // Send init message with tab ID
-    port.postMessage({
-      type: 'INIT',
-      tabId: tabId,
-    });
-
-    const messageHandler = (message: DevToolsMessage) => {
-      console.log('[DevTools Panel] Received:', message);
-      if (message && typeof message === 'object' && 'type' in message) {
+      // Listen for messages from background script
+      port.onMessage.addListener((message: DevToolsMessage) => {
+        console.log('[DevTools Panel] Received message from background:', message);
         handleDevToolsMessage(message);
-      }
-    };
+      });
 
-    port.onMessage.addListener(messageHandler);
+      port.onDisconnect.addListener(() => {
+        console.log('[DevTools Panel] Disconnected from background script');
+        devtoolsStore.state.connected.value = false;
+      });
 
-    // Handle disconnect
-    port.onDisconnect.addListener(() => {
-      console.log('[DevTools Panel] Port disconnected');
-    });
-
-    // Request initial state after a short delay
-    timeoutId = window.setTimeout(() => {
-      if (port) {
-        try {
-          port.postMessage({
-            type: 'GET_STATE',
-            tabId: tabId,
-          });
-        } catch (e) {
-          console.error('[DevTools Panel] Error sending GET_STATE:', e);
-        }
-      }
-    }, 100);
+      // Request initial state
+      timeoutId = window.setTimeout(() => {
+        console.log('[DevTools Panel] Requesting initial state');
+        port?.postMessage({
+          type: 'GET_STATE',
+          tabId: chrome.devtools.inspectedWindow.tabId,
+        });
+      }, 100);
+    } catch (error) {
+      console.error('[DevTools Panel] Error connecting to background:', error);
+    }
 
     return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      if (port) {
-        port.disconnect();
-      }
+      if (timeoutId) clearTimeout(timeoutId);
+      port?.disconnect();
     };
   }, []);
 
   if (!connected) {
     return (
-      <div className="no-lattice">
-        <div className="no-lattice-content">
-          <h2>Lattice Not Detected</h2>
-          <p>This page doesn't appear to be using Lattice DevTools.</p>
-          <p>Make sure to:</p>
-          <ul>
-            <li>
-              Import <code>@lattice/devtools</code> in your application
-            </li>
-            <li>
-              Call <code>enableDevTools()</code> before creating any contexts
-            </li>
-            <li>
-              Use <code>createLattice</code> and <code>createStore</code> from{' '}
-              <code>@lattice/devtools</code>
-            </li>
-            <li>Refresh the page after enabling DevTools</li>
-          </ul>
+      <div className="flex items-center justify-center h-screen bg-background">
+        <div className="text-center space-y-4">
+          <Activity className="w-12 h-12 mx-auto text-muted-foreground animate-pulse" />
+          <p className="text-lg text-muted-foreground">Waiting for Lattice...</p>
+          <p className="text-sm text-muted-foreground">
+            Make sure the page is using{' '}
+            <code className="bg-muted px-1 py-0.5 rounded">@lattice/devtools</code>
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="app">
-      <div className="header">
-        <h1>Lattice DevTools</h1>
-        <div className="stats">
-          <span>Contexts: {contexts.length}</span>
-          <span>Signals: {statsData.totalSignals}</span>
-          <span>Computed: {statsData.totalComputeds}</span>
-          <span>Effects: {statsData.totalEffects}</span>
+    <div className="h-screen bg-background text-foreground">
+      <div className="border-b">
+        <div className="flex items-center justify-between px-4 py-2">
+          <div className="flex items-center gap-2">
+            <Code2 className="w-5 h-5" />
+            <h1 className="font-semibold">Lattice DevTools</h1>
+            <Badge variant="secondary" className="text-xs">
+              {contexts.length} context{contexts.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Activity className="w-4 h-4" />
+            <span>{statsData.totalSignals} signals</span>
+            <span>•</span>
+            <span>{statsData.totalComputeds} computed</span>
+            <span>•</span>
+            <span>{statsData.totalEffects} effects</span>
+          </div>
         </div>
       </div>
 
-      <div className="tabs">
-        <button
-          className={selectedTab === 'timeline' ? 'active' : ''}
-          onClick={() => (devtoolsStore.state.selectedTab.value = 'timeline')}
-        >
-          Timeline
-        </button>
-      </div>
+      <Tabs value={selectedTab} onValueChange={(value) => (devtoolsStore.state.selectedTab.value = value as 'timeline')}>
+        <TabsList className="w-full rounded-none border-b h-auto p-0">
+          <TabsTrigger value="timeline" className="rounded-none data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary">
+            Timeline
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="content">
-        {selectedTab === 'timeline' && (
-          <div className="timeline">
-            <div className="timeline-header">
-              <h2>Transaction Timeline</h2>
-              <div className="timeline-controls">
-                <select
-                  value={devtoolsStore.state.filter.value.type}
-                  onChange={(e) =>
+        <TabsContent value="timeline" className="m-0">
+          <div className="flex flex-col h-[calc(100vh-8rem)]">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Transaction Timeline</h2>
+              <div className="flex items-center gap-2">
+                <Select
+                  value={filter.type}
+                  onValueChange={(value) =>
                     devtoolsStore.set({
-                      filter: {
-                        ...devtoolsStore.state.filter.value,
-                        type: e.target.value as
-                          | 'all'
-                          | 'signal'
-                          | 'computed'
-                          | 'effect',
-                      },
+                      filter: { ...filter, type: value as any },
                     })
                   }
                 >
-                  <option value="all">All</option>
-                  <option value="signal">Signals</option>
-                  <option value="computed">Computed</option>
-                  <option value="effect">Effects</option>
-                </select>
-                <input
+                  <SelectTrigger className="w-[140px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Events</SelectItem>
+                    <SelectItem value="signal">Signals</SelectItem>
+                    <SelectItem value="computed">Computed</SelectItem>
+                    <SelectItem value="effect">Effects</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Input
                   type="text"
                   placeholder="Search..."
-                  value={devtoolsStore.state.filter.value.search}
+                  className="w-[200px] h-8"
+                  value={filter.search}
                   onChange={(e) =>
                     devtoolsStore.set({
-                      filter: {
-                        ...devtoolsStore.state.filter.value,
-                        search: e.target.value,
-                      },
+                      filter: { ...filter, search: e.target.value },
                     })
                   }
                 />
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    devtoolsStore.set({
+                      filter: { ...filter, hideInternal: !filter.hideInternal },
+                    })
+                  }
+                  className="gap-2"
+                >
+                  {filter.hideInternal ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  Internal
+                </Button>
               </div>
             </div>
-            <div className="transaction-list">
-              {transactions.map((tx) => (
-                <div key={tx.id} className={`transaction ${tx.type}`}>
-                  <span className="time">
-                    {tx.timestamp
-                      ? new Date(tx.timestamp).toLocaleTimeString()
-                      : 'N/A'}
-                  </span>
-                  <span className="type">{tx.eventType}</span>
-                  <span className="data">
-                    {(() => {
-                      if (tx.eventType === 'SIGNAL_READ') {
-                        const data = tx.data as SignalReadData;
-                        const signalName = data.name || data.id;
-                        return (
-                          <>
-                            {signalName}: {JSON.stringify(data.value)}
-                            {data.internal && (
-                              <span className="internal">
-                                {' '}
-                                [internal: {data.internal}]
-                              </span>
-                            )}
-                            {data.readContext && (
-                              <span className="context">
-                                {' '}
-                                [{data.readContext.type}:{' '}
-                                {data.readContext.name || data.readContext.id}]
-                              </span>
-                            )}
-                          </>
-                        );
-                      } else if (tx.eventType === 'SIGNAL_WRITE') {
-                        const data = tx.data as SignalWriteData;
-                        const signalName = data.name || data.id;
-                        return (
-                          <>
-                            {signalName}: {JSON.stringify(data.oldValue)} →{' '}
-                            {JSON.stringify(data.newValue)}
-                          </>
-                        );
-                      } else if (tx.eventType === 'SIGNAL_CREATED') {
-                        const data = tx.data as SignalCreatedData;
-                        const signalName = data.name || data.id;
-                        return `${signalName} = ${JSON.stringify(data.initialValue)}`;
-                      } else if (
-                        tx.eventType === 'COMPUTED_CREATED' ||
-                        tx.eventType === 'EFFECT_CREATED'
-                      ) {
-                        const data = tx.data as NamedItemData;
-                        return data.name || data.id;
-                      } else {
-                        return JSON.stringify(tx.data);
-                      }
-                    })()}
-                  </span>
+
+            <div className="flex-1 overflow-y-auto">
+              {transactions.length === 0 ? (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  No transactions yet...
                 </div>
-              ))}
+              ) : (
+                <div className="divide-y">
+                  {transactions.map((tx) => (
+                    <div key={tx.id} className="px-4 py-2 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start gap-4">
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {tx.timestamp
+                            ? new Date(tx.timestamp).toLocaleTimeString('en-US', {
+                                hour12: false,
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                fractionalSecondDigits: 3,
+                              })
+                            : 'N/A'}
+                        </span>
+                        <Badge
+                          variant={
+                            tx.type === 'signal'
+                              ? 'default'
+                              : tx.type === 'computed'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                          className="text-xs"
+                        >
+                          {tx.eventType}
+                        </Badge>
+                        <div className="flex-1 font-mono text-sm">
+                          {(() => {
+                            switch (tx.eventType) {
+                              case 'SIGNAL_READ': {
+                                const data = tx.data as SignalReadData;
+                                return (
+                                  <span>
+                                    {data.name || data.id} → {JSON.stringify(data.value)}
+                                    {data.internal && (
+                                      <Badge variant="outline" className="ml-2 text-xs">
+                                        internal
+                                      </Badge>
+                                    )}
+                                  </span>
+                                );
+                              }
+                              case 'SIGNAL_WRITE': {
+                                const data = tx.data as SignalWriteData;
+                                return (
+                                  <span>
+                                    {data.name || data.id}: {JSON.stringify(data.oldValue)} → {JSON.stringify(data.newValue)}
+                                  </span>
+                                );
+                              }
+                              case 'SIGNAL_CREATED':
+                              case 'COMPUTED_CREATED':
+                              case 'EFFECT_CREATED': {
+                                const data = tx.data as { name?: string; id: string };
+                                return <span>{data.name || data.id} created</span>;
+                              }
+                              default:
+                                return <span>{JSON.stringify(tx.data)}</span>;
+                            }
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

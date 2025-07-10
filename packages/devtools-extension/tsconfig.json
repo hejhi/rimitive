@@ -3,7 +3,14 @@
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
-    "types": ["chrome"]
+    "types": ["chrome"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@lattice/core": ["../core/src/index.ts"],
+      "@lattice/signals": ["../signals/src/index.ts"],
+      "@lattice/devtools": ["../devtools/src/index.ts"]
+    }
   },
   "include": [
     "**/*.ts",
