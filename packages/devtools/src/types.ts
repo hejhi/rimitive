@@ -15,6 +15,24 @@ export interface DevToolsOptions {
   /** Enable tracking of computed executions */
   trackComputations?: boolean;
   
+  /** Enable tracking of effect executions */
+  trackEffects?: boolean;
+  
+  /** Enable tracking of signal writes */
+  trackWrites?: boolean;
+  
+  /** Enable tracking of dependencies */
+  trackDependencies?: boolean;
+  
+  /** Emit graph snapshot after batch operations */
+  snapshotOnBatch?: boolean;
+  
+  /** Emit graph snapshot after writes */
+  snapshotOnWrite?: boolean;
+  
+  /** Interval for periodic snapshots (0 to disable) */
+  snapshotInterval?: number;
+  
   /** Maximum number of events to buffer */
   maxEvents?: number;
   
@@ -39,7 +57,9 @@ export type DevToolsEventType =
   | 'EFFECT_END'
   | 'EFFECT_DISPOSED'
   | 'BATCH_START'
-  | 'BATCH_END';
+  | 'BATCH_END'
+  | 'DEPENDENCY_UPDATE'
+  | 'GRAPH_SNAPSHOT';
 
 /**
  * Base event structure
@@ -69,6 +89,7 @@ export interface SignalEventData {
   oldValue?: unknown;
   newValue?: unknown;
   initialValue?: unknown;
+  executionContext?: string | null;
 }
 
 /**
@@ -127,10 +148,45 @@ export interface DevToolsAPI {
 }
 
 /**
+ * Dependency update event data
+ */
+export interface DependencyUpdateData {
+  id: string;
+  type: 'signal' | 'computed' | 'effect';
+  trigger: 'created' | 'updated' | 'executed';
+  dependencies: Array<{ id: string; name?: string }>;
+  subscribers: Array<{ id: string; name?: string }>;
+  value?: unknown;
+}
+
+/**
+ * Graph snapshot event data
+ */
+export interface GraphSnapshotData {
+  nodes: Array<{
+    id: string;
+    type: 'signal' | 'computed' | 'effect';
+    name?: string;
+    value?: unknown;
+    isActive: boolean;
+    isOutdated?: boolean;
+    hasSubscribers?: boolean;
+  }>;
+  edges: Array<{
+    source: string;
+    target: string;
+    isActive: boolean;
+  }>;
+}
+
+/**
  * Global window extension for DevTools
  */
 declare global {
   interface Window {
     __LATTICE_DEVTOOLS__?: DevToolsAPI;
+    __LATTICE_DEVTOOLS_API__?: DevToolsAPI & {
+      sendSnapshot(snapshot: unknown): void;
+    };
   }
 }
