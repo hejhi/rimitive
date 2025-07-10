@@ -9,8 +9,19 @@ import {
   type SignalWriteData,
 } from './store';
 import { useSignal } from './useLattice';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../src/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../src/components/ui/select';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../src/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../src/components/ui/select';
 import { Input } from '../../src/components/ui/input';
 import { Badge } from '../../src/components/ui/badge';
 import { Button } from '../../src/components/ui/button';
@@ -46,7 +57,10 @@ export function App() {
 
       // Listen for messages from background script
       port.onMessage.addListener((message: DevToolsMessage) => {
-        console.log('[DevTools Panel] Received message from background:', message);
+        console.log(
+          '[DevTools Panel] Received message from background:',
+          message
+        );
         handleDevToolsMessage(message);
       });
 
@@ -78,10 +92,14 @@ export function App() {
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="text-center space-y-4">
           <Activity className="w-12 h-12 mx-auto text-muted-foreground animate-pulse" />
-          <p className="text-lg text-muted-foreground">Waiting for Lattice...</p>
+          <p className="text-lg text-muted-foreground">
+            Waiting for Lattice...
+          </p>
           <p className="text-sm text-muted-foreground">
             Make sure the page is using{' '}
-            <code className="bg-muted px-1 py-0.5 rounded">@lattice/devtools</code>
+            <code className="bg-muted px-1 py-0.5 rounded">
+              @lattice/devtools
+            </code>
           </p>
         </div>
       </div>
@@ -110,9 +128,17 @@ export function App() {
         </div>
       </div>
 
-      <Tabs value={selectedTab} onValueChange={(value) => (devtoolsStore.state.selectedTab.value = value as 'timeline')}>
-        <TabsList className="w-full rounded-none border-b h-auto p-0">
-          <TabsTrigger value="timeline" className="rounded-none data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary">
+      <Tabs
+        value={selectedTab}
+        onValueChange={(value) =>
+          (devtoolsStore.state.selectedTab.value = value as 'timeline')
+        }
+      >
+        <TabsList className="w-full rounded-none border-b h-auto p-0 justify-start">
+          <TabsTrigger
+            value="timeline"
+            className="rounded-none data-[state=active]:shadow-none border-b-2 border-transparent data-[state=active]:border-primary"
+          >
             Timeline
           </TabsTrigger>
         </TabsList>
@@ -120,7 +146,6 @@ export function App() {
         <TabsContent value="timeline" className="m-0">
           <div className="flex flex-col h-[calc(100vh-8rem)]">
             <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Transaction Timeline</h2>
               <div className="flex items-center gap-2">
                 <Select
                   value={filter.type}
@@ -152,20 +177,6 @@ export function App() {
                     })
                   }
                 />
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() =>
-                    devtoolsStore.set({
-                      filter: { ...filter, hideInternal: !filter.hideInternal },
-                    })
-                  }
-                  className="gap-2"
-                >
-                  {filter.hideInternal ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  Internal
-                </Button>
               </div>
             </div>
 
@@ -177,17 +188,23 @@ export function App() {
               ) : (
                 <div className="divide-y">
                   {transactions.map((tx) => (
-                    <div key={tx.id} className="px-4 py-2 hover:bg-muted/50 transition-colors">
-                      <div className="flex items-start gap-4">
+                    <div
+                      key={tx.id}
+                      className="px-4 py-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
                         <span className="text-xs text-muted-foreground font-mono">
                           {tx.timestamp
-                            ? new Date(tx.timestamp).toLocaleTimeString('en-US', {
-                                hour12: false,
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                                fractionalSecondDigits: 3,
-                              })
+                            ? new Date(tx.timestamp).toLocaleTimeString(
+                                'en-US',
+                                {
+                                  hour12: false,
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                  fractionalSecondDigits: 3,
+                                }
+                              )
                             : 'N/A'}
                         </span>
                         <Badge
@@ -195,45 +212,54 @@ export function App() {
                             tx.type === 'signal'
                               ? 'default'
                               : tx.type === 'computed'
-                              ? 'secondary'
-                              : 'outline'
+                                ? 'secondary'
+                                : 'outline'
                           }
                           className="text-xs"
                         >
                           {tx.eventType}
                         </Badge>
-                        <div className="flex-1 font-mono text-sm">
+                        <div className="flex-1 font-mono text-xs overflow-ellipsis overflow-hidden whitespace-nowrap">
                           {(() => {
                             switch (tx.eventType) {
                               case 'SIGNAL_READ': {
                                 const data = tx.data as SignalReadData;
                                 return (
-                                  <span>
-                                    {data.name || data.id} → {JSON.stringify(data.value)}
+                                  <>
+                                    {data.name || data.id} →{' '}
+                                    {JSON.stringify(data.value)}
                                     {data.internal && (
-                                      <Badge variant="outline" className="ml-2 text-xs">
+                                      <Badge
+                                        variant="outline"
+                                        className="ml-2 text-xs"
+                                      >
                                         internal
                                       </Badge>
                                     )}
-                                  </span>
+                                  </>
                                 );
                               }
                               case 'SIGNAL_WRITE': {
                                 const data = tx.data as SignalWriteData;
                                 return (
-                                  <span>
-                                    {data.name || data.id}: {JSON.stringify(data.oldValue)} → {JSON.stringify(data.newValue)}
-                                  </span>
+                                  <>
+                                    {data.name || data.id}:{' '}
+                                    {JSON.stringify(data.oldValue)} →{' '}
+                                    {JSON.stringify(data.newValue)}
+                                  </>
                                 );
                               }
                               case 'SIGNAL_CREATED':
                               case 'COMPUTED_CREATED':
                               case 'EFFECT_CREATED': {
-                                const data = tx.data as { name?: string; id: string };
-                                return <span>{data.name || data.id} created</span>;
+                                const data = tx.data as {
+                                  name?: string;
+                                  id: string;
+                                };
+                                return <>{data.name || data.id} created</>;
                               }
                               default:
-                                return <span>{JSON.stringify(tx.data)}</span>;
+                                return <>{JSON.stringify(tx.data)}</>;
                             }
                           })()}
                         </div>
