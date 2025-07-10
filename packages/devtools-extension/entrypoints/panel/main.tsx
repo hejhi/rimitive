@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import './globals.css';
-import './style.css';
 import { ThemeProvider } from '@/components/theme-provider';
 
 console.log('[DevTools Panel] main.tsx loading');
