@@ -276,11 +276,19 @@ export const nodeDependencies = devtoolsContext.computed(() => {
   const graph = devtoolsStore.state.dependencyGraph.value;
   
   return (nodeId: string) => {
-    const dependencies = graph.edges.get(nodeId) || new Set();
-    const subscribers = graph.reverseEdges.get(nodeId) || new Set();
+    // Find nodes that this node depends on (nodes that have edges TO this node)
+    const dependencies: string[] = [];
+    graph.edges.forEach((targets, source) => {
+      if (targets.has(nodeId)) {
+        dependencies.push(source);
+      }
+    });
+    
+    // Find nodes that depend on this node (this node has edges TO them)
+    const subscribers = graph.edges.get(nodeId) || new Set();
     
     return {
-      dependencies: Array.from(dependencies).map(id => ({
+      dependencies: dependencies.map(id => ({
         id,
         node: graph.nodes.get(id),
       })),
@@ -502,16 +510,24 @@ function updateDependencyGraph(data: DependencyUpdateData) {
     hasSubscribers: data.subscribers.length > 0,
   });
   
-  // Update edges (dependencies)
-  const deps = new Set(data.dependencies.map(d => d.id));
-  graph.edges.set(data.id, deps);
+  // Clear existing edges for this node
+  graph.edges.delete(data.id);
+  graph.reverseEdges.delete(data.id);
   
-  // Update reverse edges (subscribers)
+  // Update edges correctly: each dependency should have an edge TO this node
   data.dependencies.forEach(dep => {
-    if (!graph.reverseEdges.has(dep.id)) {
-      graph.reverseEdges.set(dep.id, new Set());
+    if (!graph.edges.has(dep.id)) {
+      graph.edges.set(dep.id, new Set());
     }
-    graph.reverseEdges.get(dep.id)!.add(data.id);
+    graph.edges.get(dep.id)!.add(data.id);
+  });
+  
+  // Update reverse edges: this node has edges TO each subscriber
+  data.subscribers.forEach(sub => {
+    if (!graph.reverseEdges.has(data.id)) {
+      graph.reverseEdges.set(data.id, new Set());
+    }
+    graph.reverseEdges.get(data.id)!.add(sub.id);
   });
   
   // Trigger update
