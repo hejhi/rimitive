@@ -3,6 +3,9 @@
 // Export context API
 export { createLattice } from './context';
 
+// Export type guards from signals package
+export { isSignal, isComputed, isEffect, isReactive } from '@lattice/signals';
+
 // Note: signal, computed, and effect are provided via context, not exported globally
 
 // Export types

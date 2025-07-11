@@ -7,6 +7,7 @@ import { releaseNode } from './node-pool';
 
 // Effect constructor
 function EffectImpl(this: Effect, fn: () => void) {
+  this.__type = 'effect';
   this._fn = fn;
   this._flags = OUTDATED;
   this._sources = undefined;

@@ -6,6 +6,7 @@
  */
 
 import type { Signal, Computed, Effect } from '@lattice/signals';
+import { isSignal, isComputed } from '@lattice/signals';
 
 // Internal type definitions based on Lattice's implementation
 // These match the actual internal structure of SignalImpl, ComputedImpl, and EffectImpl
@@ -185,39 +186,8 @@ function getReactiveName(reactive: Signal<unknown> | Computed<unknown> | Effect)
   return undefined;
 }
 
-/**
- * Type guards with proper internal checks
- */
-function isSignal(value: unknown): value is Signal<unknown> {
-  if (!value || typeof value !== 'object') return false;
-  const impl = value as SignalImpl;
-  
-  // Signals have _value and _version but not _fn
-  return '_value' in impl && 
-         '_version' in impl && 
-         !('_fn' in impl);
-}
-
-function isComputed(value: unknown): value is Computed<unknown> {
-  if (!value || typeof value !== 'object') return false;
-  const impl = value as ComputedImpl;
-  
-  // Computeds have _fn, _value, and _flags
-  return '_fn' in impl && 
-         '_value' in impl && 
-         '_flags' in impl;
-}
-
-// Note: isEffect is not currently used but kept for completeness
-// function isEffect(value: unknown): value is Effect {
-//   if (!value || typeof value !== 'object') return false;
-//   const impl = value as EffectImpl;
-//   
-//   // Effects have _fn and _flags but not _value
-//   return '_fn' in impl && 
-//          '_flags' in impl && 
-//          !('_value' in impl);
-// }
+// Type guards are now imported from @lattice/signals
+// They use the __type property for fast, reliable detection
 
 /**
  * Build a complete dependency graph for visualization

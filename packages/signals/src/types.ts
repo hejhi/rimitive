@@ -16,6 +16,7 @@ export interface Signal<T = unknown> {
   subscribe: (listener: () => void) => () => void;
   select: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   peek(): T;
+  __type: 'signal';
   _value: T;
   _version: number;
   _targets?: DependencyNode;
@@ -34,6 +35,7 @@ export interface Computed<T = unknown> {
   subscribe: (listener: () => void) => () => void;
   select: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   peek: () => T;
+  __type: 'computed';
   _fn: () => T;
   _value: T | undefined;
   _version: number;
@@ -48,6 +50,7 @@ export interface Computed<T = unknown> {
 }
 
 export interface Effect {
+  __type: 'effect';
   _fn: () => void;
   _flags: number;
   _sources?: DependencyNode;

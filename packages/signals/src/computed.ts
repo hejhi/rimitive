@@ -14,6 +14,7 @@ import { releaseNode } from './node-pool';
 
 // Computed constructor
 function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
+  this.__type = 'computed';
   this._fn = fn;
   this._value = undefined;
   this._version = 0;

@@ -45,6 +45,7 @@ let activeContext: SignalContext = {
 
 // Signal constructor
 function SignalImpl<T>(this: Signal<T>, value: T) {
+  this.__type = 'signal';
   this._value = value;
   this._version = 0;
   this._targets = undefined;
