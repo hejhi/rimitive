@@ -1,6 +1,6 @@
 /**
  * @fileoverview DevTools middleware for Lattice contexts
- * 
+ *
  * Uses a hybrid approach that combines minimal wrapping with internal graph inspection
  * for low overhead and accurate dependency tracking.
  */
@@ -9,12 +9,12 @@ import type { LatticeContext } from '@lattice/core';
 import type { Signal, Computed, Effect } from '@lattice/signals';
 import { emitEvent, initializeDevTools } from './events';
 import type { DevToolsOptions } from './types';
-import { 
-  getSubscribers, 
-  getDependencies, 
+import {
+  getSubscribers,
+  getDependencies,
   getCurrentValue,
   buildDependencyGraph,
-  type DependencyInfo 
+  type DependencyInfo,
 } from './dependency-utils';
 
 interface TrackedPrimitive {
@@ -40,7 +40,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
 
     const contextId = `ctx_${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const contextName = options.name || 'LatticeContext';
-    
+
     // Track all primitives for graph inspection
     const trackedPrimitives = new Set<TrackedPrimitive>();
 
@@ -56,16 +56,23 @@ export function withDevTools(options: DevToolsOptions = {}) {
     });
 
     // Helper to emit dependency snapshot
-    function emitDependencySnapshot(primitive: TrackedPrimitive, trigger: 'created' | 'updated' | 'executed') {
+    function emitDependencySnapshot(
+      primitive: TrackedPrimitive,
+      trigger: 'created' | 'updated' | 'executed'
+    ) {
       let dependencies: DependencyInfo[] = [];
       let subscribers: DependencyInfo[] = [];
 
       if (primitive.type === 'signal' || primitive.type === 'computed') {
-        subscribers = getSubscribers(primitive.ref as Signal<unknown> | Computed<unknown>);
+        subscribers = getSubscribers(
+          primitive.ref as Signal<unknown> | Computed<unknown>
+        );
       }
 
       if (primitive.type === 'computed' || primitive.type === 'effect') {
-        dependencies = getDependencies(primitive.ref as Computed<unknown> | Effect);
+        dependencies = getDependencies(
+          primitive.ref as Computed<unknown> | Effect
+        );
       }
 
       emitEvent({
@@ -76,27 +83,30 @@ export function withDevTools(options: DevToolsOptions = {}) {
           id: primitive.id,
           type: primitive.type,
           trigger,
-          dependencies: dependencies.map(d => ({ id: d.id, name: d.name })),
-          subscribers: subscribers.map(s => ({ id: s.id, name: s.name })),
-          value: primitive.type !== 'effect' 
-            ? getCurrentValue(primitive.ref as Signal<unknown> | Computed<unknown>)
-            : undefined,
+          dependencies: dependencies.map((d) => ({ id: d.id, name: d.name })),
+          subscribers: subscribers.map((s) => ({ id: s.id, name: s.name })),
+          value:
+            primitive.type !== 'effect'
+              ? getCurrentValue(
+                  primitive.ref as Signal<unknown> | Computed<unknown>
+                )
+              : undefined,
         },
       });
     }
 
     return {
       signal<T>(initialValue: T, name?: string): Signal<T> {
-        const signal = context.signal(initialValue, name);
+        const signal = context.signal(initialValue);
         const signalId = `sig_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
         const tracked: TrackedPrimitive = {
           id: signalId,
           name,
           type: 'signal',
-          ref: signal,
+          ref: signal as Signal<T>,
         };
-        
+
         trackedPrimitives.add(tracked);
         primitiveRegistry.set(signal, tracked);
 
@@ -105,15 +115,15 @@ export function withDevTools(options: DevToolsOptions = {}) {
           Object.getPrototypeOf(signal),
           'value'
         );
-        
+
         if (descriptor?.set) {
           const originalSet = descriptor.set;
           const originalGet = descriptor.get;
-          
+
           Object.defineProperty(signal, 'value', {
             get() {
               const value = originalGet!.call(this);
-              
+
               // Only emit reads if we're in development mode and tracking reads
               if (options.trackReads && currentExecutionContext) {
                 emitEvent({
@@ -128,13 +138,13 @@ export function withDevTools(options: DevToolsOptions = {}) {
                   },
                 });
               }
-              
+
               return value;
             },
             set(newValue: T) {
               const oldValue = originalGet!.call(this);
               const result = originalSet.call(this, newValue);
-              
+
               // Emit write event
               emitEvent({
                 type: 'SIGNAL_WRITE',
@@ -147,12 +157,12 @@ export function withDevTools(options: DevToolsOptions = {}) {
                   newValue,
                 },
               });
-              
+
               // Emit dependency snapshot after write
               setTimeout(() => {
                 emitDependencySnapshot(tracked, 'updated');
               }, 0);
-              
+
               return result;
             },
             enumerable: descriptor.enumerable,
@@ -165,30 +175,30 @@ export function withDevTools(options: DevToolsOptions = {}) {
           type: 'SIGNAL_CREATED',
           contextId,
           timestamp: Date.now(),
-          data: { 
-            id: signalId, 
-            name, 
-            initialValue 
+          data: {
+            id: signalId,
+            name,
+            initialValue,
           },
         });
-        
+
         // Emit initial dependency snapshot (will be empty for signals)
         setTimeout(() => {
           emitDependencySnapshot(tracked, 'created');
         }, 0);
 
-        return signal;
+        return signal as Signal<T>;
       },
 
       computed<T>(fn: () => T, name?: string): Computed<T> {
         const computedId = `comp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        
+
         // Wrap to track execution context and performance
-        const wrappedFn = function(this: unknown) {
+        const wrappedFn = function (this: unknown) {
           const startTime = performance.now();
           const prevContext = currentExecutionContext;
           currentExecutionContext = computedId;
-          
+
           try {
             emitEvent({
               type: 'COMPUTED_START',
@@ -196,9 +206,9 @@ export function withDevTools(options: DevToolsOptions = {}) {
               timestamp: Date.now(),
               data: { id: computedId, name },
             });
-            
+
             const result = fn.call(this);
-            
+
             emitEvent({
               type: 'COMPUTED_END',
               contextId,
@@ -210,22 +220,22 @@ export function withDevTools(options: DevToolsOptions = {}) {
                 value: result,
               },
             });
-            
+
             return result;
           } finally {
             currentExecutionContext = prevContext;
           }
         };
 
-        const computed = context.computed(wrappedFn, name);
+        const computed = context.computed(wrappedFn);
 
         const tracked: TrackedPrimitive = {
           id: computedId,
           name,
           type: 'computed',
-          ref: computed,
+          ref: computed as any,
         };
-        
+
         trackedPrimitives.add(tracked);
         primitiveRegistry.set(computed, tracked);
 
@@ -236,27 +246,27 @@ export function withDevTools(options: DevToolsOptions = {}) {
           timestamp: Date.now(),
           data: { id: computedId, name },
         });
-        
+
         // Emit dependency snapshot after first execution
         setTimeout(() => {
           emitDependencySnapshot(tracked, 'created');
         }, 0);
 
-        return computed;
+        return computed as Computed<T>;
       },
 
       effect(fn: () => void | (() => void), name?: string): () => void {
         const effectId = `eff_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-        
+
         // Track the effect for dependency analysis
         let effectRef: any = null;
-        
+
         // Wrap to track execution context
-        const wrappedFn = function(this: unknown) {
+        const wrappedFn = function (this: unknown) {
           const startTime = performance.now();
           const prevContext = currentExecutionContext;
           currentExecutionContext = effectId;
-          
+
           try {
             emitEvent({
               type: 'EFFECT_START',
@@ -264,9 +274,9 @@ export function withDevTools(options: DevToolsOptions = {}) {
               timestamp: Date.now(),
               data: { id: effectId, name },
             });
-            
+
             const cleanup = fn.call(this);
-            
+
             emitEvent({
               type: 'EFFECT_END',
               contextId,
@@ -278,7 +288,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
                 hasCleanup: typeof cleanup === 'function',
               },
             });
-            
+
             // Emit dependency snapshot after execution
             if (effectRef) {
               const tracked = primitiveRegistry.get(effectRef);
@@ -288,7 +298,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
                 }, 0);
               }
             }
-            
+
             return cleanup;
           } finally {
             currentExecutionContext = prevContext;
@@ -296,11 +306,11 @@ export function withDevTools(options: DevToolsOptions = {}) {
         };
 
         // Create the effect
-        const dispose = context.effect(wrappedFn, name);
-        
+        const dispose = context.effect(wrappedFn);
+
         // Create a reference object for the effect
-        effectRef = { 
-          dispose, 
+        effectRef = {
+          dispose,
           _sources: undefined, // Will be populated by Lattice
           _flags: 0,
         };
@@ -309,9 +319,9 @@ export function withDevTools(options: DevToolsOptions = {}) {
           id: effectId,
           name,
           type: 'effect',
-          ref: effectRef as Effect,
+          ref: effectRef as any,
         };
-        
+
         trackedPrimitives.add(tracked);
         primitiveRegistry.set(effectRef, tracked);
 
@@ -327,7 +337,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
         return () => {
           trackedPrimitives.delete(tracked);
           dispose();
-          
+
           emitEvent({
             type: 'EFFECT_DISPOSED',
             contextId,
@@ -359,12 +369,14 @@ export function withDevTools(options: DevToolsOptions = {}) {
               success: true,
             },
           });
-          
+
           // Optionally emit full graph snapshot after batch
           if (options.snapshotOnBatch !== false) {
-            const allPrimitives = Array.from(trackedPrimitives).map(t => t.ref);
+            const allPrimitives = Array.from(trackedPrimitives).map(
+              (t) => t.ref
+            );
             const graph = buildDependencyGraph(allPrimitives);
-            
+
             emitEvent({
               type: 'GRAPH_SNAPSHOT',
               contextId,
@@ -405,7 +417,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
 
         // Clear tracked primitives
         trackedPrimitives.clear();
-        
+
         // Dispose the original context
         context.dispose();
       },

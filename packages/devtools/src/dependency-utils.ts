@@ -47,11 +47,9 @@ interface EffectImpl extends Effect {
 }
 
 // Flags used internally by Lattice
-const NOTIFIED = 1 << 0;
 const OUTDATED = 1 << 1;
 const RUNNING = 1 << 2;
 const DISPOSED = 1 << 3;
-const TRACKING = 1 << 4;
 
 export interface DependencyInfo {
   id: string;
@@ -210,15 +208,16 @@ function isComputed(value: unknown): value is Computed<unknown> {
          '_flags' in impl;
 }
 
-function isEffect(value: unknown): value is Effect {
-  if (!value || typeof value !== 'object') return false;
-  const impl = value as EffectImpl;
-  
-  // Effects have _fn and _flags but not _value
-  return '_fn' in impl && 
-         '_flags' in impl && 
-         !('_value' in impl);
-}
+// Note: isEffect is not currently used but kept for completeness
+// function isEffect(value: unknown): value is Effect {
+//   if (!value || typeof value !== 'object') return false;
+//   const impl = value as EffectImpl;
+//   
+//   // Effects have _fn and _flags but not _value
+//   return '_fn' in impl && 
+//          '_flags' in impl && 
+//          !('_value' in impl);
+// }
 
 /**
  * Build a complete dependency graph for visualization

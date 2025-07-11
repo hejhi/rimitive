@@ -1,8 +1,5 @@
 // Global signal instances for direct usage
-import {
-  signal as createSignal,
-  Signal as SignalConstructor,
-} from './signal';
+import { signal as createSignal, Signal as SignalConstructor } from './signal';
 import { effect } from './effect';
 import {
   computed as createComputed,
@@ -53,7 +50,6 @@ export function computed<T>(computeFn: () => T): Computed<T> {
 // Export batch
 export { batch };
 
-
 // Re-export other utilities
 export { effect, subscribe };
 export { createSelectFactory, type Selected } from './select';
@@ -67,4 +63,5 @@ export type {
   Unsubscribe,
   SignalFactory,
   Subscriber,
+  Effect,
 } from './types';
