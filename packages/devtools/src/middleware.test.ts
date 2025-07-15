@@ -6,21 +6,16 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createLattice, createStore } from '@lattice/core';
 import { withDevTools } from './middleware';
 import { DevToolsAPIManager } from './events/api';
-import { DEVTOOLS_WINDOW_KEY } from './constants';
 
 describe('withDevTools middleware', () => {
   beforeEach(() => {
-    // Clear window.__LATTICE_DEVTOOLS__ before each test
-    if (typeof window !== 'undefined') {
-      delete (window as unknown as Record<string, unknown>)[DEVTOOLS_WINDOW_KEY];
-    }
     vi.clearAllMocks();
   });
 
   it('should initialize DevTools API on first use', () => {
     const context = createLattice();
     withDevTools()(context);
-    
+
     const api = DevToolsAPIManager.getAPI();
     expect(api).toBeTruthy();
     expect(api?.enabled).toBe(true);
@@ -157,7 +152,7 @@ describe('withDevTools middleware', () => {
 
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
-    
+
     // Dispose the effect
     if (typeof dispose === 'function') {
       dispose();

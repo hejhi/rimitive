@@ -17,12 +17,6 @@ export const FLAGS = {
 // DevTools version
 export const DEVTOOLS_VERSION = '1.0.0';
 
-// Global window key
-export const DEVTOOLS_WINDOW_KEY = '__LATTICE_DEVTOOLS__';
-
-// Message source identifier
-export const MESSAGE_SOURCE = 'lattice-devtools';
-
 // ID prefixes for different primitive types
 export const ID_PREFIXES = {
   CONTEXT: 'ctx',

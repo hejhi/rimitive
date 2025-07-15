@@ -194,14 +194,3 @@ export interface GraphSnapshotData {
 // Re-export Effect and EffectDisposer from core
 export type { Effect, EffectDisposer } from '@lattice/core';
 
-/**
- * Global window extension for DevTools
- */
-declare global {
-  interface Window {
-    __LATTICE_DEVTOOLS__?: DevToolsAPI;
-    __LATTICE_DEVTOOLS_API__?: DevToolsAPI & {
-      sendSnapshot(snapshot: unknown): void;
-    };
-  }
-}

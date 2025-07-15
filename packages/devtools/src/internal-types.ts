@@ -1,6 +1,6 @@
 /**
  * Internal type definitions for Lattice primitives
- * 
+ *
  * These types match the actual internal structure of Lattice's implementation
  * and are used for dependency graph inspection and instrumentation.
  */

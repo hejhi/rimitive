@@ -43,4 +43,4 @@ export { DevToolsAPIManager } from './events/api';
 export { PrimitiveRegistry } from './tracking/registry';
 export { ExecutionContextManager, executionContext } from './tracking/execution-context';
 export { isSignal, isComputed, isEffect, isReactivePrimitive } from './type-guards';
-export { DEVTOOLS_VERSION, DEVTOOLS_WINDOW_KEY } from './constants';
+export { DEVTOOLS_VERSION } from './constants';

@@ -1,12 +1,12 @@
 /**
  * DevTools API management
  * 
- * This module manages the global DevTools API exposed on the window object
- * for communication with browser extensions.
+ * This module manages the DevTools API for accessing debugging information
+ * from instrumented Lattice contexts.
  */
 
 import type { DevToolsAPI, DevToolsEvent } from '../types';
-import { DEVTOOLS_VERSION, DEVTOOLS_WINDOW_KEY, MESSAGE_SOURCE } from '../constants';
+import { DEVTOOLS_VERSION } from '../constants';
 import type { EventEmitter } from './emitter';
 
 /**
@@ -24,6 +24,7 @@ export interface ContextMetadata {
 // Track all API manager instances for aggregation
 const allManagers: DevToolsAPIManager[] = [];
 let globalAPIInitialized = false;
+let globalAPI: DevToolsAPI | null = null;
 
 /**
  * DevTools API manager
@@ -47,7 +48,7 @@ export class DevToolsAPIManager {
     globalAPIInitialized = true;
 
     // Create the API object that aggregates from all managers
-    const api: DevToolsAPI = {
+    globalAPI = {
       enabled: true,
       version: DEVTOOLS_VERSION,
       
@@ -96,21 +97,6 @@ export class DevToolsAPIManager {
         }
       },
     };
-
-    // Expose on window
-    if (typeof window !== 'undefined') {
-      (window as unknown as Record<string, unknown>)[DEVTOOLS_WINDOW_KEY] = api;
-      
-      // Notify extension that DevTools are available
-      window.postMessage({
-        source: MESSAGE_SOURCE,
-        type: 'INIT',
-        payload: {
-          enabled: true,
-          version: DEVTOOLS_VERSION,
-        }
-      }, '*');
-    }
   }
 
   /**
@@ -162,11 +148,7 @@ export class DevToolsAPIManager {
    * Get the DevTools API if available
    */
   static getAPI(): DevToolsAPI | null {
-    if (typeof window !== 'undefined') {
-      const api = (window as unknown as Record<string, unknown>)[DEVTOOLS_WINDOW_KEY];
-      return (api as DevToolsAPI) || null;
-    }
-    return null;
+    return globalAPI;
   }
 
   /**
