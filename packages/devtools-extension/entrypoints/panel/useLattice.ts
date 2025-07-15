@@ -1,23 +1,13 @@
 import { useSyncExternalStore } from 'react';
-import type { Signal, Computed } from '@lattice/core';
-import { devtoolsLatticeContext } from './store';
+import type { Signal, Computed, Selected } from '@lattice/core';
+import { devtoolsContext } from './store/devtoolsCtx';
 
-// React hook to subscribe to Lattice signals/computed values
-export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
+// React hook to subscribe to Lattice signals/computed values/selectors
+export function useSignal<T>(signal: Signal<T> | Computed<T> | Selected<T>): T {
   // Use React's useSyncExternalStore for proper integration
+  // Directly use the signal's subscribe method for optimal performance
   return useSyncExternalStore(
-    (onStoreChange) => {
-      // Create an effect to watch the signal
-      const dispose = devtoolsLatticeContext.effect(() => {
-        // Read the signal value to track it
-        // Access value to track dependency
-        void signal.value;
-        // Trigger React re-render
-        onStoreChange();
-      });
-
-      return dispose;
-    },
+    signal.subscribe.bind(signal),
     () => signal.value,
     () => signal.value
   );
@@ -27,6 +17,6 @@ export function useSignal<T>(signal: Signal<T> | Computed<T>): T {
 export function useBatch() {
   return (fn: () => void) => {
     // Use the devtools context batch function
-    devtoolsLatticeContext.batch(fn);
+    devtoolsContext.batch(fn);
   };
 }

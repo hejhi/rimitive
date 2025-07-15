@@ -12,6 +12,9 @@ export { isSignal, isComputed, isEffect, isReactive } from '@lattice/signals';
 export type {
   Signal,
   Computed,
+  Selected,
+  Effect,
+  EffectDisposer,
   SignalState,
   LatticeContext,
   SetState,
