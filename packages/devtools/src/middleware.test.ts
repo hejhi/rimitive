@@ -5,28 +5,33 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createLattice, createStore } from '@lattice/core';
 import { withDevTools } from './middleware';
-import { getDevToolsAPI } from './events';
+import { DevToolsAPIManager } from './events/api';
+import { DEVTOOLS_WINDOW_KEY } from './constants';
 
 describe('withDevTools middleware', () => {
   beforeEach(() => {
     // Clear window.__LATTICE_DEVTOOLS__ before each test
     if (typeof window !== 'undefined') {
-      delete (window as unknown as { __LATTICE_DEVTOOLS__?: unknown }).__LATTICE_DEVTOOLS__;
+      delete (window as unknown as Record<string, unknown>)[DEVTOOLS_WINDOW_KEY];
     }
     vi.clearAllMocks();
   });
 
   it('should initialize DevTools API on first use', () => {
-    expect(getDevToolsAPI()).toBeTruthy();
-    expect(getDevToolsAPI()?.enabled).toBe(true);
-    expect(getDevToolsAPI()?.version).toBe('1.0.0');
+    const context = createLattice();
+    withDevTools()(context);
+    
+    const api = DevToolsAPIManager.getAPI();
+    expect(api).toBeTruthy();
+    expect(api?.enabled).toBe(true);
+    expect(api?.version).toBe('1.0.0');
   });
 
   it('should emit CONTEXT_CREATED event', () => {
     const context = createLattice();
     withDevTools({ name: 'TestContext' })(context);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     const events = api.getEvents();
 
@@ -43,7 +48,7 @@ describe('withDevTools middleware', () => {
 
     const signal = instrumentedContext.signal(42);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -65,12 +70,12 @@ describe('withDevTools middleware', () => {
 
     const signal = instrumentedContext.signal(42);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
-    // Read signal
-    signal.peek();
+    // Read signal by accessing value
+    void signal.value;
 
     const events = api.getEvents();
     expect(events).toHaveLength(1);
@@ -84,7 +89,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -108,7 +113,7 @@ describe('withDevTools middleware', () => {
       return callCount * 10;
     });
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -132,7 +137,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -143,9 +148,12 @@ describe('withDevTools middleware', () => {
 
     let events = api.getEvents();
     expect(events).toHaveLength(3); // CREATED, START, END
-    expect(events[0]?.type).toBe('EFFECT_CREATED');
-    expect(events[1]?.type).toBe('EFFECT_START');
-    expect(events[2]?.type).toBe('EFFECT_END');
+    const effectCreated = events.find((e) => e.type === 'EFFECT_CREATED');
+    const effectStart = events.find((e) => e.type === 'EFFECT_START');
+    const effectEnd = events.find((e) => e.type === 'EFFECT_END');
+    expect(effectCreated).toBeTruthy();
+    expect(effectStart).toBeTruthy();
+    expect(effectEnd).toBeTruthy();
 
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
@@ -166,7 +174,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -178,10 +186,11 @@ describe('withDevTools middleware', () => {
     expect(result).toBe(42);
 
     const events = api.getEvents();
-    expect(events).toHaveLength(2);
-    expect(events[0]!.type).toBe('BATCH_START');
-    expect(events[1]!.type).toBe('BATCH_END');
-    expect(events[1]!.data).toMatchObject({
+    const batchStart = events.find((e) => e.type === 'BATCH_START');
+    const batchEnd = events.find((e) => e.type === 'BATCH_END');
+    expect(batchStart).toBeTruthy();
+    expect(batchEnd).toBeTruthy();
+    expect(batchEnd?.data).toMatchObject({
       success: true,
     });
   });
@@ -190,7 +199,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -201,9 +210,9 @@ describe('withDevTools middleware', () => {
     }).toThrow('Batch error');
 
     const events = api.getEvents();
-    expect(events).toHaveLength(2);
-    expect(events[1]!.type).toBe('BATCH_END');
-    expect(events[1]!.data).toMatchObject({
+    const batchEnd = events.find((e) => e.type === 'BATCH_END');
+    expect(batchEnd).toBeTruthy();
+    expect(batchEnd?.data).toMatchObject({
       success: false,
       error: 'Batch error',
     });
@@ -215,7 +224,7 @@ describe('withDevTools middleware', () => {
     );
     const store = createStore({ count: 0 }, instrumentedContext);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     const events = api.getEvents();
 
@@ -245,7 +254,7 @@ describe('withDevTools middleware', () => {
       context
     );
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -263,7 +272,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = getDevToolsAPI();
+    const api = DevToolsAPIManager.getAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 

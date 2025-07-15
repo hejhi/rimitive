@@ -6,50 +6,9 @@
  */
 
 import type { Signal, Computed, Effect } from '@lattice/core';
-
-// Internal type definitions based on Lattice's implementation
-// These match the actual internal structure of SignalImpl, ComputedImpl, and EffectImpl
-
-interface DependencyNode {
-  source: Signal<unknown> | Computed<unknown>;
-  target: Computed<unknown> | Effect;
-  prevSource?: DependencyNode;
-  nextSource?: DependencyNode;
-  prevTarget?: DependencyNode;
-  nextTarget?: DependencyNode;
-  version: number;
-  rollbackNode?: DependencyNode;
-}
-
-interface SignalImpl<T = unknown> extends Signal<T> {
-  _value: T;
-  _version: number;
-  _targets?: DependencyNode;
-  _node?: DependencyNode;
-}
-
-interface ComputedImpl<T = unknown> extends Computed<T> {
-  _fn: () => T;
-  _value: T | undefined;
-  _version: number;
-  _globalVersion: number;
-  _flags: number;
-  _sources?: DependencyNode;
-  _targets?: DependencyNode;
-  _node?: DependencyNode;
-}
-
-interface EffectImpl extends Effect {
-  _fn: () => void | (() => void);
-  _flags: number;
-  _sources?: DependencyNode;
-  _nextBatchedEffect?: Effect;
-}
-
-// Flags used internally by Lattice
-const OUTDATED = 1 << 1;
-const RUNNING = 1 << 2;
-const DISPOSED = 1 << 3;
+import type { SignalImpl, ComputedImpl, EffectImpl } from './internal-types';
+import { isDisposed, isRunning as isRunningHelper, isOutdated as isOutdatedHelper } from './internal-types';
+import { isSignal, isComputed } from './type-guards';
 
 export interface DependencyInfo {
   id: string;
@@ -76,7 +35,7 @@ export function getSubscribers(source: Signal<unknown> | Computed<unknown>): Dep
       id: getReactiveId(target),
       type: isComputed(target) ? 'computed' : 'effect',
       name: getReactiveName(target),
-      isActive: (targetImpl._flags & DISPOSED) === 0,
+      isActive: !isDisposed(targetImpl),
       ref: target,
     });
     
@@ -116,7 +75,7 @@ export function getDependencies(target: Computed<unknown> | Effect): DependencyI
  */
 export function isRunning(target: Computed<unknown> | Effect): boolean {
   const impl = target as ComputedImpl | EffectImpl;
-  return (impl._flags & RUNNING) !== 0;
+  return isRunningHelper(impl);
 }
 
 /**
@@ -124,7 +83,7 @@ export function isRunning(target: Computed<unknown> | Effect): boolean {
  */
 export function isOutdated(computed: Computed<unknown>): boolean {
   const impl = computed as ComputedImpl;
-  return (impl._flags & OUTDATED) !== 0;
+  return isOutdatedHelper(impl);
 }
 
 /**
@@ -200,44 +159,6 @@ function getReactiveName(reactive: Signal<unknown> | Computed<unknown> | Effect)
   return undefined;
 }
 
-/**
- * Type guards based on internal structure
- */
-/**
- * Type guards for reactive primitives
- */
-function isSignal(value: unknown): value is Signal<unknown> {
-  if (!value || typeof value !== 'object') return false;
-  const obj = value as Record<string, unknown>;
-  // Check for __type property first (new approach)
-  if ('__type' in obj && obj.__type === 'signal') return true;
-  // Fallback to structure check for older code
-  return '_value' in obj && 
-         '_version' in obj && 
-         !('_fn' in obj);
-}
-
-function isComputed(value: unknown): value is Computed<unknown> {
-  if (!value || typeof value !== 'object') return false;
-  const obj = value as Record<string, unknown>;
-  // Check for __type property first (new approach)
-  if ('__type' in obj && obj.__type === 'computed') return true;
-  // Fallback to structure check for older code
-  return '_fn' in obj && 
-         '_value' in obj && 
-         '_flags' in obj;
-}
-
-// isEffect is kept for completeness but not currently used
-// since effects are tracked differently in the middleware
-// function isEffect(value: unknown): value is Effect {
-//   if (!value || typeof value !== 'object') return false;
-//   const obj = value as any;
-//   // Effects have _fn and _flags but not _value
-//   return '_fn' in obj && 
-//          '_flags' in obj && 
-//          !('_value' in obj);
-// }
 
 /**
  * Build a complete dependency graph for visualization
