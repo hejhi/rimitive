@@ -7,7 +7,10 @@
   "scripts": {
     "dev:devtools": "cd ./devtools && pnpm dev",
     "build:devtools": "pnpm --filter ./devtools build",
-    "preview:devtools": "pnpm --filter ./devtools preview"
+    "preview:devtools": "pnpm --filter ./devtools preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "check": "pnpm typecheck && pnpm lint"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
