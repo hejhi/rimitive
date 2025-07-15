@@ -52,8 +52,6 @@ interface TabState {
 }
 
 export default defineBackground(() => {
-  console.log('[Background] Background script initializing');
-
   // Store connections from devtools panels
   const devtoolsConnections = new Map<number, chrome.runtime.Port>();
 
@@ -67,21 +65,14 @@ export default defineBackground(() => {
       let tabId: number | undefined;
 
       port.onMessage.addListener((msg: DevToolsMessage) => {
-        console.log('[Background] DevTools panel message:', msg);
-
         if (msg.type === 'INIT' && msg.tabId) {
           tabId = msg.tabId;
-          console.log('[Background] DevTools panel connected for tab:', tabId);
           devtoolsConnections.set(tabId, port);
 
           // Send current state if we have it
           if (tabStates.has(tabId)) {
             const state = tabStates.get(tabId);
             if (state) {
-              console.log(
-                '[Background] Sending initial state to DevTools:',
-                state
-              );
               port.postMessage({
                 type: 'STATE_UPDATE',
                 data: state,
@@ -102,17 +93,10 @@ export default defineBackground(() => {
             tabId = msg.tabId;
           }
 
-          console.log('[Background] GET_STATE request for tab:', tabId);
-          console.log(
-            '[Background] Available tab states:',
-            Array.from(tabStates.keys())
-          );
-
           // Send current state
           if (tabId && tabStates.has(tabId)) {
             const state = tabStates.get(tabId);
             if (state) {
-              console.log('[Background] Sending state:', state);
               port.postMessage({
                 type: 'STATE_UPDATE',
                 data: state,
@@ -126,8 +110,6 @@ export default defineBackground(() => {
                 });
               }
             }
-          } else {
-            console.log('[Background] No state found for tab:', tabId);
           }
         }
       });
@@ -147,31 +129,16 @@ export default defineBackground(() => {
       message: { source?: string; type?: string; payload?: unknown },
       sender
     ) => {
-      console.log(
-        '[Background] onMessage listener received:',
-        message,
-        'from tab:',
-        sender.tab?.id,
-        'sender:',
-        sender
-      );
-
       const tabId = sender.tab?.id;
-      if (!tabId) {
-        console.log('[Background] No tab ID, ignoring message');
-        return;
-      }
+      if (!tabId) return;
 
       if (
         message.source === 'lattice-devtools' ||
         message.source === 'lattice-devtools-content'
       ) {
-        console.log('[Background] Processing Lattice message:', message.type);
-
         // Handle messages from the page
         switch (message.type) {
           case 'LATTICE_DETECTED': {
-            console.log('[Background] Lattice detected in tab:', tabId);
             // Initialize state for this tab
             if (!tabStates.has(tabId)) {
               tabStates.set(tabId, {
@@ -180,40 +147,17 @@ export default defineBackground(() => {
                 transactions: [],
                 selectedContext: null,
               });
-              console.log('[Background] Created new state for tab:', tabId);
             } else {
               // Update existing state
               const state = tabStates.get(tabId)!;
               state.connected = true;
               tabStates.set(tabId, state);
-              console.log(
-                '[Background] Updated existing state for tab:',
-                tabId
-              );
             }
-
-            console.log(
-              '[Background] Current tab states after LATTICE_DETECTED:',
-              Array.from(tabStates.keys())
-            );
 
             // Forward to devtools if connected
             const port = devtoolsConnections.get(tabId);
-            console.log(
-              '[Background] DevTools port for tab',
-              tabId,
-              ':',
-              port ? 'connected' : 'not connected'
-            );
-            console.log(
-              '[Background] All connections:',
-              Array.from(devtoolsConnections.keys())
-            );
 
             if (port) {
-              console.log(
-                '[Background] Forwarding LATTICE_DETECTED to devtools'
-              );
               port.postMessage({
                 type: 'LATTICE_DETECTED',
                 data: message.payload,
@@ -236,11 +180,6 @@ export default defineBackground(() => {
 
             if (event.type === 'CONTEXTS_UPDATE' && event.contexts) {
               // Handle the initial contexts update
-              console.log(
-                '[Background] Updating contexts for tab:',
-                tabId,
-                event.contexts
-              );
               currentState.contexts = event.contexts;
               tabStates.set(tabId, currentState);
 

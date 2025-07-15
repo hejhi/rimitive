@@ -2,12 +2,9 @@ export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_start',
   async main() {
-    console.log('[Lattice DevTools Content] Starting...');
-
     // Use WXT's injectScript to inject the bridge script with proper URL
     try {
       await injectScript('/lattice-bridge.js');
-      console.log('[Lattice DevTools Content] Bridge script injected');
     } catch (error) {
       console.error(
         '[Lattice DevTools Content] Failed to inject bridge script:',
@@ -18,9 +15,6 @@ export default defineContentScript({
       const script = document.createElement('script');
       script.src = chrome.runtime.getURL('lattice-bridge.js');
       script.onload = () => {
-        console.log(
-          '[Lattice DevTools Content] Bridge script loaded via fallback'
-        );
         script.remove();
       };
       (document.head || document.documentElement).appendChild(script);
@@ -28,19 +22,16 @@ export default defineContentScript({
 
     // Listen for messages from the page
     window.addEventListener('message', (event) => {
-      if (event.source !== window || !event.data || typeof event.data !== 'object') {
+      if (
+        event.source !== window ||
+        !event.data ||
+        typeof event.data !== 'object'
+      ) {
         return;
       }
 
       const data = event.data as Record<string, unknown>;
-      if (!('source' in data) || data.source !== 'lattice-devtools') {
-        return;
-      }
-
-      console.log(
-        '[Lattice DevTools Content] Received message from page:',
-        data
-      );
+      if (!('source' in data) || data.source !== 'lattice-devtools') return;
 
       // Forward to background script
       void chrome.runtime.sendMessage({

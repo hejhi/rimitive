@@ -45,22 +45,31 @@ const todoStore = createStore(
 // Create computed values for todos
 const todoContext = todoStore.getContext();
 
+// Use selectors to create more granular reactivity
+const currentFilter = todoStore.state.filter.select(f => f);
+const activeTodos = todoStore.state.todos.select(todos => 
+  todos.filter(todo => !todo.completed)
+);
+const completedTodos = todoStore.state.todos.select(todos => 
+  todos.filter(todo => todo.completed)
+);
+
 const filteredTodos = todoContext.computed(() => {
+  const filter = currentFilter.value;
   const todos = todoStore.state.todos.value;
-  const filter = todoStore.state.filter.value;
 
   switch (filter) {
     case 'active':
-      return todos.filter((todo) => !todo.completed);
+      return activeTodos.value;
     case 'completed':
-      return todos.filter((todo) => todo.completed);
+      return completedTodos.value;
     default:
       return todos;
   }
 });
 
 const activeTodoCount = todoContext.computed(() => {
-  return todoStore.state.todos.value.filter((todo) => !todo.completed).length;
+  return activeTodos.value.length;
 });
 
 // UI Updates
@@ -176,12 +185,3 @@ document.getElementById('todoList')!.addEventListener('change', (e) => {
     todoStore.set({ todos: updatedTodos });
   }
 });
-
-// Log to console
-console.log('Lattice DevTools Example loaded!');
-console.log('Open Chrome DevTools and look for the "Lattice" tab.');
-console.log('You should see:');
-console.log('- Two contexts: Counter and Todo stores');
-console.log('- Real-time updates as you interact with the app');
-console.log('- Computed value recalculations');
-console.log('- Effect executions');
