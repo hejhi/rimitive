@@ -4,6 +4,25 @@
  * These types define the core interfaces for Lattice's signals-based reactive system.
  */
 
+// Internal effect type - minimal interface needed for devtools
+export interface Effect {
+  __type: 'effect';
+  _fn: () => void;
+  _flags: number;
+  _sources?: unknown;
+  _nextBatchedEffect?: Effect;
+  _notify(): void;
+  _run(): void;
+  dispose(): void;
+  subscribe?: (listener: () => void) => () => void;
+}
+
+// Dispose function with attached effect instance
+export interface EffectDisposer {
+  (): void;
+  __effect: Effect;
+}
+
 /**
  * A selected value derived from a signal or computed
  */
@@ -76,7 +95,7 @@ export interface SetState {
 export interface LatticeContext {
   signal: <T>(initialValue: T, name?: string) => Signal<T>;
   computed: <T>(computeFn: () => T) => Computed<T>;
-  effect: (effectFn: () => void | (() => void)) => () => void;
+  effect: (effectFn: () => void | (() => void)) => EffectDisposer;
   batch: (fn: () => void) => void;
   dispose(): void;
 }

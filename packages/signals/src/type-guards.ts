@@ -36,6 +36,23 @@ export function isEffect(value: unknown): value is Effect {
 }
 
 /**
+ * Check if a value is an effect dispose function
+ */
+export function isEffectDisposer(value: unknown): value is import('./types').EffectDisposer {
+  return value != null &&
+    typeof value === 'function' &&
+    '__effect' in value &&
+    isEffect(value.__effect);
+}
+
+/**
+ * Get the Effect instance from a dispose function
+ */
+export function getEffectFromDisposer(disposer: import('./types').EffectDisposer): Effect {
+  return disposer.__effect;
+}
+
+/**
  * Check if a value is any reactive primitive (Signal, Computed, or Effect)
  */
 export function isReactive(value: unknown): value is Signal<unknown> | Computed<unknown> | Effect {

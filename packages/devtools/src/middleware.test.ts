@@ -2,7 +2,6 @@
  * @fileoverview Tests for DevTools middleware
  */
 
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createLattice, createStore } from '@lattice/core';
 import { withDevTools } from './middleware';
@@ -12,7 +11,7 @@ describe('withDevTools middleware', () => {
   beforeEach(() => {
     // Clear window.__LATTICE_DEVTOOLS__ before each test
     if (typeof window !== 'undefined') {
-      delete (window as any).__LATTICE_DEVTOOLS__;
+      delete (window as unknown as { __LATTICE_DEVTOOLS__?: unknown }).__LATTICE_DEVTOOLS__;
     }
     vi.clearAllMocks();
   });
@@ -114,7 +113,7 @@ describe('withDevTools middleware', () => {
     api.clearEvents();
 
     // Access computed to trigger execution
-    computed.value;
+    void computed.value;
 
     const events = api.getEvents();
     expect(events.length).toBeGreaterThanOrEqual(2);
@@ -137,9 +136,10 @@ describe('withDevTools middleware', () => {
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
-    const dispose = instrumentedContext.effect(() => {
+    const effectFn = () => {
       // Effect body
-    });
+    };
+    const dispose = instrumentedContext.effect(effectFn);
 
     let events = api.getEvents();
     expect(events).toHaveLength(3); // CREATED, START, END
@@ -149,7 +149,13 @@ describe('withDevTools middleware', () => {
 
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
-    dispose();
+    
+    // Dispose the effect
+    if (typeof dispose === 'function') {
+      dispose();
+    } else {
+      throw new Error('Effect dispose is not a function');
+    }
 
     events = api.getEvents();
     expect(events).toHaveLength(1);

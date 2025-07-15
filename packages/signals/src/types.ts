@@ -75,6 +75,12 @@ export type EffectCleanup = void | (() => void);
 export type Unsubscribe = () => void;
 export type Subscriber = () => void;
 
+// Dispose function with attached effect instance
+export interface EffectDisposer {
+  (): void;
+  __effect: Effect;
+}
+
 export interface ComputedOptions {
   equals?: (a: unknown, b: unknown) => boolean;
 }

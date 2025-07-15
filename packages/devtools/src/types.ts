@@ -59,7 +59,8 @@ export type DevToolsEventType =
   | 'BATCH_START'
   | 'BATCH_END'
   | 'DEPENDENCY_UPDATE'
-  | 'GRAPH_SNAPSHOT';
+  | 'GRAPH_SNAPSHOT'
+  | 'SELECTOR_CREATED';
 
 /**
  * Base event structure
@@ -152,11 +153,22 @@ export interface DevToolsAPI {
  */
 export interface DependencyUpdateData {
   id: string;
-  type: 'signal' | 'computed' | 'effect';
+  type: 'signal' | 'computed' | 'effect' | 'selector';
   trigger: 'created' | 'updated' | 'executed';
   dependencies: Array<{ id: string; name?: string }>;
   subscribers: Array<{ id: string; name?: string }>;
   value?: unknown;
+}
+
+/**
+ * Selector event data
+ */
+export interface SelectorEventData {
+  id: string;
+  sourceId: string;
+  sourceName?: string;
+  sourceType: 'signal' | 'computed';
+  selector: string;
 }
 
 /**
@@ -165,7 +177,7 @@ export interface DependencyUpdateData {
 export interface GraphSnapshotData {
   nodes: Array<{
     id: string;
-    type: 'signal' | 'computed' | 'effect';
+    type: 'signal' | 'computed' | 'effect' | 'selector';
     name?: string;
     value?: unknown;
     isActive: boolean;
@@ -178,6 +190,9 @@ export interface GraphSnapshotData {
     isActive: boolean;
   }>;
 }
+
+// Re-export Effect and EffectDisposer from core
+export type { Effect, EffectDisposer } from '@lattice/core';
 
 /**
  * Global window extension for DevTools

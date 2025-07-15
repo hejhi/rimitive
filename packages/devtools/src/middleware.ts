@@ -5,27 +5,52 @@
  * for low overhead and accurate dependency tracking.
  */
 
-import type { LatticeContext } from '@lattice/core';
-import type { Signal, Computed, Effect } from '@lattice/signals';
+import type { LatticeContext, Signal, Computed, Effect } from '@lattice/core';
 import { emitEvent, initializeDevTools } from './events';
 import type { DevToolsOptions } from './types';
 import {
   getSubscribers,
   getDependencies,
   getCurrentValue,
-  buildDependencyGraph,
   type DependencyInfo,
 } from './dependency-utils';
 
-interface TrackedPrimitive {
-  id: string;
-  name?: string;
-  type: 'signal' | 'computed' | 'effect';
-  ref: Signal<unknown> | Computed<unknown> | Effect;
-}
+type TrackedPrimitive =
+  | {
+      id: string;
+      name?: string;
+      type: 'signal';
+      ref: Signal<unknown>;
+    }
+  | {
+      id: string;
+      name?: string;
+      type: 'computed';
+      ref: Computed<unknown>;
+    }
+  | {
+      id: string;
+      name?: string;
+      type: 'effect';
+      ref: Effect;
+    }
+  | {
+      id: string;
+      name?: string;
+      type: 'selector';
+      sourceId: string;
+      selector: string;
+      ref: unknown; // Selected<T> doesn't have a common base type
+    };
 
 // Registry to track all primitives and their metadata
-const primitiveRegistry = new WeakMap<any, TrackedPrimitive>();
+const primitiveRegistry = new WeakMap<
+  Signal<unknown> | Computed<unknown> | Effect,
+  TrackedPrimitive
+>();
+
+// Note: We can't use WeakMap for selectors as they don't extend a common base type
+// Selectors are tracked in trackedPrimitives set but not in the registry
 
 // Track the currently executing effect/computed for accurate context
 let currentExecutionContext: string | null = null;
@@ -55,6 +80,102 @@ export function withDevTools(options: DevToolsOptions = {}) {
       },
     });
 
+    // Helper to wrap select method on signals/computed
+    function wrapSelectMethod<T extends Signal<unknown> | Computed<unknown>>(
+      source: T,
+      sourceTracked: TrackedPrimitive
+    ): void {
+      const originalSelect = source.select;
+      if (!originalSelect) return;
+
+      // Override the select method with proper typing
+      const wrappedSelect = function <R>(this: T, selector: (value: T extends Signal<infer U> ? U : T extends Computed<infer U> ? U : never) => R) {
+        // Call the original select method
+        const selected = originalSelect.call(this, selector as Parameters<typeof originalSelect>[0]);
+        
+        // Generate ID for this selector
+        const selectorId = `sel_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        
+        // Extract selector function string for debugging
+        const selectorString = selector.toString().length > 50 
+          ? selector.toString().substring(0, 50) + '...' 
+          : selector.toString();
+        
+        // Track the selector
+        const trackedSelector: TrackedPrimitive = {
+          id: selectorId,
+          name: undefined,
+          type: 'selector',
+          sourceId: sourceTracked.id,
+          selector: selectorString,
+          ref: selected,
+        };
+        
+        trackedPrimitives.add(trackedSelector);
+        
+        // Emit selector creation event
+        emitEvent({
+          type: 'SELECTOR_CREATED',
+          contextId,
+          timestamp: Date.now(),
+          data: {
+            id: selectorId,
+            sourceId: sourceTracked.id,
+            sourceName: sourceTracked.name,
+            sourceType: sourceTracked.type as 'signal' | 'computed',
+            selector: selectorString,
+          },
+        });
+        
+        // Wrap the selected value's getter to track reads
+        const descriptor = Object.getOwnPropertyDescriptor(selected, 'value');
+        if (descriptor?.get) {
+          // Store the getter in a const to avoid unbound method warning
+          const boundGetter = descriptor.get.bind(selected);
+          Object.defineProperty(selected, 'value', {
+            get() {
+              const result: unknown = boundGetter();
+              
+              // Emit selector read event if we're tracking reads
+              if (currentExecutionContext) {
+                emitEvent({
+                  type: 'SIGNAL_READ',
+                  contextId,
+                  timestamp: Date.now(),
+                  data: {
+                    id: selectorId,
+                    name: selectorString,
+                    value: result,
+                    internal: false,
+                    executionContext: currentExecutionContext,
+                    readContext: {
+                      type: 'selector',
+                      id: selectorId,
+                      name: selectorString,
+                    },
+                  },
+                });
+              }
+              
+              return result;
+            },
+            enumerable: false,
+            configurable: true,
+          });
+        }
+        
+        return selected;
+      };
+      
+      // Type-safe assignment
+      Object.defineProperty(source, 'select', {
+        value: wrappedSelect,
+        writable: true,
+        enumerable: false,
+        configurable: true
+      });
+    }
+
     // Helper to emit dependency snapshot
     function emitDependencySnapshot(
       primitive: TrackedPrimitive,
@@ -64,16 +185,60 @@ export function withDevTools(options: DevToolsOptions = {}) {
       let subscribers: DependencyInfo[] = [];
 
       if (primitive.type === 'signal' || primitive.type === 'computed') {
-        subscribers = getSubscribers(
-          primitive.ref as Signal<unknown> | Computed<unknown>
-        );
+        subscribers = getSubscribers(primitive.ref);
       }
 
       if (primitive.type === 'computed' || primitive.type === 'effect') {
-        dependencies = getDependencies(
-          primitive.ref as Computed<unknown> | Effect
-        );
+        dependencies = getDependencies(primitive.ref);
       }
+
+      // Map dependency info to use our tracked IDs
+      const mapDependencyInfo = (info: DependencyInfo) => {
+        if (!info.ref) {
+          // No ref means we can't map to tracked ID
+          return { id: info.id, name: info.name };
+        }
+        
+        let tracked = primitiveRegistry.get(info.ref);
+        
+        // If not tracked yet, it might be from another context or not instrumented
+        // Register it now with a generated ID
+        if (!tracked) {
+          const generatedId = `${info.type}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          
+          // Create the appropriate tracked primitive based on type
+          if (info.type === 'signal') {
+            tracked = {
+              id: generatedId,
+              name: info.name,
+              type: 'signal' as const,
+              ref: info.ref as Signal<unknown>,
+            };
+          } else if (info.type === 'computed') {
+            tracked = {
+              id: generatedId,
+              name: info.name,
+              type: 'computed' as const,
+              ref: info.ref as Computed<unknown>,
+            };
+          } else {
+            tracked = {
+              id: generatedId,
+              name: info.name,
+              type: 'effect' as const,
+              ref: info.ref as Effect,
+            };
+          }
+          
+          primitiveRegistry.set(info.ref, tracked);
+          // Don't add to trackedPrimitives as it's from another context
+        }
+        
+        return {
+          id: tracked.id,
+          name: tracked.name || info.name,
+        };
+      };
 
       emitEvent({
         type: 'DEPENDENCY_UPDATE',
@@ -83,13 +248,11 @@ export function withDevTools(options: DevToolsOptions = {}) {
           id: primitive.id,
           type: primitive.type,
           trigger,
-          dependencies: dependencies.map((d) => ({ id: d.id, name: d.name })),
-          subscribers: subscribers.map((s) => ({ id: s.id, name: s.name })),
+          dependencies: dependencies.map(mapDependencyInfo),
+          subscribers: subscribers.map(mapDependencyInfo),
           value:
-            primitive.type !== 'effect'
-              ? getCurrentValue(
-                  primitive.ref as Signal<unknown> | Computed<unknown>
-                )
+            primitive.type === 'signal' || primitive.type === 'computed'
+              ? getCurrentValue(primitive.ref)
               : undefined,
         },
       });
@@ -104,25 +267,25 @@ export function withDevTools(options: DevToolsOptions = {}) {
           id: signalId,
           name,
           type: 'signal',
-          ref: signal as Signal<T>,
+          ref: signal as Signal<unknown>,
         };
 
         trackedPrimitives.add(tracked);
         primitiveRegistry.set(signal, tracked);
 
         // Minimal instrumentation - only track writes for change detection
-        const descriptor = Object.getOwnPropertyDescriptor(
-          Object.getPrototypeOf(signal),
-          'value'
-        );
+        const proto = Object.getPrototypeOf(signal) as object | null;
+        const descriptor = proto
+          ? Object.getOwnPropertyDescriptor(proto, 'value')
+          : undefined;
 
-        if (descriptor?.set) {
-          const originalSet = descriptor.set;
-          const originalGet = descriptor.get;
+        if (descriptor?.set && descriptor?.get) {
+          const originalSet = descriptor.set.bind(signal);
+          const originalGet = descriptor.get.bind(signal);
 
           Object.defineProperty(signal, 'value', {
             get() {
-              const value = originalGet!.call(this);
+              const value = originalGet() as T;
 
               // Only emit reads if we're in development mode and tracking reads
               if (options.trackReads && currentExecutionContext) {
@@ -142,8 +305,8 @@ export function withDevTools(options: DevToolsOptions = {}) {
               return value;
             },
             set(newValue: T) {
-              const oldValue = originalGet!.call(this);
-              const result = originalSet.call(this, newValue);
+              const oldValue = originalGet() as T;
+              const result = originalSet(newValue);
 
               // Emit write event
               emitEvent({
@@ -187,11 +350,18 @@ export function withDevTools(options: DevToolsOptions = {}) {
           emitDependencySnapshot(tracked, 'created');
         }, 0);
 
-        return signal as Signal<T>;
+        // Wrap the select method to track selectors
+        wrapSelectMethod(signal, tracked);
+
+        return signal;
       },
 
       computed<T>(fn: () => T, name?: string): Computed<T> {
         const computedId = `comp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        
+        // We'll set this after creating the computed
+        // eslint-disable-next-line prefer-const
+        let tracked: TrackedPrimitive;
 
         // Wrap to track execution context and performance
         const wrappedFn = function (this: unknown) {
@@ -221,6 +391,14 @@ export function withDevTools(options: DevToolsOptions = {}) {
               },
             });
 
+            // Emit dependency update after execution
+            // This ensures dependencies are properly tracked
+            setTimeout(() => {
+              if (tracked) {
+                emitDependencySnapshot(tracked, 'executed');
+              }
+            }, 0);
+
             return result;
           } finally {
             currentExecutionContext = prevContext;
@@ -229,11 +407,11 @@ export function withDevTools(options: DevToolsOptions = {}) {
 
         const computed = context.computed(wrappedFn);
 
-        const tracked: TrackedPrimitive = {
+        tracked = {
           id: computedId,
           name,
           type: 'computed',
-          ref: computed as any,
+          ref: computed,
         };
 
         trackedPrimitives.add(tracked);
@@ -247,19 +425,21 @@ export function withDevTools(options: DevToolsOptions = {}) {
           data: { id: computedId, name },
         });
 
-        // Emit dependency snapshot after first execution
-        setTimeout(() => {
-          emitDependencySnapshot(tracked, 'created');
-        }, 0);
+        // Dependencies will be emitted after first execution
 
-        return computed as Computed<T>;
+        // Wrap the select method to track selectors
+        wrapSelectMethod(computed, tracked);
+
+        return computed;
       },
 
-      effect(fn: () => void | (() => void), name?: string): () => void {
+      effect(fn: () => void | (() => void)) {
         const effectId = `eff_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        // Extract name if it exists on the function
+        const name = fn.name || undefined;
 
-        // Track the effect for dependency analysis
-        let effectRef: any = null;
+        // Store a reference to the tracked primitive once it's created
+        let trackedEffect: TrackedPrimitive | null = null;
 
         // Wrap to track execution context
         const wrappedFn = function (this: unknown) {
@@ -272,7 +452,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
               type: 'EFFECT_START',
               contextId,
               timestamp: Date.now(),
-              data: { id: effectId, name },
+              data: { id: effectId, name: undefined },
             });
 
             const cleanup = fn.call(this);
@@ -283,21 +463,18 @@ export function withDevTools(options: DevToolsOptions = {}) {
               timestamp: Date.now(),
               data: {
                 id: effectId,
-                name,
+                name: undefined,
                 duration: performance.now() - startTime,
                 hasCleanup: typeof cleanup === 'function',
               },
             });
 
-            // Emit dependency snapshot after execution
-            if (effectRef) {
-              const tracked = primitiveRegistry.get(effectRef);
-              if (tracked) {
-                setTimeout(() => {
-                  emitDependencySnapshot(tracked, 'executed');
-                }, 0);
+            // Emit dependency update after execution
+            setTimeout(() => {
+              if (trackedEffect) {
+                emitDependencySnapshot(trackedEffect, 'executed');
               }
-            }
+            }, 0);
 
             return cleanup;
           } finally {
@@ -306,24 +483,28 @@ export function withDevTools(options: DevToolsOptions = {}) {
         };
 
         // Create the effect
-        const dispose = context.effect(wrappedFn);
+        const disposer = context.effect(wrappedFn);
+        
+        // Get the effect instance from the disposer
+        const effectRef = disposer.__effect;
 
-        // Create a reference object for the effect
-        effectRef = {
-          dispose,
-          _sources: undefined, // Will be populated by Lattice
-          _flags: 0,
-        };
+        if (!effectRef) {
+          console.warn('[DevTools] Effect instance not found on disposer');
+          return disposer;
+        }
 
         const tracked: TrackedPrimitive = {
           id: effectId,
-          name,
+          name: name || undefined,
           type: 'effect',
-          ref: effectRef as any,
+          ref: effectRef,
         };
 
         trackedPrimitives.add(tracked);
         primitiveRegistry.set(effectRef, tracked);
+        
+        // Store reference for the wrapper function
+        trackedEffect = tracked;
 
         // Emit creation event
         emitEvent({
@@ -333,18 +514,12 @@ export function withDevTools(options: DevToolsOptions = {}) {
           data: { id: effectId, name },
         });
 
-        // Return wrapped disposer
-        return () => {
-          trackedPrimitives.delete(tracked);
-          dispose();
+        // Dependencies will be emitted after first execution
 
-          emitEvent({
-            type: 'EFFECT_DISPOSED',
-            contextId,
-            timestamp: Date.now(),
-            data: { id: effectId, name },
-          });
-        };
+        // Return the original disposer - no wrapping needed
+        // If the effect is disposed, it will stop appearing in dependency updates
+        // and the devtools can infer it's been disposed
+        return disposer;
       },
 
       batch(fn: () => void): void {
@@ -372,18 +547,72 @@ export function withDevTools(options: DevToolsOptions = {}) {
 
           // Optionally emit full graph snapshot after batch
           if (options.snapshotOnBatch !== false) {
-            const allPrimitives = Array.from(trackedPrimitives).map(
-              (t) => t.ref
-            );
-            const graph = buildDependencyGraph(allPrimitives);
+            // Build dependency graph with consistent IDs
+            const graphNodes: Array<{
+              id: string;
+              type: 'signal' | 'computed' | 'effect' | 'selector';
+              name?: string;
+              value?: unknown;
+              isActive: boolean;
+              // ref is only used internally for building the graph, not sent to devtools
+            }> = [];
+            const graphEdges: Array<{ source: string; target: string; isActive: boolean }> = [];
+            
+            // Create nodes with our tracked IDs
+            for (const tracked of trackedPrimitives) {
+              if (tracked.type === 'selector') {
+                // For selectors, include the selector function string as part of the name
+                graphNodes.push({
+                  id: tracked.id,
+                  type: tracked.type,
+                  name: tracked.name || tracked.selector,
+                  value: undefined, // Selectors don't store values
+                  isActive: true,
+                });
+                // Add edge from source to selector
+                graphEdges.push({
+                  source: tracked.sourceId,
+                  target: tracked.id,
+                  isActive: true,
+                });
+              } else {
+                graphNodes.push({
+                  id: tracked.id,
+                  type: tracked.type,
+                  name: tracked.name,
+                  value: tracked.type === 'signal' || tracked.type === 'computed' 
+                  ? getCurrentValue(tracked.ref) 
+                  : undefined,
+                  isActive: true,
+                });
+              }
+            }
+            
+            // Build edges using our IDs
+            for (const tracked of trackedPrimitives) {
+              if (tracked.type === 'computed' || tracked.type === 'effect') {
+                const deps = getDependencies(tracked.ref);
+                for (const dep of deps) {
+                  // Find the tracked primitive for this dependency
+                  const depTracked = dep.ref ? primitiveRegistry.get(dep.ref) : undefined;
+                  if (depTracked) {
+                    graphEdges.push({
+                      source: depTracked.id,
+                      target: tracked.id,
+                      isActive: true,
+                    });
+                  }
+                }
+              }
+            }
 
             emitEvent({
               type: 'GRAPH_SNAPSHOT',
               contextId,
               timestamp: Date.now(),
               data: {
-                nodes: Array.from(graph.nodes.values()),
-                edges: graph.edges,
+                nodes: graphNodes,
+                edges: graphEdges,
               },
             });
           }

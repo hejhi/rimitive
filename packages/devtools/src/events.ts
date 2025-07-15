@@ -26,7 +26,8 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 /**
  * Initialize the DevTools API
  */
-export function initializeDevTools(_options: DevToolsOptions = {}): void {
+export function initializeDevTools(options: DevToolsOptions = {}): void {
+  void options; // Mark as used
   if (devToolsEnabled) return;
   
   devToolsEnabled = true;
@@ -74,7 +75,7 @@ export function initializeDevTools(_options: DevToolsOptions = {}): void {
   
   // Expose on window for extension access
   if (typeof window !== 'undefined') {
-    (window as any).__LATTICE_DEVTOOLS__ = api;
+    (window as Window & { __LATTICE_DEVTOOLS__?: DevToolsAPI }).__LATTICE_DEVTOOLS__ = api;
     
     // Notify extension that DevTools are available
     window.postMessage({
@@ -190,8 +191,9 @@ export function isDevToolsEnabled(): boolean {
  * Get the DevTools API if available
  */
 export function getDevToolsAPI(): DevToolsAPI | null {
-  if (typeof window !== 'undefined' && (window as any).__LATTICE_DEVTOOLS__) {
-    return (window as any).__LATTICE_DEVTOOLS__;
+  if (typeof window !== 'undefined') {
+    const windowWithDevTools = window as Window & { __LATTICE_DEVTOOLS__?: DevToolsAPI };
+    return windowWithDevTools.__LATTICE_DEVTOOLS__ || null;
   }
   return null;
 }

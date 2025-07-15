@@ -157,8 +157,10 @@ Effect.prototype.subscribe = function () {
   return () => {};
 };
 
+import type { EffectDisposer } from './types';
+
 // Direct export instead of factory pattern
-export function effect(effectFn: () => void | (() => void)): () => void {
+export function effect(effectFn: () => void | (() => void)): EffectDisposer {
   let cleanupFn: (() => void) | void;
 
   const e = new Effect(() => {
@@ -174,13 +176,18 @@ export function effect(effectFn: () => void | (() => void)): () => void {
   // Run immediately
   e._run();
 
-  // Return dispose function that also runs final cleanup
-  return () => {
+  // Create dispose function
+  const dispose = (() => {
     e.dispose();
     if (cleanupFn && typeof cleanupFn === 'function') {
       cleanupFn();
     }
-  };
+  }) as EffectDisposer;
+  
+  // Attach the Effect instance to the dispose function
+  dispose.__effect = e;
+  
+  return dispose;
 }
 
 // Export Effect constructor for external use

@@ -13,6 +13,7 @@ import {
   batch,
   type Signal,
   type Computed,
+  type EffectDisposer,
 } from '@lattice/signals';
 
 /**
@@ -22,7 +23,7 @@ interface ContextState {
   disposed: boolean;
   signals: Set<Signal<unknown>>;
   computeds: Set<Computed<unknown>>;
-  effectDisposers: Set<() => void>;
+  effects: Set<EffectDisposer>;
 }
 
 /**
@@ -49,7 +50,7 @@ function LatticeContextImplConstructor(this: LatticeContextImpl) {
     disposed: false,
     signals: new Set<Signal<unknown>>(),
     computeds: new Set<Computed<unknown>>(),
-    effectDisposers: new Set<() => void>(),
+    effects: new Set<EffectDisposer>(),
   };
 }
 
@@ -93,20 +94,16 @@ proto.computed = function <T>(
 proto.effect = function (
   this: LatticeContextImpl,
   effectFn: () => void | (() => void)
-): () => void {
+): EffectDisposer {
   if (this._state.disposed) {
     throw new Error('Cannot create effect in disposed context');
   }
 
-  const dispose = globalEffect(effectFn);
-  const effectDisposers = this._state.effectDisposers;
-  effectDisposers.add(dispose);
-
-  // Return a wrapped disposer that also removes from our tracking
-  return () => {
-    dispose();
-    effectDisposers.delete(dispose);
-  };
+  const disposer = globalEffect(effectFn);
+  this._state.effects.add(disposer);
+  
+  // No wrapping needed - just return the original disposer
+  return disposer;
 };
 
 proto.batch = batch;
@@ -117,10 +114,10 @@ proto.dispose = function (this: LatticeContextImpl): void {
   state.disposed = true;
 
   // Dispose all effects
-  for (const dispose of state.effectDisposers) {
-    dispose();
+  for (const disposer of state.effects) {
+    disposer();
   }
-  state.effectDisposers.clear();
+  state.effects.clear();
 
   // Dispose all computeds
   for (const computed of state.computeds) {

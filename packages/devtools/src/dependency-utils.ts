@@ -5,8 +5,7 @@
  * by Lattice's reactive system.
  */
 
-import type { Signal, Computed, Effect } from '@lattice/signals';
-import { isSignal, isComputed } from '@lattice/signals';
+import type { Signal, Computed, Effect } from '@lattice/core';
 
 // Internal type definitions based on Lattice's implementation
 // These match the actual internal structure of SignalImpl, ComputedImpl, and EffectImpl
@@ -58,6 +57,7 @@ export interface DependencyInfo {
   name?: string;
   value?: unknown;
   isActive?: boolean;
+  ref?: Signal<unknown> | Computed<unknown> | Effect;
 }
 
 /**
@@ -77,6 +77,7 @@ export function getSubscribers(source: Signal<unknown> | Computed<unknown>): Dep
       type: isComputed(target) ? 'computed' : 'effect',
       name: getReactiveName(target),
       isActive: (targetImpl._flags & DISPOSED) === 0,
+      ref: target,
     });
     
     node = node.nextTarget;
@@ -101,6 +102,7 @@ export function getDependencies(target: Computed<unknown> | Effect): DependencyI
       type: isSignal(source) ? 'signal' : 'computed',
       name: getReactiveName(source),
       value: getCurrentValue(source),
+      ref: source,
     });
     
     node = node.nextSource;
@@ -172,22 +174,70 @@ function getReactiveId(reactive: Signal<unknown> | Computed<unknown> | Effect): 
 function getReactiveName(reactive: Signal<unknown> | Computed<unknown> | Effect): string | undefined {
   // Names might be stored in various ways depending on how they're created
   // Check common patterns used in Lattice
-  const impl = reactive as any;
+  const impl = reactive as unknown as Record<string, unknown>;
   
   // Direct name property
-  if (impl._name) return impl._name;
+  if ('_name' in impl && typeof impl._name === 'string') {
+    return impl._name;
+  }
   
   // Name might be stored in metadata
-  if (impl._meta?.name) return impl._meta.name;
+  if ('_meta' in impl && 
+      impl._meta && 
+      typeof impl._meta === 'object' &&
+      'name' in impl._meta) {
+    const meta = impl._meta as Record<string, unknown>;
+    if (typeof meta.name === 'string') {
+      return meta.name;
+    }
+  }
   
   // For store signals, the name might be the property key
-  if (impl._key) return impl._key;
+  if ('_key' in impl && typeof impl._key === 'string') {
+    return impl._key;
+  }
   
   return undefined;
 }
 
-// Type guards are now imported from @lattice/signals
-// They use the __type property for fast, reliable detection
+/**
+ * Type guards based on internal structure
+ */
+/**
+ * Type guards for reactive primitives
+ */
+function isSignal(value: unknown): value is Signal<unknown> {
+  if (!value || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+  // Check for __type property first (new approach)
+  if ('__type' in obj && obj.__type === 'signal') return true;
+  // Fallback to structure check for older code
+  return '_value' in obj && 
+         '_version' in obj && 
+         !('_fn' in obj);
+}
+
+function isComputed(value: unknown): value is Computed<unknown> {
+  if (!value || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+  // Check for __type property first (new approach)
+  if ('__type' in obj && obj.__type === 'computed') return true;
+  // Fallback to structure check for older code
+  return '_fn' in obj && 
+         '_value' in obj && 
+         '_flags' in obj;
+}
+
+// isEffect is kept for completeness but not currently used
+// since effects are tracked differently in the middleware
+// function isEffect(value: unknown): value is Effect {
+//   if (!value || typeof value !== 'object') return false;
+//   const obj = value as any;
+//   // Effects have _fn and _flags but not _value
+//   return '_fn' in obj && 
+//          '_flags' in obj && 
+//          !('_value' in obj);
+// }
 
 /**
  * Build a complete dependency graph for visualization
