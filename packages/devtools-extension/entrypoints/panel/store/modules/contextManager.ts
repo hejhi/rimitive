@@ -2,12 +2,12 @@ import { devtoolsStore } from '../devtoolsCtx';
 import { ContextInfo } from '../types';
 import { LatticeEvent } from './messageHandler';
 import { addNodeToGraph } from './dependencyGraph';
-import { 
-  SignalCreatedEventData, 
-  SignalWriteEventData, 
-  ComputedCreatedEventData, 
+import {
+  SignalCreatedEventData,
+  SignalWriteEventData,
+  ComputedCreatedEventData,
   EffectCreatedEventData,
-  SelectorCreatedEventData 
+  SelectorCreatedEventData,
 } from './eventTypes';
 
 interface ContextCreatedData {
@@ -31,7 +31,7 @@ export function updateContextFromEvent(event: LatticeEvent) {
 
 function handleContextCreated(contexts: ContextInfo[], event: LatticeEvent) {
   const contextData = event.data as ContextCreatedData | undefined;
-  
+
   contexts.push({
     id: event.contextId,
     name: contextData?.name || `Context ${event.contextId}`,
@@ -50,8 +50,6 @@ function handleContextCreated(contexts: ContextInfo[], event: LatticeEvent) {
 }
 
 function handleContextEvent(context: ContextInfo, event: LatticeEvent) {
-  console.log('updateContextFromEvent processing:', event.type);
-
   switch (event.type) {
     case 'SIGNAL_CREATED':
       handleSignalCreated(context, event);
@@ -73,7 +71,7 @@ function handleContextEvent(context: ContextInfo, event: LatticeEvent) {
 
 function handleSignalCreated(context: ContextInfo, event: LatticeEvent) {
   const signalData = event.data as SignalCreatedEventData;
-  
+
   context.signalCount++;
   context.signals.push({
     id: signalData.id,
@@ -91,13 +89,13 @@ function handleSignalCreated(context: ContextInfo, event: LatticeEvent) {
 
 function handleSignalWrite(context: ContextInfo, event: LatticeEvent) {
   const writeData = event.data as SignalWriteEventData;
-  
+
   if (!context.signals) {
     context.signals = [];
   }
-  
+
   const signalIndex = context.signals.findIndex((s) => s.id === writeData.id);
-  
+
   if (signalIndex !== -1) {
     context.signals[signalIndex] = {
       ...context.signals[signalIndex],
@@ -118,7 +116,7 @@ function handleSignalWrite(context: ContextInfo, event: LatticeEvent) {
 
 function handleComputedCreated(context: ContextInfo, event: LatticeEvent) {
   const computedData = event.data as ComputedCreatedEventData;
-  
+
   context.computedCount++;
   context.computeds.push({
     id: computedData.id,
@@ -137,7 +135,7 @@ function handleComputedCreated(context: ContextInfo, event: LatticeEvent) {
 
 function handleEffectCreated(context: ContextInfo, event: LatticeEvent) {
   const effectData = event.data as EffectCreatedEventData;
-  
+
   context.effectCount++;
   context.effects.push({
     id: effectData.id,
@@ -156,25 +154,25 @@ function handleEffectCreated(context: ContextInfo, event: LatticeEvent) {
 function handleSelectorCreated(event: LatticeEvent) {
   const selectorData = event.data as SelectorCreatedEventData;
   const graph = devtoolsStore.state.dependencyGraph.value;
-  
+
   // Add selector node
   addNodeToGraph(selectorData.id, {
     type: 'selector',
     name: selectorData.selector,
     value: undefined,
   });
-  
+
   // Add edge from source to selector
   if (!graph.edges.has(selectorData.sourceId)) {
     graph.edges.set(selectorData.sourceId, new Set());
   }
   graph.edges.get(selectorData.sourceId)!.add(selectorData.id);
-  
+
   // Add reverse edge
   if (!graph.reverseEdges.has(selectorData.id)) {
     graph.reverseEdges.set(selectorData.id, new Set());
   }
   graph.reverseEdges.get(selectorData.id)!.add(selectorData.sourceId);
-  
+
   devtoolsStore.state.dependencyGraph.value = { ...graph };
 }

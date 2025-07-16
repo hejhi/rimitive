@@ -70,7 +70,6 @@ export function processLogEntry(event: LatticeEvent) {
 }
 
 function processSignalWrite(event: LatticeEvent, timestamp: number) {
-  console.log('Processing SIGNAL_WRITE event');
   const data = event.data as SignalWriteData;
   const graph = devtoolsStore.state.dependencyGraph.value;
   const node = graph.nodes.get(data.id);

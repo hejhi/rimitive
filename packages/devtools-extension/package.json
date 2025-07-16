@@ -15,7 +15,9 @@
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "check": "pnpm typecheck && pnpm lint"
+    "check": "pnpm typecheck && pnpm lint",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@lattice/core": "workspace:*",
@@ -44,6 +46,8 @@
     "globals": "^16.3.0",
     "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3",
-    "wxt": "^0.20.6"
+    "wxt": "^0.20.6",
+    "vitest": "^3.1.1",
+    "@vitest/ui": "^3.1.1"
   }
 }
