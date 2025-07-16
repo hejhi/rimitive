@@ -19,7 +19,6 @@ export default tseslint.config(
       '.output/**',
       '.wxt/**',
       'demo/**',
-      'public/lattice-bridge.js', // This is injected into pages, not extension context
     ],
   },
   // Base JS/TS configuration

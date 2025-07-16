@@ -1,25 +1,7 @@
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_start',
-  async main() {
-    // Use WXT's injectScript to inject the bridge script with proper URL
-    try {
-      await injectScript('/lattice-bridge.js');
-    } catch (error) {
-      console.error(
-        '[Lattice DevTools Content] Failed to inject bridge script:',
-        error
-      );
-
-      // Fallback: inject the script content directly using a different method
-      const script = document.createElement('script');
-      script.src = chrome.runtime.getURL('lattice-bridge.js');
-      script.onload = () => {
-        script.remove();
-      };
-      (document.head || document.documentElement).appendChild(script);
-    }
-
+  main() {
     // Listen for messages from the page
     window.addEventListener('message', (event) => {
       if (

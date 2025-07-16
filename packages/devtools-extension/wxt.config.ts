@@ -26,7 +26,7 @@ export default defineConfig({
     host_permissions: ['<all_urls>'],
     web_accessible_resources: [
       {
-        resources: ['lattice-bridge.js'],
+        resources: [],
         matches: ['<all_urls>'],
       },
     ],
