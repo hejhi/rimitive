@@ -14,11 +14,7 @@
     "composite": true,
     "types": [
       "vitest/importMeta"
-    ],
-    "paths": {
-      "@lattice/signals": ["../signals/src/index.ts"],
-      "@lattice/signals/*": ["../signals/src/*"]
-    }
+    ]
   },
   "include": [
     "src/**/*.ts",

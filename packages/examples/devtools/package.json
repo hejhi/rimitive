@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@lattice/core": "workspace:*",
-    "@lattice/devtools": "workspace:*"
+    "@lattice/devtools": "workspace:*",
+    "@lattice/signals": "workspace:*"
   },
   "devDependencies": {
     "vite": "^6.0.5",

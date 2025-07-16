@@ -5,7 +5,8 @@
  * for tracking reads, writes, and dependency updates.
  */
 
-import type { Signal, LatticeContext } from '@lattice/core';
+import type { Signal } from '@lattice/signals';
+import type { LatticeContext } from '@lattice/core';
 import type { PrimitiveRegistry } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions } from '../types';

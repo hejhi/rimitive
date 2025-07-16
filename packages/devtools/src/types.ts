@@ -191,6 +191,6 @@ export interface GraphSnapshotData {
   }>;
 }
 
-// Re-export Effect and EffectDisposer from core
-export type { Effect, EffectDisposer } from '@lattice/core';
+// Re-export Effect and EffectDisposer from signals
+export type { Effect, EffectDisposer } from '@lattice/signals';
 

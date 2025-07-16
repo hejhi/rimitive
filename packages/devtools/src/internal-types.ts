@@ -5,7 +5,7 @@
  * and are used for dependency graph inspection and instrumentation.
  */
 
-import type { Signal, Computed, Effect } from '@lattice/core';
+import type { Signal, Computed, Effect } from '@lattice/signals';
 import { FLAGS } from './constants';
 
 export interface DependencyNode {

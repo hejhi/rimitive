@@ -148,6 +148,9 @@ importers:
       '@lattice/core':
         specifier: workspace:*
         version: link:../core
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../signals
     devDependencies:
       rimraf:
         specifier: ^6.0.1
@@ -276,6 +279,9 @@ importers:
       '@lattice/devtools':
         specifier: workspace:*
         version: link:../../devtools
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../../signals
     devDependencies:
       typescript:
         specifier: ^5.8.3

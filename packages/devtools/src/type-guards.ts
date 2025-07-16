@@ -2,7 +2,7 @@
  * Type guards for Lattice reactive primitives
  */
 
-import type { Signal, Computed, Effect } from '@lattice/core';
+import type { Signal, Computed, Effect } from '@lattice/signals';
 
 /**
  * Check if a value is a Signal

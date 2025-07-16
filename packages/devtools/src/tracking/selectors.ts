@@ -5,7 +5,7 @@
  * on signals and computed values.
  */
 
-import type { Signal, Computed } from '@lattice/core';
+import type { Signal, Computed } from '@lattice/signals';
 import { SELECTOR_STRING_MAX_LENGTH } from '../constants';
 import { executionContext } from './execution-context';
 import type { TrackedPrimitive, PrimitiveRegistry } from './registry';

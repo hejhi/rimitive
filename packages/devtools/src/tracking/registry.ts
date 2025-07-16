@@ -5,7 +5,7 @@
  * ensuring consistent ID management and efficient lookups.
  */
 
-import type { Signal, Computed, Effect } from '@lattice/core';
+import type { Signal, Computed, Effect } from '@lattice/signals';
 import { ID_PREFIXES } from '../constants';
 
 export type PrimitiveType = 'signal' | 'computed' | 'effect' | 'selector';

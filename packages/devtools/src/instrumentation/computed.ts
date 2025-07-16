@@ -5,7 +5,8 @@
  * for tracking execution, dependencies, and performance.
  */
 
-import type { Computed, LatticeContext } from '@lattice/core';
+import type { Computed } from '@lattice/signals';
+import type { LatticeContext } from '@lattice/core';
 import type { PrimitiveRegistry, TrackedComputed } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions } from '../types';

@@ -22,7 +22,7 @@ export default defineConfig({
       formats: ['es'],
     },
     rollupOptions: {
-      external: ['vitest', /^vitest/, 'node:test'],
+      external: ['vitest', /^vitest/, 'node:test', '@lattice/signals'],
       output: {
         preserveModules: false,
         entryFileNames: '[name].js',

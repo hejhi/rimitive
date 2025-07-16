@@ -5,7 +5,7 @@
  * by Lattice's reactive system.
  */
 
-import type { Signal, Computed, Effect } from '@lattice/core';
+import type { Signal, Computed, Effect } from '@lattice/signals';
 import type { SignalImpl, ComputedImpl, EffectImpl } from './internal-types';
 import { isDisposed } from './internal-types';
 import { isSignal, isComputed } from './type-guards';

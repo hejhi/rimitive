@@ -5,7 +5,8 @@
  * for tracking execution, cleanup, and dependencies.
  */
 
-import type { EffectDisposer, LatticeContext } from '@lattice/core';
+import type { EffectDisposer } from '@lattice/signals';
+import type { LatticeContext } from '@lattice/core';
 import type { PrimitiveRegistry, TrackedEffect } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions } from '../types';
