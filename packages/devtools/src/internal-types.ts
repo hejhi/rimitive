@@ -44,28 +44,9 @@ export interface EffectImpl extends Effect {
   _nextBatchedEffect?: Effect;
 }
 
-// Type for internal metadata that might be attached to primitives
-export interface PrimitiveMetadata {
-  _name?: string;
-  _meta?: {
-    name?: string;
-    [key: string]: unknown;
-  };
-  _key?: string;
-  __type?: 'signal' | 'computed' | 'effect';
-}
-
-// Combined type for any reactive primitive implementation
-export type ReactiveImpl = SignalImpl | ComputedImpl | EffectImpl;
-
 // Helper type to check if a primitive is disposed
 export function isDisposed(impl: ComputedImpl | EffectImpl): boolean {
   return (impl._flags & FLAGS.DISPOSED) !== 0;
-}
-
-// Helper type to check if a primitive is running
-export function isRunning(impl: ComputedImpl | EffectImpl): boolean {
-  return (impl._flags & FLAGS.RUNNING) !== 0;
 }
 
 // Helper type to check if a computed is outdated

@@ -9,16 +9,14 @@ import type { Signal, Computed, Effect } from '@lattice/core';
  */
 export function isSignal(value: unknown): value is Signal<unknown> {
   if (!value || typeof value !== 'object') return false;
-  
+
   const obj = value as Record<string, unknown>;
-  
+
   // Check for __type property first (newer approach)
   if ('__type' in obj && obj.__type === 'signal') return true;
-  
+
   // Fallback to structure check for compatibility
-  return '_value' in obj && 
-         '_version' in obj && 
-         !('_fn' in obj);
+  return '_value' in obj && '_version' in obj && !('_fn' in obj);
 }
 
 /**
@@ -26,16 +24,14 @@ export function isSignal(value: unknown): value is Signal<unknown> {
  */
 export function isComputed(value: unknown): value is Computed<unknown> {
   if (!value || typeof value !== 'object') return false;
-  
+
   const obj = value as Record<string, unknown>;
-  
+
   // Check for __type property first (newer approach)
   if ('__type' in obj && obj.__type === 'computed') return true;
-  
+
   // Fallback to structure check for compatibility
-  return '_fn' in obj && 
-         '_value' in obj && 
-         '_flags' in obj;
+  return '_fn' in obj && '_value' in obj && '_flags' in obj;
 }
 
 /**
@@ -43,21 +39,12 @@ export function isComputed(value: unknown): value is Computed<unknown> {
  */
 export function isEffect(value: unknown): value is Effect {
   if (!value || typeof value !== 'object') return false;
-  
+
   const obj = value as Record<string, unknown>;
-  
+
   // Check for __type property first (newer approach)
   if ('__type' in obj && obj.__type === 'effect') return true;
-  
-  // Fallback to structure check for compatibility
-  return '_fn' in obj && 
-         '_flags' in obj && 
-         !('_value' in obj);
-}
 
-/**
- * Check if a value is any reactive primitive
- */
-export function isReactivePrimitive(value: unknown): value is Signal<unknown> | Computed<unknown> | Effect {
-  return isSignal(value) || isComputed(value) || isEffect(value);
+  // Fallback to structure check for compatibility
+  return '_fn' in obj && '_flags' in obj && !('_value' in obj);
 }
