@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import type { Signal, Computed, Selected } from '@lattice/core';
+import type { Signal, Computed, Selected } from '@lattice/signals';
 import { devtoolsContext } from './store/devtoolsCtx';
 
 // React hook to subscribe to Lattice signals/computed values/selectors
