@@ -30,12 +30,9 @@ export type {
 } from './types';
 
 // Advanced exports for extensions and tools
-export { EventEmitter } from './events/emitter';
-export { DevToolsAPIManager } from './events/api';
-export { PrimitiveRegistry } from './tracking/registry';
-export {
-  ExecutionContextManager,
-  executionContext,
-} from './tracking/execution-context';
-export { isSignal, isComputed, isEffect } from './type-guards';
-export { DEVTOOLS_VERSION } from './constants';
+export { createEventEmitter, type EventEmitter } from './events/emitter';
+export { createDevToolsAPIManager, getDevToolsAPI, isDevToolsEnabled, type DevToolsAPIManager } from './events/api';
+export { createPrimitiveRegistry, type PrimitiveRegistry } from './tracking/registry';
+export { createExecutionContextManager, executionContext, type ExecutionContextManager } from './tracking/execution-context';
+export { isSignal, isComputed, isEffect, isReactivePrimitive } from './type-guards';
+export { DEVTOOLS_VERSION, DEVTOOLS_WINDOW_KEY } from './constants';

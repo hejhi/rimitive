@@ -29,3 +29,9 @@ export const ID_PREFIXES = {
 
 // Selector string truncation length
 export const SELECTOR_STRING_MAX_LENGTH = 50;
+
+// Window key for DevTools API
+export const DEVTOOLS_WINDOW_KEY = '__LATTICE_DEVTOOLS__';
+
+// PostMessage source identifier
+export const MESSAGE_SOURCE = 'lattice-devtools';

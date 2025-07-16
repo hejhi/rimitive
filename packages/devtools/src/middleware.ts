@@ -8,9 +8,9 @@
 import type { LatticeContext } from '@lattice/core';
 import type { DevToolsOptions } from './types';
 import { ID_PREFIXES } from './constants';
-import { EventEmitter } from './events/emitter';
-import { DevToolsAPIManager } from './events/api';
-import { PrimitiveRegistry } from './tracking/registry';
+import { createEventEmitter } from './events/emitter';
+import { createDevToolsAPIManager } from './events/api';
+import { createPrimitiveRegistry } from './tracking/registry';
 import { instrumentSignal } from './instrumentation/signal';
 import { instrumentComputed } from './instrumentation/computed';
 import { instrumentEffect } from './instrumentation/effect';
@@ -28,14 +28,14 @@ export function withDevTools(options: DevToolsOptions = {}) {
     const contextId = generateContextId();
     const contextName = options.name || 'LatticeContext';
     
-    const eventEmitter = new EventEmitter({
+    const eventEmitter = createEventEmitter({
       maxEvents: options.maxEvents,
     });
     
-    const apiManager = new DevToolsAPIManager(eventEmitter);
+    const apiManager = createDevToolsAPIManager(eventEmitter);
     apiManager.initialize();
     
-    const registry = new PrimitiveRegistry();
+    const registry = createPrimitiveRegistry();
     
     // Register context
     apiManager.registerContext(contextId, contextName);

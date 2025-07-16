@@ -48,3 +48,10 @@ export function isEffect(value: unknown): value is Effect {
   // Fallback to structure check for compatibility
   return '_fn' in obj && '_flags' in obj && !('_value' in obj);
 }
+
+/**
+ * Check if a value is any reactive primitive (Signal, Computed, or Effect)
+ */
+export function isReactivePrimitive(value: unknown): value is Signal<unknown> | Computed<unknown> | Effect {
+  return isSignal(value) || isComputed(value) || isEffect(value);
+}

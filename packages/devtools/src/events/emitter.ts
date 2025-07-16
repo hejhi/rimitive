@@ -19,153 +19,145 @@ export interface EventEmitterConfig {
 }
 
 /**
- * High-performance event emitter with batching
+ * Event emitter interface
  */
-export class EventEmitter {
-  private events: DevToolsEvent[] = [];
-  private flushTimer: ReturnType<typeof setTimeout> | null = null;
-  private isEnabled = true;
+export interface EventEmitter {
+  emit(event: DevToolsEvent): void;
+  getEvents(): DevToolsEvent[];
+  clearEvents(): void;
+  enable(): void;
+  disable(): void;
+  readonly enabled: boolean;
+  flush(): void;
+  destroy(): void;
+}
+
+/**
+ * Default flush implementation
+ */
+function defaultFlush(events: DevToolsEvent[]): void {
+  if (typeof window === 'undefined') return;
+
+  // Send events to the extension
+  for (const event of events) {
+    window.postMessage({
+      source: 'lattice-devtools',
+      type: 'EVENT',
+      payload: event,
+    }, '*');
+  }
+}
+
+/**
+ * Creates a high-performance event emitter with batching
+ */
+export function createEventEmitter(config: EventEmitterConfig = {}): EventEmitter {
+  // Private state
+  let events: DevToolsEvent[] = [];
+  let flushTimer: ReturnType<typeof setTimeout> | null = null;
+  let isEnabled = true;
   
-  private readonly config: Required<EventEmitterConfig>;
-
-  constructor(config: EventEmitterConfig = {}) {
-    this.config = {
-      maxEvents: config.maxEvents ?? MAX_EVENTS,
-      batchSize: config.batchSize ?? EVENT_BATCH_SIZE,
-      flushInterval: config.flushInterval ?? FLUSH_INTERVAL,
-      onFlush: config.onFlush ?? this.defaultFlush.bind(this),
-    };
-  }
-
-  /**
-   * Emit a DevTools event
-   */
-  emit(event: DevToolsEvent): void {
-    if (!this.isEnabled) return;
-
-    // Add event to buffer
-    this.events.push(event);
-
-    // Trim buffer if needed
-    if (this.events.length > this.config.maxEvents) {
-      this.events = this.events.slice(-this.config.maxEvents);
-    }
-
-    // Schedule flush if not already scheduled
-    if (!this.flushTimer && this.events.length > 0) {
-      this.scheduleFlush();
-    }
-  }
-
-  /**
-   * Get all buffered events
-   */
-  getEvents(): DevToolsEvent[] {
-    return [...this.events];
-  }
-
-  /**
-   * Clear all buffered events
-   */
-  clearEvents(): void {
-    this.events = [];
-    this.cancelFlush();
-  }
-
-  /**
-   * Enable event emission
-   */
-  enable(): void {
-    this.isEnabled = true;
-  }
-
-  /**
-   * Disable event emission
-   */
-  disable(): void {
-    this.isEnabled = false;
-    this.cancelFlush();
-  }
-
-  /**
-   * Check if emission is enabled
-   */
-  get enabled(): boolean {
-    return this.isEnabled;
-  }
-
-  /**
-   * Force an immediate flush
-   */
-  flush(): void {
-    this.cancelFlush();
-    if (this.events.length > 0 && this.isEnabled) {
-      this.performFlush();
-    }
-  }
-
-  /**
-   * Destroy the emitter
-   */
-  destroy(): void {
-    this.disable();
-    this.clearEvents();
-  }
+  // Resolved configuration
+  const resolvedConfig = {
+    maxEvents: config.maxEvents ?? MAX_EVENTS,
+    batchSize: config.batchSize ?? EVENT_BATCH_SIZE,
+    flushInterval: config.flushInterval ?? FLUSH_INTERVAL,
+    onFlush: config.onFlush ?? defaultFlush,
+  };
 
   /**
    * Schedule a flush operation
    */
-  private scheduleFlush(): void {
-    if (!this.isEnabled) return;
+  function scheduleFlush(): void {
+    if (!isEnabled) return;
 
-    this.flushTimer = setTimeout(() => {
-      this.flushTimer = null;
-      this.performFlush();
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      performFlush();
 
       // Continue flushing if there are more events
-      if (this.events.length > 0 && this.isEnabled) {
-        this.scheduleFlush();
+      if (events.length > 0 && isEnabled) {
+        scheduleFlush();
       }
-    }, this.config.flushInterval);
+    }, resolvedConfig.flushInterval);
   }
 
   /**
    * Cancel any scheduled flush
    */
-  private cancelFlush(): void {
-    if (this.flushTimer) {
-      clearTimeout(this.flushTimer);
-      this.flushTimer = null;
+  function cancelFlush(): void {
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
     }
   }
 
   /**
    * Perform the flush operation
    */
-  private performFlush(): void {
-    if (!this.isEnabled || this.events.length === 0) return;
+  function performFlush(): void {
+    if (!isEnabled || events.length === 0) return;
 
     // Get events to flush
-    const eventsToFlush = this.events.slice(0, this.config.batchSize);
-    this.events = this.events.slice(this.config.batchSize);
+    const eventsToFlush = events.slice(0, resolvedConfig.batchSize);
+    events = events.slice(resolvedConfig.batchSize);
 
     // Call flush handler
-    this.config.onFlush(eventsToFlush);
+    resolvedConfig.onFlush(eventsToFlush);
   }
 
-  /**
-   * Default flush implementation
-   */
-  private defaultFlush(events: DevToolsEvent[]): void {
-    if (typeof window === 'undefined') return;
+  // Return the public interface
+  return {
+    emit(event: DevToolsEvent): void {
+      if (!isEnabled) return;
 
-    // Send events to the extension
-    for (const event of events) {
-      window.postMessage({
-        source: 'lattice-devtools',
-        type: 'EVENT',
-        payload: event,
-      }, '*');
-    }
-  }
+      // Add event to buffer
+      events.push(event);
+
+      // Trim buffer if needed
+      if (events.length > resolvedConfig.maxEvents) {
+        events = events.slice(-resolvedConfig.maxEvents);
+      }
+
+      // Schedule flush if not already scheduled
+      if (!flushTimer && events.length > 0) {
+        scheduleFlush();
+      }
+    },
+
+    getEvents(): DevToolsEvent[] {
+      return [...events];
+    },
+
+    clearEvents(): void {
+      events = [];
+      cancelFlush();
+    },
+
+    enable(): void {
+      isEnabled = true;
+    },
+
+    disable(): void {
+      isEnabled = false;
+      cancelFlush();
+    },
+
+    get enabled(): boolean {
+      return isEnabled;
+    },
+
+    flush(): void {
+      cancelFlush();
+      if (events.length > 0 && isEnabled) {
+        performFlush();
+      }
+    },
+
+    destroy(): void {
+      isEnabled = false;
+      cancelFlush();
+      events = [];
+    },
+  };
 }

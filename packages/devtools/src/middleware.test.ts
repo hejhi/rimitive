@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createLattice, createStore } from '@lattice/core';
 import { withDevTools } from './middleware';
-import { DevToolsAPIManager } from './events/api';
+import { getDevToolsAPI } from './events/api';
 
 describe('withDevTools middleware', () => {
   beforeEach(() => {
@@ -16,7 +16,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     withDevTools()(context);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     expect(api).toBeTruthy();
     expect(api?.enabled).toBe(true);
     expect(api?.version).toBe('1.0.0');
@@ -26,7 +26,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     withDevTools({ name: 'TestContext' })(context);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     const events = api.getEvents();
 
@@ -43,7 +43,7 @@ describe('withDevTools middleware', () => {
 
     const signal = instrumentedContext.signal(42);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -65,7 +65,7 @@ describe('withDevTools middleware', () => {
 
     const signal = instrumentedContext.signal(42);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -84,7 +84,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -108,7 +108,7 @@ describe('withDevTools middleware', () => {
       return callCount * 10;
     });
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -132,7 +132,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -169,7 +169,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -194,7 +194,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -219,7 +219,7 @@ describe('withDevTools middleware', () => {
     );
     const store = createStore({ count: 0 }, instrumentedContext);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     const events = api.getEvents();
 
@@ -249,7 +249,7 @@ describe('withDevTools middleware', () => {
       context
     );
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
@@ -267,7 +267,7 @@ describe('withDevTools middleware', () => {
     const context = createLattice();
     const instrumentedContext = withDevTools()(context);
 
-    const api = DevToolsAPIManager.getAPI();
+    const api = getDevToolsAPI();
     if (!api) throw new Error('DevTools API not initialized');
     api.clearEvents();
 
