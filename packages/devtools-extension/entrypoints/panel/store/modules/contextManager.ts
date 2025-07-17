@@ -24,6 +24,10 @@ export function updateContextFromEvent(event: LatticeEvent) {
     const context = { ...contexts[contextIndex] };
     handleContextEvent(context, event);
     contexts[contextIndex] = context;
+  } else if (event.type !== 'CONTEXT_CREATED' && contextIndex === -1) {
+    // Event for a context we don't know about - ignore it
+    // This can happen if events arrive before STATE_UPDATE
+    return;
   }
 
   devtoolsStore.state.contexts.value = contexts;

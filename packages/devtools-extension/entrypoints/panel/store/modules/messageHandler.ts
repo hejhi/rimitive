@@ -40,7 +40,19 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
 }
 
 function handleLatticeDetected() {
+  // Reset all state when Lattice is detected (page refresh/navigation)
   devtoolsStore.state.connected.value = true;
+  devtoolsStore.state.contexts.value = [];
+  devtoolsStore.state.transactions.value = [];
+  devtoolsStore.state.selectedContext.value = null;
+  devtoolsStore.state.logEntries.value = [];
+  
+  // Reset dependency graph
+  devtoolsStore.state.dependencyGraph.value = {
+    nodes: new Map(),
+    edges: new Map(),
+    reverseEdges: new Map(),
+  };
 }
 
 function handleStateUpdate(data: unknown) {
