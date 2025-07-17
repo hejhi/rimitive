@@ -17,3 +17,5 @@ export interface StoreProviderProps<
 }
 
 export type StoreFactory<T extends Record<string, unknown>> = () => Store<T>;
+
+export type StoreSelector<T extends Record<string, unknown>, R> = (state: T) => R;

@@ -191,7 +191,7 @@ function TodoApp() {
 Share a store across components.
 
 ```tsx
-import { StoreProvider, useStoreContext, useStoreState } from '@lattice/react';
+import { StoreProvider, useStoreContext, useSelect } from '@lattice/react';
 
 const appStore = createStore({
   user: null,
@@ -216,7 +216,7 @@ function Header() {
 
 function ThemeToggle() {
   // Use selector for specific state
-  const theme = useStoreState((state) => state.theme);
+  const theme = useSelect((state) => state.theme);
   const store = useStoreContext();
 
   return (
@@ -366,7 +366,7 @@ test('Store updates', () => {
   const store = createTestStore({ count: 0 });
 
   const { result } = renderHookWithLattice(
-    () => useStoreState((s) => s.count),
+    () => useSelect((s) => s.count),
     { store }
   );
 
@@ -436,7 +436,7 @@ test('Store updates', () => {
 - `useLattice(): LatticeContext`
 - `useStore<T>(factory: () => Store<T>): Store<T>`
 - `useStoreContext<T>(): Store<T>`
-- `useStoreState<T, R>(selector?: (state: T) => R): R`
+- `useSelect<T, R>(selector?: (state: T) => R): R`
 - `createStoreHook<T>(): <R>(selector?: (state: T) => R) => R`
 
 ### Components

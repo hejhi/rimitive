@@ -71,4 +71,92 @@ describe('Store', () => {
     store.set((current) => ({ count: current.count * 2 }));
     expect(store.state.count.value).toBe(2);
   });
+
+  describe('selectors', () => {
+    it('should create computed selectors with store.select', () => {
+      const store = createStore({ count: 0, name: 'test' });
+      
+      // Single value selector
+      const count = store.select(s => s.count);
+      expect(count.value).toBe(0);
+      
+      // Computed derived value
+      const doubled = store.select(s => s.count * 2);
+      expect(doubled.value).toBe(0);
+      
+      store.set({ count: 5 });
+      expect(count.value).toBe(5);
+      expect(doubled.value).toBe(10);
+    });
+
+    it('should work with object selectors', () => {
+      const store = createStore({ user: { name: 'John', age: 30 }, count: 0 });
+      
+      // Select multiple values
+      const selection = store.select(s => ({ 
+        userName: s.user.name, 
+        userAge: s.user.age,
+        count: s.count 
+      }));
+      
+      expect(selection.value).toEqual({
+        userName: 'John',
+        userAge: 30,
+        count: 0
+      });
+      
+      store.set({ user: { name: 'Jane', age: 25 } });
+      expect(selection.value).toEqual({
+        userName: 'Jane',
+        userAge: 25,
+        count: 0
+      });
+    });
+
+    it('should work with complex derived state', () => {
+      interface Todo {
+        id: number;
+        text: string;
+        done: boolean;
+      }
+      
+      const store = createStore({
+        todos: [
+          { id: 1, text: 'Task 1', done: false },
+          { id: 2, text: 'Task 2', done: true },
+          { id: 3, text: 'Task 3', done: false }
+        ] as Todo[]
+      });
+      
+      const stats = store.select(s => ({
+        total: s.todos.length,
+        completed: s.todos.filter(t => t.done).length,
+        active: s.todos.filter(t => !t.done).length,
+        percentComplete: s.todos.length > 0 
+          ? Math.round((s.todos.filter(t => t.done).length / s.todos.length) * 100)
+          : 0
+      }));
+      
+      expect(stats.value).toEqual({
+        total: 3,
+        completed: 1,
+        active: 2,
+        percentComplete: 33
+      });
+      
+      // Mark another task as done
+      store.set({ 
+        todos: store.state.todos.value.map(t => 
+          t.id === 3 ? { ...t, done: true } : t
+        )
+      });
+      
+      expect(stats.value).toEqual({
+        total: 3,
+        completed: 2,
+        active: 1,
+        percentComplete: 67
+      });
+    });
+  });
 });

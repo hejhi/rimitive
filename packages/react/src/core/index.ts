@@ -2,6 +2,8 @@ export {
   useLattice,
   useStore,
   useStoreContext,
+  useSelect,
+  createStoreHook,
 } from './hooks';
 
 export { LatticeProvider, StoreProvider } from './components';
@@ -12,6 +14,7 @@ export type {
   LatticeProviderProps,
   StoreProviderProps,
   StoreFactory,
+  StoreSelector,
 } from './types';
 
 // Re-export core types for convenience

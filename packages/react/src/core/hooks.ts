@@ -1,10 +1,11 @@
-import { useContext, useEffect, useRef } from 'react';
+import { useContext, useEffect, useRef, useMemo } from 'react';
 import type {
   Store,
   LatticeContext as BaseLatticeContext,
 } from '@lattice/core';
+import { useSubscribe } from '../signals/hooks';
 import { LatticeContext, StoreContext } from './context';
-import type { StoreFactory } from './types';
+import type { StoreFactory, StoreSelector } from './types';
 
 /**
  * Get the current Lattice context from the nearest LatticeProvider.
@@ -78,6 +79,7 @@ export function useStore<T extends Record<string, unknown>>(
  */
 export function useStoreContext<T extends Record<string, unknown>>(): Store<T> {
   const store = useContext(StoreContext);
+
   if (!store) {
     throw new Error(
       'useStoreContext must be used within a StoreProvider. ' +
@@ -85,4 +87,48 @@ export function useStoreContext<T extends Record<string, unknown>>(): Store<T> {
     );
   }
   return store as Store<T>;
+}
+
+/**
+ * Select and subscribe to a slice of store state.
+ * When no selector is provided, returns the entire state.
+ *
+ * @example
+ * ```tsx
+ * function TodoList() {
+ *   const todos = useSelect(store => store.todos);
+ *   return <ul>{todos.map(todo => <li>{todo.text}</li>)}</ul>;
+ * }
+ * ```
+ */
+export function useSelect<T extends Record<string, unknown>, R = T>(
+  selector?: StoreSelector<T, R>
+): R {
+  const store = useStoreContext<T>();
+  const computed = useMemo(
+    () => store.select(selector ?? ((state: T) => state as unknown as R)),
+    [store, selector]
+  );
+
+  return useSubscribe(computed);
+}
+
+/**
+ * Create a store selector hook for a specific store.
+ * This is useful for creating typed selectors for your stores.
+ *
+ * @example
+ * ```tsx
+ * const useTodoStore = createStoreHook<TodoState>();
+ *
+ * function TodoCount() {
+ *   const count = useTodoStore(state => state.todos.length);
+ *   return <div>Total: {count}</div>;
+ * }
+ * ```
+ */
+export function createStoreHook<T extends Record<string, unknown>>() {
+  return function useTypedStore<R = T>(selector?: StoreSelector<T, R>): R {
+    return useSelect(selector);
+  };
 }

@@ -40,7 +40,7 @@ let activeContext: SignalContext = {
   poolSize: INITIAL_POOL_SIZE,
   allocations: 0,
   poolHits: 0,
-  poolMisses: 0
+  poolMisses: 0,
 };
 
 // Signal constructor
@@ -62,7 +62,10 @@ const Signal = SignalImpl as unknown as {
 Object.defineProperty(Signal.prototype, 'value', {
   get(this: Signal) {
     // Fast path: no tracking needed
-    if (!activeContext.currentComputed || !(activeContext.currentComputed._flags & RUNNING))
+    if (
+      !activeContext.currentComputed ||
+      !(activeContext.currentComputed._flags & RUNNING)
+    )
       return this._value;
 
     const current = activeContext.currentComputed;
@@ -87,9 +90,11 @@ Object.defineProperty(Signal.prototype, 'value', {
 
     // Create new dependency node using context pool
     activeContext.allocations++;
-    const newNode = activeContext.poolSize > 0
-      ? (activeContext.poolHits++, activeContext.nodePool[--activeContext.poolSize]!)
-      : (activeContext.poolMisses++, {} as DependencyNode);
+    const newNode =
+      activeContext.poolSize > 0
+        ? (activeContext.poolHits++,
+          activeContext.nodePool[--activeContext.poolSize]!)
+        : (activeContext.poolMisses++, {} as DependencyNode);
     newNode.source = this;
     newNode.target = current;
     newNode.version = this._version;
@@ -196,7 +201,6 @@ export function signal<T>(value: T): Signal<T> {
   return new Signal(value);
 }
 
-
 export function untrack<T>(fn: () => T): T {
   const prev = activeContext.currentComputed;
   activeContext.currentComputed = null;
@@ -222,9 +226,9 @@ export function withContext<T>(fn: () => T): T {
     poolSize: INITIAL_POOL_SIZE,
     allocations: 0,
     poolHits: 0,
-    poolMisses: 0
+    poolMisses: 0,
   };
-  
+
   try {
     return fn();
   } finally {

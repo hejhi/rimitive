@@ -8,7 +8,7 @@ export {
 } from './signals';
 
 // Core hooks - store and context management
-export { useLattice, useStore, useStoreContext } from './core';
+export { useLattice, useStore, useStoreContext, useSelect, createStoreHook } from './core';
 
 // Components
 export { LatticeProvider, StoreProvider } from './core';
