@@ -103,14 +103,16 @@ function handleSignalWrite(context: ContextInfo, event: LatticeEvent) {
       lastUpdated: event.timestamp || Date.now(),
     };
   } else {
-    // Signal doesn't exist yet, create it
+    // Signal doesn't exist in our local tracking, but don't increment count
+    // as it should have been counted when SIGNAL_CREATED was fired
     context.signals.push({
       id: writeData.id,
       name: writeData.name,
       value: writeData.newValue,
       lastUpdated: event.timestamp || Date.now(),
     });
-    context.signalCount++;
+    // Remove the increment - the signal was already counted on creation
+    // context.signalCount++;
   }
 }
 

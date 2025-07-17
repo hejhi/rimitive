@@ -22,14 +22,25 @@ export default defineContentScript({
       });
     });
 
-    // Listen for messages from devtools
+    // Listen for messages from devtools/background
     chrome.runtime.onMessage.addListener((message) => {
       if (!message || typeof message !== 'object') {
         return;
       }
 
       const msg = message as Record<string, unknown>;
-      if ('type' in msg && msg.type === 'FROM_DEVTOOLS') {
+      
+      // Handle state request from background
+      if ('type' in msg && msg.type === 'REQUEST_STATE') {
+        // Request state from the page
+        window.postMessage(
+          {
+            source: 'lattice-devtools-request',
+            type: 'REQUEST_STATE',
+          },
+          '*'
+        );
+      } else if ('type' in msg && msg.type === 'FROM_DEVTOOLS') {
         // Forward to page
         const messageData = 'data' in msg ? msg.data : {};
         window.postMessage(

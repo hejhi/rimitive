@@ -88,7 +88,7 @@ Violating ANY of the above just creates confusion and code bloat.
 
 - **Functions**: Maximum 20 lines, cyclomatic complexity < 5
 - **Files**: Maximum 300 lines
-- **Classes**: Maximum 7 public methods
+- **Classes**: NO CLASSES. NO PROXIES.
 - **Changes**: Maximum 200 lines per edit
 - **Refactor first**: Simplify before adding features
 

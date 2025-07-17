@@ -22,7 +22,7 @@ export default defineConfig({
     name: 'Lattice DevTools',
     description: 'Developer tools for debugging Lattice reactive applications',
     version: '0.0.1',
-    permissions: ['storage', 'scripting'],
+    permissions: ['storage', 'scripting', 'webNavigation'],
     host_permissions: ['<all_urls>'],
     web_accessible_resources: [
       {

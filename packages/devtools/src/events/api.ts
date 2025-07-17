@@ -124,12 +124,33 @@ export function createDevToolsAPIManager(eventEmitter: EventEmitter): DevToolsAP
         // Notify extension that DevTools are available
         window.postMessage({
           source: MESSAGE_SOURCE,
-          type: 'INIT',
+          type: 'LATTICE_DETECTED',
           payload: {
             enabled: true,
             version: api.version,
           }
         }, '*');
+        
+        // Listen for state requests from extension
+        window.addEventListener('message', (event) => {
+          if (event.source !== window || !event.data) return;
+          
+          const data = event.data as Record<string, unknown>;
+          if (data.source === 'lattice-devtools-request' && data.type === 'REQUEST_STATE') {
+            // Send current state
+            const contexts = api.getContexts();
+            window.postMessage({
+              source: MESSAGE_SOURCE,
+              type: 'STATE_RESPONSE',
+              payload: {
+                connected: true,
+                contexts,
+                transactions: [], // Events will be sent separately
+                selectedContext: contexts.length > 0 ? contexts[0]?.id || null : null
+              }
+            }, '*');
+          }
+        });
       }
     },
 
