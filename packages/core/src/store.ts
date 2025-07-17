@@ -49,6 +49,22 @@ Store.prototype.select = function <T extends object, R>(
   });
 };
 
+// Computed method - create a computed value in the store's context
+Store.prototype.computed = function <T extends object, R>(
+  this: Store<T>,
+  fn: () => R
+): Computed<R> {
+  return this._context.computed(fn);
+};
+
+// Subscribe method - create an effect in the store's context
+Store.prototype.subscribe = function <T extends object>(
+  this: Store<T>,
+  fn: () => void
+): () => void {
+  return this._context.effect(fn);
+};
+
 // Set method - update state with automatic batching
 Store.prototype.set = function <T extends object>(
   this: Store<T>,
@@ -111,6 +127,15 @@ export interface Store<T extends object> {
   /** Create a computed selector from store state */
   select<R>(selector: (state: T) => R): Computed<R>;
 
+  /** Create a computed value in the store's context */
+  computed<R>(fn: () => R): Computed<R>;
+
+  /** Create an effect in the store's context */
+  effect(fn: () => void): () => void;
+
+  /** Subscribe to any store state changes (called on change, not initial) */
+  subscribe(listener: () => void): () => void;
+
   /** Update state with automatic batching */
   set(updates: Partial<T> | ((current: T) => Partial<T>)): void;
 
@@ -138,16 +163,24 @@ export interface Store<T extends object> {
  * // Create computed selectors
  * const count = store.select(s => s.count);
  * const uppercaseName = store.select(s => s.name.toUpperCase());
- * const combined = store.select(s => ({ count: s.count, name: s.name }));
+ *
+ * // Create computed values with fine-grained reactivity
+ * const doubled = store.computed(() => store.state.count.value * 2);
  *
  * // Update state (automatically batched)
  * store.set({ count: 1, name: 'Updated' });
  *
- * // Use effects to react to changes
- * const ctx = store.getContext();
- * const unsubscribe = ctx.effect(() => {
- *   console.log('Count is:', count.value);
+ * // Effect runs immediately and on changes
+ * const cleanup = store.effect(() => {
+ *   console.log('Count is:', store.state.count.value); // Logs: "Count is: 1"
  * });
+ *
+ * // Subscribe only runs on changes (not initially)
+ * const unsubscribe = store.subscribe(() => {
+ *   console.log('Store changed!'); // Not called until next change
+ * });
+ *
+ * store.set({ count: 2 }); // Both effect and subscribe fire
  * ```
  */
 export function createStore<T extends object>(

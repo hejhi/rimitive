@@ -72,18 +72,43 @@ describe('Store', () => {
     expect(store.state.count.value).toBe(2);
   });
 
+  it('should provide convenience methods for computed and subscribe', () => {
+    const store = createStore({ count: 0, name: 'test' });
+
+    // Test computed
+    const doubled = store.computed(() => store.state.count.value * 2);
+    expect(doubled.value).toBe(0);
+
+    store.set({ count: 5 });
+    expect(doubled.value).toBe(10);
+
+    // Test subscribe
+    let subscribeCount = 0;
+    const cleanup = store.subscribe(() => {
+      void store.state.count.value;
+      subscribeCount++;
+    });
+
+    expect(subscribeCount).toBe(1); // Runs immediately
+
+    store.set({ count: 10 });
+    expect(subscribeCount).toBe(2); // Runs on change
+
+    cleanup();
+  });
+
   describe('selectors', () => {
     it('should create computed selectors with store.select', () => {
       const store = createStore({ count: 0, name: 'test' });
-      
+
       // Single value selector
-      const count = store.select(s => s.count);
+      const count = store.select((s) => s.count);
       expect(count.value).toBe(0);
-      
+
       // Computed derived value
-      const doubled = store.select(s => s.count * 2);
+      const doubled = store.select((s) => s.count * 2);
       expect(doubled.value).toBe(0);
-      
+
       store.set({ count: 5 });
       expect(count.value).toBe(5);
       expect(doubled.value).toBe(10);
@@ -91,25 +116,25 @@ describe('Store', () => {
 
     it('should work with object selectors', () => {
       const store = createStore({ user: { name: 'John', age: 30 }, count: 0 });
-      
+
       // Select multiple values
-      const selection = store.select(s => ({ 
-        userName: s.user.name, 
+      const selection = store.select((s) => ({
+        userName: s.user.name,
         userAge: s.user.age,
-        count: s.count 
+        count: s.count,
       }));
-      
+
       expect(selection.value).toEqual({
         userName: 'John',
         userAge: 30,
-        count: 0
+        count: 0,
       });
-      
+
       store.set({ user: { name: 'Jane', age: 25 } });
       expect(selection.value).toEqual({
         userName: 'Jane',
         userAge: 25,
-        count: 0
+        count: 0,
       });
     });
 
@@ -119,43 +144,46 @@ describe('Store', () => {
         text: string;
         done: boolean;
       }
-      
+
       const store = createStore({
         todos: [
           { id: 1, text: 'Task 1', done: false },
           { id: 2, text: 'Task 2', done: true },
-          { id: 3, text: 'Task 3', done: false }
-        ] as Todo[]
+          { id: 3, text: 'Task 3', done: false },
+        ] as Todo[],
       });
-      
-      const stats = store.select(s => ({
+
+      const stats = store.select((s) => ({
         total: s.todos.length,
-        completed: s.todos.filter(t => t.done).length,
-        active: s.todos.filter(t => !t.done).length,
-        percentComplete: s.todos.length > 0 
-          ? Math.round((s.todos.filter(t => t.done).length / s.todos.length) * 100)
-          : 0
+        completed: s.todos.filter((t) => t.done).length,
+        active: s.todos.filter((t) => !t.done).length,
+        percentComplete:
+          s.todos.length > 0
+            ? Math.round(
+                (s.todos.filter((t) => t.done).length / s.todos.length) * 100
+              )
+            : 0,
       }));
-      
+
       expect(stats.value).toEqual({
         total: 3,
         completed: 1,
         active: 2,
-        percentComplete: 33
+        percentComplete: 33,
       });
-      
+
       // Mark another task as done
-      store.set({ 
-        todos: store.state.todos.value.map(t => 
+      store.set({
+        todos: store.state.todos.value.map((t) =>
           t.id === 3 ? { ...t, done: true } : t
-        )
+        ),
       });
-      
+
       expect(stats.value).toEqual({
         total: 3,
         completed: 2,
         active: 1,
-        percentComplete: 67
+        percentComplete: 67,
       });
     });
   });
