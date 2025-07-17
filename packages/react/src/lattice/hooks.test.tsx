@@ -1,11 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { createStore, createLattice } from '@lattice/core';
-import {
-  useLattice,
-  useStore,
-  useStoreContext,
-} from './hooks';
+import { createStore, createLattice } from '@lattice/lattice';
+import { useLattice, useStore, useStoreContext } from './hooks';
 import { LatticeProvider, StoreProvider } from './components';
 import { renderHookWithLattice } from '../testing';
 import React from 'react';
@@ -137,5 +133,4 @@ describe('Core Hooks', () => {
       expect(result.current).toBe(store);
     });
   });
-
 });

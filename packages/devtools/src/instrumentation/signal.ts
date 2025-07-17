@@ -1,12 +1,12 @@
 /**
  * Signal instrumentation for DevTools
- * 
+ *
  * This module handles the instrumentation of Signal primitives
  * for tracking reads, writes, and dependency updates.
  */
 
 import type { Signal } from '@lattice/signals';
-import type { LatticeContext } from '@lattice/core';
+import type { LatticeContext } from '@lattice/lattice';
 import type { PrimitiveRegistry } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions } from '../types';
@@ -35,10 +35,14 @@ export function instrumentSignal<T>(
 ): Signal<T> {
   // Create the signal
   const signal = context.signal(initialValue);
-  
+
   // Register the signal
-  const tracked = options.registry.registerSignal(signal, options.contextId, name);
-  
+  const tracked = options.registry.registerSignal(
+    signal,
+    options.contextId,
+    name
+  );
+
   // Emit creation event
   options.eventEmitter.emit({
     type: 'SIGNAL_CREATED',
@@ -50,7 +54,7 @@ export function instrumentSignal<T>(
       initialValue,
     },
   });
-  
+
   // Update context count
   options.eventEmitter.emit({
     type: 'CONTEXT_CREATED',
@@ -58,10 +62,10 @@ export function instrumentSignal<T>(
     timestamp: Date.now(),
     data: { id: options.contextId, name: 'signal' },
   });
-  
+
   // Instrument value getter/setter
   instrumentSignalValue(signal, tracked.id, name, options);
-  
+
   // Wrap select method
   wrapSelectMethod(signal, tracked, {
     contextId: options.contextId,
@@ -69,12 +73,14 @@ export function instrumentSignal<T>(
     eventEmitter: options.eventEmitter,
     trackReads: options.devToolsOptions.trackReads,
   });
-  
+
   // Emit initial dependency snapshot
   setTimeout(() => {
-    options.eventEmitter.emit(getDependencySnapshot(tracked, 'created', options.registry));
+    options.eventEmitter.emit(
+      getDependencySnapshot(tracked, 'created', options.registry)
+    );
   }, 0);
-  
+
   return signal;
 }
 
@@ -85,7 +91,10 @@ function instrumentSignalValue<T>(
   signal: Signal<T>,
   signalId: string,
   name: string | undefined,
-  options: Pick<SignalInstrumentationOptions, 'contextId' | 'eventEmitter' | 'devToolsOptions' | 'registry'>
+  options: Pick<
+    SignalInstrumentationOptions,
+    'contextId' | 'eventEmitter' | 'devToolsOptions' | 'registry'
+  >
 ): void {
   // Get the property descriptor from the prototype
   const proto = Object.getPrototypeOf(signal) as object | null;
@@ -119,7 +128,7 @@ function instrumentSignalValue<T>(
 
       return value;
     },
-    
+
     set(newValue: T) {
       const oldValue = originalGet() as T;
       const result = originalSet(newValue);
@@ -141,13 +150,15 @@ function instrumentSignalValue<T>(
       const tracked = options.registry.get(signal);
       if (tracked) {
         setTimeout(() => {
-          options.eventEmitter.emit(getDependencySnapshot(tracked, 'updated', options.registry));
+          options.eventEmitter.emit(
+            getDependencySnapshot(tracked, 'updated', options.registry)
+          );
         }, 0);
       }
 
       return result;
     },
-    
+
     enumerable: descriptor.enumerable,
     configurable: true,
   });

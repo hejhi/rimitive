@@ -2,7 +2,7 @@ import { createContext } from 'react';
 import type {
   Store,
   LatticeContext as BaseLatticeContext,
-} from '@lattice/core';
+} from '@lattice/lattice';
 
 /**
  * React context for providing a Lattice instance to the component tree.

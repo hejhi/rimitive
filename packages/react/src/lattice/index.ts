@@ -16,9 +16,3 @@ export type {
   StoreFactory,
   StoreSelector,
 } from './types';
-
-// Re-export core types for convenience
-export type {
-  Store,
-  LatticeContext as BaseLatticeContext,
-} from '@lattice/core';

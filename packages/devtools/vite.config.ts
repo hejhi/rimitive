@@ -18,7 +18,7 @@ export default defineConfig({
       fileName: 'index',
     },
     rollupOptions: {
-      external: ['@lattice/signals', '@lattice/core'],
+      external: ['@lattice/signals', '@lattice/lattice'],
       output: {
         preserveModules: true,
         preserveModulesRoot: 'src',

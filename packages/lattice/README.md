@@ -1,11 +1,11 @@
-# @lattice/core
+# @lattice/lattice
 
 Build headless, portable, incredibly fast and reactive components that compose...without components.
 
 State management are context-driven stores of packaged signals that can scale from simple counters to complex applications. "Components" are just a functional pattern. Use like React Context, but with fine-grained updates, in whatever framework you want, even on the server.
 
 ```typescript
-import { createStore } from '@lattice/core';
+import { createStore } from '@lattice/lattice';
 
 function Counter(store: Store<{ count: number }>) {
   return {
@@ -25,7 +25,7 @@ counter.increment(); // count is now 1
 ## Installation
 
 ```bash
-npm install @lattice/core
+npm install @lattice/lattice
 ```
 
 ## Features
@@ -280,7 +280,7 @@ test('Counter increments', () => {
 Use the `partial` helper for single-property updates.
 
 ```typescript
-import { partial } from '@lattice/core';
+import { partial } from '@lattice/lattice';
 
 function Settings(store: Store<{ theme: string; fontSize: number }>) {
   return {

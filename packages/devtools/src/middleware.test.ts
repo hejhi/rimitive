@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createLattice, createStore } from '@lattice/core';
+import { createLattice, createStore } from '@lattice/lattice';
 import { withDevTools } from './middleware';
 import { getDevToolsAPI } from './events/api';
 

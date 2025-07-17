@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@lattice/core": "workspace:*",
+    "@lattice/lattice": "workspace:*",
     "@lattice/devtools": "workspace:*",
     "@lattice/signals": "workspace:*"
   },

@@ -22,7 +22,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         'signals/index': resolve(__dirname, 'src/signals/index.ts'),
-        'core/index': resolve(__dirname, 'src/core/index.ts'),
+        'lattice/index': resolve(__dirname, 'src/lattice/index.ts'),
         'testing/index': resolve(__dirname, 'src/testing/index.tsx'),
       },
       formats: ['es'],
@@ -32,7 +32,7 @@ export default defineConfig({
         'react',
         'react-dom',
         '@lattice/signals',
-        '@lattice/core',
+        '@lattice/lattice',
         '@testing-library/react',
         'vitest',
         /^vitest/,

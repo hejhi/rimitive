@@ -13,8 +13,8 @@
     "noImplicitReturns": true,
     "composite": true,
     "paths": {
-      "@lattice/core": ["../core/src/index.ts"],
-      "@lattice/core/*": ["../core/src/*"],
+      "@lattice/lattice": ["../lattice/src/index.ts"],
+      "@lattice/lattice/*": ["../lattice/src/*"],
       "@lattice/signals": ["../signals/src/index.ts"],
       "@lattice/signals/*": ["../signals/src/*"]
     }
@@ -23,7 +23,7 @@
     "src/**/*.ts"
   ],
   "references": [
-    { "path": "../core" },
+    { "path": "../lattice" },
     { "path": "../signals" }
   ]
 }

@@ -16,11 +16,11 @@
 ## Installation
 
 ```bash
-npm install @lattice/react @lattice/signals @lattice/core
+npm install @lattice/react @lattice/signals @lattice/lattice
 # or
-yarn add @lattice/react @lattice/signals @lattice/core
+yarn add @lattice/react @lattice/signals @lattice/lattice
 # or
-pnpm add @lattice/react @lattice/signals @lattice/core
+pnpm add @lattice/react @lattice/signals @lattice/lattice
 ```
 
 ## Quick Start
@@ -164,7 +164,7 @@ Create and manage a store with component lifecycle.
 
 ```tsx
 import { useStore } from '@lattice/react';
-import { createStore } from '@lattice/core';
+import { createStore } from '@lattice/lattice';
 
 function TodoApp() {
   const store = useStore(() =>
@@ -365,10 +365,9 @@ test('useSubscribe updates', () => {
 test('Store updates', () => {
   const store = createTestStore({ count: 0 });
 
-  const { result } = renderHookWithLattice(
-    () => useSelect((s) => s.count),
-    { store }
-  );
+  const { result } = renderHookWithLattice(() => useSelect((s) => s.count), {
+    store,
+  });
 
   expect(result.current).toBe(0);
 

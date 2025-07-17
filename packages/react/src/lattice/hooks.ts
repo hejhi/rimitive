@@ -2,7 +2,7 @@ import { useContext, useEffect, useRef, useMemo } from 'react';
 import type {
   Store,
   LatticeContext as BaseLatticeContext,
-} from '@lattice/core';
+} from '@lattice/lattice';
 import { useSubscribe } from '../signals/hooks';
 import { LatticeContext, StoreContext } from './context';
 import type { StoreFactory, StoreSelector } from './types';

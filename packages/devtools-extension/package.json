@@ -20,7 +20,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@lattice/core": "workspace:*",
+    "@lattice/lattice": "workspace:*",
     "@lattice/devtools": "workspace:*",
     "@lattice/signals": "workspace:*",
     "@radix-ui/react-dropdown-menu": "^2.1.15",

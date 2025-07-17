@@ -8,10 +8,16 @@ export {
 } from './signals';
 
 // Core hooks - store and context management
-export { useLattice, useStore, useStoreContext, useSelect, createStoreHook } from './core';
+export {
+  useLattice,
+  useStore,
+  useStoreContext,
+  useSelect,
+  createStoreHook,
+} from './lattice';
 
 // Components
-export { LatticeProvider, StoreProvider } from './core';
+export { LatticeProvider, StoreProvider } from './lattice';
 
 // Types
 export type {
@@ -27,9 +33,9 @@ export type {
   LatticeProviderProps,
   StoreProviderProps,
   StoreFactory,
-} from './core';
+} from './lattice';
 
 // Re-export commonly used types from @lattice packages
 export type { Signal, Computed, Selected } from '@lattice/signals';
 
-export type { Store, LatticeContext } from '@lattice/core';
+export type { Store, LatticeContext } from '@lattice/lattice';

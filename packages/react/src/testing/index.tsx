@@ -5,9 +5,9 @@ import {
   RenderOptions,
   RenderHookOptions,
 } from '@testing-library/react';
-import { createLattice, createStore } from '@lattice/core';
-import type { Store, LatticeContext } from '@lattice/core';
-import { LatticeProvider, StoreProvider } from '../core';
+import { createLattice, createStore } from '@lattice/lattice';
+import type { Store, LatticeContext } from '@lattice/lattice';
+import { LatticeProvider, StoreProvider } from '../lattice';
 
 interface LatticeTestingOptions {
   latticeContext?: LatticeContext;

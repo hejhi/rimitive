@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type {
   Store,
   LatticeContext as BaseLatticeContext,
-} from '@lattice/core';
+} from '@lattice/lattice';
 
 export interface LatticeProviderProps {
   children: ReactNode;
@@ -18,4 +18,6 @@ export interface StoreProviderProps<
 
 export type StoreFactory<T extends Record<string, unknown>> = () => Store<T>;
 
-export type StoreSelector<T extends Record<string, unknown>, R> = (state: T) => R;
+export type StoreSelector<T extends Record<string, unknown>, R> = (
+  state: T
+) => R;

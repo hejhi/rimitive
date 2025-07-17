@@ -1,5 +1,5 @@
 {
-  "name": "@lattice/core",
+  "name": "@lattice/lattice",
   "version": "0.0.1",
   "description": "Core framework-agnostic behavior composition layer for Lattice components",
   "author": "Lattice Team",

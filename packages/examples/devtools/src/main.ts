@@ -1,4 +1,4 @@
-import { createStore, createLattice } from '@lattice/core';
+import { createStore, createLattice } from '@lattice/lattice';
 import { withDevTools } from '@lattice/devtools';
 
 // Initialize devtools for the entire app
@@ -46,12 +46,12 @@ const todoStore = createStore(
 const todoContext = todoStore.getContext();
 
 // Use selectors to create more granular reactivity
-const currentFilter = todoStore.state.filter.select(f => f);
-const activeTodos = todoStore.state.todos.select(todos => 
-  todos.filter(todo => !todo.completed)
+const currentFilter = todoStore.state.filter.select((f) => f);
+const activeTodos = todoStore.state.todos.select((todos) =>
+  todos.filter((todo) => !todo.completed)
 );
-const completedTodos = todoStore.state.todos.select(todos => 
-  todos.filter(todo => todo.completed)
+const completedTodos = todoStore.state.todos.select((todos) =>
+  todos.filter((todo) => todo.completed)
 );
 
 const filteredTodos = todoContext.computed(() => {

@@ -28,4 +28,4 @@ pnpm dev
 3. Add your example code
 4. The example will automatically be recognized as a workspace package
 
-All examples have access to the workspace dependencies, so you can import from `@lattice/core`, `@lattice/signals`, etc.
+All examples have access to the workspace dependencies, so you can import from `@lattice/lattice`, `@lattice/signals`, etc.

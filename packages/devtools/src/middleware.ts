@@ -5,7 +5,7 @@
  * for debugging and visualization with minimal performance overhead.
  */
 
-import type { LatticeContext } from '@lattice/core';
+import type { LatticeContext } from '@lattice/lattice';
 import type { DevToolsOptions } from './types';
 import { ID_PREFIXES } from './constants';
 import { createEventEmitter } from './events/emitter';
@@ -18,7 +18,7 @@ import { instrumentBatch } from './instrumentation/batch';
 
 /**
  * Creates a devtools middleware that instruments a Lattice context
- * 
+ *
  * @param options - Configuration options for the DevTools
  * @returns A middleware function that wraps a LatticeContext
  */
@@ -27,19 +27,19 @@ export function withDevTools(options: DevToolsOptions = {}) {
     // Create context-specific instances
     const contextId = generateContextId();
     const contextName = options.name || 'LatticeContext';
-    
+
     const eventEmitter = createEventEmitter({
       maxEvents: options.maxEvents,
     });
-    
+
     const apiManager = createDevToolsAPIManager(eventEmitter);
     apiManager.initialize();
-    
+
     const registry = createPrimitiveRegistry();
-    
+
     // Register context
     apiManager.registerContext(contextId, contextName);
-    
+
     // Emit context creation
     eventEmitter.emit({
       type: 'CONTEXT_CREATED',
@@ -50,13 +50,13 @@ export function withDevTools(options: DevToolsOptions = {}) {
         name: contextName,
       },
     });
-    
+
     // Set up event listener to update context counts
     eventEmitter.emit = ((originalEmit) => {
       return (event) => {
         // Call original emit
         originalEmit.call(eventEmitter, event);
-        
+
         // Update context counts based on event type
         switch (event.type) {
           case 'SIGNAL_CREATED':
@@ -71,7 +71,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
         }
       };
     })(eventEmitter.emit.bind(eventEmitter));
-    
+
     // Create instrumentation options
     const instrumentationOptions = {
       contextId,
@@ -79,25 +79,30 @@ export function withDevTools(options: DevToolsOptions = {}) {
       eventEmitter,
       devToolsOptions: options,
     };
-    
+
     // Return instrumented context
     return {
       signal<T>(initialValue: T, name?: string) {
-        return instrumentSignal(context, initialValue, name, instrumentationOptions);
+        return instrumentSignal(
+          context,
+          initialValue,
+          name,
+          instrumentationOptions
+        );
       },
-      
+
       computed<T>(fn: () => T, name?: string) {
         return instrumentComputed(context, fn, name, instrumentationOptions);
       },
-      
+
       effect(fn: () => void | (() => void)) {
         return instrumentEffect(context, fn, instrumentationOptions);
       },
-      
+
       batch(fn: () => void) {
         return instrumentBatch(context, fn, instrumentationOptions);
       },
-      
+
       dispose() {
         // Emit disposal event
         eventEmitter.emit({
@@ -109,12 +114,12 @@ export function withDevTools(options: DevToolsOptions = {}) {
             name: contextName,
           },
         });
-        
+
         // Clean up
         registry.clearContext(contextId);
         apiManager.unregisterContext(contextId);
         eventEmitter.destroy();
-        
+
         // Dispose the original context
         context.dispose();
       },

@@ -37,7 +37,7 @@ const count = signal(0);
 const doubled = computed(() => count.value * 2);
 ```
 
-### [@lattice/core](/packages/core)
+### [@lattice/lattice](/packages/lattice)
 
 Composable stores with isolated contexts for building reactive components.
 
@@ -53,7 +53,7 @@ const todos = TodoList(store);
 npm install @lattice/signals
 
 # With component patterns
-npm install @lattice/core
+npm install @lattice/lattice
 ```
 
 ## The Gap Lattice Fills

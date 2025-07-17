@@ -28,7 +28,7 @@
     "check": "pnpm typecheck && pnpm lint"
   },
   "dependencies": {
-    "@lattice/core": "workspace:*",
+    "@lattice/lattice": "workspace:*",
     "@lattice/signals": "workspace:*"
   },
   "devDependencies": {

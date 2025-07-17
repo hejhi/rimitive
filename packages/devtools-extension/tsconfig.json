@@ -7,7 +7,7 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@lattice/core": ["../core/src/index.ts"],
+      "@lattice/lattice": ["../lattice/src/index.ts"],
       "@lattice/signals": ["../signals/src/index.ts"],
       "@lattice/devtools": ["../devtools/src/index.ts"]
     }
@@ -25,7 +25,7 @@
     "demo"
   ],
   "references": [
-    { "path": "../core" },
+    { "path": "../lattice" },
     { "path": "../signals" },
     { "path": "../devtools" }
   ]

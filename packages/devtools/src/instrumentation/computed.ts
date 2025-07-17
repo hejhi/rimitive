@@ -1,12 +1,12 @@
 /**
  * Computed instrumentation for DevTools
- * 
+ *
  * This module handles the instrumentation of Computed primitives
  * for tracking execution, dependencies, and performance.
  */
 
 import type { Computed } from '@lattice/signals';
-import type { LatticeContext } from '@lattice/core';
+import type { LatticeContext } from '@lattice/lattice';
 import type { PrimitiveRegistry, TrackedComputed } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions } from '../types';
@@ -35,19 +35,23 @@ export function instrumentComputed<T>(
 ): Computed<T> {
   // Create wrapped function that tracks execution
   const wrappedFn = createWrappedComputedFn(fn, name, options);
-  
+
   // Create the computed
   const computed = context.computed(wrappedFn);
-  
+
   // Register the computed
-  const tracked = options.registry.registerComputed(computed, options.contextId, name);
-  
+  const tracked = options.registry.registerComputed(
+    computed,
+    options.contextId,
+    name
+  );
+
   // Store tracked reference for the wrapper to use
   interface FunctionWithTracked {
     __tracked?: TrackedComputed;
   }
   (wrappedFn as FunctionWithTracked).__tracked = tracked;
-  
+
   // Emit creation event
   options.eventEmitter.emit({
     type: 'COMPUTED_CREATED',
@@ -55,7 +59,7 @@ export function instrumentComputed<T>(
     timestamp: Date.now(),
     data: { id: tracked.id, name },
   });
-  
+
   // Update context count
   options.eventEmitter.emit({
     type: 'CONTEXT_CREATED',
@@ -63,7 +67,7 @@ export function instrumentComputed<T>(
     timestamp: Date.now(),
     data: { id: options.contextId, name: 'computed' },
   });
-  
+
   // Wrap select method
   wrapSelectMethod(computed, tracked, {
     contextId: options.contextId,
@@ -71,9 +75,9 @@ export function instrumentComputed<T>(
     eventEmitter: options.eventEmitter,
     trackReads: options.devToolsOptions.trackReads,
   });
-  
+
   // Dependencies will be emitted after first execution
-  
+
   return computed;
 }
 
@@ -96,9 +100,9 @@ function createWrappedComputedFn<T>(
       // Fallback if tracked not set yet
       return fn.call(this);
     }
-    
+
     const startTime = performance.now();
-    
+
     // Execute within context
     const result = executionContext.withContext(tracked.id, () => {
       // Emit start event
@@ -108,11 +112,11 @@ function createWrappedComputedFn<T>(
         timestamp: Date.now(),
         data: { id: tracked.id, name },
       });
-      
+
       // Execute the actual function
       return fn.call(this);
     });
-    
+
     // Emit end event
     options.eventEmitter.emit({
       type: 'COMPUTED_END',
@@ -125,14 +129,16 @@ function createWrappedComputedFn<T>(
         value: result,
       },
     });
-    
+
     // Emit dependency update after execution
     setTimeout(() => {
-      options.eventEmitter.emit(getDependencySnapshot(tracked, 'executed', options.registry));
+      options.eventEmitter.emit(
+        getDependencySnapshot(tracked, 'executed', options.registry)
+      );
     }, 0);
-    
+
     return result;
   };
-  
+
   return wrappedFn;
 }

@@ -17,9 +17,9 @@
       "import": "./dist/signals/index.js",
       "types": "./dist/signals/index.d.ts"
     },
-    "./core": {
-      "import": "./dist/core/index.js",
-      "types": "./dist/core/index.d.ts"
+    "./lattice": {
+      "import": "./dist/lattice/index.js",
+      "types": "./dist/lattice/index.d.ts"
     },
     "./testing": {
       "import": "./dist/testing/index.js",
@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@lattice/signals": "workspace:*",
-    "@lattice/core": "workspace:*"
+    "@lattice/lattice": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=16.8.0"

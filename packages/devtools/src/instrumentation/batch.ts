@@ -1,11 +1,11 @@
 /**
  * Batch operation instrumentation for DevTools
- * 
+ *
  * This module handles the instrumentation of batch operations
  * for tracking performance and graph snapshots.
  */
 
-import type { LatticeContext } from '@lattice/core';
+import type { LatticeContext } from '@lattice/lattice';
 import type { PrimitiveRegistry } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions, GraphSnapshotData } from '../types';
@@ -31,7 +31,7 @@ export function instrumentBatch(
   options: BatchInstrumentationOptions
 ): void {
   const batchId = `${ID_PREFIXES.BATCH}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  
+
   // Emit batch start event
   options.eventEmitter.emit({
     type: 'BATCH_START',
@@ -39,11 +39,11 @@ export function instrumentBatch(
     timestamp: Date.now(),
     data: { id: batchId },
   });
-  
+
   try {
     // Execute the batch
     context.batch(fn);
-    
+
     // Emit batch end event
     options.eventEmitter.emit({
       type: 'BATCH_END',
@@ -54,7 +54,7 @@ export function instrumentBatch(
         success: true,
       },
     });
-    
+
     // Emit graph snapshot if enabled
     if (options.devToolsOptions.snapshotOnBatch !== false) {
       emitGraphSnapshot(options);
@@ -71,7 +71,7 @@ export function instrumentBatch(
         error: error instanceof Error ? error.message : String(error),
       },
     });
-    
+
     throw error;
   }
 }
@@ -81,7 +81,7 @@ export function instrumentBatch(
  */
 function emitGraphSnapshot(options: BatchInstrumentationOptions): void {
   const graphData = buildGraphSnapshot(options.contextId, options.registry);
-  
+
   options.eventEmitter.emit({
     type: 'GRAPH_SNAPSHOT',
     contextId: options.contextId,
@@ -100,10 +100,10 @@ function buildGraphSnapshot(
   const nodes: GraphSnapshotData['nodes'] = [];
   const edges: GraphSnapshotData['edges'] = [];
   const edgeSet = new Set<string>(); // To avoid duplicate edges
-  
+
   // Get all primitives for this context
   const primitives = registry.getContextPrimitives(contextId);
-  
+
   // Create nodes
   for (const tracked of primitives) {
     if (tracked.type === 'selector') {
@@ -115,7 +115,7 @@ function buildGraphSnapshot(
         value: undefined, // Selectors don't store values directly
         isActive: true,
       });
-      
+
       // Add edge from source to selector
       const edgeKey = `${tracked.sourceId}->${tracked.id}`;
       if (!edgeSet.has(edgeKey)) {
@@ -131,12 +131,13 @@ function buildGraphSnapshot(
         id: tracked.id,
         type: tracked.type,
         name: tracked.name,
-        value: tracked.type === 'signal' || tracked.type === 'computed' 
-          ? getCurrentValue(tracked.ref) 
-          : undefined,
+        value:
+          tracked.type === 'signal' || tracked.type === 'computed'
+            ? getCurrentValue(tracked.ref)
+            : undefined,
         isActive: true,
       });
-      
+
       // Build edges from dependencies
       if (tracked.type === 'computed' || tracked.type === 'effect') {
         const deps = getDependencies(tracked.ref);
@@ -158,6 +159,6 @@ function buildGraphSnapshot(
       }
     }
   }
-  
+
   return { nodes, edges };
 }

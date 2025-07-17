@@ -9,7 +9,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig({
   srcDir: '.',
   alias: {
-    '@lattice/core': resolve(__dirname, '../core/src/index.ts'),
+    '@lattice/lattice': resolve(__dirname, '../lattice/src/index.ts'),
     '@lattice/signals': resolve(__dirname, '../signals/src/index.ts'),
     '@lattice/devtools': resolve(__dirname, '../devtools/src/index.ts'),
     '@/lib/utils': resolve(__dirname, 'src/lib/utils.ts'),
@@ -48,7 +48,7 @@ export default defineConfig({
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
-      exclude: ['@lattice/core', '@lattice/signals', '@lattice/devtools'],
+      exclude: ['@lattice/lattice', '@lattice/signals', '@lattice/devtools'],
     },
     server: {
       watch: {

@@ -24,6 +24,6 @@
   ],
   "references": [
     { "path": "../signals" },
-    { "path": "../core" }
+    { "path": "../lattice" }
   ]
 }

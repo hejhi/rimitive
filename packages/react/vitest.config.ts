@@ -7,15 +7,12 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     includeSource: ['./src/**/*.{js,ts,tsx}'],
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-    ],
+    exclude: ['**/node_modules/**', '**/dist/**'],
   },
   resolve: {
     alias: {
       '@lattice/signals': path.resolve(__dirname, '../signals/src'),
-      '@lattice/core': path.resolve(__dirname, '../core/src'),
+      '@lattice/lattice': path.resolve(__dirname, '../lattice/src'),
     },
   },
 });

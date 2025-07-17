@@ -1,4 +1,4 @@
-import { createLattice, createStore } from '@lattice/core';
+import { createLattice, createStore } from '@lattice/lattice';
 import { DevToolsState } from './types';
 
 // Create a Lattice context for the devtools panel itself

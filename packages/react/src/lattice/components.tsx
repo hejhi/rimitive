@@ -1,5 +1,5 @@
 import React, { useMemo, useEffect } from 'react';
-import { createLattice } from '@lattice/core';
+import { createLattice } from '@lattice/lattice';
 import { LatticeContext, StoreContext } from './context';
 import type { LatticeProviderProps, StoreProviderProps } from './types';
 
