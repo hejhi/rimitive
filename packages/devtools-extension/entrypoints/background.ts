@@ -64,14 +64,14 @@ export default defineBackground(() => {
             });
 
             // Request fresh state from the page
-            chrome.tabs.sendMessage(tabId, {
+            void chrome.tabs.sendMessage(tabId, {
               type: 'REQUEST_STATE',
               source: 'lattice-devtools-background'
             });
           }
         } else if (msg.type === 'GET_STATE' && msg.tabId) {
           // Request fresh state from the page
-          chrome.tabs.sendMessage(msg.tabId, {
+          void chrome.tabs.sendMessage(msg.tabId, {
             type: 'REQUEST_STATE',
             source: 'lattice-devtools-background'
           });

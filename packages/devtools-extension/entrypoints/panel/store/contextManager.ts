@@ -1,10 +1,10 @@
-import { devtoolsStore } from '../devtoolsCtx';
+import { devtoolsStore } from './devtoolsCtx';
 import {
   ContextInfo,
   SignalCreatedData,
   SignalWriteData,
   SelectorCreatedEventData,
-} from '../types';
+} from './types';
 import { LatticeEvent } from './messageHandler';
 import { addNodeToGraph, scheduleBatchUpdate } from './dependencyGraph';
 

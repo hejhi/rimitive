@@ -1,9 +1,9 @@
-import { devtoolsStore } from '../devtoolsCtx';
+import { devtoolsStore } from './devtoolsCtx';
 import {
   DependencyUpdateData,
   GraphSnapshotData,
   DependencyNode,
-} from '../types';
+} from './types';
 
 // Batch updates to avoid multiple re-renders
 let updateBatch: (() => void)[] = [];

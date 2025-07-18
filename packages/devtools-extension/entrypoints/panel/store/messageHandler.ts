@@ -1,5 +1,5 @@
-import { devtoolsStore } from '../devtoolsCtx';
-import { ContextInfo } from '../types';
+import { devtoolsStore } from './devtoolsCtx';
+import { ContextInfo } from './types';
 import { updateContextFromEvent } from './contextManager';
 import { processLogEntry } from './logProcessor';
 

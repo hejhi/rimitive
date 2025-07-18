@@ -1,4 +1,4 @@
-import { devtoolsStore } from '../devtoolsCtx';
+import { devtoolsStore } from './devtoolsCtx';
 import {
   LogEntry,
   SignalWriteData,
@@ -19,7 +19,7 @@ import {
   ComputedEndEventData,
   EffectEndEventData,
   SelectorCreatedEventData,
-} from '../types';
+} from './types';
 import { LatticeEvent } from './messageHandler';
 import { updateDependencyGraph, updateGraphSnapshot } from './dependencyGraph';
 
