@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import type {
   ContextInfo,
-  Transaction,
   LogEntry,
   DependencyNode,
 } from '../store/types';
@@ -12,7 +11,6 @@ interface ImportData {
   exportDate: string;
   state: {
     contexts?: ContextInfo[];
-    transactions?: Transaction[];
     logEntries?: LogEntry[];
     dependencyGraph?: {
       nodes?: Array<{
@@ -50,7 +48,6 @@ export function useDataExport() {
       exportDate: new Date().toISOString(),
       state: {
         contexts: devtoolsStore.state.contexts.value,
-        transactions: devtoolsStore.state.transactions.value,
         logEntries: devtoolsStore.state.logEntries.value,
         dependencyGraph: {
           nodes: Array.from(
@@ -108,10 +105,6 @@ export function useDataExport() {
 
         if (state.contexts) {
           devtoolsStore.state.contexts.value = state.contexts;
-        }
-
-        if (state.transactions) {
-          devtoolsStore.state.transactions.value = state.transactions;
         }
 
         if (state.logEntries) {

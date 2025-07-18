@@ -3,49 +3,50 @@ import { SignalReadData } from './types';
 
 // Actual computed values that transform or aggregate data
 export const filteredTransactions = devtoolsContext.computed(() => {
-  const transactions = devtoolsStore.state.transactions.value;
+  const logEntries = devtoolsStore.state.logEntries.value;
   const filter = devtoolsStore.state.filter.value;
   const selectedContext = devtoolsStore.state.selectedContext.value;
 
-  let filtered = transactions;
+  let filtered = logEntries;
 
   // Filter by selected context
   if (selectedContext) {
-    filtered = filtered.filter((t) => t.contextId === selectedContext);
+    filtered = filtered.filter((log) => log.contextId === selectedContext);
   }
 
   // Filter by type
   if (filter.type !== 'all') {
-    filtered = filtered.filter((t) => t.type === filter.type);
+    filtered = filtered.filter((log) => log.category === filter.type);
   }
 
   // Filter by search
   if (filter.search) {
     const search = filter.search.toLowerCase();
     filtered = filtered.filter(
-      (t) =>
-        t.eventType.toLowerCase().includes(search) ||
-        JSON.stringify(t.data).toLowerCase().includes(search)
+      (log) =>
+        log.eventType.toLowerCase().includes(search) ||
+        log.nodeName?.toLowerCase().includes(search) ||
+        JSON.stringify(log.rawData).toLowerCase().includes(search)
     );
   }
 
   // Filter internal reads if enabled
   if (filter.hideInternal) {
-    filtered = filtered.filter((t) => {
-      if (t.eventType !== 'SIGNAL_READ') return true;
-      const data = t.data as SignalReadData;
+    filtered = filtered.filter((log) => {
+      if (log.eventType !== 'SIGNAL_READ') return true;
+      const data = log.rawData as SignalReadData;
       return !data.internal;
     });
   }
 
+  // Timeline view filters - show only main events, not start/end pairs
   filtered = filtered.filter(
-    (t) => t
-    // t.eventType !== 'EFFECT_START' &&
-    // t.eventType !== 'EFFECT_END' &&
-    // t.eventType !== 'COMPUTED_START' &&
-    // t.eventType !== 'BATCH_START' &&
-    // t.eventType !== 'BATCH_END' &&
-    // t.eventType !== 'DEPENDENCY_UPDATE'
+    (log) => 
+      log.type === 'signal-write' ||
+      log.type === 'signal-read' ||
+      log.type === 'computed-complete' ||
+      log.type === 'effect-complete' ||
+      log.type === 'selector-created'
   );
 
   return filtered;
@@ -66,7 +67,7 @@ export const stats = devtoolsContext.computed(() => {
     totalSignals: contexts.reduce((sum, c) => sum + c.signalCount, 0),
     totalComputeds: contexts.reduce((sum, c) => sum + c.computedCount, 0),
     totalEffects: contexts.reduce((sum, c) => sum + c.effectCount, 0),
-    totalTransactions: devtoolsStore.state.transactions.value.length,
+    totalTransactions: devtoolsStore.state.logEntries.value.length,
     totalNodes: graph.nodes.size,
     totalEdges: Array.from(graph.edges.values()).reduce(
       (sum, deps) => sum + deps.size,
@@ -80,7 +81,7 @@ export const selectedTransactionData = devtoolsContext.computed(() => {
   const selectedId = devtoolsStore.state.selectedTransaction.value;
   if (!selectedId) return null;
   
-  return filteredTransactions.value.find(t => t.id === selectedId) || null;
+  return filteredTransactions.value.find(log => log.id === selectedId) || null;
 });
 
 export const filteredLogEntries = devtoolsContext.computed(() => {

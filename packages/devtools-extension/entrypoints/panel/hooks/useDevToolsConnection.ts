@@ -27,7 +27,6 @@ export function useDevToolsConnection() {
         // Reset all state on disconnect
         devtoolsStore.state.connected.value = false;
         devtoolsStore.state.contexts.value = [];
-        devtoolsStore.state.transactions.value = [];
         devtoolsStore.state.selectedContext.value = null;
         devtoolsStore.state.logEntries.value = [];
         devtoolsStore.state.dependencyGraph.value = {

@@ -1,6 +1,5 @@
 import { devtoolsStore } from '../devtoolsCtx';
-import { ContextInfo, Transaction } from '../types';
-import { createTransaction } from './transactionProcessor';
+import { ContextInfo } from '../types';
 import { updateContextFromEvent } from './contextManager';
 import { processLogEntry } from './logProcessor';
 
@@ -19,7 +18,6 @@ export interface LatticeEvent {
 interface StateUpdateData {
   connected?: boolean;
   contexts?: ContextInfo[];
-  transactions?: Transaction[];
   selectedContext?: string | null;
 }
 
@@ -43,7 +41,6 @@ function handleLatticeDetected() {
   // Reset all state when Lattice is detected (page refresh/navigation)
   devtoolsStore.state.connected.value = true;
   devtoolsStore.state.contexts.value = [];
-  devtoolsStore.state.transactions.value = [];
   devtoolsStore.state.selectedContext.value = null;
   devtoolsStore.state.logEntries.value = [];
   
@@ -69,10 +66,6 @@ function handleStateUpdate(data: unknown) {
     autoSelectFirstContext(stateData.contexts);
   }
 
-  if (stateData.transactions) {
-    devtoolsStore.state.transactions.value = stateData.transactions;
-  }
-
   if (stateData.selectedContext !== undefined) {
     devtoolsStore.state.selectedContext.value = stateData.selectedContext;
   }
@@ -82,13 +75,6 @@ function handleTransaction(data: unknown) {
   if (!data || typeof data !== 'object') return;
 
   const event = data as LatticeEvent;
-  const transaction = createTransaction(event);
-
-  // Add transaction (keep last 1000)
-  devtoolsStore.state.transactions.value = [
-    ...devtoolsStore.state.transactions.value.slice(-999),
-    transaction,
-  ];
 
   // Update context metadata
   updateContextFromEvent(event);

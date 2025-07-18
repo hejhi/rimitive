@@ -5,10 +5,10 @@ import {
   ResizableHandle,
 } from '../../../src/components/ui/resizable';
 import { TransactionDetail } from '../TransactionDetail';
-import type { Transaction } from '../store/types';
+import type { LogEntry } from '../store/types';
 
 interface TimelineViewProps {
-  transactions: Transaction[];
+  transactions: LogEntry[];
   selectedTransaction: string | null;
   isNarrowViewport: boolean;
   onTransactionSelect: (id: string | null) => void;
@@ -69,7 +69,7 @@ export function TimelineView({
 }
 
 interface TransactionItemProps {
-  transaction: Transaction;
+  transaction: LogEntry;
   isSelected: boolean;
   onSelect: () => void;
 }
@@ -102,9 +102,9 @@ function TransactionItem({
         </span>
         <Badge
           variant={
-            tx.type === 'signal'
+            tx.category === 'signal'
               ? 'default'
-              : tx.type === 'computed'
+              : tx.category === 'computed'
                 ? 'secondary'
                 : 'outline'
           }
@@ -113,12 +113,7 @@ function TransactionItem({
           {tx.eventType}
         </Badge>
         <div className="flex-1 font-mono text-xs overflow-ellipsis overflow-hidden whitespace-nowrap">
-          {(() => {
-            const data = tx.data;
-            if ('name' in data && data.name) return data.name;
-            if ('id' in data && data.id) return data.id;
-            return tx.eventType;
-          })()}
+          {tx.nodeName || tx.nodeId}
         </div>
       </div>
     </div>

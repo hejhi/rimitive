@@ -9,7 +9,6 @@ export const devtoolsStore = createStore<DevToolsState>(
   {
     connected: false,
     contexts: [],
-    transactions: [],
     selectedContext: null,
     selectedTransaction: null,
     selectedTab: 'logs',

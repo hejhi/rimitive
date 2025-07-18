@@ -6,7 +6,7 @@ import {
   TabsTrigger,
 } from '../../src/components/ui/tabs';
 import type {
-  Transaction,
+  LogEntry,
   SignalReadData,
   SignalWriteData,
 } from './store/types';
@@ -16,7 +16,7 @@ import { NodeDependencyView } from './NodeDependencyView';
 import { dependencyGraphData, nodeDependencies } from './store/computed';
 
 interface TransactionDetailProps {
-  transaction: Transaction;
+  transaction: LogEntry;
 }
 
 export function TransactionDetail({ transaction }: TransactionDetailProps) {
@@ -25,13 +25,7 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
 
   // Extract the relevant node ID from the transaction
   const getNodeId = (): string | null => {
-    const data = transaction.data;
-    // Check if it's a type with an id property
-    if ('id' in data && typeof data.id === 'string') return data.id;
-    // Check if it's a SignalReadData with executionContext
-    if ('executionContext' in data && data.executionContext)
-      return data.executionContext;
-    return null;
+    return transaction.nodeId;
   };
 
   const nodeId = getNodeId();
@@ -60,9 +54,9 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
             Event Details
             <Badge
               variant={
-                transaction.type === 'signal'
+                transaction.category === 'signal'
                   ? 'default'
-                  : transaction.type === 'computed'
+                  : transaction.category === 'computed'
                     ? 'secondary'
                     : 'outline'
               }
@@ -92,12 +86,12 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
 
             {transaction.eventType === 'SIGNAL_READ' &&
               (() => {
-                const data = transaction.data as SignalReadData;
+                const data = transaction.rawData as SignalReadData;
                 return (
                   <>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Signal:</span>
-                      <span className="font-mono">{data.name || data.id}</span>
+                      <span className="font-mono">{transaction.nodeName || transaction.nodeId}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Value:</span>
@@ -119,12 +113,12 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
 
             {transaction.eventType === 'SIGNAL_WRITE' &&
               (() => {
-                const data = transaction.data as SignalWriteData;
+                const data = transaction.rawData as SignalWriteData;
                 return (
                   <>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Signal:</span>
-                      <span className="font-mono">{data.name || data.id}</span>
+                      <span className="font-mono">{transaction.nodeName || transaction.nodeId}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-muted-foreground">Change:</span>
@@ -143,7 +137,7 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
         <div className="border-t pt-4">
           <h3 className="text-sm font-semibold mb-2">Raw Event Data</h3>
           <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
-            <code>{JSON.stringify(transaction.data, null, 2)}</code>
+            <code>{JSON.stringify(transaction.rawData, null, 2)}</code>
           </pre>
         </div>
       </TabsContent>

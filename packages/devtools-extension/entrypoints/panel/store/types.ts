@@ -32,6 +32,10 @@ export interface LogEntry {
   nodeName?: string;
   contextId: string;
   details: LogEntryDetails;
+  // Raw event data for Timeline view
+  eventType: string;
+  rawData: unknown;
+  category: 'signal' | 'computed' | 'effect' | 'batch' | 'selector';
 }
 
 export type LogEntryDetails =
@@ -96,7 +100,6 @@ export interface SelectorCreatedLogDetails {
 export interface DevToolsState {
   connected: boolean;
   contexts: ContextInfo[];
-  transactions: Transaction[];
   selectedContext: string | null;
   selectedTransaction: string | null;
   selectedTab: 'logs' | 'timeline' | 'graph';
@@ -224,19 +227,3 @@ export interface GraphSnapshotData {
   }>;
 }
 
-export type TransactionData =
-  | SignalReadData
-  | SignalWriteData
-  | SignalCreatedData
-  | NamedItemData
-  | DependencyUpdateData
-  | GraphSnapshotData;
-
-export interface Transaction {
-  id: string;
-  timestamp: number;
-  contextId: string;
-  type: 'signal' | 'computed' | 'effect' | 'batch' | 'selector';
-  eventType: string;
-  data: TransactionData;
-}

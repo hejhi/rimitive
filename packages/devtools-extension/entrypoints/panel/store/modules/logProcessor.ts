@@ -11,6 +11,8 @@ import {
   EffectCompleteLogDetails,
   SelectorCreatedLogDetails,
   SELECTOR_CREATED,
+  BATCH_START,
+  BatchLogDetails,
   DependencyUpdateData,
   GraphSnapshotData,
 } from '../types';
@@ -60,6 +62,12 @@ export function processLogEntry(event: LatticeEvent) {
     case 'SELECTOR_CREATED':
       processSelectorCreated(event, timestamp);
       break;
+    case 'BATCH_START':
+      processBatchStart(event, timestamp);
+      break;
+    case 'BATCH_END':
+      processBatchEnd(event, timestamp);
+      break;
     case 'DEPENDENCY_UPDATE':
       updateDependencyGraph(event.data as DependencyUpdateData);
       break;
@@ -96,6 +104,9 @@ function processSignalWrite(event: LatticeEvent, timestamp: number) {
       newValue: data.newValue,
       triggeredDependencies: triggeredDeps,
     } as SignalWriteLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'signal',
   };
 
   addLogEntry(logEntry);
@@ -121,6 +132,9 @@ function processSignalRead(event: LatticeEvent, timestamp: number) {
       readBy: data.executionContext || 'unknown',
       readByName: data.readContext?.name,
     } as SignalReadLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'signal',
   };
 
   addLogEntry(logEntry);
@@ -156,6 +170,9 @@ function processComputedStart(event: LatticeEvent, timestamp: number) {
     details: {
       triggeredBy,
     } as ComputedRunLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'computed',
   };
 
   addLogEntry(logEntry);
@@ -183,6 +200,9 @@ function processComputedEnd(event: LatticeEvent, timestamp: number) {
       oldValue: activeComputed.oldValue,
       duration: data.duration || 0,
     } as ComputedCompleteLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'computed',
   };
 
   addLogEntry(logEntry);
@@ -218,6 +238,9 @@ function processEffectStart(event: LatticeEvent, timestamp: number) {
     details: {
       triggeredBy,
     } as EffectRunLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'effect',
   };
 
   addLogEntry(logEntry);
@@ -243,6 +266,9 @@ function processEffectEnd(event: LatticeEvent, timestamp: number) {
     details: {
       duration: data.duration || 0,
     } as EffectCompleteLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'effect',
   };
 
   addLogEntry(logEntry);
@@ -266,6 +292,55 @@ function processSelectorCreated(event: LatticeEvent, timestamp: number) {
       sourceType: data.sourceType,
       selector: data.selector,
     } as SelectorCreatedLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'selector',
+  };
+
+  addLogEntry(logEntry);
+}
+
+function processBatchStart(event: LatticeEvent, timestamp: number) {
+  const data = event.data as { batchId: string };
+
+  const logEntry: LogEntry = {
+    id: `log_${Date.now()}_${Math.random()}`,
+    timestamp,
+    type: 'batch-start',
+    level: 0,
+    nodeId: data.batchId,
+    nodeName: 'Batch',
+    contextId: event.contextId,
+    details: {
+      type: BATCH_START,
+      batchId: data.batchId,
+    } as BatchLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'batch',
+  };
+
+  addLogEntry(logEntry);
+}
+
+function processBatchEnd(event: LatticeEvent, timestamp: number) {
+  const data = event.data as { batchId: string };
+
+  const logEntry: LogEntry = {
+    id: `log_${Date.now()}_${Math.random()}`,
+    timestamp,
+    type: 'batch-end',
+    level: 0,
+    nodeId: data.batchId,
+    nodeName: 'Batch',
+    contextId: event.contextId,
+    details: {
+      type: BATCH_START, // Both use same details type
+      batchId: data.batchId,
+    } as BatchLogDetails,
+    eventType: event.type,
+    rawData: event.data,
+    category: 'batch',
   };
 
   addLogEntry(logEntry);
