@@ -9,7 +9,7 @@ import {
 let updateBatch: (() => void)[] = [];
 let batchTimeout: NodeJS.Timeout | null = null;
 
-function scheduleBatchUpdate(updateFn: () => void) {
+export function scheduleBatchUpdate(updateFn: () => void) {
   updateBatch.push(updateFn);
   
   if (batchTimeout) return;
@@ -118,7 +118,8 @@ export function updateGraphSnapshot(
   timestamp: number,
   contextId: string
 ) {
-  const graph = devtoolsStore.state.dependencyGraph.value;
+  scheduleBatchUpdate(() => {
+    const graph = devtoolsStore.state.dependencyGraph.value;
 
   // Collect nodes to remove in a single pass
   const nodesToRemove: string[] = [];
@@ -190,13 +191,11 @@ export function updateGraphSnapshot(
     graph.reverseEdges.set(target, reverseEdgeSet);
   }
 
-  // Update last snapshot
-  devtoolsStore.state.lastSnapshot.value = {
-    timestamp,
-    nodes: data.nodes,
-    edges: data.edges,
-  };
-
-  // Trigger update
-  devtoolsStore.state.dependencyGraph.value = { ...graph };
+    // Update last snapshot
+    devtoolsStore.state.lastSnapshot.value = {
+      timestamp,
+      nodes: data.nodes,
+      edges: data.edges,
+    };
+  });
 }

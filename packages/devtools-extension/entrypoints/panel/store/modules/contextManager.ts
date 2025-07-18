@@ -6,7 +6,7 @@ import {
   SelectorCreatedEventData,
 } from '../types';
 import { LatticeEvent } from './messageHandler';
-import { addNodeToGraph } from './dependencyGraph';
+import { addNodeToGraph, scheduleBatchUpdate } from './dependencyGraph';
 
 interface ContextCreatedData {
   name?: string;
@@ -92,13 +92,15 @@ function handleSignalCreated(context: ContextInfo, event: LatticeEvent) {
 
 function handleSignalWrite(context: ContextInfo, event: LatticeEvent) {
   const writeData = event.data as SignalWriteData;
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const node = graph.nodes.get(writeData.id);
   
-  if (node) {
-    node.value = writeData.newValue;
-    devtoolsStore.state.dependencyGraph.value = { ...graph };
-  }
+  scheduleBatchUpdate(() => {
+    const graph = devtoolsStore.state.dependencyGraph.value;
+    const node = graph.nodes.get(writeData.id);
+    
+    if (node) {
+      node.value = writeData.newValue;
+    }
+  });
 }
 
 function handleComputedCreated(context: ContextInfo, event: LatticeEvent) {
@@ -127,7 +129,6 @@ function handleEffectCreated(context: ContextInfo, event: LatticeEvent) {
 
 function handleSelectorCreated(event: LatticeEvent) {
   const selectorData = event.data as SelectorCreatedEventData;
-  const graph = devtoolsStore.state.dependencyGraph.value;
 
   // Add selector node
   addNodeToGraph(selectorData.id, {
@@ -136,17 +137,20 @@ function handleSelectorCreated(event: LatticeEvent) {
     value: undefined,
   });
 
-  // Add edge from source to selector
-  if (!graph.edges.has(selectorData.sourceId)) {
-    graph.edges.set(selectorData.sourceId, new Set());
-  }
-  graph.edges.get(selectorData.sourceId)!.add(selectorData.id);
+  // Add edges in a batched update
+  scheduleBatchUpdate(() => {
+    const graph = devtoolsStore.state.dependencyGraph.value;
+    
+    // Add edge from source to selector
+    if (!graph.edges.has(selectorData.sourceId)) {
+      graph.edges.set(selectorData.sourceId, new Set());
+    }
+    graph.edges.get(selectorData.sourceId)!.add(selectorData.id);
 
-  // Add reverse edge
-  if (!graph.reverseEdges.has(selectorData.id)) {
-    graph.reverseEdges.set(selectorData.id, new Set());
-  }
-  graph.reverseEdges.get(selectorData.id)!.add(selectorData.sourceId);
-
-  devtoolsStore.state.dependencyGraph.value = { ...graph };
+    // Add reverse edge
+    if (!graph.reverseEdges.has(selectorData.id)) {
+      graph.reverseEdges.set(selectorData.id, new Set());
+    }
+    graph.reverseEdges.get(selectorData.id)!.add(selectorData.sourceId);
+  });
 }
