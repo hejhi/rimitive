@@ -141,9 +141,6 @@ export interface ContextInfo {
   signalCount: number;
   computedCount: number;
   effectCount: number;
-  signals: SignalInfo[];
-  computeds: ComputedInfo[];
-  effects: EffectInfo[];
 }
 
 export interface SignalInfo {

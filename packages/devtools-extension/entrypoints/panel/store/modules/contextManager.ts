@@ -50,9 +50,6 @@ function handleContextCreated(contexts: ContextInfo[], event: LatticeEvent) {
     signalCount: 0,
     computedCount: 0,
     effectCount: 0,
-    signals: [],
-    computeds: [],
-    effects: [],
   });
 
   // Auto-select first context if none selected
@@ -85,12 +82,6 @@ function handleSignalCreated(context: ContextInfo, event: LatticeEvent) {
   const signalData = event.data as SignalCreatedData;
 
   context.signalCount++;
-  context.signals.push({
-    id: signalData.id,
-    name: signalData.name,
-    value: signalData.initialValue,
-    lastUpdated: event.timestamp || Date.now(),
-  });
 
   addNodeToGraph(signalData.id, {
     type: 'signal',
@@ -101,30 +92,12 @@ function handleSignalCreated(context: ContextInfo, event: LatticeEvent) {
 
 function handleSignalWrite(context: ContextInfo, event: LatticeEvent) {
   const writeData = event.data as SignalWriteData;
-
-  if (!context.signals) {
-    context.signals = [];
-  }
-
-  const signalIndex = context.signals.findIndex((s) => s.id === writeData.id);
-
-  if (signalIndex !== -1) {
-    context.signals[signalIndex] = {
-      ...context.signals[signalIndex],
-      value: writeData.newValue,
-      lastUpdated: event.timestamp || Date.now(),
-    };
-  } else {
-    // Signal doesn't exist in our local tracking, but don't increment count
-    // as it should have been counted when SIGNAL_CREATED was fired
-    context.signals.push({
-      id: writeData.id,
-      name: writeData.name,
-      value: writeData.newValue,
-      lastUpdated: event.timestamp || Date.now(),
-    });
-    // Remove the increment - the signal was already counted on creation
-    // context.signalCount++;
+  const graph = devtoolsStore.state.dependencyGraph.value;
+  const node = graph.nodes.get(writeData.id);
+  
+  if (node) {
+    node.value = writeData.newValue;
+    devtoolsStore.state.dependencyGraph.value = { ...graph };
   }
 }
 
@@ -132,13 +105,6 @@ function handleComputedCreated(context: ContextInfo, event: LatticeEvent) {
   const computedData = event.data as ComputedCreatedData;
 
   context.computedCount++;
-  context.computeds.push({
-    id: computedData.id,
-    name: computedData.name,
-    value: undefined,
-    dependencies: [],
-    lastComputed: 0,
-  });
 
   addNodeToGraph(computedData.id, {
     type: 'computed',
@@ -151,12 +117,6 @@ function handleEffectCreated(context: ContextInfo, event: LatticeEvent) {
   const effectData = event.data as EffectCreatedData;
 
   context.effectCount++;
-  context.effects.push({
-    id: effectData.id,
-    name: effectData.name,
-    isActive: true,
-    lastRun: 0,
-  });
 
   addNodeToGraph(effectData.id, {
     type: 'effect',
