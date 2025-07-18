@@ -1,12 +1,21 @@
 import { devtoolsStore } from '../devtoolsCtx';
-import { DependencyUpdateData, GraphSnapshotData, DependencyNode } from '../types';
+import {
+  DependencyUpdateData,
+  GraphSnapshotData,
+  DependencyNode,
+} from '../types';
 
 export function addNodeToGraph(
   id: string,
-  nodeData: { type: DependencyNode['type']; name?: string; value?: unknown; contextId?: string }
+  nodeData: {
+    type: DependencyNode['type'];
+    name?: string;
+    value?: unknown;
+    contextId?: string;
+  }
 ) {
   const graph = devtoolsStore.state.dependencyGraph.value;
-  
+
   graph.nodes.set(id, {
     id,
     type: nodeData.type,
@@ -17,11 +26,14 @@ export function addNodeToGraph(
     hasSubscribers: false,
     contextId: nodeData.contextId,
   });
-  
+
   devtoolsStore.state.dependencyGraph.value = { ...graph };
 }
 
-export function updateDependencyGraph(data: DependencyUpdateData, contextId: string) {
+export function updateDependencyGraph(
+  data: DependencyUpdateData,
+  contextId: string
+) {
   const graph = devtoolsStore.state.dependencyGraph.value;
 
   // Update node - preserve existing name if available
@@ -72,20 +84,51 @@ export function updateDependencyGraph(data: DependencyUpdateData, contextId: str
   devtoolsStore.state.dependencyGraph.value = { ...graph };
 }
 
-export function updateGraphSnapshot(data: GraphSnapshotData, timestamp: number) {
+export function updateGraphSnapshot(
+  data: GraphSnapshotData,
+  timestamp: number,
+  contextId: string
+) {
   const graph = devtoolsStore.state.dependencyGraph.value;
 
-  // Clear and rebuild graph from snapshot
-  graph.nodes.clear();
-  graph.edges.clear();
-  graph.reverseEdges.clear();
-
-  // Add all nodes
-  data.nodes.forEach((node) => {
-    graph.nodes.set(node.id, node);
+  // First, remove only nodes and edges belonging to this context
+  const nodesToRemove = new Set<string>();
+  graph.nodes.forEach((node, id) => {
+    if (node.contextId === contextId) {
+      nodesToRemove.add(id);
+    }
   });
 
-  // Add all edges
+  // Remove nodes from this context
+  nodesToRemove.forEach((id) => {
+    graph.nodes.delete(id);
+    graph.edges.delete(id);
+    graph.reverseEdges.delete(id);
+  });
+
+  // Also clean up edges pointing to removed nodes
+  graph.edges.forEach((targets) => {
+    nodesToRemove.forEach((removedId) => {
+      targets.delete(removedId);
+    });
+  });
+
+  graph.reverseEdges.forEach((sources) => {
+    nodesToRemove.forEach((removedId) => {
+      sources.delete(removedId);
+    });
+  });
+
+  // Add all nodes from the snapshot (they should all be from the same context)
+  data.nodes.forEach((node) => {
+    // Ensure the node has the correct context ID
+    graph.nodes.set(node.id, {
+      ...node,
+      contextId: node.contextId || contextId,
+    });
+  });
+
+  // Add all edges from the snapshot
   data.edges.forEach((edge) => {
     if (!graph.edges.has(edge.source)) {
       graph.edges.set(edge.source, new Set());

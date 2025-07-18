@@ -129,7 +129,7 @@ export function processLogEntry(event: LatticeEvent) {
       updateDependencyGraph(event.data as DependencyUpdateData, event.contextId);
       break;
     case 'GRAPH_SNAPSHOT':
-      updateGraphSnapshot(event.data as GraphSnapshotData, timestamp);
+      updateGraphSnapshot(event.data as GraphSnapshotData, timestamp, event.contextId);
       break;
   }
 }
