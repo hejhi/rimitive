@@ -18,15 +18,6 @@ import {
 } from '../types';
 import { LatticeEvent } from './messageHandler';
 import {
-  createExecutionState,
-  trackRecentWrite,
-  startComputed,
-  endComputed,
-  startEffect,
-  endEffect,
-  findRecentTrigger,
-} from './executionState';
-import {
   NamedItemData,
   ComputedEndEventData,
   EffectEndEventData,
@@ -34,8 +25,9 @@ import {
 } from './eventTypes';
 import { updateDependencyGraph, updateGraphSnapshot } from './dependencyGraph';
 
-// Module-level execution state
-const executionState = createExecutionState();
+// Simple execution tracking for level calculation
+let currentLevel = 0;
+const recentWrites: { id: string; timestamp: number }[] = [];
 
 export function processLogEntry(event: LatticeEvent) {
   const timestamp = event.timestamp || Date.now();
@@ -87,8 +79,13 @@ function processSignalWrite(event: LatticeEvent, timestamp: number) {
   const subscribers = graph.edges.get(data.id) || new Set();
   subscribers.forEach((subId) => triggeredDeps.push(subId));
 
-  // Track recent write for causality
-  trackRecentWrite(executionState, data.id, timestamp);
+  // Track recent write for simple causality
+  recentWrites.push({ id: data.id, timestamp });
+  // Keep only writes from last 100ms
+  const cutoff = timestamp - 100;
+  while (recentWrites.length > 0 && recentWrites[0].timestamp < cutoff) {
+    recentWrites.shift();
+  }
 
   // Add write log entry
   const logEntry: LogEntry = {
@@ -123,7 +120,7 @@ function processSignalRead(event: LatticeEvent, timestamp: number) {
     id: `log_${Date.now()}_${Math.random()}`,
     timestamp,
     type: 'signal-read',
-    level: executionState.currentLevel + 1,
+    level: currentLevel + 1,
     nodeId: data.id,
     nodeName: data.name || node?.name,
     contextId: event.contextId,
@@ -145,25 +142,21 @@ function processComputedStart(event: LatticeEvent, timestamp: number) {
   const graph = devtoolsStore.state.dependencyGraph.value;
   const node = graph.nodes.get(data.id);
 
-  // Determine what triggered this computed
+  // Simple causality: find recent writes to dependencies
   const triggeredBy: string[] = [];
   const dependencies = graph.reverseEdges.get(data.id) || new Set();
-  const recentTrigger = findRecentTrigger(
-    executionState,
-    data.id,
-    dependencies
-  );
-  if (recentTrigger) {
-    triggeredBy.push(recentTrigger);
+  for (const write of recentWrites) {
+    if (dependencies.has(write.id)) {
+      triggeredBy.push(write.id);
+      break;
+    }
   }
-
-  startComputed(executionState, data.id, triggeredBy, node?.value, timestamp);
 
   const logEntry: LogEntry = {
     id: `log_${Date.now()}_${Math.random()}`,
     timestamp,
     type: 'computed-run',
-    level: executionState.currentLevel - 1,
+    level: currentLevel,
     nodeId: data.id,
     nodeName: data.name || node?.name,
     contextId: event.contextId,
@@ -176,28 +169,27 @@ function processComputedStart(event: LatticeEvent, timestamp: number) {
   };
 
   addLogEntry(logEntry);
+  currentLevel++; // Increase level for nested operations
 }
 
 function processComputedEnd(event: LatticeEvent, timestamp: number) {
   const data = event.data as ComputedEndEventData;
-  const activeComputed = endComputed(executionState, data.id);
-
-  if (!activeComputed) return;
-
   const graph = devtoolsStore.state.dependencyGraph.value;
   const node = graph.nodes.get(data.id);
+
+  currentLevel = Math.max(0, currentLevel - 1); // Decrease level after computed
 
   const logEntry: LogEntry = {
     id: `log_${Date.now()}_${Math.random()}`,
     timestamp,
     type: 'computed-complete',
-    level: executionState.currentLevel,
+    level: currentLevel,
     nodeId: data.id,
     nodeName: data.name || node?.name,
     contextId: event.contextId,
     details: {
       value: data.value,
-      oldValue: activeComputed.oldValue,
+      oldValue: undefined, // We don't track this anymore
       duration: data.duration || 0,
     } as ComputedCompleteLogDetails,
     eventType: event.type,
@@ -213,25 +205,21 @@ function processEffectStart(event: LatticeEvent, timestamp: number) {
   const graph = devtoolsStore.state.dependencyGraph.value;
   const node = graph.nodes.get(data.id);
 
-  // Determine what triggered this effect
+  // Simple causality: find recent writes to dependencies
   const triggeredBy: string[] = [];
   const dependencies = graph.reverseEdges.get(data.id) || new Set();
-  const recentTrigger = findRecentTrigger(
-    executionState,
-    data.id,
-    dependencies
-  );
-  if (recentTrigger) {
-    triggeredBy.push(recentTrigger);
+  for (const write of recentWrites) {
+    if (dependencies.has(write.id)) {
+      triggeredBy.push(write.id);
+      break;
+    }
   }
-
-  startEffect(executionState, data.id, triggeredBy, timestamp);
 
   const logEntry: LogEntry = {
     id: `log_${Date.now()}_${Math.random()}`,
     timestamp,
     type: 'effect-run',
-    level: executionState.currentLevel - 1,
+    level: currentLevel,
     nodeId: data.id,
     nodeName: data.name || node?.name,
     contextId: event.contextId,
@@ -244,22 +232,21 @@ function processEffectStart(event: LatticeEvent, timestamp: number) {
   };
 
   addLogEntry(logEntry);
+  currentLevel++; // Increase level for nested operations
 }
 
 function processEffectEnd(event: LatticeEvent, timestamp: number) {
   const data = event.data as EffectEndEventData;
-  const activeEffect = endEffect(executionState, data.id);
-
-  if (!activeEffect) return;
-
   const graph = devtoolsStore.state.dependencyGraph.value;
   const node = graph.nodes.get(data.id);
+
+  currentLevel = Math.max(0, currentLevel - 1); // Decrease level after effect
 
   const logEntry: LogEntry = {
     id: `log_${Date.now()}_${Math.random()}`,
     timestamp,
     type: 'effect-complete',
-    level: executionState.currentLevel,
+    level: currentLevel,
     nodeId: data.id,
     nodeName: data.name || node?.name,
     contextId: event.contextId,
@@ -354,5 +341,3 @@ function addLogEntry(entry: LogEntry) {
   ];
 }
 
-// Export for testing
-export { executionState as _executionState };
