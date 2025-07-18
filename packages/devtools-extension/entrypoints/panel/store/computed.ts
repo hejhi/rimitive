@@ -1,46 +1,56 @@
 import { devtoolsContext, devtoolsStore } from './devtoolsCtx';
 import { SignalReadData } from './types';
 
+// Common log filtering logic
+function filterLogs(
+  logs: typeof devtoolsStore.state.logEntries.value,
+  filter: typeof devtoolsStore.state.filter.value,
+  selectedContext: string | null,
+  searchIn: string[]
+) {
+  return logs.filter((log) => {
+    // Context filter
+    if (selectedContext && log.contextId !== selectedContext) return false;
+    
+    // Type filter
+    if (filter.type !== 'all' && log.category !== filter.type) return false;
+    
+    // Search filter
+    if (filter.search) {
+      const search = filter.search.toLowerCase();
+      const searchTargets = searchIn.map(field => {
+        if (field === 'eventType') return log.eventType;
+        if (field === 'nodeName') return log.nodeName || '';
+        if (field === 'nodeId') return log.nodeId;
+        if (field === 'rawData') return JSON.stringify(log.rawData);
+        if (field === 'details') return JSON.stringify(log.details);
+        return '';
+      });
+      
+      if (!searchTargets.some(target => target.toLowerCase().includes(search))) {
+        return false;
+      }
+    }
+    
+    // Internal reads filter
+    if (filter.hideInternal && log.eventType === 'SIGNAL_READ') {
+      return !(log.rawData as SignalReadData).internal;
+    }
+    
+    return true;
+  });
+}
+
 // Actual computed values that transform or aggregate data
 export const filteredTransactions = devtoolsContext.computed(() => {
   const logEntries = devtoolsStore.state.logEntries.value;
   const filter = devtoolsStore.state.filter.value;
   const selectedContext = devtoolsStore.state.selectedContext.value;
 
-  let filtered = logEntries;
-
-  // Filter by selected context
-  if (selectedContext) {
-    filtered = filtered.filter((log) => log.contextId === selectedContext);
-  }
-
-  // Filter by type
-  if (filter.type !== 'all') {
-    filtered = filtered.filter((log) => log.category === filter.type);
-  }
-
-  // Filter by search
-  if (filter.search) {
-    const search = filter.search.toLowerCase();
-    filtered = filtered.filter(
-      (log) =>
-        log.eventType.toLowerCase().includes(search) ||
-        log.nodeName?.toLowerCase().includes(search) ||
-        JSON.stringify(log.rawData).toLowerCase().includes(search)
-    );
-  }
-
-  // Filter internal reads if enabled
-  if (filter.hideInternal) {
-    filtered = filtered.filter((log) => {
-      if (log.eventType !== 'SIGNAL_READ') return true;
-      const data = log.rawData as SignalReadData;
-      return !data.internal;
-    });
-  }
+  const filtered = filterLogs(logEntries, filter, selectedContext, ['eventType', 'nodeName', 'rawData']);
 
   // Timeline view filters - show only main events, not start/end pairs
-  filtered = filtered.filter(
+  return filtered.filter(
     (log) => 
       log.type === 'signal-write' ||
       log.type === 'signal-read' ||
@@ -48,8 +58,6 @@ export const filteredTransactions = devtoolsContext.computed(() => {
       log.type === 'effect-complete' ||
       log.type === 'selector-created'
   );
-
-  return filtered;
 });
 
 export const selectedContextData = devtoolsContext.computed(() => {
@@ -89,34 +97,8 @@ export const filteredLogEntries = devtoolsContext.computed(() => {
   const filter = devtoolsStore.state.filter.value;
   const selectedContext = devtoolsStore.state.selectedContext.value;
 
-  let filtered = logs;
-
-  // Filter by selected context
-  if (selectedContext) {
-    filtered = filtered.filter((log) => log.contextId === selectedContext);
-  }
-
-  // Filter by type
-  if (filter.type !== 'all') {
-    filtered = filtered.filter((log) => {
-      const nodeType = log.type.split('-')[0]; // 'signal-write' -> 'signal'
-      return nodeType === filter.type;
-    });
-  }
-
-  // Filter by search
-  if (filter.search) {
-    const search = filter.search.toLowerCase();
-    filtered = filtered.filter(
-      (log) =>
-        log.nodeName?.toLowerCase().includes(search) ||
-        log.nodeId.toLowerCase().includes(search) ||
-        JSON.stringify(log.details).toLowerCase().includes(search)
-    );
-  }
-
-  // Keep last 500 logs
-  return filtered.slice(-500);
+  const filtered = filterLogs(logs, filter, selectedContext, ['nodeName', 'nodeId', 'details']);
+  return filtered.slice(-500); // Keep last 500 logs
 });
 
 export const dependencyGraphData = devtoolsContext.computed(() => {

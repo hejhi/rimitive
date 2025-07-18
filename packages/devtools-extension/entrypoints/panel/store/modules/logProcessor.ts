@@ -27,6 +27,47 @@ import { updateDependencyGraph, updateGraphSnapshot } from './dependencyGraph';
 let currentLevel = 0;
 const recentWrites: { id: string; timestamp: number }[] = [];
 
+// Generic log entry factory to eliminate duplication
+function createLogEntry(
+  event: LatticeEvent,
+  timestamp: number,
+  type: LogEntry['type'],
+  category: LogEntry['category'],
+  details: LogEntry['details'],
+  level = currentLevel
+): LogEntry {
+  const graph = devtoolsStore.state.dependencyGraph.value;
+  const data = event.data as any;
+  const node = graph.nodes.get(data.id);
+  
+  return {
+    id: `log_${Date.now()}_${Math.random()}`,
+    timestamp,
+    type,
+    level,
+    nodeId: data.id,
+    nodeName: data.name || data.selector || node?.name || (type.includes('batch') ? 'Batch' : undefined),
+    contextId: event.contextId,
+    details,
+    eventType: event.type,
+    rawData: event.data,
+    category,
+  };
+}
+
+// Find what triggered a computed/effect based on recent writes
+function findTriggeredBy(nodeId: string): string[] {
+  const graph = devtoolsStore.state.dependencyGraph.value;
+  const dependencies = graph.reverseEdges.get(nodeId) || new Set();
+  
+  for (const write of recentWrites) {
+    if (dependencies.has(write.id)) {
+      return [write.id];
+    }
+  }
+  return [];
+}
+
 export function processLogEntry(event: LatticeEvent) {
   const timestamp = event.timestamp || Date.now();
 
@@ -70,12 +111,9 @@ export function processLogEntry(event: LatticeEvent) {
 function processSignalWrite(event: LatticeEvent, timestamp: number) {
   const data = event.data as SignalWriteData;
   const graph = devtoolsStore.state.dependencyGraph.value;
-  const node = graph.nodes.get(data.id);
 
   // Find all dependencies that will be triggered
-  const triggeredDeps: string[] = [];
-  const subscribers = graph.edges.get(data.id) || new Set();
-  subscribers.forEach((subId) => triggeredDeps.push(subId));
+  const triggeredDeps = Array.from(graph.edges.get(data.id) || new Set());
 
   // Track recent write for simple causality
   recentWrites.push({ id: data.id, timestamp });
@@ -85,250 +123,147 @@ function processSignalWrite(event: LatticeEvent, timestamp: number) {
     recentWrites.shift();
   }
 
-  // Add write log entry
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'signal-write',
-    level: 0,
-    nodeId: data.id,
-    nodeName: data.name || node?.name,
-    contextId: event.contextId,
-    details: {
+    'signal-write',
+    'signal',
+    {
       oldValue: data.oldValue,
       newValue: data.newValue,
       triggeredDependencies: triggeredDeps,
     } as SignalWriteLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'signal',
-  };
-
-  addLogEntry(logEntry);
+    0
+  ));
 }
 
 function processSignalRead(event: LatticeEvent, timestamp: number) {
   const data = event.data as SignalReadData;
   if (data.internal) return; // Skip internal reads
 
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const node = graph.nodes.get(data.id);
-
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'signal-read',
-    level: currentLevel + 1,
-    nodeId: data.id,
-    nodeName: data.name || node?.name,
-    contextId: event.contextId,
-    details: {
+    'signal-read',
+    'signal',
+    {
       value: data.value,
       readBy: data.executionContext || 'unknown',
       readByName: data.readContext?.name,
     } as SignalReadLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'signal',
-  };
-
-  addLogEntry(logEntry);
+    currentLevel + 1
+  ));
 }
 
 function processComputedStart(event: LatticeEvent, timestamp: number) {
   const data = event.data as NamedItemData;
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const node = graph.nodes.get(data.id);
-
-  // Simple causality: find recent writes to dependencies
-  const triggeredBy: string[] = [];
-  const dependencies = graph.reverseEdges.get(data.id) || new Set();
-  for (const write of recentWrites) {
-    if (dependencies.has(write.id)) {
-      triggeredBy.push(write.id);
-      break;
-    }
-  }
-
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  const triggeredBy = findTriggeredBy(data.id);
+  
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'computed-run',
-    level: currentLevel,
-    nodeId: data.id,
-    nodeName: data.name || node?.name,
-    contextId: event.contextId,
-    details: {
-      triggeredBy,
-    } as ComputedRunLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'computed',
-  };
-
-  addLogEntry(logEntry);
-  currentLevel++; // Increase level for nested operations
+    'computed-run',
+    'computed',
+    { triggeredBy } as ComputedRunLogDetails
+  ));
+  
+  currentLevel++;
 }
 
 function processComputedEnd(event: LatticeEvent, timestamp: number) {
   const data = event.data as ComputedEndEventData;
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const node = graph.nodes.get(data.id);
+  currentLevel = Math.max(0, currentLevel - 1);
 
-  currentLevel = Math.max(0, currentLevel - 1); // Decrease level after computed
-
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'computed-complete',
-    level: currentLevel,
-    nodeId: data.id,
-    nodeName: data.name || node?.name,
-    contextId: event.contextId,
-    details: {
+    'computed-complete',
+    'computed',
+    {
       value: data.value,
-      oldValue: undefined, // We don't track this anymore
+      oldValue: undefined,
       duration: data.duration || 0,
-    } as ComputedCompleteLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'computed',
-  };
-
-  addLogEntry(logEntry);
+    } as ComputedCompleteLogDetails
+  ));
 }
 
 function processEffectStart(event: LatticeEvent, timestamp: number) {
   const data = event.data as NamedItemData;
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const node = graph.nodes.get(data.id);
-
-  // Simple causality: find recent writes to dependencies
-  const triggeredBy: string[] = [];
-  const dependencies = graph.reverseEdges.get(data.id) || new Set();
-  for (const write of recentWrites) {
-    if (dependencies.has(write.id)) {
-      triggeredBy.push(write.id);
-      break;
-    }
-  }
-
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  const triggeredBy = findTriggeredBy(data.id);
+  
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'effect-run',
-    level: currentLevel,
-    nodeId: data.id,
-    nodeName: data.name || node?.name,
-    contextId: event.contextId,
-    details: {
-      triggeredBy,
-    } as EffectRunLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'effect',
-  };
-
-  addLogEntry(logEntry);
-  currentLevel++; // Increase level for nested operations
+    'effect-run',
+    'effect',
+    { triggeredBy } as EffectRunLogDetails
+  ));
+  
+  currentLevel++;
 }
 
 function processEffectEnd(event: LatticeEvent, timestamp: number) {
   const data = event.data as EffectEndEventData;
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const node = graph.nodes.get(data.id);
+  currentLevel = Math.max(0, currentLevel - 1);
 
-  currentLevel = Math.max(0, currentLevel - 1); // Decrease level after effect
-
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'effect-complete',
-    level: currentLevel,
-    nodeId: data.id,
-    nodeName: data.name || node?.name,
-    contextId: event.contextId,
-    details: {
-      duration: data.duration || 0,
-    } as EffectCompleteLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'effect',
-  };
-
-  addLogEntry(logEntry);
+    'effect-complete',
+    'effect',
+    { duration: data.duration || 0 } as EffectCompleteLogDetails
+  ));
 }
 
 function processSelectorCreated(event: LatticeEvent, timestamp: number) {
   const data = event.data as SelectorCreatedEventData;
 
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'selector-created',
-    level: 0,
-    nodeId: data.id,
-    nodeName: data.selector,
-    contextId: event.contextId,
-    details: {
+    'selector-created',
+    'selector',
+    {
       type: SELECTOR_CREATED,
       sourceId: data.sourceId,
       sourceName: data.sourceName,
       sourceType: data.sourceType,
       selector: data.selector,
     } as SelectorCreatedLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'selector',
-  };
-
-  addLogEntry(logEntry);
+    0
+  ));
 }
 
 function processBatchStart(event: LatticeEvent, timestamp: number) {
   const data = event.data as { batchId: string };
 
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'batch-start',
-    level: 0,
-    nodeId: data.batchId,
-    nodeName: 'Batch',
-    contextId: event.contextId,
-    details: {
+    'batch-start',
+    'batch',
+    {
       type: BATCH_START,
       batchId: data.batchId,
     } as BatchLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'batch',
-  };
-
-  addLogEntry(logEntry);
+    0
+  ));
 }
 
 function processBatchEnd(event: LatticeEvent, timestamp: number) {
   const data = event.data as { batchId: string };
 
-  const logEntry: LogEntry = {
-    id: `log_${Date.now()}_${Math.random()}`,
+  addLogEntry(createLogEntry(
+    event,
     timestamp,
-    type: 'batch-end',
-    level: 0,
-    nodeId: data.batchId,
-    nodeName: 'Batch',
-    contextId: event.contextId,
-    details: {
+    'batch-end',
+    'batch',
+    {
       type: BATCH_START, // Both use same details type
       batchId: data.batchId,
     } as BatchLogDetails,
-    eventType: event.type,
-    rawData: event.data,
-    category: 'batch',
-  };
-
-  addLogEntry(logEntry);
+    0
+  ));
 }
 
 function addLogEntry(entry: LogEntry) {
