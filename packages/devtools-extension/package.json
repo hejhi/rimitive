@@ -23,6 +23,7 @@
     "@lattice/lattice": "workspace:*",
     "@lattice/devtools": "workspace:*",
     "@lattice/signals": "workspace:*",
+    "@lattice/react": "workspace:*",
     "@radix-ui/react-dropdown-menu": "^2.1.15",
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",

@@ -1,4 +1,4 @@
-import { useSignal } from './useLattice';
+import { useSubscribe } from '@lattice/react';
 import {
   ComputedCompleteLogDetails,
   ComputedRunLogDetails,
@@ -13,7 +13,7 @@ import {
 import { filteredLogEntries } from './store/computed';
 
 export function LogsTab() {
-  const logs = useSignal(filteredLogEntries);
+  const logs = useSubscribe(filteredLogEntries);
 
   return (
     <div className="h-full overflow-y-auto">

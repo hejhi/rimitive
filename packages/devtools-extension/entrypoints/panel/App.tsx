@@ -1,4 +1,4 @@
-import { useSignal } from './useLattice';
+import { useSubscribe } from '@lattice/react';
 import {
   Tabs,
   TabsContent,
@@ -30,17 +30,17 @@ export function App() {
   console.log('[DevTools Panel] App component rendering');
 
   // Use Lattice signals with React
-  const connected = useSignal(devtoolsStore.state.connected);
-  const contexts = useSignal(devtoolsStore.state.contexts);
-  const selectedTab = useSignal(devtoolsStore.state.selectedTab);
-  const selectedTransaction = useSignal(
+  const connected = useSubscribe(devtoolsStore.state.connected);
+  const contexts = useSubscribe(devtoolsStore.state.contexts);
+  const selectedTab = useSubscribe(devtoolsStore.state.selectedTab);
+  const selectedTransaction = useSubscribe(
     devtoolsStore.state.selectedTransaction
   );
-  const filter = useSignal(devtoolsStore.state.filter);
-  const transactions = useSignal(filteredTransactions);
-  const statsData = useSignal(stats);
-  const graphData = useSignal(dependencyGraphData);
-  const getDependencies = useSignal(nodeDependencies);
+  const filter = useSubscribe(devtoolsStore.state.filter);
+  const transactions = useSubscribe(filteredTransactions);
+  const statsData = useSubscribe(stats);
+  const graphData = useSubscribe(dependencyGraphData);
+  const getDependencies = useSubscribe(nodeDependencies);
 
   // Use custom hooks
   const isNarrowViewport = useIsNarrowViewport();

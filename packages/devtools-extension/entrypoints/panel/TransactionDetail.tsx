@@ -10,7 +10,7 @@ import type {
   SignalReadData,
   SignalWriteData,
 } from './store/types';
-import { useSignal } from './useLattice';
+import { useSubscribe } from '@lattice/react';
 import { ArrowRight } from 'lucide-react';
 import { NodeDependencyView } from './NodeDependencyView';
 import { dependencyGraphData, nodeDependencies } from './store/computed';
@@ -20,8 +20,8 @@ interface TransactionDetailProps {
 }
 
 export function TransactionDetail({ transaction }: TransactionDetailProps) {
-  const graphData = useSignal(dependencyGraphData);
-  const getDependencies = useSignal(nodeDependencies);
+  const graphData = useSubscribe(dependencyGraphData);
+  const getDependencies = useSubscribe(nodeDependencies);
 
   // Extract the relevant node ID from the transaction
   const getNodeId = (): string | null => {
