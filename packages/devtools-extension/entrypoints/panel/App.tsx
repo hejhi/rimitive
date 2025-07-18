@@ -24,26 +24,21 @@ import {
   filteredTransactions,
   nodeDependencies,
   stats,
-  filterType,
-  filterSearch,
-  contextCount,
 } from './store/computed';
 
 export function App() {
   console.log('[DevTools Panel] App component rendering');
 
-  // Use Lattice signals with React - using fine-grained selectors
+  // Use Lattice signals with React
   const connected = useSignal(devtoolsStore.state.connected);
   const contexts = useSignal(devtoolsStore.state.contexts);
-  const contextsCount = useSignal(contextCount);
   const selectedTab = useSignal(devtoolsStore.state.selectedTab);
   const selectedTransaction = useSignal(
     devtoolsStore.state.selectedTransaction
   );
+  const filter = useSignal(devtoolsStore.state.filter);
   const transactions = useSignal(filteredTransactions);
   const statsData = useSignal(stats);
-  const currentFilterType = useSignal(filterType);
-  const searchValue = useSignal(filterSearch);
   const graphData = useSignal(dependencyGraphData);
   const getDependencies = useSignal(nodeDependencies);
 
@@ -59,7 +54,7 @@ export function App() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <Header
-        contextCount={contextsCount}
+        contextCount={contexts.length}
         stats={statsData}
         onExport={handleExport}
         onImport={handleImport}
@@ -91,8 +86,8 @@ export function App() {
           <FilterBar
             contexts={contexts}
             selectedContext={devtoolsStore.state.selectedContext.value}
-            filterType={currentFilterType}
-            searchValue={searchValue}
+            filterType={filter.type}
+            searchValue={filter.search}
             onContextChange={(value) =>
               (devtoolsStore.state.selectedContext.value = value)
             }

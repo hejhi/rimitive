@@ -1,17 +1,7 @@
 import { devtoolsContext, devtoolsStore } from './devtoolsCtx';
 import { SignalReadData } from './types';
 
-// Filter selectors - for fine-grained reactivity
-export const filterType = devtoolsStore.state.filter.select(f => f.type);
-export const filterSearch = devtoolsStore.state.filter.select(f => f.search);
-export const filterHideInternal = devtoolsStore.state.filter.select(f => f.hideInternal);
-
-// Array length selectors - prevent re-renders on array mutations
-export const contextCount = devtoolsStore.state.contexts.select(c => c.length);
-export const transactionCount = devtoolsStore.state.transactions.select(t => t.length);
-export const hasMultipleContexts = devtoolsStore.state.contexts.select(c => c.length > 1);
-
-// Computed values
+// Actual computed values that transform or aggregate data
 export const filteredTransactions = devtoolsContext.computed(() => {
   const transactions = devtoolsStore.state.transactions.value;
   const filter = devtoolsStore.state.filter.value;
@@ -85,13 +75,7 @@ export const stats = devtoolsContext.computed(() => {
   };
 });
 
-// Individual stat selectors for fine-grained subscriptions
-export const totalSignals = stats.select(s => s.totalSignals);
-export const totalComputeds = stats.select(s => s.totalComputeds);
-export const totalEffects = stats.select(s => s.totalEffects);
-export const totalTransactions = stats.select(s => s.totalTransactions);
-
-// Selected item selectors
+// Selected item data
 export const selectedTransactionData = devtoolsContext.computed(() => {
   const selectedId = devtoolsStore.state.selectedTransaction.value;
   if (!selectedId) return null;
@@ -133,9 +117,6 @@ export const filteredLogEntries = devtoolsContext.computed(() => {
   // Keep last 500 logs
   return filtered.slice(-500);
 });
-
-// Log entry selectors
-export const hasLogEntries = filteredLogEntries.select(logs => logs.length > 0);
 
 export const dependencyGraphData = devtoolsContext.computed(() => {
   const graph = devtoolsStore.state.dependencyGraph.value;
@@ -213,8 +194,3 @@ export const nodeDependencies = devtoolsContext.computed(() => {
   };
 });
 
-// First context selector for auto-selection
-export const firstContext = devtoolsStore.state.contexts.select(c => c[0]);
-
-// Active context name selector
-export const activeContextName = selectedContextData.select(c => c?.name || 'All Contexts');
