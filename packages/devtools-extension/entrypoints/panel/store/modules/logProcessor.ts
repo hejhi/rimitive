@@ -28,12 +28,12 @@ let currentLevel = 0;
 const recentWrites: { id: string; timestamp: number }[] = [];
 
 // Helper type to extract node ID from different event data types
-type EventDataWithId = 
-  | SignalWriteData 
-  | SignalReadData 
-  | NamedItemData 
-  | ComputedEndEventData 
-  | EffectEndEventData 
+type EventDataWithId =
+  | SignalWriteData
+  | SignalReadData
+  | NamedItemData
+  | ComputedEndEventData
+  | EffectEndEventData
   | SelectorCreatedEventData
   | { batchId: string };
 
@@ -42,7 +42,11 @@ function getNodeId(data: EventDataWithId): string {
   return data.id;
 }
 
-function getNodeName(data: EventDataWithId, node: ReturnType<typeof devtoolsStore.state.dependencyGraph.value.nodes.get>, type: LogEntry['type']): string | undefined {
+function getNodeName(
+  data: EventDataWithId,
+  node: ReturnType<typeof devtoolsStore.state.dependencyGraph.value.nodes.get>,
+  type: LogEntry['type']
+): string | undefined {
   if ('name' in data && data.name) return data.name;
   if ('selector' in data && data.selector) return data.selector;
   if (node?.name) return node.name;
@@ -126,10 +130,17 @@ export function processLogEntry(event: LatticeEvent) {
       processBatchEnd(event, timestamp);
       break;
     case 'DEPENDENCY_UPDATE':
-      updateDependencyGraph(event.data as DependencyUpdateData, event.contextId);
+      updateDependencyGraph(
+        event.data as DependencyUpdateData,
+        event.contextId
+      );
       break;
     case 'GRAPH_SNAPSHOT':
-      updateGraphSnapshot(event.data as GraphSnapshotData, timestamp, event.contextId);
+      updateGraphSnapshot(
+        event.data as GraphSnapshotData,
+        timestamp,
+        event.contextId
+      );
       break;
   }
 }

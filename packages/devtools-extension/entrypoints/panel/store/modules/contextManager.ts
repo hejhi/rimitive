@@ -1,5 +1,5 @@
 import { devtoolsStore } from '../devtoolsCtx';
-import { 
+import {
   ContextInfo,
   SignalCreatedData,
   SignalWriteData,
@@ -64,7 +64,7 @@ function handleContextEvent(context: ContextInfo, event: LatticeEvent) {
       handleSignalCreated(context, event);
       break;
     case 'SIGNAL_WRITE':
-      handleSignalWrite(context, event);
+      handleSignalWrite(event);
       break;
     case 'COMPUTED_CREATED':
       handleComputedCreated(context, event);
@@ -90,13 +90,13 @@ function handleSignalCreated(context: ContextInfo, event: LatticeEvent) {
   });
 }
 
-function handleSignalWrite(context: ContextInfo, event: LatticeEvent) {
+function handleSignalWrite(event: LatticeEvent) {
   const writeData = event.data as SignalWriteData;
-  
+
   scheduleBatchUpdate(() => {
     const graph = devtoolsStore.state.dependencyGraph.value;
     const node = graph.nodes.get(writeData.id);
-    
+
     if (node) {
       node.value = writeData.newValue;
     }
@@ -140,7 +140,7 @@ function handleSelectorCreated(event: LatticeEvent) {
   // Add edges in a batched update
   scheduleBatchUpdate(() => {
     const graph = devtoolsStore.state.dependencyGraph.value;
-    
+
     // Add edge from source to selector
     if (!graph.edges.has(selectorData.sourceId)) {
       graph.edges.set(selectorData.sourceId, new Set());

@@ -43,7 +43,7 @@ function handleLatticeDetected() {
   devtoolsStore.state.contexts.value = [];
   devtoolsStore.state.selectedContext.value = null;
   devtoolsStore.state.logEntries.value = [];
-  
+
   // Reset dependency graph
   devtoolsStore.state.dependencyGraph.value = {
     nodes: new Map(),

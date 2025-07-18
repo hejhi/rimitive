@@ -11,14 +11,14 @@ function filterLogs(
   return logs.filter((log) => {
     // Context filter
     if (selectedContext && log.contextId !== selectedContext) return false;
-    
+
     // Type filter
     if (filter.type !== 'all' && log.category !== filter.type) return false;
-    
+
     // Search filter
     if (filter.search) {
       const search = filter.search.toLowerCase();
-      const searchTargets = searchIn.map(field => {
+      const searchTargets = searchIn.map((field) => {
         if (field === 'eventType') return log.eventType;
         if (field === 'nodeName') return log.nodeName || '';
         if (field === 'nodeId') return log.nodeId;
@@ -26,17 +26,19 @@ function filterLogs(
         if (field === 'details') return JSON.stringify(log.details);
         return '';
       });
-      
-      if (!searchTargets.some(target => target.toLowerCase().includes(search))) {
+
+      if (
+        !searchTargets.some((target) => target.toLowerCase().includes(search))
+      ) {
         return false;
       }
     }
-    
+
     // Internal reads filter
     if (filter.hideInternal && log.eventType === 'SIGNAL_READ') {
       return !(log.rawData as SignalReadData).internal;
     }
-    
+
     return true;
   });
 }
@@ -47,11 +49,15 @@ export const filteredTransactions = devtoolsContext.computed(() => {
   const filter = devtoolsStore.state.filter.value;
   const selectedContext = devtoolsStore.state.selectedContext.value;
 
-  const filtered = filterLogs(logEntries, filter, selectedContext, ['eventType', 'nodeName', 'rawData']);
+  const filtered = filterLogs(logEntries, filter, selectedContext, [
+    'eventType',
+    'nodeName',
+    'rawData',
+  ]);
 
   // Timeline view filters - show only main events, not start/end pairs
   return filtered.filter(
-    (log) => 
+    (log) =>
       log.type === 'signal-write' ||
       log.type === 'signal-read' ||
       log.type === 'computed-complete' ||
@@ -88,8 +94,10 @@ export const stats = devtoolsContext.computed(() => {
 export const selectedTransactionData = devtoolsContext.computed(() => {
   const selectedId = devtoolsStore.state.selectedTransaction.value;
   if (!selectedId) return null;
-  
-  return filteredTransactions.value.find(log => log.id === selectedId) || null;
+
+  return (
+    filteredTransactions.value.find((log) => log.id === selectedId) || null
+  );
 });
 
 export const filteredLogEntries = devtoolsContext.computed(() => {
@@ -97,7 +105,11 @@ export const filteredLogEntries = devtoolsContext.computed(() => {
   const filter = devtoolsStore.state.filter.value;
   const selectedContext = devtoolsStore.state.selectedContext.value;
 
-  const filtered = filterLogs(logs, filter, selectedContext, ['nodeName', 'nodeId', 'details']);
+  const filtered = filterLogs(logs, filter, selectedContext, [
+    'nodeName',
+    'nodeId',
+    'details',
+  ]);
   return filtered.slice(-500); // Keep last 500 logs
 });
 
@@ -176,4 +188,3 @@ export const nodeDependencies = devtoolsContext.computed(() => {
     };
   };
 });
-
