@@ -27,8 +27,6 @@ import {
 } from './store/computed';
 
 export function App() {
-  console.log('[DevTools Panel] App component rendering');
-
   // Use Lattice signals with React
   const connected = useSubscribe(devtoolsStore.state.connected);
   const contexts = useSubscribe(devtoolsStore.state.contexts);

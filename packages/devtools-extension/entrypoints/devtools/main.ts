@@ -6,8 +6,6 @@ chrome.devtools.panels.create(
   '/icon/128.png',
   '/panel.html',
   (panel) => {
-    console.log('Lattice DevTools panel created');
-
     // Store panel reference for later use
     const windowWithPanel = window as Window & {
       latticePanel?: chrome.devtools.panels.ExtensionPanel;

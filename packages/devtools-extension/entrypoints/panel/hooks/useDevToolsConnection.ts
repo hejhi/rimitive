@@ -16,10 +16,6 @@ export function useDevToolsConnection() {
       });
 
       port.onMessage.addListener((message: DevToolsMessage) => {
-        console.log(
-          '[DevTools Panel] Received message from background:',
-          message
-        );
         handleDevToolsMessage(message);
       });
 
