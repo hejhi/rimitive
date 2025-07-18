@@ -65,20 +65,20 @@ export function updateDependencyGraph(
   graph.reverseEdges.delete(data.id);
 
   // Update edges correctly: each dependency should have an edge TO this node
-  data.dependencies.forEach((dep) => {
+  for (const dep of data.dependencies) {
     if (!graph.edges.has(dep.id)) {
       graph.edges.set(dep.id, new Set());
     }
     graph.edges.get(dep.id)!.add(data.id);
-  });
+  }
 
   // Update reverse edges: this node has edges TO each subscriber
-  data.subscribers.forEach((sub) => {
+  for (const sub of data.subscribers) {
     if (!graph.reverseEdges.has(data.id)) {
       graph.reverseEdges.set(data.id, new Set());
     }
     graph.reverseEdges.get(data.id)!.add(sub.id);
-  });
+  }
 
   // Trigger update
   devtoolsStore.state.dependencyGraph.value = { ...graph };
@@ -93,6 +93,7 @@ export function updateGraphSnapshot(
 
   // First, remove only nodes and edges belonging to this context
   const nodesToRemove = new Set<string>();
+
   graph.nodes.forEach((node, id) => {
     if (node.contextId === contextId) {
       nodesToRemove.add(id);
@@ -120,16 +121,16 @@ export function updateGraphSnapshot(
   });
 
   // Add all nodes from the snapshot (they should all be from the same context)
-  data.nodes.forEach((node) => {
+  for (const node of data.nodes) {
     // Ensure the node has the correct context ID
     graph.nodes.set(node.id, {
       ...node,
       contextId: node.contextId || contextId,
     });
-  });
+  }
 
   // Add all edges from the snapshot
-  data.edges.forEach((edge) => {
+  for (const edge of data.edges) {
     if (!graph.edges.has(edge.source)) {
       graph.edges.set(edge.source, new Set());
     }
@@ -139,7 +140,7 @@ export function updateGraphSnapshot(
       graph.reverseEdges.set(edge.target, new Set());
     }
     graph.reverseEdges.get(edge.target)!.add(edge.source);
-  });
+  }
 
   // Update last snapshot
   devtoolsStore.state.lastSnapshot.value = {
