@@ -15,14 +15,12 @@ import {
   BatchLogDetails,
   DependencyUpdateData,
   GraphSnapshotData,
-} from '../types';
-import { LatticeEvent } from './messageHandler';
-import {
   NamedItemData,
   ComputedEndEventData,
   EffectEndEventData,
   SelectorCreatedEventData,
-} from './eventTypes';
+} from '../types';
+import { LatticeEvent } from './messageHandler';
 import { updateDependencyGraph, updateGraphSnapshot } from './dependencyGraph';
 
 // Simple execution tracking for level calculation

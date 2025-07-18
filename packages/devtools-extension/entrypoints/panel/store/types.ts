@@ -201,6 +201,27 @@ export interface NamedItemData {
   name?: string;
 }
 
+export interface ComputedEndEventData {
+  id: string;
+  name?: string;
+  duration?: number;
+  value?: unknown;
+}
+
+export interface EffectEndEventData {
+  id: string;
+  name?: string;
+  duration?: number;
+}
+
+export interface SelectorCreatedEventData {
+  id: string;
+  sourceId: string;
+  sourceName?: string;
+  sourceType: 'signal' | 'computed';
+  selector: string;
+}
+
 export interface DependencyUpdateData {
   id: string;
   type: 'signal' | 'computed' | 'effect';

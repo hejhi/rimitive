@@ -1,16 +1,24 @@
 import { devtoolsStore } from '../devtoolsCtx';
-import { ContextInfo } from '../types';
+import { 
+  ContextInfo,
+  SignalCreatedData,
+  SignalWriteData,
+  SelectorCreatedEventData,
+} from '../types';
 import { LatticeEvent } from './messageHandler';
 import { addNodeToGraph } from './dependencyGraph';
-import {
-  SignalCreatedEventData,
-  SignalWriteEventData,
-  ComputedCreatedEventData,
-  EffectCreatedEventData,
-  SelectorCreatedEventData,
-} from './eventTypes';
 
 interface ContextCreatedData {
+  name?: string;
+}
+
+interface ComputedCreatedData {
+  id: string;
+  name?: string;
+}
+
+interface EffectCreatedData {
+  id: string;
   name?: string;
 }
 
@@ -74,7 +82,7 @@ function handleContextEvent(context: ContextInfo, event: LatticeEvent) {
 }
 
 function handleSignalCreated(context: ContextInfo, event: LatticeEvent) {
-  const signalData = event.data as SignalCreatedEventData;
+  const signalData = event.data as SignalCreatedData;
 
   context.signalCount++;
   context.signals.push({
@@ -92,7 +100,7 @@ function handleSignalCreated(context: ContextInfo, event: LatticeEvent) {
 }
 
 function handleSignalWrite(context: ContextInfo, event: LatticeEvent) {
-  const writeData = event.data as SignalWriteEventData;
+  const writeData = event.data as SignalWriteData;
 
   if (!context.signals) {
     context.signals = [];
@@ -121,7 +129,7 @@ function handleSignalWrite(context: ContextInfo, event: LatticeEvent) {
 }
 
 function handleComputedCreated(context: ContextInfo, event: LatticeEvent) {
-  const computedData = event.data as ComputedCreatedEventData;
+  const computedData = event.data as ComputedCreatedData;
 
   context.computedCount++;
   context.computeds.push({
@@ -140,7 +148,7 @@ function handleComputedCreated(context: ContextInfo, event: LatticeEvent) {
 }
 
 function handleEffectCreated(context: ContextInfo, event: LatticeEvent) {
-  const effectData = event.data as EffectCreatedEventData;
+  const effectData = event.data as EffectCreatedData;
 
   context.effectCount++;
   context.effects.push({
