@@ -126,7 +126,7 @@ export function processLogEntry(event: LatticeEvent) {
       processBatchEnd(event, timestamp);
       break;
     case 'DEPENDENCY_UPDATE':
-      updateDependencyGraph(event.data as DependencyUpdateData);
+      updateDependencyGraph(event.data as DependencyUpdateData, event.contextId);
       break;
     case 'GRAPH_SNAPSHOT':
       updateGraphSnapshot(event.data as GraphSnapshotData, timestamp);

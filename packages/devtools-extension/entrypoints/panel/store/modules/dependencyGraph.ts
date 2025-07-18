@@ -3,7 +3,7 @@ import { DependencyUpdateData, GraphSnapshotData, DependencyNode } from '../type
 
 export function addNodeToGraph(
   id: string,
-  nodeData: { type: DependencyNode['type']; name?: string; value?: unknown }
+  nodeData: { type: DependencyNode['type']; name?: string; value?: unknown; contextId?: string }
 ) {
   const graph = devtoolsStore.state.dependencyGraph.value;
   
@@ -15,12 +15,13 @@ export function addNodeToGraph(
     isActive: true,
     isOutdated: false,
     hasSubscribers: false,
+    contextId: nodeData.contextId,
   });
   
   devtoolsStore.state.dependencyGraph.value = { ...graph };
 }
 
-export function updateDependencyGraph(data: DependencyUpdateData) {
+export function updateDependencyGraph(data: DependencyUpdateData, contextId: string) {
   const graph = devtoolsStore.state.dependencyGraph.value;
 
   // Update node - preserve existing name if available
@@ -29,6 +30,10 @@ export function updateDependencyGraph(data: DependencyUpdateData) {
     // Update existing node
     existingNode.value = data.value;
     existingNode.hasSubscribers = data.subscribers.length > 0;
+    // Update context ID if not already set
+    if (!existingNode.contextId) {
+      existingNode.contextId = contextId;
+    }
   } else {
     // Create new node if it doesn't exist
     graph.nodes.set(data.id, {
@@ -39,6 +44,7 @@ export function updateDependencyGraph(data: DependencyUpdateData) {
       isActive: true,
       isOutdated: false,
       hasSubscribers: data.subscribers.length > 0,
+      contextId,
     });
   }
 

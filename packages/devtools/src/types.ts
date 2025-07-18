@@ -183,6 +183,7 @@ export interface GraphSnapshotData {
     isActive: boolean;
     isOutdated?: boolean;
     hasSubscribers?: boolean;
+    contextId?: string;
   }>;
   edges: Array<{
     source: string;

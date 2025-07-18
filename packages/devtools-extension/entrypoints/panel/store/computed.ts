@@ -110,7 +110,7 @@ export const dependencyGraphData = devtoolsContext.computed(() => {
 
   // Filter by context if needed
   if (selectedContext) {
-    nodes = nodes.filter((node) => node.id.startsWith(selectedContext));
+    nodes = nodes.filter((node) => node.contextId === selectedContext);
   }
 
   // Filter by type

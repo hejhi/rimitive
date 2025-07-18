@@ -114,6 +114,7 @@ function buildGraphSnapshot(
         name: tracked.name || tracked.selector,
         value: undefined, // Selectors don't store values directly
         isActive: true,
+        contextId: tracked.contextId,
       });
 
       // Add edge from source to selector
@@ -136,6 +137,7 @@ function buildGraphSnapshot(
             ? getCurrentValue(tracked.ref)
             : undefined,
         isActive: true,
+        contextId: tracked.contextId,
       });
 
       // Build edges from dependencies
