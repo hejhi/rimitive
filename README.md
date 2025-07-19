@@ -1,5 +1,7 @@
 # Lattice
 
+[![CI](https://github.com/henryivry/lattice/actions/workflows/ci.yml/badge.svg)](https://github.com/henryivry/lattice/actions/workflows/ci.yml)
+
 Fine-grained reactivity for JavaScript. Run anywhere.
 
 ```typescript
