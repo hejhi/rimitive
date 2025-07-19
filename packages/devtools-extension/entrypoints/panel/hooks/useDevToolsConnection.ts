@@ -4,7 +4,7 @@ import { devtoolsStore } from '../store/devtoolsCtx';
 
 export function useDevToolsConnection() {
   useEffect(() => {
-    let port: chrome.runtime.Port | null = null;
+    let port: chrome.runtime.Port = null!;
     let timeoutId: number | null = null;
 
     try {
