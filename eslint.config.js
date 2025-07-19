@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import react from 'eslint-plugin-react';
 import storybookPlugin from 'eslint-plugin-storybook';
+import wxtAutoImports from './packages/devtools-extension/.wxt/eslint-auto-imports.mjs';
 
 export default tseslint.config(
   // Global ignores
@@ -67,4 +68,9 @@ export default tseslint.config(
   },
   // Storybook configuration
   ...storybookPlugin.configs['flat/recommended'],
+  // WXT auto-imports for devtools extension
+  {
+    files: ['packages/devtools-extension/**/*.ts', 'packages/devtools-extension/**/*.tsx'],
+    ...wxtAutoImports,
+  },
 );
