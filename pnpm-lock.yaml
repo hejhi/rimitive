@@ -59,7 +59,7 @@ importers:
         version: 6.3.5(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
       vitest:
         specifier: ^3.1.4
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
   packages/benchmarks:
     devDependencies:
@@ -147,7 +147,7 @@ importers:
         version: 4.5.4(@types/node@22.15.3)(rollup@4.40.0)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1))
       vitest:
         specifier: ^3.1.1
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
   packages/devtools-extension:
     dependencies:
@@ -207,8 +207,8 @@ importers:
         specifier: ^4.1.11
         version: 4.1.11
       '@types/chrome':
-        specifier: ^0.0.331
-        version: 0.0.331
+        specifier: ^0.1.1
+        version: 0.1.1
       '@types/react':
         specifier: ^19.1.2
         version: 19.1.8
@@ -294,7 +294,7 @@ importers:
         version: 4.5.4(@types/node@22.15.3)(rollup@4.40.0)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1))
       vitest:
         specifier: ^3.1.1
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
   packages/react:
     dependencies:
@@ -361,7 +361,7 @@ importers:
         version: 4.5.4(@types/node@22.15.3)(rollup@4.40.0)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1))
       vitest:
         specifier: ^3.1.1
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
 
 packages:
 
@@ -1988,8 +1988,8 @@ packages:
   '@types/babel__traverse@7.20.7':
     resolution: {integrity: sha512-dkO5fhS7+/oos4ciWxyEyjWe48zmG6wbCheo/G2ZnHx4fs3EU6YC6UM8rk56gAjNJ9P3MTH2jo5jb92/K6wbng==}
 
-  '@types/chrome@0.0.331':
-    resolution: {integrity: sha512-/xgmrxXME8LQQC7YpNpCVYqiJiF5Rcin8tOE4kz8Hrhu8PchDK0CK0r/HzDOHc4B/AEq7T0KKrgHh74/jWNKpA==}
+  '@types/chrome@0.1.1':
+    resolution: {integrity: sha512-MLtFW++/n+OPQIaf5hA6pmURd3Zn+OxuvASyf2mYh8B8pHDpbhHjwlVHMw3H/aJC9Z7Z3itO0AFaZeegrGk0yA==}
 
   '@types/debug@4.1.12':
     resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
@@ -9411,7 +9411,7 @@ snapshots:
     dependencies:
       '@babel/types': 7.27.3
 
-  '@types/chrome@0.0.331':
+  '@types/chrome@0.1.1':
     dependencies:
       '@types/filesystem': 0.0.36
       '@types/har-format': 1.2.16
