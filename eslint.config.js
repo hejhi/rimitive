@@ -31,16 +31,9 @@ export default tseslint.config(
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.json', './packages/*/tsconfig.json', './packages/examples/*/tsconfig.json'],
+        project: true,
         tsconfigRootDir: process.cwd(),
       },
-    },
-    rules: {
-      // Temporarily disable strict type checking for browser/chrome APIs
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
-      '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn',
     },
   },
   // React-specific configuration
