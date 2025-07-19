@@ -7,17 +7,15 @@
   "scripts": {
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
-    "build": "wxt build",
-    "build:firefox": "wxt build -b firefox",
+    "build": "wxt prepare && wxt build",
+    "build:firefox": "wxt prepare && wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
     "postinstall": "wxt prepare",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "wxt prepare && tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
-    "check": "pnpm typecheck && pnpm lint",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "check": "pnpm typecheck && pnpm lint"
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*",

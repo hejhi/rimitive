@@ -133,7 +133,7 @@ describe('Component Reactivity Boundaries', () => {
         // ❌ BAD: Creates new computed on every access!
         get total() {
           const computed = ctx.computed(() =>
-            store.state.items.value.reduce((a, b) => a + b, 0)
+            store.state.items.value.reduce((a: number, b: number) => a + b, 0)
           );
           return computed.value;
         },
@@ -146,7 +146,7 @@ describe('Component Reactivity Boundaries', () => {
 
       // ✅ GOOD: Computed created once during component creation
       const totalComputed = ctx.computed(() =>
-        store.state.items.value.reduce((a, b) => a + b, 0)
+        store.state.items.value.reduce((a: number, b: number) => a + b, 0)
       );
 
       return {

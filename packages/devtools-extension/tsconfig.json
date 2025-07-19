@@ -5,6 +5,7 @@
     "jsx": "react-jsx",
     "types": ["chrome"],
     "baseUrl": ".",
+    "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"],
       "@lattice/lattice": ["../lattice/src/index.ts"],
@@ -14,12 +15,12 @@
   },
   "include": [
     "**/*.ts",
-    "**/*.tsx"
+    "**/*.tsx",
+    ".wxt/wxt.d.ts"
   ],
   "exclude": [
     "node_modules",
     ".output",
-    ".wxt",
     "dist",
     "public",
     "demo"

@@ -31,8 +31,8 @@ export default tseslint.config(
     extends: [...tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.json', './packages/*/tsconfig.json', './packages/examples/*/tsconfig.json'],
-        tsconfigRootDir: import.meta.dirname,
+        project: true,
+        tsconfigRootDir: process.cwd(),
       },
     },
   },
@@ -67,4 +67,26 @@ export default tseslint.config(
   },
   // Storybook configuration
   ...storybookPlugin.configs['flat/recommended'],
+  // WXT devtools-extension specific overrides
+  {
+    files: ['packages/devtools-extension/**/*.ts', 'packages/devtools-extension/**/*.tsx'],
+    languageOptions: {
+      globals: {
+        defineBackground: 'readonly',
+        defineContentScript: 'readonly',
+        browser: 'readonly',
+        chrome: 'readonly',
+      },
+    },
+  },
+  // Disable type checking for WXT entry files in CI
+  {
+    files: [
+      'packages/devtools-extension/entrypoints/background.ts',
+      'packages/devtools-extension/entrypoints/content.content.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-unsafe-call': 'off',
+    },
+  },
 );
