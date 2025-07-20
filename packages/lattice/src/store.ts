@@ -28,27 +28,6 @@ const Store = StoreImpl as unknown as {
   prototype: Store<object>;
 };
 
-// Select method - create computed selector from store state
-Store.prototype.select = function <T extends object, R>(
-  this: Store<T>,
-  selector: (state: T) => R
-): Computed<R> {
-  return this._context.computed(() => {
-    // Build state object by reading all signal values
-    // Note: This makes ALL signals dependencies of the computed value.
-    // For fine-grained reactivity, access individual signals directly:
-    // const count = store.getContext().computed(() => store.state.count.value)
-    const currentState = {} as T;
-    for (const [key, signal] of Object.entries(this.state) as [
-      keyof T,
-      SignalState<T>[keyof T],
-    ][]) {
-      currentState[key] = signal.value;
-    }
-    return selector(currentState);
-  });
-};
-
 // Computed method - create a computed value in the store's context
 Store.prototype.computed = function <T extends object, R>(
   this: Store<T>,
@@ -124,9 +103,6 @@ export interface Store<T extends object> {
   /** Private context instance */
   _context: LatticeContext;
 
-  /** Create a computed selector from store state */
-  select<R>(selector: (state: T) => R): Computed<R>;
-
   /** Create a computed value in the store's context */
   computed<R>(fn: () => R): Computed<R>;
 
@@ -160,10 +136,9 @@ export interface Store<T extends object> {
  * // Read state directly
  * console.log(store.state.count.value); // 0
  *
- * // Create computed selectors
- * const count = store.select(s => s.count);
- * const uppercaseName = store.select(s => s.name.toUpperCase());
- *
+ * // Create computed values
+ * const count = store.computed(() => store.state.count.value);
+ * const uppercaseName = store.computed(() => store.state.name.value.toUpperCase());
  * // Create computed values with fine-grained reactivity
  * const doubled = store.computed(() => store.state.count.value * 2);
  *

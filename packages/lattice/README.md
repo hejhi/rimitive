@@ -138,6 +138,76 @@ context.dispose();
 
 ## Patterns
 
+### Zustand-like Selectors
+
+For developers coming from Zustand, you can create similar selector patterns using the `useStoreComputed` hook:
+
+```typescript
+import { createStore } from '@lattice/lattice';
+import { useStore, useStoreComputed } from '@lattice/react';
+
+// Option 1: Using useStore with useStoreComputed
+function AnimalsDisplay() {
+  const store = useStore(() => createStore({
+    bears: 0,
+    fish: 0,
+    berries: 10
+  }));
+
+  // Select multiple values with fine-grained reactivity
+  const animals = useStoreComputed(store, state => ({
+    bears: state.bears.value,
+    fish: state.fish.value,
+    total: state.bears.value + state.fish.value
+  }));
+
+  return (
+    <div>
+      <p>Bears: {animals.bears}</p>
+      <p>Fish: {animals.fish}</p>
+      <p>Total: {animals.total}</p>
+      <button onClick={() => store.state.bears.value++}>More bears</button>
+    </div>
+  );
+}
+
+// Option 2: Store from context
+function AnimalsFromContext() {
+  const store = useStoreContext<AnimalStore>();
+  
+  // Select just what you need - only re-renders when these specific values change
+  const bearCount = useStoreComputed(store, state => state.bears.value);
+  const fishCount = useStoreComputed(store, state => state.fish.value);
+  
+  return (
+    <div>
+      <p>Bears: {bearCount}</p>
+      <p>Fish: {fishCount}</p>
+    </div>
+  );
+}
+
+// Option 3: Typed store hook pattern
+const useAnimalStore = createStoreHook<AnimalState>();
+
+function TypedAnimalsDisplay({ store }: { store: Store<AnimalState> }) {
+  // Fully typed selectors with fine-grained reactivity
+  const animals = useAnimalStore(store, state => ({
+    bears: state.bears.value,
+    fish: state.fish.value,
+    total: state.bears.value + state.fish.value
+  }));
+  
+  return <div>Total animals: {animals.total}</div>;
+}
+```
+
+Key advantages:
+- **Fine-grained reactivity**: Only subscribes to signals you actually access
+- **Familiar patterns**: Similar to Zustand but with better performance
+- **Type safety**: Full TypeScript inference
+- **Explicit control**: Clear `.value` access shows exactly what triggers updates
+
 ### Composing Components
 
 Components can use other components, creating larger abstractions from smaller ones.
@@ -345,6 +415,65 @@ Helper for creating single-property updates.
 - `context.effect(fn)` - Create an effect
 - `context.batch(fn)` - Batch updates
 - `context.dispose()` - Clean up context
+
+## Reactivity Models
+
+Lattice provides three levels of reactivity granularity, allowing you to choose the right balance between developer experience and performance:
+
+### 1. Fine-grained (direct signal access)
+
+Access individual signals for targeted reactivity:
+
+```typescript
+import { useStoreComputed } from '@lattice/react';
+
+// Direct computed - only subscribes to accessed signals
+const activeCount = store.computed(() => 
+  store.state.todos.value.filter(t => !t.done).length
+);
+
+// Multiple values with manual computed
+const summary = store.computed(() => ({
+  activeCount: store.state.todos.value.filter(t => !t.done).length,
+  totalCount: store.state.todos.value.length,
+  currentFilter: store.state.filter.value
+}));
+
+// Or use useStoreComputed in React for the same fine-grained reactivity
+const summary = useStoreComputed(store, state => ({
+  activeCount: state.todos.value.filter(t => !t.done).length,
+  totalCount: state.todos.value.length,
+  currentFilter: state.filter.value
+}));
+```
+
+This approach:
+- Only subscribes to the specific signals you access
+- Optimal performance regardless of store size
+- Explicit `.value` access makes dependencies clear
+- Same fine-grained reactivity whether using `store.computed()` or `useStoreComputed()`
+
+### 2. Ultra-fine-grained (signal subscriptions)
+
+Direct subscriptions for maximum control:
+
+```typescript
+// React only to todos changes
+store.state.todos.subscribe(() => {
+  console.log('Todos changed!');
+});
+
+// Or create computed values for nested properties
+const theme = store.computed(() => store.state.settings.value.theme);
+theme.subscribe(updateTheme);
+```
+
+### Choosing the Right Approach
+
+- **Use direct signal access** for targeted reactivity and better performance
+- **Use subscriptions** when you need imperative side effects or the most granular control
+
+Lattice encourages fine-grained reactivity by default, allowing you to subscribe only to the specific signals you need.
 
 ## License
 

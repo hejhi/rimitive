@@ -97,16 +97,16 @@ describe('Store', () => {
     cleanup();
   });
 
-  describe('selectors', () => {
-    it('should create computed selectors with store.select', () => {
+  describe('computed values', () => {
+    it('should create computed values with store.computed', () => {
       const store = createStore({ count: 0, name: 'test' });
 
       // Single value selector
-      const count = store.select((s) => s.count);
+      const count = store.computed(() => store.state.count.value);
       expect(count.value).toBe(0);
 
       // Computed derived value
-      const doubled = store.select((s) => s.count * 2);
+      const doubled = store.computed(() => store.state.count.value * 2);
       expect(doubled.value).toBe(0);
 
       store.set({ count: 5 });
@@ -114,14 +114,14 @@ describe('Store', () => {
       expect(doubled.value).toBe(10);
     });
 
-    it('should work with object selectors', () => {
+    it('should work with object computed values', () => {
       const store = createStore({ user: { name: 'John', age: 30 }, count: 0 });
 
       // Select multiple values
-      const selection = store.select((s) => ({
-        userName: s.user.name,
-        userAge: s.user.age,
-        count: s.count,
+      const selection = store.computed(() => ({
+        userName: store.state.user.value.name,
+        userAge: store.state.user.value.age,
+        count: store.state.count.value,
       }));
 
       expect(selection.value).toEqual({
@@ -153,17 +153,20 @@ describe('Store', () => {
         ] as Todo[],
       });
 
-      const stats = store.select((s) => ({
-        total: s.todos.length,
-        completed: s.todos.filter((t) => t.done).length,
-        active: s.todos.filter((t) => !t.done).length,
-        percentComplete:
-          s.todos.length > 0
-            ? Math.round(
-                (s.todos.filter((t) => t.done).length / s.todos.length) * 100
-              )
-            : 0,
-      }));
+      const stats = store.computed(() => {
+        const todos = store.state.todos.value;
+        return {
+          total: todos.length,
+          completed: todos.filter((t) => t.done).length,
+          active: todos.filter((t) => !t.done).length,
+          percentComplete:
+            todos.length > 0
+              ? Math.round(
+                  (todos.filter((t) => t.done).length / todos.length) * 100
+                )
+              : 0,
+        };
+      });
 
       expect(stats.value).toEqual({
         total: 3,

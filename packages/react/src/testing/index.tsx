@@ -5,44 +5,26 @@ import {
   RenderOptions,
   RenderHookOptions,
 } from '@testing-library/react';
-import { createLattice, createStore } from '@lattice/lattice';
-import type { Store, LatticeContext } from '@lattice/lattice';
-import { LatticeProvider, StoreProvider } from '../lattice';
+import { createStore } from '@lattice/lattice';
+import type { Store } from '@lattice/lattice';
 
-interface LatticeTestingOptions {
-  latticeContext?: LatticeContext;
-  store?: Store<Record<string, unknown>>;
-}
-
-interface CustomRenderOptions
-  extends Omit<RenderOptions, 'wrapper'>,
-    LatticeTestingOptions {}
-interface CustomRenderHookOptions<Props>
-  extends Omit<RenderHookOptions<Props>, 'wrapper'>,
-    LatticeTestingOptions {}
+type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>;
+type CustomRenderHookOptions<Props> = Omit<RenderHookOptions<Props>, 'wrapper'>;
 
 /**
- * Creates a wrapper component that provides Lattice context for testing.
+ * Creates a wrapper component for testing.
+ * This provides a stable testing environment for Lattice hooks.
  *
  * @example
  * ```tsx
  * const wrapper = createLatticeWrapper();
- * const { result } = renderHook(() => useSubscribe(mySignal), { wrapper });
+ * const { result } = renderHook(() => useSignal(0), { wrapper });
  * ```
  */
-export function createLatticeWrapper(options: LatticeTestingOptions = {}) {
+export function createLatticeWrapper() {
+  // Simple wrapper component for consistent test environment
   return function LatticeWrapper({ children }: { children: React.ReactNode }) {
-    const lattice = options.latticeContext ?? createLattice();
-
-    if (options.store) {
-      return (
-        <LatticeProvider context={lattice}>
-          <StoreProvider store={options.store}>{children}</StoreProvider>
-        </LatticeProvider>
-      );
-    }
-
-    return <LatticeProvider context={lattice}>{children}</LatticeProvider>;
+    return <>{children}</>;
   };
 }
 
@@ -62,8 +44,8 @@ export function renderWithLattice(
   ui: ReactElement,
   options: CustomRenderOptions = {}
 ): ReturnType<typeof render> {
-  const { latticeContext, store, ...renderOptions } = options;
-  const Wrapper = createLatticeWrapper({ latticeContext, store });
+  const { ...renderOptions } = options;
+  const Wrapper = createLatticeWrapper();
 
   return render(ui, { wrapper: Wrapper, ...renderOptions });
 }
@@ -75,15 +57,14 @@ export function renderWithLattice(
  * @example
  * ```tsx
  * test('useSignal updates', () => {
- *   const count = signal(0);
- *   const { result } = renderHookWithLattice(() => useSubscribe(count));
- *   expect(result.current).toBe(0);
+ *   const { result } = renderHookWithLattice(() => useSignal(0));
+ *   expect(result.current[0]).toBe(0);
  *
  *   act(() => {
- *     count.value = 1;
+ *     result.current[1](1);
  *   });
  *
- *   expect(result.current).toBe(1);
+ *   expect(result.current[0]).toBe(1);
  * });
  * ```
  */
@@ -91,8 +72,8 @@ export function renderHookWithLattice<Result, Props>(
   hook: (props: Props) => Result,
   options?: CustomRenderHookOptions<Props>
 ): ReturnType<typeof renderHook<Result, Props>> {
-  const { latticeContext, store, ...renderOptions } = options ?? {};
-  const Wrapper = createLatticeWrapper({ latticeContext, store });
+  const { ...renderOptions } = options ?? {};
+  const Wrapper = createLatticeWrapper();
 
   return renderHook(hook, { wrapper: Wrapper, ...renderOptions });
 }
@@ -106,8 +87,7 @@ export function renderHookWithLattice<Result, Props>(
  * test('store updates', () => {
  *   const store = createTestStore({ count: 0 });
  *   const { result } = renderHookWithLattice(
- *     () => useSubscribe(store.state.count),
- *     { store }
+ *     () => useSubscribe(store.state.count)
  *   );
  *
  *   expect(result.current).toBe(0);

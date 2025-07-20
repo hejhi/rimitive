@@ -2,12 +2,11 @@ import {
   useMemo,
   useRef,
   useSyncExternalStore,
-  useEffect,
   useCallback,
 } from 'react';
-import { signal, computed, effect } from '@lattice/signals';
-import type { Signal, Computed, Selected } from '@lattice/signals';
-import type { SignalLike, SignalSetter, EffectCleanup } from './types';
+import { signal } from '@lattice/signals';
+import type { Signal, Selected } from '@lattice/signals';
+import type { SignalLike, SignalSetter } from './types';
 
 /**
  * Subscribe to a signal, computed, or selected value and return its current value.
@@ -87,50 +86,6 @@ export function useSignal<T>(
   return [value, setter];
 }
 
-/**
- * Create a computed value that is scoped to the component lifecycle.
- * Returns a Computed instance that can be passed to useSubscribe or child components.
- *
- * @example
- * ```tsx
- * function DoubleCounter({ count }: { count: Signal<number> }) {
- *   const doubled = useComputed(() => count.value * 2);
- *   const value = useSubscribe(doubled);
- *   return <div>Doubled: {value}</div>;
- * }
- * ```
- */
-export function useComputed<T>(fn: () => T, deps: unknown[] = []): Computed<T> {
-  // useMemo is appropriate here because the computation function might
-  // close over external values. The deps array controls when we recreate
-  // the computed. The computed itself tracks reactive dependencies internally.
-  return useMemo(() => computed(fn), deps);
-}
-
-/**
- * Create an effect that runs when its signal dependencies change.
- * Unlike React's useEffect, this automatically tracks signal dependencies.
- *
- * @example
- * ```tsx
- * function Logger({ message }: { message: Signal<string> }) {
- *   useSignalEffect(() => {
- *     console.log('Message:', message.value);
- *     return () => console.log('Cleanup');
- *   });
- *   return null;
- * }
- * ```
- */
-export function useSignalEffect(fn: () => EffectCleanup): void {
-  const fnRef = useRef(fn);
-  fnRef.current = fn;
-
-  useEffect(() => {
-    const dispose = effect(() => fnRef.current());
-    return dispose;
-  }, []);
-}
 
 /**
  * Subscribe to a signal value using a selector function.

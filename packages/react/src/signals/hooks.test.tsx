@@ -4,8 +4,6 @@ import { signal, computed } from '@lattice/signals';
 import {
   useSubscribe,
   useSignal,
-  useComputed,
-  useSignalEffect,
   useSelector,
 } from './hooks';
 
@@ -96,130 +94,6 @@ describe('Signal Hooks', () => {
 
       expect(result.current[0]).toBe(42);
       expect(init).toHaveBeenCalledOnce();
-    });
-  });
-
-  describe('useComputed', () => {
-    it('should return a computed instance', () => {
-      const count = signal(5);
-      const { result } = renderHook(() => useComputed(() => count.value * 2));
-
-      expect(result.current.value).toBe(10);
-
-      act(() => {
-        count.value = 7;
-      });
-
-      expect(result.current.value).toBe(14);
-    });
-
-    it('should work with useSubscribe', () => {
-      const count = signal(5);
-      const { result } = renderHook(() => {
-        const computed = useComputed(() => count.value * 2);
-        return useSubscribe(computed);
-      });
-
-      expect(result.current).toBe(10);
-
-      act(() => {
-        count.value = 7;
-      });
-
-      expect(result.current).toBe(14);
-    });
-
-    it('should respect manual dependencies', () => {
-      let multiplier = 2;
-      const count = signal(5);
-
-      const { result, rerender } = renderHook(
-        ({ mult }) => {
-          const computed = useComputed(() => count.value * mult, [mult]);
-          return useSubscribe(computed);
-        },
-        { initialProps: { mult: multiplier } }
-      );
-
-      expect(result.current).toBe(10);
-
-      // Change multiplier and rerender
-      multiplier = 3;
-      rerender({ mult: multiplier });
-
-      expect(result.current).toBe(15);
-    });
-  });
-
-  describe('useSignalEffect', () => {
-    it('should run effect when dependencies change', () => {
-      const count = signal(0);
-      const effectFn = vi.fn();
-
-      renderHook(() => {
-        useSignalEffect(() => {
-          effectFn(count.value);
-        });
-      });
-
-      expect(effectFn).toHaveBeenCalledWith(0);
-
-      act(() => {
-        count.value = 1;
-      });
-
-      expect(effectFn).toHaveBeenCalledWith(1);
-      expect(effectFn).toHaveBeenCalledTimes(2);
-    });
-
-    it('should support cleanup functions', () => {
-      const cleanup = vi.fn();
-      const count = signal(0);
-
-      const { unmount } = renderHook(() => {
-        useSignalEffect(() => {
-          const value = count.value;
-          return () => {
-            cleanup(value);
-          };
-        });
-      });
-
-      act(() => {
-        count.value = 1;
-      });
-
-      expect(cleanup).toHaveBeenCalledWith(0);
-
-      unmount();
-
-      expect(cleanup).toHaveBeenCalledWith(1);
-    });
-
-    it('should track dependencies automatically', () => {
-      const a = signal(1);
-      const b = signal(2);
-      const effectFn = vi.fn();
-
-      renderHook(() => {
-        useSignalEffect(() => {
-          effectFn(a.value + b.value);
-        });
-      });
-
-      expect(effectFn).toHaveBeenCalledWith(3);
-
-      act(() => {
-        a.value = 2;
-      });
-
-      expect(effectFn).toHaveBeenCalledWith(4);
-
-      act(() => {
-        b.value = 3;
-      });
-
-      expect(effectFn).toHaveBeenCalledWith(5);
     });
   });
 
