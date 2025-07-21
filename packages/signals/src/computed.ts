@@ -344,3 +344,6 @@ function disposeAllSources<T>(computed: Computed<T>): void {
 
 // Export the Computed constructor for prototype extensions
 export { Computed };
+
+// Export helper for use in effect.ts
+export { removeFromTargets };

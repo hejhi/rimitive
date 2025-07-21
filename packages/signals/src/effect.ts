@@ -4,6 +4,7 @@ import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
 import { activeContext } from './signal';
 import { releaseNode } from './node-pool';
 import type { EffectDisposer } from './types';
+import { removeFromTargets } from './computed';
 
 // Direct class syntax - cleaner and more idiomatic
 class Effect implements EffectInterface {
@@ -57,11 +58,7 @@ class Effect implements EffectInterface {
     this._flags = (this._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
 
     // Mark sources for cleanup
-    let node = this._sources;
-    while (node) {
-      node.version = -1;
-      node = node.nextSource;
-    }
+    markSourcesUnused(this);
 
     const prevComputed = activeContext.currentComputed;
     activeContext.currentComputed = this;
@@ -73,46 +70,7 @@ class Effect implements EffectInterface {
       this._flags &= ~RUNNING;
 
       // Cleanup unused sources
-      let node = this._sources;
-      let prev: DependencyNode | undefined;
-
-      while (node) {
-        const next = node.nextSource;
-
-        if (node.version === -1) {
-          // Remove unused
-          if (prev) {
-            prev.nextSource = next;
-          } else {
-            this._sources = next;
-          }
-          if (next) {
-            next.prevSource = prev;
-          }
-
-          // Remove from source's targets
-          const source = node.source;
-          const prevTarget = node.prevTarget;
-          const nextTarget = node.nextTarget;
-
-          if (prevTarget) {
-            prevTarget.nextTarget = nextTarget;
-          } else {
-            source._targets = nextTarget;
-          }
-
-          if (nextTarget) {
-            nextTarget.prevTarget = prevTarget;
-          }
-
-          // Return node to pool
-          releaseNode(node);
-        } else {
-          prev = node;
-        }
-
-        node = next;
-      }
+      cleanupUnusedSources(this);
     }
   }
 
@@ -122,30 +80,7 @@ class Effect implements EffectInterface {
       this._flags |= DISPOSED;
 
       // Clear all sources
-      let node = this._sources;
-      while (node) {
-        const next = node.nextSource;
-        const source = node.source;
-        const prevTarget = node.prevTarget;
-        const nextTarget = node.nextTarget;
-
-        if (prevTarget) {
-          prevTarget.nextTarget = nextTarget;
-        } else {
-          source._targets = nextTarget;
-        }
-
-        if (nextTarget) {
-          nextTarget.prevTarget = prevTarget;
-        }
-
-        // Return node to pool
-        releaseNode(node);
-
-        node = next;
-      }
-
-      this._sources = undefined;
+      disposeAllSources(this);
     }
   }
 }
@@ -183,3 +118,54 @@ export function effect(effectFn: () => void | (() => void)): EffectDisposer {
 
 // Export Effect constructor for external use
 export { Effect };
+
+// Helper: Mark all sources as potentially unused before re-evaluation
+function markSourcesUnused(effect: Effect): void {
+  let node = effect._sources;
+  while (node) {
+    node.version = -1;
+    node = node.nextSource;
+  }
+}
+
+// Helper: Clean up sources that weren't used during re-evaluation
+function cleanupUnusedSources(effect: Effect): void {
+  let node = effect._sources;
+  let prev: DependencyNode | undefined;
+
+  while (node) {
+    const next = node.nextSource;
+
+    if (node.version === -1) {
+      // Remove from sources list
+      if (prev) {
+        prev.nextSource = next;
+      } else {
+        effect._sources = next;
+      }
+      if (next) {
+        next.prevSource = prev;
+      }
+
+      // Remove from source's targets and return to pool
+      removeFromTargets(node);
+      releaseNode(node);
+    } else {
+      prev = node;
+    }
+
+    node = next;
+  }
+}
+
+// Helper: Dispose all source connections
+function disposeAllSources(effect: Effect): void {
+  let node = effect._sources;
+  while (node) {
+    const next = node.nextSource;
+    removeFromTargets(node);
+    releaseNode(node);
+    node = next;
+  }
+  effect._sources = undefined;
+}
