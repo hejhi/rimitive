@@ -8,6 +8,8 @@ import type {
   Signal,
   Computed,
   EffectDisposer,
+  Selected,
+  Unsubscribe,
 } from '@lattice/signals';
 
 /**
@@ -37,6 +39,8 @@ export interface LatticeContext {
   computed: <T>(computeFn: () => T) => Computed<T>;
   effect: (effectFn: () => void | (() => void)) => EffectDisposer;
   batch: (fn: () => void) => void;
+  select: <T, R>(source: Signal<T> | Computed<T> | Selected<T>, selector: (value: T) => R) => Selected<R>;
+  subscribe: (source: Signal<unknown> | Computed<unknown> | Selected<unknown>, callback: () => void) => Unsubscribe;
   dispose(): void;
 }
 

@@ -295,18 +295,19 @@ describe('Component Reactivity Boundaries', () => {
     });
 
     const component = Component(store);
+    const ctx = store.getContext();
 
     let normalSubscriptionRuns = 0;
     let selectSubscriptionRuns = 0;
 
     // Direct subscription to user signal
-    const unsubNormal = store.state.user.subscribe(() => {
+    const unsubNormal = ctx.subscribe(store.state.user, () => {
       normalSubscriptionRuns++;
     });
 
     // Subscription via select - only fires when name changes
-    const nameSelect = store.state.user.select((u) => u.name);
-    const unsubSelect = nameSelect.subscribe(() => {
+    const nameSelect = ctx.select(store.state.user, (u) => u.name);
+    const unsubSelect = ctx.subscribe(nameSelect, () => {
       selectSubscriptionRuns++;
     });
 

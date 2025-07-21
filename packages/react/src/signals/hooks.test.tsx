@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { signal, computed } from '@lattice/signals';
+import { signal, computed, select } from '@lattice/signals';
 import {
   useSubscribe,
   useSignal,
@@ -45,7 +45,7 @@ describe('Signal Hooks', () => {
 
     it('should work with selected values', () => {
       const user = signal({ name: 'John', age: 30 });
-      const name = user.select((u) => u.name);
+      const name = select(user, (u) => u.name);
       const { result } = renderHook(() => useSubscribe(name));
 
       expect(result.current).toBe('John');

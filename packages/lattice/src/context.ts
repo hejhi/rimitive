@@ -11,9 +11,13 @@ import {
   computed as globalComputed,
   effect as globalEffect,
   batch,
+  select as globalSelect,
+  subscribe as globalSubscribe,
   type Signal,
   type Computed,
   type EffectDisposer,
+  type Selected,
+  type Unsubscribe,
 } from '@lattice/signals';
 
 /**
@@ -108,6 +112,47 @@ proto.effect = function (
 
 proto.batch = batch;
 
+proto.select = function <T, R>(
+  this: LatticeContextImpl,
+  source: Signal<T> | Computed<T> | Selected<T>,
+  selector: (value: T) => R
+): Selected<R> {
+  if (this._state.disposed) {
+    throw new Error('Cannot use select in disposed context');
+  }
+  
+  // Check if source is a Selected type
+  if ('select' in source && typeof source.select === 'function') {
+    // Use the select method on the Selected object
+    return source.select(selector);
+  } else {
+    // Use global select function for Signal and Computed
+    return globalSelect(source as Signal<T> | Computed<T>, selector);
+  }
+};
+
+proto.subscribe = function (
+  this: LatticeContextImpl,
+  source: Signal<unknown> | Computed<unknown> | Selected<unknown>,
+  callback: () => void
+): Unsubscribe {
+  if (this._state.disposed) {
+    throw new Error('Cannot use subscribe in disposed context');
+  }
+  
+  // Use global subscribe function
+  const unsubscribe = globalSubscribe(source, callback);
+  
+  // Track the subscription as an effect for cleanup
+  this._state.effects.add(unsubscribe as unknown as EffectDisposer);
+  
+  // Return a wrapped unsubscribe that also removes from tracking
+  return () => {
+    unsubscribe();
+    this._state.effects.delete(unsubscribe as unknown as EffectDisposer);
+  };
+};
+
 proto.dispose = function (this: LatticeContextImpl): void {
   const state = this._state;
   if (state.disposed) return;
@@ -146,6 +191,8 @@ export function createLattice(): LatticeContext & { dispose(): void } {
     computed: impl.computed.bind(impl),
     effect: impl.effect.bind(impl),
     batch: impl.batch,
+    select: impl.select.bind(impl),
+    subscribe: impl.subscribe.bind(impl),
     dispose: impl.dispose.bind(impl),
   };
 }

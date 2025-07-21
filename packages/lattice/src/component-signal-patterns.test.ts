@@ -125,6 +125,7 @@ describe('Component Signal Patterns - Best Practices', () => {
     }
 
     const Form = (store: Store<FormState>) => {
+      const ctx = store.getContext();
       return {
         get username() {
           return store.state.username.value;
@@ -144,11 +145,11 @@ describe('Component Signal Patterns - Best Practices', () => {
 
         // BEST PRACTICE: Subscribe to individual signals for fine-grained reactivity
         subscribeToUsername: (fn: () => void) => {
-          return store.state.username.subscribe(fn);
+          return ctx.subscribe(store.state.username, fn);
         },
 
         subscribeToEmail: (fn: () => void) => {
-          return store.state.email.subscribe(fn);
+          return ctx.subscribe(store.state.email, fn);
         },
       };
     };
@@ -382,9 +383,9 @@ describe('Component Signal Patterns - Best Practices', () => {
       const ctx = store.getContext();
 
       // BEST PRACTICE: Use select for fine-grained reactivity
-      const userName = store.state.user.select((u) => u.name);
-      const userRole = store.state.user.select((u) => u.role);
-      const theme = store.state.settings.select((s) => s.theme);
+      const userName = ctx.select(store.state.user, (u) => u.name);
+      const userRole = ctx.select(store.state.user, (u) => u.role);
+      const theme = ctx.select(store.state.settings, (s) => s.theme);
 
       const hasNotifications = ctx.computed(
         () => store.state.notifications.value > 0
@@ -438,17 +439,20 @@ describe('Component Signal Patterns - Best Practices', () => {
     let roleChanges = 0;
 
     // Subscribe to selected values
-    const unsubName = store.state.user
-      .select((u) => u.name)
-      .subscribe(() => {
+    const ctx = store.getContext();
+    const unsubName = ctx.subscribe(
+      ctx.select(store.state.user, (u) => u.name),
+      () => {
         nameChanges++;
-      });
+      }
+    );
 
-    const unsubRole = store.state.user
-      .select((u) => u.role)
-      .subscribe(() => {
+    const unsubRole = ctx.subscribe(
+      ctx.select(store.state.user, (u) => u.role),
+      () => {
         roleChanges++;
-      });
+      }
+    );
 
     // Update name - only name subscription fires
     app.updateUserName('Jane');

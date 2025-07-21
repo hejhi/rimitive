@@ -4,7 +4,7 @@ import {
   useSyncExternalStore,
   useCallback,
 } from 'react';
-import { signal } from '@lattice/signals';
+import { signal, subscribe, select } from '@lattice/signals';
 import type { Signal, Selected } from '@lattice/signals';
 import type { SignalLike, SignalSetter } from './types';
 
@@ -24,13 +24,13 @@ import type { SignalLike, SignalSetter } from './types';
  */
 export function useSubscribe<T>(signal: SignalLike<T>): T {
   // Memoize the subscribe function to avoid creating new functions on each render
-  const subscribe = useMemo(
-    () => signal.subscribe.bind(signal),
+  const subscribeCallback = useMemo(
+    () => (onStoreChange: () => void) => subscribe(signal, onStoreChange),
     [signal]
   );
   
   return useSyncExternalStore(
-    subscribe,
+    subscribeCallback,
     () => signal.value,
     () => signal.value // Server snapshot
   );
@@ -110,8 +110,8 @@ export function useSelector<T, R>(
   // Only recreate selected if signal or selector changes
   if (selectedRef.current === null || selectorRef.current !== selector) {
     selectorRef.current = selector;
-    selectedRef.current = signal.select(selector);
+    selectedRef.current = select(signal, selector);
   }
 
-  return useSubscribe(selectedRef.current);
+  return useSubscribe(selectedRef.current as SignalLike<R>);
 }
