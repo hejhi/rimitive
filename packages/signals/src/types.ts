@@ -36,7 +36,7 @@ export interface Computed<T = unknown> {
   select: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   peek: () => T;
   __type: 'computed';
-  _fn: () => T;
+  _compute: () => T;
   _value: T | undefined;
   _version: number;
   _globalVersion: number;

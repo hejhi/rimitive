@@ -1,6 +1,6 @@
 // Simplified Computed implementation - bare metal
 
-import type { DependencyNode } from './types';
+import type { DependencyNode, Effect } from './types';
 import type { Computed as ComputedInterface } from './types';
 import type { Selected } from './select';
 import {
@@ -17,7 +17,7 @@ import { releaseNode } from './node-pool';
 // Direct class syntax - cleaner and more idiomatic
 class Computed<T> implements ComputedInterface<T> {
   __type = 'computed' as const;
-  _fn: () => T;
+  _compute: () => T;
   _value: T | undefined = undefined;
   _version = 0;
   _globalVersion = -1;
@@ -27,7 +27,7 @@ class Computed<T> implements ComputedInterface<T> {
   _node: DependencyNode | undefined = undefined;
 
   constructor(fn: () => T) {
-    this._fn = fn;
+    this._compute = fn;
   }
 
   // Methods will be added via prototype below
@@ -36,62 +36,7 @@ class Computed<T> implements ComputedInterface<T> {
 
   // Value property - moved to class for benchmarking
   get value(): T {
-    const current = activeContext.currentComputed;
-
-    // Track this computed as dependency if needed
-    if (current && current._flags & RUNNING) {
-      const version = this._version;
-
-      // Node reuse pattern - check if we can reuse existing node
-      let node = this._node;
-      if (node !== undefined && node.target === current) {
-        // Reuse existing node - just update version
-        node.version = version;
-      } else {
-        // Check if already tracking this computed in current context
-        node = current._sources;
-        while (node) {
-          if (node.source === this) {
-            node.version = version;
-            break;
-          }
-          node = node.nextSource;
-        }
-
-        if (!node) {
-          // Create new dependency node using context pool
-          activeContext.allocations++;
-          const newNode =
-            activeContext.poolSize > 0
-              ? (activeContext.poolHits++,
-                activeContext.nodePool[--activeContext.poolSize]!)
-              : (activeContext.poolMisses++, {} as DependencyNode);
-          newNode.source = this;
-          newNode.target = current;
-          newNode.version = version;
-          newNode.nextSource = current._sources;
-          newNode.nextTarget = this._targets;
-          newNode.prevSource = undefined;
-          newNode.prevTarget = undefined;
-
-          if (current._sources) {
-            current._sources.prevSource = newNode;
-          }
-          current._sources = newNode;
-
-          if (this._targets) {
-            this._targets.prevTarget = newNode;
-          } else {
-            this._flags |= TRACKING;
-          }
-          this._targets = newNode;
-
-          // Store node for reuse
-          this._node = newNode;
-        }
-      }
-    }
-
+    trackDependency(this, activeContext.currentComputed);
     this._refresh();
     return this._value!;
   }
@@ -102,22 +47,9 @@ class Computed<T> implements ComputedInterface<T> {
 
     if (this._flags & RUNNING) throw new Error('Cycle detected');
 
-    // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
-    // This is the most important optimization for diamond patterns
-    // Only use global version optimization if we're not outdated
-    if (
-      !(this._flags & OUTDATED) &&
-      this._version > 0 &&
-      this._globalVersion === activeContext.version
-    )
-      return true;
-
-    // Fast path: tracking and not outdated
-    if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) return true;
+    if (shouldSkipRefresh(this)) return true;
 
     this._flags &= ~OUTDATED;
-
-    // Mark as running before checking dependencies
     this._flags |= RUNNING;
 
     // Check if we actually need to recompute
@@ -131,14 +63,8 @@ class Computed<T> implements ComputedInterface<T> {
     try {
       prepareSources(this);
       activeContext.currentComputed = this;
-
-      const value = this._fn();
-      if (this._value !== value || this._version === 0) {
-        this._value = value;
-        this._version++;
-      }
-
-      // Update global version after successful computation
+      
+      computeNewValue(this);
       this._globalVersion = activeContext.version;
     } finally {
       activeContext.currentComputed = prevComputed;
@@ -164,38 +90,7 @@ class Computed<T> implements ComputedInterface<T> {
   dispose(): void {
     if (!(this._flags & DISPOSED)) {
       this._flags |= DISPOSED;
-
-      // Clear all sources and return nodes to pool
-      let node = this._sources;
-      const nodesToRelease: DependencyNode[] = [];
-
-      while (node) {
-        const next = node.nextSource;
-        const source = node.source;
-        const prevTarget = node.prevTarget;
-        const nextTarget = node.nextTarget;
-
-        if (prevTarget) {
-          prevTarget.nextTarget = nextTarget;
-        } else {
-          source._targets = nextTarget;
-        }
-
-        if (nextTarget) {
-          nextTarget.prevTarget = prevTarget;
-        }
-
-        // Collect node for batch release
-        nodesToRelease.push(node);
-        node = next;
-      }
-
-      // Batch release for better performance
-      for (const nodeToRelease of nodesToRelease) {
-        releaseNode(nodeToRelease);
-      }
-
-      this._sources = undefined;
+      disposeAllSources(this);
       this._value = undefined;
     }
   }
@@ -228,39 +123,8 @@ function cleanupSources<T>(computed: Computed<T>): void {
     const next = node.nextSource;
 
     if (node.version === -1) {
-      // This node was not re-used, remove it
-
-      // Remove from sources list
-      if (prev !== undefined) {
-        prev.nextSource = next;
-      } else {
-        computed._sources = next;
-      }
-      if (next !== undefined) {
-        next.prevSource = prev;
-      }
-
-      // Remove from source's targets
-      const source = node.source;
-      const prevTarget = node.prevTarget;
-      const nextTarget = node.nextTarget;
-
-      if (prevTarget !== undefined) {
-        prevTarget.nextTarget = nextTarget;
-      } else {
-        source._targets = nextTarget;
-        // Clear tracking flag if no more targets
-        if (nextTarget === undefined && '_flags' in source) {
-          source._flags &= ~TRACKING;
-        }
-      }
-
-      if (nextTarget !== undefined) {
-        nextTarget.prevTarget = prevTarget;
-      }
-
-      // Return node to pool
-      releaseNode(node);
+      removeNode(node, prev, computed);
+      // prev stays the same since we removed the current node
     } else {
       // This node was re-used, keep it
       prev = node;
@@ -297,6 +161,155 @@ function needsToRecompute<T>(computed: Computed<T>): boolean {
 // Direct export instead of factory pattern
 export function computed<T>(fn: () => T): ComputedInterface<T> {
   return new Computed(fn);
+}
+
+// Helper: Track dependency relationship between computed and target
+function trackDependency<T>(computed: Computed<T>, target: ComputedInterface<T> | Effect | null): void {
+  if (!target || !(target._flags & RUNNING)) return;
+  
+  const version = computed._version;
+  
+  // Node reuse pattern - check if we can reuse existing node
+  let node = computed._node;
+  if (node !== undefined && node.target === target) {
+    // Reuse existing node - just update version
+    node.version = version;
+    return;
+  }
+  
+  // Check if already tracking this computed in current context
+  node = target._sources;
+  while (node) {
+    if (node.source === computed) {
+      node.version = version;
+      return;
+    }
+    node = node.nextSource;
+  }
+  
+  // Create new dependency node using context pool
+  activeContext.allocations++;
+  const newNode =
+    activeContext.poolSize > 0
+      ? (activeContext.poolHits++,
+        activeContext.nodePool[--activeContext.poolSize]!)
+      : (activeContext.poolMisses++, {} as DependencyNode);
+  newNode.source = computed;
+  newNode.target = target;
+  newNode.version = version;
+  newNode.nextSource = target._sources;
+  newNode.nextTarget = computed._targets;
+  newNode.prevSource = undefined;
+  newNode.prevTarget = undefined;
+
+  if (target._sources) {
+    target._sources.prevSource = newNode;
+  }
+  target._sources = newNode;
+
+  if (computed._targets) {
+    computed._targets.prevTarget = newNode;
+  } else {
+    computed._flags |= TRACKING;
+  }
+  computed._targets = newNode;
+
+  // Store node for reuse
+  computed._node = newNode;
+}
+
+// Helper: Check if refresh can be skipped
+function shouldSkipRefresh<T>(computed: Computed<T>): boolean {
+  // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
+  // This is the most important optimization for diamond patterns
+  // Only use global version optimization if we're not outdated
+  if (
+    !(computed._flags & OUTDATED) &&
+    computed._version > 0 &&
+    computed._globalVersion === activeContext.version
+  ) {
+    return true;
+  }
+  
+  // Fast path: tracking and not outdated
+  if ((computed._flags & (OUTDATED | TRACKING)) === TRACKING) {
+    return true;
+  }
+  
+  return false;
+}
+
+// Helper: Compute new value and update if changed
+function computeNewValue<T>(computed: Computed<T>): boolean {
+  const value = computed._compute();
+  if (computed._value !== value || computed._version === 0) {
+    computed._value = value;
+    computed._version++;
+    return true; // value changed
+  }
+  return false; // value unchanged
+}
+
+// Helper: Remove a dependency node from all linked lists
+function removeNode<T>(node: DependencyNode, prev: DependencyNode | undefined, computed: ComputedInterface<T>): void {
+  const next = node.nextSource;
+  
+  // Remove from sources list
+  if (prev !== undefined) {
+    prev.nextSource = next;
+  } else {
+    computed._sources = next;
+  }
+  if (next !== undefined) {
+    next.prevSource = prev;
+  }
+  
+  // Remove from source's targets
+  removeFromTargets(node);
+  
+  // Return node to pool
+  releaseNode(node);
+}
+
+// Helper: Remove node from its source's target list
+function removeFromTargets(node: DependencyNode): void {
+  const source = node.source;
+  const prevTarget = node.prevTarget;
+  const nextTarget = node.nextTarget;
+  
+  if (prevTarget !== undefined) {
+    prevTarget.nextTarget = nextTarget;
+  } else {
+    source._targets = nextTarget;
+    // Clear tracking flag if no more targets
+    if (nextTarget === undefined && '_flags' in source) {
+      source._flags &= ~TRACKING;
+    }
+  }
+  
+  if (nextTarget !== undefined) {
+    nextTarget.prevTarget = prevTarget;
+  }
+}
+
+// Helper: Dispose all source connections and release nodes
+function disposeAllSources<T>(computed: Computed<T>): void {
+  let node = computed._sources;
+  const nodesToRelease: DependencyNode[] = [];
+  
+  while (node) {
+    const next = node.nextSource;
+    removeFromTargets(node);
+    nodesToRelease.push(node);
+    node = next;
+  }
+  
+  // Batch release for better performance
+  for (const nodeToRelease of nodesToRelease) {
+    releaseNode(nodeToRelease);
+  }
+  
+  computed._sources = undefined;
 }
 
 // Export the Computed constructor for prototype extensions
