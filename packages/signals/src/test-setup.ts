@@ -8,9 +8,8 @@ import { batch as batchFn } from './batch';
 import {
   signal as createSignal,
   untrack as untrackFn,
-  activeContext,
-  resetTracking,
 } from './signal';
+import { activeContext, resetContext } from './context';
 
 // Create a test instance
 export function createTestInstance() {
@@ -45,7 +44,7 @@ export function createTestInstance() {
     },
     getCurrentComputed: () => activeContext.currentComputed,
     resetGlobalState: () => {
-      resetTracking();
+      resetContext();
     },
     getGlobalVersion: () => activeContext.version,
   };
@@ -78,5 +77,5 @@ export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 export function resetGlobalState() {
   defaultInstance = createTestInstance();
   // CRITICAL: Also reset the actual context
-  resetTracking();
+  resetContext();
 }

@@ -1,10 +1,9 @@
 import type { DependencyNode } from './types';
 import type { Effect as EffectInterface } from './types';
 import { OUTDATED, RUNNING, DISPOSED, NOTIFIED } from './types';
-import { activeContext } from './signal';
-import { releaseNode } from './node-pool';
+import { activeContext } from './context';
+import { releaseNode, removeFromTargets } from './node-operations';
 import type { EffectDisposer } from './types';
-import { removeFromTargets } from './computed';
 
 // Direct class syntax - cleaner and more idiomatic
 class Effect implements EffectInterface {

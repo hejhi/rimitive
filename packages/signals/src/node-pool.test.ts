@@ -1,6 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { signal, computed, effect } from './index';
-import { getPoolStats } from './node-pool';
+import { signal, computed, effect, subscribe } from './index';
+import { activeContext } from './context';
+
+// Test-only helper to get pool statistics
+function getPoolStats() {
+  return {
+    allocations: activeContext.allocations,
+    poolHits: activeContext.poolHits,
+    poolMisses: activeContext.poolMisses,
+    poolSize: activeContext.poolSize,
+    hitRate: activeContext.allocations > 0 
+      ? activeContext.poolHits / activeContext.allocations 
+      : 0,
+  };
+}
 
 describe('Node Pool Performance', () => {
   it('should show pool efficiency with high dependency churn', () => {
@@ -75,7 +88,7 @@ describe('Node Pool Performance', () => {
     });
     
     // Subscribe to enable tracking
-    const dispose = final.subscribe(() => {});
+    const dispose = subscribe(final, () => {});
     
     // Force evaluation
     // Force initial evaluation

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resetGlobalState } from './test-setup';
-import { signal, computed } from './index';
+import { signal, computed, select, subscribe } from './index';
 
 describe('select', () => {
   beforeEach(() => {
@@ -17,9 +17,9 @@ describe('select', () => {
     let subscribeCount = 0;
     
     // Select only the second todo
-    const secondTodo = todos.select(todos => todos[1]);
+    const secondTodo = select(todos, todos => todos[1]);
     
-    secondTodo.subscribe(() => {
+    subscribe(secondTodo, () => {
       subscribeCount++;
     });
     
@@ -52,11 +52,11 @@ describe('select', () => {
     let themeCount = 0;
     
     // Select specific nested values
-    const userName = state.select(s => s.user.name);
-    const userTheme = state.select(s => s.user.settings.theme);
+    const userName = select(state, s => s.user.name);
+    const userTheme = select(state, s => s.user.settings.theme);
     
-    userName.subscribe(() => nameCount++);
-    userTheme.subscribe(() => themeCount++);
+    subscribe(userName, () => nameCount++);
+    subscribe(userTheme, () => themeCount++);
     
     // Update name - only name subscription fires
     state.value = {
@@ -93,8 +93,8 @@ describe('select', () => {
     let firstDoneCount = 0;
     
     // Select the first done todo
-    const firstDone = doneTodos.select(done => done[0]);
-    firstDone.subscribe(() => firstDoneCount++);
+    const firstDone = select(doneTodos, done => done[0]);
+    subscribe(firstDone, () => firstDoneCount++);
     
     // Initially, todo2 is the first done todo
     expect(firstDone.value).toBe(todo2);
@@ -117,8 +117,8 @@ describe('select', () => {
     });
 
     let configCount = 0;
-    const config = state.select(s => s.config);
-    config.subscribe(() => configCount++);
+    const config = select(state, s => s.config);
+    subscribe(config, () => configCount++);
     
     // Same object reference - no trigger
     state.value = { ...state.value, config: state.value.config };
@@ -140,11 +140,9 @@ describe('select', () => {
     let levelCount = 0;
     
     // Chain selects for deep nesting
-    const firstUserLevel = state
-      .select(s => s.users[0])
-      .select(u => u?.role.level);
+    const firstUserLevel = select(state, s => s.users[0]).select(u => u?.role.level);
       
-    firstUserLevel.subscribe(() => levelCount++);
+    subscribe(firstUserLevel, () => levelCount++);
     
     // Update first user's level
     const users = [...state.value.users];

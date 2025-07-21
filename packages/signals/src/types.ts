@@ -13,8 +13,6 @@ export interface DependencyNode {
 
 export interface Signal<T = unknown> {
   value: T;
-  subscribe: (listener: () => void) => () => void;
-  select: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   peek(): T;
   __type: 'signal';
   _value: T;
@@ -32,8 +30,6 @@ export interface Signal<T = unknown> {
 
 export interface Computed<T = unknown> {
   readonly value: T;
-  subscribe: (listener: () => void) => () => void;
-  select: <R>(selector: (value: T) => R) => import('./select').Selected<R>;
   peek: () => T;
   __type: 'computed';
   _compute: () => T;
@@ -74,6 +70,13 @@ export type WritableSignal<T = unknown> = Signal<T>;
 export type EffectCleanup = void | (() => void);
 export type Unsubscribe = () => void;
 export type Subscriber = () => void;
+
+// Selected value interface for fine-grained reactivity
+export interface Selected<T> {
+  readonly value: T;
+  select<R>(selector: (value: T) => R): Selected<R>;
+  _subscribe(listener: () => void): () => void; // Internal method for subscribe function
+}
 
 // Dispose function with attached effect instance
 export interface EffectDisposer {

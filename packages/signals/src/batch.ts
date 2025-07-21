@@ -1,5 +1,5 @@
 // Batch implementation for deferred effect execution
-import { activeContext } from './signal';
+import { activeContext } from './context';
 
 // Direct export instead of factory pattern
 export function batch<T>(fn: () => T): T {

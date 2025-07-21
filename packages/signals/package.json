@@ -13,6 +13,30 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./signal": {
+      "import": "./dist/signal.js",
+      "types": "./dist/signal.d.ts"
+    },
+    "./computed": {
+      "import": "./dist/computed.js",
+      "types": "./dist/computed.d.ts"
+    },
+    "./effect": {
+      "import": "./dist/effect.js",
+      "types": "./dist/effect.d.ts"
+    },
+    "./batch": {
+      "import": "./dist/batch.js",
+      "types": "./dist/batch.d.ts"
+    },
+    "./subscribe": {
+      "import": "./dist/subscribe.js",
+      "types": "./dist/subscribe.d.ts"
+    },
+    "./select": {
+      "import": "./dist/select.js",
+      "types": "./dist/select.d.ts"
+    },
     "./type-guards": {
       "import": "./dist/type-guards.js",
       "types": "./dist/type-guards.d.ts"

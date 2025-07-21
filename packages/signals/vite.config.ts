@@ -24,6 +24,12 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        signal: resolve(__dirname, 'src/signal-export.ts'),
+        computed: resolve(__dirname, 'src/computed-export.ts'),
+        effect: resolve(__dirname, 'src/effect-export.ts'),
+        batch: resolve(__dirname, 'src/batch-export.ts'),
+        subscribe: resolve(__dirname, 'src/subscribe-export.ts'),
+        select: resolve(__dirname, 'src/select-export.ts'),
         'type-guards': resolve(__dirname, 'src/type-guards.ts'),
       },
       formats: ['es'],

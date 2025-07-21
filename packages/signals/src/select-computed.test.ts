@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, computed } from './index';
+import { signal, computed, select, subscribe } from './index';
 import { resetGlobalState } from './test-setup';
 
 describe('select from computed', () => {
@@ -23,8 +23,8 @@ describe('select from computed', () => {
     let firstCompletedCount = 0;
     
     // Select the first completed todo
-    const firstCompleted = completedTodos.select(completed => completed[0]);
-    firstCompleted.subscribe(() => firstCompletedCount++);
+    const firstCompleted = select(completedTodos, completed => completed[0]);
+    subscribe(firstCompleted, () => firstCompletedCount++);
     
     // Initially: first completed is todo 2
     expect(firstCompleted.value).toEqual({ id: 2, text: 'Task 2', done: true, priority: 1 });
@@ -62,11 +62,11 @@ describe('select from computed', () => {
     let top2Count = 0;
     
     // Select top priority and top 2
-    const topPriority = sortedTodos.select(sorted => sorted[0]);
-    const top2 = sortedTodos.select(sorted => sorted.slice(0, 2));
+    const topPriority = select(sortedTodos, sorted => sorted[0]);
+    const top2 = select(sortedTodos, sorted => sorted.slice(0, 2));
     
-    topPriority.subscribe(() => topPriorityCount++);
-    top2.subscribe(() => top2Count++);
+    subscribe(topPriority, () => topPriorityCount++);
+    subscribe(top2, () => top2Count++);
     
     // Initially: top priority is todo 2
     expect(topPriority.value).toEqual({ id: 2, text: 'High priority', priority: 1 });
@@ -107,8 +107,8 @@ describe('select from computed', () => {
     let nextTaskCount = 0;
     
     // Select John's next task
-    const johnsNextTask = johnsIncomplete.select(tasks => tasks[0]);
-    johnsNextTask.subscribe(() => nextTaskCount++);
+    const johnsNextTask = select(johnsIncomplete, tasks => tasks[0]);
+    subscribe(johnsNextTask, () => nextTaskCount++);
     
     // Initially: Review PR (due Jan 15)
     expect(johnsNextTask.value?.text).toBe('Review PR');
@@ -154,8 +154,8 @@ describe('select from computed', () => {
     let leaderCount = 0;
     
     // Select the leader
-    const leader = topScorers.select(scorers => scorers[0]);
-    leader.subscribe(() => leaderCount++);
+    const leader = select(topScorers, scorers => scorers[0]);
+    subscribe(leader, () => leaderCount++);
     
     expect(leader.value?.name).toBe('Alice'); // Highest active scorer
     

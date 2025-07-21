@@ -2,7 +2,6 @@
 
 import type { DependencyNode, Effect } from './types';
 import type { Computed as ComputedInterface } from './types';
-import type { Selected } from './select';
 import {
   NOTIFIED,
   OUTDATED,
@@ -11,8 +10,8 @@ import {
   TRACKING,
   IS_COMPUTED,
 } from './types';
-import { activeContext } from './signal';
-import { releaseNode } from './node-pool';
+import { activeContext } from './context';
+import { releaseNode, removeFromTargets, acquireNode, linkNode } from './node-operations';
 
 // Direct class syntax - cleaner and more idiomatic
 class Computed<T> implements ComputedInterface<T> {
@@ -30,9 +29,6 @@ class Computed<T> implements ComputedInterface<T> {
     this._compute = fn;
   }
 
-  // Methods will be added via prototype below
-  declare subscribe: (listener: () => void) => () => void;
-  declare select: <R>(selector: (value: T) => R) => Selected<R>;
 
   // Value property - moved to class for benchmarking
   get value(): T {
@@ -202,7 +198,7 @@ function findExistingDependency<T>(target: ComputedInterface<T> | Effect, comput
 
 // Helper: Create and link a new dependency node
 function createNewDependency<T>(computed: Computed<T>, target: ComputedInterface<T> | Effect, version: number): void {
-  const newNode = allocateNode();
+  const newNode = acquireNode();
   
   // Initialize node
   newNode.source = computed;
@@ -221,32 +217,7 @@ function createNewDependency<T>(computed: Computed<T>, target: ComputedInterface
 }
 
 // Helper: Allocate a node from the pool or create new
-function allocateNode(): DependencyNode {
-  activeContext.allocations++;
-  if (activeContext.poolSize > 0) {
-    activeContext.poolHits++;
-    return activeContext.nodePool[--activeContext.poolSize]!;
-  }
-  activeContext.poolMisses++;
-  return {} as DependencyNode;
-}
 
-// Helper: Link node into both source and target lists
-function linkNode<T>(node: DependencyNode, computed: Computed<T>, target: ComputedInterface<T> | Effect): void {
-  // Link to target's sources
-  if (target._sources) {
-    target._sources.prevSource = node;
-  }
-  target._sources = node;
-  
-  // Link to computed's targets
-  if (computed._targets) {
-    computed._targets.prevTarget = node;
-  } else {
-    computed._flags |= TRACKING;
-  }
-  computed._targets = node;
-}
 
 // Helper: Check if refresh can be skipped
 function shouldSkipRefresh<T>(computed: Computed<T>): boolean {
@@ -302,25 +273,6 @@ function removeNode<T>(node: DependencyNode, prev: DependencyNode | undefined, c
 }
 
 // Helper: Remove node from its source's target list
-function removeFromTargets(node: DependencyNode): void {
-  const source = node.source;
-  const prevTarget = node.prevTarget;
-  const nextTarget = node.nextTarget;
-  
-  if (prevTarget !== undefined) {
-    prevTarget.nextTarget = nextTarget;
-  } else {
-    source._targets = nextTarget;
-    // Clear tracking flag if no more targets
-    if (nextTarget === undefined && '_flags' in source) {
-      source._flags &= ~TRACKING;
-    }
-  }
-  
-  if (nextTarget !== undefined) {
-    nextTarget.prevTarget = prevTarget;
-  }
-}
 
 // Helper: Dispose all source connections and release nodes
 function disposeAllSources<T>(computed: Computed<T>): void {
@@ -345,5 +297,3 @@ function disposeAllSources<T>(computed: Computed<T>): void {
 // Export the Computed constructor for prototype extensions
 export { Computed };
 
-// Export helper for use in effect.ts
-export { removeFromTargets };
