@@ -5,7 +5,6 @@
  * for tracking performance and graph snapshots.
  */
 
-import type { LatticeContext } from '@lattice/lattice';
 import type { PrimitiveRegistry } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions, GraphSnapshotData } from '../types';
@@ -26,7 +25,7 @@ export interface BatchInstrumentationOptions {
  * Instrument a batch operation for DevTools tracking
  */
 export function instrumentBatch(
-  context: LatticeContext,
+  batchFactory: (fn: () => void) => void,
   fn: () => void,
   options: BatchInstrumentationOptions
 ): void {
@@ -42,7 +41,7 @@ export function instrumentBatch(
 
   try {
     // Execute the batch
-    context.batch(fn);
+    batchFactory(fn);
 
     // Emit batch end event
     options.eventEmitter.emit({

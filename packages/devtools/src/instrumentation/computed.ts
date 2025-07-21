@@ -6,12 +6,10 @@
  */
 
 import type { Computed } from '@lattice/signals';
-import type { LatticeContext } from '@lattice/lattice';
 import type { PrimitiveRegistry, TrackedComputed } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions } from '../types';
 import { executionContext } from '../tracking/execution-context';
-import { wrapSelectMethod } from '../tracking/selectors';
 import { getDependencySnapshot } from './dependency-snapshot';
 
 /**
@@ -28,7 +26,7 @@ export interface ComputedInstrumentationOptions {
  * Instrument a computed for DevTools tracking
  */
 export function instrumentComputed<T>(
-  context: LatticeContext,
+  computedFactory: <U>(fn: () => U) => Computed<U>,
   fn: () => T,
   name: string | undefined,
   options: ComputedInstrumentationOptions
@@ -37,7 +35,7 @@ export function instrumentComputed<T>(
   const wrappedFn = createWrappedComputedFn(fn, name, options);
 
   // Create the computed
-  const computed = context.computed(wrappedFn);
+  const computed = computedFactory(wrappedFn);
 
   // Register the computed
   const tracked = options.registry.registerComputed(
@@ -68,13 +66,7 @@ export function instrumentComputed<T>(
     data: { id: options.contextId, name: 'computed' },
   });
 
-  // Wrap select method
-  wrapSelectMethod(computed, tracked, {
-    contextId: options.contextId,
-    registry: options.registry,
-    eventEmitter: options.eventEmitter,
-    trackReads: options.devToolsOptions.trackReads,
-  });
+  // Note: select method is no longer on the computed itself in the new architecture
 
   // Dependencies will be emitted after first execution
 

@@ -6,12 +6,10 @@
  */
 
 import type { Signal } from '@lattice/signals';
-import type { LatticeContext } from '@lattice/lattice';
 import type { PrimitiveRegistry } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions } from '../types';
 import { executionContext } from '../tracking/execution-context';
-import { wrapSelectMethod } from '../tracking/selectors';
 import { getDependencySnapshot } from './dependency-snapshot';
 
 /**
@@ -28,13 +26,13 @@ export interface SignalInstrumentationOptions {
  * Instrument a signal for DevTools tracking
  */
 export function instrumentSignal<T>(
-  context: LatticeContext,
+  signalFactory: <U>(initialValue: U) => Signal<U>,
   initialValue: T,
   name: string | undefined,
   options: SignalInstrumentationOptions
 ): Signal<T> {
   // Create the signal
-  const signal = context.signal(initialValue);
+  const signal = signalFactory(initialValue);
 
   // Register the signal
   const tracked = options.registry.registerSignal(
@@ -66,13 +64,7 @@ export function instrumentSignal<T>(
   // Instrument value getter/setter
   instrumentSignalValue(signal, tracked.id, name, options);
 
-  // Wrap select method
-  wrapSelectMethod(signal, tracked, {
-    contextId: options.contextId,
-    registry: options.registry,
-    eventEmitter: options.eventEmitter,
-    trackReads: options.devToolsOptions.trackReads,
-  });
+  // Note: select method is no longer on the signal itself in the new architecture
 
   // Emit initial dependency snapshot
   setTimeout(() => {

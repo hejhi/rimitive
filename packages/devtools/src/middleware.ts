@@ -15,6 +15,7 @@ import { instrumentSignal } from './instrumentation/signal';
 import { instrumentComputed } from './instrumentation/computed';
 import { instrumentEffect } from './instrumentation/effect';
 import { instrumentBatch } from './instrumentation/batch';
+import type { Signal, Computed, Selected, Unsubscribe } from '@lattice/signals';
 
 /**
  * Creates a devtools middleware that instruments a Lattice context
@@ -84,7 +85,7 @@ export function withDevTools(options: DevToolsOptions = {}) {
     return {
       signal<T>(initialValue: T, name?: string) {
         return instrumentSignal(
-          context,
+          context.signal.bind(context),
           initialValue,
           name,
           instrumentationOptions
@@ -92,15 +93,27 @@ export function withDevTools(options: DevToolsOptions = {}) {
       },
 
       computed<T>(fn: () => T, name?: string) {
-        return instrumentComputed(context, fn, name, instrumentationOptions);
+        return instrumentComputed(context.computed.bind(context), fn, name, instrumentationOptions);
       },
 
       effect(fn: () => void | (() => void)) {
-        return instrumentEffect(context, fn, instrumentationOptions);
+        return instrumentEffect(context.effect.bind(context), fn, instrumentationOptions);
       },
 
       batch(fn: () => void) {
-        return instrumentBatch(context, fn, instrumentationOptions);
+        return instrumentBatch(context.batch.bind(context), fn, instrumentationOptions);
+      },
+
+      select<T, R>(source: Signal<T> | Computed<T> | Selected<T>, selector: (value: T) => R): Selected<R> {
+        // For now, just pass through to the context
+        // TODO: Add instrumentation for select
+        return context.select(source, selector);
+      },
+
+      subscribe(source: Signal<unknown> | Computed<unknown> | Selected<unknown>, callback: () => void): Unsubscribe {
+        // For now, just pass through to the context
+        // TODO: Add instrumentation for subscribe
+        return context.subscribe(source, callback);
       },
 
       dispose() {

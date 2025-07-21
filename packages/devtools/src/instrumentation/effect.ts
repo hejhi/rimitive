@@ -6,7 +6,6 @@
  */
 
 import type { EffectDisposer } from '@lattice/signals';
-import type { LatticeContext } from '@lattice/lattice';
 import type { PrimitiveRegistry, TrackedEffect } from '../tracking/registry';
 import type { EventEmitter } from '../events/emitter';
 import type { DevToolsOptions } from '../types';
@@ -27,7 +26,7 @@ export interface EffectInstrumentationOptions {
  * Instrument an effect for DevTools tracking
  */
 export function instrumentEffect(
-  context: LatticeContext,
+  effectFactory: (fn: () => void | (() => void)) => EffectDisposer,
   fn: () => void | (() => void),
   options: EffectInstrumentationOptions
 ): EffectDisposer {
@@ -82,7 +81,7 @@ export function instrumentEffect(
   };
 
   // Create the effect
-  const disposer = context.effect(wrappedFn);
+  const disposer = effectFactory(wrappedFn);
 
   // Get the effect instance from the disposer
   const effectRef = disposer.__effect;
