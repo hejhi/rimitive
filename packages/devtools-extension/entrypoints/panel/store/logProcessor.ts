@@ -1,312 +1,312 @@
 import { devtoolsStore } from './devtoolsCtx';
 import {
   LogEntry,
-  SignalWriteData,
-  SignalReadData,
-  SignalWriteLogDetails,
-  SignalReadLogDetails,
-  ComputedRunLogDetails,
-  ComputedCompleteLogDetails,
-  EffectRunLogDetails,
-  EffectCompleteLogDetails,
-  SelectorCreatedLogDetails,
-  SELECTOR_CREATED,
-  BATCH_START,
-  BatchLogDetails,
   DependencyUpdateData,
   GraphSnapshotData,
-  NamedItemData,
-  ComputedEndEventData,
-  EffectEndEventData,
-  SelectorCreatedEventData,
 } from './types';
 import { LatticeEvent } from './messageHandler';
 import { updateDependencyGraph, updateGraphSnapshot } from './dependencyGraph';
 
-// Simple execution tracking for level calculation
-let currentLevel = 0;
-const recentWrites: { id: string; timestamp: number }[] = [];
+// Track execution depth for indentation
+let executionDepth = 0;
+const depthTracker = new Map<string, number>();
 
-// Helper type to extract node ID from different event data types
-type EventDataWithId =
-  | SignalWriteData
-  | SignalReadData
-  | NamedItemData
-  | ComputedEndEventData
-  | EffectEndEventData
-  | SelectorCreatedEventData
-  | { batchId: string };
+// Track recent events for causality analysis
+const recentEvents: { eventType: string; data: any; timestamp: number }[] = [];
+const RECENT_EVENT_WINDOW = 100; // ms
 
-function getNodeId(data: EventDataWithId): string {
-  if ('batchId' in data) return data.batchId;
-  return data.id;
+/**
+ * Process any instrumentation event
+ */
+export function processLogEntry(event: LatticeEvent) {
+  const timestamp = event.timestamp || Date.now();
+  
+  // Special handling for graph-related events
+  if (event.type === 'DEPENDENCY_UPDATE') {
+    updateDependencyGraph(event.data as DependencyUpdateData, event.contextId);
+    return;
+  }
+  
+  if (event.type === 'GRAPH_SNAPSHOT') {
+    updateGraphSnapshot(event.data as GraphSnapshotData, timestamp, event.contextId);
+    return;
+  }
+  
+  // Clean up old recent events
+  const cutoff = timestamp - RECENT_EVENT_WINDOW;
+  while (recentEvents.length > 0 && recentEvents[0].timestamp < cutoff) {
+    recentEvents.shift();
+  }
+  
+  // Track this event
+  recentEvents.push({ eventType: event.type, data: event.data, timestamp });
+  
+  // Create log entry
+  const entry = createLogEntry(event, timestamp);
+  
+  // Add to log entries
+  addLogEntry(entry);
+  
+  // Update context counts for resource creation/disposal
+  updateContextCounts(event);
 }
 
-function getNodeName(
-  data: EventDataWithId,
-  node: ReturnType<typeof devtoolsStore.state.dependencyGraph.value.nodes.get>,
-  type: LogEntry['type']
-): string | undefined {
-  if ('name' in data && data.name) return data.name;
-  if ('selector' in data && data.selector) return data.selector;
-  if (node?.name) return node.name;
-  if (type.includes('batch')) return 'Batch';
-  return undefined;
-}
-
-// Generic log entry factory to eliminate duplication
-function createLogEntry(
-  event: LatticeEvent,
-  timestamp: number,
-  type: LogEntry['type'],
-  category: LogEntry['category'],
-  details: LogEntry['details'],
-  level = currentLevel,
-  nodeId?: string,
-  nodeName?: string
-): LogEntry {
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const data = event.data as EventDataWithId;
-  const id = nodeId || getNodeId(data);
-  const node = graph.nodes.get(id);
-
+/**
+ * Create a log entry from an instrumentation event
+ */
+function createLogEntry(event: LatticeEvent, timestamp: number): LogEntry {
+  const level = calculateExecutionLevel(event);
+  
   return {
-    id: `log_${Date.now()}_${Math.random()}`,
+    id: `log_${timestamp}_${Math.random()}`,
     timestamp,
-    type,
-    level,
-    nodeId: id,
-    nodeName: nodeName || getNodeName(data, node, type),
-    contextId: event.contextId,
-    details,
     eventType: event.type,
-    rawData: event.data,
-    category,
+    contextId: event.contextId,
+    data: event.data as Record<string, unknown>,
+    level,
+    category: inferCategory(event.type),
+    nodeId: extractNodeId(event.data),
+    nodeName: extractNodeName(event.data),
+    summary: generateSummary(event),
   };
 }
 
-// Find what triggered a computed/effect based on recent writes
-function findTriggeredBy(nodeId: string): string[] {
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const dependencies = graph.reverseEdges.get(nodeId) || new Set();
-
-  for (const write of recentWrites) {
-    if (dependencies.has(write.id)) {
-      return [write.id];
+/**
+ * Calculate execution level for proper indentation
+ */
+function calculateExecutionLevel(event: LatticeEvent): number {
+  // Handle start/end event pairs
+  if (event.type.includes('_START') || event.type.includes('_BEGIN')) {
+    const depth = executionDepth++;
+    const id = extractNodeId(event.data);
+    if (id) {
+      depthTracker.set(id, depth);
     }
+    return depth;
   }
-  return [];
+  
+  if (event.type.includes('_END') || event.type.includes('_COMPLETE')) {
+    executionDepth = Math.max(0, executionDepth - 1);
+    const id = extractNodeId(event.data);
+    if (id && depthTracker.has(id)) {
+      const depth = depthTracker.get(id)!;
+      depthTracker.delete(id);
+      return depth;
+    }
+    return executionDepth;
+  }
+  
+  // For other events, check if they're within an execution context
+  if (event.type.includes('_READ') || event.type.includes('_ACCESS')) {
+    return executionDepth + 1;
+  }
+  
+  return executionDepth;
 }
 
-export function processLogEntry(event: LatticeEvent) {
-  const timestamp = event.timestamp || Date.now();
+/**
+ * Infer category from event type
+ */
+function inferCategory(eventType: string): string {
+  const type = eventType.toLowerCase();
+  
+  if (type.includes('signal')) return 'signal';
+  if (type.includes('computed')) return 'computed';
+  if (type.includes('effect')) return 'effect';
+  if (type.includes('batch')) return 'batch';
+  if (type.includes('store')) return 'store';
+  if (type.includes('selector')) return 'selector';
+  
+  // For custom extensions, use the first part of the event type
+  const parts = eventType.split('_');
+  return parts[0].toLowerCase();
+}
 
+/**
+ * Extract node ID from event data
+ */
+function extractNodeId(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object') return undefined;
+  
+  const obj = data as Record<string, unknown>;
+  
+  // Common ID fields
+  if ('id' in obj && typeof obj.id === 'string') return obj.id;
+  if ('nodeId' in obj && typeof obj.nodeId === 'string') return obj.nodeId;
+  if ('resourceId' in obj && typeof obj.resourceId === 'string') return obj.resourceId;
+  if ('batchId' in obj && typeof obj.batchId === 'string') return obj.batchId;
+  
+  return undefined;
+}
+
+/**
+ * Extract node name from event data
+ */
+function extractNodeName(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object') return undefined;
+  
+  const obj = data as Record<string, unknown>;
+  
+  // Common name fields
+  if ('name' in obj && typeof obj.name === 'string') return obj.name;
+  if ('label' in obj && typeof obj.label === 'string') return obj.label;
+  if ('displayName' in obj && typeof obj.displayName === 'string') return obj.displayName;
+  if ('selector' in obj && typeof obj.selector === 'string') return obj.selector;
+  
+  return undefined;
+}
+
+/**
+ * Generate a human-readable summary of the event
+ */
+function generateSummary(event: LatticeEvent): string {
+  const data = event.data as Record<string, unknown>;
+  
+  // Handle common event patterns
   switch (event.type) {
     case 'SIGNAL_WRITE':
-      processSignalWrite(event, timestamp);
-      break;
+      return `${data.oldValue} → ${data.newValue}`;
+    
     case 'SIGNAL_READ':
-      processSignalRead(event, timestamp);
-      break;
+      return `Read: ${data.value}`;
+    
     case 'COMPUTED_START':
-      processComputedStart(event, timestamp);
-      break;
+      return 'Computing...';
+    
     case 'COMPUTED_END':
-      processComputedEnd(event, timestamp);
-      break;
+      return `Result: ${data.value}${data.duration ? ` (${Number(data.duration).toFixed(2)}ms)` : ''}`;
+    
     case 'EFFECT_START':
-      processEffectStart(event, timestamp);
-      break;
+      return 'Running effect...';
+    
     case 'EFFECT_END':
-      processEffectEnd(event, timestamp);
-      break;
-    case 'SELECTOR_CREATED':
-      processSelectorCreated(event, timestamp);
-      break;
+      return `Completed${data.duration ? ` (${Number(data.duration).toFixed(2)}ms)` : ''}`;
+    
     case 'BATCH_START':
-      processBatchStart(event, timestamp);
-      break;
+      return 'Starting batch...';
+      
     case 'BATCH_END':
-      processBatchEnd(event, timestamp);
-      break;
-    case 'DEPENDENCY_UPDATE':
-      updateDependencyGraph(
-        event.data as DependencyUpdateData,
-        event.contextId
-      );
-      break;
-    case 'GRAPH_SNAPSHOT':
-      updateGraphSnapshot(
-        event.data as GraphSnapshotData,
-        timestamp,
-        event.contextId
-      );
-      break;
+      return 'Batch completed';
+    
+    default:
+      // For custom events, try to create a meaningful summary
+      if ('value' in data) {
+        return `Value: ${JSON.stringify(data.value)}`;
+      }
+      if ('duration' in data && typeof data.duration === 'number') {
+        return `Duration: ${data.duration.toFixed(2)}ms`;
+      }
+      if ('count' in data) {
+        return `Count: ${data.count}`;
+      }
+      
+      // Show first few data fields
+      const fields = Object.entries(data)
+        .filter(([key]) => !['id', 'nodeId', 'contextId', 'timestamp'].includes(key))
+        .slice(0, 3)
+        .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+        .join(', ');
+      
+      return fields || event.type;
   }
 }
 
-function processSignalWrite(event: LatticeEvent, timestamp: number) {
-  const data = event.data as SignalWriteData;
-  const graph = devtoolsStore.state.dependencyGraph.value;
-
-  // Find all dependencies that will be triggered
-  const triggeredDeps = Array.from(graph.edges.get(data.id) || new Set());
-
-  // Track recent write for simple causality
-  recentWrites.push({ id: data.id, timestamp });
-  // Keep only writes from last 100ms
-  const cutoff = timestamp - 100;
-  while (recentWrites.length > 0 && recentWrites[0].timestamp < cutoff) {
-    recentWrites.shift();
+/**
+ * Update context resource counts
+ */
+function updateContextCounts(event: LatticeEvent) {
+  // Update context counts for creation events
+  if (event.type.includes('_CREATED')) {
+    const category = inferCategory(event.type);
+    updateContextCount(event.contextId, category, 1);
   }
-
-  addLogEntry(
-    createLogEntry(
-      event,
-      timestamp,
-      'signal-write',
-      'signal',
-      {
-        oldValue: data.oldValue,
-        newValue: data.newValue,
-        triggeredDependencies: triggeredDeps,
-      } as SignalWriteLogDetails,
-      0
-    )
-  );
+  
+  if (event.type.includes('_DISPOSED') || event.type.includes('_DESTROYED')) {
+    const category = inferCategory(event.type);
+    updateContextCount(event.contextId, category, -1);
+  }
 }
 
-function processSignalRead(event: LatticeEvent, timestamp: number) {
-  const data = event.data as SignalReadData;
-  if (data.internal) return; // Skip internal reads
-
-  addLogEntry(
-    createLogEntry(
-      event,
-      timestamp,
-      'signal-read',
-      'signal',
-      {
-        value: data.value,
-        readBy: data.executionContext || 'unknown',
-        readByName: data.readContext?.name,
-      } as SignalReadLogDetails,
-      currentLevel + 1
-    )
-  );
+/**
+ * Update context resource count
+ */
+function updateContextCount(contextId: string, category: string, delta: number) {
+  const contexts = devtoolsStore.state.contexts.value;
+  const context = contexts.find(c => c.id === contextId);
+  
+  if (!context) return;
+  
+  // Initialize resource counts if needed
+  if (!context.resourceCounts) {
+    context.resourceCounts = {};
+  }
+  
+  // Update the count
+  context.resourceCounts[category] = (context.resourceCounts[category] || 0) + delta;
+  
+  // Also update specific counts for backwards compatibility
+  if (category === 'signal' && context.signalCount !== undefined) {
+    context.signalCount += delta;
+  } else if (category === 'computed' && context.computedCount !== undefined) {
+    context.computedCount += delta;
+  } else if (category === 'effect' && context.effectCount !== undefined) {
+    context.effectCount += delta;
+  }
+  
+  // Trigger reactive update
+  devtoolsStore.state.contexts.value = [...contexts];
 }
 
-function processComputedStart(event: LatticeEvent, timestamp: number) {
-  const data = event.data as NamedItemData;
-  const triggeredBy = findTriggeredBy(data.id);
-
-  addLogEntry(
-    createLogEntry(event, timestamp, 'computed-run', 'computed', {
-      triggeredBy,
-    } as ComputedRunLogDetails)
-  );
-
-  currentLevel++;
-}
-
-function processComputedEnd(event: LatticeEvent, timestamp: number) {
-  const data = event.data as ComputedEndEventData;
-  currentLevel = Math.max(0, currentLevel - 1);
-
-  addLogEntry(
-    createLogEntry(event, timestamp, 'computed-complete', 'computed', {
-      value: data.value,
-      oldValue: undefined,
-      duration: data.duration || 0,
-    } as ComputedCompleteLogDetails)
-  );
-}
-
-function processEffectStart(event: LatticeEvent, timestamp: number) {
-  const data = event.data as NamedItemData;
-  const triggeredBy = findTriggeredBy(data.id);
-
-  addLogEntry(
-    createLogEntry(event, timestamp, 'effect-run', 'effect', {
-      triggeredBy,
-    } as EffectRunLogDetails)
-  );
-
-  currentLevel++;
-}
-
-function processEffectEnd(event: LatticeEvent, timestamp: number) {
-  const data = event.data as EffectEndEventData;
-  currentLevel = Math.max(0, currentLevel - 1);
-
-  addLogEntry(
-    createLogEntry(event, timestamp, 'effect-complete', 'effect', {
-      duration: data.duration || 0,
-    } as EffectCompleteLogDetails)
-  );
-}
-
-function processSelectorCreated(event: LatticeEvent, timestamp: number) {
-  const data = event.data as SelectorCreatedEventData;
-
-  addLogEntry(
-    createLogEntry(
-      event,
-      timestamp,
-      'selector-created',
-      'selector',
-      {
-        type: SELECTOR_CREATED,
-        sourceId: data.sourceId,
-        sourceName: data.sourceName,
-        sourceType: data.sourceType,
-        selector: data.selector,
-      } as SelectorCreatedLogDetails,
-      0
-    )
-  );
-}
-
-function processBatchStart(event: LatticeEvent, timestamp: number) {
-  const data = event.data as { batchId: string };
-
-  addLogEntry(
-    createLogEntry(
-      event,
-      timestamp,
-      'batch-start',
-      'batch',
-      {
-        type: BATCH_START,
-        batchId: data.batchId,
-      } as BatchLogDetails,
-      0
-    )
-  );
-}
-
-function processBatchEnd(event: LatticeEvent, timestamp: number) {
-  const data = event.data as { batchId: string };
-
-  addLogEntry(
-    createLogEntry(
-      event,
-      timestamp,
-      'batch-end',
-      'batch',
-      {
-        type: BATCH_START, // Both use same details type
-        batchId: data.batchId,
-      } as BatchLogDetails,
-      0
-    )
-  );
-}
-
+/**
+ * Add log entry to the store
+ */
 function addLogEntry(entry: LogEntry) {
   // Keep last 1000 log entries
   devtoolsStore.state.logEntries.value = [
     ...devtoolsStore.state.logEntries.value.slice(-999),
     entry,
   ];
+}
+
+/**
+ * Find what triggered a computed/effect based on recent writes
+ */
+export function findTriggeredBy(nodeId: string): string[] {
+  const graph = devtoolsStore.state.dependencyGraph.value;
+  const dependencies = graph.reverseEdges.get(nodeId) || new Set();
+
+  for (const event of recentEvents) {
+    if (event.eventType.includes('WRITE') || event.eventType.includes('UPDATE')) {
+      const data = event.data as Record<string, unknown>;
+      const id = extractNodeId(data);
+      if (id && dependencies.has(id)) {
+        return [id];
+      }
+    }
+  }
+  return [];
+}
+
+/**
+ * Find related events for causality analysis
+ */
+export function findRelatedEvents(entry: LogEntry): LogEntry[] {
+  const related: LogEntry[] = [];
+  const logs = devtoolsStore.state.logEntries.value;
+  
+  // Find events that might have triggered this one
+  if (entry.nodeId) {
+    // Look for recent writes or updates that might have triggered this
+    for (const log of logs) {
+      if (log.timestamp < entry.timestamp - RECENT_EVENT_WINDOW) continue;
+      if (log.timestamp >= entry.timestamp) break;
+      
+      // Check if this could be a trigger
+      if (log.eventType.includes('WRITE') || log.eventType.includes('UPDATE')) {
+        related.push(log);
+      }
+    }
+  }
+  
+  return related;
 }

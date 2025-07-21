@@ -1,15 +1,5 @@
 import { useSubscribe } from '@lattice/react';
-import {
-  ComputedCompleteLogDetails,
-  ComputedRunLogDetails,
-  EffectCompleteLogDetails,
-  SELECTOR_CREATED,
-  SelectorCreatedLogDetails,
-  SIGNAL_WRITE,
-  SignalReadLogDetails,
-  SignalWriteLogDetails,
-  type LogEntry,
-} from './store/types';
+import type { LogEntry } from './store/types';
 import { filteredLogEntries } from './store/computed';
 
 export function LogsTab() {
@@ -53,184 +43,38 @@ function LogEntryComponent({ entry }: { entry: LogEntry }) {
           {renderLogEntry(entry)}
         </span>
       </div>
-
-      {/* Additional detail lines */}
-      {renderLogDetails(entry, indent)}
     </div>
   );
 }
 
 function renderLogEntry(entry: LogEntry): React.ReactNode {
-  const name = entry.nodeName || entry.nodeId;
+  const name = entry.nodeName || entry.nodeId || 'anonymous';
+  const eventType = entry.eventType;
+  const category = entry.category;
+  
+  // Determine color based on category
+  const colorMap: Record<string, { main: string; secondary: string }> = {
+    signal: { main: 'text-blue-500', secondary: 'text-blue-400' },
+    computed: { main: 'text-purple-500', secondary: 'text-purple-400' },
+    effect: { main: 'text-yellow-500', secondary: 'text-yellow-400' },
+    batch: { main: 'text-green-500', secondary: 'text-green-400' },
+    store: { main: 'text-orange-500', secondary: 'text-orange-400' },
+    selector: { main: 'text-pink-500', secondary: 'text-pink-400' },
+  };
+  
+  const colors = colorMap[category] || { main: 'text-gray-500', secondary: 'text-gray-400' };
 
-  switch (entry.type) {
-    case 'signal-write':
-      return (
+  return (
+    <>
+      <span className={colors.main}>{eventType}</span>{' '}
+      <span className={colors.secondary}>{name}</span>
+      {entry.summary && (
         <>
-          <span className="text-blue-500">SIGNAL_WRITE</span>{' '}
-          <span className="text-blue-400">{name}</span>
+          {' '}
+          <span className="text-muted-foreground">→</span>{' '}
+          <span className="text-foreground">{entry.summary}</span>
         </>
-      );
-
-    case 'signal-read':
-      return (
-        <>
-          <span className="text-emerald-500">SIGNAL_READ</span>{' '}
-          <span className="text-emerald-400">{name}</span>
-        </>
-      );
-
-    case 'computed-run':
-      return (
-        <>
-          <span className="text-purple-500">COMPUTE_RUN</span>{' '}
-          <span className="text-purple-400">{name}</span>
-        </>
-      );
-
-    case 'computed-complete':
-      return (
-        <>
-          <span className="text-purple-500">COMPUTE_COMPLETE</span>{' '}
-          <span className="text-purple-400">{name}</span>
-        </>
-      );
-
-    case 'effect-run':
-      return (
-        <>
-          <span className="text-orange-500">EFFECT_RUN</span>{' '}
-          <span className="text-orange-400">{name}</span>
-        </>
-      );
-
-    case 'effect-complete':
-      return (
-        <>
-          <span className="text-orange-500">EFFECT_COMPLETE</span>{' '}
-          <span className="text-orange-400">{name}</span>
-        </>
-      );
-
-    case 'selector-created':
-      return (
-        <>
-          <span className="text-red-500">SELECTOR_CREATED</span>{' '}
-          <span className="text-red-400">{name}</span>
-        </>
-      );
-
-    default:
-      return <span className="text-gray-500">{entry.type}</span>;
-  }
-}
-
-function renderLogDetails(
-  entry: LogEntry,
-  baseIndent: string
-): React.ReactNode {
-  const indent = baseIndent + '  ';
-
-  switch (entry.type) {
-    case SIGNAL_WRITE: {
-      const details = entry.details as SignalWriteLogDetails;
-      return (
-        <>
-          <div className="text-muted-foreground">
-            <span className="w-[100px] inline-block" />
-            {indent}Update value: {JSON.stringify(details.oldValue)} →{' '}
-            {JSON.stringify(details.newValue)}
-          </div>
-          {details.triggeredDependencies.length > 0 && (
-            <div className="text-muted-foreground">
-              <span className="w-[100px] inline-block" />
-              {indent}Triggering {details.triggeredDependencies.length}{' '}
-              direct/indirect dependencies...
-            </div>
-          )}
-        </>
-      );
-    }
-
-    case 'signal-read': {
-      const details = entry.details as SignalReadLogDetails;
-      return (
-        <>
-          <div className="text-muted-foreground">
-            <span className="w-[100px] inline-block" />
-            {indent}Read by {details.readByName || details.readBy}
-          </div>
-          <div className="text-muted-foreground">
-            <span className="w-[100px] inline-block" />
-            {indent}Returned value: {JSON.stringify(details.value)}
-          </div>
-        </>
-      );
-    }
-
-    case 'computed-run': {
-      const details = entry.details as ComputedRunLogDetails;
-      if (details.triggeredBy.length > 0) {
-        return (
-          <div className="text-muted-foreground">
-            <span className="w-[100px] inline-block" />
-            {indent}Computing new value...
-          </div>
-        );
-      }
-      return null;
-    }
-
-    case 'computed-complete': {
-      const details = entry.details as ComputedCompleteLogDetails;
-      return (
-        <>
-          {details.oldValue !== undefined && (
-            <div className="text-muted-foreground">
-              <span className="w-[100px] inline-block" />
-              {indent}Update value: {JSON.stringify(details.oldValue)} →{' '}
-              {JSON.stringify(details.value)}
-            </div>
-          )}
-          <div className="text-muted-foreground">
-            <span className="w-[100px] inline-block" />
-            {indent}Duration: {details.duration}ms
-          </div>
-        </>
-      );
-    }
-
-    case 'effect-run': {
-      return null; // No additional details for effect run
-    }
-
-    case 'effect-complete': {
-      const details = entry.details as EffectCompleteLogDetails;
-      return (
-        <div className="text-muted-foreground">
-          <span className="w-[100px] inline-block" />
-          {indent}Duration: {details.duration}ms
-        </div>
-      );
-    }
-
-    case SELECTOR_CREATED: {
-      const details = entry.details as SelectorCreatedLogDetails;
-      return (
-        <>
-          <div className="text-muted-foreground">
-            <span className="w-[100px] inline-block" />
-            {indent}Source: {details.sourceName || details.sourceId} ({details.sourceType})
-          </div>
-          <div className="text-muted-foreground">
-            <span className="w-[100px] inline-block" />
-            {indent}Selector: {details.selector}
-          </div>
-        </>
-      );
-    }
-
-    default:
-      return null;
-  }
+      )}
+    </>
+  );
 }

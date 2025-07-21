@@ -1,100 +1,93 @@
-export const SIGNAL_WRITE = 'signal-write';
-export const SIGNAL_READ = 'signal-read';
-export const COMPUTED_RUN = 'computed-run';
-export const COMPUTED_COMPLETE = 'computed-complete';
-export const EFFECT_RUN = 'effect-run';
-export const EFFECT_COMPLETE = 'effect-complete';
-export const BATCH_START = 'batch-start';
-export const BATCH_END = 'batch-end';
-export const SELECTOR_CREATED = 'selector-created';
-
-export const LogEntryTypes = {
-  SIGNAL_WRITE,
-  SIGNAL_READ,
-  COMPUTED_RUN,
-  COMPUTED_COMPLETE,
-  EFFECT_RUN,
-  EFFECT_COMPLETE,
-  BATCH_START,
-  BATCH_END,
-  SELECTOR_CREATED,
-} as const;
-
-// Log entry types for CLI-style display
-export type LogEntryType = (typeof LogEntryTypes)[keyof typeof LogEntryTypes];
-
+// Log entry for any instrumentation event
 export interface LogEntry {
   id: string;
   timestamp: number;
-  type: LogEntryType;
-  level: number; // indentation level
-  nodeId: string;
-  nodeName?: string;
+  eventType: string; // The event type from instrumentation (e.g., 'SIGNAL_WRITE', 'MY_CUSTOM_EVENT')
+  level: number; // indentation level for display
+  nodeId?: string; // Resource ID if available
+  nodeName?: string; // Resource name if available
   contextId: string;
-  details: LogEntryDetails;
-  // Raw event data for Timeline view
-  eventType: string;
-  rawData: unknown;
-  category: 'signal' | 'computed' | 'effect' | 'batch' | 'selector';
+  data: Record<string, unknown>; // The raw event data
+  // Derived fields for display
+  category: string; // Inferred from event type
+  summary?: string; // Human-readable summary
 }
 
-export type LogEntryDetails =
-  | SignalWriteLogDetails
-  | SignalReadLogDetails
-  | ComputedRunLogDetails
-  | ComputedCompleteLogDetails
-  | EffectRunLogDetails
-  | EffectCompleteLogDetails
-  | BatchLogDetails
-  | SelectorCreatedLogDetails;
-
-export interface SignalWriteLogDetails {
-  type: typeof SIGNAL_WRITE;
+// Event data types used in various events
+export interface SignalWriteData {
+  id: string;
+  name?: string;
   oldValue: unknown;
   newValue: unknown;
-  triggeredDependencies: string[];
 }
 
-export interface SignalReadLogDetails {
-  type: typeof SIGNAL_READ;
+export interface SignalReadData {
+  id: string;
+  name?: string;
   value: unknown;
-  readBy: string;
-  readByName?: string;
+  internal?: boolean;
+  executionContext?: string;
+  readContext?: { name?: string };
 }
 
-export interface ComputedRunLogDetails {
-  type: typeof COMPUTED_RUN;
-  triggeredBy: string[];
+export interface NamedItemData {
+  id: string;
+  name?: string;
 }
 
-export interface ComputedCompleteLogDetails {
-  type: typeof COMPUTED_COMPLETE;
+export interface ComputedEndEventData extends NamedItemData {
   value: unknown;
-  oldValue?: unknown;
-  duration: number;
+  duration?: number;
 }
 
-export interface EffectRunLogDetails {
-  type: typeof EFFECT_RUN;
-  triggeredBy: string[];
+export interface EffectEndEventData extends NamedItemData {
+  duration?: number;
+  hasCleanup?: boolean;
 }
 
-export interface EffectCompleteLogDetails {
-  type: typeof EFFECT_COMPLETE;
-  duration: number;
-}
-
-export interface BatchLogDetails {
-  type: typeof BATCH_START;
-  batchId: string;
-}
-
-export interface SelectorCreatedLogDetails {
-  type: typeof SELECTOR_CREATED;
+export interface SelectorCreatedEventData {
+  id: string;
   sourceId: string;
   sourceName?: string;
-  sourceType: 'signal' | 'computed';
+  sourceType: string;
   selector: string;
+}
+
+export interface DependencyUpdateData {
+  nodeId: string;
+  nodeType: string;
+  dependencies?: Array<{ id: string; name?: string }>;
+  subscribers?: Array<{ id: string; name?: string }>;
+}
+
+export interface GraphSnapshotData {
+  nodes: Array<{
+    id: string;
+    type: string;
+    name?: string;
+    value?: unknown;
+    isActive: boolean;
+    isOutdated?: boolean;
+    hasSubscribers?: boolean;
+  }>;
+  edges: Array<{
+    source: string;
+    target: string;
+    isActive: boolean;
+  }>;
+}
+
+// Context info with generic resource counts
+export interface ContextInfo {
+  id: string;
+  name: string;
+  created?: number;
+  // Legacy specific counts
+  signalCount?: number;
+  computedCount?: number;
+  effectCount?: number;
+  // Generic resource counts for any extension type
+  resourceCounts?: Record<string, number>;
 }
 
 export interface DevToolsState {
@@ -121,7 +114,7 @@ export interface DependencyGraph {
 
 export interface DependencyNode {
   id: string;
-  type: 'signal' | 'computed' | 'effect' | 'selector';
+  type: string; // Any resource type from instrumentation
   name?: string;
   value?: unknown;
   isActive: boolean;

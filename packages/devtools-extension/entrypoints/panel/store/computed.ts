@@ -1,5 +1,4 @@
 import { devtoolsContext, devtoolsStore } from './devtoolsCtx';
-import { SignalReadData } from './types';
 
 // Common log filtering logic
 function filterLogs(
@@ -21,9 +20,9 @@ function filterLogs(
       const searchTargets = searchIn.map((field) => {
         if (field === 'eventType') return log.eventType;
         if (field === 'nodeName') return log.nodeName || '';
-        if (field === 'nodeId') return log.nodeId;
-        if (field === 'rawData') return JSON.stringify(log.rawData);
-        if (field === 'details') return JSON.stringify(log.details);
+        if (field === 'nodeId') return log.nodeId || '';
+        if (field === 'data') return JSON.stringify(log.data);
+        if (field === 'summary') return log.summary || '';
         return '';
       });
 
@@ -36,7 +35,8 @@ function filterLogs(
 
     // Internal reads filter
     if (filter.hideInternal && log.eventType === 'SIGNAL_READ') {
-      return !(log.rawData as SignalReadData).internal;
+      const data = log.data as Record<string, unknown>;
+      return !data.internal;
     }
 
     return true;
@@ -52,17 +52,16 @@ export const filteredTransactions = devtoolsContext.computed(() => {
   const filtered = filterLogs(logEntries, filter, selectedContext, [
     'eventType',
     'nodeName',
-    'rawData',
+    'data',
   ]);
 
   // Timeline view filters - show only main events, not start/end pairs
   return filtered.filter(
     (log) =>
-      log.type === 'signal-write' ||
-      log.type === 'signal-read' ||
-      log.type === 'computed-complete' ||
-      log.type === 'effect-complete' ||
-      log.type === 'selector-created'
+      !log.eventType.includes('_START') &&
+      !log.eventType.includes('_BEGIN') &&
+      log.eventType !== 'DEPENDENCY_UPDATE' &&
+      log.eventType !== 'GRAPH_SNAPSHOT'
   );
 });
 
@@ -78,9 +77,9 @@ export const stats = devtoolsContext.computed(() => {
   const graph = devtoolsStore.state.dependencyGraph.value;
 
   return {
-    totalSignals: contexts.reduce((sum, c) => sum + c.signalCount, 0),
-    totalComputeds: contexts.reduce((sum, c) => sum + c.computedCount, 0),
-    totalEffects: contexts.reduce((sum, c) => sum + c.effectCount, 0),
+    totalSignals: contexts.reduce((sum, c) => sum + (c.signalCount || 0), 0),
+    totalComputeds: contexts.reduce((sum, c) => sum + (c.computedCount || 0), 0),
+    totalEffects: contexts.reduce((sum, c) => sum + (c.effectCount || 0), 0),
     totalTransactions: devtoolsStore.state.logEntries.value.length,
     totalNodes: graph.nodes.size,
     totalEdges: Array.from(graph.edges.values()).reduce(
@@ -108,7 +107,8 @@ export const filteredLogEntries = devtoolsContext.computed(() => {
   const filtered = filterLogs(logs, filter, selectedContext, [
     'nodeName',
     'nodeId',
-    'details',
+    'data',
+    'summary',
   ]);
   return filtered.slice(-500); // Keep last 500 logs
 });
