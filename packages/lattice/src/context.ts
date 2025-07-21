@@ -1,198 +1,45 @@
 /**
- * @fileoverview Scoped lattice context implementation
+ * @fileoverview Full-featured lattice context
  *
- * Provides isolated signal/computed contexts for component trees,
- * eliminating global state conflicts and enabling proper composition.
+ * Provides a context with all signal features pre-configured.
+ * For tree-shakeable builds, use createContext with individual extensions.
  */
 
 import type { LatticeContext } from './types';
-import {
-  signal as globalSignal,
-  computed as globalComputed,
-  effect as globalEffect,
-  batch,
-  select as globalSelect,
-  subscribe as globalSubscribe,
-  type Signal,
-  type Computed,
-  type EffectDisposer,
-  type Selected,
-  type Unsubscribe,
-} from '@lattice/signals';
+import { createContext } from './extension';
+import { signalExtension } from './extensions/signal';
+import { computedExtension } from './extensions/computed';
+import { effectExtension } from './extensions/effect';
+import { batchExtension } from './extensions/batch';
+import { selectExtension } from './extensions/select';
+import { subscribeExtension } from './extensions/subscribe';
 
 /**
- * Internal context state
+ * All core extensions bundled together
  */
-interface ContextState {
-  disposed: boolean;
-  signals: Set<Signal<unknown>>;
-  computeds: Set<Computed<unknown>>;
-  effects: Set<EffectDisposer>;
-}
+export const coreExtensions = [
+  signalExtension,
+  computedExtension,
+  effectExtension,
+  batchExtension,
+  selectExtension,
+  subscribeExtension,
+] as const;
 
 /**
- * Internal context type with state
+ * Creates a full-featured lattice context with all signal utilities
+ * 
+ * @example
+ * ```typescript
+ * import { createLattice } from '@lattice/lattice';
+ * 
+ * const context = createLattice();
+ * const count = context.signal(0);
+ * const doubled = context.computed(() => count.value * 2);
+ * 
+ * // All features available: signal, computed, effect, batch, select, subscribe
+ * ```
  */
-interface LatticeContextImpl extends LatticeContext {
-  _state: ContextState;
-  dispose(): void;
-}
-
-/**
- * Tracks which signals belong to which context for boundary enforcement
- */
-const contextMap = new WeakMap<
-  Signal<unknown> | Computed<unknown>,
-  LatticeContextImpl
->();
-
-/**
- * Context constructor function
- */
-function LatticeContextImplConstructor(this: LatticeContextImpl) {
-  this._state = {
-    disposed: false,
-    signals: new Set<Signal<unknown>>(),
-    computeds: new Set<Computed<unknown>>(),
-    effects: new Set<EffectDisposer>(),
-  };
-}
-
-// Cast to constructor type
-const LatticeContextImplCtor = LatticeContextImplConstructor as unknown as {
-  new (): LatticeContextImpl;
-  prototype: LatticeContextImpl;
-};
-
-// Define the prototype
-const proto = LatticeContextImplCtor.prototype;
-
-proto.signal = function <T>(
-  this: LatticeContextImpl,
-  initialValue: T
-): Signal<T> {
-  if (this._state.disposed) {
-    throw new Error('Cannot create signal in disposed context');
-  }
-
-  const sig = globalSignal(initialValue);
-  this._state.signals.add(sig as Signal<unknown>);
-  contextMap.set(sig as Signal<unknown>, this);
-  return sig;
-};
-
-proto.computed = function <T>(
-  this: LatticeContextImpl,
-  computeFn: () => T
-): Computed<T> {
-  if (this._state.disposed) {
-    throw new Error('Cannot create computed in disposed context');
-  }
-
-  const comp = globalComputed(computeFn);
-  this._state.computeds.add(comp as Computed<unknown>);
-  contextMap.set(comp as Computed<unknown>, this);
-  return comp;
-};
-
-proto.effect = function (
-  this: LatticeContextImpl,
-  effectFn: () => void | (() => void)
-): EffectDisposer {
-  if (this._state.disposed) {
-    throw new Error('Cannot create effect in disposed context');
-  }
-
-  const disposer = globalEffect(effectFn);
-  this._state.effects.add(disposer);
-  
-  // No wrapping needed - just return the original disposer
-  return disposer;
-};
-
-proto.batch = batch;
-
-proto.select = function <T, R>(
-  this: LatticeContextImpl,
-  source: Signal<T> | Computed<T> | Selected<T>,
-  selector: (value: T) => R
-): Selected<R> {
-  if (this._state.disposed) {
-    throw new Error('Cannot use select in disposed context');
-  }
-  
-  // Check if source is a Selected type
-  if ('select' in source && typeof source.select === 'function') {
-    // Use the select method on the Selected object
-    return source.select(selector);
-  } else {
-    // Use global select function for Signal and Computed
-    return globalSelect(source as Signal<T> | Computed<T>, selector);
-  }
-};
-
-proto.subscribe = function (
-  this: LatticeContextImpl,
-  source: Signal<unknown> | Computed<unknown> | Selected<unknown>,
-  callback: () => void
-): Unsubscribe {
-  if (this._state.disposed) {
-    throw new Error('Cannot use subscribe in disposed context');
-  }
-  
-  // Use global subscribe function
-  const unsubscribe = globalSubscribe(source, callback);
-  
-  // Track the subscription as an effect for cleanup
-  this._state.effects.add(unsubscribe as unknown as EffectDisposer);
-  
-  // Return a wrapped unsubscribe that also removes from tracking
-  return () => {
-    unsubscribe();
-    this._state.effects.delete(unsubscribe as unknown as EffectDisposer);
-  };
-};
-
-proto.dispose = function (this: LatticeContextImpl): void {
-  const state = this._state;
-  if (state.disposed) return;
-  state.disposed = true;
-
-  // Dispose all effects
-  for (const disposer of state.effects) {
-    disposer();
-  }
-  state.effects.clear();
-
-  // Dispose all computeds
-  for (const computed of state.computeds) {
-    computed.dispose();
-    contextMap.delete(computed);
-  }
-  state.computeds.clear();
-
-  // Clean up signal tracking
-  for (const signal of state.signals) {
-    contextMap.delete(signal);
-  }
-  state.signals.clear();
-};
-
-/**
- * Creates a scoped lattice context for a component tree
- */
-export function createLattice(): LatticeContext & { dispose(): void } {
-  // Create new context implementation
-  const impl = new LatticeContextImplCtor();
-
-  // Create the public interface - bind methods to preserve 'this'
-  return {
-    signal: impl.signal.bind(impl),
-    computed: impl.computed.bind(impl),
-    effect: impl.effect.bind(impl),
-    batch: impl.batch,
-    select: impl.select.bind(impl),
-    subscribe: impl.subscribe.bind(impl),
-    dispose: impl.dispose.bind(impl),
-  };
+export function createLattice(): LatticeContext {
+  return createContext(...coreExtensions) as LatticeContext;
 }

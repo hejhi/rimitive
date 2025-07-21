@@ -1,0 +1,34 @@
+/**
+ * Subscribe extension for lattice
+ */
+import type { LatticeExtension } from '../extension';
+import { subscribe as subscribeImpl } from '@lattice/signals/subscribe';
+import type { Signal, Computed, Selected, Unsubscribe } from '@lattice/signals';
+
+export const subscribeExtension: LatticeExtension<
+  'subscribe',
+  (source: Signal<unknown> | Computed<unknown> | Selected<unknown>, callback: () => void) => Unsubscribe
+> = {
+  name: 'subscribe',
+  method: subscribeImpl,
+  
+  wrap(subscribeFn, ctx) {
+    return (
+      source: Signal<unknown> | Computed<unknown> | Selected<unknown>,
+      callback: () => void
+    ): Unsubscribe => {
+      if (ctx.isDisposed) {
+        throw new Error('Cannot use subscribe in disposed context');
+      }
+      
+      const unsubscribe = subscribeFn(source, callback);
+      
+      // Track the subscription
+      ctx.onDispose(unsubscribe);
+      
+      // Return wrapped unsubscribe that could remove from tracking
+      // (though disposal will clear all anyway)
+      return unsubscribe;
+    };
+  }
+};

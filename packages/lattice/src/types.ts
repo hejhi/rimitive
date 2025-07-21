@@ -31,7 +31,7 @@ export interface SetState {
 }
 
 /**
- * Lattice context provides scoped signal/computed factories
+ * Full lattice context with all features
  * Each component tree gets its own context to avoid global conflicts
  */
 export interface LatticeContext {
@@ -43,6 +43,14 @@ export interface LatticeContext {
   subscribe: (source: Signal<unknown> | Computed<unknown> | Selected<unknown>, callback: () => void) => Unsubscribe;
   dispose(): void;
 }
+
+/**
+ * Partial lattice context for tree-shakeable builds
+ * Only includes the methods that were configured
+ */
+export type PartialLatticeContext = Partial<Omit<LatticeContext, 'dispose'>> & {
+  dispose(): void;
+};
 
 export interface StoreConfig<State> {
   state: State;
