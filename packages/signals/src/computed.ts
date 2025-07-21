@@ -31,18 +31,11 @@ class Computed<T> implements ComputedInterface<T> {
   }
 
   // Methods will be added via prototype below
-  declare value: T;
-  declare _refresh: () => boolean;
-  declare _notify: () => void;
-  declare dispose: () => void;
-  declare peek: () => T;
   declare subscribe: (listener: () => void) => () => void;
   declare select: <R>(selector: (value: T) => R) => Selected<R>;
-}
 
-// Value property - hot path optimized
-Object.defineProperty(Computed.prototype, 'value', {
-  get<T>(this: Computed<T>): T {
+  // Value property - moved to class for benchmarking
+  get value(): T {
     const current = activeContext.currentComputed;
 
     // Track this computed as dependency if needed
@@ -101,8 +94,118 @@ Object.defineProperty(Computed.prototype, 'value', {
 
     this._refresh();
     return this._value!;
-  },
-});
+  }
+
+  // Simplified refresh - inline everything for performance
+  _refresh(): boolean {
+    this._flags &= ~NOTIFIED;
+
+    if (this._flags & RUNNING) throw new Error('Cycle detected');
+
+    // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
+    // This is the most important optimization for diamond patterns
+    // Only use global version optimization if we're not outdated
+    if (
+      !(this._flags & OUTDATED) &&
+      this._version > 0 &&
+      this._globalVersion === activeContext.version
+    )
+      return true;
+
+    // Fast path: tracking and not outdated
+    if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) return true;
+
+    this._flags &= ~OUTDATED;
+
+    // Mark as running before checking dependencies
+    this._flags |= RUNNING;
+
+    // Check if we actually need to recompute
+    if (this._version > 0 && !needsToRecompute(this)) {
+      this._flags &= ~RUNNING;
+      return true;
+    }
+
+    // Recompute needed
+    const prevComputed = activeContext.currentComputed;
+    try {
+      prepareSources(this);
+      activeContext.currentComputed = this;
+
+      const value = this._fn();
+      if (this._value !== value || this._version === 0) {
+        this._value = value;
+        this._version++;
+      }
+
+      // Update global version after successful computation
+      this._globalVersion = activeContext.version;
+    } finally {
+      activeContext.currentComputed = prevComputed;
+      cleanupSources(this);
+      this._flags &= ~RUNNING;
+    }
+
+    return true;
+  }
+
+  // Notify targets
+  _notify(): void {
+    if (this._flags & NOTIFIED) return;
+    this._flags |= NOTIFIED | OUTDATED;
+
+    let node = this._targets;
+    while (node) {
+      node.target._notify();
+      node = node.nextTarget;
+    }
+  }
+
+  dispose(): void {
+    if (!(this._flags & DISPOSED)) {
+      this._flags |= DISPOSED;
+
+      // Clear all sources and return nodes to pool
+      let node = this._sources;
+      const nodesToRelease: DependencyNode[] = [];
+
+      while (node) {
+        const next = node.nextSource;
+        const source = node.source;
+        const prevTarget = node.prevTarget;
+        const nextTarget = node.nextTarget;
+
+        if (prevTarget) {
+          prevTarget.nextTarget = nextTarget;
+        } else {
+          source._targets = nextTarget;
+        }
+
+        if (nextTarget) {
+          nextTarget.prevTarget = prevTarget;
+        }
+
+        // Collect node for batch release
+        nodesToRelease.push(node);
+        node = next;
+      }
+
+      // Batch release for better performance
+      for (const nodeToRelease of nodesToRelease) {
+        releaseNode(nodeToRelease);
+      }
+
+      this._sources = undefined;
+      this._value = undefined;
+    }
+  }
+
+  // Peek method - read value without tracking
+  peek(): T {
+    this._refresh();
+    return this._value!;
+  };
+}
 
 // Helper: Prepare sources for re-evaluation
 function prepareSources<T>(computed: Computed<T>): void {
@@ -190,119 +293,6 @@ function needsToRecompute<T>(computed: Computed<T>): boolean {
 
   return false;
 }
-
-// Simplified refresh - inline everything for performance
-Computed.prototype._refresh = function (): boolean {
-  this._flags &= ~NOTIFIED;
-
-  if (this._flags & RUNNING) throw new Error('Cycle detected');
-
-  // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
-  // This is the most important optimization for diamond patterns
-  // Only use global version optimization if we're not outdated
-  if (
-    !(this._flags & OUTDATED) &&
-    this._version > 0 &&
-    this._globalVersion === activeContext.version
-  )
-    return true;
-
-  // Fast path: tracking and not outdated
-  if ((this._flags & (OUTDATED | TRACKING)) === TRACKING) return true;
-
-  this._flags &= ~OUTDATED;
-
-  // Mark as running before checking dependencies
-  this._flags |= RUNNING;
-
-  // Check if we actually need to recompute
-  if (this._version > 0 && !needsToRecompute(this)) {
-    this._flags &= ~RUNNING;
-    return true;
-  }
-
-  // Recompute needed
-  const prevComputed = activeContext.currentComputed;
-  try {
-    prepareSources(this);
-    activeContext.currentComputed = this;
-
-    const value = this._fn();
-    if (this._value !== value || this._version === 0) {
-      this._value = value;
-      this._version++;
-    }
-
-    // Update global version after successful computation
-    this._globalVersion = activeContext.version;
-  } finally {
-    activeContext.currentComputed = prevComputed;
-    cleanupSources(this);
-    this._flags &= ~RUNNING;
-  }
-
-  return true;
-};
-
-// Notify targets
-Computed.prototype._notify = function (): void {
-  if (this._flags & NOTIFIED) return;
-  this._flags |= NOTIFIED | OUTDATED;
-
-  let node = this._targets;
-  while (node) {
-    node.target._notify();
-    node = node.nextTarget;
-  }
-};
-
-// Dispose
-Computed.prototype.dispose = function (): void {
-  if (!(this._flags & DISPOSED)) {
-    this._flags |= DISPOSED;
-
-    // Clear all sources and return nodes to pool
-    let node = this._sources;
-    const nodesToRelease: DependencyNode[] = [];
-
-    while (node) {
-      const next = node.nextSource;
-      const source = node.source;
-      const prevTarget = node.prevTarget;
-      const nextTarget = node.nextTarget;
-
-      if (prevTarget) {
-        prevTarget.nextTarget = nextTarget;
-      } else {
-        source._targets = nextTarget;
-      }
-
-      if (nextTarget) {
-        nextTarget.prevTarget = prevTarget;
-      }
-
-      // Collect node for batch release
-      nodesToRelease.push(node);
-      node = next;
-    }
-
-    // Batch release for better performance
-    for (const nodeToRelease of nodesToRelease) {
-      releaseNode(nodeToRelease);
-    }
-
-    this._sources = undefined;
-    this._value = undefined;
-  }
-};
-
-// Peek method - read value without tracking
-Computed.prototype.peek = function <T>(this: Computed<T>): T {
-  this._refresh();
-  return this._value!;
-};
-
-// Subscribe will be added by the global computed factory
 
 // Direct export instead of factory pattern
 export function computed<T>(fn: () => T): Computed<T> {
