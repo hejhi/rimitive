@@ -58,13 +58,13 @@ export function updateDependencyGraph(
 ) {
   scheduleBatchUpdate(() => {
     const graph = devtoolsStore.state.dependencyGraph.value;
-
+    const subLen = data.subscribers?.length ?? 0;
     // Update node - preserve existing name if available
     const existingNode = graph.nodes.get(data.id);
     if (existingNode) {
       // Update existing node
       existingNode.value = data.value;
-      existingNode.hasSubscribers = data.subscribers.length > 0;
+      existingNode.hasSubscribers = subLen > 0;
       // Update context ID if not already set
       if (!existingNode.contextId) {
         existingNode.contextId = contextId;
@@ -78,7 +78,7 @@ export function updateDependencyGraph(
         value: data.value,
         isActive: true,
         isOutdated: false,
-        hasSubscribers: data.subscribers.length > 0,
+        hasSubscribers: subLen > 0,
         contextId,
       });
     }
@@ -88,7 +88,7 @@ export function updateDependencyGraph(
     graph.reverseEdges.delete(data.id);
 
     // Batch edge updates - pre-allocate sets when possible
-    if (data.dependencies.length > 0) {
+    if (data.dependencies?.length) {
       for (const dep of data.dependencies) {
         let edgeSet = graph.edges.get(dep.id);
         if (!edgeSet) {
@@ -100,7 +100,7 @@ export function updateDependencyGraph(
     }
 
     // Batch reverse edge updates
-    if (data.subscribers.length > 0) {
+    if (data.subscribers?.length) {
       let reverseEdgeSet = graph.reverseEdges.get(data.id);
       if (!reverseEdgeSet) {
         reverseEdgeSet = new Set();

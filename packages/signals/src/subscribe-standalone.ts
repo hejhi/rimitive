@@ -26,13 +26,15 @@ export function subscribe<T>(
   }
   
   // For Signal and Computed
-  let firstRun = true;
+  // Store the previous value to detect actual changes
+  let previousValue = source.value;
   
   return effect(() => {
-    void source.value; // Track the source
-    
-    // Skip the first run (just subscribing, not a change)
-    if (!firstRun) listener();
-    firstRun = false;
+    const currentValue = source.value;
+    // Only notify if the value actually changed
+    if (!Object.is(currentValue, previousValue)) {
+      previousValue = currentValue;
+      listener();
+    }
   });
 }
