@@ -12,7 +12,7 @@ let executionDepth = 0;
 const depthTracker = new Map<string, number>();
 
 // Track recent events for causality analysis
-const recentEvents: { eventType: string; data: any; timestamp: number }[] = [];
+const recentEvents: { eventType: string; data: unknown; timestamp: number }[] = [];
 const RECENT_EVENT_WINDOW = 100; // ms
 
 /**
@@ -165,16 +165,16 @@ function generateSummary(event: LatticeEvent): string {
   // Handle common event patterns
   switch (event.type) {
     case 'SIGNAL_WRITE':
-      return `${data.oldValue} → ${data.newValue}`;
+      return `${JSON.stringify(data.oldValue)} → ${JSON.stringify(data.newValue)}`;
     
     case 'SIGNAL_READ':
-      return `Read: ${data.value}`;
+      return `Read: ${JSON.stringify(data.value)}`;
     
     case 'COMPUTED_START':
       return 'Computing...';
     
     case 'COMPUTED_END':
-      return `Result: ${data.value}${data.duration ? ` (${Number(data.duration).toFixed(2)}ms)` : ''}`;
+      return `Result: ${JSON.stringify(data.value)}${data.duration ? ` (${Number(data.duration).toFixed(2)}ms)` : ''}`;
     
     case 'EFFECT_START':
       return 'Running effect...';
@@ -188,7 +188,7 @@ function generateSummary(event: LatticeEvent): string {
     case 'BATCH_END':
       return 'Batch completed';
     
-    default:
+    default: {
       // For custom events, try to create a meaningful summary
       if ('value' in data) {
         return `Value: ${JSON.stringify(data.value)}`;
@@ -197,7 +197,7 @@ function generateSummary(event: LatticeEvent): string {
         return `Duration: ${data.duration.toFixed(2)}ms`;
       }
       if ('count' in data) {
-        return `Count: ${data.count}`;
+        return `Count: ${JSON.stringify(data.count)}`;
       }
       
       // Show first few data fields
@@ -208,6 +208,7 @@ function generateSummary(event: LatticeEvent): string {
         .join(', ');
       
       return fields || event.type;
+    }
   }
 }
 
@@ -243,15 +244,6 @@ function updateContextCount(contextId: string, category: string, delta: number) 
   
   // Update the count
   context.resourceCounts[category] = (context.resourceCounts[category] || 0) + delta;
-  
-  // Also update specific counts for backwards compatibility
-  if (category === 'signal' && context.signalCount !== undefined) {
-    context.signalCount += delta;
-  } else if (category === 'computed' && context.computedCount !== undefined) {
-    context.computedCount += delta;
-  } else if (category === 'effect' && context.effectCount !== undefined) {
-    context.effectCount += delta;
-  }
   
   // Trigger reactive update
   devtoolsStore.state.contexts.value = [...contexts];

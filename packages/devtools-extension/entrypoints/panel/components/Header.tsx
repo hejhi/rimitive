@@ -12,9 +12,10 @@ import {
 interface HeaderProps {
   contextCount: number;
   stats: {
-    totalSignals: number;
-    totalComputeds: number;
-    totalEffects: number;
+    resourceCounts: Record<string, number>;
+    totalTransactions: number;
+    totalNodes: number;
+    totalEdges: number;
   };
   onExport: () => void;
   onImport: () => void;
@@ -32,11 +33,14 @@ export function Header({ contextCount, stats, onExport, onImport }: HeaderProps)
       </div>
       <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>{stats.totalSignals} signals</span>
-          <span>•</span>
-          <span>{stats.totalComputeds} computed</span>
-          <span>•</span>
-          <span>{stats.totalEffects} effects</span>
+          {Object.entries(stats.resourceCounts).map(([type, count], index) => (
+            <span key={type} className="flex items-center gap-1">
+              {index > 0 && <span>•</span>}
+              <span>{count} {type}{count !== 1 ? 's' : ''}</span>
+            </span>
+          ))}
+          {Object.keys(stats.resourceCounts).length > 0 && <span>•</span>}
+          <span>{stats.totalNodes} nodes</span>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger className="p-1 hover:bg-accent rounded">

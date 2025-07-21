@@ -35,7 +35,7 @@ function filterLogs(
 
     // Internal reads filter
     if (filter.hideInternal && log.eventType === 'SIGNAL_READ') {
-      const data = log.data as Record<string, unknown>;
+      const data = log.data;
       return !data.internal;
     }
 
@@ -76,10 +76,18 @@ export const stats = devtoolsContext.computed(() => {
   const contexts = devtoolsStore.state.contexts.value;
   const graph = devtoolsStore.state.dependencyGraph.value;
 
+  // Aggregate resource counts across all contexts
+  const resourceTotals: Record<string, number> = {};
+  for (const context of contexts) {
+    if (context.resourceCounts) {
+      for (const [type, count] of Object.entries(context.resourceCounts)) {
+        resourceTotals[type] = (resourceTotals[type] || 0) + count;
+      }
+    }
+  }
+
   return {
-    totalSignals: contexts.reduce((sum, c) => sum + (c.signalCount || 0), 0),
-    totalComputeds: contexts.reduce((sum, c) => sum + (c.computedCount || 0), 0),
-    totalEffects: contexts.reduce((sum, c) => sum + (c.effectCount || 0), 0),
+    resourceCounts: resourceTotals,
     totalTransactions: devtoolsStore.state.logEntries.value.length,
     totalNodes: graph.nodes.size,
     totalEdges: Array.from(graph.edges.values()).reduce(

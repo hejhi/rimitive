@@ -7,8 +7,7 @@ import {
 } from '../../src/components/ui/tabs';
 import type {
   LogEntry,
-  SignalReadData,
-  SignalWriteData,
+  ResourceEventData,
 } from './store/types';
 import { useSubscribe } from '@lattice/react';
 import { ArrowRight } from 'lucide-react';
@@ -25,7 +24,7 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
 
   // Extract the relevant node ID from the transaction
   const getNodeId = (): string | null => {
-    return transaction.nodeId;
+    return transaction.nodeId || null;
   };
 
   const nodeId = getNodeId();
@@ -86,7 +85,7 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
 
             {transaction.eventType === 'SIGNAL_READ' &&
               (() => {
-                const data = transaction.rawData as SignalReadData;
+                const data = transaction.data as ResourceEventData;
                 return (
                   <>
                     <div className="flex items-center gap-2">
@@ -99,11 +98,11 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
                         {JSON.stringify(data.value)}
                       </span>
                     </div>
-                    {data.executionContext && (
+                    {'executionContext' in data && data.executionContext && (
                       <div className="flex items-center gap-2">
                         <span className="text-muted-foreground">Read by:</span>
                         <span className="font-mono">
-                          {data.executionContext}
+                          {data.executionContext as string}
                         </span>
                       </div>
                     )}
@@ -113,7 +112,7 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
 
             {transaction.eventType === 'SIGNAL_WRITE' &&
               (() => {
-                const data = transaction.rawData as SignalWriteData;
+                const data = transaction.data as ResourceEventData;
                 return (
                   <>
                     <div className="flex items-center gap-2">
@@ -137,7 +136,7 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
         <div className="border-t pt-4">
           <h3 className="text-sm font-semibold mb-2">Raw Event Data</h3>
           <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
-            <code>{JSON.stringify(transaction.rawData, null, 2)}</code>
+            <code>{JSON.stringify(transaction.data, null, 2)}</code>
           </pre>
         </div>
       </TabsContent>

@@ -11,70 +11,21 @@ export interface LogEntry {
   // Derived fields for display
   category: string; // Inferred from event type
   summary?: string; // Human-readable summary
+  rawData?: unknown; // For TransactionDetail component
 }
 
-// Event data types used in various events
-export interface SignalWriteData {
+// Generic event data shape - instrumentation emits these
+export interface ResourceEventData {
   id: string;
   name?: string;
-  oldValue: unknown;
-  newValue: unknown;
-}
-
-export interface SignalReadData {
-  id: string;
-  name?: string;
-  value: unknown;
-  internal?: boolean;
-  executionContext?: string;
-  readContext?: { name?: string };
-}
-
-export interface NamedItemData {
-  id: string;
-  name?: string;
-}
-
-export interface ComputedEndEventData extends NamedItemData {
-  value: unknown;
+  type?: string;
+  value?: unknown;
+  oldValue?: unknown;
+  newValue?: unknown;
   duration?: number;
-}
-
-export interface EffectEndEventData extends NamedItemData {
-  duration?: number;
-  hasCleanup?: boolean;
-}
-
-export interface SelectorCreatedEventData {
-  id: string;
-  sourceId: string;
-  sourceName?: string;
-  sourceType: string;
-  selector: string;
-}
-
-export interface DependencyUpdateData {
-  nodeId: string;
-  nodeType: string;
   dependencies?: Array<{ id: string; name?: string }>;
   subscribers?: Array<{ id: string; name?: string }>;
-}
-
-export interface GraphSnapshotData {
-  nodes: Array<{
-    id: string;
-    type: string;
-    name?: string;
-    value?: unknown;
-    isActive: boolean;
-    isOutdated?: boolean;
-    hasSubscribers?: boolean;
-  }>;
-  edges: Array<{
-    source: string;
-    target: string;
-    isActive: boolean;
-  }>;
+  [key: string]: unknown; // Allow any other fields from instrumentation
 }
 
 // Context info with generic resource counts
@@ -82,10 +33,6 @@ export interface ContextInfo {
   id: string;
   name: string;
   created?: number;
-  // Legacy specific counts
-  signalCount?: number;
-  computedCount?: number;
-  effectCount?: number;
   // Generic resource counts for any extension type
   resourceCounts?: Record<string, number>;
 }
@@ -97,7 +44,7 @@ export interface DevToolsState {
   selectedTransaction: string | null;
   selectedTab: 'logs' | 'timeline' | 'graph';
   filter: {
-    type: 'all' | 'signal' | 'computed' | 'effect' | 'selector';
+    type: string; // Generic type filter
     search: string;
     hideInternal: boolean;
   };
@@ -129,114 +76,10 @@ export interface GraphSnapshot {
   edges: Array<{ source: string; target: string; isActive: boolean }>;
 }
 
-export interface ContextInfo {
-  id: string;
-  name: string;
-  signalCount: number;
-  computedCount: number;
-  effectCount: number;
-}
-
-export interface SignalInfo {
-  id: string;
-  name?: string;
-  value: unknown;
-  lastUpdated: number;
-}
-
-export interface ComputedInfo {
-  id: string;
-  name?: string;
-  value: unknown;
-  dependencies: string[];
-  lastComputed: number;
-  executionContext?: string | null;
-}
-
-export interface EffectInfo {
-  id: string;
-  name?: string;
-  isActive: boolean;
-  lastRun: number;
-}
-
-// Transaction data types
-export interface SignalReadData {
-  id: string;
-  name?: string;
-  value: unknown;
-  internal?: string;
-  executionContext?: string | null;
-  readContext?: {
-    type: string;
-    id: string;
-    name?: string;
-  };
-}
-
-export interface SignalWriteData {
-  id: string;
-  name?: string;
-  oldValue: unknown;
-  newValue: unknown;
-}
-
-export interface SignalCreatedData {
-  id: string;
-  name?: string;
-  initialValue: unknown;
-}
-
-export interface NamedItemData {
-  id: string;
-  name?: string;
-}
-
-export interface ComputedEndEventData {
-  id: string;
-  name?: string;
-  duration?: number;
-  value?: unknown;
-}
-
-export interface EffectEndEventData {
-  id: string;
-  name?: string;
-  duration?: number;
-}
-
-export interface SelectorCreatedEventData {
-  id: string;
-  sourceId: string;
-  sourceName?: string;
-  sourceType: 'signal' | 'computed';
-  selector: string;
-}
-
-export interface DependencyUpdateData {
-  id: string;
-  type: 'signal' | 'computed' | 'effect';
-  trigger: 'created' | 'updated' | 'executed';
-  dependencies: Array<{ id: string; name?: string }>;
-  subscribers: Array<{ id: string; name?: string }>;
-  value?: unknown;
-}
-
-export interface GraphSnapshotData {
-  nodes: Array<{
-    id: string;
-    type: 'signal' | 'computed' | 'effect';
-    name?: string;
-    value?: unknown;
-    isActive: boolean;
-    isOutdated?: boolean;
-    hasSubscribers?: boolean;
-    contextId?: string;
-  }>;
-  edges: Array<{
-    source: string;
-    target: string;
-    isActive: boolean;
-  }>;
-}
+// Aliases for event data types that components expect
+export type DependencyUpdateData = ResourceEventData;
+export type GraphSnapshotData = {
+  nodes: DependencyNode[];
+  edges: Array<{ source: string; target: string; isActive: boolean }>;
+};
 

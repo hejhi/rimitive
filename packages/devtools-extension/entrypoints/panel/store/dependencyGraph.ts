@@ -73,7 +73,7 @@ export function updateDependencyGraph(
       // Create new node if it doesn't exist
       graph.nodes.set(data.id, {
         id: data.id,
-        type: data.type,
+        type: data.type || 'unknown',
         name: undefined,
         value: data.value,
         isActive: true,

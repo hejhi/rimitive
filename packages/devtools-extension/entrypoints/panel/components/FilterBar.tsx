@@ -11,10 +11,10 @@ import type { ContextInfo } from '../store/types';
 interface FilterBarProps {
   contexts: ContextInfo[];
   selectedContext: string | null;
-  filterType: 'all' | 'signal' | 'computed' | 'effect' | 'selector';
+  filterType: string;
   searchValue: string;
   onContextChange: (value: string | null) => void;
-  onFilterTypeChange: (value: 'all' | 'signal' | 'computed' | 'effect' | 'selector') => void;
+  onFilterTypeChange: (value: string) => void;
   onSearchChange: (value: string) => void;
 }
 
@@ -52,9 +52,7 @@ export function FilterBar({
 
       <Select
         value={filterType}
-        onValueChange={(value) =>
-          onFilterTypeChange(value as 'all' | 'signal' | 'computed' | 'effect' | 'selector')
-        }
+        onValueChange={onFilterTypeChange}
       >
         <SelectTrigger className="h-8 w-[140px] text-xs">
           <SelectValue />
