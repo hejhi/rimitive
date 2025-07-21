@@ -295,7 +295,7 @@ function needsToRecompute<T>(computed: Computed<T>): boolean {
 }
 
 // Direct export instead of factory pattern
-export function computed<T>(fn: () => T): Computed<T> {
+export function computed<T>(fn: () => T): ComputedInterface<T> {
   return new Computed(fn);
 }
 

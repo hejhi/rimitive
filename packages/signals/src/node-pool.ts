@@ -58,11 +58,6 @@ export function releaseNodes(nodes: DependencyNode[]): void {
   }
 }
 
-// Reset pool (for testing)
-export function resetNodePool(): void {
-  // Pool is now part of context, reset happens in resetTracking
-}
-
 // Get pool statistics (for performance tuning)
 export function getPoolStats() {
   return {

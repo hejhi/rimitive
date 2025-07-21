@@ -11,11 +11,9 @@ import {
   activeContext,
   resetTracking,
 } from './signal';
-import { resetNodePool } from './node-pool';
 
 // Create a test instance
 export function createTestInstance() {
-
   return {
     // Signal functions
     signal: createSignal,
@@ -81,6 +79,4 @@ export function resetGlobalState() {
   defaultInstance = createTestInstance();
   // CRITICAL: Also reset the actual context
   resetTracking();
-  // Reset the node pool for test isolation
-  resetNodePool();
 }

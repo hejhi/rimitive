@@ -25,7 +25,7 @@ class Effect implements EffectInterface {
     if (activeContext.batchDepth > 0) {
       // Add to batch queue
       this._nextBatchedEffect = activeContext.batchedEffects || undefined;
-      activeContext.batchedEffects = this as any;
+      activeContext.batchedEffects = this;
       return;
     }
 
@@ -64,7 +64,7 @@ class Effect implements EffectInterface {
     }
 
     const prevComputed = activeContext.currentComputed;
-    activeContext.currentComputed = this as any; // Type cast needed for effect tracking
+    activeContext.currentComputed = this;
 
     try {
       this._fn();
@@ -147,11 +147,6 @@ class Effect implements EffectInterface {
 
       this._sources = undefined;
     }
-  }
-
-  // Placeholder subscribe
-  subscribe(): () => void {
-    return () => {};
   }
 }
 

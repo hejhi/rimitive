@@ -1,12 +1,8 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { signal, computed, effect } from './index';
-import { getPoolStats, resetNodePool } from './node-pool';
+import { getPoolStats } from './node-pool';
 
 describe('Node Pool Performance', () => {
-  beforeEach(() => {
-    resetNodePool();
-  });
-
   it('should show pool efficiency with high dependency churn', () => {
     
     // Create signals

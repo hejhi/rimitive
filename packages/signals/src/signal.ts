@@ -1,6 +1,8 @@
 // Simplified Signal implementation - bare metal
 
-import type { Signal, Computed, Effect, DependencyNode } from './types';
+import type { DependencyNode } from './types';
+import type { Signal as SignalInterface, Computed, Effect } from './types';
+import type { Selected } from './select';
 import { RUNNING } from './types';
 
 // Context for tracking state
@@ -43,24 +45,23 @@ let activeContext: SignalContext = {
   poolMisses: 0,
 };
 
-// Signal constructor
-function SignalImpl<T>(this: Signal<T>, value: T) {
-  this.__type = 'signal';
-  this._value = value;
-  this._version = 0;
-  this._targets = undefined;
-  this._node = undefined;
-}
+// Direct class syntax - cleaner and more idiomatic
+class Signal<T> implements SignalInterface<T> {
+  __type = 'signal' as const;
+  _value: T;
+  _version = 0;
+  _targets: DependencyNode | undefined = undefined;
+  _node: DependencyNode | undefined = undefined;
 
-// Cast to constructor type
-const Signal = SignalImpl as unknown as {
-  new <T>(value: T): Signal<T>;
-  prototype: Signal;
-};
+  constructor(value: T) {
+    this._value = value;
+  }
 
-// Value property - hot path optimized
-Object.defineProperty(Signal.prototype, 'value', {
-  get(this: Signal) {
+  declare subscribe: (listener: () => void) => () => void;
+  declare select: <R>(selector: (value: T) => R) => Selected<R>;
+
+  // Value property - moved to class for consistency
+  get value(): T {
     // Fast path: no tracking needed
     if (
       !activeContext.currentComputed ||
@@ -117,9 +118,9 @@ Object.defineProperty(Signal.prototype, 'value', {
     this._node = newNode;
 
     return this._value;
-  },
+  }
 
-  set(this: Signal, value) {
+  set value(value: T) {
     if (this._value === value) return;
 
     this._value = value;
@@ -132,72 +133,64 @@ Object.defineProperty(Signal.prototype, 'value', {
       node.target._notify();
       node = node.nextTarget;
     }
-  },
-});
-
-// Signals are always fresh
-Signal.prototype._refresh = function (): boolean {
-  return true;
-};
-
-// Set method for updating nested values
-Signal.prototype.set = function <T>(
-  this: Signal<T>,
-  key: unknown,
-  value: unknown
-): void {
-  if (Array.isArray(this._value)) {
-    // For arrays, create new array with updated element
-    const arr = [...this._value];
-    const index = key as number;
-    arr[index] = value;
-    this.value = arr as T;
-  } else if (typeof this._value === 'object' && this._value !== null) {
-    // For objects, use spread
-    const objKey = key as keyof T;
-    this.value = { ...this._value, [objKey]: value } as T;
   }
-};
 
-// Patch method for partial updates
-Signal.prototype.patch = function <T>(
-  this: Signal<T>,
-  key: unknown,
-  partial: unknown
-): void {
-  if (Array.isArray(this._value)) {
-    // For arrays, patch element at index
-    const arr = [...this._value];
-    const index = key as number;
-    const current = arr[index];
-    arr[index] =
-      typeof current === 'object' && current !== null
-        ? { ...current, ...(partial as object) }
-        : partial;
-    this.value = arr as T;
-  } else if (typeof this._value === 'object' && this._value !== null) {
-    // For objects, patch property
-    const objKey = key as keyof T;
-    const current = this._value[objKey];
-    this.value = {
-      ...this._value,
-      [objKey]:
+  // Signals are always fresh
+  _refresh(): boolean {
+    return true;
+  }
+
+  // Set method for updating nested values
+  set(key: unknown, value: unknown): void {
+    if (Array.isArray(this._value)) {
+      // For arrays, create new array with updated element
+      const arr = [...this._value];
+      const index = key as number;
+      arr[index] = value;
+      this.value = arr as T;
+    } else if (typeof this._value === 'object' && this._value !== null) {
+      // For objects, use spread
+      const objKey = key as keyof T;
+      this.value = { ...this._value, [objKey]: value } as T;
+    }
+  }
+
+  // Patch method for partial updates
+  patch(key: unknown, partial: unknown): void {
+    if (Array.isArray(this._value)) {
+      // For arrays, patch element at index
+      const arr = [...this._value];
+      const index = key as number;
+      const current = arr[index];
+      arr[index] =
         typeof current === 'object' && current !== null
           ? { ...current, ...(partial as object) }
-          : partial,
-    } as T;
+          : partial;
+      this.value = arr as T;
+    } else if (typeof this._value === 'object' && this._value !== null) {
+      // For objects, patch property
+      const objKey = key as keyof T;
+      const current = this._value[objKey];
+      this.value = {
+        ...this._value,
+        [objKey]:
+          typeof current === 'object' && current !== null
+            ? { ...current, ...(partial as object) }
+            : partial,
+      } as T;
+    }
   }
-};
 
-// Peek method - read value without tracking
-Signal.prototype.peek = function <T>(this: Signal<T>): T {
-  return this._value;
-};
+  // Peek method - read value without tracking
+  peek(): T {
+    return this._value;
+  };
+}
 
 // Additional prototype methods (subscribe, select) are added in index.ts
 
 // Direct exports instead of factory pattern
-export function signal<T>(value: T): Signal<T> {
+export function signal<T>(value: T): SignalInterface<T> {
   return new Signal(value);
 }
 
