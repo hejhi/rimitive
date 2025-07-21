@@ -1,31 +1,43 @@
-import { createStore, createLattice } from '@lattice/lattice';
-import { withDevTools } from '@lattice/devtools';
+import { createStore, createContext } from '@lattice/lattice';
+import { signalExtension, computedExtension, effectExtension, batchExtension, selectExtension } from '@lattice/lattice';
+import { createInstrumentation, enableDevTools } from '@lattice/devtools';
+import { select } from '@lattice/signals/select';
 
-// Initialize devtools for the entire app
-const devToolsMiddleware = withDevTools({
+// Enable global DevTools API for browser extension
+enableDevTools();
+
+// Create instrumentation for debugging
+const instrumentation = createInstrumentation({
   name: 'Lattice DevTools Demo',
   trackReads: true,
   trackComputations: true,
 });
+
+// Create a context with instrumentation
+const counterContext = createContext(
+  { instrumentation },
+  signalExtension,
+  computedExtension,
+  effectExtension,
+  batchExtension,
+  selectExtension
+);
 
 // Counter Store
 const counterStore = createStore(
   {
     count: 0,
   },
-  devToolsMiddleware(createLattice())
+  counterContext
 );
-
-// Create computed values for the counter
-const counterContext = counterStore.getContext();
 
 const doubled = counterContext.computed(() => {
   return counterStore.state.count.value * 2;
-});
+}, 'doubled');
 
 const isEven = counterContext.computed(() => {
   return counterStore.state.count.value % 2 === 0;
-});
+}, 'isEven');
 
 // Todo Store
 interface Todo {
@@ -34,23 +46,30 @@ interface Todo {
   completed: boolean;
 }
 
+// Create a separate context for todos to demonstrate multiple contexts
+const todoContext = createContext(
+  { instrumentation },
+  signalExtension,
+  computedExtension,
+  effectExtension,
+  batchExtension,
+  selectExtension
+);
+
 const todoStore = createStore(
   {
     todos: [] as Todo[],
     filter: 'all' as 'all' | 'active' | 'completed',
   },
-  devToolsMiddleware(createLattice())
+  todoContext
 );
-
-// Create computed values for todos
-const todoContext = todoStore.getContext();
 
 // Use selectors to create more granular reactivity
-const currentFilter = todoStore.state.filter.select((f) => f);
-const activeTodos = todoStore.state.todos.select((todos) =>
+const currentFilter = select(todoStore.state.filter, (f) => f);
+const activeTodos = select(todoStore.state.todos, (todos) =>
   todos.filter((todo) => !todo.completed)
 );
-const completedTodos = todoStore.state.todos.select((todos) =>
+const completedTodos = select(todoStore.state.todos, (todos) =>
   todos.filter((todo) => todo.completed)
 );
 
