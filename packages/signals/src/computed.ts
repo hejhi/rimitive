@@ -88,11 +88,11 @@ class Computed<T> implements ComputedInterface<T> {
   }
 
   dispose(): void {
-    if (!(this._flags & DISPOSED)) {
-      this._flags |= DISPOSED;
-      disposeAllSources(this);
-      this._value = undefined;
-    }
+    if (this._flags & DISPOSED) return;
+
+    this._flags |= DISPOSED;
+    disposeAllSources(this);
+    this._value = undefined;
   }
 
   // Peek method - read value without tracking
@@ -169,31 +169,42 @@ function trackDependency<T>(computed: Computed<T>, target: ComputedInterface<T> 
   
   const version = computed._version;
   
-  // Node reuse pattern - check if we can reuse existing node
-  let node = computed._node;
-  if (node !== undefined && node.target === target) {
-    // Reuse existing node - just update version
-    node.version = version;
-    return;
-  }
+  // Try fast paths first
+  if (tryReuseNode(computed, target, version)) return;
+  if (findExistingDependency(target, computed, version)) return;
   
-  // Check if already tracking this computed in current context
-  node = target._sources;
+  // Slow path: create new dependency
+  createNewDependency(computed, target, version);
+}
+
+// Helper: Try to reuse cached node for the same target
+function tryReuseNode<T>(computed: Computed<T>, target: ComputedInterface<T> | Effect, version: number): boolean {
+  const node = computed._node;
+  if (node !== undefined && node.target === target) {
+    node.version = version;
+    return true;
+  }
+  return false;
+}
+
+// Helper: Search for existing dependency in target's sources
+function findExistingDependency<T>(target: ComputedInterface<T> | Effect, computed: Computed<T>, version: number): boolean {
+  let node = target._sources;
   while (node) {
     if (node.source === computed) {
       node.version = version;
-      return;
+      return true;
     }
     node = node.nextSource;
   }
+  return false;
+}
+
+// Helper: Create and link a new dependency node
+function createNewDependency<T>(computed: Computed<T>, target: ComputedInterface<T> | Effect, version: number): void {
+  const newNode = allocateNode();
   
-  // Create new dependency node using context pool
-  activeContext.allocations++;
-  const newNode =
-    activeContext.poolSize > 0
-      ? (activeContext.poolHits++,
-        activeContext.nodePool[--activeContext.poolSize]!)
-      : (activeContext.poolMisses++, {} as DependencyNode);
+  // Initialize node
   newNode.source = computed;
   newNode.target = target;
   newNode.version = version;
@@ -201,21 +212,40 @@ function trackDependency<T>(computed: Computed<T>, target: ComputedInterface<T> 
   newNode.nextTarget = computed._targets;
   newNode.prevSource = undefined;
   newNode.prevTarget = undefined;
+  
+  // Link into lists
+  linkNode(newNode, computed, target);
+  
+  // Cache for reuse
+  computed._node = newNode;
+}
 
-  if (target._sources) {
-    target._sources.prevSource = newNode;
+// Helper: Allocate a node from the pool or create new
+function allocateNode(): DependencyNode {
+  activeContext.allocations++;
+  if (activeContext.poolSize > 0) {
+    activeContext.poolHits++;
+    return activeContext.nodePool[--activeContext.poolSize]!;
   }
-  target._sources = newNode;
+  activeContext.poolMisses++;
+  return {} as DependencyNode;
+}
 
+// Helper: Link node into both source and target lists
+function linkNode<T>(node: DependencyNode, computed: Computed<T>, target: ComputedInterface<T> | Effect): void {
+  // Link to target's sources
+  if (target._sources) {
+    target._sources.prevSource = node;
+  }
+  target._sources = node;
+  
+  // Link to computed's targets
   if (computed._targets) {
-    computed._targets.prevTarget = newNode;
+    computed._targets.prevTarget = node;
   } else {
     computed._flags |= TRACKING;
   }
-  computed._targets = newNode;
-
-  // Store node for reuse
-  computed._node = newNode;
+  computed._targets = node;
 }
 
 // Helper: Check if refresh can be skipped
