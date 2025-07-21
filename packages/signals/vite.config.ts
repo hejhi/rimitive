@@ -15,10 +15,16 @@ export default defineConfig({
       ],
     }),
   ],
+  esbuild: {
+    minifyIdentifiers: true,
+    minifySyntax: true,
+    minifyWhitespace: true,
+  },
   build: {
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        'type-guards': resolve(__dirname, 'src/type-guards.ts'),
       },
       formats: ['es'],
     },
@@ -30,7 +36,7 @@ export default defineConfig({
         manualChunks: undefined,
       },
     },
-    sourcemap: true,
+    sourcemap: false,
     target: 'es2022',
     // Don't empty outDir in watch mode to prevent type resolution issues
     emptyOutDir: !process.argv.includes('--watch'),

@@ -53,7 +53,6 @@ export { batch };
 // Re-export other utilities
 export { effect, subscribe };
 export { createSelectFactory, type Selected } from './select';
-export { isSignal, isComputed, isEffect, isReactive, isEffectDisposer, getEffectFromDisposer } from './type-guards';
 
 // Export types
 export type {
