@@ -14,7 +14,10 @@ The devtools package provides instrumentation capabilities for Lattice contexts 
 
 ```javascript
 import { createContext, signalExtension, computedExtension, effectExtension } from '@lattice/lattice';
-import { createInstrumentation } from '@lattice/devtools';
+import { createInstrumentation, enableDevTools } from '@lattice/devtools';
+
+// Enable global DevTools API for browser extension
+enableDevTools();
 
 // Create instrumentation context
 const instrumentation = createInstrumentation({
