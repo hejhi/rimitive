@@ -10,6 +10,12 @@ export default defineConfig({
   srcDir: '.',
   alias: {
     '@lattice/lattice': resolve(__dirname, '../lattice/src/index.ts'),
+    '@lattice/signals/signal': resolve(__dirname, '../signals/src/signal-export.ts'),
+    '@lattice/signals/computed': resolve(__dirname, '../signals/src/computed-export.ts'),
+    '@lattice/signals/effect': resolve(__dirname, '../signals/src/effect-export.ts'),
+    '@lattice/signals/batch': resolve(__dirname, '../signals/src/batch-export.ts'),
+    '@lattice/signals/select': resolve(__dirname, '../signals/src/select-export.ts'),
+    '@lattice/signals/subscribe': resolve(__dirname, '../signals/src/subscribe-export.ts'),
     '@lattice/signals': resolve(__dirname, '../signals/src/index.ts'),
     '@lattice/devtools': resolve(__dirname, '../devtools/src/index.ts'),
     '@/lib/utils': resolve(__dirname, 'src/lib/utils.ts'),
@@ -40,6 +46,12 @@ export default defineConfig({
     plugins: [watchWorkspace()],
     resolve: {
       alias: {
+        '@lattice/signals/signal': resolve(__dirname, '../signals/src/signal-export.ts'),
+        '@lattice/signals/computed': resolve(__dirname, '../signals/src/computed-export.ts'),
+        '@lattice/signals/effect': resolve(__dirname, '../signals/src/effect-export.ts'),
+        '@lattice/signals/batch': resolve(__dirname, '../signals/src/batch-export.ts'),
+        '@lattice/signals/select': resolve(__dirname, '../signals/src/select-export.ts'),
+        '@lattice/signals/subscribe': resolve(__dirname, '../signals/src/subscribe-export.ts'),
         '@/lib/utils': resolve(__dirname, 'src/lib/utils.ts'),
         '@/components': resolve(__dirname, 'src/components'),
         '@/hooks': resolve(__dirname, 'src/hooks'),
