@@ -5,7 +5,7 @@ export { createLattice } from './context';
 export { createContext } from './extension';
 
 // Export extension system
-export type { LatticeExtension, ExtensionContext } from './extension';
+export type { LatticeExtension, ExtensionContext, InstrumentationContext, CreateContextOptions } from './extension';
 
 // Export individual extensions for tree-shaking
 export { signalExtension } from './extensions/signal';

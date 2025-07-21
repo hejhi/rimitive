@@ -20,5 +20,53 @@ export const batchExtension: LatticeExtension<
       }
       return batchFn(fn);
     };
+  },
+  
+  instrument(batchFn, instrumentation) {
+    let batchCounter = 0;
+    
+    return function <T>(fn: () => T): T {
+      const batchId = `batch_${++batchCounter}`;
+      
+      // Emit batch start
+      instrumentation.emit({
+        type: 'BATCH_START',
+        timestamp: Date.now(),
+        data: {
+          id: batchId,
+          contextId: instrumentation.contextId,
+        },
+      });
+      
+      const startTime = performance.now();
+      let result: T;
+      let error: unknown;
+      
+      try {
+        result = batchFn(fn);
+      } catch (e) {
+        error = e;
+      }
+      
+      const duration = performance.now() - startTime;
+      
+      // Emit batch end
+      instrumentation.emit({
+        type: 'BATCH_END',
+        timestamp: Date.now(),
+        data: {
+          id: batchId,
+          duration,
+          success: !error,
+          contextId: instrumentation.contextId,
+        },
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      return result!;
+    };
   }
 };

@@ -2,8 +2,8 @@
  * @fileoverview Main entry point for Lattice DevTools
  */
 
-// Extension-based API (recommended)
-export { devtoolsExtension } from './extension';
+// Primary API - instrumentation
+export { createInstrumentation, enableDevTools } from './instrumentation';
 
 // Legacy middleware export
 export { withDevTools } from './middleware';

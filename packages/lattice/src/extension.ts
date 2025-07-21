@@ -26,6 +26,35 @@ export interface ExtensionContext {
 }
 
 /**
+ * Instrumentation context provided to extensions
+ */
+export interface InstrumentationContext {
+  /**
+   * Unique ID for this context instance
+   */
+  contextId: string;
+  
+  /**
+   * Name of the context (for debugging)
+   */
+  contextName: string;
+  
+  /**
+   * Emit an instrumentation event
+   */
+  emit(event: {
+    type: string;
+    timestamp: number;
+    data: Record<string, unknown>;
+  }): void;
+  
+  /**
+   * Register a resource for tracking
+   */
+  register<T>(resource: T, type: string, name?: string): { id: string; resource: T };
+}
+
+/**
  * Base interface for all lattice extensions
  */
 export interface LatticeExtension<TName extends string, TMethod> {
@@ -43,6 +72,11 @@ export interface LatticeExtension<TName extends string, TMethod> {
    * Optional wrapper to add context awareness (disposal checks, tracking, etc.)
    */
   wrap?(method: TMethod, context: ExtensionContext): TMethod;
+  
+  /**
+   * Optional instrumentation wrapper for debugging/profiling
+   */
+  instrument?(method: TMethod, instrumentation: InstrumentationContext): TMethod;
   
   /**
    * Called when the extension is added to a context
@@ -84,11 +118,39 @@ interface ContextState {
 }
 
 /**
+ * Options for creating a context
+ */
+export interface CreateContextOptions {
+  /**
+   * Optional instrumentation context for debugging/profiling
+   */
+  instrumentation?: InstrumentationContext;
+}
+
+/**
  * Create a lattice context from a set of extensions
  */
 export function createContext<E extends readonly LatticeExtension<string, unknown>[]>(
   ...extensions: E
+): ExtensionsToContext<E>;
+export function createContext<E extends readonly LatticeExtension<string, unknown>[]>(
+  options: CreateContextOptions,
+  ...extensions: E
+): ExtensionsToContext<E>;
+export function createContext<E extends readonly LatticeExtension<string, unknown>[]>(
+  ...args: [CreateContextOptions, ...E] | E
 ): ExtensionsToContext<E> {
+  // Parse arguments - first arg might be options
+  let extensions: E;
+  let options: CreateContextOptions | undefined;
+  
+  if (args.length > 0 && args[0] && typeof args[0] === 'object' && 'instrumentation' in args[0]) {
+    options = args[0] as CreateContextOptions;
+    extensions = args.slice(1) as unknown as E;
+  } else {
+    extensions = args as E;
+  }
+
   const state: ContextState = {
     disposed: false,
     disposers: new Set(),
@@ -137,10 +199,18 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
     // Call onCreate lifecycle
     ext.onCreate?.(extensionContext);
 
-    // Add the method (wrapped if wrapper provided)
-    const method = ext.wrap 
-      ? ext.wrap(ext.method, extensionContext)
-      : ext.method;
+    // Start with the base method
+    let method = ext.method;
+    
+    // Apply instrumentation if provided
+    if (options?.instrumentation && ext.instrument) {
+      method = ext.instrument(method, options.instrumentation);
+    }
+    
+    // Apply context wrapper if provided
+    if (ext.wrap) {
+      method = ext.wrap(method, extensionContext);
+    }
     
     // Safe because we control the context type
     (context as Record<string, unknown>)[ext.name] = method;

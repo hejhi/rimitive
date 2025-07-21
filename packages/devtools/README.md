@@ -10,27 +10,36 @@ pnpm add @lattice/devtools
 
 ## Usage
 
-The devtools package provides instrumented versions of `createLattice` and `createStore` that emit events for debugging:
+The devtools package provides instrumentation capabilities for Lattice contexts through a first-class instrumentation API:
 
 ```javascript
-import { enableDevTools, createLattice, createStore } from '@lattice/devtools';
+import { createContext, signalExtension, computedExtension, effectExtension } from '@lattice/lattice';
+import { createInstrumentation } from '@lattice/devtools';
 
-// Enable DevTools before creating any contexts
-enableDevTools({
+// Create instrumentation context
+const instrumentation = createInstrumentation({
   name: 'My App',
-  enableProfiling: true
+  maxEvents: 10000
 });
 
-// Use the instrumented versions - they work exactly like the originals
-const context = createLattice('Main Context');
-const store = createStore({ count: 0 }, context);
+// Create lattice context with instrumentation
+const context = createContext(
+  { instrumentation },
+  signalExtension,
+  computedExtension,
+  effectExtension
+);
 
-// Optional: name your signals, computed values, and effects for better debugging
-const doubled = context.computed(() => store.count.value * 2, 'doubled');
+// Use context normally - all operations are instrumented
+const count = context.signal(0, 'count');
+const doubled = context.computed(() => count.value * 2, 'doubled');
 
 context.effect(() => {
-  console.log('Count:', store.count.value);
-}, 'logEffect');
+  console.log('Count:', count.value, 'Doubled:', doubled.value);
+}, 'logger');
+
+// Updates are tracked
+count.value = 5;
 ```
 
 ## Chrome Extension
@@ -39,21 +48,28 @@ For the best debugging experience, install the [Lattice DevTools Chrome Extensio
 
 ## API
 
-### `enableDevTools(options?: DevToolsOptions)`
+### `createInstrumentation(options?: DevToolsOptions)`
 
-Enables devtools instrumentation. Call this before creating any contexts.
+Creates an instrumentation context that can be passed to `createContext`.
 
 Options:
 - `name?: string` - Name for your application
-- `enableProfiling?: boolean` - Enable performance profiling
+- `maxEvents?: number` - Maximum number of events to buffer (default: 10000)
+- `trackReads?: boolean` - Enable tracking of signal reads
+- `trackComputations?: boolean` - Enable tracking of computed executions
+- `trackEffects?: boolean` - Enable tracking of effect executions
+- `trackWrites?: boolean` - Enable tracking of signal writes
 
-### `createLattice(name?: string)`
+### `enableDevTools()`
 
-Creates an instrumented Lattice context that emits debugging events.
+Enables the global DevTools API on the window object for browser extensions.
 
-### `createStore(initialState, context?, name?)`
+```javascript
+import { enableDevTools } from '@lattice/devtools';
 
-Creates an instrumented store that tracks all state updates.
+// Call this once at app startup
+enableDevTools();
+```
 
 ## Events
 
@@ -69,16 +85,29 @@ The devtools emit the following events:
 - `EFFECT_CREATED` - When an effect is created
 - `EFFECT_START` - When an effect starts running
 - `EFFECT_END` - When an effect finishes running
-- `STORE_CREATED` - When a store is created
-- `STORE_UPDATE_START` - When a store update begins
-- `STORE_UPDATE_END` - When a store update completes
+- `EFFECT_DISPOSED` - When an effect is disposed
+- `BATCH_START` - When a batch operation begins
+- `BATCH_END` - When a batch operation completes
 - `CONTEXT_DISPOSED` - When a context is disposed
+
+## Legacy Middleware API
+
+For backwards compatibility, the package also exports a middleware API:
+
+```javascript
+import { withDevTools } from '@lattice/devtools';
+import { createContext } from '@lattice/lattice';
+
+const context = withDevTools(createContext(), {
+  name: 'My App'
+});
+```
 
 ## Performance Impact
 
 The instrumentation adds minimal overhead:
-- ~5-10% for signal reads/writes
+- ~5-10% for signal reads/writes when read tracking is enabled
 - ~10-15% for computed recalculations
-- Negligible impact when devtools are disabled
+- Negligible impact when instrumentation is not provided to context
 
-Always disable devtools in production builds.
+Always disable devtools in production builds by not providing the instrumentation option to `createContext`.
