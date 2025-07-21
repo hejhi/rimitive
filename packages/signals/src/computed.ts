@@ -1,6 +1,8 @@
 // Simplified Computed implementation - bare metal
 
-import type { Computed, DependencyNode } from './types';
+import type { DependencyNode } from './types';
+import type { Computed as ComputedInterface } from './types';
+import type { Selected } from './select';
 import {
   NOTIFIED,
   OUTDATED,
@@ -12,28 +14,35 @@ import {
 import { activeContext } from './signal';
 import { releaseNode } from './node-pool';
 
-// Computed constructor
-function ComputedImpl<T>(this: Computed<T>, fn: () => T) {
-  this.__type = 'computed';
-  this._fn = fn;
-  this._value = undefined;
-  this._version = 0;
-  this._globalVersion = -1;
-  this._flags = OUTDATED | IS_COMPUTED;
-  this._sources = undefined;
-  this._targets = undefined;
-  this._node = undefined;
-}
+// Direct class syntax - cleaner and more idiomatic
+class Computed<T> implements ComputedInterface<T> {
+  __type = 'computed' as const;
+  _fn: () => T;
+  _value: T | undefined = undefined;
+  _version = 0;
+  _globalVersion = -1;
+  _flags = OUTDATED | IS_COMPUTED;
+  _sources: DependencyNode | undefined = undefined;
+  _targets: DependencyNode | undefined = undefined;
+  _node: DependencyNode | undefined = undefined;
 
-// Cast to constructor type
-const Computed = ComputedImpl as unknown as {
-  new <T>(fn: () => T): Computed<T>;
-  prototype: Computed;
-};
+  constructor(fn: () => T) {
+    this._fn = fn;
+  }
+
+  // Methods will be added via prototype below
+  declare value: T;
+  declare _refresh: () => boolean;
+  declare _notify: () => void;
+  declare dispose: () => void;
+  declare peek: () => T;
+  declare subscribe: (listener: () => void) => () => void;
+  declare select: <R>(selector: (value: T) => R) => Selected<R>;
+}
 
 // Value property - hot path optimized
 Object.defineProperty(Computed.prototype, 'value', {
-  get(this: Computed) {
+  get<T>(this: Computed<T>): T {
     const current = activeContext.currentComputed;
 
     // Track this computed as dependency if needed
@@ -91,12 +100,12 @@ Object.defineProperty(Computed.prototype, 'value', {
     }
 
     this._refresh();
-    return this._value;
+    return this._value!;
   },
 });
 
 // Helper: Prepare sources for re-evaluation
-function prepareSources(computed: Computed): void {
+function prepareSources<T>(computed: Computed<T>): void {
   // Simply mark all current sources as potentially unused
   for (
     let node = computed._sources;
@@ -108,7 +117,7 @@ function prepareSources(computed: Computed): void {
 }
 
 // Helper: Clean up sources after re-evaluation
-function cleanupSources(computed: Computed): void {
+function cleanupSources<T>(computed: Computed<T>): void {
   let node = computed._sources;
   let prev: DependencyNode | undefined;
 
@@ -159,7 +168,7 @@ function cleanupSources(computed: Computed): void {
 }
 
 // Check if recomputation is needed
-function needsToRecompute(computed: Computed): boolean {
+function needsToRecompute<T>(computed: Computed<T>): boolean {
   // Check dependencies in order of use
   for (
     let node = computed._sources;
