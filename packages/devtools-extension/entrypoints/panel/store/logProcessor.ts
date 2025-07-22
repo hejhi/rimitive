@@ -46,9 +46,6 @@ export function processLogEntry(event: LatticeEvent) {
   
   // Add to log entries
   addLogEntry(entry);
-  
-  // Update context counts for resource creation/disposal
-  updateContextCounts(event);
 }
 
 /**
@@ -212,42 +209,6 @@ function generateSummary(event: LatticeEvent): string {
   }
 }
 
-/**
- * Update context resource counts
- */
-function updateContextCounts(event: LatticeEvent) {
-  // Update context counts for creation events
-  if (event.type.includes('_CREATED')) {
-    const category = inferCategory(event.type);
-    updateContextCount(event.contextId, category, 1);
-  }
-  
-  if (event.type.includes('_DISPOSED') || event.type.includes('_DESTROYED')) {
-    const category = inferCategory(event.type);
-    updateContextCount(event.contextId, category, -1);
-  }
-}
-
-/**
- * Update context resource count
- */
-function updateContextCount(contextId: string, category: string, delta: number) {
-  const contexts = devtoolsState.contexts.value;
-  const context = contexts.find(c => c.id === contextId);
-  
-  if (!context) return;
-  
-  // Initialize resource counts if needed
-  if (!context.resourceCounts) {
-    context.resourceCounts = {};
-  }
-  
-  // Update the count
-  context.resourceCounts[category] = (context.resourceCounts[category] || 0) + delta;
-  
-  // Trigger reactive update
-  devtoolsState.contexts.value = [...contexts];
-}
 
 /**
  * Add log entry to the store

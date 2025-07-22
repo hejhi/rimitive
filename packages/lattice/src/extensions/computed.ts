@@ -61,7 +61,7 @@ export const computedExtension: LatticeExtension<
           get() {
             // Emit computation start
             instrumentation.emit({
-              type: 'COMPUTED_START',
+              type: 'COMPUTE_START',
               timestamp: Date.now(),
               data: {
                 id,
@@ -76,7 +76,7 @@ export const computedExtension: LatticeExtension<
             
             // Emit computation end
             instrumentation.emit({
-              type: 'COMPUTED_END',
+              type: 'COMPUTE_END',
               timestamp: Date.now(),
               data: {
                 id,

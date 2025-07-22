@@ -31,7 +31,7 @@ export default defineConfig({
     host_permissions: ['<all_urls>'],
     web_accessible_resources: [
       {
-        resources: ['devtools-api.js', 'devtools-page-script.js'],
+        resources: ['devtools-api.js'],
         matches: ['<all_urls>'],
       },
     ],

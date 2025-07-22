@@ -5,7 +5,6 @@ import { devtoolsState } from '../store/devtoolsCtx';
 export function useDevToolsConnection() {
   useEffect(() => {
     let port: chrome.runtime.Port = null!;
-    let timeoutId: number | null = null;
 
     try {
       port = chrome.runtime.connect({ name: 'devtools-panel' });
@@ -31,19 +30,11 @@ export function useDevToolsConnection() {
           reverseEdges: new Map(),
         };
       });
-
-      timeoutId = window.setTimeout(() => {
-        port?.postMessage({
-          type: 'GET_STATE',
-          tabId: chrome.devtools.inspectedWindow.tabId,
-        });
-      }, 100);
     } catch (error) {
       console.error('[DevTools Panel] Error connecting to background:', error);
     }
 
     return () => {
-      if (timeoutId) clearTimeout(timeoutId);
       port?.disconnect();
     };
   }, []);

@@ -5,51 +5,62 @@ import { addNodeToGraph, scheduleBatchUpdate } from './dependencyGraph';
 
 export function updateContextFromEvent(event: LatticeEvent) {
   const contexts = [...devtoolsState.contexts.value];
-  const contextIndex = contexts.findIndex((c) => c.id === event.contextId);
+  let contextIndex = contexts.findIndex((c) => c.id === event.contextId);
 
-  if (event.type === 'CONTEXT_CREATED' && contextIndex === -1) {
-    handleContextCreated(contexts, event);
+  // Create context if it doesn't exist yet (for events that come before CONTEXT_CREATED)
+  if (contextIndex === -1 && event.contextId) {
+    contexts.push({
+      id: event.contextId,
+      name: 'Unknown Context',
+      created: Date.now(),
+      resourceCounts: {},
+    });
+    contextIndex = contexts.length - 1;
+  }
+
+  if (event.type === 'CONTEXT_CREATED' && contextIndex !== -1) {
+    // Update context name if we already created it
+    const data = event.data as { name?: string };
+    contexts[contextIndex].name = data.name || 'Default';
   } else if (contextIndex !== -1) {
     const context = contexts[contextIndex];
     handleResourceEvent(context, event);
   }
 
   devtoolsState.contexts.value = contexts;
-}
-
-function handleContextCreated(contexts: ContextInfo[], event: LatticeEvent) {
-  const data = event.data as { name?: string };
-  contexts.push({
-    id: event.contextId,
-    name: data.name || 'Default',
-    created: Date.now(),
-    resourceCounts: {},
-  });
+  
+  // Auto-select first context if none selected
+  if (!devtoolsState.selectedContext.value && contexts.length > 0) {
+    devtoolsState.selectedContext.value = contexts[0].id;
+  }
 }
 
 function handleResourceEvent(context: ContextInfo, event: LatticeEvent) {
   const eventData = event.data as ResourceEventData;
   
-  // The instrumentation API provides the resource type in the data
-  // For resource creation events
+  // Handle resource creation events and update counts
   if (event.type.endsWith('_CREATED') && eventData.id) {
-    // Get resource type from data or derive from event type
+    // Get resource type from the data or derive it from event type
     const resourceType = eventData.type || deriveResourceType(event.type);
     
-    // Update counts
-    if (!context.resourceCounts) {
-      context.resourceCounts = {};
+    // Update resource count
+    if (!context.resourceCounts[resourceType]) {
+      context.resourceCounts[resourceType] = 0;
     }
-    context.resourceCounts[resourceType] = (context.resourceCounts[resourceType] || 0) + 1;
+    context.resourceCounts[resourceType]++;
     
     // Add to dependency graph
-    addNodeToGraph(eventData.id, {
-      type: resourceType,
-      name: eventData.name,
-      value: eventData.value || eventData.initialValue,
-    });
+    const graph = devtoolsState.dependencyGraph.value;
+    if (!graph.nodes.has(eventData.id)) {
+      addNodeToGraph(eventData.id, {
+        type: resourceType,
+        name: eventData.name,
+        value: eventData.value || eventData.initialValue,
+        contextId: event.contextId,
+      });
+    }
   } 
-  // For value updates
+  // Handle value updates
   else if ((event.type.endsWith('_WRITE') || event.type.endsWith('_UPDATE')) && eventData.id) {
     scheduleBatchUpdate(() => {
       const graph = devtoolsState.dependencyGraph.value;
