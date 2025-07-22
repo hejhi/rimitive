@@ -20,10 +20,7 @@ export const signalExtension: LatticeExtension<
       }
       
       // signalImpl doesn't accept name, so we ignore it
-      const sig = signalFn(initialValue);
-      
-      // Track the signal for debugging
-      return ctx.track(sig, 'signal');
+      return signalFn(initialValue);
     };
     
     // Cast to include the optional name parameter in the signature

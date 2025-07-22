@@ -20,9 +20,6 @@ export const computedExtension: LatticeExtension<
       
       const comp = computedFn(fn, name);
       
-      // Track the computed
-      ctx.track(comp, 'computed');
-      
       // Register cleanup - computeds need to be disposed
       ctx.onDispose(() => comp.dispose());
       

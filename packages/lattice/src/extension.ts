@@ -15,11 +15,6 @@ export interface ExtensionContext {
   onDispose(cleanup: () => void): void;
   
   /**
-   * Track a resource for debugging and cleanup
-   */
-  track<T>(resource: T, type: string): T;
-  
-  /**
    * Check if the context has been disposed
    */
   readonly isDisposed: boolean;
@@ -76,7 +71,7 @@ export interface LatticeExtension<TName extends string, TMethod> {
   /**
    * Optional instrumentation wrapper for debugging/profiling
    */
-  instrument?(method: TMethod, instrumentation: InstrumentationContext): TMethod;
+  instrument?(method: TMethod, instrumentation: InstrumentationContext, context: ExtensionContext): TMethod;
   
   /**
    * Called when the extension is added to a context
@@ -114,7 +109,6 @@ export type ExtensionsToContext<E extends readonly LatticeExtension<string, unkn
 interface ContextState {
   disposed: boolean;
   disposers: Set<() => void>;
-  resources: Map<unknown, string>;
 }
 
 /**
@@ -154,17 +148,11 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
   const state: ContextState = {
     disposed: false,
     disposers: new Set(),
-    resources: new Map(),
   };
 
   const extensionContext: ExtensionContext = {
     onDispose(cleanup: () => void): void {
       state.disposers.add(cleanup);
-    },
-    
-    track<T>(resource: T, type: string): T {
-      state.resources.set(resource, type);
-      return resource;
     },
     
     get isDisposed(): boolean {
@@ -188,9 +176,6 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
         disposer();
       }
       state.disposers.clear();
-
-      // Clear tracked resources
-      state.resources.clear();
     }
   } as ExtensionsToContext<E>;
 
@@ -204,7 +189,7 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
     
     // Apply instrumentation if provided
     if (options?.instrumentation && ext.instrument) {
-      method = ext.instrument(method, options.instrumentation);
+      method = ext.instrument(method, options.instrumentation, extensionContext);
     }
     
     // Apply context wrapper if provided

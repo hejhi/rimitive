@@ -121,44 +121,6 @@ describe('Extension System', () => {
     expect(operationCount).toBe(0); // Reset by onDispose
   });
   
-  it('should properly track resources', () => {
-    const trackedResources: unknown[] = [];
-    
-    // Custom extension that exposes tracked resources
-    const trackingExtension: LatticeExtension<
-      'getTracked', 
-      () => unknown[]
-    > = {
-      name: 'getTracked',
-      method: () => trackedResources,
-      wrap(method, ctx) {
-        // Intercept track calls
-        const originalTrack = ctx.track.bind(ctx);
-        ctx.track = function(resource, type) {
-          trackedResources.push(resource);
-          return originalTrack(resource, type);
-        };
-        return method;
-      }
-    };
-    
-    const context = createContext(
-      signalExtension,
-      computedExtension,
-      trackingExtension
-    );
-    
-    const sig1 = context.signal(1);
-    const sig2 = context.signal(2);
-    const comp = context.computed(() => sig1.value + sig2.value);
-    
-    expect(context.getTracked()).toHaveLength(3);
-    expect(context.getTracked()).toContain(sig1);
-    expect(context.getTracked()).toContain(sig2);
-    expect(context.getTracked()).toContain(comp);
-    
-    context.dispose();
-  });
   
   it('should call lifecycle hooks', () => {
     const onCreate = vi.fn();
