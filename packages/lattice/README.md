@@ -281,7 +281,7 @@ interface LatticeExtension<TName extends string, TMethod> {
 
 ## State Management
 
-Looking for reactive state management? Check out [@lattice/signals-store](../store) which provides signal-based state management extensions for Lattice.
+Looking for reactive state management? Check out [@lattice/signals-store](../signals-store) which provides signal-based state management extensions for Lattice.
 
 ## License
 

@@ -17,6 +17,7 @@
     "check": "pnpm typecheck && pnpm lint"
   },
   "dependencies": {
+    "@lattice/lattice": "workspace:*",
     "@lattice/signals-store": "workspace:*",
     "@lattice/react": "workspace:*",
     "@lattice/signals": "workspace:*",

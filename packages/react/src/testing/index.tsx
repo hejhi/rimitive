@@ -5,11 +5,14 @@ import {
   RenderOptions,
   RenderHookOptions,
 } from '@testing-library/react';
-import { createLattice } from '@lattice/signals-store';
+import { coreExtensions } from '@lattice/signals-store';
 import type { LatticeContext, SignalState } from '@lattice/signals-store';
+import { createContext } from '@lattice/lattice';
 
 type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>;
 type CustomRenderHookOptions<Props> = Omit<RenderHookOptions<Props>, 'wrapper'>;
+
+const createStore = () => createContext(...coreExtensions);
 
 /**
  * Creates a wrapper component for testing.
@@ -17,11 +20,11 @@ type CustomRenderHookOptions<Props> = Omit<RenderHookOptions<Props>, 'wrapper'>;
  *
  * @example
  * ```tsx
- * const wrapper = createLatticeWrapper();
+ * const wrapper = createStoreWrapper();
  * const { result } = renderHook(() => useSignal(0), { wrapper });
  * ```
  */
-export function createLatticeWrapper() {
+export function createStoreWrapper() {
   // Simple wrapper component for consistent test environment
   return function LatticeWrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
@@ -45,7 +48,7 @@ export function renderWithLattice(
   options: CustomRenderOptions = {}
 ): ReturnType<typeof render> {
   const { ...renderOptions } = options;
-  const Wrapper = createLatticeWrapper();
+  const Wrapper = createStoreWrapper();
 
   return render(ui, { wrapper: Wrapper, ...renderOptions });
 }
@@ -73,7 +76,7 @@ export function renderHookWithLattice<Result, Props>(
   options?: CustomRenderHookOptions<Props>
 ): ReturnType<typeof renderHook<Result, Props>> {
   const { ...renderOptions } = options ?? {};
-  const Wrapper = createLatticeWrapper();
+  const Wrapper = createStoreWrapper();
 
   return renderHook(hook, { wrapper: Wrapper, ...renderOptions });
 }
@@ -106,7 +109,7 @@ export function renderHookWithLattice<Result, Props>(
 export function createTestSignals<T extends Record<string, unknown>>(
   initialState: T
 ): { context: LatticeContext; signals: SignalState<T> } {
-  const context = createLattice();
+  const context = createStore();
   const signals = {} as SignalState<T>;
   
   for (const [key, value] of Object.entries(initialState)) {

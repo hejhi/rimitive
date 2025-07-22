@@ -1,7 +1,7 @@
 // Lattice Store - State management extensions using signals
 
-// Export context creation with all signal extensions
-export { createLattice } from './context';
+// Export all signal extensions
+export { coreExtensions } from './context';
 
 // Export individual extensions for tree-shaking
 export { signalExtension } from './extensions/signal';

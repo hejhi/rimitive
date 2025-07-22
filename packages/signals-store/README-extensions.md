@@ -21,15 +21,6 @@ const count = context.signal(0);
 const doubled = context.computed(() => count.value * 2);
 ```
 
-### Full Context (Convenient)
-
-```typescript
-import { createLattice } from '@lattice/lattice';
-
-// Includes all core extensions
-const context = createLattice();
-```
-
 ### Custom Selection
 
 ```typescript

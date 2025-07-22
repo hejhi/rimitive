@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createLattice } from './context';
+import { createContext } from '@lattice/lattice';
+import { coreExtensions } from './context';
 
 describe('Context Disposal', () => {
   it('should dispose all effects when context is disposed', () => {
-    const context = createLattice();
+    const context = createContext(...coreExtensions);
     const signal1 = context.signal(0);
     const signal2 = context.signal(0);
     
@@ -40,7 +41,7 @@ describe('Context Disposal', () => {
   });
 
   it('should dispose all computeds when context is disposed', () => {
-    const context = createLattice();
+    const context = createContext(...coreExtensions);
     const signal = context.signal(10);
     
     let computeRuns = 0;
@@ -69,7 +70,7 @@ describe('Context Disposal', () => {
   });
 
   it('should run effect cleanup functions on disposal', () => {
-    const context = createLattice();
+    const context = createContext(...coreExtensions);
     const cleanup = vi.fn();
     
     context.effect(() => {
@@ -84,7 +85,7 @@ describe('Context Disposal', () => {
   });
 
   it('should handle manual effect disposal', () => {
-    const context = createLattice();
+    const context = createContext(...coreExtensions);
     const signal = context.signal(0);
     
     let effectRuns = 0;
@@ -107,7 +108,7 @@ describe('Context Disposal', () => {
   });
 
   it('should prevent creating new primitives after disposal', () => {
-    const context = createLattice();
+    const context = createContext(...coreExtensions);
     context.dispose();
     
     expect(() => context.signal(0)).toThrow('Cannot create signal in disposed context');
@@ -116,9 +117,9 @@ describe('Context Disposal', () => {
   });
 
   it('should handle multiple independent contexts', () => {
-    const context1 = createLattice();
-    const context2 = createLattice();
-    const context3 = createLattice();
+    const context1 = createContext(...coreExtensions);
+    const context2 = createContext(...coreExtensions);
+    const context3 = createContext(...coreExtensions);
     
     const signal1 = context1.signal(0);
     const signal2 = context2.signal(0);

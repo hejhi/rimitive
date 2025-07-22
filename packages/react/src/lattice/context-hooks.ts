@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { createLattice } from '@lattice/signals-store';
+import { coreExtensions } from '@lattice/signals-store';
 import type { LatticeContext } from '@lattice/signals-store';
+import { createContext } from '@lattice/lattice';
 
 /**
  * Create a Lattice context that is scoped to the component lifecycle.
@@ -36,7 +37,7 @@ export function useLatticeContext(): LatticeContext {
   const contextRef = useRef<LatticeContext | null>(null);
   
   if (!contextRef.current) {
-    contextRef.current = createLattice();
+    contextRef.current = createContext(...coreExtensions);
   }
   
   const context = contextRef.current;

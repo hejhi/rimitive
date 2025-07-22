@@ -13,10 +13,11 @@ npm install @lattice/signals-store @lattice/lattice
 ## Quick Start
 
 ```typescript
-import { createLattice } from '@lattice/signals-store';
+import { createContext } from '@lattice/lattice';
+import { coreExtensions } from '@lattice/signals-store';
 
 // Create a reactive context with all signal extensions
-const ctx = createLattice();
+const ctx = createContext(...coreExtensions);
 
 // Create reactive state
 const count = ctx.signal(0);
@@ -151,8 +152,9 @@ interface TodoState {
   todos: Todo[];
   filter: 'all' | 'active' | 'completed';
 }
+const createStore = () => createContext(...coreExtensions);
 
-function createTodoStore(ctx = createLattice()) {
+function createTodoStore(ctx = createStore()) {
   // State
   const todos = ctx.signal<Todo[]>([]);
   const filter = ctx.signal<'all' | 'active' | 'completed'>('all');
@@ -308,7 +310,7 @@ ctx.effect(async () => {
 Ensure cleanup with lifecycle hooks:
 
 ```typescript
-function createWebSocketStore(ctx = createLattice()) {
+function createWebSocketStore(ctx = createContext(...coreExtensions)) {
   let ws: WebSocket;
   
   const messages = ctx.signal<Message[]>([]);
@@ -354,10 +356,6 @@ const isLoggedIn = ctx.computed(() => currentUser.value !== null);
 ```
 
 ## API Reference
-
-### `createLattice()`
-
-Creates a context with all signal extensions pre-installed.
 
 ### Signal Methods
 

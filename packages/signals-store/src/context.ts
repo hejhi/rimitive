@@ -5,8 +5,6 @@
  * For tree-shakeable builds, use createContext with individual extensions.
  */
 
-import type { LatticeContext } from './types';
-import { createContext } from '@lattice/lattice';
 import { signalExtension } from './extensions/signal';
 import { computedExtension } from './extensions/computed';
 import { effectExtension } from './extensions/effect';
@@ -25,21 +23,3 @@ export const coreExtensions = [
   selectExtension,
   subscribeExtension,
 ] as const;
-
-/**
- * Creates a full-featured lattice context with all signal utilities
- * 
- * @example
- * ```typescript
- * import { createLattice } from '@lattice/lattice';
- * 
- * const context = createLattice();
- * const count = context.signal(0);
- * const doubled = context.computed(() => count.value * 2);
- * 
- * // All features available: signal, computed, effect, batch, select, subscribe
- * ```
- */
-export function createLattice(): LatticeContext {
-  return createContext(...coreExtensions) as LatticeContext;
-}

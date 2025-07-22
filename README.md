@@ -41,12 +41,27 @@ const doubled = computed(() => count.value * 2);
 
 ### [@lattice/lattice](/packages/lattice)
 
-Context system with extension support for building reactive applications.
+Generic extension composition framework for building extensible libraries.
 
 ```typescript
-import { createLattice } from '@lattice/lattice';
+import { createContext } from '@lattice/lattice';
+import { signalExtension } from '@lattice/signals-store';
 
-const context = createLattice();
+const context = createContext(signalExtension);
+const count = context.signal(0);
+```
+
+### [@lattice/signals-store](/packages/signals-store)
+
+Signal-based state management with all reactive extensions pre-configured.
+
+```typescript
+import { createContext } from '@lattice/lattice';
+import { coreExtensions } from '@lattice/signals-store';
+
+const context = createContext(...coreExtensions);
+
+// fully typed!
 const todos = context.signal([]);
 const filter = context.signal('all');
 ```
@@ -57,7 +72,10 @@ const filter = context.signal('all');
 # Core primitives only
 npm install @lattice/signals
 
-# With component patterns
+# With state management extensions
+npm install @lattice/signals-store
+
+# For building extensible libraries
 npm install @lattice/lattice
 ```
 

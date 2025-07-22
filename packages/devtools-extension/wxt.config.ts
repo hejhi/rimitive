@@ -9,7 +9,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig({
   srcDir: '.',
   alias: {
-    '@lattice/signals-store': resolve(__dirname, '../store/src/index.ts'),
+    '@lattice/signals-store': resolve(__dirname, '../signals-store/src/index.ts'),
     '@lattice/signals/signal': resolve(__dirname, '../signals/src/signal-export.ts'),
     '@lattice/signals/computed': resolve(__dirname, '../signals/src/computed-export.ts'),
     '@lattice/signals/effect': resolve(__dirname, '../signals/src/effect-export.ts'),
@@ -59,7 +59,7 @@ export default defineConfig({
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
-      exclude: ['@lattice/store', '@lattice/signals'],
+      exclude: ['@lattice/signals-store', '@lattice/signals'],
     },
     server: {
       watch: {

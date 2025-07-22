@@ -1,9 +1,10 @@
-import { createLattice } from '@lattice/signals-store';
+import { coreExtensions } from '@lattice/signals-store';
 import type { SignalState } from '@lattice/signals-store';
 import type { DevToolsState, ContextInfo, LogEntry } from './types';
+import { createContext } from '@lattice/lattice';
 
 // Create a Lattice context for the devtools panel itself
-export const devtoolsContext = createLattice();
+export const devtoolsContext = createContext(...coreExtensions);
 
 // Create signals for each piece of state
 export const devtoolsState: SignalState<DevToolsState> = {

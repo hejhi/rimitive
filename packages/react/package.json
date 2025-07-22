@@ -41,6 +41,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@lattice/lattice": "workspace:*",
     "@lattice/signals": "workspace:*",
     "@lattice/signals-store": "workspace:*"
   },

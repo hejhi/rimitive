@@ -126,6 +126,9 @@ importers:
 
   packages/devtools-extension:
     dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../lattice
       '@lattice/react':
         specifier: workspace:*
         version: link:../react
@@ -272,6 +275,9 @@ importers:
 
   packages/react:
     dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../lattice
       '@lattice/signals':
         specifier: workspace:*
         version: link:../signals

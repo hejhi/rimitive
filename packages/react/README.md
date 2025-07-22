@@ -5,7 +5,7 @@ React bindings for Lattice signals and stores.
 ## Installation
 
 ```bash
-npm install @lattice/react @lattice/signals @lattice/lattice
+npm install @lattice/react @lattice/signals-store
 ```
 
 ## Quick Start
