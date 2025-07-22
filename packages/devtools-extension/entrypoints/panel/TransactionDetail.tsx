@@ -1,19 +1,34 @@
 import { Badge } from '../../src/components/ui/badge';
+import { X } from 'lucide-react';
 import type {
   LogEntry,
 } from './store/types';
+import { getCategoryColors } from './store/eventTypeManager';
 
 interface TransactionDetailProps {
   transaction: LogEntry;
+  onClose?: () => void;
 }
 
-export function TransactionDetail({ transaction }: TransactionDetailProps) {
+export function TransactionDetail({ transaction, onClose }: TransactionDetailProps) {
+  const colors = getCategoryColors(transaction.category);
+  
   return (
-    <div className="h-full flex flex-col overflow-y-auto p-4 space-y-4">
+    <div className="h-full flex flex-col relative">
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1 rounded hover:bg-muted transition-colors z-10"
+          aria-label="Close detail view"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+      <div className="h-full overflow-y-auto p-4 space-y-4">
         <div className="space-y-2">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             Event Details
-            <Badge variant="outline" className="text-xs">
+            <Badge variant="outline" className={`text-xs ${colors.main}`}>
               {transaction.eventType}
             </Badge>
           </h3>
@@ -54,6 +69,7 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
             <code>{JSON.stringify(transaction.data, null, 2)}</code>
           </pre>
         </div>
+      </div>
     </div>
   );
 }

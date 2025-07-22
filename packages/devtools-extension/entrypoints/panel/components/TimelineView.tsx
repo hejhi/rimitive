@@ -6,21 +6,22 @@ import {
 } from '../../../src/components/ui/resizable';
 import { TransactionDetail } from '../TransactionDetail';
 import type { LogEntry } from '../store/types';
+import { getCategoryColors } from '../store/eventTypeManager';
+import { useIsNarrowViewport } from '../hooks';
 
 interface TimelineViewProps {
   transactions: LogEntry[];
   selectedTransaction: string | null;
-  isNarrowViewport: boolean;
   onTransactionSelect: (id: string | null) => void;
 }
 
 export function TimelineView({
   transactions,
   selectedTransaction,
-  isNarrowViewport,
   onTransactionSelect,
 }: TimelineViewProps) {
   const transaction = transactions.find((t) => t.id === selectedTransaction);
+  const isNarrowViewport = useIsNarrowViewport();
 
   if (transactions.length === 0) {
     return (
@@ -59,7 +60,10 @@ export function TimelineView({
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={isNarrowViewport ? 30 : 40} minSize={20}>
             <div className="h-full overflow-hidden bg-muted/20">
-              <TransactionDetail transaction={transaction} />
+              <TransactionDetail 
+                transaction={transaction} 
+                onClose={() => onTransactionSelect(null)}
+              />
             </div>
           </ResizablePanel>
         </>
@@ -80,6 +84,7 @@ function TransactionItem({
   onSelect,
 }: TransactionItemProps) {
   const tx = transaction;
+  const colors = getCategoryColors(tx.category);
 
   return (
     <div
@@ -101,14 +106,8 @@ function TransactionItem({
             : 'N/A'}
         </span>
         <Badge
-          variant={
-            tx.category === 'signal'
-              ? 'default'
-              : tx.category === 'computed'
-                ? 'secondary'
-                : 'outline'
-          }
-          className="text-xs"
+          variant="outline"
+          className={`text-xs ${colors.main}`}
         >
           {tx.eventType}
         </Badge>

@@ -15,7 +15,6 @@ import {
 import {
   useDataExport,
   useDevToolsConnection,
-  useIsNarrowViewport,
 } from './hooks';
 import { devtoolsState } from './store/devtoolsCtx';
 import {
@@ -34,7 +33,6 @@ export function App() {
   const transactions = useSubscribe(filteredTransactions);
 
   // Use custom hooks
-  const isNarrowViewport = useIsNarrowViewport();
   const { handleExport, handleImport } = useDataExport();
   useDevToolsConnection();
 
@@ -98,7 +96,6 @@ export function App() {
           <TimelineView
             transactions={transactions}
             selectedTransaction={selectedTransaction}
-            isNarrowViewport={isNarrowViewport}
             onTransactionSelect={(id) =>
               (devtoolsState.selectedTransaction.value = id)
             }
