@@ -45,19 +45,19 @@ Generic extension composition framework for building extensible libraries.
 
 ```typescript
 import { createContext } from '@lattice/lattice';
-import { signalExtension } from '@lattice/signals-store';
+import { signalExtension } from '@lattice/signals';
 
 const context = createContext(signalExtension);
 const count = context.signal(0);
 ```
 
-### [@lattice/signals-store](/packages/signals-store)
+### State Management with Lattice
 
-Signal-based state management with all reactive extensions pre-configured.
+Combine signals with the extension framework for state management:
 
 ```typescript
 import { createContext } from '@lattice/lattice';
-import { coreExtensions } from '@lattice/signals-store';
+import { coreExtensions } from '@lattice/signals';
 
 const context = createContext(...coreExtensions);
 
@@ -71,9 +71,6 @@ const filter = context.signal('all');
 ```bash
 # Core primitives only
 npm install @lattice/signals
-
-# With state management extensions
-npm install @lattice/signals-store
 
 # For building extensible libraries
 npm install @lattice/lattice

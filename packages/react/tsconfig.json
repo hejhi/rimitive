@@ -26,7 +26,6 @@
   ],
   "references": [
     { "path": "../signals" },
-    { "path": "../lattice" },
-    { "path": "../signals-store" }
+    { "path": "../lattice" }
   ]
 }

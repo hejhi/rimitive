@@ -56,6 +56,9 @@
     "check": "pnpm typecheck && pnpm test && pnpm lint",
     "test": "vitest run"
   },
+  "dependencies": {
+    "@lattice/lattice": "workspace:*"
+  },
   "devDependencies": {
     "rimraf": "^6.0.1",
     "terser": "^5.36.0",

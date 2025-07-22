@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*",
-    "@lattice/signals-store": "workspace:*",
     "@lattice/react": "workspace:*",
     "@lattice/signals": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.14",

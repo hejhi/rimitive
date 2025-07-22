@@ -1,7 +1,5 @@
 /**
- * @fileoverview Runtime types for Lattice core
- *
- * Core-specific types for Lattice. Signal types should be imported from @lattice/signals directly.
+ * @fileoverview Store-specific types for Lattice integration
  */
 
 import type {
@@ -10,7 +8,7 @@ import type {
   EffectDisposer,
   Selected,
   Unsubscribe,
-} from '@lattice/signals';
+} from './types';
 
 /**
  * State represented as signals - each property is a reactive signal
@@ -51,4 +49,3 @@ export interface LatticeContext {
 export type PartialLatticeContext = Partial<Omit<LatticeContext, 'dispose'>> & {
   dispose(): void;
 };
-

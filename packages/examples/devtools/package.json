@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@lattice/lattice": "workspace:*",
-    "@lattice/signals-store": "workspace:*",
     "@lattice/signals": "workspace:*"
   },
   "devDependencies": {

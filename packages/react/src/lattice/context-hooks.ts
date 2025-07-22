@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { coreExtensions } from '@lattice/signals-store';
-import type { LatticeContext } from '@lattice/signals-store';
+import { coreExtensions } from '@lattice/signals';
+import type { LatticeContext } from '@lattice/signals';
 import { createContext } from '@lattice/lattice';
 
 /**

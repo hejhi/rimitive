@@ -1,5 +1,5 @@
-import { coreExtensions } from '@lattice/signals-store';
-import type { SignalState } from '@lattice/signals-store';
+import { coreExtensions } from '@lattice/signals';
+import type { SignalState } from '@lattice/signals';
 import type { DevToolsState, ContextInfo, LogEntry } from './types';
 import { createContext } from '@lattice/lattice';
 

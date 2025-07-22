@@ -5,8 +5,8 @@ import {
   RenderOptions,
   RenderHookOptions,
 } from '@testing-library/react';
-import { coreExtensions } from '@lattice/signals-store';
-import type { LatticeContext, SignalState } from '@lattice/signals-store';
+import { coreExtensions } from '@lattice/signals';
+import type { LatticeContext, SignalState } from '@lattice/signals';
 import { createContext } from '@lattice/lattice';
 
 type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>;
