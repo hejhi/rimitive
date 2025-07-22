@@ -1,6 +1,6 @@
 import { createLattice } from '@lattice/lattice';
 import type { SignalState } from '@lattice/lattice';
-import type { DevToolsState, ContextInfo, GraphSnapshot, LogEntry } from './types';
+import type { DevToolsState, ContextInfo, LogEntry } from './types';
 
 // Create a Lattice context for the devtools panel itself
 export const devtoolsContext = createLattice();
@@ -11,17 +11,11 @@ export const devtoolsState: SignalState<DevToolsState> = {
   contexts: devtoolsContext.signal<ContextInfo[]>([]),
   selectedContext: devtoolsContext.signal<string | null>(null),
   selectedTransaction: devtoolsContext.signal<string | null>(null),
-  selectedTab: devtoolsContext.signal<'logs' | 'timeline' | 'graph'>('logs'),
+  selectedTab: devtoolsContext.signal<'logs' | 'timeline'>('logs'),
   filter: devtoolsContext.signal({
     type: 'all',
     search: '',
     hideInternal: true,
   }),
-  dependencyGraph: devtoolsContext.signal({
-    nodes: new Map(),
-    edges: new Map(),
-    reverseEdges: new Map(),
-  }),
-  lastSnapshot: devtoolsContext.signal<GraphSnapshot | null>(null),
   logEntries: devtoolsContext.signal<LogEntry[]>([]),
 };

@@ -1,7 +1,6 @@
 import { devtoolsState } from './devtoolsCtx';
 import { ContextInfo, ResourceEventData } from './types';
 import { LatticeEvent } from './messageHandler';
-import { addNodeToGraph, scheduleBatchUpdate } from './dependencyGraph';
 
 export function updateContextFromEvent(event: LatticeEvent) {
   const contexts = [...devtoolsState.contexts.value];
@@ -14,7 +13,6 @@ export function updateContextFromEvent(event: LatticeEvent) {
       id: event.contextId,
       name: `Context ${contextNumber}`,
       created: Date.now(),
-      resourceCounts: {},
     });
     contextIndex = contexts.length - 1;
   }
@@ -33,55 +31,11 @@ export function updateContextFromEvent(event: LatticeEvent) {
   }
 }
 
-function handleResourceEvent(context: ContextInfo, event: LatticeEvent) {
+function handleResourceEvent(_context: ContextInfo, event: LatticeEvent) {
+  // Currently not used, but kept for potential future use
+  // Resource events are now handled purely through log entries
   const eventData = event.data as ResourceEventData;
   
-  // Handle resource creation events and update counts
-  if (event.type.endsWith('_CREATED') && eventData.id) {
-    // Get resource type from the data or derive it from event type
-    const resourceType = eventData.type || deriveResourceType(event.type);
-    
-    // Update resource count
-    if (!context.resourceCounts[resourceType]) {
-      context.resourceCounts[resourceType] = 0;
-    }
-    context.resourceCounts[resourceType]++;
-    
-    // Add to dependency graph
-    const graph = devtoolsState.dependencyGraph.value;
-    if (!graph.nodes.has(eventData.id)) {
-      addNodeToGraph(eventData.id, {
-        type: resourceType,
-        name: eventData.name,
-        value: eventData.value || eventData.initialValue,
-        contextId: event.contextId,
-      });
-    }
-  } 
-  // Handle value updates
-  else if ((event.type.endsWith('_WRITE') || event.type.endsWith('_UPDATE')) && eventData.id) {
-    scheduleBatchUpdate(() => {
-      const graph = devtoolsState.dependencyGraph.value;
-      const node = graph.nodes.get(eventData.id);
-      
-      if (node) {
-        if ('newValue' in eventData) {
-          node.value = eventData.newValue;
-        } else if ('value' in eventData) {
-          node.value = eventData.value;
-        }
-      }
-    });
-  }
-}
-
-// Derive resource type from event type as fallback
-function deriveResourceType(eventType: string): string {
-  // Remove the action suffix to get the resource type
-  const parts = eventType.split('_');
-  if (parts.length > 1) {
-    parts.pop(); // Remove action (CREATED, WRITE, etc.)
-    return parts.join('_').toLowerCase();
-  }
-  return 'unknown';
+  // Could add custom handling here if needed
+  void eventData; // Silence unused variable warning
 }

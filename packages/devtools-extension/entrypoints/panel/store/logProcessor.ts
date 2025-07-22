@@ -1,11 +1,8 @@
 import { devtoolsState } from './devtoolsCtx';
 import {
   LogEntry,
-  DependencyUpdateData,
-  GraphSnapshotData,
 } from './types';
 import { LatticeEvent } from './messageHandler';
-import { updateDependencyGraph, updateGraphSnapshot } from './dependencyGraph';
 
 // Track execution depth for indentation
 let executionDepth = 0;
@@ -20,17 +17,6 @@ const RECENT_EVENT_WINDOW = 100; // ms
  */
 export function processLogEntry(event: LatticeEvent) {
   const timestamp = event.timestamp || Date.now();
-  
-  // Special handling for graph-related events
-  if (event.type === 'DEPENDENCY_UPDATE') {
-    updateDependencyGraph(event.data as DependencyUpdateData, event.contextId);
-    return;
-  }
-  
-  if (event.type === 'GRAPH_SNAPSHOT') {
-    updateGraphSnapshot(event.data as GraphSnapshotData, timestamp, event.contextId);
-    return;
-  }
   
   // Clean up old recent events
   const cutoff = timestamp - RECENT_EVENT_WINDOW;
@@ -219,25 +205,6 @@ function addLogEntry(entry: LogEntry) {
     ...devtoolsState.logEntries.value.slice(-999),
     entry,
   ];
-}
-
-/**
- * Find what triggered a computed/effect based on recent writes
- */
-export function findTriggeredBy(nodeId: string): string[] {
-  const graph = devtoolsState.dependencyGraph.value;
-  const dependencies = graph.reverseEdges.get(nodeId) || new Set();
-
-  for (const event of recentEvents) {
-    if (event.eventType.includes('WRITE') || event.eventType.includes('UPDATE')) {
-      const data = event.data as Record<string, unknown>;
-      const id = extractNodeId(data);
-      if (id && dependencies.has(id)) {
-        return [id];
-      }
-    }
-  }
-  return [];
 }
 
 /**

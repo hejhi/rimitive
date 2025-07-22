@@ -37,11 +37,6 @@ function handleLatticeDetected() {
   devtoolsState.contexts.value = [];
   devtoolsState.selectedContext.value = null;
   devtoolsState.logEntries.value = [];
-  devtoolsState.dependencyGraph.value = {
-    nodes: new Map(),
-    edges: new Map(),
-    reverseEdges: new Map(),
-  };
 }
 
 function handleTransaction(data: unknown) {
@@ -62,9 +57,4 @@ function handleNavigation() {
   devtoolsState.contexts.value = [];
   devtoolsState.selectedContext.value = null;
   devtoolsState.logEntries.value = [];
-  devtoolsState.dependencyGraph.value = {
-    nodes: new Map(),
-    edges: new Map(),
-    reverseEdges: new Map(),
-  };
 }

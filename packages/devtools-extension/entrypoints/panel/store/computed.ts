@@ -59,9 +59,7 @@ export const filteredTransactions = devtoolsContext.computed(() => {
   return filtered.filter(
     (log) =>
       !log.eventType.includes('_START') &&
-      !log.eventType.includes('_BEGIN') &&
-      log.eventType !== 'DEPENDENCY_UPDATE' &&
-      log.eventType !== 'GRAPH_SNAPSHOT'
+      !log.eventType.includes('_BEGIN')
   );
 });
 
@@ -70,31 +68,6 @@ export const selectedContextData = devtoolsContext.computed(() => {
   if (!selectedId) return null;
 
   return devtoolsState.contexts.value.find((c) => c.id === selectedId);
-});
-
-export const stats = devtoolsContext.computed(() => {
-  const contexts = devtoolsState.contexts.value;
-  const graph = devtoolsState.dependencyGraph.value;
-
-  // Aggregate resource counts across all contexts
-  const resourceTotals: Record<string, number> = {};
-  for (const context of contexts) {
-    if (context.resourceCounts) {
-      for (const [type, count] of Object.entries(context.resourceCounts)) {
-        resourceTotals[type] = (resourceTotals[type] || 0) + count;
-      }
-    }
-  }
-
-  return {
-    resourceCounts: resourceTotals,
-    totalTransactions: devtoolsState.logEntries.value.length,
-    totalNodes: graph.nodes.size,
-    totalEdges: Array.from(graph.edges.values()).reduce(
-      (sum, deps) => sum + deps.size,
-      0
-    ),
-  };
 });
 
 // Selected item data
@@ -119,80 +92,4 @@ export const filteredLogEntries = devtoolsContext.computed(() => {
     'summary',
   ]);
   return filtered.slice(-500); // Keep last 500 logs
-});
-
-export const dependencyGraphData = devtoolsContext.computed(() => {
-  const graph = devtoolsState.dependencyGraph.value;
-  const selectedContext = devtoolsState.selectedContext.value;
-  const filter = devtoolsState.filter.value;
-
-  let nodes = Array.from(graph.nodes.values());
-
-  // Filter by context if needed
-  if (selectedContext) {
-    nodes = nodes.filter((node) => node.contextId === selectedContext);
-  }
-
-  // Filter by type
-  if (filter.type !== 'all') {
-    nodes = nodes.filter((node) => node.type === filter.type);
-  }
-
-  // Filter by search
-  if (filter.search) {
-    const search = filter.search.toLowerCase();
-    nodes = nodes.filter(
-      (node) =>
-        node.name?.toLowerCase().includes(search) ||
-        node.id.toLowerCase().includes(search) ||
-        JSON.stringify(node.value).toLowerCase().includes(search)
-    );
-  }
-
-  const nodeIds = new Set(nodes.map((n) => n.id));
-
-  const edges = Array.from(graph.edges.entries())
-    .filter(([source]) => nodeIds.has(source))
-    .flatMap(([source, targets]) =>
-      Array.from(targets)
-        .filter((target) => nodeIds.has(target))
-        .map((target) => ({
-          source,
-          target,
-          isActive: true,
-        }))
-    );
-
-  return {
-    nodes,
-    edges,
-  };
-});
-
-export const nodeDependencies = devtoolsContext.computed(() => {
-  const graph = devtoolsState.dependencyGraph.value;
-
-  return (nodeId: string) => {
-    // Find nodes that this node depends on (nodes that have edges TO this node)
-    const dependencies: string[] = [];
-    graph.edges.forEach((targets, source) => {
-      if (targets.has(nodeId)) {
-        dependencies.push(source);
-      }
-    });
-
-    // Find nodes that depend on this node (this node has edges TO them)
-    const subscribers = graph.edges.get(nodeId) || new Set();
-
-    return {
-      dependencies: dependencies.map((id) => ({
-        id,
-        node: graph.nodes.get(id),
-      })),
-      subscribers: Array.from(subscribers).map((id) => ({
-        id,
-        node: graph.nodes.get(id),
-      })),
-    };
-  };
 });

@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import type {
   ContextInfo,
   LogEntry,
-  DependencyNode,
 } from '../store/types';
 import { devtoolsState } from '../store/devtoolsCtx';
 
@@ -12,26 +11,8 @@ interface ImportData {
   state: {
     contexts?: ContextInfo[];
     logEntries?: LogEntry[];
-    dependencyGraph?: {
-      nodes?: Array<{
-        id: string;
-        type: 'signal' | 'computed' | 'effect';
-        name?: string;
-        value?: unknown;
-        isActive: boolean;
-        isOutdated?: boolean;
-        hasSubscribers?: boolean;
-      }>;
-      edges?: Array<{ source: string; targets: string[] }>;
-      reverseEdges?: Array<{ target: string; sources: string[] }>;
-    };
-    lastSnapshot?: {
-      timestamp: number;
-      nodes: DependencyNode[];
-      edges: Array<{ source: string; target: string; isActive: boolean }>;
-    };
     filter?: {
-      type: 'all' | 'signal' | 'computed' | 'effect';
+      type: string;
       search: string;
       hideInternal: boolean;
     };
@@ -49,24 +30,6 @@ export function useDataExport() {
       state: {
         contexts: devtoolsState.contexts.value,
         logEntries: devtoolsState.logEntries.value,
-        dependencyGraph: {
-          nodes: Array.from(
-            devtoolsState.dependencyGraph.value.nodes.entries()
-          ).map(([id, node]) => ({ ...node, id })),
-          edges: Array.from(
-            devtoolsState.dependencyGraph.value.edges.entries()
-          ).map(([source, targets]) => ({
-            source,
-            targets: Array.from(targets),
-          })),
-          reverseEdges: Array.from(
-            devtoolsState.dependencyGraph.value.reverseEdges.entries()
-          ).map(([target, sources]) => ({
-            target,
-            sources: Array.from(sources),
-          })),
-        },
-        lastSnapshot: devtoolsState.lastSnapshot.value,
         filter: devtoolsState.filter.value,
         selectedContext: devtoolsState.selectedContext.value,
         selectedTransaction: devtoolsState.selectedTransaction.value,
@@ -111,39 +74,6 @@ export function useDataExport() {
           devtoolsState.logEntries.value = state.logEntries;
         }
 
-        if (state.dependencyGraph) {
-          const graph = devtoolsState.dependencyGraph.value;
-
-          graph.nodes.clear();
-          graph.edges.clear();
-          graph.reverseEdges.clear();
-
-          if (state.dependencyGraph.nodes) {
-            state.dependencyGraph.nodes.forEach((node) => {
-              const { id, ...nodeData } = node;
-              graph.nodes.set(id, nodeData as DependencyNode);
-            });
-          }
-
-          if (state.dependencyGraph.edges) {
-            state.dependencyGraph.edges.forEach((edge) => {
-              graph.edges.set(edge.source, new Set(edge.targets));
-            });
-          }
-
-          if (state.dependencyGraph.reverseEdges) {
-            state.dependencyGraph.reverseEdges.forEach((edge) => {
-              graph.reverseEdges.set(edge.target, new Set(edge.sources));
-            });
-          }
-
-          devtoolsState.dependencyGraph.value = { ...graph };
-        }
-
-        if (state.lastSnapshot) {
-          devtoolsState.lastSnapshot.value = state.lastSnapshot;
-        }
-
         if (state.filter) {
           devtoolsState.filter.value = state.filter;
         }
@@ -156,10 +86,7 @@ export function useDataExport() {
             state.selectedTransaction;
         }
         if (state.selectedTab) {
-          devtoolsState.selectedTab.value = state.selectedTab as
-            | 'logs'
-            | 'timeline'
-            | 'graph';
+          devtoolsState.selectedTab.value = state.selectedTab as 'logs' | 'timeline';
         }
 
         devtoolsState.connected.value = true;

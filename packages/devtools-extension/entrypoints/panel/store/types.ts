@@ -28,13 +28,11 @@ export interface ResourceEventData {
   [key: string]: unknown; // Allow any other fields from instrumentation
 }
 
-// Context info with generic resource counts
+// Context info
 export interface ContextInfo {
   id: string;
   name: string;
   created?: number;
-  // Generic resource counts for any extension type
-  resourceCounts?: Record<string, number>;
 }
 
 export interface DevToolsState {
@@ -42,44 +40,12 @@ export interface DevToolsState {
   contexts: ContextInfo[];
   selectedContext: string | null;
   selectedTransaction: string | null;
-  selectedTab: 'logs' | 'timeline' | 'graph';
+  selectedTab: 'logs' | 'timeline';
   filter: {
     type: string; // Generic type filter
     search: string;
     hideInternal: boolean;
   };
-  dependencyGraph: DependencyGraph;
-  lastSnapshot: GraphSnapshot | null;
   logEntries: LogEntry[];
 }
-
-export interface DependencyGraph {
-  nodes: Map<string, DependencyNode>;
-  edges: Map<string, Set<string>>; // source -> targets
-  reverseEdges: Map<string, Set<string>>; // target -> sources
-}
-
-export interface DependencyNode {
-  id: string;
-  type: string; // Any resource type from instrumentation
-  name?: string;
-  value?: unknown;
-  isActive: boolean;
-  isOutdated?: boolean;
-  hasSubscribers?: boolean;
-  contextId?: string;
-}
-
-export interface GraphSnapshot {
-  timestamp: number;
-  nodes: DependencyNode[];
-  edges: Array<{ source: string; target: string; isActive: boolean }>;
-}
-
-// Aliases for event data types that components expect
-export type DependencyUpdateData = ResourceEventData;
-export type GraphSnapshotData = {
-  nodes: DependencyNode[];
-  edges: Array<{ source: string; target: string; isActive: boolean }>;
-};
 

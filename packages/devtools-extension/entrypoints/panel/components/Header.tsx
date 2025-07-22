@@ -11,17 +11,11 @@ import {
 
 interface HeaderProps {
   contextCount: number;
-  stats: {
-    resourceCounts: Record<string, number>;
-    totalTransactions: number;
-    totalNodes: number;
-    totalEdges: number;
-  };
   onExport: () => void;
   onImport: () => void;
 }
 
-export function Header({ contextCount, stats, onExport, onImport }: HeaderProps) {
+export function Header({ contextCount, onExport, onImport }: HeaderProps) {
   return (
     <header className="border-b flex items-center justify-between px-4 py-2">
       <div className="flex items-center gap-2">
@@ -32,16 +26,6 @@ export function Header({ contextCount, stats, onExport, onImport }: HeaderProps)
         </Badge>
       </div>
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {Object.entries(stats.resourceCounts).map(([type, count], index) => (
-            <span key={type} className="flex items-center gap-1">
-              {index > 0 && <span>•</span>}
-              <span>{count} {type}{count !== 1 ? 's' : ''}</span>
-            </span>
-          ))}
-          {Object.keys(stats.resourceCounts).length > 0 && <span>•</span>}
-          <span>{stats.totalNodes} nodes</span>
-        </div>
         <DropdownMenu>
           <DropdownMenuTrigger className="p-1 hover:bg-accent rounded">
             <MoreVertical className="w-4 h-4" />

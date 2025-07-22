@@ -24,11 +24,6 @@ export function useDevToolsConnection() {
         devtoolsState.contexts.value = [];
         devtoolsState.selectedContext.value = null;
         devtoolsState.logEntries.value = [];
-        devtoolsState.dependencyGraph.value = {
-          nodes: new Map(),
-          edges: new Map(),
-          reverseEdges: new Map(),
-        };
       });
     } catch (error) {
       console.error('[DevTools Panel] Error connecting to background:', error);
