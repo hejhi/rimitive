@@ -17,3 +17,11 @@ export { subscribeExtension } from './extensions/subscribe';
 
 // Export types
 export type { SignalState, LatticeContext, SetState } from './types';
+
+// Export instrumentation system
+export { withInstrumentation } from './instrumentation';
+export type { InstrumentationEvent, InstrumentationProvider, InstrumentationConfig } from './instrumentation';
+
+// Export built-in providers
+export { performanceProvider, devtoolsProvider, isDevtoolsAvailable } from './instrumentation/providers';
+export type { PerformanceProviderOptions, DevtoolsProviderOptions } from './instrumentation/providers';

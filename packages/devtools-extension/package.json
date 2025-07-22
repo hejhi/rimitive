@@ -1,7 +1,6 @@
 {
   "name": "@lattice/devtools-extension",
   "description": "Chrome DevTools extension for debugging Lattice applications",
-  "private": true,
   "version": "0.0.1",
   "type": "module",
   "scripts": {

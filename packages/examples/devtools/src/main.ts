@@ -1,59 +1,16 @@
-import { createContext } from '@lattice/lattice';
-import { signalExtension, computedExtension, effectExtension, batchExtension, selectExtension } from '@lattice/lattice';
+import { withInstrumentation, signalExtension, computedExtension, effectExtension, batchExtension, selectExtension, performanceProvider, devtoolsProvider } from '@lattice/lattice';
 import { select } from '@lattice/signals/select';
 
-// Create instrumentation context for debugging
-const instrumentation = {
-  contextId: crypto.randomUUID(),
-  contextName: 'Lattice DevTools Demo',
-  emit(event: { type: string; timestamp: number; data: Record<string, unknown> }) {
-    console.log('[Instrumentation] Emitting event:', event.type, event.data);
-    
-    // Send events to the devtools extension
-    window.postMessage({
-      source: 'lattice-devtools',
-      type: 'EVENT',
-      payload: {
-        ...event,
-        contextId: this.contextId
-      },
-    }, '*');
+// Create counter context with multiple instrumentation providers
+const counterContext = withInstrumentation(
+  {
+    providers: [
+      devtoolsProvider({ debug: true }),
+      performanceProvider({ threshold: 5, logAll: false })
+    ],
+    contextName: 'Counter Context',
+    enabled: true // Could be import.meta.env.DEV for conditional enabling
   },
-  register<T>(resource: T, type: string, name?: string) {
-    const id = crypto.randomUUID();
-    console.log('[Instrumentation] Registering resource:', type, name, id);
-    
-    // Don't emit here - the extension will emit the _CREATED event
-    // This prevents double counting
-    
-    return { id, resource };
-  },
-};
-
-// Announce that the page is using Lattice
-console.log('[DevTools Demo] Announcing Lattice detected');
-window.postMessage({
-  source: 'lattice-devtools',
-  type: 'LATTICE_DETECTED',
-  payload: { 
-    enabled: true,
-    version: '1.0.0'
-  },
-}, '*');
-
-// Also emit context creation event
-instrumentation.emit({
-  type: 'CONTEXT_CREATED',
-  timestamp: Date.now(),
-  data: {
-    id: instrumentation.contextId,
-    name: instrumentation.contextName,
-  },
-});
-
-// Create a context with instrumentation
-const counterContext = createContext(
-  { instrumentation },
   signalExtension,
   computedExtension,
   effectExtension,
@@ -79,48 +36,15 @@ interface Todo {
   completed: boolean;
 }
 
-// Create a separate instrumentation for todos to demonstrate multiple contexts
-const todoContextId = crypto.randomUUID();
-const todoInstrumentation = {
-  contextId: todoContextId,
-  contextName: 'Todo Context',
-  emit(event: { type: string; timestamp: number; data: Record<string, unknown> }) {
-    console.log('[Todo Instrumentation] Emitting event:', event.type, event.data);
-    
-    // Send events to the devtools extension
-    window.postMessage({
-      source: 'lattice-devtools',
-      type: 'EVENT',
-      payload: {
-        ...event,
-        contextId: todoContextId
-      },
-    }, '*');
+// Create todo context with devtools instrumentation enabled
+const todoContext = withInstrumentation(
+  {
+    providers: [
+      devtoolsProvider({ debug: false }), // Less verbose for this context
+      performanceProvider({ threshold: 10 })
+    ],
+    contextName: 'Todo Context'
   },
-  register<T>(resource: T, type: string, name?: string) {
-    const id = crypto.randomUUID();
-    console.log('[Todo Instrumentation] Registering resource:', type, name, id);
-    
-    // Don't emit here - the extension will emit the _CREATED event
-    // This prevents double counting
-    
-    return { id, resource };
-  },
-};
-
-// Emit context creation for todo context
-todoInstrumentation.emit({
-  type: 'CONTEXT_CREATED',
-  timestamp: Date.now(),
-  data: {
-    id: todoContextId,
-    name: todoInstrumentation.contextName,
-  },
-});
-
-// Create a separate context for todos to demonstrate multiple contexts
-const todoContext = createContext(
-  { instrumentation: todoInstrumentation },
   signalExtension,
   computedExtension,
   effectExtension,
