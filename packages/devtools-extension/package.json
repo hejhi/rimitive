@@ -17,7 +17,7 @@
     "check": "pnpm typecheck && pnpm lint"
   },
   "dependencies": {
-    "@lattice/store": "workspace:*",
+    "@lattice/signals-store": "workspace:*",
     "@lattice/react": "workspace:*",
     "@lattice/signals": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.14",

@@ -4,7 +4,7 @@
     "noEmit": true
   },
   "include": [
-    "devtools/src/**/*.ts"
+    "devtools/**/*.ts"
   ],
   "exclude": [
     "**/node_modules",

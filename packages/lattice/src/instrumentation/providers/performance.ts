@@ -20,7 +20,7 @@ export interface PerformanceProviderOptions {
   /**
    * Custom logger function
    */
-  logger?: (message: string, data: any) => void;
+  logger?: (message: string, data: unknown) => void;
 }
 
 /**
@@ -74,8 +74,10 @@ export function performanceProvider(options: PerformanceProviderOptions = {}): I
         
         case 'SIGNAL_WRITE': {
           if (logAll) {
+            const name = event.data.name;
+            const signalName = typeof name === 'string' ? name : 'unnamed';
             logger(
-              `[Performance] Signal write: ${event.data.name || 'unnamed'}`,
+              `[Performance] Signal write: ${signalName}`,
               {
                 oldValue: event.data.oldValue,
                 newValue: event.data.newValue
@@ -87,7 +89,7 @@ export function performanceProvider(options: PerformanceProviderOptions = {}): I
       }
     },
     
-    register<T>(resource: T, _type: string, _name?: string): { id: string; resource: T } {
+    register<T>(resource: T): { id: string; resource: T } {
       return { id: crypto.randomUUID(), resource };
     },
     

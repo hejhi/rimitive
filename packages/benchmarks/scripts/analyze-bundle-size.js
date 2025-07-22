@@ -21,7 +21,7 @@ const implementations = {
   lattice: {
     name: 'Lattice Core',
     code: `
-import { createStore } from '@lattice/store';
+import { createStore } from '@lattice/signals-store';
 
 const createSlice = createStore({ counter: 0 });
 const counterSlice = createSlice(

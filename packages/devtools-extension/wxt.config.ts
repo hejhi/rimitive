@@ -9,7 +9,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig({
   srcDir: '.',
   alias: {
-    '@lattice/store': resolve(__dirname, '../store/src/index.ts'),
+    '@lattice/signals-store': resolve(__dirname, '../store/src/index.ts'),
     '@lattice/signals/signal': resolve(__dirname, '../signals/src/signal-export.ts'),
     '@lattice/signals/computed': resolve(__dirname, '../signals/src/computed-export.ts'),
     '@lattice/signals/effect': resolve(__dirname, '../signals/src/effect-export.ts'),

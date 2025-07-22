@@ -1,26 +1,8 @@
 # @lattice/lattice
 
-Build headless, portable, incredibly fast and reactive components that compose...without components.
+A powerful, generic extension composition framework for building modular JavaScript applications.
 
-State management are context-driven stores of packaged signals that can scale from simple counters to complex applications. "Components" are just a functional pattern. Use like React Context, but with fine-grained updates, in whatever framework you want, even on the server.
-
-```typescript
-import { createStore } from '@lattice/lattice';
-
-function Counter(store: Store<{ count: number }>) {
-  return {
-    increment: () => store.state.count.value++,
-    get count() {
-      return store.state.count.value;
-    },
-  };
-}
-
-const store = createStore({ count: 0 });
-const counter = Counter(store);
-
-counter.increment(); // count is now 1
-```
+Lattice provides a lightweight, type-safe system for composing functionality through extensions - think of it as a dependency injection container with lifecycle management, perfect for building extensible applications.
 
 ## Installation
 
@@ -28,452 +10,278 @@ counter.increment(); // count is now 1
 npm install @lattice/lattice
 ```
 
-## Features
-
-- **Component-first** - Build composable, UI-agnostic units with clear state boundaries
-- **Isolated contexts** - Each store context gets its own reactive scope
-- **Type-safe** - Full TypeScript inference from state to API
-- **SSR-ready** - Request isolation built in
-- **Framework agnostic** - Use with whatever you want, even vanilla JS
-
 ## Core Concepts
 
-### Stores
+### Extensions
 
-Stores hold reactive state (as signals) and provide batched updates. Each property becomes a signal. Use `store.set` to batch update signals using a familiar api. Or update individual signals directly, it's all good.
+Extensions are the building blocks of Lattice. Each extension provides a specific piece of functionality:
 
 ```typescript
-const store = createStore({
-  user: { name: 'Alice', role: 'admin' },
-  settings: { theme: 'dark', notifications: true },
-});
+import { createContext, type LatticeExtension } from '@lattice/lattice';
 
-// Direct signal access
-console.log(store.state.user.value.name); // 'Alice'
+// A simple counter extension
+const counterExtension: LatticeExtension<'counter', () => number> = {
+  name: 'counter',
+  method: (() => {
+    let count = 0;
+    return () => ++count;
+  })()
+};
 
-// Batched updates
-store.set({
-  user: { name: 'Bob', role: 'user' },
-  settings: { theme: 'light', notifications: true },
-});
+// A logger extension
+const loggerExtension: LatticeExtension<'log', (msg: string) => void> = {
+  name: 'log',
+  method: (msg) => console.log(`[${new Date().toISOString()}] ${msg}`)
+};
 
-// Functional updates
-store.set((current) => ({
-  settings: { ...current.settings, theme: 'dark' },
-}));
+// Create a context with these extensions
+const ctx = createContext(counterExtension, loggerExtension);
+
+// Use the extensions
+ctx.log('Starting counter...');
+console.log(ctx.counter()); // 1
+console.log(ctx.counter()); // 2
 ```
 
-### Components
+### Lifecycle Management
 
-Components are plain functions that receive a store and return your API. They encapsulate behavior and can compose with other components.
+Extensions can hook into lifecycle events for setup and cleanup:
 
 ```typescript
-interface TodoState {
-  todos: Todo[];
-  filter: 'all' | 'active' | 'done';
-}
+const databaseExtension: LatticeExtension<'db', Database> = {
+  name: 'db',
+  method: new Database(),
+  
+  onCreate(context) {
+    console.log('Database extension initialized');
+    this.method.connect();
+  },
+  
+  onDispose(context) {
+    console.log('Cleaning up database connection');
+    this.method.disconnect();
+  }
+};
 
-function TodoList(store: Store<TodoState>) {
-  const ctx = store.getContext();
+const ctx = createContext(databaseExtension);
+// "Database extension initialized"
 
-  const filtered = ctx.computed(() => {
-    const todos = store.state.todos.value;
-    const filter = store.state.filter.value;
+ctx.dispose();
+// "Cleaning up database connection"
+```
 
-    if (filter === 'all') return todos;
-    return todos.filter((t) => (filter === 'active' ? !t.done : t.done));
-  });
+### Context Awareness
 
-  return {
-    addTodo: (text: string) => {
-      const todo = { id: Date.now(), text, done: false };
-      store.state.todos.value = [...store.state.todos.value, todo];
-    },
+Extensions can be wrapped to add context awareness:
 
-    toggleTodo: (id: number) => {
-      const todos = store.state.todos.value;
-      const index = todos.findIndex((t) => t.id === id);
-      if (index >= 0) {
-        const todo = todos[index];
-        store.state.todos.set(index, { ...todo, done: !todo.done });
+```typescript
+const apiExtension: LatticeExtension<'api', ApiClient> = {
+  name: 'api',
+  method: new ApiClient(),
+  
+  wrap(client, context) {
+    // Prevent usage after disposal
+    return new Proxy(client, {
+      get(target, prop) {
+        if (context.isDisposed) {
+          throw new Error('Cannot use API after context disposal');
+        }
+        return target[prop];
       }
-    },
-
-    setFilter: (filter: 'all' | 'active' | 'done') => {
-      store.state.filter.value = filter;
-    },
-
-    get filtered() {
-      return filtered.value;
-    },
-  };
-}
+    });
+  }
+};
 ```
 
-### Contexts
+### Instrumentation
 
-Every store has an isolated context for signals, computed values, and effects. You can also create standalone contexts. Or just use stores directly.
+Built-in support for debugging and monitoring through instrumentation:
 
 ```typescript
-const store = createStore({ count: 0 });
-const ctx = store.getContext();
+import { withInstrumentation, devtoolsProvider } from '@lattice/lattice';
 
-// Create reactive values in this context
-const doubled = ctx.computed(() => store.state.count.value * 2);
+const ctx = withInstrumentation(
+  {
+    providers: [devtoolsProvider()],
+    enabled: true
+  },
+  httpExtension,
+  cacheExtension,
+  analyticsExtension
+);
 
-// Effects run in context
-ctx.effect(() => {
-  console.log(`Count: ${store.state.count.value}`);
-});
-
-// Or create a standalone context
-const context = createLattice();
-const name = context.signal('Alice');
-const greeting = context.computed(() => `Hello, ${name.value}`);
-
-// Clean up everything
-store.dispose();
-context.dispose();
+// All extension method calls are now instrumented
 ```
 
-## Patterns
+## Real-World Examples
 
-### Zustand-like Selectors
-
-For developers coming from Zustand, you can create similar selector patterns using the `useStoreComputed` hook:
+### HTTP Client Extension
 
 ```typescript
-import { createStore } from '@lattice/lattice';
-import { useStore, useStoreComputed } from '@lattice/react';
-
-// Option 1: Using useStore with useStoreComputed
-function AnimalsDisplay() {
-  const store = useStore(() => createStore({
-    bears: 0,
-    fish: 0,
-    berries: 10
-  }));
-
-  // Select multiple values with fine-grained reactivity
-  const animals = useStoreComputed(store, state => ({
-    bears: state.bears.value,
-    fish: state.fish.value,
-    total: state.bears.value + state.fish.value
-  }));
-
-  return (
-    <div>
-      <p>Bears: {animals.bears}</p>
-      <p>Fish: {animals.fish}</p>
-      <p>Total: {animals.total}</p>
-      <button onClick={() => store.state.bears.value++}>More bears</button>
-    </div>
-  );
-}
-
-// Option 2: Store from context
-function AnimalsFromContext() {
-  const store = useStoreContext<AnimalStore>();
+const httpExtension: LatticeExtension<'http', HttpClient> = {
+  name: 'http',
+  method: new HttpClient(),
   
-  // Select just what you need - only re-renders when these specific values change
-  const bearCount = useStoreComputed(store, state => state.bears.value);
-  const fishCount = useStoreComputed(store, state => state.fish.value);
-  
-  return (
-    <div>
-      <p>Bears: {bearCount}</p>
-      <p>Fish: {fishCount}</p>
-    </div>
-  );
-}
-
-// Option 3: Typed store hook pattern
-const useAnimalStore = createStoreHook<AnimalState>();
-
-function TypedAnimalsDisplay({ store }: { store: Store<AnimalState> }) {
-  // Fully typed selectors with fine-grained reactivity
-  const animals = useAnimalStore(store, state => ({
-    bears: state.bears.value,
-    fish: state.fish.value,
-    total: state.bears.value + state.fish.value
-  }));
-  
-  return <div>Total animals: {animals.total}</div>;
-}
+  instrument(client, instrumentation) {
+    return new Proxy(client, {
+      get(target, prop) {
+        if (prop === 'fetch') {
+          return async (...args) => {
+            instrumentation.emit('HTTP_REQUEST', { url: args[0] });
+            const start = performance.now();
+            
+            try {
+              const result = await target[prop](...args);
+              instrumentation.emit('HTTP_RESPONSE', { 
+                url: args[0],
+                status: result.status,
+                duration: performance.now() - start
+              });
+              return result;
+            } catch (error) {
+              instrumentation.emit('HTTP_ERROR', { url: args[0], error });
+              throw error;
+            }
+          };
+        }
+        return target[prop];
+      }
+    });
+  }
+};
 ```
 
-Key advantages:
-- **Fine-grained reactivity**: Only subscribes to signals you actually access
-- **Familiar patterns**: Similar to Zustand but with better performance
-- **Type safety**: Full TypeScript inference
-- **Explicit control**: Clear `.value` access shows exactly what triggers updates
-
-### Composing Components
-
-Components can use other components, creating larger abstractions from smaller ones.
+### Event Bus Extension
 
 ```typescript
-interface TimerState {
-  elapsed: number;
-  running: boolean;
-}
+const eventBusExtension: LatticeExtension<'events', EventEmitter> = {
+  name: 'events',
+  method: new EventEmitter(),
+  
+  wrap(emitter, context) {
+    const listeners = new Set<{ event: string; handler: Function }>();
+    
+    return new Proxy(emitter, {
+      get(target, prop) {
+        if (prop === 'on' || prop === 'once') {
+          return (event: string, handler: Function) => {
+            const result = target[prop](event, handler);
+            listeners.add({ event, handler });
+            
+            // Auto-cleanup on disposal
+            context.onDispose(() => {
+              target.off(event, handler);
+            });
+            
+            return result;
+          };
+        }
+        return target[prop];
+      }
+    });
+  }
+};
+```
 
-function Timer(store: Store<TimerState>) {
-  const ctx = store.getContext();
-  let interval: number | null = null;
+### WebSocket Manager
 
-  ctx.effect(() => {
-    if (store.state.running.value) {
-      interval = setInterval(() => {
-        store.state.elapsed.value++;
-      }, 1000);
-    } else if (interval) {
-      clearInterval(interval);
-      interval = null;
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
+```typescript
+const websocketExtension: LatticeExtension<'ws', WebSocketManager> = {
+  name: 'ws',
+  method: new WebSocketManager(),
+  
+  onCreate(context) {
+    // Initialize connection pool
+    this.method.initialize();
+  },
+  
+  onDispose() {
+    // Close all connections
+    this.method.closeAll();
+  },
+  
+  instrument(manager, instrumentation) {
+    const original = manager.connect;
+    manager.connect = (url: string) => {
+      instrumentation.emit('WS_CONNECT', { url });
+      const socket = original.call(manager, url);
+      
+      socket.on('message', (data) => {
+        instrumentation.emit('WS_MESSAGE', { url, data });
+      });
+      
+      return socket;
     };
-  });
-
-  return {
-    start: () => (store.state.running.value = true),
-    stop: () => (store.state.running.value = false),
-    reset: () => store.set({ elapsed: 0, running: false }),
-  };
-}
-
-// Use in a larger component
-interface PomodoroState {
-  workTime: number;
-  breakTime: number;
-  isBreak: boolean;
-}
-
-function Pomodoro(store: Store<PomodoroState>) {
-  // Compose with Timer
-  const timerStore = createStore(
-    { elapsed: 0, running: false },
-    store.getContext() // Share context
-  );
-  const timer = Timer(timerStore);
-
-  return {
-    timer,
-    switchMode: () => {
-      timer.reset();
-      store.state.isBreak.value = !store.state.isBreak.value;
-    },
-  };
-}
+    return manager;
+  }
+};
 ```
 
-### Async Operations
+## Use Cases
 
-Handle async operations with effects and state updates.
+Lattice is perfect for:
 
-```typescript
-interface UserProfileState {
-  user: User | null;
-  loading: boolean;
-  error: string | null;
-}
-
-function UserProfile(store: Store<UserProfileState>) {
-  return {
-    async loadUser(id: string) {
-      store.set({ loading: true, error: null });
-
-      try {
-        const user = await fetchUser(id);
-        store.set({ user, loading: false });
-      } catch (err) {
-        store.set({
-          error: err.message,
-          loading: false,
-        });
-      }
-    },
-  };
-}
-```
-
-### Middleware-Ready
-
-"Middleware" can wrap a store to intercept the api, and wrap or use as needed. For instance, using `effect` to log updates.
-
-```tsx
-const enhancedStore = someLogger(createStore({ count: 0 }));
-
-function UserProfile(store: Store<UserProfileState>) {
-  return {
-    async loadUser(id: string) {
-      store.set({ loading: true, error: null });
-
-      try {
-        const user = await fetchUser(id);
-        store.set({ user, loading: false });
-      } catch (err) {
-        store.set({
-          error: err.message,
-          loading: false,
-        });
-      }
-    },
-  };
-}
-
-UserProfile(enchancedStore);
-```
-
-### Testing Components
-
-Components are easy to test since they're just functions.
-
-```typescript
-test('Counter increments', () => {
-  const store = createStore({ count: 0 });
-  const counter = Counter(store);
-
-  expect(store.state.count.value).toBe(0);
-
-  counter.increment();
-  expect(store.state.count.value).toBe(1);
-
-  store.dispose();
-});
-```
-
-### Partial Updates
-
-Use the `partial` helper for single-property updates.
-
-```typescript
-import { partial } from '@lattice/lattice';
-
-function Settings(store: Store<{ theme: string; fontSize: number }>) {
-  return {
-    setTheme: (theme: string) => {
-      store.set(partial('theme', theme));
-    },
-    increaseFontSize: () => {
-      store.set((current) => partial('fontSize', current.fontSize + 1));
-    },
-  };
-}
-```
-
-### Server-Side Rendering
-
-Each request gets its own isolated context. The same as you would with signals, but scope a component instead.
-
-```typescript
-// Next.js API route
-export async function GET(request: Request) {
-  // Create isolated context for this request
-  const ctx = createLattice();
-  const store = createStore({
-    posts: await db.posts.findMany()
-  }, ctx);
-
-  const blog = BlogComponent(store);
-  const html = renderToString(<Blog {...blog} />);
-
-  // Clean up
-  ctx.dispose();
-
-  return new Response(html);
-}
-```
+- **Dependency Injection**: Manage services and their lifecycles
+- **Plugin Systems**: Build extensible applications
+- **Testing**: Easily swap implementations for mocks
+- **Feature Flags**: Conditionally load functionality
+- **Multi-tenant Apps**: Different extension sets per tenant
+- **Modular Architecture**: Compose applications from reusable pieces
 
 ## API Reference
 
-### `createStore<T>(initialState: T, context?: LatticeContext)`
+### `createContext(...extensions)`
 
-Creates a reactive store with signal-based state.
-
-### `createLattice()`
-
-Creates an isolated context for signals, computeds, and effects.
-
-### `partial<T>(key: keyof T, value: T[keyof T])`
-
-Helper for creating single-property updates.
-
-### Store Methods
-
-- `store.state` - Signal-wrapped state properties
-- `store.set(updates)` - Batch update state
-- `store.getContext()` - Get the underlying context
-- `store.dispose()` - Clean up all resources
-
-### Context Methods
-
-- `context.signal(value)` - Create a signal in this context
-- `context.computed(fn)` - Create a computed value
-- `context.effect(fn)` - Create an effect
-- `context.batch(fn)` - Batch updates
-- `context.dispose()` - Clean up context
-
-## Reactivity Models
-
-Lattice provides three levels of reactivity granularity, allowing you to choose the right balance between developer experience and performance:
-
-### 1. Fine-grained (direct signal access)
-
-Access individual signals for targeted reactivity:
+Creates a new context with the provided extensions.
 
 ```typescript
-import { useStoreComputed } from '@lattice/react';
+const ctx = createContext(extension1, extension2, extension3);
+```
 
-// Direct computed - only subscribes to accessed signals
-const activeCount = store.computed(() => 
-  store.state.todos.value.filter(t => !t.done).length
+### `withInstrumentation(config, ...extensions)`
+
+Creates an instrumented context for debugging and monitoring.
+
+```typescript
+const ctx = withInstrumentation(
+  {
+    providers: [devtoolsProvider(), performanceProvider()],
+    enabled: process.env.NODE_ENV === 'development'
+  },
+  ...extensions
 );
-
-// Multiple values with manual computed
-const summary = store.computed(() => ({
-  activeCount: store.state.todos.value.filter(t => !t.done).length,
-  totalCount: store.state.todos.value.length,
-  currentFilter: store.state.filter.value
-}));
-
-// Or use useStoreComputed in React for the same fine-grained reactivity
-const summary = useStoreComputed(store, state => ({
-  activeCount: state.todos.value.filter(t => !t.done).length,
-  totalCount: state.todos.value.length,
-  currentFilter: state.filter.value
-}));
 ```
 
-This approach:
-- Only subscribes to the specific signals you access
-- Optimal performance regardless of store size
-- Explicit `.value` access makes dependencies clear
-- Same fine-grained reactivity whether using `store.computed()` or `useStoreComputed()`
-
-### 2. Ultra-fine-grained (signal subscriptions)
-
-Direct subscriptions for maximum control:
+### Extension Interface
 
 ```typescript
-// React only to todos changes
-store.state.todos.subscribe(() => {
-  console.log('Todos changed!');
-});
-
-// Or create computed values for nested properties
-const theme = store.computed(() => store.state.settings.value.theme);
-theme.subscribe(updateTheme);
+interface LatticeExtension<TName extends string, TMethod> {
+  name: TName;                    // Unique extension name
+  method: TMethod;                 // The functionality to provide
+  wrap?(method, context): TMethod; // Optional context wrapper
+  instrument?(method, instrumentation, context): TMethod; // Optional instrumentation
+  onCreate?(context): void;        // Called on creation
+  onDispose?(context): void;       // Called on disposal
+}
 ```
 
-### Choosing the Right Approach
+### Built-in Providers
 
-- **Use direct signal access** for targeted reactivity and better performance
-- **Use subscriptions** when you need imperative side effects or the most granular control
+- `devtoolsProvider()` - Integration with browser DevTools
+- `performanceProvider()` - Performance monitoring
 
-Lattice encourages fine-grained reactivity by default, allowing you to subscribe only to the specific signals you need.
+## Why Lattice?
+
+- **Framework Agnostic**: Use with any JavaScript framework or vanilla JS
+- **Type Safe**: Full TypeScript support with inference
+- **Lightweight**: Minimal overhead, tree-shakeable
+- **Extensible**: Easy to create custom extensions
+- **Testable**: Simple to mock and test
+- **Observable**: Built-in instrumentation support
+
+## State Management
+
+Looking for reactive state management? Check out [@lattice/signals-store](../store) which provides signal-based state management extensions for Lattice.
 
 ## License
 

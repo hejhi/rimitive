@@ -12,7 +12,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@lattice/signals': path.resolve(__dirname, '../signals/src'),
-      '@lattice/store': path.resolve(__dirname, '../store/src'),
+      '@lattice/signals-store': path.resolve(__dirname, '../store/src'),
     },
   },
 });

@@ -1,5 +1,5 @@
 {
-  "name": "@lattice/store",
+  "name": "@lattice/signals-store",
   "version": "0.0.1",
   "description": "State management extensions for Lattice using signals",
   "author": "Lattice Team",

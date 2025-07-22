@@ -1,5 +1,5 @@
-import { createLattice } from '@lattice/store';
-import type { SignalState } from '@lattice/store';
+import { createLattice } from '@lattice/signals-store';
+import type { SignalState } from '@lattice/signals-store';
 import type { DevToolsState, ContextInfo, LogEntry } from './types';
 
 // Create a Lattice context for the devtools panel itself

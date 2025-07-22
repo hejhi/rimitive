@@ -42,7 +42,7 @@
   },
   "dependencies": {
     "@lattice/signals": "workspace:*",
-    "@lattice/store": "workspace:*"
+    "@lattice/signals-store": "workspace:*"
   },
   "peerDependencies": {
     "react": ">=16.8.0"
