@@ -11,7 +11,7 @@
     "build": "lerna run build",
     "dev": "lerna run dev --parallel",
     "dev:no-build": "lerna run dev --parallel",
-    "build:lattice": "pnpm --filter @lattice/signals build && pnpm --filter @lattice/lattice build",
+    "build:lattice": "pnpm --filter @lattice/signals build && pnpm --filter @lattice/lattice build && pnpm --filter @lattice/signals-store build",
     "clean": "lerna run clean",
     "lint": "eslint . --ext .ts,.tsx",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",

@@ -72,20 +72,6 @@ export function performanceProvider(options: PerformanceProviderOptions = {}): I
           break;
         }
         
-        case 'SIGNAL_WRITE': {
-          if (logAll) {
-            const name = event.data.name;
-            const signalName = typeof name === 'string' ? name : 'unnamed';
-            logger(
-              `[Performance] Signal write: ${signalName}`,
-              {
-                oldValue: event.data.oldValue,
-                newValue: event.data.newValue
-              }
-            );
-          }
-          break;
-        }
       }
     },
     

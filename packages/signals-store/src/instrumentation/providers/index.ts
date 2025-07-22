@@ -1,0 +1,1 @@
+export { signalPerformanceProvider } from './signal-performance';

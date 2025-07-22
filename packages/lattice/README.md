@@ -1,8 +1,8 @@
 # @lattice/lattice
 
-A powerful, generic extension composition framework for building modular JavaScript applications.
+A powerful, generic extension composition framework for building modular JavaScript libraries and applications.
 
-Lattice provides a lightweight, type-safe system for composing functionality through extensions - think of it as a dependency injection container with lifecycle management, perfect for building extensible applications.
+Lattice provides a lightweight, type-safe system for composing functionality through extensions - think of it as a dependency injection container with lifecycle management, perfect for building anything extensible, tree-shake-able, and modular.
 
 ## Installation
 
