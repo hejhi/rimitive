@@ -6,7 +6,7 @@
  */
 
 import type { LatticeContext } from './types';
-import { createContext } from './extension';
+import { createContext } from '@lattice/lattice';
 import { signalExtension } from './extensions/signal';
 import { computedExtension } from './extensions/computed';
 import { effectExtension } from './extensions/effect';

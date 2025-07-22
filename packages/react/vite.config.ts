@@ -32,7 +32,7 @@ export default defineConfig({
         'react',
         'react-dom',
         '@lattice/signals',
-        '@lattice/lattice',
+        '@lattice/store',
         '@testing-library/react',
         'vitest',
         /^vitest/,

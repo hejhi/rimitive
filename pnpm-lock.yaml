@@ -63,12 +63,12 @@ importers:
 
   packages/benchmarks:
     devDependencies:
-      '@lattice/lattice':
-        specifier: workspace:*
-        version: link:../lattice
       '@lattice/signals':
         specifier: workspace:*
         version: link:../signals
+      '@lattice/store':
+        specifier: workspace:*
+        version: link:../store
       '@preact/signals-core':
         specifier: ^1.8.0
         version: 1.11.0
@@ -124,42 +124,17 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(@types/react@18.3.22)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.5.0(react@18.3.1))
 
-  packages/devtools:
-    dependencies:
-      '@lattice/lattice':
-        specifier: workspace:*
-        version: link:../lattice
-      '@lattice/signals':
-        specifier: workspace:*
-        version: link:../signals
-    devDependencies:
-      rimraf:
-        specifier: ^6.0.1
-        version: 6.0.1
-      typescript:
-        specifier: ^5.8.3
-        version: 5.8.3
-      vite:
-        specifier: ^6.3.2
-        version: 6.3.5(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
-      vite-plugin-dts:
-        specifier: ^4.5.4
-        version: 4.5.4(@types/node@22.15.3)(rollup@4.40.0)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1))
-      vitest:
-        specifier: ^3.1.1
-        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/ui@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
-
   packages/devtools-extension:
     dependencies:
-      '@lattice/lattice':
-        specifier: workspace:*
-        version: link:../lattice
       '@lattice/react':
         specifier: workspace:*
         version: link:../react
       '@lattice/signals':
         specifier: workspace:*
         version: link:../signals
+      '@lattice/store':
+        specifier: workspace:*
+        version: link:../store
       '@radix-ui/react-dialog':
         specifier: ^1.1.14
         version: 1.1.14(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -260,12 +235,12 @@ importers:
 
   packages/examples/devtools:
     dependencies:
-      '@lattice/lattice':
-        specifier: workspace:*
-        version: link:../../lattice
       '@lattice/signals':
         specifier: workspace:*
         version: link:../../signals
+      '@lattice/store':
+        specifier: workspace:*
+        version: link:../../store
     devDependencies:
       typescript:
         specifier: ^5.8.3
@@ -298,12 +273,12 @@ importers:
 
   packages/react:
     dependencies:
-      '@lattice/lattice':
-        specifier: workspace:*
-        version: link:../lattice
       '@lattice/signals':
         specifier: workspace:*
         version: link:../signals
+      '@lattice/store':
+        specifier: workspace:*
+        version: link:../store
     devDependencies:
       '@testing-library/jest-dom':
         specifier: ^6.6.3
@@ -353,6 +328,31 @@ importers:
       terser:
         specifier: ^5.36.0
         version: 5.43.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.8.3
+      vite:
+        specifier: ^6.3.2
+        version: 6.3.5(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+      vite-plugin-dts:
+        specifier: ^4.5.4
+        version: 4.5.4(@types/node@22.15.3)(rollup@4.40.0)(typescript@5.8.3)(vite@6.3.5(@types/node@22.15.3)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1))
+      vitest:
+        specifier: ^3.1.1
+        version: 3.1.4(@types/debug@4.1.12)(@types/node@22.15.3)(@vitest/browser@3.2.4)(happy-dom@17.5.6)(jiti@2.4.2)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.7.1)
+
+  packages/store:
+    dependencies:
+      '@lattice/lattice':
+        specifier: workspace:*
+        version: link:../lattice
+      '@lattice/signals':
+        specifier: workspace:*
+        version: link:../signals
+    devDependencies:
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
       typescript:
         specifier: ^5.8.3
         version: 5.8.3

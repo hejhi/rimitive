@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { createLattice } from '@lattice/lattice';
-import type { LatticeContext } from '@lattice/lattice';
+import { createLattice } from '@lattice/store';
+import type { LatticeContext } from '@lattice/store';
 
 /**
  * Create a Lattice context that is scoped to the component lifecycle.

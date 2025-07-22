@@ -145,6 +145,15 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
     extensions = args as E;
   }
 
+  // Check for duplicate extension names
+  const names = new Set<string>();
+  for (const ext of extensions) {
+    if (names.has(ext.name)) {
+      throw new Error(`Duplicate extension name: ${ext.name}`);
+    }
+    names.add(ext.name);
+  }
+
   const state: ContextState = {
     disposed: false,
     disposers: new Set(),

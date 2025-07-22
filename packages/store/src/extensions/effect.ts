@@ -1,7 +1,7 @@
 /**
  * Effect extension for lattice
  */
-import type { LatticeExtension } from '../extension';
+import type { LatticeExtension } from '@lattice/lattice';
 import { effect as effectImpl } from '@lattice/signals/effect';
 import type { EffectDisposer } from '@lattice/signals';
 

@@ -1,7 +1,7 @@
 /**
  * Signal extension for lattice
  */
-import type { LatticeExtension } from '../extension';
+import type { LatticeExtension } from '@lattice/lattice';
 import { signal as signalImpl } from '@lattice/signals/signal';
 import type { Signal } from '@lattice/signals';
 

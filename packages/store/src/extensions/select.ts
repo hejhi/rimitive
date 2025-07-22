@@ -1,7 +1,7 @@
 /**
  * Select extension for lattice
  */
-import type { LatticeExtension } from '../extension';
+import type { LatticeExtension } from '@lattice/lattice';
 import { select as selectImpl } from '@lattice/signals/select';
 import type { Signal, Computed, Selected } from '@lattice/signals';
 

@@ -5,7 +5,7 @@
  * providers for Lattice applications.
  */
 
-import type { InstrumentationProvider, InstrumentationEvent } from '@lattice/lattice';
+import type { InstrumentationProvider, InstrumentationEvent } from '@lattice/store';
 
 /**
  * Example: Analytics provider that sends events to an analytics service
@@ -125,7 +125,7 @@ export function memoryLeakDetector(): InstrumentationProvider {
 
 // Usage example:
 /*
-import { withInstrumentation, signalExtension } from '@lattice/lattice';
+import { withInstrumentation, signalExtension } from '@lattice/store';
 import { analyticsProvider, memoryLeakDetector } from './custom-providers';
 
 const ctx = withInstrumentation({

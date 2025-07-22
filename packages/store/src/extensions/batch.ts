@@ -1,7 +1,7 @@
 /**
  * Batch extension for lattice
  */
-import type { LatticeExtension } from '../extension';
+import type { LatticeExtension } from '@lattice/lattice';
 import { batch as batchImpl } from '@lattice/signals/batch';
 
 export const batchExtension: LatticeExtension<

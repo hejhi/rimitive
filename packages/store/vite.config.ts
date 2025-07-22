@@ -18,11 +18,19 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        index: resolve(__dirname, 'src/index.ts'),
+        'extensions/signal': resolve(__dirname, 'src/extensions/signal.ts'),
+        'extensions/computed': resolve(__dirname, 'src/extensions/computed.ts'),
+        'extensions/effect': resolve(__dirname, 'src/extensions/effect.ts'),
+        'extensions/batch': resolve(__dirname, 'src/extensions/batch.ts'),
+        'extensions/select': resolve(__dirname, 'src/extensions/select.ts'),
+        'extensions/subscribe': resolve(__dirname, 'src/extensions/subscribe.ts'),
+      },
       formats: ['es'],
     },
     rollupOptions: {
-      external: ['vitest', /^vitest/, 'node:test'],
+      external: ['vitest', /^vitest/, 'node:test', '@lattice/signals', /^@lattice\/signals\//],
       output: {
         preserveModules: false,
         entryFileNames: '[name].js',

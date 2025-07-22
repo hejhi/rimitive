@@ -1,4 +1,4 @@
-import { withInstrumentation, signalExtension, computedExtension, effectExtension, batchExtension, selectExtension, performanceProvider, devtoolsProvider } from '@lattice/lattice';
+import { withInstrumentation, signalExtension, computedExtension, effectExtension, batchExtension, selectExtension, performanceProvider, devtoolsProvider } from '@lattice/store';
 import { select } from '@lattice/signals/select';
 
 // Create counter context with multiple instrumentation providers

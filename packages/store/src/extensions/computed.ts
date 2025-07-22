@@ -1,7 +1,7 @@
 /**
  * Computed extension for lattice
  */
-import type { LatticeExtension } from '../extension';
+import type { LatticeExtension } from '@lattice/lattice';
 import { computed as computedImpl } from '@lattice/signals/computed';
 import type { Computed } from '@lattice/signals';
 
