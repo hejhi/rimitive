@@ -17,7 +17,6 @@ export default defineConfig({
     '@lattice/signals/select': resolve(__dirname, '../signals/src/select-export.ts'),
     '@lattice/signals/subscribe': resolve(__dirname, '../signals/src/subscribe-export.ts'),
     '@lattice/signals': resolve(__dirname, '../signals/src/index.ts'),
-    '@lattice/devtools': resolve(__dirname, '../devtools/src/index.ts'),
     '@/lib/utils': resolve(__dirname, 'src/lib/utils.ts'),
     '@/components': resolve(__dirname, 'src/components'),
     '@/hooks': resolve(__dirname, 'src/hooks'),
@@ -32,7 +31,7 @@ export default defineConfig({
     host_permissions: ['<all_urls>'],
     web_accessible_resources: [
       {
-        resources: [],
+        resources: ['devtools-api.js', 'devtools-page-script.js'],
         matches: ['<all_urls>'],
       },
     ],
@@ -60,7 +59,7 @@ export default defineConfig({
     },
     optimizeDeps: {
       include: ['react', 'react-dom'],
-      exclude: ['@lattice/lattice', '@lattice/signals', '@lattice/devtools'],
+      exclude: ['@lattice/lattice', '@lattice/signals'],
     },
     server: {
       watch: {

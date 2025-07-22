@@ -1,4 +1,4 @@
-import { devtoolsStore } from './devtoolsCtx';
+import { devtoolsState } from './devtoolsCtx';
 import { ContextInfo } from './types';
 import { updateContextFromEvent } from './contextManager';
 import { processLogEntry } from './logProcessor';
@@ -39,13 +39,13 @@ export function handleDevToolsMessage(message: DevToolsMessage) {
 
 function handleLatticeDetected() {
   // Reset all state when Lattice is detected (page refresh/navigation)
-  devtoolsStore.state.connected.value = true;
-  devtoolsStore.state.contexts.value = [];
-  devtoolsStore.state.selectedContext.value = null;
-  devtoolsStore.state.logEntries.value = [];
+  devtoolsState.connected.value = true;
+  devtoolsState.contexts.value = [];
+  devtoolsState.selectedContext.value = null;
+  devtoolsState.logEntries.value = [];
 
   // Reset dependency graph
-  devtoolsStore.state.dependencyGraph.value = {
+  devtoolsState.dependencyGraph.value = {
     nodes: new Map(),
     edges: new Map(),
     reverseEdges: new Map(),
@@ -58,16 +58,16 @@ function handleStateUpdate(data: unknown) {
   const stateData = data as StateUpdateData;
 
   if (stateData.connected !== undefined) {
-    devtoolsStore.state.connected.value = stateData.connected;
+    devtoolsState.connected.value = stateData.connected;
   }
 
   if (stateData.contexts) {
-    devtoolsStore.state.contexts.value = stateData.contexts;
+    devtoolsState.contexts.value = stateData.contexts;
     autoSelectFirstContext(stateData.contexts);
   }
 
   if (stateData.selectedContext !== undefined) {
-    devtoolsStore.state.selectedContext.value = stateData.selectedContext;
+    devtoolsState.selectedContext.value = stateData.selectedContext;
   }
 }
 
@@ -84,7 +84,7 @@ function handleTransaction(data: unknown) {
 }
 
 function autoSelectFirstContext(contexts: ContextInfo[]) {
-  if (!devtoolsStore.state.selectedContext.value && contexts.length > 0) {
-    devtoolsStore.state.selectedContext.value = contexts[0].id;
+  if (!devtoolsState.selectedContext.value && contexts.length > 0) {
+    devtoolsState.selectedContext.value = contexts[0].id;
   }
 }

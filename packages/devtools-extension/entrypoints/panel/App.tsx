@@ -18,7 +18,7 @@ import {
   useDevToolsConnection,
   useIsNarrowViewport,
 } from './hooks';
-import { devtoolsStore } from './store/devtoolsCtx';
+import { devtoolsState } from './store/devtoolsCtx';
 import {
   dependencyGraphData,
   filteredTransactions,
@@ -28,13 +28,13 @@ import {
 
 export function App() {
   // Use Lattice signals with React
-  const connected = useSubscribe(devtoolsStore.state.connected);
-  const contexts = useSubscribe(devtoolsStore.state.contexts);
-  const selectedTab = useSubscribe(devtoolsStore.state.selectedTab);
+  const connected = useSubscribe(devtoolsState.connected);
+  const contexts = useSubscribe(devtoolsState.contexts);
+  const selectedTab = useSubscribe(devtoolsState.selectedTab);
   const selectedTransaction = useSubscribe(
-    devtoolsStore.state.selectedTransaction
+    devtoolsState.selectedTransaction
   );
-  const filter = useSubscribe(devtoolsStore.state.filter);
+  const filter = useSubscribe(devtoolsState.filter);
   const transactions = useSubscribe(filteredTransactions);
   const statsData = useSubscribe(stats);
   const graphData = useSubscribe(dependencyGraphData);
@@ -62,7 +62,7 @@ export function App() {
         className="h-[calc(100vh-6rem)] flex flex-col grow"
         value={selectedTab}
         onValueChange={(value) =>
-          (devtoolsStore.state.selectedTab.value = value as
+          (devtoolsState.selectedTab.value = value as
             | 'logs'
             | 'timeline'
             | 'graph')
@@ -83,21 +83,21 @@ export function App() {
 
           <FilterBar
             contexts={contexts}
-            selectedContext={devtoolsStore.state.selectedContext.value}
+            selectedContext={devtoolsState.selectedContext.value}
             filterType={filter.type}
             searchValue={filter.search}
             onContextChange={(value) =>
-              (devtoolsStore.state.selectedContext.value = value)
+              (devtoolsState.selectedContext.value = value)
             }
             onFilterTypeChange={(value) =>
-              (devtoolsStore.state.filter.value = {
-                ...devtoolsStore.state.filter.value,
+              (devtoolsState.filter.value = {
+                ...devtoolsState.filter.value,
                 type: value,
               })
             }
             onSearchChange={(value) =>
-              (devtoolsStore.state.filter.value = {
-                ...devtoolsStore.state.filter.value,
+              (devtoolsState.filter.value = {
+                ...devtoolsState.filter.value,
                 search: value,
               })
             }
@@ -114,7 +114,7 @@ export function App() {
             selectedTransaction={selectedTransaction}
             isNarrowViewport={isNarrowViewport}
             onTransactionSelect={(id) =>
-              (devtoolsStore.state.selectedTransaction.value = id)
+              (devtoolsState.selectedTransaction.value = id)
             }
           />
         </TabsContent>

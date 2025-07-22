@@ -1,4 +1,4 @@
-import { devtoolsStore } from './devtoolsCtx';
+import { devtoolsState } from './devtoolsCtx';
 import {
   LogEntry,
   DependencyUpdateData,
@@ -232,7 +232,7 @@ function updateContextCounts(event: LatticeEvent) {
  * Update context resource count
  */
 function updateContextCount(contextId: string, category: string, delta: number) {
-  const contexts = devtoolsStore.state.contexts.value;
+  const contexts = devtoolsState.contexts.value;
   const context = contexts.find(c => c.id === contextId);
   
   if (!context) return;
@@ -246,7 +246,7 @@ function updateContextCount(contextId: string, category: string, delta: number) 
   context.resourceCounts[category] = (context.resourceCounts[category] || 0) + delta;
   
   // Trigger reactive update
-  devtoolsStore.state.contexts.value = [...contexts];
+  devtoolsState.contexts.value = [...contexts];
 }
 
 /**
@@ -254,8 +254,8 @@ function updateContextCount(contextId: string, category: string, delta: number) 
  */
 function addLogEntry(entry: LogEntry) {
   // Keep last 1000 log entries
-  devtoolsStore.state.logEntries.value = [
-    ...devtoolsStore.state.logEntries.value.slice(-999),
+  devtoolsState.logEntries.value = [
+    ...devtoolsState.logEntries.value.slice(-999),
     entry,
   ];
 }
@@ -264,7 +264,7 @@ function addLogEntry(entry: LogEntry) {
  * Find what triggered a computed/effect based on recent writes
  */
 export function findTriggeredBy(nodeId: string): string[] {
-  const graph = devtoolsStore.state.dependencyGraph.value;
+  const graph = devtoolsState.dependencyGraph.value;
   const dependencies = graph.reverseEdges.get(nodeId) || new Set();
 
   for (const event of recentEvents) {
@@ -284,7 +284,7 @@ export function findTriggeredBy(nodeId: string): string[] {
  */
 export function findRelatedEvents(entry: LogEntry): LogEntry[] {
   const related: LogEntry[] = [];
-  const logs = devtoolsStore.state.logEntries.value;
+  const logs = devtoolsState.logEntries.value;
   
   // Find events that might have triggered this one
   if (entry.nodeId) {

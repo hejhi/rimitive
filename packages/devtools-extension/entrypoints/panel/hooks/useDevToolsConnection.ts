@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { handleDevToolsMessage, type DevToolsMessage } from '../store/store';
-import { devtoolsStore } from '../store/devtoolsCtx';
+import { devtoolsState } from '../store/devtoolsCtx';
 
 export function useDevToolsConnection() {
   useEffect(() => {
@@ -21,11 +21,11 @@ export function useDevToolsConnection() {
 
       port.onDisconnect.addListener(() => {
         // Reset all state on disconnect
-        devtoolsStore.state.connected.value = false;
-        devtoolsStore.state.contexts.value = [];
-        devtoolsStore.state.selectedContext.value = null;
-        devtoolsStore.state.logEntries.value = [];
-        devtoolsStore.state.dependencyGraph.value = {
+        devtoolsState.connected.value = false;
+        devtoolsState.contexts.value = [];
+        devtoolsState.selectedContext.value = null;
+        devtoolsState.logEntries.value = [];
+        devtoolsState.dependencyGraph.value = {
           nodes: new Map(),
           edges: new Map(),
           reverseEdges: new Map(),

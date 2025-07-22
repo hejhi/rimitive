@@ -1,17 +1,37 @@
 import { createContext } from '@lattice/lattice';
 import { signalExtension, computedExtension, effectExtension, batchExtension, selectExtension } from '@lattice/lattice';
-import { createInstrumentation, enableDevTools } from '@lattice/devtools';
 import { select } from '@lattice/signals/select';
 
-// Enable global DevTools API for browser extension
-enableDevTools();
+// Create instrumentation context for debugging
+const instrumentation = {
+  contextId: crypto.randomUUID(),
+  contextName: 'Lattice DevTools Demo',
+  emit(event: { type: string; timestamp: number; data: Record<string, unknown> }) {
+    // Send events to the devtools extension
+    window.postMessage({
+      source: 'lattice-devtools',
+      type: 'INSTRUMENTATION_EVENT',
+      payload: event,
+    }, '*');
+  },
+  register<T>(resource: T, type: string, name?: string) {
+    const id = crypto.randomUUID();
+    // Register the resource with devtools
+    window.postMessage({
+      source: 'lattice-devtools',
+      type: 'RESOURCE_REGISTERED',
+      payload: { id, type, name, contextId: this.contextId },
+    }, '*');
+    return { id, resource };
+  },
+};
 
-// Create instrumentation for debugging
-const instrumentation = createInstrumentation({
-  name: 'Lattice DevTools Demo',
-  trackReads: true,
-  trackComputations: true,
-});
+// Announce that the page is using Lattice
+window.postMessage({
+  source: 'lattice-devtools',
+  type: 'LATTICE_DETECTED',
+  payload: { contextId: instrumentation.contextId, contextName: instrumentation.contextName },
+}, '*');
 
 // Create a context with instrumentation
 const counterContext = createContext(

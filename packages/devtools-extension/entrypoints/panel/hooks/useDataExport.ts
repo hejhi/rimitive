@@ -4,7 +4,7 @@ import type {
   LogEntry,
   DependencyNode,
 } from '../store/types';
-import { devtoolsStore } from '../store/devtoolsCtx';
+import { devtoolsState } from '../store/devtoolsCtx';
 
 interface ImportData {
   version: string;
@@ -47,30 +47,30 @@ export function useDataExport() {
       version: '1.0.0',
       exportDate: new Date().toISOString(),
       state: {
-        contexts: devtoolsStore.state.contexts.value,
-        logEntries: devtoolsStore.state.logEntries.value,
+        contexts: devtoolsState.contexts.value,
+        logEntries: devtoolsState.logEntries.value,
         dependencyGraph: {
           nodes: Array.from(
-            devtoolsStore.state.dependencyGraph.value.nodes.entries()
+            devtoolsState.dependencyGraph.value.nodes.entries()
           ).map(([id, node]) => ({ ...node, id })),
           edges: Array.from(
-            devtoolsStore.state.dependencyGraph.value.edges.entries()
+            devtoolsState.dependencyGraph.value.edges.entries()
           ).map(([source, targets]) => ({
             source,
             targets: Array.from(targets),
           })),
           reverseEdges: Array.from(
-            devtoolsStore.state.dependencyGraph.value.reverseEdges.entries()
+            devtoolsState.dependencyGraph.value.reverseEdges.entries()
           ).map(([target, sources]) => ({
             target,
             sources: Array.from(sources),
           })),
         },
-        lastSnapshot: devtoolsStore.state.lastSnapshot.value,
-        filter: devtoolsStore.state.filter.value,
-        selectedContext: devtoolsStore.state.selectedContext.value,
-        selectedTransaction: devtoolsStore.state.selectedTransaction.value,
-        selectedTab: devtoolsStore.state.selectedTab.value,
+        lastSnapshot: devtoolsState.lastSnapshot.value,
+        filter: devtoolsState.filter.value,
+        selectedContext: devtoolsState.selectedContext.value,
+        selectedTransaction: devtoolsState.selectedTransaction.value,
+        selectedTab: devtoolsState.selectedTab.value,
       },
     };
 
@@ -104,15 +104,15 @@ export function useDataExport() {
         const state = importData.state;
 
         if (state.contexts) {
-          devtoolsStore.state.contexts.value = state.contexts;
+          devtoolsState.contexts.value = state.contexts;
         }
 
         if (state.logEntries) {
-          devtoolsStore.state.logEntries.value = state.logEntries;
+          devtoolsState.logEntries.value = state.logEntries;
         }
 
         if (state.dependencyGraph) {
-          const graph = devtoolsStore.state.dependencyGraph.value;
+          const graph = devtoolsState.dependencyGraph.value;
 
           graph.nodes.clear();
           graph.edges.clear();
@@ -137,32 +137,32 @@ export function useDataExport() {
             });
           }
 
-          devtoolsStore.state.dependencyGraph.value = { ...graph };
+          devtoolsState.dependencyGraph.value = { ...graph };
         }
 
         if (state.lastSnapshot) {
-          devtoolsStore.state.lastSnapshot.value = state.lastSnapshot;
+          devtoolsState.lastSnapshot.value = state.lastSnapshot;
         }
 
         if (state.filter) {
-          devtoolsStore.state.filter.value = state.filter;
+          devtoolsState.filter.value = state.filter;
         }
 
         if (state.selectedContext !== undefined) {
-          devtoolsStore.state.selectedContext.value = state.selectedContext;
+          devtoolsState.selectedContext.value = state.selectedContext;
         }
         if (state.selectedTransaction !== undefined) {
-          devtoolsStore.state.selectedTransaction.value =
+          devtoolsState.selectedTransaction.value =
             state.selectedTransaction;
         }
         if (state.selectedTab) {
-          devtoolsStore.state.selectedTab.value = state.selectedTab as
+          devtoolsState.selectedTab.value = state.selectedTab as
             | 'logs'
             | 'timeline'
             | 'graph';
         }
 
-        devtoolsStore.state.connected.value = true;
+        devtoolsState.connected.value = true;
       } catch (error) {
         console.error('Failed to import data:', error);
         alert('Failed to import data. Please check the file format.');

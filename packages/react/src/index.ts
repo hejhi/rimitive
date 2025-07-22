@@ -5,7 +5,7 @@ export {
   useSelector,
 } from './signals';
 
-export { useStore, createStore } from './lattice';
+export { useLatticeContext } from './lattice';
 
 // Types
 export type {
@@ -13,8 +13,6 @@ export type {
   SignalValue,
   SignalSetter,
 } from './signals';
-
-export type { StoreFactory, Store } from './lattice';
 
 // Re-export commonly used types from @lattice packages
 export type { Signal, Computed, Selected } from '@lattice/signals';

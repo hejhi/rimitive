@@ -5,8 +5,8 @@ import {
   RenderOptions,
   RenderHookOptions,
 } from '@testing-library/react';
-import { createStore } from '../lattice/store';
-import type { Store } from '../lattice/store';
+import { createLattice } from '@lattice/lattice';
+import type { LatticeContext, SignalState } from '@lattice/lattice';
 
 type CustomRenderOptions = Omit<RenderOptions, 'wrapper'>;
 type CustomRenderHookOptions<Props> = Omit<RenderHookOptions<Props>, 'wrapper'>;
@@ -79,35 +79,41 @@ export function renderHookWithLattice<Result, Props>(
 }
 
 /**
- * Create a test store with initial state for testing.
- * The store is automatically bound to a test Lattice context.
+ * Create test signals with initial state for testing.
+ * Returns a context and signals for testing.
  *
  * @example
  * ```tsx
- * test('store updates', () => {
- *   const store = createTestStore({ count: 0 });
+ * test('signal updates', () => {
+ *   const { context, signals } = createTestSignals({ count: 0 });
  *   const { result } = renderHookWithLattice(
- *     () => useSubscribe(store.state.count)
+ *     () => useSubscribe(signals.count)
  *   );
  *
  *   expect(result.current).toBe(0);
  *
  *   act(() => {
- *     store.state.count.value = 1;
+ *     signals.count.value = 1;
  *   });
  *
  *   expect(result.current).toBe(1);
+ *   
+ *   // Clean up
+ *   context.dispose();
  * });
  * ```
  */
-export function createTestStore<T extends Record<string, unknown>>(
+export function createTestSignals<T extends Record<string, unknown>>(
   initialState: T
-): Store<T> {
-  // For testing, we just create a store with its own context
-  // This provides proper isolation for tests
-  const store = createStore(initialState);
+): { context: LatticeContext; signals: SignalState<T> } {
+  const context = createLattice();
+  const signals = {} as SignalState<T>;
+  
+  for (const [key, value] of Object.entries(initialState)) {
+    signals[key as keyof T] = context.signal(value as T[keyof T]);
+  }
 
-  return store;
+  return { context, signals };
 }
 
 /**

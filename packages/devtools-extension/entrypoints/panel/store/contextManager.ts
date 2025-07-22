@@ -1,10 +1,10 @@
-import { devtoolsStore } from './devtoolsCtx';
+import { devtoolsState } from './devtoolsCtx';
 import { ContextInfo, ResourceEventData } from './types';
 import { LatticeEvent } from './messageHandler';
 import { addNodeToGraph, scheduleBatchUpdate } from './dependencyGraph';
 
 export function updateContextFromEvent(event: LatticeEvent) {
-  const contexts = [...devtoolsStore.state.contexts.value];
+  const contexts = [...devtoolsState.contexts.value];
   const contextIndex = contexts.findIndex((c) => c.id === event.contextId);
 
   if (event.type === 'CONTEXT_CREATED' && contextIndex === -1) {
@@ -14,7 +14,7 @@ export function updateContextFromEvent(event: LatticeEvent) {
     handleResourceEvent(context, event);
   }
 
-  devtoolsStore.state.contexts.value = contexts;
+  devtoolsState.contexts.value = contexts;
 }
 
 function handleContextCreated(contexts: ContextInfo[], event: LatticeEvent) {
@@ -52,7 +52,7 @@ function handleResourceEvent(context: ContextInfo, event: LatticeEvent) {
   // For value updates
   else if ((event.type.endsWith('_WRITE') || event.type.endsWith('_UPDATE')) && eventData.id) {
     scheduleBatchUpdate(() => {
-      const graph = devtoolsStore.state.dependencyGraph.value;
+      const graph = devtoolsState.dependencyGraph.value;
       const node = graph.nodes.get(eventData.id);
       
       if (node) {

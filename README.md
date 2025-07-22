@@ -41,11 +41,14 @@ const doubled = computed(() => count.value * 2);
 
 ### [@lattice/lattice](/packages/lattice)
 
-Composable stores with isolated contexts for building reactive components.
+Context system with extension support for building reactive applications.
 
 ```typescript
-const store = createStore({ todos: [], filter: 'all' });
-const todos = TodoList(store);
+import { createLattice } from '@lattice/lattice';
+
+const context = createLattice();
+const todos = context.signal([]);
+const filter = context.signal('all');
 ```
 
 ## Installation

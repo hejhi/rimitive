@@ -1,9 +1,9 @@
-import { devtoolsContext, devtoolsStore } from './devtoolsCtx';
+import { devtoolsContext, devtoolsState } from './devtoolsCtx';
 
 // Common log filtering logic
 function filterLogs(
-  logs: typeof devtoolsStore.state.logEntries.value,
-  filter: typeof devtoolsStore.state.filter.value,
+  logs: typeof devtoolsState.logEntries.value,
+  filter: typeof devtoolsState.filter.value,
   selectedContext: string | null,
   searchIn: string[]
 ) {
@@ -45,9 +45,9 @@ function filterLogs(
 
 // Actual computed values that transform or aggregate data
 export const filteredTransactions = devtoolsContext.computed(() => {
-  const logEntries = devtoolsStore.state.logEntries.value;
-  const filter = devtoolsStore.state.filter.value;
-  const selectedContext = devtoolsStore.state.selectedContext.value;
+  const logEntries = devtoolsState.logEntries.value;
+  const filter = devtoolsState.filter.value;
+  const selectedContext = devtoolsState.selectedContext.value;
 
   const filtered = filterLogs(logEntries, filter, selectedContext, [
     'eventType',
@@ -66,15 +66,15 @@ export const filteredTransactions = devtoolsContext.computed(() => {
 });
 
 export const selectedContextData = devtoolsContext.computed(() => {
-  const selectedId = devtoolsStore.state.selectedContext.value;
+  const selectedId = devtoolsState.selectedContext.value;
   if (!selectedId) return null;
 
-  return devtoolsStore.state.contexts.value.find((c) => c.id === selectedId);
+  return devtoolsState.contexts.value.find((c) => c.id === selectedId);
 });
 
 export const stats = devtoolsContext.computed(() => {
-  const contexts = devtoolsStore.state.contexts.value;
-  const graph = devtoolsStore.state.dependencyGraph.value;
+  const contexts = devtoolsState.contexts.value;
+  const graph = devtoolsState.dependencyGraph.value;
 
   // Aggregate resource counts across all contexts
   const resourceTotals: Record<string, number> = {};
@@ -88,7 +88,7 @@ export const stats = devtoolsContext.computed(() => {
 
   return {
     resourceCounts: resourceTotals,
-    totalTransactions: devtoolsStore.state.logEntries.value.length,
+    totalTransactions: devtoolsState.logEntries.value.length,
     totalNodes: graph.nodes.size,
     totalEdges: Array.from(graph.edges.values()).reduce(
       (sum, deps) => sum + deps.size,
@@ -99,7 +99,7 @@ export const stats = devtoolsContext.computed(() => {
 
 // Selected item data
 export const selectedTransactionData = devtoolsContext.computed(() => {
-  const selectedId = devtoolsStore.state.selectedTransaction.value;
+  const selectedId = devtoolsState.selectedTransaction.value;
   if (!selectedId) return null;
 
   return (
@@ -108,9 +108,9 @@ export const selectedTransactionData = devtoolsContext.computed(() => {
 });
 
 export const filteredLogEntries = devtoolsContext.computed(() => {
-  const logs = devtoolsStore.state.logEntries.value;
-  const filter = devtoolsStore.state.filter.value;
-  const selectedContext = devtoolsStore.state.selectedContext.value;
+  const logs = devtoolsState.logEntries.value;
+  const filter = devtoolsState.filter.value;
+  const selectedContext = devtoolsState.selectedContext.value;
 
   const filtered = filterLogs(logs, filter, selectedContext, [
     'nodeName',
@@ -122,9 +122,9 @@ export const filteredLogEntries = devtoolsContext.computed(() => {
 });
 
 export const dependencyGraphData = devtoolsContext.computed(() => {
-  const graph = devtoolsStore.state.dependencyGraph.value;
-  const selectedContext = devtoolsStore.state.selectedContext.value;
-  const filter = devtoolsStore.state.filter.value;
+  const graph = devtoolsState.dependencyGraph.value;
+  const selectedContext = devtoolsState.selectedContext.value;
+  const filter = devtoolsState.filter.value;
 
   let nodes = Array.from(graph.nodes.values());
 
@@ -170,7 +170,7 @@ export const dependencyGraphData = devtoolsContext.computed(() => {
 });
 
 export const nodeDependencies = devtoolsContext.computed(() => {
-  const graph = devtoolsStore.state.dependencyGraph.value;
+  const graph = devtoolsState.dependencyGraph.value;
 
   return (nodeId: string) => {
     // Find nodes that this node depends on (nodes that have edges TO this node)

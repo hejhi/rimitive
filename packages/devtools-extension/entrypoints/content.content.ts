@@ -2,6 +2,18 @@ export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_start',
   main() {
+    // Inject the DevTools API script into the page
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('devtools-api.js');
+    script.onload = () => script.remove();
+    (document.head || document.documentElement).appendChild(script);
+    
+    // Also inject the legacy page script for compatibility
+    const legacyScript = document.createElement('script');
+    legacyScript.src = chrome.runtime.getURL('devtools-page-script.js');
+    legacyScript.onload = () => legacyScript.remove();
+    (document.head || document.documentElement).appendChild(legacyScript);
+    
     // Listen for messages from the page
     window.addEventListener('message', (event) => {
       if (

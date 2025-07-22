@@ -1,4 +1,4 @@
-import { devtoolsStore } from './devtoolsCtx';
+import { devtoolsState } from './devtoolsCtx';
 import {
   DependencyUpdateData,
   GraphSnapshotData,
@@ -15,7 +15,7 @@ export function scheduleBatchUpdate(updateFn: () => void) {
   if (batchTimeout) return;
 
   batchTimeout = setTimeout(() => {
-    const graph = devtoolsStore.state.dependencyGraph.value;
+    const graph = devtoolsState.dependencyGraph.value;
 
     // Execute all batched updates
     updateBatch.forEach((fn) => fn());
@@ -23,7 +23,7 @@ export function scheduleBatchUpdate(updateFn: () => void) {
     batchTimeout = null;
 
     // Single re-render
-    devtoolsStore.state.dependencyGraph.value = { ...graph };
+    devtoolsState.dependencyGraph.value = { ...graph };
   }, 0);
 }
 
@@ -37,7 +37,7 @@ export function addNodeToGraph(
   }
 ) {
   scheduleBatchUpdate(() => {
-    const graph = devtoolsStore.state.dependencyGraph.value;
+    const graph = devtoolsState.dependencyGraph.value;
 
     graph.nodes.set(id, {
       id,
@@ -57,7 +57,7 @@ export function updateDependencyGraph(
   contextId: string
 ) {
   scheduleBatchUpdate(() => {
-    const graph = devtoolsStore.state.dependencyGraph.value;
+    const graph = devtoolsState.dependencyGraph.value;
     const subLen = data.subscribers?.length ?? 0;
     // Update node - preserve existing name if available
     const existingNode = graph.nodes.get(data.id);
@@ -119,7 +119,7 @@ export function updateGraphSnapshot(
   contextId: string
 ) {
   scheduleBatchUpdate(() => {
-    const graph = devtoolsStore.state.dependencyGraph.value;
+    const graph = devtoolsState.dependencyGraph.value;
 
     // Collect nodes to remove in a single pass
     const nodesToRemove: string[] = [];
@@ -192,7 +192,7 @@ export function updateGraphSnapshot(
     }
 
     // Update last snapshot
-    devtoolsStore.state.lastSnapshot.value = {
+    devtoolsState.lastSnapshot.value = {
       timestamp,
       nodes: data.nodes,
       edges: data.edges,
