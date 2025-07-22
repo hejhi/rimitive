@@ -1,4 +1,4 @@
-import { createStore, createContext } from '@lattice/lattice';
+import { createContext } from '@lattice/lattice';
 import { signalExtension, computedExtension, effectExtension, batchExtension, selectExtension } from '@lattice/lattice';
 import { createInstrumentation, enableDevTools } from '@lattice/devtools';
 import { select } from '@lattice/signals/select';
@@ -23,23 +23,18 @@ const counterContext = createContext(
   selectExtension
 );
 
-// Counter Store
-const counterStore = createStore(
-  {
-    count: 0,
-  },
-  counterContext
-);
+// Counter State
+const count = counterContext.signal(0, 'count');
 
 const doubled = counterContext.computed(() => {
-  return counterStore.state.count.value * 2;
+  return count.value * 2;
 }, 'doubled');
 
 const isEven = counterContext.computed(() => {
-  return counterStore.state.count.value % 2 === 0;
+  return count.value % 2 === 0;
 }, 'isEven');
 
-// Todo Store
+// Todo State
 interface Todo {
   id: number;
   text: string;
@@ -56,34 +51,29 @@ const todoContext = createContext(
   selectExtension
 );
 
-const todoStore = createStore(
-  {
-    todos: [] as Todo[],
-    filter: 'all' as 'all' | 'active' | 'completed',
-  },
-  todoContext
-);
+const todos = todoContext.signal<Todo[]>([], 'todos');
+const filter = todoContext.signal<'all' | 'active' | 'completed'>('all', 'filter');
 
 // Use selectors to create more granular reactivity
-const currentFilter = select(todoStore.state.filter, (f) => f);
-const activeTodos = select(todoStore.state.todos, (todos) =>
+const currentFilter = select(filter, (f) => f);
+const activeTodos = select(todos, (todos) =>
   todos.filter((todo) => !todo.completed)
 );
-const completedTodos = select(todoStore.state.todos, (todos) =>
+const completedTodos = select(todos, (todos) =>
   todos.filter((todo) => todo.completed)
 );
 
 const filteredTodos = todoContext.computed(() => {
-  const filter = currentFilter.value;
-  const todos = todoStore.state.todos.value;
+  const filterValue = currentFilter.value;
+  const allTodos = todos.value;
 
-  switch (filter) {
+  switch (filterValue) {
     case 'active':
       return activeTodos.value;
     case 'completed':
       return completedTodos.value;
     default:
-      return todos;
+      return allTodos;
   }
 });
 
@@ -93,9 +83,7 @@ const activeTodoCount = todoContext.computed(() => {
 
 // UI Updates
 counterContext.effect(() => {
-  document.getElementById('count')!.textContent = String(
-    counterStore.state.count.value
-  );
+  document.getElementById('count')!.textContent = String(count.value);
 });
 
 counterContext.effect(() => {
@@ -138,15 +126,15 @@ todoContext.effect(() => {
 
 // Event Handlers
 document.getElementById('increment')!.addEventListener('click', () => {
-  counterStore.set({ count: counterStore.state.count.value + 1 });
+  count.value = count.value + 1;
 });
 
 document.getElementById('decrement')!.addEventListener('click', () => {
-  counterStore.set({ count: counterStore.state.count.value - 1 });
+  count.value = count.value - 1;
 });
 
 document.getElementById('reset')!.addEventListener('click', () => {
-  counterStore.set({ count: 0 });
+  count.value = 0;
 });
 
 document.getElementById('addTodo')!.addEventListener('click', () => {
@@ -158,9 +146,7 @@ document.getElementById('addTodo')!.addEventListener('click', () => {
       completed: false,
     };
 
-    todoStore.set({
-      todos: [...todoStore.state.todos.value, newTodo],
-    });
+    todos.value = [...todos.value, newTodo];
 
     input.value = '';
   }
@@ -176,12 +162,12 @@ document.getElementById('todoInput')!.addEventListener('keypress', (e) => {
 document.querySelectorAll('.filter').forEach((button) => {
   button.addEventListener('click', (e) => {
     const target = e.target as HTMLButtonElement;
-    const filter = target.getAttribute('data-filter') as
+    const filterValue = target.getAttribute('data-filter') as
       | 'all'
       | 'active'
       | 'completed';
 
-    todoStore.set({ filter });
+    filter.value = filterValue;
 
     // Update active button
     document
@@ -196,11 +182,11 @@ document.getElementById('todoList')!.addEventListener('change', (e) => {
   const target = e.target as HTMLInputElement;
   if (target.type === 'checkbox') {
     const todoId = Number(target.getAttribute('data-todo-id'));
-    const todos = todoStore.state.todos.value;
-    const updatedTodos = todos.map((todo) =>
+    const currentTodos = todos.value;
+    const updatedTodos = currentTodos.map((todo) =>
       todo.id === todoId ? { ...todo, completed: target.checked } : todo
     );
 
-    todoStore.set({ todos: updatedTodos });
+    todos.value = updatedTodos;
   }
 });

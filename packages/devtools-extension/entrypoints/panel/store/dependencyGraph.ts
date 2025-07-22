@@ -172,12 +172,12 @@ export function updateGraphSnapshot(
       if (!edgesBySource.has(edge.source)) {
         edgesBySource.set(edge.source, []);
       }
-      edgesBySource.get(edge.source)!.push(edge.target);
+      edgesBySource.get(edge.source).push(edge.target);
 
       if (!edgesByTarget.has(edge.target)) {
         edgesByTarget.set(edge.target, []);
       }
-      edgesByTarget.get(edge.target)!.push(edge.source);
+      edgesByTarget.get(edge.target).push(edge.source);
     }
 
     // Batch add edges

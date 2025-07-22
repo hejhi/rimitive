@@ -145,7 +145,7 @@ export function createContext<E extends readonly LatticeExtension<string, unknow
   let options: CreateContextOptions | undefined;
   
   if (args.length > 0 && args[0] && typeof args[0] === 'object' && 'instrumentation' in args[0]) {
-    options = args[0] as CreateContextOptions;
+    options = args[0];
     extensions = args.slice(1) as unknown as E;
   } else {
     extensions = args as E;

@@ -39,7 +39,7 @@ export const effectExtension: LatticeExtension<
   
   instrument(effectFn, instrumentation) {
     return function (fn: () => void | (() => void), name?: string): EffectDisposer {
-      let effectId: string;
+      let effectId = '';
       
       // Wrap the effect function to track execution
       const instrumentedFn = () => {

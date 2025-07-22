@@ -5,6 +5,7 @@
  */
 
 import type { InstrumentationContext } from '@lattice/lattice';
+import type { Signal, Computed, Effect } from '@lattice/signals';
 import type { DevToolsOptions, DevToolsEventType } from './types';
 import { createEventEmitter } from './events/emitter';
 import { createDevToolsAPIManager } from './events/api';
@@ -87,17 +88,17 @@ export function createInstrumentation(options: DevToolsOptions = {}): Instrument
       // Register based on type
       switch (type) {
         case 'signal': {
-          const tracked = registry.registerSignal(resource as any, contextId, name);
+          const tracked = registry.registerSignal(resource as Signal<unknown>, contextId, name);
           id = tracked.id;
           break;
         }
         case 'computed': {
-          const tracked = registry.registerComputed(resource as any, contextId, name);
+          const tracked = registry.registerComputed(resource as Computed<unknown>, contextId, name);
           id = tracked.id;
           break;
         }
         case 'effect': {
-          const tracked = registry.registerEffect(resource as any, contextId, name);
+          const tracked = registry.registerEffect(resource as Effect, contextId, name);
           id = tracked.id;
           break;
         }

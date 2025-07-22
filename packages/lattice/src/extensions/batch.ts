@@ -63,7 +63,10 @@ export const batchExtension: LatticeExtension<
       });
       
       if (error) {
-        throw error;
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error(typeof error === 'string' ? error : 'Batch operation failed');
       }
       
       return result!;

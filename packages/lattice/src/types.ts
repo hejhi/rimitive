@@ -52,9 +52,3 @@ export type PartialLatticeContext = Partial<Omit<LatticeContext, 'dispose'>> & {
   dispose(): void;
 };
 
-export interface StoreConfig<State> {
-  state: State;
-}
-
-// Re-export store type from store module
-export type { Store } from './store';

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act } from '@testing-library/react';
-import { createStore } from '@lattice/lattice';
+import { createStore } from './store';
 import { useStore } from './hooks';
 import { renderHookWithLattice } from '../testing';
 

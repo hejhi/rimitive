@@ -5,9 +5,6 @@
 // Primary API - instrumentation
 export { createInstrumentation, enableDevTools } from './instrumentation';
 
-// Legacy middleware export
-export { withDevTools } from './middleware';
-
 // Dependency utilities exports
 export {
   getSubscribers,

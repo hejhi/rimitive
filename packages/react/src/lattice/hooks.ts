@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Store } from '@lattice/lattice';
+import type { Store } from './store';
 import type { StoreFactory } from './types';
 
 /**
