@@ -14,20 +14,6 @@ export interface LogEntry {
   rawData?: unknown; // For TransactionDetail component
 }
 
-// Generic event data shape - instrumentation emits these
-export interface ResourceEventData {
-  id: string;
-  name?: string;
-  type?: string;
-  value?: unknown;
-  oldValue?: unknown;
-  newValue?: unknown;
-  duration?: number;
-  dependencies?: Array<{ id: string; name?: string }>;
-  subscribers?: Array<{ id: string; name?: string }>;
-  [key: string]: unknown; // Allow any other fields from instrumentation
-}
-
 // Context info
 export interface ContextInfo {
   id: string;
