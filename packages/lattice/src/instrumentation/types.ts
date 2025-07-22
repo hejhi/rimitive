@@ -59,9 +59,4 @@ export interface InstrumentationConfig {
    * Can be a boolean or a function that returns a boolean for dynamic enabling
    */
   enabled?: boolean | (() => boolean);
-  
-  /**
-   * Optional context name
-   */
-  contextName?: string;
 }

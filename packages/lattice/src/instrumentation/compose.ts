@@ -17,14 +17,14 @@ function isEnabled(config: InstrumentationConfig): boolean {
  * Compose multiple instrumentation providers into a single context
  */
 export function composeProviders(
-  providers: InstrumentationProvider[],
-  contextName = 'Lattice Context'
+  providers: InstrumentationProvider[]
 ): InstrumentationContext {
   if (providers.length === 0) {
     throw new Error('At least one instrumentation provider is required');
   }
   
   const contextId = crypto.randomUUID();
+  const contextName = 'Context';
   
   // Initialize all providers
   providers.forEach(provider => {
@@ -86,5 +86,5 @@ export function createInstrumentation(config: InstrumentationConfig): Instrument
     return undefined;
   }
   
-  return composeProviders(config.providers, config.contextName);
+  return composeProviders(config.providers);
 }

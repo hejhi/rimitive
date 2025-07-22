@@ -7,22 +7,20 @@ export function updateContextFromEvent(event: LatticeEvent) {
   const contexts = [...devtoolsState.contexts.value];
   let contextIndex = contexts.findIndex((c) => c.id === event.contextId);
 
-  // Create context if it doesn't exist yet (for events that come before CONTEXT_CREATED)
+  // Create context if it doesn't exist yet
   if (contextIndex === -1 && event.contextId) {
+    const contextNumber = contexts.length + 1;
     contexts.push({
       id: event.contextId,
-      name: 'Unknown Context',
+      name: `Context ${contextNumber}`,
       created: Date.now(),
       resourceCounts: {},
     });
     contextIndex = contexts.length - 1;
   }
 
-  if (event.type === 'CONTEXT_CREATED' && contextIndex !== -1) {
-    // Update context name if we already created it
-    const data = event.data as { name?: string };
-    contexts[contextIndex].name = data.name || 'Default';
-  } else if (contextIndex !== -1) {
+  // Handle resource events for existing contexts
+  if (contextIndex !== -1 && event.type !== 'CONTEXT_CREATED') {
     const context = contexts[contextIndex];
     handleResourceEvent(context, event);
   }

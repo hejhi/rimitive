@@ -35,15 +35,6 @@ export function devtoolsProvider(options: DevtoolsProviderOptions = {}): Instrum
         }
       }, '*');
       
-      // Emit context creation event
-      this.emit({
-        type: 'CONTEXT_CREATED',
-        timestamp: Date.now(),
-        data: {
-          id: contextId,
-          name: contextName
-        }
-      });
       
       if (debug) {
         console.log('[Lattice DevTools] Initialized for context:', contextName, contextId);

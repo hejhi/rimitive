@@ -8,7 +8,6 @@ const counterContext = withInstrumentation(
       devtoolsProvider({ debug: true }),
       performanceProvider({ threshold: 5, logAll: false })
     ],
-    contextName: 'Counter Context',
     enabled: true // Could be import.meta.env.DEV for conditional enabling
   },
   signalExtension,
@@ -42,8 +41,7 @@ const todoContext = withInstrumentation(
     providers: [
       devtoolsProvider({ debug: false }), // Less verbose for this context
       performanceProvider({ threshold: 10 })
-    ],
-    contextName: 'Todo Context'
+    ]
   },
   signalExtension,
   computedExtension,
