@@ -3,6 +3,7 @@ import {
   LogEntry,
 } from './types';
 import { LatticeEvent } from './messageHandler';
+import { inferCategory } from './eventTypeManager';
 
 // Track execution depth for indentation
 let executionDepth = 0;
@@ -87,23 +88,6 @@ function calculateExecutionLevel(event: LatticeEvent): number {
   return executionDepth;
 }
 
-/**
- * Infer category from event type
- */
-function inferCategory(eventType: string): string {
-  const type = eventType.toLowerCase();
-  
-  if (type.includes('signal')) return 'signal';
-  if (type.includes('computed')) return 'computed';
-  if (type.includes('effect')) return 'effect';
-  if (type.includes('batch')) return 'batch';
-  if (type.includes('store')) return 'store';
-  if (type.includes('selector')) return 'selector';
-  
-  // For custom extensions, use the first part of the event type
-  const parts = eventType.split('_');
-  return parts[0].toLowerCase();
-}
 
 /**
  * Extract node ID from event data
@@ -145,54 +129,14 @@ function extractNodeName(data: unknown): string | undefined {
 function generateSummary(event: LatticeEvent): string {
   const data = event.data as Record<string, unknown>;
   
-  // Handle common event patterns
-  switch (event.type) {
-    case 'SIGNAL_WRITE':
-      return `${JSON.stringify(data.oldValue)} → ${JSON.stringify(data.newValue)}`;
-    
-    case 'SIGNAL_READ':
-      return `Read: ${JSON.stringify(data.value)}`;
-    
-    case 'COMPUTED_START':
-      return 'Computing...';
-    
-    case 'COMPUTED_END':
-      return `Result: ${JSON.stringify(data.value)}${data.duration ? ` (${Number(data.duration).toFixed(2)}ms)` : ''}`;
-    
-    case 'EFFECT_START':
-      return 'Running effect...';
-    
-    case 'EFFECT_END':
-      return `Completed${data.duration ? ` (${Number(data.duration).toFixed(2)}ms)` : ''}`;
-    
-    case 'BATCH_START':
-      return 'Starting batch...';
-      
-    case 'BATCH_END':
-      return 'Batch completed';
-    
-    default: {
-      // For custom events, try to create a meaningful summary
-      if ('value' in data) {
-        return `Value: ${JSON.stringify(data.value)}`;
-      }
-      if ('duration' in data && typeof data.duration === 'number') {
-        return `Duration: ${data.duration.toFixed(2)}ms`;
-      }
-      if ('count' in data) {
-        return `Count: ${JSON.stringify(data.count)}`;
-      }
-      
-      // Show first few data fields
-      const fields = Object.entries(data)
-        .filter(([key]) => !['id', 'nodeId', 'contextId', 'timestamp'].includes(key))
-        .slice(0, 3)
-        .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
-        .join(', ');
-      
-      return fields || event.type;
-    }
-  }
+  // Just show the raw data fields, no special handling
+  const fields = Object.entries(data)
+    .filter(([key]) => !['id', 'nodeId', 'resourceId', 'contextId', 'timestamp', 'type'].includes(key))
+    .slice(0, 3)
+    .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+    .join(', ');
+  
+  return fields;
 }
 
 

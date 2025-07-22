@@ -1,9 +1,7 @@
 import { Badge } from '../../src/components/ui/badge';
 import type {
   LogEntry,
-  ResourceEventData,
 } from './store/types';
-import { ArrowRight } from 'lucide-react';
 
 interface TransactionDetailProps {
   transaction: LogEntry;
@@ -15,21 +13,8 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
         <div className="space-y-2">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             Event Details
-            <Badge
-              variant={
-                transaction.category === 'signal'
-                  ? 'default'
-                  : transaction.category === 'computed'
-                    ? 'secondary'
-                    : 'outline'
-              }
-              className="text-xs"
-            >
-              {transaction.eventType === 'COMPUTED_END'
-                ? 'COMPUTED'
-                : transaction.eventType === 'EFFECT_END'
-                  ? 'EFFECT'
-                  : transaction.eventType}
+            <Badge variant="outline" className="text-xs">
+              {transaction.eventType}
             </Badge>
           </h3>
 
@@ -47,58 +32,24 @@ export function TransactionDetail({ transaction }: TransactionDetailProps) {
               </span>
             </div>
 
-            {transaction.eventType === 'SIGNAL_READ' &&
-              (() => {
-                const data = transaction.data as ResourceEventData;
-                return (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Signal:</span>
-                      <span className="font-mono">{transaction.nodeName || transaction.nodeId}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Value:</span>
-                      <span className="font-mono">
-                        {JSON.stringify(data.value)}
-                      </span>
-                    </div>
-                    {'executionContext' in data && data.executionContext && (
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">Read by:</span>
-                        <span className="font-mono">
-                          {data.executionContext as string}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+            {transaction.nodeName && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Name:</span>
+                <span className="font-mono">{transaction.nodeName}</span>
+              </div>
+            )}
 
-            {transaction.eventType === 'SIGNAL_WRITE' &&
-              (() => {
-                const data = transaction.data as ResourceEventData;
-                return (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Signal:</span>
-                      <span className="font-mono">{transaction.nodeName || transaction.nodeId}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Change:</span>
-                      <span className="font-mono">
-                        {JSON.stringify(data.oldValue)}{' '}
-                        <ArrowRight className="inline w-3 h-3" />{' '}
-                        {JSON.stringify(data.newValue)}
-                      </span>
-                    </div>
-                  </>
-                );
-              })()}
+            {transaction.nodeId && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">ID:</span>
+                <span className="font-mono">{transaction.nodeId}</span>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="border-t pt-4">
-          <h3 className="text-sm font-semibold mb-2">Raw Event Data</h3>
+          <h3 className="text-sm font-semibold mb-2">Event Data</h3>
           <pre className="text-xs bg-muted p-3 rounded overflow-x-auto">
             <code>{JSON.stringify(transaction.data, null, 2)}</code>
           </pre>

@@ -2,7 +2,7 @@
 export interface LogEntry {
   id: string;
   timestamp: number;
-  eventType: string; // The event type from instrumentation (e.g., 'SIGNAL_WRITE', 'MY_CUSTOM_EVENT')
+  eventType: string; // The event type from instrumentation
   level: number; // indentation level for display
   nodeId?: string; // Resource ID if available
   nodeName?: string; // Resource name if available

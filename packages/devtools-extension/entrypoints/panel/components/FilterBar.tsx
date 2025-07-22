@@ -1,3 +1,4 @@
+import { useSubscribe } from '@lattice/react';
 import { Input } from '../../../src/components/ui/input';
 import {
   Select,
@@ -7,6 +8,7 @@ import {
   SelectValue,
 } from '../../../src/components/ui/select';
 import type { ContextInfo } from '../store/types';
+import { availableEventTypes } from '../store/eventTypeManager';
 
 interface FilterBarProps {
   contexts: ContextInfo[];
@@ -27,6 +29,8 @@ export function FilterBar({
   onFilterTypeChange,
   onSearchChange,
 }: FilterBarProps) {
+  const eventTypes = useSubscribe(availableEventTypes);
+  
   return (
     <div className="flex flex-wrap items-center gap-2">
       {contexts.length > 1 && (
@@ -58,11 +62,11 @@ export function FilterBar({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Types</SelectItem>
-          <SelectItem value="signal">Signals</SelectItem>
-          <SelectItem value="computed">Computed</SelectItem>
-          <SelectItem value="effect">Effects</SelectItem>
-          <SelectItem value="selector">Selectors</SelectItem>
+          {eventTypes.map((type) => (
+            <SelectItem key={type.value} value={type.value}>
+              {type.label}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
 

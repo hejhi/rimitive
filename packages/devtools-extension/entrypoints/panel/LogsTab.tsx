@@ -1,6 +1,7 @@
 import { useSubscribe } from '@lattice/react';
 import type { LogEntry } from './store/types';
 import { filteredLogEntries } from './store/computed';
+import { getCategoryColors } from './store/eventTypeManager';
 
 export function LogsTab() {
   const logs = useSubscribe(filteredLogEntries);
@@ -52,17 +53,8 @@ function renderLogEntry(entry: LogEntry): React.ReactNode {
   const eventType = entry.eventType;
   const category = entry.category;
   
-  // Determine color based on category
-  const colorMap: Record<string, { main: string; secondary: string }> = {
-    signal: { main: 'text-blue-500', secondary: 'text-blue-400' },
-    computed: { main: 'text-purple-500', secondary: 'text-purple-400' },
-    effect: { main: 'text-yellow-500', secondary: 'text-yellow-400' },
-    batch: { main: 'text-green-500', secondary: 'text-green-400' },
-    store: { main: 'text-orange-500', secondary: 'text-orange-400' },
-    selector: { main: 'text-pink-500', secondary: 'text-pink-400' },
-  };
-  
-  const colors = colorMap[category] || { main: 'text-gray-500', secondary: 'text-gray-400' };
+  // Get dynamic colors for this category
+  const colors = getCategoryColors(category);
 
   return (
     <>

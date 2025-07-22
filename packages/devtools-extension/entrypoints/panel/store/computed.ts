@@ -33,10 +33,9 @@ function filterLogs(
       }
     }
 
-    // Internal reads filter
-    if (filter.hideInternal && log.eventType === 'SIGNAL_READ') {
-      const data = log.data;
-      return !data.internal;
+    // Hide internal events if requested
+    if (filter.hideInternal && log.data.internal === true) {
+      return false;
     }
 
     return true;
