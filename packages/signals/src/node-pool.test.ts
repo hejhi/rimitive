@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { signal, computed, effect, subscribe } from './index';
-import { activeContext } from './api';
+import { signal, computed, effect, subscribe, activeContext } from './index';
 
 // Test-only helper to get pool statistics
 function getPoolStats() {

@@ -1,6 +1,6 @@
 // Standalone subscribe function for use without prototypes
 import type { Signal, Computed, Selected, Unsubscribe } from './types';
-import { effect } from './api';
+import { effect } from './default-api';
 
 /**
  * Subscribe to changes in a signal, computed, or selected value

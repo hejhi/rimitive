@@ -1,5 +1,12 @@
-// Full-featured signal package with all utilities
-export { signal, computed, effect, batch, untrack, createSignalAPI } from './api';
+// Tree-shakeable exports - import factories directly
+export { createSignalFactory } from './signal';
+export { createComputedFactory, createUntrackFactory } from './computed';
+export { createEffectFactory } from './effect';
+export { createBatchFactory } from './batch';
+export { createSignalAPI } from './api';
+
+// Convenience exports from default-api (NOT tree-shakeable)
+export { signal, computed, effect, batch, untrack, activeContext, coreFactories } from './default-api';
 
 // Standalone helper functions
 export { subscribe } from './subscribe-standalone';
@@ -16,11 +23,13 @@ export type {
   EffectCleanup,
   EffectDisposer,
   Unsubscribe,
-  SignalFactory,
   Subscriber,
   Effect,
   Selected,
 } from './types';
+
+// Export factory type and helper
+export type { SignalFactory, FactoriesToAPI } from './api';
 
 // Export Lattice extensions
 export { signalExtension } from './extensions/signal';

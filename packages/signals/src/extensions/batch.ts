@@ -2,7 +2,7 @@
  * Batch extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { batch as batchImpl } from '../api';
+import { batch as batchImpl } from '../default-api';
 
 export const batchExtension: LatticeExtension<
   'batch',

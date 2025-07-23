@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { signal, computed } from './api';
+import { signal, computed } from './default-api';
 import { isSignal, isComputed, isEffect, isReactive } from './type-guards';
 
 describe('Type Guards', () => {

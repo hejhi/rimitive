@@ -2,7 +2,7 @@
 // Provides global-like exports for test compatibility while using scoped implementation
 
 import type { Signal, Computed, Effect } from './types';
-import { computed as createComputed, effect as effectFn, batch as batchFn, signal as createSignal, untrack as untrackFn, activeContext } from './api';
+import { computed as createComputed, effect as effectFn, batch as batchFn, signal as createSignal, untrack as untrackFn, activeContext } from './default-api';
 import { ComputedInterface, DependencyNode, EffectInterface } from './context';
 
 // Create a test instance

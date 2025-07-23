@@ -1,2 +1,2 @@
 // Batch-only export
-export { batch } from './api';
+export { batch } from './default-api';

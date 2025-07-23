@@ -1,31 +1,36 @@
-// Main API that creates all signal functions with shared context
+// Main API that creates signal functions with shared context
+// IMPORTANT: Don't import factories here - that defeats tree-shaking!
 import { createContext } from './context';
-import { createSignalFactory } from './signal';
-import { createComputedFactory, createUntrackFactory } from './computed';
-import { createEffectFactory } from './effect';
-import { createBatchFactory } from './batch';
 
-// Create the default shared context and all functions
-const defaultContext = createContext();
-export const signal = createSignalFactory(defaultContext);
-export const computed = createComputedFactory(defaultContext);
-export const effect = createEffectFactory(defaultContext);
-export const batch = createBatchFactory(defaultContext);
-export const untrack = createUntrackFactory(defaultContext);
+// Type for factory functions that accept a context
+export type SignalFactory<T> = (ctx: ReturnType<typeof createContext>) => T;
 
-// Export the context for testing/debugging
-export { defaultContext as activeContext };
+// Type helper to extract the return types from factories
+export type FactoriesToAPI<T extends Record<string, SignalFactory<unknown>>> = {
+  [K in keyof T]: ReturnType<T[K]>;
+} & { _ctx: ReturnType<typeof createContext> };
 
-// Factory for creating isolated signal APIs
-export function createSignalAPI() {
+// Factory for creating signal APIs with custom primitives
+export function createSignalAPI<T extends Record<string, SignalFactory<unknown>>>(
+  factories: T
+): FactoriesToAPI<T> {
   const ctx = createContext();
+  const api = { _ctx: ctx } as FactoriesToAPI<T>;
   
-  return {
-    signal: createSignalFactory(ctx),
-    computed: createComputedFactory(ctx),
-    effect: createEffectFactory(ctx),
-    batch: createBatchFactory(ctx),
-    untrack: createUntrackFactory(ctx),
-    _ctx: ctx,
-  };
+  // Build API by calling each factory with the context
+  for (const [name, factory] of Object.entries(factories)) {
+    api[name as keyof T] = factory(ctx) as FactoriesToAPI<T>[keyof T];
+  }
+  
+  return api;
 }
+
+// Re-export just the context creator for truly modular usage
+export { createContext };
+
+// Note: For backwards compatibility and convenience, we'll keep a default-api.ts file
+// that provides the lazy-loaded defaults. This file (api.ts) is purely for the
+// tree-shakeable factory pattern.
+
+// Type exports for users who want to create custom primitives
+export type { SignalContext } from './context';
