@@ -25,12 +25,5 @@ export function createSignalAPI<T extends Record<string, SignalFactory<unknown>>
   return api;
 }
 
-// Re-export just the context creator for truly modular usage
-export { createContext };
-
-// Note: For backwards compatibility and convenience, we'll keep a default-api.ts file
-// that provides the lazy-loaded defaults. This file (api.ts) is purely for the
-// tree-shakeable factory pattern.
-
 // Type exports for users who want to create custom primitives
 export type { SignalContext } from './context';
