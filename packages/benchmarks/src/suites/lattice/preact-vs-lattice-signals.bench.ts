@@ -36,14 +36,14 @@ describe('Single Signal Updates', () => {
     }
   });
 
-  bench('Lattice (current) - single signal', () => {
+  bench('Lattice (default global) - single signal', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       latticeCount.value = i;
       void latticeCount.value; // Read
     }
   });
 
-  bench('Lattice (class-optimized) - single signal', () => {
+  bench('Lattice (scoped) - single signal', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       classOptimizedCount.value = i;
       void classOptimizedCount.value; // Read
@@ -74,14 +74,14 @@ describe('Computed Chain (a → b → c)', () => {
     }
   });
 
-  bench('Lattice (current) - computed chain', () => {
+  bench('Lattice (default global) - computed chain', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       latticeA.value = i;
       void latticeC.value; // Force evaluation
     }
   });
 
-  bench('Lattice (class-optimized) - computed chain', () => {
+  bench('Lattice (scoped) - computed chain', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       classOptimizedA.value = i;
       void classOptimizedC.value; // Force evaluation
@@ -127,14 +127,14 @@ describe('Deep Computed Tree', () => {
     }
   });
 
-  bench('Lattice (current) - deep tree', () => {
+  bench('Lattice (default global) - deep tree', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       latticeRoot.value = i + 1; // Avoid divide by zero
       void latticeResult.value;
     }
   });
 
-  bench('Lattice (class-optimized) - deep tree', () => {
+  bench('Lattice (scoped) - deep tree', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       classOptimizedRoot.value = i + 1; // Avoid divide by zero
       void classOptimizedResult.value;
@@ -168,14 +168,14 @@ describe('Diamond Pattern', () => {
     }
   });
 
-  bench('Lattice (current) - diamond', () => {
+  bench('Lattice (default global) - diamond', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       latticeSource.value = i;
       void latticeBottom.value;
     }
   });
 
-  bench('Lattice (class-optimized) - diamond', () => {
+  bench('Lattice (scoped) - diamond', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       classOptimizedSource.value = i;
       void classOptimizedBottom.value;
@@ -213,7 +213,7 @@ describe('Batch Updates', () => {
     }
   });
 
-  bench('Lattice (current) - batch updates', () => {
+  bench('Lattice (default global) - batch updates', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       latticeBatch(() => {
         latticeS1.value = i;
@@ -224,7 +224,7 @@ describe('Batch Updates', () => {
     }
   });
 
-  bench('Lattice (class-optimized) - batch updates', () => {
+  bench('Lattice (scoped) - batch updates', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       classOptimized.batch(() => {
         classOptimizedS1.value = i;
@@ -250,7 +250,7 @@ describe('Large Dependency Graph', () => {
     })
   );
 
-  // Lattice current
+  // Lattice default global
   const latticeSignals = Array.from({ length: 10 }, (_, i) => latticeSignal(i));
   const latticeComputeds = latticeSignals.map((s, i) =>
     latticeComputed(() => {
@@ -263,7 +263,7 @@ describe('Large Dependency Graph', () => {
     })
   );
 
-  // Class-optimized
+  // Scoped
   const classOptimizedSignals = Array.from({ length: 10 }, (_, i) => classOptimized.signal(i));
   const classOptimizedComputeds = classOptimizedSignals.map((s, i) =>
     classOptimized.computed(() => {
@@ -286,7 +286,7 @@ describe('Large Dependency Graph', () => {
     }
   });
 
-  bench('Lattice (current) - large graph', () => {
+  bench('Lattice (default global) - large graph', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       latticeSignals[i % latticeSignals.length]!.value = i;
       // Sample a few computeds
@@ -296,7 +296,7 @@ describe('Large Dependency Graph', () => {
     }
   });
 
-  bench('Lattice (class-optimized) - large graph', () => {
+  bench('Lattice (scoped) - large graph', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       classOptimizedSignals[i % classOptimizedSignals.length]!.value = i;
       // Sample a few computeds
@@ -328,7 +328,7 @@ describe('Rapid Updates Without Reads', () => {
     void preactComp.value;
   });
 
-  bench('Lattice (current) - rapid updates', () => {
+  bench('Lattice (default global) - rapid updates', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       latticeSig.value = i;
     }
@@ -336,7 +336,7 @@ describe('Rapid Updates Without Reads', () => {
     void latticeComp.value;
   });
 
-  bench('Lattice (class-optimized) - rapid updates', () => {
+  bench('Lattice (scoped) - rapid updates', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       classOptimizedSig.value = i;
     }
@@ -371,7 +371,7 @@ describe('Read-heavy Workload', () => {
     }
   });
 
-  bench('Lattice (current) - many reads', () => {
+  bench('Lattice (default global) - many reads', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       void latticeReadSignal.value;
       void latticeReadComputed1.value;
@@ -381,7 +381,7 @@ describe('Read-heavy Workload', () => {
     }
   });
 
-  bench('Lattice (class-optimized) - many reads', () => {
+  bench('Lattice (scoped) - many reads', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       void classOptimizedReadSignal.value;
       void classOptimizedReadComputed1.value;
