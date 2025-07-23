@@ -2,8 +2,8 @@
  * Select extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { select as selectImpl } from '@lattice/signals/select';
-import type { Signal, Computed, Selected } from '@lattice/signals';
+import { select as selectImpl } from '../select';
+import type { Signal, Computed, Selected } from '../types';
 
 // Wrapper that handles Selected types
 function selectWrapper<T, R>(

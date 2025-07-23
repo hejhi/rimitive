@@ -2,8 +2,8 @@
  * Subscribe extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { subscribe as subscribeImpl } from '@lattice/signals/subscribe';
-import type { Signal, Computed, Selected, Unsubscribe } from '@lattice/signals';
+import { subscribe as subscribeImpl } from '../';
+import type { Signal, Computed, Selected, Unsubscribe } from '../types';
 
 export const subscribeExtension: LatticeExtension<
   'subscribe',
