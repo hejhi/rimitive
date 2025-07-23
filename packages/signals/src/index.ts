@@ -57,3 +57,10 @@ export type {
   LatticeContext,
   PartialLatticeContext,
 } from './store-types';
+
+// Export optimized architecture
+export { createSignalAPI } from './optimized-architecture';
+export type { SignalContext } from './optimized-architecture';
+
+// Export concatenated implementation for benchmarking
+export { createSignalContext as createConcatenatedSignals } from './signals-concatenated';
