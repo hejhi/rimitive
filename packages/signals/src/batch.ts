@@ -1,25 +1,24 @@
-// Batch implementation for deferred effect execution
-import { activeContext } from './context';
+// Batch implementation with factory pattern for performance
+import type { SignalContext, EffectInterface } from './context';
 
-// Direct export instead of factory pattern
-export function batch<T>(fn: () => T): T {
-  if (activeContext.batchDepth) return fn();
+export function createBatchFactory(ctx: SignalContext) {
+  return function batch<T>(fn: () => T): T {
+    if (ctx.batchDepth) return fn();
 
-  activeContext.batchDepth++;
-  try {
-    return fn();
-  } finally {
-    if (--activeContext.batchDepth === 0) {
-      // Run batched effects
-      let effect = activeContext.batchedEffects;
-      activeContext.batchedEffects = null;
-
-      while (effect) {
-        const next = effect._nextBatchedEffect;
-        effect._nextBatchedEffect = undefined;
-        effect._run();
-        effect = next || null;
+    ctx.batchDepth++;
+    try {
+      return fn();
+    } finally {
+      if (--ctx.batchDepth === 0) {
+        let effect = ctx.batchedEffects;
+        ctx.batchedEffects = null;
+        while (effect) {
+          const next: EffectInterface | null = effect._nextBatchedEffect || null;
+          effect._nextBatchedEffect = undefined;
+          effect._run();
+          effect = next;
+        }
       }
     }
-  }
+  };
 }

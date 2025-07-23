@@ -2,7 +2,7 @@
  * Computed extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { computed as computedImpl } from '../computed';
+import { computed as computedImpl } from '../api';
 import type { Computed } from '../types';
 
 export const computedExtension: LatticeExtension<

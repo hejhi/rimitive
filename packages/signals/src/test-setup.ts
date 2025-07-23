@@ -2,14 +2,8 @@
 // Provides global-like exports for test compatibility while using scoped implementation
 
 import type { Signal, Computed, Effect } from './types';
-import { computed as createComputed } from './computed';
-import { effect as effectFn } from './effect';
-import { batch as batchFn } from './batch';
-import {
-  signal as createSignal,
-  untrack as untrackFn,
-} from './signal';
-import { activeContext, resetContext } from './context';
+import { computed as createComputed, effect as effectFn, batch as batchFn, signal as createSignal, untrack as untrackFn, activeContext } from './api';
+import { ComputedInterface, DependencyNode, EffectInterface } from './context';
 
 // Create a test instance
 export function createTestInstance() {
@@ -40,11 +34,22 @@ export function createTestInstance() {
 
     // Scope functions - use activeContext
     setCurrentComputed: (computed: Computed | Effect | null) => {
-      activeContext.currentComputed = computed;
+      activeContext.currentComputed = computed as ComputedInterface<unknown> | EffectInterface | null;
     },
     getCurrentComputed: () => activeContext.currentComputed,
     resetGlobalState: () => {
-      resetContext();
+      // Reset context by reinitializing pool and counters
+      activeContext.currentComputed = null;
+      activeContext.version = 0;
+      activeContext.batchDepth = 0;
+      activeContext.batchedEffects = null;
+      activeContext.poolSize = 100;
+      activeContext.allocations = 0;
+      activeContext.poolHits = 0;
+      activeContext.poolMisses = 0;
+      for (let i = 0; i < 100; i++) {
+        activeContext.nodePool[i] = {} as DependencyNode;
+      }
     },
     getGlobalVersion: () => activeContext.version,
   };
@@ -77,5 +82,5 @@ export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 export function resetGlobalState() {
   defaultInstance = createTestInstance();
   // CRITICAL: Also reset the actual context
-  resetContext();
+  defaultInstance.resetGlobalState();
 }

@@ -1,299 +1,279 @@
-// Simplified Computed implementation - bare metal
+// Computed implementation with factory pattern for performance
+import type { SignalContext, ComputedInterface, EffectInterface, DependencyNode } from './context';
+import { RUNNING, DISPOSED, OUTDATED, NOTIFIED, TRACKING, IS_COMPUTED, MAX_POOL_SIZE, removeFromTargets } from './context';
 
-import type { DependencyNode, Effect } from './types';
-import type { Computed as ComputedInterface } from './types';
-import {
-  NOTIFIED,
-  OUTDATED,
-  RUNNING,
-  DISPOSED,
-  TRACKING,
-  IS_COMPUTED,
-} from './types';
-import { activeContext } from './context';
-import { releaseNode, removeFromTargets, acquireNode, linkNode } from './node-operations';
+export function createComputedFactory(ctx: SignalContext) {
+  class Computed<T> implements ComputedInterface<T> {
+    __type = 'computed' as const;
+    _compute: () => T;
+    _value: T | undefined = undefined;
+    _version = 0;
+    _globalVersion = -1;
+    _flags = OUTDATED | IS_COMPUTED;
+    _sources: DependencyNode | undefined = undefined;
+    _targets: DependencyNode | undefined = undefined;
+    _node: DependencyNode | undefined = undefined;
 
-// Direct class syntax - cleaner and more idiomatic
-class Computed<T> implements ComputedInterface<T> {
-  __type = 'computed' as const;
-  _compute: () => T;
-  _value: T | undefined = undefined;
-  _version = 0;
-  _globalVersion = -1;
-  _flags = OUTDATED | IS_COMPUTED;
-  _sources: DependencyNode | undefined = undefined;
-  _targets: DependencyNode | undefined = undefined;
-  _node: DependencyNode | undefined = undefined;
+    constructor(compute: () => T) {
+      this._compute = compute;
+    }
 
-  constructor(fn: () => T) {
-    this._compute = fn;
-  }
+    get value(): T {
+      this._addDependency(ctx.currentComputed);
+      this._refresh();
+      return this._value!;
+    }
 
+    _refresh(): boolean {
+      this._flags &= ~NOTIFIED;
 
-  // Value property - moved to class for benchmarking
-  get value(): T {
-    trackDependency(this, activeContext.currentComputed);
-    this._refresh();
-    return this._value!;
-  }
+      if (this._flags & RUNNING) {
+        throw new Error('Cycle detected');
+      }
 
-  // Simplified refresh - inline everything for performance
-  _refresh(): boolean {
-    this._flags &= ~NOTIFIED;
+      if (this._isUpToDate()) {
+        return true;
+      }
 
-    if (this._flags & RUNNING) throw new Error('Cycle detected');
+      this._flags &= ~OUTDATED;
+      this._flags |= RUNNING;
 
-    if (shouldSkipRefresh(this)) return true;
+      if (this._version > 0 && !this._checkSources()) {
+        this._flags &= ~RUNNING;
+        return true;
+      }
 
-    this._flags &= ~OUTDATED;
-    this._flags |= RUNNING;
+      const prevComputed = ctx.currentComputed;
+      try {
+        this._prepareSourcesTracking();
+        ctx.currentComputed = this;
+        this._updateValue();
+        this._globalVersion = ctx.version;
+      } finally {
+        ctx.currentComputed = prevComputed;
+        this._cleanupSources();
+        this._flags &= ~RUNNING;
+      }
 
-    // Check if we actually need to recompute
-    if (this._version > 0 && !needsToRecompute(this)) {
-      this._flags &= ~RUNNING;
       return true;
     }
 
-    // Recompute needed
-    const prevComputed = activeContext.currentComputed;
-    try {
-      prepareSources(this);
-      activeContext.currentComputed = this;
-      
-      computeNewValue(this);
-      this._globalVersion = activeContext.version;
-    } finally {
-      activeContext.currentComputed = prevComputed;
-      cleanupSources(this);
-      this._flags &= ~RUNNING;
+    _notify(): void {
+      if (!(this._flags & NOTIFIED)) {
+        this._flags |= NOTIFIED | OUTDATED;
+
+        let node = this._targets;
+        while (node) {
+          node.target._notify();
+          node = node.nextTarget;
+        }
+      }
     }
 
-    return true;
-  }
+    dispose(): void {
+      if (!(this._flags & DISPOSED)) {
+        this._flags |= DISPOSED;
+        this._disposeAllSources();
+        this._value = undefined;
+      }
+    }
 
-  // Notify targets
-  _notify(): void {
-    if (this._flags & NOTIFIED) return;
-    this._flags |= NOTIFIED | OUTDATED;
+    peek(): T {
+      this._refresh();
+      return this._value!;
+    }
 
-    let node = this._targets;
-    while (node) {
-      node.target._notify();
-      node = node.nextTarget;
+    _addDependency(target: ComputedInterface | EffectInterface | null): void {
+      if (!target || !(target._flags & RUNNING)) return;
+
+      const version = this._version;
+
+      if (this._tryReuseNode(target, version)) return;
+      if (this._findExistingDependency(target, version)) return;
+
+      this._createNewDependency(target, version);
+    }
+
+    _tryReuseNode(target: ComputedInterface | EffectInterface, version: number): boolean {
+      const node = this._node;
+      if (node !== undefined && node.target === target) {
+        node.version = version;
+        return true;
+      }
+      return false;
+    }
+
+    _findExistingDependency(
+      target: ComputedInterface | EffectInterface,
+      version: number
+    ): boolean {
+      let node = target._sources;
+      while (node) {
+        if (node.source === (this as ComputedInterface<T>)) {
+          node.version = version;
+          return true;
+        }
+        node = node.nextSource;
+      }
+      return false;
+    }
+
+    _createNewDependency(
+      target: ComputedInterface | EffectInterface,
+      version: number
+    ): void {
+      // INLINE acquireNode for performance
+      ctx.allocations++;
+      const newNode =
+        ctx.poolSize > 0
+          ? (ctx.poolHits++, ctx.nodePool[--ctx.poolSize]!)
+          : (ctx.poolMisses++, {} as DependencyNode);
+
+      newNode.source = this;
+      newNode.target = target;
+      newNode.version = version;
+      newNode.nextSource = target._sources;
+      newNode.nextTarget = this._targets;
+      newNode.prevSource = undefined;
+      newNode.prevTarget = undefined;
+
+      if (target._sources) {
+        target._sources.prevSource = newNode;
+      }
+      target._sources = newNode;
+
+      if (this._targets) {
+        this._targets.prevTarget = newNode;
+      } else {
+        this._flags |= TRACKING;
+      }
+      this._targets = newNode;
+
+      this._node = newNode;
+    }
+
+    _isUpToDate(): boolean {
+      return (
+        !(this._flags & OUTDATED) &&
+        this._version > 0 &&
+        this._globalVersion === ctx.version
+      );
+    }
+
+    _checkSources(): boolean {
+      for (let node = this._sources; node !== undefined; node = node.nextSource) {
+        const source = node.source;
+        if (
+          node.version !== source._version ||
+          !source._refresh() ||
+          node.version !== source._version
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    _prepareSourcesTracking(): void {
+      for (let node = this._sources; node !== undefined; node = node.nextSource) {
+        node.version = -1;
+      }
+    }
+
+    _updateValue(): boolean {
+      const newValue = this._compute();
+      const changed = newValue !== this._value || this._version === 0;
+      if (changed) {
+        this._value = newValue;
+        this._version++;
+      }
+      return changed;
+    }
+
+    _cleanupSources(): void {
+      let node = this._sources;
+      let prev: DependencyNode | undefined;
+
+      while (node !== undefined) {
+        const next = node.nextSource;
+
+        if (node.version === -1) {
+          this._removeNode(node, prev);
+          // INLINE releaseNode
+          if (ctx.poolSize < MAX_POOL_SIZE) {
+            node.source = undefined!;
+            node.target = undefined!;
+            node.version = 0;
+            node.nextSource = undefined;
+            node.prevSource = undefined;
+            node.nextTarget = undefined;
+            node.prevTarget = undefined;
+            ctx.nodePool[ctx.poolSize++] = node;
+          }
+        } else {
+          prev = node;
+        }
+
+        node = next;
+      }
+    }
+
+    _removeNode(
+      node: DependencyNode,
+      prev: DependencyNode | undefined
+    ): void {
+      const next = node.nextSource;
+
+      if (prev !== undefined) {
+        prev.nextSource = next;
+      } else {
+        this._sources = next;
+      }
+
+      if (next !== undefined) {
+        next.prevSource = prev;
+      }
+
+      removeFromTargets(node);
+    }
+
+    _disposeAllSources(): void {
+      let node = this._sources;
+      while (node) {
+        const next = node.nextSource;
+        removeFromTargets(node);
+        
+        // Inline releaseNode
+        if (ctx.poolSize < MAX_POOL_SIZE) {
+          node.source = undefined!;
+          node.target = undefined!;
+          node.version = 0;
+          node.nextSource = undefined;
+          node.prevSource = undefined;
+          node.nextTarget = undefined;
+          node.prevTarget = undefined;
+          ctx.nodePool[ctx.poolSize++] = node;
+        }
+        
+        node = next;
+      }
+      this._sources = undefined;
     }
   }
 
-  dispose(): void {
-    if (this._flags & DISPOSED) return;
-
-    this._flags |= DISPOSED;
-    disposeAllSources(this);
-    this._value = undefined;
-  }
-
-  // Peek method - read value without tracking
-  peek(): T {
-    this._refresh();
-    return this._value!;
+  return function computed<T>(compute: () => T): ComputedInterface<T> {
+    return new Computed(compute);
   };
 }
 
-// Helper: Prepare sources for re-evaluation
-function prepareSources<T>(computed: Computed<T>): void {
-  // Simply mark all current sources as potentially unused
-  for (
-    let node = computed._sources;
-    node !== undefined;
-    node = node.nextSource
-  ) {
-    node.version = -1; // Mark as potentially unused
-  }
-}
-
-// Helper: Clean up sources after re-evaluation
-function cleanupSources<T>(computed: Computed<T>): void {
-  let node = computed._sources;
-  let prev: DependencyNode | undefined;
-
-  while (node !== undefined) {
-    const next = node.nextSource;
-
-    if (node.version === -1) {
-      removeNode(node, prev, computed);
-      // prev stays the same since we removed the current node
-    } else {
-      // This node was re-used, keep it
-      prev = node;
+export function createUntrackFactory(ctx: SignalContext) {
+  return function untrack<T>(fn: () => T): T {
+    const prev = ctx.currentComputed;
+    ctx.currentComputed = null;
+    try {
+      return fn();
+    } finally {
+      ctx.currentComputed = prev;
     }
-
-    node = next;
-  }
+  };
 }
-
-// Check if recomputation is needed
-function needsToRecompute<T>(computed: Computed<T>): boolean {
-  // Check dependencies in order of use
-  for (
-    let node = computed._sources;
-    node !== undefined;
-    node = node.nextSource
-  ) {
-    const source = node.source;
-
-    // Three checks as in Preact:
-    // 1. Version already changed (fast path)
-    if (node.version !== source._version) return true;
-
-    // 2. Try to refresh the source (handles nested computeds)
-    if (!source._refresh()) return true;
-
-    // 3. Check if version changed after refresh
-    if (node.version !== source._version) return true;
-  }
-
-  return false;
-}
-
-// Direct export instead of factory pattern
-export function computed<T>(fn: () => T): ComputedInterface<T> {
-  return new Computed(fn);
-}
-
-// Helper: Track dependency relationship between computed and target
-function trackDependency<T>(computed: Computed<T>, target: ComputedInterface<T> | Effect | null): void {
-  if (!target || !(target._flags & RUNNING)) return;
-  
-  const version = computed._version;
-  
-  // Try fast paths first
-  if (tryReuseNode(computed, target, version)) return;
-  if (findExistingDependency(target, computed, version)) return;
-  
-  // Slow path: create new dependency
-  createNewDependency(computed, target, version);
-}
-
-// Helper: Try to reuse cached node for the same target
-function tryReuseNode<T>(computed: Computed<T>, target: ComputedInterface<T> | Effect, version: number): boolean {
-  const node = computed._node;
-  if (node !== undefined && node.target === target) {
-    node.version = version;
-    return true;
-  }
-  return false;
-}
-
-// Helper: Search for existing dependency in target's sources
-function findExistingDependency<T>(target: ComputedInterface<T> | Effect, computed: Computed<T>, version: number): boolean {
-  let node = target._sources;
-  while (node) {
-    if (node.source === computed) {
-      node.version = version;
-      return true;
-    }
-    node = node.nextSource;
-  }
-  return false;
-}
-
-// Helper: Create and link a new dependency node
-function createNewDependency<T>(computed: Computed<T>, target: ComputedInterface<T> | Effect, version: number): void {
-  const newNode = acquireNode();
-  
-  // Initialize node
-  newNode.source = computed;
-  newNode.target = target;
-  newNode.version = version;
-  newNode.nextSource = target._sources;
-  newNode.nextTarget = computed._targets;
-  newNode.prevSource = undefined;
-  newNode.prevTarget = undefined;
-  
-  // Link into lists
-  linkNode(newNode, computed, target);
-  
-  // Cache for reuse
-  computed._node = newNode;
-}
-
-// Helper: Allocate a node from the pool or create new
-
-
-// Helper: Check if refresh can be skipped
-function shouldSkipRefresh<T>(computed: Computed<T>): boolean {
-  // CRITICAL OPTIMIZATION: Check global version FIRST before any other work
-  // This is the most important optimization for diamond patterns
-  // Only use global version optimization if we're not outdated
-  if (
-    !(computed._flags & OUTDATED) &&
-    computed._version > 0 &&
-    computed._globalVersion === activeContext.version
-  ) {
-    return true;
-  }
-  
-  // Fast path: tracking and not outdated
-  if ((computed._flags & (OUTDATED | TRACKING)) === TRACKING) {
-    return true;
-  }
-  
-  return false;
-}
-
-// Helper: Compute new value and update if changed
-function computeNewValue<T>(computed: Computed<T>): boolean {
-  const value = computed._compute();
-  if (computed._value !== value || computed._version === 0) {
-    computed._value = value;
-    computed._version++;
-    return true; // value changed
-  }
-  return false; // value unchanged
-}
-
-// Helper: Remove a dependency node from all linked lists
-function removeNode<T>(node: DependencyNode, prev: DependencyNode | undefined, computed: ComputedInterface<T>): void {
-  const next = node.nextSource;
-  
-  // Remove from sources list
-  if (prev !== undefined) {
-    prev.nextSource = next;
-  } else {
-    computed._sources = next;
-  }
-  if (next !== undefined) {
-    next.prevSource = prev;
-  }
-  
-  // Remove from source's targets
-  removeFromTargets(node);
-  
-  // Return node to pool
-  releaseNode(node);
-}
-
-// Helper: Remove node from its source's target list
-
-// Helper: Dispose all source connections and release nodes
-function disposeAllSources<T>(computed: Computed<T>): void {
-  let node = computed._sources;
-  const nodesToRelease: DependencyNode[] = [];
-  
-  while (node) {
-    const next = node.nextSource;
-    removeFromTargets(node);
-    nodesToRelease.push(node);
-    node = next;
-  }
-  
-  // Batch release for better performance
-  for (const nodeToRelease of nodesToRelease) {
-    releaseNode(nodeToRelease);
-  }
-  
-  computed._sources = undefined;
-}
-
-// Export the Computed constructor for prototype extensions
-export { Computed };
-

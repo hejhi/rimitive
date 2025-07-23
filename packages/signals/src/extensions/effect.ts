@@ -2,7 +2,7 @@
  * Effect extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { effect as effectImpl } from '../effect';
+import { effect as effectImpl } from '../api';
 import type { EffectDisposer } from '../types';
 
 export const effectExtension: LatticeExtension<

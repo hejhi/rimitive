@@ -1,8 +1,5 @@
 // Full-featured signal package with all utilities
-export { signal } from './signal';
-export { computed } from './computed';
-export { effect } from './effect';
-export { batch } from './batch';
+export { signal, computed, effect, batch, untrack, createSignalAPI } from './api';
 
 // Standalone helper functions
 export { subscribe } from './subscribe-standalone';
@@ -57,10 +54,3 @@ export type {
   LatticeContext,
   PartialLatticeContext,
 } from './store-types';
-
-// Export optimized architecture
-export { createSignalAPI } from './optimized-architecture';
-export type { SignalContext } from './optimized-architecture';
-
-// Export concatenated implementation for benchmarking
-export { createSignalContext as createConcatenatedSignals } from './signals-concatenated';

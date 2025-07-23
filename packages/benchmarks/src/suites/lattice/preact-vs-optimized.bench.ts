@@ -243,9 +243,9 @@ describe('Large Dependency Graph', () => {
     preactComputed(() => {
       let sum = s.value;
       // Each computed depends on 3 signals
-      if (i > 0) sum += preactSignals[i - 1].value;
-      if (i < preactSignals.length - 1) sum += preactSignals[i + 1].value;
-      if (i > 1) sum += preactSignals[i - 2].value;
+      if (i > 0) sum += preactSignals[i - 1]!.value;
+      if (i < preactSignals.length - 1) sum += preactSignals[i + 1]!.value;
+      if (i > 1) sum += preactSignals[i - 2]!.value;
       return sum;
     })
   );
@@ -256,9 +256,9 @@ describe('Large Dependency Graph', () => {
     latticeComputed(() => {
       let sum = s.value;
       // Each computed depends on 3 signals
-      if (i > 0) sum += latticeSignals[i - 1].value;
-      if (i < latticeSignals.length - 1) sum += latticeSignals[i + 1].value;
-      if (i > 1) sum += latticeSignals[i - 2].value;
+      if (i > 0) sum += latticeSignals[i - 1]!.value;
+      if (i < latticeSignals.length - 1) sum += latticeSignals[i + 1]!.value;
+      if (i > 1) sum += latticeSignals[i - 2]!.value;
       return sum;
     })
   );
@@ -269,40 +269,40 @@ describe('Large Dependency Graph', () => {
     classOptimized.computed(() => {
       let sum = s.value;
       // Each computed depends on 3 signals
-      if (i > 0) sum += classOptimizedSignals[i - 1].value;
-      if (i < classOptimizedSignals.length - 1) sum += classOptimizedSignals[i + 1].value;
-      if (i > 1) sum += classOptimizedSignals[i - 2].value;
+      if (i > 0) sum += classOptimizedSignals[i - 1]!.value;
+      if (i < classOptimizedSignals.length - 1) sum += classOptimizedSignals[i + 1]!.value;
+      if (i > 1) sum += classOptimizedSignals[i - 2]!.value;
       return sum;
     })
   );
 
   bench('Preact - large graph', () => {
     for (let i = 0; i < ITERATIONS; i++) {
-      preactSignals[i % preactSignals.length].value = i;
+      preactSignals[i % preactSignals.length]!.value = i;
       // Sample a few computeds
-      void preactComputeds[0].value;
-      void preactComputeds[5].value;
-      void preactComputeds[9].value;
+      void preactComputeds[0]!.value;
+      void preactComputeds[5]!.value;
+      void preactComputeds[9]!.value;
     }
   });
 
   bench('Lattice (current) - large graph', () => {
     for (let i = 0; i < ITERATIONS; i++) {
-      latticeSignals[i % latticeSignals.length].value = i;
+      latticeSignals[i % latticeSignals.length]!.value = i;
       // Sample a few computeds
-      void latticeComputeds[0].value;
-      void latticeComputeds[5].value;
-      void latticeComputeds[9].value;
+      void latticeComputeds[0]!.value;
+      void latticeComputeds[5]!.value;
+      void latticeComputeds[9]!.value;
     }
   });
 
   bench('Lattice (class-optimized) - large graph', () => {
     for (let i = 0; i < ITERATIONS; i++) {
-      classOptimizedSignals[i % classOptimizedSignals.length].value = i;
+      classOptimizedSignals[i % classOptimizedSignals.length]!.value = i;
       // Sample a few computeds
-      void classOptimizedComputeds[0].value;
-      void classOptimizedComputeds[5].value;
-      void classOptimizedComputeds[9].value;
+      void classOptimizedComputeds[0]!.value;
+      void classOptimizedComputeds[5]!.value;
+      void classOptimizedComputeds[9]!.value;
     }
   });
 });

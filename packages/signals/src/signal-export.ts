@@ -1,3 +1,3 @@
 // Signal-only export
-export { signal } from './signal';
+export { signal } from './api';
 export type { Signal } from './types';

@@ -2,7 +2,7 @@
  * Signal extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { signal as signalImpl } from '../signal';
+import { signal as signalImpl } from '../api';
 import type { Signal } from '../types';
 
 export const signalExtension: LatticeExtension<
