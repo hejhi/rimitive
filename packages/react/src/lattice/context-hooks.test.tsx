@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { act } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useLatticeContext } from './context-hooks';
-import { renderHookWithLattice } from '../testing';
+import { coreExtensions } from '@lattice/signals';
 
 describe('Lattice Context Hooks', () => {
   describe('useLatticeContext', () => {
     it('should create and manage context lifecycle', () => {
-      const { result, unmount } = renderHookWithLattice(() =>
-        useLatticeContext()
+      const { result, unmount } = renderHook(() =>
+        useLatticeContext(...coreExtensions)
       );
 
       // Context should have all methods
@@ -35,8 +35,8 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should only create context once per component instance', () => {
-      const { result, rerender } = renderHookWithLattice(() =>
-        useLatticeContext()
+      const { result, rerender } = renderHook(() =>
+        useLatticeContext(...coreExtensions)
       );
 
       const firstContext = result.current;
@@ -49,8 +49,8 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should allow signal creation and updates', () => {
-      const { result } = renderHookWithLattice(() =>
-        useLatticeContext()
+      const { result } = renderHook(() =>
+        useLatticeContext(...coreExtensions)
       );
 
       const count = result.current.signal(0);
@@ -68,8 +68,8 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should support batch updates', () => {
-      const { result } = renderHookWithLattice(() =>
-        useLatticeContext()
+      const { result } = renderHook(() =>
+        useLatticeContext(...coreExtensions)
       );
 
       const a = result.current.signal(1);
@@ -94,6 +94,38 @@ describe('Lattice Context Hooks', () => {
       // Should only compute once due to batching
       expect(computeCount).toBe(2);
       expect(sum.value).toBe(30);
+    });
+
+    it('should work with custom extensions', () => {
+      // Create a custom extension
+      const counterExtension = {
+        name: 'counter' as const,
+        method: (() => {
+          let count = 0;
+          return {
+            increment: () => ++count,
+            decrement: () => --count,
+            get: () => count,
+          };
+        })(),
+      };
+
+      const { result } = renderHook(() =>
+        useLatticeContext(counterExtension)
+      );
+
+      // Should have the custom extension method
+      expect(typeof result.current.counter).toBe('object');
+      expect(typeof result.current.counter.increment).toBe('function');
+      expect(typeof result.current.dispose).toBe('function');
+
+      // Test custom functionality
+      expect(result.current.counter.get()).toBe(0);
+      act(() => {
+        result.current.counter.increment();
+        result.current.counter.increment();
+      });
+      expect(result.current.counter.get()).toBe(2);
     });
   });
 });

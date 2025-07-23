@@ -81,6 +81,47 @@ function TodoApp() {
 }
 ```
 
+### `useLatticeContext`
+Create a Lattice context with custom extensions that is automatically disposed on unmount.
+
+```tsx
+import { signalExtension, computedExtension } from '@lattice/signals';
+
+function App() {
+  // Create context with specific extensions
+  const ctx = useLatticeContext(signalExtension, computedExtension);
+  
+  const count = useRef(ctx.signal(0));
+  const doubled = useRef(ctx.computed(() => count.current.value * 2));
+  
+  return <div>Count: {useSubscribe(count.current)}</div>;
+}
+
+// Or use all core extensions
+import { coreExtensions } from '@lattice/signals';
+
+function TodoApp() {
+  const ctx = useLatticeContext(...coreExtensions);
+  // Now you have signal, computed, effect, batch, select, subscribe
+}
+
+// Or create non-reactive extensions
+const loggerExtension = {
+  name: 'logger' as const,
+  method: {
+    log: (msg: string) => console.log(`[${new Date().toISOString()}] ${msg}`),
+    error: (msg: string) => console.error(`[${new Date().toISOString()}] ${msg}`)
+  }
+};
+
+function AppWithLogging() {
+  const ctx = useLatticeContext(loggerExtension);
+  ctx.logger.log('Component mounted');
+  
+  return <div>...</div>;
+}
+```
+
 ## Patterns
 
 ### Sharing Stores

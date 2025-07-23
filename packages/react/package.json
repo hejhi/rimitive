@@ -20,10 +20,6 @@
     "./lattice": {
       "import": "./dist/lattice/index.js",
       "types": "./dist/lattice/index.d.ts"
-    },
-    "./testing": {
-      "import": "./dist/testing/index.js",
-      "types": "./dist/testing/index.d.ts"
     }
   },
   "files": [

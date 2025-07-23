@@ -2,7 +2,7 @@
 
 // Export core extension system
 export { createContext } from './extension';
-export type { LatticeExtension, ExtensionContext, InstrumentationContext, CreateContextOptions } from './extension';
+export type { LatticeExtension, ExtensionContext, InstrumentationContext, CreateContextOptions, ExtensionsToContext } from './extension';
 
 // Export instrumentation system
 export { withInstrumentation } from './instrumentation';

@@ -1,43 +1,56 @@
 import { useEffect, useRef } from 'react';
-import { coreExtensions } from '@lattice/signals';
-import type { LatticeContext } from '@lattice/signals';
 import { createContext } from '@lattice/lattice';
+import type { LatticeExtension, ExtensionsToContext } from '@lattice/lattice';
 
 /**
- * Create a Lattice context that is scoped to the component lifecycle.
+ * Create a Lattice context with custom extensions that is scoped to the component lifecycle.
  * The context will be automatically disposed when the component unmounts.
+ *
+ * @param extensions - The Lattice extensions to include in the context
+ * @returns A context with methods from all provided extensions
  *
  * @example
  * ```tsx
- * function TodoApp() {
- *   const context = useLatticeContext();
+ * import { signalExtension, computedExtension } from '@lattice/signals';
+ * 
+ * function App() {
+ *   // Create a context with specific extensions
+ *   const context = useLatticeContext(signalExtension, computedExtension);
  *   
- *   // Create signals directly
+ *   const count = useRef(context.signal(0));
+ *   const doubled = useRef(context.computed(() => count.current.value * 2));
+ *   
+ *   return <div>...</div>;
+ * }
+ * ```
+ * 
+ * @example
+ * ```tsx
+ * // For convenience with signals, you can use coreExtensions
+ * import { coreExtensions } from '@lattice/signals';
+ * 
+ * function TodoApp() {
+ *   const context = useLatticeContext(...coreExtensions);
+ *   
  *   const todos = useRef(context.signal([]));
  *   const filter = useRef(context.signal('all'));
  *
- *   // Use standard React Context to share
  *   return (
  *     <AppContext.Provider value={{ todos: todos.current, filter: filter.current }}>
  *       <TodoList />
  *     </AppContext.Provider>
  *   );
  * }
- * 
- * // In child components
- * function TodoList() {
- *   const { todos } = useContext(AppContext);
- *   const todoList = useSubscribe(todos);
- *   // ...
- * }
  * ```
  */
-export function useLatticeContext(): LatticeContext {
+export function useLatticeContext<E extends readonly LatticeExtension<string, unknown>[]>(
+  ...extensions: E
+): ExtensionsToContext<E> {
   // Create context only once, using ref to ensure stability
-  const contextRef = useRef<LatticeContext | null>(null);
+  const contextRef = useRef<ExtensionsToContext<E> | null>(null);
   
   if (!contextRef.current) {
-    contextRef.current = createContext(...coreExtensions);
+    contextRef.current = createContext(...extensions);
   }
   
   const context = contextRef.current;
