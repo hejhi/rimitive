@@ -1,6 +1,23 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
+import * as esbuild from 'esbuild';
+import type { Plugin } from 'vite';
+
+const minifyBundle = (): Plugin => ({
+  name: 'minify-bundle',
+  async generateBundle(_, bundle) {
+    for (const asset of Object.values(bundle)) {
+      if (asset.type === 'chunk') {
+        const result = await esbuild.transform(asset.code, {
+          minify: true,
+          target: 'es2022',
+        });
+        asset.code = result.code;
+      }
+    }
+  },
+});
 
 export default defineConfig({
   plugins: [
@@ -14,6 +31,7 @@ export default defineConfig({
         'src/**/test-*.ts',
       ],
     }),
+    minifyBundle(),
   ],
   esbuild: {
     minifyIdentifiers: true,
@@ -36,9 +54,7 @@ export default defineConfig({
     rollupOptions: {
       external: ['vitest', /^vitest/, 'node:test'],
       output: {
-        preserveModules: false,
         entryFileNames: '[name].js',
-        manualChunks: undefined,
       },
     },
     sourcemap: false,
