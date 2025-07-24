@@ -10,7 +10,7 @@ export { subscribe } from './subscribe-standalone';
 export { select } from './select-standalone';
 
 // Re-export type guards
-export { isSignal, isComputed, isEffect, isReactive, isEffectDisposer, getEffectFromDisposer } from './type-guards';
+export { isSignal, isComputed, isEffect, isReactive, isSubscribable, isEffectDisposer, getEffectFromDisposer } from './type-guards';
 
 // Export types
 export type {
@@ -23,6 +23,7 @@ export type {
   Subscriber,
   Effect,
   Selected,
+  Subscribable,
 } from './types';
 
 // Export factory type and helper

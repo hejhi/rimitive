@@ -58,3 +58,14 @@ export function getEffectFromDisposer(disposer: import('./types').EffectDisposer
 export function isReactive(value: unknown): value is Signal<unknown> | Computed<unknown> | Effect {
   return isSignal(value) || isComputed(value) || isEffect(value);
 }
+
+/**
+ * Check if a value is subscribable (has value property and __type)
+ */
+export function isSubscribable(value: unknown): value is import('./types').Subscribable<unknown> {
+  return value != null && 
+    typeof value === 'object' && 
+    'value' in value &&
+    '__type' in value &&
+    typeof (value as any).__type === 'string';
+}

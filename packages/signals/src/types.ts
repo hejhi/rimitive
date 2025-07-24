@@ -57,6 +57,12 @@ export interface Effect {
   subscribe?: (listener: () => void) => () => void;
 }
 
+// Minimal interface for values that can be subscribed to
+export type Subscribable<T = unknown> = {
+  value: T;
+  readonly __type: string;
+};
+
 // State flags
 export const NOTIFIED = 1 << 0;
 export const OUTDATED = 1 << 1;
