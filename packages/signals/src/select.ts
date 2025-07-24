@@ -1,3 +1,0 @@
-// Re-export the standalone select function for the package export
-export { select } from './select-standalone';
-export type { Selected } from './types';

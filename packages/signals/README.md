@@ -27,7 +27,7 @@ npm install @lattice/signals
 - **SSR-ready** - Full server-side rendering support with request isolation
 - **Minimal overhead** - Direct property access, no getters/setters
 - **Lazy evaluation** - Computed values only run when accessed
-- **Fine-grained updates** - Subscribe to specific nested properties with `select()`
+- **Fine-grained updates** - Transform and subscribe to derived values
 - **TypeScript-first** - Full type safety with inference
 
 ## Core Concepts
@@ -98,15 +98,40 @@ const todos = signal([
 const unsub = todos.subscribe(() => {
   console.log('Todos changed!');
 });
-
-// Fine-grained subscription with select
-const firstTodo = todos.select((todos) => todos[0]);
-firstTodo.subscribe(() => {
-  console.log('First todo changed!');
-});
 ```
 
 ## Patterns
+
+### Transforming Values (Select Pattern)
+
+Use computed values to create derived subscribables with transformations:
+
+```typescript
+const state = signal({ 
+  user: { name: 'Alice', age: 30 },
+  preferences: { theme: 'dark' }
+});
+
+// Create a derived value that only updates when name changes
+const userName = computed(() => state.value.user.name);
+
+// Subscribe to just the name changes
+subscribe(userName, () => {
+  console.log('User name changed to:', userName.value);
+});
+
+// This triggers the subscription
+state.value = { ...state.value, user: { name: 'Bob', age: 30 } };
+
+// This doesn't trigger it (name didn't change)
+state.value = { ...state.value, user: { name: 'Bob', age: 31 } };
+
+// Compose transformations
+const upperName = computed(() => userName.value.toUpperCase());
+const nameLength = computed(() => userName.value.length);
+```
+
+This pattern replaces the old `select()` method with a more composable approach using `computed()`.
 
 ### Nested Updates
 
@@ -221,7 +246,6 @@ Batches signal updates. Effects only run once after all updates complete.
 - `signal.value` - Get or set the current value
 - `signal.peek()` - Read value without tracking dependencies
 - `signal.subscribe(listener)` - Listen for changes
-- `signal.select(selector)` - Create a derived subscription
 - `signal.set(key, value)` - Update object property or array element
 - `signal.patch(key, partial)` - Partially update nested objects
 

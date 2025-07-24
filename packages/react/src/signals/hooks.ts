@@ -4,8 +4,8 @@ import {
   useSyncExternalStore,
   useCallback,
 } from 'react';
-import { signal, subscribe, select } from '@lattice/signals';
-import type { Signal, Selected } from '@lattice/signals';
+import { signal, subscribe, computed } from '@lattice/signals';
+import type { Signal, Computed } from '@lattice/signals';
 import type { SignalLike, SignalSetter } from './types';
 
 /**
@@ -103,15 +103,15 @@ export function useSelector<T, R>(
   signal: Signal<T>,
   selector: (value: T) => R
 ): R {
-  // Store selector in ref to detect changes
+  // Create a computed value that applies the selector
+  const computedRef = useRef<Computed<R> | null>(null);
   const selectorRef = useRef(selector);
-  const selectedRef = useRef<Selected<R> | null>(null);
   
-  // Only recreate selected if signal or selector changes
-  if (selectedRef.current === null || selectorRef.current !== selector) {
+  // Only recreate computed if signal or selector changes
+  if (computedRef.current === null || selectorRef.current !== selector) {
     selectorRef.current = selector;
-    selectedRef.current = select(signal, selector);
+    computedRef.current = computed(() => selector(signal.value));
   }
 
-  return useSubscribe(selectedRef.current as SignalLike<R>);
+  return useSubscribe(computedRef.current as SignalLike<R>);
 }

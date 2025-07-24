@@ -6,8 +6,7 @@ export { createBatchFactory } from './batch';
 export { createSubscribeFactory } from './subscribe';
 export { createSignalAPI } from './api';
 
-// Standalone helper functions  
-export { select } from './select-standalone';
+// Standalone helper functions
 
 // Re-export type guards
 export { isSignal, isComputed, isEffect, isReactive, isSubscribable, isEffectDisposer, getEffectFromDisposer } from './type-guards';
@@ -22,7 +21,6 @@ export type {
   Unsubscribe,
   Subscriber,
   Effect,
-  Selected,
   Subscribable,
 } from './types';
 
@@ -60,7 +58,6 @@ export { signalExtension } from './extensions/signal';
 export { computedExtension } from './extensions/computed';
 export { effectExtension } from './extensions/effect';
 export { batchExtension } from './extensions/batch';
-export { selectExtension } from './extensions/select';
 export { subscribeExtension } from './extensions/subscribe';
 
 // Export core extensions bundle for convenience
@@ -68,7 +65,6 @@ import { signalExtension } from './extensions/signal';
 import { computedExtension } from './extensions/computed';
 import { effectExtension } from './extensions/effect';
 import { batchExtension } from './extensions/batch';
-import { selectExtension } from './extensions/select';
 import { subscribeExtension } from './extensions/subscribe';
 
 export const coreExtensions = [
@@ -76,7 +72,6 @@ export const coreExtensions = [
   computedExtension,
   effectExtension,
   batchExtension,
-  selectExtension,
   subscribeExtension,
 ] as const;
 

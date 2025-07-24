@@ -33,10 +33,6 @@
       "import": "./dist/subscribe.js",
       "types": "./dist/subscribe.d.ts"
     },
-    "./select": {
-      "import": "./dist/select.js",
-      "types": "./dist/select.d.ts"
-    },
     "./type-guards": {
       "import": "./dist/type-guards.js",
       "types": "./dist/type-guards.d.ts"

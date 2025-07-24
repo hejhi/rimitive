@@ -1,7 +1,7 @@
 // Subscribe implementation with factory pattern for performance
 import type { SignalContext } from './context';
 import { DISPOSED, NOTIFIED, MAX_POOL_SIZE, removeFromTargets } from './context';
-import { DependencyNode, Unsubscribe, Selected, Signal, Computed } from './types';
+import { DependencyNode, Unsubscribe, Signal, Computed } from './types';
 
 interface SubscribeNode<T> {
   _source: Signal<T> | Computed<T>;
@@ -137,15 +137,10 @@ export function createSubscribeFactory(ctx: SignalContext) {
   }
 
   return function subscribe<T>(
-    source: Signal<T> | Computed<T> | Selected<T>,
+    source: Signal<T> | Computed<T>,
     callback: (value: T) => void,
     options?: { skipEqualityCheck?: boolean }
   ): Unsubscribe {
-    // Handle Selected values that have their own _subscribe method
-    if ('_subscribe' in source && typeof source._subscribe === 'function') {
-      // For Selected values, we need to adapt the callback
-      return source._subscribe(() => callback(source.value));
-    }
     
     const sub = new Subscribe(source as Signal<T> | Computed<T>, callback);
     

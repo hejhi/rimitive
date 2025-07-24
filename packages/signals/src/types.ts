@@ -77,12 +77,6 @@ export type EffectCleanup = void | (() => void);
 export type Unsubscribe = () => void;
 export type Subscriber = () => void;
 
-// Selected value interface for fine-grained reactivity
-export interface Selected<T> {
-  readonly value: T;
-  select<R>(selector: (value: T) => R): Selected<R>;
-  _subscribe(listener: () => void): () => void; // Internal method for subscribe function
-}
 
 // Dispose function with attached effect instance
 export interface EffectDisposer {
