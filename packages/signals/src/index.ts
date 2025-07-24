@@ -3,10 +3,10 @@ export { createSignalFactory } from './signal';
 export { createComputedFactory, createUntrackFactory } from './computed';
 export { createEffectFactory } from './effect';
 export { createBatchFactory } from './batch';
+export { createSubscribeFactory } from './subscribe';
 export { createSignalAPI } from './api';
 
-// Standalone helper functions
-export { subscribe } from './subscribe-standalone';
+// Standalone helper functions  
 export { select } from './select-standalone';
 
 // Re-export type guards
@@ -35,6 +35,7 @@ import { createSignalFactory } from './signal';
 import { createComputedFactory, createUntrackFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
+import { createSubscribeFactory } from './subscribe';
 import { createSignalAPI } from './api';
 
 const defaultAPI = createSignalAPI({
@@ -43,6 +44,7 @@ const defaultAPI = createSignalAPI({
   effect: createEffectFactory,
   batch: createBatchFactory,
   untrack: createUntrackFactory,
+  subscribe: createSubscribeFactory,
 });
 
 // Export convenience functions
@@ -51,6 +53,7 @@ export const computed = defaultAPI.computed;
 export const effect = defaultAPI.effect;
 export const batch = defaultAPI.batch;
 export const untrack = defaultAPI.untrack;
+export const subscribe = defaultAPI.subscribe;
 
 // Export Lattice extensions
 export { signalExtension } from './extensions/signal';

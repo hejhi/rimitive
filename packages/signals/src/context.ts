@@ -15,6 +15,7 @@ export interface SignalContext {
   version: number;
   batchDepth: number;
   batchedEffects: Effect | null;
+  subscribeBatch?: Set<any>;
   nodePool: DependencyNode[];
   poolSize: number;
   allocations: number;
