@@ -75,10 +75,10 @@ export const coreExtensions = [
   subscribeExtension,
 ] as const;
 
-// Export store-specific types
+// Export Lattice integration types
 export type {
   SignalState,
   SetState,
   LatticeContext,
   PartialLatticeContext,
-} from './store-types';
+} from './lattice-types';

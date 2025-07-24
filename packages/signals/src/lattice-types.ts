@@ -1,5 +1,5 @@
 /**
- * @fileoverview Store-specific types for Lattice integration
+ * @fileoverview Types for Lattice framework integration and context management
  */
 
 import type {
