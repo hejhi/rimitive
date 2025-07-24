@@ -1,13 +1,12 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { Signal, Computed, Effect } from './types';
+import type { Signal, Computed, Effect, DependencyNode } from './types';
 import { createSignalAPI } from './api';
 import { createSignalFactory } from './signal';
 import { createComputedFactory, createUntrackFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
-import { ComputedInterface, DependencyNode, EffectInterface } from './context';
 
 // Create a test instance
 export function createTestInstance() {
@@ -49,7 +48,7 @@ export function createTestInstance() {
 
     // Scope functions - use ctx
     setCurrentComputed: (computed: Computed | Effect | null) => {
-      ctx.currentComputed = computed as ComputedInterface<unknown> | EffectInterface | null;
+      ctx.currentComputed = computed;
     },
     getCurrentComputed: () => ctx.currentComputed,
     resetGlobalState: () => {

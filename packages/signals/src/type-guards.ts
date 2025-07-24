@@ -3,7 +3,7 @@
  * Uses the __type property for fast, reliable type checking
  */
 
-import type { Signal, Computed, Effect } from './types';
+import type { Signal, Computed, Effect, Subscribable } from './types';
 
 /**
  * Check if a value is a Signal
@@ -62,10 +62,10 @@ export function isReactive(value: unknown): value is Signal<unknown> | Computed<
 /**
  * Check if a value is subscribable (has value property and __type)
  */
-export function isSubscribable(value: unknown): value is import('./types').Subscribable<unknown> {
+export function isSubscribable(value: unknown): value is Subscribable {
   return value != null && 
     typeof value === 'object' && 
     'value' in value &&
     '__type' in value &&
-    typeof (value as any).__type === 'string';
+    typeof value.__type === 'string';
 }

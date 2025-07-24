@@ -1,5 +1,6 @@
 // Batch implementation with factory pattern for performance
-import type { SignalContext, EffectInterface } from './context';
+import type { SignalContext } from './context';
+import { Effect } from './types';
 
 export function createBatchFactory(ctx: SignalContext) {
   return function batch<T>(fn: () => T): T {
@@ -13,7 +14,7 @@ export function createBatchFactory(ctx: SignalContext) {
         let effect = ctx.batchedEffects;
         ctx.batchedEffects = null;
         while (effect) {
-          const next: EffectInterface | null = effect._nextBatchedEffect || null;
+          const next: Effect | null = effect._nextBatchedEffect || null;
           effect._nextBatchedEffect = undefined;
           effect._run();
           effect = next;

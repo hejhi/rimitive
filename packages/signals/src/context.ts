@@ -1,6 +1,8 @@
 // Context and shared types for signals implementation
 // This module only exports types and factory functions, no global state
 
+import { Computed, DependencyNode, Effect } from "./types";
+
 export const RUNNING = 1 << 2;
 export const DISPOSED = 1 << 3;
 export const OUTDATED = 1 << 1;
@@ -9,71 +11,15 @@ export const TRACKING = 1 << 4;
 export const IS_COMPUTED = 1 << 5;
 
 export interface SignalContext {
-  currentComputed: ComputedInterface | EffectInterface | null;
+  currentComputed: Computed | Effect | null;
   version: number;
   batchDepth: number;
-  batchedEffects: EffectInterface | null;
+  batchedEffects: Effect | null;
   nodePool: DependencyNode[];
   poolSize: number;
   allocations: number;
   poolHits: number;
   poolMisses: number;
-}
-
-export interface DependencyNode {
-  source: SignalInterface | ComputedInterface;
-  target: ComputedInterface | EffectInterface;
-  version: number;
-  nextSource: DependencyNode | undefined;
-  prevSource: DependencyNode | undefined;
-  nextTarget: DependencyNode | undefined;
-  prevTarget: DependencyNode | undefined;
-}
-
-export interface SignalInterface<T = unknown> {
-  readonly __type: 'signal';
-  value: T;
-  _value: T;
-  _version: number;
-  _targets: DependencyNode | undefined;
-  _node: DependencyNode | undefined;
-  _refresh(): boolean;
-  set(key: unknown, value: unknown): void;
-  patch(key: unknown, partial: unknown): void;
-  peek(): T;
-}
-
-export interface ComputedInterface<T = unknown> {
-  readonly __type: 'computed';
-  readonly value: T;
-  _value: T | undefined;
-  _version: number;
-  _globalVersion: number;
-  _flags: number;
-  _sources: DependencyNode | undefined;
-  _targets: DependencyNode | undefined;
-  _node: DependencyNode | undefined;
-  _compute: () => T;
-  _refresh(): boolean;
-  _notify(): void;
-  dispose(): void;
-  peek(): T;
-}
-
-export interface EffectInterface {
-  readonly __type: 'effect';
-  _flags: number;
-  _sources: DependencyNode | undefined;
-  _nextBatchedEffect: EffectInterface | undefined;
-  _fn: () => void;
-  _notify(): void;
-  _run(): void;
-  dispose(): void;
-}
-
-export interface EffectDisposerInterface {
-  (): void;
-  __effect?: EffectInterface;
 }
 
 // Constants
@@ -119,9 +65,3 @@ export function removeFromTargets(node: DependencyNode): void {
     nextTarget.prevTarget = prevTarget;
   }
 }
-
-// Export public types to match types.ts
-export type Signal<T = unknown> = SignalInterface<T>;
-export type Computed<T = unknown> = ComputedInterface<T>;
-export type Effect = EffectInterface;
-export type EffectDisposer = EffectDisposerInterface;

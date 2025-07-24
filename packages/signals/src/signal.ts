@@ -1,6 +1,7 @@
 // Signal implementation with factory pattern for performance
-import type { SignalContext, SignalInterface, DependencyNode } from './context';
+import type { SignalContext } from './context';
 import { RUNNING } from './context';
+import { Signal as SignalInterface, DependencyNode } from './types'
 
 export function createSignalFactory(ctx: SignalContext) {
   class Signal<T> implements SignalInterface<T> {

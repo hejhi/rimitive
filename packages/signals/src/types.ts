@@ -11,7 +11,7 @@ export interface DependencyNode {
   rollbackNode?: DependencyNode;
 }
 
-export interface Signal<T = unknown> {
+export interface Signal<T = unknown> extends Subscribable {
   value: T;
   peek(): T;
   __type: 'signal';
@@ -28,7 +28,7 @@ export interface Signal<T = unknown> {
   ): void;
 }
 
-export interface Computed<T = unknown> {
+export interface Computed<T = unknown> extends Subscribable {
   readonly value: T;
   peek: () => T;
   __type: 'computed';

@@ -1,6 +1,7 @@
 // Effect implementation with factory pattern for performance
-import type { SignalContext, EffectInterface, EffectDisposerInterface, DependencyNode } from './context';
+import type { SignalContext } from './context';
 import { RUNNING, DISPOSED, OUTDATED, NOTIFIED, MAX_POOL_SIZE, removeFromTargets } from './context';
+import { DependencyNode, Effect as EffectInterface, EffectDisposer } from './types';
 
 export function createEffectFactory(ctx: SignalContext) {
   class Effect implements EffectInterface {
@@ -131,7 +132,7 @@ export function createEffectFactory(ctx: SignalContext) {
     }
   }
 
-  return function effect(effectFn: () => void | (() => void)): EffectDisposerInterface {
+  return function effect(effectFn: () => void | (() => void)): EffectDisposer {
     let cleanupFn: (() => void) | void;
 
     const e = new Effect(() => {
@@ -148,7 +149,7 @@ export function createEffectFactory(ctx: SignalContext) {
       if (cleanupFn && typeof cleanupFn === 'function') {
         cleanupFn();
       }
-    }) as EffectDisposerInterface;
+    }) as EffectDisposer;
 
     dispose.__effect = e;
 

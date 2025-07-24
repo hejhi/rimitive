@@ -1,6 +1,7 @@
 // Computed implementation with factory pattern for performance
-import type { SignalContext, ComputedInterface, EffectInterface, DependencyNode } from './context';
+import type { SignalContext } from './context';
 import { RUNNING, DISPOSED, OUTDATED, NOTIFIED, TRACKING, IS_COMPUTED, MAX_POOL_SIZE, removeFromTargets } from './context';
+import { DependencyNode, Computed as ComputedInterface, Effect } from './types';
 
 export function createComputedFactory(ctx: SignalContext) {
   class Computed<T> implements ComputedInterface<T> {
@@ -83,7 +84,7 @@ export function createComputedFactory(ctx: SignalContext) {
       return this._value!;
     }
 
-    _addDependency(target: ComputedInterface | EffectInterface | null): void {
+    _addDependency(target: ComputedInterface | Effect | null): void {
       if (!target || !(target._flags & RUNNING)) return;
 
       const version = this._version;
@@ -94,7 +95,10 @@ export function createComputedFactory(ctx: SignalContext) {
       this._createNewDependency(target, version);
     }
 
-    _tryReuseNode(target: ComputedInterface | EffectInterface, version: number): boolean {
+    _tryReuseNode(
+      target: ComputedInterface | Effect,
+      version: number
+    ): boolean {
       const node = this._node;
       if (node !== undefined && node.target === target) {
         node.version = version;
@@ -104,7 +108,7 @@ export function createComputedFactory(ctx: SignalContext) {
     }
 
     _findExistingDependency(
-      target: ComputedInterface | EffectInterface,
+      target: ComputedInterface | Effect,
       version: number
     ): boolean {
       let node = target._sources;
@@ -119,7 +123,7 @@ export function createComputedFactory(ctx: SignalContext) {
     }
 
     _createNewDependency(
-      target: ComputedInterface | EffectInterface,
+      target: ComputedInterface | Effect,
       version: number
     ): void {
       // INLINE acquireNode for performance
@@ -161,7 +165,11 @@ export function createComputedFactory(ctx: SignalContext) {
     }
 
     _checkSources(): boolean {
-      for (let node = this._sources; node !== undefined; node = node.nextSource) {
+      for (
+        let node = this._sources;
+        node !== undefined;
+        node = node.nextSource
+      ) {
         const source = node.source;
         if (
           node.version !== source._version ||
@@ -175,7 +183,11 @@ export function createComputedFactory(ctx: SignalContext) {
     }
 
     _prepareSourcesTracking(): void {
-      for (let node = this._sources; node !== undefined; node = node.nextSource) {
+      for (
+        let node = this._sources;
+        node !== undefined;
+        node = node.nextSource
+      ) {
         node.version = -1;
       }
     }
@@ -218,10 +230,7 @@ export function createComputedFactory(ctx: SignalContext) {
       }
     }
 
-    _removeNode(
-      node: DependencyNode,
-      prev: DependencyNode | undefined
-    ): void {
+    _removeNode(node: DependencyNode, prev: DependencyNode | undefined): void {
       const next = node.nextSource;
 
       if (prev !== undefined) {
@@ -242,7 +251,7 @@ export function createComputedFactory(ctx: SignalContext) {
       while (node) {
         const next = node.nextSource;
         removeFromTargets(node);
-        
+
         // Inline releaseNode
         if (ctx.poolSize < MAX_POOL_SIZE) {
           node.source = undefined!;
@@ -254,7 +263,7 @@ export function createComputedFactory(ctx: SignalContext) {
           node.prevTarget = undefined;
           ctx.nodePool[ctx.poolSize++] = node;
         }
-        
+
         node = next;
       }
       this._sources = undefined;
