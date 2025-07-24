@@ -2,8 +2,9 @@
 import type { SignalContext } from './context';
 import { RUNNING, DISPOSED, OUTDATED, NOTIFIED, MAX_POOL_SIZE, removeFromTargets } from './context';
 import { DependencyNode, Effect as EffectInterface, EffectDisposer } from './types';
+import type { LatticeExtension } from '@lattice/lattice';
 
-export function createEffectFactory(ctx: SignalContext) {
+export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   class Effect implements EffectInterface {
     __type = 'effect' as const;
     _fn: () => void;
@@ -142,7 +143,7 @@ export function createEffectFactory(ctx: SignalContext) {
     }
   }
 
-  return function effect(effectFn: () => void | (() => void)): EffectDisposer {
+  const effect = function effect(effectFn: () => void | (() => void)): EffectDisposer {
     let cleanupFn: (() => void) | void;
 
     const e = new Effect(() => {
@@ -164,5 +165,10 @@ export function createEffectFactory(ctx: SignalContext) {
     dispose.__effect = e;
 
     return dispose;
+  };
+
+  return {
+    name: 'effect',
+    method: effect
   };
 }

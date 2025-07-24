@@ -2,8 +2,9 @@
 import type { SignalContext } from './context';
 import { RUNNING, DISPOSED, OUTDATED, NOTIFIED, TRACKING, IS_COMPUTED, MAX_POOL_SIZE, removeFromTargets } from './context';
 import { DependencyNode, Computed as ComputedInterface, Effect } from './types';
+import type { LatticeExtension } from '@lattice/lattice';
 
-export function createComputedFactory(ctx: SignalContext) {
+export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
     _compute: () => T;
@@ -270,19 +271,25 @@ export function createComputedFactory(ctx: SignalContext) {
     }
   }
 
-  return function computed<T>(compute: () => T): ComputedInterface<T> {
-    return new Computed(compute);
+  return {
+    name: 'computed',
+    method: function computed<T>(compute: () => T): ComputedInterface<T> {
+      return new Computed(compute);
+    }
   };
 }
 
-export function createUntrackFactory(ctx: SignalContext) {
-  return function untrack<T>(fn: () => T): T {
-    const prev = ctx.currentComputed;
-    ctx.currentComputed = null;
-    try {
-      return fn();
-    } finally {
-      ctx.currentComputed = prev;
+export function createUntrackFactory(ctx: SignalContext): LatticeExtension<'untrack', <T>(fn: () => T) => T> {
+  return {
+    name: 'untrack',
+    method: function untrack<T>(fn: () => T): T {
+      const prev = ctx.currentComputed;
+      ctx.currentComputed = null;
+      try {
+        return fn();
+      } finally {
+        ctx.currentComputed = prev;
+      }
     }
   };
 }

@@ -7,6 +7,7 @@ import { createSignalFactory } from './signal';
 import { createComputedFactory, createUntrackFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
+import { createSubscribeFactory } from './subscribe';
 
 // Create a test instance
 export function createTestInstance() {
@@ -17,6 +18,7 @@ export function createTestInstance() {
     effect: createEffectFactory,
     batch: createBatchFactory,
     untrack: createUntrackFactory,
+    subscribe: createSubscribeFactory,
   });
   
   const ctx = api._ctx;
@@ -31,6 +33,9 @@ export function createTestInstance() {
 
     // Effect functions
     effect: api.effect,
+
+    // Subscribe function
+    subscribe: api.subscribe,
 
     // Batch functions - now use ctx
     batch: api.batch,
@@ -80,6 +85,8 @@ export const computed = <T>(fn: () => T): Computed<T> =>
   defaultInstance.computed(fn);
 export const effect = (fn: () => void): (() => void) =>
   defaultInstance.effect(fn);
+export const subscribe = (...args: Parameters<typeof defaultInstance.subscribe>) =>
+  defaultInstance.subscribe(...args);
 export const batch = (...args: Parameters<typeof defaultInstance.batch>) =>
   defaultInstance.batch(...args);
 export const startBatch = () => defaultInstance.startBatch();

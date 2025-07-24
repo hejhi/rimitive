@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { signal, computed, effect } from './index';
+import { signal, computed, effect } from './test-setup';
 
 describe('Computed peek()', () => {
   it('should read computed value without establishing dependencies', () => {

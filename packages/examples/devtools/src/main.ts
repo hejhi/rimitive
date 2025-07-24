@@ -1,33 +1,31 @@
-import { withInstrumentation, performanceProvider, devtoolsProvider } from '@lattice/lattice';
-import { signalExtension, computedExtension, effectExtension, batchExtension, selectExtension } from '@lattice/signals';
-import { select } from '@lattice/signals/select';
+import { 
+  createSignalAPI, 
+  createSignalFactory, 
+  createComputedFactory, 
+  createEffectFactory, 
+  createBatchFactory 
+} from '@lattice/signals';
 
-// Create counter context with multiple instrumentation providers
-const counterContext = withInstrumentation(
-  {
-    providers: [
-      devtoolsProvider({ debug: true }),
-      performanceProvider({ threshold: 5, logAll: false })
-    ],
-    enabled: true // Could be import.meta.env.DEV for conditional enabling
-  },
-  signalExtension,
-  computedExtension,
-  effectExtension,
-  batchExtension,
-  selectExtension
-);
+// Create signal API instance
+const signalAPI = createSignalAPI({
+  signal: createSignalFactory,
+  computed: createComputedFactory,
+  effect: createEffectFactory,
+  batch: createBatchFactory,
+});
+
+const { signal, computed, effect, batch } = signalAPI;
 
 // Counter State
-const count = counterContext.signal(0, 'count');
+const count = signal(0);
 
-const doubled = counterContext.computed(() => {
+const doubled = computed(() => {
   return count.value * 2;
-}, 'doubled');
+});
 
-const isEven = counterContext.computed(() => {
+const isEven = computed(() => {
   return count.value % 2 === 0;
-}, 'isEven');
+});
 
 // Todo State
 interface Todo {
@@ -36,157 +34,109 @@ interface Todo {
   completed: boolean;
 }
 
-// Create todo context with devtools instrumentation enabled
-const todoContext = withInstrumentation(
-  {
-    providers: [
-      devtoolsProvider({ debug: false }), // Less verbose for this context
-      performanceProvider({ threshold: 10 })
-    ]
-  },
-  signalExtension,
-  computedExtension,
-  effectExtension,
-  batchExtension,
-  selectExtension
-);
+const todos = signal<Todo[]>([
+  { id: 1, text: 'Learn Lattice', completed: false },
+  { id: 2, text: 'Build an app', completed: false }
+]);
 
-const todos = todoContext.signal<Todo[]>([], 'todos');
-const filter = todoContext.signal<'all' | 'active' | 'completed'>('all', 'filter');
-
-// Use selectors to create more granular reactivity
-const currentFilter = select(filter, (f) => f);
-const activeTodos = select(todos, (todos) =>
-  todos.filter((todo) => !todo.completed)
-);
-const completedTodos = select(todos, (todos) =>
-  todos.filter((todo) => todo.completed)
-);
-
-const filteredTodos = todoContext.computed(() => {
-  const filterValue = currentFilter.value;
-  const allTodos = todos.value;
-
-  switch (filterValue) {
-    case 'active':
-      return activeTodos.value;
-    case 'completed':
-      return completedTodos.value;
-    default:
-      return allTodos;
-  }
+const completedCount = computed(() => {
+  return todos.value.filter(todo => todo.completed).length;
 });
 
-const activeTodoCount = todoContext.computed(() => {
-  return activeTodos.value.length;
+const allCompleted = computed(() => {
+  return todos.value.length > 0 && todos.value.every(todo => todo.completed);
 });
 
-// UI Updates
-counterContext.effect(() => {
-  document.getElementById('count')!.textContent = String(count.value);
+// Effects
+effect(() => {
+  console.log(`You have ${completedCount.value} completed todos out of ${todos.value.length}`);
 });
 
-counterContext.effect(() => {
-  document.getElementById('doubled')!.textContent = String(doubled.value);
-});
+// Update functions
+function increment() {
+  count.value++;
+}
 
-counterContext.effect(() => {
-  document.getElementById('isEven')!.textContent = String(isEven.value);
-});
+function decrement() {
+  count.value--;
+}
 
-todoContext.effect(() => {
-  const todoList = document.getElementById('todoList')!;
-  const todos = filteredTodos.value;
+function addTodo(text: string) {
+  const newTodo: Todo = {
+    id: Date.now(),
+    text,
+    completed: false
+  };
+  todos.value = [...todos.value, newTodo];
+}
 
-  if (todos.length === 0) {
-    todoList.innerHTML = '<li style="color: #999;">No todos yet...</li>';
-  } else {
-    todoList.innerHTML = todos
-      .map(
-        (todo) => `
-          <li class="todo-item ${todo.completed ? 'completed' : ''}">
-            <input 
-              type="checkbox" 
-              ${todo.completed ? 'checked' : ''} 
-              data-todo-id="${todo.id}"
-            />
-            <span>${todo.text}</span>
-          </li>
-        `
-      )
+function toggleTodo(id: number) {
+  todos.value = todos.value.map((todo: Todo) =>
+    todo.id === id ? { ...todo, completed: !todo.completed } : todo
+  );
+}
+
+function toggleAll() {
+  const shouldComplete = !allCompleted.value;
+  todos.value = todos.value.map((todo: Todo) => ({ ...todo, completed: shouldComplete }));
+}
+
+// Test batching
+function batchedUpdates() {
+  batch(() => {
+    count.value = 10;
+    addTodo('Batched todo 1');
+    addTodo('Batched todo 2');
+    toggleTodo(1);
+  });
+}
+
+// Update UI
+function updateUI() {
+  const countEl = document.getElementById('count');
+  const doubledEl = document.getElementById('doubled');
+  const isEvenEl = document.getElementById('isEven');
+  const todoListEl = document.getElementById('todo-list');
+  const completedCountEl = document.getElementById('completed-count');
+
+  if (countEl) countEl.textContent = count.value.toString();
+  if (doubledEl) doubledEl.textContent = doubled.value.toString();
+  if (isEvenEl) isEvenEl.textContent = isEven.value ? 'Yes' : 'No';
+  if (completedCountEl) completedCountEl.textContent = `${completedCount.value} / ${todos.value.length}`;
+
+  if (todoListEl) {
+    todoListEl.innerHTML = todos.value
+      .map((todo: Todo) => `
+        <li class="${todo.completed ? 'completed' : ''}">
+          <input type="checkbox" ${todo.completed ? 'checked' : ''} 
+                 onchange="window.toggleTodo(${todo.id})">
+          ${todo.text}
+        </li>
+      `)
       .join('');
   }
+}
+
+// Set up reactive updates
+effect(() => {
+  updateUI();
 });
 
-todoContext.effect(() => {
-  document.getElementById('activeTodoCount')!.textContent = String(
-    activeTodoCount.value
-  );
+// Export functions to window for onclick handlers
+Object.assign(window, {
+  increment,
+  decrement,
+  addTodo: () => {
+    const input = document.getElementById('new-todo') as HTMLInputElement;
+    if (input && input.value.trim()) {
+      addTodo(input.value.trim());
+      input.value = '';
+    }
+  },
+  toggleTodo,
+  toggleAll,
+  batchedUpdates
 });
 
-// Event Handlers
-document.getElementById('increment')!.addEventListener('click', () => {
-  count.value = count.value + 1;
-});
-
-document.getElementById('decrement')!.addEventListener('click', () => {
-  count.value = count.value - 1;
-});
-
-document.getElementById('reset')!.addEventListener('click', () => {
-  count.value = 0;
-});
-
-document.getElementById('addTodo')!.addEventListener('click', () => {
-  const input = document.getElementById('todoInput') as HTMLInputElement;
-  if (input.value.trim()) {
-    const newTodo: Todo = {
-      id: Date.now(),
-      text: input.value.trim(),
-      completed: false,
-    };
-
-    todos.value = [...todos.value, newTodo];
-
-    input.value = '';
-  }
-});
-
-document.getElementById('todoInput')!.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    document.getElementById('addTodo')!.click();
-  }
-});
-
-// Filter buttons
-document.querySelectorAll('.filter').forEach((button) => {
-  button.addEventListener('click', (e) => {
-    const target = e.target as HTMLButtonElement;
-    const filterValue = target.getAttribute('data-filter') as
-      | 'all'
-      | 'active'
-      | 'completed';
-
-    filter.value = filterValue;
-
-    // Update active button
-    document
-      .querySelectorAll('.filter')
-      .forEach((btn) => btn.classList.remove('active'));
-    target.classList.add('active');
-  });
-});
-
-// Todo checkbox handling
-document.getElementById('todoList')!.addEventListener('change', (e) => {
-  const target = e.target as HTMLInputElement;
-  if (target.type === 'checkbox') {
-    const todoId = Number(target.getAttribute('data-todo-id'));
-    const currentTodos = todos.value;
-    const updatedTodos = currentTodos.map((todo) =>
-      todo.id === todoId ? { ...todo, completed: target.checked } : todo
-    );
-
-    todos.value = updatedTodos;
-  }
-});
+// Initial UI update
+updateUI();

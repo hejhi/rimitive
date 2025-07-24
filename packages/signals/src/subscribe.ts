@@ -1,10 +1,11 @@
 // Subscribe implementation with factory pattern for performance
 import type { SignalContext } from './context';
 import { DISPOSED, NOTIFIED, MAX_POOL_SIZE, removeFromTargets } from './context';
-import { DependencyNode, Unsubscribe, Signal, Computed } from './types';
+import { DependencyNode, Unsubscribe, Subscribable } from './types';
+import type { LatticeExtension } from '@lattice/lattice';
 
 interface SubscribeNode<T> {
-  _source: Signal<T> | Computed<T>;
+  _source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean };
   _callback: (value: T) => void;
   _flags: number;
   _dependency: DependencyNode | undefined;
@@ -12,15 +13,16 @@ interface SubscribeNode<T> {
   dispose(): void;
 }
 
-export function createSubscribeFactory(ctx: SignalContext) {
+export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean }, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => Unsubscribe> {
   class Subscribe<T> implements SubscribeNode<T> {
-    _source: Signal<T> | Computed<T>;
+    _source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean };
     _callback: (value: T) => void;
     _flags = 0;
     _dependency: DependencyNode | undefined = undefined;
     _lastValue: T;
+    _sources?: DependencyNode; // Add this to satisfy ConsumerNode interface
 
-    constructor(source: Signal<T> | Computed<T>, callback: (value: T) => void) {
+    constructor(source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean }, callback: (value: T) => void) {
       this._source = source;
       this._callback = callback;
       this._lastValue = source.value;
@@ -60,12 +62,7 @@ export function createSubscribeFactory(ctx: SignalContext) {
       
       if (skipEqualityCheck || currentValue !== this._lastValue) {
         this._lastValue = currentValue;
-        try {
-          this._callback(currentValue);
-        } catch (error) {
-          // Let errors propagate but ensure cleanup
-          throw error;
-        }
+        this._callback(currentValue);
       }
     }
 
@@ -117,8 +114,8 @@ export function createSubscribeFactory(ctx: SignalContext) {
       ctx.allocations++;
 
       // Setup the node
-      node.source = this._source as any; // source is the subscribable
-      node.target = this as any; // target is this subscribe node
+      node.source = this._source; // source is the subscribable
+      node.target = this; // target is this subscribe node
       node.version = this._source._version;
       node.nextSource = undefined;
       node.prevSource = undefined;
@@ -136,13 +133,13 @@ export function createSubscribeFactory(ctx: SignalContext) {
     }
   }
 
-  return function subscribe<T>(
-    source: Signal<T> | Computed<T>,
+  const subscribe = function subscribe<T>(
+    source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean },
     callback: (value: T) => void,
     options?: { skipEqualityCheck?: boolean }
   ): Unsubscribe {
     
-    const sub = new Subscribe(source as Signal<T> | Computed<T>, callback);
+    const sub = new Subscribe(source, callback);
     
     // If raw mode, mark it so _execute skips equality check
     if (options?.skipEqualityCheck) {
@@ -157,5 +154,10 @@ export function createSubscribeFactory(ctx: SignalContext) {
     
     // Return unsubscribe function
     return () => sub.dispose();
+  };
+
+  return {
+    name: 'subscribe',
+    method: subscribe
   };
 }

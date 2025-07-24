@@ -1,8 +1,19 @@
 // Shared types for signals implementation
 
+interface ReactiveNode {
+  _targets?: DependencyNode;
+  _version: number;
+  _refresh(): boolean;
+}
+
+interface ConsumerNode {
+  _sources?: DependencyNode;
+  _notify(): void;
+}
+
 export interface DependencyNode {
-  source: Signal | Computed;
-  target: Computed | Effect;
+  source: ReactiveNode;
+  target: ConsumerNode;
   prevSource?: DependencyNode;
   nextSource?: DependencyNode;
   prevTarget?: DependencyNode;

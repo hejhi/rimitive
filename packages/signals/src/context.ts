@@ -10,12 +10,16 @@ export const NOTIFIED = 1 << 0;
 export const TRACKING = 1 << 4;
 export const IS_COMPUTED = 1 << 5;
 
+interface SubscribeNode {
+  _execute(): void;
+}
+
 export interface SignalContext {
   currentComputed: Computed | Effect | null;
   version: number;
   batchDepth: number;
   batchedEffects: Effect | null;
-  subscribeBatch?: Set<any>;
+  subscribeBatch?: Set<SubscribeNode>;
   nodePool: DependencyNode[];
   poolSize: number;
   allocations: number;
@@ -57,7 +61,7 @@ export function removeFromTargets(node: DependencyNode): void {
     prevTarget.nextTarget = nextTarget;
   } else {
     source._targets = nextTarget;
-    if (nextTarget === undefined && '_flags' in source) {
+    if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
       source._flags &= ~TRACKING;
     }
   }

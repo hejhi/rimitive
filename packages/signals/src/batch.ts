@@ -1,9 +1,10 @@
 // Batch implementation with factory pattern for performance
 import type { SignalContext } from './context';
 import { Effect } from './types';
+import type { LatticeExtension } from '@lattice/lattice';
 
-export function createBatchFactory(ctx: SignalContext) {
-  return function batch<T>(fn: () => T): T {
+export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
+  const batch = function batch<T>(fn: () => T): T {
     if (ctx.batchDepth) return fn();
 
     ctx.batchDepth++;
@@ -31,5 +32,10 @@ export function createBatchFactory(ctx: SignalContext) {
         }
       }
     }
+  };
+
+  return {
+    name: 'batch',
+    method: batch
   };
 }

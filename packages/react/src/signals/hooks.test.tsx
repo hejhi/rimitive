@@ -1,11 +1,23 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { signal, computed, select } from '@lattice/signals';
+import { 
+  createSignalAPI, 
+  createSignalFactory, 
+  createComputedFactory 
+} from '@lattice/signals';
 import {
   useSubscribe,
   useSignal,
   useSelector,
 } from './hooks';
+
+// Create signal API instance for tests
+const signalAPI = createSignalAPI({
+  signal: createSignalFactory,
+  computed: createComputedFactory,
+});
+
+const { signal, computed } = signalAPI;
 
 describe('Signal Hooks', () => {
   describe('useSubscribe', () => {
@@ -43,9 +55,9 @@ describe('Signal Hooks', () => {
       expect(result.current).toBe(20);
     });
 
-    it('should work with selected values', () => {
+    it('should work with computed values derived from signals', () => {
       const user = signal({ name: 'John', age: 30 });
-      const name = select(user, (u) => u.name);
+      const name = computed(() => user.value.name);
       const { result } = renderHook(() => useSubscribe(name));
 
       expect(result.current).toBe('John');
