@@ -9,7 +9,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
   const DISPOSED = 1 << 3;
   const OUTDATED = 1 << 1;
   const NOTIFIED = 1 << 0;
-  const TRACKING = 1 << 4;
   const IS_COMPUTED = 1 << 5;
   
   class Computed<T> implements ComputedInterface<T> {
@@ -134,30 +133,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       target: ComputedInterface | Effect,
       version: number
     ): void {
-      // Acquire node from pool
-      const newNode = ctx.acquireNode();
-
-      newNode.source = this;
-      newNode.target = target;
-      newNode.version = version;
-      newNode.nextSource = target._sources;
-      newNode.nextTarget = this._targets;
-      newNode.prevSource = undefined;
-      newNode.prevTarget = undefined;
-
-      if (target._sources) {
-        target._sources.prevSource = newNode;
-      }
-      target._sources = newNode;
-
-      if (this._targets) {
-        this._targets.prevTarget = newNode;
-      } else {
-        this._flags |= TRACKING;
-      }
-      this._targets = newNode;
-
-      this._node = newNode;
+      ctx.linkNodes(this, target, version);
     }
 
     _isUpToDate(): boolean {

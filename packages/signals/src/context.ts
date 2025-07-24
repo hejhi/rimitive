@@ -29,6 +29,7 @@ export interface SignalContext {
   removeFromTargets: (node: DependencyNode) => void;
   acquireNode: () => DependencyNode;
   releaseNode: (node: DependencyNode) => void;
+  linkNodes: (source: any, target: any, version: number) => DependencyNode;
 }
 
 // Constants
@@ -94,6 +95,36 @@ export function createContext(): SignalContext {
       node.prevTarget = undefined;
       ctx.nodePool[ctx.poolSize++] = node;
     }
+  };
+  
+  ctx.linkNodes = (source: any, target: any, version: number): DependencyNode => {
+    const newNode = ctx.acquireNode();
+    
+    newNode.source = source;
+    newNode.target = target;
+    newNode.version = version;
+    newNode.nextSource = target._sources;
+    newNode.nextTarget = source._targets;
+    newNode.prevSource = undefined;
+    newNode.prevTarget = undefined;
+    
+    if (target._sources) {
+      target._sources.prevSource = newNode;
+    }
+    target._sources = newNode;
+    
+    if (source._targets) {
+      source._targets.prevTarget = newNode;
+    } else if ('_flags' in source && typeof source._flags === 'number') {
+      // Set TRACKING flag for computed values
+      source._flags |= TRACKING;
+    }
+    source._targets = newNode;
+    
+    // Store node for reuse
+    source._node = newNode;
+    
+    return newNode;
   };
   
   return ctx;

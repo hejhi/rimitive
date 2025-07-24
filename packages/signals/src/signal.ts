@@ -43,28 +43,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       }
 
       // Create new dependency node
-      const newNode = ctx.acquireNode();
-
-      newNode.source = this;
-      newNode.target = current;
-      newNode.version = this._version;
-      newNode.nextSource = current._sources;
-      newNode.nextTarget = this._targets;
-      newNode.prevSource = undefined;
-      newNode.prevTarget = undefined;
-
-      if (current._sources) {
-        current._sources.prevSource = newNode;
-      }
-      current._sources = newNode;
-
-      if (this._targets) {
-        this._targets.prevTarget = newNode;
-      }
-      this._targets = newNode;
-
-      // Store node for reuse
-      this._node = newNode;
+      ctx.linkNodes(this, current, this._version);
 
       return this._value;
     }
