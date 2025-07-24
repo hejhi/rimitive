@@ -1,6 +1,6 @@
 // Subscribe implementation with factory pattern for performance
 import type { SignalContext } from './context';
-import { DISPOSED, NOTIFIED, MAX_POOL_SIZE, removeFromTargets } from './context';
+import { DISPOSED, NOTIFIED, removeFromTargets } from './context';
 import { DependencyNode, Unsubscribe, Subscribable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 
@@ -82,18 +82,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
         
         if (this._dependency) {
           removeFromTargets(this._dependency);
-          
-          // Release node to pool
-          if (ctx.poolSize < MAX_POOL_SIZE) {
-            this._dependency.source = undefined!;
-            this._dependency.target = undefined!;
-            this._dependency.version = 0;
-            this._dependency.nextSource = undefined;
-            this._dependency.prevSource = undefined;
-            this._dependency.nextTarget = undefined;
-            this._dependency.prevTarget = undefined;
-            ctx.nodePool[ctx.poolSize++] = this._dependency;
-          }
+          ctx.releaseNode(this._dependency);
           
           this._dependency = undefined;
         }
@@ -102,16 +91,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
 
     _setupDependency(): void {
       // Get or create dependency node
-      let node: DependencyNode;
-      
-      if (ctx.poolSize > 0) {
-        ctx.poolHits++;
-        node = ctx.nodePool[--ctx.poolSize]!;
-      } else {
-        ctx.poolMisses++;
-        node = {} as DependencyNode;
-      }
-      ctx.allocations++;
+      const node = ctx.acquireNode();
 
       // Setup the node
       node.source = this._source; // source is the subscribable

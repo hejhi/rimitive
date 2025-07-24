@@ -42,12 +42,8 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         node = node.nextSource;
       }
 
-      // Create new dependency node - INLINE acquireNode for performance
-      ctx.allocations++;
-      const newNode =
-        ctx.poolSize > 0
-          ? (ctx.poolHits++, ctx.nodePool[--ctx.poolSize]!)
-          : (ctx.poolMisses++, {} as DependencyNode);
+      // Create new dependency node
+      const newNode = ctx.acquireNode();
 
       newNode.source = this;
       newNode.target = current;

@@ -9,7 +9,6 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
   const DISPOSED = 1 << 3;
   const OUTDATED = 1 << 1;
   const NOTIFIED = 1 << 0;
-  const MAX_POOL_SIZE = 1000;
   
   class Effect implements EffectInterface {
     __type = 'effect' as const;
@@ -104,18 +103,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
           }
 
           ctx.removeFromTargets(node);
-
-          // Inline releaseNode
-          if (ctx.poolSize < MAX_POOL_SIZE) {
-            node.source = undefined!;
-            node.target = undefined!;
-            node.version = 0;
-            node.nextSource = undefined;
-            node.prevSource = undefined;
-            node.nextTarget = undefined;
-            node.prevTarget = undefined;
-            ctx.nodePool[ctx.poolSize++] = node;
-          }
+          ctx.releaseNode(node);
         }
 
         node = next;
@@ -127,18 +115,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         while (node) {
           const next = node.nextSource;
           ctx.removeFromTargets(node);
-          
-          // Inline releaseNode
-          if (ctx.poolSize < MAX_POOL_SIZE) {
-            node.source = undefined!;
-            node.target = undefined!;
-            node.version = 0;
-            node.nextSource = undefined;
-            node.prevSource = undefined;
-            node.nextTarget = undefined;
-            node.prevTarget = undefined;
-            ctx.nodePool[ctx.poolSize++] = node;
-          }
+          ctx.releaseNode(node);
 
           node = next;
         }

@@ -27,6 +27,8 @@ export interface SignalContext {
   poolMisses: number;
   // Shared utilities (not constants - those are inlined for performance)
   removeFromTargets: (node: DependencyNode) => void;
+  acquireNode: () => DependencyNode;
+  releaseNode: (node: DependencyNode) => void;
 }
 
 // Constants
@@ -40,8 +42,22 @@ export function createContext(): SignalContext {
     nodePool[i] = {} as DependencyNode;
   }
   
-  // Create context-bound removeFromTargets
-  const contextRemoveFromTargets = (node: DependencyNode): void => {
+  // Create the context object that will be returned
+  const ctx: SignalContext = {} as SignalContext;
+  
+  // Initialize basic properties
+  ctx.currentComputed = null;
+  ctx.version = 0;
+  ctx.batchDepth = 0;
+  ctx.batchedEffects = null;
+  ctx.nodePool = nodePool;
+  ctx.poolSize = INITIAL_POOL_SIZE;
+  ctx.allocations = 0;
+  ctx.poolHits = 0;
+  ctx.poolMisses = 0;
+  
+  // Create context-bound utilities
+  ctx.removeFromTargets = (node: DependencyNode): void => {
     const source = node.source;
     const prevTarget = node.prevTarget;
     const nextTarget = node.nextTarget;
@@ -60,18 +76,27 @@ export function createContext(): SignalContext {
     }
   };
   
-  return {
-    currentComputed: null,
-    version: 0,
-    batchDepth: 0,
-    batchedEffects: null,
-    nodePool,
-    poolSize: INITIAL_POOL_SIZE,
-    allocations: 0,
-    poolHits: 0,
-    poolMisses: 0,
-    removeFromTargets: contextRemoveFromTargets,
+  ctx.acquireNode = (): DependencyNode => {
+    ctx.allocations++;
+    return ctx.poolSize > 0
+      ? (ctx.poolHits++, ctx.nodePool[--ctx.poolSize]!)
+      : (ctx.poolMisses++, {} as DependencyNode);
   };
+  
+  ctx.releaseNode = (node: DependencyNode): void => {
+    if (ctx.poolSize < MAX_POOL_SIZE) {
+      node.source = undefined!;
+      node.target = undefined!;
+      node.version = 0;
+      node.nextSource = undefined;
+      node.prevSource = undefined;
+      node.nextTarget = undefined;
+      node.prevTarget = undefined;
+      ctx.nodePool[ctx.poolSize++] = node;
+    }
+  };
+  
+  return ctx;
 }
 
 // Helper function used by all implementations

@@ -11,7 +11,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
   const NOTIFIED = 1 << 0;
   const TRACKING = 1 << 4;
   const IS_COMPUTED = 1 << 5;
-  const MAX_POOL_SIZE = 1000;
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
@@ -135,12 +134,8 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       target: ComputedInterface | Effect,
       version: number
     ): void {
-      // INLINE acquireNode for performance
-      ctx.allocations++;
-      const newNode =
-        ctx.poolSize > 0
-          ? (ctx.poolHits++, ctx.nodePool[--ctx.poolSize]!)
-          : (ctx.poolMisses++, {} as DependencyNode);
+      // Acquire node from pool
+      const newNode = ctx.acquireNode();
 
       newNode.source = this;
       newNode.target = target;
@@ -220,17 +215,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
         if (node.version === -1) {
           this._removeNode(node, prev);
-          // INLINE releaseNode
-          if (ctx.poolSize < MAX_POOL_SIZE) {
-            node.source = undefined!;
-            node.target = undefined!;
-            node.version = 0;
-            node.nextSource = undefined;
-            node.prevSource = undefined;
-            node.nextTarget = undefined;
-            node.prevTarget = undefined;
-            ctx.nodePool[ctx.poolSize++] = node;
-          }
+          ctx.releaseNode(node);
         } else {
           prev = node;
         }
@@ -260,18 +245,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       while (node) {
         const next = node.nextSource;
         ctx.removeFromTargets(node);
-
-        // Inline releaseNode
-        if (ctx.poolSize < MAX_POOL_SIZE) {
-          node.source = undefined!;
-          node.target = undefined!;
-          node.version = 0;
-          node.nextSource = undefined;
-          node.prevSource = undefined;
-          node.nextTarget = undefined;
-          node.prevTarget = undefined;
-          ctx.nodePool[ctx.poolSize++] = node;
-        }
+        ctx.releaseNode(node);
 
         node = next;
       }
