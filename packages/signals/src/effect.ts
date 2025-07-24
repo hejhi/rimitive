@@ -26,96 +26,98 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       this._flags |= NOTIFIED | OUTDATED;
 
       if (ctx.batchDepth > 0) {
-        if (ctx.batchedEffects === null) {
-          ctx.batchedEffects = this;
-          this._nextBatchedEffect = undefined;
-        } else {
-          this._nextBatchedEffect = ctx.batchedEffects;
-          ctx.batchedEffects = this;
-        }
-      } else {
+        this._nextBatchedEffect = ctx.batchedEffects || undefined;
+        ctx.batchedEffects = this;
+        return;
+      }
+
+      ctx.batchDepth++;
+      try {
         this._run();
+      } finally {
+        if (--ctx.batchDepth === 0) {
+          // Process batched effects
+          let effect = ctx.batchedEffects;
+          if (effect) {
+            ctx.batchedEffects = null;
+            while (effect) {
+              const next: EffectInterface | undefined = effect._nextBatchedEffect;
+              effect._nextBatchedEffect = undefined;
+              effect._run();
+              effect = next!;
+            }
+          }
+          
+          // Process batched subscribes
+          if (ctx.subscribeBatch && ctx.subscribeBatch.size > 0) {
+            const batch = ctx.subscribeBatch;
+            ctx.subscribeBatch = undefined;
+            for (const subscribe of batch) {
+              subscribe._execute();
+            }
+          }
+        }
       }
     }
 
     _run(): void {
-      if (this._flags & DISPOSED) return;
-      this._flags &= ~NOTIFIED;
+      if (this._flags & (DISPOSED | RUNNING)) return;
 
-      if (this._flags & RUNNING) {
-        throw new Error('Cycle detected');
+      this._flags = (this._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
+
+      // Mark sources for cleanup
+      let node = this._sources;
+      while (node) {
+        node.version = -1;
+        node = node.nextSource;
       }
 
-      this._flags |= RUNNING;
       const prevComputed = ctx.currentComputed;
+      ctx.currentComputed = this;
+
       try {
-        this._cleanupSources();
-        ctx.currentComputed = this;
-        const cleanup = this._fn();
-        if (typeof cleanup === 'function') {
-          // Store cleanup function if needed
-          // This would need to be added to the Effect interface
-        }
+        this._fn();
       } finally {
         ctx.currentComputed = prevComputed;
         this._flags &= ~RUNNING;
-      }
-    }
 
-    _refresh(): boolean {
-      if (this._flags & RUNNING) {
-        return false;
+        // Cleanup unused sources
+        node = this._sources;
+        let prev: DependencyNode | undefined;
+
+        while (node) {
+          const next = node.nextSource;
+
+          if (node.version === -1) {
+            if (prev) {
+              prev.nextSource = next;
+            } else {
+              this._sources = next;
+            }
+            if (next) {
+              next.prevSource = prev;
+            }
+
+            ctx.removeFromTargets(node);
+            ctx.releaseNode(node);
+          } else {
+            prev = node;
+          }
+
+          node = next;
+        }
       }
-      if (this._flags & OUTDATED) {
-        this._run();
-      }
-      return true;
     }
 
     dispose(): void {
-      if (this._flags & DISPOSED) return;
-      this._flags |= DISPOSED;
-      this._cleanupSources();
-    }
+      if (!(this._flags & DISPOSED)) {
+        this._flags |= DISPOSED;
 
-    _cleanupSources(): void {
-      let node = this._sources;
-      let prev: DependencyNode | undefined;
-
-      while (node !== undefined) {
-        const next = node.nextSource;
-
-        if (node.version !== -1 && ctx.currentComputed === this) {
-          // Keep the node if we're tracking
-          node.version = -1;
-          prev = node;
-        } else {
-          // Remove the node
-          if (prev !== undefined) {
-            prev.nextSource = next;
-          } else {
-            this._sources = next;
-          }
-
-          if (next !== undefined) {
-            next.prevSource = prev;
-          }
-
-          ctx.removeFromTargets(node);
-          ctx.releaseNode(node);
-        }
-
-        node = next;
-      }
-
-      if (ctx.currentComputed !== this) {
-        // Full cleanup when not tracking
         let node = this._sources;
         while (node) {
           const next = node.nextSource;
           ctx.removeFromTargets(node);
           ctx.releaseNode(node);
-          
           node = next;
         }
         this._sources = undefined;
@@ -125,16 +127,28 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
   return {
     name: 'effect',
-    method: function effect(fn: () => void | (() => void)): EffectDisposer {
-      const eff = new Effect(fn);
-      if (ctx.batchDepth === 0) {
-        eff._run();
-      } else {
-        eff._notify();
-      }
-      const disposer = (() => eff.dispose()) as EffectDisposer;
-      disposer.__effect = eff;
-      return disposer;
+    method: function effect(effectFn: () => void | (() => void)): EffectDisposer {
+      let cleanupFn: (() => void) | void;
+
+      const e = new Effect(() => {
+        if (cleanupFn && typeof cleanupFn === 'function') {
+          cleanupFn();
+        }
+        cleanupFn = effectFn();
+      });
+
+      e._run();
+
+      const dispose = (() => {
+        e.dispose();
+        if (cleanupFn && typeof cleanupFn === 'function') {
+          cleanupFn();
+        }
+      }) as EffectDisposer;
+
+      dispose.__effect = e;
+
+      return dispose;
     }
   };
 }
