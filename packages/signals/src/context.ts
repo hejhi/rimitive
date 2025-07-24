@@ -25,6 +25,8 @@ export interface SignalContext {
   allocations: number;
   poolHits: number;
   poolMisses: number;
+  // Shared utilities (not constants - those are inlined for performance)
+  removeFromTargets: (node: DependencyNode) => void;
 }
 
 // Constants
@@ -38,6 +40,26 @@ export function createContext(): SignalContext {
     nodePool[i] = {} as DependencyNode;
   }
   
+  // Create context-bound removeFromTargets
+  const contextRemoveFromTargets = (node: DependencyNode): void => {
+    const source = node.source;
+    const prevTarget = node.prevTarget;
+    const nextTarget = node.nextTarget;
+
+    if (prevTarget !== undefined) {
+      prevTarget.nextTarget = nextTarget;
+    } else {
+      source._targets = nextTarget;
+      if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
+        source._flags &= ~TRACKING;
+      }
+    }
+
+    if (nextTarget !== undefined) {
+      nextTarget.prevTarget = prevTarget;
+    }
+  };
+  
   return {
     currentComputed: null,
     version: 0,
@@ -48,6 +70,7 @@ export function createContext(): SignalContext {
     allocations: 0,
     poolHits: 0,
     poolMisses: 0,
+    removeFromTargets: contextRemoveFromTargets,
   };
 }
 

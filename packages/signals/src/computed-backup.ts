@@ -3,16 +3,16 @@ import type { SignalContext } from './context';
 import { DependencyNode, Computed as ComputedInterface, Effect } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 
+// Inline constants for hot path performance
+const RUNNING = 1 << 2;
+const DISPOSED = 1 << 3;
+const OUTDATED = 1 << 1;
+const NOTIFIED = 1 << 0;
+const TRACKING = 1 << 4;
+const IS_COMPUTED = 1 << 5;
+const MAX_POOL_SIZE = 1000;
+
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
-  // Inline constants for hot path performance
-  const RUNNING = 1 << 2;
-  const DISPOSED = 1 << 3;
-  const OUTDATED = 1 << 1;
-  const NOTIFIED = 1 << 0;
-  const TRACKING = 1 << 4;
-  const IS_COMPUTED = 1 << 5;
-  const MAX_POOL_SIZE = 1000;
-  
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
     _compute: () => T;
@@ -252,14 +252,46 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         next.prevSource = prev;
       }
 
-      ctx.removeFromTargets(node);
+      // Inline removeFromTargets for performance
+      const source = node.source;
+      const prevTarget = node.prevTarget;
+      const nextTarget = node.nextTarget;
+
+      if (prevTarget !== undefined) {
+        prevTarget.nextTarget = nextTarget;
+      } else {
+        source._targets = nextTarget;
+        if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
+          source._flags &= ~TRACKING;
+        }
+      }
+
+      if (nextTarget !== undefined) {
+        nextTarget.prevTarget = prevTarget;
+      }
     }
 
     _disposeAllSources(): void {
       let node = this._sources;
       while (node) {
         const next = node.nextSource;
-        ctx.removeFromTargets(node);
+        // Inline removeFromTargets for performance
+      const source = node.source;
+      const prevTarget = node.prevTarget;
+      const nextTarget = node.nextTarget;
+
+      if (prevTarget !== undefined) {
+        prevTarget.nextTarget = nextTarget;
+      } else {
+        source._targets = nextTarget;
+        if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
+          source._flags &= ~TRACKING;
+        }
+      }
+
+      if (nextTarget !== undefined) {
+        nextTarget.prevTarget = prevTarget;
+      }
 
         // Inline releaseNode
         if (ctx.poolSize < MAX_POOL_SIZE) {
