@@ -66,12 +66,12 @@ describe('signal update methods', () => {
       let userEffectCount = 0;
       let configEffectCount = 0;
 
-      effect(() => {
+      const dispose1 = effect(() => {
         void state.value.user;
         userEffectCount++;
       });
 
-      effect(() => {
+      const dispose2 = effect(() => {
         void state.value.config;
         configEffectCount++;
       });
@@ -84,6 +84,9 @@ describe('signal update methods', () => {
 
       expect(userEffectCount).toBe(2);
       expect(configEffectCount).toBe(2); // Also triggers because whole object changes
+      
+      dispose1();
+      dispose2();
     });
 
     it('should work with array elements', () => {

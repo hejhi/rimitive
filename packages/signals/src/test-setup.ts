@@ -57,6 +57,13 @@ export function createTestInstance() {
     },
     getCurrentComputed: () => ctx.currentComputed,
     resetGlobalState: () => {
+      // Clear any pending batched effects
+      while (ctx.batchedEffects) {
+        const next = ctx.batchedEffects._nextBatchedEffect;
+        ctx.batchedEffects._nextBatchedEffect = undefined;
+        ctx.batchedEffects = next || null;
+      }
+      
       // Reset context by reinitializing pool and counters
       ctx.currentComputed = null;
       ctx.version = 0;

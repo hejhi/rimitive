@@ -64,7 +64,6 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
     _refresh(): boolean {
       if (this._flags & RUNNING) {
-        this._flags |= OUTDATED;
         return false;
       }
       if (this._flags & OUTDATED) {
@@ -116,7 +115,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
           const next = node.nextSource;
           ctx.removeFromTargets(node);
           ctx.releaseNode(node);
-
+          
           node = next;
         }
         this._sources = undefined;
