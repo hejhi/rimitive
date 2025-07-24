@@ -2,56 +2,72 @@
 // Provides global-like exports for test compatibility while using scoped implementation
 
 import type { Signal, Computed, Effect } from './types';
-import { computed as createComputed, effect as effectFn, batch as batchFn, signal as createSignal, untrack as untrackFn, activeContext } from './default-api';
+import { createSignalAPI } from './api';
+import { createSignalFactory } from './signal';
+import { createComputedFactory, createUntrackFactory } from './computed';
+import { createEffectFactory } from './effect';
+import { createBatchFactory } from './batch';
 import { ComputedInterface, DependencyNode, EffectInterface } from './context';
 
 // Create a test instance
 export function createTestInstance() {
+  // Create API with all core factories
+  const api = createSignalAPI({
+    signal: createSignalFactory,
+    computed: createComputedFactory,
+    effect: createEffectFactory,
+    batch: createBatchFactory,
+    untrack: createUntrackFactory,
+  });
+  
+  const ctx = api._ctx;
+  
   return {
     // Signal functions
-    signal: createSignal,
-    untrack: untrackFn,
+    signal: api.signal,
+    untrack: api.untrack,
 
     // Computed functions
-    computed: createComputed,
+    computed: api.computed,
 
     // Effect functions
-    effect: effectFn,
+    effect: api.effect,
 
-    // Batch functions - now use activeContext
-    batch: batchFn,
-    startBatch: () => activeContext.batchDepth++,
+    // Batch functions - now use ctx
+    batch: api.batch,
+    startBatch: () => ctx.batchDepth++,
     endBatch: () => {
-      if (activeContext.batchDepth > 0) activeContext.batchDepth--;
+      if (ctx.batchDepth > 0) ctx.batchDepth--;
     },
-    getBatchDepth: () => activeContext.batchDepth,
-    hasPendingEffects: () => activeContext.batchedEffects !== null,
+    getBatchDepth: () => ctx.batchDepth,
+    hasPendingEffects: () => ctx.batchedEffects !== null,
     clearBatch: () => {
-      activeContext.batchedEffects = null;
+      ctx.batchedEffects = null;
       // Reset batch depth safely
-      activeContext.batchDepth = 0;
+      ctx.batchDepth = 0;
     },
 
-    // Scope functions - use activeContext
+    // Scope functions - use ctx
     setCurrentComputed: (computed: Computed | Effect | null) => {
-      activeContext.currentComputed = computed as ComputedInterface<unknown> | EffectInterface | null;
+      ctx.currentComputed = computed as ComputedInterface<unknown> | EffectInterface | null;
     },
-    getCurrentComputed: () => activeContext.currentComputed,
+    getCurrentComputed: () => ctx.currentComputed,
     resetGlobalState: () => {
       // Reset context by reinitializing pool and counters
-      activeContext.currentComputed = null;
-      activeContext.version = 0;
-      activeContext.batchDepth = 0;
-      activeContext.batchedEffects = null;
-      activeContext.poolSize = 100;
-      activeContext.allocations = 0;
-      activeContext.poolHits = 0;
-      activeContext.poolMisses = 0;
+      ctx.currentComputed = null;
+      ctx.version = 0;
+      ctx.batchDepth = 0;
+      ctx.batchedEffects = null;
+      ctx.poolSize = 100;
+      ctx.allocations = 0;
+      ctx.poolHits = 0;
+      ctx.poolMisses = 0;
       for (let i = 0; i < 100; i++) {
-        activeContext.nodePool[i] = {} as DependencyNode;
+        ctx.nodePool[i] = {} as DependencyNode;
       }
     },
-    getGlobalVersion: () => activeContext.version,
+    getGlobalVersion: () => ctx.version,
+    activeContext: ctx,
   };
 }
 
@@ -77,6 +93,30 @@ export const setCurrentComputed = (
 ) => defaultInstance.setCurrentComputed(...args);
 export const getCurrentComputed = () => defaultInstance.getCurrentComputed();
 export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
+// Use getter to always get current context
+export const activeContext = (() => {
+  // Return getter that always gets current context
+  const getter = {
+    get allocations() { return defaultInstance.activeContext.allocations; },
+    get poolHits() { return defaultInstance.activeContext.poolHits; },
+    get poolMisses() { return defaultInstance.activeContext.poolMisses; },
+    get poolSize() { return defaultInstance.activeContext.poolSize; },
+    get version() { return defaultInstance.activeContext.version; },
+    get batchDepth() { return defaultInstance.activeContext.batchDepth; },
+    get batchedEffects() { return defaultInstance.activeContext.batchedEffects; },
+    get currentComputed() { return defaultInstance.activeContext.currentComputed; },
+    get nodePool() { return defaultInstance.activeContext.nodePool; },
+    set allocations(v) { defaultInstance.activeContext.allocations = v; },
+    set poolHits(v) { defaultInstance.activeContext.poolHits = v; },
+    set poolMisses(v) { defaultInstance.activeContext.poolMisses = v; },
+    set poolSize(v) { defaultInstance.activeContext.poolSize = v; },
+    set version(v) { defaultInstance.activeContext.version = v; },
+    set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
+    set batchedEffects(v) { defaultInstance.activeContext.batchedEffects = v; },
+    set currentComputed(v) { defaultInstance.activeContext.currentComputed = v; },
+  };
+  return getter;
+})();
 
 // Reset function that recreates the default instance
 export function resetGlobalState() {

@@ -2,15 +2,19 @@
  * Effect extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { effect as effectImpl } from '../default-api';
+import { createEffectFactory } from '../effect';
+import { createSignalAPI } from '../api';
 import type { EffectDisposer } from '../types';
+
+// Create a default API instance for the extension
+const defaultAPI = createSignalAPI({ effect: createEffectFactory });
 
 export const effectExtension: LatticeExtension<
   'effect',
   (effectFn: () => void | (() => void), name?: string) => EffectDisposer
 > = {
   name: 'effect',
-  method: effectImpl as (effectFn: () => void | (() => void), name?: string) => EffectDisposer,
+  method: defaultAPI.effect as (effectFn: () => void | (() => void), name?: string) => EffectDisposer,
   
   wrap(effectFn, ctx) {
     return (fn: () => void | (() => void), name?: string): EffectDisposer => {

@@ -5,9 +5,6 @@ export { createEffectFactory } from './effect';
 export { createBatchFactory } from './batch';
 export { createSignalAPI } from './api';
 
-// Convenience exports from default-api (NOT tree-shakeable)
-export { signal, computed, effect, batch, untrack, activeContext, coreFactories } from './default-api';
-
 // Standalone helper functions
 export { subscribe } from './subscribe-standalone';
 export { select } from './select-standalone';
@@ -30,6 +27,29 @@ export type {
 
 // Export factory type and helper
 export type { SignalFactory, FactoriesToAPI } from './api';
+
+// Default API for convenience (not tree-shakeable when used)
+// Create a shared instance for all convenience exports
+import { createSignalFactory } from './signal';
+import { createComputedFactory, createUntrackFactory } from './computed';
+import { createEffectFactory } from './effect';
+import { createBatchFactory } from './batch';
+import { createSignalAPI } from './api';
+
+const defaultAPI = createSignalAPI({
+  signal: createSignalFactory,
+  computed: createComputedFactory,
+  effect: createEffectFactory,
+  batch: createBatchFactory,
+  untrack: createUntrackFactory,
+});
+
+// Export convenience functions
+export const signal = defaultAPI.signal;
+export const computed = defaultAPI.computed;
+export const effect = defaultAPI.effect;
+export const batch = defaultAPI.batch;
+export const untrack = defaultAPI.untrack;
 
 // Export Lattice extensions
 export { signalExtension } from './extensions/signal';

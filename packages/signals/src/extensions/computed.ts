@@ -2,15 +2,19 @@
  * Computed extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { computed as computedImpl } from '../default-api';
+import { createComputedFactory } from '../computed';
+import { createSignalAPI } from '../api';
 import type { Computed } from '../types';
+
+// Create a default API instance for the extension
+const defaultAPI = createSignalAPI({ computed: createComputedFactory });
 
 export const computedExtension: LatticeExtension<
   'computed',
   <T>(computeFn: () => T, name?: string) => Computed<T>
 > = {
   name: 'computed',
-  method: computedImpl as <T>(computeFn: () => T, name?: string) => Computed<T>,
+  method: defaultAPI.computed as <T>(computeFn: () => T, name?: string) => Computed<T>,
   
   wrap(computedFn, ctx) {
     return <T>(fn: () => T, name?: string): Computed<T> => {

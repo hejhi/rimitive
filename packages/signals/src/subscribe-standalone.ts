@@ -1,6 +1,6 @@
 // Standalone subscribe function for use without prototypes
 import type { Signal, Computed, Selected, Unsubscribe } from './types';
-import { effect } from './default-api';
+import { effect } from './index';
 
 /**
  * Subscribe to changes in a signal, computed, or selected value
@@ -26,15 +26,19 @@ export function subscribe<T>(
   }
   
   // For Signal and Computed
-  // Store the previous value to detect actual changes
-  let previousValue = source.value;
+  // Don't capture the value before creating the effect!
+  // Let the effect capture it on its first run.
+  let previousValue: T | undefined;
   
   return effect(() => {
     const currentValue = source.value;
-    // Only notify if the value actually changed
-    if (!Object.is(currentValue, previousValue)) {
-      previousValue = currentValue;
+    
+    // If we have a previous value and it changed, notify
+    if (previousValue !== undefined && !Object.is(currentValue, previousValue)) {
       listener();
     }
+    
+    // Always update the previous value
+    previousValue = currentValue;
   });
 }

@@ -2,15 +2,19 @@
  * Signal extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { signal as signalImpl } from '../default-api';
+import { createSignalFactory } from '../signal';
+import { createSignalAPI } from '../api';
 import type { Signal } from '../types';
+
+// Create a default API instance for the extension
+const defaultAPI = createSignalAPI({ signal: createSignalFactory });
 
 export const signalExtension: LatticeExtension<
   'signal',
   <T>(initialValue: T, name?: string) => Signal<T>
 > = {
   name: 'signal',
-  method: signalImpl as <T>(initialValue: T, name?: string) => Signal<T>,
+  method: defaultAPI.signal as <T>(initialValue: T, name?: string) => Signal<T>,
   
   wrap(signalFn, ctx) {
     // Return a function that accepts name parameter but ignores it

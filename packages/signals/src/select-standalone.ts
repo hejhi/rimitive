@@ -37,10 +37,10 @@ export function select<T, R>(
       let previousValue = selector(source.value);
       
       return subscribe(source, () => {
-        const currentValue = selector(source.peek());
+        const currentValue = selector(source.value);
         if (!Object.is(currentValue, previousValue)) {
-          listener();
           previousValue = currentValue;
+          listener();
         }
       });
     }

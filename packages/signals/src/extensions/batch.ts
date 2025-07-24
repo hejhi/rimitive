@@ -2,14 +2,18 @@
  * Batch extension for lattice
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import { batch as batchImpl } from '../default-api';
+import { createBatchFactory } from '../batch';
+import { createSignalAPI } from '../api';
+
+// Create a default API instance for the extension
+const defaultAPI = createSignalAPI({ batch: createBatchFactory });
 
 export const batchExtension: LatticeExtension<
   'batch',
   <T>(fn: () => T) => T
 > = {
   name: 'batch',
-  method: batchImpl,
+  method: defaultAPI.batch,
   
   // No wrapping needed - batch doesn't need disposal tracking
   // But we could add disposed check if desired
