@@ -1,8 +1,10 @@
 // Signal implementation with factory pattern for performance
 import type { SignalContext } from './context';
-import { RUNNING } from './context';
 import { Signal as SignalInterface, DependencyNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
+
+// Inline constant for hot path performance
+const RUNNING = 1 << 2;
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   class Signal<T> implements SignalInterface<T> {
