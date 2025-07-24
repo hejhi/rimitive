@@ -1,6 +1,5 @@
 // Effect implementation with factory pattern for performance
 import type { SignalContext } from './context';
-import { MAX_POOL_SIZE, removeFromTargets } from './context';
 import { DependencyNode, Effect as EffectInterface, EffectDisposer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 
@@ -9,6 +8,7 @@ const RUNNING = 1 << 2;
 const DISPOSED = 1 << 3;
 const OUTDATED = 1 << 1;
 const NOTIFIED = 1 << 0;
+const MAX_POOL_SIZE = 1000;
 
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   class Effect implements EffectInterface {
@@ -99,7 +99,23 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
               next.prevSource = prev;
             }
 
-            removeFromTargets(node);
+            // Inline removeFromTargets for performance
+            const source = node.source;
+            const prevTarget = node.prevTarget;
+            const nextTarget = node.nextTarget;
+
+            if (prevTarget !== undefined) {
+              prevTarget.nextTarget = nextTarget;
+            } else {
+              source._targets = nextTarget;
+              if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
+                source._flags &= ~(1 << 4); // TRACKING
+              }
+            }
+
+            if (nextTarget !== undefined) {
+              nextTarget.prevTarget = prevTarget;
+            }
             
             // Inline releaseNode
             if (ctx.poolSize < MAX_POOL_SIZE) {
@@ -128,7 +144,23 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         let node = this._sources;
         while (node) {
           const next = node.nextSource;
-          removeFromTargets(node);
+          // Inline removeFromTargets for performance
+          const source = node.source;
+          const prevTarget = node.prevTarget;
+          const nextTarget = node.nextTarget;
+
+          if (prevTarget !== undefined) {
+            prevTarget.nextTarget = nextTarget;
+          } else {
+            source._targets = nextTarget;
+            if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
+              source._flags &= ~(1 << 4); // TRACKING
+            }
+          }
+
+          if (nextTarget !== undefined) {
+            nextTarget.prevTarget = prevTarget;
+          }
           
           // Inline releaseNode
           if (ctx.poolSize < MAX_POOL_SIZE) {
