@@ -1,7 +1,6 @@
 // Subscribe implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { removeFromTargets } from './context';
 import { DependencyNode, Unsubscribe, Subscribable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 
@@ -84,7 +83,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
         this._flags |= DISPOSED;
         
         if (this._dependency) {
-          removeFromTargets(this._dependency);
+          ctx.removeFromTargets(this._dependency);
           ctx.releaseNode(this._dependency);
           
           this._dependency = undefined;

@@ -4,7 +4,7 @@
 import { CONSTANTS } from "./constants";
 import { Computed, ConsumerNode, DependencyNode, Effect, ReactiveNode } from "./types";
 
-const { TRACKING } = CONSTANTS;
+const { TRACKING, INITIAL_POOL_SIZE, MAX_POOL_SIZE } = CONSTANTS;
 
 interface SubscribeNode {
   _execute(): void;
@@ -27,10 +27,6 @@ export interface SignalContext {
   releaseNode: (node: DependencyNode) => void;
   linkNodes: (source: ReactiveNode, target: ConsumerNode, version: number) => DependencyNode;
 }
-
-// Constants
-export const MAX_POOL_SIZE = 1000;
-export const INITIAL_POOL_SIZE = 100;
 
 // Factory to create a new context
 export function createContext(): SignalContext {
@@ -124,24 +120,4 @@ export function createContext(): SignalContext {
   };
   
   return ctx;
-}
-
-// Helper function used by all implementations
-export function removeFromTargets(node: DependencyNode): void {
-  const source = node.source;
-  const prevTarget = node.prevTarget;
-  const nextTarget = node.nextTarget;
-
-  if (prevTarget !== undefined) {
-    prevTarget.nextTarget = nextTarget;
-  } else {
-    source._targets = nextTarget;
-    if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
-      source._flags &= ~TRACKING;
-    }
-  }
-
-  if (nextTarget !== undefined) {
-    nextTarget.prevTarget = prevTarget;
-  }
 }
