@@ -115,7 +115,10 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
       e._run();
 
+      let disposed = false;
       const dispose = (() => {
+        if (disposed) return;
+        disposed = true;
         e.dispose();
         if (cleanupFn && typeof cleanupFn === 'function') {
           cleanupFn();

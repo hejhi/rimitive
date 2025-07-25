@@ -333,7 +333,7 @@ describe('computed.ts', () => {
 
       // Create an effect to force evaluation
       const results: number[] = [];
-      effect(() => results.push(sum.value));
+      effect(() => { results.push(sum.value); });
 
       expect(fn).toHaveBeenCalledTimes(1);
       expect(results).toEqual([3]);
@@ -356,7 +356,7 @@ describe('computed.ts', () => {
       const doubled = computed(fn);
 
       const results: number[] = [];
-      effect(() => results.push(doubled.value));
+      effect(() => { results.push(doubled.value); });
 
       expect(fn).toHaveBeenCalledTimes(1);
 
@@ -402,8 +402,8 @@ describe('computed.ts', () => {
       const bNotifications: number[] = [];
       const cNotifications: number[] = [];
 
-      effect(() => bNotifications.push(b.value));
-      effect(() => cNotifications.push(c.value));
+      effect(() => { bNotifications.push(b.value); });
+      effect(() => { cNotifications.push(c.value); });
 
       expect(bNotifications).toEqual([2]);
       expect(cNotifications).toEqual([4]);

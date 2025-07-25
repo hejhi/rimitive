@@ -1,7 +1,7 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { Signal, Computed, Effect, DependencyNode } from './types';
+import type { Signal, Computed, Effect, DependencyNode, EffectDisposer } from './types';
 import { createSignalAPI } from './api';
 import { createSignalFactory } from './signal';
 import { createComputedFactory, createUntrackFactory } from './computed';
@@ -90,8 +90,8 @@ export const signal = <T>(value: T): Signal<T> => defaultInstance.signal(value);
 export const untrack = <T>(fn: () => T): T => defaultInstance.untrack(fn);
 export const computed = <T>(fn: () => T): Computed<T> =>
   defaultInstance.computed(fn);
-export const effect = (fn: () => void): (() => void) =>
-  defaultInstance.effect(fn);
+export const effect = (fn: () => void | (() => void)): EffectDisposer =>
+  defaultInstance.effect(fn) as EffectDisposer;
 export const subscribe = (...args: Parameters<typeof defaultInstance.subscribe>) =>
   defaultInstance.subscribe(...args);
 export const batch = (...args: Parameters<typeof defaultInstance.batch>) =>
