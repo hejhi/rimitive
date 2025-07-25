@@ -3,7 +3,9 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Computed as ComputedInterface, Effect } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers, createDependencyHelpers, createSourceCleanupHelpers } from './shared-helpers';
+import { createNodePoolHelpers } from './helpers/node-pool';
+import { createDependencyHelpers } from './helpers/dependency-tracking';
+import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 
 const {
   RUNNING,

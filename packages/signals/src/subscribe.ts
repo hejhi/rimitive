@@ -3,7 +3,7 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Unsubscribe, Subscribable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers } from './shared-helpers';
+import { createNodePoolHelpers } from './helpers/node-pool';
 
 const { NOTIFIED, DISPOSED } = CONSTANTS;
 

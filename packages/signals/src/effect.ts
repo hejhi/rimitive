@@ -3,7 +3,8 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Effect as EffectInterface, EffectDisposer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers, createSourceCleanupHelpers } from './shared-helpers';
+import { createNodePoolHelpers } from './helpers/node-pool';
+import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 
 const {
   RUNNING,

@@ -3,7 +3,8 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Signal as SignalInterface, DependencyNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers, createDependencyHelpers } from './shared-helpers';
+import { createNodePoolHelpers } from './helpers/node-pool';
+import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 const { RUNNING } = CONSTANTS;
 
