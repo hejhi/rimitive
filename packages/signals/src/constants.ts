@@ -1,0 +1,8 @@
+export const CONSTANTS = {
+  RUNNING: 1 << 2,
+  DISPOSED: 1 << 3,
+  OUTDATED: 1 << 1,
+  NOTIFIED: 1 << 0,
+  IS_COMPUTED: 1 << 5,
+  TRACKING: 1 << 4,
+}

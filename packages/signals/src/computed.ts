@@ -1,16 +1,18 @@
 // Computed implementation with factory pattern for performance
+import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Computed as ComputedInterface, Effect } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 
+const {
+  RUNNING,
+  DISPOSED,
+  OUTDATED,
+  NOTIFIED,
+  IS_COMPUTED,
+} = CONSTANTS;
+
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
-  // Inline constants for hot path performance
-  const RUNNING = 1 << 2;
-  const DISPOSED = 1 << 3;
-  const OUTDATED = 1 << 1;
-  const NOTIFIED = 1 << 0;
-  const IS_COMPUTED = 1 << 5;
-  
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
     _compute: () => T;

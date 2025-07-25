@@ -1,8 +1,11 @@
 // Subscribe implementation with factory pattern for performance
+import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { DISPOSED, NOTIFIED, removeFromTargets } from './context';
+import { removeFromTargets } from './context';
 import { DependencyNode, Unsubscribe, Subscribable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
+
+const { NOTIFIED, DISPOSED } = CONSTANTS;
 
 interface SubscribeNode<T> {
   _source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean };

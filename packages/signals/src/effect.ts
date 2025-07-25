@@ -1,15 +1,17 @@
 // Effect implementation with factory pattern for performance
+import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Effect as EffectInterface, EffectDisposer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 
+const {
+  RUNNING,
+  DISPOSED,
+  OUTDATED,
+  NOTIFIED,
+} = CONSTANTS;
+
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
-  // Inline constants for hot path performance
-  const RUNNING = 1 << 2;
-  const DISPOSED = 1 << 3;
-  const OUTDATED = 1 << 1;
-  const NOTIFIED = 1 << 0;
-  
   class Effect implements EffectInterface {
     __type = 'effect' as const;
     _fn: () => void;

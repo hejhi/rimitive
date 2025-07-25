@@ -1,14 +1,10 @@
 // Context and shared types for signals implementation
 // This module only exports types and factory functions, no global state
 
+import { CONSTANTS } from "./constants";
 import { Computed, ConsumerNode, DependencyNode, Effect, ReactiveNode } from "./types";
 
-export const RUNNING = 1 << 2;
-export const DISPOSED = 1 << 3;
-export const OUTDATED = 1 << 1;
-export const NOTIFIED = 1 << 0;
-export const TRACKING = 1 << 4;
-export const IS_COMPUTED = 1 << 5;
+const { TRACKING } = CONSTANTS;
 
 interface SubscribeNode {
   _execute(): void;
