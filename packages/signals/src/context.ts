@@ -26,6 +26,10 @@ export interface SignalContext {
   acquireNode: () => DependencyNode;
   releaseNode: (node: DependencyNode) => void;
   linkNodes: (source: ReactiveNode, target: ConsumerNode, version: number) => DependencyNode;
+  disposeAllSources: (consumer: ConsumerNode) => void;
+  cleanupSources: (consumer: ConsumerNode) => void;
+  tryReuseNode: (source: ReactiveNode, target: ConsumerNode, version: number) => boolean;
+  findExistingNode: (source: ReactiveNode, target: ConsumerNode, version: number) => boolean;
 }
 
 // Factory to create a new context
@@ -117,6 +121,71 @@ export function createContext(): SignalContext {
     source._node = newNode;
     
     return newNode;
+  };
+  
+  // Shared cleanup method for disposing all sources
+  ctx.disposeAllSources = (consumer: ConsumerNode): void => {
+    let node = consumer._sources;
+    while (node) {
+      const next = node.nextSource;
+      ctx.removeFromTargets(node);
+      ctx.releaseNode(node);
+      node = next;
+    }
+    consumer._sources = undefined;
+  };
+  
+  // Shared cleanup method for removing unused sources after tracking
+  ctx.cleanupSources = (consumer: ConsumerNode): void => {
+    let node = consumer._sources;
+    let prev: DependencyNode | undefined;
+
+    while (node !== undefined) {
+      const next = node.nextSource;
+
+      if (node.version === -1) {
+        // Remove this node from the linked list
+        if (prev !== undefined) {
+          prev.nextSource = next;
+        } else {
+          consumer._sources = next;
+        }
+
+        if (next !== undefined) {
+          next.prevSource = prev;
+        }
+
+        ctx.removeFromTargets(node);
+        ctx.releaseNode(node);
+      } else {
+        prev = node;
+      }
+
+      node = next;
+    }
+  };
+  
+  // Try to reuse the cached node on the source
+  ctx.tryReuseNode = (source: ReactiveNode, target: ConsumerNode, version: number): boolean => {
+    const node = source._node;
+    if (node !== undefined && node.target === target) {
+      node.version = version;
+      return true;
+    }
+    return false;
+  };
+  
+  // Find if a dependency already exists
+  ctx.findExistingNode = (source: ReactiveNode, target: ConsumerNode, version: number): boolean => {
+    let node = target._sources;
+    while (node) {
+      if (node.source === source) {
+        node.version = version;
+        return true;
+      }
+      node = node.nextSource;
+    }
+    return false;
   };
   
   return ctx;

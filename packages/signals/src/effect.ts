@@ -84,45 +84,14 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         this._flags &= ~RUNNING;
 
         // Cleanup unused sources
-        node = this._sources;
-        let prev: DependencyNode | undefined;
-
-        while (node) {
-          const next = node.nextSource;
-
-          if (node.version === -1) {
-            if (prev) {
-              prev.nextSource = next;
-            } else {
-              this._sources = next;
-            }
-            if (next) {
-              next.prevSource = prev;
-            }
-
-            ctx.removeFromTargets(node);
-            ctx.releaseNode(node);
-          } else {
-            prev = node;
-          }
-
-          node = next;
-        }
+        ctx.cleanupSources(this);
       }
     }
 
     dispose(): void {
       if (!(this._flags & DISPOSED)) {
         this._flags |= DISPOSED;
-
-        let node = this._sources;
-        while (node) {
-          const next = node.nextSource;
-          ctx.removeFromTargets(node);
-          ctx.releaseNode(node);
-          node = next;
-        }
-        this._sources = undefined;
+        ctx.disposeAllSources(this);
       }
     }
   }

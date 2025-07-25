@@ -26,21 +26,13 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
       const current = ctx.currentComputed;
 
-      // Node reuse pattern - check if we can reuse existing node
-      let node = this._node;
-      if (node !== undefined && node.target === current) {
-        node.version = this._version;
+      // Try to reuse or find existing node
+      if (ctx.tryReuseNode(this, current, this._version)) {
         return this._value;
       }
 
-      // Check if already tracking this signal in current computed
-      node = current._sources;
-      while (node) {
-        if (node.source === this) {
-          node.version = this._version;
-          return this._value;
-        }
-        node = node.nextSource;
+      if (ctx.findExistingNode(this, current, this._version)) {
+        return this._value;
       }
 
       // Create new dependency node

@@ -83,7 +83,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     dispose(): void {
       if (!(this._flags & DISPOSED)) {
         this._flags |= DISPOSED;
-        this._disposeAllSources();
+        ctx.disposeAllSources(this);
         this._value = undefined;
       }
     }
@@ -98,43 +98,9 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
       const version = this._version;
 
-      if (this._tryReuseNode(target, version)) return;
-      if (this._findExistingDependency(target, version)) return;
+      if (ctx.tryReuseNode(this, target, version)) return;
+      if (ctx.findExistingNode(this, target, version)) return;
 
-      this._createNewDependency(target, version);
-    }
-
-    _tryReuseNode(
-      target: ComputedInterface | Effect,
-      version: number
-    ): boolean {
-      const node = this._node;
-      if (node !== undefined && node.target === target) {
-        node.version = version;
-        return true;
-      }
-      return false;
-    }
-
-    _findExistingDependency(
-      target: ComputedInterface | Effect,
-      version: number
-    ): boolean {
-      let node = target._sources;
-      while (node) {
-        if (node.source === (this as ComputedInterface<T>)) {
-          node.version = version;
-          return true;
-        }
-        node = node.nextSource;
-      }
-      return false;
-    }
-
-    _createNewDependency(
-      target: ComputedInterface | Effect,
-      version: number
-    ): void {
       ctx.linkNodes(this, target, version);
     }
 
@@ -185,49 +151,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _cleanupSources(): void {
-      let node = this._sources;
-      let prev: DependencyNode | undefined;
-
-      while (node !== undefined) {
-        const next = node.nextSource;
-
-        if (node.version === -1) {
-          this._removeNode(node, prev);
-          ctx.releaseNode(node);
-        } else {
-          prev = node;
-        }
-
-        node = next;
-      }
-    }
-
-    _removeNode(node: DependencyNode, prev: DependencyNode | undefined): void {
-      const next = node.nextSource;
-
-      if (prev !== undefined) {
-        prev.nextSource = next;
-      } else {
-        this._sources = next;
-      }
-
-      if (next !== undefined) {
-        next.prevSource = prev;
-      }
-
-      ctx.removeFromTargets(node);
-    }
-
-    _disposeAllSources(): void {
-      let node = this._sources;
-      while (node) {
-        const next = node.nextSource;
-        ctx.removeFromTargets(node);
-        ctx.releaseNode(node);
-
-        node = next;
-      }
-      this._sources = undefined;
+      ctx.cleanupSources(this);
     }
   }
 
