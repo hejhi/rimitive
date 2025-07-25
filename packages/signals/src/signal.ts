@@ -3,13 +3,13 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Signal as SignalInterface, DependencyNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { DependencyTracker, NodePoolManager } from './shared-helpers';
+import { createNodePoolHelpers, createDependencyHelpers } from './shared-helpers';
 
 const { RUNNING } = CONSTANTS;
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
-  const pool = new NodePoolManager(ctx);
-  const tracker = new DependencyTracker(pool);
+  const pool = createNodePoolHelpers(ctx);
+  const { addDependency } = createDependencyHelpers(pool);
   
   class Signal<T> implements SignalInterface<T> {
     __type = 'signal' as const;
@@ -30,8 +30,8 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
       const current = ctx.currentComputed;
 
-      // Use tracker to handle dependency
-      tracker.addDependency(this, current, this._version);
+      // Use helper to handle dependency
+      addDependency(this, current, this._version);
 
       return this._value;
     }

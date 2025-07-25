@@ -3,7 +3,7 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Computed as ComputedInterface, Effect } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { DependencyTracker, SourceCleaner, NodePoolManager } from './shared-helpers';
+import { createNodePoolHelpers, createDependencyHelpers, createSourceCleanupHelpers } from './shared-helpers';
 
 const {
   RUNNING,
@@ -14,9 +14,9 @@ const {
 } = CONSTANTS;
 
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
-  const pool = new NodePoolManager(ctx);
-  const tracker = new DependencyTracker(pool);
-  const cleaner = new SourceCleaner(pool);
+  const pool = createNodePoolHelpers(ctx);
+  const { addDependency } = createDependencyHelpers(pool);
+  const { disposeAllSources, cleanupSources } = createSourceCleanupHelpers(pool);
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
@@ -88,7 +88,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     dispose(): void {
       if (!(this._flags & DISPOSED)) {
         this._flags |= DISPOSED;
-        cleaner.disposeAllSources(this);
+        disposeAllSources(this);
         this._value = undefined;
       }
     }
@@ -101,7 +101,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _addDependency(target: ComputedInterface | Effect | null): void {
       if (!target || !(target._flags & RUNNING)) return;
 
-      tracker.addDependency(this, target, this._version);
+      addDependency(this, target, this._version);
     }
 
     _isUpToDate(): boolean {
@@ -151,7 +151,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _cleanupSources(): void {
-      cleaner.cleanupSources(this);
+      cleanupSources(this);
     }
   }
 
