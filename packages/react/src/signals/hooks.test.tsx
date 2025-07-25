@@ -1,23 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
-import { 
-  createSignalAPI, 
-  createSignalFactory, 
-  createComputedFactory 
-} from '@lattice/signals';
 import {
   useSubscribe,
   useSignal,
   useSelector,
 } from './hooks';
-
-// Create signal API instance for tests
-const signalAPI = createSignalAPI({
-  signal: createSignalFactory,
-  computed: createComputedFactory,
-});
-
-const { signal, computed } = signalAPI;
+import { signal, computed } from './api';
 
 describe('Signal Hooks', () => {
   describe('useSubscribe', () => {

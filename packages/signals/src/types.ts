@@ -1,12 +1,13 @@
 // Shared types for signals implementation
 
-interface ReactiveNode {
+export interface ReactiveNode {
   _targets?: DependencyNode;
   _version: number;
   _refresh(): boolean;
+  _node?: DependencyNode; // For node reuse pattern
 }
 
-interface ConsumerNode {
+export interface ConsumerNode {
   _sources?: DependencyNode;
   _notify(): void;
 }

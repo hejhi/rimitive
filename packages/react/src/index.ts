@@ -15,5 +15,5 @@ export type {
 } from './signals';
 
 // Re-export commonly used types from @lattice packages
-export type { Signal, Computed, Selected } from '@lattice/signals';
+export type { Signal, Computed } from '@lattice/signals';
 export type { LatticeExtension, ExtensionsToContext } from '@lattice/lattice';

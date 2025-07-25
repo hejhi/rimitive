@@ -1,7 +1,7 @@
 // Context and shared types for signals implementation
 // This module only exports types and factory functions, no global state
 
-import { Computed, DependencyNode, Effect } from "./types";
+import { Computed, ConsumerNode, DependencyNode, Effect, ReactiveNode } from "./types";
 
 export const RUNNING = 1 << 2;
 export const DISPOSED = 1 << 3;
@@ -29,7 +29,7 @@ export interface SignalContext {
   removeFromTargets: (node: DependencyNode) => void;
   acquireNode: () => DependencyNode;
   releaseNode: (node: DependencyNode) => void;
-  linkNodes: (source: any, target: any, version: number) => DependencyNode;
+  linkNodes: (source: ReactiveNode, target: ConsumerNode, version: number) => DependencyNode;
 }
 
 // Constants
@@ -97,7 +97,7 @@ export function createContext(): SignalContext {
     }
   };
   
-  ctx.linkNodes = (source: any, target: any, version: number): DependencyNode => {
+  ctx.linkNodes = (source: ReactiveNode, target: ConsumerNode, version: number): DependencyNode => {
     const newNode = ctx.acquireNode();
     
     newNode.source = source;

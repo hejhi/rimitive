@@ -1,13 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useLatticeContext } from './context-hooks';
-import { coreExtensions } from '@lattice/signals';
+import { signalAPI } from '../signals/api';
 
 describe('Lattice Context Hooks', () => {
   describe('useLatticeContext', () => {
     it('should create and manage context lifecycle', () => {
+      // For testing, we'll create a mock extension set
+      const mockExtensions = [
+        { name: 'signal' as const, method: signalAPI.signal },
+        { name: 'computed' as const, method: signalAPI.computed },
+        { name: 'effect' as const, method: signalAPI.effect },
+        { name: 'batch' as const, method: signalAPI.batch },
+        { name: 'subscribe' as const, method: signalAPI.subscribe },
+      ];
+      
       const { result, unmount } = renderHook(() =>
-        useLatticeContext(...coreExtensions)
+        useLatticeContext(...mockExtensions)
       );
 
       // Context should have all methods
@@ -35,8 +44,17 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should only create context once per component instance', () => {
+      // For testing, we'll create a mock extension set
+      const mockExtensions = [
+        { name: 'signal' as const, method: signalAPI.signal },
+        { name: 'computed' as const, method: signalAPI.computed },
+        { name: 'effect' as const, method: signalAPI.effect },
+        { name: 'batch' as const, method: signalAPI.batch },
+        { name: 'subscribe' as const, method: signalAPI.subscribe },
+      ];
+      
       const { result, rerender } = renderHook(() =>
-        useLatticeContext(...coreExtensions)
+        useLatticeContext(...mockExtensions)
       );
 
       const firstContext = result.current;
@@ -49,8 +67,17 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should allow signal creation and updates', () => {
+      // For testing, we'll create a mock extension set
+      const mockExtensions = [
+        { name: 'signal' as const, method: signalAPI.signal },
+        { name: 'computed' as const, method: signalAPI.computed },
+        { name: 'effect' as const, method: signalAPI.effect },
+        { name: 'batch' as const, method: signalAPI.batch },
+        { name: 'subscribe' as const, method: signalAPI.subscribe },
+      ];
+      
       const { result } = renderHook(() =>
-        useLatticeContext(...coreExtensions)
+        useLatticeContext(...mockExtensions)
       );
 
       const count = result.current.signal(0);
@@ -68,8 +95,17 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should support batch updates', () => {
+      // For testing, we'll create a mock extension set
+      const mockExtensions = [
+        { name: 'signal' as const, method: signalAPI.signal },
+        { name: 'computed' as const, method: signalAPI.computed },
+        { name: 'effect' as const, method: signalAPI.effect },
+        { name: 'batch' as const, method: signalAPI.batch },
+        { name: 'subscribe' as const, method: signalAPI.subscribe },
+      ];
+      
       const { result } = renderHook(() =>
-        useLatticeContext(...coreExtensions)
+        useLatticeContext(...mockExtensions)
       );
 
       const a = result.current.signal(1);
