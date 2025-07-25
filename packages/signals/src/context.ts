@@ -1,8 +1,5 @@
-// Context and shared types for signals implementation
-// This module only exports types and factory functions, no global state
-
 import { CONSTANTS } from "./constants";
-import { Computed, DependencyNode, Effect } from "./types";
+import { ConsumerNode, DependencyNode, Effect } from "./types";
 
 const { INITIAL_POOL_SIZE } = CONSTANTS;
 
@@ -11,7 +8,7 @@ interface SubscribeNode {
 }
 
 export interface SignalContext {
-  currentComputed: Computed | Effect | null;
+  currentConsumer: ConsumerNode | null;
   version: number;
   batchDepth: number;
   batchedEffects: Effect | null;
@@ -31,7 +28,7 @@ export function createContext(): SignalContext {
   }
   
   return {
-    currentComputed: null,
+    currentConsumer: null,
     version: 0,
     batchDepth: 0,
     batchedEffects: null,

@@ -1,4 +1,3 @@
-// Effect implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Effect as EffectInterface, EffectDisposer } from './types';
@@ -20,8 +19,10 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
   class Effect implements EffectInterface {
     __type = 'effect' as const;
     _fn: () => void;
-    _flags = OUTDATED;
+
     _sources: DependencyNode | undefined = undefined;
+    _flags = OUTDATED;
+
     _nextBatchedEffect: EffectInterface | undefined = undefined;
 
     constructor(fn: () => void) {
@@ -79,13 +80,13 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         node = node.nextSource;
       }
 
-      const prevComputed = ctx.currentComputed;
-      ctx.currentComputed = this;
+      const prevConsumer = ctx.currentConsumer;
+      ctx.currentConsumer = this;
 
       try {
         this._fn();
       } finally {
-        ctx.currentComputed = prevComputed;
+        ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
 
         // Cleanup unused sources

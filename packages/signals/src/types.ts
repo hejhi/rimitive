@@ -10,6 +10,7 @@ export interface ReactiveNode {
 export interface ConsumerNode {
   _sources?: DependencyNode;
   _notify(): void;
+  _flags: number;
 }
 
 export interface DependencyNode {
@@ -47,7 +48,7 @@ export interface Computed<T = unknown> extends Subscribable {
   _compute: () => T;
   _value: T | undefined;
   _version: number;
-  _globalVersion: number;
+  _lastComputedAt: number;
   _flags: number;
   _sources?: DependencyNode;
   _targets?: DependencyNode;

@@ -1,7 +1,6 @@
-// Computed implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { DependencyNode, Computed as ComputedInterface, Effect } from './types';
+import { DependencyNode, Computed as ComputedInterface, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
@@ -24,19 +23,22 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     __type = 'computed' as const;
     _compute: () => T;
     _value: T | undefined = undefined;
-    _version = 0;
-    _globalVersion = -1;
-    _flags = OUTDATED | IS_COMPUTED;
+    _lastComputedAt = -1;
+
+    // Graph information
     _sources: DependencyNode | undefined = undefined;
+    _flags = OUTDATED | IS_COMPUTED;
+
     _targets: DependencyNode | undefined = undefined;
     _node: DependencyNode | undefined = undefined;
+    _version = 0;
 
     constructor(compute: () => T) {
       this._compute = compute;
     }
 
     get value(): T {
-      this._addDependency(ctx.currentComputed);
+      this._addDependency(ctx.currentConsumer);
       this._refresh();
       return this._value!;
     }
@@ -60,14 +62,14 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         return true;
       }
 
-      const prevComputed = ctx.currentComputed;
+      const prevConsumer = ctx.currentConsumer;
       try {
         this._prepareSourcesTracking();
-        ctx.currentComputed = this;
+        ctx.currentConsumer = this;
         this._updateValue();
-        this._globalVersion = ctx.version;
+        this._lastComputedAt = ctx.version;
       } finally {
-        ctx.currentComputed = prevComputed;
+        ctx.currentConsumer = prevConsumer;
         this._cleanupSources();
         this._flags &= ~RUNNING;
       }
@@ -100,7 +102,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       return this._value!;
     }
 
-    _addDependency(target: ComputedInterface | Effect | null): void {
+    _addDependency(target: ConsumerNode | null): void {
       if (!target || !(target._flags & RUNNING)) return;
 
       addDependency(this, target, this._version);
@@ -110,7 +112,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       return (
         !(this._flags & OUTDATED) &&
         this._version > 0 &&
-        this._globalVersion === ctx.version
+        this._lastComputedAt === ctx.version
       );
     }
 
@@ -169,12 +171,12 @@ export function createUntrackFactory(ctx: SignalContext): LatticeExtension<'untr
   return {
     name: 'untrack',
     method: function untrack<T>(fn: () => T): T {
-      const prev = ctx.currentComputed;
-      ctx.currentComputed = null;
+      const prev = ctx.currentConsumer;
+      ctx.currentConsumer = null;
       try {
         return fn();
       } finally {
-        ctx.currentComputed = prev;
+        ctx.currentConsumer = prev;
       }
     }
   };

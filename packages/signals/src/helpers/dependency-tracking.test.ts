@@ -27,7 +27,8 @@ describe('Dependency Tracking Helpers', () => {
       
       const target: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // First call creates the dependency
@@ -54,7 +55,8 @@ describe('Dependency Tracking Helpers', () => {
       
       const target: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // Create dependency manually
@@ -83,7 +85,8 @@ describe('Dependency Tracking Helpers', () => {
       
       const target: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       const linkNodesSpy = vi.spyOn(pool, 'linkNodes');
@@ -105,7 +108,8 @@ describe('Dependency Tracking Helpers', () => {
       
       const target: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // Add dependencies from multiple sources
@@ -134,7 +138,8 @@ describe('Dependency Tracking Helpers', () => {
       
       const target: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // Create initial dependency

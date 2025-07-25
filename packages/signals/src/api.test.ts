@@ -128,7 +128,7 @@ describe('createSignalAPI', () => {
     // Access to context for debugging/testing
     expect(api._ctx.version).toBe(0);
     expect(api._ctx.batchDepth).toBe(0);
-    expect(api._ctx.currentComputed).toBe(null);
+    expect(api._ctx.currentConsumer).toBe(null);
     
     // Can inspect pool statistics
     expect(api._ctx.allocations).toBe(0);

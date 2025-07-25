@@ -15,9 +15,10 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   class Signal<T> implements SignalInterface<T> {
     __type = 'signal' as const;
     _value: T;
-    _version = 0;
+    
     _targets: DependencyNode | undefined = undefined;
     _node: DependencyNode | undefined = undefined;
+    _version = 0;
 
     constructor(value: T) {
       this._value = value;
@@ -25,11 +26,11 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
     get value(): T {
       // Fast path: no tracking needed
-      if (!ctx.currentComputed || !(ctx.currentComputed._flags & RUNNING)) {
+      if (!ctx.currentConsumer || !(ctx.currentConsumer._flags & RUNNING)) {
         return this._value;
       }
 
-      const current = ctx.currentComputed;
+      const current = ctx.currentConsumer;
 
       // Use helper to handle dependency
       addDependency(this, current, this._version);

@@ -27,7 +27,8 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // Create dependencies
@@ -58,7 +59,8 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       pool.linkNodes(source, consumer, 1);
@@ -73,7 +75,8 @@ describe('Source Cleanup Helpers', () => {
     it('should handle empty sources gracefully', () => {
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // Should not throw
@@ -93,7 +96,8 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // Create dependencies
@@ -129,7 +133,8 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // Create dependencies
@@ -166,7 +171,8 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       const node = pool.linkNodes(source, consumer, 1);
@@ -187,7 +193,8 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       const nodes = sources.map(source => 
@@ -207,7 +214,8 @@ describe('Source Cleanup Helpers', () => {
     it('should handle empty sources gracefully', () => {
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       // Should not throw
@@ -225,7 +233,8 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         _sources: undefined,
-        _notify: () => {}
+        _notify: () => {},
+        _flags: 0
       };
       
       const nodes = sources.map(source => 

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  setCurrentComputed,
-  getCurrentComputed,
+  setCurrentConsumer,
+  getCurrentConsumer,
   computed,
   effect,
   signal,
@@ -81,43 +81,43 @@ describe('Global State Management', () => {
     });
   });
 
-  describe('currentComputed tracking', () => {
+  describe('currentConsumer tracking', () => {
     it('should track currently executing computed', () => {
       const s = signal(1);
-      let capturedCurrent: ReturnType<typeof getCurrentComputed> = null;
+      let capturedCurrent: ReturnType<typeof getCurrentConsumer> = null;
 
       const c = computed(() => {
-        capturedCurrent = getCurrentComputed();
+        capturedCurrent = getCurrentConsumer();
         return s.value * 2;
       });
 
       // Before execution, should be null
-      expect(getCurrentComputed()).toBe(null);
+      expect(getCurrentConsumer()).toBe(null);
 
       // During execution, should be the computed
       void c.value;
       expect(capturedCurrent).toBe(c);
 
       // After execution, should be null again
-      expect(getCurrentComputed()).toBe(null);
+      expect(getCurrentConsumer()).toBe(null);
     });
 
     it('should handle nested computed execution', () => {
       const s = signal(1);
       const captures: Array<{
         type: string;
-        current: ReturnType<typeof getCurrentComputed>;
+        current: ReturnType<typeof getCurrentConsumer>;
       }> = [];
 
       const inner = computed(() => {
-        captures.push({ type: 'inner', current: getCurrentComputed() });
+        captures.push({ type: 'inner', current: getCurrentConsumer() });
         return s.value * 2;
       });
 
       const outer = computed(() => {
-        captures.push({ type: 'outer-before', current: getCurrentComputed() });
+        captures.push({ type: 'outer-before', current: getCurrentConsumer() });
         const result = inner.value + s.value;
-        captures.push({ type: 'outer-after', current: getCurrentComputed() });
+        captures.push({ type: 'outer-after', current: getCurrentConsumer() });
         return result;
       });
 
@@ -131,11 +131,11 @@ describe('Global State Management', () => {
 
     it('should track currently executing effect', () => {
       const s = signal(1);
-      let capturedCurrent: ReturnType<typeof getCurrentComputed> = null;
+      let capturedCurrent: ReturnType<typeof getCurrentConsumer> = null;
       let effectRan = false;
 
       const dispose = effect(() => {
-        capturedCurrent = getCurrentComputed();
+        capturedCurrent = getCurrentConsumer();
         effectRan = true;
         void s.value; // Subscribe to signal
       });
@@ -145,7 +145,7 @@ describe('Global State Management', () => {
       expect(typeof capturedCurrent).toBe('object');
 
       // After execution
-      expect(getCurrentComputed()).toBe(null);
+      expect(getCurrentConsumer()).toBe(null);
 
       dispose();
     });
@@ -157,7 +157,7 @@ describe('Global State Management', () => {
 
       const c1 = computed(() => {
         executionOrder.push('c1-start');
-        const current = getCurrentComputed();
+        const current = getCurrentConsumer();
         executionOrder.push(`c1-current:${current === c1}`);
         const result = s1.value * 2;
         executionOrder.push('c1-end');
@@ -166,10 +166,10 @@ describe('Global State Management', () => {
 
       const c2 = computed(() => {
         executionOrder.push('c2-start');
-        const current = getCurrentComputed();
+        const current = getCurrentConsumer();
         executionOrder.push(`c2-current:${current === c2}`);
         const result = c1.value + s2.value;
-        executionOrder.push(`c2-after-c1:${getCurrentComputed() === c2}`);
+        executionOrder.push(`c2-after-c1:${getCurrentConsumer() === c2}`);
         executionOrder.push('c2-end');
         return result;
       });
@@ -189,18 +189,18 @@ describe('Global State Management', () => {
 
     it('should handle errors without corrupting current computed', () => {
       const s = signal(1);
-      let capturedBefore: ReturnType<typeof getCurrentComputed>;
-      let capturedDuring: ReturnType<typeof getCurrentComputed> = null;
+      let capturedBefore: ReturnType<typeof getCurrentConsumer>;
+      let capturedDuring: ReturnType<typeof getCurrentConsumer> = null;
 
       const c = computed(() => {
-        capturedDuring = getCurrentComputed();
+        capturedDuring = getCurrentConsumer();
         if (s.value > 5) {
           throw new Error('Test error');
         }
         return s.value * 2;
       });
 
-      capturedBefore = getCurrentComputed();
+      capturedBefore = getCurrentConsumer();
 
       // Normal execution
       expect(c.value).toBe(2);
@@ -209,27 +209,27 @@ describe('Global State Management', () => {
 
       // Execution with error
       s.value = 10;
-      capturedBefore = getCurrentComputed();
+      capturedBefore = getCurrentConsumer();
 
       expect(() => c.value).toThrow('Test error');
 
-      const capturedAfter = getCurrentComputed();
+      const capturedAfter = getCurrentConsumer();
       expect(capturedBefore).toBe(null);
       expect(capturedAfter).toBe(null);
     });
   });
 
-  describe('setCurrentComputed', () => {
+  describe('setCurrentConsumer', () => {
     it('should allow manual setting and clearing', () => {
       const c = computed(() => 42);
 
-      expect(getCurrentComputed()).toBe(null);
+      expect(getCurrentConsumer()).toBe(null);
 
-      setCurrentComputed(c);
-      expect(getCurrentComputed()).toBe(c);
+      setCurrentConsumer(c);
+      expect(getCurrentConsumer()).toBe(c);
 
-      setCurrentComputed(null);
-      expect(getCurrentComputed()).toBe(null);
+      setCurrentConsumer(null);
+      expect(getCurrentConsumer()).toBe(null);
     });
 
     it('should affect dependency tracking', () => {
@@ -251,7 +251,7 @@ describe('Global State Management', () => {
       expect(dependencyAdded).toBe(true);
 
       // After execution, current computed should be cleared
-      expect(getCurrentComputed()).toBe(null);
+      expect(getCurrentConsumer()).toBe(null);
     });
   });
 
@@ -280,11 +280,11 @@ describe('Global State Management', () => {
     it('should clear current computed', () => {
       const c = computed(() => 42);
 
-      setCurrentComputed(c);
-      expect(getCurrentComputed()).toBe(c);
+      setCurrentConsumer(c);
+      expect(getCurrentConsumer()).toBe(c);
 
       resetGlobalState();
-      expect(getCurrentComputed()).toBe(null);
+      expect(getCurrentConsumer()).toBe(null);
     });
 
     it('should not affect existing signals or computeds', () => {
@@ -339,7 +339,7 @@ describe('Global State Management', () => {
       expect(effectCount).toBe(2);
 
       // Global state should be clean
-      expect(getCurrentComputed()).toBe(null);
+      expect(getCurrentConsumer()).toBe(null);
     });
 
     it('should maintain consistency across multiple computeds', () => {

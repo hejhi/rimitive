@@ -52,10 +52,10 @@ export function createTestInstance() {
     },
 
     // Scope functions - use ctx
-    setCurrentComputed: (computed: Computed | Effect | null) => {
-      ctx.currentComputed = computed;
+    setCurrentConsumer: (consumer: Computed | Effect | null) => {
+      ctx.currentConsumer = consumer;
     },
-    getCurrentComputed: () => ctx.currentComputed,
+    getCurrentConsumer: () => ctx.currentConsumer,
     resetGlobalState: () => {
       // Clear any pending batched effects
       while (ctx.batchedEffects) {
@@ -65,7 +65,7 @@ export function createTestInstance() {
       }
       
       // Reset context by reinitializing pool and counters
-      ctx.currentComputed = null;
+      ctx.currentConsumer = null;
       ctx.version = 0;
       ctx.batchDepth = 0;
       ctx.batchedEffects = null;
@@ -101,10 +101,10 @@ export const endBatch = () => defaultInstance.endBatch();
 export const getBatchDepth = () => defaultInstance.getBatchDepth();
 export const hasPendingEffects = () => defaultInstance.hasPendingEffects();
 export const clearBatch = () => defaultInstance.clearBatch();
-export const setCurrentComputed = (
-  ...args: Parameters<typeof defaultInstance.setCurrentComputed>
-) => defaultInstance.setCurrentComputed(...args);
-export const getCurrentComputed = () => defaultInstance.getCurrentComputed();
+export const setCurrentConsumer = (
+  ...args: Parameters<typeof defaultInstance.setCurrentConsumer>
+) => defaultInstance.setCurrentConsumer(...args);
+export const getCurrentConsumer = () => defaultInstance.getCurrentConsumer();
 export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 // Use getter to always get current context
 export const activeContext = (() => {
@@ -117,7 +117,7 @@ export const activeContext = (() => {
     get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
     get batchedEffects() { return defaultInstance.activeContext.batchedEffects; },
-    get currentComputed() { return defaultInstance.activeContext.currentComputed; },
+    get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
     get nodePool() { return defaultInstance.activeContext.nodePool; },
     set allocations(v) { defaultInstance.activeContext.allocations = v; },
     set poolHits(v) { defaultInstance.activeContext.poolHits = v; },
@@ -126,7 +126,7 @@ export const activeContext = (() => {
     set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
     set batchedEffects(v) { defaultInstance.activeContext.batchedEffects = v; },
-    set currentComputed(v) { defaultInstance.activeContext.currentComputed = v; },
+    set currentConsumer(v) { defaultInstance.activeContext.currentConsumer = v; },
   };
   return getter;
 })();
