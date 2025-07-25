@@ -2,9 +2,9 @@
 // This module only exports types and factory functions, no global state
 
 import { CONSTANTS } from "./constants";
-import { Computed, ConsumerNode, DependencyNode, Effect, ReactiveNode } from "./types";
+import { Computed, DependencyNode, Effect } from "./types";
 
-const { TRACKING, INITIAL_POOL_SIZE, MAX_POOL_SIZE } = CONSTANTS;
+const { INITIAL_POOL_SIZE } = CONSTANTS;
 
 interface SubscribeNode {
   _execute(): void;
@@ -21,15 +21,6 @@ export interface SignalContext {
   allocations: number;
   poolHits: number;
   poolMisses: number;
-  // Shared utilities (not constants - those are inlined for performance)
-  removeFromTargets: (node: DependencyNode) => void;
-  acquireNode: () => DependencyNode;
-  releaseNode: (node: DependencyNode) => void;
-  linkNodes: (source: ReactiveNode, target: ConsumerNode, version: number) => DependencyNode;
-  disposeAllSources: (consumer: ConsumerNode) => void;
-  cleanupSources: (consumer: ConsumerNode) => void;
-  tryReuseNode: (source: ReactiveNode, target: ConsumerNode, version: number) => boolean;
-  findExistingNode: (source: ReactiveNode, target: ConsumerNode, version: number) => boolean;
 }
 
 // Factory to create a new context
@@ -39,154 +30,15 @@ export function createContext(): SignalContext {
     nodePool[i] = {} as DependencyNode;
   }
   
-  // Create the context object that will be returned
-  const ctx: SignalContext = {} as SignalContext;
-  
-  // Initialize basic properties
-  ctx.currentComputed = null;
-  ctx.version = 0;
-  ctx.batchDepth = 0;
-  ctx.batchedEffects = null;
-  ctx.nodePool = nodePool;
-  ctx.poolSize = INITIAL_POOL_SIZE;
-  ctx.allocations = 0;
-  ctx.poolHits = 0;
-  ctx.poolMisses = 0;
-  
-  // Create context-bound utilities
-  ctx.removeFromTargets = (node: DependencyNode): void => {
-    const source = node.source;
-    const prevTarget = node.prevTarget;
-    const nextTarget = node.nextTarget;
-
-    if (prevTarget !== undefined) {
-      prevTarget.nextTarget = nextTarget;
-    } else {
-      source._targets = nextTarget;
-      if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
-        source._flags &= ~TRACKING;
-      }
-    }
-
-    if (nextTarget !== undefined) {
-      nextTarget.prevTarget = prevTarget;
-    }
+  return {
+    currentComputed: null,
+    version: 0,
+    batchDepth: 0,
+    batchedEffects: null,
+    nodePool: nodePool,
+    poolSize: INITIAL_POOL_SIZE,
+    allocations: 0,
+    poolHits: 0,
+    poolMisses: 0,
   };
-  
-  ctx.acquireNode = (): DependencyNode => {
-    ctx.allocations++;
-    return ctx.poolSize > 0
-      ? (ctx.poolHits++, ctx.nodePool[--ctx.poolSize]!)
-      : (ctx.poolMisses++, {} as DependencyNode);
-  };
-  
-  ctx.releaseNode = (node: DependencyNode): void => {
-    if (ctx.poolSize < MAX_POOL_SIZE) {
-      node.source = undefined!;
-      node.target = undefined!;
-      node.version = 0;
-      node.nextSource = undefined;
-      node.prevSource = undefined;
-      node.nextTarget = undefined;
-      node.prevTarget = undefined;
-      ctx.nodePool[ctx.poolSize++] = node;
-    }
-  };
-  
-  ctx.linkNodes = (source: ReactiveNode, target: ConsumerNode, version: number): DependencyNode => {
-    const newNode = ctx.acquireNode();
-    
-    newNode.source = source;
-    newNode.target = target;
-    newNode.version = version;
-    newNode.nextSource = target._sources;
-    newNode.nextTarget = source._targets;
-    newNode.prevSource = undefined;
-    newNode.prevTarget = undefined;
-    
-    if (target._sources) {
-      target._sources.prevSource = newNode;
-    }
-    target._sources = newNode;
-    
-    if (source._targets) {
-      source._targets.prevTarget = newNode;
-    } else if ('_flags' in source && typeof source._flags === 'number') {
-      // Set TRACKING flag for computed values
-      source._flags |= TRACKING;
-    }
-    source._targets = newNode;
-    
-    // Store node for reuse
-    source._node = newNode;
-    
-    return newNode;
-  };
-  
-  // Shared cleanup method for disposing all sources
-  ctx.disposeAllSources = (consumer: ConsumerNode): void => {
-    let node = consumer._sources;
-    while (node) {
-      const next = node.nextSource;
-      ctx.removeFromTargets(node);
-      ctx.releaseNode(node);
-      node = next;
-    }
-    consumer._sources = undefined;
-  };
-  
-  // Shared cleanup method for removing unused sources after tracking
-  ctx.cleanupSources = (consumer: ConsumerNode): void => {
-    let node = consumer._sources;
-    let prev: DependencyNode | undefined;
-
-    while (node !== undefined) {
-      const next = node.nextSource;
-
-      if (node.version === -1) {
-        // Remove this node from the linked list
-        if (prev !== undefined) {
-          prev.nextSource = next;
-        } else {
-          consumer._sources = next;
-        }
-
-        if (next !== undefined) {
-          next.prevSource = prev;
-        }
-
-        ctx.removeFromTargets(node);
-        ctx.releaseNode(node);
-      } else {
-        prev = node;
-      }
-
-      node = next;
-    }
-  };
-  
-  // Try to reuse the cached node on the source
-  ctx.tryReuseNode = (source: ReactiveNode, target: ConsumerNode, version: number): boolean => {
-    const node = source._node;
-    if (node !== undefined && node.target === target) {
-      node.version = version;
-      return true;
-    }
-    return false;
-  };
-  
-  // Find if a dependency already exists
-  ctx.findExistingNode = (source: ReactiveNode, target: ConsumerNode, version: number): boolean => {
-    let node = target._sources;
-    while (node) {
-      if (node.source === source) {
-        node.version = version;
-        return true;
-      }
-      node = node.nextSource;
-    }
-    return false;
-  };
-  
-  return ctx;
 }

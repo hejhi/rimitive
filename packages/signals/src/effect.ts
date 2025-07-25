@@ -3,6 +3,7 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Effect as EffectInterface, EffectDisposer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
+import { SourceCleaner, NodePoolManager } from './shared-helpers';
 
 const {
   RUNNING,
@@ -12,6 +13,9 @@ const {
 } = CONSTANTS;
 
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
+  const pool = new NodePoolManager(ctx);
+  const cleaner = new SourceCleaner(pool);
+  
   class Effect implements EffectInterface {
     __type = 'effect' as const;
     _fn: () => void;
@@ -84,14 +88,14 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         this._flags &= ~RUNNING;
 
         // Cleanup unused sources
-        ctx.cleanupSources(this);
+        cleaner.cleanupSources(this);
       }
     }
 
     dispose(): void {
       if (!(this._flags & DISPOSED)) {
         this._flags |= DISPOSED;
-        ctx.disposeAllSources(this);
+        cleaner.disposeAllSources(this);
       }
     }
   }

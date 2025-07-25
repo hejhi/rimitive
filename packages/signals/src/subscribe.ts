@@ -3,6 +3,7 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { DependencyNode, Unsubscribe, Subscribable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
+import { NodePoolManager } from './shared-helpers';
 
 const { NOTIFIED, DISPOSED } = CONSTANTS;
 
@@ -16,6 +17,8 @@ interface SubscribeNode<T> {
 }
 
 export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean }, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => Unsubscribe> {
+  const pool = new NodePoolManager(ctx);
+  
   class Subscribe<T> implements SubscribeNode<T> {
     _source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean };
     _callback: (value: T) => void;
@@ -83,8 +86,8 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
         this._flags |= DISPOSED;
         
         if (this._dependency) {
-          ctx.removeFromTargets(this._dependency);
-          ctx.releaseNode(this._dependency);
+          pool.removeFromTargets(this._dependency);
+          pool.releaseNode(this._dependency);
           
           this._dependency = undefined;
         }
@@ -93,7 +96,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
 
     _setupDependency(): void {
       // Get or create dependency node
-      const node = ctx.acquireNode();
+      const node = pool.acquireNode();
 
       // Setup the node
       node.source = this._source; // source is the subscribable
