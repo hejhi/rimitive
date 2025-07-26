@@ -62,7 +62,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         this.value = arr as T;
       } else if (typeof this._value === 'object' && this._value !== null) {
         const objKey = key as keyof T;
-        this.value = { ...this._value, [objKey]: value } as T;
+        this.value = { ...this._value, [objKey]: value };
       }
     }
 
@@ -96,8 +96,6 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
   return {
     name: 'signal',
-    method: function signal<T>(value: T): SignalInterface<T> {
-      return new Signal(value);
-    }
+    method: <T>(value: T): SignalInterface<T> => new Signal(value)
   };
 }

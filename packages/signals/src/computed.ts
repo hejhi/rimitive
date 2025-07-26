@@ -24,11 +24,8 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _compute: () => T;
     _value: T | undefined = undefined;
     _lastComputedAt = -1;
-
-    // Graph information
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED | IS_COMPUTED;
-
     _targets: Edge | undefined = undefined;
     _node: Edge | undefined = undefined;
     _version = 0;
@@ -46,13 +43,8 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _recompute(): boolean {
       this._flags &= ~NOTIFIED;
 
-      if (this._flags & RUNNING) {
-        throw new Error('Cycle detected');
-      }
-
-      if (this._isUpToDate()) {
-        return true;
-      }
+      if (this._flags & RUNNING) throw new Error('Cycle detected');
+      if (this._isUpToDate()) return true;
 
       this._flags &= ~OUTDATED;
       this._flags |= RUNNING;
@@ -78,23 +70,21 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _notify(): void {
-      if (!(this._flags & NOTIFIED)) {
-        this._flags |= NOTIFIED | OUTDATED;
+      if (this._flags & NOTIFIED) return;
+      this._flags |= NOTIFIED | OUTDATED;
 
-        let node = this._targets;
-        while (node) {
-          node.target._notify();
-          node = node.nextTarget;
-        }
+      let node = this._targets;
+      while (node) {
+        node.target._notify();
+        node = node.nextTarget;
       }
     }
 
     dispose(): void {
-      if (!(this._flags & DISPOSED)) {
-        this._flags |= DISPOSED;
-        disposeAllSources(this);
-        this._value = undefined;
-      }
+      if (this._flags & DISPOSED) return;
+      this._flags |= DISPOSED;
+      disposeAllSources(this);
+      this._value = undefined;
     }
 
     peek(): T {
@@ -122,6 +112,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         node !== undefined;
         node = node.nextSource
       ) {
+        // TODO: add Maybe type here? like source: Maybe<Computed<T>>?
         const source = node.source;
         
         if ('_recompute' in source && typeof source._recompute === 'function') {
@@ -159,16 +150,14 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
   return {
     name: 'computed',
-    method: function computed<T>(compute: () => T): ComputedInterface<T> {
-      return new Computed(compute);
-    }
+    method: <T>(compute: () => T): ComputedInterface<T> => new Computed(compute)
   };
 }
 
 export function createUntrackFactory(ctx: SignalContext): LatticeExtension<'untrack', <T>(fn: () => T) => T> {
   return {
     name: 'untrack',
-    method: function untrack<T>(fn: () => T): T {
+    method: <T>(fn: () => T): T => {
       const prev = ctx.currentConsumer;
       ctx.currentConsumer = null;
       try {
