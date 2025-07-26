@@ -26,7 +26,7 @@ export type {
 } from './types';
 
 // Export factory type and helper
-export type { SignalFactory, FactoriesToAPI } from './api';
+export type { FactoriesToAPI } from './api';
 
 // Export Lattice integration types
 export type {

@@ -78,12 +78,3 @@ export interface EffectDisposer {
 export interface ComputedOptions {
   equals?: (a: unknown, b: unknown) => boolean;
 }
-
-// not great. shouldn't be coupled with the extension types.
-export interface SignalFactory {
-  signal: <T>(initialValue: T) => Signal<T>;
-  computed: <T>(fn: () => T, options?: ComputedOptions) => Computed<T>;
-  effect: (fn: () => EffectCleanup) => Unsubscribe;
-  batch: <T>(fn: () => T) => T;
-  set: <T>(signal: Signal<T>, value: T) => void;
-}

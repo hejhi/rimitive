@@ -37,8 +37,5 @@ export function createSignalAPI<T extends Record<string, ExtensionFactory<string
   return api;
 }
 
-// Legacy type for backwards compatibility (can be removed later)
-export type SignalFactory<T> = ExtensionFactory<string, T>;
-
 // Type exports for users who want to create custom primitives
 export type { SignalContext } from './context';
