@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, untrack, computed, effect, batch, resetGlobalState } from './test-setup';
+import { signal, computed, effect, batch, resetGlobalState } from './test-setup';
 
 describe('signal', () => {
   beforeEach(() => {
@@ -120,52 +120,6 @@ describe('signal', () => {
       a.value = 10;
       expect(result.value).toBe(30); // Now picks up new b value
       expect(computeCount).toBe(2);
-    });
-  });
-
-  describe('untrack', () => {
-    it('should prevent dependency tracking in callback', () => {
-      const a = signal(5);
-      const b = signal(10);
-      let computeCount = 0;
-      
-      const result = computed(() => {
-        computeCount++;
-        return a.value + untrack(() => b.value);
-      });
-      
-      expect(result.value).toBe(15);
-      expect(computeCount).toBe(1);
-      
-      // Changing b should not trigger recompute
-      b.value = 20;
-      expect(result.value).toBe(15);
-      expect(computeCount).toBe(1);
-      
-      // Changing a should trigger recompute and pick up new b
-      a.value = 10;
-      expect(result.value).toBe(30);
-      expect(computeCount).toBe(2);
-    });
-
-    it('should restore tracking after untrack', () => {
-      const a = signal(1);
-      const b = signal(2);
-      const c = signal(3);
-      
-      const result = computed(() => {
-        const val1 = a.value;
-        const val2 = untrack(() => b.value);
-        const val3 = c.value;
-        return val1 + val2 + val3;
-      });
-      
-      expect(result.value).toBe(6);
-      
-      // Check dependencies - should have a and c, but not b
-      expect(a._targets).toBeDefined();
-      expect(b._targets).toBeUndefined();
-      expect(c._targets).toBeDefined();
     });
   });
 

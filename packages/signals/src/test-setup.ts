@@ -4,7 +4,7 @@
 import type { Signal, Computed, Effect, Edge, EffectDisposer } from './types';
 import { createSignalAPI } from './api';
 import { createSignalFactory } from './signal';
-import { createComputedFactory, createUntrackFactory } from './computed';
+import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
@@ -17,7 +17,6 @@ export function createTestInstance() {
     computed: createComputedFactory,
     effect: createEffectFactory,
     batch: createBatchFactory,
-    untrack: createUntrackFactory,
     subscribe: createSubscribeFactory,
   });
   
@@ -26,7 +25,6 @@ export function createTestInstance() {
   return {
     // Signal functions
     signal: api.signal,
-    untrack: api.untrack,
 
     // Computed functions
     computed: api.computed,
@@ -85,7 +83,6 @@ let defaultInstance = createTestInstance();
 
 // Export all functions from default instance - use getters to always get current instance
 export const signal = <T>(value: T): Signal<T> => defaultInstance.signal(value);
-export const untrack = <T>(fn: () => T): T => defaultInstance.untrack(fn);
 export const computed = <T>(fn: () => T): Computed<T> =>
   defaultInstance.computed(fn);
 export const effect = (fn: () => void | (() => void)): EffectDisposer =>

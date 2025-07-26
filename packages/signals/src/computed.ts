@@ -153,18 +153,3 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     method: <T>(compute: () => T): ComputedInterface<T> => new Computed(compute)
   };
 }
-
-export function createUntrackFactory(ctx: SignalContext): LatticeExtension<'untrack', <T>(fn: () => T) => T> {
-  return {
-    name: 'untrack',
-    method: <T>(fn: () => T): T => {
-      const prev = ctx.currentConsumer;
-      ctx.currentConsumer = null;
-      try {
-        return fn();
-      } finally {
-        ctx.currentConsumer = prev;
-      }
-    }
-  };
-}

@@ -24,12 +24,11 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
     get value(): T {
       const current = ctx.currentConsumer;
-      const value = this._value;
 
-      if (!current || !(current._flags & RUNNING)) return value;
+      if (!current || !(current._flags & RUNNING)) return this._value;
 
       addDependency(this, current, this._version);
-      return value;
+      return this._value;
     }
 
     set value(value: T) {

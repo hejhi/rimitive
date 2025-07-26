@@ -1,6 +1,6 @@
 // Tree-shakeable exports - import factories directly
 export { createSignalFactory } from './signal';
-export { createComputedFactory, createUntrackFactory } from './computed';
+export { createComputedFactory } from './computed';
 export { createEffectFactory } from './effect';
 export { createBatchFactory } from './batch';
 export { createSubscribeFactory } from './subscribe';
