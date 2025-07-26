@@ -79,6 +79,7 @@ export interface ComputedOptions {
   equals?: (a: unknown, b: unknown) => boolean;
 }
 
+// not great. shouldn't be coupled with the extension types.
 export interface SignalFactory {
   signal: <T>(initialValue: T) => Signal<T>;
   computed: <T>(fn: () => T, options?: ComputedOptions) => Computed<T>;
