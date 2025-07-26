@@ -23,7 +23,7 @@ export interface Consumer extends BaseReactive {
 
 // Edge: The connection between a Producer and Consumer in the dependency graph
 export interface Edge {
-  source: Producer;
+  source: Producer | (Producer & Consumer);
   target: Consumer;
   prevSource?: Edge;
   nextSource?: Edge;

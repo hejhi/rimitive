@@ -15,7 +15,7 @@ export function createNodePoolHelpers(ctx: SignalContext) {
       prevTarget.nextTarget = nextTarget;
     } else {
       source._targets = nextTarget;
-      if (nextTarget === undefined && '_flags' in source && typeof source._flags === 'number') {
+      if (nextTarget === undefined && '_flags' in source) {
         source._flags &= ~TRACKING;
       }
     }
