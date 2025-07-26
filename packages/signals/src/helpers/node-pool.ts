@@ -10,24 +10,27 @@ export function createNodePoolHelpers(ctx: SignalContext) {
     const source = node.source;
     const prevTarget = node.prevTarget;
     const nextTarget = node.nextTarget;
+    const hasNextTarget = nextTarget === undefined;
 
     if (prevTarget !== undefined) {
       prevTarget.nextTarget = nextTarget;
     } else {
       source._targets = nextTarget;
-      if (nextTarget === undefined && '_flags' in source) {
+
+      // If it's a producer that's ALSO a consumer (like computed)
+      if (hasNextTarget && '_flags' in source) {
         source._flags &= ~TRACKING;
       }
     }
 
-    if (nextTarget !== undefined) {
+    if (!hasNextTarget) {
       nextTarget.prevTarget = prevTarget;
     }
   };
 
   const acquireNode = (): Edge => {
     ctx.allocations++;
-    if (ctx.poolSize) return ctx.nodePool[--ctx.poolSize]!;
+    if (ctx.poolSize > 0) return ctx.nodePool[--ctx.poolSize]!;
 
     return {} as Edge;
   };
@@ -45,28 +48,30 @@ export function createNodePoolHelpers(ctx: SignalContext) {
     ctx.nodePool[ctx.poolSize++] = node;
   };
 
-  const linkNodes = (source: Producer, target: Consumer, version: number): Edge => {
-    const newNode = acquireNode();
-
-    newNode.source = source;
-    newNode.target = target;
-    newNode.version = version;
-    newNode.nextSource = target._sources;
-    newNode.nextTarget = source._targets;
-    newNode.prevSource = undefined;
-    newNode.prevTarget = undefined;
-
-    if (target._sources) {
-      target._sources.prevSource = newNode;
-    }
-    target._sources = newNode;
-
+  const linkNodes = (source: Producer | Producer & Consumer, target: Consumer, version: number): Edge => {
+    const newNode = Object.assign(acquireNode(), {
+      source,
+      target,
+      version: version,
+      nextSource: target._sources,
+      nextTarget: source._targets,
+      prevSource: undefined,
+      prevTarget: undefined,
+    });
     if (source._targets) {
       source._targets.prevTarget = newNode;
-    } else if ('_flags' in source && typeof source._flags === 'number') {
+    }
+    // TODO: this used to be else if with the above. but a computed has both targets
+    // AND flags. so it should set both...right? or not?
+    if ('_flags' in source) {
       // Set TRACKING flag for computed values
       source._flags |= TRACKING;
     }
+    if (target._sources) {
+      target._sources.prevSource = newNode;
+    }
+
+    target._sources = newNode;
     source._targets = newNode;
     source._node = newNode; // Store node for reuse
 
