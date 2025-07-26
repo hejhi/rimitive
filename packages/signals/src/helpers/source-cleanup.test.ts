@@ -18,7 +18,7 @@ describe('Source Cleanup Helpers', () => {
 
   describe('disposeAllSources', () => {
     it('should remove all source dependencies', () => {
-      const sources = Array.from({ length: 3 }, (_) => ({
+      const sources = Array.from({ length: 3 }, () => ({
         value: 0,
         __type: 'test',
         _targets: undefined,
@@ -27,6 +27,7 @@ describe('Source Cleanup Helpers', () => {
       }));
       
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _flags: 0,
         _notify: () => {},
@@ -60,9 +61,10 @@ describe('Source Cleanup Helpers', () => {
       };
       
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       pool.linkNodes(source, consumer, 1);
@@ -76,9 +78,10 @@ describe('Source Cleanup Helpers', () => {
 
     it('should handle empty sources gracefully', () => {
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       // Should not throw
@@ -98,9 +101,10 @@ describe('Source Cleanup Helpers', () => {
       }));
       
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       // Create dependencies
@@ -136,9 +140,10 @@ describe('Source Cleanup Helpers', () => {
       }));
       
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       // Create dependencies
@@ -175,9 +180,10 @@ describe('Source Cleanup Helpers', () => {
       };
       
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       const node = pool.linkNodes(source, consumer, 1);
@@ -189,7 +195,7 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should release cleaned up nodes', () => {
-      const sources = Array.from({ length: 3 }, (_) => ({
+      const sources = Array.from({ length: 3 }, () => ({
         value: 0,
         __type: 'test',
         _targets: undefined,
@@ -198,9 +204,10 @@ describe('Source Cleanup Helpers', () => {
       }));
       
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       const nodes = sources.map(source => 
@@ -219,9 +226,10 @@ describe('Source Cleanup Helpers', () => {
 
     it('should handle empty sources gracefully', () => {
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       // Should not throw
@@ -239,9 +247,10 @@ describe('Source Cleanup Helpers', () => {
       }));
       
       const consumer: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       const nodes = sources.map(source => 

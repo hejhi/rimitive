@@ -20,6 +20,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
   const { removeFromTargets, acquireNode, releaseNode } = createNodePoolHelpers(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {
+    __type = 'subscribe';
     _source: Producer<T>;
     _callback: (value: T) => void;
     _flags = 0;

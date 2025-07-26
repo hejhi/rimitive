@@ -96,9 +96,10 @@ describe('Node Pool Helpers', () => {
       };
       
       const target: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       const node = helpers.linkNodes(source, target, 1);
@@ -121,15 +122,17 @@ describe('Node Pool Helpers', () => {
       };
       
       const target1: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       const target2: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       const node1 = helpers.linkNodes(source, target1, 1);
@@ -152,9 +155,10 @@ describe('Node Pool Helpers', () => {
       };
       
       const target: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       helpers.linkNodes(source, target, 1);
@@ -175,9 +179,10 @@ describe('Node Pool Helpers', () => {
       };
       
       const target: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       const node = helpers.linkNodes(source, target, 1);
@@ -197,9 +202,10 @@ describe('Node Pool Helpers', () => {
       };
       
       const targets = Array.from({ length: 3 }, () => ({
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       }));
       
       const nodes = targets.map(target => 
@@ -225,9 +231,10 @@ describe('Node Pool Helpers', () => {
       };
       
       const target: Consumer = {
+        __type: 'test',
         _sources: undefined,
         _notify: () => {},
-        _flags: 0
+        _flags: 0,
       };
       
       const node = helpers.linkNodes(source, target, 1);

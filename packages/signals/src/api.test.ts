@@ -97,7 +97,7 @@ describe('createSignalAPI', () => {
     const s = api.signal(0);
     
     const dispose = api.effect(() => {
-      s.value; // Track the signal
+      void s.value; // Track the signal
       effectRuns++;
     });
 

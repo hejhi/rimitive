@@ -91,7 +91,7 @@ export const untrack = <T>(fn: () => T): T => defaultInstance.untrack(fn);
 export const computed = <T>(fn: () => T): Computed<T> =>
   defaultInstance.computed(fn);
 export const effect = (fn: () => void | (() => void)): EffectDisposer =>
-  defaultInstance.effect(fn) as EffectDisposer;
+  defaultInstance.effect(fn);
 export const subscribe = (...args: Parameters<typeof defaultInstance.subscribe>) =>
   defaultInstance.subscribe(...args);
 export const batch = (...args: Parameters<typeof defaultInstance.batch>) =>

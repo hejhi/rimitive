@@ -23,9 +23,9 @@ describe('batch', () => {
     let effectCount = 0;
     effect(() => {
       // Access all signals
-      s1.value;
-      s2.value;
-      s3.value;
+      void s1.value;
+      void s2.value;
+      void s3.value;
       effectCount++;
     });
     
@@ -58,8 +58,8 @@ describe('batch', () => {
     
     let effectCount = 0;
     effect(() => {
-      s1.value;
-      s2.value;
+      void s1.value;
+      void s2.value;
       effectCount++;
     });
     
@@ -85,7 +85,7 @@ describe('batch', () => {
     let effectRan = false;
     
     effect(() => {
-      s.value;
+      void s.value;
       effectRan = true;
     });
     
@@ -109,7 +109,7 @@ describe('batch', () => {
     
     let effectCount = 0;
     effect(() => {
-      quadrupled.value;
+      void quadrupled.value;
       effectCount++;
     });
     
@@ -161,7 +161,7 @@ describe('batch', () => {
     let subscribeCount = 0;
     
     effect(() => {
-      s.value;
+      void s.value;
       effectCount++;
     });
     
@@ -210,17 +210,17 @@ describe('batch', () => {
     const order: number[] = [];
     
     effect(() => {
-      s.value;
+      void s.value;
       order.push(1);
     });
     
     effect(() => {
-      s.value;
+      void s.value;
       order.push(2);
     });
     
     effect(() => {
-      s.value;
+      void s.value;
       order.push(3);
     });
     
@@ -242,7 +242,7 @@ describe('batch', () => {
     let innerEffectCount = 0;
     
     effect(() => {
-      s1.value;
+      void s1.value;
       outerEffectCount++;
       
       if (s1.value === 10) {
@@ -253,7 +253,7 @@ describe('batch', () => {
     });
     
     effect(() => {
-      s2.value;
+      void s2.value;
       innerEffectCount++;
     });
     

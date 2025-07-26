@@ -15,7 +15,7 @@ describe('Effect', () => {
   it('should track signal dependencies', () => {
     const count = signal(0);
     const fn = vi.fn(() => {
-      count.value; // Access signal to create dependency
+      void count.value; // Access signal to create dependency
     });
 
     effect(fn);
@@ -32,7 +32,7 @@ describe('Effect', () => {
     const num = signal(1);
     const doubled = computed(() => num.value * 2);
     const fn = vi.fn(() => {
-      doubled.value; // Access computed to create dependency
+      void doubled.value; // Access computed to create dependency
     });
 
     effect(fn);
@@ -48,7 +48,7 @@ describe('Effect', () => {
     let callCount = 0;
 
     effect(() => {
-      sig.value;
+      void sig.value;
       callCount++;
       if (callCount > 1) {
         // Cleanup should have been called
@@ -75,7 +75,7 @@ describe('Effect', () => {
 
   it('should stop reacting after disposal', () => {
     const sig = signal(0);
-    const fn = vi.fn(() => { sig.value; });
+    const fn = vi.fn(() => { void sig.value; });
 
     const dispose = effect(fn);
     expect(fn).toHaveBeenCalledTimes(1);
@@ -93,8 +93,8 @@ describe('Effect', () => {
     const a = signal(1);
     const b = signal(2);
     const fn = vi.fn(() => {
-      a.value;
-      b.value;
+      void a.value;
+      void b.value;
     });
 
     effect(fn);
@@ -115,11 +115,11 @@ describe('Effect', () => {
 
     effect(() => {
       outerFn();
-      sig.value;
+      void sig.value;
       
       effect(() => {
         innerFn();
-        sig.value;
+        void sig.value;
       });
     });
 
@@ -149,7 +149,7 @@ describe('Effect', () => {
     const sig = signal(0);
     const error = new Error('Test error');
     const fn = vi.fn(() => {
-      sig.value;
+      void sig.value;
       if (fn.mock.calls.length === 1) {
         throw error;
       }
@@ -169,9 +169,9 @@ describe('Effect', () => {
     const condition = signal(true);
     const fn = vi.fn(() => {
       if (condition.value) {
-        a.value;
+        void a.value;
       } else {
-        b.value;
+        void b.value;
       }
     });
 
@@ -209,9 +209,9 @@ describe('Effect', () => {
 
   it('should handle multiple effects on same signal', () => {
     const sig = signal(0);
-    const fn1 = vi.fn(() => { sig.value; });
-    const fn2 = vi.fn(() => { sig.value; });
-    const fn3 = vi.fn(() => { sig.value; });
+    const fn1 = vi.fn(() => { void sig.value; });
+    const fn2 = vi.fn(() => { void sig.value; });
+    const fn3 = vi.fn(() => { void sig.value; });
 
     effect(fn1);
     effect(fn2);
@@ -233,7 +233,7 @@ describe('Effect', () => {
     const sig = signal(0);
     
     const dispose = effect(() => {
-      sig.value;
+      void sig.value;
       return cleanup;
     });
 
@@ -249,7 +249,7 @@ describe('Effect', () => {
 
   it('should respect batching with nested batch calls', () => {
     const sig = signal(0);
-    const fn = vi.fn(() => { sig.value; });
+    const fn = vi.fn(() => { void sig.value; });
 
     effect(fn);
     expect(fn).toHaveBeenCalledTimes(1);
@@ -279,7 +279,7 @@ describe('Effect', () => {
     });
 
     const fn = vi.fn(() => {
-      comp.value;
+      void comp.value;
     });
 
     effect(fn);

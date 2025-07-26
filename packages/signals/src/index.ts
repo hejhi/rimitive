@@ -11,13 +11,13 @@ export { isSignal, isComputed, isEffect, isReactive, isNode, isEffectDisposer, g
 
 // Export types
 export type {
+  BaseReactive,
   Signal,
   Computed,
   ComputedOptions,
   EffectCleanup,
   EffectDisposer,
   Unsubscribe,
-  Subscriber,
   Effect,
   Node,
   Producer,
