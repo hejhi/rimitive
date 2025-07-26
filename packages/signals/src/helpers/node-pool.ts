@@ -38,6 +38,7 @@ export function createNodePoolHelpers(ctx: SignalContext) {
   const releaseNode = (node: Edge): void => {
     if (ctx.poolSize >= MAX_POOL_SIZE) return;
     
+    // Reset the entire node and add back to the pool
     node.source = undefined!;
     node.target = undefined!;
     node.version = 0;
@@ -49,27 +50,22 @@ export function createNodePoolHelpers(ctx: SignalContext) {
   };
 
   const linkNodes = (source: Producer | Producer & Consumer, target: Consumer, version: number): Edge => {
-    const newNode = Object.assign(acquireNode(), {
-      source,
-      target,
-      version: version,
-      nextSource: target._sources,
-      nextTarget: source._targets,
-      prevSource: undefined,
-      prevTarget: undefined,
-    });
-    if (source._targets) {
-      source._targets.prevTarget = newNode;
-    }
+    const newNode = acquireNode();
+
+    newNode.source = source;
+    newNode.target = target;
+    newNode.version = version;
+    newNode.nextSource = target._sources;
+    newNode.nextTarget = source._targets;
+    newNode.prevSource = undefined;
+    newNode.prevTarget = undefined;
+
+    if (source._targets) (source._targets.prevTarget = newNode);
     // TODO: this used to be else if with the above. but a computed has both targets
     // AND flags. so it should set both...right? or not?
-    if ('_flags' in source) {
-      // Set TRACKING flag for computed values
-      source._flags |= TRACKING;
-    }
-    if (target._sources) {
-      target._sources.prevSource = newNode;
-    }
+    // Set TRACKING flag for computed values
+    if ('_flags' in source) (source._flags |= TRACKING);
+    if (target._sources) (target._sources.prevSource = newNode);
 
     target._sources = newNode;
     source._targets = newNode;

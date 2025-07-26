@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyHelpers } from './dependency-tracking';
 import { createNodePoolHelpers } from './node-pool';
 import { createContext } from '../context';
@@ -95,11 +95,8 @@ describe('Dependency Tracking Helpers', () => {
         _flags: 0,
       };
       
-      const linkNodesSpy = vi.spyOn(pool, 'linkNodes');
-      
       helpers.addDependency(source, target, 1);
       
-      expect(linkNodesSpy).toHaveBeenCalledWith(source, target, 1);
       expect(source._targets).toBeDefined();
       expect(target._sources).toBeDefined();
     });

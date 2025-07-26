@@ -2,7 +2,7 @@
 import type { Producer, Consumer } from '../types';
 import type { createNodePoolHelpers } from './node-pool';
 
-export function createDependencyHelpers(pool: ReturnType<typeof createNodePoolHelpers>) {
+export function createDependencyHelpers({ linkNodes }: ReturnType<typeof createNodePoolHelpers>) {
   const addDependency = (source: Producer, target: Consumer, version: number): void => {
     let node = source._node;
     if (node !== undefined && node.target === target) {
@@ -18,7 +18,7 @@ export function createDependencyHelpers(pool: ReturnType<typeof createNodePoolHe
       node = node.nextSource;
     }
 
-    pool.linkNodes(source, target, version);
+    linkNodes(source, target, version);
   };
 
   return { addDependency };

@@ -2,13 +2,13 @@
 import type { Consumer, Edge } from '../types';
 import type { createNodePoolHelpers } from './node-pool';
 
-export function createSourceCleanupHelpers(pool: ReturnType<typeof createNodePoolHelpers>) {
+export function createSourceCleanupHelpers({ removeFromTargets, releaseNode }: ReturnType<typeof createNodePoolHelpers>) {
   const disposeAllSources = (consumer: Consumer): void => {
     let node = consumer._sources;
     while (node) {
       const next = node.nextSource;
-      pool.removeFromTargets(node);
-      pool.releaseNode(node);
+      removeFromTargets(node);
+      releaseNode(node);
       node = next;
     }
     consumer._sources = undefined;
@@ -29,12 +29,10 @@ export function createSourceCleanupHelpers(pool: ReturnType<typeof createNodePoo
           consumer._sources = next;
         }
 
-        if (next !== undefined) {
-          next.prevSource = prev;
-        }
+        if (next !== undefined) (next.prevSource = prev);
 
-        pool.removeFromTargets(node);
-        pool.releaseNode(node);
+        removeFromTargets(node);
+        releaseNode(node);
       } else {
         prev = node;
       }
