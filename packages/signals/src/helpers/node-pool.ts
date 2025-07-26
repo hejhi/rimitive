@@ -1,12 +1,12 @@
 // Node pool operations - used by all modules that need node management
 import type { SignalContext } from '../context';
-import type { ProducerNode, ConsumerNode, DependencyNode } from '../types';
+import type { Producer, Consumer, Edge } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { TRACKING, MAX_POOL_SIZE } = CONSTANTS;
 
 export function createNodePoolHelpers(ctx: SignalContext) {
-  const removeFromTargets = (node: DependencyNode): void => {
+  const removeFromTargets = (node: Edge): void => {
     const source = node.source;
     const prevTarget = node.prevTarget;
     const nextTarget = node.nextTarget;
@@ -25,14 +25,14 @@ export function createNodePoolHelpers(ctx: SignalContext) {
     }
   };
 
-  const acquireNode = (): DependencyNode => {
+  const acquireNode = (): Edge => {
     ctx.allocations++;
     return ctx.poolSize > 0
       ? (ctx.poolHits++, ctx.nodePool[--ctx.poolSize]!)
-      : (ctx.poolMisses++, {} as DependencyNode);
+      : (ctx.poolMisses++, {} as Edge);
   };
 
-  const releaseNode = (node: DependencyNode): void => {
+  const releaseNode = (node: Edge): void => {
     if (ctx.poolSize < MAX_POOL_SIZE) {
       node.source = undefined!;
       node.target = undefined!;
@@ -45,7 +45,7 @@ export function createNodePoolHelpers(ctx: SignalContext) {
     }
   };
 
-  const linkNodes = (source: ProducerNode, target: ConsumerNode, version: number): DependencyNode => {
+  const linkNodes = (source: Producer, target: Consumer, version: number): Edge => {
     const newNode = acquireNode();
     
     newNode.source = source;

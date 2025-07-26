@@ -1,7 +1,7 @@
 // Subscribe implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { DependencyNode, Unsubscribe, Producer } from './types';
+import { Edge, Unsubscribe, Producer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 
@@ -11,7 +11,7 @@ interface SubscribeNode<T> {
   _source: Producer<T>;
   _callback: (value: T) => void;
   _flags: number;
-  _dependency: DependencyNode | undefined;
+  _dependency: Edge | undefined;
   _notify(): void;
   dispose(): void;
 }
@@ -23,9 +23,9 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     _source: Producer<T>;
     _callback: (value: T) => void;
     _flags = 0;
-    _dependency: DependencyNode | undefined = undefined;
+    _dependency: Edge | undefined = undefined;
     _lastValue: T;
-    _sources?: DependencyNode; // Add this to satisfy ConsumerNode interface
+    _sources?: Edge; // Add this to satisfy Consumer interface
 
     constructor(source: Producer<T>, callback: (value: T) => void) {
       this._source = source;

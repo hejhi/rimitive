@@ -3,7 +3,7 @@ import { createDependencyHelpers } from './dependency-tracking';
 import { createNodePoolHelpers } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { ProducerNode, ConsumerNode } from '../types';
+import type { Producer, Consumer } from '../types';
 
 describe('Dependency Tracking Helpers', () => {
   let ctx: SignalContext;
@@ -18,13 +18,15 @@ describe('Dependency Tracking Helpers', () => {
 
   describe('addDependency', () => {
     it('should reuse cached node when available', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -45,13 +47,15 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should find existing dependency in sources list', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -74,13 +78,15 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should create new dependency when none exists', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -97,12 +103,14 @@ describe('Dependency Tracking Helpers', () => {
 
     it('should handle multiple sources for the same target', () => {
       const sources = Array.from({ length: 3 }, (_, i) => ({
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: i + 1,
       }));
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -125,13 +133,15 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should update version when dependency already exists', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0

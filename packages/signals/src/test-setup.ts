@@ -1,7 +1,7 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { Signal, Computed, Effect, DependencyNode, EffectDisposer } from './types';
+import type { Signal, Computed, Effect, Edge, EffectDisposer } from './types';
 import { createSignalAPI } from './api';
 import { createSignalFactory } from './signal';
 import { createComputedFactory, createUntrackFactory } from './computed';
@@ -74,7 +74,7 @@ export function createTestInstance() {
       ctx.poolHits = 0;
       ctx.poolMisses = 0;
       for (let i = 0; i < 100; i++) {
-        ctx.nodePool[i] = {} as DependencyNode;
+        ctx.nodePool[i] = {} as Edge;
       }
     },
     getGlobalVersion: () => ctx.version,

@@ -1,6 +1,6 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { DependencyNode, Effect as EffectInterface, EffectDisposer } from './types';
+import { Edge, Effect as EffectInterface, EffectDisposer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
@@ -20,7 +20,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     __type = 'effect' as const;
     _fn: () => void;
 
-    _sources: DependencyNode | undefined = undefined;
+    _sources: Edge | undefined = undefined;
     _flags = OUTDATED;
 
     _nextBatchedEffect: EffectInterface | undefined = undefined;

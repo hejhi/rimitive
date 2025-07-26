@@ -1,5 +1,5 @@
 import { CONSTANTS } from "./constants";
-import { ConsumerNode, DependencyNode, Effect } from "./types";
+import { Consumer, Edge, Effect } from "./types";
 
 const { INITIAL_POOL_SIZE } = CONSTANTS;
 
@@ -8,12 +8,12 @@ interface SubscribeNode {
 }
 
 export interface SignalContext {
-  currentConsumer: ConsumerNode | null;
+  currentConsumer: Consumer | null;
   version: number;
   batchDepth: number;
   batchedEffects: Effect | null;
   subscribeBatch?: Set<SubscribeNode>;
-  nodePool: DependencyNode[];
+  nodePool: Edge[];
   poolSize: number;
   allocations: number;
   poolHits: number;
@@ -22,9 +22,9 @@ export interface SignalContext {
 
 // Factory to create a new context
 export function createContext(): SignalContext {
-  const nodePool = new Array(INITIAL_POOL_SIZE) as DependencyNode[];
+  const nodePool = new Array(INITIAL_POOL_SIZE) as Edge[];
   for (let i = 0; i < INITIAL_POOL_SIZE; i++) {
-    nodePool[i] = {} as DependencyNode;
+    nodePool[i] = {} as Edge;
   }
   
   return {

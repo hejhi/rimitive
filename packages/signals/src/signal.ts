@@ -1,7 +1,7 @@
 // Signal implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Signal as SignalInterface, DependencyNode } from './types';
+import { Signal as SignalInterface, Edge } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
@@ -16,8 +16,8 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     __type = 'signal' as const;
     _value: T;
     
-    _targets: DependencyNode | undefined = undefined;
-    _node: DependencyNode | undefined = undefined;
+    _targets: Edge | undefined = undefined;
+    _node: Edge | undefined = undefined;
     _version = 0;
 
     constructor(value: T) {

@@ -3,7 +3,7 @@
  * Uses the __type property for fast, reliable type checking
  */
 
-import type { Signal, Computed, Effect, SignalLike } from './types';
+import type { Signal, Computed, Effect, Node } from './types';
 
 /**
  * Check if a value is a Signal
@@ -62,7 +62,7 @@ export function isReactive(value: unknown): value is Signal<unknown> | Computed<
 /**
  * Check if a value is subscribable (has value property and __type)
  */
-export function isSignalLike(value: unknown): value is SignalLike {
+export function isNode(value: unknown): value is Node {
   return value != null && 
     typeof value === 'object' && 
     'value' in value &&

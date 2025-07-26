@@ -3,7 +3,7 @@ import { createSourceCleanupHelpers } from './source-cleanup';
 import { createNodePoolHelpers } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { ProducerNode, ConsumerNode, DependencyNode } from '../types';
+import type { Producer, Consumer, Edge } from '../types';
 
 describe('Source Cleanup Helpers', () => {
   let ctx: SignalContext;
@@ -19,12 +19,14 @@ describe('Source Cleanup Helpers', () => {
   describe('disposeAllSources', () => {
     it('should remove all source dependencies', () => {
       const sources = Array.from({ length: 3 }, (_) => ({
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       }));
       
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _flags: 0,
         _notify: () => {},
@@ -49,13 +51,15 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should release nodes back to pool', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -71,7 +75,7 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should handle empty sources gracefully', () => {
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -86,12 +90,14 @@ describe('Source Cleanup Helpers', () => {
   describe('cleanupSources', () => {
     it('should remove only nodes with version -1', () => {
       const sources = Array.from({ length: 4 }, (_, i) => ({
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: i + 1,
       }));
       
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -122,12 +128,14 @@ describe('Source Cleanup Helpers', () => {
 
     it('should maintain linked list integrity', () => {
       const sources = Array.from({ length: 5 }, (_, i) => ({
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: i + 1,
       }));
       
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -146,7 +154,7 @@ describe('Source Cleanup Helpers', () => {
       
       // Check that remaining nodes are properly linked
       let node = consumer._sources;
-      let prev: DependencyNode | undefined;
+      let prev: Edge | undefined;
       while (node) {
         if (prev) {
           expect(node.prevSource).toBe(prev);
@@ -158,13 +166,15 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should handle all nodes marked for cleanup', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -180,12 +190,14 @@ describe('Source Cleanup Helpers', () => {
 
     it('should release cleaned up nodes', () => {
       const sources = Array.from({ length: 3 }, (_) => ({
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       }));
       
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -206,7 +218,7 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should handle empty sources gracefully', () => {
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -219,12 +231,14 @@ describe('Source Cleanup Helpers', () => {
 
     it('should update head when first node is removed', () => {
       const sources = Array.from({ length: 3 }, (_, i) => ({
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: i + 1,
       }));
       
-      const consumer: ConsumerNode = {
+      const consumer: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0

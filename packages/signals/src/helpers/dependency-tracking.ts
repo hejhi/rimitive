@@ -1,9 +1,9 @@
 // Dependency tracking helpers - shared by signal.ts and computed.ts
-import type { ProducerNode, ConsumerNode } from '../types';
+import type { Producer, Consumer } from '../types';
 import type { createNodePoolHelpers } from './node-pool';
 
 export function createDependencyHelpers(pool: ReturnType<typeof createNodePoolHelpers>) {
-  const tryReuseNode = (source: ProducerNode, target: ConsumerNode, version: number): boolean => {
+  const tryReuseNode = (source: Producer, target: Consumer, version: number): boolean => {
     const node = source._node;
     if (node !== undefined && node.target === target) {
       node.version = version;
@@ -12,7 +12,7 @@ export function createDependencyHelpers(pool: ReturnType<typeof createNodePoolHe
     return false;
   };
 
-  const findExistingNode = (source: ProducerNode, target: ConsumerNode, version: number): boolean => {
+  const findExistingNode = (source: Producer, target: Consumer, version: number): boolean => {
     let node = target._sources;
     while (node) {
       if (node.source === source) {
@@ -24,7 +24,7 @@ export function createDependencyHelpers(pool: ReturnType<typeof createNodePoolHe
     return false;
   };
 
-  const addDependency = (source: ProducerNode, target: ConsumerNode, version: number): void => {
+  const addDependency = (source: Producer, target: Consumer, version: number): void => {
     if (tryReuseNode(source, target, version)) return;
     if (findExistingNode(source, target, version)) return;
     pool.linkNodes(source, target, version);

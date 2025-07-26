@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createNodePoolHelpers } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { ProducerNode, ConsumerNode, DependencyNode } from '../types';
+import type { Producer, Consumer, Edge } from '../types';
 
 describe('Node Pool Helpers', () => {
   let ctx: SignalContext;
@@ -70,7 +70,7 @@ describe('Node Pool Helpers', () => {
       }
       
       // Now acquire more nodes than MAX_POOL_SIZE
-      const nodes: DependencyNode[] = [];
+      const nodes: Edge[] = [];
       for (let i = 0; i < MAX_POOL_SIZE + 100; i++) {
         nodes.push(helpers.acquireNode());
       }
@@ -87,13 +87,15 @@ describe('Node Pool Helpers', () => {
 
   describe('linkNodes', () => {
     it('should create bidirectional links between source and target', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -110,19 +112,21 @@ describe('Node Pool Helpers', () => {
     });
 
     it('should maintain linked lists when multiple dependencies exist', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const target1: ConsumerNode = {
+      const target1: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
       };
       
-      const target2: ConsumerNode = {
+      const target2: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -139,13 +143,15 @@ describe('Node Pool Helpers', () => {
 
     it('should set TRACKING flag for computed sources', () => {
       const source = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
         _flags: 0,
       };
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -160,13 +166,15 @@ describe('Node Pool Helpers', () => {
 
   describe('removeFromTargets', () => {
     it('should remove node from targets list', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
       };
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0
@@ -180,7 +188,9 @@ describe('Node Pool Helpers', () => {
     });
 
     it('should maintain linked list integrity when removing middle node', () => {
-      const source: ProducerNode = {
+      const source: Producer = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
@@ -206,13 +216,15 @@ describe('Node Pool Helpers', () => {
 
     it('should clear TRACKING flag when last target is removed', () => {
       const source = {
+        value: 0,
+        __type: 'test',
         _targets: undefined,
         _node: undefined,
         _version: 1,
         _flags: 16, // TRACKING flag set
       };
       
-      const target: ConsumerNode = {
+      const target: Consumer = {
         _sources: undefined,
         _notify: () => {},
         _flags: 0

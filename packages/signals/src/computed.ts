@@ -1,6 +1,6 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { DependencyNode, Computed as ComputedInterface, ConsumerNode } from './types';
+import { Edge, Computed as ComputedInterface, Consumer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
@@ -26,11 +26,11 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _lastComputedAt = -1;
 
     // Graph information
-    _sources: DependencyNode | undefined = undefined;
+    _sources: Edge | undefined = undefined;
     _flags = OUTDATED | IS_COMPUTED;
 
-    _targets: DependencyNode | undefined = undefined;
-    _node: DependencyNode | undefined = undefined;
+    _targets: Edge | undefined = undefined;
+    _node: Edge | undefined = undefined;
     _version = 0;
 
     constructor(compute: () => T) {
@@ -102,7 +102,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       return this._value!;
     }
 
-    _addDependency(target: ConsumerNode | null): void {
+    _addDependency(target: Consumer | null): void {
       if (!target || !(target._flags & RUNNING)) return;
 
       addDependency(this, target, this._version);
