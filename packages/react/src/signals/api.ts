@@ -6,6 +6,11 @@ import {
   createEffectFactory,
   createBatchFactory,
   createSubscribeFactory,
+  type Signal,
+  type Computed,
+  type ComputedOptions,
+  type EffectCleanup,
+  type Unsubscribe,
 } from '@lattice/signals';
 
 // Create the default API instance
@@ -17,9 +22,10 @@ export const signalAPI = createSignalAPI({
   subscribe: createSubscribeFactory,
 });
 
-// Export individual functions for convenience
-export const signal = signalAPI.signal;
-export const computed = signalAPI.computed;
-export const effect = signalAPI.effect;
-export const batch = signalAPI.batch;
-export const subscribe = signalAPI.subscribe;
+// Export individual functions for convenience with explicit types
+export const signal: <T>(value: T) => Signal<T> = signalAPI.signal;
+export const computed: <T>(fn: () => T, options?: ComputedOptions) => Computed<T> = signalAPI.computed;
+export const effect: (fn: () => EffectCleanup) => Unsubscribe = signalAPI.effect;
+export const batch: <T>(fn: () => T) => T = signalAPI.batch;
+// Use typeof to get the actual type from the API
+export const subscribe: typeof signalAPI.subscribe = signalAPI.subscribe;
