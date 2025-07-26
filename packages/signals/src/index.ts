@@ -7,7 +7,7 @@ export { createSubscribeFactory } from './subscribe';
 export { createSignalAPI } from './api';
 
 // Re-export type guards
-export { isSignal, isComputed, isEffect, isReactive, isSubscribable, isEffectDisposer, getEffectFromDisposer } from './type-guards';
+export { isSignal, isComputed, isEffect, isReactive, isSignalLike, isEffectDisposer, getEffectFromDisposer } from './type-guards';
 
 // Export types
 export type {
@@ -19,7 +19,8 @@ export type {
   Unsubscribe,
   Subscriber,
   Effect,
-  Subscribable,
+  SignalLike,
+  Producer,
 } from './types';
 
 // Export factory type and helper

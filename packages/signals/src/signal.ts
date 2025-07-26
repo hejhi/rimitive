@@ -53,9 +53,6 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       }
     }
 
-    _refresh(): boolean {
-      return true;
-    }
 
     set(key: unknown, value: unknown): void {
       if (Array.isArray(this._value)) {

@@ -1,9 +1,6 @@
-// Shared types for signals implementation
-
-export interface ReactiveNode {
+export interface ProducerNode {
   _targets?: DependencyNode;
   _version: number;
-  _refresh(): boolean;
   _node?: DependencyNode; // For node reuse pattern
 }
 
@@ -14,7 +11,7 @@ export interface ConsumerNode {
 }
 
 export interface DependencyNode {
-  source: ReactiveNode;
+  source: ProducerNode;
   target: ConsumerNode;
   prevSource?: DependencyNode;
   nextSource?: DependencyNode;
@@ -24,7 +21,7 @@ export interface DependencyNode {
   rollbackNode?: DependencyNode;
 }
 
-export interface Signal<T = unknown> extends Subscribable {
+export interface Signal<T = unknown> extends Producer<T> {
   value: T;
   peek(): T;
   __type: 'signal';
@@ -32,7 +29,6 @@ export interface Signal<T = unknown> extends Subscribable {
   _version: number;
   _targets?: DependencyNode;
   _node?: DependencyNode; // For node reuse pattern
-  _refresh(): boolean;
   // Object/array update methods
   set<K extends keyof T>(key: K, value: T[K]): void;
   patch<K extends keyof T>(
@@ -41,7 +37,7 @@ export interface Signal<T = unknown> extends Subscribable {
   ): void;
 }
 
-export interface Computed<T = unknown> extends Subscribable {
+export interface Computed<T = unknown> extends Producer<T> {
   readonly value: T;
   peek: () => T;
   __type: 'computed';
@@ -54,7 +50,7 @@ export interface Computed<T = unknown> extends Subscribable {
   _targets?: DependencyNode;
   _node?: DependencyNode; // For node reuse pattern
   _notify(): void;
-  _refresh(): boolean;
+  _recompute(): boolean;
   dispose(): void;
 }
 
@@ -70,11 +66,17 @@ export interface Effect {
   subscribe?: (listener: () => void) => () => void;
 }
 
-// Minimal interface for values that can be subscribed to
-export type Subscribable<T = unknown> = {
+// Minimal interface for values that can be read like signals
+export type SignalLike<T = unknown> = {
   value: T;
   readonly __type: string;
 };
+
+// Producer interface - SignalLike with necessary internal properties for subscription
+export interface Producer<T = unknown> extends SignalLike<T> {
+  _targets?: DependencyNode;
+  _version: number;
+}
 
 // Additional type exports
 export type WritableSignal<T = unknown> = Signal<T>;

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createNodePoolHelpers } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { ReactiveNode, ConsumerNode, DependencyNode } from '../types';
+import type { ProducerNode, ConsumerNode, DependencyNode } from '../types';
 
 describe('Node Pool Helpers', () => {
   let ctx: SignalContext;
@@ -87,11 +87,10 @@ describe('Node Pool Helpers', () => {
 
   describe('linkNodes', () => {
     it('should create bidirectional links between source and target', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const target: ConsumerNode = {
@@ -111,11 +110,10 @@ describe('Node Pool Helpers', () => {
     });
 
     it('should maintain linked lists when multiple dependencies exist', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const target1: ConsumerNode = {
@@ -145,7 +143,6 @@ describe('Node Pool Helpers', () => {
         _node: undefined,
         _version: 1,
         _flags: 0,
-        _refresh: () => true
       };
       
       const target: ConsumerNode = {
@@ -163,11 +160,10 @@ describe('Node Pool Helpers', () => {
 
   describe('removeFromTargets', () => {
     it('should remove node from targets list', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const target: ConsumerNode = {
@@ -184,11 +180,10 @@ describe('Node Pool Helpers', () => {
     });
 
     it('should maintain linked list integrity when removing middle node', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const targets = Array.from({ length: 3 }, () => ({
@@ -215,7 +210,6 @@ describe('Node Pool Helpers', () => {
         _node: undefined,
         _version: 1,
         _flags: 16, // TRACKING flag set
-        _refresh: () => true
       };
       
       const target: ConsumerNode = {

@@ -1,6 +1,4 @@
-import type { Signal, Computed } from '@lattice/signals';
-
-export type SignalLike<T> = Signal<T> | Computed<T>;
+import type { SignalLike } from '@lattice/signals';
 
 export type SignalValue<S> = S extends SignalLike<infer T> ? T : never;
 

@@ -39,11 +39,11 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
     get value(): T {
       this._addDependency(ctx.currentConsumer);
-      this._refresh();
+      this._recompute();
       return this._value!;
     }
 
-    _refresh(): boolean {
+    _recompute(): boolean {
       this._flags &= ~NOTIFIED;
 
       if (this._flags & RUNNING) {
@@ -98,7 +98,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     peek(): T {
-      this._refresh();
+      this._recompute();
       return this._value!;
     }
 
@@ -123,11 +123,11 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         node = node.nextSource
       ) {
         const source = node.source;
-        if (
-          node.version !== source._version ||
-          !source._refresh() ||
-          node.version !== source._version
-        ) {
+        // If source is a computed, ensure it's up to date
+        if ('_recompute' in source && typeof source._recompute === 'function') {
+          source._recompute();
+        }
+        if (node.version !== source._version) {
           return true;
         }
       }

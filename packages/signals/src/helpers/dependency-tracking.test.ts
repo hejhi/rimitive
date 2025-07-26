@@ -3,7 +3,7 @@ import { createDependencyHelpers } from './dependency-tracking';
 import { createNodePoolHelpers } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { ReactiveNode, ConsumerNode } from '../types';
+import type { ProducerNode, ConsumerNode } from '../types';
 
 describe('Dependency Tracking Helpers', () => {
   let ctx: SignalContext;
@@ -18,11 +18,10 @@ describe('Dependency Tracking Helpers', () => {
 
   describe('addDependency', () => {
     it('should reuse cached node when available', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const target: ConsumerNode = {
@@ -46,11 +45,10 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should find existing dependency in sources list', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const target: ConsumerNode = {
@@ -76,11 +74,10 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should create new dependency when none exists', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const target: ConsumerNode = {
@@ -103,7 +100,6 @@ describe('Dependency Tracking Helpers', () => {
         _targets: undefined,
         _node: undefined,
         _version: i + 1,
-        _refresh: () => true
       }));
       
       const target: ConsumerNode = {
@@ -129,11 +125,10 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should update version when dependency already exists', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const target: ConsumerNode = {

@@ -5,7 +5,6 @@ export {
 } from './hooks';
 
 export type {
-  SignalLike,
   SignalValue,
   SignalSetter,
 } from './types';

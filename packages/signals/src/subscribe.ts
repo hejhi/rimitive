@@ -1,14 +1,14 @@
 // Subscribe implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { DependencyNode, Unsubscribe, Subscribable } from './types';
+import { DependencyNode, Unsubscribe, Producer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 
 const { NOTIFIED, DISPOSED } = CONSTANTS;
 
 interface SubscribeNode<T> {
-  _source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean };
+  _source: Producer<T>;
   _callback: (value: T) => void;
   _flags: number;
   _dependency: DependencyNode | undefined;
@@ -16,18 +16,18 @@ interface SubscribeNode<T> {
   dispose(): void;
 }
 
-export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean }, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => Unsubscribe> {
+export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Producer<T>, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => Unsubscribe> {
   const { removeFromTargets, acquireNode, releaseNode } = createNodePoolHelpers(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {
-    _source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean };
+    _source: Producer<T>;
     _callback: (value: T) => void;
     _flags = 0;
     _dependency: DependencyNode | undefined = undefined;
     _lastValue: T;
     _sources?: DependencyNode; // Add this to satisfy ConsumerNode interface
 
-    constructor(source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean }, callback: (value: T) => void) {
+    constructor(source: Producer<T>, callback: (value: T) => void) {
       this._source = source;
       this._callback = callback;
       this._lastValue = source.value;
@@ -119,7 +119,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
   }
 
   const subscribe = function subscribe<T>(
-    source: Subscribable<T> & { _targets?: DependencyNode; _version: number; _refresh(): boolean },
+    source: Producer<T>,
     callback: (value: T) => void,
     options?: { skipEqualityCheck?: boolean }
   ): Unsubscribe {

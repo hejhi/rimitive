@@ -3,7 +3,7 @@ import { createSourceCleanupHelpers } from './source-cleanup';
 import { createNodePoolHelpers } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { ReactiveNode, ConsumerNode, DependencyNode } from '../types';
+import type { ProducerNode, ConsumerNode, DependencyNode } from '../types';
 
 describe('Source Cleanup Helpers', () => {
   let ctx: SignalContext;
@@ -22,13 +22,12 @@ describe('Source Cleanup Helpers', () => {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       }));
       
       const consumer: ConsumerNode = {
         _sources: undefined,
+        _flags: 0,
         _notify: () => {},
-        _flags: 0
       };
       
       // Create dependencies
@@ -50,11 +49,10 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should release nodes back to pool', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const consumer: ConsumerNode = {
@@ -91,7 +89,6 @@ describe('Source Cleanup Helpers', () => {
         _targets: undefined,
         _node: undefined,
         _version: i + 1,
-        _refresh: () => true
       }));
       
       const consumer: ConsumerNode = {
@@ -128,7 +125,6 @@ describe('Source Cleanup Helpers', () => {
         _targets: undefined,
         _node: undefined,
         _version: i + 1,
-        _refresh: () => true
       }));
       
       const consumer: ConsumerNode = {
@@ -162,11 +158,10 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should handle all nodes marked for cleanup', () => {
-      const source: ReactiveNode = {
+      const source: ProducerNode = {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       };
       
       const consumer: ConsumerNode = {
@@ -188,7 +183,6 @@ describe('Source Cleanup Helpers', () => {
         _targets: undefined,
         _node: undefined,
         _version: 1,
-        _refresh: () => true
       }));
       
       const consumer: ConsumerNode = {
@@ -228,7 +222,6 @@ describe('Source Cleanup Helpers', () => {
         _targets: undefined,
         _node: undefined,
         _version: i + 1,
-        _refresh: () => true
       }));
       
       const consumer: ConsumerNode = {

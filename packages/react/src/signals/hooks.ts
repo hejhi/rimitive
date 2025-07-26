@@ -5,8 +5,8 @@ import {
   useCallback,
 } from 'react';
 import { signal, subscribe, computed } from './api';
-import type { Signal, Computed } from '@lattice/signals';
-import type { SignalLike, SignalSetter } from './types';
+import type { Signal, Computed, Producer } from '@lattice/signals';
+import type { SignalSetter } from './types';
 
 /**
  * Subscribe to a signal, computed, or selected value and return its current value.
@@ -22,7 +22,7 @@ import type { SignalLike, SignalSetter } from './types';
  * }
  * ```
  */
-export function useSubscribe<T>(signal: SignalLike<T>): T {
+export function useSubscribe<T>(signal: Producer<T>): T {
   // Memoize the subscribe function to avoid creating new functions on each render
   const subscribeCallback = useMemo(
     () => (onStoreChange: () => void) => subscribe(signal, onStoreChange),
@@ -112,5 +112,5 @@ export function useSelector<T, R>(
     computedRef.current = computed(() => selector(signal.value));
   }
 
-  return useSubscribe(computedRef.current as SignalLike<R>);
+  return useSubscribe(computedRef.current as Producer<R>);
 }

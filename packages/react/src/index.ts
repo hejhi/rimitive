@@ -9,7 +9,6 @@ export { useLatticeContext } from './lattice';
 
 // Types
 export type {
-  SignalLike,
   SignalValue,
   SignalSetter,
 } from './signals';

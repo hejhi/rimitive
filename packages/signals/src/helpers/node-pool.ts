@@ -1,6 +1,6 @@
 // Node pool operations - used by all modules that need node management
 import type { SignalContext } from '../context';
-import type { ReactiveNode, ConsumerNode, DependencyNode } from '../types';
+import type { ProducerNode, ConsumerNode, DependencyNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { TRACKING, MAX_POOL_SIZE } = CONSTANTS;
@@ -45,7 +45,7 @@ export function createNodePoolHelpers(ctx: SignalContext) {
     }
   };
 
-  const linkNodes = (source: ReactiveNode, target: ConsumerNode, version: number): DependencyNode => {
+  const linkNodes = (source: ProducerNode, target: ConsumerNode, version: number): DependencyNode => {
     const newNode = acquireNode();
     
     newNode.source = source;
