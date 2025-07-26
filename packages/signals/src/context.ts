@@ -16,8 +16,6 @@ export interface SignalContext {
   nodePool: Edge[];
   poolSize: number;
   allocations: number;
-  poolHits: number;
-  poolMisses: number;
 }
 
 // Factory to create a new context
@@ -35,7 +33,5 @@ export function createContext(): SignalContext {
     nodePool: nodePool,
     poolSize: INITIAL_POOL_SIZE,
     allocations: 0,
-    poolHits: 0,
-    poolMisses: 0,
   };
 }

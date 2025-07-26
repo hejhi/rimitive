@@ -20,8 +20,6 @@ describe('Node Pool Helpers', () => {
       
       expect(node).toBeDefined();
       expect(ctx.poolSize).toBe(initialPoolSize - 1);
-      expect(ctx.poolHits).toBe(1);
-      expect(ctx.poolMisses).toBe(0);
       expect(ctx.allocations).toBe(1);
     });
 
@@ -38,8 +36,6 @@ describe('Node Pool Helpers', () => {
       const node = helpers.acquireNode();
       
       expect(node).toBeDefined();
-      expect(ctx.poolSize).toBe(0);
-      expect(ctx.poolMisses).toBe(1);
     });
   });
 

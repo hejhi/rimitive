@@ -5,12 +5,7 @@ import { signal, computed, effect, activeContext, subscribe } from './test-setup
 function getPoolStats() {
   return {
     allocations: activeContext.allocations,
-    poolHits: activeContext.poolHits,
-    poolMisses: activeContext.poolMisses,
     poolSize: activeContext.poolSize,
-    hitRate: activeContext.allocations > 0 
-      ? activeContext.poolHits / activeContext.allocations 
-      : 0,
   };
 }
 
@@ -54,15 +49,8 @@ describe('Node Pool Performance', () => {
     
     const finalStats = getPoolStats();
     
-    // Verify pool is being used effectively
-    expect(finalStats.poolHits).toBeGreaterThan(0);
-    expect(finalStats.hitRate).toBeGreaterThan(0.5); // At least 50% hit rate
-    
     console.log('Pool Performance Stats:', {
       totalAllocations: finalStats.allocations,
-      poolHits: finalStats.poolHits,
-      poolMisses: finalStats.poolMisses,
-      hitRate: `${(finalStats.hitRate * 100).toFixed(1)}%`,
       poolSize: finalStats.poolSize,
     });
   });
@@ -103,9 +91,6 @@ describe('Node Pool Performance', () => {
     
     console.log('Diamond pattern stats:', {
       allocations: stats.allocations,
-      hitRate: `${(stats.hitRate * 100).toFixed(1)}%`,
-      poolHits: stats.poolHits,
-      poolMisses: stats.poolMisses,
     });
     
     // In diamond patterns with stable dependencies, we see allocations but no reuse

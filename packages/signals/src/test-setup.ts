@@ -71,8 +71,6 @@ export function createTestInstance() {
       ctx.batchedEffects = null;
       ctx.poolSize = 100;
       ctx.allocations = 0;
-      ctx.poolHits = 0;
-      ctx.poolMisses = 0;
       for (let i = 0; i < 100; i++) {
         ctx.nodePool[i] = {} as Edge;
       }
@@ -111,8 +109,6 @@ export const activeContext = (() => {
   // Return getter that always gets current context
   const getter = {
     get allocations() { return defaultInstance.activeContext.allocations; },
-    get poolHits() { return defaultInstance.activeContext.poolHits; },
-    get poolMisses() { return defaultInstance.activeContext.poolMisses; },
     get poolSize() { return defaultInstance.activeContext.poolSize; },
     get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
@@ -120,8 +116,6 @@ export const activeContext = (() => {
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
     get nodePool() { return defaultInstance.activeContext.nodePool; },
     set allocations(v) { defaultInstance.activeContext.allocations = v; },
-    set poolHits(v) { defaultInstance.activeContext.poolHits = v; },
-    set poolMisses(v) { defaultInstance.activeContext.poolMisses = v; },
     set poolSize(v) { defaultInstance.activeContext.poolSize = v; },
     set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },

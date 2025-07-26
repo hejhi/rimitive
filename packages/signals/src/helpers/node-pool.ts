@@ -27,27 +27,27 @@ export function createNodePoolHelpers(ctx: SignalContext) {
 
   const acquireNode = (): Edge => {
     ctx.allocations++;
-    return ctx.poolSize > 0
-      ? (ctx.poolHits++, ctx.nodePool[--ctx.poolSize]!)
-      : (ctx.poolMisses++, {} as Edge);
+    if (ctx.poolSize) return ctx.nodePool[--ctx.poolSize]!;
+
+    return {} as Edge;
   };
 
   const releaseNode = (node: Edge): void => {
-    if (ctx.poolSize < MAX_POOL_SIZE) {
-      node.source = undefined!;
-      node.target = undefined!;
-      node.version = 0;
-      node.nextSource = undefined;
-      node.prevSource = undefined;
-      node.nextTarget = undefined;
-      node.prevTarget = undefined;
-      ctx.nodePool[ctx.poolSize++] = node;
-    }
+    if (ctx.poolSize >= MAX_POOL_SIZE) return;
+    
+    node.source = undefined!;
+    node.target = undefined!;
+    node.version = 0;
+    node.nextSource = undefined;
+    node.prevSource = undefined;
+    node.nextTarget = undefined;
+    node.prevTarget = undefined;
+    ctx.nodePool[ctx.poolSize++] = node;
   };
 
   const linkNodes = (source: Producer, target: Consumer, version: number): Edge => {
     const newNode = acquireNode();
-    
+
     newNode.source = source;
     newNode.target = target;
     newNode.version = version;
@@ -55,12 +55,12 @@ export function createNodePoolHelpers(ctx: SignalContext) {
     newNode.nextTarget = source._targets;
     newNode.prevSource = undefined;
     newNode.prevTarget = undefined;
-    
+
     if (target._sources) {
       target._sources.prevSource = newNode;
     }
     target._sources = newNode;
-    
+
     if (source._targets) {
       source._targets.prevTarget = newNode;
     } else if ('_flags' in source && typeof source._flags === 'number') {
@@ -68,10 +68,8 @@ export function createNodePoolHelpers(ctx: SignalContext) {
       source._flags |= TRACKING;
     }
     source._targets = newNode;
-    
-    // Store node for reuse
-    source._node = newNode;
-    
+    source._node = newNode; // Store node for reuse
+
     return newNode;
   };
 

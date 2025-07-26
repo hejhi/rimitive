@@ -9,13 +9,11 @@ import { createDependencyHelpers } from './helpers/dependency-tracking';
 const { RUNNING } = CONSTANTS;
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
-  const pool = createNodePoolHelpers(ctx);
-  const { addDependency } = createDependencyHelpers(pool);
+  const { addDependency } = createDependencyHelpers(createNodePoolHelpers(ctx));
   
   class Signal<T> implements SignalInterface<T> {
     __type = 'signal' as const;
     _value: T;
-    
     _targets: Edge | undefined = undefined;
     _node: Edge | undefined = undefined;
     _version = 0;
@@ -25,17 +23,13 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     }
 
     get value(): T {
-      // Fast path: no tracking needed
-      if (!ctx.currentConsumer || !(ctx.currentConsumer._flags & RUNNING)) {
-        return this._value;
-      }
-
       const current = ctx.currentConsumer;
+      const value = this._value;
 
-      // Use helper to handle dependency
+      if (!current || !(current._flags & RUNNING)) return value;
+
       addDependency(this, current, this._version);
-
-      return this._value;
+      return value;
     }
 
     set value(value: T) {
@@ -55,20 +49,21 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
 
     set(key: unknown, value: unknown): void {
-      if (Array.isArray(this._value)) {
-        const arr = [...this._value];
-        const index = key as number;
-        arr[index] = value;
+      const currVal = this._value;
+      if (Array.isArray(currVal)) {
+        const arr = [...currVal];
+        arr[key as number] = value;
         this.value = arr as T;
-      } else if (typeof this._value === 'object' && this._value !== null) {
-        const objKey = key as keyof T;
-        this.value = { ...this._value, [objKey]: value };
+      } else if (typeof currVal === 'object' && currVal !== null) {
+        this.value = { ...currVal, [key as keyof T]: value };
       }
     }
 
     patch(key: unknown, partial: unknown): void {
-      if (Array.isArray(this._value)) {
-        const arr = [...this._value];
+      const currVal = this._value;
+
+      if (Array.isArray(currVal)) {
+        const arr = [...currVal];
         const index = key as number;
         const current = arr[index];
         arr[index] =
@@ -76,11 +71,11 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
             ? { ...current, ...(partial as object) }
             : partial;
         this.value = arr as T;
-      } else if (typeof this._value === 'object' && this._value !== null) {
+      } else if (typeof currVal === 'object' && currVal !== null) {
         const objKey = key as keyof T;
-        const current = this._value[objKey];
+        const current = currVal[objKey];
         this.value = {
-          ...this._value,
+          ...currVal,
           [objKey]:
             typeof current === 'object' && current !== null
               ? { ...current, ...(partial as object) }

@@ -132,8 +132,6 @@ describe('createSignalAPI', () => {
     
     // Can inspect pool statistics
     expect(api._ctx.allocations).toBe(0);
-    expect(api._ctx.poolHits).toBe(0);
-    expect(api._ctx.poolMisses).toBe(0);
   });
 
   it('should support multiple independent APIs', () => {
