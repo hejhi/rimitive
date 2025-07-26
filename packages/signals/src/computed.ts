@@ -5,7 +5,6 @@ import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import { isComputed } from './type-guards';
 
 const {
   RUNNING,
@@ -125,12 +124,10 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       ) {
         const source = node.source;
         
-        // If source is a computed, ensure it's up to date
-        if (isComputed(source)) source._recompute();
-
-        if (node.version !== source._version) {
-          return true;
+        if ('_recompute' in source && typeof source._recompute === 'function') {
+          (source as Computed<T>)._recompute();
         }
+        if (node.version !== source._version) return true;
       }
       return false;
     }
