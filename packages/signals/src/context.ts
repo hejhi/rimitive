@@ -1,5 +1,5 @@
 import { CONSTANTS } from "./constants";
-import { Consumer, Edge, Effect } from "./types";
+import { Consumer, Edge, ScheduledConsumer } from "./types";
 
 const { INITIAL_POOL_SIZE } = CONSTANTS;
 
@@ -11,7 +11,7 @@ export interface SignalContext {
   currentConsumer: Consumer | null;
   version: number;
   batchDepth: number;
-  batchedEffects: Effect | null;
+  scheduled: ScheduledConsumer | null;
   subscribeBatch?: Set<SubscribeNode>;
   nodePool: Edge[];
   poolSize: number;
@@ -29,7 +29,7 @@ export function createContext(): SignalContext {
     currentConsumer: null,
     version: 0,
     batchDepth: 0,
-    batchedEffects: null,
+    scheduled: null,
     nodePool: nodePool,
     poolSize: INITIAL_POOL_SIZE,
     allocations: 0,

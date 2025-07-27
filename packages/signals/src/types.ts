@@ -17,7 +17,7 @@ export interface Producer<T = unknown> extends Node<T> {
 // Consumer: A node that observes other nodes
 export interface Consumer extends BaseReactive {
   _sources?: Edge;
-  _notify(): void;
+  _invalidate(): void;
   _flags: number;
 }
 
@@ -32,34 +32,8 @@ export interface Edge {
   version: number;
 }
 
-export interface Signal<T = unknown> extends Producer<T> {
-  __type: 'signal';
-  value: T;
-  peek(): T;
-  _value: T;
-  // Object/array update methods
-  set<K extends keyof T>(key: K, value: T[K]): void;
-  patch<K extends keyof T>(
-    key: K,
-    partial: T[K] extends object ? Partial<T[K]> : never
-  ): void;
-}
-
-export interface Effect extends Consumer {
-  __type: 'effect';
-  _fn(): void;
-  _nextBatchedEffect?: Effect;
-  _run(): void;
-  dispose(): void;
-  subscribe?: (listener: () => void) => () => void;
-}
-
-// Additional type exports
-export type EffectCleanup = void | (() => void);
-export type Unsubscribe = () => void;
-
-// Dispose function with attached effect instance
-export interface EffectDisposer {
-  (): void;
-  __effect: Effect;
+// ScheduledConsumer: A Consumer that can be scheduled for deferred execution
+export interface ScheduledConsumer extends Consumer {
+  _nextScheduled?: ScheduledConsumer;
+  _flush(): void;
 }

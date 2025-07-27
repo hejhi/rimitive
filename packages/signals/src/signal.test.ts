@@ -154,7 +154,7 @@ describe('signal', () => {
       
       const sum = computed(() => {
         computeCount++;
-        return arr.value.reduce((a, b) => a + b, 0);
+        return arr.value.reduce((a: number, b: number) => a + b, 0);
       });
       
       expect(sum.value).toBe(6);

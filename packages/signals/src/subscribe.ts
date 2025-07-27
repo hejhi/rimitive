@@ -1,7 +1,7 @@
 // Subscribe implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Unsubscribe, Producer } from './types';
+import { Edge, Producer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 
@@ -12,11 +12,11 @@ interface SubscribeNode<T> {
   _callback: (value: T) => void;
   _flags: number;
   _dependency: Edge | undefined;
-  _notify(): void;
+  _invalidate(): void;
   dispose(): void;
 }
 
-export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Producer<T>, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => Unsubscribe> {
+export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Producer<T>, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
   const { removeFromTargets, acquireNode, releaseNode } = createNodePoolHelpers(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {
@@ -34,7 +34,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       this._lastValue = source.value;
     }
 
-    _notify(): void {
+    _invalidate(): void {
       if (this._flags & (NOTIFIED | DISPOSED)) return;
       this._flags |= NOTIFIED;
 
@@ -123,7 +123,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     source: Producer<T>,
     callback: (value: T) => void,
     options?: { skipEqualityCheck?: boolean }
-  ): Unsubscribe {
+  ): (() => void) {
     
     const sub = new Subscribe(source, callback);
     

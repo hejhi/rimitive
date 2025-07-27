@@ -30,7 +30,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _flags: 0,
-        _notify: () => {},
+        _invalidate: () => {},
       };
       
       // Create dependencies
@@ -63,7 +63,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -75,7 +75,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -98,7 +98,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -137,7 +137,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -177,7 +177,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -201,7 +201,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -219,7 +219,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -240,7 +240,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       

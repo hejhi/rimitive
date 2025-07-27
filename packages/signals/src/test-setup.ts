@@ -1,7 +1,9 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { Signal, Effect, Edge, EffectDisposer } from './types';
+import type { Edge } from './types';
+import type { SignalInterface } from './signal';
+import type { EffectInterface, EffectDisposer } from './effect';
 import { createSignalAPI } from './api';
 import { createSignalFactory } from './signal';
 import { createComputedFactory, type ComputedInterface } from './computed';
@@ -42,31 +44,31 @@ export function createTestInstance() {
       if (ctx.batchDepth > 0) ctx.batchDepth--;
     },
     getBatchDepth: () => ctx.batchDepth,
-    hasPendingEffects: () => ctx.batchedEffects !== null,
+    hasPendingEffects: () => ctx.scheduled !== null,
     clearBatch: () => {
-      ctx.batchedEffects = null;
+      ctx.scheduled = null;
       // Reset batch depth safely
       ctx.batchDepth = 0;
     },
 
     // Scope functions - use ctx
-    setCurrentConsumer: (consumer: ComputedInterface | Effect | null) => {
+    setCurrentConsumer: (consumer: ComputedInterface | EffectInterface | null) => {
       ctx.currentConsumer = consumer;
     },
     getCurrentConsumer: () => ctx.currentConsumer,
     resetGlobalState: () => {
-      // Clear any pending batched effects
-      while (ctx.batchedEffects) {
-        const next = ctx.batchedEffects._nextBatchedEffect;
-        ctx.batchedEffects._nextBatchedEffect = undefined;
-        ctx.batchedEffects = next || null;
+      // Clear any pending scheduled effects
+      while (ctx.scheduled) {
+        const next = ctx.scheduled._nextScheduled;
+        ctx.scheduled._nextScheduled = undefined;
+        ctx.scheduled = next || null;
       }
 
       // Reset context by reinitializing pool and counters
       ctx.currentConsumer = null;
       ctx.version = 0;
       ctx.batchDepth = 0;
-      ctx.batchedEffects = null;
+      ctx.scheduled = null;
       ctx.poolSize = 100;
       ctx.allocations = 0;
       for (let i = 0; i < 100; i++) {
@@ -82,7 +84,7 @@ export function createTestInstance() {
 let defaultInstance = createTestInstance();
 
 // Export all functions from default instance - use getters to always get current instance
-export const signal = <T>(value: T): Signal<T> => defaultInstance.signal(value);
+export const signal = <T>(value: T): SignalInterface<T> => defaultInstance.signal(value);
 export const computed = <T>(fn: () => T): ComputedInterface<T> =>
   defaultInstance.computed(fn);
 export const effect = (fn: () => void | (() => void)): EffectDisposer =>
@@ -109,14 +111,14 @@ export const activeContext = (() => {
     get poolSize() { return defaultInstance.activeContext.poolSize; },
     get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
-    get batchedEffects() { return defaultInstance.activeContext.batchedEffects; },
+    get scheduled() { return defaultInstance.activeContext.scheduled; },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
     get nodePool() { return defaultInstance.activeContext.nodePool; },
     set allocations(v) { defaultInstance.activeContext.allocations = v; },
     set poolSize(v) { defaultInstance.activeContext.poolSize = v; },
     set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
-    set batchedEffects(v) { defaultInstance.activeContext.batchedEffects = v; },
+    set scheduled(v) { defaultInstance.activeContext.scheduled = v; },
     set currentConsumer(v) { defaultInstance.activeContext.currentConsumer = v; },
   };
   return getter;

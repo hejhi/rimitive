@@ -80,13 +80,13 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       return true;
     }
 
-    _notify(): void {
+    _invalidate(): void {
       if (this._flags & NOTIFIED) return;
       this._flags |= NOTIFIED | OUTDATED;
 
       let node = this._targets;
       while (node) {
-        node.target._notify();
+        node.target._invalidate();
         node = node.nextTarget;
       }
     }

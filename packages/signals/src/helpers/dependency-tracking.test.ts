@@ -29,7 +29,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -59,7 +59,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0
       };
       
@@ -91,7 +91,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -113,7 +113,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       
@@ -145,7 +145,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: Consumer = {
         __type: 'test',
         _sources: undefined,
-        _notify: () => {},
+        _invalidate: () => {},
         _flags: 0,
       };
       

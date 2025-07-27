@@ -1,9 +1,26 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Effect as EffectInterface, EffectDisposer } from './types';
+import { Edge, ScheduledConsumer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
+
+export interface EffectInterface extends ScheduledConsumer {
+  __type: 'effect';
+  _fn(): void;
+  dispose(): void;
+  subscribe?: (listener: () => void) => () => void;
+}
+
+export type EffectCleanup = void | (() => void);
+export type Unsubscribe = () => void;
+
+// Dispose function with attached effect instance
+export interface EffectDisposer {
+  (): void;
+  __effect: EffectInterface;
+}
+
 
 const {
   RUNNING,
@@ -23,52 +40,26 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED;
 
-    _nextBatchedEffect: EffectInterface | undefined = undefined;
+    _nextScheduled: ScheduledConsumer | undefined = undefined;
 
     constructor(fn: () => void) {
       this._fn = fn;
     }
 
-    _notify(): void {
+    _invalidate(): void {
       if (this._flags & NOTIFIED) return;
       this._flags |= NOTIFIED | OUTDATED;
 
       if (ctx.batchDepth > 0) {
-        this._nextBatchedEffect = ctx.batchedEffects || undefined;
-        ctx.batchedEffects = this;
+        this._nextScheduled = ctx.scheduled || undefined;
+        ctx.scheduled = this;
         return;
       }
 
-      ctx.batchDepth++;
-      try {
-        this._run();
-      } finally {
-        if (--ctx.batchDepth === 0) {
-          // Process batched effects
-          let effect = ctx.batchedEffects;
-          if (effect) {
-            ctx.batchedEffects = null;
-            while (effect) {
-              const next: EffectInterface | undefined = effect._nextBatchedEffect;
-              effect._nextBatchedEffect = undefined;
-              effect._run();
-              effect = next!;
-            }
-          }
-          
-          // Process batched subscribes
-          if (ctx.subscribeBatch && ctx.subscribeBatch.size > 0) {
-            const batch = ctx.subscribeBatch;
-            ctx.subscribeBatch = undefined;
-            for (const subscribe of batch) {
-              subscribe._execute();
-            }
-          }
-        }
-      }
+      this._flush();
     }
 
-    _run(): void {
+    _flush(): void {
       if (this._flags & (DISPOSED | RUNNING)) return;
 
       this._flags = (this._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
@@ -114,7 +105,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         cleanupFn = effectFn();
       });
 
-      e._run();
+      e._flush();
 
       let disposed = false;
       const dispose = (() => {

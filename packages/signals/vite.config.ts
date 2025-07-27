@@ -47,7 +47,6 @@ export default defineConfig({
         effect: resolve(__dirname, 'src/effect.ts'),
         batch: resolve(__dirname, 'src/batch.ts'),
         subscribe: resolve(__dirname, 'src/subscribe.ts'),
-        'type-guards': resolve(__dirname, 'src/type-guards.ts'),
       },
       formats: ['es'],
     },

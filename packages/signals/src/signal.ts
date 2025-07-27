@@ -1,12 +1,25 @@
 // Signal implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Signal as SignalInterface, Edge } from './types';
+import { Edge, Producer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 const { RUNNING } = CONSTANTS;
+
+export interface SignalInterface<T = unknown> extends Producer<T> {
+  __type: 'signal';
+  value: T;
+  peek(): T;
+  _value: T;
+  // Object/array update methods
+  set<K extends keyof T>(key: K, value: T[K]): void;
+  patch<K extends keyof T>(
+    key: K,
+    partial: T[K] extends object ? Partial<T[K]> : never
+  ): void;
+}
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const { addDependency } = createDependencyHelpers(createNodePoolHelpers(ctx));
@@ -41,7 +54,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       // Notify all targets
       let node = this._targets;
       while (node) {
-        node.target._notify();
+        node.target._invalidate();
         node = node.nextTarget;
       }
     }

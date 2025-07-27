@@ -6,22 +6,20 @@ export { createBatchFactory } from './batch';
 export { createSubscribeFactory } from './subscribe';
 export { createSignalAPI } from './api';
 
-// Re-export type guards
-export { isSignal, isComputed, isEffect, isReactive, isNode, isEffectDisposer, getEffectFromDisposer } from './type-guards';
 
 // Export types
 export type {
   BaseReactive,
-  Signal,
-  EffectCleanup,
-  EffectDisposer,
-  Unsubscribe,
-  Effect,
   Node,
   Producer,
   Consumer,
   Edge,
+  ScheduledConsumer,
 } from './types';
+
+export type { SignalInterface as Signal } from './signal';
+export type { ComputedInterface as Computed } from './computed';
+export type { EffectInterface as Effect, EffectCleanup, EffectDisposer, Unsubscribe } from './effect';
 
 // Export factory type and helper
 export type { FactoriesToAPI } from './api';
