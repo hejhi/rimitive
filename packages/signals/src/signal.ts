@@ -1,14 +1,14 @@
 // Signal implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Producer } from './types';
+import { Edge, WritableNode, ProducerNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers, EdgeCache } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 const { RUNNING } = CONSTANTS;
 
-export interface SignalInterface<T = unknown> extends Producer<T>, EdgeCache {
+export interface SignalInterface<T = unknown> extends WritableNode<T>, ProducerNode, EdgeCache {
   __type: 'signal';
   value: T;
   _value: T;
@@ -37,7 +37,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     get value(): T {
       const current = ctx.currentConsumer;
 
-      if (!current || !(current._flags & RUNNING)) return this._value;
+      if (!current || !('_flags' in current) || !((current as StatefulNode)._flags & RUNNING)) return this._value;
 
       addDependency(this, current, this._version);
       return this._value;

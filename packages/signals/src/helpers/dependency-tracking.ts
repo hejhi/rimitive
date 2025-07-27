@@ -1,11 +1,11 @@
 // Dependency tracking helpers - shared by signal.ts and computed.ts
-import type { Producer, Consumer } from '../types';
+import type { ProducerNode, ConsumerNode } from '../types';
 import type { createNodePoolHelpers, EdgeCache } from './node-pool';
 
 export function createDependencyHelpers({ linkNodes }: ReturnType<typeof createNodePoolHelpers>) {
   const addDependency = (
-    source: Producer & EdgeCache,
-    target: Consumer,
+    source: ProducerNode & EdgeCache,
+    target: ConsumerNode,
     version: number
   ): void => {
     let node = source._lastEdge;

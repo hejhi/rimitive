@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createScheduledConsumerHelpers } from './scheduled-consumer';
 import { createContext } from '../context';
 import { CONSTANTS } from '../constants';
-import type { ScheduledConsumer } from '../types';
+import type { ScheduledNode, StatefulNode } from '../types';
 
 const { NOTIFIED, DISPOSED } = CONSTANTS;
 
@@ -11,14 +11,14 @@ describe('ScheduledConsumerHelpers', () => {
     const ctx = createContext();
     const helpers = createScheduledConsumerHelpers(ctx);
     
-    const consumer = {
+    const consumer: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
-      dispose() {},
+      dispose: () => {},
     };
     
     ctx.batchDepth = 1;
@@ -32,20 +32,21 @@ describe('ScheduledConsumerHelpers', () => {
     const ctx = createContext();
     const helpers = createScheduledConsumerHelpers(ctx);
     
-    const consumer = {
+    const consumer: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
-      dispose() {},
+      dispose: () => {},
     };
     
     ctx.batchDepth = 0;
     helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
     
     expect(consumer._flags & NOTIFIED).toBe(NOTIFIED);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(consumer._flush).toHaveBeenCalled();
   });
 
@@ -53,14 +54,14 @@ describe('ScheduledConsumerHelpers', () => {
     const ctx = createContext();
     const helpers = createScheduledConsumerHelpers(ctx);
     
-    const consumer = {
+    const consumer: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
-      dispose() {},
+      dispose: () => {},
     };
     
     ctx.batchDepth = 1;
@@ -68,6 +69,7 @@ describe('ScheduledConsumerHelpers', () => {
     
     expect(consumer._flags & NOTIFIED).toBe(NOTIFIED);
     expect(ctx.scheduled).toBe(consumer);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(consumer._flush).not.toHaveBeenCalled();
   });
 
@@ -75,18 +77,19 @@ describe('ScheduledConsumerHelpers', () => {
     const ctx = createContext();
     const helpers = createScheduledConsumerHelpers(ctx);
     
-    const consumer = {
+    const consumer: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: NOTIFIED,
       _nextScheduled: undefined,
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
-      dispose() {},
+      dispose: () => {},
     };
     
     helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
     
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(consumer._flush).not.toHaveBeenCalled();
     expect(ctx.scheduled).toBeNull();
   });
@@ -96,13 +99,14 @@ describe('ScheduledConsumerHelpers', () => {
     const helpers = createScheduledConsumerHelpers(ctx);
     
     const cleanupFn = vi.fn();
-    const consumer = {
+    const consumer: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
       _invalidate: vi.fn(),
-      _sources: undefined
+      _sources: undefined,
+      dispose: () => {},
     };
     
     helpers.disposeConsumer(consumer, cleanupFn);
@@ -123,34 +127,34 @@ describe('ScheduledConsumerHelpers', () => {
     const flush2 = vi.fn();
     const flush3 = vi.fn();
     
-    const consumer1: ScheduledConsumer = {
+    const consumer1: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
       _flush: flush1,
       _invalidate: vi.fn(),
       _sources: undefined,
-      dispose() {},
+      dispose: () => {},
     };
     
-    const consumer2: ScheduledConsumer = {
+    const consumer2: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
       _flush: flush2,
       _invalidate: vi.fn(),
       _sources: undefined,
-      dispose() {},
+      dispose: () => {},
     };
     
-    const consumer3: ScheduledConsumer = {
+    const consumer3: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
       _flush: flush3,
       _invalidate: vi.fn(),
       _sources: undefined,
-      dispose() {},
+      dispose: () => {},
     };
     
     // Build the chain: consumer3 -> consumer2 -> consumer1

@@ -1,6 +1,6 @@
 // Batch implementation with factory pattern for performance
 import type { SignalContext } from './context';
-import { ScheduledConsumer } from './types';
+import { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 
 export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
@@ -16,7 +16,7 @@ export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch'
         let scheduled = ctx.scheduled;
         ctx.scheduled = null;
         while (scheduled) {
-          const next: ScheduledConsumer | null = scheduled._nextScheduled || null;
+          const next: ScheduledNode | null = scheduled._nextScheduled || null;
           scheduled._nextScheduled = undefined;
           scheduled._flush();
           scheduled = next;

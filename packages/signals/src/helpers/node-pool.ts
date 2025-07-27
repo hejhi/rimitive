@@ -1,12 +1,12 @@
 // Node pool operations - used by all modules that need node management
 import type { SignalContext } from '../context';
-import type { Consumer, Edge, Producer } from '../types';
+import type { ConsumerNode, Edge, ProducerNode, StatefulNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { TRACKING, MAX_POOL_SIZE } = CONSTANTS;
 
 export type EdgeCache = { _lastEdge?: Edge; };
-export type TrackedProducer<T = unknown> = Producer<T> & EdgeCache;
+export type TrackedProducer = ProducerNode & EdgeCache;
 
 export function createNodePoolHelpers(ctx: SignalContext) {
   const removeFromTargets = (node: Edge): void => {
@@ -22,7 +22,7 @@ export function createNodePoolHelpers(ctx: SignalContext) {
 
       // If it's a producer that's ALSO a consumer (like computed)
       if (hasNextTarget && '_flags' in source) {
-        source._flags &= ~TRACKING;
+        (source as ProducerNode & StatefulNode)._flags &= ~TRACKING;
       }
     }
 
@@ -53,8 +53,8 @@ export function createNodePoolHelpers(ctx: SignalContext) {
   };
 
   const linkNodes = (
-    source: TrackedProducer | (TrackedProducer & Consumer),
-    target: Consumer,
+    source: TrackedProducer | (TrackedProducer & ConsumerNode),
+    target: ConsumerNode,
     version: number
   ): Edge => {
     const newNode = acquireNode();
@@ -71,7 +71,7 @@ export function createNodePoolHelpers(ctx: SignalContext) {
     // TODO: this used to be else if with the above. but a computed has both targets
     // AND flags. so it should set both...right? or not?
     // Set TRACKING flag for computed values
-    if ('_flags' in source) source._flags |= TRACKING;
+    if ('_flags' in source) (source as TrackedProducer & ConsumerNode & StatefulNode)._flags |= TRACKING;
     if (target._sources) target._sources.prevSource = newNode;
 
     target._sources = newNode;

@@ -5,7 +5,7 @@ import {
   useCallback,
 } from 'react';
 import { useSignalAPI } from './context';
-import type { Signal, Producer } from '@lattice/signals';
+import type { Signal, ReadableNode, ProducerNode } from '@lattice/signals';
 import type { ComputedInterface } from '@lattice/signals/computed';
 import type { SignalSetter } from './types';
 
@@ -23,15 +23,15 @@ import type { SignalSetter } from './types';
  * }
  * ```
  */
-export function useSubscribe<T>(signal: Producer<T>): T {
+export function useSubscribe<T>(signal: ReadableNode<T> & ProducerNode): T {
   const api = useSignalAPI();
-  
+
   // Memoize the subscribe function to avoid creating new functions on each render
   const subscribeCallback = useMemo(
     () => (onStoreChange: () => void) => api.subscribe(signal, onStoreChange),
     [signal, api]
   );
-  
+
   return useSyncExternalStore(
     subscribeCallback,
     () => signal.value,
@@ -125,5 +125,5 @@ export function useSelector<T, R>(
     computedRef.current = api.computed(() => selectorRef.current(signal.value));
   }
 
-  return useSubscribe(computedRef.current as Producer<R>);
+  return useSubscribe(computedRef.current);
 }

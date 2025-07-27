@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createNodePoolHelpers, EdgeCache } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { Consumer, Edge, Producer } from '../types';
+import type { ConsumerNode, Edge, ProducerNode } from '../types';
 
 describe('Node Pool Helpers', () => {
   let ctx: SignalContext;
@@ -83,21 +83,17 @@ describe('Node Pool Helpers', () => {
 
   describe('linkNodes', () => {
     it('should create bidirectional links between source and target', () => {
-      const source: Producer & EdgeCache = {
-        value: 0,
-        peek: () => 0,
+      const source: ProducerNode & EdgeCache = {
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       const node = helpers.linkNodes(source, target, 1);
@@ -111,29 +107,23 @@ describe('Node Pool Helpers', () => {
     });
 
     it('should maintain linked lists when multiple dependencies exist', () => {
-      const source: Producer & EdgeCache = {
-        value: 0,
-        peek: () => 0,
+      const source: ProducerNode & EdgeCache = {
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const target1: Consumer = {
+      const target1: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
-      const target2: Consumer = {
+      const target2: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       const node1 = helpers.linkNodes(source, target1, 1);
@@ -147,8 +137,6 @@ describe('Node Pool Helpers', () => {
 
     it('should set TRACKING flag for computed sources', () => {
       const source = {
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
@@ -156,12 +144,10 @@ describe('Node Pool Helpers', () => {
         _flags: 0,
       };
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       helpers.linkNodes(source, target, 1);
@@ -173,21 +159,17 @@ describe('Node Pool Helpers', () => {
 
   describe('removeFromTargets', () => {
     it('should remove node from targets list', () => {
-      const source: Producer & EdgeCache = {
-        value: 0,
-        peek: () => 0,
+      const source: ProducerNode & EdgeCache = {
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       const node = helpers.linkNodes(source, target, 1);
@@ -198,9 +180,7 @@ describe('Node Pool Helpers', () => {
     });
 
     it('should maintain linked list integrity when removing middle node', () => {
-      const source: Producer & EdgeCache = {
-        value: 0,
-        peek: () => 0,
+      const source: ProducerNode & EdgeCache = {
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
@@ -211,9 +191,7 @@ describe('Node Pool Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
-      }));
+      }) as ConsumerNode);
       
       const nodes = targets.map(target => 
         helpers.linkNodes(source, target, 1)
@@ -229,8 +207,6 @@ describe('Node Pool Helpers', () => {
 
     it('should clear TRACKING flag when last target is removed', () => {
       const source = {
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
@@ -238,12 +214,10 @@ describe('Node Pool Helpers', () => {
         _flags: 16, // TRACKING flag set
       };
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       const node = helpers.linkNodes(source, target, 1);

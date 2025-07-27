@@ -1,12 +1,12 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Consumer, Producer } from './types';
+import { Edge, ReadableNode, ProducerNode, ConsumerNode, StatefulNode, DisposableNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers, EdgeCache } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 
-export interface ComputedInterface<T = unknown> extends Producer<T>, EdgeCache, Consumer {
+export interface ComputedInterface<T = unknown> extends ReadableNode<T>, ProducerNode, EdgeCache, StatefulNode, DisposableNode {
   __type: 'computed';
   readonly value: T;
   _callback(): T;
@@ -102,8 +102,8 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       return this._value!;
     }
 
-    _addDependency(target: Consumer | null): void {
-      if (!target || !(target._flags & RUNNING)) return;
+    _addDependency(target: ConsumerNode | null): void {
+      if (!target || !('_flags' in target) || !((target as StatefulNode)._flags & RUNNING)) return;
 
       addDependency(this, target, this._version);
     }

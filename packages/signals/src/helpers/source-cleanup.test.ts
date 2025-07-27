@@ -3,7 +3,7 @@ import { createSourceCleanupHelpers } from './source-cleanup';
 import { createNodePoolHelpers, TrackedProducer } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { Consumer, Edge } from '../types';
+import type { ConsumerNode, Edge } from '../types';
 
 describe('Source Cleanup Helpers', () => {
   let ctx: SignalContext;
@@ -19,20 +19,16 @@ describe('Source Cleanup Helpers', () => {
   describe('disposeAllSources', () => {
     it('should remove all source dependencies', () => {
       const sources = Array.from({ length: 3 }, () => ({
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
-      }));
+      }) as TrackedProducer);
       
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
-        _flags: 0,
         _invalidate: () => {},
-        dispose() {},
       };
       
       // Create dependencies
@@ -55,20 +51,16 @@ describe('Source Cleanup Helpers', () => {
 
     it('should release nodes back to pool', () => {
       const source: TrackedProducer = {
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       pool.linkNodes(source, consumer, 1);
@@ -76,12 +68,10 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should handle empty sources gracefully', () => {
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       // Should not throw
@@ -93,20 +83,16 @@ describe('Source Cleanup Helpers', () => {
   describe('cleanupSources', () => {
     it('should remove only nodes with version -1', () => {
       const sources = Array.from({ length: 4 }, (_, i) => ({
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: i + 1,
-      }));
+      }) as TrackedProducer);
       
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       // Create dependencies
@@ -134,20 +120,16 @@ describe('Source Cleanup Helpers', () => {
 
     it('should maintain linked list integrity', () => {
       const sources = Array.from({ length: 5 }, (_, i) => ({
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: i + 1,
-      }));
+      }) as TrackedProducer);
       
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       // Create dependencies
@@ -176,20 +158,16 @@ describe('Source Cleanup Helpers', () => {
 
     it('should handle all nodes marked for cleanup', () => {
       const source: TrackedProducer = {
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       const node = pool.linkNodes(source, consumer, 1);
@@ -202,20 +180,16 @@ describe('Source Cleanup Helpers', () => {
 
     it('should release cleaned up nodes', () => {
       const sources = Array.from({ length: 3 }, () => ({
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
-      }));
+      }) as TrackedProducer);
       
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       const nodes = sources.map(source => 
@@ -229,12 +203,10 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should handle empty sources gracefully', () => {
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       // Should not throw
@@ -252,12 +224,10 @@ describe('Source Cleanup Helpers', () => {
         _version: i + 1,
       }));
       
-      const consumer: Consumer = {
+      const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       const nodes = sources.map(source => 

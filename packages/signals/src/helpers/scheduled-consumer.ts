@@ -1,17 +1,17 @@
 import { CONSTANTS } from '../constants';
 import type { SignalContext } from '../context';
-import type { ScheduledConsumer } from '../types';
+import type { ScheduledNode, StatefulNode } from '../types';
 
 const { DISPOSED } = CONSTANTS;
 
 export interface ScheduledConsumerHelpers {
-  scheduleConsumer: (consumer: ScheduledConsumer) => void;
+  scheduleConsumer: (consumer: ScheduledNode) => void;
   invalidateConsumer: (
-    consumer: ScheduledConsumer,
+    consumer: ScheduledNode & StatefulNode,
     checkFlags: number,
     setFlags: number
   ) => void;
-  disposeConsumer: <T extends ScheduledConsumer & { _flags: number }>(
+  disposeConsumer: <T extends ScheduledNode & StatefulNode>(
     consumer: T,
     cleanupFn: (consumer: T) => void
   ) => void;
@@ -22,7 +22,7 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   /**
    * Schedules a consumer for batch execution
    */
-  function scheduleConsumer(consumer: ScheduledConsumer): void {
+  function scheduleConsumer(consumer: ScheduledNode): void {
     consumer._nextScheduled = ctx.scheduled === null ? undefined : ctx.scheduled;
     ctx.scheduled = consumer;
   }
@@ -31,7 +31,7 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
    * Common invalidation logic for scheduled consumers
    */
   function invalidateConsumer(
-    consumer: ScheduledConsumer,
+    consumer: ScheduledNode & StatefulNode,
     checkFlags: number,
     setFlags: number
   ): void {
@@ -49,7 +49,7 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   /**
    * Common disposal pattern for scheduled consumers
    */
-  function disposeConsumer<T extends ScheduledConsumer & { _flags: number }>(
+  function disposeConsumer<T extends ScheduledNode & StatefulNode>(
     consumer: T,
     cleanupFn: (consumer: T) => void
   ): void {

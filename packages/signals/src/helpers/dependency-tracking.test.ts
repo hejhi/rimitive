@@ -3,7 +3,7 @@ import { createDependencyHelpers } from './dependency-tracking';
 import { createNodePoolHelpers, TrackedProducer } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { Consumer } from '../types';
+import type { ConsumerNode } from '../types';
 
 describe('Dependency Tracking Helpers', () => {
   let ctx: SignalContext;
@@ -19,20 +19,16 @@ describe('Dependency Tracking Helpers', () => {
   describe('addDependency', () => {
     it('should reuse cached node when available', () => {
       const source: TrackedProducer = {
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       // First call creates the dependency
@@ -51,20 +47,16 @@ describe('Dependency Tracking Helpers', () => {
 
     it('should find existing dependency in sources list', () => {
       const source: TrackedProducer = {
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       // Create dependency manually
@@ -85,20 +77,16 @@ describe('Dependency Tracking Helpers', () => {
 
     it('should create new dependency when none exists', () => {
       const source: TrackedProducer = {
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       helpers.addDependency(source, target, 1);
@@ -109,20 +97,16 @@ describe('Dependency Tracking Helpers', () => {
 
     it('should handle multiple sources for the same target', () => {
       const sources = Array.from({ length: 3 }, (_, i) => ({
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: i + 1,
       }));
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       // Add dependencies from multiple sources
@@ -143,20 +127,16 @@ describe('Dependency Tracking Helpers', () => {
 
     it('should update version when dependency already exists', () => {
       const source: TrackedProducer = {
-        value: 0,
-        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _lastEdge: undefined,
         _version: 1,
       };
       
-      const target: Consumer = {
+      const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0,
-        dispose() {},
       };
       
       // Create initial dependency

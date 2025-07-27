@@ -1,9 +1,9 @@
 // Source cleanup helpers - shared by computed.ts and effect.ts
-import type { Consumer, Edge } from '../types';
+import type { ConsumerNode, Edge } from '../types';
 import type { createNodePoolHelpers } from './node-pool';
 
 export function createSourceCleanupHelpers({ removeFromTargets, releaseNode }: ReturnType<typeof createNodePoolHelpers>) {
-  const disposeAllSources = (consumer: Consumer): void => {
+  const disposeAllSources = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
     while (node) {
       const next = node.nextSource;
@@ -14,7 +14,7 @@ export function createSourceCleanupHelpers({ removeFromTargets, releaseNode }: R
     consumer._sources = undefined;
   };
 
-  const cleanupSources = (consumer: Consumer): void => {
+  const cleanupSources = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
     let prev: Edge | undefined;
 

@@ -9,12 +9,15 @@ export { createSignalAPI } from './api';
 
 // Export types
 export type {
-  BaseReactive,
-  Node,
-  Producer,
-  Consumer,
+  ReactiveNode,
+  ReadableNode,
+  WritableNode,
+  DisposableNode,
+  ProducerNode,
+  ConsumerNode,
+  ScheduledNode,
+  StatefulNode,
   Edge,
-  ScheduledConsumer,
 } from './types';
 
 export type { SignalInterface as Signal } from './signal';

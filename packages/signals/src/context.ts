@@ -1,14 +1,14 @@
 import { CONSTANTS } from "./constants";
-import { Consumer, Edge, ScheduledConsumer } from "./types";
+import { ConsumerNode, Edge, ScheduledNode } from "./types";
 
 const { INITIAL_POOL_SIZE } = CONSTANTS;
 
 
 export interface SignalContext {
-  currentConsumer: Consumer | null;
+  currentConsumer: ConsumerNode | null;
   version: number;
   batchDepth: number;
-  scheduled: ScheduledConsumer | null;
+  scheduled: ScheduledNode | null;
   nodePool: Edge[];
   poolSize: number;
   allocations: number;

@@ -1,12 +1,12 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, ScheduledConsumer } from './types';
+import { Edge, ScheduledNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
-export interface EffectInterface extends ScheduledConsumer {
+export interface EffectInterface extends ScheduledNode, StatefulNode {
   __type: 'effect';
   _callback(): void;
   dispose(): void;
@@ -42,7 +42,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED;
 
-    _nextScheduled: ScheduledConsumer | undefined = undefined;
+    _nextScheduled: ScheduledNode | undefined = undefined;
 
     constructor(fn: () => void) {
       this._callback = fn;

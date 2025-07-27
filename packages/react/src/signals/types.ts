@@ -1,5 +1,5 @@
-import type { Node } from '@lattice/signals';
+import type { ReadableNode } from '@lattice/signals';
 
-export type SignalValue<S> = S extends Node<infer T> ? T : never;
+export type SignalValue<S> = S extends ReadableNode<infer T> ? T : never;
 
 export type SignalSetter<T> = (value: T | ((prev: T) => T)) => void;

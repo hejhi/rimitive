@@ -1,29 +1,47 @@
-export interface BaseReactive { readonly __type: string; }
+// Base for all reactive nodes
+export interface ReactiveNode {
+  readonly __type: string;
+}
 
-// Node: The base interface for all reactive graph nodes
-export interface Node<T = unknown> extends BaseReactive {
-  value: T;
+// Public-facing interfaces
+export interface ReadableNode<T = unknown> extends ReactiveNode {
+  readonly value: T;
   peek(): T;
 }
 
-// Producer: A Node that produces values and can be observed
-export interface Producer<T = unknown> extends Node<T> {
+export interface WritableNode<T = unknown> extends ReadableNode<T> {
+  value: T;
+}
+
+export interface DisposableNode {
+  dispose(): void;
+}
+
+// Internal implementation interfaces
+export interface ProducerNode extends ReactiveNode {
   _targets: Edge | undefined;
   _version: number;
 }
 
-// Consumer: A node that observes other nodes
-export interface Consumer extends BaseReactive {
+export interface ConsumerNode extends ReactiveNode {
   _sources: Edge | undefined;
   _invalidate(): void;
-  _flags: number;
-  dispose(): void;
 }
 
-// Edge: The connection between a Producer and Consumer in the dependency graph
+// A Consumer that can be scheduled for deferred execution
+export interface ScheduledNode extends ConsumerNode, DisposableNode {
+  _nextScheduled?: ScheduledNode;
+  _flush(): void;
+}
+
+export interface StatefulNode extends ConsumerNode {
+  _flags: number;
+}
+
+// The connection between a Producer and Consumer in the dependency graph
 export interface Edge {
-  source: Producer | (Producer & Consumer);
-  target: Consumer;
+  source: ProducerNode | (ProducerNode & ConsumerNode);
+  target: ConsumerNode;
   prevSource?: Edge;
   nextSource?: Edge;
   prevTarget?: Edge;
@@ -31,8 +49,3 @@ export interface Edge {
   version: number;
 }
 
-// ScheduledConsumer: A Consumer that can be scheduled for deferred execution
-export interface ScheduledConsumer extends Consumer {
-  _nextScheduled?: ScheduledConsumer;
-  _flush(): void;
-}
