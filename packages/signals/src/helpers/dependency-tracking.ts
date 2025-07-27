@@ -4,7 +4,7 @@ import type { createNodePoolHelpers } from './node-pool';
 
 export function createDependencyHelpers({ linkNodes }: ReturnType<typeof createNodePoolHelpers>) {
   const addDependency = (source: Producer, target: Consumer, version: number): void => {
-    let node = source._node;
+    let node = source._lastEdge;
     if (node !== undefined && node.target === target) {
       node.version = version;
       return;

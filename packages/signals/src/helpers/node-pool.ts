@@ -69,7 +69,7 @@ export function createNodePoolHelpers(ctx: SignalContext) {
 
     target._sources = newNode;
     source._targets = newNode;
-    source._node = newNode; // Store node for reuse
+    source._lastEdge = newNode; // Store node for reuse
 
     return newNode;
   };

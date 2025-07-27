@@ -27,7 +27,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     __type = 'signal' as const;
     _value: T;
     _targets: Edge | undefined = undefined;
-    _node: Edge | undefined = undefined;
+    _lastEdge: Edge | undefined = undefined;
     _version = 0;
 
     constructor(value: T) {
@@ -57,7 +57,6 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         node = node.nextTarget;
       }
     }
-
 
     set(key: unknown, value: unknown): void {
       const currVal = this._value;

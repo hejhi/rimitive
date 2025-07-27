@@ -23,7 +23,7 @@ describe('Dependency Tracking Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -37,7 +37,7 @@ describe('Dependency Tracking Helpers', () => {
       
       // First call creates the dependency
       helpers.addDependency(source, target, 1);
-      const cachedNode = source._node;
+      const cachedNode = source._lastEdge;
       
       // Update version
       source._version = 2;
@@ -45,8 +45,8 @@ describe('Dependency Tracking Helpers', () => {
       // Second call should reuse the cached node
       helpers.addDependency(source, target, 2);
       
-      expect(source._node).toBe(cachedNode);
-      expect(source._node?.version).toBe(2);
+      expect(source._lastEdge).toBe(cachedNode);
+      expect(source._lastEdge?.version).toBe(2);
     });
 
     it('should find existing dependency in sources list', () => {
@@ -55,7 +55,7 @@ describe('Dependency Tracking Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -71,7 +71,7 @@ describe('Dependency Tracking Helpers', () => {
       const existingNode = pool.linkNodes(source, target, 1);
       
       // Clear the cached node to force search
-      source._node = undefined;
+      source._lastEdge = undefined;
       
       // Update version
       source._version = 2;
@@ -89,7 +89,7 @@ describe('Dependency Tracking Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -113,7 +113,7 @@ describe('Dependency Tracking Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: i + 1,
       }));
       
@@ -147,7 +147,7 @@ describe('Dependency Tracking Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       

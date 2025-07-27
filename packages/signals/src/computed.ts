@@ -37,7 +37,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED | IS_COMPUTED;
     _targets: Edge | undefined = undefined;
-    _node: Edge | undefined = undefined;
+    _lastEdge: Edge | undefined = undefined;
     _version = 0;
 
     constructor(compute: () => T) {

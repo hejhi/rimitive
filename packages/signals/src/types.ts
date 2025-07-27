@@ -1,6 +1,4 @@
-export interface BaseReactive {
-  readonly __type: string;
-}
+export interface BaseReactive { readonly __type: string; }
 
 // Node: The base interface for all reactive graph nodes
 export interface Node<T = unknown> extends BaseReactive {
@@ -12,7 +10,7 @@ export interface Node<T = unknown> extends BaseReactive {
 export interface Producer<T = unknown> extends Node<T> {
   _targets?: Edge;
   _version: number;
-  _node?: Edge;
+  _lastEdge?: Edge;
 }
 
 // Consumer: A node that observes other nodes

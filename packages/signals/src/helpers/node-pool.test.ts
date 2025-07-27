@@ -88,7 +88,7 @@ describe('Node Pool Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -107,7 +107,7 @@ describe('Node Pool Helpers', () => {
       expect(node.version).toBe(1);
       expect(source._targets).toBe(node);
       expect(target._sources).toBe(node);
-      expect(source._node).toBe(node);
+      expect(source._lastEdge).toBe(node);
     });
 
     it('should maintain linked lists when multiple dependencies exist', () => {
@@ -116,7 +116,7 @@ describe('Node Pool Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -151,7 +151,7 @@ describe('Node Pool Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
         _flags: 0,
       };
@@ -178,7 +178,7 @@ describe('Node Pool Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -203,7 +203,7 @@ describe('Node Pool Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -233,7 +233,7 @@ describe('Node Pool Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
         _flags: 16, // TRACKING flag set
       };

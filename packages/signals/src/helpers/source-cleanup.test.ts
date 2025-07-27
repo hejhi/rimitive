@@ -23,7 +23,7 @@ describe('Source Cleanup Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       }));
       
@@ -59,7 +59,7 @@ describe('Source Cleanup Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -97,7 +97,7 @@ describe('Source Cleanup Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: i + 1,
       }));
       
@@ -138,7 +138,7 @@ describe('Source Cleanup Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: i + 1,
       }));
       
@@ -180,7 +180,7 @@ describe('Source Cleanup Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -206,7 +206,7 @@ describe('Source Cleanup Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: 1,
       }));
       
@@ -248,7 +248,7 @@ describe('Source Cleanup Helpers', () => {
         peek: () => 0,
         __type: 'test',
         _targets: undefined,
-        _node: undefined,
+        _lastEdge: undefined,
         _version: i + 1,
       }));
       
