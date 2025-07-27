@@ -4,6 +4,7 @@ import { Edge, ScheduledConsumer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
+import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
 export interface EffectInterface extends ScheduledConsumer {
   __type: 'effect';
@@ -32,6 +33,7 @@ const {
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const pool = createNodePoolHelpers(ctx);
   const { disposeAllSources, cleanupSources } = createSourceCleanupHelpers(pool);
+  const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   
   class Effect implements EffectInterface {
     __type = 'effect' as const;
@@ -47,16 +49,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     }
 
     _invalidate(): void {
-      if (this._flags & NOTIFIED) return;
-      this._flags |= NOTIFIED | OUTDATED;
-
-      if (ctx.batchDepth > 0) {
-        this._nextScheduled = ctx.scheduled || undefined;
-        ctx.scheduled = this;
-        return;
-      }
-
-      this._flush();
+      invalidateConsumer(this, NOTIFIED, NOTIFIED | OUTDATED);
     }
 
     _flush(): void {
@@ -86,10 +79,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     }
 
     dispose(): void {
-      if (!(this._flags & DISPOSED)) {
-        this._flags |= DISPOSED;
-        disposeAllSources(this);
-      }
+      disposeConsumer(this, disposeAllSources);
     }
   }
 

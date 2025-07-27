@@ -31,6 +31,7 @@ describe('Dependency Tracking Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       // First call creates the dependency
@@ -60,7 +61,8 @@ describe('Dependency Tracking Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
-        _flags: 0
+        _flags: 0,
+        dispose() {},
       };
       
       // Create dependency manually
@@ -93,6 +95,7 @@ describe('Dependency Tracking Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       helpers.addDependency(source, target, 1);
@@ -115,6 +118,7 @@ describe('Dependency Tracking Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       // Add dependencies from multiple sources
@@ -147,6 +151,7 @@ describe('Dependency Tracking Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       // Create initial dependency

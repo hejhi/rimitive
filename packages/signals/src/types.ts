@@ -19,6 +19,7 @@ export interface Consumer extends BaseReactive {
   _sources?: Edge;
   _invalidate(): void;
   _flags: number;
+  dispose(): void;
 }
 
 // Edge: The connection between a Producer and Consumer in the dependency graph

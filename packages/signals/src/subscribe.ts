@@ -5,6 +5,7 @@ import { Edge, Producer, ScheduledConsumer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
+import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
 const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
 
@@ -18,6 +19,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
   const nodePoolHelpers = createNodePoolHelpers(ctx);
   const { acquireNode } = nodePoolHelpers;
   const { disposeAllSources } = createSourceCleanupHelpers(nodePoolHelpers);
+  const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;
@@ -34,18 +36,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     }
 
     _invalidate(): void {
-      if (this._flags & (NOTIFIED | DISPOSED)) return;
-      this._flags |= NOTIFIED;
-
-      // Handle batching using ScheduledConsumer pattern
-      if (ctx.batchDepth > 0) {
-        this._nextScheduled = ctx.scheduled || undefined;
-        ctx.scheduled = this;
-        return;
-      }
-
-      // Execute immediately
-      this._flush();
+      invalidateConsumer(this, NOTIFIED | DISPOSED, NOTIFIED);
     }
 
     _flush(): void {
@@ -67,10 +58,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
 
 
     dispose(): void {
-      if (!(this._flags & DISPOSED)) {
-        this._flags |= DISPOSED;
-        disposeAllSources(this);
-      }
+      disposeConsumer(this, disposeAllSources);
     }
 
     _setupDependency(source: Producer<T>): void {

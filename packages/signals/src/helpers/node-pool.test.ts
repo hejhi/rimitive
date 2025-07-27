@@ -96,6 +96,7 @@ describe('Node Pool Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       const node = helpers.linkNodes(source, target, 1);
@@ -122,6 +123,7 @@ describe('Node Pool Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       const target2: Consumer = {
@@ -129,6 +131,7 @@ describe('Node Pool Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       const node1 = helpers.linkNodes(source, target1, 1);
@@ -155,6 +158,7 @@ describe('Node Pool Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       helpers.linkNodes(source, target, 1);
@@ -179,6 +183,7 @@ describe('Node Pool Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       const node = helpers.linkNodes(source, target, 1);
@@ -202,6 +207,7 @@ describe('Node Pool Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       }));
       
       const nodes = targets.map(target => 
@@ -231,6 +237,7 @@ describe('Node Pool Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       const node = helpers.linkNodes(source, target, 1);

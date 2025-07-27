@@ -31,6 +31,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _flags: 0,
         _invalidate: () => {},
+        dispose() {},
       };
       
       // Create dependencies
@@ -65,6 +66,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       pool.linkNodes(source, consumer, 1);
@@ -77,6 +79,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       // Should not throw
@@ -100,6 +103,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       // Create dependencies
@@ -139,6 +143,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       // Create dependencies
@@ -179,6 +184,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       const node = pool.linkNodes(source, consumer, 1);
@@ -203,6 +209,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       const nodes = sources.map(source => 
@@ -221,6 +228,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       // Should not throw
@@ -242,6 +250,7 @@ describe('Source Cleanup Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _flags: 0,
+        dispose() {},
       };
       
       const nodes = sources.map(source => 

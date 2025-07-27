@@ -1,0 +1,168 @@
+import { describe, it, expect, vi } from 'vitest';
+import { createScheduledConsumerHelpers } from './scheduled-consumer';
+import { createContext } from '../context';
+import { CONSTANTS } from '../constants';
+import type { ScheduledConsumer } from '../types';
+
+const { NOTIFIED, DISPOSED } = CONSTANTS;
+
+describe('ScheduledConsumerHelpers', () => {
+  it('should schedule consumers when batching', () => {
+    const ctx = createContext();
+    const helpers = createScheduledConsumerHelpers(ctx);
+    
+    const consumer = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: vi.fn(),
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose() {},
+    };
+    
+    ctx.batchDepth = 1;
+    helpers.scheduleConsumer(consumer);
+    
+    expect(ctx.scheduled).toBe(consumer);
+    expect(consumer._nextScheduled).toBeUndefined();
+  });
+
+  it('should invalidate consumer immediately when not batching', () => {
+    const ctx = createContext();
+    const helpers = createScheduledConsumerHelpers(ctx);
+    
+    const consumer = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: vi.fn(),
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose() {},
+    };
+    
+    ctx.batchDepth = 0;
+    helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
+    
+    expect(consumer._flags & NOTIFIED).toBe(NOTIFIED);
+    expect(consumer._flush).toHaveBeenCalled();
+  });
+
+  it('should schedule consumer when batching during invalidate', () => {
+    const ctx = createContext();
+    const helpers = createScheduledConsumerHelpers(ctx);
+    
+    const consumer = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: vi.fn(),
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose() {},
+    };
+    
+    ctx.batchDepth = 1;
+    helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
+    
+    expect(consumer._flags & NOTIFIED).toBe(NOTIFIED);
+    expect(ctx.scheduled).toBe(consumer);
+    expect(consumer._flush).not.toHaveBeenCalled();
+  });
+
+  it('should skip invalidation if check flags are set', () => {
+    const ctx = createContext();
+    const helpers = createScheduledConsumerHelpers(ctx);
+    
+    const consumer = {
+      __type: 'test',
+      _flags: NOTIFIED,
+      _nextScheduled: undefined,
+      _flush: vi.fn(),
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose() {},
+    };
+    
+    helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
+    
+    expect(consumer._flush).not.toHaveBeenCalled();
+    expect(ctx.scheduled).toBeNull();
+  });
+
+  it('should dispose consumer only once', () => {
+    const ctx = createContext();
+    const helpers = createScheduledConsumerHelpers(ctx);
+    
+    const cleanupFn = vi.fn();
+    const consumer = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: vi.fn(),
+      _invalidate: vi.fn(),
+      _sources: undefined
+    };
+    
+    helpers.disposeConsumer(consumer, cleanupFn);
+    
+    expect(consumer._flags & DISPOSED).toBe(DISPOSED);
+    expect(cleanupFn).toHaveBeenCalledWith(consumer);
+    
+    // Try disposing again
+    helpers.disposeConsumer(consumer, cleanupFn);
+    expect(cleanupFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('should flush all scheduled consumers', () => {
+    const ctx = createContext();
+    const helpers = createScheduledConsumerHelpers(ctx);
+    
+    const flush1 = vi.fn();
+    const flush2 = vi.fn();
+    const flush3 = vi.fn();
+    
+    const consumer1: ScheduledConsumer = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: flush1,
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose() {},
+    };
+    
+    const consumer2: ScheduledConsumer = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: flush2,
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose() {},
+    };
+    
+    const consumer3: ScheduledConsumer = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: flush3,
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose() {},
+    };
+    
+    // Build the chain: consumer3 -> consumer2 -> consumer1
+    consumer3._nextScheduled = consumer2;
+    consumer2._nextScheduled = consumer1;
+    ctx.scheduled = consumer3;
+    
+    helpers.flushScheduled();
+    
+    expect(ctx.scheduled).toBeNull();
+    expect(flush1).toHaveBeenCalledTimes(1);
+    expect(flush2).toHaveBeenCalledTimes(1);
+    expect(flush3).toHaveBeenCalledTimes(1);
+  });
+});
