@@ -8,14 +8,13 @@ export interface Node<T = unknown> extends BaseReactive {
 
 // Producer: A Node that produces values and can be observed
 export interface Producer<T = unknown> extends Node<T> {
-  _targets?: Edge;
+  _targets: Edge | undefined;
   _version: number;
-  _lastEdge?: Edge;
 }
 
 // Consumer: A node that observes other nodes
 export interface Consumer extends BaseReactive {
-  _sources?: Edge;
+  _sources: Edge | undefined;
   _invalidate(): void;
   _flags: number;
   dispose(): void;

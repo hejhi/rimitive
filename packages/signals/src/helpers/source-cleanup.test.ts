@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSourceCleanupHelpers } from './source-cleanup';
-import { createNodePoolHelpers } from './node-pool';
+import { createNodePoolHelpers, TrackedProducer } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { Producer, Consumer, Edge } from '../types';
+import type { Consumer, Edge } from '../types';
 
 describe('Source Cleanup Helpers', () => {
   let ctx: SignalContext;
@@ -54,7 +54,7 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should release nodes back to pool', () => {
-      const source: Producer = {
+      const source: TrackedProducer = {
         value: 0,
         peek: () => 0,
         __type: 'test',
@@ -175,7 +175,7 @@ describe('Source Cleanup Helpers', () => {
     });
 
     it('should handle all nodes marked for cleanup', () => {
-      const source: Producer = {
+      const source: TrackedProducer = {
         value: 0,
         peek: () => 0,
         __type: 'test',

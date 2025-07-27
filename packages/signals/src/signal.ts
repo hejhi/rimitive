@@ -3,12 +3,12 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Edge, Producer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers } from './helpers/node-pool';
+import { createNodePoolHelpers, EdgeCache } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 const { RUNNING } = CONSTANTS;
 
-export interface SignalInterface<T = unknown> extends Producer<T> {
+export interface SignalInterface<T = unknown> extends Producer<T>, EdgeCache {
   __type: 'signal';
   value: T;
   _value: T;

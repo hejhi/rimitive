@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyHelpers } from './dependency-tracking';
-import { createNodePoolHelpers } from './node-pool';
+import { createNodePoolHelpers, TrackedProducer } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { Producer, Consumer } from '../types';
+import type { Consumer } from '../types';
 
 describe('Dependency Tracking Helpers', () => {
   let ctx: SignalContext;
@@ -18,7 +18,7 @@ describe('Dependency Tracking Helpers', () => {
 
   describe('addDependency', () => {
     it('should reuse cached node when available', () => {
-      const source: Producer = {
+      const source: TrackedProducer = {
         value: 0,
         peek: () => 0,
         __type: 'test',
@@ -50,7 +50,7 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should find existing dependency in sources list', () => {
-      const source: Producer = {
+      const source: TrackedProducer = {
         value: 0,
         peek: () => 0,
         __type: 'test',
@@ -84,7 +84,7 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should create new dependency when none exists', () => {
-      const source: Producer = {
+      const source: TrackedProducer = {
         value: 0,
         peek: () => 0,
         __type: 'test',
@@ -142,7 +142,7 @@ describe('Dependency Tracking Helpers', () => {
     });
 
     it('should update version when dependency already exists', () => {
-      const source: Producer = {
+      const source: TrackedProducer = {
         value: 0,
         peek: () => 0,
         __type: 'test',

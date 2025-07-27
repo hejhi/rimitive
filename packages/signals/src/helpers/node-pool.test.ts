@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createNodePoolHelpers } from './node-pool';
+import { createNodePoolHelpers, EdgeCache } from './node-pool';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
-import type { Producer, Consumer, Edge } from '../types';
+import type { Consumer, Edge, Producer } from '../types';
 
 describe('Node Pool Helpers', () => {
   let ctx: SignalContext;
@@ -83,7 +83,7 @@ describe('Node Pool Helpers', () => {
 
   describe('linkNodes', () => {
     it('should create bidirectional links between source and target', () => {
-      const source: Producer = {
+      const source: Producer & EdgeCache = {
         value: 0,
         peek: () => 0,
         __type: 'test',
@@ -111,7 +111,7 @@ describe('Node Pool Helpers', () => {
     });
 
     it('should maintain linked lists when multiple dependencies exist', () => {
-      const source: Producer = {
+      const source: Producer & EdgeCache = {
         value: 0,
         peek: () => 0,
         __type: 'test',
@@ -173,7 +173,7 @@ describe('Node Pool Helpers', () => {
 
   describe('removeFromTargets', () => {
     it('should remove node from targets list', () => {
-      const source: Producer = {
+      const source: Producer & EdgeCache = {
         value: 0,
         peek: () => 0,
         __type: 'test',
@@ -198,7 +198,7 @@ describe('Node Pool Helpers', () => {
     });
 
     it('should maintain linked list integrity when removing middle node', () => {
-      const source: Producer = {
+      const source: Producer & EdgeCache = {
         value: 0,
         peek: () => 0,
         __type: 'test',
