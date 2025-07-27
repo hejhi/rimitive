@@ -3,16 +3,12 @@ import { Consumer, Edge, ScheduledConsumer } from "./types";
 
 const { INITIAL_POOL_SIZE } = CONSTANTS;
 
-interface SubscribeNode {
-  _execute(): void;
-}
 
 export interface SignalContext {
   currentConsumer: Consumer | null;
   version: number;
   batchDepth: number;
   scheduled: ScheduledConsumer | null;
-  subscribeBatch?: Set<SubscribeNode>;
   nodePool: Edge[];
   poolSize: number;
   allocations: number;

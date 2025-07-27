@@ -1,18 +1,16 @@
 // Subscribe implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Producer } from './types';
+import { Edge, Producer, ScheduledConsumer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 
-const { NOTIFIED, DISPOSED } = CONSTANTS;
+const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
 
-interface SubscribeNode<T> {
-  _source: Producer<T>;
+export interface SubscribeNode<T> extends ScheduledConsumer {
   _callback: (value: T) => void;
-  _flags: number;
   _dependency: Edge | undefined;
-  _invalidate(): void;
+  _lastValue: T;
   dispose(): void;
 }
 
@@ -20,13 +18,14 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
   const { removeFromTargets, acquireNode, releaseNode } = createNodePoolHelpers(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {
-    __type = 'subscribe';
+    __type = 'subscribe' as const;
     _source: Producer<T>;
     _callback: (value: T) => void;
     _flags = 0;
     _dependency: Edge | undefined = undefined;
     _lastValue: T;
-    _sources?: Edge; // Add this to satisfy Consumer interface
+    _sources?: Edge = undefined;
+    _nextScheduled?: ScheduledConsumer = undefined;
 
     constructor(source: Producer<T>, callback: (value: T) => void) {
       this._source = source;
@@ -38,33 +37,23 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       if (this._flags & (NOTIFIED | DISPOSED)) return;
       this._flags |= NOTIFIED;
 
-      // Handle batching
+      // Handle batching using ScheduledConsumer pattern
       if (ctx.batchDepth > 0) {
-        // Queue for batch execution
-        if (!ctx.subscribeBatch) {
-          ctx.subscribeBatch = new Set();
-        }
-        ctx.subscribeBatch.add(this);
+        this._nextScheduled = ctx.scheduled || undefined;
+        ctx.scheduled = this;
         return;
       }
 
-      // Execute immediately with implicit batch
-      ctx.batchDepth++;
-      try {
-        this._execute();
-      } finally {
-        if (--ctx.batchDepth === 0) {
-          this._processBatchedSubscribes();
-        }
-      }
+      // Execute immediately
+      this._flush();
     }
 
-    _execute(): void {
+    _flush(): void {
       if (this._flags & DISPOSED) return;
       this._flags &= ~NOTIFIED;
       
       const currentValue = this._source.value;
-      const skipEqualityCheck = this._flags & (1 << 6);
+      const skipEqualityCheck = this._flags & SKIP_EQUALITY;
       
       if (skipEqualityCheck || currentValue !== this._lastValue) {
         this._lastValue = currentValue;
@@ -72,15 +61,6 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       }
     }
 
-    _processBatchedSubscribes(): void {
-      if (ctx.subscribeBatch && ctx.subscribeBatch.size > 0) {
-        const batch = ctx.subscribeBatch;
-        ctx.subscribeBatch = undefined;
-        for (const subscribe of batch) {
-          subscribe._execute();
-        }
-      }
-    }
 
     dispose(): void {
       if (!(this._flags & DISPOSED)) {
@@ -129,7 +109,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     
     // If raw mode, mark it so _execute skips equality check
     if (options?.skipEqualityCheck) {
-      sub._flags |= 1 << 6; // Use a new flag for raw mode
+      sub._flags |= SKIP_EQUALITY;
     }
     
     // Setup dependency tracking

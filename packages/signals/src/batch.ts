@@ -21,15 +21,6 @@ export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch'
           scheduled._flush();
           scheduled = next;
         }
-        
-        // Process batched subscribes
-        if (ctx.subscribeBatch && ctx.subscribeBatch.size > 0) {
-          const batch = ctx.subscribeBatch;
-          ctx.subscribeBatch = undefined;
-          for (const subscribe of batch) {
-            subscribe._execute();
-          }
-        }
       }
     }
   };

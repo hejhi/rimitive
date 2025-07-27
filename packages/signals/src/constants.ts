@@ -5,6 +5,7 @@ export const CONSTANTS = {
   NOTIFIED: 1 << 0,
   IS_COMPUTED: 1 << 5,
   TRACKING: 1 << 4,
+  SKIP_EQUALITY: 1 << 6,
   MAX_POOL_SIZE: 1000,
   INITIAL_POOL_SIZE: 100
 }
