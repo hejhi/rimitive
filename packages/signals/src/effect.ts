@@ -1,12 +1,12 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { DisposableNode, Edge, ScheduledNode, StatefulNode } from './types';
+import { Disposable, Edge, ScheduledNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
-export interface EffectInterface extends ScheduledNode, StatefulNode, DisposableNode {
+export interface EffectInterface extends ScheduledNode, StatefulNode, Disposable {
   __type: 'effect';
   _callback(): void;
   dispose(): void;

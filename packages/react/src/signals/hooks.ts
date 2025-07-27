@@ -5,7 +5,7 @@ import {
   useCallback,
 } from 'react';
 import { useSignalAPI } from './context';
-import type { Signal, ReadableNode, ProducerNode } from '@lattice/signals';
+import type { Signal, Readable, ProducerNode } from '@lattice/signals';
 import type { ComputedInterface } from '@lattice/signals/computed';
 import type { SignalSetter } from './types';
 
@@ -23,7 +23,7 @@ import type { SignalSetter } from './types';
  * }
  * ```
  */
-export function useSubscribe<T>(signal: ReadableNode<T> & ProducerNode): T {
+export function useSubscribe<T>(signal: Readable<T> & ProducerNode): T {
   const api = useSignalAPI();
 
   // Memoize the subscribe function to avoid creating new functions on each render

@@ -10,9 +10,9 @@ export { createSignalAPI } from './api';
 // Export types
 export type {
   ReactiveNode,
-  ReadableNode,
-  WritableNode,
-  DisposableNode,
+  Readable,
+  Writable,
+  Disposable,
   ProducerNode,
   ConsumerNode,
   ScheduledNode,

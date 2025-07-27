@@ -1,14 +1,14 @@
 // Signal implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, WritableNode, ProducerNode, StatefulNode } from './types';
+import { Edge, Writable, ProducerNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers, EdgeCache } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 const { RUNNING } = CONSTANTS;
 
-export interface SignalInterface<T = unknown> extends WritableNode<T>, ProducerNode, EdgeCache {
+export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode, EdgeCache {
   __type: 'signal';
   value: T;
   _value: T;

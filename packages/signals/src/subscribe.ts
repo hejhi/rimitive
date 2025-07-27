@@ -1,7 +1,7 @@
 // Subscribe implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, ReadableNode, ProducerNode, ScheduledNode, StatefulNode } from './types';
+import { Edge, Readable, ProducerNode, ScheduledNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
@@ -15,7 +15,7 @@ export interface SubscribeNode<T> extends ScheduledNode, StatefulNode {
   dispose(): void;
 }
 
-export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: ReadableNode<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
+export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
   const nodePoolHelpers = createNodePoolHelpers(ctx);
   const { acquireNode } = nodePoolHelpers;
   const { disposeAllSources } = createSourceCleanupHelpers(nodePoolHelpers);
@@ -29,7 +29,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     _sources: Edge | undefined = undefined;
     _nextScheduled?: ScheduledNode = undefined;
 
-    constructor(source: ReadableNode<T> & ProducerNode, callback: (value: T) => void) {
+    constructor(source: Readable<T> & ProducerNode, callback: (value: T) => void) {
       this._callback = callback;
       this._lastValue = source.value;
       // Note: source is linked via _sources in _setupDependency
@@ -45,7 +45,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       
       // Get source from _sources edge
       if (!this._sources) return;
-      const source = this._sources.source as ReadableNode<T> & ProducerNode;
+      const source = this._sources.source as Readable<T> & ProducerNode;
       
       const currentValue = source.value;
       const skipEqualityCheck = this._flags & SKIP_EQUALITY;
@@ -61,7 +61,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       disposeConsumer(this, disposeAllSources);
     }
 
-    _setupDependency(source: ReadableNode<T> & ProducerNode): void {
+    _setupDependency(source: Readable<T> & ProducerNode): void {
       // Get or create dependency node
       const node = acquireNode();
 
@@ -87,7 +87,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
   }
 
   const subscribe = function subscribe<T>(
-    source: ReadableNode<T> & ProducerNode,
+    source: Readable<T> & ProducerNode,
     callback: (value: T) => void,
     options?: { skipEqualityCheck?: boolean }
   ): (() => void) {

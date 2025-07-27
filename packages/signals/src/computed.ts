@@ -1,12 +1,12 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, ReadableNode, ProducerNode, ConsumerNode, StatefulNode, DisposableNode } from './types';
+import { Edge, Readable, ProducerNode, ConsumerNode, StatefulNode, Disposable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers, EdgeCache } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 
-export interface ComputedInterface<T = unknown> extends ReadableNode<T>, ProducerNode, EdgeCache, StatefulNode, DisposableNode {
+export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, EdgeCache, StatefulNode, Disposable {
   __type: 'computed';
   readonly value: T;
   _callback(): T;
