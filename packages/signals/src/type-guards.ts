@@ -3,7 +3,8 @@
  * Uses the __type property for fast, reliable type checking
  */
 
-import type { Signal, Computed, Effect, Node } from './types';
+import { ComputedInterface } from './computed';
+import type { Signal, Effect, Node } from './types';
 
 /**
  * Check if a value is a Signal
@@ -18,7 +19,7 @@ export function isSignal(value: unknown): value is Signal<unknown> {
 /**
  * Check if a value is a Computed
  */
-export function isComputed(value: unknown): value is Computed<unknown> {
+export function isComputed(value: unknown): value is ComputedInterface<unknown> {
   return value != null && 
     typeof value === 'object' && 
     '__type' in value && 
@@ -55,7 +56,7 @@ export function getEffectFromDisposer(disposer: import('./types').EffectDisposer
 /**
  * Check if a value is any reactive primitive (Signal, Computed, or Effect)
  */
-export function isReactive(value: unknown): value is Signal<unknown> | Computed<unknown> | Effect {
+export function isReactive(value: unknown): value is Signal<unknown> | ComputedInterface<unknown> | Effect {
   return isSignal(value) || isComputed(value) || isEffect(value);
 }
 

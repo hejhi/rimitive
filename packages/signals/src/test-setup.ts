@@ -1,10 +1,10 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { Signal, Computed, Effect, Edge, EffectDisposer } from './types';
+import type { Signal, Effect, Edge, EffectDisposer } from './types';
 import { createSignalAPI } from './api';
 import { createSignalFactory } from './signal';
-import { createComputedFactory } from './computed';
+import { createComputedFactory, type ComputedInterface } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
@@ -50,7 +50,7 @@ export function createTestInstance() {
     },
 
     // Scope functions - use ctx
-    setCurrentConsumer: (consumer: Computed | Effect | null) => {
+    setCurrentConsumer: (consumer: ComputedInterface | Effect | null) => {
       ctx.currentConsumer = consumer;
     },
     getCurrentConsumer: () => ctx.currentConsumer,
@@ -61,7 +61,7 @@ export function createTestInstance() {
         ctx.batchedEffects._nextBatchedEffect = undefined;
         ctx.batchedEffects = next || null;
       }
-      
+
       // Reset context by reinitializing pool and counters
       ctx.currentConsumer = null;
       ctx.version = 0;
@@ -83,7 +83,7 @@ let defaultInstance = createTestInstance();
 
 // Export all functions from default instance - use getters to always get current instance
 export const signal = <T>(value: T): Signal<T> => defaultInstance.signal(value);
-export const computed = <T>(fn: () => T): Computed<T> =>
+export const computed = <T>(fn: () => T): ComputedInterface<T> =>
   defaultInstance.computed(fn);
 export const effect = (fn: () => void | (() => void)): EffectDisposer =>
   defaultInstance.effect(fn);

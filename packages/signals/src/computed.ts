@@ -1,10 +1,21 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Computed as ComputedInterface, Consumer } from './types';
+import { Edge, Consumer, Producer } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
+
+export interface ComputedInterface<T = unknown> extends Producer<T>, Consumer {
+  __type: 'computed';
+  readonly value: T;
+  peek(): T;
+  _compute(): T;
+  _value: T | undefined;
+  _lastComputedAt: number;
+  _recompute(): boolean;
+  dispose(): void;
+}
 
 const {
   RUNNING,

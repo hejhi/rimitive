@@ -4,8 +4,9 @@ import {
   useSyncExternalStore,
   useCallback,
 } from 'react';
-import { signal, subscribe, computed } from './api';
-import type { Signal, Computed, Producer } from '@lattice/signals';
+import { useSignalAPI } from './context';
+import type { Signal, Producer } from '@lattice/signals';
+import type { ComputedInterface } from '@lattice/signals/computed';
 import type { SignalSetter } from './types';
 
 /**
@@ -23,10 +24,12 @@ import type { SignalSetter } from './types';
  * ```
  */
 export function useSubscribe<T>(signal: Producer<T>): T {
+  const api = useSignalAPI();
+  
   // Memoize the subscribe function to avoid creating new functions on each render
   const subscribeCallback = useMemo(
-    () => (onStoreChange: () => void) => subscribe(signal, onStoreChange),
-    [signal]
+    () => (onStoreChange: () => void) => api.subscribe(signal, onStoreChange),
+    [signal, api]
   );
   
   return useSyncExternalStore(
@@ -55,6 +58,8 @@ export function useSubscribe<T>(signal: Producer<T>): T {
 export function useSignal<T>(
   initialValue: T | (() => T)
 ): [T, SignalSetter<T>] {
+  const api = useSignalAPI();
+  
   // Use ref to store the signal instance - created only once
   const signalRef = useRef<Signal<T> | null>(null);
 
@@ -65,10 +70,10 @@ export function useSignal<T>(
         ? (initialValue as () => T)()
         : initialValue;
 
-    signalRef.current = signal(value);
+    signalRef.current = api.signal(value);
   }
 
-  const sig = signalRef.current;
+  const sig = signalRef.current; // We know it's not null after the check above
 
   // Stable setter function
   const setter = useCallback<SignalSetter<T>>(
@@ -103,13 +108,21 @@ export function useSelector<T, R>(
   signal: Signal<T>,
   selector: (value: T) => R
 ): R {
+  const api = useSignalAPI();
+  
+  // We need to update the selector ref on each render to ensure
+  // the computed always uses the latest selector function
+  const selectorRef = useRef(selector);
+  selectorRef.current = selector;
+  
   // Create a computed value that applies the selector
   // We use a ref to maintain the same computed instance across renders
-  const computedRef = useRef<Computed<R> | null>(null);
+  const computedRef = useRef<ComputedInterface<R> | null>(null);
   
-  // Only create the computed once
+  // Only create the computed once, but use selectorRef.current
+  // to ensure it always uses the latest selector
   if (computedRef.current === null) {
-    computedRef.current = computed(() => selector(signal.value));
+    computedRef.current = api.computed(() => selectorRef.current(signal.value));
   }
 
   return useSubscribe(computedRef.current as Producer<R>);

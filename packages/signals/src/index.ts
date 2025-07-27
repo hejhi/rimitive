@@ -13,8 +13,6 @@ export { isSignal, isComputed, isEffect, isReactive, isNode, isEffectDisposer, g
 export type {
   BaseReactive,
   Signal,
-  Computed,
-  ComputedOptions,
   EffectCleanup,
   EffectDisposer,
   Unsubscribe,
@@ -27,11 +25,3 @@ export type {
 
 // Export factory type and helper
 export type { FactoriesToAPI } from './api';
-
-// Export Lattice integration types
-export type {
-  SignalState,
-  SetState,
-  LatticeContext,
-  PartialLatticeContext,
-} from './lattice-types';

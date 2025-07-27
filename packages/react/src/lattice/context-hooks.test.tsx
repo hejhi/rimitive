@@ -1,18 +1,19 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { useLatticeContext } from './context-hooks';
-import { signalAPI } from '../signals/api';
+import { createTestSignalAPI } from '../test-setup';
 
 describe('Lattice Context Hooks', () => {
   describe('useLatticeContext', () => {
     it('should create and manage context lifecycle', () => {
-      // For testing, we'll create a mock extension set
+      // For testing, we'll create a mock extension set using the test API
+      const testAPI = createTestSignalAPI();
       const mockExtensions = [
-        { name: 'signal' as const, method: signalAPI.signal },
-        { name: 'computed' as const, method: signalAPI.computed },
-        { name: 'effect' as const, method: signalAPI.effect },
-        { name: 'batch' as const, method: signalAPI.batch },
-        { name: 'subscribe' as const, method: signalAPI.subscribe },
+        { name: 'signal' as const, method: testAPI.signal },
+        { name: 'computed' as const, method: testAPI.computed },
+        { name: 'effect' as const, method: testAPI.effect },
+        { name: 'batch' as const, method: testAPI.batch },
+        { name: 'subscribe' as const, method: testAPI.subscribe },
       ];
       
       const { result, unmount } = renderHook(() =>
@@ -44,13 +45,14 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should only create context once per component instance', () => {
-      // For testing, we'll create a mock extension set
+      // For testing, we'll create a mock extension set using the test API
+      const testAPI = createTestSignalAPI();
       const mockExtensions = [
-        { name: 'signal' as const, method: signalAPI.signal },
-        { name: 'computed' as const, method: signalAPI.computed },
-        { name: 'effect' as const, method: signalAPI.effect },
-        { name: 'batch' as const, method: signalAPI.batch },
-        { name: 'subscribe' as const, method: signalAPI.subscribe },
+        { name: 'signal' as const, method: testAPI.signal },
+        { name: 'computed' as const, method: testAPI.computed },
+        { name: 'effect' as const, method: testAPI.effect },
+        { name: 'batch' as const, method: testAPI.batch },
+        { name: 'subscribe' as const, method: testAPI.subscribe },
       ];
       
       const { result, rerender } = renderHook(() =>
@@ -67,13 +69,14 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should allow signal creation and updates', () => {
-      // For testing, we'll create a mock extension set
+      // For testing, we'll create a mock extension set using the test API
+      const testAPI = createTestSignalAPI();
       const mockExtensions = [
-        { name: 'signal' as const, method: signalAPI.signal },
-        { name: 'computed' as const, method: signalAPI.computed },
-        { name: 'effect' as const, method: signalAPI.effect },
-        { name: 'batch' as const, method: signalAPI.batch },
-        { name: 'subscribe' as const, method: signalAPI.subscribe },
+        { name: 'signal' as const, method: testAPI.signal },
+        { name: 'computed' as const, method: testAPI.computed },
+        { name: 'effect' as const, method: testAPI.effect },
+        { name: 'batch' as const, method: testAPI.batch },
+        { name: 'subscribe' as const, method: testAPI.subscribe },
       ];
       
       const { result } = renderHook(() =>
@@ -95,13 +98,14 @@ describe('Lattice Context Hooks', () => {
     });
 
     it('should support batch updates', () => {
-      // For testing, we'll create a mock extension set
+      // For testing, we'll create a mock extension set using the test API
+      const testAPI = createTestSignalAPI();
       const mockExtensions = [
-        { name: 'signal' as const, method: signalAPI.signal },
-        { name: 'computed' as const, method: signalAPI.computed },
-        { name: 'effect' as const, method: signalAPI.effect },
-        { name: 'batch' as const, method: signalAPI.batch },
-        { name: 'subscribe' as const, method: signalAPI.subscribe },
+        { name: 'signal' as const, method: testAPI.signal },
+        { name: 'computed' as const, method: testAPI.computed },
+        { name: 'effect' as const, method: testAPI.effect },
+        { name: 'batch' as const, method: testAPI.batch },
+        { name: 'subscribe' as const, method: testAPI.subscribe },
       ];
       
       const { result } = renderHook(() =>

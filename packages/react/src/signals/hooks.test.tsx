@@ -1,24 +1,42 @@
 import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
+import React, { ReactNode } from 'react';
 import {
   useSubscribe,
   useSignal,
   useSelector,
 } from './hooks';
-import { signal, computed } from './api';
+import { SignalProvider } from './context';
+import { createTestSignalAPI } from '../test-setup';
 
 describe('Signal Hooks', () => {
+  // Create a wrapper that provides the signal context
+  const createWrapper = (api: ReturnType<typeof createTestSignalAPI>) => {
+    return ({ children }: { children: ReactNode }) => 
+      React.createElement(SignalProvider, { api, children });
+  };
+
   describe('useSubscribe', () => {
     it('should return current signal value', () => {
-      const count = signal(0);
-      const { result } = renderHook(() => useSubscribe(count));
+      const api = createTestSignalAPI();
+      const count = api.signal(0);
+      
+      const { result } = renderHook(
+        () => useSubscribe(count),
+        { wrapper: createWrapper(api) }
+      );
 
       expect(result.current).toBe(0);
     });
 
     it('should re-render when signal changes', () => {
-      const count = signal(0);
-      const { result } = renderHook(() => useSubscribe(count));
+      const api = createTestSignalAPI();
+      const count = api.signal(0);
+      
+      const { result } = renderHook(
+        () => useSubscribe(count),
+        { wrapper: createWrapper(api) }
+      );
 
       expect(result.current).toBe(0);
 
@@ -30,9 +48,14 @@ describe('Signal Hooks', () => {
     });
 
     it('should work with computed values', () => {
-      const count = signal(5);
-      const doubled = computed(() => count.value * 2);
-      const { result } = renderHook(() => useSubscribe(doubled));
+      const api = createTestSignalAPI();
+      const count = api.signal(5);
+      const doubled = api.computed(() => count.value * 2);
+      
+      const { result } = renderHook(
+        () => useSubscribe(doubled),
+        { wrapper: createWrapper(api) }
+      );
 
       expect(result.current).toBe(10);
 
@@ -44,9 +67,14 @@ describe('Signal Hooks', () => {
     });
 
     it('should work with computed values derived from signals', () => {
-      const user = signal({ name: 'John', age: 30 });
-      const name = computed(() => user.value.name);
-      const { result } = renderHook(() => useSubscribe(name));
+      const api = createTestSignalAPI();
+      const user = api.signal({ name: 'John', age: 30 });
+      const name = api.computed(() => user.value.name);
+      
+      const { result } = renderHook(
+        () => useSubscribe(name),
+        { wrapper: createWrapper(api) }
+      );
 
       expect(result.current).toBe('John');
 
@@ -60,14 +88,24 @@ describe('Signal Hooks', () => {
 
   describe('useSignal', () => {
     it('should create a local signal with initial value', () => {
-      const { result } = renderHook(() => useSignal(42));
+      const api = createTestSignalAPI();
+      
+      const { result } = renderHook(
+        () => useSignal(42),
+        { wrapper: createWrapper(api) }
+      );
+      
       const [value] = result.current;
-
       expect(value).toBe(42);
     });
 
     it('should update value with setter', () => {
-      const { result } = renderHook(() => useSignal(0));
+      const api = createTestSignalAPI();
+      
+      const { result } = renderHook(
+        () => useSignal(0),
+        { wrapper: createWrapper(api) }
+      );
 
       expect(result.current[0]).toBe(0);
 
@@ -79,7 +117,12 @@ describe('Signal Hooks', () => {
     });
 
     it('should support function updates', () => {
-      const { result } = renderHook(() => useSignal(5));
+      const api = createTestSignalAPI();
+      
+      const { result } = renderHook(
+        () => useSignal(5),
+        { wrapper: createWrapper(api) }
+      );
 
       act(() => {
         result.current[1]((prev) => prev * 2);
@@ -89,8 +132,13 @@ describe('Signal Hooks', () => {
     });
 
     it('should support lazy initialization', () => {
+      const api = createTestSignalAPI();
       const init = vi.fn(() => 42);
-      const { result } = renderHook(() => useSignal(init));
+      
+      const { result } = renderHook(
+        () => useSignal(init),
+        { wrapper: createWrapper(api) }
+      );
 
       expect(result.current[0]).toBe(42);
       expect(init).toHaveBeenCalledOnce();
@@ -99,20 +147,41 @@ describe('Signal Hooks', () => {
 
   describe('useSelector', () => {
     it('should select specific values from signal', () => {
-      const user = signal({ name: 'John', age: 30, email: 'john@example.com' });
-      const { result } = renderHook(() => useSelector(user, (u) => u.name));
+      const api = createTestSignalAPI();
+      const user = api.signal({ name: 'John', age: 30, email: 'john@example.com' });
+      
+      const { result } = renderHook(
+        () => useSelector(user, (u) => u.name),
+        { wrapper: createWrapper(api) }
+      );
 
       expect(result.current).toBe('John');
     });
 
+    it('computed should update when signal changes', () => {
+      const api = createTestSignalAPI();
+      const user = api.signal({ name: 'John', age: 30 });
+      const nameComputed = api.computed(() => user.value.name);
+      
+      expect(nameComputed.value).toBe('John');
+      
+      user.value = { name: 'Jane', age: 30 };
+      
+      expect(nameComputed.value).toBe('Jane');
+    });
+
     it('should only re-render when selected value changes', () => {
-      const user = signal({ name: 'John', age: 30 });
+      const api = createTestSignalAPI();
+      const user = api.signal({ name: 'John', age: 30 });
       const renderCount = { current: 0 };
 
-      const { result } = renderHook(() => {
-        renderCount.current++;
-        return useSelector(user, (u) => u.name);
-      });
+      const { result } = renderHook(
+        () => {
+          renderCount.current++;
+          return useSelector(user, (u) => u.name);
+        },
+        { wrapper: createWrapper(api) }
+      );
 
       expect(result.current).toBe('John');
       expect(renderCount.current).toBe(1);

@@ -45,17 +45,6 @@ export interface Signal<T = unknown> extends Producer<T> {
   ): void;
 }
 
-export interface Computed<T = unknown> extends Producer<T>, Consumer {
-  __type: 'computed';
-  readonly value: T;
-  peek(): T;
-  _compute(): T;
-  _value: T | undefined;
-  _lastComputedAt: number;
-  _recompute(): boolean;
-  dispose(): void;
-}
-
 export interface Effect extends Consumer {
   __type: 'effect';
   _fn(): void;
@@ -73,8 +62,4 @@ export type Unsubscribe = () => void;
 export interface EffectDisposer {
   (): void;
   __effect: Effect;
-}
-
-export interface ComputedOptions {
-  equals?: (a: unknown, b: unknown) => boolean;
 }
