@@ -8,7 +8,7 @@ import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
 export interface EffectInterface extends ScheduledConsumer {
   __type: 'effect';
-  _fn(): void;
+  _callback(): void;
   dispose(): void;
   subscribe?: (listener: () => void) => () => void;
 }
@@ -37,7 +37,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
   
   class Effect implements EffectInterface {
     __type = 'effect' as const;
-    _fn: () => void;
+    _callback: () => void;
 
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED;
@@ -45,7 +45,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     _nextScheduled: ScheduledConsumer | undefined = undefined;
 
     constructor(fn: () => void) {
-      this._fn = fn;
+      this._callback = fn;
     }
 
     _invalidate(): void {
@@ -68,7 +68,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       ctx.currentConsumer = this;
 
       try {
-        this._fn();
+        this._callback();
       } finally {
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;

@@ -20,6 +20,7 @@ describe('Source Cleanup Helpers', () => {
     it('should remove all source dependencies', () => {
       const sources = Array.from({ length: 3 }, () => ({
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -55,6 +56,7 @@ describe('Source Cleanup Helpers', () => {
     it('should release nodes back to pool', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -92,6 +94,7 @@ describe('Source Cleanup Helpers', () => {
     it('should remove only nodes with version -1', () => {
       const sources = Array.from({ length: 4 }, (_, i) => ({
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -132,6 +135,7 @@ describe('Source Cleanup Helpers', () => {
     it('should maintain linked list integrity', () => {
       const sources = Array.from({ length: 5 }, (_, i) => ({
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -173,6 +177,7 @@ describe('Source Cleanup Helpers', () => {
     it('should handle all nodes marked for cleanup', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -198,6 +203,7 @@ describe('Source Cleanup Helpers', () => {
     it('should release cleaned up nodes', () => {
       const sources = Array.from({ length: 3 }, () => ({
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -239,6 +245,7 @@ describe('Source Cleanup Helpers', () => {
     it('should update head when first node is removed', () => {
       const sources = Array.from({ length: 3 }, (_, i) => ({
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,

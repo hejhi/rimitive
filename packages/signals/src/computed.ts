@@ -9,8 +9,7 @@ import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 export interface ComputedInterface<T = unknown> extends Producer<T>, Consumer {
   __type: 'computed';
   readonly value: T;
-  peek(): T;
-  _compute(): T;
+  _callback(): T;
   _value: T | undefined;
   _lastComputedAt: number;
   _recompute(): boolean;
@@ -32,7 +31,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
-    _compute: () => T;
+    _callback: () => T;
     _value: T | undefined = undefined;
     _lastComputedAt = -1;
     _sources: Edge | undefined = undefined;
@@ -42,7 +41,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _version = 0;
 
     constructor(compute: () => T) {
-      this._compute = compute;
+      this._callback = compute;
     }
 
     get value(): T {
@@ -125,7 +124,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       ) {
         // TODO: add Maybe type here? like source: Maybe<Computed<T>>?
         const source = node.source;
-        
+
         if ('_recompute' in source && typeof source._recompute === 'function') {
           (source as Computed<T>)._recompute();
         }
@@ -145,7 +144,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _updateValue(): boolean {
-      const newValue = this._compute();
+      const newValue = this._callback();
       const changed = newValue !== this._value || this._version === 0;
       if (changed) {
         this._value = newValue;

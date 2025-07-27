@@ -85,6 +85,7 @@ describe('Node Pool Helpers', () => {
     it('should create bidirectional links between source and target', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -112,6 +113,7 @@ describe('Node Pool Helpers', () => {
     it('should maintain linked lists when multiple dependencies exist', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -146,6 +148,7 @@ describe('Node Pool Helpers', () => {
     it('should set TRACKING flag for computed sources', () => {
       const source = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -172,6 +175,7 @@ describe('Node Pool Helpers', () => {
     it('should remove node from targets list', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -196,6 +200,7 @@ describe('Node Pool Helpers', () => {
     it('should maintain linked list integrity when removing middle node', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -225,6 +230,7 @@ describe('Node Pool Helpers', () => {
     it('should clear TRACKING flag when last target is removed', () => {
       const source = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,

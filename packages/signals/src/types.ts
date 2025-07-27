@@ -5,6 +5,7 @@ export interface BaseReactive {
 // Node: The base interface for all reactive graph nodes
 export interface Node<T = unknown> extends BaseReactive {
   value: T;
+  peek(): T;
 }
 
 // Producer: A Node that produces values and can be observed

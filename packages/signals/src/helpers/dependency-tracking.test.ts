@@ -20,6 +20,7 @@ describe('Dependency Tracking Helpers', () => {
     it('should reuse cached node when available', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -51,6 +52,7 @@ describe('Dependency Tracking Helpers', () => {
     it('should find existing dependency in sources list', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -84,6 +86,7 @@ describe('Dependency Tracking Helpers', () => {
     it('should create new dependency when none exists', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -107,6 +110,7 @@ describe('Dependency Tracking Helpers', () => {
     it('should handle multiple sources for the same target', () => {
       const sources = Array.from({ length: 3 }, (_, i) => ({
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,
@@ -140,6 +144,7 @@ describe('Dependency Tracking Helpers', () => {
     it('should update version when dependency already exists', () => {
       const source: Producer = {
         value: 0,
+        peek: () => 0,
         __type: 'test',
         _targets: undefined,
         _node: undefined,

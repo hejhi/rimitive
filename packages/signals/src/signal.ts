@@ -11,7 +11,6 @@ const { RUNNING } = CONSTANTS;
 export interface SignalInterface<T = unknown> extends Producer<T> {
   __type: 'signal';
   value: T;
-  peek(): T;
   _value: T;
   // Object/array update methods
   set<K extends keyof T>(key: K, value: T[K]): void;
