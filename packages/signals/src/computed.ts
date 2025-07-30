@@ -11,6 +11,7 @@ export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNod
   readonly value: T;
   _callback(): T;
   _value: T | undefined;
+  _globalVersion: number;
   _recompute(): void;
   dispose(): void;
 }
@@ -36,6 +37,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _targets: Edge | undefined = undefined;
     _lastEdge: Edge | undefined = undefined;
     _version = 0;
+    _globalVersion = -1;
 
     constructor(compute: () => T) {
       this._callback = compute;
@@ -63,9 +65,16 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _recompute(): void {
+      // Fast path: if global version hasn't changed, nothing can have changed
+      if (this._globalVersion === ctx.version) {
+        this._flags &= ~OUTDATED;
+        return;
+      }
+      
       // Early exit if sources haven't changed (skip for first run)
       if (this._version > 0 && !this._sourcesChanged()) {
         this._flags &= ~OUTDATED;
+        this._globalVersion = ctx.version;
         return;
       }
 
@@ -91,6 +100,9 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
           this._value = newValue;
           this._version++;
         }
+        
+        // Update global version after computation
+        this._globalVersion = ctx.version;
       } finally {
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;

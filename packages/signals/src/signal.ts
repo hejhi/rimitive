@@ -50,35 +50,26 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       this._version++;
       ctx.version++;
 
-      // Batch invalidations if not already in a batch
-      if (ctx.batchDepth === 0) {
-        ctx.batchDepth++;
-        try {
-          // Notify all targets
-          let node = this._targets;
-          while (node) {
-            node.target._invalidate();
-            node = node.nextTarget;
-          }
-        } finally {
-          if (--ctx.batchDepth === 0) {
-            // Process scheduled items
-            let scheduled = ctx.scheduled;
-            ctx.scheduled = null;
-            while (scheduled) {
-              const next: ScheduledNode | null = scheduled._nextScheduled || null;
-              scheduled._nextScheduled = undefined;
-              scheduled._flush();
-              scheduled = next;
-            }
-          }
-        }
-      } else {
-        // Already in a batch, just notify targets
+      // Always use batching like Preact
+      ctx.batchDepth++;
+      try {
+        // Notify all targets
         let node = this._targets;
         while (node) {
           node.target._invalidate();
           node = node.nextTarget;
+        }
+      } finally {
+        if (--ctx.batchDepth === 0) {
+          // Process scheduled items
+          let scheduled = ctx.scheduled;
+          ctx.scheduled = null;
+          while (scheduled) {
+            const next: ScheduledNode | null = scheduled._nextScheduled || null;
+            scheduled._nextScheduled = undefined;
+            scheduled._flush();
+            scheduled = next;
+          }
         }
       }
     }
