@@ -11,7 +11,7 @@ export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNod
   readonly value: T;
   _callback(): T;
   _value: T | undefined;
-  _recompute(): boolean;
+  _recompute(): void;
   dispose(): void;
 }
 
@@ -44,43 +44,41 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
     get value(): T {
       // Check for circular dependency
-      if (this._flags & RUNNING) {
-        throw new Error('Cycle detected');
-      }
+      if (this._flags & RUNNING) throw new Error('Cycle detected');
       
       // Track dependency if we're in a computation context
       const consumer = ctx.currentConsumer;
       if (consumer && '_flags' in consumer && (consumer as StatefulNode)._flags & RUNNING) {
-        addDependency(this, consumer as StatefulNode, this._version);
+        addDependency(this, consumer, this._version);
       }
       
       // Recompute if outdated
-      if (this._flags & OUTDATED) {
-        this._recompute();
-      }
+      if (this._flags & OUTDATED) this._recompute();
       
       return this._value!;
     }
 
     peek(): T {
-      if (this._flags & OUTDATED) {
-        this._recompute();
-      }
+      if (this._flags & OUTDATED) this._recompute();
       return this._value!;
     }
 
-    _recompute(): boolean {
+    _recompute(): void {
       // Early exit if sources haven't changed (skip for first run)
       if (this._version > 0 && !this._sourcesChanged()) {
         this._flags &= ~(OUTDATED | NOTIFIED);
-        return true;
+        return;
       }
 
-      // Update flags for computation
+      // Set running flag and clear outdated/notified
       this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
       // Mark sources for dependency tracking
-      this._markSourcesForTracking();
+      let source = this._sources;
+      while (source) {
+        source.version = -1;
+        source = source.nextSource;
+      }
       
       // Execute computation with dependency tracking
       const prevConsumer = ctx.currentConsumer;
@@ -99,8 +97,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         this._flags &= ~RUNNING;
         cleanupSources(this);
       }
-
-      return true;
     }
 
     _invalidate(): void {
@@ -121,10 +117,10 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _sourcesChanged(): boolean {
       let source = this._sources;
       while (source) {
-        // Source changed if version differs or source is outdated
+        // Check version mismatch
         if (source.version !== source.source._version) return true;
         
-        // Check if computed source is outdated
+        // Check if computed source needs update
         if ('_flags' in source.source && (source.source as StatefulNode)._flags & OUTDATED) {
           return true;
         }
@@ -132,14 +128,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         source = source.nextSource;
       }
       return false;
-    }
-
-    _markSourcesForTracking(): void {
-      let source = this._sources;
-      while (source) {
-        source.version = -1; // Mark for re-tracking
-        source = source.nextSource;
-      }
     }
 
     dispose(): void {
