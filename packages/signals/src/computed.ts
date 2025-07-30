@@ -20,6 +20,7 @@ const {
   RUNNING,
   DISPOSED,
   OUTDATED,
+  NOTIFIED,
   IS_COMPUTED,
 } = CONSTANTS;
 
@@ -67,19 +68,19 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     _recompute(): void {
       // Fast path: if global version hasn't changed, nothing can have changed
       if (this._globalVersion === ctx.version) {
-        this._flags &= ~OUTDATED;
+        this._flags &= ~(OUTDATED | NOTIFIED);
         return;
       }
       
       // Early exit if sources haven't changed (skip for first run)
       if (this._version > 0 && !this._sourcesChanged()) {
-        this._flags &= ~OUTDATED;
+        this._flags &= ~(OUTDATED | NOTIFIED);
         this._globalVersion = ctx.version;
         return;
       }
 
-      // Set running flag and clear outdated
-      this._flags = (this._flags | RUNNING) & ~OUTDATED;
+      // Set running flag and clear outdated/notified
+      this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
       // Mark sources for dependency tracking
       let source = this._sources;
@@ -111,11 +112,11 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _invalidate(): void {
-      // Skip if already outdated (no need to propagate again)
-      if (this._flags & OUTDATED) return;
+      // Skip if already notified, disposed, or currently recomputing
+      if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
       
-      // Mark as outdated
-      this._flags |= OUTDATED;
+      // Mark as outdated and notified
+      this._flags |= NOTIFIED | OUTDATED;
 
       // Propagate invalidation to dependent computeds/effects
       let target = this._targets;
