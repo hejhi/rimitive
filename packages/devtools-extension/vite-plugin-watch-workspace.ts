@@ -9,7 +9,6 @@ export function watchWorkspace(): PluginOption {
       const workspacePaths = [
         resolve(__dirname, '../lattice/src'),
         resolve(__dirname, '../signals/src'),
-        resolve(__dirname, '../devtools/src'),
       ];
 
       // Add paths to watcher
