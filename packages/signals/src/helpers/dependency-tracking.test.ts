@@ -1,18 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyHelpers } from './dependency-tracking';
 import { createNodePoolHelpers, TrackedProducer } from './node-pool';
-import { createContext } from '../context';
-import type { SignalContext } from '../context';
 import type { ConsumerNode } from '../types';
 
 describe('Dependency Tracking Helpers', () => {
-  let ctx: SignalContext;
   let pool: ReturnType<typeof createNodePoolHelpers>;
   let helpers: ReturnType<typeof createDependencyHelpers>;
 
   beforeEach(() => {
-    ctx = createContext();
-    pool = createNodePoolHelpers(ctx);
+    pool = createNodePoolHelpers();
     helpers = createDependencyHelpers(pool);
   });
 

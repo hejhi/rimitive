@@ -25,7 +25,7 @@ const {
 } = CONSTANTS;
 
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
-  const pool = createNodePoolHelpers(ctx);
+  const pool = createNodePoolHelpers();
   const { addDependency } = createDependencyHelpers(pool);
   const { disposeAllSources, cleanupSources } = createSourceCleanupHelpers(pool);
   

@@ -1,18 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSourceCleanupHelpers } from './source-cleanup';
 import { createNodePoolHelpers, TrackedProducer } from './node-pool';
-import { createContext } from '../context';
-import type { SignalContext } from '../context';
 import type { ConsumerNode, Edge } from '../types';
 
 describe('Source Cleanup Helpers', () => {
-  let ctx: SignalContext;
   let pool: ReturnType<typeof createNodePoolHelpers>;
   let helpers: ReturnType<typeof createSourceCleanupHelpers>;
 
   beforeEach(() => {
-    ctx = createContext();
-    pool = createNodePoolHelpers(ctx);
+    pool = createNodePoolHelpers();
     helpers = createSourceCleanupHelpers(pool);
   });
 

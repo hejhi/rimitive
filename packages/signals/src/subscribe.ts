@@ -16,8 +16,7 @@ export interface SubscribeNode<T> extends ScheduledNode, StatefulNode {
 }
 
 export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
-  const nodePoolHelpers = createNodePoolHelpers(ctx);
-  const { acquireNode } = nodePoolHelpers;
+  const nodePoolHelpers = createNodePoolHelpers();
   const { disposeAllSources } = createSourceCleanupHelpers(nodePoolHelpers);
   const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   
@@ -63,7 +62,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
 
     _setupDependency(source: Readable<T> & ProducerNode): void {
       // Get or create dependency node
-      const node = acquireNode();
+      const node = {} as Edge;
 
       // Setup the node
       node.source = source;

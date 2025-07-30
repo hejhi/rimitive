@@ -31,7 +31,7 @@ const {
 } = CONSTANTS;
 
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
-  const pool = createNodePoolHelpers(ctx);
+  const pool = createNodePoolHelpers();
   const { disposeAllSources, cleanupSources } = createSourceCleanupHelpers(pool);
   const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   

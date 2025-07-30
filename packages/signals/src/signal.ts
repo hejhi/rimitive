@@ -21,7 +21,7 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
 }
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
-  const { addDependency } = createDependencyHelpers(createNodePoolHelpers(ctx));
+  const { addDependency } = createDependencyHelpers(createNodePoolHelpers());
   
   class Signal<T> implements SignalInterface<T> {
     __type = 'signal' as const;
