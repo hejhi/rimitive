@@ -46,3 +46,5 @@ public/
 *.ts.map
 
 **/.claude/settings.local.json
+preact-signals
+alien-signals

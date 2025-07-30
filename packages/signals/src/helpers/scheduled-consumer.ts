@@ -23,6 +23,9 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
    * Schedules a consumer for batch execution
    */
   function scheduleConsumer(consumer: ScheduledNode): void {
+    // Avoid scheduling the same consumer multiple times
+    if (consumer._nextScheduled !== undefined) return;
+    
     consumer._nextScheduled = ctx.scheduled === null ? undefined : ctx.scheduled;
     ctx.scheduled = consumer;
   }

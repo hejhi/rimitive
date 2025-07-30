@@ -46,17 +46,28 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
     get value(): T {
       this._addDependency(ctx.currentConsumer);
+      
+      // Early return if we're up to date and not outdated
+      if (!(this._flags & OUTDATED) && this._version > 0) {
+        return this._value!;
+      }
+      
       this._recompute();
       return this._value!;
     }
 
     _recompute(): boolean {
+      // Clear NOTIFIED flag early to prevent duplicate work
       this._flags &= ~NOTIFIED;
 
       if (this._flags & RUNNING) throw new Error('Cycle detected');
-      if (this._isUpToDate()) return true;
+      
+      // Skip if already up to date
+      if (this._isUpToDate()) {
+        this._flags &= ~OUTDATED;
+        return true;
+      }
 
-      this._flags &= ~OUTDATED;
       this._flags |= RUNNING;
 
       if (this._version > 0 && !this._checkSources()) {
@@ -80,13 +91,37 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _invalidate(): void {
-      if (this._flags & NOTIFIED) return;
+      // Early exit if already notified or disposed
+      if (this._flags & (NOTIFIED | DISPOSED)) return;
+      
+      // Mark as notified and outdated
       this._flags |= NOTIFIED | OUTDATED;
 
-      let node = this._targets;
-      while (node) {
-        node.target._invalidate();
-        node = node.nextTarget;
+      // Skip propagation if we're already in the process of recomputing
+      // This helps with diamond patterns and grid propagation
+      if (this._flags & RUNNING) return;
+
+      // Only propagate if we have targets
+      if (!this._targets) return;
+
+      // In batch mode, we can propagate more efficiently
+      if (ctx.batchDepth > 0) {
+        let node = this._targets;
+        while (node) {
+          const target = node.target;
+          // Check if target is already notified to avoid redundant work
+          if ('_flags' in target && !((target as StatefulNode)._flags & NOTIFIED)) {
+            target._invalidate();
+          }
+          node = node.nextTarget!;
+        }
+      } else {
+        // Not in batch, propagate normally
+        let node = this._targets;
+        while (node) {
+          node.target._invalidate();
+          node = node.nextTarget!;
+        }
       }
     }
 
@@ -122,11 +157,12 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         node !== undefined;
         node = node.nextSource
       ) {
-        // TODO: add Maybe type here? like source: Maybe<Computed<T>>?
         const source = node.source;
 
-        if ('_recompute' in source && typeof source._recompute === 'function') {
-          (source as Computed<T>)._recompute();
+        // For computed sources, just check if they're outdated
+        // Don't force recomputation here - let lazy evaluation handle it
+        if ('_flags' in source && (source as StatefulNode)._flags & OUTDATED) {
+          return true;
         }
         if (node.version !== source._version) return true;
       }
