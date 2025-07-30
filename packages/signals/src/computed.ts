@@ -11,7 +11,6 @@ export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNod
   readonly value: T;
   _callback(): T;
   _value: T | undefined;
-  _lastComputedAt: number;
   _recompute(): boolean;
   dispose(): void;
 }
@@ -33,7 +32,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     __type = 'computed' as const;
     _callback: () => T;
     _value: T | undefined = undefined;
-    _lastComputedAt = -1;
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED | IS_COMPUTED;
     _targets: Edge | undefined = undefined;
@@ -45,45 +43,48 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     get value(): T {
+      // Check for circular dependency
+      if (this._flags & RUNNING) {
+        throw new Error('Cycle detected');
+      }
+      
       // Add dependency if we're being tracked
       if (ctx.currentConsumer && '_flags' in ctx.currentConsumer && 
           (ctx.currentConsumer as StatefulNode)._flags & RUNNING) {
         addDependency(this, ctx.currentConsumer, this._version);
       }
       
-      // Fast path: already up to date
-      if (!(this._flags & OUTDATED) && this._version > 0) {
-        return this._value!;
+      // Recompute if needed
+      if (this._flags & OUTDATED) {
+        this._recompute();
       }
       
-      this._recompute();
       return this._value!;
     }
 
     _recompute(): boolean {
-      // Clear flags early
+      // Clear notified flag
       this._flags &= ~NOTIFIED;
-
-      // Cycle detection
+      
+      // Check for cycles
       if (this._flags & RUNNING) throw new Error('Cycle detected');
       
-      // Fast path: already computed this version
-      if (!(this._flags & OUTDATED) && this._version > 0 && this._lastComputedAt === ctx.version) {
-        return true;
-      }
-
+      // Mark as running
       this._flags |= RUNNING;
-      this._flags &= ~OUTDATED;
-
-      // Check if sources changed (lazy evaluation)
+      
+      // Check if sources actually changed
       if (this._version > 0 && !this._sourcesChanged()) {
-        this._flags &= ~RUNNING;
-        this._lastComputedAt = ctx.version;
+        this._flags &= ~(RUNNING | OUTDATED);
         return true;
       }
 
-      // Prepare for tracking
+      // Clear outdated flag after checking sources
+      this._flags &= ~OUTDATED;
+      
+      // Mark dependencies for tracking
       this._prepareTracking();
+      
+      // Set up tracking context
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
       
@@ -93,31 +94,26 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
           this._value = newValue;
           this._version++;
         }
-        this._lastComputedAt = ctx.version;
       } finally {
         ctx.currentConsumer = prevConsumer;
-        cleanupSources(this);
         this._flags &= ~RUNNING;
+        cleanupSources(this);
       }
 
       return true;
     }
 
     _invalidate(): void {
-      // Early exit if already handled
-      if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
+      // Skip if already invalidated or disposed
+      if (this._flags & (NOTIFIED | DISPOSED)) return;
       
-      // Mark as notified and outdated
+      // Mark as outdated
       this._flags |= NOTIFIED | OUTDATED;
 
       // Propagate to targets
       let node = this._targets;
       while (node) {
-        const target = node.target;
-        // In batch mode, check if already notified
-        if (ctx.batchDepth === 0 || !('_flags' in target) || !((target as StatefulNode)._flags & NOTIFIED)) {
-          target._invalidate();
-        }
+        node.target._invalidate();
         node = node.nextTarget!;
       }
     }
@@ -130,7 +126,10 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     peek(): T {
-      this._recompute();
+      // Use the same logic as value getter, but without tracking
+      if (this._flags & OUTDATED) {
+        this._recompute();
+      }
       return this._value!;
     }
 
@@ -139,7 +138,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       let node = this._sources;
       while (node) {
         const source = node.source;
-        // Check version mismatch or outdated computed sources
+        // Check version mismatch or if computed source is outdated
         if (node.version !== source._version || 
             ('_flags' in source && (source as StatefulNode)._flags & OUTDATED)) {
           return true;
