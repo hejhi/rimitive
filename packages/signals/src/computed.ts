@@ -43,53 +43,55 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     get value(): T {
-      // Check for circular dependency
+      // Check for circular dependency first
       if (this._flags & RUNNING) {
         throw new Error('Cycle detected');
       }
       
-      // Add dependency if we're being tracked
-      if (ctx.currentConsumer && '_flags' in ctx.currentConsumer && 
-          (ctx.currentConsumer as StatefulNode)._flags & RUNNING) {
-        addDependency(this, ctx.currentConsumer, this._version);
+      // Track dependency if we're in a computation context
+      if (ctx.currentConsumer && '_flags' in ctx.currentConsumer) {
+        const consumer = ctx.currentConsumer as StatefulNode;
+        if (consumer._flags & RUNNING) {
+          addDependency(this, consumer, this._version);
+        }
       }
       
-      // Recompute if needed
-      if (this._flags & OUTDATED) {
-        this._recompute();
-      }
-      
+      // Ensure value is up to date
+      this._ensureUpToDate();
       return this._value!;
     }
 
+    peek(): T {
+      this._ensureUpToDate();
+      return this._value!;
+    }
+
+    _ensureUpToDate(): void {
+      if (!(this._flags & OUTDATED)) return;
+      this._recompute();
+    }
+
     _recompute(): boolean {
-      // Clear notified flag
-      this._flags &= ~NOTIFIED;
-      
-      // Check for cycles
-      if (this._flags & RUNNING) throw new Error('Cycle detected');
-      
-      // Mark as running
-      this._flags |= RUNNING;
-      
-      // Check if sources actually changed
+      // Early exit if sources haven't changed (skip for first run)
       if (this._version > 0 && !this._sourcesChanged()) {
-        this._flags &= ~(RUNNING | OUTDATED);
+        this._flags &= ~(OUTDATED | NOTIFIED);
         return true;
       }
 
-      // Clear outdated flag after checking sources
-      this._flags &= ~OUTDATED;
+      // Update flags for computation
+      this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
-      // Mark dependencies for tracking
-      this._prepareTracking();
+      // Mark sources for dependency tracking
+      this._markSourcesForTracking();
       
-      // Set up tracking context
+      // Execute computation with dependency tracking
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
       
       try {
         const newValue = this._callback();
+        
+        // Update value if changed or first run
         if (newValue !== this._value || this._version === 0) {
           this._value = newValue;
           this._version++;
@@ -104,56 +106,50 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _invalidate(): void {
-      // Skip if already invalidated or disposed
-      if (this._flags & (NOTIFIED | DISPOSED)) return;
+      // Skip if already notified, disposed, or currently recomputing
+      if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
       
-      // Mark as outdated
+      // Mark as outdated and notified
       this._flags |= NOTIFIED | OUTDATED;
 
-      // Propagate to targets
-      let node = this._targets;
-      while (node) {
-        node.target._invalidate();
-        node = node.nextTarget!;
+      // Propagate invalidation to dependent computeds/effects
+      let target = this._targets;
+      while (target) {
+        target.target._invalidate();
+        target = target.nextTarget!;
+      }
+    }
+
+    _sourcesChanged(): boolean {
+      let source = this._sources;
+      while (source) {
+        // Source changed if version differs or source is outdated
+        if (source.version !== source.source._version) return true;
+        
+        // Check if computed source is outdated
+        if ('_flags' in source.source && (source.source as StatefulNode)._flags & OUTDATED) {
+          return true;
+        }
+        
+        source = source.nextSource;
+      }
+      return false;
+    }
+
+    _markSourcesForTracking(): void {
+      let source = this._sources;
+      while (source) {
+        source.version = -1; // Mark for re-tracking
+        source = source.nextSource;
       }
     }
 
     dispose(): void {
       if (this._flags & DISPOSED) return;
+      
       this._flags |= DISPOSED;
       disposeAllSources(this);
       this._value = undefined;
-    }
-
-    peek(): T {
-      // Use the same logic as value getter, but without tracking
-      if (this._flags & OUTDATED) {
-        this._recompute();
-      }
-      return this._value!;
-    }
-
-
-    _sourcesChanged(): boolean {
-      let node = this._sources;
-      while (node) {
-        const source = node.source;
-        // Check version mismatch or if computed source is outdated
-        if (node.version !== source._version || 
-            ('_flags' in source && (source as StatefulNode)._flags & OUTDATED)) {
-          return true;
-        }
-        node = node.nextSource;
-      }
-      return false;
-    }
-
-    _prepareTracking(): void {
-      let node = this._sources;
-      while (node) {
-        node.version = -1;
-        node = node.nextSource;
-      }
     }
   }
 
