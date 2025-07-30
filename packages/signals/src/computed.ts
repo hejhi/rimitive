@@ -43,32 +43,30 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     get value(): T {
-      // Check for circular dependency first
+      // Check for circular dependency
       if (this._flags & RUNNING) {
         throw new Error('Cycle detected');
       }
       
       // Track dependency if we're in a computation context
-      if (ctx.currentConsumer && '_flags' in ctx.currentConsumer) {
-        const consumer = ctx.currentConsumer as StatefulNode;
-        if (consumer._flags & RUNNING) {
-          addDependency(this, consumer, this._version);
-        }
+      const consumer = ctx.currentConsumer;
+      if (consumer && '_flags' in consumer && (consumer as StatefulNode)._flags & RUNNING) {
+        addDependency(this, consumer as StatefulNode, this._version);
       }
       
-      // Ensure value is up to date
-      this._ensureUpToDate();
+      // Recompute if outdated
+      if (this._flags & OUTDATED) {
+        this._recompute();
+      }
+      
       return this._value!;
     }
 
     peek(): T {
-      this._ensureUpToDate();
+      if (this._flags & OUTDATED) {
+        this._recompute();
+      }
       return this._value!;
-    }
-
-    _ensureUpToDate(): void {
-      if (!(this._flags & OUTDATED)) return;
-      this._recompute();
     }
 
     _recompute(): boolean {
