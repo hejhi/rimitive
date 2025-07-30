@@ -50,7 +50,12 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       
       // Track dependency if we're in a computation context
       const consumer = ctx.currentConsumer;
-      if (consumer && '_flags' in consumer && (consumer as StatefulNode)._flags & RUNNING) {
+      if (
+        consumer
+          && '_flags' in consumer
+          && typeof consumer._flags === 'number'
+          && consumer._flags & RUNNING
+      ) {
         addDependency(this, consumer, this._version);
       }
       
@@ -133,7 +138,11 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         if (source.version !== source.source._version) return true;
         
         // Check if computed source needs update
-        if ('_flags' in source.source && (source.source as StatefulNode)._flags & OUTDATED) {
+        if (
+          '_flags' in source.source
+          && typeof source.source._flags === 'number'
+          && source.source._flags & OUTDATED
+        ) {
           return true;
         }
         

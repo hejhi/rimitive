@@ -56,10 +56,9 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
     consumer: T,
     cleanupFn: (consumer: T) => void
   ): void {
-    if (!(consumer._flags & DISPOSED)) {
-      consumer._flags |= DISPOSED;
-      cleanupFn(consumer);
-    }
+    if (consumer._flags & DISPOSED) return;
+    consumer._flags |= DISPOSED;
+    cleanupFn(consumer);
   }
 
   /**

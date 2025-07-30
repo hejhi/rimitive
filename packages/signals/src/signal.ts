@@ -1,7 +1,7 @@
 // Signal implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Writable, ProducerNode, StatefulNode, ScheduledNode } from './types';
+import { Edge, Writable, ProducerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 
@@ -36,7 +36,12 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     get value(): T {
       const current = ctx.currentConsumer;
 
-      if (!current || !('_flags' in current) || !((current as StatefulNode)._flags & RUNNING)) return this._value;
+      if (
+        !current
+        || !('_flags' in current)
+        || typeof current._flags !== 'number'
+        || !(current._flags & RUNNING)
+      ) return this._value;
 
       addDependency(this, current, this._version);
       return this._value;
