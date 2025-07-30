@@ -2,9 +2,9 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Disposable, Edge, ScheduledNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
+import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 export interface EffectInterface extends ScheduledNode, StatefulNode, Disposable {
   __type: 'effect';
@@ -31,8 +31,8 @@ const {
 } = CONSTANTS;
 
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
-  const pool = createNodePoolHelpers();
-  const { disposeAllSources, cleanupSources } = createSourceCleanupHelpers(pool);
+  const { disposeAllSources, cleanupSources } =
+    createSourceCleanupHelpers(createDependencyHelpers());
   const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   
   class Effect implements EffectInterface {

@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSourceCleanupHelpers } from './source-cleanup';
-import { createNodePoolHelpers, TrackedProducer } from './node-pool';
 import type { ConsumerNode, Edge } from '../types';
+import { createDependencyHelpers, TrackedProducer } from './dependency-tracking';
 
 describe('Source Cleanup Helpers', () => {
-  let pool: ReturnType<typeof createNodePoolHelpers>;
+  let depHelpers: ReturnType<typeof createDependencyHelpers>;
   let helpers: ReturnType<typeof createSourceCleanupHelpers>;
 
   beforeEach(() => {
-    pool = createNodePoolHelpers();
-    helpers = createSourceCleanupHelpers(pool);
+    depHelpers = createDependencyHelpers();
+    helpers = createSourceCleanupHelpers(depHelpers);
   });
 
   describe('disposeAllSources', () => {
@@ -29,7 +29,7 @@ describe('Source Cleanup Helpers', () => {
       
       // Create dependencies
       sources.forEach(source => {
-        pool.linkNodes(source, consumer, 1);
+        depHelpers.linkNodes(source, consumer, 1);
       });
       
       expect(consumer._sources).toBeDefined();
@@ -59,7 +59,7 @@ describe('Source Cleanup Helpers', () => {
         _invalidate: () => {},
       };
       
-      pool.linkNodes(source, consumer, 1);
+      depHelpers.linkNodes(source, consumer, 1);
       helpers.disposeAllSources(consumer);
     });
 
@@ -92,8 +92,8 @@ describe('Source Cleanup Helpers', () => {
       };
       
       // Create dependencies
-      const nodes = sources.map(source => 
-        pool.linkNodes(source, consumer, source._version)
+      const nodes = sources.map((source) =>
+        depHelpers.linkNodes(source, consumer, source._version)
       );
       
       // Mark some nodes for cleanup
@@ -129,8 +129,8 @@ describe('Source Cleanup Helpers', () => {
       };
       
       // Create dependencies
-      const nodes = sources.map(source => 
-        pool.linkNodes(source, consumer, source._version)
+      const nodes = sources.map((source) =>
+        depHelpers.linkNodes(source, consumer, source._version)
       );
       
       // Mark alternating nodes for cleanup
@@ -166,7 +166,7 @@ describe('Source Cleanup Helpers', () => {
         _invalidate: () => {},
       };
       
-      const node = pool.linkNodes(source, consumer, 1);
+      const node = depHelpers.linkNodes(source, consumer, 1);
       node.version = -1;
       
       helpers.cleanupSources(consumer);
@@ -188,8 +188,8 @@ describe('Source Cleanup Helpers', () => {
         _invalidate: () => {},
       };
       
-      const nodes = sources.map(source => 
-        pool.linkNodes(source, consumer, 1)
+      const nodes = sources.map((source) =>
+        depHelpers.linkNodes(source, consumer, 1)
       );
       
       // Mark for cleanup
@@ -226,8 +226,8 @@ describe('Source Cleanup Helpers', () => {
         _invalidate: () => {},
       };
       
-      const nodes = sources.map(source => 
-        pool.linkNodes(source, consumer, source._version)
+      const nodes = sources.map((source) =>
+        depHelpers.linkNodes(source, consumer, source._version)
       );
       
       // Mark first node for cleanup

@@ -3,8 +3,7 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Edge, Writable, ProducerNode, StatefulNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers, EdgeCache } from './helpers/node-pool';
-import { createDependencyHelpers } from './helpers/dependency-tracking';
+import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 
 const { RUNNING } = CONSTANTS;
 
@@ -21,7 +20,7 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
 }
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
-  const { addDependency } = createDependencyHelpers(createNodePoolHelpers());
+  const { addDependency } = createDependencyHelpers();
   
   class Signal<T> implements SignalInterface<T> {
     __type = 'signal' as const;

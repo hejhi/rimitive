@@ -410,44 +410,35 @@ describe('Read-heavy Workload', () => {
 describe('Effect Performance', () => {
   // Preact
   const preactEffectSignal = preactSignal(0);
-  let preactEffectCount = 0;
   const preactCleanup = preactEffect(() => {
     void preactEffectSignal.value;
-    preactEffectCount++;
   });
 
   // Lattice
   const latticeEffectSignal = lattice.signal(0);
-  let latticeEffectCount = 0;
   const latticeCleanup = lattice.effect(() => {
     void latticeEffectSignal.value;
-    latticeEffectCount++;
   });
 
   // Alien
   const alienEffectSignal = alienSignal(0);
-  let alienEffectCount = 0;
   const alienCleanup = alienEffect(() => {
     void alienEffectSignal();
-    alienEffectCount++;
   });
 
   bench('Preact - effect triggers', () => {
-    preactEffectCount = 0;
     for (let i = 0; i < 1000; i++) {
       preactEffectSignal.value = i;
     }
   });
 
   bench('Lattice - effect triggers', () => {
-    latticeEffectCount = 0;
     for (let i = 0; i < 1000; i++) {
       latticeEffectSignal.value = i;
     }
   });
 
   bench('Alien - effect triggers', () => {
-    alienEffectCount = 0;
     for (let i = 0; i < 1000; i++) {
       alienEffectSignal(i);
     }

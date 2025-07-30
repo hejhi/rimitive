@@ -3,9 +3,9 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, ScheduledNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers } from './helpers/node-pool';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
+import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
 
@@ -16,8 +16,7 @@ export interface SubscribeNode<T> extends ScheduledNode, StatefulNode {
 }
 
 export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
-  const nodePoolHelpers = createNodePoolHelpers();
-  const { disposeAllSources } = createSourceCleanupHelpers(nodePoolHelpers);
+  const { disposeAllSources } = createSourceCleanupHelpers(createDependencyHelpers());
   const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {

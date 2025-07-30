@@ -2,8 +2,7 @@ import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, StatefulNode, Disposable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createNodePoolHelpers, EdgeCache } from './helpers/node-pool';
-import { createDependencyHelpers } from './helpers/dependency-tracking';
+import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, EdgeCache, StatefulNode, Disposable {
@@ -25,9 +24,10 @@ const {
 } = CONSTANTS;
 
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
-  const pool = createNodePoolHelpers();
-  const { addDependency } = createDependencyHelpers(pool);
-  const { disposeAllSources, cleanupSources } = createSourceCleanupHelpers(pool);
+  const depHelpers = createDependencyHelpers();
+  const { addDependency } = depHelpers
+  const { disposeAllSources, cleanupSources } =
+    createSourceCleanupHelpers(depHelpers);
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
