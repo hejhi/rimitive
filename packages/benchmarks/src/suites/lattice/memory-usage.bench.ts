@@ -24,7 +24,11 @@ import {
 } from 'alien-signals';
 
 // Create Lattice API instance
-const lattice = createSignalAPI({
+const {
+  signal: latticeSignal,
+  computed: latticeComputed,
+  effect: latticeEffect
+} = createSignalAPI({
   signal: createSignalFactory,
   computed: createComputedFactory,
   effect: createEffectFactory,
@@ -52,7 +56,7 @@ describe('Memory Usage - Signal Creation', () => {
   });
 
   bench('Lattice - 10k signals memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => lattice.signal(i));
+    const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
     // Force references to prevent optimization
     void signals.length;
   });
@@ -76,8 +80,8 @@ describe('Memory Usage - Computed Creation', () => {
   });
 
   bench('Lattice - 10k computeds memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => lattice.signal(i));
-    const computeds = signals.map(s => lattice.computed(() => s.value * 2));
+    const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
+    const computeds = signals.map(s => latticeComputed(() => s.value * 2));
     // Force evaluation
     computeds.forEach(c => c.value);
     void computeds.length;
@@ -108,10 +112,10 @@ describe('Memory Usage - Effect Creation', () => {
   });
 
   bench('Lattice - 5k effects memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => lattice.signal(i));
+    const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
     let counter = 0;
     const effects = signals.map(s => 
-      lattice.effect(() => { counter += s.value; })
+      latticeEffect(() => { counter += s.value; })
     );
     
     // Cleanup
@@ -158,16 +162,16 @@ describe('Memory Usage - Large Dependency Tree', () => {
   });
 
   bench('Lattice - tree memory (50x50)', () => {
-    const src = lattice.signal(1);
+    const src = latticeSignal(1);
     const effects: (() => void)[] = [];
     
     for (let i = 0; i < WIDTH; i++) {
       let last: { value: number } = src;
       for (let j = 0; j < HEIGHT; j++) {
         const prev = last;
-        last = lattice.computed(() => prev.value + 1);
+        last = latticeComputed(() => prev.value + 1);
       }
-      effects.push(lattice.effect(() => void last.value));
+      effects.push(latticeEffect(() => void last.value));
     }
     
     // Trigger update
@@ -225,9 +229,9 @@ describe('Memory Usage - Cleanup and GC', () => {
   bench('Lattice - cleanup efficiency', () => {
     // Create and dispose multiple times
     for (let iter = 0; iter < 5; iter++) {
-      const signals = Array.from({ length: COUNT }, (_, i) => lattice.signal(i));
-      const computeds = signals.map(s => lattice.computed(() => s.value * 2));
-      const effects = computeds.map(c => lattice.effect(() => void c.value));
+      const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
+      const computeds = signals.map(s => latticeComputed(() => s.value * 2));
+      const effects = computeds.map(c => latticeEffect(() => void c.value));
       
       // Update some values
       for (let i = 0; i < 100; i++) {
@@ -295,12 +299,12 @@ describe('Memory-Intensive Patterns', () => {
   bench('Lattice - many signals creation/disposal', () => {
     // Create many signals
     const signals = Array.from({ length: SIGNAL_COUNT }, (_, i) =>
-      lattice.signal(i)
+      latticeSignal(i)
     );
 
     // Create computeds that depend on neighbors
     const computeds = signals.map((s, i) =>
-      lattice.computed(() => {
+      latticeComputed(() => {
         let sum = s.value;
         if (i > 0) sum += signals[i - 1]!.value;
         if (i < signals.length - 1) sum += signals[i + 1]!.value;
@@ -309,7 +313,7 @@ describe('Memory-Intensive Patterns', () => {
     );
 
     // Create effects for each computed
-    const effects = computeds.map((c) => lattice.effect(() => void c.value));
+    const effects = computeds.map((c) => latticeEffect(() => void c.value));
 
     // Trigger some updates
     for (let i = 0; i < 10; i++) {

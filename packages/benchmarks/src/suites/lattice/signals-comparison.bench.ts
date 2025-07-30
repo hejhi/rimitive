@@ -32,7 +32,12 @@ import {
 const ITERATIONS = 10000;
 
 // Create Lattice API instance
-const lattice = createSignalAPI({
+const {
+  signal: latticeSignal,
+  computed: latticeComputed,
+  effect: latticeEffect,
+  batch: latticeBatch
+} = createSignalAPI({
   signal: createSignalFactory,
   computed: createComputedFactory,
   batch: createBatchFactory,
@@ -41,7 +46,7 @@ const lattice = createSignalAPI({
 
 describe('Single Signal Updates', () => {
   const preactCount = preactSignal(0);
-  const latticeCount = lattice.signal(0);
+  const latticeCount = latticeSignal(0);
   const alienCount = alienSignal(0);
 
   bench('Preact - single signal', () => {
@@ -73,9 +78,9 @@ describe('Computed Chain (a → b → c)', () => {
   const preactC = preactComputed(() => preactB.value * 2);
 
   // Lattice
-  const latticeA = lattice.signal(0);
-  const latticeB = lattice.computed(() => latticeA.value * 2);
-  const latticeC = lattice.computed(() => latticeB.value * 2);
+  const latticeA = latticeSignal(0);
+  const latticeB = latticeComputed(() => latticeA.value * 2);
+  const latticeC = latticeComputed(() => latticeB.value * 2);
 
   // Alien
   const alienA = alienSignal(0);
@@ -116,14 +121,14 @@ describe('Deep Computed Tree', () => {
   const preactResult = preactComputed(() => preactC1.value + preactC2.value);
 
   // Lattice setup
-  const latticeRoot = lattice.signal(0);
-  const latticeA1 = lattice.computed(() => latticeRoot.value * 2);
-  const latticeA2 = lattice.computed(() => latticeRoot.value * 3);
-  const latticeB1 = lattice.computed(() => latticeA1.value + latticeA2.value);
-  const latticeB2 = lattice.computed(() => latticeA1.value - latticeA2.value);
-  const latticeC1 = lattice.computed(() => latticeB1.value * latticeB2.value);
-  const latticeC2 = lattice.computed(() => latticeB1.value / (latticeB2.value || 1));
-  const latticeResult = lattice.computed(() => latticeC1.value + latticeC2.value);
+  const latticeRoot = latticeSignal(0);
+  const latticeA1 = latticeComputed(() => latticeRoot.value * 2);
+  const latticeA2 = latticeComputed(() => latticeRoot.value * 3);
+  const latticeB1 = latticeComputed(() => latticeA1.value + latticeA2.value);
+  const latticeB2 = latticeComputed(() => latticeA1.value - latticeA2.value);
+  const latticeC1 = latticeComputed(() => latticeB1.value * latticeB2.value);
+  const latticeC2 = latticeComputed(() => latticeB1.value / (latticeB2.value || 1));
+  const latticeResult = latticeComputed(() => latticeC1.value + latticeC2.value);
 
   // Alien setup
   const alienRoot = alienSignal(0);
@@ -165,10 +170,10 @@ describe('Diamond Pattern', () => {
   const preactBottom = preactComputed(() => preactLeft.value + preactRight.value);
 
   // Lattice
-  const latticeSource = lattice.signal(0);
-  const latticeLeft = lattice.computed(() => latticeSource.value * 2);
-  const latticeRight = lattice.computed(() => latticeSource.value * 3);
-  const latticeBottom = lattice.computed(() => latticeLeft.value + latticeRight.value);
+  const latticeSource = latticeSignal(0);
+  const latticeLeft = latticeComputed(() => latticeSource.value * 2);
+  const latticeRight = latticeComputed(() => latticeSource.value * 3);
+  const latticeBottom = latticeComputed(() => latticeLeft.value + latticeRight.value);
 
   // Alien
   const alienSource = alienSignal(0);
@@ -206,10 +211,10 @@ describe('Batch Updates', () => {
   const preactSum = preactComputed(() => preactS1.value + preactS2.value + preactS3.value);
 
   // Lattice
-  const latticeS1 = lattice.signal(0);
-  const latticeS2 = lattice.signal(0);
-  const latticeS3 = lattice.signal(0);
-  const latticeSum = lattice.computed(() => latticeS1.value + latticeS2.value + latticeS3.value);
+  const latticeS1 = latticeSignal(0);
+  const latticeS2 = latticeSignal(0);
+  const latticeS3 = latticeSignal(0);
+  const latticeSum = latticeComputed(() => latticeS1.value + latticeS2.value + latticeS3.value);
 
   // Alien
   const alienS1 = alienSignal(0);
@@ -230,7 +235,7 @@ describe('Batch Updates', () => {
 
   bench('Lattice - batch updates', () => {
     for (let i = 0; i < ITERATIONS; i++) {
-      lattice.batch(() => {
+      latticeBatch(() => {
         latticeS1.value = i;
         latticeS2.value = i * 2;
         latticeS3.value = i * 3;
@@ -266,9 +271,9 @@ describe('Large Dependency Graph', () => {
   );
 
   // Lattice
-  const latticeSignals = Array.from({ length: 10 }, (_, i) => lattice.signal(i));
+  const latticeSignals = Array.from({ length: 10 }, (_, i) => latticeSignal(i));
   const latticeComputeds = latticeSignals.map((s, i) =>
-    lattice.computed(() => {
+    latticeComputed(() => {
       let sum = s.value;
       // Each computed depends on 3 signals
       if (i > 0) sum += latticeSignals[i - 1]!.value;
@@ -328,8 +333,8 @@ describe('Rapid Updates Without Reads', () => {
   const preactComp = preactComputed(() => preactSig.value * 2);
 
   // Lattice
-  const latticeSig = lattice.signal(0);
-  const latticeComp = lattice.computed(() => latticeSig.value * 2);
+  const latticeSig = latticeSignal(0);
+  const latticeComp = latticeComputed(() => latticeSig.value * 2);
 
   // Alien
   const alienSig = alienSignal(0);
@@ -367,9 +372,9 @@ describe('Read-heavy Workload', () => {
   const preactReadComputed2 = preactComputed(() => preactReadSignal.value * 3);
 
   // Lattice
-  const latticeReadSignal = lattice.signal(0);
-  const latticeReadComputed1 = lattice.computed(() => latticeReadSignal.value * 2);
-  const latticeReadComputed2 = lattice.computed(() => latticeReadSignal.value * 3);
+  const latticeReadSignal = latticeSignal(0);
+  const latticeReadComputed1 = latticeComputed(() => latticeReadSignal.value * 2);
+  const latticeReadComputed2 = latticeComputed(() => latticeReadSignal.value * 3);
 
   // Alien
   const alienReadSignal = alienSignal(0);
@@ -415,8 +420,8 @@ describe('Effect Performance', () => {
   });
 
   // Lattice
-  const latticeEffectSignal = lattice.signal(0);
-  const latticeCleanup = lattice.effect(() => {
+  const latticeEffectSignal = latticeSignal(0);
+  const latticeCleanup = latticeEffect(() => {
     void latticeEffectSignal.value;
   });
 

@@ -27,7 +27,11 @@ import {
 } from 'alien-signals';
 
 // Create Lattice API instance
-const lattice = createSignalAPI({
+const {
+  signal: latticeSignal,
+  computed: latticeComputed,
+  effect: latticeEffect
+} = createSignalAPI({
   signal: createSignalFactory,
   computed: createComputedFactory,
   effect: createEffectFactory,
@@ -58,16 +62,16 @@ describe('Grid Propagation Pattern (10x10)', () => {
   });
 
   bench('Lattice - grid propagation', () => {
-    const src = lattice.signal(1);
+    const src = latticeSignal(1);
     const effects: (() => void)[] = [];
     
     for (let i = 0; i < WIDTH; i++) {
       let last: { value: number } = src;
       for (let j = 0; j < HEIGHT; j++) {
         const prev = last;
-        last = lattice.computed(() => prev.value + 1);
+        last = latticeComputed(() => prev.value + 1);
       }
-      effects.push(lattice.effect(() => void last.value));
+      effects.push(latticeEffect(() => void last.value));
     }
     
     // Trigger propagation
@@ -122,16 +126,16 @@ describe('Deep Chain Propagation (100 levels)', () => {
   });
 
   bench('Lattice - deep chain', () => {
-    const src = lattice.signal(0);
+    const src = latticeSignal(0);
     let last: { value: number } = src;
     
     // Create deep chain
     for (let i = 0; i < DEPTH; i++) {
       const prev = last;
-      last = lattice.computed(() => prev.value + 1);
+      last = latticeComputed(() => prev.value + 1);
     }
     
-    const dispose = lattice.effect(() => void last.value);
+    const dispose = latticeEffect(() => void last.value);
     
     // Trigger updates
     for (let i = 0; i < 100; i++) {
@@ -207,14 +211,14 @@ describe('Complex Object Updates', () => {
 
   bench('Lattice - complex objects', () => {
     const objects = Array.from({ length: 50 }, (_, i) => 
-      lattice.signal(createComplexObject(i))
+      latticeSignal(createComplexObject(i))
     );
     
-    const aggregated = lattice.computed(() => {
+    const aggregated = latticeComputed(() => {
       return objects.reduce((sum, obj) => sum + obj.value.data.value, 0);
     });
     
-    const dispose = lattice.effect(() => void aggregated.value);
+    const dispose = latticeEffect(() => void aggregated.value);
     
     // Update objects
     for (let i = 0; i < 100; i++) {
@@ -271,15 +275,15 @@ describe('Wide Dependency Fan-out', () => {
   });
 
   bench('Lattice - wide fan-out', () => {
-    const source = lattice.signal(0);
+    const source = latticeSignal(0);
     
     // Create many computeds depending on single source
     const computeds = Array.from({ length: FAN_OUT }, (_, i) => 
-      lattice.computed(() => source.value * (i + 1))
+      latticeComputed(() => source.value * (i + 1))
     );
     
     // Create effect depending on all computeds
-    const dispose = lattice.effect(() => {
+    const dispose = latticeEffect(() => {
       computeds.reduce((sum, c) => sum + c.value, 0);
     });
     
