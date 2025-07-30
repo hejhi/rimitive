@@ -1,6 +1,6 @@
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Readable, ProducerNode, ConsumerNode, StatefulNode, Disposable } from './types';
+import { Edge, Readable, ProducerNode, StatefulNode, Disposable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createNodePoolHelpers, EdgeCache } from './helpers/node-pool';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
@@ -45,9 +45,13 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     get value(): T {
-      this._addDependency(ctx.currentConsumer);
+      // Add dependency if we're being tracked
+      if (ctx.currentConsumer && '_flags' in ctx.currentConsumer && 
+          (ctx.currentConsumer as StatefulNode)._flags & RUNNING) {
+        addDependency(this, ctx.currentConsumer, this._version);
+      }
       
-      // Early return if we're up to date and not outdated
+      // Fast path: already up to date
       if (!(this._flags & OUTDATED) && this._version > 0) {
         return this._value!;
       }
@@ -57,33 +61,42 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _recompute(): boolean {
-      // Clear NOTIFIED flag early to prevent duplicate work
+      // Clear flags early
       this._flags &= ~NOTIFIED;
 
+      // Cycle detection
       if (this._flags & RUNNING) throw new Error('Cycle detected');
       
-      // Skip if already up to date
-      if (this._isUpToDate()) {
-        this._flags &= ~OUTDATED;
+      // Fast path: already computed this version
+      if (!(this._flags & OUTDATED) && this._version > 0 && this._lastComputedAt === ctx.version) {
         return true;
       }
 
       this._flags |= RUNNING;
+      this._flags &= ~OUTDATED;
 
-      if (this._version > 0 && !this._checkSources()) {
+      // Check if sources changed (lazy evaluation)
+      if (this._version > 0 && !this._sourcesChanged()) {
         this._flags &= ~RUNNING;
+        this._lastComputedAt = ctx.version;
         return true;
       }
 
+      // Prepare for tracking
+      this._prepareTracking();
       const prevConsumer = ctx.currentConsumer;
+      ctx.currentConsumer = this;
+      
       try {
-        this._prepareSourcesTracking();
-        ctx.currentConsumer = this;
-        this._updateValue();
+        const newValue = this._callback();
+        if (newValue !== this._value || this._version === 0) {
+          this._value = newValue;
+          this._version++;
+        }
         this._lastComputedAt = ctx.version;
       } finally {
         ctx.currentConsumer = prevConsumer;
-        this._cleanupSources();
+        cleanupSources(this);
         this._flags &= ~RUNNING;
       }
 
@@ -91,37 +104,21 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _invalidate(): void {
-      // Early exit if already notified or disposed
-      if (this._flags & (NOTIFIED | DISPOSED)) return;
+      // Early exit if already handled
+      if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
       
       // Mark as notified and outdated
       this._flags |= NOTIFIED | OUTDATED;
 
-      // Skip propagation if we're already in the process of recomputing
-      // This helps with diamond patterns and grid propagation
-      if (this._flags & RUNNING) return;
-
-      // Only propagate if we have targets
-      if (!this._targets) return;
-
-      // In batch mode, we can propagate more efficiently
-      if (ctx.batchDepth > 0) {
-        let node = this._targets;
-        while (node) {
-          const target = node.target;
-          // Check if target is already notified to avoid redundant work
-          if ('_flags' in target && !((target as StatefulNode)._flags & NOTIFIED)) {
-            target._invalidate();
-          }
-          node = node.nextTarget!;
+      // Propagate to targets
+      let node = this._targets;
+      while (node) {
+        const target = node.target;
+        // In batch mode, check if already notified
+        if (ctx.batchDepth === 0 || !('_flags' in target) || !((target as StatefulNode)._flags & NOTIFIED)) {
+          target._invalidate();
         }
-      } else {
-        // Not in batch, propagate normally
-        let node = this._targets;
-        while (node) {
-          node.target._invalidate();
-          node = node.nextTarget!;
-        }
+        node = node.nextTarget!;
       }
     }
 
@@ -137,60 +134,27 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       return this._value!;
     }
 
-    _addDependency(target: ConsumerNode | null): void {
-      if (!target || !('_flags' in target) || !((target as StatefulNode)._flags & RUNNING)) return;
 
-      addDependency(this, target, this._version);
-    }
-
-    _isUpToDate(): boolean {
-      return (
-        !(this._flags & OUTDATED) &&
-        this._version > 0 &&
-        this._lastComputedAt === ctx.version
-      );
-    }
-
-    _checkSources(): boolean {
-      for (
-        let node = this._sources;
-        node !== undefined;
-        node = node.nextSource
-      ) {
+    _sourcesChanged(): boolean {
+      let node = this._sources;
+      while (node) {
         const source = node.source;
-
-        // For computed sources, just check if they're outdated
-        // Don't force recomputation here - let lazy evaluation handle it
-        if ('_flags' in source && (source as StatefulNode)._flags & OUTDATED) {
+        // Check version mismatch or outdated computed sources
+        if (node.version !== source._version || 
+            ('_flags' in source && (source as StatefulNode)._flags & OUTDATED)) {
           return true;
         }
-        if (node.version !== source._version) return true;
+        node = node.nextSource;
       }
       return false;
     }
 
-    _prepareSourcesTracking(): void {
-      for (
-        let node = this._sources;
-        node !== undefined;
-        node = node.nextSource
-      ) {
+    _prepareTracking(): void {
+      let node = this._sources;
+      while (node) {
         node.version = -1;
+        node = node.nextSource;
       }
-    }
-
-    _updateValue(): boolean {
-      const newValue = this._callback();
-      const changed = newValue !== this._value || this._version === 0;
-      if (changed) {
-        this._value = newValue;
-        this._version++;
-      }
-      return changed;
-    }
-
-    _cleanupSources(): void {
-      cleanupSources(this);
     }
   }
 
