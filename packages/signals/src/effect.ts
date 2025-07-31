@@ -9,6 +9,7 @@ import { createDependencyHelpers } from './helpers/dependency-tracking';
 export interface EffectInterface extends ScheduledNode, StatefulNode, Disposable {
   __type: 'effect';
   _callback(): void;
+  _globalVersion: number;
   dispose(): void;
   subscribe?: (listener: () => void) => () => void;
 }
@@ -38,6 +39,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
   class Effect implements EffectInterface {
     __type = 'effect' as const;
     _callback: () => void;
+    _globalVersion = -1;
 
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED;
@@ -57,11 +59,16 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
       this._flags = (this._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
 
-      // Mark sources for cleanup
-      let node = this._sources;
-      while (node) {
-        node.version = -1;
-        node = node.nextSource;
+      // Check if we need to run cleanup based on global version
+      const needsCleanup = this._globalVersion !== ctx.version;
+
+      if (needsCleanup) {
+        // Mark sources for cleanup
+        let node = this._sources;
+        while (node) {
+          node.version = -1;
+          node = node.nextSource;
+        }
       }
 
       const prevConsumer = ctx.currentConsumer;
@@ -69,12 +76,15 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
       try {
         this._callback();
+        this._globalVersion = ctx.version;
       } finally {
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
 
-        // Cleanup unused sources
-        cleanupSources(this);
+        // Only cleanup if needed
+        if (needsCleanup) {
+          cleanupSources(this);
+        }
       }
     }
 
