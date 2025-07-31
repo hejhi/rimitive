@@ -1,9 +1,11 @@
 // Batch implementation with factory pattern for performance
 import type { SignalContext } from './context';
-import { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
+import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
 export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
+  const { flushScheduled } = createScheduledConsumerHelpers(ctx);
+  
   const batch = function batch<T>(fn: () => T): T {
     if (ctx.batchDepth) return fn();
 
@@ -12,15 +14,7 @@ export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch'
       return fn();
     } finally {
       if (--ctx.batchDepth === 0) {
-        // Process scheduled items
-        let scheduled = ctx.scheduled;
-        ctx.scheduled = null;
-        while (scheduled) {
-          const next: ScheduledNode | null = scheduled._nextScheduled || null;
-          scheduled._nextScheduled = undefined;
-          scheduled._flush();
-          scheduled = next;
-        }
+        flushScheduled();
       }
     }
   };

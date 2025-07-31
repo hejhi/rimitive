@@ -1,9 +1,11 @@
 // Signal implementation with factory pattern for performance
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Writable, ProducerNode, ScheduledNode } from './types';
+import { Edge, Writable, ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
+import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
+import { createGraphTraversalHelpers } from './helpers/graph-traversal';
 
 const { RUNNING } = CONSTANTS;
 
@@ -21,6 +23,9 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const { addDependency } = createDependencyHelpers();
+  const scheduledConsumerHelpers = createScheduledConsumerHelpers(ctx);
+  const { flushScheduled } = scheduledConsumerHelpers;
+  const { traverseAndInvalidate } = createGraphTraversalHelpers(ctx, scheduledConsumerHelpers);
   
   class Signal<T> implements SignalInterface<T> {
     __type = 'signal' as const;
@@ -57,23 +62,11 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       // Always use batching like Preact
       ctx.batchDepth++;
       try {
-        // Notify all targets
-        let node = this._targets;
-        while (node) {
-          node.target._invalidate();
-          node = node.nextTarget;
-        }
+        // Use efficient graph traversal to invalidate all affected nodes
+        traverseAndInvalidate(this._targets);
       } finally {
         if (--ctx.batchDepth === 0) {
-          // Process scheduled items
-          let scheduled = ctx.scheduled;
-          ctx.scheduled = null;
-          while (scheduled) {
-            const next: ScheduledNode | null = scheduled._nextScheduled || null;
-            scheduled._nextScheduled = undefined;
-            scheduled._flush();
-            scheduled = next;
-          }
+          flushScheduled();
         }
       }
     }
