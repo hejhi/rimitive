@@ -65,18 +65,22 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
       this._flags = (flags | RUNNING) & ~(NOTIFIED | OUTDATED);
 
-      // Mark sources
-      let node = this._sources;
-      while (node) {
-        node.version = -1;
-        node = node.nextSource;
-      }
-
       // Store and update context
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
+      
+      // Track if we need cleanup
+      let needsCleanup = false;
 
       try {
+        // Mark sources
+        let node = this._sources;
+        while (node) {
+          node.version = -1;
+          needsCleanup = true;
+          node = node.nextSource;
+        }
+
         // Execute effect with minimal overhead
         const cleanup = this._cleanup;
         if (cleanup) {
@@ -93,8 +97,8 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
         
-        // Only cleanup if we have sources to clean
-        if (this._sources) {
+        // Only cleanup if we marked sources
+        if (needsCleanup) {
           cleanupSources(this);
         }
       }
