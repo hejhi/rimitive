@@ -8,7 +8,8 @@ export interface SignalContext {
   currentConsumer: ConsumerNode | null;
   version: number;
   batchDepth: number;
-  scheduled: ScheduledNode | null;
+  scheduledQueue: ScheduledNode[];
+  scheduledCount: number;
   nodePool: Edge[];
   poolSize: number;
   allocations: number;
@@ -25,7 +26,8 @@ export function createContext(): SignalContext {
     currentConsumer: null,
     version: 0,
     batchDepth: 0,
-    scheduled: null,
+    scheduledQueue: new Array(128), // Pre-allocate for performance
+    scheduledCount: 0,
     nodePool: nodePool,
     poolSize: INITIAL_POOL_SIZE,
     allocations: 0,

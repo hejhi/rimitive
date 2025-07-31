@@ -24,8 +24,9 @@ describe('ScheduledConsumerHelpers', () => {
     ctx.batchDepth = 1;
     helpers.scheduleConsumer(consumer);
     
-    expect(ctx.scheduled).toBe(consumer);
-    expect(consumer._nextScheduled).toBeUndefined();
+    expect(ctx.scheduledQueue[0]).toBe(consumer);
+    expect(ctx.scheduledCount).toBe(1);
+    expect(consumer._nextScheduled).toBe(consumer); // Used as a flag
   });
 
   it('should invalidate consumer immediately when not batching', () => {
@@ -68,7 +69,8 @@ describe('ScheduledConsumerHelpers', () => {
     helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
     
     expect(consumer._flags & NOTIFIED).toBe(NOTIFIED);
-    expect(ctx.scheduled).toBe(consumer);
+    expect(ctx.scheduledQueue[0]).toBe(consumer);
+    expect(ctx.scheduledCount).toBe(1);
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(consumer._flush).not.toHaveBeenCalled();
   });
@@ -91,7 +93,7 @@ describe('ScheduledConsumerHelpers', () => {
     
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(consumer._flush).not.toHaveBeenCalled();
-    expect(ctx.scheduled).toBeNull();
+    expect(ctx.scheduledCount).toBe(0);
   });
 
   it('should dispose consumer only once', () => {
@@ -157,14 +159,14 @@ describe('ScheduledConsumerHelpers', () => {
       dispose: () => {},
     };
     
-    // Build the chain: consumer3 -> consumer2 -> consumer1
-    consumer3._nextScheduled = consumer2;
-    consumer2._nextScheduled = consumer1;
-    ctx.scheduled = consumer3;
+    // Schedule consumers in order
+    helpers.scheduleConsumer(consumer1);
+    helpers.scheduleConsumer(consumer2);
+    helpers.scheduleConsumer(consumer3);
     
     helpers.flushScheduled();
     
-    expect(ctx.scheduled).toBeNull();
+    expect(ctx.scheduledCount).toBe(0);
     expect(flush1).toHaveBeenCalledTimes(1);
     expect(flush2).toHaveBeenCalledTimes(1);
     expect(flush3).toHaveBeenCalledTimes(1);

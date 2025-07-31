@@ -4,6 +4,7 @@ import { Disposable, Edge, ScheduledNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
+import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
 export interface EffectInterface extends ScheduledNode, StatefulNode, Disposable {
   __type: 'effect';
@@ -32,7 +33,7 @@ const {
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(createDependencyHelpers());
-  
+  const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   class Effect implements EffectInterface {
     __type = 'effect' as const;
     _callback: () => void | (() => void);
@@ -48,67 +49,56 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     }
 
     _invalidate(): void {
-      // Inline invalidateConsumer for performance
-      if (this._flags & NOTIFIED) return;
-      this._flags |= NOTIFIED | OUTDATED;
-
-      if (ctx.batchDepth > 0) {
-        // Inline scheduleConsumer
-        if (this._nextScheduled === undefined) {
-          this._nextScheduled = ctx.scheduled === null ? undefined : ctx.scheduled;
-          ctx.scheduled = this;
-        }
-        return;
-      }
-
-      this._flush();
+      invalidateConsumer(this, NOTIFIED, NOTIFIED | OUTDATED);
     }
 
     _flush(): void {
-      if (this._flags & (DISPOSED | RUNNING)) return;
+      // Fast path checks combined
+      const flags = this._flags;
+      if (flags & (DISPOSED | RUNNING)) return;
 
-      this._flags = (this._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
+      this._flags = (flags | RUNNING) & ~(NOTIFIED | OUTDATED);
 
-      // Mark sources for cleanup
+      // Mark sources
       let node = this._sources;
       while (node) {
         node.version = -1;
         node = node.nextSource;
       }
 
+      // Store and update context
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
 
       try {
-        // Run cleanup if exists
-        if (this._cleanup) {
-          this._cleanup();
+        // Execute effect with minimal overhead
+        const cleanup = this._cleanup;
+        if (cleanup) {
+          cleanup();
           this._cleanup = undefined;
         }
         
-        // Execute effect and capture potential cleanup
         const result = this._callback();
         if (typeof result === 'function') {
           this._cleanup = result;
         }
       } finally {
+        // Restore context
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
+        
+        // Inline source cleanup for hot path
         cleanupSources(this);
       }
     }
 
 
     dispose(): void {
-      // Inline disposeConsumer for performance
-      if (this._flags & DISPOSED) return;
-      this._flags |= DISPOSED;
-      
-      // Run cleanup if exists
-      if (this._cleanup) {
+      disposeConsumer(this, () => {
+        if (!this._cleanup) return;
         this._cleanup();
         this._cleanup = undefined;
-      }
+      })
       
       disposeAllSources(this);
     }
@@ -118,14 +108,16 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     name: 'effect',
     method: function effect(effectFn: () => void | (() => void)): EffectDisposer {
       const e = new Effect(effectFn);
+      
+      try {
+        e._flush();
+      } catch (error) {
+        // Effect is still set up and reactive even if initial run throws
+        throw error;
+      }
 
-      e._flush();
-
-      const dispose = (() => {
-        if (e._flags & DISPOSED) return;
-        e.dispose();
-      }) as EffectDisposer;
-
+      // Create bound dispose method to avoid closure allocation
+      const dispose = e.dispose.bind(e) as EffectDisposer;
       dispose.__effect = e;
 
       return dispose;

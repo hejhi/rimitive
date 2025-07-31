@@ -20,14 +20,17 @@ export interface ScheduledConsumerHelpers {
 
 export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledConsumerHelpers {
   /**
-   * Schedules a consumer for batch execution
+   * Schedules a consumer for batch execution using array queue
    */
   function scheduleConsumer(consumer: ScheduledNode): void {
-    // Avoid scheduling the same consumer multiple times
+    // Check if already scheduled using a flag to avoid array search
     if (consumer._nextScheduled !== undefined) return;
     
-    consumer._nextScheduled = ctx.scheduled === null ? undefined : ctx.scheduled;
-    ctx.scheduled = consumer;
+    // Mark as scheduled (use any non-undefined value as flag)
+    consumer._nextScheduled = consumer;
+    
+    // Direct array assignment is faster than push
+    ctx.scheduledQueue[ctx.scheduledCount++] = consumer;
   }
 
   /**
@@ -62,16 +65,22 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   }
 
   /**
-   * Executes all scheduled consumers in the queue
+   * Executes all scheduled consumers using array iteration
    */
   function flushScheduled(): void {
-    let scheduled = ctx.scheduled;
-    ctx.scheduled = null;
-
-    while (scheduled) {
-      const current = scheduled;
-      scheduled = scheduled._nextScheduled || null;
-      current._flush();
+    const queue = ctx.scheduledQueue;
+    const count = ctx.scheduledCount;
+    
+    // Reset count first to handle re-scheduling during flush
+    ctx.scheduledCount = 0;
+    
+    // Process queue in reverse order to maintain FIFO semantics
+    // (last added to array = first created effect = should run first)
+    for (let i = count - 1; i >= 0; i--) {
+      const consumer = queue[i]!; // Safe: we know count is accurate
+      // Clear scheduled flag
+      consumer._nextScheduled = undefined;
+      consumer._flush();
     }
   }
 

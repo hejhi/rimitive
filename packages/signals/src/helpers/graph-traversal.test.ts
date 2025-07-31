@@ -17,7 +17,8 @@ describe('createGraphTraversalHelpers', () => {
     ctx = {
       currentConsumer: null,
       batchDepth: 0,
-      scheduled: null,
+      scheduledQueue: new Array(128),
+      scheduledCount: 0,
       globalVersion: 0,
       version: 0,
       nodePool: [],
@@ -30,8 +31,7 @@ describe('createGraphTraversalHelpers', () => {
       if (node._nextScheduled !== undefined) return;
       
       scheduledNodes.push(node);
-      node._nextScheduled = ctx.scheduled || undefined;
-      ctx.scheduled = node;
+      node._nextScheduled = node; // Use self as flag
     };
 
     const helpers = createGraphTraversalHelpers(ctx, { 
