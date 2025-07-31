@@ -30,6 +30,11 @@ const {
   NOTIFIED,
 } = CONSTANTS;
 
+// Pre-created generic dispose function to avoid creating new bound functions for each effect
+const genericDispose = function(this: EffectInterface) { 
+  this.dispose(); 
+};
+
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(createDependencyHelpers());
@@ -116,8 +121,8 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         throw error;
       }
 
-      // Create bound dispose method to avoid closure allocation
-      const dispose = e.dispose.bind(e) as EffectDisposer;
+      // Use pre-bound generic dispose to avoid new function allocation
+      const dispose = genericDispose.bind(e) as EffectDisposer;
       dispose.__effect = e;
 
       return dispose;
