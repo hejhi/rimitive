@@ -24,8 +24,8 @@ describe('ScheduledConsumerHelpers', () => {
     ctx.batchDepth = 1;
     helpers.scheduleConsumer(consumer);
     
-    expect(ctx.scheduledQueue[0]).toBe(consumer);
-    expect(ctx.scheduledCount).toBe(1);
+    expect(ctx.scheduledQueue[ctx.scheduledHead & ctx.scheduledMask]).toBe(consumer);
+    expect(ctx.scheduledTail - ctx.scheduledHead).toBe(1);
     expect(consumer._nextScheduled).toBe(consumer); // Used as a flag
   });
 
@@ -69,8 +69,8 @@ describe('ScheduledConsumerHelpers', () => {
     helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
     
     expect(consumer._flags & NOTIFIED).toBe(NOTIFIED);
-    expect(ctx.scheduledQueue[0]).toBe(consumer);
-    expect(ctx.scheduledCount).toBe(1);
+    expect(ctx.scheduledQueue[ctx.scheduledHead & ctx.scheduledMask]).toBe(consumer);
+    expect(ctx.scheduledTail - ctx.scheduledHead).toBe(1);
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(consumer._flush).not.toHaveBeenCalled();
   });
@@ -93,7 +93,7 @@ describe('ScheduledConsumerHelpers', () => {
     
     // eslint-disable-next-line @typescript-eslint/unbound-method
     expect(consumer._flush).not.toHaveBeenCalled();
-    expect(ctx.scheduledCount).toBe(0);
+    expect(ctx.scheduledTail - ctx.scheduledHead).toBe(0);
   });
 
   it('should dispose consumer only once', () => {
@@ -166,7 +166,7 @@ describe('ScheduledConsumerHelpers', () => {
     
     helpers.flushScheduled();
     
-    expect(ctx.scheduledCount).toBe(0);
+    expect(ctx.scheduledTail - ctx.scheduledHead).toBe(0);
     expect(flush1).toHaveBeenCalledTimes(1);
     expect(flush2).toHaveBeenCalledTimes(1);
     expect(flush3).toHaveBeenCalledTimes(1);

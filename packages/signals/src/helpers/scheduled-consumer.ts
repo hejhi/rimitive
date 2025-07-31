@@ -20,7 +20,7 @@ export interface ScheduledConsumerHelpers {
 
 export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledConsumerHelpers {
   /**
-   * Schedules a consumer for batch execution using array queue
+   * Schedules a consumer for batch execution using ring buffer
    */
   function scheduleConsumer(consumer: ScheduledNode): void {
     // Check if already scheduled using a flag to avoid array search
@@ -29,8 +29,9 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
     // Mark as scheduled (use any non-undefined value as flag)
     consumer._nextScheduled = consumer;
     
-    // Direct array assignment is faster than push
-    ctx.scheduledQueue[ctx.scheduledCount++] = consumer;
+    // Use ring buffer with bit masking for fast modulo
+    ctx.scheduledQueue[ctx.scheduledTail & ctx.scheduledMask] = consumer;
+    ctx.scheduledTail++;
   }
 
   /**
@@ -65,23 +66,26 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   }
 
   /**
-   * Executes all scheduled consumers using array iteration
+   * Executes all scheduled consumers using ring buffer
    */
   function flushScheduled(): void {
     const queue = ctx.scheduledQueue;
-    const count = ctx.scheduledCount;
+    const mask = ctx.scheduledMask;
     
-    // Reset count first to handle re-scheduling during flush
-    ctx.scheduledCount = 0;
+    // Calculate number of items to process
+    const count = ctx.scheduledTail - ctx.scheduledHead;
     
-    // Process queue in reverse order to maintain FIFO semantics
-    // (last added to array = first created effect = should run first)
+    // Process in reverse order (LIFO) to achieve FIFO effect execution
+    // since dependencies are prepended to the linked list
     for (let i = count - 1; i >= 0; i--) {
-      const consumer = queue[i]!; // Safe: we know count is accurate
+      const consumer = queue[(ctx.scheduledHead + i) & mask]!;
       // Clear scheduled flag
       consumer._nextScheduled = undefined;
       consumer._flush();
     }
+    
+    // Reset the queue
+    ctx.scheduledHead = ctx.scheduledTail;
   }
 
   return {

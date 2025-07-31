@@ -17,14 +17,15 @@ describe('createGraphTraversalHelpers', () => {
     ctx = {
       currentConsumer: null,
       batchDepth: 0,
-      scheduledQueue: new Array(128),
-      scheduledCount: 0,
-      globalVersion: 0,
+      scheduledQueue: new Array(256),
+      scheduledHead: 0,
+      scheduledTail: 0,
+      scheduledMask: 255,
       version: 0,
       nodePool: [],
       poolSize: 0,
       allocations: 0,
-    } as SignalContext;
+    };
 
     scheduleConsumer = (node: ScheduledNode) => {
       // Mimic the real scheduleConsumer behavior - check _nextScheduled

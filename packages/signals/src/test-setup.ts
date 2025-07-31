@@ -44,9 +44,10 @@ export function createTestInstance() {
       if (ctx.batchDepth > 0) ctx.batchDepth--;
     },
     getBatchDepth: () => ctx.batchDepth,
-    hasPendingEffects: () => ctx.scheduledCount > 0,
+    hasPendingEffects: () => ctx.scheduledTail !== ctx.scheduledHead,
     clearBatch: () => {
-      ctx.scheduledCount = 0;
+      ctx.scheduledHead = 0;
+      ctx.scheduledTail = 0;
       // Reset batch depth safely
       ctx.batchDepth = 0;
     },
@@ -58,11 +59,13 @@ export function createTestInstance() {
     getCurrentConsumer: () => ctx.currentConsumer,
     resetGlobalState: () => {
       // Clear any pending scheduled effects
-      for (let i = 0; i < ctx.scheduledCount; i++) {
-        const consumer = ctx.scheduledQueue[i];
+      const count = ctx.scheduledTail - ctx.scheduledHead;
+      for (let i = 0; i < count; i++) {
+        const consumer = ctx.scheduledQueue[(ctx.scheduledHead + i) & ctx.scheduledMask];
         if (consumer) consumer._nextScheduled = undefined;
       }
-      ctx.scheduledCount = 0;
+      ctx.scheduledHead = 0;
+      ctx.scheduledTail = 0;
 
       // Reset context by reinitializing pool and counters
       ctx.currentConsumer = null;
@@ -110,7 +113,7 @@ export const activeContext = (() => {
     get poolSize() { return defaultInstance.activeContext.poolSize; },
     get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
-    get scheduledCount() { return defaultInstance.activeContext.scheduledCount; },
+    get scheduledCount() { return defaultInstance.activeContext.scheduledTail - defaultInstance.activeContext.scheduledHead; },
     get scheduledQueue() { return defaultInstance.activeContext.scheduledQueue; },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
     get nodePool() { return defaultInstance.activeContext.nodePool; },
@@ -118,7 +121,11 @@ export const activeContext = (() => {
     set poolSize(v) { defaultInstance.activeContext.poolSize = v; },
     set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
-    set scheduledCount(v) { defaultInstance.activeContext.scheduledCount = v; },
+    set scheduledCount(v) { 
+      // Reset queue to simulate setting count to v
+      defaultInstance.activeContext.scheduledHead = 0;
+      defaultInstance.activeContext.scheduledTail = v;
+    },
     set currentConsumer(v) { defaultInstance.activeContext.currentConsumer = v; },
   };
   return getter;

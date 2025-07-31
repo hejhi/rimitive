@@ -9,7 +9,9 @@ export interface SignalContext {
   version: number;
   batchDepth: number;
   scheduledQueue: ScheduledNode[];
-  scheduledCount: number;
+  scheduledHead: number;
+  scheduledTail: number;
+  scheduledMask: number;
   nodePool: Edge[];
   poolSize: number;
   allocations: number;
@@ -22,12 +24,17 @@ export function createContext(): SignalContext {
     nodePool[i] = {} as Edge;
   }
   
+  // Use power of 2 for fast bit masking
+  const queueSize = 256;
+  
   return {
     currentConsumer: null,
     version: 0,
     batchDepth: 0,
-    scheduledQueue: new Array(128), // Pre-allocate for performance
-    scheduledCount: 0,
+    scheduledQueue: new Array(queueSize),
+    scheduledHead: 0,
+    scheduledTail: 0,
+    scheduledMask: queueSize - 1, // 255 for fast modulo via bit masking
     nodePool: nodePool,
     poolSize: INITIAL_POOL_SIZE,
     allocations: 0,
