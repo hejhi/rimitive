@@ -82,14 +82,15 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         }
 
         // Execute effect with minimal overhead
-        const cleanup = this._cleanup;
-        if (cleanup) {
-          cleanup();
+        // Fast path - no cleanup
+        if (this._cleanup) {
+          this._cleanup();
           this._cleanup = undefined;
         }
         
         const result = this._callback();
-        if (typeof result === 'function') {
+        // Only assign if function returned
+        if (result) {
           this._cleanup = result;
         }
       } finally {
