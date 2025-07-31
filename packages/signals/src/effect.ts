@@ -93,8 +93,10 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
         
-        // Inline source cleanup for hot path
-        cleanupSources(this);
+        // Only cleanup if we have sources to clean
+        if (this._sources) {
+          cleanupSources(this);
+        }
       }
     }
 
