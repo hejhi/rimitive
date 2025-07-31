@@ -40,14 +40,15 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     createSourceCleanupHelpers(createDependencyHelpers());
   const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   class Effect implements EffectInterface {
+    // Hot fields together (accessed frequently in _flush and scheduling)
+    _flags = OUTDATED;
+    _sources: Edge | undefined = undefined;
+    _nextScheduled: ScheduledNode | undefined = undefined;
+    
+    // Cold fields (less frequently accessed)
     __type = 'effect' as const;
     _callback: () => void | (() => void);
     _cleanup: (() => void) | undefined = undefined;
-
-    _sources: Edge | undefined = undefined;
-    _flags = OUTDATED;
-
-    _nextScheduled: ScheduledNode | undefined = undefined;
 
     constructor(fn: () => void | (() => void)) {
       this._callback = fn;
