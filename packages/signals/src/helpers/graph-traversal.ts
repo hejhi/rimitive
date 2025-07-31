@@ -45,7 +45,6 @@ export function createGraphTraversalHelpers(
         
         // Skip if already notified, disposed, or running
         if (statefulTarget._flags & (NOTIFIED | DISPOSED | RUNNING)) {
-          // Move to next sibling
           currentEdge = currentEdge.nextTarget;
           continue;
         }

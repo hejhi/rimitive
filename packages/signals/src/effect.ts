@@ -3,13 +3,11 @@ import type { SignalContext } from './context';
 import { Disposable, Edge, ScheduledNode, StatefulNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 export interface EffectInterface extends ScheduledNode, StatefulNode, Disposable {
   __type: 'effect';
   _callback(): void;
-  _globalVersion: number;
   dispose(): void;
   subscribe?: (listener: () => void) => () => void;
 }
@@ -34,12 +32,10 @@ const {
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(createDependencyHelpers());
-  const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   
   class Effect implements EffectInterface {
     __type = 'effect' as const;
     _callback: () => void;
-    _globalVersion = -1;
 
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED;
@@ -51,7 +47,20 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     }
 
     _invalidate(): void {
-      invalidateConsumer(this, NOTIFIED, NOTIFIED | OUTDATED);
+      // Inline invalidateConsumer for performance
+      if (this._flags & NOTIFIED) return;
+      this._flags |= NOTIFIED | OUTDATED;
+
+      if (ctx.batchDepth > 0) {
+        // Inline scheduleConsumer
+        if (this._nextScheduled === undefined) {
+          this._nextScheduled = ctx.scheduled === null ? undefined : ctx.scheduled;
+          ctx.scheduled = this;
+        }
+        return;
+      }
+
+      this._flush();
     }
 
     _flush(): void {
@@ -59,16 +68,11 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
       this._flags = (this._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
 
-      // Check if we need to run cleanup based on global version
-      const needsCleanup = this._globalVersion !== ctx.version;
-
-      if (needsCleanup) {
-        // Mark sources for cleanup
-        let node = this._sources;
-        while (node) {
-          node.version = -1;
-          node = node.nextSource;
-        }
+      // Mark sources for cleanup
+      let node = this._sources;
+      while (node) {
+        node.version = -1;
+        node = node.nextSource;
       }
 
       const prevConsumer = ctx.currentConsumer;
@@ -76,20 +80,19 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
       try {
         this._callback();
-        this._globalVersion = ctx.version;
       } finally {
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
-
-        // Only cleanup if needed
-        if (needsCleanup) {
-          cleanupSources(this);
-        }
+        cleanupSources(this);
       }
     }
 
+
     dispose(): void {
-      disposeConsumer(this, disposeAllSources);
+      // Inline disposeConsumer for performance
+      if (this._flags & DISPOSED) return;
+      this._flags |= DISPOSED;
+      disposeAllSources(this);
     }
   }
 
@@ -99,20 +102,23 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       let cleanupFn: (() => void) | void;
 
       const e = new Effect(() => {
-        if (cleanupFn && typeof cleanupFn === 'function') {
+        // Only check for cleanup if it exists
+        if (cleanupFn) {
           cleanupFn();
+          cleanupFn = undefined;
         }
-        cleanupFn = effectFn();
+        const result = effectFn();
+        if (typeof result === 'function') {
+          cleanupFn = result;
+        }
       });
 
       e._flush();
 
-      let disposed = false;
       const dispose = (() => {
-        if (disposed) return;
-        disposed = true;
+        if (e._flags & DISPOSED) return;
         e.dispose();
-        if (cleanupFn && typeof cleanupFn === 'function') {
+        if (cleanupFn) {
           cleanupFn();
         }
       }) as EffectDisposer;
