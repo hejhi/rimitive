@@ -7,7 +7,7 @@ import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 export interface EffectInterface extends ScheduledNode, StatefulNode, Disposable {
   __type: 'effect';
-  _callback(): void;
+  _callback(): void | (() => void);
   dispose(): void;
   subscribe?: (listener: () => void) => () => void;
 }
@@ -35,14 +35,15 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
   
   class Effect implements EffectInterface {
     __type = 'effect' as const;
-    _callback: () => void;
+    _callback: () => void | (() => void);
+    _cleanup: (() => void) | undefined = undefined;
 
     _sources: Edge | undefined = undefined;
     _flags = OUTDATED;
 
     _nextScheduled: ScheduledNode | undefined = undefined;
 
-    constructor(fn: () => void) {
+    constructor(fn: () => void | (() => void)) {
       this._callback = fn;
     }
 
@@ -79,7 +80,17 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       ctx.currentConsumer = this;
 
       try {
-        this._callback();
+        // Run cleanup if exists
+        if (this._cleanup) {
+          this._cleanup();
+          this._cleanup = undefined;
+        }
+        
+        // Execute effect and capture potential cleanup
+        const result = this._callback();
+        if (typeof result === 'function') {
+          this._cleanup = result;
+        }
       } finally {
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
@@ -92,6 +103,13 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       // Inline disposeConsumer for performance
       if (this._flags & DISPOSED) return;
       this._flags |= DISPOSED;
+      
+      // Run cleanup if exists
+      if (this._cleanup) {
+        this._cleanup();
+        this._cleanup = undefined;
+      }
+      
       disposeAllSources(this);
     }
   }
@@ -99,28 +117,13 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
   return {
     name: 'effect',
     method: function effect(effectFn: () => void | (() => void)): EffectDisposer {
-      let cleanupFn: (() => void) | void;
-
-      const e = new Effect(() => {
-        // Only check for cleanup if it exists
-        if (cleanupFn) {
-          cleanupFn();
-          cleanupFn = undefined;
-        }
-        const result = effectFn();
-        if (typeof result === 'function') {
-          cleanupFn = result;
-        }
-      });
+      const e = new Effect(effectFn);
 
       e._flush();
 
       const dispose = (() => {
         if (e._flags & DISPOSED) return;
         e.dispose();
-        if (cleanupFn) {
-          cleanupFn();
-        }
       }) as EffectDisposer;
 
       dispose.__effect = e;
