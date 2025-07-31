@@ -48,7 +48,8 @@ describe('createGraphTraversalHelpers', () => {
   function createMockNode(
     type: string,
     flags = 0,
-    isScheduled = false
+    isScheduled = false,
+    isEffect = false
   ): ConsumerNode & StatefulNode & Partial<ProducerNode & ScheduledNode> {
     const node: ConsumerNode & StatefulNode & Partial<ProducerNode & ScheduledNode> = {
       __type: type,
@@ -61,6 +62,11 @@ describe('createGraphTraversalHelpers', () => {
       node._flush = () => {};
       node._nextScheduled = undefined;
       node.dispose = () => {};
+    }
+    
+    // Only effects should have _invalidate method in real code
+    if (!isEffect) {
+      delete (node as any)._invalidate;
     }
 
     return node;
@@ -96,7 +102,8 @@ describe('createGraphTraversalHelpers', () => {
     traverseAndInvalidate(edge);
 
     expect(target._flags & NOTIFIED).toBeTruthy();
-    expect(target._flags & OUTDATED).toBeTruthy();
+    // With push-pull, computed nodes are only marked NOTIFIED, not OUTDATED
+    expect(target._flags & OUTDATED).toBeFalsy();
   });
 
   it('should skip already notified nodes', () => {
@@ -294,7 +301,8 @@ describe('createGraphTraversalHelpers', () => {
     // All nodes should be invalidated
     for (let i = 1; i < 100; i++) {
       expect(nodes[i]!._flags & NOTIFIED).toBeTruthy();
-      expect(nodes[i]!._flags & OUTDATED).toBeTruthy();
+      // With push-pull, computed nodes are only marked NOTIFIED, not OUTDATED
+      expect(nodes[i]!._flags & OUTDATED).toBeFalsy();
     }
   });
 });
