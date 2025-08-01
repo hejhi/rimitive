@@ -63,6 +63,17 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       const flags = this._flags;
       if (flags & (DISPOSED | RUNNING)) return;
 
+      // Check if we're actually dirty (push-pull: effects also check dependencies)
+      if (flags & NOTIFIED && !(flags & OUTDATED)) {
+        // Check if any source actually changed
+        if (!this._checkDirty()) {
+          this._flags &= ~NOTIFIED;
+          return;
+        }
+        // Mark as outdated since we confirmed it's dirty
+        this._flags |= OUTDATED;
+      }
+
       this._flags = (flags | RUNNING) & ~(NOTIFIED | OUTDATED);
 
       // Store and update context
@@ -103,6 +114,26 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
           cleanupSources(this);
         }
       }
+    }
+
+    _checkDirty(): boolean {
+      let source = this._sources;
+      while (source) {
+        const sourceNode = source.source;
+        
+        // Check if source is a computed that needs updating
+        if ('_update' in sourceNode && '_flags' in sourceNode && typeof (sourceNode as unknown as {_update: unknown})._update === 'function') {
+          const oldVersion = sourceNode._version;
+          (sourceNode as unknown as {_update(): void})._update();
+          if (oldVersion !== sourceNode._version) return true;
+        } else if (source.version !== sourceNode._version) {
+          // Signal changed
+          return true;
+        }
+        
+        source = source.nextSource;
+      }
+      return false;
     }
 
 

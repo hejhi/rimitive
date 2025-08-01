@@ -3,7 +3,7 @@ import type { Edge, ConsumerNode, ScheduledNode, StatefulNode, ProducerNode } fr
 import type { SignalContext } from '../context';
 import type { ScheduledConsumerHelpers } from './scheduled-consumer';
 
-const { NOTIFIED, OUTDATED, DISPOSED, RUNNING } = CONSTANTS;
+const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 
 // Stack frame for depth-first traversal
 interface TraversalFrame {
@@ -49,14 +49,12 @@ export function createGraphTraversalHelpers(
           continue;
         }
         
-        // Mark as notified only - lazy evaluation will determine if actually outdated
+        // Mark as notified only - ALL nodes use lazy evaluation now
         statefulTarget._flags |= NOTIFIED;
         
         // Schedule if it's a scheduled node (effect)
         if ('_flush' in target && '_nextScheduled' in target && 'dispose' in target) {
           const scheduledTarget = target as unknown as ScheduledNode;
-          // Effects should always be marked as outdated when notified
-          statefulTarget._flags |= OUTDATED;
           scheduleConsumer(scheduledTarget);
         }
       }

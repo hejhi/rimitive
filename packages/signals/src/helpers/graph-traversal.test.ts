@@ -100,16 +100,16 @@ describe('createGraphTraversalHelpers', () => {
     expect(target._flags & OUTDATED).toBeFalsy();
   });
 
-  it('should mark effects as both NOTIFIED and OUTDATED', () => {
+  it('should mark effects as NOTIFIED only (lazy evaluation for all)', () => {
     const source = createMockNode('signal') as ProducerNode;
     const effect = createMockNode('effect', 0, true); // isScheduled = true
     const edge = createEdge(source, effect);
 
     traverseAndInvalidate(edge);
 
-    // Effects should be marked as both NOTIFIED and OUTDATED
+    // Effects now also use lazy evaluation - only NOTIFIED, not OUTDATED
     expect(effect._flags & NOTIFIED).toBeTruthy();
-    expect(effect._flags & OUTDATED).toBeTruthy();
+    expect(effect._flags & OUTDATED).toBeFalsy();
   });
 
   it('should skip already notified nodes', () => {

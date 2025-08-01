@@ -148,7 +148,7 @@ describe('Computed - Push-Pull Optimization', () => {
       expect(bottomCount).toBe(2); // Only computed twice: initial + when dependencies actually changed
     });
 
-    it('should still run effects when computeds filter out changes', () => {
+    it('should NOT run effects when dependent computed values do not change', () => {
       const source = signal(1);
       let computeCount = 0;
       let effectCount = 0;
@@ -168,10 +168,15 @@ describe('Computed - Push-Pull Optimization', () => {
       expect(computeCount).toBe(1);
       expect(effectCount).toBe(1);
 
-      // Change source - computed filters but effect should still run
+      // Change source - computed filters out change, effect should NOT run
       source.value = 2;
       expect(computeCount).toBe(2); // Must recompute to check if output changed
-      expect(effectCount).toBe(2); // Effect SHOULD still run
+      expect(effectCount).toBe(1); // Effect should NOT run - dependency didn't change!
+      
+      // Change to negative - computed value changes, effect should run
+      source.value = -1;
+      expect(computeCount).toBe(3);
+      expect(effectCount).toBe(2);
     });
 
     it('should recompute once when batch updates result in same value', () => {
