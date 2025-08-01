@@ -36,14 +36,17 @@ const genericDispose = function(this: EffectInterface) {
 };
 
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
+  const depHelpers = createDependencyHelpers();
+  const { shouldNodeUpdate } = depHelpers;
   const { disposeAllSources, cleanupSources } =
-    createSourceCleanupHelpers(createDependencyHelpers());
+    createSourceCleanupHelpers(depHelpers);
   const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   class Effect implements EffectInterface {
     // Hot fields together (accessed frequently in _flush and scheduling)
     _flags = OUTDATED;
     _sources: Edge | undefined = undefined;
     _nextScheduled: ScheduledNode | undefined = undefined;
+    _globalVersion = -1;
     
     // Cold fields (less frequently accessed)
     __type = 'effect' as const;
@@ -59,81 +62,43 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     }
 
     _flush(): void {
-      // Fast path checks combined
-      const flags = this._flags;
-      if (flags & (DISPOSED | RUNNING)) return;
+      // Fast path: check disposal and running state
+      if (this._flags & (DISPOSED | RUNNING)) return;
 
-      // Check if we're actually dirty (push-pull: effects also check dependencies)
-      if (flags & NOTIFIED && !(flags & OUTDATED)) {
-        // Check if any source actually changed
-        if (!this._checkDirty()) {
-          this._flags &= ~NOTIFIED;
-          return;
-        }
-        // Mark as outdated since we confirmed it's dirty
-        this._flags |= OUTDATED;
-      }
+      // Use shared update logic to determine if we should run
+      if (!shouldNodeUpdate(this, ctx)) return;
 
-      this._flags = (flags | RUNNING) & ~(NOTIFIED | OUTDATED);
+      // Set RUNNING, clear NOTIFIED and OUTDATED
+      this._flags = (this._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
 
       // Store and update context
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
-      
-      // Track if we need cleanup
-      let needsCleanup = false;
 
       try {
-        // Mark sources
-        let node = this._sources;
-        while (node) {
-          node.version = -1;
-          needsCleanup = true;
-          node = node.nextSource;
+        // Mark sources for dependency tracking
+        let source = this._sources;
+        while (source) {
+          source.version = -1;
+          source = source.nextSource;
         }
 
-        // Execute effect with minimal overhead
-        // Fast path - no cleanup
+        // Run cleanup if exists
         if (this._cleanup) {
           this._cleanup();
           this._cleanup = undefined;
         }
         
+        // Execute effect callback
         const result = this._callback();
-        // Only assign if function returned
         if (result) {
           this._cleanup = result;
         }
       } finally {
-        // Restore context
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
-        
-        // Only cleanup if we marked sources
-        if (needsCleanup) {
-          cleanupSources(this);
-        }
+        cleanupSources(this);
       }
-    }
-
-    _checkDirty(): boolean {
-      let source = this._sources;
-      while (source) {
-        const sourceNode = source.source;
-        
-        // Check if source is a computed that needs updating
-        if ('_update' in sourceNode && '_flags' in sourceNode && typeof (sourceNode as unknown as {_update: unknown})._update === 'function') {
-          const oldVersion = sourceNode._version;
-          (sourceNode as unknown as {_update(): void})._update();
-          if (oldVersion !== sourceNode._version) return true;
-        } else if (source.version !== sourceNode._version) {
-          // Signal changed
-          return true;
-        }
-        
-        source = source.nextSource;
-      }
-      return false;
     }
 
 

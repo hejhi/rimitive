@@ -24,7 +24,7 @@ const {
 
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   const depHelpers = createDependencyHelpers();
-  const { addDependency } = depHelpers
+  const { addDependency, shouldNodeUpdate } = depHelpers
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(depHelpers);
   const scheduledConsumerHelpers = createScheduledConsumerHelpers(ctx);
@@ -103,44 +103,9 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _update(): void {
-      const flags = this._flags;
-      
-      // Fast path: already clean
-      if (!(flags & (OUTDATED | NOTIFIED))) return;
-      
-      // If OUTDATED or NOTIFIED, always recompute
-      if (flags & OUTDATED || this._checkDirty()) return this._recompute();
-
-      this._flags &= ~NOTIFIED;
-    }
-    
-    _checkDirty(): boolean {
-      // Fast path: global version hasn't changed
-      if (this._globalVersion === ctx.version) return false;
-      
-      // Check if any source changed
-      let source = this._sources;
-      while (source) {
-        const sourceNode = source.source;
-        
-        // For computed sources, recursively update and check if changed
-        if ('_update' in sourceNode) {
-          const oldVersion = sourceNode._version;
-          (sourceNode as Computed<unknown>)._update();
-          if (oldVersion !== sourceNode._version) return true;
-        } else if (source.version !== sourceNode._version) {
-          // Signal changed
-          return true;
-        }
-        
-        // Update edge version to match source
-        source.version = sourceNode._version;
-        source = source.nextSource;
+      if (shouldNodeUpdate(this, ctx)) {
+        this._recompute();
       }
-      
-      // All sources clean - update global version
-      this._globalVersion = ctx.version;
-      return false;
     }
 
 
