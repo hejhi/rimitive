@@ -46,16 +46,14 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     get value(): T {
-      // Check for circular dependency
       if (this._flags & RUNNING) throw new Error('Cycle detected');
       
-      // Track dependency if we're in a computation context
+      // Track dependency if in computation context
       const consumer = ctx.currentConsumer;
       if (consumer && '_flags' in consumer && typeof consumer._flags === 'number' && consumer._flags & RUNNING) {
         addDependency(this, consumer, this._version);
       }
       
-      // Update if needed and return value
       this._updateIfNeeded();
       return this._value!;
     }
@@ -66,7 +64,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _recompute(): boolean {
-      // Set running flag and clear outdated/notified
       this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
       // Mark sources for dependency tracking
@@ -76,90 +73,77 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         source = source.nextSource;
       }
       
-      // Execute computation with dependency tracking
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
       
-      let valueChanged = false;
       try {
         const oldValue = this._value;
         const newValue = this._callback();
         
-        // Update value if changed or first run
-        if (newValue !== oldValue || this._version === 0) {
+        // Check if value changed
+        const changed = newValue !== oldValue || this._version === 0;
+        if (changed) {
           this._value = newValue;
           this._version++;
-          valueChanged = true;
         }
         
-        // Update global version after computation
         this._globalVersion = ctx.version;
+        return changed;
       } finally {
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
         cleanupSources(this);
       }
-      
-      return valueChanged;
     }
 
     _invalidate(): void {
-      // Skip if already notified, disposed, or currently recomputing
       if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
       
-      // Mark as notified only - OUTDATED will be set lazily if actually dirty
       this._flags |= NOTIFIED;
-
-      // Use iterative traversal instead of recursion
       if (this._targets) {
         traverseAndInvalidate(this._targets);
       }
     }
 
     _updateIfNeeded(): boolean {
-      // Fast path: already clean
       const flags = this._flags;
-      if (!(flags & (OUTDATED | NOTIFIED))) {
-        return false;
-      }
       
-      // Fast path: global version check for NOTIFIED
-      if (flags & NOTIFIED && !(flags & OUTDATED) && this._globalVersion === ctx.version) {
+      // Fast path: already clean
+      if (!(flags & (OUTDATED | NOTIFIED))) return false;
+      
+      // If OUTDATED, always recompute
+      if (flags & OUTDATED) return this._recompute();
+      
+      // NOTIFIED only - check if actually dirty
+      // Fast path: global version hasn't changed
+      if (this._globalVersion === ctx.version) {
         this._flags &= ~NOTIFIED;
         return false;
       }
       
-      // If OUTDATED, must recompute
-      if (flags & OUTDATED) {
-        return this._recompute();
-      }
-      
-      // NOTIFIED only - check if sources actually changed
+      // Check if any source changed
       let source = this._sources;
       while (source) {
         const sourceNode = source.source;
         
-        // Check if source is a computed that needs updating
+        // For computed sources, recursively update and check if changed
         if ('_updateIfNeeded' in sourceNode) {
-          // Recursively update the source
           if ((sourceNode as Computed<any>)._updateIfNeeded()) {
             this._flags |= OUTDATED;
             return this._recompute();
           }
-          // Update our edge version to match source
+          // Update edge version after recursive check
           source.version = sourceNode._version;
-        } else {
-          // For signals, just check version
-          if (source.version !== sourceNode._version) {
-            this._flags |= OUTDATED;
-            return this._recompute();
-          }
+        } else if (source.version !== sourceNode._version) {
+          // Signal changed
+          this._flags |= OUTDATED;
+          return this._recompute();
         }
         
         source = source.nextSource;
       }
       
-      // All sources clean, clear NOTIFIED
+      // All sources clean
       this._flags &= ~NOTIFIED;
       return false;
     }
