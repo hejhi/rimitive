@@ -49,13 +49,8 @@ export function createGraphTraversalHelpers(
           continue;
         }
         
-        // Mark as notified only (push-pull: lazy dirty checking)
-        statefulTarget._flags |= NOTIFIED;
-        
-        // For nodes with _invalidate (effects), also mark as OUTDATED
-        if ('_invalidate' in target) {
-          statefulTarget._flags |= OUTDATED;
-        }
+        // Mark as notified and outdated
+        statefulTarget._flags |= NOTIFIED | OUTDATED;
         
         // Schedule if it's a scheduled node (effect)
         if ('_flush' in target && '_nextScheduled' in target && 'dispose' in target) {

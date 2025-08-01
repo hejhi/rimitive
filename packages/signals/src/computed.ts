@@ -12,7 +12,6 @@ export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNod
   _value: T | undefined;
   _globalVersion: number;
   _recompute(): void;
-  _checkDirty(): boolean;
   dispose(): void;
 }
 
@@ -60,15 +59,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         addDependency(this, consumer, this._version);
       }
       
-      // Push-pull: Check if NOTIFIED but not OUTDATED (lazy dirty checking)
-      if (this._flags & NOTIFIED && !(this._flags & OUTDATED)) {
-        if (this._checkDirty()) {
-          this._flags |= OUTDATED;
-        } else {
-          this._flags &= ~NOTIFIED;  // Clear notified, it's clean
-        }
-      }
-      
       // Recompute if outdated
       if (this._flags & OUTDATED) this._recompute();
       
@@ -76,15 +66,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     peek(): T {
-      // Push-pull: Check if NOTIFIED but not OUTDATED (lazy dirty checking)
-      if (this._flags & NOTIFIED && !(this._flags & OUTDATED)) {
-        if (this._checkDirty()) {
-          this._flags |= OUTDATED;
-        } else {
-          this._flags &= ~NOTIFIED;  // Clear notified, it's clean
-        }
-      }
-      
       if (this._flags & OUTDATED) this._recompute();
       return this._value!;
     }
@@ -167,45 +148,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         
         source = source.nextSource;
       }
-      return false;
-    }
-
-    /**
-     * Lazy dirty checking for push-pull algorithm.
-     * Recursively checks if any dependencies have actually changed.
-     * Returns true if this computed needs to be recomputed.
-     */
-    _checkDirty(): boolean {
-      // Fast path: global version hasn't changed
-      if (this._globalVersion === ctx.version) {
-        return false;
-      }
-      
-      // Check each source
-      let edge = this._sources;
-      while (edge) {
-        const source = edge.source;
-        
-        // If source is a computed that's NOTIFIED, recursively check it
-        if ('_flags' in source && '_checkDirty' in source) {
-          const computedSource = source as unknown as ComputedInterface;
-          if (computedSource._flags & NOTIFIED) {
-            if (computedSource._checkDirty()) {
-              return true;  // Source is dirty, so we are too
-            }
-          }
-        }
-        
-        // Check version mismatch
-        if (edge.version !== source._version) {
-          return true;  // Source changed
-        }
-        
-        edge = edge.nextSource;
-      }
-      
-      // All sources are clean, update global version
-      this._globalVersion = ctx.version;
       return false;
     }
 
