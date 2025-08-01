@@ -26,7 +26,12 @@ describe('Computed - Push-Pull Optimization', () => {
   });
 
   describe('Lazy Dirty Checking', () => {
-    it('should not recompute filtered computeds when input changes but output remains same', () => {
+    // Push-pull optimization: When signals change, all dependent computeds are marked as 
+    // "notified" but not "outdated". When read, computeds check if their sources actually 
+    // changed values. If not, they skip recomputation. This is most beneficial for 
+    // downstream computeds - if an upstream computed's value doesn't change, all 
+    // downstream computeds can skip recomputation entirely.
+    it('should recompute to check values but not increment version when output remains same', () => {
       const source = signal(1);
       let computeCount = 0;
       
@@ -42,7 +47,7 @@ describe('Computed - Push-Pull Optimization', () => {
       // Change source but filtered result should remain the same
       source.value = 2;
       expect(filtered.value).toBe(1);
-      expect(computeCount).toBe(2); // Will recompute (current behavior)
+      expect(computeCount).toBe(2); // Must recompute to check if output changed
 
       // Change to negative should trigger recompute
       source.value = -1;
@@ -50,7 +55,7 @@ describe('Computed - Push-Pull Optimization', () => {
       expect(computeCount).toBe(3);
     });
 
-    it('should handle multi-level filtered computeds', () => {
+    it('should skip downstream recomputation when upstream computed values do not change', () => {
       const source = signal(1);
       let level1Count = 0;
       let level2Count = 0;
@@ -81,19 +86,19 @@ describe('Computed - Push-Pull Optimization', () => {
       // Change source but level1 output stays 'positive'
       source.value = 2;
       expect(level3.value).toBe(2);
-      expect(level1Count).toBe(2); // Will recompute (current behavior)
-      expect(level2Count).toBe(2); // Will recompute (current behavior)
-      expect(level3Count).toBe(2); // Will recompute (current behavior)
+      expect(level1Count).toBe(2); // Must recompute to check
+      expect(level2Count).toBe(1); // Should NOT recompute - level1's value didn't change
+      expect(level3Count).toBe(1); // Should NOT recompute - level2's value didn't change
 
       // Change to negative should cascade
       source.value = -1;
       expect(level3.value).toBe(-2);
       expect(level1Count).toBe(3);
-      expect(level2Count).toBe(3);
-      expect(level3Count).toBe(3);
+      expect(level2Count).toBe(2); // Only computed twice: initial + when source changed to -1
+      expect(level3Count).toBe(2); // Only computed twice: initial + when source changed to -1
     });
 
-    it('should handle diamond dependencies with filtering', () => {
+    it('should skip recomputation when multiple dependencies have unchanged values (diamond)', () => {
       const source = signal(1);
       let leftCount = 0;
       let rightCount = 0;
@@ -124,16 +129,16 @@ describe('Computed - Push-Pull Optimization', () => {
       // Change to 3 - left stays 'odd', right stays 'small'
       source.value = 3;
       expect(bottom.value).toBe('odd-small');
-      expect(leftCount).toBe(2); // Will recompute (current behavior)
-      expect(rightCount).toBe(2); // Will recompute (current behavior)
-      expect(bottomCount).toBe(2); // Will recompute (current behavior)
+      expect(leftCount).toBe(2); // Must recompute to check
+      expect(rightCount).toBe(2); // Must recompute to check
+      expect(bottomCount).toBe(1); // Should NOT recompute - neither dependency's value changed
 
       // Change to 12 - left changes to 'even', right changes to 'big'
       source.value = 12;
       expect(bottom.value).toBe('even-big');
       expect(leftCount).toBe(3);
       expect(rightCount).toBe(3);
-      expect(bottomCount).toBe(3);
+      expect(bottomCount).toBe(2); // Only computed twice: initial + when dependencies actually changed
     });
 
     it('should still run effects when computeds filter out changes', () => {
@@ -157,11 +162,11 @@ describe('Computed - Push-Pull Optimization', () => {
 
       // Change source - computed filters but effect should still run
       source.value = 2;
-      expect(computeCount).toBe(2); // Will recompute (current behavior)
-      expect(effectCount).toBe(2); // Effect SHOULD run
+      expect(computeCount).toBe(2); // Must recompute to check if output changed
+      expect(effectCount).toBe(2); // Effect SHOULD still run
     });
 
-    it('should handle batch updates with lazy checking', () => {
+    it('should recompute once when batch updates result in same value', () => {
       const s1 = signal(1);
       const s2 = signal(2);
       let computeCount = 0;
@@ -181,7 +186,7 @@ describe('Computed - Push-Pull Optimization', () => {
       });
 
       expect(sum.value).toBe(3);
-      expect(computeCount).toBe(2); // Will recompute (current behavior)
+      expect(computeCount).toBe(2); // Must recompute to check, but value stays same
     });
 
     it('should clear dirty check cache between flushes', () => {

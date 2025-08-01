@@ -95,8 +95,21 @@ describe('createGraphTraversalHelpers', () => {
 
     traverseAndInvalidate(edge);
 
+    // With push-pull optimization, computeds only get NOTIFIED, not OUTDATED
     expect(target._flags & NOTIFIED).toBeTruthy();
-    expect(target._flags & OUTDATED).toBeTruthy();
+    expect(target._flags & OUTDATED).toBeFalsy();
+  });
+
+  it('should mark effects as both NOTIFIED and OUTDATED', () => {
+    const source = createMockNode('signal') as ProducerNode;
+    const effect = createMockNode('effect', 0, true); // isScheduled = true
+    const edge = createEdge(source, effect);
+
+    traverseAndInvalidate(edge);
+
+    // Effects should be marked as both NOTIFIED and OUTDATED
+    expect(effect._flags & NOTIFIED).toBeTruthy();
+    expect(effect._flags & OUTDATED).toBeTruthy();
   });
 
   it('should skip already notified nodes', () => {
@@ -291,10 +304,10 @@ describe('createGraphTraversalHelpers', () => {
 
     traverseAndInvalidate(edges[0]);
 
-    // All nodes should be invalidated
+    // All nodes should be notified (but not outdated - that's determined lazily)
     for (let i = 1; i < 100; i++) {
       expect(nodes[i]!._flags & NOTIFIED).toBeTruthy();
-      expect(nodes[i]!._flags & OUTDATED).toBeTruthy();
+      expect(nodes[i]!._flags & OUTDATED).toBeFalsy();
     }
   });
 });

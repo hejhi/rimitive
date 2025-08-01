@@ -49,12 +49,14 @@ export function createGraphTraversalHelpers(
           continue;
         }
         
-        // Mark as notified and outdated
-        statefulTarget._flags |= NOTIFIED | OUTDATED;
+        // Mark as notified only - lazy evaluation will determine if actually outdated
+        statefulTarget._flags |= NOTIFIED;
         
         // Schedule if it's a scheduled node (effect)
         if ('_flush' in target && '_nextScheduled' in target && 'dispose' in target) {
           const scheduledTarget = target as unknown as ScheduledNode;
+          // Effects should always be marked as outdated when notified
+          statefulTarget._flags |= OUTDATED;
           scheduleConsumer(scheduledTarget);
         }
       }

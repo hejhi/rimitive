@@ -63,30 +63,39 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         addDependency(this, consumer, this._version);
       }
       
-      // Recompute if outdated
-      if (this._flags & OUTDATED) this._recompute();
+      // Handle dirty checking and recomputation
+      if (this._flags & OUTDATED) {
+        this._recompute();
+      } else if (this._flags & NOTIFIED) {
+        // Check if sources are actually dirty
+        if (this._checkDirty()) {
+          // Sources changed, mark as outdated and recompute
+          this._flags |= OUTDATED;
+          this._recompute();
+        } else {
+          // Sources didn't change, just clear notified
+          this._flags &= ~NOTIFIED;
+        }
+      }
       
       return this._value!;
     }
 
     peek(): T {
-      if (this._flags & OUTDATED) this._recompute();
+      this._updateIfNeeded();
       return this._value!;
     }
 
-    _recompute(): void {
+    _recompute(): boolean {
       // Fast path: if global version hasn't changed, nothing can have changed
       if (this._globalVersion === ctx.version) {
         this._flags &= ~(OUTDATED | NOTIFIED);
-        return;
+        return false;
       }
       
-      // Early exit if sources haven't changed (skip for first run)
-      if (this._version > 0 && !this._sourcesChanged()) {
-        this._flags &= ~(OUTDATED | NOTIFIED);
-        this._globalVersion = ctx.version;
-        return;
-      }
+      // Note: We don't check sources here anymore because if we're in _recompute,
+      // we've already determined we need to recompute (either OUTDATED was set,
+      // or _checkDirty returned true)
 
       // Set running flag and clear outdated/notified
       this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
@@ -102,13 +111,16 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
       
+      let valueChanged = false;
       try {
+        const oldValue = this._value;
         const newValue = this._callback();
         
         // Update value if changed or first run
-        if (newValue !== this._value || this._version === 0) {
+        if (newValue !== oldValue || this._version === 0) {
           this._value = newValue;
           this._version++;
+          valueChanged = true;
         }
         
         // Update global version after computation
@@ -118,14 +130,18 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         this._flags &= ~RUNNING;
         cleanupSources(this);
       }
+      
+      // Return whether the value changed
+      // The recursive dirty checking will handle propagation through return values
+      return valueChanged;
     }
 
     _invalidate(): void {
       // Skip if already notified, disposed, or currently recomputing
       if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
       
-      // Mark as outdated and notified
-      this._flags |= NOTIFIED | OUTDATED;
+      // Mark as notified only - OUTDATED will be set lazily if actually dirty
+      this._flags |= NOTIFIED;
 
       // Use iterative traversal instead of recursion
       if (this._targets) {
@@ -133,25 +149,85 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       }
     }
 
-    _sourcesChanged(): boolean {
+    _updateIfNeeded(): boolean {
+      // If already clean, nothing to do
+      if (!(this._flags & (OUTDATED | NOTIFIED))) {
+        return false;
+      }
+      
+      // If OUTDATED, must recompute
+      if (this._flags & OUTDATED) {
+        return this._recompute();
+      }
+      
+      // If only NOTIFIED, check if actually dirty
+      if (this._flags & NOTIFIED) {
+        const isDirty = this._checkDirty();
+        if (isDirty) {
+          this._flags |= OUTDATED;
+          return this._recompute();
+        } else {
+          this._flags &= ~NOTIFIED;
+          return false;
+        }
+      }
+      
+      return false;
+    }
+
+    _checkDirty(): boolean {
       let source = this._sources;
       while (source) {
-        // Check version mismatch
-        if (source.version !== source.source._version) return true;
+        const sourceNode = source.source;
         
-        // Check if computed source needs update
-        if (
-          '_flags' in source.source
-          && typeof source.source._flags === 'number'
-          && source.source._flags & OUTDATED
-        ) {
-          return true;
+        // Check if source is a computed
+        if ('_flags' in sourceNode && typeof sourceNode._flags === 'number' && '_checkAndUpdate' in sourceNode) {
+          const sourceComputed = sourceNode as Computed<any>;
+          
+          // Check and update the source, returns true if value changed
+          if (sourceComputed._checkAndUpdate()) {
+            return true;
+          }
+          
+          // Update our edge version to match source
+          source.version = sourceComputed._version;
+        } else {
+          // For signals, just check version
+          if (source.version !== sourceNode._version) {
+            return true;
+          }
         }
         
         source = source.nextSource;
       }
       return false;
     }
+    
+    _checkAndUpdate(): boolean {
+      // If already clean, no change
+      if (!(this._flags & (OUTDATED | NOTIFIED))) {
+        return false;
+      }
+      
+      // If OUTDATED, must recompute
+      if (this._flags & OUTDATED) {
+        return this._recompute();
+      }
+      
+      // If NOTIFIED, check if actually dirty
+      if (this._flags & NOTIFIED) {
+        if (this._checkDirty()) {
+          this._flags |= OUTDATED;
+          return this._recompute();
+        } else {
+          this._flags &= ~NOTIFIED;
+          return false;
+        }
+      }
+      
+      return false;
+    }
+
 
     dispose(): void {
       if (this._flags & DISPOSED) return;
