@@ -64,6 +64,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _recompute(): void {
+      // Single flag update: set RUNNING, clear OUTDATED and NOTIFIED
       this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
       // Mark sources for dependency tracking
@@ -80,7 +81,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         const oldValue = this._value;
         const newValue = this._callback();
         
-        // Update value and version if changed
+        // Update value and version if changed or first run
         if (newValue !== oldValue || this._version === 0) {
           this._value = newValue;
           this._version++;
@@ -127,12 +128,13 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
           const oldVersion = sourceNode._version;
           (sourceNode as Computed<any>)._update();
           if (oldVersion !== sourceNode._version) return true;
-          source.version = sourceNode._version;
         } else if (source.version !== sourceNode._version) {
           // Signal changed
           return true;
         }
         
+        // Update edge version to match source
+        source.version = sourceNode._version;
         source = source.nextSource;
       }
       
