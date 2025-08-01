@@ -11,6 +11,7 @@
     "bench": "pnpm build:all && node --expose-gc scripts/run-chunked-benchmarks.js real",
     "bench:lattice": "node --expose-gc scripts/run-chunked-benchmarks.js real lattice",
     "bench:report:real": "node --expose-gc scripts/run-chunked-benchmarks.js real",
+    "bench:dev": "pnpm build:all && vitest bench",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm lint"

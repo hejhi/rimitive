@@ -4,6 +4,8 @@ import { Edge, Readable, ProducerNode, StatefulNode, Disposable } from './types'
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
+import { createGraphTraversalHelpers } from './helpers/graph-traversal';
+import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, EdgeCache, StatefulNode, Disposable {
   __type: 'computed';
@@ -28,6 +30,8 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
   const { addDependency } = depHelpers
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(depHelpers);
+  const scheduledConsumerHelpers = createScheduledConsumerHelpers(ctx);
+  const { traverseAndInvalidate } = createGraphTraversalHelpers(ctx, scheduledConsumerHelpers);
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
@@ -123,11 +127,9 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // Mark as outdated and notified
       this._flags |= NOTIFIED | OUTDATED;
 
-      // Propagate invalidation to dependent computeds/effects
-      let target = this._targets;
-      while (target) {
-        target.target._invalidate();
-        target = target.nextTarget!;
+      // Use iterative traversal instead of recursion
+      if (this._targets) {
+        traverseAndInvalidate(this._targets);
       }
     }
 
