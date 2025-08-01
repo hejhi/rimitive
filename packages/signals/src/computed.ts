@@ -54,16 +54,16 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         addDependency(this, consumer, this._version);
       }
       
-      this._updateIfNeeded();
+      this._update();
       return this._value!;
     }
 
     peek(): T {
-      this._updateIfNeeded();
+      this._update();
       return this._value!;
     }
 
-    _recompute(): boolean {
+    _recompute(): void {
       this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
       // Mark sources for dependency tracking
@@ -80,15 +80,13 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         const oldValue = this._value;
         const newValue = this._callback();
         
-        // Check if value changed
-        const changed = newValue !== oldValue || this._version === 0;
-        if (changed) {
+        // Update value and version if changed
+        if (newValue !== oldValue || this._version === 0) {
           this._value = newValue;
           this._version++;
         }
         
         this._globalVersion = ctx.version;
-        return changed;
       } finally {
         ctx.currentConsumer = prevConsumer;
         this._flags &= ~RUNNING;
@@ -105,19 +103,29 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       }
     }
 
-    _updateIfNeeded(): boolean {
+    _update(): void {
       const flags = this._flags;
       
       // Fast path: already clean
-      if (!(flags & (OUTDATED | NOTIFIED))) return false;
+      if (!(flags & (OUTDATED | NOTIFIED))) return;
       
       // If OUTDATED, always recompute
-      if (flags & OUTDATED) return this._recompute();
+      if (flags & OUTDATED) {
+        this._recompute();
+        return;
+      }
       
       // NOTIFIED only - check if actually dirty
+      if (this._checkDirty()) {
+        this._recompute();
+      } else {
+        this._flags &= ~NOTIFIED;
+      }
+    }
+    
+    _checkDirty(): boolean {
       // Fast path: global version hasn't changed
       if (this._globalVersion === ctx.version) {
-        this._flags &= ~NOTIFIED;
         return false;
       }
       
@@ -127,24 +135,23 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         const sourceNode = source.source;
         
         // For computed sources, recursively update and check if changed
-        if ('_updateIfNeeded' in sourceNode) {
-          if ((sourceNode as Computed<any>)._updateIfNeeded()) {
-            this._flags |= OUTDATED;
-            return this._recompute();
+        if ('_update' in sourceNode) {
+          const oldVersion = sourceNode._version;
+          (sourceNode as Computed<any>)._update();
+          if (oldVersion !== sourceNode._version) {
+            return true;
           }
-          // Update edge version after recursive check
           source.version = sourceNode._version;
         } else if (source.version !== sourceNode._version) {
           // Signal changed
-          this._flags |= OUTDATED;
-          return this._recompute();
+          return true;
         }
         
         source = source.nextSource;
       }
       
-      // All sources clean
-      this._flags &= ~NOTIFIED;
+      // All sources clean - update global version
+      this._globalVersion = ctx.version;
       return false;
     }
 
