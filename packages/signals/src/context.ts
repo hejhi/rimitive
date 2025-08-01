@@ -31,7 +31,7 @@ export function createContext(): SignalContext {
     currentConsumer: null,
     version: 0,
     batchDepth: 0,
-    scheduledQueue: new Array(queueSize),
+    scheduledQueue: new Array<ScheduledNode>(queueSize),
     scheduledHead: 0,
     scheduledTail: 0,
     scheduledMask: queueSize - 1, // 255 for fast modulo via bit masking

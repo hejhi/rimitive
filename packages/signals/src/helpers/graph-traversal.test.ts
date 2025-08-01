@@ -17,7 +17,7 @@ describe('createGraphTraversalHelpers', () => {
     ctx = {
       currentConsumer: null,
       batchDepth: 0,
-      scheduledQueue: new Array(256),
+      scheduledQueue: new Array<ScheduledNode>(256),
       scheduledHead: 0,
       scheduledTail: 0,
       scheduledMask: 255,

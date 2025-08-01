@@ -122,12 +122,8 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     method: function effect(effectFn: () => void | (() => void)): EffectDisposer {
       const e = new Effect(effectFn);
       
-      try {
-        e._flush();
-      } catch (error) {
-        // Effect is still set up and reactive even if initial run throws
-        throw error;
-      }
+      // Run the effect for the first time
+      e._flush();
 
       // Use pre-bound generic dispose to avoid new function allocation
       const dispose = genericDispose.bind(e) as EffectDisposer;

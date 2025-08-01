@@ -126,7 +126,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         // For computed sources, recursively update and check if changed
         if ('_update' in sourceNode) {
           const oldVersion = sourceNode._version;
-          (sourceNode as Computed<any>)._update();
+          (sourceNode as Computed<unknown>)._update();
           if (oldVersion !== sourceNode._version) return true;
         } else if (source.version !== sourceNode._version) {
           // Signal changed

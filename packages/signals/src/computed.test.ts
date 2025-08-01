@@ -6,11 +6,18 @@ import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 
 describe('Computed - Push-Pull Optimization', () => {
-  let api: any;
-  let signal: any;
-  let computed: any;
-  let effect: any;
-  let batch: any;
+  type API = ReturnType<typeof createSignalAPI<{
+    signal: typeof createSignalFactory;
+    computed: typeof createComputedFactory;
+    effect: typeof createEffectFactory;
+    batch: typeof createBatchFactory;
+  }>>;
+  
+  let api: API;
+  let signal: API['signal'];
+  let computed: API['computed'];
+  let effect: API['effect'];
+  let batch: API['batch'];
 
   beforeEach(() => {
     api = createSignalAPI({
@@ -154,7 +161,8 @@ describe('Computed - Push-Pull Optimization', () => {
 
       effect(() => {
         effectCount++;
-        filtered.value; // Subscribe to filtered
+        // Subscribe to filtered by reading its value
+        void filtered.value;
       });
 
       expect(computeCount).toBe(1);
