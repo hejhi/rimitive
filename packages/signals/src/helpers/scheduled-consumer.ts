@@ -71,14 +71,15 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   const flushScheduled = (): void => {
     const queue = ctx.scheduledQueue;
     const mask = ctx.scheduledMask;
+    const head = ctx.scheduledHead;
     
     // Calculate number of items to process
-    const count = ctx.scheduledTail - ctx.scheduledHead;
+    const count = ctx.scheduledTail - head;
     
     // Process in reverse order (LIFO) to achieve FIFO effect execution
     // since dependencies are prepended to the linked list
     for (let i = count - 1; i >= 0; i--) {
-      const consumer = queue[(ctx.scheduledHead + i) & mask]!;
+      const consumer = queue[(head + i) & mask]!;
       // Clear scheduled flag
       consumer._nextScheduled = undefined;
       consumer._flush();
