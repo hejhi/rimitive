@@ -28,10 +28,10 @@ export function createDependencyHelpers(): DependencyHelpers {
        source,
        target,
        version,
-       nextSource,
-       nextTarget,
        prevSource: undefined,
        prevTarget: undefined,
+       nextSource,
+       nextTarget,
      };
 
      if (nextTarget) nextTarget.prevTarget = newNode;
