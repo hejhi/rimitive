@@ -29,7 +29,7 @@ export function createGraphTraversalHelpers(
    * invalidating all affected nodes in a single pass. This avoids the cascade of function
    * calls that would occur with recursive invalidation.
    */
-  function traverseAndInvalidate(startEdge: Edge | undefined): void {
+  const traverseAndInvalidate = (startEdge: Edge | undefined): void => {
     if (!startEdge) return;
 
     let stack: TraversalFrame | undefined;
@@ -88,7 +88,5 @@ export function createGraphTraversalHelpers(
     }
   }
 
-  return {
-    traverseAndInvalidate
-  };
+  return { traverseAndInvalidate };
 }

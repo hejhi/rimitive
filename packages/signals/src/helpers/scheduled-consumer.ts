@@ -22,7 +22,7 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   /**
    * Schedules a consumer for batch execution using ring buffer
    */
-  function scheduleConsumer(consumer: ScheduledNode): void {
+  const scheduleConsumer = (consumer: ScheduledNode): void => {
     // Check if already scheduled using a flag to avoid array search
     if (consumer._nextScheduled !== undefined) return;
     
@@ -37,11 +37,11 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   /**
    * Common invalidation logic for scheduled consumers
    */
-  function invalidateConsumer(
+  const invalidateConsumer = (
     consumer: ScheduledNode & StatefulNode,
     checkFlags: number,
     setFlags: number
-  ): void {
+  ): void => {
     if (consumer._flags & checkFlags) return;
     consumer._flags |= setFlags;
 
@@ -56,10 +56,10 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   /**
    * Common disposal pattern for scheduled consumers
    */
-  function disposeConsumer<T extends ScheduledNode & StatefulNode>(
+  const disposeConsumer = <T extends ScheduledNode & StatefulNode>(
     consumer: T,
     cleanupFn: (consumer: T) => void
-  ): void {
+  ): void => {
     if (consumer._flags & DISPOSED) return;
     consumer._flags |= DISPOSED;
     cleanupFn(consumer);
@@ -68,7 +68,7 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
   /**
    * Executes all scheduled consumers using ring buffer
    */
-  function flushScheduled(): void {
+  const flushScheduled = (): void => {
     const queue = ctx.scheduledQueue;
     const mask = ctx.scheduledMask;
     
