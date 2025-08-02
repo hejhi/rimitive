@@ -71,7 +71,7 @@ export function createDependencyHelpers(): DependencyHelpers {
   };
 
   const removeFromTargets = ({ source, prevTarget, nextTarget }: Edge): void => {
-    const hasNextTarget = nextTarget === undefined;
+    const isLastTarget = nextTarget === undefined;
 
     if (prevTarget !== undefined) {
       prevTarget.nextTarget = nextTarget;
@@ -79,12 +79,12 @@ export function createDependencyHelpers(): DependencyHelpers {
       source._targets = nextTarget;
 
       // If it's a producer that's ALSO a consumer (like computed)
-      if (hasNextTarget && '_flags' in source && typeof source._flags === 'number') {
+      if (isLastTarget && '_flags' in source && typeof source._flags === 'number') {
         source._flags &= ~TRACKING;
       }
     }
 
-    if (!hasNextTarget) {
+    if (!isLastTarget) {
       nextTarget.prevTarget = prevTarget;
     }
   };
