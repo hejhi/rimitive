@@ -5,6 +5,9 @@ import type { ScheduledConsumerHelpers } from './scheduled-consumer';
 
 const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 
+// Pre-compute combined flags for faster checks
+const SKIP_FLAGS = NOTIFIED | DISPOSED | RUNNING;
+
 // Stack frame for depth-first traversal
 interface TraversalFrame {
   edge: Edge;
@@ -44,7 +47,7 @@ export function createGraphTraversalHelpers(
         const statefulTarget = target as ConsumerNode & StatefulNode;
         
         // Skip if already notified, disposed, or running
-        if (statefulTarget._flags & (NOTIFIED | DISPOSED | RUNNING)) {
+        if (statefulTarget._flags & SKIP_FLAGS) {
           currentEdge = currentEdge.nextTarget;
           continue;
         }
