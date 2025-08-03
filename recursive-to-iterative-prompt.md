@@ -16,7 +16,7 @@ This creates deep call stacks (40-120 frames) in benchmarks with nested computed
 
 ## Your Task
 
-Make the `checkNodeDirty` function iterative to eliminate recursive calls while preserving exact reactive behavior and maintaining encapsulation between extensions.
+Create an iterative update system that eliminates the recursive call chain while preserving exact reactive behavior and maintaining encapsulation between extensions. This requires more than just making `checkNodeDirty` iterative - it requires a unified approach to the entire update process.
 
 ## Key Requirements
 
@@ -28,14 +28,18 @@ Make the `checkNodeDirty` function iterative to eliminate recursive calls while 
 
 ## Implementation Guidelines
 
-### 1. Modify checkNodeDirty to be Iterative
+### 1. Create a Unified Iterative Update System
 
-In `packages/signals/src/helpers/dependency-tracking.ts`, replace the recursive `checkNodeDirty` implementation with an iterative version that:
+The challenge is that simply making `checkNodeDirty` iterative won't solve the problem because:
+- `checkNodeDirty` must call `source._update()` to ensure computed sources are current
+- This creates a new recursive chain regardless of the iterative implementation
+- The solution requires redesigning the entire update flow
 
-- Uses an explicit stack to track nodes being checked
-- Maintains the same function signature and return type
-- Preserves all version checking and edge update logic
-- Detects circular dependencies
+Instead, create a unified iterative update function that:
+- Combines the logic of `_update()`, `shouldNodeUpdate()`, and `checkNodeDirty()`
+- Uses an explicit stack to manage the entire update process
+- Never makes recursive function calls
+- Maintains proper update order (sources before consumers)
 - Works with any node that implements the Consumer/Producer interfaces
 
 ### 2. Key Logic to Preserve

@@ -1,7 +1,10 @@
 # Recursive to Iterative Conversion TODO List
 
 ## Overview
-Convert the recursive `checkNodeDirty` function in Lattice Signals to an iterative implementation to improve performance in conditional dependency scenarios.
+Convert the recursive dependency checking in Lattice Signals to an iterative implementation to improve performance in conditional dependency scenarios.
+
+## Key Discovery
+The initial approach of making `checkNodeDirty` iterative is insufficient. The recursion happens because `checkNodeDirty` calls `source._update()`, which creates a new recursive chain. The solution requires a unified iterative update system that manages the entire update process without recursive function calls.
 
 ## Critical Architectural Issue
 
@@ -11,7 +14,13 @@ The recursion in Lattice is **distributed across multiple functions** creating a
 computed.value → _update() → shouldNodeUpdate() → checkNodeDirty() → source._update() → (recurse)
 ```
 
-The key is to make `checkNodeDirty` iterative while maintaining encapsulation between extensions.
+**Important Discovery**: Simply making `checkNodeDirty` iterative is insufficient because:
+1. `checkNodeDirty` must ensure computed sources are up-to-date before checking versions
+2. To update a computed source, it must call `source._update()` 
+3. This starts a new recursive chain regardless of whether `checkNodeDirty` itself is iterative
+4. The recursion is architectural, not just implementational
+
+The solution requires a more fundamental change to how updates propagate through the dependency graph.
 
 ## Phase 1: Setup and Benchmarking
 
@@ -29,34 +38,47 @@ The key is to make `checkNodeDirty` iterative while maintaining encapsulation be
 - [x] Add tests for wide graphs (many siblings)
 - [x] Add tests for mixed conditional/unconditional dependencies
 
-## Phase 2: Implement Iterative checkNodeDirty
+## Phase 2: Implement Iterative Update System
 
 ### 2.1 Understand Current Implementation
 - [x] Document the recursive call chain with file:line references
-- [x] Identify how checkNodeDirty triggers recursion
+- [x] Identify how checkNodeDirty triggers recursion  
 - [x] Map out version checking and edge update logic
 - [x] Understand Consumer/Producer interface usage
+- [x] Discovered: Simple iterative checkNodeDirty won't work - need unified approach
 
-### 2.2 Design Iterative Algorithm
-- [ ] Design stack frame structure for tracking state:
+### 2.2 Design Iterative Algorithm  
+- [x] Identified need for unified update system (not just iterative checkNodeDirty)
+- [ ] Design state machine that combines all update phases:
   ```typescript
-  interface CheckNodeDirtyFrame {
+  interface UpdateFrame {
     node: ConsumerNode & { _globalVersion?: number };
-    sourceEdge?: Edge;
+    phase: 'initial' | 'check-sources' | 'awaiting-source' | 'sources-checked' | 'complete';
+    currentSource?: Edge;
     isDirty: boolean;
-    checkingSource?: ProducerNode;
-    sourceOldVersion?: number;
+    // Track which computed source we're waiting for
+    pendingSource?: ConsumerNode & ProducerNode & { _update(): void };
   }
   ```
-- [ ] Plan how to handle sources that need updating
-- [ ] Design circular dependency detection
+- [ ] Key insight: Must process dependency graph in correct order:
+  1. Start from requested node
+  2. Traverse down to leaf nodes (signals)  
+  3. Process back up, ensuring sources update before consumers
+- [ ] Handle flag transitions correctly:
+  - NOTIFIED → check if dirty → OUTDATED if dirty
+  - OUTDATED → must recompute
+  - Clear flags after recomputation
+- [ ] Maintain circular dependency detection
 
 ### 2.3 Implement Iterative Version
-- [ ] Replace recursive `checkNodeDirty` in dependency-tracking.ts
-- [ ] Use explicit stack to track nodes being checked
-- [ ] Maintain Set for cycle detection
-- [ ] Preserve all version checking logic
-- [ ] Handle sources with `_update` method iteratively
+- [ ] Create new unified iterative update function that:
+  - Never calls `_update()` recursively
+  - Manages entire update process with explicit stack
+  - Inlines shouldNodeUpdate and checkNodeDirty logic
+  - Calls _recompute() at appropriate times
+- [ ] Integrate with existing Computed class
+- [ ] Maintain all reactive behaviors from tests
+- [ ] Preserve encapsulation - use only public interfaces
 
 ## Phase 3: Integration and Edge Cases
 
@@ -150,16 +172,17 @@ This creates the cycle: `_update → shouldNodeUpdate → checkNodeDirty → _up
 ### Why Naive Iterative Conversion Fails
 
 Simply making `checkNodeDirty` iterative doesn't work because:
-- Even in an iterative loop, calling `_update()` starts a new recursive chain
-- The recursion is architectural, not just implementational
-- The entire reactive system assumes these functions can call each other
+- `checkNodeDirty` must ensure computed sources are up-to-date by calling `source._update()`
+- Even if `checkNodeDirty` uses an iterative loop, calling `_update()` starts a new recursive chain
+- The recursion is architectural - it's built into how updates propagate through the graph
 
 ### The Real Solution
 
 We need a **unified iterative update system** that:
-1. Never calls `_update()` recursively
-2. Inlines all update logic into a single state machine
-3. Manages the entire update process with an explicit stack
+1. Never calls `_update()` recursively (breaks the recursive chain)
+2. Combines all update phases into a single state machine
+3. Manages source traversal, version checking, and recomputation with an explicit stack
+4. Maintains the exact same reactive behavior as the recursive version
 
 ## Notes
 

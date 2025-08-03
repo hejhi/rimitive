@@ -58,18 +58,19 @@ Each level creates multiple stack frames with associated overhead.
 
 ## Proposed Solution
 
-### Make checkNodeDirty Iterative
+### Create Unified Iterative Update System
 
-Replace the recursive implementation of `checkNodeDirty` with an iterative version that uses an explicit stack:
+The core insight: We cannot just make `checkNodeDirty` iterative because it must call `source._update()`, which restarts the recursion. Instead, we need a unified iterative update system:
 
 ```typescript
-const checkNodeDirty = (
-  node: ConsumerNode & { _globalVersion?: number },
+const iterativeUpdate = (
+  node: ConsumerNode & ProducerNode & { _globalVersion?: number; _flags: number },
   ctx: SignalContext
-): boolean => {
-  // Use stack-based iteration instead of recursion
-  // Track nodes being updated to detect cycles
-  // Preserve all existing behavior
+): void => {
+  // Single iterative function that handles entire update process
+  // Combines logic from _update(), shouldNodeUpdate(), and checkNodeDirty()
+  // Uses explicit stack to manage all phases of update
+  // Never calls _update() recursively
 }
 ```
 
@@ -87,10 +88,14 @@ const checkNodeDirty = (
 - ✅ Test suite created: `packages/signals/src/helpers/iterative-traversal.test.ts`
 
 ### Phase 2: Implementation (Next)
-1. Create `iterative-update.ts` with unified update function
-2. Implement state machine for all update phases
+1. Create unified iterative update function in `dependency-tracking.ts`
+2. Implement state machine that handles:
+   - Flag checking (OUTDATED/NOTIFIED)
+   - Source traversal and version checking
+   - Recomputation triggering
+   - Global version updates
 3. Add visited tracking to prevent infinite loops
-4. Integrate with existing `Computed` class
+4. Modify `Computed._update()` to use iterative approach
 
 ### Phase 3: Validation
 1. Ensure all tests pass
