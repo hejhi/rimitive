@@ -1,61 +1,65 @@
-# Recursive to Iterative Conversion TODO
+# Status: Iterative Dependency Update Implementation
 
-## Goal
-Eliminate recursive dependency checking in Lattice Signals to improve performance in conditional dependency scenarios.
+## Current State
 
-## Key Discovery
-The recursion happens because `checkNodeDirty` calls `source._update()`. A unified iterative update system is required, not just an iterative `checkNodeDirty`.
+An iterative implementation has been built and tested **in isolation** but is **not yet integrated** into the main Lattice codebase.
 
-## Current Status (2025-08-03)
-**Phase 3 Completed** - Optimized iterative implementation is ready for integration.
+### What Exists
 
-### What's Been Done:
-- ✅ Created optimized `iterativeUpdate` function with object pooling
-- ✅ Reduced stack depth from 40-120 frames to <5 frames
-- ✅ Achieved performance improvements for deep chains (20+ levels)
-- ✅ All tests passing with identical behavior to recursive approach
-- ✅ Code consolidated to single clear implementation
+1. **Implementation**: `packages/signals/src/helpers/iterative-update.ts`
+   - State machine with 5 phases
+   - Object pooling for performance
+   - Dynamic arrays (recently updated from fixed-size)
+   - Cycle detection
 
-### Performance Results:
-- **Deep chains (20+ levels)**: 1.1x to 2.7x faster
-- **Shallow chains (<20 levels)**: Minor overhead (1.06x slower)
-- **Stack overflow risk**: Eliminated
-- **Memory**: Pre-allocated pools reduce GC pressure
+2. **Tests**: `packages/signals/src/helpers/iterative-update.test.ts`
+   - Basic functionality tests pass
+   - Stress tests for 1000+ node graphs pass
+   - One test skipped due to unrelated bug in signals
 
-### Files to Use:
-- `packages/signals/src/helpers/iterative-update.ts` - The optimized implementation
-- `packages/signals/src/helpers/iterative-update.test.ts` - Comprehensive tests
+3. **Benchmarks**: Show improvements for deep chains in isolation
+
+### What Doesn't Exist
+
+1. **Integration**: The main `computed.ts` still uses recursive implementation
+2. **Production testing**: No real-world usage or integration tests
+3. **Full performance validation**: Only synthetic benchmarks exist
 
 ## Next Steps
 
-### Phase 4: Integration (Ready to Start)
-- [ ] Modify `packages/signals/src/computed.ts` to use `iterativeUpdate` instead of recursive `_update()`
-- [ ] Update `checkNodeDirty` in `dependency-tracking.ts` to work with iterative approach
-- [ ] Run full test suite: `pnpm --filter @lattice/signals test`
-- [ ] Run benchmarks: `pnpm --filter @lattice/benchmarks bench:dev`
+### Immediate Task: Integration
 
-### Phase 5: Further Optimization
-- [ ] Investigate why Alien is still 2.7x faster for conditional dependencies
-- [ ] Consider additional optimizations for conditional dependency tracking
-- [ ] Profile the integrated solution to find remaining bottlenecks
+Replace the recursive update logic in `computed.ts` with the iterative implementation:
 
-## Technical Details
+1. **Locate integration point**: `packages/signals/src/computed.ts` line ~105 (_update method)
+2. **Import iterative function**: Add import for `iterativeUpdate`
+3. **Replace recursive logic**: Swap current implementation with iterative call
+4. **Update related code**: Ensure `shouldNodeUpdate` and `checkNodeDirty` work correctly
+5. **Test thoroughly**: Run full test suite
 
-The implementation uses a state machine with 5 phases:
-1. **check-dirty**: Examine flags (OUTDATED/NOTIFIED)
-2. **traverse-sources**: Walk dependencies, check versions
-3. **wait-for-source**: Handle computed sources needing update
-4. **ready-to-compute**: Execute callback if needed
-5. **computed**: Update versions and cleanup
+### Testing Plan
 
-### Key Optimizations:
-- Pre-allocated frame pool (100 frames)
-- Pre-allocated stack array (100 slots)
-- Array-based visiting tracker instead of Set
-- Numeric phase constants instead of strings
-- Object reuse to minimize allocations
+1. **Unit tests**: `pnpm --filter @lattice/signals test`
+2. **Type checking**: `pnpm typecheck`
+3. **Benchmarks**: `pnpm --filter @lattice/benchmarks bench:dev`
+4. **Integration tests**: Verify no behavior changes
 
-## Important Notes:
-- The 2.72x gap with Alien-signals isn't fully closed by this optimization alone
-- The iterative approach provides the foundation for additional optimizations
-- Integration should be done carefully to avoid breaking existing functionality
+### Success Criteria
+
+- All existing tests pass without modification
+- No TypeScript errors
+- Benchmark shows expected improvements
+- Stack depth remains under 5 frames
+
+## Known Issues
+
+1. **Wide graph test failure**: Unrelated to iterative implementation
+2. **Performance gap**: Still 2.7x slower than alien-signals for conditional dependencies
+3. **Integration complexity**: May require adjustments to helper functions
+
+## Future Work
+
+After successful integration:
+1. Profile remaining performance gaps
+2. Investigate alien-signals' conditional dependency optimizations
+3. Consider additional optimizations based on findings

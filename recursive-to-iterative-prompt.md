@@ -1,87 +1,63 @@
-# Prompt: Implement Iterative Dependency Checking for Lattice Signals
+# Problem: Recursive Dependency Updates in Lattice Signals
 
-## Problem
+## Background
 
-Lattice has a performance bottleneck due to distributed recursion when updating computed values:
+Lattice is a reactive signals library where computed values must check if their dependencies have changed before recomputing. This currently uses recursion.
+
+## The Problem
+
+When accessing a computed value, the update chain triggers deep recursion:
 
 ```
 computed.value → _update() → shouldNodeUpdate() → checkNodeDirty() → source._update() → (recursion!)
 ```
 
-This creates deep call stacks (40-120 frames) with nested dependencies.
+### Why This Matters
 
-### Key Files to Examine
+1. **Stack overflow risk**: Deep dependency chains (40-120 frames) can exceed stack limits
+2. **Performance overhead**: Function call overhead accumulates with each recursive call
+3. **Memory pressure**: Each stack frame consumes memory
+4. **Debugging difficulty**: Deep stack traces are hard to debug
 
-1. `packages/signals/src/computed.ts` - See `_update()` method (line ~105)
-2. `packages/signals/src/helpers/dependency-tracking.ts` - See `checkNodeDirty()` (line ~96)
-3. `packages/benchmarks/src/suites/lattice/recursive-vs-iterative.bench.ts` - Performance test
-4. `packages/signals/src/helpers/iterative-update.ts` - **Completed implementation**
+## Key Code Locations
 
-## Solution Implemented (2025-08-03)
+1. `packages/signals/src/computed.ts` - The `_update()` method (line ~105) contains the recursive logic
+2. `packages/signals/src/helpers/dependency-tracking.ts` - The `checkNodeDirty()` function (line ~96) triggers recursive updates
+3. `packages/benchmarks/src/suites/lattice/recursive-vs-iterative.bench.ts` - Benchmarks comparing approaches
 
-Created a unified iterative update system that eliminates all recursive calls while preserving exact reactive behavior.
+## Performance Context
 
-### Implementation Highlights
+### Current Performance Gap
+- Lattice is 2.72x slower than alien-signals library in conditional dependency scenarios
+- The recursive implementation contributes to this gap but isn't the only factor
 
-1. **State Machine Architecture**:
-   - 5 phases: check-dirty → traverse-sources → wait-for-source → ready-to-compute → computed
-   - Numeric phase constants for performance
-   - Explicit stack management
+### Conditional Dependencies Explained
+Conditional dependencies occur when a computed value only accesses some of its potential dependencies based on runtime conditions:
 
-2. **Performance Optimizations**:
-   - Pre-allocated frame pool (100 objects)
-   - Pre-allocated stack array (100 slots)
-   - Array-based visiting tracker instead of Set
-   - Object reuse to minimize GC pressure
+```javascript
+// Example: This computed only reads 'expensiveB' if 'condition' is false
+computed(() => condition.value ? cheapA.value : expensiveB.value)
+```
 
-3. **Results Achieved**:
-   - ✅ Stack depth reduced from 40-120 to <5 frames
-   - ✅ Deep chains (20+ levels): 1.1x to 2.7x faster
-   - ✅ All tests passing with identical behavior
-   - ⚠️ Conditional dependencies: Still 2.7x gap with Alien
+The challenge: Avoid unnecessary updates when unused branches change.
 
-## Lessons Learned
+## Solution Requirements
 
-### What Worked Well:
-1. **Incremental Development**: Building POC first, then optimizing
-2. **Object Pooling**: Significant reduction in allocations
-3. **State Machine Design**: Clear phases made debugging easier
-4. **Comprehensive Testing**: Ensured correctness throughout
+### Must Have
+1. **Eliminate recursion**: Convert to iterative approach with explicit stack
+2. **Preserve behavior**: Exact same reactive semantics as current implementation
+3. **Maintain performance**: No regression for simple dependency chains
+4. **Handle edge cases**: Circular dependencies, deep chains, wide graphs
 
-### Challenges Encountered:
-1. **TypeScript Strictness**: Required careful null handling with pre-allocated arrays
-2. **Performance Trade-offs**: Small overhead for shallow chains due to pooling setup
-3. **Root Cause**: The 2.7x gap suggests the recursion wasn't the only bottleneck
+### Success Metrics
+1. Stack depth < 5 frames (vs current 40-120)
+2. All existing tests pass unchanged
+3. Performance within 1.5x of alien-signals (stretch goal)
+4. No increase in memory usage
 
-### Key Insights:
-1. **Holistic Approach Required**: Can't just make one function iterative - need unified system
-2. **Memory vs Speed**: Pre-allocation helps but adds complexity
-3. **Benchmarking is Critical**: Real-world performance differs from theory
-4. **Further Investigation Needed**: Alien's conditional dependency optimization remains superior
+## Technical Constraints
 
-## For Next Implementation:
-
-1. **Integration Steps**:
-   ```typescript
-   // In computed.ts _update() method
-   import { iterativeUpdate } from './helpers/iterative-update';
-   
-   // Replace recursive call with:
-   iterativeUpdate(this, ctx);
-   ```
-
-2. **Areas to Investigate**:
-   - Why Alien is 2.7x faster at conditional dependencies
-   - Whether dependency tracking itself can be optimized
-   - If there are smarter ways to skip unnecessary updates
-
-3. **Potential Optimizations**:
-   - Lazy dependency tracking
-   - Better conditional branch detection
-   - Smarter version comparison strategies
-
-## Files Ready for Use:
-- `packages/signals/src/helpers/iterative-update.ts` - Production-ready implementation
-- `packages/signals/src/helpers/iterative-update.test.ts` - Comprehensive test suite
-
-The iterative foundation is solid and ready for integration. The remaining performance gap requires deeper analysis of Alien's approach to conditional dependencies.
+- Cannot change the public API of signals/computed
+- Must work with existing TypeScript strict mode settings
+- Should integrate cleanly with current helper structure
+- Must support all current edge cases (cycles, etc.)

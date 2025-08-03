@@ -47,15 +47,11 @@ for (let i = 0; i < FRAME_POOL_SIZE; i++) {
   };
 }
 
-// Pre-allocated stack
-const STACK_SIZE = 100;
-const stack: UpdateFrame[] = new Array(STACK_SIZE);
-let stackTop = -1;
+// Dynamic stack that grows as needed
+let stack: UpdateFrame[] = [];
 
-// Visiting set using a simple array (for small graphs)
-const VISITING_SIZE = 100;
-const visiting: UpdatableNode[] = new Array(VISITING_SIZE);
-let visitingCount = 0;
+// Dynamic visiting set that grows as needed
+let visiting: UpdatableNode[] = [];
 
 // Helper to get a frame from the pool
 function getFrame(): UpdateFrame {
@@ -94,7 +90,8 @@ function returnFrame(frame: UpdateFrame | undefined): void {
 
 // Helper to check if node is visiting
 function isVisiting(node: UpdatableNode): boolean {
-  for (let i = 0; i < visitingCount; i++) {
+  const len = visiting.length;
+  for (let i = 0; i < len; i++) {
     if (visiting[i] === node) return true;
   }
   return false;
@@ -102,18 +99,17 @@ function isVisiting(node: UpdatableNode): boolean {
 
 // Helper to add to visiting
 function addVisiting(node: UpdatableNode): void {
-  if (visitingCount < VISITING_SIZE) {
-    visiting[visitingCount++] = node;
-  }
+  visiting.push(node);
 }
 
 // Helper to remove from visiting
 function removeVisiting(node: UpdatableNode): void {
-  for (let i = 0; i < visitingCount; i++) {
+  const len = visiting.length;
+  for (let i = 0; i < len; i++) {
     if (visiting[i] === node) {
-      // Swap with last and decrement count
-      visiting[i] = visiting[visitingCount - 1]!;
-      visitingCount--;
+      // Swap with last and remove
+      visiting[i] = visiting[len - 1]!;
+      visiting.pop();
       return;
     }
   }
@@ -128,8 +124,8 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
   if (!(node._flags & (OUTDATED | NOTIFIED))) return;
   
   // Reset state
-  stackTop = -1;
-  visitingCount = 0;
+  stack.length = 0;
+  visiting.length = 0;
   framePoolIndex = 0;
   
   // Push initial node
@@ -137,10 +133,10 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
   initialFrame.node = node;
   initialFrame.phase = PHASE_CHECK_DIRTY;
   initialFrame.isDirty = false;
-  stack[++stackTop] = initialFrame;
+  stack.push(initialFrame);
   
-  while (stackTop >= 0) {
-    const frame = stack[stackTop]!; // We know this is defined when stackTop >= 0
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1]!; // Top of stack
     
     switch (frame.phase) {
       case PHASE_CHECK_DIRTY: {
@@ -154,8 +150,7 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
           frame.currentSource = frame.node!._sources;
         } else {
           // Node is clean
-          returnFrame(stack[stackTop]);
-          stackTop--;
+          returnFrame(stack.pop());
         }
         break;
       }
@@ -187,7 +182,7 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
               sourceFrame.node = updatableSource;
               sourceFrame.phase = PHASE_CHECK_DIRTY;
               sourceFrame.isDirty = false;
-              stack[++stackTop] = sourceFrame;
+              stack.push(sourceFrame);
               addVisiting(updatableSource);
               break;
             }
@@ -211,8 +206,7 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
             // Update global version and we're done
             frame.node!._globalVersion = ctx.version;
             frame.node!._flags &= ~NOTIFIED;
-            returnFrame(stack[stackTop]);
-            stackTop--;
+            returnFrame(stack.pop());
             removeVisiting(frame.node!);
           }
         }
@@ -260,8 +254,7 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
       
       case PHASE_COMPUTED: {
         // Node has been computed, pop from stack
-        returnFrame(stack[stackTop]);
-        stackTop--;
+        returnFrame(stack.pop());
         removeVisiting(frame.node!);
         break;
       }
