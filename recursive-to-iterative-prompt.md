@@ -1,113 +1,78 @@
 # Prompt: Implement Iterative Dependency Checking for Lattice Signals
 
-## Context
+## Problem
 
-You are refactoring a reactive signals library (Lattice) that has a performance bottleneck due to distributed recursion. The library currently uses mutual recursion across multiple functions when updating computed values, causing poor performance with deep dependency chains.
+Lattice has a performance bottleneck due to distributed recursion when updating computed values:
 
-## Current Architecture Problem
+```
+computed.value → _update() → shouldNodeUpdate() → checkNodeDirty() → source._update() → (recursion!)
+```
 
-The system has a recursive call cycle:
-1. `computed.value` → `_update()` 
-2. `_update()` → `shouldNodeUpdate()`
-3. `shouldNodeUpdate()` → `checkNodeDirty()`
-4. `checkNodeDirty()` → `source._update()` (recursion!)
+This creates deep call stacks (40-120 frames) with nested dependencies.
 
-This creates deep call stacks (40-120 frames) in benchmarks with nested computed values.
+### Key Files to Examine
 
-## Your Task
+1. `packages/signals/src/computed.ts` - See `_update()` method (line ~105)
+2. `packages/signals/src/helpers/dependency-tracking.ts` - See `checkNodeDirty()` (line ~96)
+3. `packages/benchmarks/src/suites/lattice/recursive-vs-iterative.bench.ts` - Performance test
+4. `packages/signals/src/helpers/iterative-update.ts` - Existing proof of concept
 
-Create an iterative update system that eliminates the recursive call chain while preserving exact reactive behavior and maintaining encapsulation between extensions. This requires more than just making `checkNodeDirty` iterative - it requires a unified approach to the entire update process.
+## Solution
+
+Create a unified iterative update system that eliminates all recursive calls while preserving exact reactive behavior.
 
 ## Key Requirements
 
-1. **Never call `_update()` recursively** - This is the most critical requirement
-2. **Preserve exact behavior** - All existing tests must pass without modification
-3. **Maintain encapsulation** - The solution must not have any extension-specific knowledge
-4. **Use Consumer/Producer interfaces** - These are the shared contracts between extensions
-5. **Handle all edge cases**: circular dependencies, disposed nodes, errors in computeds
+1. **Never call `_update()` recursively** - Use explicit stack instead
+2. **Preserve exact behavior** - All existing tests must pass
+3. **Maintain encapsulation** - Use only Consumer/Producer interfaces
+4. **Handle all edge cases** - Circular dependencies, disposed nodes, errors
 
-## Implementation Guidelines
+## Implementation Approach
 
-### 1. Create a Unified Iterative Update System
+### State Machine Design
 
-The challenge is that simply making `checkNodeDirty` iterative won't solve the problem because:
-- `checkNodeDirty` must call `source._update()` to ensure computed sources are current
-- This creates a new recursive chain regardless of the iterative implementation
-- The solution requires redesigning the entire update flow
+Create an iterative function with these phases:
+- **check-dirty**: Examine flags (OUTDATED/NOTIFIED) to determine if update needed
+- **traverse-sources**: Walk dependencies, checking versions
+- **wait-for-source**: Pause while computed source updates
+- **ready-to-compute**: All sources current, execute callback if needed
+- **complete**: Update versions and clean up
 
-Instead, create a unified iterative update function that:
-- Combines the logic of `_update()`, `shouldNodeUpdate()`, and `checkNodeDirty()`
-- Uses an explicit stack to manage the entire update process
-- Never makes recursive function calls
-- Maintains proper update order (sources before consumers)
-- Works with any node that implements the Consumer/Producer interfaces
+### Critical Details
 
-### 2. Key Logic to Preserve
+- Track visiting nodes in a Set for cycle detection
+- Update edge versions even when sources are clean
+- Preserve global version updates for performance
+- Handle RUNNING flag to prevent circular dependencies
+- Optimize allocations - reuse stack frames where possible
 
-The iterative version must maintain these behaviors:
-- Fast path: return false if `node._globalVersion === ctx.version`
-- Check each source for version changes
-- For sources with `_update` method: ensure they're up-to-date before checking versions
-- Update edge versions to match source versions
-- Update node's global version when all sources are clean
+## Starting Point
 
-### 3. Circular Dependency Detection
+A proof of concept exists in `packages/signals/src/helpers/iterative-update.ts` that:
+- Works correctly but needs optimization for deep chains (30+ levels)
+- Shows the state machine approach with explicit stack
+- Has tests in `iterative-update-poc.test.ts`
 
-Track nodes currently being updated to detect cycles:
-- Maintain a Set of nodes in the update path
-- Throw "Cycle detected" error if a node is encountered twice
-- Clean up tracking state properly on all exit paths
+## Next Steps
 
-## Test Cases to Verify
-
-1. **Deep chains**: 100+ levels of computed → computed → signal
-2. **Wide graphs**: Single computed depending on 100+ sources
-3. **Conditional dependencies**: Sources that are only accessed conditionally
-4. **Circular dependencies**: Should detect and throw "Cycle detected"
-5. **Disposed nodes**: Handle gracefully during traversal
-6. **Errors in computeds**: Should propagate correctly
-
-## Performance Targets
-
-- Reduce call stack depth from 40-120 frames to ~1-5 frames
-- Improve conditional dependency benchmark from 2.72x slower to within 1.5x of alien-signals
-- No regression in other benchmarks
+1. **Optimize the POC** - Focus on reducing allocations for deep chains
+2. **Integrate with Computed** - Replace the recursive `_update()` call
+3. **Run validation** - Ensure all tests pass and benchmarks improve
 
 ## Validation
 
-Run these commands to verify your implementation:
 ```bash
-# Run specific test suite
+# Run tests
 pnpm --filter @lattice/signals test iterative-traversal
 
-# Run benchmarks
+# Run benchmarks  
 pnpm --filter @lattice/benchmarks bench:dev -- recursive-vs-iterative
-
-# Run full test suite
-pnpm --filter @lattice/signals test
 ```
-
-## Implementation Status
-
-A proof of concept has been created (`iterative-update.ts`) that demonstrates:
-- Elimination of all recursive calls using explicit stack
-- Correct reactive behavior with all tests passing
-- Performance improvements for shallow chains (10-20 levels)
-- Need for optimization on deeper chains
-
-## Common Pitfalls to Avoid
-
-1. **Don't call any `_update()` method** - This restarts recursion
-2. **Don't forget edge version updates** - Must happen even when sources are clean
-3. **Don't skip global version updates** - Critical for performance
-4. **Don't create new objects unnecessarily** - Reuse stack frames if possible
-5. **Don't forget the RUNNING flag** - Prevents circular dependencies
-6. **Optimize allocations** - The POC shows that naive stack allocation can hurt performance for deep chains
 
 ## Success Criteria
 
-Your implementation is successful when:
-1. All tests in `iterative-traversal.test.ts` pass
-2. The benchmark shows >40% performance improvement for deep chains
-3. No regressions in other benchmarks
-4. Memory usage is equal or better than recursive version
+1. All existing tests pass without modification
+2. Call stack depth reduced from 40-120 frames to <5 frames
+3. Performance within 1.5x of alien-signals for conditional dependencies
+4. No memory leaks or increased allocations

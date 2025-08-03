@@ -1,206 +1,55 @@
-# Recursive to Iterative Conversion TODO List
+# Recursive to Iterative Conversion TODO
 
-## Overview
-Convert the recursive dependency checking in Lattice Signals to an iterative implementation to improve performance in conditional dependency scenarios.
+## Goal
+Eliminate recursive dependency checking in Lattice Signals to improve performance in conditional dependency scenarios.
 
 ## Key Discovery
-The initial approach of making `checkNodeDirty` iterative is insufficient. The recursion happens because `checkNodeDirty` calls `source._update()`, which creates a new recursive chain. The solution requires a unified iterative update system that manages the entire update process without recursive function calls.
+The recursion happens because `checkNodeDirty` calls `source._update()`. A unified iterative update system is required, not just an iterative `checkNodeDirty`.
 
-## Proof of Concept Results
-Successfully implemented `iterativeUpdate` function that:
-- Eliminates all recursive calls using explicit stack
-- Maintains correct reactive behavior (all tests pass)
-- Shows 1.8-2.2x performance improvement for shallow chains (10-20 levels)
-- Needs optimization for deeper chains where recursive version is currently faster
+## Quick Start
+1. Read the recursive chain in `computed.ts:105` → `dependency-tracking.ts:96`
+2. Review proof of concept: `packages/signals/src/helpers/iterative-update.ts`
+3. Run tests: `pnpm --filter @lattice/signals test iterative-update-poc`
+4. Start with Phase 3 optimization tasks below
 
-## Critical Architectural Issue
+## Implementation Plan
 
-The recursion in Lattice is **distributed across multiple functions** creating a mutual recursion pattern:
+### Phase 1: Analysis & Setup ✅
+- Created benchmark showing 2.72x performance gap
+- Created comprehensive test suite
+- Identified recursive call chain across 4 functions
 
-```
-computed.value → _update() → shouldNodeUpdate() → checkNodeDirty() → source._update() → (recurse)
-```
+### Phase 2: Proof of Concept ✅
+- Implemented `iterativeUpdate` with state machine approach
+- Verified correctness - all tests pass
+- Achieved 2x speedup for shallow chains
+- Identified optimization needs for deep chains
 
-**Important Discovery**: Simply making `checkNodeDirty` iterative is insufficient because:
-1. `checkNodeDirty` must ensure computed sources are up-to-date before checking versions
-2. To update a computed source, it must call `source._update()` 
-3. This starts a new recursive chain regardless of whether `checkNodeDirty` itself is iterative
-4. The recursion is architectural, not just implementational
+### Phase 3: Optimization (Current)
+- [ ] Profile `iterative-update.ts` to identify allocation hotspots
+- [ ] Pre-allocate stack array instead of dynamic push/pop
+- [ ] Reuse frame objects instead of creating new ones
+- [ ] Benchmark after each optimization using `iterative-benchmark.test.ts`
 
-The solution requires a more fundamental change to how updates propagate through the dependency graph.
+### Phase 4: Integration
+- [ ] Modify `packages/signals/src/computed.ts` to use iterative approach
+- [ ] Update `checkNodeDirty` in `dependency-tracking.ts` to not call `_update()`
+- [ ] Run full test suite: `pnpm --filter @lattice/signals test`
+- [ ] Check for performance regressions in other benchmarks
 
-## Phase 1: Setup and Benchmarking
+### Phase 5: Validation
+- [ ] All existing tests pass
+- [ ] Benchmark shows <1.5x gap with alien-signals
+- [ ] Memory usage equal or better
+- [ ] Call stack depth <5 frames
 
-### 1.1 Create Performance Benchmark
-- [x] Create new benchmark file: `packages/benchmarks/src/suites/lattice/recursive-vs-iterative.bench.ts`
-- [x] Implement deep conditional dependency chain (10+ levels)
-- [x] Add multiple branches where only one is active
-- [x] Measure operations/second for read operations
-- [x] Created micro-benchmark in `iterative-benchmark.test.ts` showing:
-  - 2.2x speedup for 10-level chains
-  - 1.8x speedup for 20-level chains
-  - Performance regression for 30+ level chains (needs optimization)
+## Technical Approach
 
-### 1.2 Create Integration Test Suite
-- [x] Create test file: `packages/signals/src/helpers/iterative-traversal.test.ts`
-- [x] Copy all relevant tests from graph-traversal.test.ts
-- [x] Add tests for deep chains (100+ levels)
-- [x] Add tests for wide graphs (many siblings)
-- [x] Add tests for mixed conditional/unconditional dependencies
+State machine with phases:
+1. **check-dirty**: Examine flags (OUTDATED/NOTIFIED)
+2. **traverse-sources**: Walk dependencies, check versions
+3. **wait-for-source**: Handle computed sources needing update
+4. **ready-to-compute**: Execute callback if needed
+5. **complete**: Update versions and cleanup
 
-## Phase 2: Implement Iterative Update System
-
-### 2.1 Understand Current Implementation
-- [x] Document the recursive call chain with file:line references
-- [x] Identify how checkNodeDirty triggers recursion  
-- [x] Map out version checking and edge update logic
-- [x] Understand Consumer/Producer interface usage
-- [x] Discovered: Simple iterative checkNodeDirty won't work - need unified approach
-
-### 2.2 Design Iterative Algorithm  
-- [x] Identified need for unified update system (not just iterative checkNodeDirty)
-- [ ] Design state machine that combines all update phases:
-  ```typescript
-  interface UpdateFrame {
-    node: ConsumerNode & { _globalVersion?: number };
-    phase: 'initial' | 'check-sources' | 'awaiting-source' | 'sources-checked' | 'complete';
-    currentSource?: Edge;
-    isDirty: boolean;
-    // Track which computed source we're waiting for
-    pendingSource?: ConsumerNode & ProducerNode & { _update(): void };
-  }
-  ```
-- [ ] Key insight: Must process dependency graph in correct order:
-  1. Start from requested node
-  2. Traverse down to leaf nodes (signals)  
-  3. Process back up, ensuring sources update before consumers
-- [ ] Handle flag transitions correctly:
-  - NOTIFIED → check if dirty → OUTDATED if dirty
-  - OUTDATED → must recompute
-  - Clear flags after recomputation
-- [ ] Maintain circular dependency detection
-
-### 2.3 Implement Iterative Version
-- [x] Created proof of concept `iterativeUpdate` function that:
-  - Never calls `_update()` recursively
-  - Manages entire update process with explicit stack
-  - Uses state machine with phases: check-dirty, traverse-sources, wait-for-source, ready-to-compute, computed
-  - Properly handles circular dependency detection
-- [x] Verified correctness with tests - all behaviors preserved
-- [ ] Performance optimization needed:
-  - Current POC is 2x faster for shallow chains but slower for deep chains
-  - Need to reduce allocations and optimize hot paths
-- [ ] Integrate with existing Computed class
-- [ ] Handle all edge cases from existing implementation
-
-## Phase 3: Integration and Edge Cases
-
-### 3.1 Integration
-- [ ] Ensure `shouldNodeUpdate` continues to work correctly
-- [ ] Verify computed values update properly
-- [ ] Test with effects and other consumers
-
-### 3.2 Handle Edge Cases
-- [ ] Test with circular dependencies (should throw "Cycle detected")
-- [ ] Test with disposed nodes during traversal
-- [ ] Test with errors during source updates
-- [ ] Verify version tracking remains correct
-
-## Phase 4: Performance Optimization
-
-### 4.1 Stack Optimization
-- [ ] Minimize stack frame allocations
-- [ ] Use bit flags for state instead of objects where possible
-- [ ] Optimize hot paths with inline conditions
-- [ ] Consider using fixed-size array for small stacks
-
-### 4.2 Cache Optimization
-- [ ] Preserve _lastEdge optimization
-- [ ] Add fast path for single-source nodes
-- [ ] Cache frequently accessed node properties
-- [ ] Minimize property access in hot loops
-
-## Phase 5: Testing and Validation
-
-### 5.1 Run Existing Test Suite
-- [ ] Ensure all computed.test.ts tests pass
-- [ ] Ensure all effect.test.ts tests pass
-- [ ] Ensure all dependency-tracking.test.ts tests pass
-- [ ] Ensure all graph-traversal.test.ts tests pass
-
-### 5.2 Performance Validation
-- [ ] Run new benchmark and compare to baseline
-- [ ] Verify 2.72x gap reduced to under 1.5x
-- [ ] Check no regression in other benchmarks
-- [ ] Profile with Chrome DevTools for call stack depth
-
-### 5.3 Memory Validation
-- [ ] Measure memory allocations per operation
-- [ ] Verify no memory leaks with long-running tests
-- [ ] Check stack frame pool effectiveness
-- [ ] Compare heap snapshots before/after
-
-## Phase 6: Integration and Cleanup
-
-### 6.1 Replace Recursive Implementation
-- [ ] Switch all callers to use iterative versions
-- [ ] Remove or deprecate recursive functions
-- [ ] Update any documentation/comments
-- [ ] Clean up any temporary code
-
-### 6.2 Code Review Checklist
-- [ ] No new `any` types introduced
-- [ ] All functions under 20 lines
-- [ ] Cyclomatic complexity < 5
-- [ ] Clear variable/function names
-- [ ] No commented-out code
-
-### 6.3 Final Validation
-- [ ] Run full test suite with coverage
-- [ ] Run all benchmarks to verify no regressions
-- [ ] Test with real-world usage patterns
-- [ ] Document any behavioral differences
-
-## Success Criteria
-
-1. **Performance**: Conditional dependency benchmark gap reduced from 2.72x to under 1.5x
-2. **Correctness**: All existing tests pass without modification
-3. **No Regressions**: Other benchmarks maintain current performance
-4. **Memory**: No increase in memory usage vs recursive approach
-5. **Maintainability**: Code remains readable and debuggable
-
-## Key Insights
-
-### The Distributed Recursion Problem
-
-The recursive pattern spans multiple files and functions:
-
-1. **computed.ts:57** - `get value()` calls `this._update()`
-2. **computed.ts:106** - `_update()` calls `shouldNodeUpdate(this, ctx)`
-3. **dependency-tracking.ts:146** - `shouldNodeUpdate()` calls `checkNodeDirty(node, ctx)`
-4. **dependency-tracking.ts:122** - `checkNodeDirty()` calls `sourceNode._update()` (RECURSION!)
-
-This creates the cycle: `_update → shouldNodeUpdate → checkNodeDirty → _update`
-
-### Why Naive Iterative Conversion Fails
-
-Simply making `checkNodeDirty` iterative doesn't work because:
-- `checkNodeDirty` must ensure computed sources are up-to-date by calling `source._update()`
-- Even if `checkNodeDirty` uses an iterative loop, calling `_update()` starts a new recursive chain
-- The recursion is architectural - it's built into how updates propagate through the graph
-
-### The Real Solution
-
-We need a **unified iterative update system** that:
-1. Never calls `_update()` recursively (breaks the recursive chain)
-2. Combines all update phases into a single state machine
-3. Manages source traversal, version checking, and recomputation with an explicit stack
-4. Maintains the exact same reactive behavior as the recursive version
-
-## Notes
-
-- Cannot just convert one function - must redesign the entire update flow
-- Use alien-signals as architectural reference, not implementation guide
-- Preserve all reactive behaviors documented in tests
-- Consider creating feature flag to switch between implementations during development
-- The performance gain comes from eliminating function call overhead in deep chains
+Critical: Never call `_update()` recursively. Use explicit stack for all state management.
