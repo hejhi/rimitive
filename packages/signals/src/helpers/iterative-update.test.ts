@@ -4,6 +4,7 @@ import { createSignalFactory } from '../signal';
 import { createComputedFactory } from '../computed';
 import { createEffectFactory } from '../effect';
 import { createBatchFactory } from '../batch';
+import { createIterativeUpdateHelpers } from './iterative-update';
 
 describe('Iterative update implementation', () => {
   const { signal, computed } = createSignalAPI({
@@ -12,6 +13,9 @@ describe('Iterative update implementation', () => {
     effect: createEffectFactory,
     batch: createBatchFactory,
   });
+
+  // Create helpers instance for testing - will be used when integrated
+  createIterativeUpdateHelpers(); // Verify factory can be instantiated
 
   describe('Update order verification', () => {
     it('should update sources before consumers', () => {
@@ -267,12 +271,13 @@ describe('Iterative update implementation', () => {
         nodes[level] = [];
         for (let i = 0; i < nodesPerLevel; i++) {
           const prevLevel = nodes[level - 1];
-          nodes[level][i] = computed(() => {
+          if (!prevLevel) continue;
+          nodes[level]![i] = computed(() => {
             // Each node depends on 3 nodes from previous level
             const idx1 = i % prevLevel.length;
             const idx2 = (i + 1) % prevLevel.length;
             const idx3 = (i + 2) % prevLevel.length;
-            return prevLevel[idx1].value + prevLevel[idx2].value + prevLevel[idx3].value;
+            return prevLevel[idx1]!.value + prevLevel[idx2]!.value + prevLevel[idx3]!.value;
           });
         }
       }
@@ -280,8 +285,11 @@ describe('Iterative update implementation', () => {
       // Create final aggregator
       const final = computed(() => {
         let sum = 0;
-        for (const node of nodes[levels - 1]) {
-          sum += node.value;
+        const lastLevel = nodes[levels - 1];
+        if (lastLevel) {
+          for (const node of lastLevel) {
+            sum += node.value;
+          }
         }
         return sum;
       });
@@ -291,8 +299,11 @@ describe('Iterative update implementation', () => {
       expect(typeof initialValue).toBe('number');
       
       // Update some base nodes
-      nodes[0][0].value = 100;
-      nodes[0][1].value = 200;
+      const baseLevel = nodes[0];
+      if (baseLevel && baseLevel[0] && baseLevel[1]) {
+        baseLevel[0].value = 100;
+        baseLevel[1].value = 200;
+      }
       
       // Should recompute correctly
       const updatedValue = final.value;
