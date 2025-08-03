@@ -249,7 +249,9 @@ export function createIterativeUpdateHelpers(): IterativeUpdateHelpers {
               frame.node!._globalVersion = ctx.version;
               frame.node!._flags = (frame.node!._flags & ~(OUTDATED | NOTIFIED | RUNNING));
             } finally {
-              frame.node!._flags &= ~RUNNING;
+              if (frame.node) {
+                frame.node._flags &= ~RUNNING;
+              }
             }
           }
           
