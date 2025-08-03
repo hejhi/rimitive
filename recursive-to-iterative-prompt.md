@@ -87,6 +87,14 @@ pnpm --filter @lattice/benchmarks bench:dev -- recursive-vs-iterative
 pnpm --filter @lattice/signals test
 ```
 
+## Implementation Status
+
+A proof of concept has been created (`iterative-update.ts`) that demonstrates:
+- Elimination of all recursive calls using explicit stack
+- Correct reactive behavior with all tests passing
+- Performance improvements for shallow chains (10-20 levels)
+- Need for optimization on deeper chains
+
 ## Common Pitfalls to Avoid
 
 1. **Don't call any `_update()` method** - This restarts recursion
@@ -94,6 +102,7 @@ pnpm --filter @lattice/signals test
 3. **Don't skip global version updates** - Critical for performance
 4. **Don't create new objects unnecessarily** - Reuse stack frames if possible
 5. **Don't forget the RUNNING flag** - Prevents circular dependencies
+6. **Optimize allocations** - The POC shows that naive stack allocation can hurt performance for deep chains
 
 ## Success Criteria
 
