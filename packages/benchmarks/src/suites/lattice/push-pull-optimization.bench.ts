@@ -16,7 +16,7 @@ import { describe, bench } from 'vitest';
 import {
   signal as preactSignal,
   computed as preactComputed,
-  batch as preactBatch,
+  ReadonlySignal,
 } from '@preact/signals-core';
 import {
   createSignalFactory,
@@ -27,9 +27,8 @@ import {
 import {
   signal as alienSignal,
   computed as alienComputed,
-  startBatch as alienStartBatch,
-  endBatch as alienEndBatch,
 } from 'alien-signals';
+import { ComputedInterface } from '../../../../signals/dist/src/computed';
 
 const ITERATIONS = 10000;
 
@@ -37,7 +36,6 @@ const ITERATIONS = 10000;
 const {
   signal: latticeSignal,
   computed: latticeComputed,
-  batch: latticeBatch
 } = createSignalAPI({
   signal: createSignalFactory,
   computed: createComputedFactory,
@@ -364,7 +362,7 @@ describe('Push-Pull: Large Graph with Sparse Updates', () => {
       return i % 2 === 0 ? val : 0;
     })
   );
-  const preactSparseSums = [];
+  const preactSparseSums: ReadonlySignal<number>[] = [];
   for (let i = 0; i < GRAPH_SIZE - 1; i++) {
     preactSparseSums.push(
       preactComputed(() => {
@@ -390,7 +388,7 @@ describe('Push-Pull: Large Graph with Sparse Updates', () => {
       return i % 2 === 0 ? val : 0;
     })
   );
-  const latticeSparseSums = [];
+  const latticeSparseSums: ComputedInterface<number>[] = [];
   for (let i = 0; i < GRAPH_SIZE - 1; i++) {
     latticeSparseSums.push(
       latticeComputed(() => {
@@ -416,7 +414,7 @@ describe('Push-Pull: Large Graph with Sparse Updates', () => {
       return i % 2 === 0 ? val : 0;
     })
   );
-  const alienSparseSums = [];
+  const alienSparseSums: (() => number)[] = [];
   for (let i = 0; i < GRAPH_SIZE - 1; i++) {
     alienSparseSums.push(
       alienComputed(() => {

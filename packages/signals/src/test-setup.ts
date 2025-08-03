@@ -1,7 +1,6 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { Edge } from './types';
 import type { SignalInterface } from './signal';
 import type { EffectInterface, EffectDisposer } from './effect';
 import { createSignalAPI } from './api';
@@ -73,9 +72,6 @@ export function createTestInstance() {
       ctx.batchDepth = 0;
       ctx.poolSize = 100;
       ctx.allocations = 0;
-      for (let i = 0; i < 100; i++) {
-        ctx.nodePool[i] = {} as Edge;
-      }
     },
     getGlobalVersion: () => ctx.version,
     activeContext: ctx,
@@ -116,7 +112,6 @@ export const activeContext = (() => {
     get scheduledCount() { return defaultInstance.activeContext.scheduledTail - defaultInstance.activeContext.scheduledHead; },
     get scheduledQueue() { return defaultInstance.activeContext.scheduledQueue; },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
-    get nodePool() { return defaultInstance.activeContext.nodePool; },
     set allocations(v) { defaultInstance.activeContext.allocations = v; },
     set poolSize(v) { defaultInstance.activeContext.poolSize = v; },
     set version(v) { defaultInstance.activeContext.version = v; },

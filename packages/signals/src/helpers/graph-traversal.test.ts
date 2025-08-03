@@ -22,7 +22,6 @@ describe('createGraphTraversalHelpers', () => {
       scheduledTail: 0,
       scheduledMask: 255,
       version: 0,
-      nodePool: [],
       poolSize: 0,
       allocations: 0,
     };
