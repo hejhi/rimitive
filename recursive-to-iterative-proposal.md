@@ -1,12 +1,12 @@
-# Proposal: Convert Recursive Algorithms to Iterative in Lattice Signals
+# Proposal: Convert Recursive Dependency Checking to Iterative in Lattice Signals
 
 ## Executive Summary
 
-Convert the distributed recursive dependency checking algorithm in Lattice to an iterative stack-based approach to improve performance in conditional dependency scenarios where alien-signals currently outperforms Lattice by 2.72x.
+Convert the recursive `checkNodeDirty` function in Lattice to an iterative implementation to improve performance in conditional dependency scenarios where alien-signals currently outperforms Lattice by 2.72x.
 
 ## The Distributed Recursion Problem
 
-The performance bottleneck is not a simple recursive function, but a **distributed mutual recursion** across multiple files:
+The performance bottleneck is a **distributed mutual recursion** across multiple files:
 
 ### Recursive Call Chain
 
@@ -56,53 +56,29 @@ In the conditional dependency benchmark:
 
 Each level creates multiple stack frames with associated overhead.
 
-## Why Current Approach Fails
-
-Our attempted iterative conversion of `checkNodeDirty` (lines 102-211) fails because:
-
-1. It still calls `computedNode._update()` at line 177
-2. This `_update()` call starts a new recursive chain
-3. The recursion is **architectural**, not just implementational
-
 ## Proposed Solution
 
-### 1. Create Unified Iterative Update System
+### Make checkNodeDirty Iterative
 
-Create a new function that handles the entire update process without recursive calls:
-
-**File**: `packages/signals/src/helpers/iterative-update.ts`
+Replace the recursive implementation of `checkNodeDirty` with an iterative version that uses an explicit stack:
 
 ```typescript
-interface UnifiedUpdateFrame {
-  node: ConsumerNode & { _flags?: number; _globalVersion?: number };
-  phase: 'check-flags' | 'check-sources' | 'recompute' | 'done';
-  sourceEdge?: Edge;
-  isDirty: boolean;
-  sourcesProcessed: number;
-}
-
-export function updateNodeIterative(
-  node: ConsumerNode & { _flags?: number; _globalVersion?: number },
+const checkNodeDirty = (
+  node: ConsumerNode & { _globalVersion?: number },
   ctx: SignalContext
-): boolean {
-  // Single iterative loop handling all update phases
-  // Never calls _update() recursively
+): boolean => {
+  // Use stack-based iteration instead of recursion
+  // Track nodes being updated to detect cycles
+  // Preserve all existing behavior
 }
 ```
 
-### 2. Inline All Update Logic
+### Key Design Principles
 
-Instead of calling separate functions, inline their logic:
-- Flag checking from `shouldNodeUpdate()` (lines 129-156)
-- Source checking from `checkNodeDirty()` (lines 94-126)
-- Recomputation from `Computed._recompute()` (lines 66-96)
-
-### 3. Integration Points
-
-Modify existing code to use the iterative system:
-- `Computed._update()` at line 105 calls `updateNodeIterative()` instead
-- Add feature flag for gradual rollout
-- Preserve existing API surface
+1. **Maintain Encapsulation**: The solution uses only Consumer/Producer interfaces, no extension-specific knowledge
+2. **Preserve Behavior**: All existing tests pass without modification
+3. **Detect Cycles**: Track visiting nodes to throw "Cycle detected" on circular dependencies
+4. **Same Interface**: Function signature and return type remain unchanged
 
 ## Implementation Plan
 

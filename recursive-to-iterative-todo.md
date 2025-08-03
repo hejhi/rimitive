@@ -1,7 +1,7 @@
 # Recursive to Iterative Conversion TODO List
 
 ## Overview
-Convert recursive dependency checking algorithms in Lattice Signals to iterative stack-based approach to improve performance in conditional dependency scenarios.
+Convert the recursive `checkNodeDirty` function in Lattice Signals to an iterative implementation to improve performance in conditional dependency scenarios.
 
 ## Critical Architectural Issue
 
@@ -11,7 +11,7 @@ The recursion in Lattice is **distributed across multiple functions** creating a
 computed.value → _update() → shouldNodeUpdate() → checkNodeDirty() → source._update() → (recurse)
 ```
 
-This means we cannot simply make one function iterative - we must redesign the entire update flow.
+The key is to make `checkNodeDirty` iterative while maintaining encapsulation between extensions.
 
 ## Phase 1: Setup and Benchmarking
 
@@ -29,50 +29,44 @@ This means we cannot simply make one function iterative - we must redesign the e
 - [x] Add tests for wide graphs (many siblings)
 - [x] Add tests for mixed conditional/unconditional dependencies
 
-## Phase 2: Architectural Redesign
+## Phase 2: Implement Iterative checkNodeDirty
 
-### 2.1 Understand Current Architecture
-- [ ] Document the complete recursive call chain with file:line references
-- [ ] Identify all entry points to the update system
-- [ ] Map out all state transitions during updates
-- [ ] Understand the contract between _update(), shouldNodeUpdate(), and checkNodeDirty()
+### 2.1 Understand Current Implementation
+- [x] Document the recursive call chain with file:line references
+- [x] Identify how checkNodeDirty triggers recursion
+- [x] Map out version checking and edge update logic
+- [x] Understand Consumer/Producer interface usage
 
-### 2.2 Design Unified Update System
-- [ ] Create a single `updateNodeIterative()` function that handles the entire update process
-- [ ] Define a unified stack frame that can represent all update phases:
+### 2.2 Design Iterative Algorithm
+- [ ] Design stack frame structure for tracking state:
   ```typescript
-  interface UnifiedUpdateFrame {
-    node: ConsumerNode;
-    phase: 'check-flags' | 'check-sources' | 'recompute' | 'post-update';
+  interface CheckNodeDirtyFrame {
+    node: ConsumerNode & { _globalVersion?: number };
     sourceEdge?: Edge;
     isDirty: boolean;
-    oldVersion: number;
+    checkingSource?: ProducerNode;
+    sourceOldVersion?: number;
   }
   ```
-- [ ] Design state machine for the iterative update process
+- [ ] Plan how to handle sources that need updating
+- [ ] Design circular dependency detection
 
-### 2.3 Inline Update Logic
-- [ ] Extract the logic from `shouldNodeUpdate()` to be inlined
-- [ ] Extract the logic from `checkNodeDirty()` to be inlined
-- [ ] Extract the recompute logic from `Computed._recompute()` to be inlined
-- [ ] Ensure all flag manipulations happen in the correct order
+### 2.3 Implement Iterative Version
+- [ ] Replace recursive `checkNodeDirty` in dependency-tracking.ts
+- [ ] Use explicit stack to track nodes being checked
+- [ ] Maintain Set for cycle detection
+- [ ] Preserve all version checking logic
+- [ ] Handle sources with `_update` method iteratively
 
-## Phase 3: Implement Iterative Update System
+## Phase 3: Integration and Edge Cases
 
-### 3.1 Create Core Iterative Function
-- [ ] Implement `updateNodeIterative()` in a new file `iterative-update.ts`
-- [ ] Handle all phases of update in a single loop
-- [ ] Maintain a visited set to prevent infinite loops
-- [ ] Implement proper cleanup on early exit
+### 3.1 Integration
+- [ ] Ensure `shouldNodeUpdate` continues to work correctly
+- [ ] Verify computed values update properly
+- [ ] Test with effects and other consumers
 
-### 3.2 Integration Points
-- [ ] Modify `Computed._update()` to call `updateNodeIterative()`
-- [ ] Ensure `Effect` nodes work with the new system
-- [ ] Update `shouldNodeUpdate()` to detect and use iterative path
-- [ ] Add feature flag to switch between recursive and iterative
-
-### 3.3 Handle Edge Cases
-- [ ] Test with circular dependencies
+### 3.2 Handle Edge Cases
+- [ ] Test with circular dependencies (should throw "Cycle detected")
 - [ ] Test with disposed nodes during traversal
 - [ ] Test with errors during source updates
 - [ ] Verify version tracking remains correct

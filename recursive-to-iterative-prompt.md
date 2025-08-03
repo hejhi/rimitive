@@ -1,4 +1,4 @@
-# Prompt: Implement Iterative Update System for Lattice Signals
+# Prompt: Implement Iterative Dependency Checking for Lattice Signals
 
 ## Context
 
@@ -16,65 +16,43 @@ This creates deep call stacks (40-120 frames) in benchmarks with nested computed
 
 ## Your Task
 
-Create a unified iterative update system that eliminates all recursive calls while preserving the exact reactive behavior.
+Make the `checkNodeDirty` function iterative to eliminate recursive calls while preserving exact reactive behavior and maintaining encapsulation between extensions.
 
 ## Key Requirements
 
 1. **Never call `_update()` recursively** - This is the most critical requirement
 2. **Preserve exact behavior** - All existing tests must pass without modification
-3. **Use a single iterative function** with an explicit stack/state machine
-4. **Inline all update logic** instead of calling existing functions
+3. **Maintain encapsulation** - The solution must not have any extension-specific knowledge
+4. **Use Consumer/Producer interfaces** - These are the shared contracts between extensions
 5. **Handle all edge cases**: circular dependencies, disposed nodes, errors in computeds
 
 ## Implementation Guidelines
 
-### 1. Create the Core Iterative Function
+### 1. Modify checkNodeDirty to be Iterative
 
-Create a new file `packages/signals/src/helpers/iterative-update.ts`:
+In `packages/signals/src/helpers/dependency-tracking.ts`, replace the recursive `checkNodeDirty` implementation with an iterative version that:
 
-```typescript
-export function updateNodeIterative(
-  node: ConsumerNode & { _flags?: number; _globalVersion?: number },
-  ctx: SignalContext
-): boolean {
-  // Your implementation here
-}
-```
+- Uses an explicit stack to track nodes being checked
+- Maintains the same function signature and return type
+- Preserves all version checking and edge update logic
+- Detects circular dependencies
+- Works with any node that implements the Consumer/Producer interfaces
 
-### 2. State Machine Design
+### 2. Key Logic to Preserve
 
-Your stack frames should handle these phases:
-- **check-flags**: Check if node needs updating (NOTIFIED, OUTDATED flags)
-- **check-sources**: Iterate through source dependencies
-- **update-computed**: For computed sources that need updating
-- **recompute**: Execute the node's compute function
-- **done**: Clean up and propagate results
+The iterative version must maintain these behaviors:
+- Fast path: return false if `node._globalVersion === ctx.version`
+- Check each source for version changes
+- For sources with `_update` method: ensure they're up-to-date before checking versions
+- Update edge versions to match source versions
+- Update node's global version when all sources are clean
 
-### 3. Critical Logic to Inline
+### 3. Circular Dependency Detection
 
-From `shouldNodeUpdate()` (dependency-tracking.ts:129-156):
-- Check `OUTDATED` and `NOTIFIED` flags
-- Update global version when clean
-
-From `checkNodeDirty()` (dependency-tracking.ts:94-126):
-- Compare source versions
-- Update edge versions
-- Check if sources changed
-
-From `Computed._recompute()` (computed.ts:66-96):
-- Set/clear `RUNNING` flag
-- Execute callback with proper context
-- Update value and version if changed
-- Clean up sources
-
-### 4. Integration
-
-Modify `Computed._update()` (computed.ts:105-109) to use your iterative function:
-```typescript
-_update(): void {
-  updateNodeIterative(this, ctx);
-}
-```
+Track nodes currently being updated to detect cycles:
+- Maintain a Set of nodes in the update path
+- Throw "Cycle detected" error if a node is encountered twice
+- Clean up tracking state properly on all exit paths
 
 ## Test Cases to Verify
 
