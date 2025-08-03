@@ -15,55 +15,153 @@ interface UpdatableNode extends ConsumerNode, ProducerNode {
 
 // Stack frame for iterative traversal
 interface UpdateFrame {
-  node: UpdatableNode;
-  phase: 'check-dirty' | 'traverse-sources' | 'wait-for-source' | 'ready-to-compute' | 'computed';
-  currentSource?: Edge;
+  node: UpdatableNode | null;
+  phase: number; // Using numbers instead of strings for performance
+  currentSource: Edge | undefined;
   isDirty: boolean;
-  sourceNode?: UpdatableNode;
-  sourceOldVersion?: number;
+  sourceNode: UpdatableNode | undefined;
+  sourceOldVersion: number | undefined;
+}
+
+// Phase constants as numbers (faster than string comparisons)
+const PHASE_CHECK_DIRTY = 0;
+const PHASE_TRAVERSE_SOURCES = 1;
+const PHASE_WAIT_FOR_SOURCE = 2;
+const PHASE_READY_TO_COMPUTE = 3;
+const PHASE_COMPUTED = 4;
+
+// Pre-allocated frame pool to reduce allocations
+const FRAME_POOL_SIZE = 100;
+const framePool: UpdateFrame[] = [];
+let framePoolIndex = 0;
+
+// Initialize frame pool
+for (let i = 0; i < FRAME_POOL_SIZE; i++) {
+  framePool[i] = {
+    node: null,
+    phase: 0,
+    currentSource: undefined,
+    isDirty: false,
+    sourceNode: undefined,
+    sourceOldVersion: undefined
+  };
+}
+
+// Pre-allocated stack
+const STACK_SIZE = 100;
+const stack: UpdateFrame[] = new Array(STACK_SIZE);
+let stackTop = -1;
+
+// Visiting set using a simple array (for small graphs)
+const VISITING_SIZE = 100;
+const visiting: UpdatableNode[] = new Array(VISITING_SIZE);
+let visitingCount = 0;
+
+// Helper to get a frame from the pool
+function getFrame(): UpdateFrame {
+  if (framePoolIndex < framePool.length) {
+    return framePool[framePoolIndex++]!;
+  }
+  // Fallback: create new frame if pool exhausted
+  return {
+    node: null,
+    phase: 0,
+    currentSource: undefined,
+    isDirty: false,
+    sourceNode: undefined,
+    sourceOldVersion: undefined
+  };
+}
+
+// Helper to return frame to pool
+function returnFrame(frame: UpdateFrame | undefined): void {
+  if (!frame) return;
+  
+  // Reset frame
+  frame.node = null;
+  frame.phase = 0;
+  frame.currentSource = undefined;
+  frame.isDirty = false;
+  frame.sourceNode = undefined;
+  frame.sourceOldVersion = undefined;
+  
+  // Return to pool if there's space
+  if (framePoolIndex > 0) {
+    framePoolIndex--;
+    framePool[framePoolIndex] = frame;
+  }
+}
+
+// Helper to check if node is visiting
+function isVisiting(node: UpdatableNode): boolean {
+  for (let i = 0; i < visitingCount; i++) {
+    if (visiting[i] === node) return true;
+  }
+  return false;
+}
+
+// Helper to add to visiting
+function addVisiting(node: UpdatableNode): void {
+  if (visitingCount < VISITING_SIZE) {
+    visiting[visitingCount++] = node;
+  }
+}
+
+// Helper to remove from visiting
+function removeVisiting(node: UpdatableNode): void {
+  for (let i = 0; i < visitingCount; i++) {
+    if (visiting[i] === node) {
+      // Swap with last and decrement count
+      visiting[i] = visiting[visitingCount - 1]!;
+      visitingCount--;
+      return;
+    }
+  }
 }
 
 /**
  * Iteratively update a computed node and all its dependencies.
- * This is a proof of concept that shows how to eliminate recursion.
+ * Uses object pooling and pre-allocated data structures to minimize allocations.
  */
 export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
   // Fast path: already up to date
   if (!(node._flags & (OUTDATED | NOTIFIED))) return;
   
-  const stack: UpdateFrame[] = [];
-  const visiting = new Set<UpdatableNode>();
+  // Reset state
+  stackTop = -1;
+  visitingCount = 0;
+  framePoolIndex = 0;
   
   // Push initial node
-  stack.push({
-    node,
-    phase: 'check-dirty',
-    isDirty: false
-  });
+  const initialFrame = getFrame();
+  initialFrame.node = node;
+  initialFrame.phase = PHASE_CHECK_DIRTY;
+  initialFrame.isDirty = false;
+  stack[++stackTop] = initialFrame;
   
-  while (stack.length > 0) {
-    const frame = stack[stack.length - 1]!;
+  while (stackTop >= 0) {
+    const frame = stack[stackTop]!; // We know this is defined when stackTop >= 0
     
     switch (frame.phase) {
-      case 'check-dirty': {
+      case PHASE_CHECK_DIRTY: {
         // Check if node needs update
-        if (frame.node._flags & OUTDATED) {
+        if (frame.node!._flags & OUTDATED) {
           frame.isDirty = true;
-          frame.phase = 'traverse-sources';
-        } else if (frame.node._flags & NOTIFIED) {
+          frame.phase = PHASE_TRAVERSE_SOURCES;
+        } else if (frame.node!._flags & NOTIFIED) {
           // Need to check sources
-          frame.phase = 'traverse-sources';
-          frame.currentSource = frame.node._sources;
+          frame.phase = PHASE_TRAVERSE_SOURCES;
+          frame.currentSource = frame.node!._sources;
         } else {
           // Node is clean
-          stack.pop();
+          returnFrame(stack[stackTop]);
+          stackTop--;
         }
         break;
       }
       
-      case 'traverse-sources': {
+      case PHASE_TRAVERSE_SOURCES: {
         // Check all sources for changes
-        let allSourcesClean = true;
         
         while (frame.currentSource) {
           const source = frame.currentSource;
@@ -75,22 +173,22 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
             
             if (updatableSource._flags & (OUTDATED | NOTIFIED)) {
               // Need to update this source first
-              if (visiting.has(updatableSource)) {
+              if (isVisiting(updatableSource)) {
                 throw new Error('Cycle detected');
               }
               
               // Save state and process source
               frame.sourceNode = updatableSource;
               frame.sourceOldVersion = updatableSource._version;
-              frame.phase = 'wait-for-source';
+              frame.phase = PHASE_WAIT_FOR_SOURCE;
               
               // Push source onto stack
-              stack.push({
-                node: updatableSource,
-                phase: 'check-dirty',
-                isDirty: false
-              });
-              visiting.add(updatableSource);
+              const sourceFrame = getFrame();
+              sourceFrame.node = updatableSource;
+              sourceFrame.phase = PHASE_CHECK_DIRTY;
+              sourceFrame.isDirty = false;
+              stack[++stackTop] = sourceFrame;
+              addVisiting(updatableSource);
               break;
             }
           }
@@ -108,19 +206,20 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
         // If we processed all sources, move to next phase
         if (!frame.currentSource) {
           if (frame.isDirty) {
-            frame.phase = 'ready-to-compute';
+            frame.phase = PHASE_READY_TO_COMPUTE;
           } else {
             // Update global version and we're done
-            frame.node._globalVersion = ctx.version;
-            frame.node._flags &= ~NOTIFIED;
-            stack.pop();
-            visiting.delete(frame.node);
+            frame.node!._globalVersion = ctx.version;
+            frame.node!._flags &= ~NOTIFIED;
+            returnFrame(stack[stackTop]);
+            stackTop--;
+            removeVisiting(frame.node!);
           }
         }
         break;
       }
       
-      case 'wait-for-source': {
+      case PHASE_WAIT_FOR_SOURCE: {
         // Source has been updated, check if it changed
         if (frame.sourceNode && frame.sourceOldVersion !== undefined) {
           if (frame.sourceOldVersion !== frame.sourceNode._version) {
@@ -129,40 +228,41 @@ export function iterativeUpdate(node: UpdatableNode, ctx: SignalContext): void {
         }
         
         // Continue traversing sources
-        frame.phase = 'traverse-sources';
+        frame.phase = PHASE_TRAVERSE_SOURCES;
         break;
       }
       
-      case 'ready-to-compute': {
+      case PHASE_READY_TO_COMPUTE: {
         // All sources are up to date, now compute if needed
-        if (frame.node._callback && frame.isDirty) {
+        if (frame.node!._callback && frame.isDirty) {
           // Mark as running to detect cycles
-          frame.node._flags |= RUNNING;
+          frame.node!._flags |= RUNNING;
           
           try {
-            const oldValue = frame.node._value;
-            const newValue = frame.node._callback();
+            const oldValue = frame.node!._value;
+            const newValue = frame.node!._callback();
             
-            if (newValue !== oldValue || frame.node._version === 0) {
-              frame.node._value = newValue;
-              frame.node._version++;
+            if (newValue !== oldValue || frame.node!._version === 0) {
+              frame.node!._value = newValue;
+              frame.node!._version++;
             }
             
-            frame.node._globalVersion = ctx.version;
-            frame.node._flags = (frame.node._flags & ~(OUTDATED | NOTIFIED | RUNNING));
+            frame.node!._globalVersion = ctx.version;
+            frame.node!._flags = (frame.node!._flags & ~(OUTDATED | NOTIFIED | RUNNING));
           } finally {
-            frame.node._flags &= ~RUNNING;
+            frame.node!._flags &= ~RUNNING;
           }
         }
         
-        frame.phase = 'computed';
+        frame.phase = PHASE_COMPUTED;
         break;
       }
       
-      case 'computed': {
+      case PHASE_COMPUTED: {
         // Node has been computed, pop from stack
-        stack.pop();
-        visiting.delete(frame.node);
+        returnFrame(stack[stackTop]);
+        stackTop--;
+        removeVisiting(frame.node!);
         break;
       }
     }

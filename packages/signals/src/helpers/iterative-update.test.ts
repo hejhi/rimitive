@@ -1,4 +1,4 @@
-import { it, expect, describe, vi } from 'vitest';
+import { it, expect, describe } from 'vitest';
 import { createSignalAPI } from '../index';
 import { createSignalFactory } from '../signal';
 import { createComputedFactory } from '../computed';
@@ -6,7 +6,7 @@ import { createEffectFactory } from '../effect';
 import { createBatchFactory } from '../batch';
 
 describe('Iterative update implementation', () => {
-  const { signal, computed, effect } = createSignalAPI({
+  const { signal, computed } = createSignalAPI({
     signal: createSignalFactory,
     computed: createComputedFactory,
     effect: createEffectFactory,
@@ -117,17 +117,6 @@ describe('Iterative update implementation', () => {
       // Monkey-patch to count recursion depth
       let maxDepth = 0;
       let currentDepth = 0;
-      
-      const originalUpdate = (chain[depth] as any)._update;
-      const instrumentedUpdate = function(this: any) {
-        currentDepth++;
-        maxDepth = Math.max(maxDepth, currentDepth);
-        try {
-          return originalUpdate.call(this);
-        } finally {
-          currentDepth--;
-        }
-      };
       
       // Instrument all computeds in the chain
       for (let i = 1; i <= depth; i++) {
