@@ -1,4 +1,11 @@
-// Subscribe implementation with factory pattern for performance
+// ALGORITHM: Lightweight Value Change Subscription
+//
+// Subscribe provides a simpler alternative to effects for when you only
+// need to react to changes in a single signal/computed. Unlike effects:
+// - Only tracks one dependency (more efficient)
+// - Provides both old and new values to callback
+// - No cleanup function support (simpler API)
+// - Can skip equality checks for reference types
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, ScheduledNode, StatefulNode } from './types';
@@ -16,70 +23,106 @@ export interface SubscribeNode<T> extends ScheduledNode, StatefulNode {
 }
 
 export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
+  // Only need disposal helper since subscribe has exactly one source
   const { disposeAllSources } = createSourceCleanupHelpers(createDependencyHelpers());
+  
+  // Scheduling helpers for deferred execution
   const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;
-    _callback: (value: T) => void;
-    _flags = 0;
-    _lastValue: T;
-    _sources: Edge | undefined = undefined;
-    _nextScheduled?: ScheduledNode = undefined;
+    _callback: (value: T) => void;           // User's callback function
+    _flags = 0;                              // State flags (NOTIFIED, DISPOSED, SKIP_EQUALITY)
+    _lastValue: T;                           // Cached value for equality check
+    _sources: Edge | undefined = undefined;  // Single edge to source signal/computed
+    _nextScheduled?: ScheduledNode = undefined; // Link in scheduling queue
 
     constructor(source: Readable<T> & ProducerNode, callback: (value: T) => void) {
       this._callback = callback;
+      
+      // ALGORITHM: Initial Value Caching
+      // Store the initial value for comparison in _flush
+      // This read doesn't establish dependency (we do that manually)
       this._lastValue = source.value;
-      // Note: source is linked via _sources in _setupDependency
+      
+      // Dependency is established later via _setupDependency
     }
 
     _invalidate(): void {
+      // ALGORITHM: Scheduled Notification
+      // When source changes, mark as NOTIFIED and schedule for batch execution
+      // Skip if already NOTIFIED or DISPOSED
       invalidateConsumer(this, NOTIFIED | DISPOSED, NOTIFIED);
     }
 
     _flush(): void {
+      // Skip if disposed
       if (this._flags & DISPOSED) return;
+      
+      // Clear NOTIFIED flag
       this._flags &= ~NOTIFIED;
       
-      // Get source from _sources edge
+      // ALGORITHM: Source Resolution
+      // Get the source from our single dependency edge
       if (!this._sources) return;
       const source = this._sources.source as Readable<T> & ProducerNode;
       
+      // Read current value (this doesn't track dependency since we're not RUNNING)
       const currentValue = source.value;
+      
+      // ALGORITHM: Conditional Callback Execution
+      // Only call callback if:
+      // 1. skipEqualityCheck is enabled (always call)
+      // 2. Value actually changed (using === equality)
       const skipEqualityCheck = this._flags & SKIP_EQUALITY;
       
       if (skipEqualityCheck || currentValue !== this._lastValue) {
+        // Update cached value before calling callback
+        // This ensures callback sees consistent state
         this._lastValue = currentValue;
         this._callback(currentValue);
       }
+      // FLAG: No error handling - callback errors will propagate
     }
 
 
     dispose(): void {
+      // ALGORITHM: Clean Disposal
+      // Mark as disposed and remove the single source edge
       disposeConsumer(this, disposeAllSources);
     }
 
     _setupDependency(source: Readable<T> & ProducerNode): void {
-      // Get or create dependency node
+      // ALGORITHM: Manual Edge Creation
+      // Subscribe doesn't use automatic dependency tracking
+      // Instead, we manually create a single edge to the source
+      
+      // Create new edge object
       const node = {} as Edge;
 
-      // Setup the node
+      // Setup bidirectional pointers
       node.source = source;
       node.target = this;
-      node.version = source._version;
+      node.version = source._version; // Current version for staleness checks
+      
+      // This subscribe only has one source, so no source list needed
       node.nextSource = undefined;
       node.prevSource = undefined;
       
-      // Link into source's targets list
+      // ALGORITHM: Insert at Head of Target List
+      // Add to the beginning of source's target list
       node.nextTarget = source._targets;
       node.prevTarget = undefined;
       
+      // Update old head's back pointer
       if (source._targets) {
         source._targets.prevTarget = node;
       }
+      
+      // Update source's head pointer
       source._targets = node;
       
-      // Set as the single source
+      // Store as our single source
       this._sources = node;
     }
   }
@@ -92,18 +135,23 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     
     const sub = new Subscribe(source, callback);
     
-    // If raw mode, mark it so _execute skips equality check
+    // ALGORITHM: Option Handling
+    // skipEqualityCheck disables === comparison
+    // Useful for objects where you want to react to every update
+    // even if the reference doesn't change
     if (options?.skipEqualityCheck) {
       sub._flags |= SKIP_EQUALITY;
     }
     
-    // Setup dependency tracking
+    // Manually establish the dependency relationship
     sub._setupDependency(source);
     
-    // Call callback with initial value
+    // ALGORITHM: Immediate Initial Callback
+    // Call callback with current value to establish initial state
+    // This matches effect behavior of running immediately
     callback(source.value);
     
-    // Return unsubscribe function
+    // Return unsubscribe function for cleanup
     return () => sub.dispose();
   };
 

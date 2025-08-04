@@ -5,13 +5,18 @@ import type { ScheduledConsumerHelpers } from './scheduled-consumer';
 
 const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 
-// Pre-compute combined flags for faster checks
+// OPTIMIZATION: Pre-computed Bitmask
+// Combine flags that indicate a node should be skipped during traversal
+// Using bitwise OR at compile time for faster runtime checks
 const SKIP_FLAGS = NOTIFIED | DISPOSED | RUNNING;
 
-// Stack frame for depth-first traversal
+// ALGORITHM: Explicit Stack for Iterative DFS
+// Instead of using recursion (which can overflow on deep graphs),
+// we maintain an explicit stack of traversal frames.
+// Each frame represents a position in the graph we need to return to.
 interface TraversalFrame {
-  edge: Edge;
-  next: TraversalFrame | undefined;
+  edge: Edge; // The edge to process when we return to this frame
+  next: TraversalFrame | undefined; // Link to next frame (linked list stack)
 }
 
 export interface GraphTraversalHelpers {
@@ -20,21 +25,37 @@ export interface GraphTraversalHelpers {
 
 /**
  * Creates graph traversal helpers for efficient dependency graph updates.
- * This uses a stack-based approach similar to alien-signals for better performance
- * on deep dependency chains.
+ * 
+ * ALGORITHM: Iterative Depth-First Search with Explicit Stack
+ * Traditional recursive DFS can cause stack overflow on deep dependency chains.
+ * This implementation uses an explicit stack to traverse arbitrarily deep graphs.
+ * 
+ * INSPIRATION: This approach is similar to alien-signals and other high-performance
+ * reactive libraries that prioritize handling deep dependency chains efficiently.
  */
 export function createGraphTraversalHelpers(
   _ctx: SignalContext,
   { scheduleConsumer }: ScheduledConsumerHelpers
 ): GraphTraversalHelpers {
   /**
-   * Performs a depth-first traversal of the dependency graph starting from the given edge,
-   * invalidating all affected nodes in a single pass. This avoids the cascade of function
-   * calls that would occur with recursive invalidation.
+   * ALGORITHM: Push-Phase Invalidation via Iterative DFS
+   * 
+   * When a signal changes, we need to invalidate all transitively dependent
+   * computeds and effects. This function implements the "push" phase of the
+   * push-pull algorithm.
+   * 
+   * Key insights:
+   * 1. We only mark nodes as NOTIFIED (not OUTDATED) for lazy evaluation
+   * 2. Effects are scheduled but not executed (deferred until batch end)
+   * 3. Already notified nodes are skipped (prevents redundant traversal)
+   * 4. Depth-first order ensures proper invalidation ordering
    */
   const traverseAndInvalidate = (startEdge: Edge | undefined): void => {
     if (!startEdge) return;
 
+    // ALGORITHM: Iterative DFS State
+    // - stack: Linked list of positions to return to (simulates call stack)
+    // - currentEdge: Current position in graph traversal
     let stack: TraversalFrame | undefined;
     let currentEdge: Edge | undefined = startEdge;
 
@@ -42,31 +63,46 @@ export function createGraphTraversalHelpers(
     while (currentEdge) {
       const target = currentEdge.target;
       
-      // Type guard to check if target is a StatefulNode
+      // Type guard to check if target is a StatefulNode (has flags)
       if ('_flags' in target) {
         const statefulTarget = target as ConsumerNode & StatefulNode;
         
-        // Skip if already notified, disposed, or running
+        // OPTIMIZATION: Early Skip Check
+        // Skip nodes that are:
+        // - NOTIFIED: Already marked in this invalidation pass
+        // - DISPOSED: No longer active, will be cleaned up
+        // - RUNNING: Currently executing, will see changes when done
+        // This prevents redundant work and infinite loops
         if (statefulTarget._flags & SKIP_FLAGS) {
           currentEdge = currentEdge.nextTarget;
           continue;
         }
         
-        // Mark as notified only - ALL nodes use lazy evaluation now
+        // ALGORITHM: Lazy Invalidation Strategy
+        // We only mark nodes as NOTIFIED, not OUTDATED. This is key to performance:
+        // - NOTIFIED means "might be dirty, check when accessed"
+        // - Avoids unnecessary computation if the value is never read
+        // - Computed values will verify if truly dirty when accessed
         statefulTarget._flags |= NOTIFIED;
         
-        // Schedule if it's a scheduled node (effect)
+        // ALGORITHM: Effect Scheduling
+        // Effects are special - they always run when notified, but we defer
+        // execution until the batch completes to avoid inconsistent state
         if ('_flush' in target && '_nextScheduled' in target && 'dispose' in target) {
           const scheduledTarget = target as unknown as ScheduledNode;
           scheduleConsumer(scheduledTarget);
         }
       }
       
-      // Check if this node has its own targets (depth-first)
+      // ALGORITHM: Recursive Descent
+      // If this consumer is also a producer (i.e., a computed), we need to
+      // traverse its dependents too. This handles transitive dependencies.
       if ('_targets' in target) {
         const targetAsProducer = target as ConsumerNode & ProducerNode;
         if (targetAsProducer._targets) {
-          // Save current position if there are siblings to process later
+          // ALGORITHM: Stack Management for Backtracking
+          // Before descending, save our position if there are siblings
+          // This simulates the return address in recursive DFS
           if (currentEdge.nextTarget) {
             stack = {
               edge: currentEdge.nextTarget,
@@ -74,19 +110,23 @@ export function createGraphTraversalHelpers(
             };
           }
           
-          // Descend into the target's dependencies
+          // Descend into the target's dependencies (depth-first)
           currentEdge = targetAsProducer._targets;
           continue;
         }
       }
       
-      // No targets to descend into, move to next sibling
+      // ALGORITHM: Traverse Siblings
+      // No children to visit, move to next sibling at current level
       currentEdge = currentEdge.nextTarget;
       
-      // If no siblings, pop from stack to backtrack
+      // ALGORITHM: Backtracking via Stack Pop
+      // If no siblings remain, pop saved positions from stack
+      // This simulates returning from recursive calls in DFS
       while (!currentEdge && stack) {
         currentEdge = stack.edge;
-        stack = stack.next;
+        stack = stack.next; // Pop the stack frame
+        // FLAG: This could be optimized with object pooling for stack frames
       }
     }
   }

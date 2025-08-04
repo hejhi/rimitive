@@ -1,3 +1,13 @@
+// ALGORITHM: Lazy Computed Values with Automatic Dependency Tracking
+// 
+// Computed values implement the "pull" part of push-pull reactivity:
+// - They only recompute when accessed (lazy evaluation)
+// - They cache their result until dependencies change
+// - They automatically track which signals/computeds they depend on
+// - They can be both producers (for other computeds) and consumers (of signals)
+// 
+// This creates a directed acyclic graph (DAG) of dependencies that updates efficiently.
+
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, StatefulNode, Disposable } from './types';
@@ -9,9 +19,9 @@ import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, EdgeCache, StatefulNode, Disposable {
   __type: 'computed';
-  readonly value: T;
-  peek(): T;
-  dispose(): void;
+  readonly value: T;  // Getter triggers lazy evaluation
+  peek(): T;          // Non-tracking read (still evaluates if needed)
+  dispose(): void;    // Cleanup method to break circular references
 }
 
 const {
@@ -23,86 +33,140 @@ const {
 } = CONSTANTS;
 
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
+  // Helper functions for managing the dependency graph
   const depHelpers = createDependencyHelpers();
   const { addDependency, shouldNodeUpdate } = depHelpers
+  
+  // Helpers for cleaning up stale dependencies after recomputation
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(depHelpers);
+    
+  // Scheduling helpers (computeds don't use these directly, but need for traversal)
   const scheduledConsumerHelpers = createScheduledConsumerHelpers(ctx);
+  
+  // Graph traversal for propagating invalidations to dependents
   const { traverseAndInvalidate } = createGraphTraversalHelpers(ctx, scheduledConsumerHelpers);
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
-    _callback: () => T;
-    _value: T | undefined = undefined;
-    _sources: Edge | undefined = undefined;
-    _flags = OUTDATED | IS_COMPUTED;
-    _targets: Edge | undefined = undefined;
-    _lastEdge: Edge | undefined = undefined;
-    _version = 0;
-    _globalVersion = -1;
+    _callback: () => T;                    // The user's computation function
+    _value: T | undefined = undefined;     // Cached result of computation
+    _sources: Edge | undefined = undefined; // Dependencies (what this computed reads)
+    _flags = OUTDATED | IS_COMPUTED;       // Start as OUTDATED to force first computation
+    _targets: Edge | undefined = undefined; // Dependents (who reads this computed)
+    _lastEdge: Edge | undefined = undefined; // Cache for fast repeated access
+    _version = 0;                          // Incremented when value changes
+    _globalVersion = -1;                   // Global version when last checked for updates
 
     constructor(compute: () => T) {
       this._callback = compute;
     }
 
     get value(): T {
+      // ALGORITHM: Cycle Detection
+      // If we're already computing this value, we have a circular dependency
+      // This prevents infinite recursion in cases like: a = computed(() => b.value + 1); b = computed(() => a.value + 1)
       if (this._flags & RUNNING) throw new Error('Cycle detected');
       
-      // Track dependency if in computation context
+      // ALGORITHM: Dependency Registration (Pull Phase)
+      // If we're being read from within another computed/effect, register the dependency
       const consumer = ctx.currentConsumer;
       if (consumer && '_flags' in consumer && typeof consumer._flags === 'number' && consumer._flags & RUNNING) {
         addDependency(this, consumer, this._version);
       }
       
+      // ALGORITHM: Lazy Evaluation
+      // Only recompute if our dependencies have changed
       this._update();
+      
+      // Value is guaranteed to be defined after _update
       return this._value!;
     }
 
     peek(): T {
+      // ALGORITHM: Non-tracking Read
+      // Same as value getter but doesn't register dependencies
+      // Useful for conditional checks that shouldn't create dependencies
       this._update();
       return this._value!;
     }
 
     _recompute(): void {
-      // Single flag update: set RUNNING, clear OUTDATED and NOTIFIED
+      // ALGORITHM: Atomic Flag Update
+      // Use single assignment with bitwise operations for atomicity
+      // Set RUNNING, clear OUTDATED and NOTIFIED in one operation
       this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
-      // Mark sources for dependency tracking
+      // ALGORITHM: Dependency Discovery Preparation
+      // Mark all current dependencies with version -1
+      // After recomputation, any dependency still at -1 wasn't accessed
+      // and will be removed during cleanup (dynamic dependency tracking)
       let source = this._sources;
       while (source) {
         source.version = -1;
         source = source.nextSource;
       }
       
+      // ALGORITHM: Context Switching for Dependency Tracking
+      // Set ourselves as the current consumer so signal reads register with us
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
       
       try {
         const oldValue = this._value;
+        
+        // ALGORITHM: Execute User Computation
+        // This may read signals/computeds, which will call addDependency
         const newValue = this._callback();
         
-        // Update value and version if changed or first run
+        // ALGORITHM: Change Detection and Version Update
+        // Only increment version if value actually changed
+        // Exception: always update on first run (version 0) to establish initial state
         if (newValue !== oldValue || this._version === 0) {
           this._value = newValue;
           this._version++;
+          // FLAG: Using === equality like signals - objects need immutable updates
         }
         
+        // Cache the global version to skip future checks if nothing changes
         this._globalVersion = ctx.version;
       } finally {
+        // ALGORITHM: Cleanup Phase (Critical for correctness)
+        // 1. Restore previous consumer context
         ctx.currentConsumer = prevConsumer;
+        
+        // 2. Clear RUNNING flag to allow future computations
         this._flags &= ~RUNNING;
+        
+        // 3. Remove stale dependencies (those with version -1)
+        // This implements dynamic dependency tracking - dependencies can change between runs
         cleanupSources(this);
       }
     }
 
     _invalidate(): void {
+      // ALGORITHM: Invalidation Guard
+      // Skip if already notified (avoid redundant traversal)
+      // Skip if disposed (node is dead)
+      // Skip if running (will see changes when done)
       if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
       
+      // Mark as potentially dirty
       this._flags |= NOTIFIED;
+      
+      // ALGORITHM: Transitive Invalidation
+      // If this computed has dependents, they might be affected too
+      // Propagate the invalidation through the graph
       if (this._targets) traverseAndInvalidate(this._targets);
     }
 
     _update(): void {
+      // ALGORITHM: Conditional Recomputation
+      // shouldNodeUpdate checks:
+      // 1. If we're already clean (via global version)
+      // 2. If we're OUTDATED (definitely need update)
+      // 3. If we're NOTIFIED (check dependencies recursively)
+      // Only recompute if actually necessary
       if (shouldNodeUpdate(this, ctx)) {
         this._recompute();
       }
@@ -110,11 +174,21 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
 
     dispose(): void {
+      // ALGORITHM: Safe Disposal
+      // Ensure idempotent disposal - can be called multiple times safely
       if (this._flags & DISPOSED) return;
       
+      // Mark as disposed to prevent further updates
       this._flags |= DISPOSED;
+      
+      // Remove all edges to sources (break circular references for GC)
       disposeAllSources(this);
+      
+      // Clear cached value to free memory
       this._value = undefined;
+      
+      // TODO: Should we also clear _targets to help dependents?
+      // Currently dependents will discover this node is disposed when they update
     }
   }
 

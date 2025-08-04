@@ -1,11 +1,17 @@
 /**
- * TEST: Disproves the claim that Lattice maintains static dependency edges
+ * TEST: Verification of Dynamic Dependency Unlinking Algorithm
  * 
- * The summary.md claims:
- * "When condB changes → traverses to expensiveB → traverses to result → marks as NOTIFIED
- *  This happens even though result doesn't actually use expensiveB when condition is true"
+ * This test suite verifies a critical optimization in the reactive system:
+ * Dependencies are dynamically tracked and unlinked when no longer used.
  * 
- * This test proves that claim is FALSE. Lattice DOES implement dynamic dependency unlinking.
+ * ALGORITHM TESTED: Dynamic Dependency Graph Maintenance
+ * - When a computed runs, it marks all current dependencies with version -1
+ * - As it accesses dependencies during execution, it updates their versions
+ * - After execution, any dependency still at version -1 is removed
+ * - This ensures the dependency graph reflects only active data flow
+ * 
+ * This optimization is crucial for conditional computations where branches
+ * may access different sets of dependencies based on runtime conditions.
  */
 
 import { describe, it, expect } from 'vitest';
