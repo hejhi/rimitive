@@ -171,4 +171,63 @@ describe('ScheduledConsumerHelpers', () => {
     expect(flush2).toHaveBeenCalledTimes(1);
     expect(flush3).toHaveBeenCalledTimes(1);
   });
+
+  it('should throw on queue overflow', () => {
+    const ctx = createContext();
+    const helpers = createScheduledConsumerHelpers(ctx);
+    
+    // Fill the queue to capacity
+    for (let i = 0; i < 256; i++) {
+      const consumer: ScheduledNode & StatefulNode = {
+        __type: 'test',
+        _flags: 0,
+        _nextScheduled: undefined,
+        _flush: vi.fn(),
+        _invalidate: vi.fn(),
+        _sources: undefined,
+        dispose: () => {},
+      };
+      helpers.scheduleConsumer(consumer);
+    }
+    
+    // The 257th consumer should cause an overflow error
+    const overflowConsumer: ScheduledNode & StatefulNode = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: vi.fn(),
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose: () => {},
+    };
+    
+    expect(() => helpers.scheduleConsumer(overflowConsumer)).toThrow(/Effect queue overflow: 256 effects scheduled/);
+  });
+
+  it('should reset queue counters to prevent integer overflow', () => {
+    const ctx = createContext();
+    const helpers = createScheduledConsumerHelpers(ctx);
+    
+    // Set tail close to overflow threshold
+    ctx.scheduledTail = 0x7FFFFFF1;
+    ctx.scheduledHead = 0x7FFFFFF1;
+    
+    // Schedule and flush a consumer
+    const consumer: ScheduledNode & StatefulNode = {
+      __type: 'test',
+      _flags: 0,
+      _nextScheduled: undefined,
+      _flush: vi.fn(),
+      _invalidate: vi.fn(),
+      _sources: undefined,
+      dispose: () => {},
+    };
+    
+    helpers.scheduleConsumer(consumer);
+    helpers.flushScheduled();
+    
+    // Should have reset to 0
+    expect(ctx.scheduledHead).toBe(0);
+    expect(ctx.scheduledTail).toBe(0);
+  });
 });

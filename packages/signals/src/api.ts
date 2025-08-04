@@ -1,11 +1,38 @@
-// ALGORITHM: Factory-Based API with Shared Context
-//
-// This module implements a factory pattern that allows users to create
-// custom reactive primitives while sharing a single context. The design:
-// 1. Each primitive (signal, computed, effect) is a factory function
-// 2. All factories receive the same context for coordination
-// 3. Uses the Lattice library for extensible method composition
-// 4. Enables tree-shaking by only importing needed factories
+/**
+ * ALGORITHM: Composable Factory-Based API Architecture
+ * 
+ * This module implements a sophisticated factory pattern that enables:
+ * 
+ * 1. MODULAR COMPOSITION:
+ *    - Each reactive primitive (signal, computed, effect) is a separate factory
+ *    - Users can import only what they need (tree-shaking)
+ *    - Easy to add custom primitives by creating new factories
+ *    - Similar to React's hooks philosophy - composable primitives
+ * 
+ * 2. SHARED CONTEXT PATTERN:
+ *    - All primitives share a single SignalContext instance
+ *    - Enables coordination between different primitive types
+ *    - Context isolation for SSR/concurrent rendering
+ *    - Inspired by React Context and Zone.js
+ * 
+ * 3. TYPE-SAFE EXTENSIBILITY:
+ *    - TypeScript infers the final API shape from factories
+ *    - Adding new factories automatically extends the API types
+ *    - No need to manually maintain API interface definitions
+ *    - Uses advanced TypeScript mapped types and inference
+ * 
+ * 4. LATTICE INTEGRATION:
+ *    - Leverages @lattice/lattice for method composition
+ *    - Provides automatic dispose() method for cleanup
+ *    - Handles method name conflicts and composition
+ *    - Minimal boilerplate for extending the system
+ * 
+ * DESIGN PHILOSOPHY:
+ * - Composition over inheritance
+ * - Explicit over implicit
+ * - Type safety without runtime overhead
+ * - Pay only for what you use
+ */
 import { createContext as createLattice, type LatticeExtension } from '@lattice/lattice';
 import { createContext } from './context';
 

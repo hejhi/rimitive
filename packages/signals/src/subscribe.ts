@@ -1,11 +1,39 @@
-// ALGORITHM: Lightweight Value Change Subscription
-//
-// Subscribe provides a simpler alternative to effects for when you only
-// need to react to changes in a single signal/computed. Unlike effects:
-// - Only tracks one dependency (more efficient)
-// - Provides both old and new values to callback
-// - No cleanup function support (simpler API)
-// - Can skip equality checks for reference types
+/**
+ * ALGORITHM: Lightweight Single-Source Subscription Pattern
+ * 
+ * Subscribe implements a specialized reactive pattern optimized for the common
+ * case of watching a single value. It's more efficient than effects because:
+ * 
+ * 1. SINGLE DEPENDENCY OPTIMIZATION:
+ *    - No linked list traversal for dependencies
+ *    - No dynamic dependency discovery overhead
+ *    - Direct edge to exactly one source
+ *    - O(1) for all operations
+ * 
+ * 2. VALUE CACHING FOR CHANGE DETECTION:
+ *    - Stores previous value to detect actual changes
+ *    - Uses === equality by default (referential equality)
+ *    - Can disable equality check for deep comparison scenarios
+ *    - Prevents unnecessary callback invocations
+ * 
+ * 3. SIMPLIFIED API:
+ *    - No cleanup function support (use dispose instead)
+ *    - No dependency tracking context needed
+ *    - Direct callback with new value only
+ *    - More intuitive for simple use cases
+ * 
+ * USE CASES:
+ * - UI components reacting to single state changes
+ * - Logging/debugging specific values
+ * - Bridge to non-reactive systems
+ * - Performance-critical single-value monitoring
+ * 
+ * TRADE-OFFS:
+ * - Can't track multiple dependencies (use effect instead)
+ * - No cleanup function (must manage externally)
+ * - No access to old value in callback
+ * - Manual dependency setup (less magic, more explicit)
+ */
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, ScheduledNode, StatefulNode } from './types';

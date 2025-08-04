@@ -1,13 +1,41 @@
-// ALGORITHM: Side Effects with Automatic Cleanup and Batching
-//
-// Effects are the "leaves" of the reactive graph - they consume values but don't
-// produce any. They're where side effects happen (DOM updates, logging, etc).
-//
-// Key features:
-// - Auto-run when dependencies change
-// - Support cleanup functions for resource management  
-// - Batched execution to avoid intermediate states
-// - Scheduled via circular buffer for performance
+/**
+ * ALGORITHM: Reactive Effects with Automatic Cleanup and Batching
+ * 
+ * Effects are the "output nodes" of the reactive graph - they consume reactive values
+ * and perform side effects. Unlike computed values, effects:
+ * - Always execute eagerly when dependencies change (no lazy evaluation)
+ * - Don't produce values (they're sinks, not sources)
+ * - Can have cleanup functions for resource management
+ * 
+ * KEY ALGORITHMS:
+ * 
+ * 1. AUTOMATIC CLEANUP PATTERN (React-inspired):
+ *    - Effects can return a cleanup function
+ *    - Cleanup runs before next execution and on disposal
+ *    - Prevents resource leaks (event listeners, timers, subscriptions)
+ * 
+ * 2. BATCHED SCHEDULING:
+ *    - Effects are queued, not executed immediately
+ *    - Batch completes after all sync updates finish
+ *    - Prevents seeing intermediate/inconsistent states
+ *    - Similar to React's batching in event handlers
+ * 
+ * 3. CIRCULAR BUFFER QUEUE:
+ *    - Effects scheduled in a power-of-2 sized circular buffer
+ *    - O(1) enqueue/dequeue operations
+ *    - No array resizing or memory allocation during scheduling
+ * 
+ * 4. DEDUPLICATION:
+ *    - Each effect scheduled at most once per batch
+ *    - NOTIFIED flag prevents duplicate scheduling
+ *    - Improves performance with many dependency changes
+ * 
+ * INSPIRATION:
+ * - React useEffect (cleanup pattern, dependency tracking)
+ * - MobX autorun (automatic re-execution)
+ * - Vue watchEffect (immediate execution)
+ * - RxJS (cleanup/disposal pattern)
+ */
 
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';

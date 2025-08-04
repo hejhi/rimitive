@@ -1,11 +1,41 @@
-// Dependency tracking helpers - shared by signal.ts and computed.ts
-// This module implements the core graph management algorithms for the reactive system.
-// 
-// ALGORITHM: Bidirectional Dependency Graph
-// The reactive system maintains a bidirectional graph where:
-// - Producers (signals/computeds) have forward edges to their consumers (computeds/effects)
-// - Consumers have backward edges to their producers
-// This allows O(1) edge removal and efficient traversal in both directions
+/**
+ * ALGORITHM: Bidirectional Dependency Graph Management
+ * 
+ * This module implements the core graph algorithms that power the reactive system.
+ * The key insight is using a bidirectional graph with intrusive linked lists:
+ * 
+ * 1. INTRUSIVE LINKED LISTS:
+ *    - Edges ARE the list nodes (no separate allocation)
+ *    - Each edge belongs to TWO lists simultaneously:
+ *      a) Producer's target list (forward edges)
+ *      b) Consumer's source list (backward edges)
+ *    - Enables O(1) insertion and removal
+ *    - Better cache locality than pointer-based graphs
+ * 
+ * 2. EDGE CACHING OPTIMIZATION:
+ *    - Producers cache their last accessed edge
+ *    - Exploits temporal locality - same consumer often reads repeatedly
+ *    - Turns O(n) search into O(1) in common case
+ *    - Inspired by CPU inline caches
+ * 
+ * 3. VERSION-BASED STALENESS DETECTION:
+ *    - Each edge stores the producer's version when created
+ *    - Comparing edge.version to producer._version detects changes
+ *    - More efficient than dirty flags or timestamps
+ *    - Handles the "diamond problem" correctly
+ * 
+ * 4. DYNAMIC DEPENDENCY DISCOVERY:
+ *    - Dependencies detected at runtime, not declared
+ *    - Supports conditional logic naturally
+ *    - Dependencies can change between computations
+ *    - Similar to mobx/vue but without proxies
+ * 
+ * INSPIRATION:
+ * - Glimmer's reference system (version tracking)
+ * - Linux kernel's intrusive lists (memory efficiency)  
+ * - V8's inline caches (edge caching)
+ * - Database query planners (dependency analysis)
+ */
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge } from '../types';
 import type { SignalContext } from '../context';

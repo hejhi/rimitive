@@ -1,12 +1,35 @@
-// ALGORITHM: Lazy Computed Values with Automatic Dependency Tracking
-// 
-// Computed values implement the "pull" part of push-pull reactivity:
-// - They only recompute when accessed (lazy evaluation)
-// - They cache their result until dependencies change
-// - They automatically track which signals/computeds they depend on
-// - They can be both producers (for other computeds) and consumers (of signals)
-// 
-// This creates a directed acyclic graph (DAG) of dependencies that updates efficiently.
+/**
+ * ALGORITHM: Lazy Computed Values with Push-Pull Reactivity
+ * 
+ * Computed values are the heart of the reactive system, implementing several key algorithms:
+ * 
+ * 1. LAZY EVALUATION (Pull Algorithm):
+ *    - Only recompute when accessed AND dependencies have changed
+ *    - Cache results between computations for efficiency
+ *    - Inspired by Haskell's lazy evaluation and spreadsheet formulas
+ * 
+ * 2. AUTOMATIC DEPENDENCY TRACKING (Dynamic Discovery):
+ *    - Dependencies detected at runtime by intercepting signal reads
+ *    - No need to declare dependencies upfront (unlike React's useEffect)
+ *    - Dependencies can change between computations (conditional logic)
+ * 
+ * 3. PUSH-PULL HYBRID:
+ *    - PUSH: Receive invalidation notifications from dependencies
+ *    - PULL: Only recompute when actually accessed
+ *    - Best of both worlds: eager notification, lazy computation
+ * 
+ * 4. DIAMOND DEPENDENCY OPTIMIZATION:
+ *    - Handles diamond patterns efficiently (A -> B,C -> D)
+ *    - Version tracking prevents redundant recomputation
+ *    - Global version clock enables O(1) staleness checks
+ * 
+ * This creates a directed acyclic graph (DAG) that updates with optimal efficiency.
+ * The implementation draws inspiration from:
+ * - MobX computed values
+ * - Vue 3's computed refs
+ * - SolidJS memos
+ * - Incremental computation literature
+ */
 
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
@@ -49,17 +72,47 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
-    _callback: () => T;                    // The user's computation function
-    _value: T | undefined = undefined;     // Cached result of computation
-    _sources: Edge | undefined = undefined; // Dependencies (what this computed reads)
-    _flags = OUTDATED | IS_COMPUTED;       // Start as OUTDATED to force first computation
-    _targets: Edge | undefined = undefined; // Dependents (who reads this computed)
-    _lastEdge: Edge | undefined = undefined; // Cache for fast repeated access
-    _version = 0;                          // Incremented when value changes
-    _globalVersion = -1;                   // Global version when last checked for updates
+    
+    // User's computation function - should be pure for best results
+    _callback: () => T;
+    
+    // ALGORITHM: Memoization Cache
+    // Stores the last computed value to avoid redundant computation.
+    // undefined initially to force first computation.
+    _value: T | undefined = undefined;
+    
+    // ALGORITHM: Dynamic Dependency List
+    // Linked list of edges pointing to our dependencies (signals/computeds we read).
+    // This list is rebuilt on each computation to handle conditional dependencies.
+    _sources: Edge | undefined = undefined;
+    
+    // OPTIMIZATION: Initial State Flags
+    // Start as OUTDATED to force computation on first access.
+    // IS_COMPUTED distinguishes us from effects for different handling.
+    _flags = OUTDATED | IS_COMPUTED;
+    
+    // Linked list of edges pointing to our dependents (computeds/effects that read us)
+    _targets: Edge | undefined = undefined;
+    
+    // OPTIMIZATION: Edge Cache
+    // Same optimization as signals - cache last edge for repeated access
+    _lastEdge: Edge | undefined = undefined;
+    
+    // ALGORITHM: Local Version Counter
+    // Incremented only when our computed value actually changes.
+    // This enables dependents to skip recomputation if we didn't change.
+    _version = 0;
+    
+    // OPTIMIZATION: Global Version Cache
+    // Stores ctx.version when we last verified we're up-to-date.
+    // If global version hasn't changed, we can skip all dependency checks.
+    // -1 means "never checked" to force first update.
+    // INSIGHT: This turns nested dependency checks from O(depth) to O(1)!
+    _globalVersion = -1;
 
     constructor(compute: () => T) {
       this._callback = compute;
+      // FLAG: Could validate that compute is a function here
     }
 
     get value(): T {

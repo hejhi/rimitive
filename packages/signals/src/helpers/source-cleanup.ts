@@ -1,13 +1,46 @@
-// ALGORITHM: Dynamic Dependency Management
-//
-// These helpers manage the cleanup of dependency edges when:
-// 1. A computed/effect is disposed (remove all edges)
-// 2. Dependencies change between runs (remove stale edges)
-//
-// This is crucial for:
-// - Preventing memory leaks (circular references)
-// - Ensuring computeds/effects don't react to old dependencies
-// - Supporting conditional dependency patterns
+/**
+ * ALGORITHM: Dynamic Dependency Management and Memory Safety
+ * 
+ * This module implements the cleanup phase of dynamic dependency tracking.
+ * It's essential for correctness and memory efficiency.
+ * 
+ * KEY ALGORITHMS:
+ * 
+ * 1. MARK-AND-SWEEP FOR DEPENDENCIES:
+ *    - Before recomputation: Mark all dependencies with version -1
+ *    - During recomputation: Update version of accessed dependencies
+ *    - After recomputation: Remove edges still marked with -1
+ *    - Similar to garbage collection algorithms
+ * 
+ * 2. BIDIRECTIONAL EDGE REMOVAL:
+ *    - Each edge must be removed from BOTH linked lists:
+ *      a) Consumer's source list (backward edges)
+ *      b) Producer's target list (forward edges)
+ *    - Prevents dangling pointers and ensures consistency
+ * 
+ * 3. CONDITIONAL DEPENDENCY SUPPORT:
+ *    ```
+ *    computed(() => {
+ *      if (showDetails.value) {
+ *        return `${name.value}: ${description.value}`;
+ *      }
+ *      return name.value;
+ *    })
+ *    ```
+ *    - When showDetails is false, edge to description is removed
+ *    - When showDetails becomes true, edge to description is added
+ *    - This automatic management is key to the reactive model
+ * 
+ * MEMORY SAFETY:
+ * - Prevents circular reference leaks between producers/consumers
+ * - Ensures disposed nodes can be garbage collected
+ * - Critical for long-running applications
+ * 
+ * INSPIRATION:
+ * - Mark-and-sweep garbage collectors
+ * - Database referential integrity
+ * - Graph theory edge removal algorithms
+ */
 import type { ConsumerNode, Edge } from '../types';
 import { createDependencyHelpers } from './dependency-tracking';
 

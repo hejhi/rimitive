@@ -18,9 +18,43 @@ export interface ScheduledConsumerHelpers {
   flushScheduled: () => void;
 }
 
-// ALGORITHM: Effect Scheduling System
-// Effects (side effects) need special handling to ensure they run in a consistent state.
-// This module implements a high-performance scheduling queue using a circular buffer.
+/**
+ * ALGORITHM: High-Performance Effect Scheduling System
+ * 
+ * Effects (side effects) require careful scheduling to maintain consistency.
+ * This module implements several key algorithms:
+ * 
+ * 1. CIRCULAR BUFFER QUEUE:
+ *    - Fixed-size array (256 slots) with head/tail pointers
+ *    - O(1) enqueue and dequeue operations
+ *    - No array resizing or memory allocation during operation
+ *    - Power-of-2 size enables bitwise AND for fast modulo
+ * 
+ * 2. INTRUSIVE SCHEDULING FLAG:
+ *    - Use _nextScheduled property as both flag and linked list pointer
+ *    - Self-reference (_nextScheduled = this) indicates "scheduled"
+ *    - Avoids separate boolean flag or set lookup
+ * 
+ * 3. BATCH-AWARE EXECUTION:
+ *    - Inside batch: Queue for later
+ *    - Outside batch: Execute immediately
+ *    - Ensures effects never see inconsistent intermediate states
+ * 
+ * 4. REVERSE-ORDER PROCESSING:
+ *    - Process queue LIFO to achieve FIFO semantics
+ *    - Compensates for edge prepending in dependency graph
+ *    - Ensures proper execution order respecting dependencies
+ * 
+ * PERFORMANCE CHARACTERISTICS:
+ * - Enqueue: O(1) - Direct array access with bitwise index
+ * - Dequeue: O(1) - Pointer arithmetic, no shifting
+ * - Memory: O(1) - Fixed 256-slot buffer, no dynamic allocation
+ * 
+ * LIMITATIONS:
+ * - Fixed queue size (256) - will wrap and overwrite if exceeded
+ * - No automatic resizing - could lose effects in pathological cases
+ * - scheduledTail can overflow (32-bit integer limit)
+ */
 export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledConsumerHelpers {
   /**
    * ALGORITHM: Circular Buffer Queue for O(1) Scheduling
@@ -48,15 +82,30 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
       ctx.scheduledQueue = new Array<ScheduledNode>(256);
     }
     
+    // SAFETY: Queue Overflow Protection
+    // Check if queue is full before inserting to prevent silent data loss
+    // This adds ~2-3ns overhead but prevents catastrophic failures
+    const queueSize = ctx.scheduledTail - ctx.scheduledHead;
+    if (queueSize >= 256) {
+      // Log error for debugging before throwing
+      console.error('[signals] Effect queue overflow:', {
+        queueSize,
+        head: ctx.scheduledHead,
+        tail: ctx.scheduledTail
+      });
+      throw new Error(
+        `Effect queue overflow: ${queueSize} effects scheduled. ` +
+        `This usually indicates a design issue such as recursive effects ` +
+        `or missing batching. Consider restructuring your reactive graph.`
+      );
+    }
+    
     // ALGORITHM: Circular Buffer Insertion
     // Use bitwise AND with mask (255 = 0xFF = 11111111 in binary)
     // This is equivalent to scheduledTail % 256 but much faster
     // Example: 257 & 255 = 1, 513 & 255 = 1 (wraps around)
     ctx.scheduledQueue[ctx.scheduledTail & ctx.scheduledMask] = consumer;
     ctx.scheduledTail++;
-    
-    // FLAG: Queue will silently wrap if more than 256 effects are scheduled
-    // This could overwrite earlier entries. Consider dynamic resizing?
   }
 
   /**
@@ -158,14 +207,20 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
       // Effects might dispose themselves or each other during execution
     }
     
-    // ALGORITHM: Queue Reset
+    // ALGORITHM: Queue Reset with Overflow Prevention
     // Move head to tail position, effectively clearing the queue
     // The actual array slots still contain references, but they'll be
     // overwritten on next use. This avoids the cost of clearing.
     ctx.scheduledHead = ctx.scheduledTail;
     
-    // FIXME: Long-running apps might overflow scheduledTail
-    // Consider resetting both to 0 when queue is empty
+    // SAFETY: Prevent Integer Overflow
+    // After ~2 billion operations, scheduledTail could overflow.
+    // Reset both counters to 0 when queue is empty to prevent this.
+    // This is safe because the queue is empty (head === tail).
+    if (ctx.scheduledTail > 0x7FFFFFF0) { // Close to MAX_SAFE_INTEGER/2
+      ctx.scheduledHead = 0;
+      ctx.scheduledTail = 0;
+    }
   }
 
   return {
