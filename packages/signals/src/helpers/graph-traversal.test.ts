@@ -22,8 +22,6 @@ describe('createGraphTraversalHelpers', () => {
       scheduledTail: 0,
       scheduledMask: 255,
       version: 0,
-      poolSize: 0,
-      allocations: 0,
     };
 
     scheduleConsumer = (node: ScheduledNode) => {

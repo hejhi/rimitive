@@ -60,18 +60,16 @@ export function createTestInstance() {
       // Clear any pending scheduled effects
       const count = ctx.scheduledTail - ctx.scheduledHead;
       for (let i = 0; i < count; i++) {
-        const consumer = ctx.scheduledQueue[(ctx.scheduledHead + i) & ctx.scheduledMask];
+        const consumer = ctx.scheduledQueue![(ctx.scheduledHead + i) & ctx.scheduledMask];
         if (consumer) consumer._nextScheduled = undefined;
       }
       ctx.scheduledHead = 0;
       ctx.scheduledTail = 0;
 
-      // Reset context by reinitializing pool and counters
+      // Reset context
       ctx.currentConsumer = null;
       ctx.version = 0;
       ctx.batchDepth = 0;
-      ctx.poolSize = 100;
-      ctx.allocations = 0;
     },
     getGlobalVersion: () => ctx.version,
     activeContext: ctx,
@@ -105,15 +103,11 @@ export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 export const activeContext = (() => {
   // Return getter that always gets current context
   const getter = {
-    get allocations() { return defaultInstance.activeContext.allocations; },
-    get poolSize() { return defaultInstance.activeContext.poolSize; },
     get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
     get scheduledCount() { return defaultInstance.activeContext.scheduledTail - defaultInstance.activeContext.scheduledHead; },
     get scheduledQueue() { return defaultInstance.activeContext.scheduledQueue; },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
-    set allocations(v) { defaultInstance.activeContext.allocations = v; },
-    set poolSize(v) { defaultInstance.activeContext.poolSize = v; },
     set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
     set scheduledCount(v) { 

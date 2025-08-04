@@ -29,6 +29,11 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
     // Mark as scheduled (use any non-undefined value as flag)
     consumer._nextScheduled = consumer;
     
+    // Lazy initialize queue on first use
+    if (!ctx.scheduledQueue) {
+      ctx.scheduledQueue = new Array<ScheduledNode>(256);
+    }
+    
     // Use ring buffer with bit masking for fast modulo
     ctx.scheduledQueue[ctx.scheduledTail & ctx.scheduledMask] = consumer;
     ctx.scheduledTail++;
@@ -69,6 +74,9 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
    * Executes all scheduled consumers using ring buffer
    */
   const flushScheduled = (): void => {
+    // Skip if queue hasn't been initialized yet
+    if (!ctx.scheduledQueue) return;
+    
     const queue = ctx.scheduledQueue;
     const mask = ctx.scheduledMask;
     const head = ctx.scheduledHead;
