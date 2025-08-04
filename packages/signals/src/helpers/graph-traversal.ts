@@ -39,7 +39,6 @@ export function createGraphTraversalHelpers(
 ): GraphTraversalHelpers {
   // OPTIMIZATION: Track last traversal version to skip redundant work
   let lastTraversalVersion = -1;
-  let nodesNotifiedThisVersion = 0;
   /**
    * ALGORITHM: Push-Phase Invalidation via Iterative DFS
    * 
@@ -63,7 +62,6 @@ export function createGraphTraversalHelpers(
     // Update tracking for this version
     if (lastTraversalVersion !== ctx.version) {
       lastTraversalVersion = ctx.version;
-      nodesNotifiedThisVersion = 0;
     }
 
     // ALGORITHM: Iterative DFS State
@@ -97,7 +95,6 @@ export function createGraphTraversalHelpers(
         // - Avoids unnecessary computation if the value is never read
         // - Computed values will verify if truly dirty when accessed
         statefulTarget._flags |= NOTIFIED;
-        nodesNotifiedThisVersion++; // Track for optimization
         
         // ALGORITHM: Effect Scheduling
         // Effects are special - they always run when notified, but we defer

@@ -101,6 +101,9 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       // - Global version: Used as a generation counter for optimizations
       this._version++;
       ctx.version++;
+      
+      // OPTIMIZATION: Skip traversal if no targets
+      if (!this._targets) return;
 
       // OPTIMIZATION: Skip traversal if no targets
       if (!this._targets) return;
