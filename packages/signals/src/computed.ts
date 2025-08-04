@@ -161,6 +161,13 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     }
 
     _update(): void {
+      // OPTIMIZATION: Ultra-fast path for clean computeds
+      // If our cached global version matches and we're not flagged dirty,
+      // we can skip all checks - this is the most common case in stable UIs
+      if (this._globalVersion === ctx.version && !(this._flags & (OUTDATED | NOTIFIED))) {
+        return;
+      }
+      
       // ALGORITHM: Conditional Recomputation
       // shouldNodeUpdate checks:
       // 1. If we're already clean (via global version)

@@ -102,6 +102,9 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       this._version++;
       ctx.version++;
 
+      // OPTIMIZATION: Skip traversal if no targets
+      if (!this._targets) return;
+      
       // ALGORITHM: Automatic Batching (inspired by React's batching strategy)
       // All synchronous updates are automatically batched to prevent redundant computations
       // This is crucial for performance when multiple signals change together

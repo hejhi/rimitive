@@ -34,9 +34,12 @@ export interface GraphTraversalHelpers {
  * reactive libraries that prioritize handling deep dependency chains efficiently.
  */
 export function createGraphTraversalHelpers(
-  _ctx: SignalContext,
+  ctx: SignalContext,
   { scheduleConsumer }: ScheduledConsumerHelpers
 ): GraphTraversalHelpers {
+  // OPTIMIZATION: Track last traversal version to skip redundant work
+  let lastTraversalVersion = -1;
+  let nodesNotifiedThisVersion = 0;
   /**
    * ALGORITHM: Push-Phase Invalidation via Iterative DFS
    * 
@@ -52,6 +55,16 @@ export function createGraphTraversalHelpers(
    */
   const traverseAndInvalidate = (startEdge: Edge | undefined): void => {
     if (!startEdge) return;
+    
+    // OPTIMIZATION: Global Version Fast Path
+    // Skip this optimization for now - it can cause correctness issues
+    // if not all paths were traversed in the first pass
+    
+    // Update tracking for this version
+    if (lastTraversalVersion !== ctx.version) {
+      lastTraversalVersion = ctx.version;
+      nodesNotifiedThisVersion = 0;
+    }
 
     // ALGORITHM: Iterative DFS State
     // - stack: Linked list of positions to return to (simulates call stack)
@@ -84,6 +97,7 @@ export function createGraphTraversalHelpers(
         // - Avoids unnecessary computation if the value is never read
         // - Computed values will verify if truly dirty when accessed
         statefulTarget._flags |= NOTIFIED;
+        nodesNotifiedThisVersion++; // Track for optimization
         
         // ALGORITHM: Effect Scheduling
         // Effects are special - they always run when notified, but we defer
