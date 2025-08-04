@@ -56,6 +56,7 @@
     "@lattice/lattice": "workspace:*"
   },
   "devDependencies": {
+    "alien-signals": "^2.0.5",
     "esbuild": "^0.25.8",
     "rimraf": "^6.0.1",
     "terser": "^5.36.0",

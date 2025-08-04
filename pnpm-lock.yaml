@@ -344,6 +344,9 @@ importers:
         specifier: workspace:*
         version: link:../lattice
     devDependencies:
+      alien-signals:
+        specifier: ^2.0.5
+        version: 2.0.5
       esbuild:
         specifier: ^0.25.8
         version: 0.25.8

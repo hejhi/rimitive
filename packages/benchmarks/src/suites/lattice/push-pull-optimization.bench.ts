@@ -10,6 +10,11 @@
  * 
  * The key insight: With push-pull, if an intermediate computed's value doesn't
  * change (e.g., due to filtering), downstream computeds won't recompute.
+ * 
+ * IMPORTANT: All benchmarks properly initialize dependencies before timing begins.
+ * This ensures we measure warm performance (actual runtime behavior) rather than
+ * cold starts (initial dependency discovery). Without initialization, benchmarks
+ * would unfairly penalize libraries with different cold start costs.
  */
 
 import { describe, bench } from 'vitest';
@@ -23,12 +28,12 @@ import {
   createComputedFactory,
   createBatchFactory,
   createSignalAPI,
+  Computed,
 } from '@lattice/signals';
 import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
-import { ComputedInterface } from '../../../../signals/dist/src/computed';
 
 const ITERATIONS = 10000;
 
@@ -117,6 +122,11 @@ describe('Push-Pull: Filtered Diamond Dependencies', () => {
     }
     return a + b + sum;
   });
+
+  // Initialize before benchmarking
+  void preactExpensive.value;
+  void latticeExpensive.value;
+  void alienExpensive();
 
   bench('Preact - filtered diamond (mixed changes)', () => {
     for (let i = 0; i < ITERATIONS; i++) {
@@ -235,6 +245,11 @@ describe('Push-Pull: Multi-Level Filtering', () => {
     return val > 0 ? Math.sqrt(val) * Math.log(val) : 0;
   });
 
+  // Initialize before benchmarking
+  void preactMLResult.value;
+  void latticeMLResult.value;
+  void alienMLResult();
+
   bench('Preact - multi-level filtering', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       preactMLSource.value = i % 100;
@@ -317,6 +332,26 @@ describe('Push-Pull: Conditional Dependencies', () => {
     return alienCondSwitch() ? alienCondExpensiveA() : alienCondExpensiveB();
   });
 
+  // Initialize all implementations before benchmarking
+  // This ensures we're measuring warm performance, not cold starts
+  void preactCondResult.value;
+  preactCondSwitch.value = false;
+  void preactCondResult.value;
+  preactCondSwitch.value = true;
+  void preactCondResult.value;
+
+  void latticeCondResult.value;
+  latticeCondSwitch.value = false;
+  void latticeCondResult.value;
+  latticeCondSwitch.value = true;
+  void latticeCondResult.value;
+
+  void alienCondResult();
+  alienCondSwitch(false);
+  void alienCondResult();
+  alienCondSwitch(true);
+  void alienCondResult();
+
   bench('Preact - conditional deps (updating inactive branch)', () => {
     for (let i = 0; i < ITERATIONS; i++) {
       // condSwitch is true, so only A branch matters
@@ -388,7 +423,7 @@ describe('Push-Pull: Large Graph with Sparse Updates', () => {
       return i % 2 === 0 ? val : 0;
     })
   );
-  const latticeSparseSums: ComputedInterface<number>[] = [];
+  const latticeSparseSums: Computed<number>[] = [];
   for (let i = 0; i < GRAPH_SIZE - 1; i++) {
     latticeSparseSums.push(
       latticeComputed(() => {
@@ -430,6 +465,11 @@ describe('Push-Pull: Large Graph with Sparse Updates', () => {
   const alienSparseFinal = alienComputed(() => {
     return alienSparseSums.reduce((acc, sum) => acc + sum(), 0);
   });
+
+  // Initialize before benchmarking
+  void preactSparseFinal.value;
+  void latticeSparseFinal.value;
+  void alienSparseFinal();
 
   bench('Preact - sparse graph (updating filtered nodes)', () => {
     for (let i = 0; i < ITERATIONS / 10; i++) {
@@ -482,6 +522,11 @@ describe('Push-Pull: Write-Heavy vs Read-Heavy Patterns', () => {
   const alienWriteComputed1 = alienComputed(() => alienWriteSource() * 2);
   const alienWriteComputed2 = alienComputed(() => alienWriteComputed1() + 10);
   const alienWriteComputed3 = alienComputed(() => alienWriteComputed2() * alienWriteComputed2());
+
+  // Initialize before benchmarking
+  void preactWriteComputed3.value;
+  void latticeWriteComputed3.value;
+  void alienWriteComputed3();
 
   bench('Preact - 100 writes, 1 read', () => {
     for (let batch = 0; batch < ITERATIONS / 100; batch++) {
