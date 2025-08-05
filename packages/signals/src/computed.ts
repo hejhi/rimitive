@@ -45,6 +45,7 @@ export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNod
   readonly value: T;  // Getter triggers lazy evaluation
   peek(): T;          // Non-tracking read (still evaluates if needed)
   dispose(): void;    // Cleanup method to break circular references
+  _refresh(): boolean;  // Check if needs update without updating (preact-style)
 }
 
 const {
@@ -53,12 +54,13 @@ const {
   OUTDATED,
   NOTIFIED,
   IS_COMPUTED,
+  TRACKING,
 } = CONSTANTS;
 
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   // Helper functions for managing the dependency graph
   const depHelpers = createDependencyHelpers();
-  const { addDependency, shouldNodeUpdate } = depHelpers
+  const { addDependency, shouldNodeUpdate, checkNodeDirty } = depHelpers
   
   // Helpers for cleaning up stale dependencies after recomputation
   const { disposeAllSources, cleanupSources } =
@@ -125,12 +127,20 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // If we're being read from within another computed/effect, register the dependency
       const consumer = ctx.currentConsumer;
       if (consumer && '_flags' in consumer && typeof consumer._flags === 'number' && consumer._flags & RUNNING) {
+        // Register dependency with current version (might be stale if not yet computed)
         addDependency(this, consumer, this._version);
       }
       
       // ALGORITHM: Lazy Evaluation
       // Only recompute if our dependencies have changed
       this._update();
+      
+      // ALGORITHM: Post-Update Edge Synchronization
+      // If we just updated and have a consumer, update the edge version
+      // This handles the case where the edge was created before first computation
+      if (consumer && '_flags' in consumer && typeof consumer._flags === 'number' && consumer._flags & RUNNING) {
+        addDependency(this, consumer, this._version);
+      }
       
       // Value is guaranteed to be defined after _update
       return this._value!;
@@ -225,11 +235,59 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // shouldNodeUpdate checks:
       // 1. If we're already clean (via global version)
       // 2. If we're OUTDATED (definitely need update)
-      // 3. If we're NOTIFIED (check dependencies recursively)
+      // 3. If we're NOTIFIED (check dependencies iteratively)
       // Only recompute if actually necessary
-      if (shouldNodeUpdate(this, ctx)) {
+      if (shouldNodeUpdate(this)) {
         this._recompute();
       }
+    }
+
+    _refresh(): boolean {
+      // ALGORITHM: Refresh Following Preact-Signals Pattern
+      // This method ensures the computed is fresh, recomputing if needed
+      // Returns true if the computed is fresh (almost always after calling)
+      
+      // If we're currently computing, we have a cycle
+      if (this._flags & RUNNING) return false;
+      
+      // If we have the TRACKING flag and are not OUTDATED or NOTIFIED, we're fresh
+      // TRACKING means we have subscribers and are part of the active graph
+      if ((this._flags & (OUTDATED | NOTIFIED | TRACKING)) === TRACKING) {
+        return true;
+      }
+      
+      // Clear NOTIFIED flag as we're handling it now
+      this._flags &= ~NOTIFIED;
+      
+      // Clear OUTDATED flag as we're about to check/update
+      this._flags &= ~OUTDATED;
+      
+      // OPTIMIZATION: Global version check
+      // If nothing changed globally since we last updated, we're fresh
+      if (this._globalVersion === ctx.version) {
+        return true;
+      }
+      
+      // Cache the current global version
+      this._globalVersion = ctx.version;
+      
+      // Set RUNNING flag to detect cycles during dependency checking
+      this._flags |= RUNNING;
+      
+      // If we have a valid cached value, check if dependencies changed
+      if (this._version > 0 && !checkNodeDirty(this)) {
+        this._flags &= ~RUNNING;
+        return true;
+      }
+      
+      // Dependencies changed or first run - actually recompute now
+      this._flags &= ~RUNNING;
+      
+      // Recompute the value
+      this._recompute();
+      
+      // After recomputation, we're fresh
+      return true;
     }
 
 

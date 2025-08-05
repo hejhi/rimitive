@@ -75,13 +75,13 @@ describe('Recursive vs Iterative - Deep Conditional Dependencies', () => {
         });
         
         // Initial read to establish dependencies
-        result.value;
+        void result.value;
         
         // Update inactive branch
         (chainB[0] as ReturnType<typeof signal<number>>).value++;
         
         // Read result - triggers recursive checking
-        result.value;
+        void result.value;
       });
     });
   });
@@ -99,7 +99,7 @@ describe('Recursive vs Iterative - Deep Conditional Dependencies', () => {
         const prevSignal = signals[i - 1]!;
         signals[i] = alienComputed(() => {
           // Add computation to make it realistic
-          const value = prevSignal() as number;
+          const value = prevSignal();
           return value + 1;
         });
       }

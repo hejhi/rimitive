@@ -38,7 +38,6 @@
  */
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge } from '../types';
-import type { SignalContext } from '../context';
 
 // OPTIMIZATION: Edge Caching
 // Producers cache their last accessed edge to avoid linked list traversal
@@ -53,8 +52,8 @@ export interface DependencyHelpers {
   linkNodes: (source: TrackedProducer | (TrackedProducer & ConsumerNode), target: ConsumerNode, version: number) => Edge;
   addDependency: (source: TrackedProducer, target: ConsumerNode, version: number) => void;
   removeFromTargets: (edge: Edge) => void;
-  checkNodeDirty: (node: ConsumerNode & { _globalVersion?: number }, ctx: SignalContext) => boolean;
-  shouldNodeUpdate: (node: ConsumerNode & { _flags: number; _globalVersion?: number }, ctx: SignalContext) => boolean;
+  checkNodeDirty: (node: ConsumerNode & { _globalVersion?: number }) => boolean;
+  shouldNodeUpdate: (node: ConsumerNode & { _flags: number; _globalVersion?: number }) => boolean;
 }
 
 export function createDependencyHelpers(): DependencyHelpers {
@@ -167,59 +166,57 @@ export function createDependencyHelpers(): DependencyHelpers {
   };
 
   /**
-   * ALGORITHM: Recursive Dirty Checking with Global Version Optimization
+   * ALGORITHM: Preact-style Dependency Checking with _refresh()
    * 
    * Determines if a consumer needs to recompute by checking if any of its
-   * dependencies have changed. Uses two-level version checking:
-   * 1. Global version - if nothing in the system changed, node is clean
-   * 2. Local versions - check each dependency's version against cached edge version
+   * dependencies have changed. This follows preact-signals' pattern:
+   * 1. Check version mismatch first (fast path)
+   * 2. Call _refresh() on computed dependencies (recursive but controlled)
+   * 3. Check version again after refresh
    * 
-   * For computed dependencies, recursively updates them first to get fresh values.
-   * This implements "pull-based" lazy evaluation.
+   * The recursion happens through _refresh() calls, but it's controlled by
+   * RUNNING flags and global version checks to prevent stack overflow.
    */
   const checkNodeDirty = (
-    node: ConsumerNode & { _globalVersion?: number },
-    ctx: SignalContext
+    node: ConsumerNode & { _globalVersion?: number }
   ): boolean => {
-    // OPTIMIZATION: Global Version Check
-    // If the global version hasn't changed since last check, no signals changed
-    // This avoids traversing dependencies when nothing happened
-    if (node._globalVersion === ctx.version) return false;
-    
     // ALGORITHM: Dependency Chain Traversal
     // Walk through all dependencies, checking if any changed
     let source = node._sources;
     while (source) {
       const sourceNode = source.source;
       
-      // Handle computed dependencies differently from signals
-      // FIXME: This type checking is fragile - should use a more robust discriminator
-      if ('_update' in sourceNode && '_flags' in sourceNode && typeof (sourceNode as unknown as {_update: unknown})._update === 'function') {
-        // ALGORITHM: Recursive Computed Update (Pull-based evaluation)
-        // Before checking if computed changed, ensure it's up-to-date
-        // This creates a recursive pull through the dependency chain
-        const oldVersion = sourceNode._version;
-        (sourceNode as unknown as {_update(): void})._update();
-        
-        // If computed's version changed after update, we're dirty
-        if (oldVersion !== sourceNode._version) return true;
-      } else if (source.version !== sourceNode._version) {
-        // Simple signal - just compare versions
-        // Edge version is from when dependency was established
-        // Source version is current - mismatch means it changed
+      // ALGORITHM: Three-phase dependency check
+      // We need to check if this dependency has actually changed value
+      
+      // Phase 1: Quick version check - if versions already differ, we're dirty
+      const versionMismatch = source.version !== sourceNode._version;
+      
+      // Phase 2: For computeds, always refresh to check if they need recomputation
+      let refreshFailed = false;
+      if ('_refresh' in sourceNode && typeof sourceNode._refresh === 'function') {
+        const refreshable = sourceNode as ProducerNode & ConsumerNode & { _refresh(): boolean };
+        refreshFailed = !refreshable._refresh();
+      }
+      
+      // Phase 3: After refresh, check if version changed
+      const versionChangedAfterRefresh = source.version !== sourceNode._version;
+      
+      if (versionMismatch || refreshFailed || versionChangedAfterRefresh) {
+        // Dependency changed - we're dirty
         return true;
       }
       
-      // OPTIMIZATION: Update cached edge version to avoid rechecking
-      // Next time we check, we'll know we've already seen this version
+      // ALGORITHM: Edge Version Synchronization
+      // If we reach here, the dependency is clean (value hasn't changed)
+      // Update the edge version to match the source's current version
+      // This prevents redundant checks in future traversals
       source.version = sourceNode._version;
+      
       source = source.nextSource;
     }
     
-    // ALGORITHM: Clean State Caching
-    // All dependencies are clean - cache the global version to skip
-    // this entire check next time if nothing changes globally
-    node._globalVersion = ctx.version;
+    // All dependencies are clean
     return false;
   };
 
@@ -235,8 +232,7 @@ export function createDependencyHelpers(): DependencyHelpers {
    * when many signals change but not all paths lead to actual changes.
    */
   const shouldNodeUpdate = (
-    node: ConsumerNode & { _flags: number; _globalVersion?: number },
-    ctx: SignalContext
+    node: ConsumerNode & { _flags: number; _globalVersion?: number }
   ): boolean => {
     const flags = node._flags;
     
@@ -250,7 +246,7 @@ export function createDependencyHelpers(): DependencyHelpers {
     // ALGORITHM: Lazy Verification
     // NOTIFIED means "might be dirty" - verify by checking dependencies
     if (flags & NOTIFIED) {
-      if (checkNodeDirty(node, ctx)) {
+      if (checkNodeDirty(node)) {
         // Dependencies did change - mark as OUTDATED for next time
         node._flags |= OUTDATED;
         return true;

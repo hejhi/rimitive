@@ -123,7 +123,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       // ALGORITHM: Conditional Execution
       // Even though effects are eager, we still check if dependencies
       // actually changed (they might have been false positives)
-      if (!shouldNodeUpdate(this, ctx)) return;
+      if (!shouldNodeUpdate(this)) return;
 
       // ALGORITHM: Atomic State Transition
       // Set RUNNING to prevent re-entrance
