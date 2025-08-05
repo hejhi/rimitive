@@ -120,10 +120,14 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       // Skip if disposed (dead node) or already running (prevent re-entrance)
       if (this._flags & (DISPOSED | RUNNING)) return;
 
+      // OPTIMIZATION: Global version fast path
+      // If nothing changed globally since we last ran, skip all checks
+      if (this._globalVersion === ctx.version) return;
+
       // ALGORITHM: Conditional Execution
       // Even though effects are eager, we still check if dependencies
       // actually changed (they might have been false positives)
-      if (!shouldNodeUpdate(this)) return;
+      if (!shouldNodeUpdate(this, ctx)) return;
 
       // ALGORITHM: Atomic State Transition
       // Set RUNNING to prevent re-entrance

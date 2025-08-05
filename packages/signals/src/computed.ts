@@ -225,9 +225,9 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
     _update(): void {
       // OPTIMIZATION: Ultra-fast path for clean computeds
-      // If our cached global version matches and we're not flagged dirty,
-      // we can skip all checks - this is the most common case in stable UIs
-      if (this._globalVersion === ctx.version && !(this._flags & (OUTDATED | NOTIFIED))) {
+      // If our cached global version matches, NOTHING has changed globally
+      // We can skip all checks - no signal changes means no flag changes
+      if (this._globalVersion === ctx.version) {
         return;
       }
       
@@ -237,7 +237,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // 2. If we're OUTDATED (definitely need update)
       // 3. If we're NOTIFIED (check dependencies iteratively)
       // Only recompute if actually necessary
-      if (shouldNodeUpdate(this)) {
+      if (shouldNodeUpdate(this, ctx)) {
         this._recompute();
       }
     }
@@ -268,15 +268,14 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         return true;
       }
       
-      // Cache the current global version
-      this._globalVersion = ctx.version;
-      
       // Set RUNNING flag to detect cycles during dependency checking
       this._flags |= RUNNING;
       
       // If we have a valid cached value, check if dependencies changed
       if (this._version > 0 && !checkNodeDirty(this)) {
         this._flags &= ~RUNNING;
+        // Only cache global version after confirming we're actually clean
+        this._globalVersion = ctx.version;
         return true;
       }
       

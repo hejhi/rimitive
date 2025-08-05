@@ -53,7 +53,7 @@ export interface DependencyHelpers {
   addDependency: (source: TrackedProducer, target: ConsumerNode, version: number) => void;
   removeFromTargets: (edge: Edge) => void;
   checkNodeDirty: (node: ConsumerNode & { _globalVersion?: number }) => boolean;
-  shouldNodeUpdate: (node: ConsumerNode & { _flags: number; _globalVersion?: number }) => boolean;
+  shouldNodeUpdate: (node: ConsumerNode & { _flags: number; _globalVersion?: number }, ctx?: { version: number }) => boolean;
 }
 
 export function createDependencyHelpers(): DependencyHelpers {
@@ -239,7 +239,8 @@ export function createDependencyHelpers(): DependencyHelpers {
    * when many signals change but not all paths lead to actual changes.
    */
   const shouldNodeUpdate = (
-    node: ConsumerNode & { _flags: number; _globalVersion?: number }
+    node: ConsumerNode & { _flags: number; _globalVersion?: number },
+    ctx?: { version: number }
   ): boolean => {
     const flags = node._flags;
     
@@ -261,6 +262,10 @@ export function createDependencyHelpers(): DependencyHelpers {
         // False alarm - dependencies didn't actually change
         // Clear NOTIFIED flag to mark as clean
         node._flags &= ~NOTIFIED;
+        // Update global version if context provided
+        if (ctx && node._globalVersion !== undefined) {
+          node._globalVersion = ctx.version;
+        }
         return false;
       }
     }

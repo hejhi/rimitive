@@ -58,9 +58,17 @@ export const CONSTANTS = {
   // When set, skips the equality check and always notifies subscribers.
   // Used when the subscriber wants to be notified of every write,
   // even if the value didn't actually change.
-  SKIP_EQUALITY: 1 << 6 // 64 (binary: 1000000)
+  SKIP_EQUALITY: 1 << 6, // 64 (binary: 1000000)
+  
+  // CLEAN (bit 7): Aggressive caching optimization for computed values.
+  // Set when a computed has been verified clean (all dependencies unchanged).
+  // Allows skipping ALL dependency checks on subsequent reads until invalidated.
+  // This is a huge win for stable computeds that are read frequently.
+  // OPTIMIZATION: Enables "verified clean" fast path
+  CLEAN: 1 << 7         // 128 (binary: 10000000)
   
   // OPTIMIZATION NOTE: Bits are ordered by frequency of checking:
+  // - CLEAN is checked first (fastest path for stable computeds)
   // - NOTIFIED/OUTDATED are checked most often (every read)
   // - RUNNING/DISPOSED are checked during updates
   // - Others are checked less frequently
