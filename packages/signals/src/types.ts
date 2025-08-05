@@ -54,6 +54,7 @@ export interface ProducerNode extends ReactiveNode {
 export interface ConsumerNode extends ReactiveNode {
   _sources: Edge | undefined;  // Head of intrusive linked list of dependencies
   _invalidate(): void;         // Called when dependencies change
+  _refresh(): boolean;
 }
 
 // PATTERN: Deferred Execution Queue

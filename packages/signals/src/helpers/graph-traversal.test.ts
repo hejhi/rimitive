@@ -52,6 +52,7 @@ describe('createGraphTraversalHelpers', () => {
       _sources: undefined,
       _flags: flags,
       _invalidate: () => {},
+      _refresh: () => true,
     };
 
     if (isScheduled) {

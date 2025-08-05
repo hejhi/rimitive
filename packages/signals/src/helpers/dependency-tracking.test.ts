@@ -22,6 +22,7 @@ describe('Dependency Tracking Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // First call creates the dependency
@@ -50,6 +51,7 @@ describe('Dependency Tracking Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // Create dependency manually
@@ -80,6 +82,7 @@ describe('Dependency Tracking Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       helpers.addDependency(source, target, 1);
@@ -100,6 +103,7 @@ describe('Dependency Tracking Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // Add dependencies from multiple sources
@@ -130,6 +134,7 @@ describe('Dependency Tracking Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // Create initial dependency
@@ -160,6 +165,7 @@ describe('Dependency Tracking Helpers', () => {
           __type: 'test',
           _sources: undefined,
           _invalidate: () => {},
+          _refresh: () => true,
         };
         
         const node = helpers.linkNodes(source, target, 1);
@@ -183,13 +189,15 @@ describe('Dependency Tracking Helpers', () => {
         const target1: ConsumerNode = {
           __type: 'test',
           _sources: undefined,
-          _invalidate: () => {},
+          _invalidate: () => { },
+          _refresh: () => true,
         };
         
         const target2: ConsumerNode = {
           __type: 'test',
           _sources: undefined,
           _invalidate: () => {},
+          _refresh: () => true,
         };
         
         const node1 = helpers.linkNodes(source, target1, 1);
@@ -214,6 +222,7 @@ describe('Dependency Tracking Helpers', () => {
           __type: 'test',
           _sources: undefined,
           _invalidate: () => {},
+          _refresh: () => true,
         };
         
         helpers.linkNodes(source, target, 1);
@@ -236,6 +245,7 @@ describe('Dependency Tracking Helpers', () => {
           __type: 'test',
           _sources: undefined,
           _invalidate: () => {},
+          _refresh: () => true,
         };
         
         const node = helpers.linkNodes(source, target, 1);
@@ -284,6 +294,7 @@ describe('Dependency Tracking Helpers', () => {
           __type: 'test',
           _sources: undefined,
           _invalidate: () => {},
+          _refresh: () => true,
         };
         
         const node = helpers.linkNodes(source, target, 1);

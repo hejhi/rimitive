@@ -186,18 +186,26 @@ export function createDependencyHelpers(): DependencyHelpers {
     while (source) {
       const sourceNode = source.source;
       
-      // ALGORITHM: Three-phase dependency check
-      // We need to check if this dependency has actually changed value
+      // OPTIMIZATION: Fast path for signals (no dependencies)
+      // Signals don't have _sources, so we can check them quickly
+      if (!('_sources' in sourceNode)) {
+        if (source.version !== sourceNode._version) {
+          return true; // Signal changed, we're dirty
+        }
+        // Signal unchanged, update edge version and continue
+        source.version = sourceNode._version;
+        source = source.nextSource;
+        continue;
+      }
+      
+      // Complex path for computeds (has dependencies)
+      // ALGORITHM: Three-phase dependency check for computeds
       
       // Phase 1: Quick version check - if versions already differ, we're dirty
       const versionMismatch = source.version !== sourceNode._version;
       
-      // Phase 2: For computeds, always refresh to check if they need recomputation
-      let refreshFailed = false;
-      if ('_refresh' in sourceNode && typeof sourceNode._refresh === 'function') {
-        const refreshable = sourceNode as ProducerNode & ConsumerNode & { _refresh(): boolean };
-        refreshFailed = !refreshable._refresh();
-      }
+      // Phase 2: Refresh computed to check if it needs recomputation
+      const refreshFailed = !sourceNode._refresh();
       
       // Phase 3: After refresh, check if version changed
       const versionChangedAfterRefresh = source.version !== sourceNode._version;
@@ -208,9 +216,8 @@ export function createDependencyHelpers(): DependencyHelpers {
       }
       
       // ALGORITHM: Edge Version Synchronization
-      // If we reach here, the dependency is clean (value hasn't changed)
-      // Update the edge version to match the source's current version
-      // This prevents redundant checks in future traversals
+      // The dependency is clean (value hasn't changed)
+      // Update the edge version to prevent redundant checks
       source.version = sourceNode._version;
       
       source = source.nextSource;

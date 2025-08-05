@@ -44,7 +44,6 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
   __type: 'signal';
   value: T;  // User-facing getter/setter for reactive access
   _value: T; // Internal storage of the actual value
-  _refresh(): boolean; // Always returns true for signals (preact-style)
   
   // PATTERN: Immutable Update Helpers
   // These methods enforce immutability for proper change detection.
@@ -232,13 +231,6 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       // without subscribing to changes
       // Common use case: Checking a value to decide which dependencies to track
       return this._value;
-    }
-
-    _refresh(): boolean {
-      // ALGORITHM: Signal Freshness Check (Preact-style)
-      // Signals are always fresh - they hold concrete values, not computed ones
-      // This method exists to provide a uniform interface with computed values
-      return true;
     }
   }
 

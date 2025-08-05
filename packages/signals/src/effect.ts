@@ -174,6 +174,12 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       }
     }
 
+    _refresh(): boolean {
+      // Effects are always considered "fresh" - they don't produce values
+      // This method exists to satisfy the ConsumerNode interface
+      // Effects are scheduled for execution through _invalidate/_flush instead
+      return true;
+    }
 
     dispose(): void {
       // ALGORITHM: Effect Disposal

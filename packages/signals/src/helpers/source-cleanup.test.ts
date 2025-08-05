@@ -25,6 +25,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // Create dependencies
@@ -57,6 +58,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       depHelpers.linkNodes(source, consumer, 1);
@@ -68,6 +70,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // Should not throw
@@ -89,6 +92,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // Create dependencies
@@ -126,6 +130,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // Create dependencies
@@ -164,6 +169,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       const node = depHelpers.linkNodes(source, consumer, 1);
@@ -186,6 +192,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       const nodes = sources.map((source) =>
@@ -203,6 +210,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       // Should not throw
@@ -224,6 +232,7 @@ describe('Source Cleanup Helpers', () => {
         __type: 'test',
         _sources: undefined,
         _invalidate: () => {},
+        _refresh: () => true,
       };
       
       const nodes = sources.map((source) =>

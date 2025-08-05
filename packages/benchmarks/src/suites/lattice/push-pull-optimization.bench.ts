@@ -123,10 +123,7 @@ describe('Push-Pull: Filtered Diamond Dependencies', () => {
     return a + b + sum;
   });
 
-  // Initialize before benchmarking
-  void preactExpensive.value;
-  void latticeExpensive.value;
-  void alienExpensive();
+  // No warm-up - testing cold start impact
 
   bench('Preact - filtered diamond (mixed changes)', () => {
     for (let i = 0; i < ITERATIONS; i++) {
@@ -245,10 +242,7 @@ describe('Push-Pull: Multi-Level Filtering', () => {
     return val > 0 ? Math.sqrt(val) * Math.log(val) : 0;
   });
 
-  // Initialize before benchmarking
-  void preactMLResult.value;
-  void latticeMLResult.value;
-  void alienMLResult();
+  // No warm-up - testing cold start impact
 
   bench('Preact - multi-level filtering', () => {
     for (let i = 0; i < ITERATIONS; i++) {
@@ -332,25 +326,7 @@ describe('Push-Pull: Conditional Dependencies', () => {
     return alienCondSwitch() ? alienCondExpensiveA() : alienCondExpensiveB();
   });
 
-  // Initialize all implementations before benchmarking
-  // This ensures we're measuring warm performance, not cold starts
-  void preactCondResult.value;
-  preactCondSwitch.value = false;
-  void preactCondResult.value;
-  preactCondSwitch.value = true;
-  void preactCondResult.value;
-
-  void latticeCondResult.value;
-  latticeCondSwitch.value = false;
-  void latticeCondResult.value;
-  latticeCondSwitch.value = true;
-  void latticeCondResult.value;
-
-  void alienCondResult();
-  alienCondSwitch(false);
-  void alienCondResult();
-  alienCondSwitch(true);
-  void alienCondResult();
+  // No warm-up - testing cold start impact
 
   bench('Preact - conditional deps (updating inactive branch)', () => {
     for (let i = 0; i < ITERATIONS; i++) {
@@ -466,10 +442,7 @@ describe('Push-Pull: Large Graph with Sparse Updates', () => {
     return alienSparseSums.reduce((acc, sum) => acc + sum(), 0);
   });
 
-  // Initialize before benchmarking
-  void preactSparseFinal.value;
-  void latticeSparseFinal.value;
-  void alienSparseFinal();
+  // No warm-up - testing cold start impact
 
   bench('Preact - sparse graph (updating filtered nodes)', () => {
     for (let i = 0; i < ITERATIONS / 10; i++) {
@@ -523,10 +496,7 @@ describe('Push-Pull: Write-Heavy vs Read-Heavy Patterns', () => {
   const alienWriteComputed2 = alienComputed(() => alienWriteComputed1() + 10);
   const alienWriteComputed3 = alienComputed(() => alienWriteComputed2() * alienWriteComputed2());
 
-  // Initialize before benchmarking
-  void preactWriteComputed3.value;
-  void latticeWriteComputed3.value;
-  void alienWriteComputed3();
+  // No warm-up - testing cold start impact
 
   bench('Preact - 100 writes, 1 read', () => {
     for (let batch = 0; batch < ITERATIONS / 100; batch++) {

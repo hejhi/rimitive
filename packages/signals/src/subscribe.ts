@@ -113,6 +113,12 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       // FLAG: No error handling - callback errors will propagate
     }
 
+    _refresh(): boolean {
+      // Subscribe nodes are always considered "fresh" - they don't produce values
+      // This method exists to satisfy the ConsumerNode interface
+      // Subscribe nodes are scheduled for execution through _invalidate/_flush instead
+      return true;
+    }
 
     dispose(): void {
       // ALGORITHM: Clean Disposal

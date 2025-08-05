@@ -14,17 +14,12 @@ import {
 import {
   signal as alienSignal,
   computed as alienComputed,
-  effect as alienEffect,
-  startBatch as alienStartBatch,
-  endBatch as alienEndBatch,
 } from 'alien-signals';
 
 // Create Lattice API instance
 const {
   signal: latticeSignal,
   computed: latticeComputed,
-  effect: latticeEffect,
-  batch: latticeBatch
 } = createSignalAPI({
   signal: createSignalFactory,
   computed: createComputedFactory,

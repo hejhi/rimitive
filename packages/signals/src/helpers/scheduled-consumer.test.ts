@@ -19,6 +19,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     ctx.batchDepth = 1;
@@ -41,6 +42,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     ctx.batchDepth = 0;
@@ -63,6 +65,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     ctx.batchDepth = 1;
@@ -87,6 +90,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
@@ -109,6 +113,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     helpers.disposeConsumer(consumer, cleanupFn);
@@ -137,6 +142,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     const consumer2: ScheduledNode & StatefulNode = {
@@ -147,6 +153,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     const consumer3: ScheduledNode & StatefulNode = {
@@ -157,6 +164,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     // Schedule consumers in order
@@ -186,6 +194,7 @@ describe('ScheduledConsumerHelpers', () => {
         _invalidate: vi.fn(),
         _sources: undefined,
         dispose: () => {},
+        _refresh: () => true
       };
       helpers.scheduleConsumer(consumer);
     }
@@ -199,6 +208,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true
     };
     
     expect(() => helpers.scheduleConsumer(overflowConsumer)).toThrow(/Effect queue overflow: 256 effects scheduled/);
@@ -221,6 +231,7 @@ describe('ScheduledConsumerHelpers', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
+      _refresh: () => true,
     };
     
     helpers.scheduleConsumer(consumer);
