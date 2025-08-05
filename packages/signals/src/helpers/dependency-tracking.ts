@@ -199,21 +199,20 @@ export function createDependencyHelpers(): DependencyHelpers {
       }
       
       // Complex path for computeds (has dependencies)
-      // ALGORITHM: Three-phase dependency check for computeds
+      // ALGORITHM: Optimized dependency check for computeds
       
-      // Phase 1: Quick version check - if versions already differ, we're dirty
-      const versionMismatch = source.version !== sourceNode._version;
-      
-      // Phase 2: Refresh computed to check if it needs recomputation
+      // Phase 1: Always refresh computed dependencies
+      // This ensures they check THEIR dependencies and recompute if needed
+      // The key insight: _refresh() will only increment version if value changed
       const refreshFailed = !sourceNode._refresh();
       
-      // Phase 3: After refresh, check if version changed
-      const versionChangedAfterRefresh = source.version !== sourceNode._version;
+      // Phase 2: Check if the refresh produced a new version
+      // If version is still the same, the computed's VALUE didn't change
+      // even though its dependencies might have new versions
+      const versionChanged = source.version !== sourceNode._version;
       
-      if (versionMismatch || refreshFailed || versionChangedAfterRefresh) {
-        // Dependency changed - we're dirty
-        return true;
-      }
+      // Dependency value changed - we're dirty
+      if (refreshFailed || versionChanged) return true;
       
       // ALGORITHM: Edge Version Synchronization
       // The dependency is clean (value hasn't changed)
