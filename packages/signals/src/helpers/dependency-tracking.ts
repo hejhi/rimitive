@@ -54,6 +54,7 @@ export interface DependencyHelpers {
   removeFromTargets: (edge: Edge) => void;
   checkNodeDirty: (node: ConsumerNode & { _globalVersion?: number }) => boolean;
   shouldNodeUpdate: (node: ConsumerNode & { _flags: number; _globalVersion?: number }, ctx?: { version: number }) => boolean;
+  isNodeClean: (node: ConsumerNode & { _flags: number }, flags: number) => boolean;
 }
 
 export function createDependencyHelpers(): DependencyHelpers {
@@ -251,40 +252,46 @@ export function createDependencyHelpers(): DependencyHelpers {
    * 1. NOTIFIED phase - marked as "maybe dirty" during push invalidation
    * 2. OUTDATED phase - confirmed dirty after checking dependencies
    * 
-   * This allows the push phase to be fast (just marking) while the pull
-   * phase does the actual verification. This is crucial for performance
-   * when many signals change but not all paths lead to actual changes.
+   * OPTIMIZATION: This version is split for performance:
+   * - Fast path (OUTDATED check) is inlined in hot paths
+   * - This function handles the slower NOTIFIED case
    */
   const shouldNodeUpdate = (
     node: ConsumerNode & { _flags: number; _globalVersion?: number },
     ctx?: { version: number }
   ): boolean => {
-    const flags = node._flags;
+    // OPTIMIZATION: Only called for NOTIFIED case now
+    // OUTDATED is handled inline in hot paths
+    if (!(node._flags & NOTIFIED)) return false;
     
-    // OPTIMIZATION: Simple check - OUTDATED means update needed
-    if (flags & OUTDATED) return true;
+    // Check if dependencies actually changed
+    const isDirty = checkNodeDirty(node);
     
-    // For compatibility, still handle NOTIFIED without OUTDATED
-    // This can happen in edge cases or during migration
-    if (flags & NOTIFIED) {
-      if (checkNodeDirty(node)) {
-        // Dependencies did change - mark as OUTDATED
-        node._flags |= OUTDATED;
-        return true;
-      }
-
-      // False alarm - dependencies didn't actually change
-      // Clear NOTIFIED flag to mark as clean
+    if (isDirty) {
+      // Dependencies changed - mark as OUTDATED for next time
+      node._flags |= OUTDATED;
+    } else {
+      // False alarm - clear NOTIFIED and cache global version
       node._flags &= ~NOTIFIED;
-      // Update global version if context provided
       if (ctx && node._globalVersion !== undefined) {
         node._globalVersion = ctx.version;
       }
-      return false;
     }
     
-    return false;
+    return isDirty;
   };
 
-  return { addDependency, removeFromTargets, linkNodes, checkNodeDirty, shouldNodeUpdate };
+  /**
+   * OPTIMIZATION: Pure inline-friendly check
+   * Simple flag check that V8 can inline effectively.
+   * No side effects, just a boolean return.
+   */
+  const isNodeClean = (
+    node: ConsumerNode & { _flags: number },
+    dirtyMask: number
+  ): boolean => {
+    return (node._flags & dirtyMask) === 0;
+  };
+
+  return { addDependency, removeFromTargets, linkNodes, checkNodeDirty, shouldNodeUpdate, isNodeClean };
 }

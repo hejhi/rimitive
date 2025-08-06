@@ -126,10 +126,16 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       // If nothing changed globally since we last ran, skip all checks
       if (this._globalVersion === ctx.version) return;
 
-      // ALGORITHM: Conditional Execution
-      // Even though effects are eager, we still check if dependencies
-      // actually changed (they might have been false positives)
-      if (!shouldNodeUpdate(this, ctx)) return;
+      // OPTIMIZATION: Inline OUTDATED check for hot path
+      // Most effects will be OUTDATED after invalidation
+      if (!(this._flags & (OUTDATED | NOTIFIED))) return;
+      
+      if (this._flags & OUTDATED) {
+        // Fast path - we know we need to update
+      } else if (!shouldNodeUpdate(this, ctx)) {
+        // Slow path - check if NOTIFIED dependencies actually changed
+        return;
+      }
 
       // ALGORITHM: Atomic State Transition
       // Set RUNNING to prevent re-entrance
