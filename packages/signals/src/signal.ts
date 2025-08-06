@@ -160,9 +160,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       } finally {
         // When the outermost batch completes (batchDepth reaches 0),
         // flush all scheduled effects in the order they were scheduled
-        if (--ctx.batchDepth === 0) {
-          flushScheduled();
-        }
+        if (--ctx.batchDepth === 0) flushScheduled();
       }
     }
 

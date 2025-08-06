@@ -159,10 +159,10 @@ export function createDependencyHelpers(): DependencyHelpers {
       }
     }
 
-    if (!isLastTarget) {
-      // Update next node's back pointer
-      nextTarget.prevTarget = prevTarget;
-    }
+    if (isLastTarget) return;
+
+    // Update next node's back pointer
+    nextTarget.prevTarget = prevTarget;
   };
 
   /**
@@ -189,9 +189,9 @@ export function createDependencyHelpers(): DependencyHelpers {
       // OPTIMIZATION: Fast path for signals (no dependencies)
       // Signals don't have _sources, so we can check them quickly
       if (!('_sources' in sourceNode)) {
-        if (source.version !== sourceNode._version) {
-          return true; // Signal changed, we're dirty
-        }
+        // Signal changed, we're dirty
+        if (source.version !== sourceNode._version) return true;
+
         // Signal unchanged, update edge version and continue
         source.version = sourceNode._version;
         source = source.nextSource;
@@ -218,7 +218,6 @@ export function createDependencyHelpers(): DependencyHelpers {
       // The dependency is clean (value hasn't changed)
       // Update the edge version to prevent redundant checks
       source.version = sourceNode._version;
-      
       source = source.nextSource;
     }
     
@@ -257,19 +256,18 @@ export function createDependencyHelpers(): DependencyHelpers {
         // Dependencies did change - mark as OUTDATED for next time
         node._flags |= OUTDATED;
         return true;
-      } else {
-        // False alarm - dependencies didn't actually change
-        // Clear NOTIFIED flag to mark as clean
-        node._flags &= ~NOTIFIED;
-        // Update global version if context provided
-        if (ctx && node._globalVersion !== undefined) {
-          node._globalVersion = ctx.version;
-        }
-        return false;
       }
+
+      // False alarm - dependencies didn't actually change
+      // Clear NOTIFIED flag to mark as clean
+      node._flags &= ~NOTIFIED;
+      // Update global version if context provided
+      if (ctx && node._globalVersion !== undefined) {
+        node._globalVersion = ctx.version;
+      }
+      return false;
     }
     
-    // TODO: Is this reachable? Add assertion or remove
     return false;
   };
 

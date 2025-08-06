@@ -126,10 +126,14 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // ALGORITHM: Dependency Registration (Pull Phase)
       // If we're being read from within another computed/effect, register the dependency
       const consumer = ctx.currentConsumer;
-      if (consumer && '_flags' in consumer && typeof consumer._flags === 'number' && consumer._flags & RUNNING) {
-        // Register dependency with current version (might be stale if not yet computed)
-        addDependency(this, consumer, this._version);
-      }
+      const cflags =
+        consumer &&
+        '_flags' in consumer &&
+        typeof consumer._flags === 'number' &&
+        consumer._flags & RUNNING;
+      
+      // Register dependency with current version (might be stale if not yet computed)
+      if (cflags) addDependency(this, consumer, this._version);
       
       // ALGORITHM: Lazy Evaluation
       // Only recompute if our dependencies have changed
@@ -138,9 +142,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // ALGORITHM: Post-Update Edge Synchronization
       // If we just updated and have a consumer, update the edge version
       // This handles the case where the edge was created before first computation
-      if (consumer && '_flags' in consumer && typeof consumer._flags === 'number' && consumer._flags & RUNNING) {
-        addDependency(this, consumer, this._version);
-      }
+      if (cflags) addDependency(this, consumer, this._version);
       
       // Value is guaranteed to be defined after _update
       return this._value!;
@@ -227,9 +229,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // OPTIMIZATION: Ultra-fast path for clean computeds
       // If our cached global version matches, NOTHING has changed globally
       // We can skip all checks - no signal changes means no flag changes
-      if (this._globalVersion === ctx.version) {
-        return;
-      }
+      if (this._globalVersion === ctx.version) return;
       
       // ALGORITHM: Conditional Recomputation
       // shouldNodeUpdate checks:
@@ -237,9 +237,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // 2. If we're OUTDATED (definitely need update)
       // 3. If we're NOTIFIED (check dependencies iteratively)
       // Only recompute if actually necessary
-      if (shouldNodeUpdate(this, ctx)) {
-        this._recompute();
-      }
+      if (shouldNodeUpdate(this, ctx)) this._recompute();
     }
 
     _refresh(): boolean {
@@ -252,9 +250,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       
       // If we have the TRACKING flag and are not OUTDATED or NOTIFIED, we're fresh
       // TRACKING means we have subscribers and are part of the active graph
-      if ((this._flags & (OUTDATED | NOTIFIED | TRACKING)) === TRACKING) {
-        return true;
-      }
+      if ((this._flags & (OUTDATED | NOTIFIED | TRACKING)) === TRACKING) return true;
       
       // Clear NOTIFIED flag as we're handling it now
       this._flags &= ~NOTIFIED;
@@ -264,9 +260,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       
       // OPTIMIZATION: Global version check
       // If nothing changed globally since we last updated, we're fresh
-      if (this._globalVersion === ctx.version) {
-        return true;
-      }
+      if (this._globalVersion === ctx.version) return true;
       
       // Set RUNNING flag to detect cycles during dependency checking
       this._flags |= RUNNING;

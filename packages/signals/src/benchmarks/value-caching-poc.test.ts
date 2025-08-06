@@ -33,8 +33,6 @@ describe('Value Caching POC', () => {
   let api: API;
   let signal: API['signal'];
   let computed: API['computed'];
-  let effect: API['effect'];
-  let batch: API['batch'];
 
   beforeEach(() => {
     api = createSignalAPI({
@@ -45,8 +43,6 @@ describe('Value Caching POC', () => {
     });
     signal = api.signal;
     computed = api.computed;
-    effect = api.effect;
-    batch = api.batch;
   });
 
   // Extended Computed interface with value caching capability
@@ -84,11 +80,11 @@ describe('Value Caching POC', () => {
       // For signals, peek the current value
       if ('value' in sourceNode && !('_sources' in sourceNode)) {
         const currentValue = sourceNode.value;
-        const cachedValue = this._cachedDependencyValues.get(sourceNode);
+        const cachedValue = this._cachedDependencyValues?.get(sourceNode);
         
         if (cachedValue === undefined || cachedValue !== currentValue) {
           anyValueChanged = true;
-          this._cachedDependencyValues.set(sourceNode, currentValue);
+          this._cachedDependencyValues?.set(sourceNode, currentValue);
         }
       }
       // For computeds, recursively check if they're dirty
@@ -96,11 +92,11 @@ describe('Value Caching POC', () => {
         // First refresh the computed to ensure it's up to date
         sourceNode._refresh();
         const currentValue = sourceNode._value;
-        const cachedValue = this._cachedDependencyValues.get(sourceNode);
+        const cachedValue = this._cachedDependencyValues?.get(sourceNode);
         
         if (cachedValue === undefined || cachedValue !== currentValue) {
           anyValueChanged = true;
-          this._cachedDependencyValues.set(sourceNode, currentValue);
+          this._cachedDependencyValues?.set(sourceNode, currentValue);
         }
       }
       
@@ -111,7 +107,6 @@ describe('Value Caching POC', () => {
   };
   
   // Override _refresh to use _peekDirty
-  const originalRefresh = original._refresh;
   original._refresh = function() {
     const { RUNNING, OUTDATED, NOTIFIED, TRACKING } = CONSTANTS;
     
@@ -152,7 +147,7 @@ describe('Value Caching POC', () => {
   const originalRecompute = original._recompute;
   original._recompute = function() {
     // Clear cached values as dependencies might have changed
-    this._cachedDependencyValues.clear();
+    this._cachedDependencyValues?.clear();
     
     // Run original recompute
     originalRecompute.call(this);
@@ -163,7 +158,7 @@ describe('Value Caching POC', () => {
       const sourceNode = source.source;
       if ('value' in sourceNode) {
         const currentValue = 'peek' in sourceNode ? sourceNode.peek() : sourceNode.value;
-        this._cachedDependencyValues.set(sourceNode, currentValue);
+        this._cachedDependencyValues?.set(sourceNode, currentValue);
       }
       source = source.nextSource;
     }
@@ -173,7 +168,6 @@ describe('Value Caching POC', () => {
   }
   it('demonstrates value caching for filtered diamond pattern', () => {
     // Track computation counts
-    let sourceComputations = 0;
     let filter1Computations = 0;
     let filter2Computations = 0;
     let consumerComputations = 0;
