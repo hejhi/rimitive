@@ -103,9 +103,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       // Only call callback if:
       // 1. skipEqualityCheck is enabled (always call)
       // 2. Value actually changed (using === equality)
-      const skipEqualityCheck = this._flags & SKIP_EQUALITY;
-      
-      if (skipEqualityCheck || currentValue !== this._lastValue) {
+      if ((this._flags & SKIP_EQUALITY) || currentValue !== this._lastValue) {
         // Update cached value before calling callback
         // This ensures callback sees consistent state
         this._lastValue = currentValue;
