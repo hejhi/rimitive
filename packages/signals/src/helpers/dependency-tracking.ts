@@ -201,7 +201,23 @@ export function createDependencyHelpers(): DependencyHelpers {
       // Complex path for computeds (has dependencies)
       // ALGORITHM: Optimized dependency check for computeds
       
-      // Phase 1: Always refresh computed dependencies
+      // OPTIMIZATION: Early exit for clean computeds
+      // If the computed has clean flags and our edge version matches,
+      // we can skip the refresh entirely
+      if ('_flags' in sourceNode && typeof sourceNode._flags === 'number') {
+        const flags = sourceNode._flags;
+        const isClean = !(flags & (NOTIFIED | OUTDATED));
+        const versionMatches = source.version === sourceNode._version;
+        
+        if (isClean && versionMatches) {
+          // This computed is clean and hasn't changed since we last read it
+          // Skip the expensive _refresh call
+          source = source.nextSource;
+          continue;
+        }
+      }
+      
+      // Phase 1: Refresh computed dependencies if potentially dirty
       // This ensures they check THEIR dependencies and recompute if needed
       // The key insight: _refresh() will only increment version if value changed
       const refreshFailed = !sourceNode._refresh();
@@ -242,18 +258,14 @@ export function createDependencyHelpers(): DependencyHelpers {
   ): boolean => {
     const flags = node._flags;
     
-    // OPTIMIZATION: Early exit if node is known clean
-    // Neither NOTIFIED nor OUTDATED means nothing to do
-    if (!(flags & (OUTDATED | NOTIFIED))) return false;
-    
-    // OUTDATED is definitive - node must update
+    // OPTIMIZATION: Simple check - OUTDATED means update needed
     if (flags & OUTDATED) return true;
     
-    // ALGORITHM: Lazy Verification
-    // NOTIFIED means "might be dirty" - verify by checking dependencies
+    // For compatibility, still handle NOTIFIED without OUTDATED
+    // This can happen in edge cases or during migration
     if (flags & NOTIFIED) {
       if (checkNodeDirty(node)) {
-        // Dependencies did change - mark as OUTDATED for next time
+        // Dependencies did change - mark as OUTDATED
         node._flags |= OUTDATED;
         return true;
       }
