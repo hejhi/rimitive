@@ -18,6 +18,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };
@@ -41,6 +42,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };
@@ -64,6 +66,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };
@@ -89,6 +92,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };
@@ -112,6 +116,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };
@@ -141,6 +146,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: flush1,
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };
@@ -152,6 +158,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: flush2,
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };
@@ -163,6 +170,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: flush3,
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };
@@ -193,6 +201,7 @@ describe('ScheduledConsumerHelpers', () => {
         _flush: vi.fn(),
         _invalidate: vi.fn(),
         _sources: undefined,
+        _generation: 0,
         dispose: () => {},
         _refresh: () => true
       };
@@ -203,6 +212,7 @@ describe('ScheduledConsumerHelpers', () => {
     const overflowConsumer: ScheduledNode & StatefulNode = {
       __type: 'test',
       _flags: 0,
+      _generation: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
       _invalidate: vi.fn(),
@@ -230,6 +240,7 @@ describe('ScheduledConsumerHelpers', () => {
       _flush: vi.fn(),
       _invalidate: vi.fn(),
       _sources: undefined,
+      _generation: 0,
       dispose: () => {},
       _refresh: () => true,
     };

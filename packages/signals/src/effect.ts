@@ -97,6 +97,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     _sources: Edge | undefined = undefined;              // Dependencies this effect reads
     _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
     _globalVersion = -1;                                 // For global version optimization
+    _generation = 0;                                     // Generation counter for edge cleanup
     
     // Cold fields (accessed less frequently)
     __type = 'effect' as const;                          // Type discriminator
@@ -140,14 +141,10 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       ctx.currentConsumer = this;
 
       try {
-        // ALGORITHM: Mark Dependencies for Cleanup
-        // Same as computed - mark all current deps with -1
-        // After running, any still at -1 weren't accessed and will be removed
-        let source = this._sources;
-        while (source) {
-          source.version = -1;
-          source = source.nextSource;
-        }
+        // ALGORITHM: Generation-Based Dependency Tracking
+        // Increment generation before execution
+        // All edges accessed during this run will be marked with this generation
+        this._generation++;
 
         // ALGORITHM: Cleanup Before Re-execution
         // If the effect returned a cleanup function last time, run it first

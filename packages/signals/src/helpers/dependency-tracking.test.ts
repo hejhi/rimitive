@@ -21,6 +21,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -50,6 +51,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -81,6 +83,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -102,6 +105,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -133,6 +137,7 @@ describe('Dependency Tracking Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -164,6 +169,7 @@ describe('Dependency Tracking Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _sources: undefined,
+          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -189,6 +195,7 @@ describe('Dependency Tracking Helpers', () => {
         const target1: ConsumerNode = {
           __type: 'test',
           _sources: undefined,
+          _generation: 0,
           _invalidate: () => { },
           _refresh: () => true,
         };
@@ -196,6 +203,7 @@ describe('Dependency Tracking Helpers', () => {
         const target2: ConsumerNode = {
           __type: 'test',
           _sources: undefined,
+          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -221,6 +229,7 @@ describe('Dependency Tracking Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _sources: undefined,
+          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -244,6 +253,7 @@ describe('Dependency Tracking Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _sources: undefined,
+          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -293,6 +303,7 @@ describe('Dependency Tracking Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _sources: undefined,
+          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };

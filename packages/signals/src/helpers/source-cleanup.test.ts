@@ -24,6 +24,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -57,6 +58,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -69,6 +71,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -80,7 +83,7 @@ describe('Source Cleanup Helpers', () => {
   });
 
   describe('cleanupSources', () => {
-    it('should remove only nodes with version -1', () => {
+    it('should remove only nodes with old generation', () => {
       const sources = Array.from({ length: 4 }, (_, i) => ({
         __type: 'test',
         _targets: undefined,
@@ -91,18 +94,22 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
       
-      // Create dependencies
+      // Create dependencies with current generation
       const nodes = sources.map((source) =>
         depHelpers.linkNodes(source, consumer, source._version)
       );
       
-      // Mark some nodes for cleanup
-      nodes[1]!.version = -1;
-      nodes[3]!.version = -1;
+      // Increment generation (simulating recomputation)
+      consumer._generation++;
+      
+      // Update some nodes to new generation (simulating access during recomputation)
+      nodes[0]!.generation = consumer._generation;
+      nodes[2]!.generation = consumer._generation;
       
       helpers.cleanupSources(consumer);
       
@@ -110,7 +117,7 @@ describe('Source Cleanup Helpers', () => {
       let count = 0;
       let node = consumer._sources;
       while (node) {
-        expect(node.version).not.toBe(-1);
+        expect(node.generation).toBe(consumer._generation);
         count++;
         node = node.nextSource;
       }
@@ -129,6 +136,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -138,9 +146,11 @@ describe('Source Cleanup Helpers', () => {
         depHelpers.linkNodes(source, consumer, source._version)
       );
       
-      // Mark alternating nodes for cleanup
-      nodes[1]!.version = -1;
-      nodes[3]!.version = -1;
+      // Increment generation and mark some nodes as accessed
+      consumer._generation++;
+      nodes[0]!.generation = consumer._generation;
+      nodes[2]!.generation = consumer._generation;
+      nodes[4]!.generation = consumer._generation;
       
       helpers.cleanupSources(consumer);
       
@@ -168,12 +178,15 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
       
-      const node = depHelpers.linkNodes(source, consumer, 1);
-      node.version = -1;
+      depHelpers.linkNodes(source, consumer, 1);
+      
+      // Increment generation but don't update any nodes
+      consumer._generation++;
       
       helpers.cleanupSources(consumer);
       
@@ -191,16 +204,17 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
       
-      const nodes = sources.map((source) =>
+      sources.map((source) =>
         depHelpers.linkNodes(source, consumer, 1)
       );
       
-      // Mark for cleanup
-      nodes.forEach(node => node.version = -1);
+      // Increment generation but don't update any nodes
+      consumer._generation++;
       
       helpers.cleanupSources(consumer);
     });
@@ -209,6 +223,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -231,6 +246,7 @@ describe('Source Cleanup Helpers', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
         _sources: undefined,
+        _generation: 1,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -239,8 +255,11 @@ describe('Source Cleanup Helpers', () => {
         depHelpers.linkNodes(source, consumer, source._version)
       );
       
-      // Mark first node for cleanup
-      nodes[2]!.version = -1; // Most recent node is first in list
+      // Increment generation and update only some nodes
+      consumer._generation++;
+      nodes[0]!.generation = consumer._generation;
+      nodes[1]!.generation = consumer._generation;
+      // nodes[2] stays with old generation
       
       helpers.cleanupSources(consumer);
       

@@ -53,6 +53,7 @@ export interface ProducerNode extends ReactiveNode {
 // They maintain a list of producers (sources) they depend on
 export interface ConsumerNode extends ReactiveNode {
   _sources: Edge | undefined;  // Head of intrusive linked list of dependencies
+  _generation: number;         // Generation counter for edge cleanup
   _invalidate(): void;         // Called when dependencies change
   _refresh(): boolean;
 }
@@ -105,5 +106,10 @@ export interface Edge {
   // Stores the source's version when this edge was created/validated.
   // Enables O(1) staleness checks: if edge.version !== source._version, recompute
   version: number;
+  
+  // OPTIMIZATION: Generation-Based Cleanup
+  // Stores the consumer's generation when this edge was last accessed.
+  // Enables O(1) cleanup: if edge.generation !== consumer._generation, remove
+  generation: number;
 }
 

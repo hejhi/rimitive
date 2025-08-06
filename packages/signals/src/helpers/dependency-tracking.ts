@@ -75,6 +75,7 @@ export function createDependencyHelpers(): DependencyHelpers {
        source,
        target,
        version, // Store producer's version at time of edge creation
+       generation: target._generation, // Store consumer's generation for cleanup
        prevSource: undefined, // Will be head, so no previous
        prevTarget: undefined, // Will be head, so no previous  
        nextSource, // Link to old head of consumer's sources
@@ -112,8 +113,9 @@ export function createDependencyHelpers(): DependencyHelpers {
     // OPTIMIZATION: Check cached edge first (O(1) fast path)
     let node = source._lastEdge;
     if (node !== undefined && node.target === target) {
-      // Edge exists in cache - just update version
+      // Edge exists in cache - just update version and generation
       node.version = version;
+      node.generation = target._generation;
       return;
     }
     
@@ -123,8 +125,9 @@ export function createDependencyHelpers(): DependencyHelpers {
     node = target._sources;
     while (node) {
       if (node.source === source) {
-        // Found existing edge - update version and cache it
+        // Found existing edge - update version, generation and cache it
         node.version = version;
+        node.generation = target._generation;
         // OPTIMIZATION: Update cache for next access
         source._lastEdge = node;
         return;

@@ -69,16 +69,16 @@ export function createSourceCleanupHelpers({ removeFromTargets }: ReturnType<typ
 
   // ALGORITHM: Selective Edge Removal for Dynamic Dependencies
   // After a computed/effect runs, we need to remove edges to dependencies
-  // that were NOT accessed during the run (marked with version -1)
+  // that were NOT accessed during the run (generation != consumer's generation)
   const cleanupSources = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
     let prev: Edge | undefined;
 
-    // Walk the linked list, removing nodes with version -1
+    // Walk the linked list, removing nodes with old generation
     while (node !== undefined) {
       const next = node.nextSource;
 
-      if (node.version === -1) {
+      if (node.generation !== consumer._generation) {
         // ALGORITHM: Linked List Removal
         // This dependency wasn't accessed - remove it
         

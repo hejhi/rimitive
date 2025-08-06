@@ -111,6 +111,11 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     // -1 means "never checked" to force first update.
     // INSIGHT: This turns nested dependency checks from O(depth) to O(1)!
     _globalVersion = -1;
+    
+    // OPTIMIZATION: Generation Counter for Edge Cleanup
+    // Incremented before each recomputation to mark "current" edges
+    // Edges with generation !== this value are stale and removed
+    _generation = 0;
 
     constructor(compute: () => T) {
       this._callback = compute;
@@ -162,15 +167,11 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // Set RUNNING, clear OUTDATED and NOTIFIED in one operation
       this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
-      // ALGORITHM: Dependency Discovery Preparation
-      // Mark all current dependencies with version -1
-      // After recomputation, any dependency still at -1 wasn't accessed
-      // and will be removed during cleanup (dynamic dependency tracking)
-      let source = this._sources;
-      while (source) {
-        source.version = -1;
-        source = source.nextSource;
-      }
+      // ALGORITHM: Generation-Based Dependency Tracking
+      // Increment generation counter before recomputation
+      // All edges accessed during this run will be marked with this generation
+      // After recomputation, edges with old generation are removed
+      this._generation++;
       
       // ALGORITHM: Context Switching for Dependency Tracking
       // Set ourselves as the current consumer so signal reads register with us

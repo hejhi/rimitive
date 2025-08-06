@@ -64,6 +64,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     _lastValue: T;                           // Cached value for equality check
     _sources: Edge | undefined = undefined;  // Single edge to source signal/computed
     _nextScheduled?: ScheduledNode = undefined; // Link in scheduling queue
+    _generation = 0;                         // Generation counter for edge cleanup
 
     constructor(source: Readable<T> & ProducerNode, callback: (value: T) => void) {
       this._callback = callback;
