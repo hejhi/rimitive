@@ -105,11 +105,18 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     // This enables dependents to skip recomputation if we didn't change.
     _version = 0;
     
-    // OPTIMIZATION: Global Version Cache
-    // Stores ctx.version when we last verified we're up-to-date.
-    // If global version hasn't changed, we can skip all dependency checks.
-    // -1 means "never checked" to force first update.
-    // INSIGHT: This turns nested dependency checks from O(depth) to O(1)!
+    // CACHED GLOBAL VERSION (FAST-PATH OPTIMIZATION)
+    // Caches ctx.version when this computed was last verified as up-to-date.
+    // Enables the critical "nothing changed" fast path.
+    // 
+    // PURPOSE: O(1) optimization for stable systems
+    // - If _globalVersion === ctx.version, skip ALL dependency checks
+    // - Turns potentially O(n) traversal into O(1) check
+    // - Particularly effective for deep dependency trees
+    // 
+    // NOT REDUNDANT: This is a performance cache that avoids traversing
+    // the dependency graph when nothing has changed globally.
+    // Without it, every access would need to validate all dependencies.
     _globalVersion = -1;
     
     // OPTIMIZATION: Generation Counter for Edge Cleanup

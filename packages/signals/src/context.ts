@@ -19,10 +19,17 @@ export interface SignalContext {
   // Similar to React's Fiber tracking or Vue's targetStack.
   currentConsumer: ConsumerNode | null;
   
-  // ALGORITHM: Global Version Clock
-  // Monotonically increasing counter used for cache invalidation.
-  // When a signal changes, we increment this and use it to mark edges as stale.
-  // This is more efficient than traversing the entire graph.
+  // ALGORITHM: Global Version Clock (TEMPORAL CHANGE TRACKING)
+  // Monotonically increasing counter that tracks ANY change in the system.
+  // Incremented whenever ANY signal's value changes.
+  // 
+  // PURPOSE: Enables O(1) "has anything changed?" checks
+  // - If consumer._globalVersion === ctx.version, nothing changed globally
+  // - Avoids traversing entire dependency graph when system is stable
+  // 
+  // NOT REDUNDANT WITH GENERATION: This tracks WHEN changes occur,
+  // while generation tracks WHICH dependencies are active.
+  // 
   // OPTIMIZATION: Could use BigInt if overflow is a concern (unlikely in practice)
   version: number;
   

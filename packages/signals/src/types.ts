@@ -46,14 +46,38 @@ export interface Disposable {
 // They maintain a list of consumers (targets) that depend on them
 export interface ProducerNode extends ReactiveNode {
   _targets: Edge | undefined;  // Head of intrusive linked list of dependents
-  _version: number;            // Incremented on change for cache invalidation
+  
+  // LOCAL VERSION COUNTER (VALUE CHANGE TRACKING)
+  // Incremented when THIS node's value changes.
+  // Used to detect if specific dependencies have new values.
+  // 
+  // PURPOSE: Fine-grained change detection
+  // - Stored in edge.version when dependencies are registered
+  // - Compared against edge.version to detect if this dependency changed
+  // 
+  // NOT REDUNDANT WITH GENERATION: This tracks value changes,
+  // while generation tracks which edges to keep/remove.
+  _version: number;
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
 // They maintain a list of producers (sources) they depend on
 export interface ConsumerNode extends ReactiveNode {
   _sources: Edge | undefined;  // Head of intrusive linked list of dependencies
-  _generation: number;         // Generation counter for edge cleanup
+  
+  // GENERATION COUNTER (STRUCTURAL CHANGE TRACKING)
+  // Incremented before each recomputation to mark current "generation".
+  // Used for dynamic dependency cleanup after conditional logic changes.
+  // 
+  // PURPOSE: Identifies which edges were accessed in current computation
+  // - Before recompute: increment generation
+  // - During recompute: set edge.generation = this._generation for accessed deps
+  // - After recompute: remove edges where edge.generation !== this._generation
+  // 
+  // NOT REDUNDANT WITH VERSIONS: This tracks WHICH dependencies are active,
+  // while versions track WHEN values change.
+  _generation: number;
+  
   _invalidate(): void;         // Called when dependencies change
   _refresh(): boolean;
 }
@@ -102,14 +126,27 @@ export interface Edge {
   prevTarget?: Edge;  // Previous edge to same target
   nextTarget?: Edge;  // Next edge to same target
   
-  // OPTIMIZATION: Version Tracking
-  // Stores the source's version when this edge was created/validated.
-  // Enables O(1) staleness checks: if edge.version !== source._version, recompute
+  // CACHED PRODUCER VERSION (STALENESS DETECTION)
+  // Stores the producer's _version at the time this edge was created/validated.
+  // Updated whenever the consumer reads from the producer.
+  // 
+  // PURPOSE: O(1) staleness detection without pointer chasing
+  // - If edge.version !== source._version, the producer has changed
+  // - Avoids dereferencing source just to check if it changed
+  // 
+  // NOT REDUNDANT: This is a cache of producer._version for performance
   version: number;
   
-  // OPTIMIZATION: Generation-Based Cleanup
-  // Stores the consumer's generation when this edge was last accessed.
-  // Enables O(1) cleanup: if edge.generation !== consumer._generation, remove
+  // CACHED CONSUMER GENERATION (EDGE LIFECYCLE)
+  // Stores the consumer's _generation when this edge was last accessed.
+  // Updated whenever consumer reads from producer during recomputation.
+  // 
+  // PURPOSE: Identifies stale edges for cleanup
+  // - If edge.generation !== consumer._generation, edge wasn't used
+  // - Enables automatic cleanup of conditional dependencies
+  // 
+  // ORTHOGONAL TO VERSION: Version tracks value changes (temporal),
+  // generation tracks edge usage (structural)
   generation: number;
 }
 
