@@ -1,17 +1,17 @@
 import { CONSTANTS } from '../constants';
 import type { SignalContext } from '../context';
-import type { ScheduledNode, StatefulNode } from '../types';
+import type { ScheduledNode } from '../types';
 
 const { DISPOSED } = CONSTANTS;
 
 export interface ScheduledConsumerHelpers {
   scheduleConsumer: (consumer: ScheduledNode) => void;
   invalidateConsumer: (
-    consumer: ScheduledNode & StatefulNode,
+    consumer: ScheduledNode,
     checkFlags: number,
     setFlags: number
   ) => void;
-  disposeConsumer: <T extends ScheduledNode & StatefulNode>(
+  disposeConsumer: <T extends ScheduledNode>(
     consumer: T,
     cleanupFn: (consumer: T) => void
   ) => void;
@@ -119,7 +119,7 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
    * signal updates in a batch have completed.
    */
   const invalidateConsumer = (
-    consumer: ScheduledNode & StatefulNode,
+    consumer: ScheduledNode,
     checkFlags: number,  // Flags that indicate "already handled"
     setFlags: number     // Flags to set when handling
   ): void => {
@@ -149,7 +149,7 @@ export function createScheduledConsumerHelpers(ctx: SignalContext): ScheduledCon
    * further scheduling or execution. The DISPOSED flag acts as a
    * tombstone to skip the node in all future operations.
    */
-  const disposeConsumer = <T extends ScheduledNode & StatefulNode>(
+  const disposeConsumer = <T extends ScheduledNode>(
     consumer: T,
     cleanupFn: (consumer: T) => void  // Custom cleanup logic per consumer type
   ): void => {

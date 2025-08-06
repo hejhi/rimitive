@@ -88,7 +88,7 @@ export function createDependencyHelpers(): DependencyHelpers {
      // FLAG: Computed nodes can be both producers AND consumers
      // When a computed has consumers, we set the TRACKING flag to indicate
      // it's part of an active dependency chain and should update when read
-     if ('_flags' in source && typeof source._flags === 'number') source._flags |= TRACKING;
+     if ('_flags' in source) source._flags |= TRACKING;
      
      if (nextSource) nextSource.prevSource = newNode;
 
@@ -157,7 +157,7 @@ export function createDependencyHelpers(): DependencyHelpers {
       // If this was the last consumer and source is also a computed,
       // clear TRACKING flag since it has no downstream dependencies
       // This allows the computed to skip updates when not observed
-      if (isLastTarget && '_flags' in source && typeof source._flags === 'number') {
+      if (isLastTarget && '_flags' in source) {
         source._flags &= ~TRACKING;
       }
     }
@@ -207,7 +207,7 @@ export function createDependencyHelpers(): DependencyHelpers {
       // OPTIMIZATION: Early exit for clean computeds
       // If the computed has clean flags and our edge version matches,
       // we can skip the refresh entirely
-      if ('_flags' in sourceNode && typeof sourceNode._flags === 'number') {
+      if ('_flags' in sourceNode) {
         const flags = sourceNode._flags;
         const isClean = !(flags & (NOTIFIED | OUTDATED));
         const versionMatches = source.version === sourceNode._version;

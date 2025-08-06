@@ -25,7 +25,6 @@ export type {
   ProducerNode,
   ConsumerNode,
   ScheduledNode,
-  StatefulNode,
   Edge,
 } from './types';
 

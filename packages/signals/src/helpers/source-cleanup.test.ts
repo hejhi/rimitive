@@ -23,6 +23,7 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},
@@ -57,6 +58,7 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},
@@ -70,6 +72,7 @@ describe('Source Cleanup Helpers', () => {
     it('should handle empty sources gracefully', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},
@@ -93,6 +96,7 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},
@@ -135,6 +139,7 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},
@@ -177,6 +182,7 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},
@@ -203,6 +209,7 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},
@@ -222,6 +229,7 @@ describe('Source Cleanup Helpers', () => {
     it('should handle empty sources gracefully', () => {
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},
@@ -245,6 +253,7 @@ describe('Source Cleanup Helpers', () => {
       
       const consumer: ConsumerNode = {
         __type: 'test',
+        _flags: 0,
         _sources: undefined,
         _generation: 1,
         _invalidate: () => {},

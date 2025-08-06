@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createScheduledConsumerHelpers } from './scheduled-consumer';
 import { createContext } from '../context';
 import { CONSTANTS } from '../constants';
-import type { ScheduledNode, StatefulNode } from '../types';
+import type { ScheduledNode } from '../types';
 
 const { NOTIFIED, DISPOSED } = CONSTANTS;
 
@@ -11,7 +11,7 @@ describe('ScheduledConsumerHelpers', () => {
     const ctx = createContext();
     const helpers = createScheduledConsumerHelpers(ctx);
     
-    const consumer: ScheduledNode & StatefulNode = {
+    const consumer: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -35,7 +35,7 @@ describe('ScheduledConsumerHelpers', () => {
     const ctx = createContext();
     const helpers = createScheduledConsumerHelpers(ctx);
     
-    const consumer: ScheduledNode & StatefulNode = {
+    const consumer: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -59,7 +59,7 @@ describe('ScheduledConsumerHelpers', () => {
     const ctx = createContext();
     const helpers = createScheduledConsumerHelpers(ctx);
     
-    const consumer: ScheduledNode & StatefulNode = {
+    const consumer: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -85,7 +85,7 @@ describe('ScheduledConsumerHelpers', () => {
     const ctx = createContext();
     const helpers = createScheduledConsumerHelpers(ctx);
     
-    const consumer: ScheduledNode & StatefulNode = {
+    const consumer: ScheduledNode = {
       __type: 'test',
       _flags: NOTIFIED,
       _nextScheduled: undefined,
@@ -109,7 +109,7 @@ describe('ScheduledConsumerHelpers', () => {
     const helpers = createScheduledConsumerHelpers(ctx);
     
     const cleanupFn = vi.fn();
-    const consumer: ScheduledNode & StatefulNode = {
+    const consumer: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -139,7 +139,7 @@ describe('ScheduledConsumerHelpers', () => {
     const flush2 = vi.fn();
     const flush3 = vi.fn();
     
-    const consumer1: ScheduledNode & StatefulNode = {
+    const consumer1: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -151,7 +151,7 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true,
     };
     
-    const consumer2: ScheduledNode & StatefulNode = {
+    const consumer2: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -163,7 +163,7 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true,
     };
     
-    const consumer3: ScheduledNode & StatefulNode = {
+    const consumer3: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -194,7 +194,7 @@ describe('ScheduledConsumerHelpers', () => {
     
     // Fill the queue to capacity
     for (let i = 0; i < 256; i++) {
-      const consumer: ScheduledNode & StatefulNode = {
+      const consumer: ScheduledNode = {
         __type: 'test',
         _flags: 0,
         _nextScheduled: undefined,
@@ -209,7 +209,7 @@ describe('ScheduledConsumerHelpers', () => {
     }
     
     // The 257th consumer should cause an overflow error
-    const overflowConsumer: ScheduledNode & StatefulNode = {
+    const overflowConsumer: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _generation: 0,
@@ -233,7 +233,7 @@ describe('ScheduledConsumerHelpers', () => {
     ctx.scheduledHead = 0x7FFFFFF1;
     
     // Schedule and flush a consumer
-    const consumer: ScheduledNode & StatefulNode = {
+    const consumer: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,

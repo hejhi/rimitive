@@ -33,14 +33,14 @@
 
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Readable, ProducerNode, StatefulNode, Disposable } from './types';
+import { Edge, Readable, ProducerNode, Disposable, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createGraphTraversalHelpers } from './helpers/graph-traversal';
 import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
-export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, EdgeCache, StatefulNode, Disposable {
+export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
   __type: 'computed';
   readonly value: T;  // Getter triggers lazy evaluation
   peek(): T;          // Non-tracking read (still evaluates if needed)
@@ -138,11 +138,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // ALGORITHM: Dependency Registration (Pull Phase)
       // If we're being read from within another computed/effect, register the dependency
       const consumer = ctx.currentConsumer;
-      const cflags =
-        consumer &&
-        '_flags' in consumer &&
-        typeof consumer._flags === 'number' &&
-        consumer._flags & RUNNING;
+      const cflags = consumer && consumer._flags & RUNNING;
       
       // Register dependency with current version (might be stale if not yet computed)
       if (cflags) addDependency(this, consumer, this._version);

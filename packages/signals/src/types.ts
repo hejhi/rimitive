@@ -63,23 +63,24 @@ export interface ProducerNode extends ReactiveNode {
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
 // They maintain a list of producers (sources) they depend on
 export interface ConsumerNode extends ReactiveNode {
-  _sources: Edge | undefined;  // Head of intrusive linked list of dependencies
-  
+  _sources: Edge | undefined; // Head of intrusive linked list of dependencies
+
   // GENERATION COUNTER (STRUCTURAL CHANGE TRACKING)
   // Incremented before each recomputation to mark current "generation".
   // Used for dynamic dependency cleanup after conditional logic changes.
-  // 
+  //
   // PURPOSE: Identifies which edges were accessed in current computation
   // - Before recompute: increment generation
   // - During recompute: set edge.generation = this._generation for accessed deps
   // - After recompute: remove edges where edge.generation !== this._generation
-  // 
+  //
   // NOT REDUNDANT WITH VERSIONS: This tracks WHICH dependencies are active,
   // while versions track WHEN values change.
   _generation: number;
-  
-  _invalidate(): void;         // Called when dependencies change
+
+  _invalidate(): void; // Called when dependencies change
   _refresh(): boolean;
+  _flags: number; // Bit field containing OUTDATED, RUNNING, DISPOSED, etc.
 }
 
 // PATTERN: Deferred Execution Queue
@@ -90,15 +91,8 @@ export interface ScheduledNode extends ConsumerNode, Disposable {
   _flush(): void;                  // Execute the deferred work
 }
 
-// OPTIMIZATION: Bit Flags for State
-// StatefulNode uses bit flags instead of boolean fields to pack
-// multiple state values into a single number. This improves:
-// 1. Memory usage (32 bits vs multiple 64-bit pointers)
-// 2. Cache locality (single field access)
-// 3. Atomic state transitions (single assignment)
-export interface StatefulNode extends ConsumerNode {
-  _flags: number;  // Bit field containing OUTDATED, RUNNING, DISPOSED, etc.
-}
+type EdgeSourceNode = ProducerNode | (ProducerNode & ConsumerNode);
+type EdgeTargetNode = ConsumerNode | (ProducerNode & ConsumerNode);
 
 // ALGORITHM: Intrusive Doubly-Linked Graph Edges
 // Edge represents a dependency relationship in the graph.
@@ -115,36 +109,36 @@ export interface StatefulNode extends ConsumerNode {
 // - Forward: "What depends on this producer?"
 // - Backward: "What does this consumer depend on?"
 export interface Edge {
-  source: ProducerNode | (ProducerNode & ConsumerNode);  // The dependency
-  target: ConsumerNode;                                   // The dependent
-  
+  source: EdgeSourceNode; // The dependency
+  target: EdgeTargetNode | (EdgeTargetNode & Disposable) | (EdgeTargetNode & ScheduledNode); // The dependent
+
   // Intrusive list pointers for source's edge list
-  prevSource?: Edge;  // Previous edge from same source
-  nextSource?: Edge;  // Next edge from same source
-  
-  // Intrusive list pointers for target's edge list  
-  prevTarget?: Edge;  // Previous edge to same target
-  nextTarget?: Edge;  // Next edge to same target
-  
+  prevSource?: Edge; // Previous edge from same source
+  nextSource?: Edge; // Next edge from same source
+
+  // Intrusive list pointers for target's edge list
+  prevTarget?: Edge; // Previous edge to same target
+  nextTarget?: Edge; // Next edge to same target
+
   // CACHED PRODUCER VERSION (STALENESS DETECTION)
   // Stores the producer's _version at the time this edge was created/validated.
   // Updated whenever the consumer reads from the producer.
-  // 
+  //
   // PURPOSE: O(1) staleness detection without pointer chasing
   // - If edge.version !== source._version, the producer has changed
   // - Avoids dereferencing source just to check if it changed
-  // 
+  //
   // NOT REDUNDANT: This is a cache of producer._version for performance
   version: number;
-  
+
   // CACHED CONSUMER GENERATION (EDGE LIFECYCLE)
   // Stores the consumer's _generation when this edge was last accessed.
   // Updated whenever consumer reads from producer during recomputation.
-  // 
+  //
   // PURPOSE: Identifies stale edges for cleanup
   // - If edge.generation !== consumer._generation, edge wasn't used
   // - Enables automatic cleanup of conditional dependencies
-  // 
+  //
   // ORTHOGONAL TO VERSION: Version tracks value changes (temporal),
   // generation tracks edge usage (structural)
   generation: number;

@@ -113,12 +113,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       // 3. The consumer is currently RUNNING (not disposed or paused)
       // This implements "automatic dependency tracking" - dependencies are discovered
       // at runtime by observing which signals are accessed during computation
-      if (
-        !current
-        || !('_flags' in current)
-        || typeof current._flags !== 'number'
-        || !(current._flags & RUNNING)
-      ) return this._value;
+      if (!current || !(current._flags & RUNNING)) return this._value;
 
       // ALGORITHM: Edge Registration
       // Create a bidirectional edge between this signal (producer) and the consumer

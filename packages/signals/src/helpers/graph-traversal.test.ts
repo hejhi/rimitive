@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createGraphTraversalHelpers } from './graph-traversal';
 import { CONSTANTS } from '../constants';
-import type { Edge, ConsumerNode, StatefulNode, ProducerNode, ScheduledNode } from '../types';
+import type { Edge, ConsumerNode, ProducerNode, ScheduledNode } from '../types';
 import type { SignalContext } from '../context';
 
 const { NOTIFIED, OUTDATED, DISPOSED, RUNNING } = CONSTANTS;
@@ -46,8 +46,8 @@ describe('createGraphTraversalHelpers', () => {
     type: string,
     flags = 0,
     isScheduled = false
-  ): ConsumerNode & StatefulNode & Partial<ProducerNode & ScheduledNode> {
-    const node: ConsumerNode & StatefulNode & Partial<ProducerNode & ScheduledNode> = {
+  ): ConsumerNode & Partial<ProducerNode & ScheduledNode> {
+    const node: ConsumerNode & Partial<ProducerNode & ScheduledNode> = {
       __type: type,
       _sources: undefined,
       _generation: 0,
@@ -167,8 +167,8 @@ describe('createGraphTraversalHelpers', () => {
   it('should traverse depth-first through dependency chains', () => {
     // Create chain: source -> computed1 -> computed2 -> effect
     const source = createMockNode('signal') as ProducerNode;
-    const computed1 = createMockNode('computed') as ConsumerNode & StatefulNode & ProducerNode;
-    const computed2 = createMockNode('computed') as ConsumerNode & StatefulNode & ProducerNode;
+    const computed1 = createMockNode('computed') as ConsumerNode & ProducerNode;
+    const computed2 = createMockNode('computed') as ConsumerNode & ProducerNode;
     const effect = createMockNode('effect', 0, true);
 
     const edge1 = createEdge(source, computed1);
@@ -189,8 +189,8 @@ describe('createGraphTraversalHelpers', () => {
   it('should handle diamond dependencies', () => {
     // Diamond: source -> [computed1, computed2] -> computed3
     const source = createMockNode('signal') as ProducerNode;
-    const computed1 = createMockNode('computed') as ConsumerNode & StatefulNode & ProducerNode;
-    const computed2 = createMockNode('computed') as ConsumerNode & StatefulNode & ProducerNode;
+    const computed1 = createMockNode('computed') as ConsumerNode & ProducerNode;
+    const computed2 = createMockNode('computed') as ConsumerNode & ProducerNode;
     const computed3 = createMockNode('computed');
 
     const edge1 = createEdge(source, computed1);
@@ -220,10 +220,10 @@ describe('createGraphTraversalHelpers', () => {
     // eff2          eff3
 
     const source = createMockNode('signal') as ProducerNode;
-    const comp1 = createMockNode('computed') as ConsumerNode & StatefulNode & ProducerNode;
-    const comp2 = createMockNode('computed') as ConsumerNode & StatefulNode & ProducerNode;
-    const comp3 = createMockNode('computed') as ConsumerNode & StatefulNode & ProducerNode;
-    const comp4 = createMockNode('computed') as ConsumerNode & StatefulNode & ProducerNode;
+    const comp1 = createMockNode('computed') as ConsumerNode & ProducerNode;
+    const comp2 = createMockNode('computed') as ConsumerNode & ProducerNode;
+    const comp3 = createMockNode('computed') as ConsumerNode & ProducerNode;
+    const comp4 = createMockNode('computed') as ConsumerNode & ProducerNode;
     const eff1 = createMockNode('effect', 0, true);
     const eff2 = createMockNode('effect', 0, true);
     const eff3 = createMockNode('effect', 0, true);
@@ -289,11 +289,11 @@ describe('createGraphTraversalHelpers', () => {
 
   it('should handle very deep chains efficiently', () => {
     // Create a chain of 100 nodes
-    const nodes: (ConsumerNode & StatefulNode & ProducerNode)[] = [];
+    const nodes: (ConsumerNode & ProducerNode)[] = [];
     const edges: Edge[] = [];
 
     for (let i = 0; i < 100; i++) {
-      nodes[i] = createMockNode(`computed${i}`) as ConsumerNode & StatefulNode & ProducerNode;
+      nodes[i] = createMockNode(`computed${i}`) as ConsumerNode & ProducerNode;
     }
 
     for (let i = 0; i < 99; i++) {

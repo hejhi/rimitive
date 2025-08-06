@@ -1,5 +1,5 @@
 import { CONSTANTS } from '../constants';
-import type { Edge, ConsumerNode, ScheduledNode, StatefulNode } from '../types';
+import type { Edge } from '../types';
 import type { SignalContext } from '../context';
 import type { ScheduledConsumerHelpers } from './scheduled-consumer';
 
@@ -74,29 +74,22 @@ export function createGraphTraversalHelpers(
     while (currentEdge) {
       const target = currentEdge.target;
       
-      // Type guard to check if target is a StatefulNode (has flags)
-      if ('_flags' in target) {
-        const statefulTarget = target as ConsumerNode & StatefulNode;
-        
-        // OPTIMIZATION: Early Skip Check
-        // Skip nodes that are already processed or invalid
-        if (statefulTarget._flags & SKIP_FLAGS) {
-          currentEdge = currentEdge.nextTarget;
-          continue;
-        }
-        
-        // Mark as notified and schedule if needed
-        statefulTarget._flags |= NOTIFIED;
-        
-        if ('_flush' in target && '_nextScheduled' in target && 'dispose' in target) {
-          scheduleConsumer(target as unknown as ScheduledNode);
-        }
+      // OPTIMIZATION: Early Skip Check
+      // Skip nodes that are already processed or invalid
+      if (target._flags & SKIP_FLAGS) {
+        currentEdge = currentEdge.nextTarget;
+        continue;
       }
+      
+      // Mark as notified and schedule if needed
+      target._flags |= NOTIFIED;
+      
+      if ('_nextScheduled' in target) scheduleConsumer(target);
       
       // OPTIMIZATION: Linear Chain Fast Path
       // Most dependency chains are linear (A→B→C). Handle these without stack.
       const nextSibling = currentEdge.nextTarget;
-      const childTargets = '_targets' in target ? target._targets as Edge : undefined;
+      const childTargets = '_targets' in target ? target._targets : undefined;
       
       if (childTargets) {
         // Has children to traverse
