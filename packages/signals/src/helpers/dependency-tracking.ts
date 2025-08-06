@@ -112,23 +112,25 @@ export function createDependencyHelpers(): DependencyHelpers {
     version: number
   ): void => {
     // OPTIMIZATION: Check cached edge first (O(1) fast path)
-    let node = source._lastEdge;
-    if (node !== undefined && node.target === target) {
+    const cached = source._lastEdge;
+    if (cached && cached.target === target) {
       // Edge exists in cache - just update version and generation
-      node.version = version;
-      node.generation = target._generation;
+      cached.version = version;
+      cached.generation = target._generation;
       return;
     }
     
+    // OPTIMIZATION: Store generation in local variable to avoid repeated property access
+    const generation = target._generation;
+    
     // ALGORITHM: Linear Search for Existing Edge
     // Search through consumer's dependency list for existing edge
-    // This is O(n) but typically n is small (most computeds have few dependencies)
-    node = target._sources;
+    let node = target._sources;
     while (node) {
       if (node.source === source) {
         // Found existing edge - update version, generation and cache it
         node.version = version;
-        node.generation = target._generation;
+        node.generation = generation;
         // OPTIMIZATION: Update cache for next access
         source._lastEdge = node;
         return;
