@@ -260,11 +260,8 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // TRACKING means we have subscribers and are part of the active graph
       if ((this._flags & (OUTDATED | NOTIFIED | TRACKING)) === TRACKING) return true;
       
-      // Clear NOTIFIED flag as we're handling it now
-      this._flags &= ~NOTIFIED;
-      
-      // Clear OUTDATED flag as we're about to check/update
-      this._flags &= ~OUTDATED;
+      // Clear NOTIFIED and OUTDATED flags as we're handling them now
+      this._flags &= ~(NOTIFIED | OUTDATED);
       
       // OPTIMIZATION: Global version check
       // If nothing changed globally since we last updated, we're fresh
@@ -281,7 +278,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
         return true;
       }
       
-      // Dependencies changed or first run - actually recompute now
+      // Dependencies changed or first run - clear RUNNING before recompute
       this._flags &= ~RUNNING;
       
       // Recompute the value
