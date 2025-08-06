@@ -181,67 +181,50 @@ export function createDependencyHelpers(): DependencyHelpers {
    * The recursion happens through _refresh() calls, but it's controlled by
    * RUNNING flags and global version checks to prevent stack overflow.
    */
-  const checkNodeDirty = (
-    node: ConsumerNode
-  ): boolean => {
-    // ALGORITHM: Dependency Chain Traversal
-    // Walk through all dependencies, checking if any changed
+  /**
+   * ALGORITHM: Preact-style Dependency Checking with _refresh()
+   * 
+   * Determines if a consumer needs to recompute by checking if any of its
+   * dependencies have changed. This follows preact-signals' pattern:
+   * 1. Check version mismatch first (fast path)
+   * 2. Call _refresh() on computed dependencies (recursive but controlled)
+   * 3. Check version again after refresh
+   * 
+   * The recursion happens through _refresh() calls, but it's controlled by
+   * RUNNING flags and global version checks to prevent stack overflow.
+   */
+  const checkNodeDirty = (node: ConsumerNode): boolean => {
     let source = node._sources;
     while (source) {
       const sourceNode = source.source;
+      const version = sourceNode._version;
       
-      // OPTIMIZATION: Fast path for signals (no dependencies)
-      // Signals don't have _sources, so we can check them quickly
+      // Fast path for signals
       if (!('_sources' in sourceNode)) {
-        // Signal changed, we're dirty
-        if (source.version !== sourceNode._version) return true;
-
-        // Signal unchanged, update edge version and continue
-        source.version = sourceNode._version;
+        if (source.version !== version) return true;
+        source.version = version;
         source = source.nextSource;
         continue;
       }
       
-      // Complex path for computeds (has dependencies)
-      // ALGORITHM: Optimized dependency check for computeds
-      
-      // OPTIMIZATION: Early exit for clean computeds
-      // If the computed has clean flags and our edge version matches,
-      // we can skip the refresh entirely
-      if ('_flags' in sourceNode) {
-        const flags = sourceNode._flags;
-        const isClean = !(flags & (NOTIFIED | OUTDATED));
-        const versionMatches = source.version === sourceNode._version;
-        
-        if (isClean && versionMatches) {
-          // This computed is clean and hasn't changed since we last read it
-          // Skip the expensive _refresh call
-          source = source.nextSource;
-          continue;
-        }
+      // Skip clean computeds with matching version
+      if (
+        '_flags' in sourceNode &&
+        !(sourceNode._flags & (NOTIFIED | OUTDATED)) &&
+        source.version === version
+      ) {
+        source = source.nextSource;
+        continue;
       }
       
-      // Phase 1: Refresh computed dependencies if potentially dirty
-      // This ensures they check THEIR dependencies and recompute if needed
-      // The key insight: _refresh() will only increment version if value changed
-      const refreshFailed = !sourceNode._refresh();
+      // Refresh computed and check if value or _version changed
+      if (!sourceNode._refresh() || source.version !== sourceNode._version) return true;
       
-      // Phase 2: Check if the refresh produced a new version
-      // If version is still the same, the computed's VALUE didn't change
-      // even though its dependencies might have new versions
-      const versionChanged = source.version !== sourceNode._version;
-      
-      // Dependency value changed - we're dirty
-      if (refreshFailed || versionChanged) return true;
-      
-      // ALGORITHM: Edge Version Synchronization
-      // The dependency is clean (value hasn't changed)
-      // Update the edge version to prevent redundant checks
+      // Update edge version
       source.version = sourceNode._version;
       source = source.nextSource;
     }
     
-    // All dependencies are clean
     return false;
   };
 
