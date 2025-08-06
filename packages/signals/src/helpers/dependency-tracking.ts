@@ -199,31 +199,38 @@ export function createDependencyHelpers(): DependencyHelpers {
     let source = node._sources;
     while (source) {
       const sourceNode = source.source;
-      const version = sourceNode._version;
+      const edgeVersion = source.version;
+      const currentVersion = sourceNode._version;
       
-      // Fast path for signals
+      // Fast path for signals - no dependencies to check
       if (!('_sources' in sourceNode)) {
-        if (source.version !== version) return true;
-        source.version = version;
+        if (edgeVersion !== currentVersion) return true;
+        // Update edge version for clean signal
+        source.version = currentVersion;
         source = source.nextSource;
         continue;
       }
       
-      // Skip clean computeds with matching version
+      // OPTIMIZATION: Combined check for clean computeds
+      // Check flags and version in one condition to reduce branches
       if (
         '_flags' in sourceNode &&
-        !(sourceNode._flags & (NOTIFIED | OUTDATED)) &&
-        source.version === version
+        edgeVersion === currentVersion &&
+        !(sourceNode._flags & (NOTIFIED | OUTDATED))
       ) {
         source = source.nextSource;
         continue;
       }
       
-      // Refresh computed and check if value or _version changed
-      if (!sourceNode._refresh() || source.version !== sourceNode._version) return true;
+      // Computed needs refresh - check if it actually changed
+      if (!sourceNode._refresh()) return true;
       
-      // Update edge version
-      source.version = sourceNode._version;
+      // Check if version changed after refresh
+      const newVersion = sourceNode._version;
+      if (edgeVersion !== newVersion) return true;
+      
+      // Update edge version for next time
+      source.version = newVersion;
       source = source.nextSource;
     }
     
