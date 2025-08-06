@@ -120,14 +120,12 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       // Skip if disposed (dead node) or already running (prevent re-entrance)
       if (this._flags & (DISPOSED | RUNNING)) return;
 
-      // OPTIMIZATION: Inline OUTDATED check for hot path
-      // Most effects will be OUTDATED after invalidation
+      // OPTIMIZATION: Check if effect needs to run
+      // Skip if not marked as OUTDATED or NOTIFIED
       if (!(this._flags & (OUTDATED | NOTIFIED))) return;
       
-      if (this._flags & OUTDATED) {
-        // Fast path - we know we need to update
-      } else if (!shouldNodeUpdate(this, ctx)) {
-        // Slow path - check if NOTIFIED dependencies actually changed
+      // If only NOTIFIED (not OUTDATED), check if dependencies actually changed
+      if (!(this._flags & OUTDATED) && !shouldNodeUpdate(this)) {
         return;
       }
 

@@ -235,23 +235,9 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // We can skip all checks - no signal changes means no flag changes
       if (this._globalVersion === ctx.version) return;
       
-      // OPTIMIZATION: Inline hot path for better performance
-      // Check OUTDATED flag first (most common after invalidation)
-      if (this._flags & OUTDATED) {
-        this._recompute();
-        return;
-      }
-      
       // ALGORITHM: Conditional Recomputation
-      // Only check dependencies if NOTIFIED but not OUTDATED
-      // This is less common, so we can afford the function call
-      if (shouldNodeUpdate(this, ctx)) {
-        this._recompute();
-      } else {
-        if (this._globalVersion !== undefined) {
-          this._globalVersion = ctx.version;
-        }
-      }
+      // Check OUTDATED flag first (common case) or check dependencies if NOTIFIED
+      if (this._flags & OUTDATED || shouldNodeUpdate(this)) this._recompute();
     }
 
     _refresh(): boolean {
