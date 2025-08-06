@@ -147,20 +147,19 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       // OPTIMIZATION: Skip traversal if no targets
       if (!this._targets) return;
       
-      // ALGORITHM: Automatic Batching (inspired by React's batching strategy)
-      // All synchronous updates are automatically batched to prevent redundant computations
-      // This is crucial for performance when multiple signals change together
-      ctx.batchDepth++;
-      try {
-        // ALGORITHM: Push-Based Invalidation Propagation
-        // Traverse the dependency graph starting from this signal's targets
-        // Mark all dependent computeds as "outdated" and schedule effects
-        // This uses depth-first traversal to ensure proper ordering
-        traverseAndInvalidate(this._targets);
-      } finally {
-        // When the outermost batch completes (batchDepth reaches 0),
-        // flush all scheduled effects in the order they were scheduled
-        if (--ctx.batchDepth === 0) flushScheduled();
+      // OPTIMIZATION: Reuse existing batch if present
+      // This reduces overhead for multiple signal updates within a batch
+      const isNewBatch = ctx.batchDepth === 0;
+      if (isNewBatch) ctx.batchDepth++;
+      
+      // ALGORITHM: Push-Based Invalidation Propagation
+      // Traverse the dependency graph starting from this signal's targets
+      // Mark all dependent computeds as "outdated" and schedule effects
+      traverseAndInvalidate(this._targets);
+      
+      // Only flush if we created the batch
+      if (isNewBatch && --ctx.batchDepth === 0) {
+        flushScheduled();
       }
     }
 

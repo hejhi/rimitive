@@ -1,5 +1,5 @@
 import { CONSTANTS } from '../constants';
-import type { Edge, ConsumerNode, ScheduledNode, StatefulNode, ProducerNode } from '../types';
+import type { Edge, ConsumerNode, ScheduledNode, StatefulNode } from '../types';
 import type { SignalContext } from '../context';
 import type { ScheduledConsumerHelpers } from './scheduled-consumer';
 
@@ -79,66 +79,45 @@ export function createGraphTraversalHelpers(
         const statefulTarget = target as ConsumerNode & StatefulNode;
         
         // OPTIMIZATION: Early Skip Check
-        // Skip nodes that are:
-        // - NOTIFIED: Already marked in this invalidation pass
-        // - DISPOSED: No longer active, will be cleaned up
-        // - RUNNING: Currently executing, will see changes when done
-        // This prevents redundant work and infinite loops
+        // Skip nodes that are already processed or invalid
         if (statefulTarget._flags & SKIP_FLAGS) {
           currentEdge = currentEdge.nextTarget;
           continue;
         }
         
-        // ALGORITHM: Lazy Invalidation Strategy
-        // We only mark nodes as NOTIFIED, not OUTDATED. This is key to performance:
-        // - NOTIFIED means "might be dirty, check when accessed"
-        // - Avoids unnecessary computation if the value is never read
-        // - Computed values will verify if truly dirty when accessed
+        // Mark as notified and schedule if needed
         statefulTarget._flags |= NOTIFIED;
         
-        // ALGORITHM: Effect Scheduling
-        // Effects are special - they always run when notified, but we defer
-        // execution until the batch completes to avoid inconsistent state
         if ('_flush' in target && '_nextScheduled' in target && 'dispose' in target) {
-          const scheduledTarget = target as unknown as ScheduledNode;
-          scheduleConsumer(scheduledTarget);
+          scheduleConsumer(target as unknown as ScheduledNode);
         }
       }
       
-      // ALGORITHM: Recursive Descent
-      // If this consumer is also a producer (i.e., a computed), we need to
-      // traverse its dependents too. This handles transitive dependencies.
-      if ('_targets' in target) {
-        const targetAsProducer = target as ConsumerNode & ProducerNode;
-        if (targetAsProducer._targets) {
-          // ALGORITHM: Stack Management for Backtracking
-          // Before descending, save our position if there are siblings
-          // This simulates the return address in recursive DFS
-          if (currentEdge.nextTarget) {
-            stack = {
-              edge: currentEdge.nextTarget,
-              next: stack
-            };
-          }
-          
-          // Descend into the target's dependencies (depth-first)
-          currentEdge = targetAsProducer._targets;
-          continue;
+      // OPTIMIZATION: Linear Chain Fast Path
+      // Most dependency chains are linear (A→B→C). Handle these without stack.
+      const nextSibling = currentEdge.nextTarget;
+      const childTargets = '_targets' in target ? target._targets as Edge : undefined;
+      
+      if (childTargets) {
+        // Has children to traverse
+        // Save sibling for later (need stack)
+        if (nextSibling) {
+          stack = { edge: nextSibling, next: stack };
         }
+
+        currentEdge = childTargets;
+        continue;
       }
       
-      // ALGORITHM: Traverse Siblings
-      // No children to visit, move to next sibling at current level
-      currentEdge = currentEdge.nextTarget;
-      
-      // ALGORITHM: Backtracking via Stack Pop
-      // If no siblings remain, pop saved positions from stack
-      // This simulates returning from recursive calls in DFS
-      while (!currentEdge && stack) {
-        currentEdge = stack.edge;
-        stack = stack.next; // Pop the stack frame
-        // FLAG: This could be optimized with object pooling for stack frames
+      if (nextSibling) {
+        // No children, but has siblings
+        currentEdge = nextSibling;
+        continue;
       }
+
+      // No children or siblings - backtrack
+      currentEdge = stack?.edge;
+      stack = stack?.next;
     }
   }
 
