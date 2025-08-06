@@ -146,29 +146,25 @@ export function createDependencyHelpers(): DependencyHelpers {
   // Removes an edge from the producer's linked list of consumers
   // This is O(1) because we have direct pointers to neighbors
   const removeFromTargets = ({ source, prevTarget, nextTarget }: Edge): void => {
-    const isLastTarget = nextTarget === undefined;
-
     // Remove from doubly-linked list
-    if (prevTarget !== undefined) {
+    if (prevTarget) {
       // Middle or end of list - update previous node
       prevTarget.nextTarget = nextTarget;
     } else {
       // Head of list - update producer's head pointer
       source._targets = nextTarget;
 
-      // ALGORITHM: TRACKING Flag Management
-      // If this was the last consumer and source is also a computed,
-      // clear TRACKING flag since it has no downstream dependencies
-      // This allows the computed to skip updates when not observed
-      if (isLastTarget && '_flags' in source) {
+      // OPTIMIZATION: Only check TRACKING flag if this was the last consumer
+      // Combine the checks to reduce branches
+      if (!nextTarget && '_flags' in source) {
         source._flags &= ~TRACKING;
       }
     }
 
-    if (isLastTarget) return;
-
-    // Update next node's back pointer
-    nextTarget.prevTarget = prevTarget;
+    // Update next node's back pointer if it exists
+    if (nextTarget) {
+      nextTarget.prevTarget = prevTarget;
+    }
   };
 
   /**
