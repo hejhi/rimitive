@@ -52,8 +52,8 @@ export interface DependencyHelpers {
   linkNodes: (source: TrackedProducer | (TrackedProducer & ConsumerNode), target: ConsumerNode, version: number) => Edge;
   addDependency: (source: TrackedProducer, target: ConsumerNode, version: number) => void;
   removeFromTargets: (edge: Edge) => void;
-  checkNodeDirty: (node: ConsumerNode & { _globalVersion?: number }) => boolean;
-  shouldNodeUpdate: (node: ConsumerNode & { _flags: number; _globalVersion?: number }, ctx?: { version: number }) => boolean;
+  checkNodeDirty: (node: ConsumerNode) => boolean;
+  shouldNodeUpdate: (node: ConsumerNode & { _flags: number; }, ctx?: { version: number }) => boolean;
   isNodeClean: (node: ConsumerNode & { _flags: number }, flags: number) => boolean;
 }
 
@@ -182,7 +182,7 @@ export function createDependencyHelpers(): DependencyHelpers {
    * RUNNING flags and global version checks to prevent stack overflow.
    */
   const checkNodeDirty = (
-    node: ConsumerNode & { _globalVersion?: number }
+    node: ConsumerNode
   ): boolean => {
     // ALGORITHM: Dependency Chain Traversal
     // Walk through all dependencies, checking if any changed
@@ -257,8 +257,7 @@ export function createDependencyHelpers(): DependencyHelpers {
    * - This function handles the slower NOTIFIED case
    */
   const shouldNodeUpdate = (
-    node: ConsumerNode & { _flags: number; _globalVersion?: number },
-    ctx?: { version: number }
+    node: ConsumerNode & { _flags: number; },
   ): boolean => {
     // OPTIMIZATION: Only called for NOTIFIED case now
     // OUTDATED is handled inline in hot paths
@@ -273,9 +272,6 @@ export function createDependencyHelpers(): DependencyHelpers {
     } else {
       // False alarm - clear NOTIFIED and cache global version
       node._flags &= ~NOTIFIED;
-      if (ctx && node._globalVersion !== undefined) {
-        node._globalVersion = ctx.version;
-      }
     }
     
     return isDirty;

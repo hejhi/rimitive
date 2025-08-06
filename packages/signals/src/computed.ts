@@ -245,7 +245,13 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // ALGORITHM: Conditional Recomputation
       // Only check dependencies if NOTIFIED but not OUTDATED
       // This is less common, so we can afford the function call
-      if (shouldNodeUpdate(this, ctx)) this._recompute();
+      if (shouldNodeUpdate(this, ctx)) {
+        this._recompute();
+      } else {
+        if (this._globalVersion !== undefined) {
+          this._globalVersion = ctx.version;
+        }
+      }
     }
 
     _refresh(): boolean {

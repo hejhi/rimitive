@@ -96,8 +96,6 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     _flags = OUTDATED;                                   // Start OUTDATED to run on creation
     _sources: Edge | undefined = undefined;              // Dependencies this effect reads
     _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
-    // CACHED GLOBAL VERSION - Same as computed, enables fast-path optimization
-    _globalVersion = -1;
     _generation = 0;                                     // Generation counter for edge cleanup
     
     // Cold fields (accessed less frequently)
@@ -121,10 +119,6 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       // OPTIMIZATION: Early Exit Checks
       // Skip if disposed (dead node) or already running (prevent re-entrance)
       if (this._flags & (DISPOSED | RUNNING)) return;
-
-      // OPTIMIZATION: Global version fast path
-      // If nothing changed globally since we last ran, skip all checks
-      if (this._globalVersion === ctx.version) return;
 
       // OPTIMIZATION: Inline OUTDATED check for hot path
       // Most effects will be OUTDATED after invalidation

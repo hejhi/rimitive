@@ -24,7 +24,6 @@ export interface SignalContext {
   // Incremented whenever ANY signal's value changes.
   // 
   // PURPOSE: Enables O(1) "has anything changed?" checks
-  // - If consumer._globalVersion === ctx.version, nothing changed globally
   // - Avoids traversing entire dependency graph when system is stable
   // 
   // NOT REDUNDANT WITH GENERATION: This tracks WHEN changes occur,
