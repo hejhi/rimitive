@@ -4,6 +4,7 @@ import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
+import { createSubscribeFactory } from './subscribe';
 
 describe('Computed - Push-Pull Optimization', () => {
   type API = ReturnType<typeof createSignalAPI<{
@@ -11,6 +12,7 @@ describe('Computed - Push-Pull Optimization', () => {
     computed: typeof createComputedFactory;
     effect: typeof createEffectFactory;
     batch: typeof createBatchFactory;
+    subscribe: typeof createSubscribeFactory;
   }>>;
   
   let api: API;
@@ -25,6 +27,7 @@ describe('Computed - Push-Pull Optimization', () => {
       computed: createComputedFactory,
       effect: createEffectFactory,
       batch: createBatchFactory,
+      subscribe: createSubscribeFactory,
     });
     signal = api.signal;
     computed = api.computed;

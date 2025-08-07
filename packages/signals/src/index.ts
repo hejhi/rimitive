@@ -12,6 +12,12 @@ export { createComputedFactory } from './computed';
 export { createEffectFactory } from './effect';
 export { createBatchFactory } from './batch';
 export { createSubscribeFactory } from './subscribe';
+
+// Export the work queue for advanced users
+export { createWorkQueue } from './helpers/work-queue';
+export type { WorkQueue } from './helpers/work-queue';
+
+// Export API creation utilities
 export { createSignalAPI } from './api';
 
 

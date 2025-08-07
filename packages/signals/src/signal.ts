@@ -31,6 +31,7 @@ import { Edge, Writable, ProducerNode, ScheduledNode, ConsumerNode } from './typ
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createGraphWalker } from './helpers/graph-walker';
+import type { SignalApi } from './api';
 
 const { RUNNING } = CONSTANTS;
 
@@ -55,7 +56,7 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
   ): void;
 }
 
-export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
+export function createSignalFactory(ctx: SignalContext, api: SignalApi): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   // Dependency tracking helper for establishing producer-consumer edges
   const { addDependency } = createDependencyHelpers();
   
@@ -66,7 +67,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Avoids creating new function objects in the critical update path
   const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) ctx.workQueue.enqueue(node as ScheduledNode);
+    if ('_nextScheduled' in node) api.workQueue.enqueue(node as ScheduledNode);
   };
   
   // PATTERN: Class-based Implementation
@@ -154,7 +155,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       
       // Only flush if we created the batch
       if (isNewBatch && --ctx.batchDepth === 0) {
-        ctx.workQueue.flush();
+        api.workQueue.flush();
       }
     }
 

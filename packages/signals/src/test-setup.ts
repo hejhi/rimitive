@@ -3,25 +3,36 @@
 
 import type { SignalInterface } from './signal';
 import type { EffectInterface, EffectDisposer } from './effect';
-import { createSignalAPI } from './api';
+import type { ComputedInterface } from './computed';
+import { createContext } from './context';
+import { createWorkQueue } from './helpers/work-queue';
 import { createSignalFactory } from './signal';
-import { createComputedFactory, type ComputedInterface } from './computed';
+import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
+import { createContext as createLattice } from '@lattice/lattice';
+import type { SignalApi } from './api';
 
 // Create a test instance
 export function createTestInstance() {
-  // Create API with all core factories
-  const api = createSignalAPI({
-    signal: createSignalFactory,
-    computed: createComputedFactory,
-    effect: createEffectFactory,
-    batch: createBatchFactory,
-    subscribe: createSubscribeFactory,
-  });
+  // Create context and work queue for testing
+  const ctx = createContext();
+  const workQueue = createWorkQueue();
   
-  const ctx = api._ctx;
+  // Create shared API object
+  const signalApi: SignalApi = {
+    workQueue,
+  };
+  
+  // Create API with all core factories
+  const api = createLattice(
+    createSignalFactory(ctx, signalApi),
+    createComputedFactory(ctx, signalApi),
+    createEffectFactory(ctx, signalApi),
+    createBatchFactory(ctx, signalApi),
+    createSubscribeFactory(ctx, signalApi)
+  );
   
   return {
     // Signal functions
@@ -43,10 +54,10 @@ export function createTestInstance() {
       if (ctx.batchDepth > 0) ctx.batchDepth--;
     },
     getBatchDepth: () => ctx.batchDepth,
-    hasPendingEffects: () => ctx.workQueue.state.tail !== ctx.workQueue.state.head,
+    hasPendingEffects: () => workQueue.state.tail !== workQueue.state.head,
     clearBatch: () => {
-      ctx.workQueue.state.head = 0;
-      ctx.workQueue.state.tail = 0;
+      workQueue.state.head = 0;
+      workQueue.state.tail = 0;
       // Reset batch depth safely
       ctx.batchDepth = 0;
     },
@@ -58,13 +69,13 @@ export function createTestInstance() {
     getCurrentConsumer: () => ctx.currentConsumer,
     resetGlobalState: () => {
       // Clear any pending scheduled effects
-      const count = ctx.workQueue.state.tail - ctx.workQueue.state.head;
+      const count = workQueue.state.tail - workQueue.state.head;
       for (let i = 0; i < count; i++) {
-        const consumer = ctx.workQueue.state.queue![(ctx.workQueue.state.head + i) & ctx.workQueue.state.mask];
+        const consumer = workQueue.state.queue![(workQueue.state.head + i) & workQueue.state.mask];
         if (consumer) consumer._nextScheduled = undefined;
       }
-      ctx.workQueue.state.head = 0;
-      ctx.workQueue.state.tail = 0;
+      workQueue.state.head = 0;
+      workQueue.state.tail = 0;
 
       // Reset context
       ctx.currentConsumer = null;
@@ -73,6 +84,8 @@ export function createTestInstance() {
     },
     getGlobalVersion: () => ctx.version,
     activeContext: ctx,
+    // Export work queue for test access
+    workQueue: workQueue,
   };
 }
 
@@ -105,15 +118,19 @@ export const activeContext = (() => {
   const getter = {
     get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
-    get scheduledCount() { return defaultInstance.activeContext.workQueue.state.tail - defaultInstance.activeContext.workQueue.state.head; },
-    get scheduledQueue() { return defaultInstance.activeContext.workQueue.state.queue; },
+    get scheduledCount() { 
+      return defaultInstance.workQueue.state.tail - defaultInstance.workQueue.state.head;
+    },
+    get scheduledQueue() { 
+      return defaultInstance.workQueue.state.queue;
+    },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
     set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
     set scheduledCount(v) { 
       // Reset queue to simulate setting count to v
-      defaultInstance.activeContext.workQueue.state.head = 0;
-      defaultInstance.activeContext.workQueue.state.tail = v;
+      defaultInstance.workQueue.state.head = 0;
+      defaultInstance.workQueue.state.tail = v;
     },
     set currentConsumer(v) { defaultInstance.activeContext.currentConsumer = v; },
   };

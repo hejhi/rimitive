@@ -4,8 +4,11 @@ import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
+import { createSubscribeFactory } from './subscribe';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { SignalContext } from './context';
+import { createContext } from './context';
+import { createWorkQueue } from './helpers/work-queue';
+import { createContext as createLattice } from '@lattice/lattice';
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
@@ -14,59 +17,168 @@ describe('createSignalAPI', () => {
       computed: createComputedFactory,
       effect: createEffectFactory,
       batch: createBatchFactory,
+      subscribe: createSubscribeFactory,
     });
 
     expect(api.signal).toBeDefined();
     expect(api.computed).toBeDefined();
     expect(api.effect).toBeDefined();
     expect(api.batch).toBeDefined();
-    expect(api._ctx).toBeDefined();
+    expect(api.subscribe).toBeDefined();
     expect(api.dispose).toBeDefined();
   });
 
-  it('should share the same context across all factories', () => {
+  it('should create a minimal API without effects', () => {
+    const api = createSignalAPI({
+      signal: createSignalFactory,
+      computed: createComputedFactory,
+    });
+
+    expect(api.signal).toBeDefined();
+    expect(api.computed).toBeDefined();
+    expect(api.dispose).toBeDefined();
+    
+    // These should not exist in minimal API
+    expect('effect' in api).toBe(false);
+    expect('batch' in api).toBe(false);
+    expect('subscribe' in api).toBe(false);
+  });
+
+  it('should work with custom work queue implementation', () => {
+    let flushCalled = false;
+    
+    // Create custom context and API manually for custom work queue
+    const ctx = createContext();
+    const customWorkQueue = (() => {
+      const queue = createWorkQueue();
+      return {
+        ...queue,
+        flush: () => {
+          flushCalled = true;
+          queue.flush();
+        }
+      };
+    })();
+    
+    const signalApi = { workQueue: customWorkQueue };
+    
+    const api = createLattice(
+      createSignalFactory(ctx, signalApi),
+      createComputedFactory(ctx, signalApi),
+      createEffectFactory(ctx, signalApi),
+      createBatchFactory(ctx, signalApi),
+      createSubscribeFactory(ctx, signalApi)
+    );
+    
+    const count = api.signal(0);
+    const double = api.computed(() => count.value * 2);
+    
+    let effectValue = 0;
+    api.effect(() => {
+      effectValue = double.value;
+    });
+
+    count.value = 5;
+    
+    expect(effectValue).toBe(10);
+    expect(flushCalled).toBe(true);
+  });
+
+  it('should handle dispose method correctly', () => {
     const api = createSignalAPI({
       signal: createSignalFactory,
       computed: createComputedFactory,
       effect: createEffectFactory,
+      batch: createBatchFactory,
+      subscribe: createSubscribeFactory,
     });
 
-    // Create a signal and computed that depends on it
-    const s = api.signal(1);
-    const c = api.computed(() => s.value * 2);
+    let effectRuns = 0;
+    const count = api.signal(0);
+    
+    const dispose = api.effect(() => {
+      count.value; // Subscribe to count
+      effectRuns++;
+    });
 
-    // Initial values
-    expect(c.value).toBe(2);
+    expect(effectRuns).toBe(1);
 
-    // Update signal - if context is shared, computed should update
-    s.value = 3;
-    expect(c.value).toBe(6);
+    count.value = 1;
+    expect(effectRuns).toBe(2);
 
-    // Check context counters are shared
-    const initialVersion = api._ctx.version;
-    s.value = 4;
-    expect(api._ctx.version).toBe(initialVersion + 1);
+    // Dispose the effect itself
+    dispose();
+    
+    // After dispose, effects should not run
+    count.value = 2;
+    expect(effectRuns).toBe(2); // Should still be 2
+    
+    // api.dispose() disposes the context, not individual effects
+    api.dispose();
   });
 
-  it('should work with custom factories', () => {
-    // Create a custom factory
-    const createCustomFactory = (ctx: SignalContext): LatticeExtension<'custom', () => string> => ({
-      name: 'custom',
-      method: () => `Context version: ${ctx.version}`
+  it('should support multiple independent APIs', () => {
+    const api1 = createSignalAPI({
+      signal: createSignalFactory,
+      computed: createComputedFactory,
+      effect: createEffectFactory,
+      batch: createBatchFactory,
+      subscribe: createSubscribeFactory,
+    });
+    const api2 = createSignalAPI({
+      signal: createSignalFactory,
+      computed: createComputedFactory,
+      effect: createEffectFactory,
+      batch: createBatchFactory,
+      subscribe: createSubscribeFactory,
     });
 
-    const api = createSignalAPI({
-      signal: createSignalFactory,
-      custom: createCustomFactory,
+    const signal1 = api1.signal(0);
+    const signal2 = api2.signal(0);
+
+    let effect1Runs = 0;
+    let effect2Runs = 0;
+
+    api1.effect(() => {
+      signal1.value;
+      effect1Runs++;
     });
+
+    api2.effect(() => {
+      signal2.value;
+      effect2Runs++;
+    });
+
+    signal1.value = 1;
+    expect(effect1Runs).toBe(2);
+    expect(effect2Runs).toBe(1); // Should not be affected
+
+    signal2.value = 1;
+    expect(effect1Runs).toBe(2); // Should not be affected
+    expect(effect2Runs).toBe(2);
+  });
+
+  it('should work with custom extensions alongside signals', () => {
+    // Create a custom extension
+    const createCustomFactory = (_ctx: typeof createContext extends () => infer R ? R : never): LatticeExtension<'custom', () => string> => {
+      return {
+        name: 'custom',
+        method: () => 'custom value'
+      };
+    };
+
+    // Create API with custom extension
+    const ctx = createContext();
+    const signalApi = { workQueue: createWorkQueue() };
+    
+    const api = createLattice(
+      createSignalFactory(ctx, signalApi),
+      createCustomFactory(ctx)
+    );
 
     expect(api.custom).toBeDefined();
-    expect(api.custom()).toBe('Context version: 0');
-
-    // Update signal to increment version
-    const s = api.signal(1);
-    s.value = 2;
-    expect(api.custom()).toBe('Context version: 1');
+    expect(api.custom()).toBe('custom value');
+    expect(api.signal).toBeDefined();
   });
 
   it('should properly type the API based on factories', () => {
@@ -76,91 +188,14 @@ describe('createSignalAPI', () => {
     });
 
     // TypeScript should know these methods exist
-    const s = api.signal(42);
-    const c = api.computed(() => s.value);
+    const count = api.signal(0);
+    const double = api.computed(() => count.value * 2);
 
-    // TypeScript should know the return types
-    const value: number = s.value;
-    const computedValue: number = c.value;
+    // TypeScript should properly type values
+    const value: number = count.value;
+    const computedValue: number = double.value;
 
-    expect(value).toBe(42);
-    expect(computedValue).toBe(42);
-  });
-
-  it('should handle dispose method correctly', () => {
-    const api = createSignalAPI({
-      signal: createSignalFactory,
-      effect: createEffectFactory,
-    });
-
-    let effectRuns = 0;
-    const s = api.signal(0);
-    
-    const dispose = api.effect(() => {
-      void s.value; // Track the signal
-      effectRuns++;
-    });
-
-    expect(effectRuns).toBe(1);
-
-    s.value = 1;
-    expect(effectRuns).toBe(2);
-
-    // Dispose the effect
-    dispose();
-
-    s.value = 2;
-    expect(effectRuns).toBe(2); // Should not run again
-
-    // API dispose method should clean up the context
-    api.dispose();
-    
-    // After dispose, the API should still be usable but with a fresh context
-    const s2 = api.signal(10);
-    expect(s2.value).toBe(10);
-  });
-
-  it('should expose context for advanced usage', () => {
-    const api = createSignalAPI({
-      signal: createSignalFactory,
-    });
-
-    // Access to context for debugging/testing
-    expect(api._ctx.version).toBe(0);
-    expect(api._ctx.batchDepth).toBe(0);
-    expect(api._ctx.currentConsumer).toBe(null);
-  });
-
-  it('should support multiple independent APIs', () => {
-    const api1 = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-    });
-
-    const api2 = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-    });
-
-    // Each API should have its own context
-    expect(api1._ctx).not.toBe(api2._ctx);
-
-    // Changes in one API should not affect the other
-    const s1 = api1.signal(1);
-    const s2 = api2.signal(2);
-
-    const c1 = api1.computed(() => s1.value * 10);
-    const c2 = api2.computed(() => s2.value * 10);
-
-    expect(c1.value).toBe(10);
-    expect(c2.value).toBe(20);
-
-    s1.value = 3;
-    expect(c1.value).toBe(30);
-    expect(c2.value).toBe(20); // Should not change
-
-    // Context versions should be independent
-    expect(api1._ctx.version).toBe(1);
-    expect(api2._ctx.version).toBe(0);
+    expect(value).toBe(0);
+    expect(computedValue).toBe(0);
   });
 });

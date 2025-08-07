@@ -35,11 +35,19 @@
  */
 import { createContext as createLattice, type LatticeExtension } from '@lattice/lattice';
 import { createContext } from './context';
+import { createWorkQueue, type WorkQueue } from './helpers/work-queue';
 
-// Type for extension factory functions that accept a context
+// Shared API object passed to all extensions
+export interface SignalApi {
+  workQueue: WorkQueue;
+  // Future shared resources can be added here
+}
+
+// Type for extension factory functions that accept context and shared API
 // Each factory creates one reactive primitive (signal, computed, etc)
 export type ExtensionFactory<TName extends string, TMethod> = (
-  ctx: ReturnType<typeof createContext>
+  ctx: ReturnType<typeof createContext>,
+  api: SignalApi
 ) => LatticeExtension<TName, TMethod>;
 
 // ALGORITHM: Type-Level Factory to API Transformation
@@ -62,19 +70,26 @@ export function createSignalAPI<T extends Record<string, ExtensionFactory<string
 ): FactoriesToAPI<T> {
   // STEP 1: Create Shared Context
   // All reactive primitives share this context for coordination
-  // Contains: current consumer, batch depth, scheduling queue, etc.
+  // Contains: current consumer, batch depth, etc.
   const signalCtx = createContext();
   
-  // STEP 2: Initialize Extensions
-  // Call each factory with the shared context to create extensions
-  // Each extension defines one method (signal, computed, effect, etc)
-  const extensions = Object.values(factories).map(factory => factory(signalCtx));
+  // STEP 2: Create Shared API
+  // All reactive primitives share this API for common resources
+  // Currently contains work queue, can be extended with other shared resources
+  const signalApi: SignalApi = {
+    workQueue: createWorkQueue(),
+  };
   
-  // STEP 3: Compose with Lattice
+  // STEP 3: Initialize Extensions
+  // Call each factory with the shared context and API to create extensions
+  // Each extension defines one method (signal, computed, effect, etc)
+  const extensions = Object.values(factories).map(factory => factory(signalCtx, signalApi));
+  
+  // STEP 4: Compose with Lattice
   // Lattice handles the method composition and provides dispose functionality
   const latticeCtx = createLattice(...extensions);
   
-  // STEP 4: Build Final API
+  // STEP 5: Build Final API
   // Combine Lattice methods with our signal context
   // The context is exposed as _ctx for advanced use cases
   const api = {

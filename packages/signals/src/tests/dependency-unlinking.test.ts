@@ -15,18 +15,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import {
-  createSignalFactory,
-  createComputedFactory,
-  createBatchFactory,
-  createSignalAPI,
-} from '../index.js';
-
-const { signal, computed } = createSignalAPI({
-  signal: createSignalFactory,
-  computed: createComputedFactory,
-  batch: createBatchFactory,
-});
+import { signal, computed } from '../test-setup';
 
 describe('Dynamic dependency unlinking', () => {
   it('should not recompute unused branches after condition changes', () => {

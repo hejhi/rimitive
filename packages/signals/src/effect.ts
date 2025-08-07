@@ -43,6 +43,7 @@ import { Disposable, Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
+import type { SignalApi } from './api';
 
 export interface EffectInterface extends ScheduledNode, Disposable {
   __type: 'effect';
@@ -76,7 +77,7 @@ const genericDispose = function(this: EffectInterface) {
   this.dispose(); 
 };
 
-export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
+export function createEffectFactory(ctx: SignalContext, api: SignalApi): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   // Dependency tracking helpers
   const depHelpers = createDependencyHelpers();
   const { shouldNodeUpdate } = depHelpers;
@@ -118,7 +119,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       // Batch-aware execution
       if (ctx.batchDepth > 0) {
         // Inside a batch - defer execution
-        ctx.workQueue.enqueue(this);
+        api.workQueue.enqueue(this);
         return;
       }
       
@@ -195,7 +196,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     dispose(): void {
       // ALGORITHM: Effect Disposal
       // 1. Mark as disposed and run any pending cleanup
-      ctx.workQueue.dispose(this, () => {
+      api.workQueue.dispose(this, () => {
         if (!this._cleanup) return;
         this._cleanup();
         this._cleanup = undefined;
