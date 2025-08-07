@@ -1,7 +1,5 @@
 import { CONSTANTS } from '../constants';
-import type { Edge } from '../types';
-import type { SignalContext } from '../context';
-import type { ScheduledConsumerHelpers } from './scheduled-consumer';
+import type { Edge, ScheduledNode } from '../types';
 
 const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 
@@ -33,19 +31,14 @@ export interface GraphTraversalHelpers {
  * INSPIRATION: This approach is similar to alien-signals and other high-performance
  * reactive libraries that prioritize handling deep dependency chains efficiently.
  */
-export function createGraphTraversalHelpers(
-  ctx: SignalContext,
-  { scheduleConsumer }: ScheduledConsumerHelpers
-): GraphTraversalHelpers {
-  // OPTIMIZATION: Track last traversal version to skip redundant work
-  let lastTraversalVersion = -1;
+export function createGraphTraverser(scheduleNode: (consumer: ScheduledNode) => void): GraphTraversalHelpers {
   /**
    * ALGORITHM: Push-Phase Invalidation via Iterative DFS
-   * 
+   *
    * When a signal changes, we need to invalidate all transitively dependent
    * computeds and effects. This function implements the "push" phase of the
    * push-pull algorithm.
-   * 
+   *
    * Key insights:
    * 1. We only mark nodes as NOTIFIED (not OUTDATED) for lazy evaluation
    * 2. Effects are scheduled but not executed (deferred until batch end)
@@ -54,15 +47,6 @@ export function createGraphTraversalHelpers(
    */
   const traverseAndInvalidate = (startEdge: Edge | undefined): void => {
     if (!startEdge) return;
-    
-    // OPTIMIZATION: Global Version Fast Path
-    // Skip this optimization for now - it can cause correctness issues
-    // if not all paths were traversed in the first pass
-    
-    // Update tracking for this version
-    if (lastTraversalVersion !== ctx.version) {
-      lastTraversalVersion = ctx.version;
-    }
 
     // ALGORITHM: Iterative DFS State
     // - stack: Linked list of positions to return to (simulates call stack)
@@ -73,35 +57,33 @@ export function createGraphTraversalHelpers(
     // Main traversal loop - continues until all reachable nodes are processed
     while (currentEdge) {
       const target = currentEdge.target;
-      
+
       // OPTIMIZATION: Early Skip Check
       // Skip nodes that are already processed or invalid
       if (target._flags & SKIP_FLAGS) {
         currentEdge = currentEdge.nextTarget;
         continue;
       }
-      
+
       // Mark as notified and schedule if needed
       target._flags |= NOTIFIED;
-      
-      if ('_nextScheduled' in target) scheduleConsumer(target);
-      
+
+      if ('_nextScheduled' in target) scheduleNode(target);
+
       // OPTIMIZATION: Linear Chain Fast Path
       // Most dependency chains are linear (A→B→C). Handle these without stack.
       const nextSibling = currentEdge.nextTarget;
       const childTargets = '_targets' in target ? target._targets : undefined;
-      
+
       if (childTargets) {
         // Has children to traverse
         // Save sibling for later (need stack)
-        if (nextSibling) {
-          stack = { edge: nextSibling, next: stack };
-        }
+        if (nextSibling) stack = { edge: nextSibling, next: stack };
 
         currentEdge = childTargets;
         continue;
       }
-      
+
       if (nextSibling) {
         // No children, but has siblings
         currentEdge = nextSibling;
@@ -112,7 +94,7 @@ export function createGraphTraversalHelpers(
       currentEdge = stack?.edge;
       stack = stack?.next;
     }
-  }
+  };
 
   return { traverseAndInvalidate };
 }

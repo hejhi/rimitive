@@ -54,7 +54,6 @@ export interface DependencyHelpers {
   removeFromTargets: (edge: Edge) => void;
   checkNodeDirty: (node: ConsumerNode) => boolean;
   shouldNodeUpdate: (node: ConsumerNode & { _flags: number; }, ctx?: { version: number }) => boolean;
-  isNodeClean: (node: ConsumerNode & { _flags: number }, flags: number) => boolean;
 }
 
 export function createDependencyHelpers(): DependencyHelpers {
@@ -120,9 +119,6 @@ export function createDependencyHelpers(): DependencyHelpers {
       return;
     }
     
-    // OPTIMIZATION: Store generation in local variable to avoid repeated property access
-    const generation = target._generation;
-    
     // ALGORITHM: Linear Search for Existing Edge
     // Search through consumer's dependency list for existing edge
     let node = target._sources;
@@ -130,7 +126,7 @@ export function createDependencyHelpers(): DependencyHelpers {
       if (node.source === source) {
         // Found existing edge - update version, generation and cache it
         node.version = version;
-        node.generation = generation;
+        node.generation = target._generation;
         // OPTIMIZATION: Update cache for next access
         source._lastEdge = node;
         return;
@@ -156,15 +152,11 @@ export function createDependencyHelpers(): DependencyHelpers {
 
       // OPTIMIZATION: Only check TRACKING flag if this was the last consumer
       // Combine the checks to reduce branches
-      if (!nextTarget && '_flags' in source) {
-        source._flags &= ~TRACKING;
-      }
+      if (!nextTarget && '_flags' in source) (source._flags &= ~TRACKING);
     }
-
-    // Update next node's back pointer if it exists
-    if (nextTarget) {
-      nextTarget.prevTarget = prevTarget;
-    }
+    
+    if (!nextTarget) return;
+    nextTarget.prevTarget = prevTarget;
   };
 
   /**
@@ -210,7 +202,6 @@ export function createDependencyHelpers(): DependencyHelpers {
       // OPTIMIZATION: Combined check for clean computeds
       // Check flags and version in one condition to reduce branches
       if (
-        '_flags' in sourceNode &&
         edgeVersion === currentVersion &&
         !(sourceNode._flags & (NOTIFIED | OUTDATED))
       ) {
@@ -265,17 +256,5 @@ export function createDependencyHelpers(): DependencyHelpers {
     return isDirty;
   };
 
-  /**
-   * OPTIMIZATION: Pure inline-friendly check
-   * Simple flag check that V8 can inline effectively.
-   * No side effects, just a boolean return.
-   */
-  const isNodeClean = (
-    node: ConsumerNode & { _flags: number },
-    dirtyMask: number
-  ): boolean => {
-    return (node._flags & dirtyMask) === 0;
-  };
-
-  return { addDependency, removeFromTargets, linkNodes, checkNodeDirty, shouldNodeUpdate, isNodeClean };
+  return { addDependency, removeFromTargets, linkNodes, checkNodeDirty, shouldNodeUpdate };
 }

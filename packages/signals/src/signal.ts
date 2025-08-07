@@ -31,7 +31,7 @@ import { Edge, Writable, ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
-import { createGraphTraversalHelpers } from './helpers/graph-traversal';
+import { createGraphTraverser } from './helpers/graph-traversal';
 
 const { RUNNING } = CONSTANTS;
 
@@ -62,12 +62,11 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   
   // Scheduled consumer helpers for deferred effect execution
   // Uses a circular buffer queue for O(1) enqueue/dequeue operations
-  const scheduledConsumerHelpers = createScheduledConsumerHelpers(ctx);
-  const { flushScheduled } = scheduledConsumerHelpers;
+  const { scheduleConsumer, flushScheduled } = createScheduledConsumerHelpers(ctx);
   
   // Graph traversal helper for propagating invalidations through the dependency graph
   // Uses depth-first traversal with version checks to avoid redundant invalidations
-  const { traverseAndInvalidate } = createGraphTraversalHelpers(ctx, scheduledConsumerHelpers);
+  const { traverseAndInvalidate } = createGraphTraverser(scheduleConsumer);
   
   // PATTERN: Class-based Implementation
   // Using a class instead of factory functions for better performance:

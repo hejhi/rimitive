@@ -1,44 +1,25 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createGraphTraversalHelpers } from './graph-traversal';
+import { createGraphTraverser } from './graph-traversal';
 import { CONSTANTS } from '../constants';
 import type { Edge, ConsumerNode, ProducerNode, ScheduledNode } from '../types';
-import type { SignalContext } from '../context';
 
 const { NOTIFIED, OUTDATED, DISPOSED, RUNNING } = CONSTANTS;
 
-describe('createGraphTraversalHelpers', () => {
-  let ctx: SignalContext;
+describe('createGraphTraverser', () => {
   let scheduledNodes: ScheduledNode[];
-  let scheduleConsumer: (node: ScheduledNode) => void;
   let traverseAndInvalidate: (startEdge: Edge | undefined) => void;
 
   beforeEach(() => {
     scheduledNodes = [];
-    ctx = {
-      currentConsumer: null,
-      batchDepth: 0,
-      scheduledQueue: new Array<ScheduledNode>(256),
-      scheduledHead: 0,
-      scheduledTail: 0,
-      scheduledMask: 255,
-      version: 0,
-    };
 
-    scheduleConsumer = (node: ScheduledNode) => {
+    const helpers = createGraphTraverser((node: ScheduledNode) => {
       // Mimic the real scheduleConsumer behavior - check _nextScheduled
       if (node._nextScheduled !== undefined) return;
-      
+
       scheduledNodes.push(node);
       node._nextScheduled = node; // Use self as flag
-    };
-
-    const helpers = createGraphTraversalHelpers(ctx, { 
-      scheduleConsumer,
-      invalidateConsumer: () => {},
-      disposeConsumer: () => {},
-      flushScheduled: () => {}
     });
-    
+
     traverseAndInvalidate = helpers.traverseAndInvalidate;
   });
 
@@ -65,10 +46,7 @@ describe('createGraphTraversalHelpers', () => {
     return node;
   }
 
-  function createEdge(
-    source: ProducerNode,
-    target: ConsumerNode
-  ): Edge {
+  function createEdge(source: ProducerNode, target: ConsumerNode): Edge {
     return {
       source,
       target,
@@ -273,7 +251,7 @@ describe('createGraphTraversalHelpers', () => {
   it('should avoid scheduling the same effect multiple times', () => {
     const source = createMockNode('signal') as ProducerNode;
     const effect = createMockNode('effect', 0, true);
-    
+
     const edge1 = createEdge(source, effect);
     const edge2 = createEdge(source, effect);
     linkEdges([edge1, edge2]);

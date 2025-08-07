@@ -37,7 +37,7 @@ import { Edge, Readable, ProducerNode, Disposable, ConsumerNode } from './types'
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import { createGraphTraversalHelpers } from './helpers/graph-traversal';
+import { createGraphTraverser } from './helpers/graph-traversal';
 import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
@@ -67,10 +67,10 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
     createSourceCleanupHelpers(depHelpers);
     
   // Scheduling helpers (computeds don't use these directly, but need for traversal)
-  const scheduledConsumerHelpers = createScheduledConsumerHelpers(ctx);
+  const { scheduleConsumer } = createScheduledConsumerHelpers(ctx);
   
   // Graph traversal for propagating invalidations to dependents
-  const { traverseAndInvalidate } = createGraphTraversalHelpers(ctx, scheduledConsumerHelpers);
+  const { traverseAndInvalidate } = createGraphTraverser(scheduleConsumer);
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
