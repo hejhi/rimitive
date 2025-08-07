@@ -5,7 +5,8 @@ import {
   useCallback,
 } from 'react';
 import { useSignalAPI } from './context';
-import type { Signal, Readable, ProducerNode } from '@lattice/signals';
+import type { Signal } from '@lattice/signals/signal';
+import type { Readable, ProducerNode } from '@lattice/signals/types';
 import type { ComputedInterface } from '@lattice/signals/computed';
 import type { SignalSetter } from './types';
 

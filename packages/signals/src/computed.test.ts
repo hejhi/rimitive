@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSignalAPI } from './api';
+import { createDefaultContext } from './default-context';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -28,7 +29,7 @@ describe('Computed - Push-Pull Optimization', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
     signal = api.signal;
     computed = api.computed;
     effect = api.effect;

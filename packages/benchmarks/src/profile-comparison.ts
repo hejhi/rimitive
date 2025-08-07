@@ -4,13 +4,12 @@
  * Focus on pull phase operations and dependency checking
  */
 
-import {
-  createSignalFactory,
-  createComputedFactory,
-  createBatchFactory,
-  createEffectFactory,
-  createSignalAPI,
-} from '@lattice/signals';
+import { createSignalAPI } from '@lattice/signals/api';
+import { createDefaultContext } from '@lattice/signals/default-context';
+import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
+import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
+import { createBatchFactory } from '@lattice/signals/batch';
+import { createEffectFactory } from '@lattice/signals/effect';
 import {
   signal as alienSignal,
   computed as alienComputed,
@@ -25,7 +24,7 @@ const {
   computed: createComputedFactory,
   batch: createBatchFactory,
   effect: createEffectFactory,
-});
+}, createDefaultContext());
 
 interface ProfileResult {
   name: string;
@@ -65,7 +64,7 @@ console.log('=== Test 1: Dependency Check (No Change) ===');
   const latticeSource = latticeSignal(0);
   const latticeComp = latticeComputed(() => latticeSource.value * 2);
   // Prime it
-  latticeComp.value;
+  void latticeComp.value;
   
   const latticeResult = profile('Lattice - dependency check', iterations, () => {
     // Access computed without changing source
@@ -76,7 +75,7 @@ console.log('=== Test 1: Dependency Check (No Change) ===');
   const alienSource = alienSignal(0);
   const alienComp = alienComputed(() => alienSource() * 2);
   // Prime it
-  alienComp();
+  void alienComp();
   
   const alienResult = profile('Alien - dependency check', iterations, () => {
     // Access computed without changing source
@@ -95,29 +94,29 @@ console.log('=== Test 2: Deep Chain Dependency Check ===');
   const chainLength = 50;
   
   // Lattice chain
-  let latticeSignals: any[] = [latticeSignal(0)];
+  const latticeSignals: Array<SignalInterface<number> | ComputedInterface<number>> = [latticeSignal(0)];
   for (let i = 1; i < chainLength; i++) {
-    const prev = latticeSignals[i - 1];
+    const prev = latticeSignals[i - 1]!;
     latticeSignals.push(latticeComputed(() => prev.value + 1));
   }
   // Prime it
-  latticeSignals[chainLength - 1].value;
+  void latticeSignals[chainLength - 1]!.value;
   
   const latticeResult = profile('Lattice - deep chain check', iterations, () => {
-    void latticeSignals[chainLength - 1].value;
+    void latticeSignals[chainLength - 1]!.value;
   });
   
   // Alien chain
-  let alienSignals: any[] = [alienSignal(0)];
+  const alienSignals = [alienSignal(0)];
   for (let i = 1; i < chainLength; i++) {
-    const prev = alienSignals[i - 1];
+    const prev = alienSignals[i - 1]!;
     alienSignals.push(alienComputed(() => prev() + 1));
   }
   // Prime it
-  alienSignals[chainLength - 1]();
+  void alienSignals[chainLength - 1]!();
   
   const alienResult = profile('Alien - deep chain check', iterations, () => {
-    void alienSignals[chainLength - 1]();
+    void alienSignals[chainLength - 1]!();
   });
   
   console.log(`${latticeResult.name}: ${latticeResult.timePerOp.toFixed(6)}ms per op`);
@@ -136,7 +135,7 @@ console.log('=== Test 3: Diamond Pattern Resolution ===');
   const latticeC = latticeComputed(() => latticeA.value * 3);
   const latticeD = latticeComputed(() => latticeB.value + latticeC.value);
   // Prime it
-  latticeD.value;
+  void latticeD.value;
   
   const latticeResult = profile('Lattice - diamond resolution', iterations, () => {
     latticeA.value++;
@@ -149,7 +148,7 @@ console.log('=== Test 3: Diamond Pattern Resolution ===');
   const alienC = alienComputed(() => alienA() * 3);
   const alienD = alienComputed(() => alienB() + alienC());
   // Prime it
-  alienD();
+  void alienD();
   
   const alienResult = profile('Alien - diamond resolution', iterations, () => {
     alienA(alienA() + 1);
@@ -180,11 +179,9 @@ console.log('=== Test 4: Pull Phase Function Calls ===');
   // Prime them
   latticeComputeds.forEach(c => c.value);
   
-  let callCount = 0;
   const latticeResult = profile('Lattice - complex graph traversal', iterations, () => {
     // Change one signal and read multiple computeds
     latticeSignals[5]!.value++;
-    callCount++;
     void latticeComputeds[4]!.value;
     void latticeComputeds[5]!.value;
     void latticeComputeds[6]!.value;

@@ -1,4 +1,4 @@
-import type { Readable } from '@lattice/signals';
+import type { Readable } from '@lattice/signals/types';
 
 export type SignalValue<S> = S extends Readable<infer T> ? T : never;
 

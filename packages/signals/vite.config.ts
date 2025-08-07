@@ -29,7 +29,9 @@ export default defineConfig({
         'src/**/*.test.ts',
         'src/**/*.test.d.ts',
         'src/**/test-*.ts',
+        'src/**/*.example.ts',
       ],
+      rollupTypes: true,
     }),
     minifyBundle(),
   ],
@@ -41,12 +43,16 @@ export default defineConfig({
   build: {
     lib: {
       entry: {
-        index: resolve(__dirname, 'src/index.ts'),
+        api: resolve(__dirname, 'src/api.ts'),
         signal: resolve(__dirname, 'src/signal.ts'),
         computed: resolve(__dirname, 'src/computed.ts'),
         effect: resolve(__dirname, 'src/effect.ts'),
         batch: resolve(__dirname, 'src/batch.ts'),
         subscribe: resolve(__dirname, 'src/subscribe.ts'),
+        types: resolve(__dirname, 'src/types.ts'),
+        context: resolve(__dirname, 'src/context.ts'),
+        constants: resolve(__dirname, 'src/constants.ts'),
+        'default-context': resolve(__dirname, 'src/default-context.ts'),
       },
       formats: ['es'],
     },

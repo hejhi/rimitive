@@ -12,26 +12,23 @@ import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
 import { createContext as createLattice } from '@lattice/lattice';
-import type { SignalApi } from './api';
+import type { ExtendedSignalContext } from './api';
 
 // Create a test instance
 export function createTestInstance() {
-  // Create context and work queue for testing
-  const ctx = createContext();
-  const workQueue = createWorkQueue();
-  
-  // Create shared API object
-  const signalApi: SignalApi = {
-    workQueue,
+  // Create extended context for testing
+  const ctx: ExtendedSignalContext = {
+    ...createContext(),
+    workQueue: createWorkQueue(),
   };
   
   // Create API with all core factories
   const api = createLattice(
-    createSignalFactory(ctx, signalApi),
-    createComputedFactory(ctx, signalApi),
-    createEffectFactory(ctx, signalApi),
-    createBatchFactory(ctx, signalApi),
-    createSubscribeFactory(ctx, signalApi)
+    createSignalFactory(ctx),
+    createComputedFactory(ctx),
+    createEffectFactory(ctx),
+    createBatchFactory(ctx),
+    createSubscribeFactory(ctx)
   );
   
   return {
@@ -54,10 +51,10 @@ export function createTestInstance() {
       if (ctx.batchDepth > 0) ctx.batchDepth--;
     },
     getBatchDepth: () => ctx.batchDepth,
-    hasPendingEffects: () => workQueue.state.tail !== workQueue.state.head,
+    hasPendingEffects: () => ctx.workQueue.state.tail !== ctx.workQueue.state.head,
     clearBatch: () => {
-      workQueue.state.head = 0;
-      workQueue.state.tail = 0;
+      ctx.workQueue.state.head = 0;
+      ctx.workQueue.state.tail = 0;
       // Reset batch depth safely
       ctx.batchDepth = 0;
     },
@@ -69,13 +66,13 @@ export function createTestInstance() {
     getCurrentConsumer: () => ctx.currentConsumer,
     resetGlobalState: () => {
       // Clear any pending scheduled effects
-      const count = workQueue.state.tail - workQueue.state.head;
+      const count = ctx.workQueue.state.tail - ctx.workQueue.state.head;
       for (let i = 0; i < count; i++) {
-        const consumer = workQueue.state.queue![(workQueue.state.head + i) & workQueue.state.mask];
+        const consumer = ctx.workQueue.state.queue![(ctx.workQueue.state.head + i) & ctx.workQueue.state.mask];
         if (consumer) consumer._nextScheduled = undefined;
       }
-      workQueue.state.head = 0;
-      workQueue.state.tail = 0;
+      ctx.workQueue.state.head = 0;
+      ctx.workQueue.state.tail = 0;
 
       // Reset context
       ctx.currentConsumer = null;
@@ -85,7 +82,7 @@ export function createTestInstance() {
     getGlobalVersion: () => ctx.version,
     activeContext: ctx,
     // Export work queue for test access
-    workQueue: workQueue,
+    workQueue: ctx.workQueue,
   };
 }
 

@@ -151,7 +151,7 @@ describe('Signal Hooks', () => {
       const user = api.signal({ name: 'John', age: 30, email: 'john@example.com' });
       
       const { result } = renderHook(
-        () => useSelector(user, (u) => u.name),
+        () => useSelector(user, (u: { name: string; age: number; email: string }) => u.name),
         { wrapper: createWrapper(api) }
       );
 
@@ -178,7 +178,7 @@ describe('Signal Hooks', () => {
       const { result } = renderHook(
         () => {
           renderCount.current++;
-          return useSelector(user, (u) => u.name);
+          return useSelector(user, (u: { name: string; age: number }) => u.name);
         },
         { wrapper: createWrapper(api) }
       );

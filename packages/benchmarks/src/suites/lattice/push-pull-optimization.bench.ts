@@ -23,13 +23,11 @@ import {
   computed as preactComputed,
   ReadonlySignal,
 } from '@preact/signals-core';
-import {
-  createSignalFactory,
-  createComputedFactory,
-  createBatchFactory,
-  createSignalAPI,
-  Computed,
-} from '@lattice/signals';
+import { createSignalAPI } from '@lattice/signals/api';
+import { createDefaultContext } from '@lattice/signals/default-context';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { ComputedInterface, createComputedFactory } from '@lattice/signals/computed';
+import { createBatchFactory } from '@lattice/signals/batch';
 import {
   signal as alienSignal,
   computed as alienComputed,
@@ -45,7 +43,7 @@ const {
   signal: createSignalFactory,
   computed: createComputedFactory,
   batch: createBatchFactory,
-});
+}, createDefaultContext());
 
 describe('Push-Pull: Filtered Diamond Dependencies', () => {
   /**
@@ -399,7 +397,7 @@ describe('Push-Pull: Large Graph with Sparse Updates', () => {
       return i % 2 === 0 ? val : 0;
     })
   );
-  const latticeSparseSums: Computed<number>[] = [];
+  const latticeSparseSums: ComputedInterface<number>[] = [];
   for (let i = 0; i < GRAPH_SIZE - 1; i++) {
     latticeSparseSums.push(
       latticeComputed(() => {

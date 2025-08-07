@@ -32,13 +32,12 @@
  */
 
 import { CONSTANTS } from './constants';
-import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createGraphWalker } from './helpers/graph-walker';
-import type { SignalApi } from './api';
+import type { ExtendedSignalContext } from './api';
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
   __type: 'computed';
@@ -57,7 +56,9 @@ const {
   TRACKING,
 } = CONSTANTS;
 
-export function createComputedFactory(ctx: SignalContext, api: SignalApi): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
+export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
+  const { workQueue: { enqueue } } = ctx;
+
   // Helper functions for managing the dependency graph
   const depHelpers = createDependencyHelpers();
   const { addDependency, shouldNodeUpdate, checkNodeDirty } = depHelpers
@@ -71,7 +72,7 @@ export function createComputedFactory(ctx: SignalContext, api: SignalApi): Latti
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Reused across all computed invalidations to avoid function allocation
   const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) api.workQueue.enqueue(node as ScheduledNode);
+    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
   };
   
   class Computed<T> implements ComputedInterface<T> {

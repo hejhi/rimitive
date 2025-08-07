@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createSignalAPI } from './api';
+import { createSignalAPI, type ExtendedSignalContext, type ExtensionFactory } from './api';
+import { createDefaultContext } from './default-context';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -8,7 +9,6 @@ import { createSubscribeFactory } from './subscribe';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
-import { createContext as createLattice } from '@lattice/lattice';
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
@@ -18,7 +18,7 @@ describe('createSignalAPI', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     expect(api.signal).toBeDefined();
     expect(api.computed).toBeDefined();
@@ -32,7 +32,7 @@ describe('createSignalAPI', () => {
     const api = createSignalAPI({
       signal: createSignalFactory,
       computed: createComputedFactory,
-    });
+    }, createDefaultContext());
 
     expect(api.signal).toBeDefined();
     expect(api.computed).toBeDefined();
@@ -44,31 +44,30 @@ describe('createSignalAPI', () => {
     expect('subscribe' in api).toBe(false);
   });
 
-  it('should work with custom work queue implementation', () => {
+  it('should work with custom context and work queue', () => {
     let flushCalled = false;
     
-    // Create custom context and API manually for custom work queue
-    const ctx = createContext();
-    const customWorkQueue = (() => {
-      const queue = createWorkQueue();
-      return {
-        ...queue,
-        flush: () => {
-          flushCalled = true;
-          queue.flush();
-        }
-      };
-    })();
+    // Create custom context with custom work queue
+    const customCtx = {
+      ...createContext(),
+      workQueue: (() => {
+        const queue = createWorkQueue();
+        return {
+          ...queue,
+          flush: () => {
+            flushCalled = true;
+            queue.flush();
+          }
+        };
+      })()
+    };
     
-    const signalApi = { workQueue: customWorkQueue };
-    
-    const api = createLattice(
-      createSignalFactory(ctx, signalApi),
-      createComputedFactory(ctx, signalApi),
-      createEffectFactory(ctx, signalApi),
-      createBatchFactory(ctx, signalApi),
-      createSubscribeFactory(ctx, signalApi)
-    );
+    const api = createSignalAPI({
+      signal: createSignalFactory,
+      computed: createComputedFactory,
+      effect: createEffectFactory,
+      batch: createBatchFactory,
+    }, customCtx);
     
     const count = api.signal(0);
     const double = api.computed(() => count.value * 2);
@@ -84,6 +83,68 @@ describe('createSignalAPI', () => {
     expect(flushCalled).toBe(true);
   });
 
+  it('should allow extending context with custom work queue', () => {
+    let enqueueCount = 0;
+    
+    // Create custom context with instrumented work queue
+    const customCtx: ExtendedSignalContext = {
+      ...createContext(),
+      workQueue: (() => {
+        const queue = createWorkQueue();
+        const originalEnqueue = queue.enqueue;
+        queue.enqueue = (node) => {
+          enqueueCount++;
+          return originalEnqueue(node);
+        };
+        return queue;
+      })()
+    };
+    
+    const api = createSignalAPI({
+      signal: createSignalFactory,
+      effect: createEffectFactory,
+    }, customCtx);
+    
+    const count = api.signal(0);
+    api.effect(() => {
+      void count.value; // Subscribe to count
+    });
+    
+    count.value = 1; // Should enqueue the effect
+    
+    expect(enqueueCount).toBe(1);
+  });
+
+  it('should allow custom factories to access extended context', () => {
+    // Create custom context with logger storage
+    interface LoggerContext extends ExtendedSignalContext {
+      logs: string[];
+    }
+    
+    const customCtx: LoggerContext = {
+      ...createDefaultContext(),
+      logs: []
+    };
+    
+    // Create custom extension that uses the logger storage
+    const createLoggerFactory = (ctx: LoggerContext): LatticeExtension<'logger', (message: string) => void> => {
+      return {
+        name: 'logger',
+        method: (message: string) => {
+          ctx.logs.push(message);
+        }
+      };
+    };
+    
+    const api = createSignalAPI({
+      signal: createSignalFactory,
+      logger: createLoggerFactory as ExtensionFactory<'logger', (message: string) => void>,
+    }, customCtx);
+    
+    api.logger('test message');
+    expect(api._ctx.logs).toEqual(['test message']);
+  });
+
   it('should handle dispose method correctly', () => {
     const api = createSignalAPI({
       signal: createSignalFactory,
@@ -91,13 +152,13 @@ describe('createSignalAPI', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     let effectRuns = 0;
     const count = api.signal(0);
     
     const dispose = api.effect(() => {
-      count.value; // Subscribe to count
+      void count.value; // Subscribe to count
       effectRuns++;
     });
 
@@ -124,14 +185,14 @@ describe('createSignalAPI', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
     const api2 = createSignalAPI({
       signal: createSignalFactory,
       computed: createComputedFactory,
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     const signal1 = api1.signal(0);
     const signal2 = api2.signal(0);
@@ -140,12 +201,12 @@ describe('createSignalAPI', () => {
     let effect2Runs = 0;
 
     api1.effect(() => {
-      signal1.value;
+      void signal1.value;
       effect1Runs++;
     });
 
     api2.effect(() => {
-      signal2.value;
+      void signal2.value;
       effect2Runs++;
     });
 
@@ -160,21 +221,18 @@ describe('createSignalAPI', () => {
 
   it('should work with custom extensions alongside signals', () => {
     // Create a custom extension
-    const createCustomFactory = (_ctx: typeof createContext extends () => infer R ? R : never): LatticeExtension<'custom', () => string> => {
+    const createCustomFactory = (): LatticeExtension<'custom', () => string> => {
       return {
         name: 'custom',
         method: () => 'custom value'
       };
     };
 
-    // Create API with custom extension
-    const ctx = createContext();
-    const signalApi = { workQueue: createWorkQueue() };
-    
-    const api = createLattice(
-      createSignalFactory(ctx, signalApi),
-      createCustomFactory(ctx)
-    );
+    // Create API with custom extension and signal
+    const api = createSignalAPI({
+      signal: createSignalFactory,
+      custom: createCustomFactory
+    }, createDefaultContext());
 
     expect(api.custom).toBeDefined();
     expect(api.custom()).toBe('custom value');
@@ -185,7 +243,7 @@ describe('createSignalAPI', () => {
     const api = createSignalAPI({
       signal: createSignalFactory,
       computed: createComputedFactory,
-    });
+    }, createDefaultContext());
 
     // TypeScript should know these methods exist
     const count = api.signal(0);

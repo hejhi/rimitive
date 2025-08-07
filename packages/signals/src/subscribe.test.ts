@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSignalAPI } from './api';
+import { createDefaultContext } from './default-context';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -14,7 +15,7 @@ describe('subscribe factory', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     const s = api.signal(10);
     const callback = vi.fn();
@@ -31,7 +32,7 @@ describe('subscribe factory', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     const s = api.signal(10);
     const callback = vi.fn();
@@ -56,7 +57,7 @@ describe('subscribe factory', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     const count = api.signal(1);
     const double = api.computed(() => count.value * 2);
@@ -80,14 +81,14 @@ describe('subscribe factory', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     const a = api.signal(1);
     const b = api.signal(2);
     const sum = api.computed(() => {
       // Always returns 10, regardless of inputs
-      a.value;
-      b.value;
+      void a.value;
+      void b.value;
       return 10;
     });
     
@@ -114,7 +115,7 @@ describe('subscribe factory', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     const count = api.signal(0);
     const callback = vi.fn();
@@ -140,7 +141,7 @@ describe('subscribe factory', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     const count = api.signal(0);
     const callback = vi.fn();
@@ -164,7 +165,7 @@ describe('subscribe factory', () => {
       effect: createEffectFactory,
       batch: createBatchFactory,
       subscribe: createSubscribeFactory,
-    });
+    }, createDefaultContext());
 
     const count = api.signal(0);
     const callback1 = vi.fn();

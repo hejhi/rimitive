@@ -1,10 +1,9 @@
-import { 
-  createSignalAPI, 
-  createSignalFactory, 
-  createComputedFactory, 
-  createEffectFactory, 
-  createBatchFactory 
-} from '@lattice/signals';
+import { createSignalAPI } from '@lattice/signals/api';
+import { createDefaultContext } from '@lattice/signals/default-context';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
+import { createBatchFactory } from '@lattice/signals/batch';
 
 // Create signal API instance
 const signalAPI = createSignalAPI({
@@ -12,7 +11,7 @@ const signalAPI = createSignalAPI({
   computed: createComputedFactory,
   effect: createEffectFactory,
   batch: createBatchFactory,
-});
+}, createDefaultContext());
 
 const { signal, computed, effect, batch } = signalAPI;
 

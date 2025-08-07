@@ -1,12 +1,10 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { 
-  createSignalAPI,
-  createSignalFactory,
-  createComputedFactory,
-  createEffectFactory,
-  createBatchFactory,
-  createSubscribeFactory
-} from '@lattice/signals';
+import { createSignalAPI } from '@lattice/signals/api';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
+import { createBatchFactory } from '@lattice/signals/batch';
+import { createSubscribeFactory } from '@lattice/signals/subscribe';
 
 // Type for the signal API - use the actual return type
 type SignalAPI = ReturnType<typeof createSignalAPI<{

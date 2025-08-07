@@ -5,13 +5,10 @@
   "author": "Lattice Team",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+    "./api": {
+      "import": "./dist/api.js",
+      "types": "./dist/api.d.ts"
     },
     "./signal": {
       "import": "./dist/signal.js",
@@ -33,9 +30,21 @@
       "import": "./dist/subscribe.js",
       "types": "./dist/subscribe.d.ts"
     },
-    "./type-guards": {
-      "import": "./dist/type-guards.js",
-      "types": "./dist/type-guards.d.ts"
+    "./types": {
+      "import": "./dist/types.js",
+      "types": "./dist/types.d.ts"
+    },
+    "./context": {
+      "import": "./dist/context.js",
+      "types": "./dist/context.d.ts"
+    },
+    "./constants": {
+      "import": "./dist/constants.js",
+      "types": "./dist/constants.d.ts"
+    },
+    "./default-context": {
+      "import": "./dist/default-context.js",
+      "types": "./dist/default-context.d.ts"
     }
   },
   "files": [

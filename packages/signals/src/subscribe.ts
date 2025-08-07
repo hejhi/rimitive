@@ -35,12 +35,11 @@
  * - Manual dependency setup (less magic, more explicit)
  */
 import { CONSTANTS } from './constants';
-import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
-import type { SignalApi } from './api';
+import type { ExtendedSignalContext } from './api';
 
 const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
 
@@ -50,10 +49,10 @@ export interface SubscribeNode<T> extends ScheduledNode {
   dispose(): void;
 }
 
-export function createSubscribeFactory(ctx: SignalContext, api: SignalApi): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
+export function createSubscribeFactory(ctx: ExtendedSignalContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
   // Only need disposal helper since subscribe has exactly one source
   const { disposeAllSources } = createSourceCleanupHelpers(createDependencyHelpers());
-  
+  const { workQueue: { enqueue, dispose } } = ctx;
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;
     _callback: (value: T) => void;           // User's callback function
@@ -88,7 +87,7 @@ export function createSubscribeFactory(ctx: SignalContext, api: SignalApi): Latt
       // Batch-aware execution
       if (ctx.batchDepth > 0) {
         // Inside a batch - defer execution
-        api.workQueue.enqueue(this);
+        enqueue(this);
         return;
       }
       
@@ -134,7 +133,7 @@ export function createSubscribeFactory(ctx: SignalContext, api: SignalApi): Latt
     dispose(): void {
       // ALGORITHM: Clean Disposal
       // Mark as disposed and remove the single source edge
-      api.workQueue.dispose(this, disposeAllSources);
+      dispose(this, disposeAllSources);
     }
 
     _setupDependency(source: Readable<T> & ProducerNode): void {

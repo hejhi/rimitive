@@ -14,13 +14,12 @@ import {
   batch as preactBatch,
   effect as preactEffect,
 } from '@preact/signals-core';
-import {
-  createSignalFactory,
-  createComputedFactory,
-  createBatchFactory,
-  createEffectFactory,
-  createSignalAPI,
-} from '@lattice/signals';
+import { createSignalAPI } from '@lattice/signals/api';
+import { createDefaultContext } from '@lattice/signals/default-context';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createBatchFactory } from '@lattice/signals/batch';
+import { createEffectFactory } from '@lattice/signals/effect';
 import {
   signal as alienSignal,
   computed as alienComputed,
@@ -42,7 +41,7 @@ const {
   computed: createComputedFactory,
   batch: createBatchFactory,
   effect: createEffectFactory,
-});
+}, createDefaultContext());
 
 describe('Single Signal Updates', () => {
   const preactCount = preactSignal(0);

@@ -34,9 +34,8 @@
  * - Queue is flushed when outermost batch completes
  * - Inspired by database transactions and React's batching
  */
-import type { SignalContext } from './context';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { SignalApi } from './api';
+import type { ExtendedSignalContext } from './api';
 
 // PATTERN: Error Wrapper for Non-Error Values
 // When user code throws non-Error values (strings, numbers, etc.),
@@ -49,7 +48,9 @@ class BatchError extends Error {
   }
 }
 
-export function createBatchFactory(ctx: SignalContext, api: SignalApi): LatticeExtension<'batch', <T>(fn: () => T) => T> {
+export function createBatchFactory(ctx: ExtendedSignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
+  const { workQueue: { flush } } = ctx;
+
   // ALGORITHM: Nested Batch Support
   // The batch function is reentrant - batches can be nested safely.
   // Only the outermost batch triggers the flush.
@@ -88,7 +89,7 @@ export function createBatchFactory(ctx: SignalContext, api: SignalApi): LatticeE
       try {
         // Execute all effects that were scheduled during the batch
         // They'll see the final state of all signal changes
-        api.workQueue.flush();
+        flush();
       } catch (error) {
         // CRITICAL: Reset batchDepth on flush error
         // This prevents the system from getting stuck in a batched state

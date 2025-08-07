@@ -1,11 +1,10 @@
-import { 
-  createSignalAPI, 
-  createSignalFactory, 
-  createComputedFactory, 
-  createEffectFactory, 
-  createBatchFactory 
-} from '@lattice/signals';
-import type { Signal } from '@lattice/signals';
+import { createSignalAPI } from '@lattice/signals/api';
+import { createDefaultContext } from '@lattice/signals/default-context';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
+import { createBatchFactory } from '@lattice/signals/batch';
+import type { Signal } from '@lattice/signals/signal';
 import type { ContextInfo, LogEntry } from './types';
 
 // Create a Lattice context for the devtools panel itself
@@ -14,7 +13,7 @@ export const devtoolsContext = createSignalAPI({
   computed: createComputedFactory,
   effect: createEffectFactory,
   batch: createBatchFactory,
-});
+}, createDefaultContext());
 
 // Create signals for each piece of state
 // Create individual signals for each piece of state

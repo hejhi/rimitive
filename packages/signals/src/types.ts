@@ -144,3 +144,6 @@ export interface Edge {
   generation: number;
 }
 
+// Ensure module is not tree-shaken
+export const __types = true;
+

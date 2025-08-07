@@ -14,12 +14,11 @@ import {
   computed as preactComputed,
   effect as preactEffect,
 } from '@preact/signals-core';
-import {
-  createSignalFactory,
-  createComputedFactory,
-  createEffectFactory,
-  createSignalAPI,
-} from '@lattice/signals';
+import { createSignalAPI } from '@lattice/signals/api';
+import { createDefaultContext } from '@lattice/signals/default-context';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
 import {
   signal as alienSignal,
   computed as alienComputed,
@@ -35,7 +34,7 @@ const {
   signal: createSignalFactory,
   computed: createComputedFactory,
   effect: createEffectFactory,
-});
+}, createDefaultContext());
 
 describe('Grid Propagation Pattern (10x10)', () => {
   const WIDTH = 10;
