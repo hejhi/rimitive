@@ -1,17 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createScheduledConsumerHelpers } from './scheduled-consumer';
+import { createWorkQueue } from './work-queue';
 import { createContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
 const { NOTIFIED, DISPOSED } = CONSTANTS;
 
-describe('ScheduledConsumerHelpers', () => {
-  it('should schedule consumers when batching', () => {
+describe('WorkQueue', () => {
+  it('should schedule nodes when batching', () => {
     const ctx = createContext();
-    const helpers = createScheduledConsumerHelpers(ctx);
+    const helpers = createWorkQueue(ctx);
     
-    const consumer: ScheduledNode = {
+    const node: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -24,18 +24,18 @@ describe('ScheduledConsumerHelpers', () => {
     };
     
     ctx.batchDepth = 1;
-    helpers.scheduleConsumer(consumer);
+    helpers.enqueue(node);
     
-    expect(ctx.scheduledQueue![ctx.scheduledHead & ctx.scheduledMask]).toBe(consumer);
+    expect(ctx.scheduledQueue![ctx.scheduledHead & ctx.scheduledMask]).toBe(node);
     expect(ctx.scheduledTail - ctx.scheduledHead).toBe(1);
-    expect(consumer._nextScheduled).toBe(consumer); // Used as a flag
+    expect(node._nextScheduled).toBe(node); // Used as a flag
   });
 
-  it('should invalidate consumer immediately when not batching', () => {
+  it('should invalidate node immediately when not batching', () => {
     const ctx = createContext();
-    const helpers = createScheduledConsumerHelpers(ctx);
+    const helpers = createWorkQueue(ctx);
     
-    const consumer: ScheduledNode = {
+    const node: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -48,18 +48,18 @@ describe('ScheduledConsumerHelpers', () => {
     };
     
     ctx.batchDepth = 0;
-    helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
+    helpers.invalidate(node, NOTIFIED, NOTIFIED);
     
-    expect(consumer._flags & NOTIFIED).toBe(NOTIFIED);
+    expect(node._flags & NOTIFIED).toBe(NOTIFIED);
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(consumer._flush).toHaveBeenCalled();
+    expect(node._flush).toHaveBeenCalled();
   });
 
-  it('should schedule consumer when batching during invalidate', () => {
+  it('should schedule node when batching during invalidate', () => {
     const ctx = createContext();
-    const helpers = createScheduledConsumerHelpers(ctx);
+    const helpers = createWorkQueue(ctx);
     
-    const consumer: ScheduledNode = {
+    const node: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -72,20 +72,20 @@ describe('ScheduledConsumerHelpers', () => {
     };
     
     ctx.batchDepth = 1;
-    helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
+    helpers.invalidate(node, NOTIFIED, NOTIFIED);
     
-    expect(consumer._flags & NOTIFIED).toBe(NOTIFIED);
-    expect(ctx.scheduledQueue![ctx.scheduledHead & ctx.scheduledMask]).toBe(consumer);
+    expect(node._flags & NOTIFIED).toBe(NOTIFIED);
+    expect(ctx.scheduledQueue![ctx.scheduledHead & ctx.scheduledMask]).toBe(node);
     expect(ctx.scheduledTail - ctx.scheduledHead).toBe(1);
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(consumer._flush).not.toHaveBeenCalled();
+    expect(node._flush).not.toHaveBeenCalled();
   });
 
   it('should skip invalidation if check flags are set', () => {
     const ctx = createContext();
-    const helpers = createScheduledConsumerHelpers(ctx);
+    const helpers = createWorkQueue(ctx);
     
-    const consumer: ScheduledNode = {
+    const node: ScheduledNode = {
       __type: 'test',
       _flags: NOTIFIED,
       _nextScheduled: undefined,
@@ -97,19 +97,19 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true,
     };
     
-    helpers.invalidateConsumer(consumer, NOTIFIED, NOTIFIED);
+    helpers.invalidate(node, NOTIFIED, NOTIFIED);
     
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    expect(consumer._flush).not.toHaveBeenCalled();
+    expect(node._flush).not.toHaveBeenCalled();
     expect(ctx.scheduledTail - ctx.scheduledHead).toBe(0);
   });
 
-  it('should dispose consumer only once', () => {
+  it('should dispose node only once', () => {
     const ctx = createContext();
-    const helpers = createScheduledConsumerHelpers(ctx);
+    const helpers = createWorkQueue(ctx);
     
     const cleanupFn = vi.fn();
-    const consumer: ScheduledNode = {
+    const node: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -121,25 +121,25 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true,
     };
     
-    helpers.disposeConsumer(consumer, cleanupFn);
+    helpers.dispose(node, cleanupFn);
     
-    expect(consumer._flags & DISPOSED).toBe(DISPOSED);
-    expect(cleanupFn).toHaveBeenCalledWith(consumer);
+    expect(node._flags & DISPOSED).toBe(DISPOSED);
+    expect(cleanupFn).toHaveBeenCalledWith(node);
     
     // Try disposing again
-    helpers.disposeConsumer(consumer, cleanupFn);
+    helpers.dispose(node, cleanupFn);
     expect(cleanupFn).toHaveBeenCalledTimes(1);
   });
 
-  it('should flush all scheduled consumers', () => {
+  it('should flush all scheduled nodes', () => {
     const ctx = createContext();
-    const helpers = createScheduledConsumerHelpers(ctx);
+    const helpers = createWorkQueue(ctx);
     
     const flush1 = vi.fn();
     const flush2 = vi.fn();
     const flush3 = vi.fn();
     
-    const consumer1: ScheduledNode = {
+    const node1: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -151,7 +151,7 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true,
     };
     
-    const consumer2: ScheduledNode = {
+    const node2: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -163,7 +163,7 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true,
     };
     
-    const consumer3: ScheduledNode = {
+    const node3: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -175,12 +175,12 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true,
     };
     
-    // Schedule consumers in order
-    helpers.scheduleConsumer(consumer1);
-    helpers.scheduleConsumer(consumer2);
-    helpers.scheduleConsumer(consumer3);
+    // Schedule nodes in order
+    helpers.enqueue(node1);
+    helpers.enqueue(node2);
+    helpers.enqueue(node3);
     
-    helpers.flushScheduled();
+    helpers.flush();
     
     expect(ctx.scheduledTail - ctx.scheduledHead).toBe(0);
     expect(flush1).toHaveBeenCalledTimes(1);
@@ -190,11 +190,11 @@ describe('ScheduledConsumerHelpers', () => {
 
   it('should throw on queue overflow', () => {
     const ctx = createContext();
-    const helpers = createScheduledConsumerHelpers(ctx);
+    const helpers = createWorkQueue(ctx);
     
     // Fill the queue to capacity
     for (let i = 0; i < 256; i++) {
-      const consumer: ScheduledNode = {
+      const node: ScheduledNode = {
         __type: 'test',
         _flags: 0,
         _nextScheduled: undefined,
@@ -205,11 +205,11 @@ describe('ScheduledConsumerHelpers', () => {
         dispose: () => {},
         _refresh: () => true
       };
-      helpers.scheduleConsumer(consumer);
+      helpers.enqueue(node);
     }
     
-    // The 257th consumer should cause an overflow error
-    const overflowConsumer: ScheduledNode = {
+    // The 257th node should cause an overflow error
+    const overflowNode: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _generation: 0,
@@ -221,19 +221,19 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true
     };
     
-    expect(() => helpers.scheduleConsumer(overflowConsumer)).toThrow(/Effect queue overflow: 256 effects scheduled/);
+    expect(() => helpers.enqueue(overflowNode)).toThrow(/Effect queue overflow: 256 effects scheduled/);
   });
 
   it('should reset queue counters to prevent integer overflow', () => {
     const ctx = createContext();
-    const helpers = createScheduledConsumerHelpers(ctx);
+    const helpers = createWorkQueue(ctx);
     
     // Set tail close to overflow threshold
     ctx.scheduledTail = 0x7FFFFFF1;
     ctx.scheduledHead = 0x7FFFFFF1;
     
-    // Schedule and flush a consumer
-    const consumer: ScheduledNode = {
+    // Schedule and flush a node
+    const node: ScheduledNode = {
       __type: 'test',
       _flags: 0,
       _nextScheduled: undefined,
@@ -245,8 +245,8 @@ describe('ScheduledConsumerHelpers', () => {
       _refresh: () => true,
     };
     
-    helpers.scheduleConsumer(consumer);
-    helpers.flushScheduled();
+    helpers.enqueue(node);
+    helpers.flush();
     
     // Should have reset to 0
     expect(ctx.scheduledHead).toBe(0);

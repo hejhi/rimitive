@@ -39,7 +39,7 @@ import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
+import { createWorkQueue } from './helpers/work-queue';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
@@ -54,8 +54,8 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
   // Only need disposal helper since subscribe has exactly one source
   const { disposeAllSources } = createSourceCleanupHelpers(createDependencyHelpers());
   
-  // Scheduling helpers for deferred execution
-  const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
+  // Work queue for scheduling and disposing nodes
+  const workQueue = createWorkQueue(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;
@@ -81,7 +81,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       // ALGORITHM: Scheduled Notification
       // When source changes, mark as NOTIFIED and schedule for batch execution
       // Skip if already NOTIFIED or DISPOSED
-      invalidateConsumer(this, NOTIFIED | DISPOSED, NOTIFIED);
+      workQueue.invalidate(this, NOTIFIED | DISPOSED, NOTIFIED);
     }
 
     _flush(): void {
@@ -122,7 +122,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     dispose(): void {
       // ALGORITHM: Clean Disposal
       // Mark as disposed and remove the single source edge
-      disposeConsumer(this, disposeAllSources);
+      workQueue.dispose(this, disposeAllSources);
     }
 
     _setupDependency(source: Readable<T> & ProducerNode): void {

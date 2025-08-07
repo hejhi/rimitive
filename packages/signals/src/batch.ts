@@ -36,7 +36,7 @@
  */
 import type { SignalContext } from './context';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
+import { createWorkQueue } from './helpers/work-queue';
 
 // PATTERN: Error Wrapper for Non-Error Values
 // When user code throws non-Error values (strings, numbers, etc.),
@@ -50,7 +50,7 @@ class BatchError extends Error {
 }
 
 export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { flushScheduled } = createScheduledConsumerHelpers(ctx);
+  const workQueue = createWorkQueue(ctx);
   
   // ALGORITHM: Nested Batch Support
   // The batch function is reentrant - batches can be nested safely.
@@ -90,7 +90,7 @@ export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch'
       try {
         // Execute all effects that were scheduled during the batch
         // They'll see the final state of all signal changes
-        flushScheduled();
+        workQueue.flush();
       } catch (error) {
         // CRITICAL: Reset batchDepth on flush error
         // This prevents the system from getting stuck in a batched state

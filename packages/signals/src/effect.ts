@@ -43,7 +43,7 @@ import { Disposable, Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
-import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
+import { createWorkQueue } from './helpers/work-queue';
 
 export interface EffectInterface extends ScheduledNode, Disposable {
   __type: 'effect';
@@ -86,8 +86,8 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(depHelpers);
     
-  // Scheduling and disposal helpers specific to effects
-  const { invalidateConsumer, disposeConsumer } = createScheduledConsumerHelpers(ctx);
+  // Work queue for scheduling and disposing nodes
+  const workQueue = createWorkQueue(ctx);
   class Effect implements EffectInterface {
     // OPTIMIZATION: Hot/Cold Field Separation
     // Group frequently accessed fields together for better CPU cache locality
@@ -112,7 +112,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       // Effects are eager - when notified, they're also marked OUTDATED
       // This ensures they run in the next flush cycle
       // The NOTIFIED flag prevents duplicate scheduling
-      invalidateConsumer(this, NOTIFIED, NOTIFIED | OUTDATED);
+      workQueue.invalidate(this, NOTIFIED, NOTIFIED | OUTDATED);
     }
 
     _flush(): void {
@@ -184,7 +184,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     dispose(): void {
       // ALGORITHM: Effect Disposal
       // 1. Mark as disposed and run any pending cleanup
-      disposeConsumer(this, () => {
+      workQueue.dispose(this, () => {
         if (!this._cleanup) return;
         this._cleanup();
         this._cleanup = undefined;

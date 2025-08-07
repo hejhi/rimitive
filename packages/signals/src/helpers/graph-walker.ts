@@ -17,12 +17,12 @@ interface TraversalFrame {
   next: TraversalFrame | undefined; // Link to next frame (linked list stack)
 }
 
-export interface GraphTraversalHelpers {
-  traverseAndInvalidate: (startEdge: Edge | undefined, notify: (node: ConsumerNode) => void) => void;
+export interface GraphWalker {
+  walk: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
 }
 
 /**
- * Creates graph traversal helpers for efficient dependency graph updates.
+ * Creates a graph walker for efficient dependency graph traversal.
  * 
  * ALGORITHM: Iterative Depth-First Search with Explicit Stack
  * Traditional recursive DFS can cause stack overflow on deep dependency chains.
@@ -31,13 +31,12 @@ export interface GraphTraversalHelpers {
  * INSPIRATION: This approach is similar to alien-signals and other high-performance
  * reactive libraries that prioritize handling deep dependency chains efficiently.
  */
-export function createGraphTraverser(): GraphTraversalHelpers {
+export function createGraphWalker(): GraphWalker {
   /**
    * ALGORITHM: Push-Phase Invalidation via Iterative DFS
    *
-   * When a signal changes, we need to invalidate all transitively dependent
-   * computeds and effects. This function implements the "push" phase of the
-   * push-pull algorithm.
+   * When a signal changes, we need to walk all transitively dependent
+   * nodes. This function implements the "push" phase of the push-pull algorithm.
    *
    * Key insights:
    * 1. We only mark nodes as NOTIFIED (not OUTDATED) for lazy evaluation
@@ -45,17 +44,17 @@ export function createGraphTraverser(): GraphTraversalHelpers {
    * 3. Already notified nodes are skipped (prevents redundant traversal)
    * 4. Depth-first order ensures proper invalidation ordering
    */
-  const traverseAndInvalidate = (
-    startEdge: Edge | undefined,
-    notify: (node: ConsumerNode) => void
+  const walk = (
+    from: Edge | undefined,
+    visit: (node: ConsumerNode) => void
   ): void => {
-    if (!startEdge) return;
+    if (!from) return;
 
     // ALGORITHM: Iterative DFS State
     // - stack: Linked list of positions to return to (simulates call stack)
     // - currentEdge: Current position in graph traversal
     let stack: TraversalFrame | undefined;
-    let currentEdge: Edge | undefined = startEdge;
+    let currentEdge: Edge | undefined = from;
 
     // Main traversal loop - continues until all reachable nodes are processed
     while (currentEdge) {
@@ -71,8 +70,8 @@ export function createGraphTraverser(): GraphTraversalHelpers {
       // Mark as notified
       target._flags |= NOTIFIED;
 
-      // Call the notification callback
-      notify(target);
+      // Visit this node
+      visit(target);
 
       // OPTIMIZATION: Linear Chain Fast Path
       // Most dependency chains are linear (A→B→C). Handle these without stack.
@@ -100,5 +99,5 @@ export function createGraphTraverser(): GraphTraversalHelpers {
     }
   };
 
-  return { traverseAndInvalidate };
+  return { walk };
 }

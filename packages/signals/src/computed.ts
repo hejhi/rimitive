@@ -37,8 +37,8 @@ import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode }
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import { createGraphTraverser } from './helpers/graph-traversal';
-import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
+import { createGraphWalker } from './helpers/graph-walker';
+import { createWorkQueue } from './helpers/work-queue';
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
   __type: 'computed';
@@ -66,16 +66,16 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(depHelpers);
     
-  // Scheduling helpers (computeds don't use these directly, but need for traversal)
-  const { scheduleConsumer } = createScheduledConsumerHelpers(ctx);
+  // Work queue for scheduling nodes (computeds don't use directly, but need for traversal)
+  const workQueue = createWorkQueue(ctx);
   
-  // Graph traversal for propagating invalidations to dependents
-  const { traverseAndInvalidate } = createGraphTraverser();
+  // Graph walker for propagating changes to dependents
+  const graphWalker = createGraphWalker();
   
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Reused across all computed invalidations to avoid function allocation
   const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) scheduleConsumer(node as ScheduledNode);
+    if ('_nextScheduled' in node) workQueue.enqueue(node as ScheduledNode);
   };
   
   class Computed<T> implements ComputedInterface<T> {
@@ -231,8 +231,8 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       
       // ALGORITHM: Transitive Invalidation
       // If this computed has dependents, they might be affected too
-      // Propagate the invalidation through the graph
-      if (this._targets) traverseAndInvalidate(this._targets, notifyNode);
+      // Walk the graph to notify all dependent nodes
+      if (this._targets) graphWalker.walk(this._targets, notifyNode);
     }
 
     _update(): void {

@@ -30,8 +30,8 @@ import type { SignalContext } from './context';
 import { Edge, Writable, ProducerNode, ScheduledNode, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
-import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
-import { createGraphTraverser } from './helpers/graph-traversal';
+import { createWorkQueue } from './helpers/work-queue';
+import { createGraphWalker } from './helpers/graph-walker';
 
 const { RUNNING } = CONSTANTS;
 
@@ -60,18 +60,18 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   // Dependency tracking helper for establishing producer-consumer edges
   const { addDependency } = createDependencyHelpers();
   
-  // Scheduled consumer helpers for deferred effect execution
+  // Work queue for deferred node execution
   // Uses a circular buffer queue for O(1) enqueue/dequeue operations
-  const { scheduleConsumer, flushScheduled } = createScheduledConsumerHelpers(ctx);
+  const workQueue = createWorkQueue(ctx);
   
-  // Graph traversal helper for propagating invalidations through the dependency graph
-  // Uses depth-first traversal with version checks to avoid redundant invalidations
-  const { traverseAndInvalidate } = createGraphTraverser();
+  // Graph walker for propagating changes through the dependency graph
+  // Uses depth-first traversal to notify all dependent nodes
+  const graphWalker = createGraphWalker();
   
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Avoids creating new function objects in the critical update path
   const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) scheduleConsumer(node as ScheduledNode);
+    if ('_nextScheduled' in node) workQueue.enqueue(node as ScheduledNode);
   };
   
   // PATTERN: Class-based Implementation
@@ -152,14 +152,14 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       const isNewBatch = ctx.batchDepth === 0;
       if (isNewBatch) ctx.batchDepth++;
       
-      // ALGORITHM: Push-Based Invalidation Propagation
-      // Traverse the dependency graph starting from this signal's targets
-      // Mark all dependent computeds as "outdated" and schedule effects
-      traverseAndInvalidate(this._targets, notifyNode);
+      // ALGORITHM: Push-Based Change Propagation
+      // Walk the dependency graph starting from this signal's targets
+      // Visit all dependent nodes to notify them of the change
+      graphWalker.walk(this._targets, notifyNode);
       
       // Only flush if we created the batch
       if (isNewBatch && --ctx.batchDepth === 0) {
-        flushScheduled();
+        workQueue.flush();
       }
     }
 
