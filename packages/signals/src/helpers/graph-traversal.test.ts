@@ -7,20 +7,24 @@ const { NOTIFIED, OUTDATED, DISPOSED, RUNNING } = CONSTANTS;
 
 describe('createGraphTraverser', () => {
   let scheduledNodes: ScheduledNode[];
-  let traverseAndInvalidate: (startEdge: Edge | undefined) => void;
+  let traverseAndInvalidate: (startEdge: Edge | undefined, notify: (node: ConsumerNode) => void) => void;
+  let notify: (node: ConsumerNode) => void;
 
   beforeEach(() => {
     scheduledNodes = [];
 
-    const helpers = createGraphTraverser((node: ScheduledNode) => {
-      // Mimic the real scheduleConsumer behavior - check _nextScheduled
-      if (node._nextScheduled !== undefined) return;
+    notify = (node: ConsumerNode) => {
+      // Check if this node is schedulable (has effect properties)
+      if ('_nextScheduled' in node) {
+        const schedulableNode = node as ConsumerNode & ScheduledNode;
+        if (schedulableNode._nextScheduled !== undefined) return;
+        
+        scheduledNodes.push(schedulableNode);
+        schedulableNode._nextScheduled = schedulableNode; // Use self as flag
+      }
+    };
 
-      scheduledNodes.push(node);
-      node._nextScheduled = node; // Use self as flag
-    });
-
-    traverseAndInvalidate = helpers.traverseAndInvalidate;
+    traverseAndInvalidate = createGraphTraverser().traverseAndInvalidate;
   });
 
   function createMockNode(
@@ -71,7 +75,7 @@ describe('createGraphTraverser', () => {
     const target = createMockNode('computed');
     const edge = createEdge(source, target);
 
-    traverseAndInvalidate(edge);
+    traverseAndInvalidate(edge, notify);
 
     // With push-pull optimization, computeds only get NOTIFIED, not OUTDATED
     expect(target._flags & NOTIFIED).toBeTruthy();
@@ -83,7 +87,7 @@ describe('createGraphTraverser', () => {
     const effect = createMockNode('effect', 0, true); // isScheduled = true
     const edge = createEdge(source, effect);
 
-    traverseAndInvalidate(edge);
+    traverseAndInvalidate(edge, notify);
 
     // Effects now also use lazy evaluation - only NOTIFIED, not OUTDATED
     expect(effect._flags & NOTIFIED).toBeTruthy();
@@ -96,7 +100,7 @@ describe('createGraphTraverser', () => {
     const edge = createEdge(source, target);
 
     const initialFlags = target._flags;
-    traverseAndInvalidate(edge);
+    traverseAndInvalidate(edge, notify);
 
     expect(target._flags).toBe(initialFlags);
   });
@@ -107,7 +111,7 @@ describe('createGraphTraverser', () => {
     const edge = createEdge(source, target);
 
     const initialFlags = target._flags;
-    traverseAndInvalidate(edge);
+    traverseAndInvalidate(edge, notify);
 
     expect(target._flags).toBe(initialFlags);
   });
@@ -118,7 +122,7 @@ describe('createGraphTraverser', () => {
     const edge = createEdge(source, target);
 
     const initialFlags = target._flags;
-    traverseAndInvalidate(edge);
+    traverseAndInvalidate(edge, notify);
 
     expect(target._flags).toBe(initialFlags);
   });
@@ -135,7 +139,7 @@ describe('createGraphTraverser', () => {
 
     linkEdges([edge1, edge2, edge3]);
 
-    traverseAndInvalidate(edge1);
+    traverseAndInvalidate(edge1, notify);
 
     expect(target1._flags & NOTIFIED).toBeTruthy();
     expect(target2._flags & NOTIFIED).toBeTruthy();
@@ -156,7 +160,7 @@ describe('createGraphTraverser', () => {
     computed1._targets = edge2;
     computed2._targets = edge3;
 
-    traverseAndInvalidate(edge1);
+    traverseAndInvalidate(edge1, notify);
 
     expect(computed1._flags & NOTIFIED).toBeTruthy();
     expect(computed2._flags & NOTIFIED).toBeTruthy();
@@ -180,7 +184,7 @@ describe('createGraphTraverser', () => {
     computed1._targets = edge3;
     computed2._targets = edge4;
 
-    traverseAndInvalidate(edge1);
+    traverseAndInvalidate(edge1, notify);
 
     expect(computed1._flags & NOTIFIED).toBeTruthy();
     expect(computed2._flags & NOTIFIED).toBeTruthy();
@@ -225,7 +229,7 @@ describe('createGraphTraverser', () => {
     const comp4ToEff3 = createEdge(comp4, eff3);
     comp4._targets = comp4ToEff3;
 
-    traverseAndInvalidate(sourceToComp1);
+    traverseAndInvalidate(sourceToComp1, notify);
 
     // All nodes should be invalidated
     expect(comp1._flags & NOTIFIED).toBeTruthy();
@@ -243,7 +247,7 @@ describe('createGraphTraverser', () => {
   });
 
   it('should handle empty edge', () => {
-    traverseAndInvalidate(undefined);
+    traverseAndInvalidate(undefined, notify);
     // Should not throw
     expect(scheduledNodes).toHaveLength(0);
   });
@@ -259,7 +263,7 @@ describe('createGraphTraverser', () => {
     // Manually set _nextScheduled to simulate already scheduled
     effect._nextScheduled = {} as ScheduledNode;
 
-    traverseAndInvalidate(edge1);
+    traverseAndInvalidate(edge1, notify);
 
     // Effect should only be scheduled once
     expect(scheduledNodes).toHaveLength(0); // Because it was already scheduled
@@ -280,7 +284,7 @@ describe('createGraphTraverser', () => {
       nodes[i]!._targets = edge;
     }
 
-    traverseAndInvalidate(edges[0]);
+    traverseAndInvalidate(edges[0], notify);
 
     // All nodes should be notified (but not outdated - that's determined lazily)
     for (let i = 1; i < 100; i++) {

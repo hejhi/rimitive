@@ -27,7 +27,7 @@
  */
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Writable, ProducerNode } from './types';
+import { Edge, Writable, ProducerNode, ScheduledNode, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createScheduledConsumerHelpers } from './helpers/scheduled-consumer';
@@ -66,7 +66,13 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   
   // Graph traversal helper for propagating invalidations through the dependency graph
   // Uses depth-first traversal with version checks to avoid redundant invalidations
-  const { traverseAndInvalidate } = createGraphTraverser(scheduleConsumer);
+  const { traverseAndInvalidate } = createGraphTraverser();
+  
+  // OPTIMIZATION: Pre-defined notification handler for hot path
+  // Avoids creating new function objects in the critical update path
+  const notifyNode = (node: ConsumerNode): void => {
+    if ('_nextScheduled' in node) scheduleConsumer(node as ScheduledNode);
+  };
   
   // PATTERN: Class-based Implementation
   // Using a class instead of factory functions for better performance:
@@ -149,7 +155,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       // ALGORITHM: Push-Based Invalidation Propagation
       // Traverse the dependency graph starting from this signal's targets
       // Mark all dependent computeds as "outdated" and schedule effects
-      traverseAndInvalidate(this._targets);
+      traverseAndInvalidate(this._targets, notifyNode);
       
       // Only flush if we created the batch
       if (isNewBatch && --ctx.batchDepth === 0) {

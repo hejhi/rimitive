@@ -1,5 +1,5 @@
 import { CONSTANTS } from '../constants';
-import type { Edge, ScheduledNode } from '../types';
+import type { Edge, ConsumerNode } from '../types';
 
 const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 
@@ -18,7 +18,7 @@ interface TraversalFrame {
 }
 
 export interface GraphTraversalHelpers {
-  traverseAndInvalidate: (startEdge: Edge | undefined) => void;
+  traverseAndInvalidate: (startEdge: Edge | undefined, notify: (node: ConsumerNode) => void) => void;
 }
 
 /**
@@ -31,7 +31,7 @@ export interface GraphTraversalHelpers {
  * INSPIRATION: This approach is similar to alien-signals and other high-performance
  * reactive libraries that prioritize handling deep dependency chains efficiently.
  */
-export function createGraphTraverser(scheduleNode: (consumer: ScheduledNode) => void): GraphTraversalHelpers {
+export function createGraphTraverser(): GraphTraversalHelpers {
   /**
    * ALGORITHM: Push-Phase Invalidation via Iterative DFS
    *
@@ -45,7 +45,10 @@ export function createGraphTraverser(scheduleNode: (consumer: ScheduledNode) => 
    * 3. Already notified nodes are skipped (prevents redundant traversal)
    * 4. Depth-first order ensures proper invalidation ordering
    */
-  const traverseAndInvalidate = (startEdge: Edge | undefined): void => {
+  const traverseAndInvalidate = (
+    startEdge: Edge | undefined,
+    notify: (node: ConsumerNode) => void
+  ): void => {
     if (!startEdge) return;
 
     // ALGORITHM: Iterative DFS State
@@ -65,10 +68,11 @@ export function createGraphTraverser(scheduleNode: (consumer: ScheduledNode) => 
         continue;
       }
 
-      // Mark as notified and schedule if needed
+      // Mark as notified
       target._flags |= NOTIFIED;
 
-      if ('_nextScheduled' in target) scheduleNode(target);
+      // Call the notification callback
+      notify(target);
 
       // OPTIMIZATION: Linear Chain Fast Path
       // Most dependency chains are linear (A→B→C). Handle these without stack.

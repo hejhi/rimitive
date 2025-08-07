@@ -33,7 +33,7 @@
 
 import { CONSTANTS } from './constants';
 import type { SignalContext } from './context';
-import { Edge, Readable, ProducerNode, Disposable, ConsumerNode } from './types';
+import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
@@ -70,7 +70,13 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
   const { scheduleConsumer } = createScheduledConsumerHelpers(ctx);
   
   // Graph traversal for propagating invalidations to dependents
-  const { traverseAndInvalidate } = createGraphTraverser(scheduleConsumer);
+  const { traverseAndInvalidate } = createGraphTraverser();
+  
+  // OPTIMIZATION: Pre-defined notification handler for hot path
+  // Reused across all computed invalidations to avoid function allocation
+  const notifyNode = (node: ConsumerNode): void => {
+    if ('_nextScheduled' in node) scheduleConsumer(node as ScheduledNode);
+  };
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
@@ -226,7 +232,7 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       // ALGORITHM: Transitive Invalidation
       // If this computed has dependents, they might be affected too
       // Propagate the invalidation through the graph
-      if (this._targets) traverseAndInvalidate(this._targets);
+      if (this._targets) traverseAndInvalidate(this._targets, notifyNode);
     }
 
     _update(): void {
