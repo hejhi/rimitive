@@ -1,4 +1,6 @@
-import { ConsumerNode, ScheduledNode } from "./types";
+import { ConsumerNode } from "./types";
+import type { WorkQueue } from "./helpers/work-queue";
+import { createWorkQueue } from "./helpers/work-queue";
 
 /**
  * ALGORITHM: Context-Based State Isolation
@@ -38,18 +40,11 @@ export interface SignalContext {
   // Similar to database transaction nesting.
   batchDepth: number;
   
-  // ALGORITHM: Circular Buffer for Effect Queue
-  // These fields implement a power-of-2 sized circular buffer for scheduling effects.
-  // Using a circular buffer avoids array resizing and provides O(1) enqueue/dequeue.
-  // 
-  // The queue uses the "one slot empty" technique to distinguish full from empty:
-  // - Empty: head === tail
-  // - Full: (tail + 1) & mask === head
-  scheduledQueue: ScheduledNode[] | null;  // The buffer (lazy allocated)
-  scheduledHead: number;                   // Index of next item to dequeue
-  scheduledTail: number;                   // Index where next item will be enqueued
-  scheduledMask: number;                   // Size - 1 for fast modulo via bit AND
-  // OPTIMIZATION: Power-of-2 size enables (index & mask) instead of (index % size)
+  // ALGORITHM: Shared Work Queue
+  // The work queue manages scheduling of effects and subscriptions.
+  // It's created once and shared across all modules to ensure batch
+  // can flush all scheduled work regardless of which module scheduled it.
+  workQueue: WorkQueue;
 }
 
 // PATTERN: Factory Function
@@ -60,11 +55,6 @@ export function createContext(): SignalContext {
     currentConsumer: null,
     version: 0,
     batchDepth: 0,
-    scheduledQueue: null, // OPTIMIZATION: Lazy allocation - only create if effects are used
-    scheduledHead: 0,
-    scheduledTail: 0,
-    scheduledMask: 255, // 256 - 1 for fast modulo via bit masking
-    // FLAG: Initial size of 256 might be too large for apps with few effects
-    // TODO: Consider making initial size configurable or adaptive
+    workQueue: createWorkQueue(),
   };
 }

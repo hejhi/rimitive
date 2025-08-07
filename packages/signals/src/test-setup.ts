@@ -43,10 +43,10 @@ export function createTestInstance() {
       if (ctx.batchDepth > 0) ctx.batchDepth--;
     },
     getBatchDepth: () => ctx.batchDepth,
-    hasPendingEffects: () => ctx.scheduledTail !== ctx.scheduledHead,
+    hasPendingEffects: () => ctx.workQueue.state.tail !== ctx.workQueue.state.head,
     clearBatch: () => {
-      ctx.scheduledHead = 0;
-      ctx.scheduledTail = 0;
+      ctx.workQueue.state.head = 0;
+      ctx.workQueue.state.tail = 0;
       // Reset batch depth safely
       ctx.batchDepth = 0;
     },
@@ -58,13 +58,13 @@ export function createTestInstance() {
     getCurrentConsumer: () => ctx.currentConsumer,
     resetGlobalState: () => {
       // Clear any pending scheduled effects
-      const count = ctx.scheduledTail - ctx.scheduledHead;
+      const count = ctx.workQueue.state.tail - ctx.workQueue.state.head;
       for (let i = 0; i < count; i++) {
-        const consumer = ctx.scheduledQueue![(ctx.scheduledHead + i) & ctx.scheduledMask];
+        const consumer = ctx.workQueue.state.queue![(ctx.workQueue.state.head + i) & ctx.workQueue.state.mask];
         if (consumer) consumer._nextScheduled = undefined;
       }
-      ctx.scheduledHead = 0;
-      ctx.scheduledTail = 0;
+      ctx.workQueue.state.head = 0;
+      ctx.workQueue.state.tail = 0;
 
       // Reset context
       ctx.currentConsumer = null;
@@ -105,15 +105,15 @@ export const activeContext = (() => {
   const getter = {
     get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
-    get scheduledCount() { return defaultInstance.activeContext.scheduledTail - defaultInstance.activeContext.scheduledHead; },
-    get scheduledQueue() { return defaultInstance.activeContext.scheduledQueue; },
+    get scheduledCount() { return defaultInstance.activeContext.workQueue.state.tail - defaultInstance.activeContext.workQueue.state.head; },
+    get scheduledQueue() { return defaultInstance.activeContext.workQueue.state.queue; },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
     set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
     set scheduledCount(v) { 
       // Reset queue to simulate setting count to v
-      defaultInstance.activeContext.scheduledHead = 0;
-      defaultInstance.activeContext.scheduledTail = v;
+      defaultInstance.activeContext.workQueue.state.head = 0;
+      defaultInstance.activeContext.workQueue.state.tail = v;
     },
     set currentConsumer(v) { defaultInstance.activeContext.currentConsumer = v; },
   };

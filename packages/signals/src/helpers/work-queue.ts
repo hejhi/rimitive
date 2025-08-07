@@ -1,16 +1,18 @@
 import { CONSTANTS } from '../constants';
-import type { SignalContext } from '../context';
 import type { ScheduledNode } from '../types';
 
 const { DISPOSED } = CONSTANTS;
 
+export interface QueueState {
+  queue: ScheduledNode[] | null;
+  head: number;
+  tail: number;
+  mask: number;
+}
+
 export interface WorkQueue {
+  state: QueueState;
   enqueue: (node: ScheduledNode) => void;
-  invalidate: (
-    node: ScheduledNode,
-    checkFlags: number,
-    setFlags: number
-  ) => void;
   dispose: <T extends ScheduledNode>(
     node: T,
     cleanup: (node: T) => void
@@ -55,7 +57,13 @@ export interface WorkQueue {
  * - No automatic resizing - could lose effects in pathological cases
  * - scheduledTail can overflow (32-bit integer limit)
  */
-export function createWorkQueue(ctx: SignalContext): WorkQueue {
+export function createWorkQueue(): WorkQueue {
+  const state: QueueState = {
+    queue: null,
+    head: 0,
+    tail: 0,
+    mask: 255
+  };
   /**
    * ALGORITHM: Circular Buffer Queue for O(1) Scheduling
    *
@@ -78,20 +86,20 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     // OPTIMIZATION: Lazy Queue Allocation
     // Don't allocate the 256-element array until we actually need it
     // Many apps might not use effects at all
-    if (!ctx.scheduledQueue) {
-      ctx.scheduledQueue = new Array<ScheduledNode>(256);
+    if (!state.queue) {
+      state.queue = new Array<ScheduledNode>(256);
     }
 
     // SAFETY: Queue Overflow Protection
     // Check if queue is full before inserting to prevent silent data loss
     // This adds ~2-3ns overhead but prevents catastrophic failures
-    const queueSize = ctx.scheduledTail - ctx.scheduledHead;
+    const queueSize = state.tail - state.head;
     if (queueSize >= 256) {
       // Log error for debugging before throwing
       console.error('[signals] Effect queue overflow:', {
         queueSize,
-        head: ctx.scheduledHead,
-        tail: ctx.scheduledTail,
+        head: state.head,
+        tail: state.tail,
       });
       throw new Error(
         `Effect queue overflow: ${queueSize} effects scheduled. ` +
@@ -104,43 +112,10 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     // Use bitwise AND with mask (255 = 0xFF = 11111111 in binary)
     // This is equivalent to scheduledTail % 256 but much faster
     // Example: 257 & 255 = 1, 513 & 255 = 1 (wraps around)
-    ctx.scheduledQueue[ctx.scheduledTail & ctx.scheduledMask] = node;
-    ctx.scheduledTail++;
+    state.queue[state.tail & state.mask] = node;
+    state.tail++;
   };
 
-  /**
-   * ALGORITHM: Conditional Scheduling Based on Batch State
-   *
-   * This provides a unified invalidation pattern that respects batching:
-   * - Inside a batch: Schedule for later execution
-   * - Outside a batch: Execute immediately
-   *
-   * This ensures effects always see a consistent state where all
-   * signal updates in a batch have completed.
-   */
-  const invalidate = (
-    node: ScheduledNode,
-    checkFlags: number, // Flags that indicate "already handled"
-    setFlags: number // Flags to set when handling
-  ): void => {
-    // OPTIMIZATION: Early exit if already processed
-    // Prevents duplicate scheduling/execution
-    if (node._flags & checkFlags) return;
-
-    // Mark with the provided flags (usually NOTIFIED or OUTDATED)
-    node._flags |= setFlags;
-
-    // ALGORITHM: Batch-Aware Execution
-    if (ctx.batchDepth > 0) {
-      // Inside a batch - defer execution
-      enqueue(node);
-      return;
-    }
-
-    // Outside batch - execute immediately
-    // This happens when effects trigger other effects
-    node._flush();
-  };
 
   /**
    * ALGORITHM: Safe Disposal Pattern
@@ -176,15 +151,15 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
    */
   const flush = (): void => {
     // Skip if queue hasn't been initialized yet (no effects used)
-    if (!ctx.scheduledQueue) return;
+    if (!state.queue) return;
 
-    const queue = ctx.scheduledQueue;
-    const mask = ctx.scheduledMask;
-    const head = ctx.scheduledHead;
+    const queue = state.queue;
+    const mask = state.mask;
+    const head = state.head;
 
     // Calculate number of items to process
     // Since tail can wrap around, this arithmetic works correctly
-    const count = ctx.scheduledTail - head;
+    const count = state.tail - head;
 
     // ALGORITHM: Reverse Order Processing for Correct Execution Order
     // Process from tail to head (LIFO) to achieve FIFO effect order
@@ -211,22 +186,22 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     // Move head to tail position, effectively clearing the queue
     // The actual array slots still contain references, but they'll be
     // overwritten on next use. This avoids the cost of clearing.
-    ctx.scheduledHead = ctx.scheduledTail;
+    state.head = state.tail;
 
     // SAFETY: Prevent Integer Overflow
     // After ~2 billion operations, scheduledTail could overflow.
     // Reset both counters to 0 when queue is empty to prevent this.
     // This is safe because the queue is empty (head === tail).
-    if (ctx.scheduledTail > 0x7ffffff0) {
+    if (state.tail > 0x7ffffff0) {
       // Close to MAX_SAFE_INTEGER/2
-      ctx.scheduledHead = 0;
-      ctx.scheduledTail = 0;
+      state.head = 0;
+      state.tail = 0;
     }
   };
 
   return {
+    state,
     enqueue,
-    invalidate,
     dispose,
     flush,
   };

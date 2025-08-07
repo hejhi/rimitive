@@ -38,7 +38,6 @@ import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createGraphWalker } from './helpers/graph-walker';
-import { createWorkQueue } from './helpers/work-queue';
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
   __type: 'computed';
@@ -65,17 +64,13 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
   // Helpers for cleaning up stale dependencies after recomputation
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(depHelpers);
-    
-  // Work queue for scheduling nodes (computeds don't use directly, but need for traversal)
-  const workQueue = createWorkQueue(ctx);
-  
   // Graph walker for propagating changes to dependents
   const graphWalker = createGraphWalker();
   
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Reused across all computed invalidations to avoid function allocation
   const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) workQueue.enqueue(node as ScheduledNode);
+    if ('_nextScheduled' in node) ctx.workQueue.enqueue(node as ScheduledNode);
   };
   
   class Computed<T> implements ComputedInterface<T> {

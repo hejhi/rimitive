@@ -39,7 +39,6 @@ import type { SignalContext } from './context';
 import { Edge, Readable, ProducerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import { createWorkQueue } from './helpers/work-queue';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
@@ -53,9 +52,6 @@ export interface SubscribeNode<T> extends ScheduledNode {
 export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
   // Only need disposal helper since subscribe has exactly one source
   const { disposeAllSources } = createSourceCleanupHelpers(createDependencyHelpers());
-  
-  // Work queue for scheduling and disposing nodes
-  const workQueue = createWorkQueue(ctx);
   
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;
@@ -81,7 +77,22 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
       // ALGORITHM: Scheduled Notification
       // When source changes, mark as NOTIFIED and schedule for batch execution
       // Skip if already NOTIFIED or DISPOSED
-      workQueue.invalidate(this, NOTIFIED | DISPOSED, NOTIFIED);
+      
+      // Early exit if already processed or disposed
+      if (this._flags & (NOTIFIED | DISPOSED)) return;
+      
+      // Mark with NOTIFIED flag
+      this._flags |= NOTIFIED;
+      
+      // Batch-aware execution
+      if (ctx.batchDepth > 0) {
+        // Inside a batch - defer execution
+        ctx.workQueue.enqueue(this);
+        return;
+      }
+      
+      // Outside batch - execute immediately
+      this._flush();
     }
 
     _flush(): void {
@@ -122,7 +133,7 @@ export function createSubscribeFactory(ctx: SignalContext): LatticeExtension<'su
     dispose(): void {
       // ALGORITHM: Clean Disposal
       // Mark as disposed and remove the single source edge
-      workQueue.dispose(this, disposeAllSources);
+      ctx.workQueue.dispose(this, disposeAllSources);
     }
 
     _setupDependency(source: Readable<T> & ProducerNode): void {
