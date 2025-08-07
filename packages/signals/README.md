@@ -27,7 +27,7 @@ npm install @lattice/signals
 - **SSR-ready** - Full server-side rendering support with request isolation
 - **Minimal overhead** - Direct property access, no getters/setters
 - **Lazy evaluation** - Computed values only run when accessed
-- **Fine-grained updates** - Transform and subscribe to derived values
+- **Selective subscriptions** - Subscribe to specific derived values through computed
 - **TypeScript-first** - Full type safety with inference
 
 ## Core Concepts
@@ -135,7 +135,7 @@ This pattern replaces the old `select()` method with a more composable approach 
 
 ### Nested Updates
 
-Signals provide helpers for updating nested data immutably:
+For updating nested data, use standard JavaScript immutable update patterns:
 
 ```typescript
 const state = signal({
@@ -144,10 +144,19 @@ const state = signal({
 });
 
 // Update nested property
-state.set('user', { ...state.value.user, name: 'Bob' });
+state.value = {
+  ...state.value,
+  user: { ...state.value.user, name: 'Bob' }
+};
 
-// Patch nested object
-state.patch('user', { name: 'Bob' }); // Only updates name
+// Update deeply nested property
+state.value = {
+  ...state.value,
+  user: {
+    ...state.value.user,
+    settings: { ...state.value.user.settings, theme: 'light' }
+  }
+};
 ```
 
 ### Batching
@@ -246,8 +255,6 @@ Batches signal updates. Effects only run once after all updates complete.
 - `signal.value` - Get or set the current value
 - `signal.peek()` - Read value without tracking dependencies
 - `signal.subscribe(listener)` - Listen for changes
-- `signal.set(key, value)` - Update object property or array element
-- `signal.patch(key, partial)` - Partially update nested objects
 
 ## Server-Side Rendering (SSR)
 

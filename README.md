@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/henryivry/lattice/actions/workflows/ci.yml/badge.svg)](https://github.com/henryivry/lattice/actions)
 
-Fine-grained reactivity for JavaScript. Run anywhere.
+Fast, portable reactive primitives for JavaScript. Run anywhere.
 
 ```typescript
 import { signal, computed, effect } from '@lattice/signals';
@@ -151,17 +151,20 @@ effect(() => {
 });
 ```
 
-### Fine-Grained Updates
+### Selective Reactivity
 
 ```typescript
 const state = signal({ user: { name: 'Alice', prefs: { theme: 'dark' } } });
 
-// Only react to theme changes
-const themeWatcher = state.select((s) => s.user.prefs.theme);
-themeWatcher.subscribe(() => updateTheme());
+// Only react to theme changes using computed
+const theme = computed(() => state.value.user.prefs.theme);
+theme.subscribe(() => updateTheme());
 
-// Update nested without losing reactivity
-state.set('user', { ...state.value.user, name: 'Bob' });
+// Update nested data immutably
+state.value = {
+  ...state.value,
+  user: { ...state.value.user, name: 'Bob' }
+};
 ```
 
 ## Performance

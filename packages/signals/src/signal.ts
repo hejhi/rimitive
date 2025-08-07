@@ -43,16 +43,6 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
   __type: 'signal';
   value: T;  // User-facing getter/setter for reactive access
   _value: T; // Internal storage of the actual value
-  
-  // PATTERN: Immutable Update Helpers
-  // These methods enforce immutability for proper change detection.
-  // React developers will recognize this pattern from setState.
-  // Vue developers will recognize this from Vue 3's reactive arrays/objects.
-  set<K extends keyof T>(key: K, value: T[K]): void;
-  patch<K extends keyof T>(
-    key: K,
-    partial: T[K] extends object ? Partial<T[K]> : never
-  ): void;
 }
 
 export function createSignalFactory(ctx: ExtendedSignalContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
@@ -159,63 +149,6 @@ export function createSignalFactory(ctx: ExtendedSignalContext): LatticeExtensio
       }
     }
 
-    set(key: unknown, value: unknown): void {
-      // ALGORITHM: Immutable Update Helper
-      // Provides a convenient way to update nested properties while maintaining immutability
-      // This ensures the signal's equality check (===) will detect the change
-      const currVal = this._value;
-      
-      // Handle array updates
-      if (Array.isArray(currVal)) {
-        // Create a shallow copy of the array
-        const arr = [...currVal];
-        // Update the specific index
-        arr[key as number] = value;
-        // Trigger signal update with new array reference
-        this.value = arr as T;
-      } else if (typeof currVal === 'object' && currVal !== null) {
-        // Handle object updates using spread syntax for shallow cloning
-        // FLAG: This only does shallow cloning - deep nested updates require manual handling
-        this.value = { ...currVal, [key as keyof T]: value };
-      }
-      // FIXME: Should we warn or throw when trying to set on primitive values?
-    }
-
-    patch(key: unknown, partial: unknown): void {
-      // ALGORITHM: Partial Update Helper (similar to React's setState with partial updates)
-      // Allows updating nested objects by merging partial values
-      const currVal = this._value;
-
-      if (Array.isArray(currVal)) {
-        // For arrays, patch the element at the given index
-        const arr = [...currVal];
-        const index = key as number;
-        const current = arr[index];
-        
-        // If the current element is an object, merge the partial
-        // Otherwise, replace entirely
-        arr[index] =
-          typeof current === 'object' && current !== null
-            ? { ...current, ...(partial as object) }
-            : partial;
-        this.value = arr as T;
-      } else if (typeof currVal === 'object' && currVal !== null) {
-        // For objects, patch the property at the given key
-        const objKey = key as keyof T;
-        const current = currVal[objKey];
-        
-        // Deep merge one level - if the property is an object, spread both
-        // FLAG: Only merges one level deep - deeply nested updates need multiple patches
-        this.value = {
-          ...currVal,
-          [objKey]:
-            typeof current === 'object' && current !== null
-              ? { ...current, ...(partial as object) }
-              : partial,
-        } as T;
-      }
-      // TODO: Consider adding deep merge utility or warning about shallow merge limitations
-    }
 
     peek(): T {
       // ALGORITHM: Non-Tracking Read

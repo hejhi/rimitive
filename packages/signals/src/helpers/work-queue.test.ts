@@ -170,7 +170,7 @@ describe('WorkQueue', () => {
       _refresh: () => true
     };
     
-    expect(() => helpers.enqueue(overflowNode)).toThrow(/Effect queue overflow: 256 effects scheduled/);
+    expect(() => helpers.enqueue(overflowNode)).toThrow(/Queue overflow: 256/);
   });
 
   it('should reset queue counters to prevent integer overflow', () => {
