@@ -96,16 +96,8 @@ export function createWorkQueue(): WorkQueue {
     const queueSize = state.tail - state.head;
     if (queueSize >= 256) {
       // Log error for debugging before throwing
-      console.error('[signals] Effect queue overflow:', {
-        queueSize,
-        head: state.head,
-        tail: state.tail,
-      });
-      throw new Error(
-        `Effect queue overflow: ${queueSize} effects scheduled. ` +
-          `This usually indicates a design issue such as recursive effects ` +
-          `or missing batching. Consider restructuring your reactive graph.`
-      );
+      console.error('[signals] Queue overflow:', queueSize);
+      throw new Error(`Queue overflow: ${queueSize}`);
     }
 
     // ALGORITHM: Circular Buffer Insertion

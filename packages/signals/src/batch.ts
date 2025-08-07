@@ -103,26 +103,26 @@ export function createBatchFactory(ctx: ExtendedSignalContext): LatticeExtension
     if (userError && flushError) {
       // Both errors occurred - log the flush error and throw user error
       // User error takes priority as it happened first and is likely the root cause
-      console.error('Error during batch flush (after user error):', flushError);
+      console.error('Batch flush error:', flushError);
       // Wrap non-Error values to satisfy ESLint
       if (userError instanceof Error) {
         throw userError;
       } else {
-        throw new BatchError('Batch function threw a non-Error value', userError);
+        throw new BatchError('Non-Error value', userError);
       }
     } else if (userError) {
       // Only user error
       if (userError instanceof Error) {
         throw userError;
       } else {
-        throw new BatchError('Batch function threw a non-Error value', userError);
+        throw new BatchError('Non-Error value', userError);
       }
     } else if (flushError) {
       // Only flush error
       if (flushError instanceof Error) {
         throw flushError;
       } else {
-        throw new BatchError('Batch flush threw a non-Error value', flushError);
+        throw new BatchError('Non-Error value', flushError);
       }
     }
     
