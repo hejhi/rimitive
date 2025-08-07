@@ -40,21 +40,36 @@ export interface SignalContext {
   // Similar to database transaction nesting.
   batchDepth: number;
   
-  // ALGORITHM: Shared Work Queue
-  // The work queue manages scheduling of effects and subscriptions.
-  // It's created once and shared across all modules to ensure batch
-  // can flush all scheduled work regardless of which module scheduled it.
-  workQueue: WorkQueue;
+  // ALGORITHM: Lazy Work Queue
+  // The work queue is created on first use, enabling tree-shaking
+  // if effects/subscriptions are never used. This is a compromise between
+  // tree-shaking and avoiding circular dependencies in the factory system.
+  _workQueue?: WorkQueue;
+  
+  // Getter that lazily creates the work queue
+  get workQueue(): WorkQueue;
 }
 
 // PATTERN: Factory Function
 // Creates a new isolated context with default values.
 // Using a factory instead of a class avoids prototype overhead.
 export function createContext(): SignalContext {
-  return {
+  const ctx = {
     currentConsumer: null,
     version: 0,
     batchDepth: 0,
-    workQueue: createWorkQueue(),
+    _workQueue: undefined as WorkQueue | undefined,
+    
+    get workQueue(): WorkQueue {
+      // OPTIMIZATION: Lazy Creation
+      // Only create work queue when first accessed (by effect/subscribe/batch)
+      // This enables tree-shaking of work queue code if unused
+      if (!ctx._workQueue) {
+        ctx._workQueue = createWorkQueue();
+      }
+      return ctx._workQueue;
+    }
   };
+  
+  return ctx;
 }
