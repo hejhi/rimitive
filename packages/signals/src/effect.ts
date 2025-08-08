@@ -99,6 +99,12 @@ export function createEffectFactory(ctx: ExtendedSignalContext): LatticeExtensio
     __type = 'effect' as const;                          // Type discriminator
     _callback: () => void | (() => void);                // User's effect function
     _cleanup: (() => void) | undefined = undefined;      // Cleanup from previous run
+    
+    // OPTIMIZATION: Last Verified Global Version
+    // Cache the global ctx.version when we've verified that dependencies
+    // did NOT change. If another NOTIFIED arrives without a global version
+    // bump, we can skip shouldNodeUpdate() entirely and clear NOTIFIED.
+    _verifiedVersion = -1;
 
     constructor(fn: () => void | (() => void)) {
       this._callback = fn;
@@ -139,8 +145,21 @@ export function createEffectFactory(ctx: ExtendedSignalContext): LatticeExtensio
       if (!(this._flags & (OUTDATED | NOTIFIED))) return;
       
       // If only NOTIFIED (not OUTDATED), check if dependencies actually changed
-      if (!(this._flags & OUTDATED) && !shouldNodeUpdate(this)) {
-        return;
+      if (!(this._flags & OUTDATED)) {
+        // FAST PATH: If we've already verified no change at this global version,
+        // clear NOTIFIED and bail without rechecking dependencies.
+        if (this._verifiedVersion === ctx.version) {
+          this._flags &= ~NOTIFIED;
+          return;
+        }
+        
+        // Slow path: perform dependency check
+        if (!shouldNodeUpdate(this)) {
+          // Cache the verified clean global version to skip future checks
+          this._verifiedVersion = ctx.version;
+          return;
+        }
+        // If dirty, shouldNodeUpdate marked OUTDATED; fall through to run
       }
 
       // ALGORITHM: Atomic State Transition
