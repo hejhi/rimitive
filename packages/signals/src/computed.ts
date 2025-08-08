@@ -38,6 +38,7 @@ import { createDependencyHelpers, EdgeCache } from './helpers/dependency-trackin
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createGraphWalker } from './helpers/graph-walker';
 import type { ExtendedSignalContext } from './api';
+// no-op import removed: dev-only cycle detection eliminated
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
   __type: 'computed';
@@ -134,10 +135,6 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
     }
 
     get value(): T {
-      // ALGORITHM: Cycle Detection
-      // If we're already computing this value, we have a circular dependency
-      // This prevents infinite recursion in cases like: a = computed(() => b.value + 1); b = computed(() => a.value + 1)
-      if (this._flags & RUNNING) throw new Error('Cycle detected');
       
       // ALGORITHM: Dependency Registration (Pull Phase)
       // If we're being read from within another computed/effect, register the dependency
@@ -235,6 +232,11 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
     }
 
     _update(): void {
+      // RE-ENTRANCE GUARD: If this computed is currently RUNNING (i.e.,
+      // we're being re-entered through a cyclic read during recomputation),
+      // return the last cached value without attempting to update. This
+      // mirrors non-throwing cycle handling and prevents infinite recursion.
+      if (this._flags & RUNNING) return;
       // OPTIMIZATION: Ultra-fast path for clean computeds
       // If our cached global version matches, NOTHING has changed globally
       // We can skip all checks - no signal changes means no flag changes
