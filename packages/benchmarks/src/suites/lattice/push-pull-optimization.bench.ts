@@ -11,10 +11,8 @@
  * The key insight: With push-pull, if an intermediate computed's value doesn't
  * change (e.g., due to filtering), downstream computeds won't recompute.
  * 
- * IMPORTANT: All benchmarks properly initialize dependencies before timing begins.
- * This ensures we measure warm performance (actual runtime behavior) rather than
- * cold starts (initial dependency discovery). Without initialization, benchmarks
- * would unfairly penalize libraries with different cold start costs.
+ * NOTE: Most scenarios initialize dependencies before timing (warm performance),
+ * but some explicitly measure cold-init impact and are marked accordingly.
  */
 
 import { describe, bench } from 'vitest';

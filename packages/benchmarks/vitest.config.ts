@@ -4,7 +4,8 @@ export default defineConfig({
   plugins: [],
   test: {
     globals: true,
-    environment: 'jsdom',
+    // Use Node for microbench timing and memory stability
+    environment: 'node',
     include: ['src/**/*.bench.{ts,tsx}'],
     benchmark: {
       // Include benchmark files
@@ -16,15 +17,17 @@ export default defineConfig({
     pool: 'forks',
     poolOptions: {
       forks: {
-        singleFork: false, // Allow multiple forks for better memory isolation
+        // Use a single fork so shared setup in beforeAll is visible
+        // across benches in the same file (prevents NaN comparisons).
+        singleFork: true,
       },
     },
     // Enable memory tracking in Node.js
     setupFiles: ['./vitest.setup.ts'],
   },
   resolve: {
-    // Enable browser conditions for Svelte 5 runes
-    conditions: ['browser'],
+    // Prefer Node conditions for benchmarking
+    conditions: ['node'],
   },
   esbuild: {
     jsx: 'automatic',

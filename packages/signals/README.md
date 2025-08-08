@@ -104,7 +104,7 @@ const unsub = todos.subscribe(() => {
 
 ### Transforming Values (Select Pattern)
 
-Use computed values to create derived subscribables with transformations:
+Use `computed` values to create derived subscribables with transformations:
 
 ```typescript
 const state = signal({ 
@@ -130,8 +130,6 @@ state.value = { ...state.value, user: { name: 'Bob', age: 31 } };
 const upperName = computed(() => userName.value.toUpperCase());
 const nameLength = computed(() => userName.value.length);
 ```
-
-This pattern replaces the old `select()` method with a more composable approach using `computed()`.
 
 ### Nested Updates
 

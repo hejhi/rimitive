@@ -182,7 +182,8 @@ describe('Complex Object Updates', () => {
     data: {
       value: id * 10,
       metadata: {
-        timestamp: Date.now(),
+        // Deterministic value to avoid timer noise in hot paths
+        timestamp: id * 1000,
         tags: [`tag-${id}`, `category-${id % 5}`],
       },
     },

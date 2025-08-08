@@ -88,6 +88,7 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
     'vitest',
     'bench',
     '--run',
+    // Vitest bench JSON output flag
     `--reporter=verbose`,
     `--outputJson=${outputPath}`,
     `src/suites/${category}/${suiteName}.bench${extension}`
@@ -124,6 +125,12 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
       if (code === 0) {
         // Parse memory information from stdout and enhance JSON output
         try {
+          // Ensure output exists
+          try {
+            await fs.stat(outputPath);
+          } catch {
+            console.warn(`⚠️ Expected JSON not found at ${outputPath}. Check reporter/flags.`);
+          }
           await enhanceJsonWithMemoryData(outputPath, stdout);
         } catch (error) {
           console.warn(`⚠️ Could not enhance ${suiteName} with memory data:`, error.message);

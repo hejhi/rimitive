@@ -21,6 +21,7 @@ import {
   computed as alienComputed,
   effect as alienEffect,
 } from 'alien-signals';
+import { measureMemoryOnce, forceGC } from '../../utils/memory';
 
 // Create Lattice API instance
 const {
@@ -33,12 +34,7 @@ const {
   effect: createEffectFactory,
 }, createDefaultContext());
 
-// Helper to force garbage collection if available
-const forceGC = () => {
-  if (global.gc) {
-    global.gc();
-  }
-};
+// forceGC is imported from utils/memory
 
 
 describe('Memory Usage - Signal Creation', () => {
@@ -49,21 +45,27 @@ describe('Memory Usage - Signal Creation', () => {
   });
 
   bench('Preact - 10k signals memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => preactSignal(i));
-    // Force references to prevent optimization
-    void signals.length;
+    measureMemoryOnce('Preact - 10k signals memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => preactSignal(i));
+      // Force references to prevent optimization
+      void signals.length;
+    });
   });
 
   bench('Lattice - 10k signals memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
-    // Force references to prevent optimization
-    void signals.length;
+    measureMemoryOnce('Lattice - 10k signals memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
+      // Force references to prevent optimization
+      void signals.length;
+    });
   });
 
   bench('Alien - 10k signals memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => alienSignal(i));
-    // Force references to prevent optimization
-    void signals.length;
+    measureMemoryOnce('Alien - 10k signals memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => alienSignal(i));
+      // Force references to prevent optimization
+      void signals.length;
+    });
   });
 });
 
@@ -71,27 +73,33 @@ describe('Memory Usage - Computed Creation', () => {
   const COUNT = 10000;
 
   bench('Preact - 10k computeds memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => preactSignal(i));
-    const computeds = signals.map(s => preactComputed(() => s.value * 2));
-    // Force evaluation
-    computeds.forEach(c => c.value);
-    void computeds.length;
+    measureMemoryOnce('Preact - 10k computeds memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => preactSignal(i));
+      const computeds = signals.map(s => preactComputed(() => s.value * 2));
+      // Force evaluation
+      computeds.forEach(c => c.value);
+      void computeds.length;
+    });
   });
 
   bench('Lattice - 10k computeds memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
-    const computeds = signals.map(s => latticeComputed(() => s.value * 2));
-    // Force evaluation
-    computeds.forEach(c => c.value);
-    void computeds.length;
+    measureMemoryOnce('Lattice - 10k computeds memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
+      const computeds = signals.map(s => latticeComputed(() => s.value * 2));
+      // Force evaluation
+      computeds.forEach(c => c.value);
+      void computeds.length;
+    });
   });
 
   bench('Alien - 10k computeds memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => alienSignal(i));
-    const computeds = signals.map(s => alienComputed(() => s() * 2));
-    // Force evaluation
-    computeds.forEach(c => c());
-    void computeds.length;
+    measureMemoryOnce('Alien - 10k computeds memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => alienSignal(i));
+      const computeds = signals.map(s => alienComputed(() => s() * 2));
+      // Force evaluation
+      computeds.forEach(c => c());
+      void computeds.length;
+    });
   });
 });
 
@@ -99,39 +107,42 @@ describe('Memory Usage - Effect Creation', () => {
   const COUNT = 5000; // Reduced count for effects
 
   bench('Preact - 5k effects memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => preactSignal(i));
-    let counter = 0;
-    const effects = signals.map(s => 
-      preactEffect(() => { counter += s.value; })
-    );
-    
-    // Cleanup
-    effects.forEach(dispose => dispose());
-    void counter;
+    measureMemoryOnce('Preact - 5k effects memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => preactSignal(i));
+      let counter = 0;
+      const effects = signals.map(s => 
+        preactEffect(() => { counter += s.value; })
+      );
+      // Cleanup
+      effects.forEach(dispose => dispose());
+      void counter;
+    });
   });
 
   bench('Lattice - 5k effects memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
-    let counter = 0;
-    const effects = signals.map(s => 
-      latticeEffect(() => { counter += s.value; })
-    );
-    
-    // Cleanup
-    effects.forEach(dispose => dispose());
-    void counter;
+    measureMemoryOnce('Lattice - 5k effects memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => latticeSignal(i));
+      let counter = 0;
+      const effects = signals.map(s => 
+        latticeEffect(() => { counter += s.value; })
+      );
+      // Cleanup
+      effects.forEach(dispose => dispose());
+      void counter;
+    });
   });
 
   bench('Alien - 5k effects memory', () => {
-    const signals = Array.from({ length: COUNT }, (_, i) => alienSignal(i));
-    let counter = 0;
-    const effects = signals.map(s => 
-      alienEffect(() => { counter += s(); })
-    );
-    
-    // Cleanup
-    effects.forEach(dispose => dispose());
-    void counter;
+    measureMemoryOnce('Alien - 5k effects memory', () => {
+      const signals = Array.from({ length: COUNT }, (_, i) => alienSignal(i));
+      let counter = 0;
+      const effects = signals.map(s => 
+        alienEffect(() => { counter += s(); })
+      );
+      // Cleanup
+      effects.forEach(dispose => dispose());
+      void counter;
+    });
   });
 });
 
@@ -140,66 +151,63 @@ describe('Memory Usage - Large Dependency Tree', () => {
   const HEIGHT = 50;
 
   bench('Preact - tree memory (50x50)', () => {
-    const src = preactSignal(1);
-    const effects: (() => void)[] = [];
-    
-    for (let i = 0; i < WIDTH; i++) {
-      let last = src;
-      for (let j = 0; j < HEIGHT; j++) {
-        const prev = last;
-        last = preactComputed(() => prev.value + 1);
+    measureMemoryOnce('Preact - tree memory (50x50)', () => {
+      const src = preactSignal(1);
+      const effects: (() => void)[] = [];
+      for (let i = 0; i < WIDTH; i++) {
+        let last = src;
+        for (let j = 0; j < HEIGHT; j++) {
+          const prev = last;
+          last = preactComputed(() => prev.value + 1);
+        }
+        effects.push(preactEffect(() => void last.value));
       }
-      effects.push(preactEffect(() => void last.value));
-    }
-    
-    // Trigger update
-    src.value++;
-    
-    // Cleanup
-    effects.forEach(dispose => dispose());
-    void effects.length;
+      // Trigger update
+      src.value++;
+      // Cleanup
+      effects.forEach(dispose => dispose());
+      void effects.length;
+    });
   });
 
   bench('Lattice - tree memory (50x50)', () => {
-    const src = latticeSignal(1);
-    const effects: (() => void)[] = [];
-    
-    for (let i = 0; i < WIDTH; i++) {
-      let last: { value: number } = src;
-      for (let j = 0; j < HEIGHT; j++) {
-        const prev = last;
-        last = latticeComputed(() => prev.value + 1);
+    measureMemoryOnce('Lattice - tree memory (50x50)', () => {
+      const src = latticeSignal(1);
+      const effects: (() => void)[] = [];
+      for (let i = 0; i < WIDTH; i++) {
+        let last: { value: number } = src;
+        for (let j = 0; j < HEIGHT; j++) {
+          const prev = last;
+          last = latticeComputed(() => prev.value + 1);
+        }
+        effects.push(latticeEffect(() => void last.value));
       }
-      effects.push(latticeEffect(() => void last.value));
-    }
-    
-    // Trigger update
-    src.value++;
-    
-    // Cleanup
-    effects.forEach(dispose => dispose());
-    void effects.length;
+      // Trigger update
+      src.value++;
+      // Cleanup
+      effects.forEach(dispose => dispose());
+      void effects.length;
+    });
   });
 
   bench('Alien - tree memory (50x50)', () => {
-    const src = alienSignal(1);
-    const effects: (() => void)[] = [];
-    
-    for (let i = 0; i < WIDTH; i++) {
-      let last = src;
-      for (let j = 0; j < HEIGHT; j++) {
-        const prev = last;
-        last = alienComputed(() => prev() + 1);
+    measureMemoryOnce('Alien - tree memory (50x50)', () => {
+      const src = alienSignal(1);
+      const effects: (() => void)[] = [];
+      for (let i = 0; i < WIDTH; i++) {
+        let last = src;
+        for (let j = 0; j < HEIGHT; j++) {
+          const prev = last;
+          last = alienComputed(() => prev() + 1);
+        }
+        effects.push(alienEffect(() => void last()));
       }
-      effects.push(alienEffect(() => void last()));
-    }
-    
-    // Trigger update
-    src(src() + 1);
-    
-    // Cleanup
-    effects.forEach(dispose => dispose());
-    void effects.length;
+      // Trigger update
+      src(src() + 1);
+      // Cleanup
+      effects.forEach(dispose => dispose());
+      void effects.length;
+    });
   });
 });
 
@@ -268,86 +276,80 @@ describe('Memory-Intensive Patterns', () => {
   const SIGNAL_COUNT = 1000;
 
   bench('Preact - many signals creation/disposal', () => {
-    // Create many signals
-    const signals = Array.from({ length: SIGNAL_COUNT }, (_, i) =>
-      preactSignal(i)
-    );
-
-    // Create computeds that depend on neighbors
-    const computeds = signals.map((s, i) =>
-      preactComputed(() => {
-        let sum = s.value;
-        if (i > 0) sum += signals[i - 1]!.value;
-        if (i < signals.length - 1) sum += signals[i + 1]!.value;
-        return sum;
-      })
-    );
-
-    // Create effects for each computed
-    const effects = computeds.map((c) => preactEffect(() => void c.value));
-
-    // Trigger some updates
-    for (let i = 0; i < 10; i++) {
-      signals[i * 10]!.value = i * 1000;
-    }
-
-    // Cleanup
-    effects.forEach((dispose) => dispose());
+    measureMemoryOnce('Preact - many signals creation/disposal', () => {
+      // Create many signals
+      const signals = Array.from({ length: SIGNAL_COUNT }, (_, i) =>
+        preactSignal(i)
+      );
+      // Create computeds that depend on neighbors
+      const computeds = signals.map((s, i) =>
+        preactComputed(() => {
+          let sum = s.value;
+          if (i > 0) sum += signals[i - 1]!.value;
+          if (i < signals.length - 1) sum += signals[i + 1]!.value;
+          return sum;
+        })
+      );
+      // Create effects for each computed
+      const effects = computeds.map((c) => preactEffect(() => void c.value));
+      // Trigger some updates
+      for (let i = 0; i < 10; i++) {
+        signals[i * 10]!.value = i * 1000;
+      }
+      // Cleanup
+      effects.forEach((dispose) => dispose());
+    });
   });
 
   bench('Lattice - many signals creation/disposal', () => {
-    // Create many signals
-    const signals = Array.from({ length: SIGNAL_COUNT }, (_, i) =>
-      latticeSignal(i)
-    );
-
-    // Create computeds that depend on neighbors
-    const computeds = signals.map((s, i) =>
-      latticeComputed(() => {
-        let sum = s.value;
-        if (i > 0) sum += signals[i - 1]!.value;
-        if (i < signals.length - 1) sum += signals[i + 1]!.value;
-        return sum;
-      })
-    );
-
-    // Create effects for each computed
-    const effects = computeds.map((c) => latticeEffect(() => void c.value));
-
-    // Trigger some updates
-    for (let i = 0; i < 10; i++) {
-      signals[i * 10]!.value = i * 1000;
-    }
-
-    // Cleanup
-    effects.forEach((dispose) => dispose());
+    measureMemoryOnce('Lattice - many signals creation/disposal', () => {
+      // Create many signals
+      const signals = Array.from({ length: SIGNAL_COUNT }, (_, i) =>
+        latticeSignal(i)
+      );
+      // Create computeds that depend on neighbors
+      const computeds = signals.map((s, i) =>
+        latticeComputed(() => {
+          let sum = s.value;
+          if (i > 0) sum += signals[i - 1]!.value;
+          if (i < signals.length - 1) sum += signals[i + 1]!.value;
+          return sum;
+        })
+      );
+      // Create effects for each computed
+      const effects = computeds.map((c) => latticeEffect(() => void c.value));
+      // Trigger some updates
+      for (let i = 0; i < 10; i++) {
+        signals[i * 10]!.value = i * 1000;
+      }
+      // Cleanup
+      effects.forEach((dispose) => dispose());
+    });
   });
 
   bench('Alien - many signals creation/disposal', () => {
-    // Create many signals
-    const signals = Array.from({ length: SIGNAL_COUNT }, (_, i) =>
-      alienSignal(i)
-    );
-
-    // Create computeds that depend on neighbors
-    const computeds = signals.map((s, i) =>
-      alienComputed(() => {
-        let sum = s();
-        if (i > 0) sum += signals[i - 1]!();
-        if (i < signals.length - 1) sum += signals[i + 1]!();
-        return sum;
-      })
-    );
-
-    // Create effects for each computed
-    const effects = computeds.map((c) => alienEffect(() => void c()));
-
-    // Trigger some updates
-    for (let i = 0; i < 10; i++) {
-      signals[i * 10]!(i * 1000);
-    }
-
-    // Cleanup
-    effects.forEach((dispose) => dispose());
+    measureMemoryOnce('Alien - many signals creation/disposal', () => {
+      // Create many signals
+      const signals = Array.from({ length: SIGNAL_COUNT }, (_, i) =>
+        alienSignal(i)
+      );
+      // Create computeds that depend on neighbors
+      const computeds = signals.map((s, i) =>
+        alienComputed(() => {
+          let sum = s();
+          if (i > 0) sum += signals[i - 1]!();
+          if (i < signals.length - 1) sum += signals[i + 1]!();
+          return sum;
+        })
+      );
+      // Create effects for each computed
+      const effects = computeds.map((c) => alienEffect(() => void c()));
+      // Trigger some updates
+      for (let i = 0; i < 10; i++) {
+        signals[i * 10]!(i * 1000);
+      }
+      // Cleanup
+      effects.forEach((dispose) => dispose());
+    });
   });
 });
