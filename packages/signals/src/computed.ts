@@ -235,6 +235,27 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
       // We can skip all checks - no signal changes means no flag changes
       if (this._globalVersion === ctx.version) return;
       
+      // OPTIMIZATION: NOTIFIED short-circuit without recursion
+      // If we're only NOTIFIED (not OUTDATED), do a cheap scan of direct
+      // sources to see if any changed versions or are themselves pending.
+      // If all sources match versions and are not NOTIFIED/OUTDATED, we can
+      // clear NOTIFIED and cache the global version without recursive refresh.
+      if ((this._flags & NOTIFIED) && !(this._flags & OUTDATED)) {
+        let dirty = false;
+        let edge = this._sources;
+        while (edge) {
+          const src = edge.source as ProducerNode & Partial<ConsumerNode> & { _flags?: number };
+          if (edge.version !== src._version) { dirty = true; break; }
+          if ('_flags' in src && (src._flags! & (NOTIFIED | OUTDATED))) { dirty = true; break; }
+          edge = edge.nextSource!;
+        }
+        if (!dirty) {
+          this._flags &= ~NOTIFIED;
+          this._globalVersion = ctx.version;
+          return;
+        }
+      }
+      
       // ALGORITHM: Conditional Recomputation
       // Check OUTDATED flag first (common case) or check dependencies if NOTIFIED
       if (this._flags & OUTDATED || shouldNodeUpdate(this)) this._recompute();
