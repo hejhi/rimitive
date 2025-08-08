@@ -7,7 +7,7 @@
  * 3. Use Lattice to compose everything together
  */
 
-import { createSignalAPI, type ExtendedSignalContext, type ExtensionFactory } from '../api';
+import { createSignalAPI, type ExtensionFactory } from '../api';
 import { createSignalFactory, type SignalInterface } from '../signal';
 import { createComputedFactory } from '../computed';
 import { createEffectFactory } from '../effect';
@@ -17,10 +17,13 @@ import { createWorkQueue } from '../helpers/work-queue';
 import { createGraphWalker } from '../helpers/graph-walker';
 import { createDependencyHelpers } from '../helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from '../helpers/source-cleanup';
-import type { LatticeExtension } from '@lattice/lattice';
 
 // Example 1: Custom context with performance tracking
-interface PerformanceContext extends ExtendedSignalContext {
+interface PerformanceContext extends SignalContext {
+  workQueue: ReturnType<typeof createWorkQueue>;
+  graphWalker: ReturnType<typeof createGraphWalker>;
+  createDependencyHelpers: typeof createDependencyHelpers;
+  createSourceCleanupHelpers: typeof createSourceCleanupHelpers;
   performance: {
     signalReads: number;
     signalWrites: number;
@@ -88,7 +91,7 @@ interface PerfResult {
   reset?: () => void;
 }
 
-const createPerformanceMonitor = (ctx: ExtendedSignalContext): LatticeExtension<'perf', () => PerfResult> => {
+const createPerformanceMonitor: ExtensionFactory<'perf', () => PerfResult, SignalContext & { performance?: PerformanceContext['performance'] }> = (ctx) => {
   if (!('performance' in ctx)) {
     return {
       name: 'perf',
@@ -177,7 +180,7 @@ export function minimalExample() {
 
 // Example 6: Type-safe factory requirements (future enhancement idea)
 // This shows how we could extend the pattern to have factories declare requirements
-interface RequirementsAwareFactory<TName extends string, TMethod, TRequiredContext extends SignalContext = ExtendedSignalContext> 
+interface RequirementsAwareFactory<TName extends string, TMethod, TRequiredContext extends SignalContext = SignalContext> 
   extends ExtensionFactory<TName, TMethod, TRequiredContext> {
   _contextType?: TRequiredContext; // Phantom type for requirements
 }
@@ -186,14 +189,14 @@ interface RequirementsAwareFactory<TName extends string, TMethod, TRequiredConte
 export const createDebugSignalFactory: RequirementsAwareFactory<
   'signal', 
   <T>(value: T) => SignalInterface<T>,
-  ExtendedSignalContext & { debug: boolean }
+  SignalContext & { debug: boolean }
 > = (ctx) => {
   // TypeScript would error if ctx doesn't have debug property
-  const debugCtx = ctx as ExtendedSignalContext & { debug: boolean };
+  const debugCtx = ctx as SignalContext & { debug: boolean };
   if (debugCtx.debug) {
     console.log('Debug mode enabled');
   }
-  return createSignalFactory(ctx);
+  return createSignalFactory(ctx as any);
 };
 
 // Example 7: Using the default context

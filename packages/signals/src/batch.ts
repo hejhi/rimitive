@@ -35,7 +35,8 @@
  * - Inspired by database transactions and React's batching
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import type { ExtendedSignalContext } from './api';
+import type { SignalContext } from './context';
+import type { WorkQueue } from './helpers/work-queue';
 
 // PATTERN: Error Wrapper for Non-Error Values
 // When user code throws non-Error values (strings, numbers, etc.),
@@ -48,7 +49,11 @@ class BatchError extends Error {
   }
 }
 
-export function createBatchFactory(ctx: ExtendedSignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
+interface BatchFactoryContext extends SignalContext {
+  workQueue: WorkQueue;
+}
+
+export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
   const { workQueue: { flush } } = ctx;
 
   // ALGORITHM: Nested Batch Support

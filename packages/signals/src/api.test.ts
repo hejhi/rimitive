@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createSignalAPI, type ExtendedSignalContext, type ExtensionFactory } from './api';
+import { createSignalAPI, type ExtensionFactory } from './api';
 import { createDefaultContext } from './default-context';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
@@ -126,7 +126,7 @@ describe('createSignalAPI', () => {
 
   it('should allow custom factories to access extended context', () => {
     // Create custom context with logger storage
-    interface LoggerContext extends ExtendedSignalContext {
+    interface LoggerContext extends ReturnType<typeof createDefaultContext> {
       logs: string[];
     }
     

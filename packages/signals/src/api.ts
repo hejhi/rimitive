@@ -35,19 +35,8 @@
  */
 import { createContext as createLattice, type LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
-import type { GraphWalker } from './helpers/graph-walker';
-import type { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import type { createDependencyHelpers } from './helpers/dependency-tracking';
-import type { WorkQueue } from './helpers/work-queue';
-
-// Extended context that includes both state and services
-export interface ExtendedSignalContext extends SignalContext {
-  workQueue: WorkQueue;
-  // Future shared resources can be added here
-  graphWalker: GraphWalker;
-  createSourceCleanupHelpers: typeof createSourceCleanupHelpers;
-  createDependencyHelpers: typeof createDependencyHelpers;
-}
+// Note: We intentionally avoid a single "extended" context type.
+// Each factory declares exactly what it needs via its own context type.
 
 // Type for extension factory functions that accept a specific required context
 // Each factory can specify its own minimal context requirements

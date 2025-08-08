@@ -3,7 +3,7 @@ import '@testing-library/jest-dom';
 import { afterEach } from 'vitest';
 import React, { ReactElement } from 'react';
 import { render } from '@testing-library/react';
-import { createSignalAPI, type FactoriesToAPI, type ExtendedSignalContext } from '@lattice/signals/api';
+import { createSignalAPI, type FactoriesToAPI } from '@lattice/signals/api';
 import { createDefaultContext } from '@lattice/signals/default-context';
 import { createSignalFactory } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
@@ -22,7 +22,7 @@ const testFactories = {
 } as const;
 
 // Type alias for the API created with our standard factories
-type TestSignalAPI = FactoriesToAPI<typeof testFactories, ExtendedSignalContext>;
+type TestSignalAPI = FactoriesToAPI<typeof testFactories>;
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {
