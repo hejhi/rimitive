@@ -48,27 +48,13 @@ export const CONSTANTS = {
   // OPTIMIZATION: Enables "unobserved computed" optimization
   TRACKING: 1 << 4,     // 16 (binary: 0010000)
   
-  // IS_COMPUTED (bit 5): Type flag to distinguish computed from effects.
-  // Computeds cache their value and only recompute when read.
-  // Effects always run when notified (after batch completes).
-  // FLAG: Could potentially be removed if we use different classes
-  IS_COMPUTED: 1 << 5,  // 32 (binary: 0100000)
-  
   // SKIP_EQUALITY (bit 6): Performance flag for subscriptions.
   // When set, skips the equality check and always notifies subscribers.
   // Used when the subscriber wants to be notified of every write,
   // even if the value didn't actually change.
   SKIP_EQUALITY: 1 << 6, // 64 (binary: 1000000)
   
-  // CLEAN (bit 7): Aggressive caching optimization for computed values.
-  // Set when a computed has been verified clean (all dependencies unchanged).
-  // Allows skipping ALL dependency checks on subsequent reads until invalidated.
-  // This is a huge win for stable computeds that are read frequently.
-  // OPTIMIZATION: Enables "verified clean" fast path
-  CLEAN: 1 << 7         // 128 (binary: 10000000)
-  
   // OPTIMIZATION NOTE: Bits are ordered by frequency of checking:
-  // - CLEAN is checked first (fastest path for stable computeds)
   // - NOTIFIED/OUTDATED are checked most often (every read)
   // - RUNNING/DISPOSED are checked during updates
   // - Others are checked less frequently

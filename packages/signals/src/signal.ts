@@ -124,14 +124,17 @@ export function createSignalFactory(ctx: ExtendedSignalContext): LatticeExtensio
       this._value = value;
       
       // ALGORITHM: Version Tracking for Cache Invalidation
-      // Increment both local and global versions:
-      // - Local version: Used to detect if specific dependencies are stale
-      // - Global version: Used as a generation counter for optimizations
+      // Increment local version: Used to detect if specific dependencies are stale
       this._version++;
-      ctx.version++;
       
-      // OPTIMIZATION: Skip traversal if no targets
+      // OPTIMIZATION: Skip global version bump if no dependents
+      // Avoids invalidating unrelated computeds' global fast path when this
+      // signal has no consumers. Only bump global version if we actually
+      // have targets to notify.
       if (!this._targets) return;
+      
+      // Increment global version as we are about to notify dependents
+      ctx.version++;
       
       // OPTIMIZATION: Reuse existing batch if present
       // This reduces overhead for multiple signal updates within a batch

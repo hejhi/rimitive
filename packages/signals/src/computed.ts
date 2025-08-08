@@ -52,7 +52,6 @@ const {
   DISPOSED,
   OUTDATED,
   NOTIFIED,
-  IS_COMPUTED,
   TRACKING,
 } = CONSTANTS;
 
@@ -93,8 +92,7 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
     
     // OPTIMIZATION: Initial State Flags
     // Start as OUTDATED to force computation on first access.
-    // IS_COMPUTED distinguishes us from effects for different handling.
-    _flags = OUTDATED | IS_COMPUTED;
+    _flags = OUTDATED;
     
     // Linked list of edges pointing to our dependents (computeds/effects that read us)
     _targets: Edge | undefined = undefined;
