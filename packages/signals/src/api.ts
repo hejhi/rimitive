@@ -35,12 +35,14 @@
  */
 import { createContext as createLattice, type LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
+import type { GraphWalker } from './helpers/graph-walker';
 import type { WorkQueue } from './helpers/work-queue';
 
 // Extended context that includes both state and services
 export interface ExtendedSignalContext extends SignalContext {
   workQueue: WorkQueue;
   // Future shared resources can be added here
+  graphWalker: GraphWalker;
 }
 
 // Type for extension factory functions that accept the extended context

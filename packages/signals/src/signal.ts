@@ -29,7 +29,6 @@ import { CONSTANTS } from './constants';
 import { Edge, Writable, ProducerNode, ScheduledNode, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
-import { createGraphWalker } from './helpers/graph-walker';
 import type { ExtendedSignalContext } from './api';
 
 const { RUNNING } = CONSTANTS;
@@ -50,9 +49,8 @@ export function createSignalFactory(ctx: ExtendedSignalContext): LatticeExtensio
   const { addDependency } = createDependencyHelpers();
   const { workQueue: { enqueue, flush } } = ctx;
   
-  // Graph walker for propagating changes through the dependency graph
-  // Uses depth-first traversal to notify all dependent nodes
-  const graphWalker = createGraphWalker();
+  // Graph walker provided via context for traversal
+  const { graphWalker: { walk } } = ctx;
   
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Avoids creating new function objects in the critical update path
@@ -144,7 +142,7 @@ export function createSignalFactory(ctx: ExtendedSignalContext): LatticeExtensio
       // ALGORITHM: Push-Based Change Propagation
       // Walk the dependency graph starting from this signal's targets
       // Visit all dependent nodes to notify them of the change
-      graphWalker.walk(this._targets, notifyNode);
+      walk(this._targets, notifyNode);
       
       // Only flush if we created the batch
       if (isNewBatch && --ctx.batchDepth === 0) {

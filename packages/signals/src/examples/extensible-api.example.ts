@@ -13,6 +13,7 @@ import { createComputedFactory } from '../computed';
 import { createEffectFactory } from '../effect';
 import { createContext } from '../context';
 import { createWorkQueue } from '../helpers/work-queue';
+import { createGraphWalker } from '../helpers/graph-walker';
 import type { LatticeExtension } from '@lattice/lattice';
 
 // Example 1: Custom context with performance tracking
@@ -29,6 +30,7 @@ function createPerformanceContext(): PerformanceContext {
   return {
     ...createContext(),
     workQueue: createWorkQueue(),
+    graphWalker: createGraphWalker(),
     performance: {
       signalReads: 0,
       signalWrites: 0,
@@ -155,7 +157,8 @@ export function minimalExample() {
     effect: createEffectFactory,
   }, {
     ...createContext(),
-    workQueue: loggingWorkQueue
+    workQueue: loggingWorkQueue,
+    graphWalker: createGraphWalker(),
   });
   
   // Use the API
@@ -195,7 +198,8 @@ export function defaultExample() {
     effect: createEffectFactory,
   }, {
     ...createContext(),
-    workQueue: createWorkQueue()
+    workQueue: createWorkQueue(),
+    graphWalker: createGraphWalker(),
   });
   
   // Works just like before

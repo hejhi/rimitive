@@ -1,5 +1,6 @@
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
+import { createGraphWalker } from './helpers/graph-walker';
 import type { ExtendedSignalContext } from './api';
 
 /**
@@ -10,5 +11,6 @@ export function createDefaultContext(): ExtendedSignalContext {
   return {
     ...createContext(),
     workQueue: createWorkQueue(),
+    graphWalker: createGraphWalker(),
   };
 }

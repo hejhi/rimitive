@@ -36,7 +36,6 @@ import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode }
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import { createGraphWalker } from './helpers/graph-walker';
 import type { ExtendedSignalContext } from './api';
 // no-op import removed: dev-only cycle detection eliminated
 
@@ -66,8 +65,8 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
   // Helpers for cleaning up stale dependencies after recomputation
   const { disposeAllSources, cleanupSources } =
     createSourceCleanupHelpers(depHelpers);
-  // Graph walker for propagating changes to dependents
-  const graphWalker = createGraphWalker();
+  // Graph walker provided via context for traversal
+  const { graphWalker: { walk } } = ctx;
   
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Reused across all computed invalidations to avoid function allocation
@@ -228,7 +227,7 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
       // ALGORITHM: Transitive Invalidation
       // If this computed has dependents, they might be affected too
       // Walk the graph to notify all dependent nodes
-      if (this._targets) graphWalker.walk(this._targets, notifyNode);
+      if (this._targets) walk(this._targets, notifyNode);
     }
 
     _update(): void {

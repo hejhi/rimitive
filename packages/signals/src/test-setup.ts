@@ -6,6 +6,7 @@ import type { EffectInterface, EffectDisposer } from './effect';
 import type { ComputedInterface } from './computed';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
+import { createGraphWalker } from './helpers/graph-walker';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -20,6 +21,7 @@ export function createTestInstance() {
   const ctx: ExtendedSignalContext = {
     ...createContext(),
     workQueue: createWorkQueue(),
+    graphWalker: createGraphWalker(),
   };
   
   // Create API with all core factories

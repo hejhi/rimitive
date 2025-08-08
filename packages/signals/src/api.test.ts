@@ -9,6 +9,7 @@ import { createSubscribeFactory } from './subscribe';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
+import { createGraphWalker } from './helpers/graph-walker';
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
@@ -59,7 +60,8 @@ describe('createSignalAPI', () => {
             queue.flush();
           }
         };
-      })()
+      })(),
+      graphWalker: createGraphWalker(),
     };
     
     const api = createSignalAPI({
@@ -97,7 +99,8 @@ describe('createSignalAPI', () => {
           return originalEnqueue(node);
         };
         return queue;
-      })()
+      })(),
+      graphWalker: createGraphWalker(),
     };
     
     const api = createSignalAPI({
