@@ -88,3 +88,28 @@ import { signal, computed } from '@lattice/signals';
 ```
 
 But now bundlers can tree-shake unused primitives when using the factory approach.
+
+## Build Your Own Context (Tree-shake Helpers)
+
+```ts
+import { createSignalAPI } from '@lattice/signals/api';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
+import { createContext } from '@lattice/signals/context';
+// Import only the helpers you need; unused ones get tree-shaken
+import { createWorkQueue } from '@lattice/signals/helpers/work-queue';
+import { createGraphWalker } from '@lattice/signals/helpers/graph-walker';
+
+const api = createSignalAPI({
+  signal: createSignalFactory,
+  computed: createComputedFactory,
+  effect: createEffectFactory,
+}, {
+  ...createContext(),
+  workQueue: createWorkQueue(),
+  graphWalker: createGraphWalker(),
+});
+```
+
+If you don’t import `helpers/*`, bundlers can exclude those files entirely.
