@@ -65,8 +65,9 @@ const CONFIG = {
  * Run a single benchmark suite
  */
 async function runBenchmarkSuite(suiteName, category, timestamp) {
-  const outputFile = `${suiteName}-${CONFIG.mode}.json`;
-  const outputPath = path.join(projectRoot, CONFIG.outputDir, timestamp, outputFile);
+  const baseName = `${suiteName}-${CONFIG.mode}`;
+  const rawOutPath = path.join(projectRoot, CONFIG.outputDir, timestamp, `${baseName}.txt`);
+  const jsonOutPath = path.join(projectRoot, CONFIG.outputDir, timestamp, `${baseName}.json`);
   
   console.log(`\n📊 Running ${suiteName} benchmark...`);
   
@@ -88,9 +89,8 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
     'vitest',
     'bench',
     '--run',
-    // Vitest bench JSON output flag
+    // Use verbose reporter; we capture stdout and write files ourselves
     `--reporter=verbose`,
-    `--outputJson=${outputPath}`,
     `src/suites/${category}/${suiteName}.bench${extension}`
   ];
   
@@ -123,24 +123,34 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
     
     child.on('close', async (code) => {
       if (code === 0) {
-        // Parse memory information from stdout and enhance JSON output
         try {
-          // Ensure output exists
-          try {
-            await fs.stat(outputPath);
-          } catch {
-            console.warn(`⚠️ Expected JSON not found at ${outputPath}. Check reporter/flags.`);
-          }
-          await enhanceJsonWithMemoryData(outputPath, stdout);
+          // Write raw stdout to file
+          await fs.writeFile(rawOutPath, stdout, 'utf8');
+          // Build JSON report with parsed memory data and raw output reference
+          const memoryMeasurements = parseMemoryFromOutput(stdout);
+          const report = {
+            type: 'vitest-bench-stdout',
+            suite: suiteName,
+            category,
+            mode: CONFIG.mode,
+            timestamp,
+            rawOutputFile: path.basename(rawOutPath),
+            memoryTracking: {
+              enabled: true,
+              parsedFromOutput: true,
+              memoryMeasurements,
+            },
+          };
+          await fs.writeFile(jsonOutPath, JSON.stringify(report, null, 2), 'utf8');
         } catch (error) {
-          console.warn(`⚠️ Could not enhance ${suiteName} with memory data:`, error.message);
+          console.warn(`⚠️ Failed to write outputs for ${suiteName}:`, error.message);
         }
-        
+
         console.log(`✅ ${suiteName} benchmark completed`);
-        resolve({ suite: suiteName, outputFile, status: 'success' });
+        resolve({ suite: suiteName, outputFile: path.basename(jsonOutPath), status: 'success' });
       } else {
         console.error(`❌ ${suiteName} benchmark failed with code ${code}`);
-        resolve({ suite: suiteName, outputFile, status: 'failed', code });
+        resolve({ suite: suiteName, outputFile: path.basename(jsonOutPath), status: 'failed', code });
       }
     });
     
