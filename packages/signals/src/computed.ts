@@ -36,7 +36,9 @@ import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode }
 import type { LatticeExtension } from '@lattice/lattice';
 import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
-import type { ExtendedSignalContext } from './api';
+import type { SignalContext } from './context';
+import type { WorkQueue } from './helpers/work-queue';
+import type { GraphWalker } from './helpers/graph-walker';
 // no-op import removed: dev-only cycle detection eliminated
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
@@ -55,16 +57,23 @@ const {
   TRACKING,
 } = CONSTANTS;
 
-export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
+interface ComputedFactoryContext extends SignalContext {
+  workQueue: WorkQueue;
+  graphWalker: GraphWalker;
+  createDependencyHelpers: typeof createDependencyHelpers;
+  createSourceCleanupHelpers: typeof createSourceCleanupHelpers;
+}
+
+export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   const { workQueue: { enqueue } } = ctx;
 
   // Helper functions for managing the dependency graph
-  const depHelpers = createDependencyHelpers();
+  const depHelpers = ctx.createDependencyHelpers();
   const { addDependency, shouldNodeUpdate, checkNodeDirty } = depHelpers
   
   // Helpers for cleaning up stale dependencies after recomputation
   const { disposeAllSources, cleanupSources } =
-    createSourceCleanupHelpers(depHelpers);
+    ctx.createSourceCleanupHelpers(depHelpers);
   // Graph walker provided via context for traversal
   const { graphWalker: { walk } } = ctx;
   

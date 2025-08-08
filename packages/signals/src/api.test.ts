@@ -10,6 +10,8 @@ import type { LatticeExtension } from '@lattice/lattice';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
+import { createDependencyHelpers } from './helpers/dependency-tracking';
+import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
@@ -62,6 +64,8 @@ describe('createSignalAPI', () => {
         };
       })(),
       graphWalker: createGraphWalker(),
+      createDependencyHelpers,
+      createSourceCleanupHelpers,
     };
     
     const api = createSignalAPI({
@@ -89,7 +93,7 @@ describe('createSignalAPI', () => {
     let enqueueCount = 0;
     
     // Create custom context with instrumented work queue
-    const customCtx: ExtendedSignalContext = {
+    const customCtx = {
       ...createContext(),
       workQueue: (() => {
         const queue = createWorkQueue();
@@ -101,6 +105,8 @@ describe('createSignalAPI', () => {
         return queue;
       })(),
       graphWalker: createGraphWalker(),
+      createDependencyHelpers,
+      createSourceCleanupHelpers,
     };
     
     const api = createSignalAPI({

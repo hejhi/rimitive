@@ -54,6 +54,10 @@
     "./helpers/work-queue": {
       "import": "./dist/helpers/work-queue.js",
       "types": "./dist/helpers/work-queue.d.ts"
+    },
+    "./helpers/source-cleanup": {
+      "import": "./dist/helpers/source-cleanup.js",
+      "types": "./dist/helpers/source-cleanup.d.ts"
     }
   },
   "files": [

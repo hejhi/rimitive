@@ -12,8 +12,11 @@ import { createSignalFactory, type SignalInterface } from '../signal';
 import { createComputedFactory } from '../computed';
 import { createEffectFactory } from '../effect';
 import { createContext } from '../context';
+import type { SignalContext } from '../context';
 import { createWorkQueue } from '../helpers/work-queue';
 import { createGraphWalker } from '../helpers/graph-walker';
+import { createDependencyHelpers } from '../helpers/dependency-tracking';
+import { createSourceCleanupHelpers } from '../helpers/source-cleanup';
 import type { LatticeExtension } from '@lattice/lattice';
 
 // Example 1: Custom context with performance tracking
@@ -31,6 +34,8 @@ function createPerformanceContext(): PerformanceContext {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
+    createDependencyHelpers,
+    createSourceCleanupHelpers,
     performance: {
       signalReads: 0,
       signalWrites: 0,
@@ -44,10 +49,10 @@ function createPerformanceContext(): PerformanceContext {
 const createPerfSignalFactory: ExtensionFactory<'signal', <T>(value: T) => SignalInterface<T>> = (ctx) => {
   if (!('performance' in ctx)) {
     // Fallback to regular signal if no performance tracking
-    return createSignalFactory(ctx);
+    return createSignalFactory(ctx as any);
   }
   
-  const baseFactory = createSignalFactory(ctx);
+  const baseFactory = createSignalFactory(ctx as any);
   const perfCtx = ctx as PerformanceContext;
   
   return {
@@ -159,6 +164,8 @@ export function minimalExample() {
     ...createContext(),
     workQueue: loggingWorkQueue,
     graphWalker: createGraphWalker(),
+    createDependencyHelpers,
+    createSourceCleanupHelpers,
   });
   
   // Use the API
@@ -170,8 +177,8 @@ export function minimalExample() {
 
 // Example 6: Type-safe factory requirements (future enhancement idea)
 // This shows how we could extend the pattern to have factories declare requirements
-interface RequirementsAwareFactory<TName extends string, TMethod, TRequiredContext = ExtendedSignalContext> 
-  extends ExtensionFactory<TName, TMethod> {
+interface RequirementsAwareFactory<TName extends string, TMethod, TRequiredContext extends SignalContext = ExtendedSignalContext> 
+  extends ExtensionFactory<TName, TMethod, TRequiredContext> {
   _contextType?: TRequiredContext; // Phantom type for requirements
 }
 
@@ -200,6 +207,8 @@ export function defaultExample() {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
+     createDependencyHelpers,
+     createSourceCleanupHelpers,
   });
   
   // Works just like before

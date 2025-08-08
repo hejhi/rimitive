@@ -7,21 +7,24 @@ import type { ComputedInterface } from './computed';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
+import { createDependencyHelpers } from './helpers/dependency-tracking';
+import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
 import { createContext as createLattice } from '@lattice/lattice';
-import type { ExtendedSignalContext } from './api';
 
 // Create a test instance
 export function createTestInstance() {
   // Create extended context for testing
-  const ctx: ExtendedSignalContext = {
+  const ctx = {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
+    createDependencyHelpers,
+    createSourceCleanupHelpers,
   };
   
   // Create API with all core factories

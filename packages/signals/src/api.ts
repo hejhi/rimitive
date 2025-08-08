@@ -36,6 +36,8 @@
 import { createContext as createLattice, type LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
 import type { GraphWalker } from './helpers/graph-walker';
+import type { createSourceCleanupHelpers } from './helpers/source-cleanup';
+import type { createDependencyHelpers } from './helpers/dependency-tracking';
 import type { WorkQueue } from './helpers/work-queue';
 
 // Extended context that includes both state and services
@@ -43,23 +45,45 @@ export interface ExtendedSignalContext extends SignalContext {
   workQueue: WorkQueue;
   // Future shared resources can be added here
   graphWalker: GraphWalker;
+  createSourceCleanupHelpers: typeof createSourceCleanupHelpers;
+  createDependencyHelpers: typeof createDependencyHelpers;
 }
 
-// Type for extension factory functions that accept the extended context
-// Each factory creates one reactive primitive (signal, computed, etc)
-export type ExtensionFactory<TName extends string, TMethod> = (
-  ctx: ExtendedSignalContext
+// Type for extension factory functions that accept a specific required context
+// Each factory can specify its own minimal context requirements
+export type ExtensionFactory<
+  TName extends string,
+  TMethod,
+  TCtx extends SignalContext = SignalContext
+> = (
+  ctx: TCtx
 ) => LatticeExtension<TName, TMethod>;
 
 // ALGORITHM: Type-Level Factory to API Transformation
 // This complex type transforms a record of factories into the final API shape
 // For each factory, it extracts the method type and maps it to the same key
 // Also adds internal context and dispose method
+// Extract the required context type from a factory
+export type FactoryCtx<F> = F extends (ctx: infer C) => LatticeExtension<string, any> ? C : never;
+// Convert a union to an intersection
+export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+  k: infer I
+) => void
+  ? I
+  : never;
+// Combined required context across all factories
+export type CombinedCtx<T extends Record<string, (ctx: any) => LatticeExtension<string, any>>> =
+  UnionToIntersection<FactoryCtx<T[keyof T]>> extends infer I
+    ? I extends SignalContext
+      ? I
+      : SignalContext
+    : SignalContext;
+
 export type FactoriesToAPI<
-  T extends Record<string, ExtensionFactory<string, unknown>>,
-  TCtx extends ExtendedSignalContext = ExtendedSignalContext
+  T extends Record<string, (ctx: any) => LatticeExtension<string, any>>,
+  TCtx extends SignalContext = CombinedCtx<T>
 > = {
-  [K in keyof T]: T[K] extends ExtensionFactory<string, infer M> ? M : never;
+  [K in keyof T]: T[K] extends (ctx: any) => LatticeExtension<string, infer M> ? M : never;
 } & { 
   _ctx: TCtx;  // Exposed for advanced use cases
   dispose: () => void;  // Cleanup method from Lattice
@@ -70,12 +94,12 @@ export type FactoriesToAPI<
 // It allows users to pick exactly which primitives they need,
 // enabling optimal tree-shaking and extensibility
 export function createSignalAPI<
-  T extends Record<string, ExtensionFactory<string, unknown>>,
-  TCtx extends ExtendedSignalContext = ExtendedSignalContext
+  T extends Record<string, (ctx: any) => LatticeExtension<string, any>>,
+  TCtx extends SignalContext = CombinedCtx<T>
 >(
   factories: T,
-  ctx: TCtx
-): FactoriesToAPI<T, TCtx> {
+  ctx: TCtx & CombinedCtx<T>
+): FactoriesToAPI<T, TCtx & CombinedCtx<T>> {
   // STEP 1: Use provided context
   // Users must provide their own context for full control
   const signalCtx = ctx;
@@ -94,8 +118,8 @@ export function createSignalAPI<
   // The context is exposed as _ctx for advanced use cases
   const api = {
     ...latticeCtx,
-    _ctx: signalCtx,
-  } as FactoriesToAPI<T, TCtx>;
+    _ctx: signalCtx as TCtx & CombinedCtx<T>,
+  } as FactoriesToAPI<T, TCtx & CombinedCtx<T>>;
   
   return api;
   

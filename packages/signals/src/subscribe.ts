@@ -39,7 +39,8 @@ import { Edge, Readable, ProducerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
-import type { ExtendedSignalContext } from './api';
+import type { SignalContext } from './context';
+import type { WorkQueue } from './helpers/work-queue';
 
 const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
 
@@ -49,9 +50,15 @@ export interface SubscribeNode<T> extends ScheduledNode {
   dispose(): void;
 }
 
-export function createSubscribeFactory(ctx: ExtendedSignalContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
+interface SubscribeFactoryContext extends SignalContext {
+  workQueue: WorkQueue;
+  createDependencyHelpers: typeof createDependencyHelpers;
+  createSourceCleanupHelpers: typeof createSourceCleanupHelpers;
+}
+
+export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
   // Only need disposal helper since subscribe has exactly one source
-  const { disposeAllSources } = createSourceCleanupHelpers(createDependencyHelpers());
+  const { disposeAllSources } = ctx.createSourceCleanupHelpers(ctx.createDependencyHelpers());
   const { workQueue: { enqueue, dispose } } = ctx;
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;

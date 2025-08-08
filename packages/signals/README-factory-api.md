@@ -112,4 +112,8 @@ const api = createSignalAPI({
 });
 ```
 
-If you don’t import `helpers/*`, bundlers can exclude those files entirely.
+If you don’t import `helpers/*`, bundlers can exclude those files entirely. Helpers available for direct import:
+
+- `@lattice/signals/helpers/work-queue`
+- `@lattice/signals/helpers/graph-walker`
+- `@lattice/signals/helpers/source-cleanup`

@@ -42,7 +42,8 @@ import { Disposable, Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createSourceCleanupHelpers } from './helpers/source-cleanup';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
-import type { ExtendedSignalContext } from './api';
+import type { SignalContext } from './context';
+import type { WorkQueue } from './helpers/work-queue';
 
 export interface EffectInterface extends ScheduledNode, Disposable {
   __type: 'effect';
@@ -76,15 +77,21 @@ const genericDispose = function(this: EffectInterface) {
   this.dispose(); 
 };
 
-export function createEffectFactory(ctx: ExtendedSignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
+interface EffectFactoryContext extends SignalContext {
+  workQueue: WorkQueue;
+  createDependencyHelpers: typeof createDependencyHelpers;
+  createSourceCleanupHelpers: typeof createSourceCleanupHelpers;
+}
+
+export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   // Dependency tracking helpers
-  const depHelpers = createDependencyHelpers();
+  const depHelpers = ctx.createDependencyHelpers();
   const { shouldNodeUpdate } = depHelpers;
   const { workQueue: { enqueue, dispose } } = ctx;
 
   // Source cleanup for dynamic dependencies
   const { disposeAllSources, cleanupSources } =
-    createSourceCleanupHelpers(depHelpers);
+    ctx.createSourceCleanupHelpers(depHelpers);
   class Effect implements EffectInterface {
     // OPTIMIZATION: Hot/Cold Field Separation
     // Group frequently accessed fields together for better CPU cache locality

@@ -72,6 +72,7 @@ export default defineConfig({
         'default-context': resolve(__dirname, 'src/default-context.ts'),
         'helpers/graph-walker': resolve(__dirname, 'src/helpers/graph-walker.ts'),
         'helpers/work-queue': resolve(__dirname, 'src/helpers/work-queue.ts'),
+        'helpers/source-cleanup': resolve(__dirname, 'src/helpers/source-cleanup.ts'),
       },
       formats: ['es'],
     },
