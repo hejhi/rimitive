@@ -118,6 +118,20 @@ export function createDependencyHelpers(): DependencyHelpers {
       cached.generation = target._generation;
       return;
     }
+
+    // OPTIMIZATION: Consumer-tail reuse (stable read order)
+    // If target has a current cursor (set at run start), and the next expected
+    // edge matches this source, update in O(1) and advance the cursor.
+    const cursor = target._cursor;
+    if (cursor && cursor.source === source) {
+      cursor.version = version;
+      cursor.generation = target._generation;
+      // Update producer cache for subsequent accesses
+      source._lastEdge = cursor;
+      // Advance cursor to the next expected edge
+      target._cursor = cursor.nextSource;
+      return;
+    }
     
     // ALGORITHM: Linear Search for Existing Edge
     // Search through consumer's dependency list for existing edge
@@ -241,6 +255,22 @@ export function createDependencyHelpers(): DependencyHelpers {
     // OPTIMIZATION: Only called for NOTIFIED case now
     // OUTDATED is handled inline in hot paths
     if (!(node._flags & NOTIFIED)) return false;
+    
+    // OPTIMIZATION: NOTIFIED-only cheap scan (non-recursive)
+    // If all direct sources have matching versions and are not themselves
+    // NOTIFIED/OUTDATED, we can clear NOTIFIED and skip expensive checks.
+    let e = node._sources;
+    let clean = true;
+    while (e) {
+      const s = e.source as ProducerNode & { _flags?: number };
+      if (e.version !== s._version) { clean = false; break; }
+      if ('_flags' in s && (s._flags! & (NOTIFIED | OUTDATED))) { clean = false; break; }
+      e = e.nextSource!;
+    }
+    if (clean) {
+      node._flags &= ~NOTIFIED;
+      return false;
+    }
     
     // Check if dependencies actually changed
     const isDirty = checkNodeDirty(node);

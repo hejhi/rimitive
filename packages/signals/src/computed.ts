@@ -126,6 +126,9 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
     // Incremented before each recomputation to mark "current" edges
     // Edges with generation !== this value are stale and removed
     _generation = 0;
+    
+    // Per-run cursor for dependency edge reuse
+    _cursor: Edge | undefined = undefined;
 
     constructor(compute: () => T) {
       this._callback = compute;
@@ -175,6 +178,8 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
       // All edges accessed during this run will be marked with this generation
       // After recomputation, edges with old generation are removed
       this._generation++;
+      // OPTIMIZATION: Initialize per-run dependency cursor for O(1) edge reuse
+      this._cursor = this._sources;
       
       // ALGORITHM: Context Switching for Dependency Tracking
       // Set ourselves as the current consumer so signal reads register with us
@@ -210,6 +215,8 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
         // 3. Remove stale dependencies (those with version -1)
         // This implements dynamic dependency tracking - dependencies can change between runs
         cleanupSources(this);
+        // Clear traversal cursor after cleanup
+        this._cursor = undefined;
       }
     }
 
