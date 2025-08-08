@@ -16,14 +16,14 @@ import type { SignalContext } from '../context';
 import { createWorkQueue } from '../helpers/work-queue';
 import { createGraphWalker } from '../helpers/graph-walker';
 import { createDependencyHelpers } from '../helpers/dependency-tracking';
-import { createSourceCleanupHelpers } from '../helpers/source-cleanup';
+import { createSourceCleanup } from '../helpers/source-cleanup';
 
 // Example 1: Custom context with performance tracking
 interface PerformanceContext extends SignalContext {
   workQueue: ReturnType<typeof createWorkQueue>;
   graphWalker: ReturnType<typeof createGraphWalker>;
-  createDependencyHelpers: typeof createDependencyHelpers;
-  createSourceCleanupHelpers: typeof createSourceCleanupHelpers;
+  dependencies: ReturnType<typeof createDependencyHelpers>;
+  sourceCleanup: ReturnType<typeof createSourceCleanup>;
   performance: {
     signalReads: number;
     signalWrites: number;
@@ -37,8 +37,8 @@ function createPerformanceContext(): PerformanceContext {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
-    createDependencyHelpers,
-    createSourceCleanupHelpers,
+    dependencies: createDependencyHelpers(),
+    sourceCleanup: createSourceCleanup(createDependencyHelpers().removeFromTargets),
     performance: {
       signalReads: 0,
       signalWrites: 0,
@@ -167,8 +167,8 @@ export function minimalExample() {
     ...createContext(),
     workQueue: loggingWorkQueue,
     graphWalker: createGraphWalker(),
-    createDependencyHelpers,
-    createSourceCleanupHelpers,
+    dependencies: createDependencyHelpers(),
+    sourceCleanup: createSourceCleanup(createDependencyHelpers().removeFromTargets),
   });
   
   // Use the API
@@ -210,8 +210,8 @@ export function defaultExample() {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
-     createDependencyHelpers,
-     createSourceCleanupHelpers,
+     dependencies: createDependencyHelpers(),
+     sourceCleanup: createSourceCleanup(createDependencyHelpers().removeFromTargets),
   });
   
   // Works just like before

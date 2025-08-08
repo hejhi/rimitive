@@ -28,7 +28,7 @@
 import { CONSTANTS } from './constants';
 import { Edge, Writable, ProducerNode, ScheduledNode, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createDependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
+import type { DependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 import type { GraphWalker } from './helpers/graph-walker';
@@ -49,17 +49,16 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
 interface SignalFactoryContext extends SignalContext {
   workQueue: WorkQueue;
   graphWalker: GraphWalker;
-  createDependencyHelpers: typeof createDependencyHelpers;
+  dependencies: DependencyHelpers;
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
-  // Dependency tracking helper for establishing producer-consumer edges
-  const { addDependency } = ctx.createDependencyHelpers();
-  const { workQueue: { enqueue, flush } } = ctx;
-  
-  // Graph walker provided via context for traversal
-  const { graphWalker: { walk } } = ctx;
-  
+  const {
+    dependencies: { addDependency }, 
+    graphWalker: { walk },
+    workQueue: { enqueue, flush }
+  } = ctx;
+
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Avoids creating new function objects in the critical update path
   const notifyNode = (node: ConsumerNode): void => {

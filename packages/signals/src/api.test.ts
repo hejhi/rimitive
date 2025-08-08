@@ -11,7 +11,7 @@ import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
-import { createSourceCleanupHelpers } from './helpers/source-cleanup';
+import { createSourceCleanup } from './helpers/source-cleanup';
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
@@ -64,8 +64,11 @@ describe('createSignalAPI', () => {
         };
       })(),
       graphWalker: createGraphWalker(),
-      createDependencyHelpers,
-      createSourceCleanupHelpers,
+      dependencies: createDependencyHelpers(),
+      sourceCleanup: (() => {
+        const d = createDependencyHelpers();
+        return createSourceCleanup(d.removeFromTargets);
+      })(),
     };
     
     const api = createSignalAPI({
@@ -105,8 +108,11 @@ describe('createSignalAPI', () => {
         return queue;
       })(),
       graphWalker: createGraphWalker(),
-      createDependencyHelpers,
-      createSourceCleanupHelpers,
+      dependencies: createDependencyHelpers(),
+      sourceCleanup: (() => {
+        const d = createDependencyHelpers();
+        return createSourceCleanup(d.removeFromTargets);
+      })(),
     };
     
     const api = createSignalAPI({

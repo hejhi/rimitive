@@ -8,7 +8,7 @@ import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
-import { createSourceCleanupHelpers } from './helpers/source-cleanup';
+import { createSourceCleanup } from './helpers/source-cleanup';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -19,12 +19,17 @@ import { createContext as createLattice } from '@lattice/lattice';
 // Create a test instance
 export function createTestInstance() {
   // Create extended context for testing
+  const base = createContext();
+  const workQueue = createWorkQueue();
+  const graphWalker = createGraphWalker();
+  const dependencies = createDependencyHelpers();
+  const sourceCleanup = createSourceCleanup(dependencies.removeFromTargets);
   const ctx = {
-    ...createContext(),
-    workQueue: createWorkQueue(),
-    graphWalker: createGraphWalker(),
-    createDependencyHelpers,
-    createSourceCleanupHelpers,
+    ...base,
+    workQueue,
+    graphWalker,
+    dependencies,
+    sourceCleanup,
   };
   
   // Create API with all core factories

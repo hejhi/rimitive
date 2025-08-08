@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSourceCleanupHelpers } from './source-cleanup';
+import { createSourceCleanup } from './source-cleanup';
 import type { ConsumerNode, Edge } from '../types';
 import { createDependencyHelpers, TrackedProducer } from './dependency-tracking';
 
 describe('Source Cleanup Helpers', () => {
   let depHelpers: ReturnType<typeof createDependencyHelpers>;
-  let helpers: ReturnType<typeof createSourceCleanupHelpers>;
+  let helpers: ReturnType<typeof createSourceCleanup>;
 
   beforeEach(() => {
     depHelpers = createDependencyHelpers();
-    helpers = createSourceCleanupHelpers(depHelpers);
+    helpers = createSourceCleanup(depHelpers.removeFromTargets);
   });
 
   describe('disposeAllSources', () => {

@@ -1,7 +1,7 @@
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
-import { createSourceCleanupHelpers } from './helpers/source-cleanup';
+import { createSourceCleanup } from './helpers/source-cleanup';
 import { createDependencyHelpers } from './helpers/dependency-tracking';
 
 /**
@@ -9,11 +9,16 @@ import { createDependencyHelpers } from './helpers/dependency-tracking';
  * Users can use this as a starting point or create their own.
  */
 export function createDefaultContext() {
+  const base = createContext();
+  const workQueue = createWorkQueue();
+  const graphWalker = createGraphWalker();
+  const dependencies = createDependencyHelpers();
+  const sourceCleanup = createSourceCleanup(dependencies.removeFromTargets);
   return {
-    ...createContext(),
-    workQueue: createWorkQueue(),
-    graphWalker: createGraphWalker(),
-    createSourceCleanupHelpers,
-    createDependencyHelpers,
+    ...base,
+    workQueue,
+    graphWalker,
+    dependencies,
+    sourceCleanup,
   };
 }

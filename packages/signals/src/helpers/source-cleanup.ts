@@ -42,9 +42,13 @@
  * - Graph theory edge removal algorithms
  */
 import type { ConsumerNode, Edge } from '../types';
-import { createDependencyHelpers } from './dependency-tracking';
 
-export function createSourceCleanupHelpers({ removeFromTargets }: ReturnType<typeof createDependencyHelpers>) {
+export interface SourceCleanupHelpers {
+  disposeAllSources: (consumer: ConsumerNode) => void;
+  cleanupSources: (consumer: ConsumerNode) => void;
+}
+
+export function createSourceCleanup(removeFromTargets: (edge: Edge) => void): SourceCleanupHelpers {
   // ALGORITHM: Complete Edge Removal
   // Used during disposal to remove all dependency edges at once
   const disposeAllSources = (consumer: ConsumerNode): void => {
