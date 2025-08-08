@@ -73,6 +73,7 @@ export default defineConfig({
         'helpers/graph-walker': resolve(__dirname, 'src/helpers/graph-walker.ts'),
         'helpers/work-queue': resolve(__dirname, 'src/helpers/work-queue.ts'),
         'helpers/source-cleanup': resolve(__dirname, 'src/helpers/source-cleanup.ts'),
+        'helpers/dependency-tracking': resolve(__dirname, 'src/helpers/dependency-tracking.ts'),
       },
       formats: ['es'],
     },

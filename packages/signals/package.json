@@ -58,6 +58,10 @@
     "./helpers/source-cleanup": {
       "import": "./dist/helpers/source-cleanup.js",
       "types": "./dist/helpers/source-cleanup.d.ts"
+    },
+    "./helpers/dependency-tracking": {
+      "import": "./dist/helpers/dependency-tracking.js",
+      "types": "./dist/helpers/dependency-tracking.d.ts"
     }
   },
   "files": [

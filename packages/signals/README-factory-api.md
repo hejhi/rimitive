@@ -100,6 +100,8 @@ import { createContext } from '@lattice/signals/context';
 // Import only the helpers you need; unused ones get tree-shaken
 import { createWorkQueue } from '@lattice/signals/helpers/work-queue';
 import { createGraphWalker } from '@lattice/signals/helpers/graph-walker';
+import { createDependencyHelpers } from '@lattice/signals/helpers/dependency-tracking';
+import { createSourceCleanup } from '@lattice/signals/helpers/source-cleanup';
 
 const api = createSignalAPI({
   signal: createSignalFactory,
@@ -109,6 +111,8 @@ const api = createSignalAPI({
   ...createContext(),
   workQueue: createWorkQueue(),
   graphWalker: createGraphWalker(),
+  dependencies: createDependencyHelpers(),
+  sourceCleanup: createSourceCleanup(createDependencyHelpers().removeFromTargets),
 });
 ```
 
@@ -116,4 +120,5 @@ If you don’t import `helpers/*`, bundlers can exclude those files entirely. He
 
 - `@lattice/signals/helpers/work-queue`
 - `@lattice/signals/helpers/graph-walker`
+- `@lattice/signals/helpers/dependency-tracking`
 - `@lattice/signals/helpers/source-cleanup`
