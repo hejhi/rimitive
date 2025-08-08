@@ -141,19 +141,16 @@ export function createComputedFactory(ctx: ExtendedSignalContext): LatticeExtens
       // ALGORITHM: Dependency Registration (Pull Phase)
       // If we're being read from within another computed/effect, register the dependency
       const consumer = ctx.currentConsumer;
-      const cflags = consumer && consumer._flags & RUNNING;
-      
-      // Register dependency with current version (might be stale if not yet computed)
-      if (cflags) addDependency(this, consumer, this._version);
-      
+      const isTracking = !!(consumer && (consumer._flags & RUNNING));
+
       // ALGORITHM: Lazy Evaluation
       // Only recompute if our dependencies have changed
       this._update();
       
       // ALGORITHM: Post-Update Edge Synchronization
-      // If we just updated and have a consumer, update the edge version
-      // This handles the case where the edge was created before first computation
-      if (cflags) addDependency(this, consumer, this._version);
+      // If we have a consumer, (now) register/update the dependency edge
+      // Doing this once avoids redundant edge work on the hot path.
+      if (isTracking) addDependency(this, consumer, this._version);
       
       // Value is guaranteed to be defined after _update
       return this._value!;

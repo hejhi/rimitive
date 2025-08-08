@@ -113,8 +113,10 @@ export function createEffectFactory(ctx: ExtendedSignalContext): LatticeExtensio
       // Early exit if already processed
       if (this._flags & NOTIFIED) return;
       
-      // Mark with NOTIFIED and OUTDATED flags
-      this._flags |= NOTIFIED | OUTDATED;
+      // Mark as NOTIFIED only; defer OUTDATED until dependency check.
+      // This allows us to skip effect runs when upstream values didn't change
+      // (e.g., filtered/conditional scenarios), relying on shouldNodeUpdate.
+      this._flags |= NOTIFIED;
       
       // Batch-aware execution
       if (ctx.batchDepth > 0) {
