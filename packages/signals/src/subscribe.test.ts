@@ -1,20 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSignalAPI } from './api';
 import { createDefaultContext } from './default-context';
-import { createSignalFactory } from './signal';
-import { createComputedFactory } from './computed';
-import { createEffectFactory } from './effect';
+import { createSignalFactory, type SignalInterface } from './signal';
+import { createComputedFactory, type ComputedInterface } from './computed';
+import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
+import type { Readable, ProducerNode } from './types';
 
 describe('subscribe factory', () => {
   it('should call callback with initial value', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => () => void>,
     }, createDefaultContext());
 
     const s = api.signal(10);
@@ -27,11 +28,11 @@ describe('subscribe factory', () => {
 
   it('should call callback when signal changes', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => () => void>,
     }, createDefaultContext());
 
     const s = api.signal(10);
@@ -52,11 +53,11 @@ describe('subscribe factory', () => {
 
   it('should work with computed values', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => () => void>,
     }, createDefaultContext());
 
     const count = api.signal(1);
@@ -76,11 +77,11 @@ describe('subscribe factory', () => {
 
   it('should not call callback if computed value does not change', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => () => void>,
     }, createDefaultContext());
 
     const a = api.signal(1);
@@ -110,11 +111,11 @@ describe('subscribe factory', () => {
 
   it('should respect batching', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => () => void>,
     }, createDefaultContext());
 
     const count = api.signal(0);
@@ -136,11 +137,11 @@ describe('subscribe factory', () => {
 
   it('should dispose correctly', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => () => void>,
     }, createDefaultContext());
 
     const count = api.signal(0);
@@ -160,11 +161,11 @@ describe('subscribe factory', () => {
 
   it('should handle multiple subscriptions', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => () => void>,
     }, createDefaultContext());
 
     const count = api.signal(0);

@@ -37,8 +37,8 @@
 import { CONSTANTS } from './constants';
 import { Edge, Readable, ProducerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { SourceCleanupHelpers } from './helpers/source-cleanup';
-import type { DependencyHelpers } from './helpers/dependency-tracking';
+import type { DependencySweeper } from './helpers/dependency-sweeper';
+import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 
@@ -52,13 +52,13 @@ export interface SubscribeNode<T> extends ScheduledNode {
 
 interface SubscribeFactoryContext extends SignalContext {
   workQueue: WorkQueue;
-  dependencies: DependencyHelpers;
-  sourceCleanup: SourceCleanupHelpers;
+  dependencies: DependencyGraph;
+  sourceCleanup: DependencySweeper;
 }
 
 export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
   const {
-    sourceCleanup: { disposeAllSources },
+    sourceCleanup: { detachAll },
     workQueue: { enqueue, dispose }
   } = ctx;
   class Subscribe<T> implements SubscribeNode<T> {
@@ -141,7 +141,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     dispose(): void {
       // ALGORITHM: Clean Disposal
       // Mark as disposed and remove the single source edge
-      dispose(this, disposeAllSources);
+      dispose(this, detachAll);
     }
 
     _setupDependency(source: Readable<T> & ProducerNode): void {

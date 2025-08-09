@@ -43,15 +43,15 @@
  */
 import type { ConsumerNode, Edge } from '../types';
 
-export interface SourceCleanupHelpers {
-  disposeAllSources: (consumer: ConsumerNode) => void;
-  cleanupSources: (consumer: ConsumerNode) => void;
+export interface DependencySweeper {
+  detachAll: (consumer: ConsumerNode) => void;
+  pruneStale: (consumer: ConsumerNode) => void;
 }
 
-export function createSourceCleanup(removeFromTargets: (edge: Edge) => void): SourceCleanupHelpers {
+export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void): DependencySweeper {
   // ALGORITHM: Complete Edge Removal
   // Used during disposal to remove all dependency edges at once
-  const disposeAllSources = (consumer: ConsumerNode): void => {
+  const detachAll = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
     
     // Walk the linked list of sources
@@ -61,7 +61,7 @@ export function createSourceCleanup(removeFromTargets: (edge: Edge) => void): So
       
       // Remove this edge from the producer's target list
       // This is the bidirectional edge removal - we remove from both sides
-      removeFromTargets(node);
+      unlinkFromProducer(node);
       
       // Move to next source
       node = next;
@@ -74,7 +74,7 @@ export function createSourceCleanup(removeFromTargets: (edge: Edge) => void): So
   // ALGORITHM: Selective Edge Removal for Dynamic Dependencies
   // After a computed/effect runs, we need to remove edges to dependencies
   // that were NOT accessed during the run (generation != consumer's generation)
-  const cleanupSources = (consumer: ConsumerNode): void => {
+  const pruneStale = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
     let prev: Edge | undefined;
 
@@ -98,7 +98,7 @@ export function createSourceCleanup(removeFromTargets: (edge: Edge) => void): So
         if (next !== undefined) (next.prevSource = prev);
 
         // Remove from producer's target list (bidirectional removal)
-        removeFromTargets(node);
+        unlinkFromProducer(node);
         
         // Don't update prev - it stays the same for next iteration
       } else {
@@ -111,5 +111,6 @@ export function createSourceCleanup(removeFromTargets: (edge: Edge) => void): So
     }
   };
 
-  return { disposeAllSources, cleanupSources };
+  return { detachAll, pruneStale };
 }
+

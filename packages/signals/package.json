@@ -55,13 +55,13 @@
       "import": "./dist/helpers/work-queue.js",
       "types": "./dist/helpers/work-queue.d.ts"
     },
-    "./helpers/source-cleanup": {
-      "import": "./dist/helpers/source-cleanup.js",
-      "types": "./dist/helpers/source-cleanup.d.ts"
+    "./helpers/dependency-sweeper": {
+      "import": "./dist/helpers/dependency-sweeper.js",
+      "types": "./dist/helpers/dependency-sweeper.d.ts"
     },
-    "./helpers/dependency-tracking": {
-      "import": "./dist/helpers/dependency-tracking.js",
-      "types": "./dist/helpers/dependency-tracking.d.ts"
+    "./helpers/dependency-graph": {
+      "import": "./dist/helpers/dependency-graph.js",
+      "types": "./dist/helpers/dependency-graph.d.ts"
     }
   },
   "files": [

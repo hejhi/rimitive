@@ -28,7 +28,7 @@
 import { CONSTANTS } from './constants';
 import { Edge, Writable, ProducerNode, ScheduledNode, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { DependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
+import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 import type { GraphWalker } from './helpers/graph-walker';
@@ -49,12 +49,12 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
 interface SignalFactoryContext extends SignalContext {
   workQueue: WorkQueue;
   graphWalker: GraphWalker;
-  dependencies: DependencyHelpers;
+  dependencies: DependencyGraph;
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const {
-    dependencies: { addDependency }, 
+    dependencies: { ensureLink }, 
     graphWalker: { walk },
     workQueue: { enqueue, flush }
   } = ctx;
@@ -114,7 +114,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // ALGORITHM: Edge Registration
       // Create a bidirectional edge between this signal (producer) and the consumer
       // The edge includes the current version for later staleness checks
-      addDependency(this, current, this._version);
+      ensureLink(this, current, this._version);
       return this._value;
     }
 

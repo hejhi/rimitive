@@ -1,26 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { createSignalAPI, type ExtensionFactory } from './api';
+import { createSignalAPI } from './api';
 import { createDefaultContext } from './default-context';
-import { createSignalFactory } from './signal';
-import { createComputedFactory } from './computed';
-import { createEffectFactory } from './effect';
+import { createSignalFactory, type SignalInterface } from './signal';
+import { createComputedFactory, type ComputedInterface } from './computed';
+import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
-import { createDependencyHelpers } from './helpers/dependency-tracking';
-import { createSourceCleanup } from './helpers/source-cleanup';
+import { createDependencyGraph } from './helpers/dependency-graph';
+import { createDependencySweeper } from './helpers/dependency-sweeper';
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
+    // Cast factories to the contravariant-friendly shape expected by createSignalAPI
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      // We only check presence, not call signature, so keep unknown
+      subscribe: createSubscribeFactory as (ctx: unknown) => LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
 
     expect(api.signal).toBeDefined();
@@ -33,8 +35,8 @@ describe('createSignalAPI', () => {
 
   it('should create a minimal API without effects', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
     }, createDefaultContext());
 
     expect(api.signal).toBeDefined();
@@ -64,18 +66,18 @@ describe('createSignalAPI', () => {
         };
       })(),
       graphWalker: createGraphWalker(),
-      dependencies: createDependencyHelpers(),
+      dependencies: createDependencyGraph(),
       sourceCleanup: (() => {
-        const d = createDependencyHelpers();
-        return createSourceCleanup(d.removeFromTargets);
+        const d = createDependencyGraph();
+        return createDependencySweeper(d.unlinkFromProducer);
       })(),
     };
     
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
     }, customCtx);
     
     const count = api.signal(0);
@@ -108,16 +110,16 @@ describe('createSignalAPI', () => {
         return queue;
       })(),
       graphWalker: createGraphWalker(),
-      dependencies: createDependencyHelpers(),
+      dependencies: createDependencyGraph(),
       sourceCleanup: (() => {
-        const d = createDependencyHelpers();
-        return createSourceCleanup(d.removeFromTargets);
+        const d = createDependencyGraph();
+        return createDependencySweeper(d.unlinkFromProducer);
       })(),
     };
     
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      effect: createEffectFactory,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
     }, customCtx);
     
     const count = api.signal(0);
@@ -152,8 +154,9 @@ describe('createSignalAPI', () => {
     };
     
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      logger: createLoggerFactory as ExtensionFactory<'logger', (message: string) => void>,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      // Align with createSignalAPI factory shape
+      logger: (createLoggerFactory as unknown) as (ctx: unknown) => LatticeExtension<'logger', (message: string) => void>,
     }, customCtx);
     
     api.logger('test message');
@@ -162,11 +165,11 @@ describe('createSignalAPI', () => {
 
   it('should handle dispose method correctly', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
 
     let effectRuns = 0;
@@ -195,18 +198,18 @@ describe('createSignalAPI', () => {
 
   it('should support multiple independent APIs', () => {
     const api1 = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
     const api2 = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
 
     const signal1 = api1.signal(0);
@@ -245,8 +248,8 @@ describe('createSignalAPI', () => {
 
     // Create API with custom extension and signal
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      custom: createCustomFactory
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      custom: (createCustomFactory as unknown) as (ctx: unknown) => LatticeExtension<'custom', () => string>
     }, createDefaultContext());
 
     expect(api.custom).toBeDefined();
@@ -256,8 +259,8 @@ describe('createSignalAPI', () => {
 
   it('should properly type the API based on factories', () => {
     const api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
     }, createDefaultContext());
 
     // TypeScript should know these methods exist

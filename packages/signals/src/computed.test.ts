@@ -1,34 +1,25 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSignalAPI } from './api';
 import { createDefaultContext } from './default-context';
-import { createSignalFactory } from './signal';
-import { createComputedFactory } from './computed';
-import { createEffectFactory } from './effect';
+import { createSignalFactory, type SignalInterface } from './signal';
+import { createComputedFactory, type ComputedInterface } from './computed';
+import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
 
 describe('Computed - Push-Pull Optimization', () => {
-  type API = ReturnType<typeof createSignalAPI<{
-    signal: typeof createSignalFactory;
-    computed: typeof createComputedFactory;
-    effect: typeof createEffectFactory;
-    batch: typeof createBatchFactory;
-    subscribe: typeof createSubscribeFactory;
-  }>>;
-  
-  let api: API;
-  let signal: API['signal'];
-  let computed: API['computed'];
-  let effect: API['effect'];
-  let batch: API['batch'];
+  let signal: <T>(value: T) => SignalInterface<T>;
+  let computed: <T>(compute: () => T) => ComputedInterface<T>;
+  let effect: (fn: () => void | (() => void)) => EffectDisposer;
+  let batch: <T>(fn: () => T) => T;
 
   beforeEach(() => {
-    api = createSignalAPI({
-      signal: createSignalFactory,
-      computed: createComputedFactory,
-      effect: createEffectFactory,
-      batch: createBatchFactory,
-      subscribe: createSubscribeFactory,
+    const api = createSignalAPI({
+      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
     signal = api.signal;
     computed = api.computed;

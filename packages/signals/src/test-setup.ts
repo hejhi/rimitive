@@ -7,8 +7,8 @@ import type { ComputedInterface } from './computed';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
-import { createDependencyHelpers } from './helpers/dependency-tracking';
-import { createSourceCleanup } from './helpers/source-cleanup';
+import { createDependencyGraph } from './helpers/dependency-graph';
+import { createDependencySweeper } from './helpers/dependency-sweeper';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -22,8 +22,8 @@ export function createTestInstance() {
   const base = createContext();
   const workQueue = createWorkQueue();
   const graphWalker = createGraphWalker();
-  const dependencies = createDependencyHelpers();
-  const sourceCleanup = createSourceCleanup(dependencies.removeFromTargets);
+  const dependencies = createDependencyGraph();
+  const sourceCleanup = createDependencySweeper(dependencies.unlinkFromProducer);
   const ctx = {
     ...base,
     workQueue,

@@ -40,8 +40,8 @@
 import { CONSTANTS } from './constants';
 import { Disposable, Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { SourceCleanupHelpers } from './helpers/source-cleanup';
-import type { DependencyHelpers } from './helpers/dependency-tracking';
+import type { DependencySweeper } from './helpers/dependency-sweeper';
+import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 
@@ -79,18 +79,18 @@ const genericDispose = function(this: EffectInterface) {
 
 interface EffectFactoryContext extends SignalContext {
   workQueue: WorkQueue;
-  dependencies: DependencyHelpers;
-  sourceCleanup: SourceCleanupHelpers;
+  dependencies: DependencyGraph;
+  sourceCleanup: DependencySweeper;
 }
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
     workQueue: { enqueue, dispose },
-    dependencies: { shouldNodeUpdate }
+    dependencies: { needsRecompute }
   } = ctx;
 
   // Source cleanup for dynamic dependencies
-  const { disposeAllSources, cleanupSources } = ctx.sourceCleanup;
+  const { detachAll, pruneStale } = ctx.sourceCleanup;
   class Effect implements EffectInterface {
     // OPTIMIZATION: Hot/Cold Field Separation
     // Group frequently accessed fields together for better CPU cache locality
@@ -163,7 +163,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         }
         
         // Slow path: perform dependency check
-        if (!shouldNodeUpdate(this)) {
+        if (!needsRecompute(this)) {
           // Cache the verified clean global version to skip future checks
           this._verifiedVersion = ctx.version;
           return;
@@ -214,7 +214,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         this._flags &= ~RUNNING;
         
         // 3. Remove stale dependencies (dynamic dependency tracking)
-        cleanupSources(this);
+        pruneStale(this);
         // Clear traversal cursor
         this._cursor = undefined;
       }
@@ -237,7 +237,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       })
       
       // 2. Remove all dependency edges for garbage collection
-      disposeAllSources(this);
+      detachAll(this);
       
       // TODO: Should we also clear _callback to free closure memory?
     }

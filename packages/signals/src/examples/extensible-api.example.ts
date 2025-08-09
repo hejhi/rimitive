@@ -9,21 +9,21 @@
 
 import { createSignalAPI, type ExtensionFactory } from '../api';
 import { createSignalFactory, type SignalInterface } from '../signal';
-import { createComputedFactory } from '../computed';
-import { createEffectFactory } from '../effect';
+import { createComputedFactory, type ComputedInterface } from '../computed';
+import { createEffectFactory, type EffectDisposer } from '../effect';
 import { createContext } from '../context';
 import type { SignalContext } from '../context';
 import { createWorkQueue } from '../helpers/work-queue';
 import { createGraphWalker } from '../helpers/graph-walker';
-import { createDependencyHelpers } from '../helpers/dependency-tracking';
-import { createSourceCleanup } from '../helpers/source-cleanup';
+import { createDependencyGraph } from '../helpers/dependency-graph';
+import { createDependencySweeper } from '../helpers/dependency-sweeper';
 
 // Example 1: Custom context with performance tracking
 interface PerformanceContext extends SignalContext {
   workQueue: ReturnType<typeof createWorkQueue>;
   graphWalker: ReturnType<typeof createGraphWalker>;
-  dependencies: ReturnType<typeof createDependencyHelpers>;
-  sourceCleanup: ReturnType<typeof createSourceCleanup>;
+  dependencies: ReturnType<typeof createDependencyGraph>;
+  sourceCleanup: ReturnType<typeof createDependencySweeper>;
   performance: {
     signalReads: number;
     signalWrites: number;
@@ -37,8 +37,8 @@ function createPerformanceContext(): PerformanceContext {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
-    dependencies: createDependencyHelpers(),
-    sourceCleanup: createSourceCleanup(createDependencyHelpers().removeFromTargets),
+    dependencies: createDependencyGraph(),
+    sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
     performance: {
       signalReads: 0,
       signalWrites: 0,
@@ -49,13 +49,18 @@ function createPerformanceContext(): PerformanceContext {
 }
 
 // Example 2: Custom factory that adds performance tracking
-const createPerfSignalFactory: ExtensionFactory<'signal', <T>(value: T) => SignalInterface<T>> = (ctx) => {
+type SignalFactoryCtx = Parameters<typeof createSignalFactory>[0];
+const createPerfSignalFactory: ExtensionFactory<
+  'signal',
+  <T>(value: T) => SignalInterface<T>,
+  SignalFactoryCtx & { performance?: PerformanceContext['performance'] }
+> = (ctx) => {
   if (!('performance' in ctx)) {
     // Fallback to regular signal if no performance tracking
-    return createSignalFactory(ctx as any);
+    return createSignalFactory(ctx);
   }
   
-  const baseFactory = createSignalFactory(ctx as any);
+  const baseFactory = createSignalFactory(ctx);
   const perfCtx = ctx as PerformanceContext;
   
   return {
@@ -118,10 +123,10 @@ const createPerformanceMonitor: ExtensionFactory<'perf', () => PerfResult, Signa
 export function example() {
   // Create API with custom context and factories
   const api = createSignalAPI({
-    signal: createPerfSignalFactory,
-    computed: createComputedFactory,
-    effect: createEffectFactory,
-    perf: createPerformanceMonitor,
+    signal: createPerfSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+    computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+    effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+    perf: (createPerformanceMonitor as unknown) as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'perf', () => { stats?: PerformanceContext['performance']; error?: string; reset?: () => void }>,
   }, createPerformanceContext());
   
   // Use the API
@@ -161,14 +166,14 @@ export function minimalExample() {
   
   // Create minimal API with just signals and effects
   const api = createSignalAPI({
-    signal: createSignalFactory,
-    effect: createEffectFactory,
+    signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+    effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
   }, {
     ...createContext(),
     workQueue: loggingWorkQueue,
     graphWalker: createGraphWalker(),
-    dependencies: createDependencyHelpers(),
-    sourceCleanup: createSourceCleanup(createDependencyHelpers().removeFromTargets),
+    dependencies: createDependencyGraph(),
+    sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
   });
   
   // Use the API
@@ -189,29 +194,29 @@ interface RequirementsAwareFactory<TName extends string, TMethod, TRequiredConte
 export const createDebugSignalFactory: RequirementsAwareFactory<
   'signal', 
   <T>(value: T) => SignalInterface<T>,
-  SignalContext & { debug: boolean }
+  SignalFactoryCtx & { debug: boolean }
 > = (ctx) => {
   // TypeScript would error if ctx doesn't have debug property
-  const debugCtx = ctx as SignalContext & { debug: boolean };
+  const debugCtx = ctx as SignalFactoryCtx & { debug: boolean };
   if (debugCtx.debug) {
     console.log('Debug mode enabled');
   }
-  return createSignalFactory(ctx as any);
+  return createSignalFactory(ctx);
 };
 
 // Example 7: Using the default context
 export function defaultExample() {
   // For simple use cases, use the default context
   const api = createSignalAPI({
-    signal: createSignalFactory,
-    computed: createComputedFactory,
-    effect: createEffectFactory,
+    signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+    computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+    effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
   }, {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
-     dependencies: createDependencyHelpers(),
-     sourceCleanup: createSourceCleanup(createDependencyHelpers().removeFromTargets),
+    dependencies: createDependencyGraph(),
+    sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
   });
   
   // Works just like before

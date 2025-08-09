@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSourceCleanup } from './source-cleanup';
+import { createDependencySweeper } from './dependency-sweeper';
 import type { ConsumerNode, Edge } from '../types';
-import { createDependencyHelpers, TrackedProducer } from './dependency-tracking';
+import { createDependencyGraph, TrackedProducer } from './dependency-graph';
 
-describe('Source Cleanup Helpers', () => {
-  let depHelpers: ReturnType<typeof createDependencyHelpers>;
-  let helpers: ReturnType<typeof createSourceCleanup>;
+describe('Dependency Sweeper', () => {
+  let depHelpers: ReturnType<typeof createDependencyGraph>;
+  let helpers: ReturnType<typeof createDependencySweeper>;
 
   beforeEach(() => {
-    depHelpers = createDependencyHelpers();
-    helpers = createSourceCleanup(depHelpers.removeFromTargets);
+    depHelpers = createDependencyGraph();
+    helpers = createDependencySweeper(depHelpers.unlinkFromProducer);
   });
 
-  describe('disposeAllSources', () => {
+  describe('detachAll', () => {
     it('should remove all source dependencies', () => {
       const sources = Array.from({ length: 3 }, () => ({
         __type: 'test',
@@ -32,13 +32,13 @@ describe('Source Cleanup Helpers', () => {
       
       // Create dependencies
       sources.forEach(source => {
-        depHelpers.linkNodes(source, consumer, 1);
+        depHelpers.connect(source, consumer, 1);
       });
       
       expect(consumer._sources).toBeDefined();
       
       // Dispose all sources
-      helpers.disposeAllSources(consumer);
+      helpers.detachAll(consumer);
       
       expect(consumer._sources).toBeUndefined();
       
@@ -65,8 +65,8 @@ describe('Source Cleanup Helpers', () => {
         _refresh: () => true,
       };
       
-      depHelpers.linkNodes(source, consumer, 1);
-      helpers.disposeAllSources(consumer);
+      depHelpers.connect(source, consumer, 1);
+      helpers.detachAll(consumer);
     });
 
     it('should handle empty sources gracefully', () => {
@@ -80,12 +80,12 @@ describe('Source Cleanup Helpers', () => {
       };
       
       // Should not throw
-      expect(() => helpers.disposeAllSources(consumer)).not.toThrow();
+      expect(() => helpers.detachAll(consumer)).not.toThrow();
       expect(consumer._sources).toBeUndefined();
     });
   });
 
-  describe('cleanupSources', () => {
+  describe('pruneStale', () => {
     it('should remove only nodes with old generation', () => {
       const sources = Array.from({ length: 4 }, (_, i) => ({
         __type: 'test',
@@ -105,7 +105,7 @@ describe('Source Cleanup Helpers', () => {
       
       // Create dependencies with current generation
       const nodes = sources.map((source) =>
-        depHelpers.linkNodes(source, consumer, source._version)
+        depHelpers.connect(source, consumer, source._version)
       );
       
       // Increment generation (simulating recomputation)
@@ -115,7 +115,7 @@ describe('Source Cleanup Helpers', () => {
       nodes[0]!.generation = consumer._generation;
       nodes[2]!.generation = consumer._generation;
       
-      helpers.cleanupSources(consumer);
+      helpers.pruneStale(consumer);
       
       // Count remaining sources
       let count = 0;
@@ -148,7 +148,7 @@ describe('Source Cleanup Helpers', () => {
       
       // Create dependencies
       const nodes = sources.map((source) =>
-        depHelpers.linkNodes(source, consumer, source._version)
+        depHelpers.connect(source, consumer, source._version)
       );
       
       // Increment generation and mark some nodes as accessed
@@ -157,7 +157,7 @@ describe('Source Cleanup Helpers', () => {
       nodes[2]!.generation = consumer._generation;
       nodes[4]!.generation = consumer._generation;
       
-      helpers.cleanupSources(consumer);
+      helpers.pruneStale(consumer);
       
       // Check that remaining nodes are properly linked
       let node = consumer._sources;
@@ -189,12 +189,12 @@ describe('Source Cleanup Helpers', () => {
         _refresh: () => true,
       };
       
-      depHelpers.linkNodes(source, consumer, 1);
+      depHelpers.connect(source, consumer, 1);
       
       // Increment generation but don't update any nodes
       consumer._generation++;
       
-      helpers.cleanupSources(consumer);
+      helpers.pruneStale(consumer);
       
       expect(consumer._sources).toBeUndefined();
     });
@@ -217,13 +217,13 @@ describe('Source Cleanup Helpers', () => {
       };
       
       sources.map((source) =>
-        depHelpers.linkNodes(source, consumer, 1)
+        depHelpers.connect(source, consumer, 1)
       );
       
       // Increment generation but don't update any nodes
       consumer._generation++;
       
-      helpers.cleanupSources(consumer);
+      helpers.pruneStale(consumer);
     });
 
     it('should handle empty sources gracefully', () => {
@@ -237,7 +237,7 @@ describe('Source Cleanup Helpers', () => {
       };
       
       // Should not throw
-      expect(() => helpers.cleanupSources(consumer)).not.toThrow();
+      expect(() => helpers.pruneStale(consumer)).not.toThrow();
       expect(consumer._sources).toBeUndefined();
     });
 
@@ -261,7 +261,7 @@ describe('Source Cleanup Helpers', () => {
       };
       
       const nodes = sources.map((source) =>
-        depHelpers.linkNodes(source, consumer, source._version)
+        depHelpers.connect(source, consumer, source._version)
       );
       
       // Increment generation and update only some nodes
@@ -270,10 +270,11 @@ describe('Source Cleanup Helpers', () => {
       nodes[1]!.generation = consumer._generation;
       // nodes[2] stays with old generation
       
-      helpers.cleanupSources(consumer);
+      helpers.pruneStale(consumer);
       
       // Consumer should now point to the second node
       expect(consumer._sources).toBe(nodes[1]);
     });
   });
 });
+

@@ -34,8 +34,8 @@
 import { CONSTANTS } from './constants';
 import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { DependencyHelpers, EdgeCache } from './helpers/dependency-tracking';
-import type { SourceCleanupHelpers } from './helpers/source-cleanup';
+import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
+import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 import type { GraphWalker } from './helpers/graph-walker';
@@ -60,16 +60,16 @@ const {
 interface ComputedFactoryContext extends SignalContext {
   workQueue: WorkQueue;
   graphWalker: GraphWalker;
-  dependencies: DependencyHelpers;
-  sourceCleanup: SourceCleanupHelpers;
+  dependencies: DependencyGraph;
+  sourceCleanup: DependencySweeper;
 }
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   const {
     workQueue: { enqueue },
     graphWalker: { walk },
-    dependencies: { addDependency, shouldNodeUpdate, checkNodeDirty },
-    sourceCleanup: { disposeAllSources, cleanupSources }
+    dependencies: { ensureLink, needsRecompute, hasStaleDependencies },
+    sourceCleanup: { detachAll, pruneStale }
   } = ctx;
   
   // OPTIMIZATION: Pre-defined notification handler for hot path
@@ -151,7 +151,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Post-Update Edge Synchronization
       // If we have a consumer, (now) register/update the dependency edge
       // Doing this once avoids redundant edge work on the hot path.
-      if (isTracking) addDependency(this, consumer, this._version);
+      if (isTracking) ensureLink(this, consumer, this._version);
       
       // Value is guaranteed to be defined after _update
       return this._value!;
@@ -210,9 +210,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         // 2. Clear RUNNING flag to allow future computations
         this._flags &= ~RUNNING;
         
-        // 3. Remove stale dependencies (those with version -1)
-        // This implements dynamic dependency tracking - dependencies can change between runs
-        cleanupSources(this);
+        // 3. Remove stale dependencies (dynamic dependency tracking)
+        pruneStale(this);
         // Clear traversal cursor after cleanup
         this._cursor = undefined;
       }
@@ -247,7 +246,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       
       // ALGORITHM: Conditional Recomputation
       // Check OUTDATED flag first (common case) or check dependencies if NOTIFIED
-      if (this._flags & OUTDATED || shouldNodeUpdate(this)) this._recompute();
+      if (this._flags & OUTDATED || needsRecompute(this)) this._recompute();
     }
 
     _refresh(): boolean {
@@ -273,7 +272,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       this._flags |= RUNNING;
       
       // If we have a valid cached value, check if dependencies changed
-      if (this._version > 0 && !checkNodeDirty(this)) {
+      if (this._version > 0 && !hasStaleDependencies(this)) {
         this._flags &= ~RUNNING;
         // Only cache global version after confirming we're actually clean
         this._globalVersion = ctx.version;
@@ -300,7 +299,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       this._flags |= DISPOSED;
       
       // Remove all edges to sources (break circular references for GC)
-      disposeAllSources(this);
+      detachAll(this);
       
       // Clear cached value to free memory
       this._value = undefined;

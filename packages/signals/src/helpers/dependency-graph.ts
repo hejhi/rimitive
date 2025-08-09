@@ -48,34 +48,34 @@ export type TrackedProducer = ProducerNode & EdgeCache;
 
 const { TRACKING, NOTIFIED, OUTDATED } = CONSTANTS;
 
-export interface DependencyHelpers {
-  linkNodes: (source: TrackedProducer | (TrackedProducer & ConsumerNode), target: ConsumerNode, version: number) => Edge;
-  addDependency: (source: TrackedProducer, target: ConsumerNode, version: number) => void;
-  removeFromTargets: (edge: Edge) => void;
-  checkNodeDirty: (node: ConsumerNode) => boolean;
-  shouldNodeUpdate: (node: ConsumerNode & { _flags: number; }, ctx?: { version: number }) => boolean;
+export interface DependencyGraph {
+  connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
+  ensureLink: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
+  unlinkFromProducer: (edge: Edge) => void;
+  hasStaleDependencies: (consumer: ConsumerNode) => boolean;
+  needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
 }
 
-export function createDependencyHelpers(): DependencyHelpers {
+export function createDependencyGraph(): DependencyGraph {
    // ALGORITHM: Edge Creation and Insertion
    // Creates a new edge between producer and consumer, inserting it at the head
    // of both linked lists for O(1) insertion
-   const linkNodes = (
-     source: TrackedProducer | (TrackedProducer & ConsumerNode),
-     target: ConsumerNode,
-     version: number
+   const connect = (
+     producer: TrackedProducer | (TrackedProducer & ConsumerNode),
+     consumer: ConsumerNode,
+     producerVersion: number
    ): Edge => {
      // Get current heads of both linked lists
-     const nextSource = target._sources; // Consumer's current first dependency
-     const nextTarget = source._targets; // Producer's current first dependent
+     const nextSource = consumer._sources; // Consumer's current first dependency
+     const nextTarget = producer._targets; // Producer's current first dependent
      
      // ALGORITHM: Doubly-Linked List Node Creation
      // Create new edge that will become the new head of both lists
      const newNode: Edge = {
-       source,
-       target,
-       version, // Store producer's version at time of edge creation
-       generation: target._generation, // Store consumer's generation for cleanup
+       source: producer,
+       target: consumer,
+       version: producerVersion, // Store producer's version at time of edge creation
+       generation: consumer._generation, // Store consumer's generation for cleanup
        prevSource: undefined, // Will be head, so no previous
        prevTarget: undefined, // Will be head, so no previous  
        nextSource, // Link to old head of consumer's sources
@@ -88,16 +88,16 @@ export function createDependencyHelpers(): DependencyHelpers {
      // FLAG: Computed nodes can be both producers AND consumers
      // When a computed has consumers, we set the TRACKING flag to indicate
      // it's part of an active dependency chain and should update when read
-     if ('_flags' in source) source._flags |= TRACKING;
+     if ('_flags' in producer) producer._flags |= TRACKING;
      
      if (nextSource) nextSource.prevSource = newNode;
 
      // Insert at head of both linked lists
-     target._sources = newNode; // Consumer now depends on this edge first
-     source._targets = newNode; // Producer now notifies this edge first
+     consumer._sources = newNode; // Consumer now depends on this edge first
+     producer._targets = newNode; // Producer now notifies this edge first
      
      // OPTIMIZATION: Cache this edge for fast repeated access
-     source._lastEdge = newNode;
+     producer._lastEdge = newNode;
 
      return newNode;
    };
@@ -105,57 +105,54 @@ export function createDependencyHelpers(): DependencyHelpers {
   // ALGORITHM: Dependency Registration with Deduplication
   // This is called during signal/computed reads to establish dependencies
   // It either updates an existing edge or creates a new one
-  const addDependency = (
-    source: ProducerNode & EdgeCache,
-    target: ConsumerNode,
-    version: number
+  const ensureLink = (
+    producer: ProducerNode & EdgeCache,
+    consumer: ConsumerNode,
+    producerVersion: number
   ): void => {
     // OPTIMIZATION: Check cached edge first (O(1) fast path)
-    const cached = source._lastEdge;
-    if (cached && cached.target === target) {
+    const cached = producer._lastEdge;
+    if (cached && cached.target === consumer) {
       // Edge exists in cache - just update version and generation
-      cached.version = version;
-      cached.generation = target._generation;
+      cached.version = producerVersion;
+      cached.generation = consumer._generation;
       return;
     }
 
     // OPTIMIZATION: Consumer-tail reuse (stable read order)
     // If target has a current cursor (set at run start), and the next expected
     // edge matches this source, update in O(1) and advance the cursor.
-    const cursor = target._cursor;
-    if (cursor && cursor.source === source) {
-      cursor.version = version;
-      cursor.generation = target._generation;
-      // Update producer cache for subsequent accesses
-      source._lastEdge = cursor;
-      // Advance cursor to the next expected edge
-      target._cursor = cursor.nextSource;
+    const cursor = consumer._cursor;
+    if (cursor && cursor.source === producer) {
+      cursor.version = producerVersion;
+      cursor.generation = consumer._generation;
+      producer._lastEdge = cursor;
+      consumer._cursor = cursor.nextSource;
       return;
     }
     
     // ALGORITHM: Linear Search for Existing Edge
     // Search through consumer's dependency list for existing edge
-    let node = target._sources;
+    let node = consumer._sources;
     while (node) {
-      if (node.source === source) {
+      if (node.source === producer) {
         // Found existing edge - update version, generation and cache it
-        node.version = version;
-        node.generation = target._generation;
-        // OPTIMIZATION: Update cache for next access
-        source._lastEdge = node;
+        node.version = producerVersion;
+        node.generation = consumer._generation;
+        producer._lastEdge = node;
         return;
       }
       node = node.nextSource;
     }
 
     // No existing edge found - create new one
-    linkNodes(source, target, version);
+    connect(producer, consumer, producerVersion);
   };
 
   // ALGORITHM: Edge Removal from Producer's Target List  
   // Removes an edge from the producer's linked list of consumers
   // This is O(1) because we have direct pointers to neighbors
-  const removeFromTargets = ({ source, prevTarget, nextTarget }: Edge): void => {
+  const unlinkFromProducer = ({ source, prevTarget, nextTarget }: Edge): void => {
     // Remove from doubly-linked list
     if (prevTarget) {
       // Middle or end of list - update previous node
@@ -197,8 +194,8 @@ export function createDependencyHelpers(): DependencyHelpers {
    * The recursion happens through _refresh() calls, but it's controlled by
    * RUNNING flags and global version checks to prevent stack overflow.
    */
-  const checkNodeDirty = (node: ConsumerNode): boolean => {
-    let source = node._sources;
+  const hasStaleDependencies = (consumer: ConsumerNode): boolean => {
+    let source = consumer._sources;
     while (source) {
       const sourceNode = source.source;
       const edgeVersion = source.version;
@@ -249,14 +246,13 @@ export function createDependencyHelpers(): DependencyHelpers {
    * - Fast path (OUTDATED check) is inlined in hot paths
    * - This function handles the slower NOTIFIED case
    */
-  const shouldNodeUpdate = (
+  const needsRecompute = (
     node: ConsumerNode & { _flags: number; },
   ): boolean => {
     // OPTIMIZATION: Only called for NOTIFIED case now
     // OUTDATED is handled inline in hot paths
     if (!(node._flags & NOTIFIED)) return false;
     
-    // OPTIMIZATION: NOTIFIED-only cheap scan (non-recursive)
     // If all direct sources have matching versions and are not themselves
     // NOTIFIED/OUTDATED, we can clear NOTIFIED and skip expensive checks.
     let e = node._sources;
@@ -273,7 +269,7 @@ export function createDependencyHelpers(): DependencyHelpers {
     }
     
     // Check if dependencies actually changed
-    const isDirty = checkNodeDirty(node);
+    const isDirty = hasStaleDependencies(node);
     
     if (isDirty) {
       // Dependencies changed - mark as OUTDATED for next time
@@ -286,5 +282,6 @@ export function createDependencyHelpers(): DependencyHelpers {
     return isDirty;
   };
 
-  return { addDependency, removeFromTargets, linkNodes, checkNodeDirty, shouldNodeUpdate };
+  return { ensureLink, unlinkFromProducer, connect, hasStaleDependencies, needsRecompute };
 }
+

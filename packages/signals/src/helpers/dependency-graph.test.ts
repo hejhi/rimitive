@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createDependencyHelpers, EdgeCache, TrackedProducer } from './dependency-tracking';
+import { createDependencyGraph, EdgeCache, TrackedProducer } from './dependency-graph';
 import type { ConsumerNode, ProducerNode } from '../types';
 
-describe('Dependency Tracking Helpers', () => {
-  let helpers: ReturnType<typeof createDependencyHelpers>;
+describe('Dependency Graph Helpers', () => {
+  let helpers: ReturnType<typeof createDependencyGraph>;
 
   beforeEach(() => {
-    helpers = createDependencyHelpers();
+    helpers = createDependencyGraph();
   });
 
-  describe('addDependency', () => {
+  describe('ensureLink', () => {
     it('should reuse cached node when available', () => {
       const source: TrackedProducer = {
         __type: 'test',
@@ -28,14 +28,14 @@ describe('Dependency Tracking Helpers', () => {
       };
       
       // First call creates the dependency
-      helpers.addDependency(source, target, 1);
+      helpers.ensureLink(source, target, 1);
       const cachedNode = source._lastEdge;
       
       // Update version
       source._version = 2;
       
       // Second call should reuse the cached node
-      helpers.addDependency(source, target, 2);
+      helpers.ensureLink(source, target, 2);
       
       expect(source._lastEdge).toBe(cachedNode);
       expect(source._lastEdge?.version).toBe(2);
@@ -59,7 +59,7 @@ describe('Dependency Tracking Helpers', () => {
       };
       
       // Create dependency manually
-      const existingNode = helpers.linkNodes(source, target, 1);
+      const existingNode = helpers.connect(source, target, 1);
       
       // Clear the cached node to force search
       source._lastEdge = undefined;
@@ -68,7 +68,7 @@ describe('Dependency Tracking Helpers', () => {
       source._version = 2;
       
       // Should find the existing dependency
-      helpers.addDependency(source, target, 2);
+      helpers.ensureLink(source, target, 2);
       
       expect(existingNode.version).toBe(2);
       expect(target._sources).toBe(existingNode);
@@ -91,7 +91,7 @@ describe('Dependency Tracking Helpers', () => {
         _refresh: () => true,
       };
       
-      helpers.addDependency(source, target, 1);
+      helpers.ensureLink(source, target, 1);
       
       expect(source._targets).toBeDefined();
       expect(target._sources).toBeDefined();
@@ -116,7 +116,7 @@ describe('Dependency Tracking Helpers', () => {
       
       // Add dependencies from multiple sources
       sources.forEach(source => {
-        helpers.addDependency(source, target, source._version);
+        helpers.ensureLink(source as TrackedProducer, target, (source as TrackedProducer)._version);
       });
       
       // Count sources
@@ -148,13 +148,13 @@ describe('Dependency Tracking Helpers', () => {
       };
       
       // Create initial dependency
-      helpers.addDependency(source, target, 1);
+      helpers.ensureLink(source, target, 1);
       
       // Update version
       source._version = 5;
       
       // Update dependency
-      helpers.addDependency(source, target, 5);
+      helpers.ensureLink(source, target, 5);
       
       // Check that version was updated
       const node = target._sources;
@@ -162,7 +162,7 @@ describe('Dependency Tracking Helpers', () => {
     });
   });
 
-  describe('linkNodes', () => {
+  describe('connect', () => {
       it('should create bidirectional links between source and target', () => {
         const source: ProducerNode & EdgeCache = {
           __type: 'test',
@@ -180,7 +180,7 @@ describe('Dependency Tracking Helpers', () => {
           _refresh: () => true,
         };
         
-        const node = helpers.linkNodes(source, target, 1);
+        const node = helpers.connect(source, target, 1);
         
         expect(node.source).toBe(source);
         expect(node.target).toBe(target);
@@ -216,8 +216,8 @@ describe('Dependency Tracking Helpers', () => {
           _refresh: () => true,
         };
         
-        const node1 = helpers.linkNodes(source, target1, 1);
-        const node2 = helpers.linkNodes(source, target2, 1);
+        const node1 = helpers.connect(source, target1, 1);
+        const node2 = helpers.connect(source, target2, 1);
         
         // Source should point to most recent target
         expect(source._targets).toBe(node2);
@@ -243,14 +243,14 @@ describe('Dependency Tracking Helpers', () => {
           _refresh: () => true,
         };
         
-        helpers.linkNodes(source, target, 1);
+        helpers.connect(source, target, 1);
         
         // TRACKING flag is 1 << 4 = 16
         expect(source._flags & 16).toBe(16);
       });
     });
   
-    describe('removeFromTargets', () => {
+    describe('unlinkFromProducer', () => {
       it('should remove node from targets list', () => {
         const source: ProducerNode & EdgeCache = {
           __type: 'test',
@@ -268,9 +268,9 @@ describe('Dependency Tracking Helpers', () => {
           _refresh: () => true,
         };
         
-        const node = helpers.linkNodes(source, target, 1);
+        const node = helpers.connect(source, target, 1);
         
-        helpers.removeFromTargets(node);
+        helpers.unlinkFromProducer(node);
         
         expect(source._targets).toBeUndefined();
       });
@@ -290,11 +290,11 @@ describe('Dependency Tracking Helpers', () => {
         }) as ConsumerNode);
         
         const nodes = targets.map(target => 
-          helpers.linkNodes(source, target, 1)
+          helpers.connect(source, target, 1)
         );
         
         // Remove middle node
-        helpers.removeFromTargets(nodes[1]!);
+        helpers.unlinkFromProducer(nodes[1]!);
         
         // Check that nodes[0] and nodes[2] are still linked
         expect(nodes[2]!.nextTarget).toBe(nodes[0]);
@@ -319,11 +319,12 @@ describe('Dependency Tracking Helpers', () => {
           _refresh: () => true,
         };
         
-        const node = helpers.linkNodes(source, target, 1);
+        const node = helpers.connect(source, target, 1);
         
-        helpers.removeFromTargets(node);
+        helpers.unlinkFromProducer(node);
         
         expect(source._flags & 16).toBe(0);
       });
     });
 });
+

@@ -53,15 +53,15 @@ export type ExtensionFactory<
 // For each factory, it extracts the method type and maps it to the same key
 // Also adds internal context and dispose method
 // Extract the required context type from a factory
-export type FactoryCtx<F> = F extends (ctx: infer C) => LatticeExtension<string, any> ? C : never;
+export type FactoryCtx<F> = F extends (ctx: infer C) => LatticeExtension<string, unknown> ? C : never;
 // Convert a union to an intersection
-export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+export type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (
   k: infer I
 ) => void
   ? I
   : never;
 // Combined required context across all factories
-export type CombinedCtx<T extends Record<string, (ctx: any) => LatticeExtension<string, any>>> =
+export type CombinedCtx<T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>> =
   UnionToIntersection<FactoryCtx<T[keyof T]>> extends infer I
     ? I extends SignalContext
       ? I
@@ -69,10 +69,10 @@ export type CombinedCtx<T extends Record<string, (ctx: any) => LatticeExtension<
     : SignalContext;
 
 export type FactoriesToAPI<
-  T extends Record<string, (ctx: any) => LatticeExtension<string, any>>,
+  T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>,
   TCtx extends SignalContext = CombinedCtx<T>
 > = {
-  [K in keyof T]: T[K] extends (ctx: any) => LatticeExtension<string, infer M> ? M : never;
+  [K in keyof T]: T[K] extends (ctx: unknown) => LatticeExtension<string, infer M> ? M : never;
 } & { 
   _ctx: TCtx;  // Exposed for advanced use cases
   dispose: () => void;  // Cleanup method from Lattice
@@ -83,7 +83,7 @@ export type FactoriesToAPI<
 // It allows users to pick exactly which primitives they need,
 // enabling optimal tree-shaking and extensibility
 export function createSignalAPI<
-  T extends Record<string, (ctx: any) => LatticeExtension<string, any>>,
+  T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>,
   TCtx extends SignalContext = CombinedCtx<T>
 >(
   factories: T,
@@ -105,9 +105,12 @@ export function createSignalAPI<
   // STEP 4: Build Final API
   // Combine Lattice methods with our signal context
   // The context is exposed as _ctx for advanced use cases
+  // TypeScript cannot precisely infer the mapping between factories and
+  // composed methods from the dynamic extensions array. We assert the shape
+  // here to align with FactoriesToAPI's contract.
   const api = {
-    ...latticeCtx,
-    _ctx: signalCtx as TCtx & CombinedCtx<T>,
+    ...(latticeCtx as unknown as Omit<FactoriesToAPI<T, TCtx & CombinedCtx<T>>, '_ctx'>),
+    _ctx: signalCtx,
   } as FactoriesToAPI<T, TCtx & CombinedCtx<T>>;
   
   return api;
