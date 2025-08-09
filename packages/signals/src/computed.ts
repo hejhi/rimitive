@@ -32,7 +32,7 @@
  */
 
 import { CONSTANTS } from './constants';
-import { Edge, Readable, ProducerNode, Disposable, ConsumerNode } from './types';
+import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
@@ -67,9 +67,18 @@ interface ComputedFactoryContext extends SignalContext {
 }
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
-  const { dependencies: { ensureLink, needsRecompute, hasStaleDependencies }, sourceCleanup: { detachAll, pruneStale }, propagator } = ctx;
+  const {
+    workQueue: { enqueue },
+    graphWalker,
+    dependencies: { ensureLink, needsRecompute, hasStaleDependencies },
+    sourceCleanup: { detachAll, pruneStale },
+    propagator,
+  } = ctx;
   
-  // No dedicated notify handler needed here; scheduling happens during propagation
+  // Scheduling visitor (shared with signal path)
+  const notifyNode = (node: ConsumerNode): void => {
+    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
+  };
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
@@ -203,10 +212,19 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Mark as potentially dirty
       this._flags |= NOTIFIED;
       
-      // ALGORITHM: Transitive Invalidation (Aggregated)
-      // If this computed has dependents, aggregate them as roots to be
-      // traversed once per batch. Actual traversal happens at batch end.
-      if (this._targets) propagator.add(this._targets);
+      // ALGORITHM: Transitive Invalidation with small-batch fast path
+      if (!this._targets) return;
+      if (ctx.batchDepth === 0) {
+        // Outside user batch: traverse immediately
+        graphWalker.dfs(this._targets, notifyNode);
+      } else {
+        // Inside user batch: avoid propagator overhead for tiny batches
+        if (propagator.size() < 3) {
+          graphWalker.dfs(this._targets, notifyNode);
+        } else {
+          propagator.add(this._targets);
+        }
+      }
     }
 
     _update(): void {

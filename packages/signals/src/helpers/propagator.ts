@@ -28,7 +28,8 @@ export function createPropagator(): Propagator {
   };
 
   const clear = (): void => {
-    roots = [];
+    // Reuse the array to avoid allocations per batch
+    roots.length = 0;
   };
 
   const size = (): number => roots.length;
