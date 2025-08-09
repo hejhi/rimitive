@@ -118,18 +118,6 @@ export function createDependencyGraph(): DependencyGraph {
       cached.generation = consumer._generation;
       return;
     }
-
-    // OPTIMIZATION: Consumer-tail reuse (stable read order)
-    // If target has a current cursor (set at run start), and the next expected
-    // edge matches this source, update in O(1) and advance the cursor.
-    const cursor = consumer._cursor;
-    if (cursor && cursor.source === producer) {
-      cursor.version = producerVersion;
-      cursor.generation = consumer._generation;
-      producer._lastEdge = cursor;
-      consumer._cursor = cursor.nextSource;
-      return;
-    }
     
     // ALGORITHM: Linear Search for Existing Edge
     // Search through consumer's dependency list for existing edge

@@ -64,11 +64,6 @@ export interface ProducerNode extends ReactiveNode {
 // They maintain a list of producers (sources) they depend on
 export interface ConsumerNode extends ReactiveNode {
   _sources: Edge | undefined; // Head of intrusive linked list of dependencies
-  // OPTIMIZATION: Per-run traversal cursor for O(1) edge reuse
-  // Points to the next expected dependency edge during a RUNNING computation.
-  // When reads occur in a stable order across runs, this lets addDependency
-  // update edges in O(1) without scanning or relying on producer caches.
-  _cursor?: Edge;
 
   // GENERATION COUNTER (STRUCTURAL CHANGE TRACKING)
   // Incremented before each recomputation to mark current "generation".

@@ -106,9 +106,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     _callback: () => void | (() => void);                // User's effect function
     _cleanup: (() => void) | undefined = undefined;      // Cleanup from previous run
     
-    // Per-run cursor for dependency edge reuse
-    _cursor: Edge | undefined = undefined;
-    
     // OPTIMIZATION: Last Verified Global Version
     // Cache the global ctx.version when we've verified that dependencies
     // did NOT change. If another NOTIFIED arrives without a global version
@@ -182,8 +179,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       ctx.currentConsumer = this;
 
       try {
-        // Initialize per-run cursor for O(1) dependency reuse
-        this._cursor = this._sources;
         // ALGORITHM: Generation-Based Dependency Tracking
         // Increment generation before execution
         // All edges accessed during this run will be marked with this generation
@@ -215,8 +210,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         
         // 3. Remove stale dependencies (dynamic dependency tracking)
         pruneStale(this);
-        // Clear traversal cursor
-        this._cursor = undefined;
       }
     }
 
