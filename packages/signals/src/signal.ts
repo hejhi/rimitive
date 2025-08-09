@@ -56,8 +56,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
   const {
     dependencies: { ensureLink }, 
     graphWalker: { walk },
-    workQueue: { enqueue, flush }
+    workQueue,
   } = ctx;
+  const { enqueue, flush, state } = workQueue;
 
   // OPTIMIZATION: Pre-defined notification handler for hot path
   // Avoids creating new function objects in the critical update path
@@ -145,16 +146,18 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // This reduces overhead for multiple signal updates within a batch
       const isNewBatch = ctx.batchDepth === 0;
       if (isNewBatch) ctx.batchDepth++;
-      
+
+      // Track queue tail to detect if any effects/subscriptions were scheduled
+      // during this invalidation. Flushing an empty queue adds overhead; skip it.
+      const prevTail = state.tail;
+
       // ALGORITHM: Push-Based Change Propagation
       // Walk the dependency graph starting from this signal's targets
       // Visit all dependent nodes to notify them of the change
       walk(this._targets, notifyNode);
-      
-      // Only flush if we created the batch
-      if (isNewBatch && --ctx.batchDepth === 0) {
-        flush();
-      }
+
+      // Only flush if we created the batch and actually enqueued work
+      if (isNewBatch && --ctx.batchDepth === 0 && state.tail !== prevTail) flush();
     }
 
 

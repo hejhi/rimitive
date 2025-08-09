@@ -184,9 +184,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = this;
       
-      try {
-        const oldValue = this._value;
-        
+      try {        
         // ALGORITHM: Execute User Computation
         // This may read signals/computeds, which will call addDependency
         const newValue = this._callback();
@@ -194,10 +192,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         // ALGORITHM: Change Detection and Version Update
         // Only increment version if value actually changed
         // Exception: always update on first run (version 0) to establish initial state
-        if (newValue !== oldValue || this._version === 0) {
+        if (newValue !== this._value || this._version === 0) {
           this._value = newValue;
           this._version++;
-          // FLAG: Using === equality like signals - objects need immutable updates
         }
         
         // Cache the global version to skip future checks if nothing changes
@@ -238,7 +235,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // we're being re-entered through a cyclic read during recomputation),
       // return the last cached value without attempting to update. This
       // mirrors non-throwing cycle handling and prevents infinite recursion.
-      if (this._flags & RUNNING) return;
+      if (this._flags & RUNNING || this._globalVersion === ctx.version) return;
       // OPTIMIZATION: Ultra-fast path for clean computeds
       // If our cached global version matches, NOTHING has changed globally
       // We can skip all checks - no signal changes means no flag changes
