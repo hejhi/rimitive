@@ -218,17 +218,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       
       // ALGORITHM: Transitive Invalidation with small-batch fast path
       if (!this._targets) return;
-      if (ctx.batchDepth === 0) {
-        // Outside user batch: traverse immediately
-        graphWalker.dfs(this._targets, notifyNode);
-      } else {
-        // Inside user batch: avoid propagator overhead for tiny batches
-        if (propagator.size() < 3) {
-          graphWalker.dfs(this._targets, notifyNode);
-        } else {
-          propagator.add(this._targets);
-        }
-      }
+      // Centralized invalidation logic via propagator
+      propagator.invalidate(this._targets, ctx.batchDepth > 0, graphWalker, notifyNode);
     }
 
     _update(): void {

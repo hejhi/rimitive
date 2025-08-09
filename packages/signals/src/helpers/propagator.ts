@@ -5,6 +5,13 @@ export interface Propagator {
   add: (from: Edge | undefined) => void;
   clear: () => void;
   size: () => number;
+  // Invalidate immediately or aggregate based on batching/threshold
+  invalidate: (
+    from: Edge | undefined,
+    isBatched: boolean,
+    walker: GraphWalker,
+    visit: (node: ConsumerNode) => void
+  ) => void;
   // Run a single traversal seeded by all added roots
   propagate: (
     walker: GraphWalker,
@@ -43,5 +50,28 @@ export function createPropagator(): Propagator {
     clear();
   };
 
-  return { add, clear, size, propagate };
+  // OPTIMIZATION: Centralized invalidation strategy
+  // - Outside batches: traverse immediately
+  // - Inside small batches: traverse immediately (threshold tuned to 2)
+  // - Large batches: aggregate for a single multi-root traversal at commit
+  const invalidate = (
+    from: Edge | undefined,
+    isBatched: boolean,
+    walker: GraphWalker,
+    visit: (node: ConsumerNode) => void
+  ): void => {
+    if (!from) return;
+    if (!isBatched) {
+      walker.dfs(from, visit);
+      return;
+    }
+    // Small-batch fast path to avoid array churn
+    if (roots.length < 2) {
+      walker.dfs(from, visit);
+      return;
+    }
+    roots.push(from);
+  };
+
+  return { add, clear, size, propagate, invalidate };
 }

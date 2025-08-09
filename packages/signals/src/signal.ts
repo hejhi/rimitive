@@ -154,19 +154,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // during this invalidation. Flushing an empty queue adds overhead; skip it.
       const prevTail = state.tail;
 
-      if (isNewBatch) {
-        // Fast path: traverse immediately when not inside a user batch
-        graphWalker.dfs(this._targets, notifyNode);
-        if (--ctx.batchDepth === 0 && state.tail !== prevTail) flush();
-      } else {
-        // Inside a user batch: small-batch fast path to avoid propagator overhead
-        if (propagator.size() < 3) {
-          graphWalker.dfs(this._targets, notifyNode);
-        } else {
-          // Aggregate roots for single traversal at commit
-          propagator.add(this._targets);
-        }
-      }
+      // Centralized invalidation logic via propagator
+      propagator.invalidate(this._targets, !isNewBatch, graphWalker, notifyNode);
+      if (isNewBatch && --ctx.batchDepth === 0 && state.tail !== prevTail) flush();
     }
 
 
