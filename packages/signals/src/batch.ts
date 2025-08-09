@@ -37,6 +37,9 @@
 import type { LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
+import type { GraphWalker } from './helpers/graph-walker';
+import type { Propagator } from './helpers/propagator';
+import type { ConsumerNode, ScheduledNode } from './types';
 
 // PATTERN: Error Wrapper for Non-Error Values
 // When user code throws non-Error values (strings, numbers, etc.),
@@ -51,10 +54,17 @@ class BatchError extends Error {
 
 interface BatchFactoryContext extends SignalContext {
   workQueue: WorkQueue;
+  graphWalker: GraphWalker;
+  propagator: Propagator;
 }
 
 export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { workQueue: { flush } } = ctx;
+  const { workQueue: { flush, enqueue }, graphWalker, propagator } = ctx;
+
+  // Shared scheduling visitor
+  const notifyNode = (node: ConsumerNode): void => {
+    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
+  };
 
   // ALGORITHM: Nested Batch Support
   // The batch function is reentrant - batches can be nested safely.
@@ -92,8 +102,9 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     
     if (shouldFlush) {
       try {
-        // Execute all effects that were scheduled during the batch
-        // They'll see the final state of all signal changes
+        // Perform a single multi-root propagation for this batch (DFS)
+        propagator.propagate(graphWalker, notifyNode);
+        // Execute all scheduled effects
         flush();
       } catch (error) {
         // CRITICAL: Reset batchDepth on flush error

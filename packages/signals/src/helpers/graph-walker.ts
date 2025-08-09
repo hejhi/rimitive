@@ -5,99 +5,131 @@ const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 
 // OPTIMIZATION: Pre-computed Bitmask
 // Combine flags that indicate a node should be skipped during traversal
-// Using bitwise OR at compile time for faster runtime checks
 const SKIP_FLAGS = NOTIFIED | DISPOSED | RUNNING;
 
 // ALGORITHM: Explicit Stack for Iterative DFS
-// Instead of using recursion (which can overflow on deep graphs),
-// we maintain an explicit stack of traversal frames.
-// Each frame represents a position in the graph we need to return to.
+// Instead of recursion, use our own stack frames.
 interface TraversalFrame {
-  edge: Edge; // The edge to process when we return to this frame
-  next: TraversalFrame | undefined; // Link to next frame (linked list stack)
+  edge: Edge;
+  next: TraversalFrame | undefined;
 }
 
 export interface GraphWalker {
+  // Default traversal (DFS) used by signals/computeds
   walk: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
+  // Depth-first traversal exposed explicitly
+  dfs: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
+  // Multi-root traversal (seeded by multiple producers)
+  dfsMany: (roots: (Edge | undefined)[], visit: (node: ConsumerNode) => void) => void;
 }
 
 /**
  * Creates a graph walker for efficient dependency graph traversal.
- * 
- * ALGORITHM: Iterative Depth-First Search with Explicit Stack
- * Traditional recursive DFS can cause stack overflow on deep dependency chains.
- * This implementation uses an explicit stack to traverse arbitrarily deep graphs.
- * 
- * INSPIRATION: This approach is similar to alien-signals and other high-performance
- * reactive libraries that prioritize handling deep dependency chains efficiently.
+ *
+ * ALGORITHM: Iterative DFS with flag-based short-circuiting
+ * - Uses NOTIFIED/DISPOSED/RUNNING flags to avoid redundant work
+ * - Relies on NOTIFIED as a per-walk dedup marker (set on first visit)
  */
 export function createGraphWalker(): GraphWalker {
-  /**
-   * ALGORITHM: Push-Phase Invalidation via Iterative DFS
-   *
-   * When a signal changes, we need to walk all transitively dependent
-   * nodes. This function implements the "push" phase of the push-pull algorithm.
-   *
-   * Key insights:
-   * 1. We only mark nodes as NOTIFIED (not OUTDATED) for lazy evaluation
-   * 2. Effects are scheduled but not executed (deferred until batch end)
-   * 3. Already notified nodes are skipped (prevents redundant traversal)
-   * 4. Depth-first order ensures proper invalidation ordering
-   */
-  const walk = (
+  // Depth-first traversal with explicit stack
+  const dfs = (
     from: Edge | undefined,
     visit: (node: ConsumerNode) => void
   ): void => {
     if (!from) return;
 
-    // ALGORITHM: Iterative DFS State
-    // - stack: Linked list of positions to return to (simulates call stack)
-    // - currentEdge: Current position in graph traversal
     let stack: TraversalFrame | undefined;
     let currentEdge: Edge | undefined = from;
 
-    // Main traversal loop - continues until all reachable nodes are processed
     while (currentEdge) {
       const target = currentEdge.target;
 
-      // OPTIMIZATION: Early Skip Check
-      // Skip nodes that are already processed or invalid
+      // Skip nodes already notified/disposed/running
       if (target._flags & SKIP_FLAGS) {
         currentEdge = currentEdge.nextTarget;
         continue;
       }
 
-      // Mark as notified
+      // Mark as NOTIFIED (lazy invalidation) and invoke visitor
       target._flags |= NOTIFIED;
-
-      // Visit this node
       visit(target);
 
-      // OPTIMIZATION: Linear Chain Fast Path
-      // Most dependency chains are linear (A→B→C). Handle these without stack.
+      // Linear chain fast path; defer siblings via stack for true DFS
       const nextSibling = currentEdge.nextTarget;
-      const childTargets = '_targets' in target ? target._targets : undefined;
+      const childTargets = (target as unknown as { _targets?: Edge })._targets;
 
       if (childTargets) {
-        // Has children to traverse
-        // Save sibling for later (need stack)
         if (nextSibling) stack = { edge: nextSibling, next: stack };
-
         currentEdge = childTargets;
         continue;
       }
 
       if (nextSibling) {
-        // No children, but has siblings
         currentEdge = nextSibling;
         continue;
       }
 
-      // No children or siblings - backtrack
       currentEdge = stack?.edge;
       stack = stack?.next;
     }
   };
 
-  return { walk };
+  // Depth-first traversal for multiple roots
+  const dfsMany = (
+    roots: (Edge | undefined)[],
+    visit: (node: ConsumerNode) => void
+  ): void => {
+    let stack: TraversalFrame | undefined;
+    let currentEdge: Edge | undefined = undefined;
+    let i = 0;
+
+    // Helper to advance to next available edge from stack or roots
+    const nextEdge = (): Edge | undefined => {
+      if (stack) {
+        const e = stack.edge;
+        stack = stack.next;
+        return e;
+      }
+      while (i < roots.length) {
+        const candidate = roots[i++];
+        if (candidate) return candidate;
+      }
+      return undefined;
+    };
+
+    currentEdge = nextEdge();
+    while (currentEdge) {
+      const target = currentEdge.target;
+
+      if (target._flags & SKIP_FLAGS) {
+        currentEdge = currentEdge.nextTarget ?? nextEdge();
+        continue;
+      }
+
+      target._flags |= NOTIFIED;
+      visit(target);
+
+      const nextSibling = currentEdge.nextTarget;
+      const childTargets = (target as unknown as { _targets?: Edge })._targets;
+
+      if (childTargets) {
+        if (nextSibling) stack = { edge: nextSibling, next: stack };
+        currentEdge = childTargets;
+        continue;
+      }
+
+      if (nextSibling) {
+        currentEdge = nextSibling;
+        continue;
+      }
+
+      currentEdge = nextEdge();
+    }
+  };
+
+
+
+  // Keep DFS as the default walk to preserve existing behavior
+  const walk = dfs;
+  return { walk, dfs, dfsMany };
 }

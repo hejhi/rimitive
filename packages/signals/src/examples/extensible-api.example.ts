@@ -17,11 +17,13 @@ import { createWorkQueue } from '../helpers/work-queue';
 import { createGraphWalker } from '../helpers/graph-walker';
 import { createDependencyGraph } from '../helpers/dependency-graph';
 import { createDependencySweeper } from '../helpers/dependency-sweeper';
+import { createPropagator } from '../helpers/propagator';
 
 // Example 1: Custom context with performance tracking
 interface PerformanceContext extends SignalContext {
   workQueue: ReturnType<typeof createWorkQueue>;
   graphWalker: ReturnType<typeof createGraphWalker>;
+  propagator: ReturnType<typeof createPropagator>;
   dependencies: ReturnType<typeof createDependencyGraph>;
   sourceCleanup: ReturnType<typeof createDependencySweeper>;
   performance: {
@@ -37,6 +39,7 @@ function createPerformanceContext(): PerformanceContext {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
+    propagator: createPropagator(),
     dependencies: createDependencyGraph(),
     sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
     performance: {
@@ -172,6 +175,7 @@ export function minimalExample() {
     ...createContext(),
     workQueue: loggingWorkQueue,
     graphWalker: createGraphWalker(),
+    propagator: createPropagator(),
     dependencies: createDependencyGraph(),
     sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
   });
@@ -215,6 +219,7 @@ export function defaultExample() {
     ...createContext(),
     workQueue: createWorkQueue(),
     graphWalker: createGraphWalker(),
+    propagator: createPropagator(),
     dependencies: createDependencyGraph(),
     sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
   });

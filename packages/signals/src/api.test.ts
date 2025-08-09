@@ -12,6 +12,7 @@ import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
 import { createDependencyGraph } from './helpers/dependency-graph';
 import { createDependencySweeper } from './helpers/dependency-sweeper';
+import { createPropagator } from './helpers/propagator';
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
@@ -66,6 +67,7 @@ describe('createSignalAPI', () => {
         };
       })(),
       graphWalker: createGraphWalker(),
+      propagator: createPropagator(),
       dependencies: createDependencyGraph(),
       sourceCleanup: (() => {
         const d = createDependencyGraph();
@@ -110,6 +112,7 @@ describe('createSignalAPI', () => {
         return queue;
       })(),
       graphWalker: createGraphWalker(),
+      propagator: createPropagator(),
       dependencies: createDependencyGraph(),
       sourceCleanup: (() => {
         const d = createDependencyGraph();

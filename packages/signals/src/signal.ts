@@ -32,6 +32,7 @@ import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 import type { GraphWalker } from './helpers/graph-walker';
+import type { Propagator } from './helpers/propagator';
 
 const { RUNNING } = CONSTANTS;
 
@@ -50,12 +51,14 @@ interface SignalFactoryContext extends SignalContext {
   workQueue: WorkQueue;
   graphWalker: GraphWalker;
   dependencies: DependencyGraph;
+  propagator: Propagator;
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const {
     dependencies: { ensureLink }, 
-    graphWalker: { walk },
+    graphWalker,
+    propagator,
     workQueue,
   } = ctx;
   const { enqueue, flush, state } = workQueue;
@@ -151,13 +154,14 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // during this invalidation. Flushing an empty queue adds overhead; skip it.
       const prevTail = state.tail;
 
-      // ALGORITHM: Push-Based Change Propagation
-      // Walk the dependency graph starting from this signal's targets
-      // Visit all dependent nodes to notify them of the change
-      walk(this._targets, notifyNode);
-
-      // Only flush if we created the batch and actually enqueued work
-      if (isNewBatch && --ctx.batchDepth === 0 && state.tail !== prevTail) flush();
+      if (isNewBatch) {
+        // Fast path: traverse immediately when not inside a user batch
+        graphWalker.dfs(this._targets, notifyNode);
+        if (--ctx.batchDepth === 0 && state.tail !== prevTail) flush();
+      } else {
+        // Inside a user batch: aggregate roots for single traversal at commit
+        propagator.add(this._targets);
+      }
     }
 
 

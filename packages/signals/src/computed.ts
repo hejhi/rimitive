@@ -32,13 +32,14 @@
  */
 
 import { CONSTANTS } from './constants';
-import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
+import { Edge, Readable, ProducerNode, Disposable, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 import type { GraphWalker } from './helpers/graph-walker';
+import type { Propagator } from './helpers/propagator';
 // no-op import removed: dev-only cycle detection eliminated
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
@@ -62,21 +63,13 @@ interface ComputedFactoryContext extends SignalContext {
   graphWalker: GraphWalker;
   dependencies: DependencyGraph;
   sourceCleanup: DependencySweeper;
+  propagator: Propagator;
 }
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
-  const {
-    workQueue: { enqueue },
-    graphWalker: { walk },
-    dependencies: { ensureLink, needsRecompute, hasStaleDependencies },
-    sourceCleanup: { detachAll, pruneStale }
-  } = ctx;
+  const { dependencies: { ensureLink, needsRecompute, hasStaleDependencies }, sourceCleanup: { detachAll, pruneStale }, propagator } = ctx;
   
-  // OPTIMIZATION: Pre-defined notification handler for hot path
-  // Reused across all computed invalidations to avoid function allocation
-  const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
-  };
+  // No dedicated notify handler needed here; scheduling happens during propagation
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
@@ -210,10 +203,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Mark as potentially dirty
       this._flags |= NOTIFIED;
       
-      // ALGORITHM: Transitive Invalidation
-      // If this computed has dependents, they might be affected too
-      // Walk the graph to notify all dependent nodes
-      if (this._targets) walk(this._targets, notifyNode);
+      // ALGORITHM: Transitive Invalidation (Aggregated)
+      // If this computed has dependents, aggregate them as roots to be
+      // traversed once per batch. Actual traversal happens at batch end.
+      if (this._targets) propagator.add(this._targets);
     }
 
     _update(): void {
@@ -222,10 +215,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // return the last cached value without attempting to update. This
       // mirrors non-throwing cycle handling and prevents infinite recursion.
       if (this._flags & RUNNING || this._globalVersion === ctx.version) return;
-      // OPTIMIZATION: Ultra-fast path for clean computeds
-      // If our cached global version matches, NOTHING has changed globally
-      // We can skip all checks - no signal changes means no flag changes
-      if (this._globalVersion === ctx.version) return;
       
       // ALGORITHM: Conditional Recomputation
       // Check OUTDATED flag first (common case) or check dependencies if NOTIFIED
