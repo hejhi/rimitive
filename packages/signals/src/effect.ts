@@ -99,7 +99,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     _flags = OUTDATED;                                   // Start OUTDATED to run on creation
     _sources: Edge | undefined = undefined;              // Dependencies this effect reads
     _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
-    _generation = 0;                                     // Generation counter for edge cleanup
     
     // Cold fields (accessed less frequently)
     __type = 'effect' as const;                          // Type discriminator
@@ -179,10 +178,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       ctx.currentConsumer = this;
 
       try {
-        // ALGORITHM: Generation-Based Dependency Tracking
-        // Increment generation before execution
-        // All edges accessed during this run will be marked with this generation
-        this._generation++;
 
         // ALGORITHM: Cleanup Before Re-execution
         // If the effect returned a cleanup function last time, run it first

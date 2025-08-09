@@ -75,7 +75,7 @@ export function createDependencyGraph(): DependencyGraph {
        source: producer,
        target: consumer,
        version: producerVersion, // Store producer's version at time of edge creation
-       generation: consumer._generation, // Store consumer's generation for cleanup
+       marked: true, // Mark as used during current run
        prevSource: undefined, // Will be head, so no previous
        prevTarget: undefined, // Will be head, so no previous  
        nextSource, // Link to old head of consumer's sources
@@ -113,9 +113,9 @@ export function createDependencyGraph(): DependencyGraph {
     // OPTIMIZATION: Check cached edge first (O(1) fast path)
     const cached = producer._lastEdge;
     if (cached && cached.target === consumer) {
-      // Edge exists in cache - just update version and generation
+      // Edge exists in cache - just update version and mark
       cached.version = producerVersion;
-      cached.generation = consumer._generation;
+      cached.marked = true;
       return;
     }
     
@@ -124,9 +124,9 @@ export function createDependencyGraph(): DependencyGraph {
     let node = consumer._sources;
     while (node) {
       if (node.source === producer) {
-        // Found existing edge - update version, generation and cache it
+        // Found existing edge - update version, mark and cache it
         node.version = producerVersion;
-        node.generation = consumer._generation;
+        node.marked = true;
         producer._lastEdge = node;
         return;
       }
@@ -272,4 +272,3 @@ export function createDependencyGraph(): DependencyGraph {
 
   return { ensureLink, unlinkFromProducer, connect, hasStaleDependencies, needsRecompute };
 }
-

@@ -65,19 +65,6 @@ export interface ProducerNode extends ReactiveNode {
 export interface ConsumerNode extends ReactiveNode {
   _sources: Edge | undefined; // Head of intrusive linked list of dependencies
 
-  // GENERATION COUNTER (STRUCTURAL CHANGE TRACKING)
-  // Incremented before each recomputation to mark current "generation".
-  // Used for dynamic dependency cleanup after conditional logic changes.
-  //
-  // PURPOSE: Identifies which edges were accessed in current computation
-  // - Before recompute: increment generation
-  // - During recompute: set edge.generation = this._generation for accessed deps
-  // - After recompute: remove edges where edge.generation !== this._generation
-  //
-  // NOT REDUNDANT WITH VERSIONS: This tracks WHICH dependencies are active,
-  // while versions track WHEN values change.
-  _generation: number;
-
   _invalidate(): void; // Called when dependencies change
   _refresh(): boolean;
   _flags: number; // Bit field containing OUTDATED, RUNNING, DISPOSED, etc.
@@ -131,17 +118,10 @@ export interface Edge {
   // NOT REDUNDANT: This is a cache of producer._version for performance
   version: number;
 
-  // CACHED CONSUMER GENERATION (EDGE LIFECYCLE)
-  // Stores the consumer's _generation when this edge was last accessed.
-  // Updated whenever consumer reads from producer during recomputation.
-  //
-  // PURPOSE: Identifies stale edges for cleanup
-  // - If edge.generation !== consumer._generation, edge wasn't used
-  // - Enables automatic cleanup of conditional dependencies
-  //
-  // ORTHOGONAL TO VERSION: Version tracks value changes (temporal),
-  // generation tracks edge usage (structural)
-  generation: number;
+  // MARK BIT FOR DYNAMIC DEPENDENCY TRACKING
+  // Set to true when an edge is accessed during a run.
+  // After the run, edges not marked are pruned; kept edges are reset to false.
+  marked?: boolean;
 }
 
 // Ensure module is not tree-shaken

@@ -22,7 +22,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _sources: undefined,
-        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -53,7 +52,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _sources: undefined,
-        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -86,7 +84,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _sources: undefined,
-        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -109,7 +106,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _sources: undefined,
-        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -142,7 +138,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _sources: undefined,
-        _generation: 0,
         _invalidate: () => {},
         _refresh: () => true,
       };
@@ -174,8 +169,7 @@ describe('Dependency Graph Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _sources: undefined,
-          _generation: 0,
+        _sources: undefined,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -202,7 +196,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _sources: undefined,
-          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -211,7 +204,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _sources: undefined,
-          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -238,7 +230,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _sources: undefined,
-          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -263,7 +254,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _sources: undefined,
-          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -314,7 +304,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _sources: undefined,
-          _generation: 0,
           _invalidate: () => {},
           _refresh: () => true,
         };
@@ -327,4 +316,3 @@ describe('Dependency Graph Helpers', () => {
       });
     });
 });
-

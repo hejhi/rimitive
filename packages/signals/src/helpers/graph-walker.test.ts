@@ -35,7 +35,6 @@ describe('GraphWalker', () => {
     const node: ConsumerNode & Partial<ProducerNode & ScheduledNode> = {
       __type: type,
       _sources: undefined,
-      _generation: 0,
       _flags: flags,
       _invalidate: () => {},
       _refresh: () => true,
@@ -55,7 +54,7 @@ describe('GraphWalker', () => {
       source,
       target,
       version: 0,
-      generation: 0,
+      marked: false,
       prevSource: undefined,
       nextSource: undefined,
       prevTarget: undefined,

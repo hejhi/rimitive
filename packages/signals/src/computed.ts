@@ -124,10 +124,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // Without it, every access would need to validate all dependencies.
     _globalVersion = -1;
     
-    // OPTIMIZATION: Generation Counter for Edge Cleanup
-    // Incremented before each recomputation to mark "current" edges
-    // Edges with generation !== this value are stale and removed
-    _generation = 0;
+    // NOTE: Edge lifecycle is managed via per-edge mark bits during runs
 
     constructor(compute: () => T) {
       this._callback = compute;
@@ -168,11 +165,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Set RUNNING, clear OUTDATED and NOTIFIED in one operation
       this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
       
-      // ALGORITHM: Generation-Based Dependency Tracking
-      // Increment generation counter before recomputation
-      // All edges accessed during this run will be marked with this generation
-      // After recomputation, edges with old generation are removed
-      this._generation++;
+      // Edge marks will be set during ensureLink; stale edges pruned after run
       
       // ALGORITHM: Context Switching for Dependency Tracking
       // Set ourselves as the current consumer so signal reads register with us

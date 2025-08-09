@@ -72,8 +72,8 @@ export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void
   };
 
   // ALGORITHM: Selective Edge Removal for Dynamic Dependencies
-  // After a computed/effect runs, we need to remove edges to dependencies
-  // that were NOT accessed during the run (generation != consumer's generation)
+  // After a computed/effect runs, remove edges that were NOT accessed
+  // during the run. We mark accessed edges with edge.marked = true in ensureLink.
   const pruneStale = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
     let prev: Edge | undefined;
@@ -81,8 +81,7 @@ export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void
     // Walk the linked list, removing nodes with old generation
     while (node !== undefined) {
       const next = node.nextSource;
-
-      if (node.generation !== consumer._generation) {
+      if (!node.marked) {
         // ALGORITHM: Linked List Removal
         // This dependency wasn't accessed - remove it
         
@@ -103,6 +102,8 @@ export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void
         // Don't update prev - it stays the same for next iteration
       } else {
         // This dependency was accessed - keep it
+        // Reset mark for the next run
+        node.marked = false;
         // Update prev for next iteration
         prev = node;
       }
@@ -113,4 +114,3 @@ export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void
 
   return { detachAll, pruneStale };
 }
-
