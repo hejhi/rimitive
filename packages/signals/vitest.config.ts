@@ -9,5 +9,12 @@ export default defineConfig({
       '**/node_modules/**',
       '**/dist/**',
     ],
+    // Prefer threads to avoid child-process kill in constrained sandbox
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
 });
