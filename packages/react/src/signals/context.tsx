@@ -1,19 +1,22 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
-import { createBatchFactory } from '@lattice/signals/batch';
-import { createSubscribeFactory } from '@lattice/signals/subscribe';
+import type { SignalInterface } from '@lattice/signals/signal';
+import type { ComputedInterface } from '@lattice/signals/computed';
+import type { EffectDisposer } from '@lattice/signals/effect';
+import type { Readable, ProducerNode } from '@lattice/signals/types';
 
-// Type for the signal API - use the actual return type
-type SignalAPI = ReturnType<typeof createSignalAPI<{
-  signal: typeof createSignalFactory;
-  computed: typeof createComputedFactory;
-  effect: typeof createEffectFactory;
-  batch: typeof createBatchFactory;
-  subscribe: typeof createSubscribeFactory;
-}>>;
+// Minimal API shape used by React bindings
+export interface SignalAPI {
+  signal: <T>(value: T) => SignalInterface<T>;
+  computed: <T>(compute: () => T) => ComputedInterface<T>;
+  effect: (fn: () => void | (() => void)) => EffectDisposer;
+  batch: <T>(fn: () => T) => T;
+  subscribe: <T>(
+    source: Readable<T> & ProducerNode,
+    callback: (value: T) => void,
+    options?: { skipEqualityCheck?: boolean }
+  ) => () => void;
+  dispose: () => void;
+}
 
 // Create the React Context
 const SignalContext = createContext<SignalAPI | null>(null);

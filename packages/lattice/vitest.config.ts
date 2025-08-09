@@ -10,5 +10,11 @@ export default defineConfig({
       '**/dist/**',
       '**/adapters/contract.test.ts', // This is a test suite generator, not tests
     ],
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true,
+      },
+    },
   },
 });
