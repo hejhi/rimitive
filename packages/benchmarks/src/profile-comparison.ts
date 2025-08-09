@@ -10,21 +10,23 @@ import { createSignalFactory, type SignalInterface } from '@lattice/signals/sign
 import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
 import { createBatchFactory } from '@lattice/signals/batch';
 import { createEffectFactory } from '@lattice/signals/effect';
+// Minimal local type to avoid workspace dep
+type LatticeExtension<N extends string, M> = { name: N; method: M };
 import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
 
 // Create Lattice API instance
-const {
-  signal: latticeSignal,
-  computed: latticeComputed,
-} = createSignalAPI({
-  signal: createSignalFactory,
-  computed: createComputedFactory,
-  batch: createBatchFactory,
-  effect: createEffectFactory,
+const latticeAPI = createSignalAPI({
+  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+  computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+  batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+  effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => unknown>,
 }, createDefaultContext());
+
+const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
+const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
 
 interface ProfileResult {
   name: string;

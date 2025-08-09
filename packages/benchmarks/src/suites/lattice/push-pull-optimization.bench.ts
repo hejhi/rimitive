@@ -23,9 +23,10 @@ import {
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
 import { createDefaultContext } from '@lattice/signals/default-context';
-import { createSignalFactory } from '@lattice/signals/signal';
+import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
 import { ComputedInterface, createComputedFactory } from '@lattice/signals/computed';
 import { createBatchFactory } from '@lattice/signals/batch';
+type LatticeExtension<N extends string, M> = { name: N; method: M };
 import {
   signal as alienSignal,
   computed as alienComputed,
@@ -34,14 +35,14 @@ import {
 const ITERATIONS = 10000;
 
 // Create Lattice API instance
-const {
-  signal: latticeSignal,
-  computed: latticeComputed,
-} = createSignalAPI({
-  signal: createSignalFactory,
-  computed: createComputedFactory,
-  batch: createBatchFactory,
+const latticeAPI = createSignalAPI({
+  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+  computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+  batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
 }, createDefaultContext());
+
+const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
+const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
 
 describe('Push-Pull: Filtered Diamond Dependencies', () => {
   /**

@@ -156,56 +156,12 @@ async function runBenchmarkSuite(suiteName, category, timestamp) {
     
     child.on('error', (error) => {
       console.error(`❌ Error running ${suiteName} benchmark:`, error);
-      resolve({ suite: suiteName, outputFile, status: 'error', error: error.message });
+      resolve({ suite: suiteName, outputFile: path.basename(jsonOutPath), status: 'error', error: error.message });
     });
   });
 }
 
-/**
- * Enhance JSON output with memory data from stdout
- */
-async function enhanceJsonWithMemoryData(outputPath, stdout) {
-  try {
-    // Read the existing JSON output
-    const jsonContent = await fs.readFile(outputPath, 'utf8');
-    const data = JSON.parse(jsonContent);
-    
-    // Parse memory information from stdout
-    const memoryData = parseMemoryFromOutput(stdout);
-    
-    // Enhance the JSON with memory information
-    const enhancedData = {
-      ...data,
-      memoryTracking: {
-        enabled: true,
-        parsedFromOutput: true,
-        memoryMeasurements: memoryData
-      }
-    };
-    
-    // Enhance individual benchmark results
-    if (enhancedData.files) {
-      enhancedData.files = enhancedData.files.map(file => ({
-        ...file,
-        groups: file.groups?.map(group => ({
-          ...group,
-          benchmarks: group.benchmarks?.map(benchmark => {
-            const memInfo = memoryData.find(m => m.benchmarkName === benchmark.name);
-            return {
-              ...benchmark,
-              memoryUsage: memInfo || null
-            };
-          })
-        }))
-      }));
-    }
-    
-    // Write enhanced JSON back
-    await fs.writeFile(outputPath, JSON.stringify(enhancedData, null, 2));
-  } catch (error) {
-    console.warn('Failed to enhance JSON with memory data:', error.message);
-  }
-}
+// Note: JSON enhancement function removed due to lack of use; keep script minimal
 
 /**
  * Parse memory measurements from stdout

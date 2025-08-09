@@ -1,19 +1,23 @@
 import { createSignalAPI } from '@lattice/signals/api';
 import { createDefaultContext } from '@lattice/signals/default-context';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
+import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
+import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
+import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
 import { createBatchFactory } from '@lattice/signals/batch';
+type LatticeExtension<N extends string, M> = { name: N; method: M };
 
 // Create signal API instance
 const signalAPI = createSignalAPI({
-  signal: createSignalFactory,
-  computed: createComputedFactory,
-  effect: createEffectFactory,
-  batch: createBatchFactory,
+  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+  computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+  effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+  batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
 }, createDefaultContext());
 
-const { signal, computed, effect, batch } = signalAPI;
+const signal = signalAPI.signal as <T>(value: T) => SignalInterface<T>;
+const computed = signalAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
+const effect = signalAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
+const batch = signalAPI.batch as <T>(fn: () => T) => T;
 
 // Counter State
 const count = signal(0);
@@ -39,11 +43,11 @@ const todos = signal<Todo[]>([
 ]);
 
 const completedCount = computed(() => {
-  return todos.value.filter(todo => todo.completed).length;
+  return todos.value.filter((todo: Todo) => todo.completed).length;
 });
 
 const allCompleted = computed(() => {
-  return todos.value.length > 0 && todos.value.every(todo => todo.completed);
+  return todos.value.length > 0 && todos.value.every((todo: Todo) => todo.completed);
 });
 
 // Effects

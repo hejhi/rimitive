@@ -13,9 +13,10 @@ import {
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
 import { createDefaultContext } from '@lattice/signals/default-context';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
-import { createEffectFactory } from '@lattice/signals/effect';
+import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
+import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
+import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
+type LatticeExtension<N extends string, M> = { name: N; method: M };
 import {
   signal as alienSignal,
   computed as alienComputed,
@@ -24,15 +25,15 @@ import {
 import { measureMemoryOnce, forceGC } from '../../utils/memory';
 
 // Create Lattice API instance
-const {
-  signal: latticeSignal,
-  computed: latticeComputed,
-  effect: latticeEffect
-} = createSignalAPI({
-  signal: createSignalFactory,
-  computed: createComputedFactory,
-  effect: createEffectFactory,
+const latticeAPI = createSignalAPI({
+  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+  computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+  effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
 }, createDefaultContext());
+
+const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
+const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
+const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
 
 // forceGC is imported from utils/memory
 

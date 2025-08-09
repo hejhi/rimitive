@@ -8,19 +8,23 @@
 import { describe, bench } from 'vitest';
 import { createSignalAPI } from '@lattice/signals/api';
 import { createDefaultContext } from '@lattice/signals/default-context';
-import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
+import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
+import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
 import { createBatchFactory } from '@lattice/signals/batch';
 import { createEffectFactory } from '@lattice/signals/effect';
+type LatticeExtension<N extends string, M> = { name: N; method: M };
 
 const ITERATIONS = 100000;
 
-const { signal, computed } = createSignalAPI({
-  signal: createSignalFactory,
-  computed: createComputedFactory,
-  batch: createBatchFactory,
-  effect: createEffectFactory,
+const latticeAPI = createSignalAPI({
+  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+  computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
+  batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+  effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => unknown>,
 }, createDefaultContext());
+
+const signal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
+const computed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
 
 describe('Lattice - read-only micro', () => {
   const s = signal(1);
@@ -41,4 +45,3 @@ describe('Lattice - read-only micro', () => {
     if (acc === Number.MIN_VALUE) console.log('noop');
   });
 });
-

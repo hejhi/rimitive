@@ -22,7 +22,9 @@ export function forceGC() {
       globalThis.gc();
       globalThis.gc();
     }
-  } catch {}
+  } catch {
+    // noop: ignore environments without gc
+  }
 }
 
 export function measureMemoryOnce<T>(name: string, work: () => T): T {
@@ -42,15 +44,11 @@ export function measureMemoryOnce<T>(name: string, work: () => T): T {
     const delta = total - setup;
     // These strings are parsed by scripts/run-chunked-benchmarks.js
     // Pattern: "<name> setup memory: <value unit>" etc.
-    // eslint-disable-next-line no-console
     console.log(`${name} setup memory: ${formatBytes(setup)}`);
-    // eslint-disable-next-line no-console
     console.log(`${name} memory delta: ${formatBytes(delta)}`);
-    // eslint-disable-next-line no-console
     console.log(`${name} total memory: ${formatBytes(total)}`);
     logged.add(name);
   }
 
   return result;
 }
-

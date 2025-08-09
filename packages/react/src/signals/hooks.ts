@@ -74,7 +74,7 @@ export function useSignal<T>(
     signalRef.current = api.signal(value);
   }
 
-  const sig = signalRef.current!; // Created on first render
+  const sig = signalRef.current; // Created on first render
 
   // Stable setter function
   const setter = useCallback<SignalSetter<T>>(
@@ -126,5 +126,5 @@ export function useSelector<T, R>(
     computedRef.current = api.computed(() => selectorRef.current(signal.value));
   }
 
-  return useSubscribe(computedRef.current!);
+  return useSubscribe(computedRef.current);
 }
