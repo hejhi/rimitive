@@ -119,14 +119,34 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
     
-    // ALGORITHM: Linear Search for Existing Edge
-    // Search through consumer's dependency list for existing edge
+    // ALGORITHM: Linear Search with Move-To-Front (MTF)
+    // Search through consumer's dependency list for existing edge.
+    // On hit, splice the edge to the head to reduce future lookup cost.
     let node = consumer._sources;
     while (node) {
       if (node.source === producer) {
-        // Found existing edge - update version, generation and cache it
+        // Update edge metadata
         node.version = producerVersion;
         node.gen = consumer._gen ?? 0;
+
+        // Move-To-Front: if not already head, splice to head
+        if (node !== consumer._sources) {
+          const prev = node.prevSource;
+          const next = node.nextSource;
+
+          // Detach from current position
+          if (prev) prev.nextSource = next; else consumer._sources = next;
+          if (next) next.prevSource = prev;
+
+          // Insert at head
+          const oldHead = consumer._sources;
+          node.prevSource = undefined;
+          node.nextSource = oldHead;
+          if (oldHead) oldHead.prevSource = node;
+          consumer._sources = node;
+        }
+
+        // Cache on producer for fast subsequent hits
         producer._lastEdge = node;
         return;
       }
