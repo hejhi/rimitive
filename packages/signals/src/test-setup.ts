@@ -64,10 +64,10 @@ export function createTestInstance() {
       if (ctx.batchDepth > 0) ctx.batchDepth--;
     },
     getBatchDepth: () => ctx.batchDepth,
-    hasPendingEffects: () => ctx.workQueue.state.tail !== ctx.workQueue.state.head,
+    hasPendingEffects: () => ctx.workQueue.state.size > 0,
     clearBatch: () => {
-      ctx.workQueue.state.head = 0;
-      ctx.workQueue.state.tail = 0;
+      ctx.workQueue.state.head = undefined;
+      ctx.workQueue.state.size = 0;
       // Reset batch depth safely
       ctx.batchDepth = 0;
     },
@@ -78,14 +78,15 @@ export function createTestInstance() {
     },
     getCurrentConsumer: () => ctx.currentConsumer,
     resetGlobalState: () => {
-      // Clear any pending scheduled effects
-      const count = ctx.workQueue.state.tail - ctx.workQueue.state.head;
-      for (let i = 0; i < count; i++) {
-        const consumer = ctx.workQueue.state.queue![(ctx.workQueue.state.head + i) & ctx.workQueue.state.mask];
-        if (consumer) consumer._nextScheduled = undefined;
+      // Clear any pending scheduled effects by walking the intrusive stack
+      let node = ctx.workQueue.state.head;
+      while (node) {
+        const next = node._nextScheduled as any;
+        node._nextScheduled = undefined;
+        node = next;
       }
-      ctx.workQueue.state.head = 0;
-      ctx.workQueue.state.tail = 0;
+      ctx.workQueue.state.head = undefined;
+      ctx.workQueue.state.size = 0;
 
       // Reset context
       ctx.currentConsumer = null;
@@ -129,18 +130,20 @@ export const activeContext = (() => {
     get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
     get scheduledCount() { 
-      return defaultInstance.workQueue.state.tail - defaultInstance.workQueue.state.head;
+      return defaultInstance.workQueue.state.size;
     },
     get scheduledQueue() { 
-      return defaultInstance.workQueue.state.queue;
+      // Materialize the current intrusive stack as an array snapshot
+      const out: any[] = [];
+      let node = defaultInstance.workQueue.state.head as any;
+      while (node) { out.push(node); node = node._nextScheduled; }
+      return out;
     },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
     set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
-    set scheduledCount(v) { 
-      // Reset queue to simulate setting count to v
-      defaultInstance.workQueue.state.head = 0;
-      defaultInstance.workQueue.state.tail = v;
+    set scheduledCount(_v) { 
+      // No-op in intrusive queue; kept for backward compat with tests (unused)
     },
     set currentConsumer(v) { defaultInstance.activeContext.currentConsumer = v; },
   };

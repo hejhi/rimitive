@@ -152,11 +152,11 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
 
       // Track queue tail to detect if any effects/subscriptions were scheduled
       // during this invalidation. Flushing an empty queue adds overhead; skip it.
-      const prevTail = state.tail;
+      const prevSize = state.size;
 
       // Centralized invalidation logic via propagator
       propagator.invalidate(this._targets, !isNewBatch, graphWalker, notifyNode);
-      if (isNewBatch && --ctx.batchDepth === 0 && state.tail !== prevTail) flush();
+      if (isNewBatch && --ctx.batchDepth === 0 && state.size !== prevSize) flush();
     }
 
 

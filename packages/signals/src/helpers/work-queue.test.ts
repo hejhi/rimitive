@@ -21,10 +21,8 @@ describe('WorkQueue', () => {
     };
     
     helpers.enqueue(node);
-    
-    expect(helpers.state.queue![helpers.state.head & helpers.state.mask]).toBe(node);
-    expect(helpers.state.tail - helpers.state.head).toBe(1);
-    expect(node._nextScheduled).toBe(node); // Used as a flag
+    expect(helpers.state.size).toBe(1);
+    expect(node._nextScheduled).toBeDefined(); // scheduled flag via pointer
   });
 
   it('should not enqueue already scheduled nodes', () => {
@@ -43,11 +41,11 @@ describe('WorkQueue', () => {
     
     // Enqueue once
     helpers.enqueue(node);
-    expect(helpers.state.tail - helpers.state.head).toBe(1);
+    expect(helpers.state.size).toBe(1);
     
     // Try to enqueue again - should be skipped
     helpers.enqueue(node);
-    expect(helpers.state.tail - helpers.state.head).toBe(1);
+    expect(helpers.state.size).toBe(1);
   });
 
   it('should dispose node only once', () => {
@@ -122,7 +120,7 @@ describe('WorkQueue', () => {
     
     helpers.flush();
     
-    expect(helpers.state.tail - helpers.state.head).toBe(0);
+    expect(helpers.state.size).toBe(0);
     expect(flush1).toHaveBeenCalledTimes(1);
     expect(flush2).toHaveBeenCalledTimes(1);
     expect(flush3).toHaveBeenCalledTimes(1);
@@ -132,66 +130,6 @@ describe('WorkQueue', () => {
     expect(flush2.mock.invocationCallOrder[0]!).toBeLessThan(flush1.mock.invocationCallOrder[0]!);
   });
 
-  it('should throw on queue overflow', () => {
-    const helpers = createWorkQueue();
-    
-    // Fill the queue to capacity
-    for (let i = 0; i < 256; i++) {
-      const node: ScheduledNode = {
-        __type: 'test',
-        _flags: 0,
-        _nextScheduled: undefined,
-        _flush: vi.fn(),
-        _invalidate: vi.fn(),
-        _sources: undefined,
-        dispose: () => {},
-        _refresh: () => true
-      };
-      helpers.enqueue(node);
-    }
-    
-    // The 257th node should cause an overflow error
-    const overflowNode: ScheduledNode = {
-      __type: 'test',
-      _flags: 0,
-      _nextScheduled: undefined,
-      _flush: vi.fn(),
-      _invalidate: vi.fn(),
-      _sources: undefined,
-      dispose: () => {},
-      _refresh: () => true
-    };
-    
-    expect(() => helpers.enqueue(overflowNode)).toThrow(/Queue overflow: 256/);
-  });
-
-  it('should reset queue counters to prevent integer overflow', () => {
-    const helpers = createWorkQueue();
-    
-    // Set tail close to overflow threshold
-    helpers.state.tail = 0x7FFFFFF1;
-    helpers.state.head = 0x7FFFFFF1;
-    
-    // Schedule and flush a node
-    const node: ScheduledNode = {
-      __type: 'test',
-      _flags: 0,
-      _nextScheduled: undefined,
-      _flush: vi.fn(),
-      _invalidate: vi.fn(),
-      _sources: undefined,
-      dispose: () => {},
-      _refresh: () => true,
-    };
-    
-    helpers.enqueue(node);
-    helpers.flush();
-    
-    // Should have reset to 0
-    expect(helpers.state.head).toBe(0);
-    expect(helpers.state.tail).toBe(0);
-  });
-
   it('should handle empty flush', () => {
     const helpers = createWorkQueue();
     
@@ -199,8 +137,8 @@ describe('WorkQueue', () => {
     expect(() => helpers.flush()).not.toThrow();
     
     // State should remain unchanged
-    expect(helpers.state.tail).toBe(0);
-    expect(helpers.state.head).toBe(0);
+    expect(helpers.state.size).toBe(0);
+    expect(helpers.state.head).toBeUndefined();
   });
 
   it('should clear _nextScheduled flag during flush', () => {
