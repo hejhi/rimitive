@@ -6,7 +6,7 @@
  * of change propagation when most signals remain unchanged.
  */
 
-import { run, bench, group } from 'mitata';
+import { run, bench, group, summary, barplot } from 'mitata';
 
 // Type for mitata benchmark state
 interface BenchState {
@@ -49,77 +49,81 @@ function makeIndices(total: number, ratio: number): number[] {
 }
 
 group('Subscription Updates', () => {
-  bench('Preact - $sources sources, $changeRatio% changes', function* (state: BenchState) {
-    const sourceCount = state.get('sources');
-    const changeRatio = state.get('changeRatio') / 100;
-    const ticks = 100;
-    const indices = makeIndices(sourceCount, changeRatio);
+  summary(() => {
+    barplot(() => {
+      bench('Preact - $sources sources, $changeRatio% changes', function* (state: BenchState) {
+        const sourceCount = state.get('sources');
+        const changeRatio = state.get('changeRatio') / 100;
+        const ticks = 100;
+        const indices = makeIndices(sourceCount, changeRatio);
+        
+        const sources = Array.from({ length: sourceCount }, (_, i) => preactSignal(i));
+        const computeds = sources.map(s => preactComputed(() => s.value * 2));
+        const disposers = computeds.map(c => preactEffect(() => void c.value));
+        
+        yield () => {
+          for (let t = 0; t < ticks; t++) {
+            for (const i of indices) {
+              sources[i]!.value = t + i;
+            }
+          }
+        };
+        
+        // Cleanup after measurement
+        disposers.forEach(d => d());
+      })
+      .args('sources', [50, 100, 200])
+      .args('changeRatio', [10, 25, 50, 100]);
     
-    const sources = Array.from({ length: sourceCount }, (_, i) => preactSignal(i));
-    const computeds = sources.map(s => preactComputed(() => s.value * 2));
-    const disposers = computeds.map(c => preactEffect(() => void c.value));
+      bench('Lattice - $sources sources, $changeRatio% changes', function* (state: BenchState) {
+        const sourceCount = state.get('sources');
+        const changeRatio = state.get('changeRatio') / 100;
+        const ticks = 100;
+        const indices = makeIndices(sourceCount, changeRatio);
+        
+        const sources = Array.from({ length: sourceCount }, (_, i) => latticeSignal(i));
+        const computeds = sources.map(s => latticeComputed(() => s.value * 2));
+        const disposers = computeds.map(c => latticeEffect(() => void c.value));
+        
+        yield () => {
+          for (let t = 0; t < ticks; t++) {
+            for (const i of indices) {
+              sources[i]!.value = t + i;
+            }
+          }
+        };
+        
+        // Cleanup after measurement
+        disposers.forEach(d => d());
+      })
+      .args('sources', [50, 100, 200])
+      .args('changeRatio', [10, 25, 50, 100]);
     
-    yield () => {
-      for (let t = 0; t < ticks; t++) {
-        for (const i of indices) {
-          sources[i]!.value = t + i;
-        }
-      }
-    };
-    
-    // Cleanup after measurement
-    disposers.forEach(d => d());
+      bench('Alien - $sources sources, $changeRatio% changes', function* (state: BenchState) {
+        const sourceCount = state.get('sources');
+        const changeRatio = state.get('changeRatio') / 100;
+        const ticks = 100;
+        const indices = makeIndices(sourceCount, changeRatio);
+        
+        const sources = Array.from({ length: sourceCount }, (_, i) => alienSignal(i));
+        const computeds = sources.map(s => alienComputed(() => s() * 2));
+        const disposers = computeds.map(c => alienEffect(() => void c()));
+        
+        yield () => {
+          for (let t = 0; t < ticks; t++) {
+            for (const i of indices) {
+              sources[i]!(t + i);
+            }
+          }
+        };
+        
+        // Cleanup after measurement
+        disposers.forEach(d => d());
+      })
+      .args('sources', [50, 100, 200])
+      .args('changeRatio', [10, 25, 50, 100]);
+    });
   })
-  .args('sources', [50, 100, 200])
-  .args('changeRatio', [10, 25, 50, 100]);
-
-  bench('Lattice - $sources sources, $changeRatio% changes', function* (state: BenchState) {
-    const sourceCount = state.get('sources');
-    const changeRatio = state.get('changeRatio') / 100;
-    const ticks = 100;
-    const indices = makeIndices(sourceCount, changeRatio);
-    
-    const sources = Array.from({ length: sourceCount }, (_, i) => latticeSignal(i));
-    const computeds = sources.map(s => latticeComputed(() => s.value * 2));
-    const disposers = computeds.map(c => latticeEffect(() => void c.value));
-    
-    yield () => {
-      for (let t = 0; t < ticks; t++) {
-        for (const i of indices) {
-          sources[i]!.value = t + i;
-        }
-      }
-    };
-    
-    // Cleanup after measurement
-    disposers.forEach(d => d());
-  })
-  .args('sources', [50, 100, 200])
-  .args('changeRatio', [10, 25, 50, 100]);
-
-  bench('Alien - $sources sources, $changeRatio% changes', function* (state: BenchState) {
-    const sourceCount = state.get('sources');
-    const changeRatio = state.get('changeRatio') / 100;
-    const ticks = 100;
-    const indices = makeIndices(sourceCount, changeRatio);
-    
-    const sources = Array.from({ length: sourceCount }, (_, i) => alienSignal(i));
-    const computeds = sources.map(s => alienComputed(() => s() * 2));
-    const disposers = computeds.map(c => alienEffect(() => void c()));
-    
-    yield () => {
-      for (let t = 0; t < ticks; t++) {
-        for (const i of indices) {
-          sources[i]!(t + i);
-        }
-      }
-    };
-    
-    // Cleanup after measurement
-    disposers.forEach(d => d());
-  })
-  .args('sources', [50, 100, 200])
-  .args('changeRatio', [10, 25, 50, 100]);
 });
 
 // Run all benchmarks

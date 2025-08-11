@@ -7,7 +7,7 @@
  * 3. Alien signals (Vue 3 inspired push-pull algorithm)
  */
 
-import { run, bench, group } from 'mitata';
+import { run, bench, group, barplot, summary } from 'mitata';
 
 // Type for mitata benchmark state
 interface BenchState {
@@ -48,333 +48,363 @@ const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => Ef
 const latticeBatch = latticeAPI.batch as <T>(fn: () => T) => T;
 
 group('Basic Operations', () => {
-  bench('Preact - write + read: $iterations iterations', function* (state: BenchState) {
-    const iterations = state.get('iterations');
-    const count = preactSignal(0);
-    
-    yield () => {
-      for (let i = 0; i < iterations; i++) {
-        count.value = i;
-        void count.value;
-      }
-    };
-  })
-  .args('iterations', [1000, 5000, 10000]);
+  summary(() => {
+    barplot(() => {
+      bench(
+        'Preact - write + read: $iterations iterations',
+        function* (state: BenchState) {
+          const iterations = state.get('iterations');
+          const count = preactSignal(0);
 
-  bench('Lattice - write + read: $iterations iterations', function* (state: BenchState) {
-    const iterations = state.get('iterations');
-    const count = latticeSignal(0);
-    
-    yield () => {
-      for (let i = 0; i < iterations; i++) {
-        count.value = i;
-        void count.value;
-      }
-    };
-  })
-  .args('iterations', [1000, 5000, 10000]);
+          yield () => {
+            for (let i = 0; i < iterations; i++) {
+              count.value = i;
+              void count.value;
+            }
+          };
+        }
+      ).args('iterations', [1000, 5000, 10000]);
 
-  bench('Alien - write + read: $iterations iterations', function* (state: BenchState) {
-    const iterations = state.get('iterations');
-    const count = alienSignal(0);
-    
-    yield () => {
-      for (let i = 0; i < iterations; i++) {
-        count(i);
-        void count();
-      }
-    };
-  })
-  .args('iterations', [1000, 5000, 10000]);
+      bench(
+        'Lattice - write + read: $iterations iterations',
+        function* (state: BenchState) {
+          const iterations = state.get('iterations');
+          const count = latticeSignal(0);
+
+          yield () => {
+            for (let i = 0; i < iterations; i++) {
+              count.value = i;
+              void count.value;
+            }
+          };
+        }
+      ).args('iterations', [1000, 5000, 10000]);
+
+      bench(
+        'Alien - write + read: $iterations iterations',
+        function* (state: BenchState) {
+          const iterations = state.get('iterations');
+          const count = alienSignal(0);
+
+          yield () => {
+            for (let i = 0; i < iterations; i++) {
+              count(i);
+              void count();
+            }
+          };
+        }
+      ).args('iterations', [1000, 5000, 10000]);
+    });
+  });
 });
 
 group('Computed Chain', () => {
-  bench('Preact - chain depth: $depth', function* (state: BenchState) {
-    const depth = state.get('depth');
-    const source = preactSignal(0);
-    let last = source;
-    
-    // Build chain of specified depth
-    for (let i = 0; i < depth; i++) {
-      const prev = last;
-      last = preactComputed(() => prev.value * 2);
-    }
-    
-    yield () => {
-      for (let i = 0; i < 10000; i++) {
-        source.value = i;
-        void last.value;
-      }
-    };
-  })
-  .args('depth', [2, 3, 5, 10]);
+  summary(() => {
+    barplot(() => {
+      bench('Preact - chain depth: $depth', function* (state: BenchState) {
+        const depth = state.get('depth');
+        const source = preactSignal(0);
+        let last = source;
 
-  bench('Lattice - chain depth: $depth', function* (state: BenchState) {
-    const depth = state.get('depth');
-    const source = latticeSignal(0);
-    let last: { value: number } = source;
-    
-    // Build chain of specified depth
-    for (let i = 0; i < depth; i++) {
-      const prev = last;
-      last = latticeComputed(() => prev.value * 2);
-    }
-    
-    yield () => {
-      for (let i = 0; i < 10000; i++) {
-        source.value = i;
-        void last.value;
-      }
-    };
-  })
-  .args('depth', [2, 3, 5, 10]);
+        // Build chain of specified depth
+        for (let i = 0; i < depth; i++) {
+          const prev = last;
+          last = preactComputed(() => prev.value * 2);
+        }
 
-  bench('Alien - chain depth: $depth', function* (state: BenchState) {
-    const depth = state.get('depth');
-    const source = alienSignal(0);
-    let last = source;
-    
-    // Build chain of specified depth
-    for (let i = 0; i < depth; i++) {
-      const prev = last;
-      last = alienComputed(() => prev() * 2);
-    }
-    
-    yield () => {
-      for (let i = 0; i < 10000; i++) {
-        source(i);
-        void last();
-      }
-    };
-  })
-  .args('depth', [2, 3, 5, 10]);
+        yield () => {
+          for (let i = 0; i < 10000; i++) {
+            source.value = i;
+            void last.value;
+          }
+        };
+      }).args('depth', [2, 3, 5, 10]);
+
+      bench('Lattice - chain depth: $depth', function* (state: BenchState) {
+        const depth = state.get('depth');
+        const source = latticeSignal(0);
+        let last: { value: number } = source;
+
+        // Build chain of specified depth
+        for (let i = 0; i < depth; i++) {
+          const prev = last;
+          last = latticeComputed(() => prev.value * 2);
+        }
+
+        yield () => {
+          for (let i = 0; i < 10000; i++) {
+            source.value = i;
+            void last.value;
+          }
+        };
+      }).args('depth', [2, 3, 5, 10]);
+
+      bench('Alien - chain depth: $depth', function* (state: BenchState) {
+        const depth = state.get('depth');
+        const source = alienSignal(0);
+        let last = source;
+
+        // Build chain of specified depth
+        for (let i = 0; i < depth; i++) {
+          const prev = last;
+          last = alienComputed(() => prev() * 2);
+        }
+
+        yield () => {
+          for (let i = 0; i < 10000; i++) {
+            source(i);
+            void last();
+          }
+        };
+      }).args('depth', [2, 3, 5, 10]);
+    });
+  });
 });
 
 group('Diamond Dependency', () => {
-  bench('Preact - diamond: $iterations iterations', function* (state: BenchState) {
-    const iterations = state.get('iterations');
-    const source = preactSignal(0);
-    const left = preactComputed(() => source.value * 2);
-    const right = preactComputed(() => source.value * 3);
-    const bottom = preactComputed(() => left.value + right.value);
-    
-    yield () => {
-      for (let i = 0; i < iterations; i++) {
-        source.value = i;
-        void bottom.value;
-      }
-    };
-  })
-  .args('iterations', [1000, 5000, 10000]);
+  summary(() => {
+    barplot(() => {
+      bench(
+        'Preact - diamond: $iterations iterations',
+        function* (state: BenchState) {
+          const iterations = state.get('iterations');
+          const source = preactSignal(0);
+          const left = preactComputed(() => source.value * 2);
+          const right = preactComputed(() => source.value * 3);
+          const bottom = preactComputed(() => left.value + right.value);
 
-  bench('Lattice - diamond: $iterations iterations', function* (state: BenchState) {
-    const iterations = state.get('iterations');
-    const source = latticeSignal(0);
-    const left = latticeComputed(() => source.value * 2);
-    const right = latticeComputed(() => source.value * 3);
-    const bottom = latticeComputed(() => left.value + right.value);
-    
-    yield () => {
-      for (let i = 0; i < iterations; i++) {
-        source.value = i;
-        void bottom.value;
-      }
-    };
-  })
-  .args('iterations', [1000, 5000, 10000]);
+          yield () => {
+            for (let i = 0; i < iterations; i++) {
+              source.value = i;
+              void bottom.value;
+            }
+          };
+        }
+      ).args('iterations', [1000, 5000, 10000]);
 
-  bench('Alien - diamond: $iterations iterations', function* (state: BenchState) {
-    const iterations = state.get('iterations');
-    const source = alienSignal(0);
-    const left = alienComputed(() => source() * 2);
-    const right = alienComputed(() => source() * 3);
-    const bottom = alienComputed(() => left() + right());
-    
-    yield () => {
-      for (let i = 0; i < iterations; i++) {
-        source(i);
-        void bottom();
-      }
-    };
-  })
-  .args('iterations', [1000, 5000, 10000]);
+      bench(
+        'Lattice - diamond: $iterations iterations',
+        function* (state: BenchState) {
+          const iterations = state.get('iterations');
+          const source = latticeSignal(0);
+          const left = latticeComputed(() => source.value * 2);
+          const right = latticeComputed(() => source.value * 3);
+          const bottom = latticeComputed(() => left.value + right.value);
+
+          yield () => {
+            for (let i = 0; i < iterations; i++) {
+              source.value = i;
+              void bottom.value;
+            }
+          };
+        }
+      ).args('iterations', [1000, 5000, 10000]);
+
+      bench(
+        'Alien - diamond: $iterations iterations',
+        function* (state: BenchState) {
+          const iterations = state.get('iterations');
+          const source = alienSignal(0);
+          const left = alienComputed(() => source() * 2);
+          const right = alienComputed(() => source() * 3);
+          const bottom = alienComputed(() => left() + right());
+
+          yield () => {
+            for (let i = 0; i < iterations; i++) {
+              source(i);
+              void bottom();
+            }
+          };
+        }
+      ).args('iterations', [1000, 5000, 10000]);
+    });
+  });
 });
 
 group('Batch Updates', () => {
-  bench('Preact - batch $count signals', function* (state: BenchState) {
-    const count = state.get('count');
-    const signals = Array.from({ length: count }, () => preactSignal(0));
-    const sum = preactComputed(() => 
-      signals.reduce((acc, s) => acc + s.value, 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < 1000; i++) {
-        preactBatch(() => {
-          signals.forEach((s, idx) => {
-            s.value = i * (idx + 1);
-          });
-        });
-        void sum.value;
-      }
-    };
-  })
-  .args('count', [3, 5, 10]);
+  summary(() => {
+    barplot(() => {
+      bench('Preact - batch $count signals', function* (state: BenchState) {
+        const count = state.get('count');
+        const signals = Array.from({ length: count }, () => preactSignal(0));
+        const sum = preactComputed(() =>
+          signals.reduce((acc, s) => acc + s.value, 0)
+        );
 
-  bench('Lattice - batch $count signals', function* (state: BenchState) {
-    const count = state.get('count');
-    const signals = Array.from({ length: count }, () => latticeSignal(0));
-    const sum = latticeComputed(() => 
-      signals.reduce((acc, s) => acc + s.value, 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < 1000; i++) {
-        latticeBatch(() => {
-          signals.forEach((s, idx) => {
-            s.value = i * (idx + 1);
-          });
-        });
-        void sum.value;
-      }
-    };
-  })
-  .args('count', [3, 5, 10]);
+        yield () => {
+          for (let i = 0; i < 1000; i++) {
+            preactBatch(() => {
+              signals.forEach((s, idx) => {
+                s.value = i * (idx + 1);
+              });
+            });
+            void sum.value;
+          }
+        };
+      }).args('count', [3, 5, 10]);
 
-  bench('Alien - batch $count signals', function* (state: BenchState) {
-    const count = state.get('count');
-    const signals = Array.from({ length: count }, () => alienSignal(0));
-    const sum = alienComputed(() => 
-      signals.reduce((acc, s) => acc + s(), 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < 1000; i++) {
-        alienStartBatch();
-        signals.forEach((s, idx) => {
-          s(i * (idx + 1));
-        });
-        alienEndBatch();
-        void sum();
-      }
-    };
-  })
-  .args('count', [3, 5, 10]);
+      bench('Lattice - batch $count signals', function* (state: BenchState) {
+        const count = state.get('count');
+        const signals = Array.from({ length: count }, () => latticeSignal(0));
+        const sum = latticeComputed(() =>
+          signals.reduce((acc, s) => acc + s.value, 0)
+        );
+
+        yield () => {
+          for (let i = 0; i < 1000; i++) {
+            latticeBatch(() => {
+              signals.forEach((s, idx) => {
+                s.value = i * (idx + 1);
+              });
+            });
+            void sum.value;
+          }
+        };
+      }).args('count', [3, 5, 10]);
+
+      bench('Alien - batch $count signals', function* (state: BenchState) {
+        const count = state.get('count');
+        const signals = Array.from({ length: count }, () => alienSignal(0));
+        const sum = alienComputed(() =>
+          signals.reduce((acc, s) => acc + s(), 0)
+        );
+
+        yield () => {
+          for (let i = 0; i < 1000; i++) {
+            alienStartBatch();
+            signals.forEach((s, idx) => {
+              s(i * (idx + 1));
+            });
+            alienEndBatch();
+            void sum();
+          }
+        };
+      }).args('count', [3, 5, 10]);
+    });
+  });
 });
 
 group('Wide Fan-out', () => {
-  bench('Preact - fan-out: $width computeds', function* (state: BenchState) {
-    const width = state.get('width');
-    const source = preactSignal(0);
-    const computeds = Array.from({ length: width }, (_, i) => 
-      preactComputed(() => source.value * (i + 1))
-    );
-    const aggregated = preactComputed(() =>
-      computeds.reduce((sum, c) => sum + c.value, 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < 1000; i++) {
-        source.value = i;
-        void aggregated.value;
-      }
-    };
-  })
-  .args('width', [10, 50, 100]);
+  summary(() => {
+    barplot(() => {
+      bench(
+        'Preact - fan-out: $width computeds',
+        function* (state: BenchState) {
+          const width = state.get('width');
+          const source = preactSignal(0);
+          const computeds = Array.from({ length: width }, (_, i) =>
+            preactComputed(() => source.value * (i + 1))
+          );
+          const aggregated = preactComputed(() =>
+            computeds.reduce((sum, c) => sum + c.value, 0)
+          );
 
-  bench('Lattice - fan-out: $width computeds', function* (state: BenchState) {
-    const width = state.get('width');
-    const source = latticeSignal(0);
-    const computeds = Array.from({ length: width }, (_, i) => 
-      latticeComputed(() => source.value * (i + 1))
-    );
-    const aggregated = latticeComputed(() =>
-      computeds.reduce((sum, c) => sum + c.value, 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < 1000; i++) {
-        source.value = i;
-        void aggregated.value;
-      }
-    };
-  })
-  .args('width', [10, 50, 100]);
+          yield () => {
+            for (let i = 0; i < 1000; i++) {
+              source.value = i;
+              void aggregated.value;
+            }
+          };
+        }
+      ).args('width', [10, 50, 100]);
 
-  bench('Alien - fan-out: $width computeds', function* (state: BenchState) {
-    const width = state.get('width');
-    const source = alienSignal(0);
-    const computeds = Array.from({ length: width }, (_, i) => 
-      alienComputed(() => source() * (i + 1))
-    );
-    const aggregated = alienComputed(() =>
-      computeds.reduce((sum, c) => sum + c(), 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < 1000; i++) {
-        source(i);
-        void aggregated();
-      }
-    };
-  })
-  .args('width', [10, 50, 100]);
+      bench(
+        'Lattice - fan-out: $width computeds',
+        function* (state: BenchState) {
+          const width = state.get('width');
+          const source = latticeSignal(0);
+          const computeds = Array.from({ length: width }, (_, i) =>
+            latticeComputed(() => source.value * (i + 1))
+          );
+          const aggregated = latticeComputed(() =>
+            computeds.reduce((sum, c) => sum + c.value, 0)
+          );
+
+          yield () => {
+            for (let i = 0; i < 1000; i++) {
+              source.value = i;
+              void aggregated.value;
+            }
+          };
+        }
+      ).args('width', [10, 50, 100]);
+
+      bench('Alien - fan-out: $width computeds', function* (state: BenchState) {
+        const width = state.get('width');
+        const source = alienSignal(0);
+        const computeds = Array.from({ length: width }, (_, i) =>
+          alienComputed(() => source() * (i + 1))
+        );
+        const aggregated = alienComputed(() =>
+          computeds.reduce((sum, c) => sum + c(), 0)
+        );
+
+        yield () => {
+          for (let i = 0; i < 1000; i++) {
+            source(i);
+            void aggregated();
+          }
+        };
+      }).args('width', [10, 50, 100]);
+    });
+  });
 });
 
 group('Effect Triggers', () => {
-  bench('Preact - $count effect updates', function* (state: BenchState) {
-    const count = state.get('count');
-    const signal = preactSignal(0);
-    let counter = 0;
-    const cleanup = preactEffect(() => {
-      counter += signal.value;
-    });
-    
-    yield () => {
-      for (let i = 0; i < count; i++) {
-        signal.value = i;
-      }
-    };
-    
-    cleanup();
-  })
-  .args('count', [100, 500, 1000]);
+  summary(() => {
+    barplot(() => {
+      bench('Preact - $count effect updates', function* (state: BenchState) {
+        const count = state.get('count');
+        const signal = preactSignal(0);
+        let counter = 0;
+        const cleanup = preactEffect(() => {
+          counter += signal.value;
+        });
 
-  bench('Lattice - $count effect updates', function* (state: BenchState) {
-    const count = state.get('count');
-    const signal = latticeSignal(0);
-    let counter = 0;
-    const cleanup = latticeEffect(() => {
-      counter += signal.value;
-    });
-    
-    yield () => {
-      for (let i = 0; i < count; i++) {
-        signal.value = i;
-      }
-    };
-    
-    cleanup();
-  })
-  .args('count', [100, 500, 1000]);
+        yield () => {
+          for (let i = 0; i < count; i++) {
+            signal.value = i;
+          }
+        };
 
-  bench('Alien - $count effect updates', function* (state: BenchState) {
-    const count = state.get('count');
-    const signal = alienSignal(0);
-    let counter = 0;
-    const cleanup = alienEffect(() => {
-      counter += signal();
+        cleanup();
+      }).args('count', [100, 500, 1000]);
+
+      bench('Lattice - $count effect updates', function* (state: BenchState) {
+        const count = state.get('count');
+        const signal = latticeSignal(0);
+        let counter = 0;
+        const cleanup = latticeEffect(() => {
+          counter += signal.value;
+        });
+
+        yield () => {
+          for (let i = 0; i < count; i++) {
+            signal.value = i;
+          }
+        };
+
+        cleanup();
+      }).args('count', [100, 500, 1000]);
+
+      bench('Alien - $count effect updates', function* (state: BenchState) {
+        const count = state.get('count');
+        const signal = alienSignal(0);
+        let counter = 0;
+        const cleanup = alienEffect(() => {
+          counter += signal();
+        });
+
+        yield () => {
+          for (let i = 0; i < count; i++) {
+            signal(i);
+          }
+        };
+
+        cleanup();
+      }).args('count', [100, 500, 1000]);
     });
-    
-    yield () => {
-      for (let i = 0; i < count; i++) {
-        signal(i);
-      }
-    };
-    
-    cleanup();
-  })
-  .args('count', [100, 500, 1000]);
+  });
 });
 
 // Run all benchmarks
