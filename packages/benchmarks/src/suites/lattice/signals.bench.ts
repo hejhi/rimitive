@@ -595,7 +595,6 @@ group('Memory Pressure', () => {
 });
 
 // Concurrent updates benchmark
-group('Concurrent Updates', () => {
   summary(() => {
     bench('Preact - concurrent: $concurrency', function* (state: BenchState) {
       const concurrency = state.get('concurrency');
@@ -669,7 +668,6 @@ group('Concurrent Updates', () => {
     })
     .args('concurrency', [1, 5, 10, 20]);
   });
-});
 
 // Run all benchmarks
 await run();
