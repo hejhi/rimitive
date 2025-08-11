@@ -8,11 +8,12 @@
   "private": true,
   "scripts": {
     "build:all": "cd ../ && pnpm build && cd benchmarks",
-    "bench": "pnpm build:all && node --expose-gc scripts/run-chunked-benchmarks.js real",
-    "bench:lattice": "node --expose-gc scripts/run-chunked-benchmarks.js real lattice",
-    "bench:report:real": "node --expose-gc scripts/run-chunked-benchmarks.js real",
-    "bench:dev": "pnpm build:all && vitest bench",
-    
+    "bench": "pnpm build:all && tsx --expose-gc src/suites/lattice/*.bench.ts",
+    "bench:signals": "tsx --expose-gc src/suites/lattice/signals.bench.ts",
+    "bench:memory": "tsx --expose-gc src/suites/lattice/memory.bench.ts",
+    "bench:propagation": "tsx --expose-gc src/suites/lattice/propagation.bench.ts",
+    "bench:push-pull": "tsx --expose-gc src/suites/lattice/push-pull.bench.ts",
+    "bench:subscription": "tsx --expose-gc src/suites/lattice/subscription-throughput.bench.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm lint"
@@ -27,6 +28,7 @@
     "@types/react-dom": "^19.1.6",
     "glob": "^11.0.3",
     "jsdom": "^25.0.0",
+    "mitata": "^1.0.34",
     "mobx": "^6.13.6",
     "pinia": "^2.3.0",
     "react": "^18.3.1",
