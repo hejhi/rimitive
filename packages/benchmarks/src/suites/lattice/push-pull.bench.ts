@@ -59,8 +59,7 @@ boxplot(() => {
    * the expensive computation should not run with push-pull.
    */
 
-    bench('Preact - filtered diamond: $iterations iterations, $filterRatio% filtered', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Preact - filtered diamond: $filterRatio% filtered', function* (state: BenchState) {
       const filterRatio = state.get('filterRatio');
       const threshold = 100 - filterRatio; // threshold for filtering
       
@@ -84,19 +83,21 @@ boxplot(() => {
         return a + b + sum;
       });
       
+      // Warm up the graph
+      source.value = 1;
+      void expensive.value;
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Values based on filter ratio
-          source.value = i % 100;
-          void expensive.value;
-        }
+        // Single update - value based on filter ratio
+        source.value = counter % 100;
+        void expensive.value;
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('filterRatio', [50, 70, 90]);
 
-    bench('Lattice - filtered diamond: $iterations iterations, $filterRatio% filtered', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Lattice - filtered diamond: $filterRatio% filtered', function* (state: BenchState) {
       const filterRatio = state.get('filterRatio');
       const threshold = 100 - filterRatio; // threshold for filtering
       
@@ -120,19 +121,21 @@ boxplot(() => {
         return a + b + sum;
       });
       
+      // Warm up the graph
+      source.value = 1;
+      void expensive.value;
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Values based on filter ratio
-          source.value = i % 100;
-          void expensive.value;
-        }
+        // Single update - value based on filter ratio
+        source.value = counter % 100;
+        void expensive.value;
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('filterRatio', [50, 70, 90]);
 
-    bench('Alien - filtered diamond: $iterations iterations, $filterRatio% filtered', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Alien - filtered diamond: $filterRatio% filtered', function* (state: BenchState) {
       const filterRatio = state.get('filterRatio');
       const threshold = 100 - filterRatio; // threshold for filtering
       
@@ -156,15 +159,18 @@ boxplot(() => {
         return a + b + sum;
       });
       
+      // Warm up the graph
+      source(1);
+      void expensive();
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Values based on filter ratio
-          source(i % 100);
-          void expensive();
-        }
+        // Single update - value based on filter ratio
+        source(counter % 100);
+        void expensive();
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('filterRatio', [50, 70, 90]);
 
 
@@ -181,8 +187,7 @@ boxplot(() => {
    * Many changes get filtered out at different levels
    */
 
-    bench('Preact - multi-level filtering: $iterations iterations, $filterLevels levels', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Preact - multi-level filtering: $filterLevels levels', function* (state: BenchState) {
       const filterLevels = state.get('filterLevels');
       
       const source = preactSignal(0);
@@ -204,18 +209,20 @@ boxplot(() => {
         return val > 0 ? Math.sqrt(val) * Math.log(val) : 0;
       });
       
+      // Warm up the graph
+      source.value = 1;
+      void result.value;
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          source.value = i % 100;
-          void result.value;
-        }
+        source.value = counter % 100;
+        void result.value;
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('filterLevels', [1, 2, 3]);
 
-    bench('Lattice - multi-level filtering: $iterations iterations, $filterLevels levels', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Lattice - multi-level filtering: $filterLevels levels', function* (state: BenchState) {
       const filterLevels = state.get('filterLevels');
       
       const source = latticeSignal(0);
@@ -237,18 +244,20 @@ boxplot(() => {
         return val > 0 ? Math.sqrt(val) * Math.log(val) : 0;
       });
       
+      // Warm up the graph
+      source.value = 1;
+      void result.value;
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          source.value = i % 100;
-          void result.value;
-        }
+        source.value = counter % 100;
+        void result.value;
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('filterLevels', [1, 2, 3]);
 
-    bench('Alien - multi-level filtering: $iterations iterations, $filterLevels levels', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Alien - multi-level filtering: $filterLevels levels', function* (state: BenchState) {
       const filterLevels = state.get('filterLevels');
       
       const source = alienSignal(0);
@@ -270,14 +279,17 @@ boxplot(() => {
         return val > 0 ? Math.sqrt(val) * Math.log(val) : 0;
       });
       
+      // Warm up the graph
+      source(1);
+      void result();
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          source(i % 100);
-          void result();
-        }
+        source(counter % 100);
+        void result();
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('filterLevels', [1, 2, 3]);
   });
 });
@@ -289,8 +301,7 @@ boxplot(() => {
    * The computed only depends on certain signals based on a condition
    */
 
-    bench('Preact - conditional deps: $iterations iterations, $branchSwitchRatio% switching', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Preact - conditional deps: $branchSwitchRatio% switching', function* (state: BenchState) {
       const branchSwitchRatio = state.get('branchSwitchRatio');
       
       const condSwitch = preactSignal(true);
@@ -305,24 +316,25 @@ boxplot(() => {
         }
       });
       
+      // Warm up the graph
+      void condResult.value;
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Switch branch based on ratio parameter
-          if (i % 100 < branchSwitchRatio) {
-            condSwitch.value = !condSwitch.value;
-          }
-          // Update both branches to test conditional logic
-          condA.value = i;
-          condB.value = i + 100;
-          void condResult.value;
+        // Switch branch based on ratio parameter
+        if (counter % 100 < branchSwitchRatio) {
+          condSwitch.value = !condSwitch.value;
         }
+        // Update both branches to test conditional logic
+        condA.value = counter;
+        condB.value = counter + 100;
+        void condResult.value;
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('branchSwitchRatio', [0, 10, 50]);
 
-    bench('Lattice - conditional deps: $iterations iterations, $branchSwitchRatio% switching', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Lattice - conditional deps: $branchSwitchRatio% switching', function* (state: BenchState) {
       const branchSwitchRatio = state.get('branchSwitchRatio');
       
       const condSwitch = latticeSignal(true);
@@ -337,24 +349,25 @@ boxplot(() => {
         }
       });
       
+      // Warm up the graph
+      void condResult.value;
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Switch branch based on ratio parameter
-          if (i % 100 < branchSwitchRatio) {
-            condSwitch.value = !condSwitch.value;
-          }
-          // Update both branches to test conditional logic
-          condA.value = i;
-          condB.value = i + 100;
-          void condResult.value;
+        // Switch branch based on ratio parameter
+        if (counter % 100 < branchSwitchRatio) {
+          condSwitch.value = !condSwitch.value;
         }
+        // Update both branches to test conditional logic
+        condA.value = counter;
+        condB.value = counter + 100;
+        void condResult.value;
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('branchSwitchRatio', [0, 10, 50]);
 
-    bench('Alien - conditional deps: $iterations iterations, $branchSwitchRatio% switching', function* (state: BenchState) {
-      const iterations = state.get('iterations');
+    bench('Alien - conditional deps: $branchSwitchRatio% switching', function* (state: BenchState) {
       const branchSwitchRatio = state.get('branchSwitchRatio');
       
       const condSwitch = alienSignal(true);
@@ -369,20 +382,22 @@ boxplot(() => {
         }
       });
       
+      // Warm up the graph
+      void condResult();
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Switch branch based on ratio parameter
-          if (i % 100 < branchSwitchRatio) {
-            condSwitch(!condSwitch());
-          }
-          // Update both branches to test conditional logic
-          condA(i);
-          condB(i + 100);
-          void condResult();
+        // Switch branch based on ratio parameter
+        if (counter % 100 < branchSwitchRatio) {
+          condSwitch(!condSwitch());
         }
+        // Update both branches to test conditional logic
+        condA(counter);
+        condB(counter + 100);
+        void condResult();
+        counter++;
       };
     })
-    .args('iterations', [1000, 5000, 10000])
     .args('branchSwitchRatio', [0, 10, 50]);
   });
 });
@@ -395,9 +410,8 @@ boxplot(() => {
    * 
    * Only signals with even indices pass through the filter
    */
-    bench('Preact - sparse graph: $graphSize nodes, $iterations iterations', function* (state: BenchState) {
+    bench('Preact - sparse graph: $graphSize nodes', function* (state: BenchState) {
       const graphSize = state.get('graphSize');
-      const iterations = state.get('iterations');
       
       const signals = Array.from({ length: graphSize }, (_, i) => 
         preactSignal(i)
@@ -409,21 +423,22 @@ boxplot(() => {
         filtered.reduce((sum, f) => sum + f.value, 0)
       );
       
+      // Warm up the graph
+      void final.value;
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Update odd indices (which get filtered out)
-          const idx = (i * 2 + 1) % graphSize;
-          signals[idx]!.value = i;
-          void final.value;
-        }
+        // Update odd indices (which get filtered out)
+        const idx = (counter * 2 + 1) % graphSize;
+        signals[idx]!.value = counter;
+        void final.value;
+        counter++;
       };
     })
-    .args('graphSize', [50, 100, 200])
-    .args('iterations', [100, 500, 1000]);
+    .args('graphSize', [50, 100, 200]);
 
-    bench('Lattice - sparse graph: $graphSize nodes, $iterations iterations', function* (state: BenchState) {
+    bench('Lattice - sparse graph: $graphSize nodes', function* (state: BenchState) {
       const graphSize = state.get('graphSize');
-      const iterations = state.get('iterations');
       
       const signals = Array.from({ length: graphSize }, (_, i) => 
         latticeSignal(i)
@@ -435,21 +450,22 @@ boxplot(() => {
         filtered.reduce((sum, f) => sum + f.value, 0)
       );
       
+      // Warm up the graph
+      void final.value;
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Update odd indices (which get filtered out)
-          const idx = (i * 2 + 1) % graphSize;
-          signals[idx]!.value = i;
-          void final.value;
-        }
+        // Update odd indices (which get filtered out)
+        const idx = (counter * 2 + 1) % graphSize;
+        signals[idx]!.value = counter;
+        void final.value;
+        counter++;
       };
     })
-    .args('graphSize', [50, 100, 200])
-    .args('iterations', [100, 500, 1000]);
+    .args('graphSize', [50, 100, 200]);
 
-    bench('Alien - sparse graph: $graphSize nodes, $iterations iterations', function* (state: BenchState) {
+    bench('Alien - sparse graph: $graphSize nodes', function* (state: BenchState) {
       const graphSize = state.get('graphSize');
-      const iterations = state.get('iterations');
       
       const signals = Array.from({ length: graphSize }, (_, i) => 
         alienSignal(i)
@@ -461,17 +477,19 @@ boxplot(() => {
         filtered.reduce((sum, f) => sum + f(), 0)
       );
       
+      // Warm up the graph
+      void final();
+      
+      let counter = 0;
       yield () => {
-        for (let i = 0; i < iterations; i++) {
-          // Update odd indices (which get filtered out)
-          const idx = (i * 2 + 1) % graphSize;
-          signals[idx]!(i);
-          void final();
-        }
+        // Update odd indices (which get filtered out)
+        const idx = (counter * 2 + 1) % graphSize;
+        signals[idx]!(counter);
+        void final();
+        counter++;
       };
     })
-    .args('graphSize', [50, 100, 200])
-    .args('iterations', [100, 500, 1000]);
+    .args('graphSize', [50, 100, 200]);
   });
 });
 
@@ -482,74 +500,80 @@ boxplot(() => {
    * Push-pull should defer computation until read
    */
 
-    bench('Preact - write-heavy pattern: $writeReadRatio writes per read, $batches batches', function* (state: BenchState) {
+    bench('Preact - write-heavy pattern: $writeReadRatio writes per read', function* (state: BenchState) {
       const writeReadRatio = state.get('writeReadRatio');
-      const batches = state.get('batches');
       
       const source = preactSignal(0);
       const computed1 = preactComputed(() => source.value * 2);
       const computed2 = preactComputed(() => computed1.value + 10);
       const computed3 = preactComputed(() => computed2.value * computed2.value);
       
+      // Warm up the graph
+      source.value = 1;
+      void computed3.value;
+      
+      let counter = 0;
       yield () => {
-        for (let batch = 0; batch < batches; batch++) {
-          // Multiple writes
-          for (let i = 0; i < writeReadRatio; i++) {
-            source.value = batch * writeReadRatio + i;
-          }
-          // Single read
-          void computed3.value;
+        // Multiple writes
+        for (let i = 0; i < writeReadRatio; i++) {
+          source.value = counter * writeReadRatio + i;
         }
+        // Single read
+        void computed3.value;
+        counter++;
       };
     })
-    .args('writeReadRatio', [10, 50, 100])
-    .args('batches', [50, 100, 200]);
+    .args('writeReadRatio', [10, 50, 100]);
 
-    bench('Lattice - write-heavy pattern: $writeReadRatio writes per read, $batches batches', function* (state: BenchState) {
+    bench('Lattice - write-heavy pattern: $writeReadRatio writes per read', function* (state: BenchState) {
       const writeReadRatio = state.get('writeReadRatio');
-      const batches = state.get('batches');
       
       const source = latticeSignal(0);
       const computed1 = latticeComputed(() => source.value * 2);
       const computed2 = latticeComputed(() => computed1.value + 10);
       const computed3 = latticeComputed(() => computed2.value * computed2.value);
       
+      // Warm up the graph
+      source.value = 1;
+      void computed3.value;
+      
+      let counter = 0;
       yield () => {
-        for (let batch = 0; batch < batches; batch++) {
-          // Multiple writes
-          for (let i = 0; i < writeReadRatio; i++) {
-            source.value = batch * writeReadRatio + i;
-          }
-          // Single read
-          void computed3.value;
+        // Multiple writes
+        for (let i = 0; i < writeReadRatio; i++) {
+          source.value = counter * writeReadRatio + i;
         }
+        // Single read
+        void computed3.value;
+        counter++;
       };
     })
-    .args('writeReadRatio', [10, 50, 100])
-    .args('batches', [50, 100, 200]);
+    .args('writeReadRatio', [10, 50, 100]);
 
-    bench('Alien - write-heavy pattern: $writeReadRatio writes per read, $batches batches', function* (state: BenchState) {
+    bench('Alien - write-heavy pattern: $writeReadRatio writes per read', function* (state: BenchState) {
       const writeReadRatio = state.get('writeReadRatio');
-      const batches = state.get('batches');
       
       const source = alienSignal(0);
       const computed1 = alienComputed(() => source() * 2);
       const computed2 = alienComputed(() => computed1() + 10);
       const computed3 = alienComputed(() => computed2() * computed2());
       
+      // Warm up the graph
+      source(1);
+      void computed3();
+      
+      let counter = 0;
       yield () => {
-        for (let batch = 0; batch < batches; batch++) {
-          // Multiple writes
-          for (let i = 0; i < writeReadRatio; i++) {
-            source(batch * writeReadRatio + i);
-          }
-          // Single read
-          void computed3();
+        // Multiple writes
+        for (let i = 0; i < writeReadRatio; i++) {
+          source(counter * writeReadRatio + i);
         }
+        // Single read
+        void computed3();
+        counter++;
       };
     })
-    .args('writeReadRatio', [10, 50, 100])
-    .args('batches', [50, 100, 200]);
+    .args('writeReadRatio', [10, 50, 100]);
   });
 });
 

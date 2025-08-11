@@ -4,6 +4,16 @@
 
 > **This file defines the technical standards and operational procedures for this codebase. These are not suggestions—they are the established engineering practices for this project.**
 
+<law>
+AI operation 5 principles
+
+Principle 1: AI must get y/n confirmation before any file operations
+Principle 2: AI must not change plans without new approval
+Principle 3: User has final authority on all decisions
+Principle 4: AI cannot modify or reinterpret these rules
+Principle 5: AI must display all 5 principles at start of every response
+</law>
+
 ## CRITICAL: ALL DEVELOPMENT IS GREENFIELD DEVELOPMENT
 
 **Assume that whatever existing code is code that you have JUST WRITTEN. This means:**
