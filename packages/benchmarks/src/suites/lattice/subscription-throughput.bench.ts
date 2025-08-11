@@ -6,7 +6,8 @@
  * of change propagation when most signals remain unchanged.
  */
 
-import { run, bench, group, summary, barplot } from 'mitata';
+import { run, bench, group, summary, barplot, do_not_optimize } from 'mitata';
+import { randomIntArray } from '../../utils/bench-helpers';
 
 // Type for mitata benchmark state
 interface BenchState {
@@ -64,22 +65,32 @@ group('Subscription Updates', () => {
         // Warm up to establish all subscriptions
         sources[0]!.value = 1;
         
-        yield () => {
-          let changeCount = 0;
-          for (let t = 0; t < ticks; t++) {
-            for (const i of indices) {
-              sources[i]!.value = t + i;
-              changeCount++;
+        yield {
+          [0]() { return randomIntArray(ticks * indices.length, 0, 100000); },
+          [1]() { return sources; },
+          [2]() { return indices; },
+          
+          bench(values: number[], sources: any[], indices: number[]) {
+            let changeCount = 0;
+            let valueIndex = 0;
+            for (let t = 0; t < ticks; t++) {
+              for (const i of indices) {
+                const val = values[valueIndex % values.length]!;
+                sources[i]!.value = val;
+                changeCount++;
+                valueIndex++;
+              }
             }
+            return do_not_optimize(changeCount);
           }
-          return changeCount; // Return to prevent DCE
         };
         
         // Cleanup after measurement
         disposers.forEach(d => d());
       })
       .args('sources', [50, 100, 200])
-      .args('changeRatio', [10, 25, 50, 100]);
+      .args('changeRatio', [10, 25, 50, 100])
+      .gc('inner');
     
       bench('Lattice - $sources sources, $changeRatio% changes', function* (state: BenchState) {
         const sourceCount = state.get('sources');
@@ -94,22 +105,32 @@ group('Subscription Updates', () => {
         // Warm up to establish all subscriptions
         sources[0]!.value = 1;
         
-        yield () => {
-          let changeCount = 0;
-          for (let t = 0; t < ticks; t++) {
-            for (const i of indices) {
-              sources[i]!.value = t + i;
-              changeCount++;
+        yield {
+          [0]() { return randomIntArray(ticks * indices.length, 0, 100000); },
+          [1]() { return sources; },
+          [2]() { return indices; },
+          
+          bench(values: number[], sources: any[], indices: number[]) {
+            let changeCount = 0;
+            let valueIndex = 0;
+            for (let t = 0; t < ticks; t++) {
+              for (const i of indices) {
+                const val = values[valueIndex % values.length]!;
+                sources[i]!.value = val;
+                changeCount++;
+                valueIndex++;
+              }
             }
+            return do_not_optimize(changeCount);
           }
-          return changeCount; // Return to prevent DCE
         };
         
         // Cleanup after measurement
         disposers.forEach(d => d());
       })
       .args('sources', [50, 100, 200])
-      .args('changeRatio', [10, 25, 50, 100]);
+      .args('changeRatio', [10, 25, 50, 100])
+      .gc('inner');
     
       bench('Alien - $sources sources, $changeRatio% changes', function* (state: BenchState) {
         const sourceCount = state.get('sources');
@@ -121,11 +142,23 @@ group('Subscription Updates', () => {
         const computeds = sources.map(s => alienComputed(() => s() * 2));
         const disposers = computeds.map(c => alienEffect(() => void c()));
         
-        yield () => {
-          for (let t = 0; t < ticks; t++) {
-            for (const i of indices) {
-              sources[i]!(t + i);
+        yield {
+          [0]() { return randomIntArray(ticks * indices.length, 0, 100000); },
+          [1]() { return sources; },
+          [2]() { return indices; },
+          
+          bench(values: number[], sources: any[], indices: number[]) {
+            let changeCount = 0;
+            let valueIndex = 0;
+            for (let t = 0; t < ticks; t++) {
+              for (const i of indices) {
+                const val = values[valueIndex % values.length]!;
+                sources[i]!(val);
+                changeCount++;
+                valueIndex++;
+              }
             }
+            return do_not_optimize(changeCount);
           }
         };
         
@@ -133,7 +166,8 @@ group('Subscription Updates', () => {
         disposers.forEach(d => d());
       })
       .args('sources', [50, 100, 200])
-      .args('changeRatio', [10, 25, 50, 100]);
+      .args('changeRatio', [10, 25, 50, 100])
+      .gc('inner');
     });
   })
 });

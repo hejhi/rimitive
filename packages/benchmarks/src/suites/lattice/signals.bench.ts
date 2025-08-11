@@ -7,7 +7,8 @@
  * 3. Alien signals (Vue 3 inspired push-pull algorithm)
  */
 
-import { run, bench, group, barplot, summary } from 'mitata';
+import { run, bench, group, barplot, summary, do_not_optimize } from 'mitata';
+import { randomInt, randomIntArray, shuffle } from '../../utils/bench-helpers';
 
 // Type for mitata benchmark state
 interface BenchState {
@@ -55,14 +56,23 @@ group('Basic Operations', () => {
         function* (state: BenchState) {
           const iterations = state.get('iterations');
           const count = preactSignal(0);
+          
+          // Generate random values to prevent pattern optimization
+          const values = randomIntArray(iterations, 0, 10000);
 
-          yield () => {
-            let sum = 0;
-            for (let i = 0; i < iterations; i++) {
-              count.value = i;
-              sum += count.value; // Prevent DCE by accumulating
+          yield {
+            // Computed parameters prevent loop invariant code motion
+            [0]() { return values; },
+            [1]() { return count; },
+            
+            bench(values: number[], signal: any) {
+              let sum = 0;
+              for (let i = 0; i < values.length; i++) {
+                signal.value = values[i];
+                sum += signal.value;
+              }
+              return do_not_optimize(sum);
             }
-            return sum; // Return value to prevent DCE
           };
         }
       )
@@ -74,14 +84,21 @@ group('Basic Operations', () => {
         function* (state: BenchState) {
           const iterations = state.get('iterations');
           const count = latticeSignal(0);
+          
+          const values = randomIntArray(iterations, 0, 10000);
 
-          yield () => {
-            let sum = 0;
-            for (let i = 0; i < iterations; i++) {
-              count.value = i;
-              sum += count.value; // Prevent DCE by accumulating
+          yield {
+            [0]() { return values; },
+            [1]() { return count; },
+            
+            bench(values: number[], signal: any) {
+              let sum = 0;
+              for (let i = 0; i < values.length; i++) {
+                signal.value = values[i];
+                sum += signal.value;
+              }
+              return do_not_optimize(sum);
             }
-            return sum; // Return value to prevent DCE
           };
         }
       )
@@ -93,14 +110,21 @@ group('Basic Operations', () => {
         function* (state: BenchState) {
           const iterations = state.get('iterations');
           const count = alienSignal(0);
+          
+          const values = randomIntArray(iterations, 0, 10000);
 
-          yield () => {
-            let sum = 0;
-            for (let i = 0; i < iterations; i++) {
-              count(i);
-              sum += count(); // Prevent DCE by accumulating
+          yield {
+            [0]() { return values; },
+            [1]() { return count; },
+            
+            bench(values: number[], signal: any) {
+              let sum = 0;
+              for (let i = 0; i < values.length; i++) {
+                signal(values[i]);
+                sum += signal();
+              }
+              return do_not_optimize(sum);
             }
-            return sum; // Return value to prevent DCE
           };
         }
       )
@@ -127,14 +151,23 @@ group('Computed Chain', () => {
         // Warm up the chain to establish dependencies
         source.value = 1;
         void last.value;
+        
+        // Random values to prevent optimization
+        const values = randomIntArray(1000, 1, 100);
 
-        yield () => {
-          let sum = 0;
-          for (let i = 0; i < 10000; i++) {
-            source.value = i;
-            sum += last.value;
+        yield {
+          [0]() { return values; },
+          [1]() { return source; },
+          [2]() { return last; },
+          
+          bench(values: number[], source: any, last: any) {
+            let sum = 0;
+            for (const val of values) {
+              source.value = val;
+              sum += last.value;
+            }
+            return do_not_optimize(sum);
           }
-          return sum;
         };
       })
       .args('depth', [2, 3, 5, 10])
@@ -154,14 +187,22 @@ group('Computed Chain', () => {
         // Warm up the chain to establish dependencies
         source.value = 1;
         void last.value;
+        
+        const values = randomIntArray(1000, 1, 100);
 
-        yield () => {
-          let sum = 0;
-          for (let i = 0; i < 10000; i++) {
-            source.value = i;
-            sum += last.value;
+        yield {
+          [0]() { return values; },
+          [1]() { return source; },
+          [2]() { return last; },
+          
+          bench(values: number[], source: any, last: any) {
+            let sum = 0;
+            for (const val of values) {
+              source.value = val;
+              sum += last.value;
+            }
+            return do_not_optimize(sum);
           }
-          return sum;
         };
       })
         .args('depth', [2, 3, 5, 10])
@@ -181,14 +222,22 @@ group('Computed Chain', () => {
         // Warm up the chain to establish dependencies
         source(1);
         void last();
+        
+        const values = randomIntArray(1000, 1, 100);
 
-        yield () => {
-          let sum = 0;
-          for (let i = 0; i < 10000; i++) {
-            source(i);
-            sum += last();
+        yield {
+          [0]() { return values; },
+          [1]() { return source; },
+          [2]() { return last; },
+          
+          bench(values: number[], source: any, last: any) {
+            let sum = 0;
+            for (const val of values) {
+              source(val);
+              sum += last();
+            }
+            return do_not_optimize(sum);
           }
-          return sum;
         };
       })
         .args('depth', [2, 3, 5, 10])
@@ -450,24 +499,27 @@ group('Memory Pressure', () => {
       const objects = state.get('objects');
       
       yield {
-        // Computed property to generate unique iterations
-        [0]() {
+        // Generate indices for each iteration
+        indices() {
           return Array.from({ length: objects }, (_, i) => i);
         },
         
         bench(indices: number[]) {
-          const signals = indices.map((i: number) => preactSignal(i));
+          const signals = indices.map(() => preactSignal(randomInt(0, 1000)));
           const computeds = signals.map((s) => preactComputed(() => s.value * 2));
-          const effects = computeds.map((c) => preactEffect(() => void c.value));
+          const effects = computeds.map((c) => preactEffect(() => do_not_optimize(c.value)));
           
-          // Trigger some updates
-          signals.forEach((s, i) => s.value = i * 2);
+          // Random updates
+          const updateCount = Math.floor(signals.length / 10);
+          const updateIndices = shuffle(indices).slice(0, updateCount);
+          for (const idx of updateIndices) {
+            signals[idx]!.value = randomInt(0, 1000);
+          }
           
           // Cleanup
           effects.forEach((e) => e());
           
-          // Return something to prevent DCE
-          return signals.length + computeds.length;
+          return do_not_optimize(signals.length + computeds.length);
         }
       };
     })
@@ -485,21 +537,21 @@ group('Memory Pressure', () => {
           },
 
           bench(indices: number[]) {
-            const signals = indices.map((i: number) => latticeSignal(i));
-            const computeds = signals.map((s) =>
-              latticeComputed(() => s.value * 2)
-            );
-            const effects = computeds.map((c) =>
-              latticeEffect(() => void c.value)
-            );
+            const signals = indices.map(() => latticeSignal(randomInt(0, 1000)));
+            const computeds = signals.map((s) => latticeComputed(() => s.value * 2));
+            const effects = computeds.map((c) => latticeEffect(() => do_not_optimize(c.value)));
 
-            // Trigger some updates
-            signals.forEach((s, i) => (s.value = i * 2));
+            // Random updates
+            const updateCount = Math.floor(signals.length / 10);
+            const updateIndices = shuffle(indices).slice(0, updateCount);
+            for (const idx of updateIndices) {
+              signals[idx]!.value = randomInt(0, 1000);
+            }
 
             // Cleanup
             effects.forEach((e) => e());
 
-            return signals.length + computeds.length;
+            return do_not_optimize(signals.length + computeds.length);
           },
         };
       }
@@ -518,17 +570,21 @@ group('Memory Pressure', () => {
           },
 
           bench(indices: number[]) {
-            const signals = indices.map((i: number) => alienSignal(i));
+            const signals = indices.map(() => alienSignal(randomInt(0, 1000)));
             const computeds = signals.map((s) => alienComputed(() => s() * 2));
-            const effects = computeds.map((c) => alienEffect(() => void c()));
+            const effects = computeds.map((c) => alienEffect(() => do_not_optimize(c())));
 
-            // Trigger some updates
-            signals.forEach((s, i) => s(i * 2));
+            // Random updates
+            const updateCount = Math.floor(signals.length / 10);
+            const updateIndices = shuffle(indices).slice(0, updateCount);
+            for (const idx of updateIndices) {
+              signals[idx]!(randomInt(0, 1000));
+            }
 
             // Cleanup
             effects.forEach((e) => e());
 
-            return signals.length + computeds.length;
+            return do_not_optimize(signals.length + computeds.length);
           },
         };
       }

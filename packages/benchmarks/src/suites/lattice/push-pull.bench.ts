@@ -8,7 +8,8 @@
  * 3. Write-heavy patterns where reads are infrequent
  */
 
-import { run, bench, group, barplot, summary } from 'mitata';
+import { run, bench, group, barplot, summary, do_not_optimize } from 'mitata';
+import { randomIntArray } from '../../utils/bench-helpers';
 
 // Type for mitata benchmark state
 interface BenchState {
@@ -56,13 +57,19 @@ group('Filtered Updates', () => {
         source.value = 1;
         void downstream.value;
         
-        yield () => {
-          let sum = 0;
-          for (let i = 0; i < iterations; i++) {
-            source.value = i;
-            sum += downstream.value;
+        yield {
+          [0]() { return randomIntArray(iterations, 0, 10000); },
+          [1]() { return source; },
+          [2]() { return downstream; },
+          
+          bench(values: number[], source: any, downstream: any) {
+            let sum = 0;
+            for (const val of values) {
+              source.value = val;
+              sum += downstream.value;
+            }
+            return do_not_optimize(sum);
           }
-          return sum; // Prevent DCE
         };
       })
       .args('filterRatio', [10, 25, 50, 75]);
@@ -83,13 +90,19 @@ group('Filtered Updates', () => {
         source.value = 1;
         void downstream.value;
         
-        yield () => {
-          let sum = 0;
-          for (let i = 0; i < iterations; i++) {
-            source.value = i;
-            sum += downstream.value;
+        yield {
+          [0]() { return randomIntArray(iterations, 0, 10000); },
+          [1]() { return source; },
+          [2]() { return downstream; },
+          
+          bench(values: number[], source: any, downstream: any) {
+            let sum = 0;
+            for (const val of values) {
+              source.value = val;
+              sum += downstream.value;
+            }
+            return do_not_optimize(sum);
           }
-          return sum; // Prevent DCE
         };
       })
       .args('filterRatio', [10, 25, 50, 75]);
@@ -106,10 +119,18 @@ group('Filtered Updates', () => {
         });
         const downstream = alienComputed(() => filtered() * 2);
         
-        yield () => {
-          for (let i = 0; i < iterations; i++) {
-            source(i);
-            void downstream();
+        yield {
+          [0]() { return randomIntArray(iterations, 0, 10000); },
+          [1]() { return source; },
+          [2]() { return downstream; },
+          
+          bench(values: number[], source: any, downstream: any) {
+            let sum = 0;
+            for (const val of values) {
+              source(val);
+              sum += downstream();
+            }
+            return do_not_optimize(sum);
           }
         };
       })
@@ -132,16 +153,27 @@ group('Conditional Dependencies', () => {
           selector.value ? branchA.value : branchB.value
         );
         
-        yield () => {
-          for (let i = 0; i < iterations; i++) {
-            // Switch branches based on ratio
-            if (i % (100 / switchRatio) === 0) {
-              selector.value = !selector.value;
+        yield {
+          [0]() { return randomIntArray(iterations, 0, 10000); },
+          [1]() { return selector; },
+          [2]() { return branchA; },
+          [3]() { return branchB; },
+          [4]() { return result; },
+          
+          bench(values: number[], selector: any, branchA: any, branchB: any, result: any) {
+            let sum = 0;
+            for (let i = 0; i < values.length; i++) {
+              const val = values[i]!;
+              // Switch branches based on ratio
+              if (val % (100 / switchRatio) === 0) {
+                selector.value = !selector.value;
+              }
+              // Always update both branches
+              branchA.value = val;
+              branchB.value = val * 2;
+              sum += result.value;
             }
-            // Always update both branches
-            branchA.value = i;
-            branchB.value = i * 2;
-            void result.value;
+            return do_not_optimize(sum);
           }
         };
       })
@@ -158,16 +190,27 @@ group('Conditional Dependencies', () => {
           selector.value ? branchA.value : branchB.value
         );
         
-        yield () => {
-          for (let i = 0; i < iterations; i++) {
-            // Switch branches based on ratio
-            if (switchRatio > 0 && i % (100 / switchRatio) === 0) {
-              selector.value = !selector.value;
+        yield {
+          [0]() { return randomIntArray(iterations, 0, 10000); },
+          [1]() { return selector; },
+          [2]() { return branchA; },
+          [3]() { return branchB; },
+          [4]() { return result; },
+          
+          bench(values: number[], selector: any, branchA: any, branchB: any, result: any) {
+            let sum = 0;
+            for (let i = 0; i < values.length; i++) {
+              const val = values[i]!;
+              // Switch branches based on ratio
+              if (switchRatio > 0 && val % (100 / switchRatio) === 0) {
+                selector.value = !selector.value;
+              }
+              // Always update both branches
+              branchA.value = val;
+              branchB.value = val * 2;
+              sum += result.value;
             }
-            // Always update both branches
-            branchA.value = i;
-            branchB.value = i * 2;
-            void result.value;
+            return do_not_optimize(sum);
           }
         };
       })
@@ -184,16 +227,27 @@ group('Conditional Dependencies', () => {
           selector() ? branchA() : branchB()
         );
         
-        yield () => {
-          for (let i = 0; i < iterations; i++) {
-            // Switch branches based on ratio
-            if (switchRatio > 0 && i % (100 / switchRatio) === 0) {
-              selector(!selector());
+        yield {
+          [0]() { return randomIntArray(iterations, 0, 10000); },
+          [1]() { return selector; },
+          [2]() { return branchA; },
+          [3]() { return branchB; },
+          [4]() { return result; },
+          
+          bench(values: number[], selector: any, branchA: any, branchB: any, result: any) {
+            let sum = 0;
+            for (let i = 0; i < values.length; i++) {
+              const val = values[i]!;
+              // Switch branches based on ratio
+              if (switchRatio > 0 && val % (100 / switchRatio) === 0) {
+                selector(!selector());
+              }
+              // Always update both branches
+              branchA(val);
+              branchB(val * 2);
+              sum += result();
             }
-            // Always update both branches
-            branchA(i);
-            branchB(i * 2);
-            void result();
+            return do_not_optimize(sum);
           }
         };
       })
@@ -213,17 +267,26 @@ group('Write-Heavy Pattern', () => {
         const c2 = preactComputed(() => c1.value * 2);
         const c3 = preactComputed(() => c2.value * 2);
         
-        yield () => {
-          let writeCount = 0;
-          for (let i = 0; i < totalOps; i++) {
-            source.value = i;
-            writeCount++;
-            
-            // Read based on ratio
-            if (writeCount >= writeRatio) {
-              void c3.value;
-              writeCount = 0;
+        yield {
+          [0]() { return randomIntArray(totalOps, 0, 100000); },
+          [1]() { return source; },
+          [2]() { return c3; },
+          
+          bench(values: number[], source: any, c3: any) {
+            let writeCount = 0;
+            let sum = 0;
+            for (let i = 0; i < values.length; i++) {
+              const val = values[i]!;
+              source.value = val;
+              writeCount++;
+              
+              // Read based on ratio
+              if (writeCount >= writeRatio) {
+                sum += c3.value;
+                writeCount = 0;
+              }
             }
+            return do_not_optimize(sum);
           }
         };
       })
@@ -237,17 +300,26 @@ group('Write-Heavy Pattern', () => {
         const c2 = latticeComputed(() => c1.value * 2);
         const c3 = latticeComputed(() => c2.value * 2);
         
-        yield () => {
-          let writeCount = 0;
-          for (let i = 0; i < totalOps; i++) {
-            source.value = i;
-            writeCount++;
-            
-            // Read based on ratio
-            if (writeCount >= writeRatio) {
-              void c3.value;
-              writeCount = 0;
+        yield {
+          [0]() { return randomIntArray(totalOps, 0, 100000); },
+          [1]() { return source; },
+          [2]() { return c3; },
+          
+          bench(values: number[], source: any, c3: any) {
+            let writeCount = 0;
+            let sum = 0;
+            for (let i = 0; i < values.length; i++) {
+              const val = values[i]!;
+              source.value = val;
+              writeCount++;
+              
+              // Read based on ratio
+              if (writeCount >= writeRatio) {
+                sum += c3.value;
+                writeCount = 0;
+              }
             }
+            return do_not_optimize(sum);
           }
         };
       })
@@ -261,17 +333,26 @@ group('Write-Heavy Pattern', () => {
         const c2 = alienComputed(() => c1() * 2);
         const c3 = alienComputed(() => c2() * 2);
         
-        yield () => {
-          let writeCount = 0;
-          for (let i = 0; i < totalOps; i++) {
-            source(i);
-            writeCount++;
-            
-            // Read based on ratio
-            if (writeCount >= writeRatio) {
-              void c3();
-              writeCount = 0;
+        yield {
+          [0]() { return randomIntArray(totalOps, 0, 100000); },
+          [1]() { return source; },
+          [2]() { return c3; },
+          
+          bench(values: number[], source: any, c3: any) {
+            let writeCount = 0;
+            let sum = 0;
+            for (let i = 0; i < values.length; i++) {
+              const val = values[i]!;
+              source(val);
+              writeCount++;
+              
+              // Read based on ratio
+              if (writeCount >= writeRatio) {
+                sum += c3();
+                writeCount = 0;
+              }
             }
+            return do_not_optimize(sum);
           }
         };
       })
