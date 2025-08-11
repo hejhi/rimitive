@@ -22,8 +22,6 @@ export default defineConfig({
         singleFork: true,
       },
     },
-    // Enable memory tracking in Node.js
-    setupFiles: ['./vitest.setup.ts'],
   },
   resolve: {
     // Prefer Node conditions for benchmarking
