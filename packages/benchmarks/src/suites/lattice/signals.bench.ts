@@ -500,9 +500,7 @@ group('Memory Pressure', () => {
       
       yield {
         // Generate indices for each iteration
-        indices() {
-          return Array.from({ length: objects }, (_, i) => i);
-        },
+        [0]() { return Array.from({ length: objects }, (_, i) => i); },
         
         bench(indices: number[]) {
           const signals = indices.map(() => preactSignal(randomInt(0, 1000)));
@@ -532,9 +530,7 @@ group('Memory Pressure', () => {
         const objects = state.get('objects');
 
         yield {
-          [0]() {
-            return Array.from({ length: objects }, (_, i) => i);
-          },
+          [0]() { return Array.from({ length: objects }, (_, i) => i); },
 
           bench(indices: number[]) {
             const signals = indices.map(() => latticeSignal(randomInt(0, 1000)));
@@ -565,9 +561,7 @@ group('Memory Pressure', () => {
         const objects = state.get('objects');
 
         yield {
-          [0]() {
-            return Array.from({ length: objects }, (_, i) => i);
-          },
+          [0]() { return Array.from({ length: objects }, (_, i) => i); },
 
           bench(indices: number[]) {
             const signals = indices.map(() => alienSignal(randomInt(0, 1000)));
@@ -601,7 +595,7 @@ group('Memory Pressure', () => {
       const iterations = 1000;
       
       yield {
-        concurrency,
+        [0]() { return concurrency; },
         async bench() {
           const signals = Array.from({ length: concurrency }, () => preactSignal(0));
           const promises = signals.map((signal, idx) => 
@@ -625,7 +619,7 @@ group('Memory Pressure', () => {
       const iterations = 1000;
       
       yield {
-        concurrency,
+        [0]() { return concurrency; },
         async bench() {
           const signals = Array.from({ length: concurrency }, () => latticeSignal(0));
           const promises = signals.map((signal, idx) => 
@@ -649,7 +643,7 @@ group('Memory Pressure', () => {
       const iterations = 1000;
       
       yield {
-        concurrency,
+        [0]() { return concurrency; },
         async bench() {
           const signals = Array.from({ length: concurrency }, () => alienSignal(0));
           const promises = signals.map((signal, idx) => 
