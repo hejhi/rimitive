@@ -52,11 +52,17 @@ group('Filtered Updates', () => {
         });
         const downstream = preactComputed(() => filtered.value * 2);
         
+        // Warm up to establish dependencies
+        source.value = 1;
+        void downstream.value;
+        
         yield () => {
+          let sum = 0;
           for (let i = 0; i < iterations; i++) {
             source.value = i;
-            void downstream.value;
+            sum += downstream.value;
           }
+          return sum; // Prevent DCE
         };
       })
       .args('filterRatio', [10, 25, 50, 75]);
@@ -73,11 +79,17 @@ group('Filtered Updates', () => {
         });
         const downstream = latticeComputed(() => filtered.value * 2);
         
+        // Warm up to establish dependencies
+        source.value = 1;
+        void downstream.value;
+        
         yield () => {
+          let sum = 0;
           for (let i = 0; i < iterations; i++) {
             source.value = i;
-            void downstream.value;
+            sum += downstream.value;
           }
+          return sum; // Prevent DCE
         };
       })
       .args('filterRatio', [10, 25, 50, 75]);

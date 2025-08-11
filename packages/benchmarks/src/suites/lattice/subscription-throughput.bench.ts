@@ -61,12 +61,18 @@ group('Subscription Updates', () => {
         const computeds = sources.map(s => preactComputed(() => s.value * 2));
         const disposers = computeds.map(c => preactEffect(() => void c.value));
         
+        // Warm up to establish all subscriptions
+        sources[0]!.value = 1;
+        
         yield () => {
+          let changeCount = 0;
           for (let t = 0; t < ticks; t++) {
             for (const i of indices) {
               sources[i]!.value = t + i;
+              changeCount++;
             }
           }
+          return changeCount; // Return to prevent DCE
         };
         
         // Cleanup after measurement
@@ -85,12 +91,18 @@ group('Subscription Updates', () => {
         const computeds = sources.map(s => latticeComputed(() => s.value * 2));
         const disposers = computeds.map(c => latticeEffect(() => void c.value));
         
+        // Warm up to establish all subscriptions
+        sources[0]!.value = 1;
+        
         yield () => {
+          let changeCount = 0;
           for (let t = 0; t < ticks; t++) {
             for (const i of indices) {
               sources[i]!.value = t + i;
+              changeCount++;
             }
           }
+          return changeCount; // Return to prevent DCE
         };
         
         // Cleanup after measurement

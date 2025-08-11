@@ -57,13 +57,17 @@ group('Basic Operations', () => {
           const count = preactSignal(0);
 
           yield () => {
+            let sum = 0;
             for (let i = 0; i < iterations; i++) {
               count.value = i;
-              void count.value;
+              sum += count.value; // Prevent DCE by accumulating
             }
+            return sum; // Return value to prevent DCE
           };
         }
-      ).args('iterations', [1000, 5000, 10000]);
+      )
+      .args('iterations', [1000, 5000, 10000])
+      .gc('inner'); // Run GC between iterations
 
       bench(
         'Lattice - write + read: $iterations iterations',
@@ -72,13 +76,17 @@ group('Basic Operations', () => {
           const count = latticeSignal(0);
 
           yield () => {
+            let sum = 0;
             for (let i = 0; i < iterations; i++) {
               count.value = i;
-              void count.value;
+              sum += count.value; // Prevent DCE by accumulating
             }
+            return sum; // Return value to prevent DCE
           };
         }
-      ).args('iterations', [1000, 5000, 10000]);
+      )
+      .args('iterations', [1000, 5000, 10000])
+      .gc('inner'); // Run GC between iterations
 
       bench(
         'Alien - write + read: $iterations iterations',
@@ -87,13 +95,17 @@ group('Basic Operations', () => {
           const count = alienSignal(0);
 
           yield () => {
+            let sum = 0;
             for (let i = 0; i < iterations; i++) {
               count(i);
-              void count();
+              sum += count(); // Prevent DCE by accumulating
             }
+            return sum; // Return value to prevent DCE
           };
         }
-      ).args('iterations', [1000, 5000, 10000]);
+      )
+      .args('iterations', [1000, 5000, 10000])
+      .gc('inner'); // Run GC between iterations
     });
   });
 });
@@ -112,13 +124,21 @@ group('Computed Chain', () => {
           last = preactComputed(() => prev.value * 2);
         }
 
+        // Warm up the chain to establish dependencies
+        source.value = 1;
+        void last.value;
+
         yield () => {
+          let sum = 0;
           for (let i = 0; i < 10000; i++) {
             source.value = i;
-            void last.value;
+            sum += last.value;
           }
+          return sum;
         };
-      }).args('depth', [2, 3, 5, 10]);
+      })
+      .args('depth', [2, 3, 5, 10])
+      .gc('inner'); // GC between different depth configurations
 
       bench('Lattice - chain depth: $depth', function* (state: BenchState) {
         const depth = state.get('depth');
@@ -131,13 +151,21 @@ group('Computed Chain', () => {
           last = latticeComputed(() => prev.value * 2);
         }
 
+        // Warm up the chain to establish dependencies
+        source.value = 1;
+        void last.value;
+
         yield () => {
+          let sum = 0;
           for (let i = 0; i < 10000; i++) {
             source.value = i;
-            void last.value;
+            sum += last.value;
           }
+          return sum;
         };
-      }).args('depth', [2, 3, 5, 10]);
+      })
+        .args('depth', [2, 3, 5, 10])
+        .gc('inner'); // GC between different depth configurations
 
       bench('Alien - chain depth: $depth', function* (state: BenchState) {
         const depth = state.get('depth');
@@ -150,13 +178,21 @@ group('Computed Chain', () => {
           last = alienComputed(() => prev() * 2);
         }
 
+        // Warm up the chain to establish dependencies
+        source(1);
+        void last();
+
         yield () => {
+          let sum = 0;
           for (let i = 0; i < 10000; i++) {
             source(i);
-            void last();
+            sum += last();
           }
+          return sum;
         };
-      }).args('depth', [2, 3, 5, 10]);
+      })
+        .args('depth', [2, 3, 5, 10])
+        .gc('inner'); // GC between different depth configurations
     });
   });
 });
@@ -404,6 +440,178 @@ group('Effect Triggers', () => {
         cleanup();
       }).args('count', [100, 500, 1000]);
     });
+  });
+});
+
+// Advanced benchmark group with better DCE prevention and memory testing
+group('Memory Pressure', () => {
+  summary(() => {
+    bench('Preact - create/dispose $objects objects', function* (state: BenchState) {
+      const objects = state.get('objects');
+      
+      yield {
+        // Computed property to generate unique iterations
+        [0]() {
+          return Array.from({ length: objects }, (_, i) => i);
+        },
+        
+        bench(indices: number[]) {
+          const signals = indices.map((i: number) => preactSignal(i));
+          const computeds = signals.map((s) => preactComputed(() => s.value * 2));
+          const effects = computeds.map((c) => preactEffect(() => void c.value));
+          
+          // Trigger some updates
+          signals.forEach((s, i) => s.value = i * 2);
+          
+          // Cleanup
+          effects.forEach((e) => e());
+          
+          // Return something to prevent DCE
+          return signals.length + computeds.length;
+        }
+      };
+    })
+    .range('objects', 100, 1000, 100)  // Use range for continuous exploration
+    .gc('inner');  // GC before each iteration for memory-intensive operations
+    
+    bench(
+      'Lattice - create/dispose $objects objects',
+      function* (state: BenchState) {
+        const objects = state.get('objects');
+
+        yield {
+          [0]() {
+            return Array.from({ length: objects }, (_, i) => i);
+          },
+
+          bench(indices: number[]) {
+            const signals = indices.map((i: number) => latticeSignal(i));
+            const computeds = signals.map((s) =>
+              latticeComputed(() => s.value * 2)
+            );
+            const effects = computeds.map((c) =>
+              latticeEffect(() => void c.value)
+            );
+
+            // Trigger some updates
+            signals.forEach((s, i) => (s.value = i * 2));
+
+            // Cleanup
+            effects.forEach((e) => e());
+
+            return signals.length + computeds.length;
+          },
+        };
+      }
+    )
+      .range('objects', 100, 1000, 100)
+      .gc('inner');
+    
+    bench(
+      'Alien - create/dispose $objects objects',
+      function* (state: BenchState) {
+        const objects = state.get('objects');
+
+        yield {
+          [0]() {
+            return Array.from({ length: objects }, (_, i) => i);
+          },
+
+          bench(indices: number[]) {
+            const signals = indices.map((i: number) => alienSignal(i));
+            const computeds = signals.map((s) => alienComputed(() => s() * 2));
+            const effects = computeds.map((c) => alienEffect(() => void c()));
+
+            // Trigger some updates
+            signals.forEach((s, i) => s(i * 2));
+
+            // Cleanup
+            effects.forEach((e) => e());
+
+            return signals.length + computeds.length;
+          },
+        };
+      }
+    )
+      .range('objects', 100, 1000, 100)
+      .gc('inner');
+  });
+});
+
+// Concurrent updates benchmark
+group('Concurrent Updates', () => {
+  summary(() => {
+    bench('Preact - concurrent: $concurrency', function* (state: BenchState) {
+      const concurrency = state.get('concurrency');
+      const iterations = 1000;
+      
+      yield {
+        concurrency,
+        async bench() {
+          const signals = Array.from({ length: concurrency }, () => preactSignal(0));
+          const promises = signals.map((signal, idx) => 
+            Promise.resolve().then(() => {
+              for (let i = 0; i < iterations; i++) {
+                signal.value = i + idx;
+              }
+              return signal.value;
+            })
+          );
+          
+          const results = await Promise.all(promises);
+          return results.reduce((a, b) => a + b, 0);
+        }
+      };
+    })
+    .args('concurrency', [1, 5, 10, 20]);
+    
+    bench('Lattice - concurrent: $concurrency', function* (state: BenchState) {
+      const concurrency = state.get('concurrency');
+      const iterations = 1000;
+      
+      yield {
+        concurrency,
+        async bench() {
+          const signals = Array.from({ length: concurrency }, () => latticeSignal(0));
+          const promises = signals.map((signal, idx) => 
+            Promise.resolve().then(() => {
+              for (let i = 0; i < iterations; i++) {
+                signal.value = i + idx;
+              }
+              return signal.value;
+            })
+          );
+          
+          const results = await Promise.all(promises);
+          return results.reduce((a, b) => a + b, 0);
+        }
+      };
+    })
+    .args('concurrency', [1, 5, 10, 20]);
+    
+    bench('Alien - concurrent: $concurrency', function* (state: BenchState) {
+      const concurrency = state.get('concurrency');
+      const iterations = 1000;
+      
+      yield {
+        concurrency,
+        async bench() {
+          const signals = Array.from({ length: concurrency }, () => alienSignal(0));
+          const promises = signals.map((signal, idx) => 
+            Promise.resolve().then(() => {
+              for (let i = 0; i < iterations; i++) {
+                signal(i + idx);
+              }
+              return signal();
+            })
+          );
+          
+          const results = await Promise.all(promises);
+          return results.reduce((a, b) => a + b, 0);
+        }
+      };
+    })
+    .args('concurrency', [1, 5, 10, 20]);
   });
 });
 
