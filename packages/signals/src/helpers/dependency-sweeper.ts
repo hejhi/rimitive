@@ -73,37 +73,30 @@ export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void
 
   // ALGORITHM: Selective Edge Removal via Generations
   // After a computed/effect runs, remove edges whose generation tag does not
-  // match the consumer's current generation. During the run, ensureLink tags
-  // edges with edge.gen = consumer._gen.
+  // match the consumer's current generation.
   const pruneStale = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
     let prev: Edge | undefined;
 
+    const currentGen = consumer._gen;
     // Walk the linked list, removing nodes with old generation
     while (node !== undefined) {
       const next = node.nextSource;
-      if (node.gen !== consumer._gen) {
-        // ALGORITHM: Linked List Removal
-        // This dependency wasn't accessed - remove it
-        
-        // Update previous node's forward pointer
+      if (node.gen !== currentGen) {
+        // Linked List Removal
         if (prev !== undefined) {
           prev.nextSource = next;
         } else {
-          // No previous - update head pointer
           consumer._sources = next;
         }
 
-        // Update next node's backward pointer
         if (next !== undefined) (next.prevSource = prev);
 
         // Remove from producer's target list (bidirectional removal)
         unlinkFromProducer(node);
-        
-        // Don't update prev - it stays the same for next iteration
+        // prev remains unchanged
       } else {
-        // This dependency was accessed during current run - keep it
-        // Update prev for next iteration
+        // Keep node
         prev = node;
       }
 
