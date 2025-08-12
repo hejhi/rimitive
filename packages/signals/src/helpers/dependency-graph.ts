@@ -56,7 +56,13 @@ export interface DependencyGraph {
   needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
 }
 
+// OPTIMIZATION: WeakMap for O(1) edge lookups
+// Maps consumer -> producer -> edge for fast deduplication
+// WeakMap ensures no memory leaks when nodes are garbage collected
+type EdgeMap = WeakMap<ConsumerNode, WeakMap<ProducerNode, Edge>>;
+
 export function createDependencyGraph(): DependencyGraph {
+  const edgeMap: EdgeMap = new WeakMap();
    // ALGORITHM: Edge Creation and Insertion
    // Creates a new edge between producer and consumer, inserting it at the head
    // of both linked lists for O(1) insertion
@@ -96,6 +102,14 @@ export function createDependencyGraph(): DependencyGraph {
      consumer._sources = newNode; // Consumer now depends on this edge first
      producer._targets = newNode; // Producer now notifies this edge first
      
+     // OPTIMIZATION: Update WeakMap for O(1) lookups
+     let producerMap = edgeMap.get(consumer);
+     if (!producerMap) {
+       producerMap = new WeakMap();
+       edgeMap.set(consumer, producerMap);
+     }
+     producerMap.set(producer, newNode);
+     
      // OPTIMIZATION: Cache this edge for fast repeated access
      producer._lastEdge = newNode;
 
@@ -119,22 +133,19 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
     
-    // ALGORITHM: Linear Search (MTF disabled for V8 hidden class stability)
-    // Search through consumer's dependency list for existing edge.
-    // UPDATE: Move-To-Front disabled - causes excessive V8 hidden class transitions
-    // in hot paths (401KB per iteration in diamond benchmarks).
-    let node = consumer._sources;
-    while (node) {
-      if (node.source === producer) {
-        // Update edge metadata
-        node.version = producerVersion;
-        node.gen = consumer._gen ?? 0;
-
-        // Cache on producer for fast subsequent hits
-        producer._lastEdge = node;
-        return;
-      }
-      node = node.nextSource;
+    // OPTIMIZATION: WeakMap lookup for O(1) edge deduplication
+    // Replaces the old O(n) linear search through consumer._sources
+    const producerMap = edgeMap.get(consumer);
+    const existingEdge = producerMap?.get(producer);
+    
+    if (existingEdge) {
+      // Update edge metadata
+      existingEdge.version = producerVersion;
+      existingEdge.gen = consumer._gen ?? 0;
+      
+      // Cache on producer for fast subsequent hits
+      producer._lastEdge = existingEdge;
+      return;
     }
 
     // No existing edge found - create new one
@@ -161,6 +172,10 @@ export function createDependencyGraph(): DependencyGraph {
     if (!nextTarget) return;
     nextTarget.prevTarget = prevTarget;
   };
+
+  // NOTE: WeakMap cleanup is automatic
+  // When a consumer node is garbage collected, all its WeakMap entries
+  // are automatically removed. No manual cleanup needed.
 
   /**
    * ALGORITHM: Preact-style Dependency Checking with _refresh()

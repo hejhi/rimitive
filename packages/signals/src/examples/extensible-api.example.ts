@@ -41,7 +41,10 @@ function createPerformanceContext(): PerformanceContext {
     graphWalker: createGraphWalker(),
     propagator: createPropagator(),
     dependencies: createDependencyGraph(),
-    sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
+    sourceCleanup: (() => {
+      const deps = createDependencyGraph();
+      return createDependencySweeper(deps.unlinkFromProducer);
+    })(),
     performance: {
       signalReads: 0,
       signalWrites: 0,
@@ -177,7 +180,10 @@ export function minimalExample() {
     graphWalker: createGraphWalker(),
     propagator: createPropagator(),
     dependencies: createDependencyGraph(),
-    sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
+    sourceCleanup: (() => {
+      const deps = createDependencyGraph();
+      return createDependencySweeper(deps.unlinkFromProducer);
+    })(),
   });
   
   // Use the API
@@ -221,7 +227,10 @@ export function defaultExample() {
     graphWalker: createGraphWalker(),
     propagator: createPropagator(),
     dependencies: createDependencyGraph(),
-    sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
+    sourceCleanup: (() => {
+      const deps = createDependencyGraph();
+      return createDependencySweeper(deps.unlinkFromProducer);
+    })(),
   });
   
   // Works just like before

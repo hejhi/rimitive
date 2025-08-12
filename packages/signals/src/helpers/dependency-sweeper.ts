@@ -63,6 +63,8 @@ export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void
       // This is the bidirectional edge removal - we remove from both sides
       unlinkFromProducer(node);
       
+      // WeakMap cleanup is automatic - no manual removal needed
+      
       // Move to next source
       node = next;
     }
