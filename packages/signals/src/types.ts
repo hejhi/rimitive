@@ -64,6 +64,7 @@ export interface ProducerNode extends ReactiveNode {
 // They maintain a list of producers (sources) they depend on
 export interface ConsumerNode extends ReactiveNode {
   _sources: Edge | undefined; // Head of intrusive linked list of dependencies
+  _sourcesTail?: Edge; // OPTIMIZATION: Tail pointer for O(1) access to recent dependencies
 
   _invalidate(): void; // Called when dependencies change
   _refresh(): boolean;
