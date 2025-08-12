@@ -3,9 +3,9 @@ import { createTestInstance } from '../test-setup';
 
 describe('Conditional Dependencies with WeakMap', () => {
   let instance: ReturnType<typeof createTestInstance>;
-  let signal: ReturnType<typeof instance.signal>;
-  let computed: ReturnType<typeof instance.computed>;
-  let effect: ReturnType<typeof instance.effect>;
+  let signal: typeof instance.signal;
+  let computed: typeof instance.computed;
+  let effect: typeof instance.effect;
 
   beforeEach(() => {
     instance = createTestInstance();
@@ -75,7 +75,7 @@ describe('Conditional Dependencies with WeakMap', () => {
     effect(() => {
       effectCount++;
       // Access the computed to establish dependency
-      result.value;
+      void result.value;
     });
     
     expect(effectCount).toBe(1);

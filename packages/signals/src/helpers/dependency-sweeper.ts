@@ -48,7 +48,10 @@ export interface DependencySweeper {
   pruneStale: (consumer: ConsumerNode) => void;
 }
 
-export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void): DependencySweeper {
+export function createDependencySweeper(
+  unlinkFromProducer: (edge: Edge) => void,
+  unlinkFromConsumer: (edge: Edge) => void
+): DependencySweeper {
   // ALGORITHM: Complete Edge Removal
   // Used during disposal to remove all dependency edges at once
   const detachAll = (consumer: ConsumerNode): void => {
@@ -63,7 +66,10 @@ export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void
       // This is the bidirectional edge removal - we remove from both sides
       unlinkFromProducer(node);
       
-      // WeakMap cleanup is automatic - no manual removal needed
+      // No need to clear producer cache or WeakMap here:
+      // - Consumer is being disposed and will be GC'd
+      // - WeakMap entries disappear automatically with GC
+      // - No future ensureLink calls will happen for this consumer
       
       // Move to next source
       node = next;
@@ -96,6 +102,15 @@ export function createDependencySweeper(unlinkFromProducer: (edge: Edge) => void
 
         // Remove from producer's target list (bidirectional removal)
         unlinkFromProducer(node);
+        // Remove from WeakMap to prevent stale edge lookups
+        unlinkFromConsumer(node);
+        
+        // Clear producer's cache if it points to this pruned edge
+        // This prevents stale cache hits when the dependency is re-established
+        if ('_lastEdge' in node.source && node.source._lastEdge === node) {
+          node.source._lastEdge = undefined;
+        }
+        
         // prev remains unchanged
       } else {
         // Keep node

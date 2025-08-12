@@ -43,7 +43,7 @@ function createPerformanceContext(): PerformanceContext {
     dependencies: createDependencyGraph(),
     sourceCleanup: (() => {
       const deps = createDependencyGraph();
-      return createDependencySweeper(deps.unlinkFromProducer);
+      return createDependencySweeper(deps.unlinkFromProducer, deps.unlinkFromConsumer);
     })(),
     performance: {
       signalReads: 0,
@@ -182,7 +182,7 @@ export function minimalExample() {
     dependencies: createDependencyGraph(),
     sourceCleanup: (() => {
       const deps = createDependencyGraph();
-      return createDependencySweeper(deps.unlinkFromProducer);
+      return createDependencySweeper(deps.unlinkFromProducer, deps.unlinkFromConsumer);
     })(),
   });
   
@@ -229,7 +229,7 @@ export function defaultExample() {
     dependencies: createDependencyGraph(),
     sourceCleanup: (() => {
       const deps = createDependencyGraph();
-      return createDependencySweeper(deps.unlinkFromProducer);
+      return createDependencySweeper(deps.unlinkFromProducer, deps.unlinkFromConsumer);
     })(),
   });
   

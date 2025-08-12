@@ -71,7 +71,7 @@ describe('createSignalAPI', () => {
       dependencies: createDependencyGraph(),
       sourceCleanup: (() => {
         const d = createDependencyGraph();
-        return createDependencySweeper(d.unlinkFromProducer);
+        return createDependencySweeper(d.unlinkFromProducer, d.unlinkFromConsumer);
       })(),
     };
     
@@ -116,7 +116,7 @@ describe('createSignalAPI', () => {
       dependencies: createDependencyGraph(),
       sourceCleanup: (() => {
         const d = createDependencyGraph();
-        return createDependencySweeper(d.unlinkFromProducer);
+        return createDependencySweeper(d.unlinkFromProducer, d.unlinkFromConsumer);
       })(),
     };
     

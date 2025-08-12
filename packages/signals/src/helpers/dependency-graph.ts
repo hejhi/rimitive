@@ -180,9 +180,7 @@ export function createDependencyGraph(): DependencyGraph {
   // remain in the map and cause incorrect lookups.
   const unlinkFromConsumer = ({ source, target }: Edge): void => {
     const producerMap = edgeMap.get(target);
-    if (producerMap) {
-      producerMap.delete(source);
-    }
+    if (producerMap) producerMap.delete(source);
   };
 
   /**
@@ -297,5 +295,5 @@ export function createDependencyGraph(): DependencyGraph {
     return isDirty;
   };
 
-  return { ensureLink, unlinkFromProducer, connect, hasStaleDependencies, needsRecompute };
+  return { ensureLink, unlinkFromProducer, unlinkFromConsumer, connect, hasStaleDependencies, needsRecompute };
 }
