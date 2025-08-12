@@ -4,7 +4,7 @@
  * Focused on basic signal read/write operations
  */
 
-import { run, bench, group } from 'mitata';
+import { run, bench, group, summary, barplot } from 'mitata';
 import {
   signal as preactSignal,
 } from '@preact/signals-core';
@@ -32,103 +32,107 @@ const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
 const ITERATIONS = 100000;
 
 group('Signal Updates', () => {
-  bench('Preact - write only', function* () {
-    const signal = preactSignal(0);
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal.value = i;
-      }
-    };
-  });
-
-  bench('Lattice - write only', function* () {
-    const signal = latticeSignal(0);
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal.value = i;
-      }
-    };
-  });
-
-  bench('Alien - write only', function* () {
-    const signal = alienSignal(0);
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal(i);
-      }
-    };
-  });
-
-  bench('Preact - read only', function* () {
-    const signal = preactSignal(42);
-    // Warm up
-    void signal.value;
+  summary(() => {
+    barplot(() => {
+      bench('Preact - write only', function* () {
+        const signal = preactSignal(0);
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal.value = i;
+          }
+        };
+      });
     
-    yield () => {
-      let sum = 0;
-      for (let i = 0; i < ITERATIONS; i++) {
-        sum += signal.value;
-      }
-      return sum;
-    };
-  });
-
-  bench('Lattice - read only', function* () {
-    const signal = latticeSignal(42);
-    // Warm up
-    void signal.value;
+      bench('Lattice - write only', function* () {
+        const signal = latticeSignal(0);
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal.value = i;
+          }
+        };
+      });
     
-    yield () => {
-      let sum = 0;
-      for (let i = 0; i < ITERATIONS; i++) {
-        sum += signal.value;
-      }
-      return sum;
-    };
-  });
-
-  bench('Alien - read only', function* () {
-    const signal = alienSignal(42);
-    // Warm up
-    void signal();
+      bench('Alien - write only', function* () {
+        const signal = alienSignal(0);
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal(i);
+          }
+        };
+      });
     
-    yield () => {
-      let sum = 0;
-      for (let i = 0; i < ITERATIONS; i++) {
-        sum += signal();
-      }
-      return sum;
-    };
-  });
-
-  bench('Preact - read/write mixed', function* () {
-    const signal = preactSignal(0);
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal.value = i;
+      bench('Preact - read only', function* () {
+        const signal = preactSignal(42);
+        // Warm up
         void signal.value;
-      }
-    };
-  });
-
-  bench('Lattice - read/write mixed', function* () {
-    const signal = latticeSignal(0);
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal.value = i;
+        
+        yield () => {
+          let sum = 0;
+          for (let i = 0; i < ITERATIONS; i++) {
+            sum += signal.value;
+          }
+          return sum;
+        };
+      });
+    
+      bench('Lattice - read only', function* () {
+        const signal = latticeSignal(42);
+        // Warm up
         void signal.value;
-      }
-    };
-  });
-
-  bench('Alien - read/write mixed', function* () {
-    const signal = alienSignal(0);
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal(i);
+        
+        yield () => {
+          let sum = 0;
+          for (let i = 0; i < ITERATIONS; i++) {
+            sum += signal.value;
+          }
+          return sum;
+        };
+      });
+    
+      bench('Alien - read only', function* () {
+        const signal = alienSignal(42);
+        // Warm up
         void signal();
-      }
-    };
+        
+        yield () => {
+          let sum = 0;
+          for (let i = 0; i < ITERATIONS; i++) {
+            sum += signal();
+          }
+          return sum;
+        };
+      });
+    
+      bench('Preact - read/write mixed', function* () {
+        const signal = preactSignal(0);
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal.value = i;
+            void signal.value;
+          }
+        };
+      });
+    
+      bench('Lattice - read/write mixed', function* () {
+        const signal = latticeSignal(0);
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal.value = i;
+            void signal.value;
+          }
+        };
+      });
+    
+      bench('Alien - read/write mixed', function* () {
+        const signal = alienSignal(0);
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal(i);
+            void signal();
+          }
+        };
+      });
+    });
   });
 });
 

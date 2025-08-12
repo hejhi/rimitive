@@ -4,7 +4,7 @@
  * Tests how efficiently effects are triggered on signal changes
  */
 
-import { run, bench, group } from 'mitata';
+import { run, bench, group, summary, barplot } from 'mitata';
 import {
   signal as preactSignal,
   effect as preactEffect,
@@ -35,152 +35,164 @@ const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => Ef
 const ITERATIONS = 10000;
 
 group('Single Effect', () => {
-  bench('Preact', function* () {
-    const signal = preactSignal(0);
-    let counter = 0;
-    const dispose = preactEffect(() => {
-      counter += signal.value;
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const signal = preactSignal(0);
+        let counter = 0;
+        const dispose = preactEffect(() => {
+          counter += signal.value;
+        });
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal.value = i;
+          }
+        };
+        
+        dispose();
+      });
+    
+      bench('Lattice', function* () {
+        const signal = latticeSignal(0);
+        let counter = 0;
+        const dispose = latticeEffect(() => {
+          counter += signal.value;
+        });
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal.value = i;
+          }
+        };
+        
+        dispose();
+      });
+    
+      bench('Alien', function* () {
+        const signal = alienSignal(0);
+        let counter = 0;
+        const dispose = alienEffect(() => {
+          counter += signal();
+        });
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            signal(i);
+          }
+        };
+        
+        dispose();
+      });
     });
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal.value = i;
-      }
-    };
-    
-    dispose();
-  });
-
-  bench('Lattice', function* () {
-    const signal = latticeSignal(0);
-    let counter = 0;
-    const dispose = latticeEffect(() => {
-      counter += signal.value;
-    });
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal.value = i;
-      }
-    };
-    
-    dispose();
-  });
-
-  bench('Alien', function* () {
-    const signal = alienSignal(0);
-    let counter = 0;
-    const dispose = alienEffect(() => {
-      counter += signal();
-    });
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        signal(i);
-      }
-    };
-    
-    dispose();
   });
 });
 
 group('Multiple Effects', () => {
-  bench('Preact - 10 effects', function* () {
-    const signal = preactSignal(0);
-    let counters = Array(10).fill(0);
-    const disposers = counters.map((_, i) => 
-      preactEffect(() => {
-        counters[i] += signal.value;
-      })
-    );
+  summary(() => {
+    barplot(() => {
+      bench('Preact - 10 effects', function* () {
+        const signal = preactSignal(0);
+        let counters = Array(10).fill(0);
+        const disposers = counters.map((_, i) => 
+          preactEffect(() => {
+            counters[i] += signal.value;
+          })
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            signal.value = i;
+          }
+        };
+        
+        disposers.forEach(d => d());
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        signal.value = i;
-      }
-    };
+      bench('Lattice - 10 effects', function* () {
+        const signal = latticeSignal(0);
+        let counters = Array(10).fill(0);
+        const disposers = counters.map((_, i) => 
+          latticeEffect(() => {
+            counters[i] += signal.value;
+          })
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            signal.value = i;
+          }
+        };
+        
+        disposers.forEach(d => d());
+      });
     
-    disposers.forEach(d => d());
-  });
-
-  bench('Lattice - 10 effects', function* () {
-    const signal = latticeSignal(0);
-    let counters = Array(10).fill(0);
-    const disposers = counters.map((_, i) => 
-      latticeEffect(() => {
-        counters[i] += signal.value;
-      })
-    );
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        signal.value = i;
-      }
-    };
-    
-    disposers.forEach(d => d());
-  });
-
-  bench('Alien - 10 effects', function* () {
-    const signal = alienSignal(0);
-    let counters = Array(10).fill(0);
-    const disposers = counters.map((_, i) => 
-      alienEffect(() => {
-        counters[i] += signal();
-      })
-    );
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        signal(i);
-      }
-    };
-    
-    disposers.forEach(d => d());
+      bench('Alien - 10 effects', function* () {
+        const signal = alienSignal(0);
+        let counters = Array(10).fill(0);
+        const disposers = counters.map((_, i) => 
+          alienEffect(() => {
+            counters[i] += signal();
+          })
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            signal(i);
+          }
+        };
+        
+        disposers.forEach(d => d());
+      });
+    });
   });
 });
 
 group('Effect Cleanup', () => {
-  bench('Preact', function* () {
-    const signal = preactSignal(0);
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const signal = preactSignal(0);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 100; i++) {
+            const dispose = preactEffect(() => {
+              void signal.value;
+            });
+            signal.value = i;
+            dispose();
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 100; i++) {
-        const dispose = preactEffect(() => {
-          void signal.value;
-        });
-        signal.value = i;
-        dispose();
-      }
-    };
-  });
-
-  bench('Lattice', function* () {
-    const signal = latticeSignal(0);
+      bench('Lattice', function* () {
+        const signal = latticeSignal(0);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 100; i++) {
+            const dispose = latticeEffect(() => {
+              void signal.value;
+            });
+            signal.value = i;
+            dispose();
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 100; i++) {
-        const dispose = latticeEffect(() => {
-          void signal.value;
-        });
-        signal.value = i;
-        dispose();
-      }
-    };
-  });
-
-  bench('Alien', function* () {
-    const signal = alienSignal(0);
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 100; i++) {
-        const dispose = alienEffect(() => {
-          void signal();
-        });
-        signal(i);
-        dispose();
-      }
-    };
+      bench('Alien', function* () {
+        const signal = alienSignal(0);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 100; i++) {
+            const dispose = alienEffect(() => {
+              void signal();
+            });
+            signal(i);
+            dispose();
+          }
+        };
+      });
+    });
   });
 });
 

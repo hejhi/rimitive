@@ -4,7 +4,7 @@
  * Tests scenarios where one signal has many dependent computeds
  */
 
-import { run, bench, group } from 'mitata';
+import { run, bench, group, summary, barplot } from 'mitata';
 import {
   signal as preactSignal,
   computed as preactComputed,
@@ -38,179 +38,191 @@ const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => Ef
 const ITERATIONS = 1000;
 
 group('Fan-out 10 Computeds', () => {
-  bench('Preact', function* () {
-    const source = preactSignal(0);
-    const computeds = Array.from({ length: 10 }, (_, i) => 
-      preactComputed(() => source.value * (i + 1))
-    );
-    const sum = preactComputed(() => 
-      computeds.reduce((acc, c) => acc + c.value, 0)
-    );
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const source = preactSignal(0);
+        const computeds = Array.from({ length: 10 }, (_, i) => 
+          preactComputed(() => source.value * (i + 1))
+        );
+        const sum = preactComputed(() => 
+          computeds.reduce((acc, c) => acc + c.value, 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source.value = i;
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source.value = i;
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Lattice', function* () {
-    const source = latticeSignal(0);
-    const computeds = Array.from({ length: 10 }, (_, i) => 
-      latticeComputed(() => source.value * (i + 1))
-    );
-    const sum = latticeComputed(() => 
-      computeds.reduce((acc, c) => acc + c.value, 0)
-    );
+      bench('Lattice', function* () {
+        const source = latticeSignal(0);
+        const computeds = Array.from({ length: 10 }, (_, i) => 
+          latticeComputed(() => source.value * (i + 1))
+        );
+        const sum = latticeComputed(() => 
+          computeds.reduce((acc, c) => acc + c.value, 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source.value = i;
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source.value = i;
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Alien', function* () {
-    const source = alienSignal(0);
-    const computeds = Array.from({ length: 10 }, (_, i) => 
-      alienComputed(() => source() * (i + 1))
-    );
-    const sum = alienComputed(() => 
-      computeds.reduce((acc, c) => acc + c(), 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source(i);
-        void sum();
-      }
-    };
+      bench('Alien', function* () {
+        const source = alienSignal(0);
+        const computeds = Array.from({ length: 10 }, (_, i) => 
+          alienComputed(() => source() * (i + 1))
+        );
+        const sum = alienComputed(() => 
+          computeds.reduce((acc, c) => acc + c(), 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source(i);
+            void sum();
+          }
+        };
+      });
+    });
   });
 });
 
 group('Fan-out 100 Computeds', () => {
-  bench('Preact', function* () {
-    const source = preactSignal(0);
-    const computeds = Array.from({ length: 100 }, (_, i) => 
-      preactComputed(() => source.value * (i + 1))
-    );
-    const dispose = preactEffect(() => {
-      computeds.reduce((acc, c) => acc + c.value, 0);
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const source = preactSignal(0);
+        const computeds = Array.from({ length: 100 }, (_, i) => 
+          preactComputed(() => source.value * (i + 1))
+        );
+        const dispose = preactEffect(() => {
+          computeds.reduce((acc, c) => acc + c.value, 0);
+        });
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            source.value = i;
+          }
+        };
+        
+        dispose();
+      });
+    
+      bench('Lattice', function* () {
+        const source = latticeSignal(0);
+        const computeds = Array.from({ length: 100 }, (_, i) => 
+          latticeComputed(() => source.value * (i + 1))
+        );
+        const dispose = latticeEffect(() => {
+          computeds.reduce((acc, c) => acc + c.value, 0);
+        });
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            source.value = i;
+          }
+        };
+        
+        dispose();
+      });
+    
+      bench('Alien', function* () {
+        const source = alienSignal(0);
+        const computeds = Array.from({ length: 100 }, (_, i) => 
+          alienComputed(() => source() * (i + 1))
+        );
+        const dispose = alienEffect(() => {
+          computeds.reduce((acc, c) => acc + c(), 0);
+        });
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            source(i);
+          }
+        };
+        
+        dispose();
+      });
     });
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        source.value = i;
-      }
-    };
-    
-    dispose();
-  });
-
-  bench('Lattice', function* () {
-    const source = latticeSignal(0);
-    const computeds = Array.from({ length: 100 }, (_, i) => 
-      latticeComputed(() => source.value * (i + 1))
-    );
-    const dispose = latticeEffect(() => {
-      computeds.reduce((acc, c) => acc + c.value, 0);
-    });
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        source.value = i;
-      }
-    };
-    
-    dispose();
-  });
-
-  bench('Alien', function* () {
-    const source = alienSignal(0);
-    const computeds = Array.from({ length: 100 }, (_, i) => 
-      alienComputed(() => source() * (i + 1))
-    );
-    const dispose = alienEffect(() => {
-      computeds.reduce((acc, c) => acc + c(), 0);
-    });
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        source(i);
-      }
-    };
-    
-    dispose();
   });
 });
 
 group('Mixed Fan-out', () => {
-  bench('Preact', function* () {
-    const source = preactSignal(0);
-    // 50 direct computeds
-    const direct = Array.from({ length: 50 }, (_, i) => 
-      preactComputed(() => source.value + i)
-    );
-    // 50 indirect computeds (depend on direct)
-    const indirect = direct.map((d, i) => 
-      preactComputed(() => d.value * 2)
-    );
-    const sum = preactComputed(() => 
-      indirect.reduce((acc, c) => acc + c.value, 0)
-    );
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const source = preactSignal(0);
+        // 50 direct computeds
+        const direct = Array.from({ length: 50 }, (_, i) => 
+          preactComputed(() => source.value + i)
+        );
+        // 50 indirect computeds (depend on direct)
+        const indirect = direct.map((d, i) => 
+          preactComputed(() => d.value * 2)
+        );
+        const sum = preactComputed(() => 
+          indirect.reduce((acc, c) => acc + c.value, 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            source.value = i;
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        source.value = i;
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Lattice', function* () {
-    const source = latticeSignal(0);
-    // 50 direct computeds
-    const direct = Array.from({ length: 50 }, (_, i) => 
-      latticeComputed(() => source.value + i)
-    );
-    // 50 indirect computeds (depend on direct)
-    const indirect = direct.map((d, i) => 
-      latticeComputed(() => d.value * 2)
-    );
-    const sum = latticeComputed(() => 
-      indirect.reduce((acc, c) => acc + c.value, 0)
-    );
+      bench('Lattice', function* () {
+        const source = latticeSignal(0);
+        // 50 direct computeds
+        const direct = Array.from({ length: 50 }, (_, i) => 
+          latticeComputed(() => source.value + i)
+        );
+        // 50 indirect computeds (depend on direct)
+        const indirect = direct.map((d, i) => 
+          latticeComputed(() => d.value * 2)
+        );
+        const sum = latticeComputed(() => 
+          indirect.reduce((acc, c) => acc + c.value, 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            source.value = i;
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        source.value = i;
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Alien', function* () {
-    const source = alienSignal(0);
-    // 50 direct computeds
-    const direct = Array.from({ length: 50 }, (_, i) => 
-      alienComputed(() => source() + i)
-    );
-    // 50 indirect computeds (depend on direct)
-    const indirect = direct.map((d, i) => 
-      alienComputed(() => d() * 2)
-    );
-    const sum = alienComputed(() => 
-      indirect.reduce((acc, c) => acc + c(), 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        source(i);
-        void sum();
-      }
-    };
+      bench('Alien', function* () {
+        const source = alienSignal(0);
+        // 50 direct computeds
+        const direct = Array.from({ length: 50 }, (_, i) => 
+          alienComputed(() => source() + i)
+        );
+        // 50 indirect computeds (depend on direct)
+        const indirect = direct.map((d, i) => 
+          alienComputed(() => d() * 2)
+        );
+        const sum = alienComputed(() => 
+          indirect.reduce((acc, c) => acc + c(), 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            source(i);
+            void sum();
+          }
+        };
+      });
+    });
   });
 });
 

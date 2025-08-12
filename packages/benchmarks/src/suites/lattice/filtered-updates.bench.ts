@@ -5,7 +5,7 @@
  * Key insight: If a computed's value doesn't change, downstream shouldn't recompute
  */
 
-import { run, bench, group } from 'mitata';
+import { run, bench, group, summary, barplot } from 'mitata';
 import {
   signal as preactSignal,
   computed as preactComputed,
@@ -36,143 +36,155 @@ const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => Computed
 const ITERATIONS = 10000;
 
 group('Threshold Filter', () => {
-  bench('Preact - 90% filtered', function* () {
-    const source = preactSignal(0);
-    const filtered = preactComputed(() => Math.floor(source.value / 10));
-    const final = preactComputed(() => filtered.value * 100);
-    
-    // Warm up
-    source.value = 1;
-    void final.value;
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source.value = i;
+  summary(() => {
+    barplot(() => {
+      bench('Preact - 90% filtered', function* () {
+        const source = preactSignal(0);
+        const filtered = preactComputed(() => Math.floor(source.value / 10));
+        const final = preactComputed(() => filtered.value * 100);
+        
+        // Warm up
+        source.value = 1;
         void final.value;
-      }
-    };
-  });
-
-  bench('Lattice - 90% filtered', function* () {
-    const source = latticeSignal(0);
-    const filtered = latticeComputed(() => Math.floor(source.value / 10));
-    const final = latticeComputed(() => filtered.value * 100);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source.value = i;
+            void final.value;
+          }
+        };
+      });
     
-    // Warm up
-    source.value = 1;
-    void final.value;
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source.value = i;
+      bench('Lattice - 90% filtered', function* () {
+        const source = latticeSignal(0);
+        const filtered = latticeComputed(() => Math.floor(source.value / 10));
+        const final = latticeComputed(() => filtered.value * 100);
+        
+        // Warm up
+        source.value = 1;
         void final.value;
-      }
-    };
-  });
-
-  bench('Alien - 90% filtered', function* () {
-    const source = alienSignal(0);
-    const filtered = alienComputed(() => Math.floor(source() / 10));
-    const final = alienComputed(() => filtered() * 100);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source.value = i;
+            void final.value;
+          }
+        };
+      });
     
-    // Warm up
-    source(1);
-    void final();
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source(i);
+      bench('Alien - 90% filtered', function* () {
+        const source = alienSignal(0);
+        const filtered = alienComputed(() => Math.floor(source() / 10));
+        const final = alienComputed(() => filtered() * 100);
+        
+        // Warm up
+        source(1);
         void final();
-      }
-    };
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source(i);
+            void final();
+          }
+        };
+      });
+    });
   });
 });
 
 group('Boolean Filter', () => {
-  bench('Preact - toggle filter', function* () {
-    const source = preactSignal(0);
-    const isEven = preactComputed(() => source.value % 2 === 0);
-    const message = preactComputed(() => isEven.value ? 'even' : 'odd');
-    const final = preactComputed(() => message.value.toUpperCase());
+  summary(() => {
+    barplot(() => {
+      bench('Preact - toggle filter', function* () {
+        const source = preactSignal(0);
+        const isEven = preactComputed(() => source.value % 2 === 0);
+        const message = preactComputed(() => isEven.value ? 'even' : 'odd');
+        const final = preactComputed(() => message.value.toUpperCase());
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source.value = i;
+            void final.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source.value = i;
-        void final.value;
-      }
-    };
-  });
-
-  bench('Lattice - toggle filter', function* () {
-    const source = latticeSignal(0);
-    const isEven = latticeComputed(() => source.value % 2 === 0);
-    const message = latticeComputed(() => isEven.value ? 'even' : 'odd');
-    const final = latticeComputed(() => message.value.toUpperCase());
+      bench('Lattice - toggle filter', function* () {
+        const source = latticeSignal(0);
+        const isEven = latticeComputed(() => source.value % 2 === 0);
+        const message = latticeComputed(() => isEven.value ? 'even' : 'odd');
+        const final = latticeComputed(() => message.value.toUpperCase());
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source.value = i;
+            void final.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source.value = i;
-        void final.value;
-      }
-    };
-  });
-
-  bench('Alien - toggle filter', function* () {
-    const source = alienSignal(0);
-    const isEven = alienComputed(() => source() % 2 === 0);
-    const message = alienComputed(() => isEven() ? 'even' : 'odd');
-    const final = alienComputed(() => message().toUpperCase());
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source(i);
-        void final();
-      }
-    };
+      bench('Alien - toggle filter', function* () {
+        const source = alienSignal(0);
+        const isEven = alienComputed(() => source() % 2 === 0);
+        const message = alienComputed(() => isEven() ? 'even' : 'odd');
+        const final = alienComputed(() => message().toUpperCase());
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source(i);
+            void final();
+          }
+        };
+      });
+    });
   });
 });
 
 group('Multi-Level Filter', () => {
-  bench('Preact', function* () {
-    const source = preactSignal(0);
-    const level1 = preactComputed(() => Math.floor(source.value / 5));
-    const level2 = preactComputed(() => Math.floor(level1.value / 2));
-    const level3 = preactComputed(() => level2.value * 1000);
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const source = preactSignal(0);
+        const level1 = preactComputed(() => Math.floor(source.value / 5));
+        const level2 = preactComputed(() => Math.floor(level1.value / 2));
+        const level3 = preactComputed(() => level2.value * 1000);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source.value = i;
+            void level3.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source.value = i;
-        void level3.value;
-      }
-    };
-  });
-
-  bench('Lattice', function* () {
-    const source = latticeSignal(0);
-    const level1 = latticeComputed(() => Math.floor(source.value / 5));
-    const level2 = latticeComputed(() => Math.floor(level1.value / 2));
-    const level3 = latticeComputed(() => level2.value * 1000);
+      bench('Lattice', function* () {
+        const source = latticeSignal(0);
+        const level1 = latticeComputed(() => Math.floor(source.value / 5));
+        const level2 = latticeComputed(() => Math.floor(level1.value / 2));
+        const level3 = latticeComputed(() => level2.value * 1000);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source.value = i;
+            void level3.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source.value = i;
-        void level3.value;
-      }
-    };
-  });
-
-  bench('Alien', function* () {
-    const source = alienSignal(0);
-    const level1 = alienComputed(() => Math.floor(source() / 5));
-    const level2 = alienComputed(() => Math.floor(level1() / 2));
-    const level3 = alienComputed(() => level2() * 1000);
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        source(i);
-        void level3();
-      }
-    };
+      bench('Alien', function* () {
+        const source = alienSignal(0);
+        const level1 = alienComputed(() => Math.floor(source() / 5));
+        const level2 = alienComputed(() => Math.floor(level1() / 2));
+        const level3 = alienComputed(() => level2() * 1000);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            source(i);
+            void level3();
+          }
+        };
+      });
+    });
   });
 });
 

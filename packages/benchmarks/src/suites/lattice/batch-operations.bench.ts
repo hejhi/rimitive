@@ -4,7 +4,7 @@
  * Tests batching multiple signal updates to minimize recomputations
  */
 
-import { run, bench, group } from 'mitata';
+import { run, bench, group, summary, barplot } from 'mitata';
 import {
   signal as preactSignal,
   computed as preactComputed,
@@ -39,197 +39,209 @@ const latticeBatch = latticeAPI.batch as <T>(fn: () => T) => T;
 const ITERATIONS = 10000;
 
 group('Batch 3 Signal Updates', () => {
-  bench('Preact', function* () {
-    const s1 = preactSignal(0);
-    const s2 = preactSignal(0);
-    const s3 = preactSignal(0);
-    const sum = preactComputed(() => s1.value + s2.value + s3.value);
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const s1 = preactSignal(0);
+        const s2 = preactSignal(0);
+        const s3 = preactSignal(0);
+        const sum = preactComputed(() => s1.value + s2.value + s3.value);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            preactBatch(() => {
+              s1.value = i;
+              s2.value = i * 2;
+              s3.value = i * 3;
+            });
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        preactBatch(() => {
-          s1.value = i;
-          s2.value = i * 2;
-          s3.value = i * 3;
-        });
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Lattice', function* () {
-    const s1 = latticeSignal(0);
-    const s2 = latticeSignal(0);
-    const s3 = latticeSignal(0);
-    const sum = latticeComputed(() => s1.value + s2.value + s3.value);
+      bench('Lattice', function* () {
+        const s1 = latticeSignal(0);
+        const s2 = latticeSignal(0);
+        const s3 = latticeSignal(0);
+        const sum = latticeComputed(() => s1.value + s2.value + s3.value);
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            latticeBatch(() => {
+              s1.value = i;
+              s2.value = i * 2;
+              s3.value = i * 3;
+            });
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        latticeBatch(() => {
-          s1.value = i;
-          s2.value = i * 2;
-          s3.value = i * 3;
-        });
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Alien', function* () {
-    const s1 = alienSignal(0);
-    const s2 = alienSignal(0);
-    const s3 = alienSignal(0);
-    const sum = alienComputed(() => s1() + s2() + s3());
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS; i++) {
-        alienStartBatch();
-        s1(i);
-        s2(i * 2);
-        s3(i * 3);
-        alienEndBatch();
-        void sum();
-      }
-    };
+      bench('Alien', function* () {
+        const s1 = alienSignal(0);
+        const s2 = alienSignal(0);
+        const s3 = alienSignal(0);
+        const sum = alienComputed(() => s1() + s2() + s3());
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS; i++) {
+            alienStartBatch();
+            s1(i);
+            s2(i * 2);
+            s3(i * 3);
+            alienEndBatch();
+            void sum();
+          }
+        };
+      });
+    });
   });
 });
 
 group('Batch 10 Signal Updates', () => {
-  bench('Preact', function* () {
-    const signals = Array.from({ length: 10 }, () => preactSignal(0));
-    const sum = preactComputed(() => 
-      signals.reduce((acc, s) => acc + s.value, 0)
-    );
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const signals = Array.from({ length: 10 }, () => preactSignal(0));
+        const sum = preactComputed(() => 
+          signals.reduce((acc, s) => acc + s.value, 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            preactBatch(() => {
+              signals.forEach((s, idx) => {
+                s.value = i * (idx + 1);
+              });
+            });
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        preactBatch(() => {
-          signals.forEach((s, idx) => {
-            s.value = i * (idx + 1);
-          });
-        });
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Lattice', function* () {
-    const signals = Array.from({ length: 10 }, () => latticeSignal(0));
-    const sum = latticeComputed(() => 
-      signals.reduce((acc, s) => acc + s.value, 0)
-    );
+      bench('Lattice', function* () {
+        const signals = Array.from({ length: 10 }, () => latticeSignal(0));
+        const sum = latticeComputed(() => 
+          signals.reduce((acc, s) => acc + s.value, 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            latticeBatch(() => {
+              signals.forEach((s, idx) => {
+                s.value = i * (idx + 1);
+              });
+            });
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        latticeBatch(() => {
-          signals.forEach((s, idx) => {
-            s.value = i * (idx + 1);
-          });
-        });
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Alien', function* () {
-    const signals = Array.from({ length: 10 }, () => alienSignal(0));
-    const sum = alienComputed(() => 
-      signals.reduce((acc, s) => acc + s(), 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 10; i++) {
-        alienStartBatch();
-        signals.forEach((s, idx) => {
-          s(i * (idx + 1));
-        });
-        alienEndBatch();
-        void sum();
-      }
-    };
+      bench('Alien', function* () {
+        const signals = Array.from({ length: 10 }, () => alienSignal(0));
+        const sum = alienComputed(() => 
+          signals.reduce((acc, s) => acc + s(), 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 10; i++) {
+            alienStartBatch();
+            signals.forEach((s, idx) => {
+              s(i * (idx + 1));
+            });
+            alienEndBatch();
+            void sum();
+          }
+        };
+      });
+    });
   });
 });
 
 group('Nested Batch Operations', () => {
-  bench('Preact', function* () {
-    const signals = Array.from({ length: 5 }, () => preactSignal(0));
-    const computeds = signals.map((s, i) => 
-      preactComputed(() => s.value * (i + 1))
-    );
-    const sum = preactComputed(() => 
-      computeds.reduce((acc, c) => acc + c.value, 0)
-    );
+  summary(() => {
+    barplot(() => {
+      bench('Preact', function* () {
+        const signals = Array.from({ length: 5 }, () => preactSignal(0));
+        const computeds = signals.map((s, i) => 
+          preactComputed(() => s.value * (i + 1))
+        );
+        const sum = preactComputed(() => 
+          computeds.reduce((acc, c) => acc + c.value, 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 5; i++) {
+            preactBatch(() => {
+              preactBatch(() => {
+                signals[0]!.value = i;
+                signals[1]!.value = i * 2;
+              });
+              preactBatch(() => {
+                signals[2]!.value = i * 3;
+                signals[3]!.value = i * 4;
+                signals[4]!.value = i * 5;
+              });
+            });
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 5; i++) {
-        preactBatch(() => {
-          preactBatch(() => {
-            signals[0]!.value = i;
-            signals[1]!.value = i * 2;
-          });
-          preactBatch(() => {
-            signals[2]!.value = i * 3;
-            signals[3]!.value = i * 4;
-            signals[4]!.value = i * 5;
-          });
-        });
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Lattice', function* () {
-    const signals = Array.from({ length: 5 }, () => latticeSignal(0));
-    const computeds = signals.map((s, i) => 
-      latticeComputed(() => s.value * (i + 1))
-    );
-    const sum = latticeComputed(() => 
-      computeds.reduce((acc, c) => acc + c.value, 0)
-    );
+      bench('Lattice', function* () {
+        const signals = Array.from({ length: 5 }, () => latticeSignal(0));
+        const computeds = signals.map((s, i) => 
+          latticeComputed(() => s.value * (i + 1))
+        );
+        const sum = latticeComputed(() => 
+          computeds.reduce((acc, c) => acc + c.value, 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 5; i++) {
+            latticeBatch(() => {
+              latticeBatch(() => {
+                signals[0]!.value = i;
+                signals[1]!.value = i * 2;
+              });
+              latticeBatch(() => {
+                signals[2]!.value = i * 3;
+                signals[3]!.value = i * 4;
+                signals[4]!.value = i * 5;
+              });
+            });
+            void sum.value;
+          }
+        };
+      });
     
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 5; i++) {
-        latticeBatch(() => {
-          latticeBatch(() => {
-            signals[0]!.value = i;
-            signals[1]!.value = i * 2;
-          });
-          latticeBatch(() => {
-            signals[2]!.value = i * 3;
-            signals[3]!.value = i * 4;
-            signals[4]!.value = i * 5;
-          });
-        });
-        void sum.value;
-      }
-    };
-  });
-
-  bench('Alien', function* () {
-    const signals = Array.from({ length: 5 }, () => alienSignal(0));
-    const computeds = signals.map((s, i) => 
-      alienComputed(() => s() * (i + 1))
-    );
-    const sum = alienComputed(() => 
-      computeds.reduce((acc, c) => acc + c(), 0)
-    );
-    
-    yield () => {
-      for (let i = 0; i < ITERATIONS / 5; i++) {
-        alienStartBatch();
-        alienStartBatch();
-        signals[0]!(i);
-        signals[1]!(i * 2);
-        alienEndBatch();
-        alienStartBatch();
-        signals[2]!(i * 3);
-        signals[3]!(i * 4);
-        signals[4]!(i * 5);
-        alienEndBatch();
-        alienEndBatch();
-        void sum();
-      }
-    };
+      bench('Alien', function* () {
+        const signals = Array.from({ length: 5 }, () => alienSignal(0));
+        const computeds = signals.map((s, i) => 
+          alienComputed(() => s() * (i + 1))
+        );
+        const sum = alienComputed(() => 
+          computeds.reduce((acc, c) => acc + c(), 0)
+        );
+        
+        yield () => {
+          for (let i = 0; i < ITERATIONS / 5; i++) {
+            alienStartBatch();
+            alienStartBatch();
+            signals[0]!(i);
+            signals[1]!(i * 2);
+            alienEndBatch();
+            alienStartBatch();
+            signals[2]!(i * 3);
+            signals[3]!(i * 4);
+            signals[4]!(i * 5);
+            alienEndBatch();
+            alienEndBatch();
+            void sum();
+          }
+        };
+      });
+    });
   });
 });
 
