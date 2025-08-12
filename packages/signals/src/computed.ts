@@ -136,11 +136,17 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     }
 
     get value(): T {
+      // OPTIMIZATION: Fast path for non-tracking reads
+      // Most reads happen outside of computed/effect context
+      const consumer = ctx.currentConsumer;
+      if (!consumer) {
+        this._update();
+        return this._value!;
+      }
       
       // ALGORITHM: Dependency Registration (Pull Phase)
       // If we're being read from within another computed/effect, register the dependency
-      const consumer = ctx.currentConsumer;
-      const isTracking = !!(consumer && (consumer._flags & RUNNING));
+      const isTracking = !!(consumer._flags & RUNNING);
 
       // ALGORITHM: Lazy Evaluation
       // Only recompute if our dependencies have changed
@@ -223,11 +229,12 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     }
 
     _update(): void {
-      // RE-ENTRANCE GUARD: If this computed is currently RUNNING (i.e.,
-      // we're being re-entered through a cyclic read during recomputation),
-      // return the last cached value without attempting to update. This
-      // mirrors non-throwing cycle handling and prevents infinite recursion.
-      if (this._flags & RUNNING || this._globalVersion === ctx.version) return;
+      // OPTIMIZATION: Combined flag and version check
+      // Most common case: already updated this global version
+      if (this._globalVersion === ctx.version) return;
+      
+      // RE-ENTRANCE GUARD: Check RUNNING after version check (less common)
+      if (this._flags & RUNNING) return;
       
       // ALGORITHM: Conditional Recomputation
       // Check OUTDATED flag first (common case) or check dependencies if NOTIFIED

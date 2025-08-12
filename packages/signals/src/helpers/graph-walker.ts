@@ -38,6 +38,25 @@ export function createGraphWalker(): GraphWalker {
   ): void => {
     if (!from) return;
 
+    // OPTIMIZATION: Fast path for single-edge linear chains
+    // Avoid stack allocation for simple cases
+    if (!from.nextTarget) {
+      let edge: Edge | undefined = from;
+      while (edge && !edge.nextTarget) {
+        const target = edge.target as ConsumerNode;
+        if (!(target._flags & SKIP_FLAGS)) {
+          target._flags |= NOTIFIED;
+          visit(target);
+          edge = (target as unknown as { _targets?: Edge })._targets;
+        } else {
+          break;
+        }
+      }
+      // If we broke out with multiple targets, fall through to normal DFS
+      if (!edge) return;
+      from = edge;
+    }
+
     let stack: TraversalFrame | undefined;
     let currentEdge: Edge | undefined = from;
 
