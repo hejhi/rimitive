@@ -52,6 +52,7 @@ export interface DependencyGraph {
   connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
   ensureLink: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
   unlinkFromProducer: (edge: Edge) => void;
+  unlinkFromConsumer: (edge: Edge) => void;
   hasStaleDependencies: (consumer: ConsumerNode) => boolean;
   needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
 }
@@ -173,9 +174,16 @@ export function createDependencyGraph(): DependencyGraph {
     nextTarget.prevTarget = prevTarget;
   };
 
-  // NOTE: WeakMap cleanup is automatic
-  // When a consumer node is garbage collected, all its WeakMap entries
-  // are automatically removed. No manual cleanup needed.
+  // ALGORITHM: Manual WeakMap cleanup for pruned edges
+  // While WeakMap handles GC automatically, we must manually remove edges
+  // when they're pruned (conditional dependencies). Otherwise stale edges
+  // remain in the map and cause incorrect lookups.
+  const unlinkFromConsumer = ({ source, target }: Edge): void => {
+    const producerMap = edgeMap.get(target);
+    if (producerMap) {
+      producerMap.delete(source);
+    }
+  };
 
   /**
    * ALGORITHM: Preact-style Dependency Checking with _refresh()
