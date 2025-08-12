@@ -11,6 +11,7 @@
     "bench": "pnpm build:all && tsx --expose-gc src/runner.ts",
     "bench:all": "pnpm build:all && tsx --expose-gc src/runner.ts",
     "bench:quick": "tsx --expose-gc src/runner.ts",
+    "bench:conditional-deps": "tsx --expose-gc src/runner.ts conditional-deps",
     "bench:diamond-deps": "tsx --expose-gc src/runner.ts diamond-deps",
     "bench:dense-updates": "tsx --expose-gc src/runner.ts dense-updates",
     "bench:batch-operations": "tsx --expose-gc src/runner.ts batch-operations",
