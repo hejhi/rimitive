@@ -1,9 +1,9 @@
 /**
- * Subscription Throughput Benchmarks
- *
- * Measures how the systems scale with many subscribers when only a
- * fraction of sources actually change per tick. Tests the efficiency
- * of change propagation when most signals remain unchanged.
+ * Sparse Updates Benchmark
+ * 
+ * Tests performance when only a small fraction of signals change per tick.
+ * This simulates real-world scenarios where most state remains stable
+ * while only specific parts update (e.g., cursor position, single form field).
  */
 
 import { run, bench, group, summary, barplot, do_not_optimize } from 'mitata';
@@ -13,6 +13,7 @@ import { randomIntArray } from '../../utils/bench-helpers';
 interface BenchState {
   get(name: string): any;
 }
+
 import {
   signal as preactSignal,
   computed as preactComputed,
@@ -40,137 +41,130 @@ const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
 const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
 const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
 
-function makeIndices(total: number, ratio: number): number[] {
-  const count = Math.floor(total * ratio);
-  const indices: number[] = [];
-  for (let i = 0; i < count; i++) {
-    indices.push(Math.floor(i * (total / count)));
-  }
-  return indices;
-}
-
-group('Subscription Updates', () => {
+group('Sparse Updates (10-25% change rate)', () => {
   summary(() => {
+    const SOURCE_COUNT = 100;
+    const TICKS = 50;
+    
+    function makeIndices(ratio: number): number[] {
+      const count = Math.floor(SOURCE_COUNT * ratio);
+      const indices: number[] = [];
+      for (let i = 0; i < count; i++) {
+        indices.push(Math.floor(i * (SOURCE_COUNT / count)));
+      }
+      return indices;
+    }
+    
     barplot(() => {
-      bench('Preact - $sources sources, $changeRatio% changes', function* (state: BenchState) {
-        const sourceCount = state.get('sources');
+      bench('Preact - $changeRatio% sparse updates', function* (state: BenchState) {
         const changeRatio = state.get('changeRatio') / 100;
-        const ticks = 100;
-        const indices = makeIndices(sourceCount, changeRatio);
+        const indices = makeIndices(changeRatio);
         
-        const sources = Array.from({ length: sourceCount }, (_, i) => preactSignal(i));
+        const sources = Array.from({ length: SOURCE_COUNT }, (_, i) => preactSignal(i));
         const computeds = sources.map(s => preactComputed(() => s.value * 2));
         const disposers = computeds.map(c => preactEffect(() => void c.value));
         
-        // Warm up to establish all subscriptions
+        // Warm up
         sources[0]!.value = 1;
         
         yield {
-          [0]() { return randomIntArray(ticks * indices.length, 0, 100000); },
+          [0]() { return randomIntArray(TICKS * indices.length, 0, 100000); },
           [1]() { return sources; },
           [2]() { return indices; },
           
           bench(values: number[], sources: any[], indices: number[]) {
             let changeCount = 0;
             let valueIndex = 0;
-            for (let t = 0; t < ticks; t++) {
+            for (let t = 0; t < TICKS; t++) {
               for (const i of indices) {
-                const val = values[valueIndex % values.length]!;
-                sources[i]!.value = val;
+                sources[i]!.value = values[valueIndex++ % values.length]!;
                 changeCount++;
-                valueIndex++;
               }
             }
             return do_not_optimize(changeCount);
           }
         };
         
-        // Cleanup after measurement
         disposers.forEach(d => d());
       })
-      .args('sources', [50, 100, 200])
-      .args('changeRatio', [10, 25, 50, 100])
+      .args('changeRatio', [10, 15, 20, 25])
       .gc('inner');
     
-      bench('Lattice - $sources sources, $changeRatio% changes', function* (state: BenchState) {
-        const sourceCount = state.get('sources');
+      bench('Lattice - $changeRatio% sparse updates', function* (state: BenchState) {
         const changeRatio = state.get('changeRatio') / 100;
-        const ticks = 100;
-        const indices = makeIndices(sourceCount, changeRatio);
+        const indices = makeIndices(changeRatio);
         
-        const sources = Array.from({ length: sourceCount }, (_, i) => latticeSignal(i));
+        const sources = Array.from({ length: SOURCE_COUNT }, (_, i) => latticeSignal(i));
         const computeds = sources.map(s => latticeComputed(() => s.value * 2));
         const disposers = computeds.map(c => latticeEffect(() => void c.value));
         
-        // Warm up to establish all subscriptions
+        // Warm up
         sources[0]!.value = 1;
         
         yield {
-          [0]() { return randomIntArray(ticks * indices.length, 0, 100000); },
+          [0]() { return randomIntArray(TICKS * indices.length, 0, 100000); },
           [1]() { return sources; },
           [2]() { return indices; },
           
           bench(values: number[], sources: any[], indices: number[]) {
             let changeCount = 0;
             let valueIndex = 0;
-            for (let t = 0; t < ticks; t++) {
+            for (let t = 0; t < TICKS; t++) {
               for (const i of indices) {
-                const val = values[valueIndex % values.length]!;
-                sources[i]!.value = val;
+                sources[i]!.value = values[valueIndex++ % values.length]!;
                 changeCount++;
-                valueIndex++;
               }
             }
             return do_not_optimize(changeCount);
           }
         };
         
-        // Cleanup after measurement
         disposers.forEach(d => d());
       })
-      .args('sources', [50, 100, 200])
-      .args('changeRatio', [10, 25, 50, 100])
+      .args('changeRatio', [10, 15, 20, 25])
       .gc('inner');
     
-      bench('Alien - $sources sources, $changeRatio% changes', function* (state: BenchState) {
-        const sourceCount = state.get('sources');
+      bench('Alien - $changeRatio% sparse updates', function* (state: BenchState) {
         const changeRatio = state.get('changeRatio') / 100;
-        const ticks = 100;
-        const indices = makeIndices(sourceCount, changeRatio);
+        const indices = makeIndices(changeRatio);
         
-        const sources = Array.from({ length: sourceCount }, (_, i) => alienSignal(i));
+        const sources = Array.from({ length: SOURCE_COUNT }, (_, i) => alienSignal(i));
         const computeds = sources.map(s => alienComputed(() => s() * 2));
         const disposers = computeds.map(c => alienEffect(() => void c()));
         
         yield {
-          [0]() { return randomIntArray(ticks * indices.length, 0, 100000); },
+          [0]() { return randomIntArray(TICKS * indices.length, 0, 100000); },
           [1]() { return sources; },
           [2]() { return indices; },
           
           bench(values: number[], sources: any[], indices: number[]) {
             let changeCount = 0;
             let valueIndex = 0;
-            for (let t = 0; t < ticks; t++) {
+            for (let t = 0; t < TICKS; t++) {
               for (const i of indices) {
-                const val = values[valueIndex % values.length]!;
-                sources[i]!(val);
+                sources[i]!(values[valueIndex++ % values.length]!);
                 changeCount++;
-                valueIndex++;
               }
             }
             return do_not_optimize(changeCount);
           }
         };
         
-        // Cleanup after measurement
         disposers.forEach(d => d());
       })
-      .args('sources', [50, 100, 200])
-      .args('changeRatio', [10, 25, 50, 100])
+      .args('changeRatio', [10, 15, 20, 25])
       .gc('inner');
     });
-  })
+  });
 });
 
 // Run all benchmarks
-await run();
+const format = process.env.BENCHMARK_FORMAT === 'json' 
+  ? { json: { debug: false, samples: false } }
+  : undefined;
+
+const results = await run({ format });
+
+if (process.env.BENCHMARK_FORMAT === 'json') {
+  console.log(JSON.stringify(results, null, 2));
+}

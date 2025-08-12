@@ -8,7 +8,8 @@
   "private": true,
   "scripts": {
     "build:all": "cd ../ && pnpm build && cd benchmarks",
-    "bench": "pnpm build:all && tsx --expose-gc run-all-benchmarks.ts",
+    "bench": "pnpm build:all && tsx --expose-gc src/runner.ts",
+    "bench:json": "tsx --expose-gc src/runner.ts",
     "bench:signals": "tsx --expose-gc src/suites/lattice/signals.bench.ts",
     "bench:push-pull": "tsx --expose-gc src/suites/lattice/push-pull.bench.ts",
     "bench:subscription": "tsx --expose-gc src/suites/lattice/subscription-throughput.bench.ts",
