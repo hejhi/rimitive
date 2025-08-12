@@ -13,8 +13,8 @@ export async function runBenchmark(options?: any) {
       print: (s: string) => process.stderr.write(s + '\n') // Output display to stderr
     });
     
-    // Output JSON data to stdout for capture
-    console.log(JSON.stringify(results, null, 2));
+    // Output JSON data to stdout for capture (compact, no pretty printing)
+    console.log(JSON.stringify(results));
     return results;
   } else {
     // Normal single-format run
@@ -25,7 +25,7 @@ export async function runBenchmark(options?: any) {
     const results = await mitataRun({ ...options, format });
     
     if (process.env.BENCHMARK_FORMAT === 'json') {
-      console.log(JSON.stringify(results, null, 2));
+      console.log(JSON.stringify(results));
     }
     
     return results;

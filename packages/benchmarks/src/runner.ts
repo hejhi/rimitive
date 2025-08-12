@@ -12,7 +12,7 @@ interface BenchmarkResult {
   name: string;
   timestamp: string;
   duration_ms: number;
-  data?: any;
+  jsonData?: string;  // Raw JSON string from benchmark
   error?: string;
 }
 
@@ -98,14 +98,12 @@ class BenchmarkRunner {
     console.log(`Running: ${name}`);
 
     try {
-      const output = await this.executeBenchmark(filePath);
+      const jsonData = await this.executeBenchmark(filePath);
       const duration_ms = Date.now() - startTime;
       
-      // Parse JSON from output
-      const data = this.parseJsonOutput(output);
-      
-      if (!data) {
-        throw new Error('No valid JSON output found');
+      // Validate it's actually JSON
+      if (!jsonData.trim()) {
+        throw new Error('No output received');
       }
 
       console.log(`  ✓ Completed in ${(duration_ms / 1000).toFixed(2)}s\n`);
@@ -114,7 +112,7 @@ class BenchmarkRunner {
         name,
         timestamp: new Date().toISOString(),
         duration_ms,
-        data
+        jsonData
       };
     } catch (error: any) {
       const duration_ms = Date.now() - startTime;
@@ -169,28 +167,15 @@ class BenchmarkRunner {
     });
   }
 
-  private parseJsonOutput(output: string): any {
-    const lines = output.split('\n').reverse();
-    
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('{')) {
-        try {
-          return JSON.parse(trimmed);
-        } catch {
-          // Continue searching
-        }
-      }
-    }
-    
-    return null;
-  }
 
   private async saveResult(result: BenchmarkResult): Promise<void> {
     // Save with format: <hash>-<timestamp>-<name>.json
     const fileName = `${this.commitHash}-${this.timestamp}-${result.name}.json`;
     const filePath = path.join(this.outputDir, fileName);
-    await fs.writeFile(filePath, JSON.stringify(result, null, 2));
+    
+    // If we have jsonData, save it directly; otherwise save the error result
+    const content = result.jsonData || JSON.stringify(result);
+    await fs.writeFile(filePath, content);
     
     // Also save a "latest" symlink for convenience
     const latestPath = path.join(this.outputDir, `latest-${result.name}.json`);
