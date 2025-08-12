@@ -44,14 +44,13 @@ export function createGraphWalker(): GraphWalker {
       let edge: Edge | undefined = from;
       while (edge && !edge.nextTarget) {
         const target = edge.target as ConsumerNode;
-        if (!(target._flags & SKIP_FLAGS)) {
-          target._flags |= NOTIFIED;
-          visit(target);
-          edge = (target as unknown as { _targets?: Edge })._targets;
-        } else {
-          break;
-        }
+        if (target._flags & SKIP_FLAGS) break;
+
+        target._flags |= NOTIFIED;
+        visit(target);
+        edge = (target as unknown as { _targets: Edge })._targets;
       }
+
       // If we broke out with multiple targets, fall through to normal DFS
       if (!edge) return;
       from = edge;
