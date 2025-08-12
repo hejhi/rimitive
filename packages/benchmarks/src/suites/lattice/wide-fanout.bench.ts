@@ -164,7 +164,7 @@ group('Mixed Fan-out', () => {
           preactComputed(() => source.value + i)
         );
         // 50 indirect computeds (depend on direct)
-        const indirect = direct.map((d, i) => 
+        const indirect = direct.map((d) => 
           preactComputed(() => d.value * 2)
         );
         const sum = preactComputed(() => 
@@ -186,7 +186,7 @@ group('Mixed Fan-out', () => {
           latticeComputed(() => source.value + i)
         );
         // 50 indirect computeds (depend on direct)
-        const indirect = direct.map((d, i) => 
+        const indirect = direct.map((d) => 
           latticeComputed(() => d.value * 2)
         );
         const sum = latticeComputed(() => 
@@ -208,7 +208,7 @@ group('Mixed Fan-out', () => {
           alienComputed(() => source() + i)
         );
         // 50 indirect computeds (depend on direct)
-        const indirect = direct.map((d, i) => 
+        const indirect = direct.map((d) => 
           alienComputed(() => d() * 2)
         );
         const sum = alienComputed(() => 

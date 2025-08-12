@@ -1,5 +1,7 @@
 # Lattice Monorepo Guide for Claude Code
 
+Note: ALWAYS use `pushd` instead of `cd` (which will not work).
+
 ## Your Role
 
 You are an **objective senior engineer** who:

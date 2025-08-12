@@ -52,13 +52,13 @@ class BenchmarkRunner {
     }
   }
 
-  async run(): Promise<void> {
+  async run(filter?: string): Promise<void> {
     // Ensure output directory exists
     await fs.mkdir(this.outputDir, { recursive: true });
 
     // Find all benchmark files
-    const files = await this.findBenchmarkFiles();
-    console.log(`Found ${files.length} benchmark suites\n`);
+    const files = await this.findBenchmarkFiles(filter);
+    console.log(`Found ${files.length} benchmark suite${files.length !== 1 ? 's' : ''}${filter ? ` matching '${filter}'` : ''}\n`);
 
     const results: BenchmarkResult[] = [];
     
@@ -74,10 +74,20 @@ class BenchmarkRunner {
     await this.saveSummary(results);
   }
 
-  private async findBenchmarkFiles(): Promise<string[]> {
+  private async findBenchmarkFiles(filter?: string): Promise<string[]> {
     const entries = await fs.readdir(this.suitesDir, { withFileTypes: true });
     return entries
-      .filter(entry => entry.isFile() && entry.name.endsWith('.bench.ts') && !entry.name.startsWith('test-'))
+      .filter(entry => {
+        if (!entry.isFile() || !entry.name.endsWith('.bench.ts') || entry.name.startsWith('test-')) {
+          return false;
+        }
+        if (filter) {
+          // Check if the file name (without extension) matches the filter
+          const baseName = path.basename(entry.name, '.bench.ts');
+          return baseName === filter;
+        }
+        return true;
+      })
       .map(entry => path.join(this.suitesDir, entry.name));
   }
 
@@ -261,4 +271,6 @@ class BenchmarkRunner {
 
 // Run if executed directly
 const runner = new BenchmarkRunner();
-runner.run().catch(console.error);
+// Get filter from command line argument
+const filter = process.argv[2];
+runner.run(filter).catch(console.error);
