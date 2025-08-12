@@ -137,6 +137,7 @@ export function createDependencyGraph(): DependencyGraph {
       tail.version = producerVersion;
       tail.gen = consumer._gen ?? 0;
       producer._lastEdge = tail;
+      // Tail is already correct, no need to update
       return;
     }
     
@@ -159,7 +160,10 @@ export function createDependencyGraph(): DependencyGraph {
         node.version = producerVersion;
         node.gen = consumer._gen ?? 0;
         producer._lastEdge = node;
-        consumer._sourcesTail = node;
+        // Only update tail if we're finding an edge that's not at the tail
+        if (consumer._sourcesTail !== node) {
+          consumer._sourcesTail = node;
+        }
         return;
       }
       node = node.nextSource;
