@@ -81,7 +81,7 @@ export function createTestInstance() {
       // Clear any pending scheduled effects by walking the intrusive stack
       let node = ctx.workQueue.state.head;
       while (node) {
-        const next = node._nextScheduled as any;
+        const next = node._nextScheduled;
         node._nextScheduled = undefined;
         node = next;
       }
@@ -134,8 +134,8 @@ export const activeContext = (() => {
     },
     get scheduledQueue() { 
       // Materialize the current intrusive stack as an array snapshot
-      const out: any[] = [];
-      let node = defaultInstance.workQueue.state.head as any;
+      const out = [];
+      let node = defaultInstance.workQueue.state.head;
       while (node) { out.push(node); node = node._nextScheduled; }
       return out;
     },

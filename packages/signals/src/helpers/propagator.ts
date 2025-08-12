@@ -27,7 +27,7 @@ export interface Propagator {
  * several producers change before effects are flushed.
  */
 export function createPropagator(): Propagator {
-  let roots: Edge[] = [];
+  const roots: Edge[] = [];
 
   const add = (from: Edge | undefined): void => {
     if (!from) return;

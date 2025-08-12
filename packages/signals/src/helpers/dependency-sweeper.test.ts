@@ -71,7 +71,7 @@ describe('Dependency Sweeper', () => {
 
     // Expect only a and c remain as sources (order not guaranteed)
     let list = target._sources;
-    const kept = new Set<any>();
+    const kept = new Set<unknown>();
     while (list) {
       kept.add(list.source);
       // also ensure gen matches current run

@@ -119,32 +119,16 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
     
-    // ALGORITHM: Linear Search with Move-To-Front (MTF)
+    // ALGORITHM: Linear Search (MTF disabled for V8 hidden class stability)
     // Search through consumer's dependency list for existing edge.
-    // On hit, splice the edge to the head to reduce future lookup cost.
+    // UPDATE: Move-To-Front disabled - causes excessive V8 hidden class transitions
+    // in hot paths (401KB per iteration in diamond benchmarks).
     let node = consumer._sources;
     while (node) {
       if (node.source === producer) {
         // Update edge metadata
         node.version = producerVersion;
         node.gen = consumer._gen ?? 0;
-
-        // Move-To-Front: if not already head, splice to head
-        if (node !== consumer._sources) {
-          const prev = node.prevSource;
-          const next = node.nextSource;
-
-          // Detach from current position
-          if (prev) prev.nextSource = next; else consumer._sources = next;
-          if (next) next.prevSource = prev;
-
-          // Insert at head
-          const oldHead = consumer._sources;
-          node.prevSource = undefined;
-          node.nextSource = oldHead;
-          if (oldHead) oldHead.prevSource = node;
-          consumer._sources = node;
-        }
 
         // Cache on producer for fast subsequent hits
         producer._lastEdge = node;

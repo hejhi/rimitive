@@ -68,7 +68,7 @@ export function createWorkQueue(): WorkQueue {
     state.head = undefined;
     // We'll decrement size as we process; preserve initial count to avoid underflow effects
     while (current) {
-      const rawNext = current._nextScheduled as ScheduledNode | undefined;
+      const rawNext: ScheduledNode | undefined = current._nextScheduled;
       const next: ScheduledNode | undefined =
         rawNext === current ? undefined : rawNext;
       current._nextScheduled = undefined; // clear scheduled flag
