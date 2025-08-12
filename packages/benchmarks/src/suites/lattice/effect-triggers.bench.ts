@@ -4,7 +4,7 @@
  * Tests how efficiently effects are triggered on signal changes
  */
 
-import { bench, group, summary, barplot } from 'mitata';
+import { bench, group, summary, barplot, do_not_optimize } from 'mitata';
 import { runBenchmark } from '../../utils/benchmark-runner';
 import {
   signal as preactSignal,
@@ -49,6 +49,7 @@ group('Single Effect', () => {
           for (let i = 0; i < ITERATIONS; i++) {
             signal.value = i;
           }
+          return do_not_optimize(counter);
         };
         
         dispose();
@@ -65,6 +66,7 @@ group('Single Effect', () => {
           for (let i = 0; i < ITERATIONS; i++) {
             signal.value = i;
           }
+          return do_not_optimize(counter);
         };
         
         dispose();
@@ -81,6 +83,7 @@ group('Single Effect', () => {
           for (let i = 0; i < ITERATIONS; i++) {
             signal(i);
           }
+          return do_not_optimize(counter);
         };
         
         dispose();
@@ -94,7 +97,7 @@ group('Multiple Effects', () => {
     barplot(() => {
       bench('Preact - 10 effects', function* () {
         const signal = preactSignal(0);
-        let counters = Array(10).fill(0);
+        const counters = Array(10).fill(0);
         const disposers = counters.map((_, i) => 
           preactEffect(() => {
             counters[i] += signal.value;
@@ -112,7 +115,7 @@ group('Multiple Effects', () => {
     
       bench('Lattice - 10 effects', function* () {
         const signal = latticeSignal(0);
-        let counters = Array(10).fill(0);
+        const counters = Array(10).fill(0);
         const disposers = counters.map((_, i) => 
           latticeEffect(() => {
             counters[i] += signal.value;
@@ -130,7 +133,7 @@ group('Multiple Effects', () => {
     
       bench('Alien - 10 effects', function* () {
         const signal = alienSignal(0);
-        let counters = Array(10).fill(0);
+        const counters = Array(10).fill(0);
         const disposers = counters.map((_, i) => 
           alienEffect(() => {
             counters[i] += signal();

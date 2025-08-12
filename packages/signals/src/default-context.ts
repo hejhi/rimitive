@@ -15,7 +15,7 @@ export function createDefaultContext() {
   const graphWalker = createGraphWalker();
   const propagator = createPropagator();
   const dependencies = createDependencyGraph();
-  const sourceCleanup = createDependencySweeper(dependencies.unlinkFromProducer, dependencies.unlinkFromConsumer);
+  const sourceCleanup = createDependencySweeper(dependencies.unlinkFromProducer);
   return {
     ...baseCtx,
     workQueue,

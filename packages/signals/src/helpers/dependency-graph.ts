@@ -52,7 +52,6 @@ export interface DependencyGraph {
   connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
   ensureLink: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
   unlinkFromProducer: (edge: Edge) => void;
-  unlinkFromConsumer: (edge: Edge) => void;
   hasStaleDependencies: (consumer: ConsumerNode) => boolean;
   needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
 }
@@ -191,13 +190,6 @@ export function createDependencyGraph(): DependencyGraph {
     nextTarget.prevTarget = prevTarget;
   };
 
-  // ALGORITHM: Edge cleanup for pruned edges
-  // Currently a no-op since we removed WeakMap and rely on intrusive lists
-  // Kept for API compatibility
-  const unlinkFromConsumer = (_edge: Edge): void => {
-    // No-op: edge removal handled by intrusive list operations
-  };
-
   /**
    * ALGORITHM: Preact-style Dependency Checking with _refresh()
    * 
@@ -310,5 +302,5 @@ export function createDependencyGraph(): DependencyGraph {
     return isDirty;
   };
 
-  return { ensureLink, unlinkFromProducer, unlinkFromConsumer, connect, hasStaleDependencies, needsRecompute };
+  return { ensureLink, unlinkFromProducer, connect, hasStaleDependencies, needsRecompute };
 }

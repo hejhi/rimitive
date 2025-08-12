@@ -50,7 +50,6 @@ export interface DependencySweeper {
 
 export function createDependencySweeper(
   unlinkFromProducer: (edge: Edge) => void,
-  unlinkFromConsumer: (edge: Edge) => void
 ): DependencySweeper {
   // ALGORITHM: Complete Edge Removal
   // Used during disposal to remove all dependency edges at once
@@ -102,8 +101,6 @@ export function createDependencySweeper(
 
         // Remove from producer's target list (bidirectional removal)
         unlinkFromProducer(node);
-        // Remove from WeakMap to prevent stale edge lookups
-        unlinkFromConsumer(node);
         
         // Clear producer's cache if it points to this pruned edge
         // This prevents stale cache hits when the dependency is re-established

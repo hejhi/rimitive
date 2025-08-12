@@ -9,7 +9,7 @@ describe('Dependency Sweeper', () => {
 
   beforeEach(() => {
     graph = createDependencyGraph();
-    sweeper = createDependencySweeper(graph.unlinkFromProducer, graph.unlinkFromConsumer);
+    sweeper = createDependencySweeper(graph.unlinkFromProducer);
   });
 
   const makeProducer = (version = 1): TrackedProducer => ({

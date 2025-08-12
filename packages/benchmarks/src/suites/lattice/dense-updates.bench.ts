@@ -12,7 +12,8 @@ import { randomIntArray } from '../../utils/bench-helpers';
 
 // Type for mitata benchmark state
 interface BenchState {
-  get(name: string): any;
+  get(name: 'changeRatio'): number;
+  get(name: string): unknown;
 }
 
 import {
@@ -41,6 +42,11 @@ const latticeAPI = createSignalAPI(
 const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
 const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
 const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
+
+// Signal types for each library
+type PreactSignal = { value: number };
+type LatticeSignal = { value: number };
+type AlienSignal = (value?: number) => number;
 
 group('Dense Updates (50-100% change rate)', () => {
   summary(() => {
@@ -73,7 +79,7 @@ group('Dense Updates (50-100% change rate)', () => {
           [1]() { return sources; },
           [2]() { return indices; },
           
-          bench(values: number[], sources: any[], indices: number[]) {
+          bench(values: number[], sources: PreactSignal[], indices: number[]) {
             let changeCount = 0;
             let valueIndex = 0;
             for (let t = 0; t < TICKS; t++) {
@@ -107,7 +113,7 @@ group('Dense Updates (50-100% change rate)', () => {
           [1]() { return sources; },
           [2]() { return indices; },
           
-          bench(values: number[], sources: any[], indices: number[]) {
+          bench(values: number[], sources: LatticeSignal[], indices: number[]) {
             let changeCount = 0;
             let valueIndex = 0;
             for (let t = 0; t < TICKS; t++) {
@@ -138,12 +144,12 @@ group('Dense Updates (50-100% change rate)', () => {
           [1]() { return sources; },
           [2]() { return indices; },
           
-          bench(values: number[], sources: any[], indices: number[]) {
+          bench(values: number[], sources: AlienSignal[], indices: number[]) {
             let changeCount = 0;
             let valueIndex = 0;
             for (let t = 0; t < TICKS; t++) {
               for (const i of indices) {
-                sources[i]!(values[valueIndex++ % values.length]!);
+                sources[i]!(values[valueIndex++ % values.length]);
                 changeCount++;
               }
             }

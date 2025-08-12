@@ -1,9 +1,9 @@
 /**
- * Sparse Updates Benchmark
+ * Dense Updates Benchmark
  * 
- * Tests performance when only a small fraction of signals change per tick.
- * This simulates real-world scenarios where most state remains stable
- * while only specific parts update (e.g., cursor position, single form field).
+ * Tests performance when a large fraction of signals change per tick.
+ * This simulates scenarios with high update frequency like animations,
+ * real-time data feeds, or game state updates.
  */
 
 import { bench, group, summary, barplot, do_not_optimize } from 'mitata';
@@ -48,7 +48,7 @@ type PreactSignal = { value: number };
 type LatticeSignal = { value: number };
 type AlienSignal = (value?: number) => number;
 
-group('Sparse Updates (10-25% change rate)', () => {
+group('Dense Updates (50-100% change rate)', () => {
   summary(() => {
     const SOURCE_COUNT = 100;
     const TICKS = 50;
@@ -56,7 +56,6 @@ group('Sparse Updates (10-25% change rate)', () => {
     function makeIndices(ratio: number): number[] {
       const count = Math.floor(SOURCE_COUNT * ratio);
       const indices: number[] = [];
-      // Spread changes evenly across the signal array
       for (let i = 0; i < count; i++) {
         indices.push(Math.floor(i * (SOURCE_COUNT / count)));
       }
@@ -64,7 +63,7 @@ group('Sparse Updates (10-25% change rate)', () => {
     }
     
     barplot(() => {
-      bench('Preact - $changeRatio% sparse updates', function* (state: BenchState) {
+      bench('Preact - $changeRatio% dense updates', function* (state: BenchState) {
         const changeRatio = state.get('changeRatio') / 100;
         const indices = makeIndices(changeRatio);
         
@@ -95,10 +94,10 @@ group('Sparse Updates (10-25% change rate)', () => {
         
         disposers.forEach(d => d());
       })
-      .args('changeRatio', [10, 15, 20, 25])
+      .args('changeRatio', [50, 75, 90, 100])
       .gc('inner');
     
-      bench('Lattice - $changeRatio% sparse updates', function* (state: BenchState) {
+      bench('Lattice - $changeRatio% dense updates', function* (state: BenchState) {
         const changeRatio = state.get('changeRatio') / 100;
         const indices = makeIndices(changeRatio);
         
@@ -129,10 +128,10 @@ group('Sparse Updates (10-25% change rate)', () => {
         
         disposers.forEach(d => d());
       })
-      .args('changeRatio', [10, 15, 20, 25])
+      .args('changeRatio', [50, 75, 90, 100])
       .gc('inner');
     
-      bench('Alien - $changeRatio% sparse updates', function* (state: BenchState) {
+      bench('Alien - $changeRatio% dense updates', function* (state: BenchState) {
         const changeRatio = state.get('changeRatio') / 100;
         const indices = makeIndices(changeRatio);
         
@@ -150,7 +149,7 @@ group('Sparse Updates (10-25% change rate)', () => {
             let valueIndex = 0;
             for (let t = 0; t < TICKS; t++) {
               for (const i of indices) {
-                sources[i]!(values[valueIndex++ % values.length]);
+                sources[i]!(values[valueIndex++ % values.length]!);
                 changeCount++;
               }
             }
@@ -160,7 +159,7 @@ group('Sparse Updates (10-25% change rate)', () => {
         
         disposers.forEach(d => d());
       })
-      .args('changeRatio', [10, 15, 20, 25])
+      .args('changeRatio', [50, 75, 90, 100])
       .gc('inner');
     });
   });

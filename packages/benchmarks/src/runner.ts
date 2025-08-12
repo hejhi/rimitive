@@ -114,15 +114,15 @@ class BenchmarkRunner {
         duration_ms,
         jsonData
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const duration_ms = Date.now() - startTime;
-      console.error(`  ✗ Failed: ${error.message}\n`);
+      console.error(`  ✗ Failed: ${(error as Error).message}\n`);
       
       return {
         name,
         timestamp: new Date().toISOString(),
         duration_ms,
-        error: error.message
+        error: (error as Error).message
       };
     }
   }
@@ -147,7 +147,7 @@ class BenchmarkRunner {
       });
 
       // Capture stdout for JSON data
-      proc.stdout.on('data', (chunk) => chunks.push(chunk));
+      proc.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
       
       // Pass stderr through for formatted output
       proc.stderr.pipe(process.stderr);

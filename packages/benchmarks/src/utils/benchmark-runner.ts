@@ -4,7 +4,14 @@
  */
 import { run as mitataRun } from 'mitata';
 
-export async function runBenchmark(options?: any) {
+// Type for mitata run options
+interface MitataOptions {
+  format?: 'mitata' | 'json' | { json: { debug?: boolean; samples?: boolean } };
+  print?: (s: string) => void;
+  [key: string]: unknown; // Allow other options
+}
+
+export async function runBenchmark(options?: MitataOptions): Promise<unknown> {
   if (process.env.BENCHMARK_FORMAT === 'both') {
     // Single run with both formats - display to stderr, JSON to stdout
     const results = await mitataRun({ 
