@@ -78,43 +78,32 @@ export function createDependencySweeper(
     consumer._sources = undefined;
   };
 
-  // ALGORITHM: Selective Edge Removal via Generations
-  // After a computed/effect runs, remove edges whose generation tag does not
-  // match the consumer's current generation.
+  // ALGORITHM: Edge Recycling via Version Marking
+  // After a computed/effect runs, mark edges whose generation tag does not
+  // match the consumer's current generation as recyclable (version = -1).
+  // This avoids constant allocation/deallocation of Edge objects.
   const pruneStale = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
-    let prev: Edge | undefined;
 
     const currentGen = consumer._gen;
-    // Walk the linked list, removing nodes with old generation
+    // Walk the linked list, marking stale nodes as recyclable
     while (node !== undefined) {
-      const next = node.nextSource;
       if (node.gen !== currentGen) {
-        // Linked List Removal
-        if (prev !== undefined) {
-          prev.nextSource = next;
-        } else {
-          consumer._sources = next;
-        }
-
-        if (next !== undefined) (next.prevSource = prev);
-
-        // Remove from producer's target list (bidirectional removal)
-        unlinkFromProducer(node);
+        // Mark edge as recyclable instead of removing it
+        // version = -1 indicates a stale edge that can be reused
+        node.version = -1;
         
-        // Clear producer's cache if it points to this pruned edge
+        // Clear producer's cache if it points to this recycled edge
         // This prevents stale cache hits when the dependency is re-established
         if ('_lastEdge' in node.source && node.source._lastEdge === node) {
           node.source._lastEdge = undefined;
         }
         
-        // prev remains unchanged
-      } else {
-        // Keep node
-        prev = node;
+        // DON'T remove from producer's target list - keep for recycling
+        // The edge stays in both lists but is marked as inactive
       }
-
-      node = next;
+      
+      node = node.nextSource;
     }
   };
 

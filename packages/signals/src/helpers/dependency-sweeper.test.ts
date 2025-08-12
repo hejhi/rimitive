@@ -69,23 +69,28 @@ describe('Dependency Sweeper', () => {
     // Now prune stale (b)
     sweeper.pruneStale(target);
 
-    // Expect only a and c remain as sources (order not guaranteed)
+    // With edge recycling, all edges remain but b is marked as recyclable
     let list = target._sources;
-    const kept = new Set<unknown>();
+    const active = new Set<unknown>();
+    const recycled = new Set<unknown>();
     while (list) {
-      kept.add(list.source);
-      // also ensure gen matches current run
-      expect(list.gen).toBe(1);
+      if (list.version === -1) {
+        recycled.add(list.source);
+      } else {
+        active.add(list.source);
+        // Active edges should have current gen
+        expect(list.gen).toBe(1);
+      }
       list = list.nextSource;
     }
-    expect(kept.has(a)).toBe(true);
-    expect(kept.has(c)).toBe(true);
-    expect(kept.has(b)).toBe(false);
-    // b should be unlinked from its producer side
-    expect(b._targets).toBeUndefined();
+    expect(active.has(a)).toBe(true);
+    expect(active.has(c)).toBe(true);
+    expect(recycled.has(b)).toBe(true);
+    // With recycling, b's edge stays in producer's list
+    expect(b._targets).toBeDefined();
   });
 
-  it('prunes all when none accessed in current run', () => {
+  it('marks all as recyclable when none accessed in current run', () => {
     const a = makeProducer(1);
     const b = makeProducer(1);
     const target = makeConsumer();
@@ -96,8 +101,17 @@ describe('Dependency Sweeper', () => {
     target._gen = 2; // new run, but we do not access any producer
     sweeper.pruneStale(target);
 
-    expect(target._sources).toBeUndefined();
-    expect(a._targets).toBeUndefined();
-    expect(b._targets).toBeUndefined();
+    // With edge recycling, edges remain but are marked as recyclable
+    let list = target._sources;
+    let recycledCount = 0;
+    while (list) {
+      expect(list.version).toBe(-1); // All should be marked as recyclable
+      recycledCount++;
+      list = list.nextSource;
+    }
+    expect(recycledCount).toBe(2);
+    // Edges stay in producer's list for recycling
+    expect(a._targets).toBeDefined();
+    expect(b._targets).toBeDefined();
   });
 });

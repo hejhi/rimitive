@@ -151,12 +151,13 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
     
-    // FALLBACK: Linear search when caches miss (like alien-signals)
-    // This is rare (<5% of cases) with tail pointer optimization
+    // FALLBACK: Linear search when caches miss
+    // Look for existing edge (active or recyclable)
     let node = consumer._sources;
     while (node) {
       if (node.source === producer) {
-        // Found edge - update and cache
+        // Found edge - either active (version >= 0) or recyclable (version = -1)
+        // Reactivate/update it
         node.version = producerVersion;
         node.gen = consumer._gen ?? 0;
         producer._lastEdge = node;
@@ -223,6 +224,13 @@ export function createDependencyGraph(): DependencyGraph {
     while (source) {
       const sourceNode = source.source;
       const edgeVersion = source.version;
+      
+      // Skip recycled edges (version = -1)
+      if (edgeVersion === -1) {
+        source = source.nextSource;
+        continue;
+      }
+      
       const currentVersion = sourceNode._version;
       
       // Fast path for signals - no dependencies to check
@@ -282,9 +290,12 @@ export function createDependencyGraph(): DependencyGraph {
     let e = node._sources;
     let clean = true;
     while (e) {
-      const s = e.source as ProducerNode & { _flags?: number };
-      if (e.version !== s._version) { clean = false; break; }
-      if ('_flags' in s && (s._flags! & (NOTIFIED | OUTDATED))) { clean = false; break; }
+      // Skip recycled edges (version = -1)
+      if (e.version !== -1) {
+        const s = e.source as ProducerNode & { _flags?: number };
+        if (e.version !== s._version) { clean = false; break; }
+        if ('_flags' in s && (s._flags! & (NOTIFIED | OUTDATED))) { clean = false; break; }
+      }
       e = e.nextSource!;
     }
     if (clean) {
