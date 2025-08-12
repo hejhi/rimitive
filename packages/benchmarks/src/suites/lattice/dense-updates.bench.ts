@@ -6,7 +6,8 @@
  * real-time data feeds, or game state updates.
  */
 
-import { run, bench, group, summary, barplot, do_not_optimize } from 'mitata';
+import { bench, group, summary, barplot, do_not_optimize } from 'mitata';
+import { runBenchmark } from '../../utils/benchmark-runner';
 import { randomIntArray } from '../../utils/bench-helpers';
 
 // Type for mitata benchmark state
@@ -158,13 +159,5 @@ group('Dense Updates (50-100% change rate)', () => {
   });
 });
 
-// Run all benchmarks
-const format = process.env.BENCHMARK_FORMAT === 'json' 
-  ? { json: { debug: false, samples: false } }
-  : undefined;
-
-const results = await run({ format });
-
-if (process.env.BENCHMARK_FORMAT === 'json') {
-  console.log(JSON.stringify(results, null, 2));
-}
+// Run benchmarks with unified output handling
+await runBenchmark();

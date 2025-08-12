@@ -131,64 +131,41 @@ class BenchmarkRunner {
 
   private executeBenchmark(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      // First, run with normal output for CLI display
+      // Run benchmark once with both formats captured
       console.log(''); // Add spacing
-      const displayProc = spawn('npx', [
+      const chunks: Buffer[] = [];
+      
+      const proc = spawn('npx', [
         'tsx',
         '--expose-gc',
         filePath
       ], {
         env: {
           ...process.env,
+          BENCHMARK_FORMAT: 'both', // Signal to output both formats
           NODE_ENV: 'production'
         },
-        stdio: ['inherit', 'inherit', 'inherit'], // Pass through all stdio
         timeout: this.timeout
       });
 
-      displayProc.on('close', (displayCode) => {
-        if (displayCode !== 0) {
-          const errorMsg = displayCode === 143 
+      // Capture stdout for JSON data
+      proc.stdout.on('data', (chunk) => chunks.push(chunk));
+      
+      // Pass stderr through for formatted output
+      proc.stderr.pipe(process.stderr);
+
+      proc.on('close', (code) => {
+        if (code === 0) {
+          resolve(Buffer.concat(chunks).toString());
+        } else {
+          const errorMsg = code === 143 
             ? `Process timed out after ${this.timeout / 1000}s (SIGTERM)`
-            : `Process exited with code ${displayCode}`;
+            : `Process exited with code ${code}`;
           reject(new Error(errorMsg));
-          return;
         }
-
-        // Now run again with JSON format to capture results
-        console.log('\n  Capturing results...');
-        const chunks: Buffer[] = [];
-        
-        const jsonProc = spawn('npx', [
-          'tsx',
-          '--expose-gc',
-          filePath
-        ], {
-          env: {
-            ...process.env,
-            BENCHMARK_FORMAT: 'json',
-            NODE_ENV: 'production'
-          },
-          timeout: this.timeout
-        });
-
-        jsonProc.stdout.on('data', (chunk) => chunks.push(chunk));
-        
-        jsonProc.on('close', (code) => {
-          if (code === 0) {
-            resolve(Buffer.concat(chunks).toString());
-          } else {
-            const errorMsg = code === 143 
-              ? `Process timed out after ${this.timeout / 1000}s (SIGTERM)`
-              : `Process exited with code ${code}`;
-            reject(new Error(errorMsg));
-          }
-        });
-
-        jsonProc.on('error', reject);
       });
 
-      displayProc.on('error', reject);
+      proc.on('error', reject);
     });
   }
 

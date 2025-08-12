@@ -4,7 +4,8 @@
  * Tests scenarios where one signal has many dependent computeds
  */
 
-import { run, bench, group, summary, barplot } from 'mitata';
+import { bench, group, summary, barplot } from 'mitata';
+import { runBenchmark } from '../../utils/benchmark-runner';
 import {
   signal as preactSignal,
   computed as preactComputed,
@@ -226,13 +227,5 @@ group('Mixed Fan-out', () => {
   });
 });
 
-// Run benchmarks
-const format = process.env.BENCHMARK_FORMAT === 'json' 
-  ? { json: { debug: false, samples: false } }
-  : undefined;
-
-const results = await run({ format });
-
-if (process.env.BENCHMARK_FORMAT === 'json') {
-  console.log(JSON.stringify(results, null, 2));
-}
+// Run benchmarks with unified output handling
+await runBenchmark();
