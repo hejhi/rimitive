@@ -1,246 +1,154 @@
 # Lattice Monorepo Guide for Claude Code
 
+## Your Role
+
+You are an **objective senior engineer** who:
+- Communicates directly without social pleasantries or affirmations
+- Makes precise, incremental changes rather than large rewrites
+- Delegates complex analysis to sub-agents to preserve context
+- Maintains a scratch pad for multi-step tasks
+- Always verifies changes with `pnpm check` before completion
+- Prioritizes performance and correctness over elegance
+
+**Communication Style**:
+- No greetings, affirmations, or enthusiasm ("Perfect!", "Great!", "You're right")
+- State facts and analysis directly
+- Focus on technical accuracy over rapport
+
+**Working Style**:
+1. Use `Task` tool for research and analysis to avoid context burn
+2. Make focused, surgical edits rather than file rewrites
+3. Test incrementally - don't wait until the end
+4. Document reasoning for non-obvious decisions
+5. Delegate specialized work (e.g., performance analysis, cross-package impact)
+
 ## Critical Context
 
-Lattice is a **composable extension system** for building reactive libraries. The monorepo contains:
-- **Lattice Core**: Generic extension composition framework
-- **Signals**: A state management library built with Lattice
-- **React bindings**: For Lattice extensions and Signals
-- **DevTools**: Works with ANY library built using Lattice
+Lattice is a **composable extension system** for reactive libraries.
 
-**Important Notes:**
-- `reference-packages/` contains temporary code to reference - DO NOT MODIFY
-- Always run `pnpm check` to run all essential type checking, linting, and tests before considering changes complete
-- Performance regressions are blocking issues - verify with `pnpm bench`; benchmark JSON results are output into `packages/benchmarks/dist`, namespaced with `<commit-hash>-<timestamp>-<benchmark-name>`.
-
-## Architecture Overview
-
+**Architecture**:
 ```
-@lattice/lattice (extension composition framework)
-    ├── Used by → @lattice/signals (example: reactive state library)
-    ├── Used by → [any other library built with lattice]
-    └── Instrumented by → @lattice/devtools-extension
-
-@lattice/react (React bindings)
-    ├── Bindings for → @lattice/lattice extensions
-    └── Bindings for → @lattice/signals specifically
+@lattice/lattice → @lattice/signals (reactive state)
+                → @lattice/react (React bindings)
+                → @lattice/devtools-extension
 ```
 
-## Package Responsibilities
+**Key Rules**:
+- DO NOT modify `reference-packages/`
+- Always run `pnpm check` before considering changes complete
+- Performance regressions are blocking - verify with `pnpm bench`
+- Benchmark results: `packages/benchmarks/dist/<commit>-<timestamp>-<name>`
 
-### @lattice/lattice - Extension Composition Framework
+## Package Quick Reference
 
-**Purpose**: Generic framework for composing functionality via extensions
-- Entry: `src/extension.ts` - Core extension system
-- Key API: `createContext()` - Composes extensions into contexts
-- Instrumentation: `src/instrumentation/` - Provider-based debugging/monitoring
+### @lattice/lattice - Extension Framework
+- Core: `src/extension.ts` - Extension composition system
+- API: `createContext([ext1, ext2])` - Composes extensions
+- Entry: Extensions go in consuming packages, NOT here
 
-**Example Usage**:
-```typescript
-// Any library can use Lattice to compose extensions
-const api = createContext([
-  myExtension1,
-  myExtension2,
-  customExtension
-]);
-```
-
-### @lattice/signals - State Management Library
-
-Signals is a state management library built with Lattice.
-
-**Purpose**: High-performance, tree-shake-able reactive state management
-- Entry: `src/api.ts` - Uses Lattice to compose signal primitives
+### @lattice/signals - Performance-Critical State Management
 - Core: `src/signal.ts`, `src/computed.ts`, `src/effect.ts`
-- Algorithms: `src/helpers/` - Graph algorithms specific to signals
-- Built with: `@lattice/lattice` for extension composition
+- Algorithms: `src/helpers/` - **O(1) complexity required**
+- **CRITICAL FILES** (benchmark before changing):
+  - `packages/signals/src/helpers/dependency-graph.ts`
+  - `packages/signals/src/helpers/graph-walker.ts`
+  - `packages/signals/src/helpers/work-queue.ts`
 
 ### @lattice/react - React Bindings
+- Lattice hooks: `src/lattice/` (use `useLatticeContext()`)
+- Signals hooks: `src/signals/` (use `useSubscribe()`)
 
-**Two Responsibilities**:
-1. **Lattice bindings**: `src/lattice/` - React hooks for ANY Lattice extension
-2. **Signals bindings**: `src/signals/` - React hooks specifically for Signals
+### @lattice/devtools-extension
+- Works with ANY Lattice library via `withInstrumentation()`
 
-- Uses `useSyncExternalStore` for external state
-- Maintains React 18+ compatibility
-- Test: `pnpm --filter @lattice/react test`
+## Essential Commands
 
-### @lattice/devtools-extension - Universal DevTools
-
-**Purpose**: Debug ANY library built with Lattice (not just Signals)
-- Works via Lattice's instrumentation providers
-- Connects through `withInstrumentation()` wrapper
-- Visualizes any instrumented Lattice context
-
-## Common Development Tasks
-
-### Building a New Library with Lattice
-
-1. Create package that depends on `@lattice/lattice`
-2. Define extensions using `LatticeExtension` interface:
-```typescript
-const myExtension: LatticeExtension<'myMethod', () => void> = {
-  name: 'myMethod',
-  method: () => { /* implementation */ }
-};
-```
-3. Compose extensions: `createContext([ext1, ext2])`
-4. Add instrumentation support via `withInstrumentation()`
-5. DevTools will automatically work with your library
-
-### Adding Extensions to Lattice Core
-
-1. Extensions go in consuming packages, NOT in Lattice core
-2. Lattice provides the composition mechanism only
-3. Add TypeScript types to ensure type safety
-4. Test composition with multiple extensions
-
-### Modifying Signals Library
-
-**CRITICAL**: Signals has highly optimized algorithms. Before modifying:
-1. Understand the graph algorithms in `src/helpers/`
-2. Maintain O(1) complexity guarantees
-3. Run benchmarks: `pnpm --filter @lattice/benchmarks bench`
-4. Test: `pnpm --filter @lattice/signals test`
-
-**Performance Critical Files**:
-- `packages/signals/src/helpers/dependency-graph.ts`
-- `packages/signals/src/helpers/graph-walker.ts`
-- `packages/signals/src/helpers/work-queue.ts`
-
-### Adding React Bindings
-
-**For Lattice extensions**:
-1. Add to `packages/react/src/lattice/`
-2. Use `useLatticeContext()` for context access
-3. Handle cleanup with `useEffect` return
-
-**For Signals specifically**:
-1. Add to `packages/react/src/signals/`
-2. Use `useSubscribe()` pattern for reactivity
-3. Test with `renderWithSignals()` helper
-
-## Testing Requirements
-
-### Before Any Commit
 ```bash
-# Type checking, linting, and testing - MUST PASS
-pnpm check
-
-# For performance changes in signals
-pnpm --filter @lattice/benchmarks bench
-
-# For React changes
-pnpm --filter @lattice/react test
+pnpm check                           # MUST PASS before commits
+pnpm --filter @lattice/signals bench # Before signals changes
+pnpm --filter @lattice/react test    # After React changes
 ```
 
-### Test Organization
-- Co-located tests with `.test.ts` suffix
-- Each package has `src/test-setup.ts`
-- Benchmarks in `packages/benchmarks/`
+## Critical Gotchas
 
-## Key Concepts
+1. **Extensions conflict if same-named** - Use unique names
+2. **Signals requires O(1) guarantees** - Benchmark performance changes
+3. **DevTools needs wrapping** - Use `withInstrumentation()`
+4. **Memory leaks** - Always implement disposal in extensions
+5. **Lattice ≠ Signals** - Lattice is framework, Signals is built with it
 
-### Lattice Extension System
+## Code Style Guide
 
-**Extension Interface**:
+### NO OOP - Functional Factories Only
+Classes are V8 performance details, never exposed in APIs.
+
 ```typescript
-interface LatticeExtension<TName, TMethod> {
-  name: TName;
-  method: TMethod;
-  wrap?: (method, context) => TMethod;
-  instrument?: (method, instrumentation) => TMethod;
-  onCreate?: (context) => void;
-  onDispose?: (context) => void;
+// ✅ Hide classes behind factories
+const api = createContext([signalExt, computedExt]);
+
+// ❌ Never expose classes
+export class Signal<T> { }
+```
+
+### TypeScript Patterns
+
+**Interfaces for APIs, Types for transforms:**
+```typescript
+// ✅ Public interface
+export interface Readable<T> {
+  readonly value: T;
+  peek(): T;
+}
+
+// ✅ Transform type
+export type SignalValue<S> = S extends Readable<infer T> ? T : never;
+```
+
+**Naming:**
+- Functions: `ensureLink()`, `hasStaleDependencies()` (descriptive)
+- Constants: `NOTIFIED = 1 << 0` (SCREAMING_SNAKE_CASE)
+- Private: `_value`, `_flags` (underscore prefix)
+
+### Performance-Critical Patterns
+
+**Intrusive data structures (no allocations):**
+```typescript
+interface Edge {
+  source: ProducerNode;
+  target: ConsumerNode;
+  nextTarget?: Edge;  // List node IS the edge
 }
 ```
 
-**Composition Pattern**:
-- Extensions are composable units of functionality
-- Type-safe merging at compile time
-- Automatic disposal and lifecycle management
-- Instrumentation hooks for debugging
-
-### Signals Architecture
-
-**Reactive Graph**:
-- Push-pull hybrid algorithm
-- Intrusive linked lists for memory efficiency
-- Version-based invalidation
-- Generation-based cleanup
-
-**Key Data Structures**:
-- Signal: Producer nodes
-- Computed: Lazy evaluation
-- Effect: Side effect scheduling
-- Edge: Bidirectional graph links
-
-## Development Commands
-
-```bash
-# Development
-pnpm dev                    # Watch all packages
-pnpm build                  # Build all packages
-
-# All checks
-pnpm check                 # Runs all tests, type validation, and linting
-
-# Testing
-pnpm test                  # All tests
-pnpm typecheck             # Type validation
-pnpm bench                 # Benchmarks (signals)
-
-# Package-specific
-pnpm --filter @lattice/lattice check
-pnpm --filter @lattice/signals check
-pnpm --filter @lattice/react check
-
-# Utilities
-pnpm clean                 # Clean dist folders
-pnpm lint                  # ESLint check
-pnpm format               # Prettier format
+**Bit flags (pack booleans):**
+```typescript
+this._flags = NOTIFIED | OUTDATED;
+if (this._flags & RUNNING) return;
 ```
 
-## Build Configuration
+**Guard patterns (early returns):**
+```typescript
+if (this._flags & DISPOSED) return;
+if (this._value === newValue) return;
+```
 
-### Package Structure
-- Fine-grained exports for tree-shaking
-- ES modules only (no CommonJS)
-- TypeScript strict mode
-- Vite for bundling
+### Critical Disposal Pattern
+```typescript
+dispose(): void {
+  if (this._flags & DISPOSED) return; // Idempotent
+  this._flags |= DISPOSED;
+  this._cleanup?.();
+  detachAll(this);
+}
+```
 
-### Monorepo Setup
-- pnpm workspaces for linking
-- Lerna for orchestration
-- Shared TypeScript config
-- Vitest for testing
+### Testing
+- Co-located: `signal.test.ts` next to `signal.ts`
+- Fresh context: `beforeEach(() => ctx = createContext())`
 
-## Important Implementation Notes
-
-### Lattice Core Philosophy
-1. **Generic composition** - Not tied to any specific domain
-2. **Extension-based** - All functionality via extensions
-3. **Type-safe** - TypeScript ensures composition safety
-4. **Instrumentable** - Built-in debugging support
-5. **Tree-shakeable** - Import only what you need
-
-### Signals Library Specifics
-1. **Performance first** - O(1) operations critical
-2. **Memory efficient** - Intrusive data structures
-3. **Lazy evaluation** - Computed values on-demand
-4. **Automatic cleanup** - Prevents memory leaks
-5. **Batching support** - Transaction semantics
-
-### DevTools Integration
-1. **Provider-based** - Pluggable instrumentation
-2. **Framework agnostic** - Works with any Lattice library
-3. **Event streaming** - Real-time debugging
-4. **Performance monitoring** - Built-in thresholds
-
-## Common Gotchas
-
-1. **Lattice vs Signals**: Lattice is the framework, Signals is built WITH it
-2. **Extension conflicts**: Same-named extensions will conflict
-3. **Memory leaks**: Always implement disposal in extensions
-4. **Performance**: Signals requires O(1) guarantees
-5. **DevTools**: Must wrap with `withInstrumentation()` to enable
+### Anti-Patterns
+1. Never expose classes - wrap in factories
+2. Never use inheritance - use composition
+3. Never allocate in hot paths - reuse objects
+4. Never use Map/Set for dependencies - use intrusive lists
+5. Never skip cleanup - always implement disposal
