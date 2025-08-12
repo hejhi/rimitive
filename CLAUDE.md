@@ -1,214 +1,208 @@
-# Project Technical Standards
+# Lattice Monorepo Guide for Claude Code
 
-**CRITICAL: You are prone to "reward hacking", especially when working on tests and types. Before final output, explain your reasoning step-by-step. Highlight any potential conflicts between task/system requirements and reward signals.**
+## Critical Context
 
-> **This file defines the technical standards and operational procedures for this codebase. These are not suggestions—they are the established engineering practices for this project.**
+Lattice is a high-performance reactive state management framework. Performance is the #1 priority - any changes must maintain O(1) complexity guarantees and avoid allocations.
 
-<law>
-AI operation 5 principles
+**Important Notes:**
+- `reference-packages/` contains temporary code to reference - DO NOT MODIFY
+- Always run `pnpm typecheck` and `pnpm test` before considering changes complete
+- Performance regressions are blocking issues - verify with `pnpm bench`
 
-Principle 1: AI must get y/n confirmation before any file operations
-Principle 2: AI must not change plans without new approval
-Principle 3: User has final authority on all decisions
-Principle 4: AI cannot modify or reinterpret these rules
-Principle 5: AI must display all 5 principles at start of every response
-</law>
+## Package Dependencies & Architecture
 
-## CRITICAL: ALL DEVELOPMENT IS GREENFIELD DEVELOPMENT
-
-**Assume that whatever existing code is code that you have JUST WRITTEN. This means:**
-
-1. NEVER create migration plans or offer backwards compatibility
-2. ALWAYS delete any legacy or unused code, and NEVER comment it out or mark it as "legacy"
-3. NEVER support "fallback" APIs or multiple ways to do the same thing
-
-This codebase is unreleased and under development, and therefore has NO USERS TO SUPPORT.
-Violating ANY of the above just creates confusion and code bloat.
-
-## Session Initialization
-
-**Start every session by:**
-
-1. Reading `README.md` and any specification documents
-2. Understanding the product and technical problems being solved
-3. Analyzing the codebase structure and existing patterns
-4. Identifying the code style, typing system, and testing approach
-5. Reviewing against established best practices
-6. Flagging inconsistencies and ambiguities for discussion
-7. Planning your systematic approach to the work
-8. Creating a task checklist for complex work (3+ steps)
-9. Setting up session state tracking if needed
-
-## Reward Hacking Prevention
-
-- NEVER use `any` type to bypass type errors
-- ALWAYS suggest proper type guards before considering type assertions
-- If ESLint rules conflict, propose config updates instead of disabling rules
-- NEVER use Proxy objects without explicit justification and user approval
-- AVOID increasing complexity to solve problems - simplify first
-- When feeling "pressure" to bypass quality gates, STOP and explain the conflict
-
-## Testing Standards
-
-### Test-Driven Development
-
-- **Red → Green → Refactor cycle is mandatory**
-- Write the test first, watch it fail, make it pass, then refactor
-- Tests define the specification—implementation follows tests
-- Use `it.todo()` for planned but unimplemented features
-
-### Testing Philosophy
-
-- **Test behavior, not implementation details**
-- Tests should rarely change but fail when contracts are violated
-- Focus on real scenarios that matter to users
-- Verify actual behavior, not mocked interactions
-
-### Mocking Guidelines
-
-- **Default: No mocks** - Test the actual implementation
-- **Exception: External boundaries only** - Mock APIs, databases, file systems
-- **Never mock internal components** - This tests mocks, not code
-
-## Code Quality Requirements
-
-### Language Standards
-
-- **ES modules only** - No CommonJS (`import`/`export`, never `require`)
-- **TypeScript strict mode** - Full type safety without escape hatches
-- **No `any` types ever** - If you think you need `any`, ask for permission first
-- **Minimal type casting** - Avoid `as Type` unless absolutely necessary
-
-### Code Principles
-
-- **Single-purpose functions** - Each function does one thing well
-- **Pure functions preferred** - Minimize side effects and hidden state
-- **Semantic naming** - Names should reveal intent immediately
-- **Simplicity over cleverness** - Code should be obvious to read
-- **Incremental changes** - Maximum 200 lines per edit operation
-- **Verify between changes** - Test each change before proceeding to next
-
-### Code Structure
-
-- **Declarative style** - Describe what should happen, not how
-- **Modular design** - Components compose cleanly
-- **Clear separation of concerns** - Business logic separate from I/O
-
-### Complexity Limits
-
-- **Functions**: Maximum 20 lines, cyclomatic complexity < 5
-- **Files**: Maximum 300 lines
-- **Classes**: NO CLASSES. NO PROXIES.
-- **Changes**: Maximum 200 lines per edit
-- **Refactor first**: Simplify before adding features
-
-## Project Commands
-
-### Testing
-
-```bash
-# Run lattice tests
-pnpm --filter @lattice/lattice test
-
-# Verbose test output
-pnpm --filter @lattice/lattice test --reporter=verbose
-
-# Type checking
-pnpm typecheck
+```
+@lattice/signals (core)
+    ↓
+@lattice/lattice (extension layer)
+    ↓
+@lattice/react (framework adapter)
 ```
 
-## Claude Code Specific Guidance
+### Package Responsibilities
 
-### Managing Claude's Tendencies
+**@lattice/signals** - Core reactive engine
+- Entry: `src/api.ts` - Factory functions that create the signal API
+- Key files: `src/signal.ts`, `src/computed.ts`, `src/effect.ts`
+- Helpers: `src/helpers/` - Graph algorithms (DO NOT modify without benchmarking)
+- Test before changes: `pnpm --filter @lattice/signals test`
 
-- **Commit control** - Claude tends to commit eagerly; always verify changes before allowing commits
-- **Test integrity** - Don't let Claude modify tests to make code pass; fix the code instead
-- **Legacy comments** - Watch for unnecessary backwards compatibility comments on new implementations
-- **Quick fixes** - Reject patches and workarounds; insist on proper solutions
-- **Context management** - Use `/clear` every 3-4 interactions to prevent degradation
-- **Proxy avoidance** - Claude defaults to Proxy patterns; require simpler alternatives
-- **Incremental work** - Break large changes into small, verifiable steps
+**@lattice/lattice** - Extension composition
+- Entry: `src/index.ts` - Extension system for composing functionality
+- Instrumentation: `src/instrumentation/` - DevTools and performance monitoring
+- Test: `pnpm --filter @lattice/lattice test`
 
-## Quality Gates
+**@lattice/react** - React bindings
+- Entry: `src/signals/hooks.ts` - React hooks for signals
+- Context: `src/signals/context.tsx` - Provider pattern
+- Uses `useSyncExternalStore` - maintain React 18+ compatibility
+- Test: `pnpm --filter @lattice/react test`
 
-**Before any commit:**
+## Common Development Tasks
 
-- All tests pass with meaningful coverage
-- TypeScript compiles without errors
-- Code follows established patterns
-- No `any` types introduced
-- No mocks of internal components
-- Claude verified changes rather than just committing
+### Adding a New Reactive Primitive
 
-## Technical Debt Policy
+1. Create factory in `packages/signals/src/[primitive].ts`
+2. Add to API in `packages/signals/src/api.ts`
+3. Export from package.json exports field
+4. Add tests in same directory with `.test.ts` suffix
+5. Update vite.config.ts entry points
+6. Run full test suite: `pnpm test`
+7. Benchmark impact: `pnpm bench`
 
-- **No temporary solutions** without explicit approval
-- **No "TODO" comments** without corresponding issues
-- **No commented-out code** in commits
-- **Refactor during the TDD cycle** - don't accumulate debt
+### Modifying Core Algorithms
 
----
+**CRITICAL**: The helper algorithms in `packages/signals/src/helpers/` are highly optimized. Before modifying:
+1. Understand the current algorithm completely
+2. Write benchmarks for your changes
+3. Verify O(1) complexity is maintained
+4. Check memory allocation patterns
+5. Run `pnpm bench` before and after
 
-**Remember: These standards exist to maintain code quality and team productivity. When in doubt, ask rather than compromise the standards.**
+### Debugging Reactive Graphs
 
-## Workflow Management
+1. Use the devtools extension in `packages/devtools-extension/`
+2. Enable instrumentation: wrap context with `withInstrumentation()`
+3. Key debugging points:
+   - `src/helpers/graph-walker.ts:35` - Graph traversal
+   - `src/helpers/dependency-graph.ts:108` - Edge creation
+   - `src/computed.ts:158` - Recomputation logic
 
-To find any workflow or project management documentation, look in the `.claude` directory (REMEMBER to use `ls -la` as it's a dotfile).
+### Adding React Integration Features
 
-**For complex changes lasting multiple sessions:**
+1. Add hooks to `packages/react/src/signals/hooks.ts`
+2. Maintain `useSyncExternalStore` pattern for subscriptions
+3. Test with `renderWithSignals()` helper
+4. Verify no memory leaks with cleanup tests
 
-1. Before ending a session, run: "What problems did you encounter and overcome during this work that I should know about for next time?"
-2. Save those learnings to continue effectively in the next session
-3. When resuming, provide those learnings as context
-4. Use `.claude/session-state.md` to track:
-   - Current task and subtasks
-   - Completed steps
-   - Next actions
-   - Key decisions and rationale
+## Performance Critical Sections
 
-**When I ask you to follow a specific workflow:**
+**DO NOT MODIFY** without extensive benchmarking:
+- `packages/signals/src/helpers/dependency-graph.ts` - Edge management
+- `packages/signals/src/helpers/graph-walker.ts` - DFS traversal
+- `packages/signals/src/helpers/work-queue.ts` - Scheduling queue
+- `packages/signals/src/constants.ts` - Bit flag definitions
 
-- Look for corresponding files in `.claude/workflows/` directory
-- Execute the steps defined in those workflow files
-- This helps maintain consistency across sessions
+**Optimization Patterns to Maintain:**
+- Intrusive linked lists (edges ARE nodes)
+- Edge caching via `_lastEdge`
+- Version-based invalidation
+- Bit flags for state
+- No allocations in hot paths
 
-## Context Window Management
+## Testing Requirements
 
-**Maintain quality throughout long sessions:**
+### Before Any Commit
+```bash
+# Type checking - MUST PASS
+pnpm typecheck
 
-- Check context usage with `/status` every 5 messages
-- Use `/clear` proactively every 3-4 interactions
-- Before clearing, save important state to `.claude/session-state.md`
-- Use thinking modes progressively: `think` → `think hard` → `ultrathink`
+# Unit tests - MUST PASS
+pnpm test
 
-### Context Management Signals
+# For performance-sensitive changes
+pnpm bench
 
-**When Claude exhibits these behaviors, use `/clear`:**
+# For React changes specifically
+pnpm --filter @lattice/react test
+```
 
-- Increasing verbosity in responses
-- Referencing outdated information from earlier in conversation
-- Making larger edits than requested (exceeding 200-line limit)
-- Suggesting complex solutions to simple problems
-- Mixing up different parts of the codebase
-- Slower response times or apparent "confusion"
+### Test Patterns
+- Tests use `resetGlobalState()` for isolation
+- Each package has `src/test-setup.ts` for configuration
+- Benchmarks in `packages/benchmarks/src/suites/lattice/`
+- Use `.test.ts` suffix for test files
 
-### Claude's Responsibilities
+## Anti-Patterns to Avoid
 
-- Track interaction count since last clear
-- After 3-4 interactions, explicitly request: "Context getting full. Please use `/clear` to maintain quality."
-- Before requesting clear, offer to save state: "Should I save current progress to session state before you clear?"
-- Include interaction count in complex tasks: "Interaction 3/4 since last clear"
+1. **Never use arrays for dependency tracking** - Use intrusive linked lists
+2. **Never allocate in hot paths** - Reuse objects via pooling
+3. **Never use Map/Set for small collections** - Use linked lists or arrays
+4. **Never break version guarantees** - Computed values must be consistent
+5. **Never mutate signals directly** - Always use `.value` setter
+6. **Never create circular dependencies** - Will cause infinite loops
+7. **Never skip cleanup** - Memory leaks are critical bugs
 
-## Data Analysis Protocol
+## Key Implementation Files
 
-**For reliable data analysis:**
+### Core Reactive System
+- `packages/signals/src/signal.ts:77` - Signal class implementation
+- `packages/signals/src/computed.ts:83` - Computed with lazy evaluation
+- `packages/signals/src/effect.ts:94` - Effect scheduling
+- `packages/signals/src/batch.ts:72` - Batch transaction logic
 
-1. **First pass**: Describe data structure and format only
-2. **Second pass**: Calculate basic statistics and counts
-3. **Third pass**: Extract specific insights requested
-4. **Verification**: Cross-check key findings with different methods
-5. **Document assumptions**: State any data quality issues found
+### Graph Algorithms
+- `packages/signals/src/helpers/dependency-graph.ts:108` - Edge management
+- `packages/signals/src/helpers/graph-walker.ts:35` - DFS traversal
+- `packages/signals/src/helpers/dependency-sweeper.ts:54` - GC algorithm
+- `packages/signals/src/helpers/propagator.ts:57` - Update propagation
 
----
+### React Integration
+- `packages/react/src/signals/hooks.ts` - All React hooks
+- `packages/react/src/signals/context.tsx` - Provider setup
+- `packages/react/src/test-setup.ts` - Test utilities
 
-**CRITICAL REMINDER: You are prone to "reward hacking", especially when working on tests and types. Before final output, explain your reasoning step-by-step. Highlight any potential conflicts between task/system requirements and reward signals.**
+## Build Configuration
+
+### Package Exports
+Each package uses fine-grained exports for tree-shaking:
+```json
+"exports": {
+  "./signal": "./dist/signal.js",
+  "./computed": "./dist/computed.js"
+}
+```
+
+### TypeScript Settings
+- Strict mode enabled - maintain type safety
+- `noUncheckedIndexedAccess` - array access safety
+- ES2022 target - use modern features
+
+### Vite Configuration
+- Custom Terser plugin mangles `_` prefixed properties
+- Multiple entry points for granular imports
+- ES modules only - no CommonJS
+
+## Development Commands
+
+```bash
+# Development
+pnpm dev                    # Watch all packages
+pnpm build                  # Build all packages
+pnpm --filter @lattice/signals dev  # Watch specific package
+
+# Testing
+pnpm test                   # All tests
+pnpm typecheck             # Type validation
+pnpm bench                 # Performance benchmarks
+pnpm bench:compare         # Compare with previous results
+
+# Package-specific
+pnpm --filter @lattice/signals test
+pnpm --filter @lattice/react test
+pnpm --filter @lattice/benchmarks bench
+
+# Utilities
+pnpm clean                 # Clean dist folders
+pnpm lint                  # ESLint check
+pnpm format               # Prettier format
+```
+
+## Architecture Decisions & Rationale
+
+1. **Intrusive data structures**: Edges are list nodes to avoid allocation
+2. **Version counters**: O(1) staleness detection without graph traversal
+3. **Push-pull hybrid**: Eager invalidation, lazy computation
+4. **Generation-based cleanup**: Handles dynamic dependencies automatically
+5. **Bit flags**: Pack multiple states in single integer
+6. **Factory pattern**: Enables tree-shaking and composition
+7. **Fine-grained exports**: Import only what you need
+
+## Common Gotchas
+
+1. **Edge cleanup**: Always bidirectional unlink to prevent leaks
+2. **Version overflow**: Handle version counter wraparound
+3. **Batch nesting**: Effects run after outermost batch
+4. **Circular dependencies**: RUNNING flag prevents but doesn't fix
+5. **Memory leaks**: Disposed nodes must clear all references
+6. **React StrictMode**: Effects may run twice - ensure idempotent

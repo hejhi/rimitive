@@ -169,7 +169,7 @@ state.value = {
 
 ## Performance
 
-Lattice uses several techniques for lightning performance (see our [benchmarks](/packages/signals)):
+Lattice uses several techniques for lightning performance (see our [benchmarks](/packages/benchmarks)):
 
 - **Lazy evaluation** - Computed values only run when accessed
 - **Minimal allocations** - Reuses dependency tracking nodes
