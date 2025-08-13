@@ -166,16 +166,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
           }
         }
       } else {
-        // Multiple targets - zero allocation traversal
-        // Use a temporary stack field on edges to avoid allocations
+        // Multiple targets - zero allocation traversal using permanent stackNext field
         let stack: Edge | undefined;
         let current: Edge | undefined = edge;
-        
-        // We'll temporarily use the edge.stackNext field for our stack
-        // This field doesn't normally exist, so we're adding it temporarily
-        interface StackableEdge extends Edge {
-          stackNext?: Edge;
-        }
         
         while (current) {
           const target: ConsumerNode = current.target;
@@ -189,7 +182,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
             if (childTargets) {
               // Save siblings for later - push to stack using intrusive list
               if (current.nextTarget) {
-                const sibling = current.nextTarget as StackableEdge;
+                const sibling = current.nextTarget;
                 sibling.stackNext = stack;
                 stack = sibling;
               }
@@ -202,10 +195,10 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
           if (current.nextTarget) {
             current = current.nextTarget;
           } else if (stack) {
-            const stackable = stack as StackableEdge;
             current = stack;
-            stack = stackable.stackNext;
-            stackable.stackNext = undefined; // Clean up
+            stack = stack.stackNext;
+            // Clean up - but stack could be undefined now
+            if (current) current.stackNext = undefined;
           } else {
             current = undefined;
           }

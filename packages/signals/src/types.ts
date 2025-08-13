@@ -129,6 +129,12 @@ export interface Edge {
   // Set to the consumer's _gen during the run that touched this edge.
   // After the run, edges whose gen !== consumer._gen are pruned.
   gen?: number;
+
+  // TRAVERSAL STACK POINTER FOR ZERO-ALLOCATION DFS
+  // Used temporarily during graph traversal to maintain a stack without heap allocation.
+  // This field enables intrusive stack management during propagation.
+  // Having it as a permanent field avoids V8 hidden class transitions.
+  stackNext?: Edge;
 }
 
 // Ensure module is not tree-shaken
