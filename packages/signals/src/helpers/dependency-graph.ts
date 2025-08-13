@@ -217,58 +217,110 @@ export function createDependencyGraph(): DependencyGraph {
    * - Global version checks for early termination
    * - Version comparison to detect actual changes
    */
-  const hasStaleDependencies = (consumer: ConsumerNode): boolean => {
-    let hasChanges = false;
-    let source = consumer._sources;
-    
-    while (source) {
-      const sourceNode = source.source;
-      const edgeVersion = source.version;
-      
-      // Skip recycled edges (version = -1)
-      if (edgeVersion === -1) {
-        source = source.nextSource;
-        continue;
-      }
-      
-      const currentVersion = sourceNode._version;
-      
-      // Fast path for signals - no dependencies to check
-      if (!('_sources' in sourceNode)) {
-        if (edgeVersion !== currentVersion) {
-          hasChanges = true;
+  const hasStaleDependencies = (root: ConsumerNode): boolean => {
+    if (root._flags & OUTDATED) return true;
+
+    type Frame = {
+      sub: ConsumerNode;
+      link: Edge | undefined;
+      parent?: Frame;
+      parentEdge?: Edge;
+      dirty?: boolean;
+    };
+
+    let frame: Frame | undefined = { sub: root, link: root._sources };
+
+    while (frame) {
+      const link: Edge | undefined = frame.link;
+
+      // Unwind when finished scanning this sub's deps
+      if (!link) {
+        // Clear NOTIFIED on clean nodes
+        if (!frame.dirty && (frame.sub._flags & NOTIFIED)) {
+          frame.sub._flags &= ~NOTIFIED;
         }
-        // Update edge version for clean signal
-        source.version = currentVersion;
-        source = source.nextSource;
+        if (!frame.parent) return !!frame.dirty;
+
+        const edgeToParent = frame.parentEdge!;
+        const subAny = frame.sub;
+        const prevVersion = edgeToParent.version;
+        let changed = false;
+        // If subtree was dirty and this is a computed, recompute now
+        if (frame.dirty) {
+          subAny._refresh();
+          if ('_version' in subAny) {
+            changed = prevVersion !== subAny._version;
+          }
+        }
+        // Sync parent edge cached version
+        if ('_version' in subAny && typeof subAny._version === 'number') {
+          edgeToParent.version = subAny._version;
+        }
+
+        // Propagate dirtiness only if value actually changed
+        if (frame.dirty && changed) {
+          frame.parent.dirty = true;
+        }
+        // Advance parent to next dependency
+        frame.parent.link = edgeToParent.nextSource;
+        frame = frame.parent;
         continue;
       }
-      
-      // OPTIMIZATION: Combined check for clean computeds
-      // Check flags and version in one condition to reduce branches
-      if (
-        edgeVersion === currentVersion &&
-        !(sourceNode._flags & (NOTIFIED | OUTDATED))
-      ) {
-        source = source.nextSource;
+
+      // Skip recycled edges
+      if (link.version === -1) {
+        frame.link = link.nextSource;
         continue;
       }
-      
-      // Computed needs refresh - ensure it's up to date
-      sourceNode._refresh();
-      
-      // Check if version changed after refresh
-      const newVersion = sourceNode._version;
-      if (edgeVersion !== newVersion) {
-        hasChanges = true;
+
+      const dep = link.source as ProducerNode & Partial<ConsumerNode> & { _flags?: number };
+      const cached = link.version;
+
+      // Signals: compare versions
+      if (!('_sources' in dep)) {
+        const v = dep._version;
+        if (cached !== v) frame.dirty = true;
+        link.version = v;
+        frame.link = link.nextSource;
+        continue;
       }
-      
-      // Update edge version for next time
-      source.version = newVersion;
-      source = source.nextSource;
+
+      const depFlags = (dep as any)._flags || 0;
+      const current = dep._version;
+
+      // Explicitly outdated dependency -> mark dirty
+      if (depFlags & OUTDATED) {
+        frame.dirty = true;
+        frame.link = link.nextSource;
+        continue;
+      }
+
+      // Clean dependency fast path
+      if (cached === current && (depFlags & NOTIFIED) === 0) {
+        frame.link = link.nextSource;
+        continue;
+      }
+
+      // Dive into pending dependency
+      if (depFlags & NOTIFIED) {
+        frame = {
+          sub: dep as unknown as ConsumerNode,
+          link: (dep as any)._sources,
+          parent: frame,
+          parentEdge: link,
+        };
+        continue;
+      }
+
+      // Version mismatch without NOTIFIED -> mark dirty and sync
+      if (cached !== current) {
+        frame.dirty = true;
+        link.version = current;
+      }
+      frame.link = link.nextSource;
     }
-    
-    return hasChanges;
+
+    return false;
   };
 
   /**

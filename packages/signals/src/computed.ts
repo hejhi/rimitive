@@ -54,7 +54,6 @@ const {
   DISPOSED,
   OUTDATED,
   NOTIFIED,
-  TRACKING,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -66,7 +65,7 @@ interface ComputedFactoryContext extends SignalContext {
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   const {
-    dependencies: { ensureLink, needsRecompute, hasStaleDependencies },
+    dependencies: { ensureLink, needsRecompute },
     sourceCleanup: { detachAll, pruneStale },
     graphWalker: { dfs },
     workQueue: { enqueue }
@@ -242,42 +241,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     }
 
     _refresh(): boolean {
-      // ALGORITHM: Refresh Following Preact-Signals Pattern
-      // This method ensures the computed is fresh, recomputing if needed
-      // Returns true if the computed is fresh (almost always after calling)
-      
-      // If we're currently computing, we have a cycle
-      if (this._flags & RUNNING) return false;
-      
-      // If we have the TRACKING flag and are not OUTDATED or NOTIFIED, we're fresh
-      // TRACKING means we have subscribers and are part of the active graph
-      if ((this._flags & (OUTDATED | NOTIFIED | TRACKING)) === TRACKING) return true;
-      
-      // Clear NOTIFIED and OUTDATED flags as we're handling them now
-      this._flags &= ~(NOTIFIED | OUTDATED);
-      
-      // OPTIMIZATION: Global version check
-      // If nothing changed globally since we last updated, we're fresh
-      if (this._globalVersion === ctx.version) return true;
-      
-      // Set RUNNING flag to detect cycles during dependency checking
-      this._flags |= RUNNING;
-      
-      // If we have a valid cached value, check if dependencies changed
-      if (this._version > 0 && !hasStaleDependencies(this)) {
-        this._flags &= ~RUNNING;
-        // Only cache global version after confirming we're actually clean
-        this._globalVersion = ctx.version;
-        return true;
-      }
-      
-      // Dependencies changed or first run - clear RUNNING before recompute
-      this._flags &= ~RUNNING;
-      
       // Recompute the value
       this._recompute();
-      
-      // After recomputation, we're fresh
       return true;
     }
 
