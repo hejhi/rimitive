@@ -254,10 +254,8 @@ export function createDependencyGraph(): DependencyGraph {
         continue;
       }
       
-      // Computed needs refresh - check if it actually changed
-      if (!sourceNode._refresh()) {
-        hasChanges = true;
-      }
+      // Computed needs refresh - ensure it's up to date
+      sourceNode._refresh();
       
       // Check if version changed after refresh
       const newVersion = sourceNode._version;
