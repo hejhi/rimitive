@@ -202,28 +202,20 @@ export function createDependencyGraph(): DependencyGraph {
   };
 
   /**
-   * ALGORITHM: Preact-style Dependency Checking with _refresh()
+   * ALGORITHM: Depth-First Dependency Checking
    * 
-   * Determines if a consumer needs to recompute by checking if any of its
-   * dependencies have changed. This follows preact-signals' pattern:
-   * 1. Check version mismatch first (fast path)
-   * 2. Call _refresh() on computed dependencies (recursive but controlled)
-   * 3. Check version again after refresh
+   * Iteratively checks if any direct dependencies have changed versions.
+   * For computed dependencies, calls their _refresh() method which may
+   * trigger a depth-first traversal of the dependency graph.
    * 
-   * The recursion happens through _refresh() calls, but it's controlled by
-   * RUNNING flags and global version checks to prevent stack overflow.
-   */
-  /**
-   * ALGORITHM: Preact-style Dependency Checking with _refresh()
+   * This function itself is NOT recursive, but participates in mutual
+   * recursion with computed._refresh():
+   * - hasStaleDependencies → computed._refresh() → hasStaleDependencies
    * 
-   * Determines if a consumer needs to recompute by checking if any of its
-   * dependencies have changed. This follows preact-signals' pattern:
-   * 1. Check version mismatch first (fast path)
-   * 2. Call _refresh() on computed dependencies (recursive but controlled)
-   * 3. Check version again after refresh
-   * 
-   * The recursion happens through _refresh() calls, but it's controlled by
-   * RUNNING flags and global version checks to prevent stack overflow.
+   * The traversal is controlled by:
+   * - RUNNING flags to detect and prevent cycles
+   * - Global version checks for early termination
+   * - Version comparison to detect actual changes
    */
   const hasStaleDependencies = (consumer: ConsumerNode): boolean => {
     let source = consumer._sources;
