@@ -202,15 +202,15 @@ export function createDependencyGraph(): DependencyGraph {
   };
 
   /**
-   * ALGORITHM: Depth-First Dependency Checking
+   * ALGORITHM: Complete Dependency Checking (No Early Exit)
    * 
-   * Iteratively checks if any direct dependencies have changed versions.
+   * Iteratively checks ALL direct dependencies have changed versions.
    * For computed dependencies, calls their _refresh() method which may
    * trigger a depth-first traversal of the dependency graph.
    * 
-   * This function itself is NOT recursive, but participates in mutual
-   * recursion with computed._refresh():
-   * - hasStaleDependencies → computed._refresh() → hasStaleDependencies
+   * OPTIMIZATION: Unlike the original Preact pattern, we don't exit early
+   * when finding a changed dependency. This ensures all dependencies are
+   * refreshed in diamond patterns, avoiding redundant refresh calls later.
    * 
    * The traversal is controlled by:
    * - RUNNING flags to detect and prevent cycles
@@ -218,7 +218,9 @@ export function createDependencyGraph(): DependencyGraph {
    * - Version comparison to detect actual changes
    */
   const hasStaleDependencies = (consumer: ConsumerNode): boolean => {
+    let hasChanges = false;
     let source = consumer._sources;
+    
     while (source) {
       const sourceNode = source.source;
       const edgeVersion = source.version;
@@ -233,7 +235,9 @@ export function createDependencyGraph(): DependencyGraph {
       
       // Fast path for signals - no dependencies to check
       if (!('_sources' in sourceNode)) {
-        if (edgeVersion !== currentVersion) return true;
+        if (edgeVersion !== currentVersion) {
+          hasChanges = true;
+        }
         // Update edge version for clean signal
         source.version = currentVersion;
         source = source.nextSource;
@@ -251,18 +255,22 @@ export function createDependencyGraph(): DependencyGraph {
       }
       
       // Computed needs refresh - check if it actually changed
-      if (!sourceNode._refresh()) return true;
+      if (!sourceNode._refresh()) {
+        hasChanges = true;
+      }
       
       // Check if version changed after refresh
       const newVersion = sourceNode._version;
-      if (edgeVersion !== newVersion) return true;
+      if (edgeVersion !== newVersion) {
+        hasChanges = true;
+      }
       
       // Update edge version for next time
       source.version = newVersion;
       source = source.nextSource;
     }
     
-    return false;
+    return hasChanges;
   };
 
   /**
