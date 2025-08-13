@@ -60,6 +60,8 @@ interface BatchFactoryContext extends SignalContext {
 
 export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
   const { workQueue: { flush, enqueue }, graphWalker, propagator } = ctx;
+  const { dfsMany } = graphWalker;
+  const { propagate } = propagator;
 
   // Shared scheduling visitor
   const notifyNode = (node: ConsumerNode): void => {
@@ -103,7 +105,7 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     if (shouldFlush) {
       try {
         // Perform a single multi-root propagation for this batch (DFS)
-        propagator.propagate(graphWalker, notifyNode);
+        propagate(dfsMany, notifyNode);
         // Execute all scheduled effects
         flush();
       } catch (error) {

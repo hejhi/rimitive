@@ -14,7 +14,7 @@ export interface Propagator {
   ) => void;
   // Run a single traversal seeded by all added roots
   propagate: (
-    walker: GraphWalker,
+    dfsMany: GraphWalker['dfsMany'],
     visit: (node: ConsumerNode) => void
   ) => void;
 }
@@ -42,11 +42,11 @@ export function createPropagator(): Propagator {
   const size = (): number => roots.length;
 
   const propagate = (
-    walker: GraphWalker,
+    dfsMany: GraphWalker['dfsMany'],
     visit: (node: ConsumerNode) => void
   ): void => {
     if (roots.length === 0) return;
-    walker.dfsMany(roots, visit);
+    dfsMany(roots, visit);
     clear();
   };
 
@@ -61,15 +61,18 @@ export function createPropagator(): Propagator {
     visit: (node: ConsumerNode) => void
   ): void => {
     if (!from) return;
+
     if (!isBatched) {
       walker.dfs(from, visit);
       return;
     }
+
     // Small-batch fast path to avoid array churn
     if (roots.length < 2) {
       walker.dfs(from, visit);
       return;
     }
+
     roots.push(from);
   };
 

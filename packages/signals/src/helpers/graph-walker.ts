@@ -72,23 +72,23 @@ export function createGraphWalker(): GraphWalker {
       target._flags |= NOTIFIED;
       visit(target);
 
-      // Linear chain fast path; defer siblings via stack for true DFS
+      // Optimized traversal with reduced branching
       const nextSibling = currentEdge.nextTarget;
       const childTargets = (target as unknown as { _targets?: Edge })._targets;
 
+      // Determine next edge to process
       if (childTargets) {
+        // Push sibling to stack if exists, then go to children
         if (nextSibling) stack = { edge: nextSibling, next: stack };
         currentEdge = childTargets;
-        continue;
-      }
-
-      if (nextSibling) {
+      } else if (nextSibling) {
+        // No children, process sibling
         currentEdge = nextSibling;
-        continue;
+      } else {
+        // No children or siblings, pop from stack
+        currentEdge = stack?.edge;
+        stack = stack?.next;
       }
-
-      currentEdge = stack?.edge;
-      stack = stack?.next;
     }
   };
 
