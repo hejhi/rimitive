@@ -48,7 +48,7 @@ export function createGraphWalker(): GraphWalker {
 
         target._flags |= NOTIFIED;
         visit(target);
-        edge = (target as unknown as { _targets: Edge })._targets;
+        edge = (target as unknown as { _targets?: Edge })._targets;
       }
 
       // If we broke out with multiple targets, fall through to normal DFS
