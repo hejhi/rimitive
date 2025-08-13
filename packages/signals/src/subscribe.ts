@@ -78,8 +78,8 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     }
 
     _invalidate(): void {
-      // ALGORITHM: Queue for Immediate Propagation
-      // When source changes, queue for execution
+      // ALGORITHM: Queue for Immediate Propagation with Linked List
+      // When source changes, queue for execution using intrusive list
       // Skip if already NOTIFIED or DISPOSED
       
       // Early exit if already processed or disposed
@@ -90,9 +90,27 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       
       // Queue the subscription if not already queued
       if (this._nextScheduled === undefined) {
-        // Mark as queued
+        // Use sentinel value
         this._nextScheduled = this;
-        ctx.queuedEffects[ctx.queuedEffectsLength++] = this;
+        if (ctx.queueTail) {
+          ctx.queueTail._nextScheduled = this;
+          ctx.queueTail = this;
+        } else {
+          ctx.queueHead = ctx.queueTail = this;
+        }
+      }
+      
+      // If not in a batch, flush immediately
+      if (ctx.batchDepth === 0) {
+        let current = ctx.queueHead;
+        ctx.queueHead = ctx.queueTail = undefined;
+        
+        while (current) {
+          const next = current._nextScheduled === current ? undefined : current._nextScheduled;
+          current._nextScheduled = undefined;
+          current._flush();
+          current = next;
+        }
       }
     }
 

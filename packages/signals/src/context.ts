@@ -38,12 +38,11 @@ export interface SignalContext {
   // Similar to database transaction nesting.
   batchDepth: number;
   
-  // ALGORITHM: Effect Queue (Alien Signals Approach)
-  // Queue of effects to be executed at batch end
-  // Uses immediate propagation with effect queuing instead of root collection
-  queuedEffects: (ScheduledNode | undefined)[];
-  queuedEffectsLength: number;
-  notifyIndex: number;
+  // ALGORITHM: Intrusive Linked List for Effect Queue
+  // Head and tail of queued effects list for O(1) enqueue and dequeue
+  // Uses _nextScheduled field on nodes to form the list (no allocations)
+  queueHead: ScheduledNode | undefined;
+  queueTail: ScheduledNode | undefined;
 }
 
 // PATTERN: Factory Function
@@ -54,8 +53,7 @@ export function createContext(): SignalContext {
     currentConsumer: null,
     version: 0,
     batchDepth: 0,
-    queuedEffects: [],
-    queuedEffectsLength: 0,
-    notifyIndex: 0,
+    queueHead: undefined,
+    queueTail: undefined,
   };
 }

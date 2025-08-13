@@ -36,7 +36,6 @@
  */
 import type { LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
-import { flushEffects } from './helpers/propagate';
 
 // PATTERN: Error Wrapper for Non-Error Values
 // When user code throws non-Error values (strings, numbers, etc.),
@@ -49,8 +48,8 @@ class BatchError extends Error {
   }
 }
 
-interface BatchFactoryContext extends SignalContext {
-}
+// BatchFactoryContext is just SignalContext - no additional fields needed
+type BatchFactoryContext = SignalContext;
 
 export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
 
@@ -90,9 +89,17 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     
     if (shouldFlush) {
       try {
-        // ALGORITHM: Flush Queued Effects (Alien Signals Approach)
-        // No need for multi-root propagation - effects were queued during immediate propagation
-        flushEffects(ctx);
+        // ALGORITHM: Flush Queued Effects Using Linked List
+        // Effects were queued during immediate propagation
+        let current = ctx.queueHead;
+        ctx.queueHead = ctx.queueTail = undefined;
+        
+        while (current) {
+          const next = current._nextScheduled === current ? undefined : current._nextScheduled;
+          current._nextScheduled = undefined;
+          current._flush();
+          current = next;
+        }
       } catch (error) {
         // CRITICAL: Reset batchDepth on flush error
         // This prevents the system from getting stuck in a batched state

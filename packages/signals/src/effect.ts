@@ -115,8 +115,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     }
 
     _invalidate(): void {
-      // ALGORITHM: Effect Invalidation with Queuing
-      // Effects are queued during propagation and executed at batch end
+      // ALGORITHM: Effect Invalidation with Linked List Queue
+      // Effects are queued using intrusive linked list
       // The NOTIFIED flag prevents duplicate scheduling
       
       // Early exit if already processed
@@ -127,9 +127,27 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       
       // Queue the effect if not already queued
       if (this._nextScheduled === undefined) {
-        // Mark as queued
+        // Use sentinel value to mark as queued
         this._nextScheduled = this;
-        ctx.queuedEffects[ctx.queuedEffectsLength++] = this;
+        if (ctx.queueTail) {
+          ctx.queueTail._nextScheduled = this;
+          ctx.queueTail = this;
+        } else {
+          ctx.queueHead = ctx.queueTail = this;
+        }
+      }
+      
+      // If not in a batch, flush immediately
+      if (ctx.batchDepth === 0) {
+        let current = ctx.queueHead;
+        ctx.queueHead = ctx.queueTail = undefined;
+        
+        while (current) {
+          const next = current._nextScheduled === current ? undefined : current._nextScheduled;
+          current._nextScheduled = undefined;
+          current._flush();
+          current = next;
+        }
       }
     }
 

@@ -32,12 +32,11 @@
  */
 
 import { CONSTANTS } from './constants';
-import { Edge, Readable, ProducerNode, Disposable, ConsumerNode } from './types';
+import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { SignalContext } from './context';
-import { propagate } from './helpers/propagate';
 // no-op import removed: dev-only cycle detection eliminated
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
@@ -209,10 +208,74 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Mark as potentially dirty
       this._flags |= NOTIFIED;
       
-      // ALGORITHM: Immediate Propagation
-      // Propagate invalidation immediately through dependency graph
+      // ALGORITHM: Inline Immediate Propagation
+      // Same approach as signal but inlined for performance
       if (!this._targets) return;
-      propagate(this._targets, ctx);
+      
+      // Fast path for single target
+      let edge: Edge | undefined = this._targets;
+      if (edge && !edge.nextTarget) {
+        while (edge) {
+          const target: ConsumerNode = edge.target;
+          if (!(target._flags & (NOTIFIED | DISPOSED | RUNNING))) {
+            target._flags |= NOTIFIED;
+            
+            // Queue if schedulable
+            if ('_nextScheduled' in target) {
+              const scheduled = target as ScheduledNode;
+              if (!scheduled._nextScheduled) {
+                scheduled._nextScheduled = scheduled;
+                if (ctx.queueTail) {
+                  ctx.queueTail._nextScheduled = scheduled;
+                  ctx.queueTail = scheduled;
+                } else {
+                  ctx.queueHead = ctx.queueTail = scheduled;
+                }
+              }
+            }
+            
+            edge = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
+          } else {
+            edge = undefined;
+            break;
+          }
+        }
+      } else {
+        // Multiple targets - full traversal
+        const stack: Edge[] = [];
+        let current: Edge | undefined = edge;
+        
+        while (current) {
+          const target: ConsumerNode = current.target;
+          
+          if (!(target._flags & (NOTIFIED | DISPOSED | RUNNING))) {
+            target._flags |= NOTIFIED;
+            
+            // Queue if schedulable
+            if ('_nextScheduled' in target) {
+              const scheduled = target as ScheduledNode;
+              if (!scheduled._nextScheduled) {
+                scheduled._nextScheduled = scheduled;
+                if (ctx.queueTail) {
+                  ctx.queueTail._nextScheduled = scheduled;
+                  ctx.queueTail = scheduled;
+                } else {
+                  ctx.queueHead = ctx.queueTail = scheduled;
+                }
+              }
+            }
+            
+            const childTargets: Edge | undefined = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
+            if (childTargets) {
+              if (current.nextTarget) stack.push(current.nextTarget);
+              current = childTargets;
+              continue;
+            }
+          }
+          
+          current = current.nextTarget || stack.pop();
+        }
+      }
     }
 
     _update(): void {

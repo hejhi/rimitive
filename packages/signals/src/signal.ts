@@ -26,13 +26,12 @@
  * - alien-signals (optimized graph traversal)
  */
 import { CONSTANTS } from './constants';
-import { Edge, Writable, ProducerNode } from './types';
+import { Edge, Writable, ProducerNode, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
-import { propagate, flushEffects } from './helpers/propagate';
 
-const { RUNNING } = CONSTANTS;
+const { RUNNING, NOTIFIED, DISPOSED } = CONSTANTS;
 
 // PATTERN: Interface Segregation
 // SignalInterface combines multiple concerns through interface composition:
@@ -130,14 +129,83 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // Increment global version as we are about to notify dependents
       ctx.version++;
       
-      // ALGORITHM: Immediate Propagation (Alien Signals Approach)
-      // Propagate changes immediately through the dependency graph
-      // Effects are queued during propagation and flushed at batch end
-      propagate(this._targets, ctx);
+      // ALGORITHM: Inline Immediate Propagation with Linked List Queue
+      // Optimized traversal with minimal overhead
+      if (!this._targets) return;
       
-      // If not in a batch, flush effects immediately
+      // Inline queue helper - avoids function call overhead
+      const queueEffect = (node: ConsumerNode): void => {
+        if ('_nextScheduled' in node) {
+          const scheduled = node as ScheduledNode;
+          if (!scheduled._nextScheduled) {
+            scheduled._nextScheduled = scheduled; // Sentinel
+            if (ctx.queueTail) {
+              ctx.queueTail._nextScheduled = scheduled;
+              ctx.queueTail = scheduled;
+            } else {
+              ctx.queueHead = ctx.queueTail = scheduled;
+            }
+          }
+        }
+      };
+      
+      // OPTIMIZATION: Fast path for single target
+      let edge: Edge | undefined = this._targets;
+      if (edge && !edge.nextTarget) {
+        // Single target - no stack needed
+        while (edge) {
+          const target: ConsumerNode = edge.target;
+          if (!(target._flags & (NOTIFIED | DISPOSED | RUNNING))) {
+            target._flags |= NOTIFIED;
+            queueEffect(target);
+            // Continue with target's targets if it's a computed
+            edge = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
+          } else {
+            edge = undefined;
+            break;
+          }
+        }
+      } else {
+        // Multiple targets - need traversal with stack
+        // Using array stack for simplicity (could optimize with linked list later)
+        const stack: Edge[] = [];
+        let current: Edge | undefined = edge;
+        
+        while (current) {
+          const target: ConsumerNode = current.target;
+          
+          if (!(target._flags & (NOTIFIED | DISPOSED | RUNNING))) {
+            target._flags |= NOTIFIED;
+            queueEffect(target);
+            
+            // If target has dependents, traverse them
+            const childTargets: Edge | undefined = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
+            if (childTargets) {
+              // Save siblings for later
+              if (current.nextTarget) {
+                stack.push(current.nextTarget);
+              }
+              current = childTargets;
+              continue;
+            }
+          }
+          
+          // Move to sibling or pop from stack
+          current = current.nextTarget || stack.pop();
+        }
+      }
+      
+      // Flush effects immediately if not in a batch
       if (ctx.batchDepth === 0) {
-        flushEffects(ctx);
+        let current = ctx.queueHead;
+        ctx.queueHead = ctx.queueTail = undefined;
+        
+        while (current) {
+          const next = current._nextScheduled === current ? undefined : current._nextScheduled;
+          current._nextScheduled = undefined;
+          current._flush();
+          current = next;
+        }
       }
     }
 
