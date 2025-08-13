@@ -241,8 +241,12 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
           }
         }
       } else {
-        // Multiple targets - full traversal
-        const stack: Edge[] = [];
+        // Multiple targets - zero allocation traversal
+        interface StackableEdge extends Edge {
+          stackNext?: Edge;
+        }
+        
+        let stack: Edge | undefined;
         let current: Edge | undefined = edge;
         
         while (current) {
@@ -267,13 +271,28 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
             
             const childTargets: Edge | undefined = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
             if (childTargets) {
-              if (current.nextTarget) stack.push(current.nextTarget);
+              // Use intrusive stack
+              if (current.nextTarget) {
+                const sibling = current.nextTarget as StackableEdge;
+                sibling.stackNext = stack;
+                stack = sibling;
+              }
               current = childTargets;
               continue;
             }
           }
           
-          current = current.nextTarget || stack.pop();
+          // Move to sibling or pop from stack
+          if (current.nextTarget) {
+            current = current.nextTarget;
+          } else if (stack) {
+            const stackable = stack as StackableEdge;
+            current = stack;
+            stack = stackable.stackNext;
+            stackable.stackNext = undefined; // Clean up
+          } else {
+            current = undefined;
+          }
         }
       }
     }
