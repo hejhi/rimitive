@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createWorkQueue } from './work-queue';
+import { createContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
@@ -7,7 +8,8 @@ const { DISPOSED } = CONSTANTS;
 
 describe('WorkQueue', () => {
   it('should enqueue nodes', () => {
-    const helpers = createWorkQueue();
+    const ctx = createContext();
+    const helpers = createWorkQueue(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -26,7 +28,8 @@ describe('WorkQueue', () => {
   });
 
   it('should not enqueue already scheduled nodes', () => {
-    const helpers = createWorkQueue();
+    const ctx = createContext();
+    const helpers = createWorkQueue(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -49,7 +52,8 @@ describe('WorkQueue', () => {
   });
 
   it('should dispose node only once', () => {
-    const helpers = createWorkQueue();
+    const ctx = createContext();
+    const helpers = createWorkQueue(ctx);
     
     const cleanupFn = vi.fn();
     const node: ScheduledNode = {
@@ -73,8 +77,9 @@ describe('WorkQueue', () => {
     expect(cleanupFn).toHaveBeenCalledTimes(1);
   });
 
-  it('should flush all scheduled nodes in reverse order', () => {
-    const helpers = createWorkQueue();
+  it('should flush all scheduled nodes in FIFO order', () => {
+    const ctx = createContext();
+    const helpers = createWorkQueue(ctx);
     
     const flush1 = vi.fn();
     const flush2 = vi.fn();
@@ -125,24 +130,26 @@ describe('WorkQueue', () => {
     expect(flush2).toHaveBeenCalledTimes(1);
     expect(flush3).toHaveBeenCalledTimes(1);
     
-    // Verify they were flushed in reverse order (LIFO)
-    expect(flush3.mock.invocationCallOrder[0]!).toBeLessThan(flush2.mock.invocationCallOrder[0]!);
-    expect(flush2.mock.invocationCallOrder[0]!).toBeLessThan(flush1.mock.invocationCallOrder[0]!);
+    // Verify they were flushed in FIFO order
+    expect(flush1.mock.invocationCallOrder[0]!).toBeLessThan(flush2.mock.invocationCallOrder[0]!);
+    expect(flush2.mock.invocationCallOrder[0]!).toBeLessThan(flush3.mock.invocationCallOrder[0]!);
   });
 
   it('should handle empty flush', () => {
-    const helpers = createWorkQueue();
+    const ctx = createContext();
+    const helpers = createWorkQueue(ctx);
     
     // Flush with no nodes queued - should not throw
     expect(() => helpers.flush()).not.toThrow();
     
     // State should remain unchanged
     expect(helpers.state.size).toBe(0);
-    expect(helpers.state.head).toBeUndefined();
+    expect(ctx.queueHead).toBeUndefined();
   });
 
   it('should clear _nextScheduled flag during flush', () => {
-    const helpers = createWorkQueue();
+    const ctx = createContext();
+    const helpers = createWorkQueue(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',

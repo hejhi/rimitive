@@ -1,5 +1,3 @@
-Found 12 benchmark suites
-
 Running: batch-operations
 
 clk: ~3.06 GHz

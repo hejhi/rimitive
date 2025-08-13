@@ -21,7 +21,7 @@ import { createContext as createLattice } from '@lattice/lattice';
 export function createTestInstance() {
   // Create extended context for testing
   const base = createContext();
-  const workQueue = createWorkQueue();
+  const workQueue = createWorkQueue(base);
   const graphWalker = createGraphWalker();
   const propagator = createPropagator();
   const dependencies = createDependencyGraph();
@@ -66,7 +66,6 @@ export function createTestInstance() {
     getBatchDepth: () => ctx.batchDepth,
     hasPendingEffects: () => ctx.workQueue.state.size > 0,
     clearBatch: () => {
-      ctx.workQueue.state.head = undefined;
       ctx.workQueue.state.size = 0;
       // Reset batch depth safely
       ctx.batchDepth = 0;
@@ -78,14 +77,14 @@ export function createTestInstance() {
     },
     getCurrentConsumer: () => ctx.currentConsumer,
     resetGlobalState: () => {
-      // Clear any pending scheduled effects by walking the intrusive stack
-      let node = ctx.workQueue.state.head;
+      // Clear any pending scheduled effects by walking the intrusive queue
+      let node = ctx.queueHead;
       while (node) {
-        const next = node._nextScheduled;
+        const next = node._nextScheduled === node ? undefined : node._nextScheduled;
         node._nextScheduled = undefined;
         node = next;
       }
-      ctx.workQueue.state.head = undefined;
+      ctx.queueHead = ctx.queueTail = undefined;
       ctx.workQueue.state.size = 0;
 
       // Reset context
@@ -133,10 +132,13 @@ export const activeContext = (() => {
       return defaultInstance.workQueue.state.size;
     },
     get scheduledQueue() { 
-      // Materialize the current intrusive stack as an array snapshot
+      // Materialize the current intrusive queue as an array snapshot
       const out = [];
-      let node = defaultInstance.workQueue.state.head;
-      while (node) { out.push(node); node = node._nextScheduled; }
+      let node = defaultInstance.activeContext.queueHead;
+      while (node) { 
+        out.push(node); 
+        node = node._nextScheduled === node ? undefined : node._nextScheduled;
+      }
       return out;
     },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },

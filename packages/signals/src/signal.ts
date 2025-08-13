@@ -30,8 +30,11 @@ import { Edge, Writable, ProducerNode, ConsumerNode, ScheduledNode } from './typ
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
+import type { GraphWalker } from './helpers/graph-walker';
+import type { Propagator } from './helpers/propagator';
+import type { WorkQueue } from './helpers/work-queue';
 
-const { RUNNING, NOTIFIED, DISPOSED } = CONSTANTS;
+const { RUNNING } = CONSTANTS;
 
 // PATTERN: Interface Segregation
 // SignalInterface combines multiple concerns through interface composition:
@@ -46,12 +49,23 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
 
 interface SignalFactoryContext extends SignalContext {
   dependencies: DependencyGraph;
+  graphWalker: GraphWalker;
+  propagator: Propagator;
+  workQueue: WorkQueue;
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const {
     dependencies: { ensureLink },
+    graphWalker,
+    propagator,
+    workQueue
   } = ctx;
+  
+  // Pre-bind notification handler for hot path
+  const notifyNode = (node: ConsumerNode): void => {
+    if ('_nextScheduled' in node) workQueue.enqueue(node as ScheduledNode);
+  };
   
   // PATTERN: Class-based Implementation
   // Using a class instead of factory functions for better performance:
@@ -129,93 +143,23 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // Increment global version as we are about to notify dependents
       ctx.version++;
       
-      // ALGORITHM: Inline Immediate Propagation with Linked List Queue
-      // Optimized traversal with minimal overhead
-      if (!this._targets) return;
+      // ALGORITHM: Delegated Propagation via GraphWalker and Propagator
+      // Uses modular components for optimal traversal strategy
+      const isNewBatch = ctx.batchDepth === 0;
+      if (isNewBatch) ctx.batchDepth++;
       
-      // Inline queue helper - avoids function call overhead
-      const queueEffect = (node: ConsumerNode): void => {
-        if ('_nextScheduled' in node) {
-          const scheduled = node as ScheduledNode;
-          if (!scheduled._nextScheduled) {
-            scheduled._nextScheduled = scheduled; // Sentinel
-            if (ctx.queueTail) {
-              ctx.queueTail._nextScheduled = scheduled;
-              ctx.queueTail = scheduled;
-            } else {
-              ctx.queueHead = ctx.queueTail = scheduled;
-            }
-          }
-        }
-      };
+      // Track queue size to detect if effects were scheduled
+      const prevSize = workQueue.state.size;
       
-      // OPTIMIZATION: Fast path for single target
-      let edge: Edge | undefined = this._targets;
-      if (edge && !edge.nextTarget) {
-        // Single target - no stack needed
-        while (edge) {
-          const target: ConsumerNode = edge.target;
-          if (!(target._flags & (NOTIFIED | DISPOSED | RUNNING))) {
-            target._flags |= NOTIFIED;
-            queueEffect(target);
-            // Continue with target's targets if it's a computed
-            edge = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
-          } else {
-            edge = undefined;
-            break;
-          }
-        }
-      } else {
-        // Multiple targets - zero allocation traversal using permanent stackNext field
-        let stack: Edge | undefined;
-        let current: Edge | undefined = edge;
-        
-        while (current) {
-          const target: ConsumerNode = current.target;
-          
-          if (!(target._flags & (NOTIFIED | DISPOSED | RUNNING))) {
-            target._flags |= NOTIFIED;
-            queueEffect(target);
-            
-            // If target has dependents, traverse them
-            const childTargets: Edge | undefined = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
-            if (childTargets) {
-              // Save siblings for later - push to stack using intrusive list
-              if (current.nextTarget) {
-                const sibling = current.nextTarget;
-                sibling.stackNext = stack;
-                stack = sibling;
-              }
-              current = childTargets;
-              continue;
-            }
-          }
-          
-          // Move to sibling or pop from stack
-          if (current.nextTarget) {
-            current = current.nextTarget;
-          } else if (stack) {
-            current = stack;
-            stack = stack.stackNext;
-            // Clean up - but stack could be undefined now
-            if (current) current.stackNext = undefined;
-          } else {
-            current = undefined;
-          }
-        }
-      }
+      // Use propagator's intelligent invalidation strategy
+      // - Immediate traversal for unbatched updates
+      // - Small batch optimization (threshold = 2)
+      // - Multi-root aggregation for large batches
+      propagator.invalidate(this._targets, !isNewBatch, graphWalker, notifyNode);
       
-      // Flush effects immediately if not in a batch
-      if (ctx.batchDepth === 0) {
-        let current = ctx.queueHead;
-        ctx.queueHead = ctx.queueTail = undefined;
-        
-        while (current) {
-          const next = current._nextScheduled === current ? undefined : current._nextScheduled;
-          current._nextScheduled = undefined;
-          current._flush();
-          current = next;
-        }
+      // Flush effects if we're ending a batch and effects were queued
+      if (isNewBatch && --ctx.batchDepth === 0 && workQueue.state.size !== prevSize) {
+        workQueue.flush();
       }
     }
 

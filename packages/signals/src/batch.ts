@@ -36,6 +36,7 @@
  */
 import type { LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
+import type { WorkQueue } from './helpers/work-queue';
 
 // PATTERN: Error Wrapper for Non-Error Values
 // When user code throws non-Error values (strings, numbers, etc.),
@@ -48,10 +49,13 @@ class BatchError extends Error {
   }
 }
 
-// BatchFactoryContext is just SignalContext - no additional fields needed
-type BatchFactoryContext = SignalContext;
+// BatchFactoryContext needs WorkQueue for flushing
+interface BatchFactoryContext extends SignalContext {
+  workQueue: WorkQueue;
+}
 
 export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
+  const { workQueue } = ctx;
 
   // ALGORITHM: Nested Batch Support
   // The batch function is reentrant - batches can be nested safely.
@@ -89,17 +93,9 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     
     if (shouldFlush) {
       try {
-        // ALGORITHM: Flush Queued Effects Using Linked List
+        // ALGORITHM: Flush Queued Effects via WorkQueue
         // Effects were queued during immediate propagation
-        let current = ctx.queueHead;
-        ctx.queueHead = ctx.queueTail = undefined;
-        
-        while (current) {
-          const next = current._nextScheduled === current ? undefined : current._nextScheduled;
-          current._nextScheduled = undefined;
-          current._flush();
-          current = next;
-        }
+        workQueue.flush();
       } catch (error) {
         // CRITICAL: Reset batchDepth on flush error
         // This prevents the system from getting stuck in a batched state

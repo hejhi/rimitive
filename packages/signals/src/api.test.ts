@@ -54,10 +54,11 @@ describe('createSignalAPI', () => {
     let flushCalled = false;
     
     // Create custom context with custom work queue
+    const baseCtx = createContext();
     const customCtx = {
-      ...createContext(),
+      ...baseCtx,
       workQueue: (() => {
-        const queue = createWorkQueue();
+        const queue = createWorkQueue(baseCtx);
         return {
           ...queue,
           flush: () => {
@@ -100,10 +101,11 @@ describe('createSignalAPI', () => {
     let enqueueCount = 0;
     
     // Create custom context with instrumented work queue
+    const baseCtx = createContext();
     const customCtx = {
-      ...createContext(),
+      ...baseCtx,
       workQueue: (() => {
-        const queue = createWorkQueue();
+        const queue = createWorkQueue(baseCtx);
         const originalEnqueue = queue.enqueue;
         queue.enqueue = (node) => {
           enqueueCount++;

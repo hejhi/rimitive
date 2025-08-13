@@ -37,6 +37,8 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { SignalContext } from './context';
+import type { GraphWalker } from './helpers/graph-walker';
+import type { WorkQueue } from './helpers/work-queue';
 // no-op import removed: dev-only cycle detection eliminated
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
@@ -58,13 +60,22 @@ const {
 interface ComputedFactoryContext extends SignalContext {
   dependencies: DependencyGraph;
   sourceCleanup: DependencySweeper;
+  graphWalker: GraphWalker;
+  workQueue: WorkQueue;
 }
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   const {
     dependencies: { ensureLink, needsRecompute, hasStaleDependencies },
     sourceCleanup: { detachAll, pruneStale },
+    graphWalker,
+    workQueue
   } = ctx;
+  
+  // Pre-bind notification handler for hot path
+  const notifyNode = (node: ConsumerNode): void => {
+    if ('_nextScheduled' in node) workQueue.enqueue(node as ScheduledNode);
+  };
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
@@ -208,89 +219,13 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Mark as potentially dirty
       this._flags |= NOTIFIED;
       
-      // ALGORITHM: Inline Immediate Propagation
-      // Same approach as signal but inlined for performance
+      // ALGORITHM: Delegated Propagation via GraphWalker
+      // Use the centralized graph traversal system
       if (!this._targets) return;
       
-      // Fast path for single target
-      let edge: Edge | undefined = this._targets;
-      if (edge && !edge.nextTarget) {
-        while (edge) {
-          const target: ConsumerNode = edge.target;
-          if (!(target._flags & (NOTIFIED | DISPOSED | RUNNING))) {
-            target._flags |= NOTIFIED;
-            
-            // Queue if schedulable
-            if ('_nextScheduled' in target) {
-              const scheduled = target as ScheduledNode;
-              if (!scheduled._nextScheduled) {
-                scheduled._nextScheduled = scheduled;
-                if (ctx.queueTail) {
-                  ctx.queueTail._nextScheduled = scheduled;
-                  ctx.queueTail = scheduled;
-                } else {
-                  ctx.queueHead = ctx.queueTail = scheduled;
-                }
-              }
-            }
-            
-            edge = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
-          } else {
-            edge = undefined;
-            break;
-          }
-        }
-      } else {
-        // Multiple targets - zero allocation traversal using permanent stackNext field
-        let stack: Edge | undefined;
-        let current: Edge | undefined = edge;
-        
-        while (current) {
-          const target: ConsumerNode = current.target;
-          
-          if (!(target._flags & (NOTIFIED | DISPOSED | RUNNING))) {
-            target._flags |= NOTIFIED;
-            
-            // Queue if schedulable
-            if ('_nextScheduled' in target) {
-              const scheduled = target as ScheduledNode;
-              if (!scheduled._nextScheduled) {
-                scheduled._nextScheduled = scheduled;
-                if (ctx.queueTail) {
-                  ctx.queueTail._nextScheduled = scheduled;
-                  ctx.queueTail = scheduled;
-                } else {
-                  ctx.queueHead = ctx.queueTail = scheduled;
-                }
-              }
-            }
-            
-            const childTargets: Edge | undefined = ('_targets' in target && '_version' in target) ? (target as ConsumerNode & ProducerNode)._targets : undefined;
-            if (childTargets) {
-              // Use intrusive stack with permanent stackNext field
-              if (current.nextTarget) {
-                const sibling = current.nextTarget;
-                sibling.stackNext = stack;
-                stack = sibling;
-              }
-              current = childTargets;
-              continue;
-            }
-          }
-          
-          // Move to sibling or pop from stack
-          if (current.nextTarget) {
-            current = current.nextTarget;
-          } else if (stack) {
-            current = stack;
-            stack = stack.stackNext;
-            // Clean up - but stack could be undefined now
-            if (current) current.stackNext = undefined;
-          } else {
-            current = undefined;
-          }
-        }
-      }
+      // Use GraphWalker's optimized DFS traversal
+      // This handles fast paths, stack management, and flag checking
+      graphWalker.dfs(this._targets, notifyNode);
     }
 
     _update(): void {
