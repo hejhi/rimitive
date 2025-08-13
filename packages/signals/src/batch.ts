@@ -55,7 +55,9 @@ interface BatchFactoryContext extends SignalContext {
 }
 
 export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { workQueue } = ctx;
+  const {
+    workQueue: { flush },
+  } = ctx;
 
   // ALGORITHM: Nested Batch Support
   // The batch function is reentrant - batches can be nested safely.
@@ -95,7 +97,7 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
       try {
         // ALGORITHM: Flush Queued Effects via WorkQueue
         // Effects were queued during immediate propagation
-        workQueue.flush();
+        flush();
       } catch (error) {
         // CRITICAL: Reset batchDepth on flush error
         // This prevents the system from getting stuck in a batched state

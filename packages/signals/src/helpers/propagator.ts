@@ -9,7 +9,7 @@ export interface Propagator {
   invalidate: (
     from: Edge | undefined,
     isBatched: boolean,
-    walker: GraphWalker,
+    walker: GraphWalker['dfs'],
     visit: (node: ConsumerNode) => void
   ) => void;
   // Run a single traversal seeded by all added roots
@@ -78,19 +78,19 @@ export function createPropagator(): Propagator {
   const invalidate = (
     from: Edge | undefined,
     isBatched: boolean,
-    walker: GraphWalker,
+    dfs: GraphWalker['dfs'],
     visit: (node: ConsumerNode) => void
   ): void => {
     if (!from) return;
 
     if (!isBatched) {
-      walker.dfs(from, visit);
+      dfs(from, visit);
       return;
     }
 
     // Small-batch fast path to avoid queue overhead
     if (rootsSize < 2) {
-      walker.dfs(from, visit);
+      dfs(from, visit);
       return;
     }
 

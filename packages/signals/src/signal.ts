@@ -57,14 +57,14 @@ interface SignalFactoryContext extends SignalContext {
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const {
     dependencies: { ensureLink },
-    graphWalker,
-    propagator,
-    workQueue
+    graphWalker: { dfs },
+    propagator: { invalidate },
+    workQueue: { enqueue, state, flush }
   } = ctx;
   
   // Pre-bind notification handler for hot path
   const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) workQueue.enqueue(node as ScheduledNode);
+    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
   };
   
   // PATTERN: Class-based Implementation
@@ -149,17 +149,17 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       if (isNewBatch) ctx.batchDepth++;
       
       // Track queue size to detect if effects were scheduled
-      const prevSize = workQueue.state.size;
+      const prevSize = state.size;
       
       // Use propagator's intelligent invalidation strategy
       // - Immediate traversal for unbatched updates
       // - Small batch optimization (threshold = 2)
       // - Multi-root aggregation for large batches
-      propagator.invalidate(this._targets, !isNewBatch, graphWalker, notifyNode);
+      invalidate(this._targets, !isNewBatch, dfs, notifyNode);
       
       // Flush effects if we're ending a batch and effects were queued
-      if (isNewBatch && --ctx.batchDepth === 0 && workQueue.state.size !== prevSize) {
-        workQueue.flush();
+      if (isNewBatch && --ctx.batchDepth === 0 && state.size !== prevSize) {
+        flush();
       }
     }
 

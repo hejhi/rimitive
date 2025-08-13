@@ -68,13 +68,13 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
   const {
     dependencies: { ensureLink, needsRecompute, hasStaleDependencies },
     sourceCleanup: { detachAll, pruneStale },
-    graphWalker,
-    workQueue
+    graphWalker: { dfs },
+    workQueue: { enqueue }
   } = ctx;
   
   // Pre-bind notification handler for hot path
   const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) workQueue.enqueue(node as ScheduledNode);
+    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
   };
   
   class Computed<T> implements ComputedInterface<T> {
@@ -225,7 +225,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       
       // Use GraphWalker's optimized DFS traversal
       // This handles fast paths, stack management, and flag checking
-      graphWalker.dfs(this._targets, notifyNode);
+      dfs(this._targets, notifyNode);
     }
 
     _update(): void {
