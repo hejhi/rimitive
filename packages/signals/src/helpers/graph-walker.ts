@@ -7,20 +7,16 @@ const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 // Combine flags that indicate a node should be skipped during traversal
 const SKIP_FLAGS = NOTIFIED | DISPOSED | RUNNING;
 
-// ALGORITHM: Explicit Stack for Iterative DFS
-// Instead of recursion, use our own stack frames.
-interface TraversalFrame {
-  edge: Edge;
-  next: TraversalFrame | undefined;
-}
+// Note: We now use Edge.stackNext for intrusive stack management
+// instead of separate TraversalFrame objects to achieve zero allocation
 
 export interface GraphWalker {
   // Default traversal (DFS) used by signals/computeds
   walk: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
   // Depth-first traversal exposed explicitly
   dfs: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
-  // Multi-root traversal (seeded by multiple producers)
-  dfsMany: (roots: (Edge | undefined)[], visit: (node: ConsumerNode) => void) => void;
+  // Multi-root traversal using intrusive linked list
+  dfsMany: (rootsHead: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
 }
 
 /**
@@ -56,7 +52,7 @@ export function createGraphWalker(): GraphWalker {
       from = edge;
     }
 
-    let stack: TraversalFrame | undefined;
+    let stack: Edge | undefined;
     let currentEdge: Edge | undefined = from;
 
     while (currentEdge) {
@@ -76,41 +72,50 @@ export function createGraphWalker(): GraphWalker {
       const nextSibling = currentEdge.nextTarget;
       const childTargets = (target as unknown as { _targets?: Edge })._targets;
 
-      // Determine next edge to process
+      // Determine next edge to process using intrusive stack
       if (childTargets) {
         // Push sibling to stack if exists, then go to children
-        if (nextSibling) stack = { edge: nextSibling, next: stack };
+        if (nextSibling) {
+          nextSibling.stackNext = stack;
+          stack = nextSibling;
+        }
         currentEdge = childTargets;
       } else if (nextSibling) {
         // No children, process sibling
         currentEdge = nextSibling;
+      } else if (stack) {
+        // No children or siblings, pop from intrusive stack
+        currentEdge = stack;
+        stack = stack.stackNext;
+        currentEdge.stackNext = undefined; // Clean up
       } else {
-        // No children or siblings, pop from stack
-        currentEdge = stack?.edge;
-        stack = stack?.next;
+        currentEdge = undefined;
       }
     }
   };
 
-  // Depth-first traversal for multiple roots
+  // Depth-first traversal for multiple roots using intrusive list
   const dfsMany = (
-    roots: (Edge | undefined)[],
+    rootsHead: Edge | undefined,
     visit: (node: ConsumerNode) => void
   ): void => {
-    let stack: TraversalFrame | undefined;
+    let stack: Edge | undefined;
     let currentEdge: Edge | undefined = undefined;
-    let i = 0;
+    let rootsQueue: Edge | undefined = rootsHead;
 
-    // Helper to advance to next available edge from stack or roots
+    // Helper to advance to next available edge from stack or roots queue
     const nextEdge = (): Edge | undefined => {
       if (stack) {
-        const e = stack.edge;
-        stack = stack.next;
+        const e = stack;
+        stack = stack.stackNext;
+        e.stackNext = undefined; // Clean up
         return e;
       }
-      while (i < roots.length) {
-        const candidate = roots[i++];
-        if (candidate) return candidate;
+      // Process next root from intrusive queue
+      if (rootsQueue) {
+        const candidate = rootsQueue;
+        rootsQueue = rootsQueue.queueNext === rootsQueue ? undefined : rootsQueue.queueNext;
+        return candidate;
       }
       return undefined;
     };
@@ -131,7 +136,10 @@ export function createGraphWalker(): GraphWalker {
       const childTargets = (target as unknown as { _targets?: Edge })._targets;
 
       if (childTargets) {
-        if (nextSibling) stack = { edge: nextSibling, next: stack };
+        if (nextSibling) {
+          nextSibling.stackNext = stack;
+          stack = nextSibling;
+        }
         currentEdge = childTargets;
         continue;
       }

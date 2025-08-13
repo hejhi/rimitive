@@ -20,33 +20,54 @@ export interface Propagator {
 }
 
 /**
- * ALGORITHM: Multi-root Invalidation Aggregator
+ * ALGORITHM: Zero-Allocation Multi-root Invalidation Aggregator
  *
  * Collects starting edges across multiple writes within a batch and performs
- * a single traversal using the GraphWalker. This reduces redundant work when
- * several producers change before effects are flushed.
+ * a single traversal using the GraphWalker. Uses intrusive linked lists
+ * instead of arrays to achieve true zero-allocation operation.
  */
 export function createPropagator(): Propagator {
-  const roots: Edge[] = [];
+  // Intrusive linked list of pending roots
+  let rootsHead: Edge | undefined;
+  let rootsTail: Edge | undefined;
+  let rootsSize = 0;
 
   const add = (from: Edge | undefined): void => {
-    if (!from) return;
-    roots.push(from);
+    if (!from || from.queueNext !== undefined) return; // Already queued
+    
+    // Add to intrusive queue
+    from.queueNext = from; // Sentinel value marks as queued
+    if (rootsTail) {
+      rootsTail.queueNext = from;
+      rootsTail = from;
+    } else {
+      rootsHead = rootsTail = from;
+    }
+    rootsSize++;
   };
 
   const clear = (): void => {
-    // Reuse the array to avoid allocations per batch
-    roots.length = 0;
+    // Clear intrusive list
+    let current = rootsHead;
+    while (current) {
+      const next = current.queueNext === current ? undefined : current.queueNext;
+      current.queueNext = undefined;
+      current = next;
+    }
+    rootsHead = rootsTail = undefined;
+    rootsSize = 0;
   };
 
-  const size = (): number => roots.length;
+  const size = (): number => rootsSize;
 
   const propagate = (
     dfsMany: GraphWalker['dfsMany'],
     visit: (node: ConsumerNode) => void
   ): void => {
-    if (roots.length === 0) return;
-    dfsMany(roots, visit);
+    if (!rootsHead) return;
+    
+    // Pass the intrusive list directly to walker
+    dfsMany(rootsHead, visit);
     clear();
   };
 
@@ -67,13 +88,13 @@ export function createPropagator(): Propagator {
       return;
     }
 
-    // Small-batch fast path to avoid array churn
-    if (roots.length < 2) {
+    // Small-batch fast path to avoid queue overhead
+    if (rootsSize < 2) {
       walker.dfs(from, visit);
       return;
     }
 
-    roots.push(from);
+    add(from);
   };
 
   return { add, clear, size, propagate, invalidate };

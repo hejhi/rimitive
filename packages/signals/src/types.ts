@@ -135,6 +135,11 @@ export interface Edge {
   // This field enables intrusive stack management during propagation.
   // Having it as a permanent field avoids V8 hidden class transitions.
   stackNext?: Edge;
+
+  // PROPAGATOR QUEUE POINTER FOR BATCH AGGREGATION
+  // Used to link edges in the propagator's pending roots queue.
+  // Enables zero-allocation multi-root aggregation for batched updates.
+  queueNext?: Edge;
 }
 
 // Ensure module is not tree-shaken
