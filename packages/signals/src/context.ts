@@ -1,4 +1,4 @@
-import { ConsumerNode } from "./types";
+import { ConsumerNode, ScheduledNode } from "./types";
 
 /**
  * ALGORITHM: Context-Based State Isolation
@@ -37,6 +37,13 @@ export interface SignalContext {
   // Effects only run when batchDepth returns to 0.
   // Similar to database transaction nesting.
   batchDepth: number;
+  
+  // ALGORITHM: Effect Queue (Alien Signals Approach)
+  // Queue of effects to be executed at batch end
+  // Uses immediate propagation with effect queuing instead of root collection
+  queuedEffects: (ScheduledNode | undefined)[];
+  queuedEffectsLength: number;
+  notifyIndex: number;
 }
 
 // PATTERN: Factory Function
@@ -47,5 +54,8 @@ export function createContext(): SignalContext {
     currentConsumer: null,
     version: 0,
     batchDepth: 0,
+    queuedEffects: [],
+    queuedEffectsLength: 0,
+    notifyIndex: 0,
   };
 }

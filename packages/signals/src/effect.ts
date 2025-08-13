@@ -43,7 +43,6 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
-import type { WorkQueue } from './helpers/work-queue';
 
 export interface EffectInterface extends ScheduledNode, Disposable {
   __type: 'effect';
@@ -78,14 +77,12 @@ const genericDispose = function(this: EffectInterface) {
 };
 
 interface EffectFactoryContext extends SignalContext {
-  workQueue: WorkQueue;
   dependencies: DependencyGraph;
   sourceCleanup: DependencySweeper;
 }
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    workQueue: { enqueue, dispose },
     dependencies: { needsRecompute }
   } = ctx;
 
@@ -118,28 +115,22 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     }
 
     _invalidate(): void {
-      // ALGORITHM: Effect Invalidation
-      // Effects are eager - when notified, they're also marked OUTDATED
-      // This ensures they run in the next flush cycle
+      // ALGORITHM: Effect Invalidation with Queuing
+      // Effects are queued during propagation and executed at batch end
       // The NOTIFIED flag prevents duplicate scheduling
       
       // Early exit if already processed
       if (this._flags & NOTIFIED) return;
       
-      // Mark as NOTIFIED only; defer OUTDATED until dependency check.
-      // This allows us to skip effect runs when upstream values didn't change
-      // (e.g., filtered/conditional scenarios), relying on shouldNodeUpdate.
+      // Mark as NOTIFIED
       this._flags |= NOTIFIED;
       
-      // Batch-aware execution
-      if (ctx.batchDepth > 0) {
-        // Inside a batch - defer execution
-        enqueue(this);
-        return;
+      // Queue the effect if not already queued
+      if (this._nextScheduled === undefined) {
+        // Mark as queued
+        this._nextScheduled = this;
+        ctx.queuedEffects[ctx.queuedEffectsLength++] = this;
       }
-      
-      // Outside batch - execute immediately
-      this._flush();
     }
 
     _flush(): void {
@@ -223,11 +214,13 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     dispose(): void {
       // ALGORITHM: Effect Disposal
       // 1. Mark as disposed and run any pending cleanup
-      dispose(this, () => {
-        if (!this._cleanup) return;
+      if (this._flags & DISPOSED) return;
+      this._flags |= DISPOSED;
+      
+      if (this._cleanup) {
         this._cleanup();
         this._cleanup = undefined;
-      })
+      }
       
       // 2. Remove all dependency edges for garbage collection
       detachAll(this);

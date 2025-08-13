@@ -58,43 +58,46 @@ export interface DependencyGraph {
 
 export function createDependencyGraph(): DependencyGraph {
    // ALGORITHM: Edge Creation and Insertion
-   // Creates a new edge between producer and consumer, inserting it at the head
-   // of both linked lists for O(1) insertion
+   // Creates a new edge between producer and consumer, inserting at head of sources
+   // and appending to tail of targets for correct effect execution order
    const connect = (
      producer: TrackedProducer | (TrackedProducer & ConsumerNode),
      consumer: ConsumerNode,
      producerVersion: number
    ): Edge => {
-     // Get current heads of both linked lists
+     // Get current heads and tails
      const nextSource = consumer._sources; // Consumer's current first dependency
-     const nextTarget = producer._targets; // Producer's current first dependent
+     const prevTarget = producer._targetsTail; // Producer's current last dependent
      
      // ALGORITHM: Doubly-Linked List Node Creation
-     // Create new edge that will become the new head of both lists
+     // Create new edge that will be head of sources, tail of targets
      const newNode: Edge = {
        source: producer,
        target: consumer,
        version: producerVersion, // Store producer's version at time of edge creation
        gen: consumer._gen ?? 0, // Tag with current consumer generation
-       prevSource: undefined, // Will be head, so no previous
-       prevTarget: undefined, // Will be head, so no previous  
+       prevSource: undefined, // Will be head of sources, so no previous
+       prevTarget, // Link to current tail of producer's targets  
        nextSource, // Link to old head of consumer's sources
-       nextTarget, // Link to old head of producer's targets
+       nextTarget: undefined, // Will be new tail of targets, so no next
      };
 
-     // Update old heads to point back to new node
-     if (nextTarget) nextTarget.prevTarget = newNode;
+     // Update source list (prepend to consumer's sources)
+     if (nextSource) nextSource.prevSource = newNode;
+     consumer._sources = newNode; // Consumer now depends on this edge first
      
      // FLAG: Computed nodes can be both producers AND consumers
      // When a computed has consumers, we set the TRACKING flag to indicate
      // it's part of an active dependency chain and should update when read
      if ('_flags' in producer) producer._flags |= TRACKING;
      
-     if (nextSource) nextSource.prevSource = newNode;
-
-     // Insert at head of both linked lists
-     consumer._sources = newNode; // Consumer now depends on this edge first
-     producer._targets = newNode; // Producer now notifies this edge first
+     // Append to target list (preserve execution order)
+     if (prevTarget) {
+       prevTarget.nextTarget = newNode;
+     } else {
+       producer._targets = newNode; // First target
+     }
+     producer._targetsTail = newNode; // Update tail pointer
      
      // OPTIMIZATION: Update tail pointer for O(1) access to recent dependencies
      if (!consumer._sourcesTail) {
@@ -103,7 +106,6 @@ export function createDependencyGraph(): DependencyGraph {
      
      // OPTIMIZATION: Cache this edge for fast repeated access
      producer._lastEdge = newNode;
-     consumer._sourcesTail = newNode;
 
      return newNode;
    };
@@ -191,8 +193,12 @@ export function createDependencyGraph(): DependencyGraph {
       if (!nextTarget && '_flags' in source) (source._flags &= ~TRACKING);
     }
     
-    if (!nextTarget) return;
-    nextTarget.prevTarget = prevTarget;
+    if (nextTarget) {
+      nextTarget.prevTarget = prevTarget;
+    } else {
+      // This was the tail - update tail pointer
+      source._targetsTail = prevTarget;
+    }
   };
 
   /**

@@ -211,10 +211,13 @@ describe('Dependency Graph Helpers', () => {
         const node1 = helpers.connect(source, target1, 1);
         const node2 = helpers.connect(source, target2, 1);
         
-        // Source should point to most recent target
-        expect(source._targets).toBe(node2);
-        expect(node2.nextTarget).toBe(node1);
-        expect(node1.prevTarget).toBe(node2);
+        // Source should point to first target (head of list)
+        expect(source._targets).toBe(node1);
+        // node1 should point to node2 (insertion order)
+        expect(node1.nextTarget).toBe(node2);
+        expect(node2.prevTarget).toBe(node1);
+        // node2 should be the tail
+        expect(source._targetsTail).toBe(node2);
       });
   
       it('should set TRACKING flag for computed sources', () => {
@@ -286,9 +289,9 @@ describe('Dependency Graph Helpers', () => {
         // Remove middle node
         helpers.unlinkFromProducer(nodes[1]!);
         
-        // Check that nodes[0] and nodes[2] are still linked
-        expect(nodes[2]!.nextTarget).toBe(nodes[0]);
-        expect(nodes[0]!.prevTarget).toBe(nodes[2]);
+        // Check that nodes[0] and nodes[2] are still linked in correct order
+        expect(nodes[0]!.nextTarget).toBe(nodes[2]);
+        expect(nodes[2]!.prevTarget).toBe(nodes[0]);
       });
   
       it('should clear TRACKING flag when last target is removed', () => {

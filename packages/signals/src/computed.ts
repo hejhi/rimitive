@@ -32,14 +32,12 @@
  */
 
 import { CONSTANTS } from './constants';
-import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
+import { Edge, Readable, ProducerNode, Disposable, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { SignalContext } from './context';
-import type { WorkQueue } from './helpers/work-queue';
-import type { GraphWalker } from './helpers/graph-walker';
-import type { Propagator } from './helpers/propagator';
+import { propagate } from './helpers/propagate';
 // no-op import removed: dev-only cycle detection eliminated
 
 export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
@@ -59,26 +57,15 @@ const {
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
-  workQueue: WorkQueue;
-  graphWalker: GraphWalker;
   dependencies: DependencyGraph;
   sourceCleanup: DependencySweeper;
-  propagator: Propagator;
 }
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   const {
-    workQueue: { enqueue },
-    graphWalker,
     dependencies: { ensureLink, needsRecompute, hasStaleDependencies },
     sourceCleanup: { detachAll, pruneStale },
-    propagator,
   } = ctx;
-  
-  // Scheduling visitor (shared with signal path)
-  const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
-  };
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
@@ -222,10 +209,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Mark as potentially dirty
       this._flags |= NOTIFIED;
       
-      // ALGORITHM: Transitive Invalidation with small-batch fast path
+      // ALGORITHM: Immediate Propagation
+      // Propagate invalidation immediately through dependency graph
       if (!this._targets) return;
-      // Centralized invalidation logic via propagator
-      propagator.invalidate(this._targets, ctx.batchDepth > 0, graphWalker, notifyNode);
+      propagate(this._targets, ctx);
     }
 
     _update(): void {

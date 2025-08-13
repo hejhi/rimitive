@@ -40,7 +40,6 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
-import type { WorkQueue } from './helpers/work-queue';
 
 const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
 
@@ -51,15 +50,13 @@ export interface SubscribeNode<T> extends ScheduledNode {
 }
 
 interface SubscribeFactoryContext extends SignalContext {
-  workQueue: WorkQueue;
   dependencies: DependencyGraph;
   sourceCleanup: DependencySweeper;
 }
 
 export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExtension<'subscribe', <T>(source: Readable<T> & ProducerNode, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
   const {
-    sourceCleanup: { detachAll },
-    workQueue: { enqueue, dispose }
+    sourceCleanup: { detachAll }
   } = ctx;
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;
@@ -81,8 +78,8 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     }
 
     _invalidate(): void {
-      // ALGORITHM: Scheduled Notification
-      // When source changes, mark as NOTIFIED and schedule for batch execution
+      // ALGORITHM: Queue for Immediate Propagation
+      // When source changes, queue for execution
       // Skip if already NOTIFIED or DISPOSED
       
       // Early exit if already processed or disposed
@@ -91,15 +88,12 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // Mark with NOTIFIED flag
       this._flags |= NOTIFIED;
       
-      // Batch-aware execution
-      if (ctx.batchDepth > 0) {
-        // Inside a batch - defer execution
-        enqueue(this);
-        return;
+      // Queue the subscription if not already queued
+      if (this._nextScheduled === undefined) {
+        // Mark as queued
+        this._nextScheduled = this;
+        ctx.queuedEffects[ctx.queuedEffectsLength++] = this;
       }
-      
-      // Outside batch - execute immediately
-      this._flush();
     }
 
     _flush(): void {
@@ -140,7 +134,9 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     dispose(): void {
       // ALGORITHM: Clean Disposal
       // Mark as disposed and remove the single source edge
-      dispose(this, detachAll);
+      if (this._flags & DISPOSED) return;
+      this._flags |= DISPOSED;
+      detachAll(this);
     }
 
     _setupDependency(source: Readable<T> & ProducerNode): void {

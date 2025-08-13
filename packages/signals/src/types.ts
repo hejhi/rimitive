@@ -46,6 +46,7 @@ export interface Disposable {
 // They maintain a list of consumers (targets) that depend on them
 export interface ProducerNode extends ReactiveNode {
   _targets: Edge | undefined;  // Head of intrusive linked list of dependents
+  _targetsTail?: Edge;  // Tail pointer for O(1) append and insertion order preservation
   
   // LOCAL VERSION COUNTER (VALUE CHANGE TRACKING)
   // Incremented when THIS node's value changes.

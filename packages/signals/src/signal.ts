@@ -26,13 +26,11 @@
  * - alien-signals (optimized graph traversal)
  */
 import { CONSTANTS } from './constants';
-import { Edge, Writable, ProducerNode, ScheduledNode, ConsumerNode } from './types';
+import { Edge, Writable, ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
-import type { WorkQueue } from './helpers/work-queue';
-import type { GraphWalker } from './helpers/graph-walker';
-import type { Propagator } from './helpers/propagator';
+import { propagate, flushEffects } from './helpers/propagate';
 
 const { RUNNING } = CONSTANTS;
 
@@ -48,26 +46,13 @@ export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode,
 }
 
 interface SignalFactoryContext extends SignalContext {
-  workQueue: WorkQueue;
-  graphWalker: GraphWalker;
   dependencies: DependencyGraph;
-  propagator: Propagator;
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const {
-    dependencies: { ensureLink }, 
-    graphWalker,
-    propagator,
-    workQueue,
+    dependencies: { ensureLink },
   } = ctx;
-  const { enqueue, flush, state } = workQueue;
-
-  // OPTIMIZATION: Pre-defined notification handler for hot path
-  // Avoids creating new function objects in the critical update path
-  const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
-  };
   
   // PATTERN: Class-based Implementation
   // Using a class instead of factory functions for better performance:
@@ -145,18 +130,15 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // Increment global version as we are about to notify dependents
       ctx.version++;
       
-      // OPTIMIZATION: Reuse existing batch if present
-      // This reduces overhead for multiple signal updates within a batch
-      const isNewBatch = ctx.batchDepth === 0;
-      if (isNewBatch) ctx.batchDepth++;
-
-      // Track queue tail to detect if any effects/subscriptions were scheduled
-      // during this invalidation. Flushing an empty queue adds overhead; skip it.
-      const prevSize = state.size;
-
-      // Centralized invalidation logic via propagator
-      propagator.invalidate(this._targets, !isNewBatch, graphWalker, notifyNode);
-      if (isNewBatch && --ctx.batchDepth === 0 && state.size !== prevSize) flush();
+      // ALGORITHM: Immediate Propagation (Alien Signals Approach)
+      // Propagate changes immediately through the dependency graph
+      // Effects are queued during propagation and flushed at batch end
+      propagate(this._targets, ctx);
+      
+      // If not in a batch, flush effects immediately
+      if (ctx.batchDepth === 0) {
+        flushEffects(ctx);
+      }
     }
 
 
