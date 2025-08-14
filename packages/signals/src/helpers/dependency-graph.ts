@@ -251,8 +251,7 @@ export function createDependencyGraph(): DependencyGraph {
           const v = dep._version;
           if (cached !== v) {
             dirty = true;
-            // Early exit only at depth 0 (direct dependency of root)
-            if (depth === 0) return true;
+            // No early exit - check all siblings for proper batching
           }
           currentLink.version = v;
           currentLink = currentLink.nextSource;
@@ -265,8 +264,7 @@ export function createDependencyGraph(): DependencyGraph {
         // Explicitly outdated dependency
         if (depFlags & OUTDATED) {
           dirty = true;
-          // Only early exit for direct dependencies
-          if (depth === 0) return true;
+          // Continue checking siblings - no early exit
           currentLink = currentLink.nextSource;
           continue;
         }
@@ -300,8 +298,7 @@ export function createDependencyGraph(): DependencyGraph {
         if (cached !== current) {
           dirty = true;
           currentLink.version = current;
-          // Only early exit for direct dependencies
-          if (depth === 0) return true;
+          // No early exit - continue checking siblings
         }
         
         currentLink = currentLink.nextSource;
