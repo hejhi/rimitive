@@ -202,20 +202,12 @@ export function createDependencyGraph(): DependencyGraph {
   };
 
   /**
-   * ALGORITHM: Complete Dependency Checking (No Early Exit)
+   * ALGORITHM: Dependency Checking with Early Exit Optimization
    * 
-   * Iteratively checks ALL direct dependencies have changed versions.
-   * For computed dependencies, calls their _refresh() method which may
-   * trigger a depth-first traversal of the dependency graph.
-   * 
-   * OPTIMIZATION: Unlike the original Preact pattern, we don't exit early
-   * when finding a changed dependency. This ensures all dependencies are
-   * refreshed in diamond patterns, avoiding redundant refresh calls later.
-   * 
-   * The traversal is controlled by:
-   * - RUNNING flags to detect and prevent cycles
-   * - Global version checks for early termination
-   * - Version comparison to detect actual changes
+   * Based on the original implementation but with key optimization:
+   * - Early exit when finding changed signal dependencies (major perf win)
+   * - Maintains correct diamond dependency behavior
+   * - Refreshes intermediate computeds to check if values actually changed
    */
   const hasStaleDependencies = (root: ConsumerNode): boolean => {
     if (root._flags & OUTDATED) return true;
@@ -245,6 +237,7 @@ export function createDependencyGraph(): DependencyGraph {
         const subAny = frame.sub;
         const prevVersion = edgeToParent.version;
         let changed = false;
+        
         // If subtree was dirty and this is a computed, recompute now
         if (frame.dirty) {
           subAny._refresh();
@@ -252,15 +245,17 @@ export function createDependencyGraph(): DependencyGraph {
             changed = prevVersion !== subAny._version;
           }
         }
+        
         // Sync parent edge cached version
         if ('_version' in subAny && typeof subAny._version === 'number') {
           edgeToParent.version = subAny._version;
         }
 
-        // Propagate dirtiness only if value actually changed
-        if (frame.dirty && changed) {
+        // Propagate dirtiness if value changed
+        if (changed) {
           frame.parent.dirty = true;
         }
+        
         // Advance parent to next dependency
         frame.parent.link = edgeToParent.nextSource;
         frame = frame.parent;
@@ -279,18 +274,25 @@ export function createDependencyGraph(): DependencyGraph {
       // Signals: compare versions
       if (!('_sources' in dep)) {
         const v = dep._version;
-        if (cached !== v) frame.dirty = true;
+        if (cached !== v) {
+          frame.dirty = true;
+          // Early exit only if this is a direct dependency of root
+          // Otherwise we need to check if intermediate computeds change
+          if (!frame.parent) return true;
+        }
         link.version = v;
         frame.link = link.nextSource;
         continue;
       }
 
-      const depFlags = (dep as any)._flags || 0;
+      const depFlags = ('_flags' in dep ? dep._flags : 0) || 0;
       const current = dep._version;
 
-      // Explicitly outdated dependency -> mark dirty
+      // Explicitly outdated dependency
       if (depFlags & OUTDATED) {
         frame.dirty = true;
+        // Only early exit for direct dependencies of root
+        if (!frame.parent) return true;
         frame.link = link.nextSource;
         continue;
       }
@@ -305,18 +307,21 @@ export function createDependencyGraph(): DependencyGraph {
       if (depFlags & NOTIFIED) {
         frame = {
           sub: dep as unknown as ConsumerNode,
-          link: (dep as any)._sources,
+          link: ('_sources' in dep ? dep._sources : undefined),
           parent: frame,
           parentEdge: link,
         };
         continue;
       }
 
-      // Version mismatch without NOTIFIED -> mark dirty and sync
+      // Version mismatch without NOTIFIED
       if (cached !== current) {
         frame.dirty = true;
         link.version = current;
+        // Only early exit for direct dependencies of root
+        if (!frame.parent) return true;
       }
+      
       frame.link = link.nextSource;
     }
 
