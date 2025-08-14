@@ -34,14 +34,14 @@
 import { CONSTANTS } from './constants';
 import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
+import type { DependencyGraph } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { SignalContext } from './context';
 import type { GraphWalker } from './helpers/graph-walker';
 import type { WorkQueue } from './helpers/work-queue';
 // no-op import removed: dev-only cycle detection eliminated
 
-export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, EdgeCache, Disposable {
+export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, Disposable {
   __type: 'computed';
   readonly value: T;  // Getter triggers lazy evaluation
   peek(): T;          // Non-tracking read (still evaluates if needed)
@@ -54,6 +54,7 @@ const {
   DISPOSED,
   OUTDATED,
   NOTIFIED,
+  DIRTY_FLAGS,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -168,8 +169,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     _recompute(): void {
       // ALGORITHM: Atomic Flag Update
       // Use single assignment with bitwise operations for atomicity
-      // Set RUNNING, clear OUTDATED and NOTIFIED in one operation
-      this._flags = (this._flags | RUNNING) & ~(OUTDATED | NOTIFIED);
+      // Set RUNNING, clear all dirty flags in one operation
+      this._flags = (this._flags | RUNNING) & ~DIRTY_FLAGS;
       
       // Increment generation for this run; edges touched will carry this tag
       this._gen = (this._gen + 1) | 0;

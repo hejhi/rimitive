@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createDependencyGraph, TrackedProducer } from './dependency-graph';
+import { createDependencyGraph } from './dependency-graph';
 import { createDependencySweeper } from './dependency-sweeper';
-import type { ConsumerNode } from '../types';
+import type { ConsumerNode, ProducerNode } from '../types';
 
 describe('Dependency Sweeper', () => {
   let graph: ReturnType<typeof createDependencyGraph>;
@@ -12,10 +12,9 @@ describe('Dependency Sweeper', () => {
     sweeper = createDependencySweeper(graph.unlinkFromProducer);
   });
 
-  const makeProducer = (version = 1): TrackedProducer => ({
+  const makeProducer = (version = 1): ProducerNode => ({
     __type: 'test',
     _targets: undefined,
-    _lastEdge: undefined,
     _version: version,
   });
 

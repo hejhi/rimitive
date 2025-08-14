@@ -66,6 +66,7 @@ const {
   DISPOSED,
   OUTDATED,
   NOTIFIED,
+  DIRTY_FLAGS,
 } = CONSTANTS;
 
 // OPTIMIZATION: Shared Dispose Function
@@ -157,8 +158,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       if (this._flags & (DISPOSED | RUNNING)) return;
 
       // OPTIMIZATION: Check if effect needs to run
-      // Skip if not marked as OUTDATED or NOTIFIED
-      if (!(this._flags & (OUTDATED | NOTIFIED))) return;
+      // Skip if not marked as dirty (using compound check)
+      if (!(this._flags & DIRTY_FLAGS)) return;
       
       // If only NOTIFIED (not OUTDATED), check if dependencies actually changed
       if (!(this._flags & OUTDATED)) {
@@ -180,8 +181,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
       // ALGORITHM: Atomic State Transition
       // Set RUNNING to prevent re-entrance
-      // Clear NOTIFIED and OUTDATED since we're handling them now
-      this._flags = (this._flags | RUNNING) & ~(NOTIFIED | OUTDATED);
+      // Clear all dirty flags since we're handling them now
+      this._flags = (this._flags | RUNNING) & ~DIRTY_FLAGS;
 
       // Bump generation for this run; dependencies touched will be tagged
       this._gen = (this._gen + 1) | 0;

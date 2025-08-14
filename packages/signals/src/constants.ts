@@ -59,4 +59,16 @@ export const CONSTANTS = {
   // - RUNNING/DISPOSED are checked during updates
   // - Others are checked less frequently
   // Lower bits = more frequent checks = better CPU branch prediction
+  
+  // COMPOUND FLAGS: Pre-computed combinations for efficient checks
+  // These avoid multiple bitwise operations in hot paths
+  
+  // DIRTY_FLAGS: Either NOTIFIED or OUTDATED means the node needs attention
+  DIRTY_FLAGS: (1 << 0) | (1 << 1), // 3 (NOTIFIED | OUTDATED)
+  
+  // SKIP_FLAGS: Flags that indicate we should skip processing  
+  SKIP_FLAGS: (1 << 2) | (1 << 3), // 12 (RUNNING | DISPOSED)
+  
+  // ACTIVE_FLAGS: Node is actively being processed or disposed
+  ACTIVE_FLAGS: (1 << 2) | (1 << 3) | (1 << 0) | (1 << 1), // 15 (all state flags)
 }

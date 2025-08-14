@@ -28,7 +28,7 @@
 import { CONSTANTS } from './constants';
 import { Edge, Writable, ProducerNode, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { DependencyGraph, EdgeCache } from './helpers/dependency-graph';
+import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 import type { GraphWalker } from './helpers/graph-walker';
 import type { Propagator } from './helpers/propagator';
@@ -40,8 +40,7 @@ const { RUNNING } = CONSTANTS;
 // SignalInterface combines multiple concerns through interface composition:
 // - Writable<T>: Public API for reading/writing values
 // - ProducerNode: Internal graph node that can have dependents
-// - EdgeCache: Performance optimization for repeated access
-export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode, EdgeCache {
+export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode {
   __type: 'signal';
   value: T;  // User-facing getter/setter for reactive access
   _value: T; // Internal storage of the actual value

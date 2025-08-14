@@ -39,18 +39,15 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge } from '../types';
 
-// OPTIMIZATION: Edge Caching
-// Producers cache their last accessed edge to avoid linked list traversal
-// This optimization is based on the observation that the same consumer
-// often accesses the same producer multiple times in succession
-export type EdgeCache = { _lastEdge?: Edge };
-export type TrackedProducer = ProducerNode & EdgeCache;
+// Simplified producer type without edge caching
+// We rely on tail pointers for efficient access patterns
+export type TrackedProducer = ProducerNode;
 
-const { TRACKING, NOTIFIED, OUTDATED } = CONSTANTS;
+const { TRACKING, NOTIFIED, OUTDATED, DIRTY_FLAGS } = CONSTANTS;
 
 export interface DependencyGraph {
-  connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
-  ensureLink: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
+  connect: (producer: ProducerNode | (ProducerNode & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
+  ensureLink: (producer: ProducerNode, consumer: ConsumerNode, producerVersion: number) => void;
   unlinkFromProducer: (edge: Edge) => void;
   hasStaleDependencies: (consumer: ConsumerNode) => boolean;
   needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
@@ -61,7 +58,7 @@ export function createDependencyGraph(): DependencyGraph {
    // Creates a new edge between producer and consumer, inserting at head of sources
    // and appending to tail of targets for correct effect execution order
    const connect = (
-     producer: TrackedProducer | (TrackedProducer & ConsumerNode),
+     producer: ProducerNode | (ProducerNode & ConsumerNode),
      consumer: ConsumerNode,
      producerVersion: number
    ): Edge => {
@@ -103,9 +100,6 @@ export function createDependencyGraph(): DependencyGraph {
      if (!consumer._sourcesTail) {
        consumer._sourcesTail = newNode;
      }
-     
-     // OPTIMIZATION: Cache this edge for fast repeated access
-     producer._lastEdge = newNode;
 
      return newNode;
    };
@@ -114,31 +108,17 @@ export function createDependencyGraph(): DependencyGraph {
   // This is called during signal/computed reads to establish dependencies
   // It either updates an existing edge or creates a new one
   const ensureLink = (
-    producer: ProducerNode & EdgeCache,
+    producer: ProducerNode,
     consumer: ConsumerNode,
     producerVersion: number
   ): void => {
-    // OPTIMIZATION: Check cached edge first (O(1) fast path)
-    const cached = producer._lastEdge;
-    if (cached && cached.target === consumer) {
-      // Edge exists in cache - just update version and generation tag
-      cached.version = producerVersion;
-      cached.gen = consumer._gen ?? 0;
-      // Move to tail if not already there
-      if (consumer._sourcesTail !== cached) {
-        consumer._sourcesTail = cached;
-      }
-      return;
-    }
-    
     // OPTIMIZATION: Check consumer's tail pointer (last accessed dependency)
-    // This handles alternating access patterns efficiently
+    // This handles sequential access patterns efficiently
     const tail = consumer._sourcesTail;
     if (tail && tail.source === producer) {
-      // Found at tail - update and cache
+      // Found at tail - just update version
       tail.version = producerVersion;
       tail.gen = consumer._gen ?? 0;
-      producer._lastEdge = tail;
       // Tail is already correct, no need to update
       return;
     }
@@ -148,12 +128,11 @@ export function createDependencyGraph(): DependencyGraph {
       const edge = tail.prevSource;
       edge.version = producerVersion;
       edge.gen = consumer._gen ?? 0;
-      producer._lastEdge = edge;
       consumer._sourcesTail = edge; // Move to tail for next access
       return;
     }
     
-    // FALLBACK: Linear search when caches miss
+    // FALLBACK: Linear search from head
     // Look for existing edge (active or recyclable)
     let node = consumer._sources;
     while (node) {
@@ -162,11 +141,8 @@ export function createDependencyGraph(): DependencyGraph {
         // Reactivate/update it
         node.version = producerVersion;
         node.gen = consumer._gen ?? 0;
-        producer._lastEdge = node;
-        // Only update tail if we're finding an edge that's not at the tail
-        if (consumer._sourcesTail !== node) {
-          consumer._sourcesTail = node;
-        }
+        // Move to tail for better locality
+        consumer._sourcesTail = node;
         return;
       }
       node = node.nextSource;
@@ -202,130 +178,182 @@ export function createDependencyGraph(): DependencyGraph {
   };
 
   /**
-   * ALGORITHM: Dependency Checking with Early Exit Optimization
+   * ALGORITHM: Zero-Allocation Dependency Checking with Intrusive Stack
    * 
-   * Based on the original implementation but with key optimization:
-   * - Early exit when finding changed signal dependencies (major perf win)
-   * - Maintains correct diamond dependency behavior
-   * - Refreshes intermediate computeds to check if values actually changed
+   * Key optimizations from alien-signals:
+   * - Uses existing edges as stack frames (no allocations)
+   * - Maintains traversal state in temporary edge fields
+   * - Early exit for changed signal dependencies
+   * - Efficient unwinding without frame objects
    */
   const hasStaleDependencies = (root: ConsumerNode): boolean => {
     if (root._flags & OUTDATED) return true;
-
-    type Frame = {
-      sub: ConsumerNode;
-      link: Edge | undefined;
-      parent?: Frame;
-      parentEdge?: Edge;
-      dirty?: boolean;
-    };
-
-    let frame: Frame | undefined = { sub: root, link: root._sources };
-
-    while (frame) {
-      const link: Edge | undefined = frame.link;
-
-      // Unwind when finished scanning this sub's deps
-      if (!link) {
-        // Clear NOTIFIED on clean nodes
-        if (!frame.dirty && (frame.sub._flags & NOTIFIED)) {
-          frame.sub._flags &= ~NOTIFIED;
-        }
-        if (!frame.parent) return !!frame.dirty;
-
-        const edgeToParent = frame.parentEdge!;
-        const subAny = frame.sub;
-        const prevVersion = edgeToParent.version;
-        let changed = false;
-        
-        // If subtree was dirty and this is a computed, recompute now
-        if (frame.dirty) {
-          subAny._refresh();
-          if ('_version' in subAny) {
-            changed = prevVersion !== subAny._version;
-          }
-        }
-        
-        // Sync parent edge cached version
-        if ('_version' in subAny && typeof subAny._version === 'number') {
-          edgeToParent.version = subAny._version;
-        }
-
-        // Propagate dirtiness if value changed
-        if (changed) {
-          frame.parent.dirty = true;
-        }
-        
-        // Advance parent to next dependency
-        frame.parent.link = edgeToParent.nextSource;
-        frame = frame.parent;
-        continue;
-      }
-
-      // Skip recycled edges
-      if (link.version === -1) {
-        frame.link = link.nextSource;
-        continue;
-      }
-
-      const dep = link.source as ProducerNode & Partial<ConsumerNode> & { _flags?: number };
-      const cached = link.version;
-
-      // Signals: compare versions
+    
+    // OPTIMIZATION: Fast path for linear chains (single dependency)
+    // Common pattern: computed(() => signal.value * 2)
+    // Skip complex traversal when there's only one active dependency
+    const firstEdge = root._sources;
+    if (firstEdge && !firstEdge.nextSource) {
+      // Single dependency - check directly
+      if (firstEdge.version === -1) return false; // Recycled edge
+      
+      const dep = firstEdge.source as ProducerNode & Partial<ConsumerNode> & { _flags?: number };
+      
+      // Signals: simple version check
       if (!('_sources' in dep)) {
-        const v = dep._version;
-        if (cached !== v) {
-          frame.dirty = true;
-          // Early exit only if this is a direct dependency of root
-          // Otherwise we need to check if intermediate computeds change
-          if (!frame.parent) return true;
-        }
-        link.version = v;
-        frame.link = link.nextSource;
-        continue;
-      }
-
-      const depFlags = ('_flags' in dep ? dep._flags : 0) || 0;
-      const current = dep._version;
-
-      // Explicitly outdated dependency
-      if (depFlags & OUTDATED) {
-        frame.dirty = true;
-        // Only early exit for direct dependencies of root
-        if (!frame.parent) return true;
-        frame.link = link.nextSource;
-        continue;
-      }
-
-      // Clean dependency fast path
-      if (cached === current && (depFlags & NOTIFIED) === 0) {
-        frame.link = link.nextSource;
-        continue;
-      }
-
-      // Dive into pending dependency
-      if (depFlags & NOTIFIED) {
-        frame = {
-          sub: dep as unknown as ConsumerNode,
-          link: ('_sources' in dep ? dep._sources : undefined),
-          parent: frame,
-          parentEdge: link,
-        };
-        continue;
-      }
-
-      // Version mismatch without NOTIFIED
-      if (cached !== current) {
-        frame.dirty = true;
-        link.version = current;
-        // Only early exit for direct dependencies of root
-        if (!frame.parent) return true;
+        const stale = firstEdge.version !== dep._version;
+        firstEdge.version = dep._version;
+        return stale;
       }
       
-      frame.link = link.nextSource;
+      // Computed: check flags and version
+      const depFlags = ('_flags' in dep ? dep._flags : 0) || 0;
+      if (depFlags & OUTDATED) return true;
+      
+      // Clean fast path
+      if (firstEdge.version === dep._version && !(depFlags & DIRTY_FLAGS)) {
+        return false;
+      }
+      
+      // Need to check nested - fall through to full algorithm
     }
 
-    return false;
+    // Intrusive stack frame type - temporarily attached to edges
+    type StackFrame = Edge & {
+      _savedNext?: Edge;
+      _savedSub?: ConsumerNode;
+      _savedDirty?: boolean;
+      _stackNext?: Edge;
+    };
+
+    // Use edges themselves as intrusive stack nodes
+    // We'll temporarily use edge fields for traversal state
+    let currentSub: ConsumerNode = root;
+    let currentLink: Edge | undefined = root._sources;
+    let stackTop: StackFrame | undefined = undefined; // Stack of parent edges
+    let dirty = false;
+    let depth = 0;
+
+    while (true) {
+      // Process current dependency
+      if (currentLink) {
+        // Skip recycled edges
+        if (currentLink.version === -1) {
+          currentLink = currentLink.nextSource;
+          continue;
+        }
+
+        const dep = currentLink.source as ProducerNode & Partial<ConsumerNode> & { _flags?: number };
+        const cached = currentLink.version;
+
+        // Signals: compare versions
+        if (!('_sources' in dep)) {
+          const v = dep._version;
+          if (cached !== v) {
+            dirty = true;
+            // Early exit only at depth 0 (direct dependency of root)
+            if (depth === 0) return true;
+          }
+          currentLink.version = v;
+          currentLink = currentLink.nextSource;
+          continue;
+        }
+
+        const depFlags = ('_flags' in dep ? dep._flags : 0) || 0;
+        const current = dep._version;
+
+        // Explicitly outdated dependency
+        if (depFlags & OUTDATED) {
+          dirty = true;
+          // Only early exit for direct dependencies
+          if (depth === 0) return true;
+          currentLink = currentLink.nextSource;
+          continue;
+        }
+
+        // Clean dependency fast path - check both version and no dirty flags
+        if (cached === current && !(depFlags & DIRTY_FLAGS)) {
+          currentLink = currentLink.nextSource;
+          continue;
+        }
+
+        // Need to dive into this dependency
+        if (depFlags & NOTIFIED) {
+          // Push current state onto intrusive stack
+          // Temporarily store traversal state in the edge
+          const frame = currentLink as StackFrame;
+          frame._savedNext = currentLink.nextSource;
+          frame._savedSub = currentSub;
+          frame._savedDirty = dirty;
+          frame._stackNext = stackTop;
+          stackTop = frame;
+          
+          // Descend into dependency
+          currentSub = dep as unknown as ConsumerNode;
+          currentLink = dep._sources;
+          dirty = false;
+          depth++;
+          continue;
+        }
+
+        // Version mismatch without NOTIFIED
+        if (cached !== current) {
+          dirty = true;
+          currentLink.version = current;
+          // Only early exit for direct dependencies
+          if (depth === 0) return true;
+        }
+        
+        currentLink = currentLink.nextSource;
+        continue;
+      }
+
+      // Finished processing current sub's dependencies
+      // Clear NOTIFIED on clean nodes
+      if (!dirty && (currentSub._flags & NOTIFIED)) {
+        currentSub._flags &= ~NOTIFIED;
+      }
+
+      // Check if we're done
+      if (!stackTop) {
+        return dirty;
+      }
+
+      // Pop from stack
+      const parentEdge: StackFrame = stackTop;
+      const prevVersion = parentEdge.version;
+      let changed = false;
+      
+      // If subtree was dirty and this is a computed, recompute now
+      if (dirty) {
+        currentSub._refresh();
+        if ('_version' in currentSub) {
+          changed = prevVersion !== currentSub._version;
+        }
+      }
+      
+      // Sync parent edge cached version
+      if ('_version' in currentSub && typeof currentSub._version === 'number') {
+        parentEdge.version = currentSub._version;
+      }
+
+      // Restore state from intrusive stack
+      currentLink = parentEdge._savedNext;
+      currentSub = parentEdge._savedSub!;
+      const parentDirty = parentEdge._savedDirty ?? false;
+      stackTop = parentEdge._stackNext;
+      
+      // Clean up temporary fields - set to undefined instead of delete
+      // IMPORTANT: Using delete causes V8 deoptimization!
+      parentEdge._savedNext = undefined;
+      parentEdge._savedSub = undefined;
+      parentEdge._savedDirty = undefined;
+      parentEdge._stackNext = undefined;
+      
+      // Propagate dirtiness if value changed
+      dirty = parentDirty || changed;
+      depth--;
+    }
   };
 
   /**
@@ -347,7 +375,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (!(node._flags & NOTIFIED)) return false;
     
     // If all direct sources have matching versions and are not themselves
-    // NOTIFIED/OUTDATED, we can clear NOTIFIED and skip expensive checks.
+    // dirty, we can clear NOTIFIED and skip expensive checks.
     let e = node._sources;
     let clean = true;
     while (e) {
@@ -355,7 +383,8 @@ export function createDependencyGraph(): DependencyGraph {
       if (e.version !== -1) {
         const s = e.source as ProducerNode & { _flags?: number };
         if (e.version !== s._version) { clean = false; break; }
-        if ('_flags' in s && (s._flags! & (NOTIFIED | OUTDATED))) { clean = false; break; }
+        // Use compound DIRTY_FLAGS check
+        if ('_flags' in s && (s._flags! & DIRTY_FLAGS)) { clean = false; break; }
       }
       e = e.nextSource!;
     }

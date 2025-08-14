@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createDependencyGraph, EdgeCache, TrackedProducer } from './dependency-graph';
+import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode } from '../types';
 
 describe('Dependency Graph Helpers', () => {
@@ -10,11 +10,10 @@ describe('Dependency Graph Helpers', () => {
   });
 
   describe('ensureLink', () => {
-    it('should reuse cached node when available', () => {
-      const source: TrackedProducer = {
+    it('should reuse edge when same producer accessed again', () => {
+      const source: ProducerNode = {
         __type: 'test',
         _targets: undefined,
-        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -28,23 +27,22 @@ describe('Dependency Graph Helpers', () => {
       
       // First call creates the dependency
       helpers.ensureLink(source, target, 1);
-      const cachedNode = source._lastEdge;
+      const firstEdge = target._sources;
       
       // Update version
       source._version = 2;
       
-      // Second call should reuse the cached node
+      // Second call should reuse the same edge
       helpers.ensureLink(source, target, 2);
       
-      expect(source._lastEdge).toBe(cachedNode);
-      expect(source._lastEdge?.version).toBe(2);
+      expect(target._sources).toBe(firstEdge);
+      expect(target._sources?.version).toBe(2);
     });
 
     it('should find existing dependency in sources list', () => {
-      const source: TrackedProducer = {
+      const source: ProducerNode = {
         __type: 'test',
         _targets: undefined,
-        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -59,9 +57,6 @@ describe('Dependency Graph Helpers', () => {
       // Create dependency manually
       const existingNode = helpers.connect(source, target, 1);
       
-      // Clear the cached node to force search
-      source._lastEdge = undefined;
-      
       // Update version
       source._version = 2;
       
@@ -73,10 +68,9 @@ describe('Dependency Graph Helpers', () => {
     });
 
     it('should create new dependency when none exists', () => {
-      const source: TrackedProducer = {
+      const source: ProducerNode = {
         __type: 'test',
         _targets: undefined,
-        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -98,7 +92,6 @@ describe('Dependency Graph Helpers', () => {
       const sources = Array.from({ length: 3 }, (_, i) => ({
         __type: 'test',
         _targets: undefined,
-        _lastEdge: undefined,
         _version: i + 1,
       }));
       
@@ -112,7 +105,7 @@ describe('Dependency Graph Helpers', () => {
       
       // Add dependencies from multiple sources
       sources.forEach(source => {
-        helpers.ensureLink(source as TrackedProducer, target, (source as TrackedProducer)._version);
+        helpers.ensureLink(source as ProducerNode, target, (source as ProducerNode)._version);
       });
       
       // Count sources
@@ -127,10 +120,9 @@ describe('Dependency Graph Helpers', () => {
     });
 
     it('should update version when dependency already exists', () => {
-      const source: TrackedProducer = {
+      const source: ProducerNode = {
         __type: 'test',
         _targets: undefined,
-        _lastEdge: undefined,
         _version: 1,
       };
       
@@ -159,10 +151,9 @@ describe('Dependency Graph Helpers', () => {
 
   describe('connect', () => {
       it('should create bidirectional links between source and target', () => {
-        const source: ProducerNode & EdgeCache = {
+        const source: ProducerNode = {
           __type: 'test',
           _targets: undefined,
-          _lastEdge: undefined,
           _version: 1,
         };
         
@@ -181,14 +172,12 @@ describe('Dependency Graph Helpers', () => {
         expect(node.version).toBe(1);
         expect(source._targets).toBe(node);
         expect(target._sources).toBe(node);
-        expect(source._lastEdge).toBe(node);
       });
   
       it('should maintain linked lists when multiple dependencies exist', () => {
-        const source: ProducerNode & EdgeCache = {
+        const source: ProducerNode = {
           __type: 'test',
           _targets: undefined,
-          _lastEdge: undefined,
           _version: 1,
         };
         
@@ -246,10 +235,9 @@ describe('Dependency Graph Helpers', () => {
   
     describe('unlinkFromProducer', () => {
       it('should remove node from targets list', () => {
-        const source: ProducerNode & EdgeCache = {
+        const source: ProducerNode = {
           __type: 'test',
           _targets: undefined,
-          _lastEdge: undefined,
           _version: 1,
         };
         
@@ -269,10 +257,9 @@ describe('Dependency Graph Helpers', () => {
       });
   
       it('should maintain linked list integrity when removing middle node', () => {
-        const source: ProducerNode & EdgeCache = {
+        const source: ProducerNode = {
           __type: 'test',
           _targets: undefined,
-          _lastEdge: undefined,
           _version: 1,
         };
         
@@ -298,7 +285,6 @@ describe('Dependency Graph Helpers', () => {
         const source = {
           __type: 'test',
           _targets: undefined,
-          _lastEdge: undefined,
           _version: 1,
           _flags: 16, // TRACKING flag set
         };
