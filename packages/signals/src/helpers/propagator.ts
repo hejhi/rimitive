@@ -35,13 +35,14 @@ export function createPropagator(): Propagator {
   const add = (from: Edge | undefined): void => {
     if (!from || from.queueNext !== undefined) return; // Already queued
     
-    // Add to intrusive queue
-    from.queueNext = from; // Sentinel value marks as queued
+    // Add to intrusive queue without sentinel
     if (rootsTail) {
       rootsTail.queueNext = from;
+      from.queueNext = undefined; // Explicit undefined instead of self-reference
       rootsTail = from;
     } else {
       rootsHead = rootsTail = from;
+      from.queueNext = undefined; // Explicit undefined instead of self-reference
     }
     rootsSize++;
   };
@@ -50,7 +51,7 @@ export function createPropagator(): Propagator {
     // Clear intrusive list
     let current = rootsHead;
     while (current) {
-      const next = current.queueNext === current ? undefined : current.queueNext;
+      const next = current.queueNext;
       current.queueNext = undefined;
       current = next;
     }

@@ -67,6 +67,7 @@ const {
   OUTDATED,
   NOTIFIED,
   DIRTY_FLAGS,
+  SCHEDULED,
 } = CONSTANTS;
 
 // OPTIMIZATION: Shared Dispose Function
@@ -127,15 +128,16 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       this._flags |= NOTIFIED;
       
       // Queue the effect if not already queued
-      if (this._nextScheduled === undefined) {
-        // Use sentinel value to mark as queued
-        this._nextScheduled = this;
+      if (!(this._flags & SCHEDULED)) {
+        // Mark as scheduled
+        this._flags |= SCHEDULED;
         if (ctx.queueTail) {
           ctx.queueTail._nextScheduled = this;
           ctx.queueTail = this;
         } else {
           ctx.queueHead = ctx.queueTail = this;
         }
+        this._nextScheduled = undefined; // Tail has no next
       }
       
       // If not in a batch, flush immediately
@@ -144,8 +146,9 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         ctx.queueHead = ctx.queueTail = undefined;
         
         while (current) {
-          const next = current._nextScheduled === current ? undefined : current._nextScheduled;
+          const next = current._nextScheduled;
           current._nextScheduled = undefined;
+          current._flags &= ~SCHEDULED; // Clear scheduled flag
           current._flush();
           current = next;
         }

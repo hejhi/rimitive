@@ -41,7 +41,7 @@ import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 
-const { NOTIFIED, DISPOSED, SKIP_EQUALITY } = CONSTANTS;
+const { NOTIFIED, DISPOSED, SKIP_EQUALITY, SCHEDULED } = CONSTANTS;
 
 export interface SubscribeNode<T> extends ScheduledNode {
   _callback: (value: T) => void;
@@ -89,15 +89,16 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       this._flags |= NOTIFIED;
       
       // Queue the subscription if not already queued
-      if (this._nextScheduled === undefined) {
-        // Use sentinel value
-        this._nextScheduled = this;
+      if (!(this._flags & SCHEDULED)) {
+        // Mark as scheduled
+        this._flags |= SCHEDULED;
         if (ctx.queueTail) {
           ctx.queueTail._nextScheduled = this;
           ctx.queueTail = this;
         } else {
           ctx.queueHead = ctx.queueTail = this;
         }
+        this._nextScheduled = undefined; // Tail has no next
       }
       
       // If not in a batch, flush immediately
@@ -106,8 +107,9 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
         ctx.queueHead = ctx.queueTail = undefined;
         
         while (current) {
-          const next = current._nextScheduled === current ? undefined : current._nextScheduled;
+          const next = current._nextScheduled;
           current._nextScheduled = undefined;
+          current._flags &= ~SCHEDULED; // Clear scheduled flag
           current._flush();
           current = next;
         }

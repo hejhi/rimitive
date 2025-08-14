@@ -137,7 +137,7 @@ export const activeContext = (() => {
       let node = defaultInstance.activeContext.queueHead;
       while (node) { 
         out.push(node); 
-        node = node._nextScheduled === node ? undefined : node._nextScheduled;
+        node = node._nextScheduled;
       }
       return out;
     },

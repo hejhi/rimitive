@@ -2,7 +2,7 @@ import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 import type { SignalContext } from '../context';
 
-const { DISPOSED } = CONSTANTS;
+const { DISPOSED, SCHEDULED } = CONSTANTS;
 
 export interface QueueState {
   // Number of scheduled nodes (for quick checks and observability)
@@ -39,15 +39,19 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
 
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
-    if (node._nextScheduled !== undefined) return; // already scheduled
-    // Use self-reference as sentinel to mark as scheduled
-    node._nextScheduled = node;
+    if (node._flags & SCHEDULED) return; // already scheduled
+    
+    // Mark as scheduled using bit flag
+    node._flags |= SCHEDULED;
+    
+    // Add to queue
     if (ctx.queueTail) {
       ctx.queueTail._nextScheduled = node;
       ctx.queueTail = node;
     } else {
       ctx.queueHead = ctx.queueTail = node;
     }
+    node._nextScheduled = undefined; // Tail has no next
     state.size++;
   };
 
@@ -71,8 +75,9 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     state.size = 0;
     
     while (current) {
-      const next: ScheduledNode | undefined = current._nextScheduled === current ? undefined : current._nextScheduled;
-      current._nextScheduled = undefined; // clear scheduled flag
+      const next: ScheduledNode | undefined = current._nextScheduled;
+      current._nextScheduled = undefined;
+      current._flags &= ~SCHEDULED; // Clear scheduled flag
       current._flush();
       current = next;
     }

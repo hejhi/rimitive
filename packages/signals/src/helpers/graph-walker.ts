@@ -114,7 +114,7 @@ export function createGraphWalker(): GraphWalker {
       // Process next root from intrusive queue
       if (rootsQueue) {
         const candidate = rootsQueue;
-        rootsQueue = rootsQueue.queueNext === rootsQueue ? undefined : rootsQueue.queueNext;
+        rootsQueue = rootsQueue.queueNext;
         return candidate;
       }
       return undefined;

@@ -48,6 +48,11 @@ export const CONSTANTS = {
   // OPTIMIZATION: Enables "unobserved computed" optimization
   TRACKING: 1 << 4,     // 16 (binary: 0010000)
   
+  // SCHEDULED (bit 5): Node is already in the work queue.
+  // Prevents duplicate scheduling and replaces sentinel value pattern.
+  // Set when enqueued, cleared when flushed.
+  SCHEDULED: 1 << 5,     // 32 (binary: 0100000)
+  
   // SKIP_EQUALITY (bit 6): Performance flag for subscriptions.
   // When set, skips the equality check and always notifies subscribers.
   // Used when the subscriber wants to be notified of every write,

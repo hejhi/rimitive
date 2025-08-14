@@ -4,7 +4,7 @@ import { createContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
-const { DISPOSED } = CONSTANTS;
+const { DISPOSED, SCHEDULED } = CONSTANTS;
 
 describe('WorkQueue', () => {
   it('should enqueue nodes', () => {
@@ -24,7 +24,7 @@ describe('WorkQueue', () => {
     
     helpers.enqueue(node);
     expect(helpers.state.size).toBe(1);
-    expect(node._nextScheduled).toBeDefined(); // scheduled flag via pointer
+    expect(node._flags & SCHEDULED).toBeTruthy(); // scheduled flag via bit
   });
 
   it('should not enqueue already scheduled nodes', () => {
@@ -163,9 +163,9 @@ describe('WorkQueue', () => {
     };
     
     helpers.enqueue(node);
-    expect(node._nextScheduled).toBe(node);
+    expect(node._flags & SCHEDULED).toBeTruthy(); // Check SCHEDULED bit is set
     
     helpers.flush();
-    expect(node._nextScheduled).toBeUndefined();
+    expect(node._flags & SCHEDULED).toBeFalsy(); // Check SCHEDULED bit is cleared
   });
 });

@@ -232,7 +232,6 @@ export function createDependencyGraph(): DependencyGraph {
     let currentLink: Edge | undefined = root._sources;
     let stackTop: StackFrame | undefined = undefined; // Stack of parent edges
     let dirty = false;
-    let depth = 0;
 
     while (true) {
       // Process current dependency
@@ -290,7 +289,6 @@ export function createDependencyGraph(): DependencyGraph {
           currentSub = dep as unknown as ConsumerNode;
           currentLink = dep._sources;
           dirty = false;
-          depth++;
           continue;
         }
 
@@ -349,7 +347,6 @@ export function createDependencyGraph(): DependencyGraph {
       
       // Propagate dirtiness if value changed
       dirty = parentDirty || changed;
-      depth--;
     }
   };
 
