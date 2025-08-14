@@ -1,6 +1,13 @@
 import type { Edge, ConsumerNode } from '../types';
 import type { GraphWalker, QueueNode } from './graph-walker';
 
+// OPTIMIZATION: Use intrusive queue - edges themselves form the queue
+// No separate QueueNode allocation needed
+interface QueuedEdge extends Edge {
+  _queueNext?: QueuedEdge;
+  _queued?: boolean;
+}
+
 export interface Propagator {
   add: (from: Edge | undefined) => void;
   clear: () => void;
@@ -27,34 +34,44 @@ export interface Propagator {
  * instead of arrays to achieve true zero-allocation operation.
  */
 export function createPropagator(): Propagator {
-  // Queue of pending roots using separate nodes
-  let rootsHead: QueueNode | undefined;
-  let rootsTail: QueueNode | undefined;
+  // OPTIMIZATION: Intrusive queue - edges themselves form the linked list
+  // No separate QueueNode allocations, no Set allocation
+  let rootsHead: QueuedEdge | undefined;
+  let rootsTail: QueuedEdge | undefined;
   let rootsSize = 0;
-  // Track queued edges to prevent duplicates
-  const queuedEdges = new Set<Edge>();
 
   const add = (from: Edge | undefined): void => {
-    if (!from || queuedEdges.has(from)) return; // Already queued
+    if (!from) return;
     
-    // Add to queue with new node
-    const node: QueueNode = { edge: from, next: undefined };
-    queuedEdges.add(from);
+    const edge = from as QueuedEdge;
+    
+    // OPTIMIZATION: Use flag instead of Set for deduplication
+    if (edge._queued) return; // Already queued
+    edge._queued = true;
+    
+    // Add to intrusive queue (no allocation)
+    edge._queueNext = undefined;
     
     if (rootsTail) {
-      rootsTail.next = node;
-      rootsTail = node;
+      rootsTail._queueNext = edge;
+      rootsTail = edge;
     } else {
-      rootsHead = rootsTail = node;
+      rootsHead = rootsTail = edge;
     }
     rootsSize++;
   };
 
   const clear = (): void => {
-    // Clear queue - nodes will be GC'd
+    // Clear queue and reset flags
+    let current = rootsHead;
+    while (current) {
+      current._queued = false; // Reset flag
+      const next = current._queueNext;
+      current._queueNext = undefined; // Clean up reference
+      current = next;
+    }
     rootsHead = rootsTail = undefined;
     rootsSize = 0;
-    queuedEdges.clear();
   };
 
   const size = (): number => rootsSize;
@@ -65,8 +82,24 @@ export function createPropagator(): Propagator {
   ): void => {
     if (!rootsHead) return;
     
-    // Pass the queue directly to walker
-    dfsMany(rootsHead, visit);
+    // Convert intrusive queue to QueueNode format for walker
+    // TODO: Update walker to use intrusive format directly
+    let current: QueuedEdge | undefined = rootsHead;
+    let walkerHead: QueueNode | undefined = undefined;
+    let walkerTail: QueueNode | undefined = undefined;
+    
+    while (current) {
+      const node: QueueNode = { edge: current, next: undefined };
+      if (walkerTail) {
+        walkerTail.next = node;
+        walkerTail = node;
+      } else {
+        walkerHead = walkerTail = node;
+      }
+      current = current._queueNext;
+    }
+    
+    dfsMany(walkerHead, visit);
     clear();
   };
 

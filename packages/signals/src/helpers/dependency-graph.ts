@@ -39,15 +39,18 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge } from '../types';
 
-// Simplified producer type without edge caching
-// We rely on tail pointers for efficient access patterns
-export type TrackedProducer = ProducerNode;
+// OPTIMIZATION: Edge Caching
+// Producers cache their last accessed edge to avoid linked list traversal
+// This optimization is based on the observation that the same consumer
+// often accesses the same producer multiple times in succession
+export type EdgeCache = { _lastEdge?: Edge };
+export type TrackedProducer = ProducerNode & EdgeCache;
 
 const { TRACKING, NOTIFIED, OUTDATED, DIRTY_FLAGS } = CONSTANTS;
 
 export interface DependencyGraph {
-  connect: (producer: ProducerNode | (ProducerNode & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
-  ensureLink: (producer: ProducerNode, consumer: ConsumerNode, producerVersion: number) => void;
+  connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
+  ensureLink: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
   unlinkFromProducer: (edge: Edge) => void;
   hasStaleDependencies: (consumer: ConsumerNode) => boolean;
   needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
@@ -58,7 +61,7 @@ export function createDependencyGraph(): DependencyGraph {
    // Creates a new edge between producer and consumer, inserting at head of sources
    // and appending to tail of targets for correct effect execution order
    const connect = (
-     producer: ProducerNode | (ProducerNode & ConsumerNode),
+     producer: TrackedProducer | (TrackedProducer & ConsumerNode),
      consumer: ConsumerNode,
      producerVersion: number
    ): Edge => {
@@ -100,6 +103,9 @@ export function createDependencyGraph(): DependencyGraph {
      if (!consumer._sourcesTail) {
        consumer._sourcesTail = newNode;
      }
+     
+     // OPTIMIZATION: Cache this edge for fast repeated access
+     producer._lastEdge = newNode;
 
      return newNode;
    };
@@ -108,17 +114,31 @@ export function createDependencyGraph(): DependencyGraph {
   // This is called during signal/computed reads to establish dependencies
   // It either updates an existing edge or creates a new one
   const ensureLink = (
-    producer: ProducerNode,
+    producer: TrackedProducer,
     consumer: ConsumerNode,
     producerVersion: number
   ): void => {
+    // OPTIMIZATION: Check cached edge first (O(1) fast path)
+    const cached = producer._lastEdge;
+    if (cached && cached.target === consumer) {
+      // Edge exists in cache - just update version and generation tag
+      cached.version = producerVersion;
+      cached.gen = consumer._gen ?? 0;
+      // Move to tail if not already there
+      if (consumer._sourcesTail !== cached) {
+        consumer._sourcesTail = cached;
+      }
+      return;
+    }
+    
     // OPTIMIZATION: Check consumer's tail pointer (last accessed dependency)
     // This handles sequential access patterns efficiently
     const tail = consumer._sourcesTail;
     if (tail && tail.source === producer) {
-      // Found at tail - just update version
+      // Found at tail - update and cache
       tail.version = producerVersion;
       tail.gen = consumer._gen ?? 0;
+      producer._lastEdge = tail;
       // Tail is already correct, no need to update
       return;
     }
@@ -128,6 +148,7 @@ export function createDependencyGraph(): DependencyGraph {
       const edge = tail.prevSource;
       edge.version = producerVersion;
       edge.gen = consumer._gen ?? 0;
+      producer._lastEdge = edge;
       consumer._sourcesTail = edge; // Move to tail for next access
       return;
     }
@@ -141,6 +162,7 @@ export function createDependencyGraph(): DependencyGraph {
         // Reactivate/update it
         node.version = producerVersion;
         node.gen = consumer._gen ?? 0;
+        producer._lastEdge = node;
         // Move to tail for better locality
         consumer._sourcesTail = node;
         return;
@@ -315,7 +337,7 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Pop from stack
-      const frame: StackFrame = stackTop!;
+      const frame: StackFrame = stackTop;
       const parentEdge: Edge = frame.edge;
       const prevVersion: number = parentEdge.version;
       let changed = false;
