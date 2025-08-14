@@ -218,19 +218,19 @@ export function createDependencyGraph(): DependencyGraph {
       // Need to check nested - fall through to full algorithm
     }
 
-    // Intrusive stack frame type - temporarily attached to edges
-    type StackFrame = Edge & {
-      _savedNext?: Edge;
-      _savedSub?: ConsumerNode;
-      _savedDirty?: boolean;
-      _stackNext?: Edge;
-    };
+    // Stack frame type - follows Alien's pattern, never mutates Edge
+    interface StackFrame {
+      edge: Edge;
+      nextLink: Edge | undefined;
+      sub: ConsumerNode;
+      dirty: boolean;
+      prev: StackFrame | undefined;
+    }
 
-    // Use edges themselves as intrusive stack nodes
-    // We'll temporarily use edge fields for traversal state
+    // Use separate stack frames for traversal state
     let currentSub: ConsumerNode = root;
     let currentLink: Edge | undefined = root._sources;
-    let stackTop: StackFrame | undefined = undefined; // Stack of parent edges
+    let stackTop: StackFrame | undefined = undefined; // Stack of parent frames
     let dirty = false;
 
     while (true) {
@@ -276,14 +276,14 @@ export function createDependencyGraph(): DependencyGraph {
 
         // Need to dive into this dependency
         if (depFlags & NOTIFIED) {
-          // Push current state onto intrusive stack
-          // Temporarily store traversal state in the edge
-          const frame = currentLink as StackFrame;
-          frame._savedNext = currentLink.nextSource;
-          frame._savedSub = currentSub;
-          frame._savedDirty = dirty;
-          frame._stackNext = stackTop;
-          stackTop = frame;
+          // Push current state onto stack with new frame
+          stackTop = {
+            edge: currentLink,
+            nextLink: currentLink.nextSource,
+            sub: currentSub,
+            dirty: dirty,
+            prev: stackTop
+          };
           
           // Descend into dependency
           currentSub = dep as unknown as ConsumerNode;
@@ -315,8 +315,9 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Pop from stack
-      const parentEdge: StackFrame = stackTop;
-      const prevVersion = parentEdge.version;
+      const frame: StackFrame = stackTop!;
+      const parentEdge: Edge = frame.edge;
+      const prevVersion: number = parentEdge.version;
       let changed = false;
       
       // If subtree was dirty and this is a computed, recompute now
@@ -332,18 +333,13 @@ export function createDependencyGraph(): DependencyGraph {
         parentEdge.version = currentSub._version;
       }
 
-      // Restore state from intrusive stack
-      currentLink = parentEdge._savedNext;
-      currentSub = parentEdge._savedSub!;
-      const parentDirty = parentEdge._savedDirty ?? false;
-      stackTop = parentEdge._stackNext;
+      // Restore state from stack frame
+      currentLink = frame.nextLink;
+      currentSub = frame.sub;
+      const parentDirty: boolean = frame.dirty;
+      stackTop = frame.prev;
       
-      // Clean up temporary fields - set to undefined instead of delete
-      // IMPORTANT: Using delete causes V8 deoptimization!
-      parentEdge._savedNext = undefined;
-      parentEdge._savedSub = undefined;
-      parentEdge._savedDirty = undefined;
-      parentEdge._stackNext = undefined;
+      // No cleanup needed - frame will be GC'd
       
       // Propagate dirtiness if value changed
       dirty = parentDirty || changed;

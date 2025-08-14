@@ -7,16 +7,25 @@ const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 // Combine flags that indicate a node should be skipped during traversal
 const SKIP_FLAGS = NOTIFIED | DISPOSED | RUNNING;
 
-// Note: We now use Edge.stackNext for intrusive stack management
-// instead of separate TraversalFrame objects to achieve zero allocation
+// Stack frame for DFS traversal - follows Alien's pattern
+interface StackFrame {
+  edge: Edge;
+  prev: StackFrame | undefined;
+}
+
+// Queue node for multiple roots - follows Alien's pattern
+export interface QueueNode {
+  edge: Edge;
+  next: QueueNode | undefined;
+}
 
 export interface GraphWalker {
   // Default traversal (DFS) used by signals/computeds
   walk: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
   // Depth-first traversal exposed explicitly
   dfs: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
-  // Multi-root traversal using intrusive linked list
-  dfsMany: (rootsHead: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
+  // Multi-root traversal using queue nodes
+  dfsMany: (rootsHead: QueueNode | undefined, visit: (node: ConsumerNode) => void) => void;
 }
 
 /**
@@ -52,7 +61,7 @@ export function createGraphWalker(): GraphWalker {
       from = edge;
     }
 
-    let stack: Edge | undefined;
+    let stack: StackFrame | undefined;
     let currentEdge: Edge | undefined = from;
 
     while (currentEdge) {
@@ -72,50 +81,47 @@ export function createGraphWalker(): GraphWalker {
       const nextSibling = currentEdge.nextTarget;
       const childTargets = (target as unknown as { _targets?: Edge })._targets;
 
-      // Determine next edge to process using intrusive stack
+      // Determine next edge to process using separate stack frames
       if (childTargets) {
         // Push sibling to stack if exists, then go to children
         if (nextSibling) {
-          nextSibling.stackNext = stack;
-          stack = nextSibling;
+          stack = { edge: nextSibling, prev: stack };
         }
         currentEdge = childTargets;
       } else if (nextSibling) {
         // No children, process sibling
         currentEdge = nextSibling;
       } else if (stack) {
-        // No children or siblings, pop from intrusive stack
-        currentEdge = stack;
-        stack = stack.stackNext;
-        currentEdge.stackNext = undefined; // Clean up
+        // No children or siblings, pop from stack
+        currentEdge = stack.edge;
+        stack = stack.prev;
       } else {
         currentEdge = undefined;
       }
     }
   };
 
-  // Depth-first traversal for multiple roots using intrusive list
+  // Depth-first traversal for multiple roots
   const dfsMany = (
-    rootsHead: Edge | undefined,
+    rootsHead: QueueNode | undefined,
     visit: (node: ConsumerNode) => void
   ): void => {
-    let stack: Edge | undefined;
+    let stack: StackFrame | undefined;
     let currentEdge: Edge | undefined = undefined;
-    let rootsQueue: Edge | undefined = rootsHead;
+    let rootsQueue: QueueNode | undefined = rootsHead;
 
     // Helper to advance to next available edge from stack or roots queue
     const nextEdge = (): Edge | undefined => {
       if (stack) {
-        const e = stack;
-        stack = stack.stackNext;
-        e.stackNext = undefined; // Clean up
-        return e;
+        const frame = stack;
+        stack = stack.prev;
+        return frame.edge;
       }
-      // Process next root from intrusive queue
+      // Process next root from queue
       if (rootsQueue) {
-        const candidate = rootsQueue;
-        rootsQueue = rootsQueue.queueNext;
-        return candidate;
+        const node = rootsQueue;
+        rootsQueue = rootsQueue.next;
+        return node.edge;
       }
       return undefined;
     };
@@ -137,8 +143,7 @@ export function createGraphWalker(): GraphWalker {
 
       if (childTargets) {
         if (nextSibling) {
-          nextSibling.stackNext = stack;
-          stack = nextSibling;
+          stack = { edge: nextSibling, prev: stack };
         }
         currentEdge = childTargets;
         continue;

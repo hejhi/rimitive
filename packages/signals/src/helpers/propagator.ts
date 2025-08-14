@@ -1,5 +1,5 @@
 import type { Edge, ConsumerNode } from '../types';
-import type { GraphWalker } from './graph-walker';
+import type { GraphWalker, QueueNode } from './graph-walker';
 
 export interface Propagator {
   add: (from: Edge | undefined) => void;
@@ -27,36 +27,34 @@ export interface Propagator {
  * instead of arrays to achieve true zero-allocation operation.
  */
 export function createPropagator(): Propagator {
-  // Intrusive linked list of pending roots
-  let rootsHead: Edge | undefined;
-  let rootsTail: Edge | undefined;
+  // Queue of pending roots using separate nodes
+  let rootsHead: QueueNode | undefined;
+  let rootsTail: QueueNode | undefined;
   let rootsSize = 0;
+  // Track queued edges to prevent duplicates
+  const queuedEdges = new Set<Edge>();
 
   const add = (from: Edge | undefined): void => {
-    if (!from || from.queueNext !== undefined) return; // Already queued
+    if (!from || queuedEdges.has(from)) return; // Already queued
     
-    // Add to intrusive queue without sentinel
+    // Add to queue with new node
+    const node: QueueNode = { edge: from, next: undefined };
+    queuedEdges.add(from);
+    
     if (rootsTail) {
-      rootsTail.queueNext = from;
-      from.queueNext = undefined; // Explicit undefined instead of self-reference
-      rootsTail = from;
+      rootsTail.next = node;
+      rootsTail = node;
     } else {
-      rootsHead = rootsTail = from;
-      from.queueNext = undefined; // Explicit undefined instead of self-reference
+      rootsHead = rootsTail = node;
     }
     rootsSize++;
   };
 
   const clear = (): void => {
-    // Clear intrusive list
-    let current = rootsHead;
-    while (current) {
-      const next = current.queueNext;
-      current.queueNext = undefined;
-      current = next;
-    }
+    // Clear queue - nodes will be GC'd
     rootsHead = rootsTail = undefined;
     rootsSize = 0;
+    queuedEdges.clear();
   };
 
   const size = (): number => rootsSize;
@@ -67,7 +65,7 @@ export function createPropagator(): Propagator {
   ): void => {
     if (!rootsHead) return;
     
-    // Pass the intrusive list directly to walker
+    // Pass the queue directly to walker
     dfsMany(rootsHead, visit);
     clear();
   };
