@@ -1,12 +1,5 @@
 import type { Edge, ConsumerNode } from '../types';
-import type { GraphWalker, QueueNode } from './graph-walker';
-
-// OPTIMIZATION: Use intrusive queue - edges themselves form the queue
-// No separate QueueNode allocation needed
-interface QueuedEdge extends Edge {
-  _queueNext?: QueuedEdge;
-  _queued?: boolean;
-}
+import type { GraphWalker, QueuedEdge } from './graph-walker';
 
 export interface Propagator {
   add: (from: Edge | undefined) => void;
@@ -82,24 +75,8 @@ export function createPropagator(): Propagator {
   ): void => {
     if (!rootsHead) return;
     
-    // Convert intrusive queue to QueueNode format for walker
-    // TODO: Update walker to use intrusive format directly
-    let current: QueuedEdge | undefined = rootsHead;
-    let walkerHead: QueueNode | undefined = undefined;
-    let walkerTail: QueueNode | undefined = undefined;
-    
-    while (current) {
-      const node: QueueNode = { edge: current, next: undefined };
-      if (walkerTail) {
-        walkerTail.next = node;
-        walkerTail = node;
-      } else {
-        walkerHead = walkerTail = node;
-      }
-      current = current._queueNext;
-    }
-    
-    dfsMany(walkerHead, visit);
+    // Pass intrusive queue directly to walker - zero allocations!
+    dfsMany(rootsHead, visit);
     clear();
   };
 

@@ -13,10 +13,11 @@ interface StackFrame {
   prev: StackFrame | undefined;
 }
 
-// Queue node for multiple roots - follows Alien's pattern
-export interface QueueNode {
-  edge: Edge;
-  next: QueueNode | undefined;
+// Queue node for multiple roots - uses intrusive queue pattern
+// QueuedEdge extends Edge with _queueNext pointer for zero-allocation queuing
+export interface QueuedEdge extends Edge {
+  _queueNext?: QueuedEdge;
+  _queued?: boolean;
 }
 
 export interface GraphWalker {
@@ -24,8 +25,8 @@ export interface GraphWalker {
   walk: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
   // Depth-first traversal exposed explicitly
   dfs: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
-  // Multi-root traversal using queue nodes
-  dfsMany: (rootsHead: QueueNode | undefined, visit: (node: ConsumerNode) => void) => void;
+  // Multi-root traversal using intrusive queue
+  dfsMany: (rootsHead: QueuedEdge | undefined, visit: (node: ConsumerNode) => void) => void;
 }
 
 /**
@@ -101,14 +102,14 @@ export function createGraphWalker(): GraphWalker {
     }
   };
 
-  // Depth-first traversal for multiple roots
+  // Depth-first traversal for multiple roots using intrusive queue
   const dfsMany = (
-    rootsHead: QueueNode | undefined,
+    rootsHead: QueuedEdge | undefined,
     visit: (node: ConsumerNode) => void
   ): void => {
     let stack: StackFrame | undefined;
     let currentEdge: Edge | undefined = undefined;
-    let rootsQueue: QueueNode | undefined = rootsHead;
+    let rootsQueue: QueuedEdge | undefined = rootsHead;
 
     // Helper to advance to next available edge from stack or roots queue
     const nextEdge = (): Edge | undefined => {
@@ -117,11 +118,11 @@ export function createGraphWalker(): GraphWalker {
         stack = stack.prev;
         return frame.edge;
       }
-      // Process next root from queue
+      // Process next root from intrusive queue
       if (rootsQueue) {
-        const node = rootsQueue;
-        rootsQueue = rootsQueue.next;
-        return node.edge;
+        const edge = rootsQueue;
+        rootsQueue = rootsQueue._queueNext;  // Use intrusive pointer
+        return edge;
       }
       return undefined;
     };
