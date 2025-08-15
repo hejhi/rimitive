@@ -7,10 +7,10 @@ const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
 // Combine flags that indicate a node should be skipped during traversal
 const SKIP_FLAGS = NOTIFIED | DISPOSED | RUNNING;
 
-// Stack frame for DFS traversal - follows Alien's pattern
-interface StackFrame {
-  edge: Edge;
-  prev: StackFrame | undefined;
+// Intrusive stack for DFS traversal - zero allocations
+// Edge extends with _stackNext pointer for stack operations
+export interface StackedEdge extends Edge {
+  _stackNext?: StackedEdge;
 }
 
 // Queue node for multiple roots - uses intrusive queue pattern
@@ -37,7 +37,7 @@ export interface GraphWalker {
  * - Relies on NOTIFIED as a per-walk dedup marker (set on first visit)
  */
 export function createGraphWalker(): GraphWalker {
-  // Depth-first traversal with explicit stack
+  // Depth-first traversal with intrusive stack (zero allocations)
   const dfs = (
     from: Edge | undefined,
     visit: (node: ConsumerNode) => void
@@ -45,7 +45,7 @@ export function createGraphWalker(): GraphWalker {
     if (!from) return;
 
     // OPTIMIZATION: Fast path for single-edge linear chains
-    // Avoid stack allocation for simple cases
+    // Avoid stack operations for simple cases
     if (!from.nextTarget) {
       let edge: Edge | undefined = from;
       while (edge && !edge.nextTarget) {
@@ -62,7 +62,7 @@ export function createGraphWalker(): GraphWalker {
       from = edge;
     }
 
-    let stack: StackFrame | undefined;
+    let stackHead: StackedEdge | undefined;
     let currentEdge: Edge | undefined = from;
 
     while (currentEdge) {
@@ -82,41 +82,43 @@ export function createGraphWalker(): GraphWalker {
       const nextSibling = currentEdge.nextTarget;
       const childTargets = (target as unknown as { _targets?: Edge })._targets;
 
-      // Determine next edge to process using separate stack frames
+      // Determine next edge to process using intrusive stack
       if (childTargets) {
         // Push sibling to stack if exists, then go to children
         if (nextSibling) {
-          stack = { edge: nextSibling, prev: stack };
+          const sibling = nextSibling as StackedEdge;
+          sibling._stackNext = stackHead;
+          stackHead = sibling;
         }
         currentEdge = childTargets;
       } else if (nextSibling) {
         // No children, process sibling
         currentEdge = nextSibling;
-      } else if (stack) {
+      } else if (stackHead) {
         // No children or siblings, pop from stack
-        currentEdge = stack.edge;
-        stack = stack.prev;
+        currentEdge = stackHead;
+        stackHead = stackHead._stackNext;
       } else {
         currentEdge = undefined;
       }
     }
   };
 
-  // Depth-first traversal for multiple roots using intrusive queue
+  // Depth-first traversal for multiple roots using intrusive queue and stack
   const dfsMany = (
     rootsHead: QueuedEdge | undefined,
     visit: (node: ConsumerNode) => void
   ): void => {
-    let stack: StackFrame | undefined;
+    let stackHead: StackedEdge | undefined;
     let currentEdge: Edge | undefined = undefined;
     let rootsQueue: QueuedEdge | undefined = rootsHead;
 
     // Helper to advance to next available edge from stack or roots queue
     const nextEdge = (): Edge | undefined => {
-      if (stack) {
-        const frame = stack;
-        stack = stack.prev;
-        return frame.edge;
+      if (stackHead) {
+        const edge = stackHead;
+        stackHead = stackHead._stackNext;
+        return edge;
       }
       // Process next root from intrusive queue
       if (rootsQueue) {
@@ -144,7 +146,9 @@ export function createGraphWalker(): GraphWalker {
 
       if (childTargets) {
         if (nextSibling) {
-          stack = { edge: nextSibling, prev: stack };
+          const sibling = nextSibling as StackedEdge;
+          sibling._stackNext = stackHead;
+          stackHead = sibling;
         }
         currentEdge = childTargets;
         continue;
