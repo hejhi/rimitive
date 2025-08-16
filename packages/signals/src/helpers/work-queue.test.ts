@@ -19,7 +19,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _onOutdated: () => true,
+      _updateValue: () => true,
       _runVersion: 0,
     };
     
@@ -40,7 +40,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _onOutdated: () => true,
+      _updateValue: () => true,
       _runVersion: 0,
     };
     
@@ -66,7 +66,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _onOutdated: () => true,
+      _updateValue: () => true,
       _runVersion: 0,
     };
     
@@ -96,7 +96,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _onOutdated: () => true,
+      _updateValue: () => true,
       _runVersion: 0,
     };
     
@@ -108,7 +108,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _onOutdated: () => true,
+      _updateValue: () => true,
       _runVersion: 0,
     };
     
@@ -120,7 +120,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _onOutdated: () => true,
+      _updateValue: () => true,
       _runVersion: 0,
     };
     
@@ -165,7 +165,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _onOutdated: () => true,
+      _updateValue: () => true,
       _runVersion: 0,
     };
     

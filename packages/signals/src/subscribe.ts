@@ -148,8 +148,8 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // FLAG: No error handling - callback errors will propagate
     }
 
-    _onOutdated(): boolean {
-      // Subscribe nodes are always considered "fresh" - they don't produce values
+    _updateValue(): boolean {
+      // Subscribe nodes don't produce values - nothing to update
       // This method exists to satisfy the ConsumerNode interface
       // Subscribe nodes are scheduled for execution through _invalidate/_flush instead
       return true;

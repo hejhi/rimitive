@@ -37,7 +37,7 @@ describe('GraphWalker', () => {
       _sources: undefined,
       _flags: flags,
       _invalidate: () => {},
-      _onOutdated: () => true,
+      _updateValue: () => true,
       _runVersion: 0,
     };
 

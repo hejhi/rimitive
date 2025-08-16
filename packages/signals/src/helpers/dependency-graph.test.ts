@@ -22,7 +22,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _sources: undefined,
         _invalidate: () => {},
-        _onOutdated: () => true,
+        _updateValue: () => true,
         _runVersion: 0,
       };
       
@@ -52,7 +52,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _sources: undefined,
         _invalidate: () => {},
-        _onOutdated: () => true,
+        _updateValue: () => true,
         _runVersion: 0,
       };
       
@@ -81,7 +81,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _sources: undefined,
         _invalidate: () => {},
-        _onOutdated: () => true,
+        _updateValue: () => true,
         _runVersion: 0,
       };
       
@@ -103,7 +103,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _sources: undefined,
         _invalidate: () => {},
-        _onOutdated: () => true,
+        _updateValue: () => true,
         _runVersion: 0,
       };
       
@@ -135,7 +135,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _sources: undefined,
         _invalidate: () => {},
-        _onOutdated: () => true,
+        _updateValue: () => true,
         _runVersion: 0,
       };
       
@@ -167,7 +167,7 @@ describe('Dependency Graph Helpers', () => {
           _flags: 0,
         _sources: undefined,
           _invalidate: () => {},
-          _onOutdated: () => true,
+          _updateValue: () => true,
           _runVersion: 0,
         };
         
@@ -192,7 +192,7 @@ describe('Dependency Graph Helpers', () => {
           _flags: 0,
           _sources: undefined,
           _invalidate: () => {},
-          _onOutdated: () => true,
+          _updateValue: () => true,
           _runVersion: 0,
         };
         
@@ -201,7 +201,7 @@ describe('Dependency Graph Helpers', () => {
           _flags: 0,
           _sources: undefined,
           _invalidate: () => {},
-          _onOutdated: () => true,
+          _updateValue: () => true,
           _runVersion: 0,
         };
         
@@ -231,7 +231,7 @@ describe('Dependency Graph Helpers', () => {
           _flags: 0,
           _sources: undefined,
           _invalidate: () => {},
-          _onOutdated: () => true,
+          _updateValue: () => true,
           _runVersion: 0,
         };
         
@@ -255,7 +255,7 @@ describe('Dependency Graph Helpers', () => {
           _flags: 0,
           _sources: undefined,
           _invalidate: () => {},
-          _onOutdated: () => true,
+          _updateValue: () => true,
           _runVersion: 0,
         };
         
@@ -304,7 +304,7 @@ describe('Dependency Graph Helpers', () => {
           _flags: 0,
           _sources: undefined,
           _invalidate: () => {},
-          _onOutdated: () => true,
+          _updateValue: () => true,
           _runVersion: 0,
         };
         

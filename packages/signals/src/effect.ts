@@ -226,8 +226,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       }
     }
 
-    _onOutdated(): boolean {
-      // Effects are always considered "fresh" - they don't produce values
+    _updateValue(): boolean {
+      // Effects don't produce values - nothing to update
       // This method exists to satisfy the ConsumerNode interface
       // Effects are scheduled for execution through _invalidate/_flush instead
       return true;

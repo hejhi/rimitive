@@ -50,7 +50,7 @@ export interface ComputedInterface<T = unknown>
   readonly value: T; // Getter triggers lazy evaluation
   peek(): T; // Non-tracking read (still evaluates if needed)
   dispose(): void; // Cleanup method to break circular references
-  _onOutdated(): boolean; // Check if needs update without updating (preact-style)
+  _updateValue(): boolean; // Update the computed value when dependencies change
 }
 
 const {
@@ -201,17 +201,17 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Check STALE flag first (common case) or check dependencies if INVALIDATED
       // Skip refreshing all consumers.
       if (this._flags & STALE) {
-        this._onOutdated();
+        this._updateValue();
         return;
       }
 
-      // TODO: Why do we need to call this._onOutdated() after calling refreshConsumers, which...
-      // calls this.refresh()? Why can't we just call refreshConsumers(this) and be done? it causes
-      // a lot of tests to fail.
-      if (refreshConsumers(this)) this._onOutdated();
+      // TODO: Why do we need to call this._updateValue() after calling refreshConsumers, which...
+      // already calls this._updateValue() internally? Why can't we just call refreshConsumers(this) and be done?
+      // Removing this duplicate call causes tests to fail.
+      if (refreshConsumers(this)) this._updateValue();
     }
 
-    _onOutdated(): boolean {
+    _updateValue(): boolean {
       // ALGORITHM: Atomic Flag Update
       // Use single assignment with bitwise operations for atomicity
       // Set RUNNING, clear flags in one operation

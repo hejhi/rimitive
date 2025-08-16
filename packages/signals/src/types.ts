@@ -68,7 +68,7 @@ export interface ConsumerNode extends ReactiveNode {
   _sourcesTail?: Edge; // OPTIMIZATION: Tail pointer for O(1) access to recent dependencies
 
   _invalidate(): void; // Called when dependencies change
-  _onOutdated(): boolean;
+  _updateValue(): boolean; // Update this node's value (if it produces one)
   _flags: number; // Bit field containing STALE, RUNNING, DISPOSED, etc.
   // RUN VERSION COUNTER (DYNAMIC DEPENDENCY SWEEPING)
   // Incremented at the start of each run to tag edges created/validated

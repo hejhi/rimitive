@@ -385,9 +385,9 @@ export function createDependencyGraph(): DependencyGraph {
       const prevVersion: number = parentEdge.version;
       let changed = false;
 
-      // If subtree was stale and this is a computed, recompute now
+      // If subtree was stale and this is a computed, update its value now
       if (stale) {
-        currentConsumer._onOutdated();
+        currentConsumer._updateValue();
         if ('_version' in currentConsumer) {
           changed = prevVersion !== currentConsumer._version;
         }
