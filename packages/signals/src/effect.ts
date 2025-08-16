@@ -180,7 +180,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
           return;
         }
 
-        // If invalidated, refreshConsumers marked STALE; fall through to run
+        // If stale, refreshConsumers marked STALE; fall through to run
       }
 
       // ALGORITHM: Atomic State Transition

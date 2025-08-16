@@ -413,8 +413,8 @@ export function createDependencyGraph(): DependencyGraph {
     }
 
     if (stale) {
-      // Dependencies changed - mark as STALE for next time
-      consumer._flags |= STALE;
+      // Dependencies changed - mark as STALE and clear INVALIDATED
+      consumer._flags = (consumer._flags & ~INVALIDATED) | STALE;
     } else {
       // False alarm - clear INVALIDATED and cache global version
       consumer._flags &= ~INVALIDATED;
