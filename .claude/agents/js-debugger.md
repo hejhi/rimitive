@@ -79,7 +79,7 @@ console.log(`Op time: ${(performance.now() - start) / ops}µs per op`);
 **Bit Flags in Signals**:
 - `RUNNING = 1 << 0` - Currently executing
 - `NOTIFIED = 1 << 1` - Marked for update
-- `OUTDATED = 1 << 2` - Dependencies changed
+- `STALE = 1 << 2` - Dependencies changed
 - `DISPOSED = 1 << 3` - No longer active
 - `HAS_ERROR = 1 << 4` - Error state
 

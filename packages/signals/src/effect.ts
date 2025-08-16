@@ -64,7 +64,7 @@ export interface EffectDisposer {
 const {
   RUNNING,
   DISPOSED,
-  OUTDATED,
+  STALE,
   NOTIFIED,
   DIRTY_FLAGS,
   SCHEDULED,
@@ -93,19 +93,19 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
   class Effect implements EffectInterface {
     // OPTIMIZATION: Hot/Cold Field Separation
     // Group frequently accessed fields together for better CPU cache locality
-    
+
     // Hot fields (accessed on every schedule/flush cycle)
-    _flags = OUTDATED;                                   // Start OUTDATED to run on creation
-    _sources: Edge | undefined = undefined;              // Dependencies this effect reads
+    _flags = STALE; // Start STALE to run on creation
+    _sources: Edge | undefined = undefined; // Dependencies this effect reads
     _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
     // Generation counter for dynamic dependency pruning
     _gen = 0;
-    
+
     // Cold fields (accessed less frequently)
-    __type = 'effect' as const;                          // Type discriminator
-    _callback: () => void | (() => void);                // User's effect function
-    _cleanup: (() => void) | undefined = undefined;      // Cleanup from previous run
-    
+    __type = 'effect' as const; // Type discriminator
+    _callback: () => void | (() => void); // User's effect function
+    _cleanup: (() => void) | undefined = undefined; // Cleanup from previous run
+
     // OPTIMIZATION: Last Verified Global Version
     // Cache the global ctx.version when we've verified that dependencies
     // did NOT change. If another NOTIFIED arrives without a global version
@@ -120,13 +120,13 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // ALGORITHM: Effect Invalidation with Linked List Queue
       // Effects are queued using intrusive linked list
       // The NOTIFIED flag prevents duplicate scheduling
-      
+
       // Early exit if already processed
       if (this._flags & NOTIFIED) return;
-      
+
       // Mark as NOTIFIED
       this._flags |= NOTIFIED;
-      
+
       // Queue the effect if not already queued
       if (!(this._flags & SCHEDULED)) {
         // Mark as scheduled
@@ -139,12 +139,12 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         }
         this._nextScheduled = undefined; // Tail has no next
       }
-      
+
       // If not in a batch, flush immediately
       if (ctx.batchDepth === 0) {
         let current = ctx.queueHead;
         ctx.queueHead = ctx.queueTail = undefined;
-        
+
         while (current) {
           const next = current._nextScheduled;
           current._nextScheduled = undefined;
@@ -163,23 +163,24 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // OPTIMIZATION: Check if effect needs to run
       // Skip if not marked as dirty (using compound check)
       if (!(this._flags & DIRTY_FLAGS)) return;
-      
-      // If only NOTIFIED (not OUTDATED), check if dependencies actually changed
-      if (!(this._flags & OUTDATED)) {
+
+      // If only NOTIFIED (not STALE), check if dependencies actually changed
+      if (!(this._flags & STALE)) {
         // FAST PATH: If we've already verified no change at this global version,
         // clear NOTIFIED and bail without rechecking dependencies.
         if (this._verifiedVersion === ctx.version) {
           this._flags &= ~NOTIFIED;
           return;
         }
-        
+
         // Slow path: perform dependency check
         if (!refreshConsumers(this)) {
           // Cache the verified clean global version to skip future checks
           this._verifiedVersion = ctx.version;
           return;
         }
-        // If dirty, shouldNodeUpdate marked OUTDATED; fall through to run
+
+        // If dirty, refreshConsumers marked STALE; fall through to run
       }
 
       // ALGORITHM: Atomic State Transition
@@ -196,7 +197,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       ctx.currentConsumer = this;
 
       try {
-
         // ALGORITHM: Cleanup Before Re-execution
         // If the effect returned a cleanup function last time, run it first
         // This ensures proper resource cleanup (event listeners, timers, etc)
@@ -204,7 +204,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
           this._cleanup();
           this._cleanup = undefined;
         }
-        
+
         // ALGORITHM: Execute Effect with Optional Cleanup Return
         // The effect can return a cleanup function that will be called:
         // 1. Before the next execution
@@ -217,16 +217,16 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         // ALGORITHM: Cleanup Phase (must run even if effect throws)
         // 1. Restore previous consumer context
         ctx.currentConsumer = prevConsumer;
-        
+
         // 2. Clear RUNNING flag to allow future executions
         this._flags &= ~RUNNING;
-        
+
         // 3. Remove stale dependencies (dynamic dependency tracking)
         pruneStale(this);
       }
     }
 
-    _refresh(): boolean {
+    _onOutdated(): boolean {
       // Effects are always considered "fresh" - they don't produce values
       // This method exists to satisfy the ConsumerNode interface
       // Effects are scheduled for execution through _invalidate/_flush instead
@@ -238,15 +238,15 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // 1. Mark as disposed and run any pending cleanup
       if (this._flags & DISPOSED) return;
       this._flags |= DISPOSED;
-      
+
       if (this._cleanup) {
         this._cleanup();
         this._cleanup = undefined;
       }
-      
+
       // 2. Remove all dependency edges for garbage collection
       detachAll(this);
-      
+
       // TODO: Should we also clear _callback to free closure memory?
     }
   }

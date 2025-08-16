@@ -3,7 +3,7 @@ import { createGraphWalker } from './graph-walker';
 import { CONSTANTS } from '../constants';
 import type { Edge, ConsumerNode, ProducerNode, ScheduledNode } from '../types';
 
-const { NOTIFIED, OUTDATED, DISPOSED, RUNNING } = CONSTANTS;
+const { NOTIFIED, STALE, DISPOSED, RUNNING } = CONSTANTS;
 
 describe('GraphWalker', () => {
   let scheduledNodes: ScheduledNode[];
@@ -37,7 +37,7 @@ describe('GraphWalker', () => {
       _sources: undefined,
       _flags: flags,
       _invalidate: () => {},
-      _refresh: () => true,
+      _onOutdated: () => true,
     };
 
     if (isScheduled) {
@@ -75,9 +75,9 @@ describe('GraphWalker', () => {
 
     walk(edge, visit);
 
-    // With push-pull optimization, computeds only get NOTIFIED, not OUTDATED
+    // With push-pull optimization, computeds only get NOTIFIED, not STALE
     expect(target._flags & NOTIFIED).toBeTruthy();
-    expect(target._flags & OUTDATED).toBeFalsy();
+    expect(target._flags & STALE).toBeFalsy();
   });
 
   it('should mark effects as NOTIFIED only (lazy evaluation for all)', () => {
@@ -87,9 +87,9 @@ describe('GraphWalker', () => {
 
     walk(edge, visit);
 
-    // Effects now also use lazy evaluation - only NOTIFIED, not OUTDATED
+    // Effects now also use lazy evaluation - only NOTIFIED, not STALE
     expect(effect._flags & NOTIFIED).toBeTruthy();
-    expect(effect._flags & OUTDATED).toBeFalsy();
+    expect(effect._flags & STALE).toBeFalsy();
   });
 
   it('should skip already notified nodes', () => {
@@ -287,7 +287,7 @@ describe('GraphWalker', () => {
     // All nodes should be notified (but not outdated - that's determined lazily)
     for (let i = 1; i < 100; i++) {
       expect(nodes[i]!._flags & NOTIFIED).toBeTruthy();
-      expect(nodes[i]!._flags & OUTDATED).toBeFalsy();
+      expect(nodes[i]!._flags & STALE).toBeFalsy();
     }
   });
 });

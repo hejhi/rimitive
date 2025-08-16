@@ -60,20 +60,23 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
   } = ctx;
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;
-    _callback: (value: T) => void;           // User's callback function
-    _flags = 0;                              // State flags (NOTIFIED, DISPOSED, SKIP_EQUALITY)
-    _lastValue: T;                           // Cached value for equality check
-    _sources: Edge | undefined = undefined;  // Single edge to source signal/computed
+    _callback: (value: T) => void; // User's callback function
+    _flags = 0; // State flags (NOTIFIED, DISPOSED, SKIP_EQUALITY)
+    _lastValue: T; // Cached value for equality check
+    _sources: Edge | undefined = undefined; // Single edge to source signal/computed
     _nextScheduled?: ScheduledNode = undefined; // Link in scheduling queue
 
-    constructor(source: Readable<T> & ProducerNode, callback: (value: T) => void) {
+    constructor(
+      source: Readable<T> & ProducerNode,
+      callback: (value: T) => void
+    ) {
       this._callback = callback;
-      
+
       // ALGORITHM: Initial Value Caching
       // Store the initial value for comparison in _flush
       // This read doesn't establish dependency (we do that manually)
       this._lastValue = source.value;
-      
+
       // Dependency is established later via _setupDependency
     }
 
@@ -81,13 +84,13 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // ALGORITHM: Queue for Immediate Propagation with Linked List
       // When source changes, queue for execution using intrusive list
       // Skip if already NOTIFIED or DISPOSED
-      
+
       // Early exit if already processed or disposed
       if (this._flags & (NOTIFIED | DISPOSED)) return;
-      
+
       // Mark with NOTIFIED flag
       this._flags |= NOTIFIED;
-      
+
       // Queue the subscription if not already queued
       if (!(this._flags & SCHEDULED)) {
         // Mark as scheduled
@@ -100,12 +103,12 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
         }
         this._nextScheduled = undefined; // Tail has no next
       }
-      
+
       // If not in a batch, flush immediately
       if (ctx.batchDepth === 0) {
         let current = ctx.queueHead;
         ctx.queueHead = ctx.queueTail = undefined;
-        
+
         while (current) {
           const next = current._nextScheduled;
           current._nextScheduled = undefined;
@@ -119,23 +122,23 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     _flush(): void {
       // Skip if disposed
       if (this._flags & DISPOSED) return;
-      
+
       // Clear NOTIFIED flag
       this._flags &= ~NOTIFIED;
-      
+
       // ALGORITHM: Source Resolution
       // Get the source from our single dependency edge
       if (!this._sources) return;
       const source = this._sources.source as Readable<T> & ProducerNode;
-      
+
       // Read current value (this doesn't track dependency since we're not RUNNING)
       const currentValue = source.value;
-      
+
       // ALGORITHM: Conditional Callback Execution
       // Only call callback if:
       // 1. skipEqualityCheck is enabled (always call)
       // 2. Value actually changed (using === equality)
-      if ((this._flags & SKIP_EQUALITY) || currentValue !== this._lastValue) {
+      if (this._flags & SKIP_EQUALITY || currentValue !== this._lastValue) {
         // Update cached value before calling callback
         // This ensures callback sees consistent state
         this._lastValue = currentValue;
@@ -144,7 +147,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // FLAG: No error handling - callback errors will propagate
     }
 
-    _refresh(): boolean {
+    _onOutdated(): boolean {
       // Subscribe nodes are always considered "fresh" - they don't produce values
       // This method exists to satisfy the ConsumerNode interface
       // Subscribe nodes are scheduled for execution through _invalidate/_flush instead
@@ -163,7 +166,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // ALGORITHM: Manual Edge Creation
       // Subscribe doesn't use automatic dependency tracking
       // Instead, we manually create a single edge to the source
-      
+
       // Create new edge object
       const node = {} as Edge;
 
@@ -171,24 +174,24 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       node.source = source;
       node.target = this;
       node.version = source._version; // Current version for staleness checks
-      
+
       // This subscribe only has one source, so no source list needed
       node.nextSource = undefined;
       node.prevSource = undefined;
-      
+
       // ALGORITHM: Insert at Head of Target List
       // Add to the beginning of source's target list
       node.nextTarget = source._targets;
       node.prevTarget = undefined;
-      
+
       // Update old head's back pointer
       if (source._targets) {
         source._targets.prevTarget = node;
       }
-      
+
       // Update source's head pointer
       source._targets = node;
-      
+
       // Store as our single source
       this._sources = node;
     }

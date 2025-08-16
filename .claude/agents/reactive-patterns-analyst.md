@@ -106,14 +106,14 @@ function propagate() {
 ```javascript
 // Push phase: Mark stale
 function markStale(node: ConsumerNode) {
-  if (node._flags & OUTDATED) return; // Already marked
-  node._flags |= OUTDATED;
+  if (node._flags & STALE) return; // Already marked
+  node._flags |= STALE;
   node._dependents.forEach(markStale);
 }
 
 // Pull phase: Recompute if needed  
 function ensureFresh(node: ComputedNode) {
-  if (!(node._flags & OUTDATED)) return node._value;
+  if (!(node._flags & STALE)) return node._value;
   
   // Check dependencies first (pull)
   let needsUpdate = false;
@@ -129,7 +129,7 @@ function ensureFresh(node: ComputedNode) {
     node._version++;
   }
   
-  node._flags &= ~OUTDATED;
+  node._flags &= ~STALE;
   return node._value;
 }
 ```

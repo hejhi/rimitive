@@ -41,18 +41,22 @@ import type { GraphWalker } from './helpers/graph-walker';
 import type { WorkQueue } from './helpers/work-queue';
 // no-op import removed: dev-only cycle detection eliminated
 
-export interface ComputedInterface<T = unknown> extends Readable<T>, ProducerNode, ConsumerNode, Disposable {
+export interface ComputedInterface<T = unknown>
+  extends Readable<T>,
+    ProducerNode,
+    ConsumerNode,
+    Disposable {
   __type: 'computed';
-  readonly value: T;  // Getter triggers lazy evaluation
-  peek(): T;          // Non-tracking read (still evaluates if needed)
-  dispose(): void;    // Cleanup method to break circular references
-  _refresh(): boolean;  // Check if needs update without updating (preact-style)
+  readonly value: T; // Getter triggers lazy evaluation
+  peek(): T; // Non-tracking read (still evaluates if needed)
+  dispose(): void; // Cleanup method to break circular references
+  _onOutdated(): boolean; // Check if needs update without updating (preact-style)
 }
 
 const {
   RUNNING,
   DISPOSED,
-  OUTDATED,
+  STALE,
   NOTIFIED,
   DIRTY_FLAGS,
 } = CONSTANTS;
@@ -79,52 +83,52 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
   
   class Computed<T> implements ComputedInterface<T> {
     __type = 'computed' as const;
-    
+
     // User's computation function - should be pure for best results
     _callback: () => T;
-    
+
     // ALGORITHM: Memoization Cache
     // Stores the last computed value to avoid redundant computation.
     // undefined initially to force first computation.
     _value: T | undefined = undefined;
-    
+
     // ALGORITHM: Dynamic Dependency List
     // Linked list of edges pointing to our dependencies (signals/computeds we read).
     // This list is rebuilt on each computation to handle conditional dependencies.
     _sources: Edge | undefined = undefined;
-    
+
     // OPTIMIZATION: Initial State Flags
-    // Start as OUTDATED to force computation on first access.
-    _flags = OUTDATED;
+    // Start as STALE to force computation on first access.
+    _flags = STALE;
     // Generation counter for dynamic dependency pruning
     _gen = 0;
-    
+
     // Linked list of edges pointing to our dependents (computeds/effects that read us)
     _targets: Edge | undefined = undefined;
-    
+
     // OPTIMIZATION: Edge Cache
     // Same optimization as signals - cache last edge for repeated access
     _lastEdge: Edge | undefined = undefined;
-    
+
     // ALGORITHM: Local Version Counter
     // Incremented only when our computed value actually changes.
     // This enables dependents to skip recomputation if we didn't change.
     _version = 0;
-    
+
     // CACHED GLOBAL VERSION (FAST-PATH OPTIMIZATION)
     // Caches ctx.version when this computed was last verified as up-to-date.
     // Enables the critical "nothing changed" fast path.
-    // 
+    //
     // PURPOSE: O(1) optimization for stable systems
     // - If _globalVersion === ctx.version, skip ALL dependency checks
     // - Turns potentially O(n) traversal into O(1) check
     // - Particularly effective for deep dependency trees
-    // 
+    //
     // NOT REDUNDANT: This is a performance cache that avoids traversing
     // the dependency graph when nothing has changed globally.
     // Without it, every access would need to validate all dependencies.
     _globalVersion = -1;
-    
+
     // NOTE: Edge lifecycle is managed via per-edge mark bits during runs
 
     constructor(compute: () => T) {
@@ -140,7 +144,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         this._update();
         return this._value!;
       }
-      
+
       // ALGORITHM: Dependency Registration (Pull Phase)
       // If we're being read from within another computed/effect, register the dependency
       const isTracking = !!(consumer._flags & RUNNING);
@@ -148,12 +152,12 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Lazy Evaluation
       // Only recompute if our dependencies have changed
       this._update();
-      
+
       // ALGORITHM: Post-Update Edge Synchronization
       // If we have a consumer, (now) register/update the dependency edge
       // Doing this once avoids redundant edge work on the hot path.
       if (isTracking) ensureLink(this, consumer, this._version);
-      
+
       // Value is guaranteed to be defined after _update
       return this._value!;
     }
@@ -172,14 +176,14 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Skip if disposed (node is dead)
       // Skip if running (will see changes when done)
       if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
-      
+
       // Mark as potentially dirty
       this._flags |= NOTIFIED;
-      
+
       // ALGORITHM: Delegated Propagation via GraphWalker
       // Use the centralized graph traversal system
       if (!this._targets) return;
-      
+
       // Use GraphWalker's optimized DFS traversal
       // This handles fast paths, stack management, and flag checking
       dfs(this._targets, notifyNode);
@@ -194,20 +198,20 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       if (this._flags & RUNNING) return;
 
       // ALGORITHM: Conditional Recomputation
-      // Check OUTDATED flag first (common case) or check dependencies if NOTIFIED
+      // Check STALE flag first (common case) or check dependencies if NOTIFIED
       // Skip refreshing all consumers.
-      if (this._flags & OUTDATED) {
-        this._refresh();
+      if (this._flags & STALE) {
+        this._onOutdated();
         return;
       }
 
-      // TODO: Why do we need to call this._refresh() after calling refreshConsumers, which...
+      // TODO: Why do we need to call this._onOutdated() after calling refreshConsumers, which...
       // calls this.refresh()? Why can't we just call refreshConsumers(this) and be done? it causes
       // a lot of tests to fail.
-      if (refreshConsumers(this)) this._refresh();
+      if (refreshConsumers(this)) this._onOutdated();
     }
 
-    _refresh(): boolean {
+    _onOutdated(): boolean {
       // ALGORITHM: Atomic Flag Update
       // Use single assignment with bitwise operations for atomicity
       // Set RUNNING, clear all dirty flags in one operation
@@ -252,21 +256,20 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       return true;
     }
 
-
     dispose(): void {
       // ALGORITHM: Safe Disposal
       // Ensure idempotent disposal - can be called multiple times safely
       if (this._flags & DISPOSED) return;
-      
+
       // Mark as disposed to prevent further updates
       this._flags |= DISPOSED;
-      
+
       // Remove all edges to sources (break circular references for GC)
       detachAll(this);
-      
+
       // Clear cached value to free memory
       this._value = undefined;
-      
+
       // TODO: Should we also clear _targets to help dependents?
       // Currently dependents will discover this node is disposed when they update
     }

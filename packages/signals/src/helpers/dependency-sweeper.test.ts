@@ -23,7 +23,7 @@ describe('Dependency Sweeper', () => {
     _sources: undefined,
     _flags: 0,
     _invalidate: () => {},
-    _refresh: () => true,
+    _onOutdated: () => true,
     _gen: 0,
   });
 

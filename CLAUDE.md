@@ -181,7 +181,7 @@ interface Edge {
 
 **Bit flags (pack booleans):**
 ```typescript
-this._flags = NOTIFIED | OUTDATED;
+this._flags = NOTIFIED | STALE;
 if (this._flags & RUNNING) return;
 ```
 

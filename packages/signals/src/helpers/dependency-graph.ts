@@ -46,7 +46,7 @@ import type { ProducerNode, ConsumerNode, Edge } from '../types';
 export type EdgeCache = { _lastEdge?: Edge };
 export type TrackedProducer = ProducerNode & EdgeCache;
 
-const { TRACKING, NOTIFIED, OUTDATED, DIRTY_FLAGS } = CONSTANTS;
+const { TRACKING, NOTIFIED, STALE, DIRTY_FLAGS } = CONSTANTS;
 
 export interface DependencyGraph {
   connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
@@ -218,7 +218,7 @@ export function createDependencyGraph(): DependencyGraph {
    */
   const refreshConsumers = (consumer: ConsumerNode): boolean => {
     // OPTIMIZATION: Only called for NOTIFIED case now
-    // OUTDATED is handled inline in hot paths
+    // STALE is handled inline in hot paths
     if (!(consumer._flags & NOTIFIED)) return false;
 
     // If all direct sources have matching versions and are not themselves
@@ -254,7 +254,7 @@ export function createDependencyGraph(): DependencyGraph {
     // TODO: is the above redundant?
     stale = false;
 
-    if (consumer._flags & OUTDATED) return true;
+    if (consumer._flags & STALE) return true;
 
     // OPTIMIZATION: Fast path for linear chains (single dependency)
     // Common pattern: computed(() => signal.value * 2)
@@ -277,7 +277,7 @@ export function createDependencyGraph(): DependencyGraph {
       // If we're here, the firstEdgeSource is both a producer and a consumer node, with its own sources
       // Check flags and version
       const firstEdgeSourceFlags = firstEdgeSource._flags || 0;
-      if (firstEdgeSourceFlags & OUTDATED) return true;
+      if (firstEdgeSourceFlags & STALE) return true;
 
       // Clean fast path
       // Check if the edge version matches the source version and isn't dirty. If so, we can return.
@@ -325,7 +325,7 @@ export function createDependencyGraph(): DependencyGraph {
         const currentVersion = consumerSource._version;
 
         // Explicitly outdated dependency
-        if (sourceFlags & OUTDATED) {
+        if (sourceFlags & STALE) {
           stale = true;
           // Continue checking siblings - no early exit
           currentEdge = currentEdge.nextSource;
@@ -387,7 +387,7 @@ export function createDependencyGraph(): DependencyGraph {
 
       // If subtree was dirty and this is a computed, recompute now
       if (stale) {
-        currentConsumer._refresh();
+        currentConsumer._onOutdated();
         if ('_version' in currentConsumer) {
           changed = prevVersion !== currentConsumer._version;
         }
@@ -413,8 +413,8 @@ export function createDependencyGraph(): DependencyGraph {
     }
 
     if (stale) {
-      // Dependencies changed - mark as OUTDATED for next time
-      consumer._flags |= OUTDATED;
+      // Dependencies changed - mark as STALE for next time
+      consumer._flags |= STALE;
     } else {
       // False alarm - clear NOTIFIED and cache global version
       consumer._flags &= ~NOTIFIED;

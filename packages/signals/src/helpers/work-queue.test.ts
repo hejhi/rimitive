@@ -19,7 +19,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _refresh: () => true,
+      _onOutdated: () => true,
     };
     
     helpers.enqueue(node);
@@ -39,7 +39,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _refresh: () => true,
+      _onOutdated: () => true,
     };
     
     // Enqueue once
@@ -64,7 +64,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _refresh: () => true,
+      _onOutdated: () => true,
     };
     
     helpers.dispose(node, cleanupFn);
@@ -93,7 +93,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _refresh: () => true,
+      _onOutdated: () => true,
     };
     
     const node2: ScheduledNode = {
@@ -104,7 +104,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _refresh: () => true,
+      _onOutdated: () => true,
     };
     
     const node3: ScheduledNode = {
@@ -115,7 +115,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _refresh: () => true,
+      _onOutdated: () => true,
     };
     
     // Schedule nodes in order
@@ -159,7 +159,7 @@ describe('WorkQueue', () => {
       _invalidate: vi.fn(),
       _sources: undefined,
       dispose: () => {},
-      _refresh: () => true,
+      _onOutdated: () => true,
     };
     
     helpers.enqueue(node);
