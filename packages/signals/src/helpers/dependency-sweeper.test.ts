@@ -24,7 +24,7 @@ describe('Dependency Sweeper', () => {
     _flags: 0,
     _invalidate: () => {},
     _onOutdated: () => true,
-    _gen: 0,
+    _runVersion: 0,
   });
 
   it('detaches all edges on dispose', () => {
@@ -57,7 +57,7 @@ describe('Dependency Sweeper', () => {
     graph.ensureLink(c, target, c._version);
 
     // Next run (gen 1): only access a and c
-    target._gen = 1;
+    target._runVersion = 1;
     // Access a via cached fast path
     a._version = 2;
     graph.ensureLink(a, target, a._version);
@@ -97,7 +97,7 @@ describe('Dependency Sweeper', () => {
     graph.ensureLink(a, target, a._version);
     graph.ensureLink(b, target, b._version);
 
-    target._gen = 2; // new run, but we do not access any producer
+    target._runVersion = 2; // new run, but we do not access any producer
     sweeper.pruneStale(target);
 
     // With edge recycling, edges remain but are marked as recyclable

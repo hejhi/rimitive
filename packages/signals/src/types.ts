@@ -74,7 +74,7 @@ export interface ConsumerNode extends ReactiveNode {
   // Incremented at the start of each run to tag edges created/validated
   // during that run. Edges not matching the current generation are pruned.
   // Optional for legacy/tests; runtime classes set this to a number.
-  _gen?: number;
+  _runVersion?: number;
 }
 
 // PATTERN: Deferred Execution Queue
@@ -126,8 +126,8 @@ export interface Edge {
   version: number;
 
   // GENERATION TAG FOR DYNAMIC DEPENDENCY TRACKING
-  // Set to the consumer's _gen during the run that touched this edge.
-  // After the run, edges whose gen !== consumer._gen are pruned.
+  // Set to the consumer's _runVersion during the run that touched this edge.
+  // After the run, edges whose gen !== consumer._runVersion are pruned.
   gen?: number;
 }
 

@@ -85,7 +85,7 @@ export function createDependencySweeper(
   const pruneStale = (consumer: ConsumerNode): void => {
     let node = consumer._sources;
 
-    const currentGen = consumer._gen;
+    const currentGen = consumer._runVersion;
     // Walk the linked list, marking stale nodes as recyclable
     while (node !== undefined) {
       if (node.gen !== currentGen) {

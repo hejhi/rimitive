@@ -83,7 +83,7 @@ export function createDependencyGraph(): DependencyGraph {
        source: producer,
        target: consumer,
        version: producerVersion, // Store producer's version at time of edge creation
-       gen: consumer._gen ?? 0, // Tag with current consumer generation
+       gen: consumer._runVersion ?? 0, // Tag with current consumer generation
        prevSource: undefined, // Will be head of sources, so no previous
        prevTarget, // Link to current tail of producer's targets  
        nextSource, // Link to old head of consumer's sources
@@ -131,7 +131,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (cached && cached.target === consumer) {
       // Edge exists in cache - just update version and generation tag
       cached.version = producerVersion;
-      cached.gen = consumer._gen ?? 0;
+      cached.gen = consumer._runVersion ?? 0;
       // Move to tail if not already there
       if (consumer._sourcesTail !== cached) {
         consumer._sourcesTail = cached;
@@ -145,7 +145,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (tail && tail.source === producer) {
       // Found at tail - update and cache
       tail.version = producerVersion;
-      tail.gen = consumer._gen ?? 0;
+      tail.gen = consumer._runVersion ?? 0;
       producer._lastEdge = tail;
       // Tail is already correct, no need to update
       return;
@@ -155,7 +155,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (tail?.prevSource && tail.prevSource.source === producer) {
       const edge = tail.prevSource;
       edge.version = producerVersion;
-      edge.gen = consumer._gen ?? 0;
+      edge.gen = consumer._runVersion ?? 0;
       producer._lastEdge = edge;
       consumer._sourcesTail = edge; // Move to tail for next access
       return;
@@ -169,7 +169,7 @@ export function createDependencyGraph(): DependencyGraph {
         // Found edge - either active (version >= 0) or recyclable (version = -1)
         // Reactivate/update it
         node.version = producerVersion;
-        node.gen = consumer._gen ?? 0;
+        node.gen = consumer._runVersion ?? 0;
         producer._lastEdge = node;
         // Move to tail for better locality
         consumer._sourcesTail = node;

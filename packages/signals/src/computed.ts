@@ -101,7 +101,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // Start as STALE to force computation on first access.
     _flags = STALE;
     // Generation counter for dynamic dependency pruning
-    _gen = 0;
+    _runVersion = 0;
 
     // Linked list of edges pointing to our dependents (computeds/effects that read us)
     _targets: Edge | undefined = undefined;
@@ -218,7 +218,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       this._flags = (this._flags | RUNNING) & ~PENDING;
 
       // Increment generation for this run; edges touched will carry this tag
-      this._gen = (this._gen + 1) | 0;
+      this._runVersion = (this._runVersion + 1) | 0;
       // Edges will be tagged via ensureLink; stale edges pruned after run
 
       // ALGORITHM: Context Switching for Dependency Tracking
