@@ -16,20 +16,20 @@
  * - Set flag: node._flags |= CONSTANTS.STALE
  * - Clear flag: node._flags &= ~CONSTANTS.STALE  
  * - Check flag: node._flags & CONSTANTS.STALE
- * - Check multiple: node._flags & (CONSTANTS.STALE | CONSTANTS.NOTIFIED)
+ * - Check multiple: node._flags & (CONSTANTS.STALE | CONSTANTS.INVALIDATED)
  */
 export const CONSTANTS = {
   // ALGORITHM: Push-Pull State Flags
   // These two flags implement the core push-pull algorithm:
   
-  // NOTIFIED (bit 0): Set during "push" phase when a dependency changes.
+  // INVALIDATED (bit 0): Set during "push" phase when a dependency changes.
   // Means "this node MIGHT be dirty, check when accessed"
   // This enables lazy evaluation - we don't recompute until needed.
-  NOTIFIED: 1 << 0,     // 1 (binary: 0000001)
+  INVALIDATED: 1 << 0,     // 1 (binary: 0000001)
   
   // STALE (bit 1): Set during "pull" phase when we confirm the node IS dirty.
   // Means "this node's cached value is stale and MUST be recomputed"
-  // Stronger guarantee than NOTIFIED.
+  // Stronger guarantee than INVALIDATED.
   STALE: 1 << 1,     // 2 (binary: 0000010)
   
   // RUNNING (bit 2): Prevents infinite loops during computation.
@@ -60,7 +60,7 @@ export const CONSTANTS = {
   SKIP_EQUALITY: 1 << 6, // 64 (binary: 1000000)
   
   // OPTIMIZATION NOTE: Bits are ordered by frequency of checking:
-  // - NOTIFIED/STALE are checked most often (every read)
+  // - INVALIDATED/STALE are checked most often (every read)
   // - RUNNING/DISPOSED are checked during updates
   // - Others are checked less frequently
   // Lower bits = more frequent checks = better CPU branch prediction
@@ -68,8 +68,8 @@ export const CONSTANTS = {
   // COMPOUND FLAGS: Pre-computed combinations for efficient checks
   // These avoid multiple bitwise operations in hot paths
   
-  // DIRTY_FLAGS: Either NOTIFIED or STALE means the node needs attention
-  DIRTY_FLAGS: (1 << 0) | (1 << 1), // 3 (NOTIFIED | STALE)
+  // PENDING: Either INVALIDATED or STALE means the node needs attention
+  PENDING: (1 << 0) | (1 << 1), // 3 (INVALIDATED | STALE)
   
   // SKIP_FLAGS: Flags that indicate we should skip processing  
   SKIP_FLAGS: (1 << 2) | (1 << 3), // 12 (RUNNING | DISPOSED)

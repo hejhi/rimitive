@@ -57,8 +57,8 @@ const {
   RUNNING,
   DISPOSED,
   STALE,
-  NOTIFIED,
-  DIRTY_FLAGS,
+  INVALIDATED,
+  PENDING,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -175,10 +175,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Skip if already notified (avoid redundant traversal)
       // Skip if disposed (node is dead)
       // Skip if running (will see changes when done)
-      if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
+      if (this._flags & (INVALIDATED | DISPOSED | RUNNING)) return;
 
       // Mark as potentially dirty
-      this._flags |= NOTIFIED;
+      this._flags |= INVALIDATED;
 
       // ALGORITHM: Delegated Propagation via GraphWalker
       // Use the centralized graph traversal system
@@ -198,7 +198,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       if (this._flags & RUNNING) return;
 
       // ALGORITHM: Conditional Recomputation
-      // Check STALE flag first (common case) or check dependencies if NOTIFIED
+      // Check STALE flag first (common case) or check dependencies if INVALIDATED
       // Skip refreshing all consumers.
       if (this._flags & STALE) {
         this._onOutdated();
@@ -215,7 +215,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Atomic Flag Update
       // Use single assignment with bitwise operations for atomicity
       // Set RUNNING, clear all dirty flags in one operation
-      this._flags = (this._flags | RUNNING) & ~DIRTY_FLAGS;
+      this._flags = (this._flags | RUNNING) & ~PENDING;
 
       // Increment generation for this run; edges touched will carry this tag
       this._gen = (this._gen + 1) | 0;

@@ -1,11 +1,11 @@
 import { CONSTANTS } from '../constants';
 import type { Edge, ConsumerNode } from '../types';
 
-const { NOTIFIED, DISPOSED, RUNNING } = CONSTANTS;
+const { INVALIDATED, DISPOSED, RUNNING } = CONSTANTS;
 
 // OPTIMIZATION: Pre-computed Bitmask
 // Combine flags that indicate a node should be skipped during traversal
-const SKIP_FLAGS = NOTIFIED | DISPOSED | RUNNING;
+const SKIP_FLAGS = INVALIDATED | DISPOSED | RUNNING;
 
 // Intrusive stack for DFS traversal - zero allocations
 // Edge extends with _stackNext pointer for stack operations
@@ -33,8 +33,8 @@ export interface GraphWalker {
  * Creates a graph walker for efficient dependency graph traversal.
  *
  * ALGORITHM: Iterative DFS with flag-based short-circuiting
- * - Uses NOTIFIED/DISPOSED/RUNNING flags to avoid redundant work
- * - Relies on NOTIFIED as a per-walk dedup marker (set on first visit)
+ * - Uses INVALIDATED/DISPOSED/RUNNING flags to avoid redundant work
+ * - Relies on INVALIDATED as a per-walk dedup marker (set on first visit)
  */
 export function createGraphWalker(): GraphWalker {
   // Depth-first traversal with intrusive stack (zero allocations)
@@ -52,7 +52,7 @@ export function createGraphWalker(): GraphWalker {
         const target = edge.target as ConsumerNode;
         if (target._flags & SKIP_FLAGS) break;
 
-        target._flags |= NOTIFIED;
+        target._flags |= INVALIDATED;
         visit(target);
         edge = (target as unknown as { _targets?: Edge })._targets;
       }
@@ -74,8 +74,8 @@ export function createGraphWalker(): GraphWalker {
         continue;
       }
 
-      // Mark as NOTIFIED (lazy invalidation) and invoke visitor
-      target._flags |= NOTIFIED;
+      // Mark as INVALIDATED (lazy invalidation) and invoke visitor
+      target._flags |= INVALIDATED;
       visit(target);
 
       // Optimized traversal with reduced branching
@@ -138,7 +138,7 @@ export function createGraphWalker(): GraphWalker {
         continue;
       }
 
-      target._flags |= NOTIFIED;
+      target._flags |= INVALIDATED;
       visit(target);
 
       const nextSibling = currentEdge.nextTarget;

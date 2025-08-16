@@ -78,7 +78,7 @@ console.log(`Op time: ${(performance.now() - start) / ops}µs per op`);
 
 **Bit Flags in Signals**:
 - `RUNNING = 1 << 0` - Currently executing
-- `NOTIFIED = 1 << 1` - Marked for update
+- `INVALIDATED = 1 << 1` - Marked for update
 - `STALE = 1 << 2` - Dependencies changed
 - `DISPOSED = 1 << 3` - No longer active
 - `HAS_ERROR = 1 << 4` - Error state
@@ -105,13 +105,13 @@ When debugging, always provide:
 
 Example:
 ```
-ROOT CAUSE: Line 142 - Missing NOTIFIED flag check before propagation
+ROOT CAUSE: Line 142 - Missing INVALIDATED flag check before propagation
 MECHANISM: 
   1. Effect runs, setting _flags = RUNNING
   2. Dependency notifies during execution
-  3. NOTIFIED flag set but ignored due to RUNNING
+  3. INVALIDATED flag set but ignored due to RUNNING
   4. Effect completes without re-running
-FIX: Add guard: if (this._flags & NOTIFIED && !(this._flags & RUNNING))
+FIX: Add guard: if (this._flags & INVALIDATED && !(this._flags & RUNNING))
 VERIFICATION: Add test with nested effect triggering parent
 ```
 

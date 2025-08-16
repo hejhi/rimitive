@@ -27,7 +27,7 @@
  * 
  * 4. DEDUPLICATION:
  *    - Each effect scheduled at most once per batch
- *    - NOTIFIED flag prevents duplicate scheduling
+ *    - INVALIDATED flag prevents duplicate scheduling
  *    - Improves performance with many dependency changes
  * 
  * INSPIRATION:
@@ -65,8 +65,8 @@ const {
   RUNNING,
   DISPOSED,
   STALE,
-  NOTIFIED,
-  DIRTY_FLAGS,
+  INVALIDATED,
+  PENDING,
   SCHEDULED,
 } = CONSTANTS;
 
@@ -108,8 +108,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
     // OPTIMIZATION: Last Verified Global Version
     // Cache the global ctx.version when we've verified that dependencies
-    // did NOT change. If another NOTIFIED arrives without a global version
-    // bump, we can skip shouldNodeUpdate() entirely and clear NOTIFIED.
+    // did NOT change. If another INVALIDATED arrives without a global version
+    // bump, we can skip shouldNodeUpdate() entirely and clear INVALIDATED.
     _verifiedVersion = -1;
 
     constructor(fn: () => void | (() => void)) {
@@ -119,13 +119,13 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     _invalidate(): void {
       // ALGORITHM: Effect Invalidation with Linked List Queue
       // Effects are queued using intrusive linked list
-      // The NOTIFIED flag prevents duplicate scheduling
+      // The INVALIDATED flag prevents duplicate scheduling
 
       // Early exit if already processed
-      if (this._flags & NOTIFIED) return;
+      if (this._flags & INVALIDATED) return;
 
-      // Mark as NOTIFIED
-      this._flags |= NOTIFIED;
+      // Mark as INVALIDATED
+      this._flags |= INVALIDATED;
 
       // Queue the effect if not already queued
       if (!(this._flags & SCHEDULED)) {
@@ -162,14 +162,14 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
       // OPTIMIZATION: Check if effect needs to run
       // Skip if not marked as dirty (using compound check)
-      if (!(this._flags & DIRTY_FLAGS)) return;
+      if (!(this._flags & PENDING)) return;
 
-      // If only NOTIFIED (not STALE), check if dependencies actually changed
+      // If only INVALIDATED (not STALE), check if dependencies actually changed
       if (!(this._flags & STALE)) {
         // FAST PATH: If we've already verified no change at this global version,
-        // clear NOTIFIED and bail without rechecking dependencies.
+        // clear INVALIDATED and bail without rechecking dependencies.
         if (this._verifiedVersion === ctx.version) {
-          this._flags &= ~NOTIFIED;
+          this._flags &= ~INVALIDATED;
           return;
         }
 
@@ -186,7 +186,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // ALGORITHM: Atomic State Transition
       // Set RUNNING to prevent re-entrance
       // Clear all dirty flags since we're handling them now
-      this._flags = (this._flags | RUNNING) & ~DIRTY_FLAGS;
+      this._flags = (this._flags | RUNNING) & ~PENDING;
 
       // Bump generation for this run; dependencies touched will be tagged
       this._gen = (this._gen + 1) | 0;

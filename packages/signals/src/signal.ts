@@ -5,7 +5,7 @@
  * 
  * PUSH PHASE (Write):
  * - When a signal's value changes, it traverses its dependency graph
- * - Marks all transitively dependent nodes as "possibly dirty" (NOTIFIED)
+ * - Marks all transitively dependent nodes as "possibly dirty" (INVALIDATED)
  * - Schedules effects for execution after the current batch
  * 
  * PULL PHASE (Read):

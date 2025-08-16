@@ -3,7 +3,7 @@ import { createGraphWalker } from './graph-walker';
 import { CONSTANTS } from '../constants';
 import type { Edge, ConsumerNode, ProducerNode, ScheduledNode } from '../types';
 
-const { NOTIFIED, STALE, DISPOSED, RUNNING } = CONSTANTS;
+const { INVALIDATED, STALE, DISPOSED, RUNNING } = CONSTANTS;
 
 describe('GraphWalker', () => {
   let scheduledNodes: ScheduledNode[];
@@ -75,26 +75,26 @@ describe('GraphWalker', () => {
 
     walk(edge, visit);
 
-    // With push-pull optimization, computeds only get NOTIFIED, not STALE
-    expect(target._flags & NOTIFIED).toBeTruthy();
+    // With push-pull optimization, computeds only get INVALIDATED, not STALE
+    expect(target._flags & INVALIDATED).toBeTruthy();
     expect(target._flags & STALE).toBeFalsy();
   });
 
-  it('should mark effects as NOTIFIED only (lazy evaluation for all)', () => {
+  it('should mark effects as INVALIDATED only (lazy evaluation for all)', () => {
     const source = createMockNode('signal') as ProducerNode;
     const effect = createMockNode('effect', 0, true); // isScheduled = true
     const edge = createEdge(source, effect);
 
     walk(edge, visit);
 
-    // Effects now also use lazy evaluation - only NOTIFIED, not STALE
-    expect(effect._flags & NOTIFIED).toBeTruthy();
+    // Effects now also use lazy evaluation - only INVALIDATED, not STALE
+    expect(effect._flags & INVALIDATED).toBeTruthy();
     expect(effect._flags & STALE).toBeFalsy();
   });
 
   it('should skip already notified nodes', () => {
     const source = createMockNode('signal') as ProducerNode;
-    const target = createMockNode('computed', NOTIFIED);
+    const target = createMockNode('computed', INVALIDATED);
     const edge = createEdge(source, target);
 
     const initialFlags = target._flags;
@@ -139,9 +139,9 @@ describe('GraphWalker', () => {
 
     walk(edge1, visit);
 
-    expect(target1._flags & NOTIFIED).toBeTruthy();
-    expect(target2._flags & NOTIFIED).toBeTruthy();
-    expect(target3._flags & NOTIFIED).toBeTruthy();
+    expect(target1._flags & INVALIDATED).toBeTruthy();
+    expect(target2._flags & INVALIDATED).toBeTruthy();
+    expect(target3._flags & INVALIDATED).toBeTruthy();
   });
 
   it('should traverse depth-first through dependency chains', () => {
@@ -160,9 +160,9 @@ describe('GraphWalker', () => {
 
     walk(edge1, visit);
 
-    expect(computed1._flags & NOTIFIED).toBeTruthy();
-    expect(computed2._flags & NOTIFIED).toBeTruthy();
-    expect(effect._flags & NOTIFIED).toBeTruthy();
+    expect(computed1._flags & INVALIDATED).toBeTruthy();
+    expect(computed2._flags & INVALIDATED).toBeTruthy();
+    expect(effect._flags & INVALIDATED).toBeTruthy();
     expect(scheduledNodes).toContain(effect);
   });
 
@@ -184,9 +184,9 @@ describe('GraphWalker', () => {
 
     walk(edge1, visit);
 
-    expect(computed1._flags & NOTIFIED).toBeTruthy();
-    expect(computed2._flags & NOTIFIED).toBeTruthy();
-    expect(computed3._flags & NOTIFIED).toBeTruthy();
+    expect(computed1._flags & INVALIDATED).toBeTruthy();
+    expect(computed2._flags & INVALIDATED).toBeTruthy();
+    expect(computed3._flags & INVALIDATED).toBeTruthy();
   });
 
   it('should handle complex graphs with multiple branches', () => {
@@ -230,13 +230,13 @@ describe('GraphWalker', () => {
     walk(sourceToComp1, visit);
 
     // All nodes should be invalidated
-    expect(comp1._flags & NOTIFIED).toBeTruthy();
-    expect(comp2._flags & NOTIFIED).toBeTruthy();
-    expect(comp3._flags & NOTIFIED).toBeTruthy();
-    expect(comp4._flags & NOTIFIED).toBeTruthy();
-    expect(eff1._flags & NOTIFIED).toBeTruthy();
-    expect(eff2._flags & NOTIFIED).toBeTruthy();
-    expect(eff3._flags & NOTIFIED).toBeTruthy();
+    expect(comp1._flags & INVALIDATED).toBeTruthy();
+    expect(comp2._flags & INVALIDATED).toBeTruthy();
+    expect(comp3._flags & INVALIDATED).toBeTruthy();
+    expect(comp4._flags & INVALIDATED).toBeTruthy();
+    expect(eff1._flags & INVALIDATED).toBeTruthy();
+    expect(eff2._flags & INVALIDATED).toBeTruthy();
+    expect(eff3._flags & INVALIDATED).toBeTruthy();
 
     // All effects should be scheduled
     expect(scheduledNodes).toContain(eff1);
@@ -286,7 +286,7 @@ describe('GraphWalker', () => {
 
     // All nodes should be notified (but not outdated - that's determined lazily)
     for (let i = 1; i < 100; i++) {
-      expect(nodes[i]!._flags & NOTIFIED).toBeTruthy();
+      expect(nodes[i]!._flags & INVALIDATED).toBeTruthy();
       expect(nodes[i]!._flags & STALE).toBeFalsy();
     }
   });

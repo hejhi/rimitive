@@ -165,7 +165,7 @@ export type SignalValue<S> = S extends Readable<infer T> ? T : never;
 
 **Naming:**
 - Functions: `ensureLink()`, `hasStaleDependencies()` (descriptive)
-- Constants: `NOTIFIED = 1 << 0` (SCREAMING_SNAKE_CASE)
+- Constants: `INVALIDATED = 1 << 0` (SCREAMING_SNAKE_CASE)
 - Private: `_value`, `_flags` (underscore prefix)
 
 ### Performance-Critical Patterns
@@ -181,7 +181,7 @@ interface Edge {
 
 **Bit flags (pack booleans):**
 ```typescript
-this._flags = NOTIFIED | STALE;
+this._flags = INVALIDATED | STALE;
 if (this._flags & RUNNING) return;
 ```
 

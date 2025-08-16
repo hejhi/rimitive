@@ -41,7 +41,7 @@ import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 
-const { NOTIFIED, DISPOSED, SKIP_EQUALITY, SCHEDULED } = CONSTANTS;
+const { INVALIDATED, DISPOSED, SKIP_EQUALITY, SCHEDULED } = CONSTANTS;
 
 export interface SubscribeNode<T> extends ScheduledNode {
   _callback: (value: T) => void;
@@ -61,7 +61,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
   class Subscribe<T> implements SubscribeNode<T> {
     __type = 'subscribe' as const;
     _callback: (value: T) => void; // User's callback function
-    _flags = 0; // State flags (NOTIFIED, DISPOSED, SKIP_EQUALITY)
+    _flags = 0; // State flags (INVALIDATED, DISPOSED, SKIP_EQUALITY)
     _lastValue: T; // Cached value for equality check
     _sources: Edge | undefined = undefined; // Single edge to source signal/computed
     _nextScheduled?: ScheduledNode = undefined; // Link in scheduling queue
@@ -83,13 +83,13 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     _invalidate(): void {
       // ALGORITHM: Queue for Immediate Propagation with Linked List
       // When source changes, queue for execution using intrusive list
-      // Skip if already NOTIFIED or DISPOSED
+      // Skip if already INVALIDATED or DISPOSED
 
       // Early exit if already processed or disposed
-      if (this._flags & (NOTIFIED | DISPOSED)) return;
+      if (this._flags & (INVALIDATED | DISPOSED)) return;
 
-      // Mark with NOTIFIED flag
-      this._flags |= NOTIFIED;
+      // Mark with INVALIDATED flag
+      this._flags |= INVALIDATED;
 
       // Queue the subscription if not already queued
       if (!(this._flags & SCHEDULED)) {
@@ -123,8 +123,8 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // Skip if disposed
       if (this._flags & DISPOSED) return;
 
-      // Clear NOTIFIED flag
-      this._flags &= ~NOTIFIED;
+      // Clear INVALIDATED flag
+      this._flags &= ~INVALIDATED;
 
       // ALGORITHM: Source Resolution
       // Get the source from our single dependency edge

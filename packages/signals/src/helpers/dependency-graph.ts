@@ -46,7 +46,7 @@ import type { ProducerNode, ConsumerNode, Edge } from '../types';
 export type EdgeCache = { _lastEdge?: Edge };
 export type TrackedProducer = ProducerNode & EdgeCache;
 
-const { TRACKING, NOTIFIED, STALE, DIRTY_FLAGS } = CONSTANTS;
+const { TRACKING, INVALIDATED, STALE, PENDING } = CONSTANTS;
 
 export interface DependencyGraph {
   connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
@@ -217,12 +217,12 @@ export function createDependencyGraph(): DependencyGraph {
    * - Efficient unwinding without frame objects
    */
   const refreshConsumers = (consumer: ConsumerNode): boolean => {
-    // OPTIMIZATION: Only called for NOTIFIED case now
+    // OPTIMIZATION: Only called for INVALIDATED case now
     // STALE is handled inline in hot paths
-    if (!(consumer._flags & NOTIFIED)) return false;
+    if (!(consumer._flags & INVALIDATED)) return false;
 
     // If all direct sources have matching versions and are not themselves
-    // stale, we can clear NOTIFIED and skip expensive checks.
+    // stale, we can clear INVALIDATED and skip expensive checks.
     let edge = consumer._sources;
     let stale = false;
 
@@ -235,8 +235,8 @@ export function createDependencyGraph(): DependencyGraph {
           break;
         }
 
-        // Use compound DIRTY_FLAGS check
-        if ('_flags' in source && source._flags & DIRTY_FLAGS) {
+        // Use compound PENDING check
+        if ('_flags' in source && source._flags & PENDING) {
           stale = true;
           break;
         }
@@ -246,7 +246,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
 
     if (!stale) {
-      consumer._flags &= ~NOTIFIED;
+      consumer._flags &= ~INVALIDATED;
       return false;
     }
 
@@ -281,10 +281,10 @@ export function createDependencyGraph(): DependencyGraph {
 
       // Clean fast path
       // Check if the edge version matches the source version and isn't dirty. If so, we can return.
-      // NOTE: what's the difference between DIRTY_FLAGS, a version check, and NOTIFIED?
+      // NOTE: what's the difference between PENDING, a version check, and INVALIDATED?
       if (
         firstEdgeVersion === firstEdgeSource._version &&
-        !(firstEdgeSourceFlags & DIRTY_FLAGS)
+        !(firstEdgeSourceFlags & PENDING)
       ) {
         return false;
       }
@@ -335,14 +335,14 @@ export function createDependencyGraph(): DependencyGraph {
         // Clean dependency fast path - check both version and no dirty flags
         if (
           currentEdgeVersion === currentVersion &&
-          !(sourceFlags & DIRTY_FLAGS)
+          !(sourceFlags & PENDING)
         ) {
           currentEdge = currentEdge.nextSource;
           continue;
         }
 
         // Need to dive into this dependency
-        if (sourceFlags & NOTIFIED) {
+        if (sourceFlags & INVALIDATED) {
           // Push current state onto stack with new frame
           stackTop = {
             edge: currentEdge,
@@ -359,7 +359,7 @@ export function createDependencyGraph(): DependencyGraph {
           continue;
         }
 
-        // Version mismatch without NOTIFIED
+        // Version mismatch without INVALIDATED
         if (currentEdgeVersion !== currentVersion) {
           stale = true;
           currentEdge.version = currentVersion;
@@ -371,9 +371,9 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Finished processing current sub's dependencies
-      // Clear NOTIFIED on clean nodes
-      if (!stale && currentConsumer._flags & NOTIFIED) {
-        currentConsumer._flags &= ~NOTIFIED;
+      // Clear INVALIDATED on clean nodes
+      if (!stale && currentConsumer._flags & INVALIDATED) {
+        currentConsumer._flags &= ~INVALIDATED;
       }
 
       // Check if we're done
@@ -416,8 +416,8 @@ export function createDependencyGraph(): DependencyGraph {
       // Dependencies changed - mark as STALE for next time
       consumer._flags |= STALE;
     } else {
-      // False alarm - clear NOTIFIED and cache global version
-      consumer._flags &= ~NOTIFIED;
+      // False alarm - clear INVALIDATED and cache global version
+      consumer._flags &= ~INVALIDATED;
     }
     
     return stale;

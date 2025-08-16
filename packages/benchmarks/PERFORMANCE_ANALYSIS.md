@@ -102,12 +102,12 @@ Replace complex edge management with simpler approach:
 Combine multiple flag operations:
 ```typescript
 // Current: Multiple checks
-if (this._flags & NOTIFIED) return;
+if (this._flags & INVALIDATED) return;
 if (this._flags & DISPOSED) return;
 if (this._flags & RUNNING) return;
 
 // Optimized: Single check
-if (this._flags & (NOTIFIED | DISPOSED | RUNNING)) return;
+if (this._flags & (INVALIDATED | DISPOSED | RUNNING)) return;
 ```
 
 ## Validation Strategy
