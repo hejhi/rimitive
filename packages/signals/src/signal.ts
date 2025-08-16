@@ -5,7 +5,7 @@
  * 
  * PUSH PHASE (Write):
  * - When a signal's value changes, it traverses its dependency graph
- * - Marks all transitively dependent nodes as "possibly dirty" (INVALIDATED)
+ * - Marks all transitively dependent nodes as "possibly stale" (INVALIDATED)
  * - Schedules effects for execution after the current batch
  * 
  * PULL PHASE (Read):
@@ -91,7 +91,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     // ALGORITHM: Version-based Cache Invalidation
     // Monotonically increasing counter, incremented on each value change.
     // Edges store the version when created, enabling O(1) staleness checks.
-    // This is more efficient than dirty flags or timestamp comparisons.
+    // This is more efficient than stale flags or timestamp comparisons.
     _version = 0;
 
     constructor(value: T) {

@@ -23,11 +23,11 @@ export const CONSTANTS = {
   // These two flags implement the core push-pull algorithm:
   
   // INVALIDATED (bit 0): Set during "push" phase when a dependency changes.
-  // Means "this node MIGHT be dirty, check when accessed"
+  // Means "this node needs to be checked for staleness, etc. Check when accessed"
   // This enables lazy evaluation - we don't recompute until needed.
   INVALIDATED: 1 << 0,     // 1 (binary: 0000001)
   
-  // STALE (bit 1): Set during "pull" phase when we confirm the node IS dirty.
+  // STALE (bit 1): Set during "pull" phase when we confirm the node IS stale.
   // Means "this node's cached value is stale and MUST be recomputed"
   // Stronger guarantee than INVALIDATED.
   STALE: 1 << 1,     // 2 (binary: 0000010)

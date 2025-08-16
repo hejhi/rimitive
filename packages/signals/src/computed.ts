@@ -177,7 +177,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Skip if running (will see changes when done)
       if (this._flags & (INVALIDATED | DISPOSED | RUNNING)) return;
 
-      // Mark as potentially dirty
+      // Mark as invalidated
       this._flags |= INVALIDATED;
 
       // ALGORITHM: Delegated Propagation via GraphWalker
@@ -214,7 +214,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     _onOutdated(): boolean {
       // ALGORITHM: Atomic Flag Update
       // Use single assignment with bitwise operations for atomicity
-      // Set RUNNING, clear all dirty flags in one operation
+      // Set RUNNING, clear flags in one operation
       this._flags = (this._flags | RUNNING) & ~PENDING;
 
       // Increment generation for this run; edges touched will carry this tag

@@ -21,7 +21,7 @@
  * 3. VERSION-BASED STALENESS DETECTION:
  *    - Each edge stores the producer's version when created
  *    - Comparing edge.version to producer._version detects changes
- *    - More efficient than dirty flags or timestamps
+ *    - More efficient than stale flags or timestamps
  *    - Handles the "diamond problem" correctly
  * 
  * 4. DYNAMIC DEPENDENCY DISCOVERY:
@@ -280,7 +280,7 @@ export function createDependencyGraph(): DependencyGraph {
       if (firstEdgeSourceFlags & STALE) return true;
 
       // Clean fast path
-      // Check if the edge version matches the source version and isn't dirty. If so, we can return.
+      // Check if the edge version matches the source version and isn't stale. If so, we can return.
       // NOTE: what's the difference between PENDING, a version check, and INVALIDATED?
       if (
         firstEdgeVersion === firstEdgeSource._version &&
@@ -332,7 +332,7 @@ export function createDependencyGraph(): DependencyGraph {
           continue;
         }
 
-        // Clean dependency fast path - check both version and no dirty flags
+        // Clean dependency fast path - check both version and no stale flags
         if (
           currentEdgeVersion === currentVersion &&
           !(sourceFlags & PENDING)
@@ -385,7 +385,7 @@ export function createDependencyGraph(): DependencyGraph {
       const prevVersion: number = parentEdge.version;
       let changed = false;
 
-      // If subtree was dirty and this is a computed, recompute now
+      // If subtree was stale and this is a computed, recompute now
       if (stale) {
         currentConsumer._onOutdated();
         if ('_version' in currentConsumer) {

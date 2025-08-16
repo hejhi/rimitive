@@ -161,7 +161,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       if (this._flags & (DISPOSED | RUNNING)) return;
 
       // OPTIMIZATION: Check if effect needs to run
-      // Skip if not marked as dirty (using compound check)
+      // Skip if not marked as PENDING (a compound flag)
       if (!(this._flags & PENDING)) return;
 
       // If only INVALIDATED (not STALE), check if dependencies actually changed
@@ -180,12 +180,12 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
           return;
         }
 
-        // If dirty, refreshConsumers marked STALE; fall through to run
+        // If invalidated, refreshConsumers marked STALE; fall through to run
       }
 
       // ALGORITHM: Atomic State Transition
       // Set RUNNING to prevent re-entrance
-      // Clear all dirty flags since we're handling them now
+      // Clear all flags since we're handling them now
       this._flags = (this._flags | RUNNING) & ~PENDING;
 
       // Bump generation for this run; dependencies touched will be tagged

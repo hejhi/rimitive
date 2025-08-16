@@ -197,7 +197,7 @@ describe('Computed - Push-Pull Optimization', () => {
       expect(computeCount).toBe(2); // Must recompute to check, but value stays same
     });
 
-    it('should clear dirty check cache between flushes', () => {
+    it('should clear invalidated check cache between flushes', () => {
       const source = signal(1);
       let computeCount = 0;
 
