@@ -286,11 +286,11 @@ export function createDependencyGraph(): DependencyGraph {
           continue;
         }
 
-        const depFlags = consumerSource._flags || 0;
+        const sourceFlags = consumerSource._flags || 0;
         const currentVersion = consumerSource._version;
 
         // Explicitly outdated dependency
-        if (depFlags & OUTDATED) {
+        if (sourceFlags & OUTDATED) {
           stale = true;
           // Continue checking siblings - no early exit
           currentEdge = currentEdge.nextSource;
@@ -300,14 +300,14 @@ export function createDependencyGraph(): DependencyGraph {
         // Clean dependency fast path - check both version and no dirty flags
         if (
           currentEdgeVersion === currentVersion &&
-          !(depFlags & DIRTY_FLAGS)
+          !(sourceFlags & DIRTY_FLAGS)
         ) {
           currentEdge = currentEdge.nextSource;
           continue;
         }
 
         // Need to dive into this dependency
-        if (depFlags & NOTIFIED) {
+        if (sourceFlags & NOTIFIED) {
           // Push current state onto stack with new frame
           stackTop = {
             edge: currentEdge,
