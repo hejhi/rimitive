@@ -66,10 +66,10 @@ interface ComputedFactoryContext extends SignalContext {
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   const {
-    dependencies: { ensureLink, needsRecompute },
+    dependencies: { ensureLink, refreshConsumers },
     sourceCleanup: { detachAll, pruneStale },
     graphWalker: { dfs },
-    workQueue: { enqueue }
+    workQueue: { enqueue },
   } = ctx;
   
   // Pre-bind notification handler for hot path
@@ -189,13 +189,22 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // OPTIMIZATION: Combined flag and version check
       // Most common case: already updated this global version
       if (this._globalVersion === ctx.version) return;
-      
+
       // RE-ENTRANCE GUARD: Check RUNNING after version check (less common)
       if (this._flags & RUNNING) return;
-      
+
       // ALGORITHM: Conditional Recomputation
       // Check OUTDATED flag first (common case) or check dependencies if NOTIFIED
-      if (this._flags & OUTDATED || needsRecompute(this)) this._refresh();
+      // Skip refreshing all consumers.
+      if (this._flags & OUTDATED) {
+        this._refresh();
+        return;
+      }
+
+      // TODO: Why do we need to call this._refresh() after calling refreshConsumers, which...
+      // calls this.refresh()? Why can't we just call refreshConsumers(this) and be done? it causes
+      // a lot of tests to fail.
+      if (refreshConsumers(this)) this._refresh();
     }
 
     _refresh(): boolean {

@@ -85,7 +85,7 @@ interface EffectFactoryContext extends SignalContext {
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    dependencies: { needsRecompute }
+    dependencies: { refreshConsumers },
   } = ctx;
 
   // Source cleanup for dynamic dependencies
@@ -174,7 +174,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         }
         
         // Slow path: perform dependency check
-        if (!needsRecompute(this)) {
+        if (!refreshConsumers(this)) {
           // Cache the verified clean global version to skip future checks
           this._verifiedVersion = ctx.version;
           return;

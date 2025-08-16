@@ -53,7 +53,6 @@ export interface DependencyGraph {
   ensureLink: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
   unlinkFromProducer: (edge: Edge) => void;
   refreshConsumers: (consumer: ConsumerNode) => boolean;
-  needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
 }
 
 // Stack frame type - follows Alien's pattern, never mutates Edge
@@ -218,6 +217,43 @@ export function createDependencyGraph(): DependencyGraph {
    * - Efficient unwinding without frame objects
    */
   const refreshConsumers = (consumer: ConsumerNode): boolean => {
+    // OPTIMIZATION: Only called for NOTIFIED case now
+    // OUTDATED is handled inline in hot paths
+    if (!(consumer._flags & NOTIFIED)) return false;
+
+    // If all direct sources have matching versions and are not themselves
+    // stale, we can clear NOTIFIED and skip expensive checks.
+    let edge = consumer._sources;
+    let stale = false;
+
+    while (edge) {
+      const { source, version } = edge;
+      // Skip recycled edges (version = -1)
+      if (version !== -1) {
+        if (version !== source._version) {
+          stale = true;
+          break;
+        }
+
+        // Use compound DIRTY_FLAGS check
+        if ('_flags' in source && source._flags & DIRTY_FLAGS) {
+          stale = true;
+          break;
+        }
+      }
+
+      edge = edge.nextSource;
+    }
+
+    if (!stale) {
+      consumer._flags &= ~NOTIFIED;
+      return false;
+    }
+
+    // If we got here, we have something stale so we should continue.
+    // TODO: is the above redundant?
+    stale = false;
+
     if (consumer._flags & OUTDATED) return true;
 
     // OPTIMIZATION: Fast path for linear chains (single dependency)
@@ -260,7 +296,6 @@ export function createDependencyGraph(): DependencyGraph {
     let currentConsumer = consumer;
     let currentEdge = consumer._sources;
     let stackTop: StackFrame | undefined = undefined; // Stack of parent frames
-    let stale = false;
 
     while (true) {
       // Process current dependency
@@ -342,7 +377,7 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Check if we're done
-      if (!stackTop) return stale;
+      if (!stackTop) break;
 
       // Pop from stack
       const frame: StackFrame = stackTop;
@@ -376,67 +411,16 @@ export function createDependencyGraph(): DependencyGraph {
       // Propagate dirtiness if value changed
       stale = frame.stale || changed;
     }
-  };
 
-  /**
-   * ALGORITHM: Two-Phase Update Check
-   * 
-   * Determines if a node needs to execute using a two-phase approach:
-   * 1. NOTIFIED phase - marked as "maybe dirty" during push invalidation
-   * 2. OUTDATED phase - confirmed dirty after checking dependencies
-   * 
-   * OPTIMIZATION: This version is split for performance:
-   * - Fast path (OUTDATED check) is inlined in hot paths
-   * - This function handles the slower NOTIFIED case
-   */
-  const needsRecompute = (
-    node: ConsumerNode,
-  ): boolean => {
-    // OPTIMIZATION: Only called for NOTIFIED case now
-    // OUTDATED is handled inline in hot paths
-    if (!(node._flags & NOTIFIED)) return false;
-    
-    // If all direct sources have matching versions and are not themselves
-    // stale, we can clear NOTIFIED and skip expensive checks.
-    let edge = node._sources;
-    let stale = false;
-
-    while (edge) {
-      const { source, version } = edge;
-      // Skip recycled edges (version = -1)
-      if (version !== -1) {
-        if (version !== source._version) {
-          stale = true;
-          break;
-        }
-
-        // Use compound DIRTY_FLAGS check
-        if ('_flags' in source && source._flags & DIRTY_FLAGS) {
-          stale = true;
-          break;
-        }
-      }
-
-      edge = edge.nextSource;
-    }
-
-    if (!stale) {
-      node._flags &= ~NOTIFIED;
-      return false;
-    }
-    
-    // Check if dependencies actually changed
-    const isStale = refreshConsumers(node);
-    
-    if (isStale) {
+    if (stale) {
       // Dependencies changed - mark as OUTDATED for next time
-      node._flags |= OUTDATED;
+      consumer._flags |= OUTDATED;
     } else {
       // False alarm - clear NOTIFIED and cache global version
-      node._flags &= ~NOTIFIED;
+      consumer._flags &= ~NOTIFIED;
     }
     
-    return isStale;
+    return stale;
   };
 
   return {
@@ -444,6 +428,5 @@ export function createDependencyGraph(): DependencyGraph {
     unlinkFromProducer,
     connect,
     refreshConsumers,
-    needsRecompute,
   };
 }
