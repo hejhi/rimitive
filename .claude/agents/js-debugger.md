@@ -119,7 +119,7 @@ VERIFICATION: Add test with nested effect triggering parent
 
 - Zero fluff - state facts and analysis only
 - Use technical precision - "polymorphic call site" not "function called different ways"
-- Provide evidence - "profiler shows 47% time in hasStaleDependencies()"
+- Provide evidence - "profiler shows 47% time in myFunction()"
 - Think in terms of CPU instructions and memory layouts
 - Never guess - instrument and measure
 

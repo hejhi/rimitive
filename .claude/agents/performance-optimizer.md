@@ -92,14 +92,6 @@ function bad2(val) {
    - O(n²): Nested loops, naive string matching
    - O(2ⁿ): Recursive subsets, naive fibonacci
 
-## Lattice-Specific Optimizations
-
-**Critical Hot Paths**:
-1. `propagate()` - Called for every state change
-2. `hasStaleDependencies()` - Called before every computed read
-3. `ensureLink()` - Called for every dependency edge
-4. `detachEdge()` - Called during cleanup
-
 **Memory Layout Optimizations**:
 ```javascript
 // GOOD: Properties accessed together are defined together
@@ -163,7 +155,7 @@ Always provide:
 
 Example:
 ```
-BOTTLENECK: hasStaleDependencies() - 47% of runtime
+BOTTLENECK: myMethod() - 47% of runtime
 ROOT CAUSE: O(n) scan of all dependencies on every read
 FIX: Add _maxDependencyVersion field, compare single integer
 MEASUREMENT: 1.2ms → 0.03ms per 10K reads (40x improvement)

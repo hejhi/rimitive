@@ -52,7 +52,7 @@ export interface DependencyGraph {
   connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
   ensureLink: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
   unlinkFromProducer: (edge: Edge) => void;
-  hasStaleDependencies: (consumer: ConsumerNode) => boolean;
+  refreshConsumers: (consumer: ConsumerNode) => boolean;
   needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
 }
 
@@ -217,9 +217,9 @@ export function createDependencyGraph(): DependencyGraph {
    * - Early exit for changed signal dependencies
    * - Efficient unwinding without frame objects
    */
-  const hasStaleDependencies = (consumer: ConsumerNode): boolean => {
+  const refreshConsumers = (consumer: ConsumerNode): boolean => {
     if (consumer._flags & OUTDATED) return true;
-    
+
     // OPTIMIZATION: Fast path for linear chains (single dependency)
     // Common pattern: computed(() => signal.value * 2)
     // Skip complex traversal when there's only one active dependency
@@ -228,21 +228,21 @@ export function createDependencyGraph(): DependencyGraph {
       const firstEdgeVersion = firstEdge.version;
       // Single dependency - check directly
       if (firstEdgeVersion === -1) return false; // Recycled edge
-      
+
       const firstEdgeSource = firstEdge.source;
-      
+
       // Signals: simple version check
       if (!('_sources' in firstEdgeSource)) {
         const stale = firstEdgeVersion !== firstEdgeSource._version;
         firstEdge.version = firstEdgeSource._version;
         return stale;
       }
-      
+
       // If we're here, the firstEdgeSource is both a producer and a consumer node, with its own sources
       // Check flags and version
       const firstEdgeSourceFlags = firstEdgeSource._flags || 0;
       if (firstEdgeSourceFlags & OUTDATED) return true;
-      
+
       // Clean fast path
       // Check if the edge version matches the source version and isn't dirty. If so, we can return.
       // NOTE: what's the difference between DIRTY_FLAGS, a version check, and NOTIFIED?
@@ -252,7 +252,7 @@ export function createDependencyGraph(): DependencyGraph {
       ) {
         return false;
       }
-      
+
       // Need to check nested - fall through to full algorithm
     }
 
@@ -349,7 +349,7 @@ export function createDependencyGraph(): DependencyGraph {
       const parentEdge: Edge = frame.edge;
       const prevVersion: number = parentEdge.version;
       let changed = false;
-      
+
       // If subtree was dirty and this is a computed, recompute now
       if (stale) {
         currentConsumer._refresh();
@@ -357,7 +357,7 @@ export function createDependencyGraph(): DependencyGraph {
           changed = prevVersion !== currentConsumer._version;
         }
       }
-      
+
       // Sync parent edge cached version
       if (
         '_version' in currentConsumer &&
@@ -370,9 +370,9 @@ export function createDependencyGraph(): DependencyGraph {
       currentEdge = frame.nextLink;
       currentConsumer = frame.consumer;
       stackTop = frame.prev;
-      
+
       // No cleanup needed - frame will be GC'd
-      
+
       // Propagate dirtiness if value changed
       stale = frame.stale || changed;
     }
@@ -426,7 +426,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
     
     // Check if dependencies actually changed
-    const isStale = hasStaleDependencies(node);
+    const isStale = refreshConsumers(node);
     
     if (isStale) {
       // Dependencies changed - mark as OUTDATED for next time
@@ -439,5 +439,11 @@ export function createDependencyGraph(): DependencyGraph {
     return isStale;
   };
 
-  return { ensureLink, unlinkFromProducer, connect, hasStaleDependencies, needsRecompute };
+  return {
+    ensureLink,
+    unlinkFromProducer,
+    connect,
+    refreshConsumers,
+    needsRecompute,
+  };
 }
