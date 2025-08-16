@@ -56,6 +56,15 @@ export interface DependencyGraph {
   needsRecompute: (consumer: ConsumerNode & { _flags: number }) => boolean;
 }
 
+// Stack frame type - follows Alien's pattern, never mutates Edge
+interface StackFrame {
+  edge: Edge;
+  nextLink: Edge | undefined;
+  consumer: ConsumerNode;
+  stale: boolean;
+  prev: StackFrame | undefined;
+}
+
 export function createDependencyGraph(): DependencyGraph {
    // ALGORITHM: Edge Creation and Insertion
    // Creates a new edge between producer and consumer, inserting at head of sources
@@ -208,91 +217,92 @@ export function createDependencyGraph(): DependencyGraph {
    * - Early exit for changed signal dependencies
    * - Efficient unwinding without frame objects
    */
-  const hasStaleDependencies = (root: ConsumerNode): boolean => {
-    if (root._flags & OUTDATED) return true;
+  const hasStaleDependencies = (consumer: ConsumerNode): boolean => {
+    if (consumer._flags & OUTDATED) return true;
     
     // OPTIMIZATION: Fast path for linear chains (single dependency)
     // Common pattern: computed(() => signal.value * 2)
     // Skip complex traversal when there's only one active dependency
-    const firstEdge = root._sources;
+    const firstEdge = consumer._sources;
     if (firstEdge && !firstEdge.nextSource) {
+      const firstEdgeVersion = firstEdge.version;
       // Single dependency - check directly
-      if (firstEdge.version === -1) return false; // Recycled edge
+      if (firstEdgeVersion === -1) return false; // Recycled edge
       
-      const dep = firstEdge.source as ProducerNode & Partial<ConsumerNode> & { _flags?: number };
+      const firstEdgeSource = firstEdge.source;
       
       // Signals: simple version check
-      if (!('_sources' in dep)) {
-        const stale = firstEdge.version !== dep._version;
-        firstEdge.version = dep._version;
+      if (!('_sources' in firstEdgeSource)) {
+        const stale = firstEdgeVersion !== firstEdgeSource._version;
+        firstEdge.version = firstEdgeSource._version;
         return stale;
       }
       
-      // Computed: check flags and version
-      const depFlags = ('_flags' in dep ? dep._flags : 0) || 0;
-      if (depFlags & OUTDATED) return true;
+      // If we're here, the firstEdgeSource is both a producer and a consumer node, with its own sources
+      // Check flags and version
+      const firstEdgeSourceFlags = firstEdgeSource._flags || 0;
+      if (firstEdgeSourceFlags & OUTDATED) return true;
       
       // Clean fast path
-      if (firstEdge.version === dep._version && !(depFlags & DIRTY_FLAGS)) {
+      // Check if the edge version matches the source version and isn't dirty. If so, we can return.
+      // NOTE: what's the difference between DIRTY_FLAGS, a version check, and NOTIFIED?
+      if (
+        firstEdgeVersion === firstEdgeSource._version &&
+        !(firstEdgeSourceFlags & DIRTY_FLAGS)
+      ) {
         return false;
       }
       
       // Need to check nested - fall through to full algorithm
     }
 
-    // Stack frame type - follows Alien's pattern, never mutates Edge
-    interface StackFrame {
-      edge: Edge;
-      nextLink: Edge | undefined;
-      sub: ConsumerNode;
-      dirty: boolean;
-      prev: StackFrame | undefined;
-    }
-
     // Use separate stack frames for traversal state
-    let currentSub: ConsumerNode = root;
-    let currentLink: Edge | undefined = root._sources;
+    let currentConsumer = consumer;
+    let currentEdge = consumer._sources;
     let stackTop: StackFrame | undefined = undefined; // Stack of parent frames
-    let dirty = false;
+    let stale = false;
 
     while (true) {
       // Process current dependency
-      if (currentLink) {
+      if (currentEdge) {
         // Skip recycled edges
-        if (currentLink.version === -1) {
-          currentLink = currentLink.nextSource;
+        if (currentEdge.version === -1) {
+          currentEdge = currentEdge.nextSource;
           continue;
         }
 
-        const dep = currentLink.source as ProducerNode & Partial<ConsumerNode> & { _flags?: number };
-        const cached = currentLink.version;
+        const consumerSource = currentEdge.source;
+        const currentEdgeVersion = currentEdge.version;
 
         // Signals: compare versions
-        if (!('_sources' in dep)) {
-          const v = dep._version;
-          if (cached !== v) {
-            dirty = true;
+        if (!('_sources' in consumerSource)) {
+          const v = consumerSource._version;
+          if (currentEdgeVersion !== v) {
+            stale = true;
             // No early exit - check all siblings for proper batching
           }
-          currentLink.version = v;
-          currentLink = currentLink.nextSource;
+          currentEdge.version = v;
+          currentEdge = currentEdge.nextSource;
           continue;
         }
 
-        const depFlags = ('_flags' in dep ? dep._flags : 0) || 0;
-        const current = dep._version;
+        const depFlags = consumerSource._flags || 0;
+        const currentVersion = consumerSource._version;
 
         // Explicitly outdated dependency
         if (depFlags & OUTDATED) {
-          dirty = true;
+          stale = true;
           // Continue checking siblings - no early exit
-          currentLink = currentLink.nextSource;
+          currentEdge = currentEdge.nextSource;
           continue;
         }
 
         // Clean dependency fast path - check both version and no dirty flags
-        if (cached === current && !(depFlags & DIRTY_FLAGS)) {
-          currentLink = currentLink.nextSource;
+        if (
+          currentEdgeVersion === currentVersion &&
+          !(depFlags & DIRTY_FLAGS)
+        ) {
+          currentEdge = currentEdge.nextSource;
           continue;
         }
 
@@ -300,41 +310,39 @@ export function createDependencyGraph(): DependencyGraph {
         if (depFlags & NOTIFIED) {
           // Push current state onto stack with new frame
           stackTop = {
-            edge: currentLink,
-            nextLink: currentLink.nextSource,
-            sub: currentSub,
-            dirty: dirty,
-            prev: stackTop
+            edge: currentEdge,
+            nextLink: currentEdge.nextSource,
+            consumer: currentConsumer,
+            stale,
+            prev: stackTop,
           };
-          
+
           // Descend into dependency
-          currentSub = dep as unknown as ConsumerNode;
-          currentLink = dep._sources;
-          dirty = false;
+          currentConsumer = consumerSource;
+          currentEdge = consumerSource._sources;
+          stale = false;
           continue;
         }
 
         // Version mismatch without NOTIFIED
-        if (cached !== current) {
-          dirty = true;
-          currentLink.version = current;
+        if (currentEdgeVersion !== currentVersion) {
+          stale = true;
+          currentEdge.version = currentVersion;
           // No early exit - continue checking siblings
         }
-        
-        currentLink = currentLink.nextSource;
+
+        currentEdge = currentEdge.nextSource;
         continue;
       }
 
       // Finished processing current sub's dependencies
       // Clear NOTIFIED on clean nodes
-      if (!dirty && (currentSub._flags & NOTIFIED)) {
-        currentSub._flags &= ~NOTIFIED;
+      if (!stale && currentConsumer._flags & NOTIFIED) {
+        currentConsumer._flags &= ~NOTIFIED;
       }
 
       // Check if we're done
-      if (!stackTop) {
-        return dirty;
-      }
+      if (!stackTop) return stale;
 
       // Pop from stack
       const frame: StackFrame = stackTop;
@@ -343,28 +351,30 @@ export function createDependencyGraph(): DependencyGraph {
       let changed = false;
       
       // If subtree was dirty and this is a computed, recompute now
-      if (dirty) {
-        currentSub._refresh();
-        if ('_version' in currentSub) {
-          changed = prevVersion !== currentSub._version;
+      if (stale) {
+        currentConsumer._refresh();
+        if ('_version' in currentConsumer) {
+          changed = prevVersion !== currentConsumer._version;
         }
       }
       
       // Sync parent edge cached version
-      if ('_version' in currentSub && typeof currentSub._version === 'number') {
-        parentEdge.version = currentSub._version;
+      if (
+        '_version' in currentConsumer &&
+        typeof currentConsumer._version === 'number'
+      ) {
+        parentEdge.version = currentConsumer._version;
       }
 
       // Restore state from stack frame
-      currentLink = frame.nextLink;
-      currentSub = frame.sub;
-      const parentDirty: boolean = frame.dirty;
+      currentEdge = frame.nextLink;
+      currentConsumer = frame.consumer;
       stackTop = frame.prev;
       
       // No cleanup needed - frame will be GC'd
       
       // Propagate dirtiness if value changed
-      dirty = parentDirty || changed;
+      stale = frame.stale || changed;
     }
   };
 
@@ -380,35 +390,45 @@ export function createDependencyGraph(): DependencyGraph {
    * - This function handles the slower NOTIFIED case
    */
   const needsRecompute = (
-    node: ConsumerNode & { _flags: number; },
+    node: ConsumerNode,
   ): boolean => {
     // OPTIMIZATION: Only called for NOTIFIED case now
     // OUTDATED is handled inline in hot paths
     if (!(node._flags & NOTIFIED)) return false;
     
     // If all direct sources have matching versions and are not themselves
-    // dirty, we can clear NOTIFIED and skip expensive checks.
-    let e = node._sources;
-    let clean = true;
-    while (e) {
+    // stale, we can clear NOTIFIED and skip expensive checks.
+    let edge = node._sources;
+    let stale = false;
+
+    while (edge) {
+      const { source, version } = edge;
       // Skip recycled edges (version = -1)
-      if (e.version !== -1) {
-        const s = e.source as ProducerNode & { _flags?: number };
-        if (e.version !== s._version) { clean = false; break; }
+      if (version !== -1) {
+        if (version !== source._version) {
+          stale = true;
+          break;
+        }
+
         // Use compound DIRTY_FLAGS check
-        if ('_flags' in s && (s._flags! & DIRTY_FLAGS)) { clean = false; break; }
+        if ('_flags' in source && source._flags & DIRTY_FLAGS) {
+          stale = true;
+          break;
+        }
       }
-      e = e.nextSource!;
+
+      edge = edge.nextSource;
     }
-    if (clean) {
+
+    if (!stale) {
       node._flags &= ~NOTIFIED;
       return false;
     }
     
     // Check if dependencies actually changed
-    const isDirty = hasStaleDependencies(node);
+    const isStale = hasStaleDependencies(node);
     
-    if (isDirty) {
+    if (isStale) {
       // Dependencies changed - mark as OUTDATED for next time
       node._flags |= OUTDATED;
     } else {
@@ -416,7 +436,7 @@ export function createDependencyGraph(): DependencyGraph {
       node._flags &= ~NOTIFIED;
     }
     
-    return isDirty;
+    return isStale;
   };
 
   return { ensureLink, unlinkFromProducer, connect, hasStaleDependencies, needsRecompute };
