@@ -166,49 +166,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       return this._value!;
     }
 
-    _recompute(): void {
-      // ALGORITHM: Atomic Flag Update
-      // Use single assignment with bitwise operations for atomicity
-      // Set RUNNING, clear all dirty flags in one operation
-      this._flags = (this._flags | RUNNING) & ~DIRTY_FLAGS;
-      
-      // Increment generation for this run; edges touched will carry this tag
-      this._gen = (this._gen + 1) | 0;
-      // Edges will be tagged via ensureLink; stale edges pruned after run
-      
-      // ALGORITHM: Context Switching for Dependency Tracking
-      // Set ourselves as the current consumer so signal reads register with us
-      const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = this;
-      
-      try {        
-        // ALGORITHM: Execute User Computation
-        // This may read signals/computeds, which will call addDependency
-        const newValue = this._callback();
-        
-        // ALGORITHM: Change Detection and Version Update
-        // Only increment version if value actually changed
-        // Exception: always update on first run (version 0) to establish initial state
-        if (newValue !== this._value || this._version === 0) {
-          this._value = newValue;
-          this._version++;
-        }
-        
-        // Cache the global version to skip future checks if nothing changes
-        this._globalVersion = ctx.version;
-      } finally {
-        // ALGORITHM: Cleanup Phase (Critical for correctness)
-        // 1. Restore previous consumer context
-        ctx.currentConsumer = prevConsumer;
-        
-        // 2. Clear RUNNING flag to allow future computations
-        this._flags &= ~RUNNING;
-        
-        // 3. Remove stale dependencies (dynamic dependency tracking)
-        pruneStale(this);
-      }
-    }
-
     _invalidate(): void {
       // ALGORITHM: Invalidation Guard
       // Skip if already notified (avoid redundant traversal)
@@ -238,12 +195,51 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       
       // ALGORITHM: Conditional Recomputation
       // Check OUTDATED flag first (common case) or check dependencies if NOTIFIED
-      if (this._flags & OUTDATED || needsRecompute(this)) this._recompute();
+      if (this._flags & OUTDATED || needsRecompute(this)) this._refresh();
     }
 
     _refresh(): boolean {
-      // Recompute the value
-      this._recompute();
+      // ALGORITHM: Atomic Flag Update
+      // Use single assignment with bitwise operations for atomicity
+      // Set RUNNING, clear all dirty flags in one operation
+      this._flags = (this._flags | RUNNING) & ~DIRTY_FLAGS;
+
+      // Increment generation for this run; edges touched will carry this tag
+      this._gen = (this._gen + 1) | 0;
+      // Edges will be tagged via ensureLink; stale edges pruned after run
+
+      // ALGORITHM: Context Switching for Dependency Tracking
+      // Set ourselves as the current consumer so signal reads register with us
+      const prevConsumer = ctx.currentConsumer;
+      ctx.currentConsumer = this;
+
+      try {
+        // ALGORITHM: Execute User Computation
+        // This may read signals/computeds, which will call addDependency
+        const newValue = this._callback();
+
+        // ALGORITHM: Change Detection and Version Update
+        // Only increment version if value actually changed
+        // Exception: always update on first run (version 0) to establish initial state
+        if (newValue !== this._value || this._version === 0) {
+          this._value = newValue;
+          this._version++;
+        }
+
+        // Cache the global version to skip future checks if nothing changes
+        this._globalVersion = ctx.version;
+      } finally {
+        // ALGORITHM: Cleanup Phase (Critical for correctness)
+        // 1. Restore previous consumer context
+        ctx.currentConsumer = prevConsumer;
+
+        // 2. Clear RUNNING flag to allow future computations
+        this._flags &= ~RUNNING;
+
+        // 3. Remove stale dependencies (dynamic dependency tracking)
+        pruneStale(this);
+      }
+
       return true;
     }
 
