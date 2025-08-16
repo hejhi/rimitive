@@ -115,19 +115,19 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // This enables dependents to skip recomputation if we didn't change.
     _version = 0;
 
-    // CACHED GLOBAL VERSION (FAST-PATH OPTIMIZATION)
+    // CACHED CONTEXT VERSION (FAST-PATH OPTIMIZATION)
     // Caches ctx.version when this computed was last verified as up-to-date.
     // Enables the critical "nothing changed" fast path.
     //
     // PURPOSE: O(1) optimization for stable systems
-    // - If _globalVersion === ctx.version, skip ALL dependency checks
+    // - If _verifiedVersion === ctx.version, skip ALL dependency checks
     // - Turns potentially O(n) traversal into O(1) check
     // - Particularly effective for deep dependency trees
     //
     // NOT REDUNDANT: This is a performance cache that avoids traversing
     // the dependency graph when nothing has changed globally.
     // Without it, every access would need to validate all dependencies.
-    _globalVersion = -1;
+    _verifiedVersion = -1;
 
     // NOTE: Edge lifecycle is managed via per-edge mark bits during runs
 
@@ -192,7 +192,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     _update(): void {
       // OPTIMIZATION: Combined flag and version check
       // Most common case: already updated this global version
-      if (this._globalVersion === ctx.version) return;
+      if (this._verifiedVersion === ctx.version) return;
 
       // RE-ENTRANCE GUARD: Check RUNNING after version check (less common)
       if (this._flags & RUNNING) return;
@@ -240,7 +240,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         }
 
         // Cache the global version to skip future checks if nothing changes
-        this._globalVersion = ctx.version;
+        this._verifiedVersion = ctx.version;
       } finally {
         // ALGORITHM: Cleanup Phase (Critical for correctness)
         // 1. Restore previous consumer context

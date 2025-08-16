@@ -109,7 +109,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     // OPTIMIZATION: Last Verified Global Version
     // Cache the global ctx.version when we've verified that dependencies
     // did NOT change. If another INVALIDATED arrives without a global version
-    // bump, we can skip shouldNodeUpdate() entirely and clear INVALIDATED.
+    // bump, we can skip dependency checks entirely and clear INVALIDATED.
     _verifiedVersion = -1;
 
     constructor(fn: () => void | (() => void)) {
