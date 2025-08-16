@@ -70,11 +70,10 @@ export interface ConsumerNode extends ReactiveNode {
   _invalidate(): void; // Called when dependencies change
   _onOutdated(): boolean;
   _flags: number; // Bit field containing STALE, RUNNING, DISPOSED, etc.
-  // GENERATION COUNTER (DYNAMIC DEPENDENCY SWEEPING)
+  // RUN VERSION COUNTER (DYNAMIC DEPENDENCY SWEEPING)
   // Incremented at the start of each run to tag edges created/validated
-  // during that run. Edges not matching the current generation are pruned.
-  // Optional for legacy/tests; runtime classes set this to a number.
-  _runVersion?: number;
+  // during that run. Edges not matching the current run version are pruned.
+  _runVersion: number;
 }
 
 // PATTERN: Deferred Execution Queue

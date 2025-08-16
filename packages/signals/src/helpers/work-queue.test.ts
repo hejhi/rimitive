@@ -20,6 +20,7 @@ describe('WorkQueue', () => {
       _sources: undefined,
       dispose: () => {},
       _onOutdated: () => true,
+      _runVersion: 0,
     };
     
     helpers.enqueue(node);
@@ -40,6 +41,7 @@ describe('WorkQueue', () => {
       _sources: undefined,
       dispose: () => {},
       _onOutdated: () => true,
+      _runVersion: 0,
     };
     
     // Enqueue once
@@ -65,6 +67,7 @@ describe('WorkQueue', () => {
       _sources: undefined,
       dispose: () => {},
       _onOutdated: () => true,
+      _runVersion: 0,
     };
     
     helpers.dispose(node, cleanupFn);
@@ -94,6 +97,7 @@ describe('WorkQueue', () => {
       _sources: undefined,
       dispose: () => {},
       _onOutdated: () => true,
+      _runVersion: 0,
     };
     
     const node2: ScheduledNode = {
@@ -105,6 +109,7 @@ describe('WorkQueue', () => {
       _sources: undefined,
       dispose: () => {},
       _onOutdated: () => true,
+      _runVersion: 0,
     };
     
     const node3: ScheduledNode = {
@@ -116,6 +121,7 @@ describe('WorkQueue', () => {
       _sources: undefined,
       dispose: () => {},
       _onOutdated: () => true,
+      _runVersion: 0,
     };
     
     // Schedule nodes in order
@@ -160,6 +166,7 @@ describe('WorkQueue', () => {
       _sources: undefined,
       dispose: () => {},
       _onOutdated: () => true,
+      _runVersion: 0,
     };
     
     helpers.enqueue(node);

@@ -38,6 +38,7 @@ describe('GraphWalker', () => {
       _flags: flags,
       _invalidate: () => {},
       _onOutdated: () => true,
+      _runVersion: 0,
     };
 
     if (isScheduled) {

@@ -23,6 +23,7 @@ describe('Dependency Graph Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _onOutdated: () => true,
+        _runVersion: 0,
       };
       
       // First call creates the dependency
@@ -52,6 +53,7 @@ describe('Dependency Graph Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _onOutdated: () => true,
+        _runVersion: 0,
       };
       
       // Create dependency manually
@@ -80,6 +82,7 @@ describe('Dependency Graph Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _onOutdated: () => true,
+        _runVersion: 0,
       };
       
       helpers.ensureLink(source, target, 1);
@@ -101,6 +104,7 @@ describe('Dependency Graph Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _onOutdated: () => true,
+        _runVersion: 0,
       };
       
       // Add dependencies from multiple sources
@@ -132,6 +136,7 @@ describe('Dependency Graph Helpers', () => {
         _sources: undefined,
         _invalidate: () => {},
         _onOutdated: () => true,
+        _runVersion: 0,
       };
       
       // Create initial dependency
@@ -163,6 +168,7 @@ describe('Dependency Graph Helpers', () => {
         _sources: undefined,
           _invalidate: () => {},
           _onOutdated: () => true,
+          _runVersion: 0,
         };
         
         const node = helpers.connect(source, target, 1);
@@ -187,6 +193,7 @@ describe('Dependency Graph Helpers', () => {
           _sources: undefined,
           _invalidate: () => {},
           _onOutdated: () => true,
+          _runVersion: 0,
         };
         
         const target2: ConsumerNode = {
@@ -195,6 +202,7 @@ describe('Dependency Graph Helpers', () => {
           _sources: undefined,
           _invalidate: () => {},
           _onOutdated: () => true,
+          _runVersion: 0,
         };
         
         const node1 = helpers.connect(source, target1, 1);
@@ -224,6 +232,7 @@ describe('Dependency Graph Helpers', () => {
           _sources: undefined,
           _invalidate: () => {},
           _onOutdated: () => true,
+          _runVersion: 0,
         };
         
         helpers.connect(source, target, 1);
@@ -247,6 +256,7 @@ describe('Dependency Graph Helpers', () => {
           _sources: undefined,
           _invalidate: () => {},
           _onOutdated: () => true,
+          _runVersion: 0,
         };
         
         const node = helpers.connect(source, target, 1);
@@ -295,6 +305,7 @@ describe('Dependency Graph Helpers', () => {
           _sources: undefined,
           _invalidate: () => {},
           _onOutdated: () => true,
+          _runVersion: 0,
         };
         
         const node = helpers.connect(source, target, 1);

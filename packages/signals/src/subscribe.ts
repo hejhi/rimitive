@@ -65,6 +65,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     _lastValue: T; // Cached value for equality check
     _sources: Edge | undefined = undefined; // Single edge to source signal/computed
     _nextScheduled?: ScheduledNode = undefined; // Link in scheduling queue
+    _runVersion = 0; // Run version counter for dynamic dependency tracking
 
     constructor(
       source: Readable<T> & ProducerNode,
