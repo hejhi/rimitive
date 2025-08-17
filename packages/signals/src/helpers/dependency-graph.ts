@@ -173,7 +173,7 @@ export function createDependencyGraph(): DependencyGraph {
     let node = toNode;
     let edge = toNode._in;
     let stack: StackFrame | undefined;
-    let dirty = false;
+    let stale = false;
 
     while (true) {
       // Skip recycled edges
@@ -194,21 +194,21 @@ export function createDependencyGraph(): DependencyGraph {
           const sourceFlags = source._flags;
           
           if (sourceFlags & STALE) {
-            dirty = true;
+            stale = true;
           } else if (changed || (sourceFlags & PENDING)) {
             if (sourceFlags & INVALIDATED) {
               // Push to stack
-              stack = { edge, next: edge.nextIn, to: node, stale: dirty, prev: stack };
+              stack = { edge, next: edge.nextIn, to: node, stale, prev: stack };
               node = source;
               edge = source._in;
-              dirty = false;
+              stale = false;
               continue;
             }
-            dirty = true;
+            stale = true;
           }
         } else {
           // Signal node - just version check
-          dirty = dirty || changed;
+          stale = stale || changed;
         }
         
         edge = edge.nextIn;
@@ -216,16 +216,15 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Clear INVALIDATED if clean
-      if (!dirty) node._flags &= ~INVALIDATED;
-      
+      if (!stale) node._flags &= ~INVALIDATED;
       if (!stack) break;
 
       // Stack unwind
       const frame: StackFrame = stack;
-      if (dirty) {
+      if (stale) {
         node._updateValue();
         if ('_version' in node) {
-          dirty = frame.edge.fromVersion !== node._version;
+          stale = frame.edge.fromVersion !== node._version;
           frame.edge.fromVersion = node._version;
         }
       }
@@ -233,12 +232,15 @@ export function createDependencyGraph(): DependencyGraph {
       edge = frame.next;
       node = frame.to;
       stack = frame.prev;
-      dirty = frame.stale || dirty;
+      stale = frame.stale || stale;
     }
 
     // Single flag operation
-    toNode._flags = dirty ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
-    return dirty;
+    toNode._flags = stale
+      ? (flags | STALE) & ~INVALIDATED
+      : flags & ~INVALIDATED;
+
+    return stale;
   };
 
   return {
