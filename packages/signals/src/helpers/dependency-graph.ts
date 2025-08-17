@@ -39,7 +39,7 @@ interface StackFrame {
 export function createDependencyGraph(): DependencyGraph {
   // ALGORITHM: Unified Edge Management (inspired by alien-signals)
   // Combines edge creation and update into single function
-  // Checks tail first for O(1) common case, then creates if needed
+  // Uses 2-element cache for O(1) access to recently used edges
   const link = (
     producer: TrackedProducer,
     consumer: ConsumerNode,
@@ -51,6 +51,17 @@ export function createDependencyGraph(): DependencyGraph {
       // Found at tail - just update version
       tail.fromVersion = producerVersion;
       tail.toGen = consumer._gen;
+      return;
+    }
+    
+    // OPTIMIZATION: Check previous edge for alternating patterns
+    // This creates a 2-element LRU cache for common access patterns
+    if (tail?.prevIn !== undefined && tail.prevIn.from === producer) {
+      const edge = tail.prevIn;
+      edge.fromVersion = producerVersion;
+      edge.toGen = consumer._gen;
+      // Move to tail for LRU behavior
+      consumer._inTail = edge;
       return;
     }
     
