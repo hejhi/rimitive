@@ -43,8 +43,7 @@ import type { ProducerNode, ConsumerNode, Edge } from '../types';
 // Producers cache their last accessed edge to avoid linked list traversal
 // This optimization is based on the observation that the same consumer
 // often accesses the same producer multiple times in succession
-export type EdgeCache = { _lastEdge?: Edge };
-export type TrackedProducer = ProducerNode & EdgeCache;
+export type TrackedProducer = ProducerNode;
 
 const { TRACKING, INVALIDATED, STALE, PENDING } = CONSTANTS;
 
@@ -111,9 +110,6 @@ export function createDependencyGraph(): DependencyGraph {
      if (!consumer._sourcesTail) {
        consumer._sourcesTail = newNode;
      }
-     
-     // OPTIMIZATION: Cache this edge for fast repeated access
-     producer._lastEdge = newNode;
 
      return newNode;
    };
@@ -126,19 +122,6 @@ export function createDependencyGraph(): DependencyGraph {
     consumer: ConsumerNode,
     producerVersion: number
   ): void => {
-    // OPTIMIZATION: Check cached edge first (O(1) fast path)
-    const cached = producer._lastEdge;
-    if (cached && cached.target === consumer) {
-      // Edge exists in cache - just update version and generation tag
-      cached.version = producerVersion;
-      cached.gen = consumer._runVersion;
-      // Move to tail if not already there
-      if (consumer._sourcesTail !== cached) {
-        consumer._sourcesTail = cached;
-      }
-      return;
-    }
-    
     // OPTIMIZATION: Check consumer's tail pointer (last accessed dependency)
     // This handles sequential access patterns efficiently
     const tail = consumer._sourcesTail;
@@ -146,7 +129,6 @@ export function createDependencyGraph(): DependencyGraph {
       // Found at tail - update and cache
       tail.version = producerVersion;
       tail.gen = consumer._runVersion;
-      producer._lastEdge = tail;
       // Tail is already correct, no need to update
       return;
     }
@@ -156,7 +138,6 @@ export function createDependencyGraph(): DependencyGraph {
       const edge = tail.prevSource;
       edge.version = producerVersion;
       edge.gen = consumer._runVersion;
-      producer._lastEdge = edge;
       consumer._sourcesTail = edge; // Move to tail for next access
       return;
     }
@@ -170,7 +151,6 @@ export function createDependencyGraph(): DependencyGraph {
         // Reactivate/update it
         node.version = producerVersion;
         node.gen = consumer._runVersion;
-        producer._lastEdge = node;
         // Move to tail for better locality
         consumer._sourcesTail = node;
         return;
