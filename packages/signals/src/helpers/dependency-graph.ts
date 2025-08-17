@@ -169,96 +169,87 @@ export function createDependencyGraph(): DependencyGraph {
    * - Maintains traversal state in temporary edge fields
    * - Early exit for changed signal dependencies
    * - Efficient unwinding without frame objects
+   * 
+   * Simplifications applied:
+   * - Reduced nesting with early continues
+   * - Extracted recycled edge skipping to tight loop
+   * - Unified version update logic
+   * - Flattened signal/computed branching
    */
   const refreshConsumers = (toNode: ToNode): boolean => {
-    // OPTIMIZATION: Only called for INVALIDATED case now
-    // STALE is handled inline in hot paths
+    // Early exit checks
     if (!(toNode._flags & INVALIDATED)) return false;
-
-    // Already explicitly marked STALE - no need to check dependencies
     if (toNode._flags & STALE) return true;
 
-    // OPTIMIZATION: Fast path for linear chains (single dependency)
-    // Common pattern: computed(() => signal.value * 2)
+    // Fast path for single dependency
     const firstEdge = toNode._in;
-
-    if (firstEdge && !firstEdge.nextIn) {
-      // Skip recycled edges
-      if (firstEdge.fromVersion === -1) return false;
-
+    if (firstEdge && !firstEdge.nextIn && firstEdge.fromVersion !== -1) {
       const source = firstEdge.from;
-      const edgeVersion = firstEdge.fromVersion;
-
-      // Signals: simple version check
-      if (!('_in' in source)) {
-        const isStale = edgeVersion !== source._version;
-        firstEdge.fromVersion = source._version;
-        return isStale;
+      const isSignal = !('_in' in source);
+      
+      // Update version first (always needed)
+      const oldVersion = firstEdge.fromVersion;
+      firstEdge.fromVersion = source._version;
+      
+      // Simple signal check
+      if (isSignal) {
+        return oldVersion !== source._version;
       }
-
-      // Complex dependency: check flags and version
-      const sourceFlags = source._flags || 0;
-
-      // Already marked stale
-      if (sourceFlags & STALE) return true;
-
-      // Clean fast path - both version and flags match
-      if (edgeVersion === source._version && !(sourceFlags & PENDING)) {
-        return false;
-      }
-
-      // Need recursive check - fall through to full algorithm
+      
+      // Complex node check
+      const flags = source._flags || 0;
+      if (flags & STALE) return true;
+      if (oldVersion === source._version && !(flags & PENDING)) return false;
+      // Fall through to full traversal
     }
 
-    // Full dependency tree traversal
+    // Main traversal with simplified logic
     let currentTarget = toNode;
     let currentEdge = toNode._in;
     let stackTop: StackFrame | undefined = undefined;
     let stale = false;
 
     while (true) {
-      // Process current dependency
+      // Skip recycled edges in tight loop
+      while (currentEdge && currentEdge.fromVersion === -1) {
+        currentEdge = currentEdge.nextIn;
+      }
+
       if (currentEdge) {
-        // Skip recycled edges
-        if (currentEdge.fromVersion === -1) {
-          currentEdge = currentEdge.nextIn;
-          continue;
-        }
-
         const source = currentEdge.from;
-        const edgeVersion = currentEdge.fromVersion;
-
-        // Signals: compare versions
-        if (!('_in' in source)) {
-          const sourceVersion = source._version;
-          if (edgeVersion !== sourceVersion) {
+        const oldVersion = currentEdge.fromVersion;
+        const newVersion = source._version;
+        const isSignal = !('_in' in source);
+        
+        // Always update cached version
+        currentEdge.fromVersion = newVersion;
+        
+        // Handle signals - simple version check
+        if (isSignal) {
+          if (oldVersion !== newVersion) {
             stale = true;
-            // No early exit - check all siblings for proper batching
           }
-          currentEdge.fromVersion = sourceVersion;
           currentEdge = currentEdge.nextIn;
           continue;
         }
-
-        const sourceFlags = source._flags || 0;
-        const sourceVersion = source._version;
-
-        // Already marked stale
-        if (sourceFlags & STALE) {
+        
+        // Handle complex nodes (computeds)
+        const flags = source._flags || 0;
+        
+        // Quick checks that don't require recursion
+        if (flags & STALE) {
           stale = true;
           currentEdge = currentEdge.nextIn;
           continue;
         }
-
-        // Clean dependency - version and flags both clean
-        if (edgeVersion === sourceVersion && !(sourceFlags & PENDING)) {
+        
+        if (oldVersion === newVersion && !(flags & PENDING)) {
           currentEdge = currentEdge.nextIn;
           continue;
         }
-
-        // Need to dive into this dependency
-        if (sourceFlags & INVALIDATED) {
-          // Push current state onto stack
+        
+        // Need to recurse into INVALIDATED dependencies
+        if (flags & INVALIDATED) {
           stackTop = {
             edge: currentEdge,
             next: currentEdge.nextIn,
@@ -266,67 +257,54 @@ export function createDependencyGraph(): DependencyGraph {
             stale,
             prev: stackTop,
           };
-
-          // Descend into dependency
+          
           currentTarget = source;
           currentEdge = source._in;
           stale = false;
           continue;
         }
-
-        // Version mismatch without INVALIDATED
-        if (edgeVersion !== sourceVersion) {
+        
+        // Version changed but not INVALIDATED
+        if (oldVersion !== newVersion) {
           stale = true;
-          currentEdge.fromVersion = sourceVersion;
         }
-
+        
         currentEdge = currentEdge.nextIn;
         continue;
       }
 
-      // Finished processing current targetNode's dependencies
-      // Clear INVALIDATED on clean nodes
+      // Finished current node's dependencies
       if (!stale && currentTarget._flags & INVALIDATED) {
         currentTarget._flags &= ~INVALIDATED;
       }
 
-      // Check if we're done
+      // Check if done
       if (!stackTop) break;
 
-      // Pop from stack
+      // Pop stack and handle computed update
       const frame: StackFrame = stackTop;
       const parentEdge = frame.edge;
-      const prevVersion = parentEdge.fromVersion;
       let changed = false;
 
-      // If subtree was stale and this is a computed, update its value now
       if (stale) {
         currentTarget._updateValue();
         if ('_version' in currentTarget) {
-          changed = prevVersion !== currentTarget._version;
+          changed = parentEdge.fromVersion !== currentTarget._version;
+          parentEdge.fromVersion = currentTarget._version;
         }
       }
 
-      // Sync parent edge cached version
-      if ('_version' in currentTarget) {
-        parentEdge.fromVersion = currentTarget._version;
-      }
-
-      // Restore state from stack frame
+      // Restore state
       currentEdge = frame.next;
       currentTarget = frame.to;
       stackTop = frame.prev;
-
-      // Propagate dirtiness if value changed
       stale = frame.stale || changed;
     }
 
     // Update final flags
     if (stale) {
-      // Dependencies changed - mark as STALE and clear INVALIDATED
       toNode._flags = (toNode._flags & ~INVALIDATED) | STALE;
     } else {
-      // False alarm - clear INVALIDATED
       toNode._flags &= ~INVALIDATED;
     }
 
