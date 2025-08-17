@@ -49,12 +49,12 @@ export function createGraphWalker(): GraphWalker {
     if (!from.nextTarget) {
       let edge: Edge | undefined = from;
       while (edge && !edge.nextTarget) {
-        const target = edge.target as ConsumerNode;
-        if (target._flags & SKIP_FLAGS) break;
+        const to = edge.to as ConsumerNode;
+        if (to._flags & SKIP_FLAGS) break;
 
-        target._flags |= INVALIDATED;
-        visit(target);
-        edge = (target as unknown as { _targets?: Edge })._targets;
+        to._flags |= INVALIDATED;
+        visit(to);
+        edge = (to as unknown as { _targets?: Edge })._targets;
       }
 
       // If we broke out with multiple targets, fall through to normal DFS
@@ -66,7 +66,7 @@ export function createGraphWalker(): GraphWalker {
     let currentEdge: Edge | undefined = from;
 
     while (currentEdge) {
-      const target = currentEdge.target;
+      const target = currentEdge.to;
 
       // Skip nodes already notified/disposed/running
       if (target._flags & SKIP_FLAGS) {
@@ -131,7 +131,7 @@ export function createGraphWalker(): GraphWalker {
 
     currentEdge = nextEdge();
     while (currentEdge) {
-      const target = currentEdge.target;
+      const target = currentEdge.to;
 
       if (target._flags & SKIP_FLAGS) {
         currentEdge = currentEdge.nextTarget ?? nextEdge();

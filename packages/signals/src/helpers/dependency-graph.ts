@@ -53,12 +53,12 @@ export function createDependencyGraph(): DependencyGraph {
      // ALGORITHM: Doubly-Linked List Node Creation
      // Create new edge that will be head of sources, tail of targets
      const newNode: Edge = {
-       source: producer,
-       target: consumer,
+       from: producer,
+       to: consumer,
        version: producerVersion, // Store producer's version at time of edge creation
        runVersion: consumer._runVersion, // Tag with current run version
        prevSource: undefined, // Will be head of sources, so no previous
-       prevTarget, // Link to current tail of producer's targets  
+       prevTarget, // Link to current tail of producer's targets
        nextSource, // Link to old head of consumer's sources
        nextTarget: undefined, // Will be new tail of targets, so no next
      };
@@ -99,7 +99,7 @@ export function createDependencyGraph(): DependencyGraph {
     // OPTIMIZATION: Check consumer's tail pointer (last accessed dependency)
     // This handles sequential access patterns efficiently
     const tail = consumer._sourcesTail;
-    if (tail && tail.source === producer) {
+    if (tail && tail.from === producer) {
       // Found at tail - update and cache
       tail.version = producerVersion;
       tail.runVersion = consumer._runVersion;
@@ -108,7 +108,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
     
     // Check the second-to-last edge (common for alternating patterns)
-    if (tail?.prevSource && tail.prevSource.source === producer) {
+    if (tail?.prevSource && tail.prevSource.from === producer) {
       const edge = tail.prevSource;
       edge.version = producerVersion;
       edge.runVersion = consumer._runVersion;
@@ -120,7 +120,7 @@ export function createDependencyGraph(): DependencyGraph {
     // Look for existing edge (active or recyclable)
     let node = consumer._sources;
     while (node) {
-      if (node.source === producer) {
+      if (node.from === producer) {
         // Found edge - either active (version >= 0) or recyclable (version = -1)
         // Reactivate/update it
         node.version = producerVersion;
@@ -139,25 +139,25 @@ export function createDependencyGraph(): DependencyGraph {
   // ALGORITHM: Edge Removal from Producer's Target List  
   // Removes an edge from the producer's linked list of consumers
   // This is O(1) because we have direct pointers to neighbors
-  const unlinkFromProducer = ({ source, prevTarget, nextTarget }: Edge): void => {
+  const unlinkFromProducer = ({ from, prevTarget, nextTarget }: Edge): void => {
     // Remove from doubly-linked list
     if (prevTarget) {
       // Middle or end of list - update previous node
       prevTarget.nextTarget = nextTarget;
     } else {
       // Head of list - update producer's head pointer
-      source._targets = nextTarget;
+      from._targets = nextTarget;
 
       // OPTIMIZATION: Only check TRACKING flag if this was the last consumer
       // Combine the checks to reduce branches
-      if (!nextTarget && '_flags' in source) (source._flags &= ~TRACKING);
+      if (!nextTarget && '_flags' in from) from._flags &= ~TRACKING;
     }
     
     if (nextTarget) {
       nextTarget.prevTarget = prevTarget;
     } else {
       // This was the tail - update tail pointer
-      source._targetsTail = prevTarget;
+      from._targetsTail = prevTarget;
     }
   };
 
@@ -186,7 +186,7 @@ export function createDependencyGraph(): DependencyGraph {
       // Skip recycled edges
       if (firstEdge.version === -1) return false;
 
-      const source = firstEdge.source;
+      const source = firstEdge.from;
       const edgeVersion = firstEdge.version;
 
       // Signals: simple version check
@@ -225,7 +225,7 @@ export function createDependencyGraph(): DependencyGraph {
           continue;
         }
 
-        const source = currentEdge.source;
+        const source = currentEdge.from;
         const edgeVersion = currentEdge.version;
 
         // Signals: compare versions

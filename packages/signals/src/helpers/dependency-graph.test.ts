@@ -173,8 +173,8 @@ describe('Dependency Graph Helpers', () => {
         
         const node = helpers.connect(source, target, 1);
         
-        expect(node.source).toBe(source);
-        expect(node.target).toBe(target);
+        expect(node.from).toBe(source);
+        expect(node.to).toBe(target);
         expect(node.version).toBe(1);
         expect(source._targets).toBe(node);
         expect(target._sources).toBe(node);

@@ -50,10 +50,10 @@ describe('GraphWalker', () => {
     return node;
   }
 
-  function createEdge(source: ProducerNode, target: ConsumerNode): Edge {
+  function createEdge(from: ProducerNode, to: ConsumerNode): Edge {
     return {
-      source,
-      target,
+      from,
+      to,
       version: 0,
       prevSource: undefined,
       nextSource: undefined,

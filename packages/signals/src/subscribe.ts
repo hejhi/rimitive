@@ -41,7 +41,7 @@ import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 
-const { INVALIDATED, DISPOSED, SKIP_EQUALITY, SCHEDULED } = CONSTANTS;
+const { INVALIDATED, DISPOSED, SCHEDULED } = CONSTANTS;
 
 export interface SubscribeNode<T> extends ScheduledNode {
   _callback: (value: T) => void;
@@ -130,7 +130,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // ALGORITHM: Source Resolution
       // Get the source from our single dependency edge
       if (!this._sources) return;
-      const source = this._sources.source as Readable<T> & ProducerNode;
+      const source = this._sources.from as Readable<T> & ProducerNode;
 
       // Read current value (this doesn't track dependency since we're not RUNNING)
       const currentValue = source.value;
@@ -139,7 +139,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // Only call callback if:
       // 1. skipEqualityCheck is enabled (always call)
       // 2. Value actually changed (using === equality)
-      if (this._flags & SKIP_EQUALITY || currentValue !== this._lastValue) {
+      if (currentValue !== this._lastValue) {
         // Update cached value before calling callback
         // This ensures callback sees consistent state
         this._lastValue = currentValue;
@@ -172,8 +172,8 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       const node = {} as Edge;
 
       // Setup bidirectional pointers
-      node.source = source;
-      node.target = this;
+      node.from = source;
+      node.to = this;
       node.version = source._version; // Current version for staleness checks
 
       // This subscribe only has one source, so no source list needed
@@ -201,18 +201,9 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
   const subscribe = function subscribe<T>(
     source: Readable<T> & ProducerNode,
     callback: (value: T) => void,
-    options?: { skipEqualityCheck?: boolean }
   ): (() => void) {
     
     const sub = new Subscribe(source, callback);
-    
-    // ALGORITHM: Option Handling
-    // skipEqualityCheck disables === comparison
-    // Useful for objects where you want to react to every update
-    // even if the reference doesn't change
-    if (options?.skipEqualityCheck) {
-      sub._flags |= SKIP_EQUALITY;
-    }
     
     // Manually establish the dependency relationship
     sub._setupDependency(source);

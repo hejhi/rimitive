@@ -95,8 +95,8 @@ export function createDependencySweeper(
 
         // Clear producer's cache if it points to this recycled edge
         // This prevents stale cache hits when the dependency is re-established
-        if ('_lastEdge' in node.source && node.source._lastEdge === node) {
-          node.source._lastEdge = undefined;
+        if ('_lastEdge' in node.from && node.from._lastEdge === node) {
+          node.from._lastEdge = undefined;
         }
 
         // DON'T remove from producer's target list - keep for recycling

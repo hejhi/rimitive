@@ -102,8 +102,8 @@ export type TargetNode = ConsumerNode | (ProducerNode & ConsumerNode);
 // - Forward: "What depends on this producer?"
 // - Backward: "What does this consumer depend on?"
 export interface Edge {
-  source: SourceNode; // The dependency
-  target: TargetNode | (TargetNode & Disposable) | (TargetNode & ScheduledNode); // The dependent
+  from: SourceNode; // The dependency
+  to: TargetNode | (TargetNode & Disposable) | (TargetNode & ScheduledNode); // The dependent
 
   // Intrusive list pointers for source's edge list
   prevSource?: Edge; // Previous edge from same source

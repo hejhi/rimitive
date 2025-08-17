@@ -74,10 +74,10 @@ describe('Dependency Sweeper', () => {
     const recycled = new Set<unknown>();
     while (list) {
       if (list.version === -1) {
-        recycled.add(list.source);
+        recycled.add(list.from);
       } else {
-        active.add(list.source);
-        // Active edges should have current gen
+        active.add(list.from);
+        // Active edgesgrshould have current gen
         expect(list.runVersion).toBe(1);
       }
       list = list.nextSource;
