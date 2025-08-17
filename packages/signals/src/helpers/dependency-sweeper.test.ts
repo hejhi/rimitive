@@ -82,7 +82,7 @@ describe('Dependency Sweeper', () => {
         // Active edgesgrshould have current gen
         expect(list.toGen).toBe(1);
       }
-      list = list.nextFrom;
+      list = list.nextIn;
     }
     expect(active.has(a)).toBe(true);
     expect(active.has(c)).toBe(true);
@@ -108,7 +108,7 @@ describe('Dependency Sweeper', () => {
     while (list) {
       expect(list.version).toBe(-1); // All should be marked as recyclable
       recycledCount++;
-      list = list.nextFrom;
+      list = list.nextIn;
     }
     expect(recycledCount).toBe(2);
     // Edges stay in producer's list for recycling

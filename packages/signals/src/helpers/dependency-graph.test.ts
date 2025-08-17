@@ -124,7 +124,7 @@ describe('Dependency Graph Helpers', () => {
       let node = target._from;
       while (node) {
         count++;
-        node = node.nextFrom;
+        node = node.nextIn;
       }
       
       expect(count).toBe(3);
@@ -225,8 +225,8 @@ describe('Dependency Graph Helpers', () => {
         // Source should point to first target (head of list)
         expect(source._to).toBe(node1);
         // node1 should point to node2 (insertion order)
-        expect(node1.nextTo).toBe(node2);
-        expect(node2.prevTo).toBe(node1);
+        expect(node1.nextOut).toBe(node2);
+        expect(node2.prevOut).toBe(node1);
         // node2 should be the tail
         expect(source._toTail).toBe(node2);
       });
@@ -306,8 +306,8 @@ describe('Dependency Graph Helpers', () => {
         helpers.unlinkFromProducer(nodes[1]!);
         
         // Check that nodes[0] and nodes[2] are still linked in correct order
-        expect(nodes[0]!.nextTo).toBe(nodes[2]);
-        expect(nodes[2]!.prevTo).toBe(nodes[0]);
+        expect(nodes[0]!.nextOut).toBe(nodes[2]);
+        expect(nodes[2]!.prevOut).toBe(nodes[0]);
       });
   
       it('should clear TRACKING flag when last target is removed', () => {

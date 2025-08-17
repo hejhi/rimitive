@@ -56,18 +56,18 @@ describe('GraphWalker', () => {
       from,
       to,
       version: 0,
-      prevFrom: undefined,
-      nextFrom: undefined,
-      prevTo: undefined,
-      nextTo: undefined,
+      prevIn: undefined,
+      nextIn: undefined,
+      prevOut: undefined,
+      nextOut: undefined,
       toGen: 0
     };
   }
 
   function linkEdges(edges: Edge[]): void {
     for (let i = 0; i < edges.length - 1; i++) {
-      edges[i]!.nextTo = edges[i + 1];
-      edges[i + 1]!.prevTo = edges[i];
+      edges[i]!.nextOut = edges[i + 1];
+      edges[i + 1]!.prevOut = edges[i];
     }
   }
 

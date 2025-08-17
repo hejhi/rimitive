@@ -95,8 +95,8 @@ export type ToNode = ConsumerNode | (ProducerNode & ConsumerNode);
 // - O(1) insertion/removal
 //
 // The edge is part of TWO doubly-linked lists simultaneously:
-// 1. source.prevFrom <-> edge <-> edge.nextFrom (all edges from same source)
-// 2. target.prevTo <-> edge <-> edge.nextTo (all edges to same target)
+// 1. Producer's output list: prevOut <-> edge <-> nextOut (all edges FROM same producer)
+// 2. Consumer's input list: prevIn <-> edge <-> nextIn (all edges TO same consumer)
 //
 // This allows efficient traversal in both directions:
 // - Forward: "What depends on this producer?"
@@ -105,13 +105,13 @@ export interface Edge {
   from: FromNode; // The dependency
   to: ToNode | (ToNode & Disposable) | (ToNode & ScheduledNode); // The dependent
 
-  // Intrusive list pointers for source's edge list
-  prevFrom: Edge | undefined; // Previous edge from same source
-  nextFrom: Edge | undefined; // Next edge from same source
+  // Edges sharing the same source (producer) - "out" from producer
+  prevOut: Edge | undefined; // Previous edge from same source
+  nextOut: Edge | undefined; // Next edge from same source
 
-  // Intrusive list pointers for target's edge list
-  prevTo: Edge | undefined; // Previous edge to same target
-  nextTo: Edge | undefined; // Next edge to same target
+  // Edges sharing the same target (consumer) - "in" to consumer
+  prevIn: Edge | undefined; // Previous edge to same target
+  nextIn: Edge | undefined; // Next edge to same target
 
   // CACHED PRODUCER VERSION (STALENESS DETECTION)
   // Stores the producer's _version at the time this edge was created/validated.

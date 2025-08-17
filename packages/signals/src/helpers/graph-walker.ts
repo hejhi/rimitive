@@ -46,9 +46,9 @@ export function createGraphWalker(): GraphWalker {
 
     // OPTIMIZATION: Fast path for single-edge linear chains
     // Avoid stack operations for simple cases
-    if (!from.nextTo) {
+    if (!from.nextOut) {
       let edge: Edge | undefined = from;
-      while (edge && !edge.nextTo) {
+      while (edge && !edge.nextOut) {
         const to = edge.to as ConsumerNode;
         if (to._flags & SKIP_FLAGS) break;
 
@@ -70,7 +70,7 @@ export function createGraphWalker(): GraphWalker {
 
       // Skip nodes already notified/disposed/running
       if (target._flags & SKIP_FLAGS) {
-        currentEdge = currentEdge.nextTo;
+        currentEdge = currentEdge.nextOut;
         continue;
       }
 
@@ -79,7 +79,7 @@ export function createGraphWalker(): GraphWalker {
       visit(target);
 
       // Optimized traversal with reduced branching
-      const nextSibling = currentEdge.nextTo;
+      const nextSibling = currentEdge.nextOut;
       const childTargets = (target as unknown as { _to?: Edge })._to;
 
       // Determine next edge to process using intrusive stack
@@ -134,14 +134,14 @@ export function createGraphWalker(): GraphWalker {
       const target = currentEdge.to;
 
       if (target._flags & SKIP_FLAGS) {
-        currentEdge = currentEdge.nextTo ?? nextEdge();
+        currentEdge = currentEdge.nextOut ?? nextEdge();
         continue;
       }
 
       target._flags |= INVALIDATED;
       visit(target);
 
-      const nextSibling = currentEdge.nextTo;
+      const nextSibling = currentEdge.nextOut;
       const childTargets = (target as unknown as { _to?: Edge })._to;
 
       if (childTargets) {
