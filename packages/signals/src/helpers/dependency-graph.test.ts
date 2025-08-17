@@ -20,7 +20,7 @@ describe('Dependency Graph Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _sources: undefined,
+        _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
@@ -28,7 +28,7 @@ describe('Dependency Graph Helpers', () => {
       
       // First call creates the dependency
       helpers.ensureLink(source, target, 1);
-      const firstEdge = target._sources;
+      const firstEdge = target._from;
       
       // Update version
       source._version = 2;
@@ -36,8 +36,8 @@ describe('Dependency Graph Helpers', () => {
       // Second call should reuse the same edge
       helpers.ensureLink(source, target, 2);
       
-      expect(target._sources).toBe(firstEdge);
-      expect(target._sources?.version).toBe(2);
+      expect(target._from).toBe(firstEdge);
+      expect(target._from?.version).toBe(2);
     });
 
     it('should find existing dependency in sources list', () => {
@@ -50,7 +50,7 @@ describe('Dependency Graph Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _sources: undefined,
+        _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
@@ -66,7 +66,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.ensureLink(source, target, 2);
       
       expect(existingNode.version).toBe(2);
-      expect(target._sources).toBe(existingNode);
+      expect(target._from).toBe(existingNode);
     });
 
     it('should create new dependency when none exists', () => {
@@ -79,7 +79,7 @@ describe('Dependency Graph Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _sources: undefined,
+        _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
@@ -88,7 +88,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.ensureLink(source, target, 1);
       
       expect(source._to).toBeDefined();
-      expect(target._sources).toBeDefined();
+      expect(target._from).toBeDefined();
     });
 
     it('should handle multiple sources for the same target', () => {
@@ -101,7 +101,7 @@ describe('Dependency Graph Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _sources: undefined,
+        _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
@@ -114,7 +114,7 @@ describe('Dependency Graph Helpers', () => {
       
       // Count sources
       let count = 0;
-      let node = target._sources;
+      let node = target._from;
       while (node) {
         count++;
         node = node.nextSource;
@@ -133,7 +133,7 @@ describe('Dependency Graph Helpers', () => {
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _sources: undefined,
+        _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
@@ -149,7 +149,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.ensureLink(source, target, 5);
       
       // Check that version was updated
-      const node = target._sources;
+      const node = target._from;
       expect(node?.version).toBe(5);
     });
   });
@@ -165,7 +165,7 @@ describe('Dependency Graph Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-        _sources: undefined,
+        _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
@@ -177,7 +177,7 @@ describe('Dependency Graph Helpers', () => {
         expect(node.to).toBe(target);
         expect(node.version).toBe(1);
         expect(source._to).toBe(node);
-        expect(target._sources).toBe(node);
+        expect(target._from).toBe(node);
       });
   
       it('should maintain linked lists when multiple dependencies exist', () => {
@@ -190,7 +190,7 @@ describe('Dependency Graph Helpers', () => {
         const target1: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _sources: undefined,
+          _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
@@ -199,7 +199,7 @@ describe('Dependency Graph Helpers', () => {
         const target2: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _sources: undefined,
+          _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
@@ -214,7 +214,7 @@ describe('Dependency Graph Helpers', () => {
         expect(node1.nextTarget).toBe(node2);
         expect(node2.prevTarget).toBe(node1);
         // node2 should be the tail
-        expect(source._targetsTail).toBe(node2);
+        expect(source._toTail).toBe(node2);
       });
   
       it('should set TRACKING flag for computed sources', () => {
@@ -229,7 +229,7 @@ describe('Dependency Graph Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _sources: undefined,
+          _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
@@ -253,7 +253,7 @@ describe('Dependency Graph Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _sources: undefined,
+          _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
@@ -275,7 +275,7 @@ describe('Dependency Graph Helpers', () => {
         
         const targets = Array.from({ length: 3 }, () => ({
           __type: 'test',
-          _sources: undefined,
+          _from: undefined,
           _invalidate: () => {},
         }) as ConsumerNode);
         
@@ -302,7 +302,7 @@ describe('Dependency Graph Helpers', () => {
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _sources: undefined,
+          _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,

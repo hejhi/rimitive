@@ -20,7 +20,7 @@ describe('Dependency Sweeper', () => {
 
   const makeConsumer = (): ConsumerNode => ({
     __type: 'test',
-    _sources: undefined,
+    _from: undefined,
     _flags: 0,
     _invalidate: () => {},
     _updateValue: () => true,
@@ -39,7 +39,7 @@ describe('Dependency Sweeper', () => {
 
     sweeper.detachAll(target);
 
-    expect(target._sources).toBeUndefined();
+    expect(target._from).toBeUndefined();
     expect(a._to).toBeUndefined();
     expect(b._to).toBeUndefined();
     expect(c._to).toBeUndefined();
@@ -69,7 +69,7 @@ describe('Dependency Sweeper', () => {
     sweeper.pruneStale(target);
 
     // With edge recycling, all edges remain but b is marked as recyclable
-    let list = target._sources;
+    let list = target._from;
     const active = new Set<unknown>();
     const recycled = new Set<unknown>();
     while (list) {
@@ -101,7 +101,7 @@ describe('Dependency Sweeper', () => {
     sweeper.pruneStale(target);
 
     // With edge recycling, edges remain but are marked as recyclable
-    let list = target._sources;
+    let list = target._from;
     let recycledCount = 0;
     while (list) {
       expect(list.version).toBe(-1); // All should be marked as recyclable

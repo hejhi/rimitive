@@ -96,7 +96,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
     // Hot fields (accessed on every schedule/flush cycle)
     _flags = STALE; // Start STALE to run on creation
-    _sources: Edge | undefined = undefined; // Dependencies this effect reads
+    _from: Edge | undefined = undefined; // Dependencies this effect reads
     _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
     // Generation counter for dynamic dependency pruning
     _runVersion = 0;

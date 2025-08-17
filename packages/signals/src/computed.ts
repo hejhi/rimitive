@@ -95,7 +95,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // ALGORITHM: Dynamic Dependency List
     // Linked list of edges pointing to our dependencies (signals/computeds we read).
     // This list is rebuilt on each computation to handle conditional dependencies.
-    _sources: Edge | undefined = undefined;
+    _from: Edge | undefined = undefined;
 
     // OPTIMIZATION: Initial State Flags
     // Start as STALE to force computation on first access.

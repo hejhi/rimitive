@@ -63,7 +63,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     _callback: (value: T) => void; // User's callback function
     _flags = 0; // State flags (INVALIDATED, DISPOSED, SKIP_EQUALITY)
     _lastValue: T; // Cached value for equality check
-    _sources: Edge | undefined = undefined; // Single edge to source signal/computed
+    _from: Edge | undefined = undefined; // Single edge to source signal/computed
     _nextScheduled?: ScheduledNode = undefined; // Link in scheduling queue
     _runVersion = 0; // Run version counter for dynamic dependency tracking
 
@@ -129,8 +129,8 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
 
       // ALGORITHM: Source Resolution
       // Get the source from our single dependency edge
-      if (!this._sources) return;
-      const source = this._sources.from as Readable<T> & ProducerNode;
+      if (!this._from) return;
+      const source = this._from.from as Readable<T> & ProducerNode;
 
       // Read current value (this doesn't track dependency since we're not RUNNING)
       const currentValue = source.value;
@@ -194,7 +194,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       source._to = node;
 
       // Store as our single source
-      this._sources = node;
+      this._from = node;
     }
   }
 

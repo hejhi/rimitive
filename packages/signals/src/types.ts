@@ -46,7 +46,7 @@ export interface Disposable {
 // They maintain a list of consumers (targets) that depend on them
 export interface ProducerNode extends ReactiveNode {
   _to: Edge | undefined;  // Head of intrusive linked list of dependents
-  _targetsTail?: Edge;  // Tail pointer for O(1) append and insertion order preservation
+  _toTail?: Edge;  // Tail pointer for O(1) append and insertion order preservation
   
   // LOCAL VERSION COUNTER (VALUE CHANGE TRACKING)
   // Incremented when THIS node's value changes.
@@ -64,8 +64,8 @@ export interface ProducerNode extends ReactiveNode {
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
 // They maintain a list of producers (sources) they depend on
 export interface ConsumerNode extends ReactiveNode {
-  _sources: Edge | undefined; // Head of intrusive linked list of dependencies
-  _sourcesTail?: Edge; // OPTIMIZATION: Tail pointer for O(1) access to recent dependencies
+  _from: Edge | undefined; // Head of intrusive linked list of dependencies
+  _fromTail?: Edge; // OPTIMIZATION: Tail pointer for O(1) access to recent dependencies
 
   _invalidate(): void; // Called when dependencies change
   _updateValue(): boolean; // Update this node's value (if it produces one)

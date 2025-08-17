@@ -47,8 +47,8 @@ export function createDependencyGraph(): DependencyGraph {
      producerVersion: number
    ): Edge => {
      // Get current heads and tails
-     const nextSource = consumer._sources; // Consumer's current first dependency
-     const prevTarget = producer._targetsTail; // Producer's current last dependent
+     const nextSource = consumer._from; // Consumer's current first dependency
+     const prevTarget = producer._toTail; // Producer's current last dependent
      
      // ALGORITHM: Doubly-Linked List Node Creation
      // Create new edge that will be head of sources, tail of targets
@@ -65,7 +65,7 @@ export function createDependencyGraph(): DependencyGraph {
 
      // Update source list (prepend to consumer's sources)
      if (nextSource) nextSource.prevSource = newNode;
-     consumer._sources = newNode; // Consumer now depends on this edge first
+     consumer._from = newNode; // Consumer now depends on this edge first
      
      // FLAG: Computed nodes can be both producers AND consumers
      // When a computed has consumers, we set the TRACKING flag to indicate
@@ -78,11 +78,11 @@ export function createDependencyGraph(): DependencyGraph {
      } else {
        producer._to = newNode; // First target
      }
-     producer._targetsTail = newNode; // Update tail pointer
+     producer._toTail = newNode; // Update tail pointer
      
      // OPTIMIZATION: Update tail pointer for O(1) access to recent dependencies
-     if (!consumer._sourcesTail) {
-       consumer._sourcesTail = newNode;
+     if (!consumer._fromTail) {
+       consumer._fromTail = newNode;
      }
 
      return newNode;
@@ -98,7 +98,7 @@ export function createDependencyGraph(): DependencyGraph {
   ): void => {
     // OPTIMIZATION: Check consumer's tail pointer (last accessed dependency)
     // This handles sequential access patterns efficiently
-    const tail = consumer._sourcesTail;
+    const tail = consumer._fromTail;
     if (tail && tail.from === producer) {
       // Found at tail - update and cache
       tail.version = producerVersion;
@@ -112,13 +112,13 @@ export function createDependencyGraph(): DependencyGraph {
       const edge = tail.prevSource;
       edge.version = producerVersion;
       edge.runVersion = consumer._runVersion;
-      consumer._sourcesTail = edge; // Move to tail for next access
+      consumer._fromTail = edge; // Move to tail for next access
       return;
     }
     
     // FALLBACK: Linear search from head
     // Look for existing edge (active or recyclable)
-    let node = consumer._sources;
+    let node = consumer._from;
     while (node) {
       if (node.from === producer) {
         // Found edge - either active (version >= 0) or recyclable (version = -1)
@@ -126,7 +126,7 @@ export function createDependencyGraph(): DependencyGraph {
         node.version = producerVersion;
         node.runVersion = consumer._runVersion;
         // Move to tail for better locality
-        consumer._sourcesTail = node;
+        consumer._fromTail = node;
         return;
       }
       node = node.nextSource;
@@ -157,7 +157,7 @@ export function createDependencyGraph(): DependencyGraph {
       nextTarget.prevTarget = prevTarget;
     } else {
       // This was the tail - update tail pointer
-      from._targetsTail = prevTarget;
+      from._toTail = prevTarget;
     }
   };
 
@@ -180,7 +180,7 @@ export function createDependencyGraph(): DependencyGraph {
 
     // OPTIMIZATION: Fast path for linear chains (single dependency)
     // Common pattern: computed(() => signal.value * 2)
-    const firstEdge = toNode._sources;
+    const firstEdge = toNode._from;
 
     if (firstEdge && !firstEdge.nextSource) {
       // Skip recycled edges
@@ -190,7 +190,7 @@ export function createDependencyGraph(): DependencyGraph {
       const edgeVersion = firstEdge.version;
 
       // Signals: simple version check
-      if (!('_sources' in source)) {
+      if (!('_from' in source)) {
         const isStale = edgeVersion !== source._version;
         firstEdge.version = source._version;
         return isStale;
@@ -212,7 +212,7 @@ export function createDependencyGraph(): DependencyGraph {
 
     // Full dependency tree traversal
     let currentTarget = toNode;
-    let currentEdge = toNode._sources;
+    let currentEdge = toNode._from;
     let stackTop: StackFrame | undefined = undefined;
     let stale = false;
 
@@ -229,7 +229,7 @@ export function createDependencyGraph(): DependencyGraph {
         const edgeVersion = currentEdge.version;
 
         // Signals: compare versions
-        if (!('_sources' in source)) {
+        if (!('_from' in source)) {
           const sourceVersion = source._version;
           if (edgeVersion !== sourceVersion) {
             stale = true;
@@ -269,7 +269,7 @@ export function createDependencyGraph(): DependencyGraph {
 
           // Descend into dependency
           currentTarget = source;
-          currentEdge = source._sources;
+          currentEdge = source._from;
           stale = false;
           continue;
         }
