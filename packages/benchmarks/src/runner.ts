@@ -12,7 +12,7 @@ interface BenchmarkResult {
   name: string;
   timestamp: string;
   duration_ms: number;
-  jsonData?: string;  // Raw JSON string from benchmark
+  formattedOutput?: string;  // Formatted output from benchmark
   error?: string;
 }
 
@@ -52,13 +52,13 @@ class BenchmarkRunner {
     }
   }
 
-  async run(filter?: string): Promise<void> {
+  async run(filters?: string[]): Promise<void> {
     // Ensure output directory exists
     await fs.mkdir(this.outputDir, { recursive: true });
 
     // Find all benchmark files
-    const files = await this.findBenchmarkFiles(filter);
-    console.log(`Found ${files.length} benchmark suite${files.length !== 1 ? 's' : ''}${filter ? ` matching '${filter}'` : ''}\n`);
+    const files = await this.findBenchmarkFiles(filters);
+    console.log(`Found ${files.length} benchmark suite${files.length !== 1 ? 's' : ''}${filters?.length ? ` matching filters` : ''}\n`);
 
     const results: BenchmarkResult[] = [];
     
@@ -74,17 +74,18 @@ class BenchmarkRunner {
     await this.saveSummary(results);
   }
 
-  private async findBenchmarkFiles(filter?: string): Promise<string[]> {
+  private async findBenchmarkFiles(filters?: string[]): Promise<string[]> {
     const entries = await fs.readdir(this.suitesDir, { withFileTypes: true });
     return entries
       .filter(entry => {
         if (!entry.isFile() || !entry.name.endsWith('.bench.ts') || entry.name.startsWith('test-')) {
           return false;
         }
-        if (filter) {
-          // Check if the file name (without extension) matches the filter
+        if (filters?.length) {
+          // Check if the file name (without extension) matches any of the filters
           const baseName = path.basename(entry.name, '.bench.ts');
-          return baseName === filter;
+          // Support partial matching (e.g., "signal" matches "signal-updates")
+          return filters.some(filter => baseName.includes(filter));
         }
         return true;
       })
@@ -98,11 +99,10 @@ class BenchmarkRunner {
     console.log(`Running: ${name}`);
 
     try {
-      const jsonData = await this.executeBenchmark(filePath);
+      const formattedOutput = await this.executeBenchmark(filePath);
       const duration_ms = Date.now() - startTime;
       
-      // Validate it's actually JSON
-      if (!jsonData.trim()) {
+      if (!formattedOutput.trim()) {
         throw new Error('No output received');
       }
 
@@ -112,7 +112,7 @@ class BenchmarkRunner {
         name,
         timestamp: new Date().toISOString(),
         duration_ms,
-        jsonData
+        formattedOutput
       };
     } catch (error: unknown) {
       const duration_ms = Date.now() - startTime;
@@ -129,9 +129,9 @@ class BenchmarkRunner {
 
   private executeBenchmark(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      // Run benchmark once with both formats captured
+      // Run benchmark and capture formatted output
       console.log(''); // Add spacing
-      const chunks: Buffer[] = [];
+      const outputChunks: Buffer[] = [];
       
       const proc = spawn('npx', [
         'tsx',
@@ -140,21 +140,25 @@ class BenchmarkRunner {
       ], {
         env: {
           ...process.env,
-          BENCHMARK_FORMAT: 'both', // Signal to output both formats
           NODE_ENV: 'production'
         },
         timeout: this.timeout
       });
 
-      // Capture stdout for JSON data
-      proc.stdout.on('data', (chunk: Buffer) => chunks.push(chunk));
+      // Capture both stdout and stderr for formatted output
+      proc.stdout.on('data', (chunk: Buffer) => {
+        outputChunks.push(chunk);
+        process.stdout.write(chunk); // Pass through to console
+      });
       
-      // Pass stderr through for formatted output
-      proc.stderr.pipe(process.stderr);
+      proc.stderr.on('data', (chunk: Buffer) => {
+        outputChunks.push(chunk);
+        process.stderr.write(chunk); // Pass through to console
+      });
 
       proc.on('close', (code) => {
         if (code === 0) {
-          resolve(Buffer.concat(chunks).toString());
+          resolve(Buffer.concat(outputChunks).toString());
         } else {
           const errorMsg = code === 143 
             ? `Process timed out after ${this.timeout / 1000}s (SIGTERM)`
@@ -169,16 +173,32 @@ class BenchmarkRunner {
 
 
   private async saveResult(result: BenchmarkResult): Promise<void> {
-    // Save with format: <hash>-<timestamp>-<name>.json
-    const fileName = `${this.commitHash}-${this.timestamp}-${result.name}.json`;
+    // Save with format: <hash>-<timestamp>-<name>.md
+    const fileName = `${this.commitHash}-${this.timestamp}-${result.name}.md`;
     const filePath = path.join(this.outputDir, fileName);
     
-    // If we have jsonData, save it directly; otherwise save the error result
-    const content = result.jsonData || JSON.stringify(result);
-    await fs.writeFile(filePath, content);
+    // Convert ANSI escape codes to markdown-friendly format
+    const cleanOutput = this.cleanAnsiCodes(result.formattedOutput || '');
+    
+    // Create markdown content with metadata
+    const mdContent = `# Benchmark: ${result.name}
+
+**Date:** ${result.timestamp}  
+**Commit:** ${this.commitHash}  
+**Duration:** ${(result.duration_ms / 1000).toFixed(2)}s  
+${result.error ? `**Status:** ❌ Failed - ${result.error}` : '**Status:** ✅ Success'}
+
+## Results
+
+\`\`\`
+${cleanOutput}
+\`\`\`
+`;
+    
+    await fs.writeFile(filePath, mdContent);
     
     // Also save a "latest" symlink for convenience
-    const latestPath = path.join(this.outputDir, `latest-${result.name}.json`);
+    const latestPath = path.join(this.outputDir, `latest-${result.name}.md`);
     try {
       await fs.unlink(latestPath);
     } catch {
@@ -187,25 +207,57 @@ class BenchmarkRunner {
     await fs.symlink(fileName, latestPath);
   }
 
-  private async saveSummary(results: BenchmarkResult[]): Promise<void> {
-    const summary = {
-      commit: this.commitHash,
-      timestamp: new Date().toISOString(),
-      system: this.getSystemInfo(),
-      results: results.map(r => ({
-        name: r.name,
-        duration_ms: r.duration_ms,
-        status: r.error ? 'failed' : 'success',
-        error: r.error
-      }))
-    };
+  private cleanAnsiCodes(text: string): string {
+    // Remove ANSI escape sequences
+    return text.replace(/\x1b\[[0-9;]*m/g, '');
+  }
 
-    const summaryFileName = `${this.commitHash}-${this.timestamp}-summary.json`;
+  private async saveSummary(results: BenchmarkResult[]): Promise<void> {
+    const system = this.getSystemInfo();
+    const successCount = results.filter(r => !r.error).length;
+    const failedCount = results.filter(r => r.error).length;
+    
+    // Create markdown summary
+    const summaryContent = `# Benchmark Summary
+
+**Date:** ${new Date().toISOString()}  
+**Commit:** ${this.commitHash}  
+
+## System Info
+- **Node:** ${system.node}
+- **Platform:** ${system.platform}
+- **Architecture:** ${system.arch}
+- **CPUs:** ${system.cpus}
+- **Memory:** ${system.memory_gb} GB
+
+## Results Overview
+- **Total:** ${results.length}
+- **Success:** ${successCount} ✅
+- **Failed:** ${failedCount} ${failedCount > 0 ? '❌' : ''}
+
+## Individual Results
+
+| Benchmark | Duration | Status |
+|-----------|----------|--------|
+${results.map(r => 
+  `| [${r.name}](latest-${r.name}.md) | ${(r.duration_ms / 1000).toFixed(2)}s | ${r.error ? '❌ Failed' : '✅ Success'} |`
+).join('\n')}
+
+${failedCount > 0 ? `
+## Errors
+
+${results.filter(r => r.error).map(r => 
+  `### ${r.name}\n\`\`\`\n${r.error}\n\`\`\``
+).join('\n\n')}
+` : ''}
+`;
+
+    const summaryFileName = `${this.commitHash}-${this.timestamp}-summary.md`;
     const summaryPath = path.join(this.outputDir, summaryFileName);
-    await fs.writeFile(summaryPath, JSON.stringify(summary, null, 2));
+    await fs.writeFile(summaryPath, summaryContent);
     
     // Also save a "latest" summary
-    const latestSummaryPath = path.join(this.outputDir, 'latest-summary.json');
+    const latestSummaryPath = path.join(this.outputDir, 'latest-summary.md');
     try {
       await fs.unlink(latestSummaryPath);
     } catch {
@@ -215,8 +267,8 @@ class BenchmarkRunner {
     
     console.log('Summary:');
     console.log(`  Total: ${results.length}`);
-    console.log(`  Success: ${results.filter(r => !r.error).length}`);
-    console.log(`  Failed: ${results.filter(r => r.error).length}`);
+    console.log(`  Success: ${successCount}`);
+    console.log(`  Failed: ${failedCount}`);
     console.log(`\nResults saved to: ${this.outputDir}`);
   }
 
@@ -233,6 +285,6 @@ class BenchmarkRunner {
 
 // Run if executed directly
 const runner = new BenchmarkRunner();
-// Get filter from command line argument
-const filter = process.argv[2];
-runner.run(filter).catch(console.error);
+// Get filters from command line arguments (all args after script name)
+const filters = process.argv.slice(2).filter(arg => arg && !arg.startsWith('-'));
+runner.run(filters.length > 0 ? filters : undefined).catch(console.error);

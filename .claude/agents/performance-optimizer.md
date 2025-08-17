@@ -76,6 +76,12 @@ function bad2(val) {
    
    # Deoptimization log
    node --trace-opt --trace-deopt script.js
+   
+   # Lattice benchmarks (from packages/benchmarks/)
+   pnpm bench:quick signal              # Test signal read/write
+   pnpm bench:quick computed            # Test computed chains
+   pnpm bench:quick dense sparse        # Test graph updates
+   pnpm bench:quick                     # Run all benchmarks
    ```
 
 2. **Identify Hot Paths**: Focus on code that runs millions of times
@@ -126,6 +132,24 @@ if (this.isDisposed || this.isRunning) return;
 3. **Isolation**: Test one variable at a time
 4. **Real-world Patterns**: Benchmark actual usage, not synthetic loops
 
+**Lattice Benchmark Infrastructure**:
+- Location: `packages/benchmarks/`
+- Output: Markdown files in `dist/` with formatted results
+- Latest results: `dist/latest-<benchmark>.md` and `dist/latest-summary.md`
+
+Available benchmarks:
+- `signal-updates`: Basic signal read/write operations
+- `computed-chains`: Computed dependency chains (3, 10, 50 levels)
+- `batch-operations`: Batched signal updates
+- `dense-updates`: Dense dependency graph updates
+- `sparse-updates`: Sparse dependency graph updates
+- `diamond-deps`: Diamond dependency patterns
+- `effect-triggers`: Effect triggering performance
+- `scaling-subscribers`: Scaling with many subscribers
+- `wide-fanout`: Wide dependency fanout patterns
+- `conditional-deps`: Conditional dependency tracking
+- `write-heavy`: Write-heavy workloads
+
 Example benchmark structure:
 ```javascript
 // Warmup
@@ -159,7 +183,15 @@ BOTTLENECK: myMethod() - 47% of runtime
 ROOT CAUSE: O(n) scan of all dependencies on every read
 FIX: Add _maxDependencyVersion field, compare single integer
 MEASUREMENT: 1.2ms → 0.03ms per 10K reads (40x improvement)
+BENCHMARK: Run 'pnpm bench:quick signal' to verify improvement
 ```
+
+**When Analyzing Performance:**
+1. Check existing benchmark results in `packages/benchmarks/dist/latest-*.md`
+2. Run relevant benchmarks before changes: `pnpm bench:quick <name>`
+3. Make optimization
+4. Run benchmarks after changes
+5. Compare markdown results to prove improvement
 
 ## Critical Performance Invariants
 

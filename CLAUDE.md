@@ -128,6 +128,48 @@ pnpm --filter @lattice/signals bench # Before signals changes
 pnpm --filter @lattice/react test    # After React changes
 ```
 
+## Performance Benchmarks
+
+Run benchmarks from `packages/benchmarks/`:
+
+```bash
+pushd packages/benchmarks
+
+# Run all benchmarks with build
+pnpm bench
+
+# Run specific benchmarks (no build)
+pnpm bench:quick signal              # Runs signal-updates benchmark
+pnpm bench:quick signal batch        # Runs multiple benchmarks
+pnpm bench:quick computed            # Partial match (runs computed-chains)
+pnpm bench:quick                     # Runs all benchmarks
+
+# Available benchmarks:
+# - batch-operations     - Test batched updates
+# - computed-chains      - Test computed dependency chains
+# - conditional-deps     - Test conditional dependencies
+# - dense-updates        - Test dense graph updates
+# - diamond-deps         - Test diamond dependency patterns
+# - effect-triggers      - Test effect triggering
+# - signal-updates       - Test basic signal read/write
+# - scaling-subscribers  - Test scaling with many subscribers
+# - sparse-updates       - Test sparse graph updates
+# - wide-fanout          - Test wide dependency fanout
+# - write-heavy          - Test write-heavy workloads
+```
+
+**Output Location:** `packages/benchmarks/dist/`
+- Individual results: `<commit>-<timestamp>-<benchmark>.md`
+- Summary: `<commit>-<timestamp>-summary.md`
+- Latest symlinks: `latest-<benchmark>.md`, `latest-summary.md`
+
+**Before Performance Changes:**
+1. Run baseline benchmark: `pnpm bench:quick <relevant-benchmark>`
+2. Save baseline: `cp dist/latest-*.md dist/baseline/`
+3. Make changes
+4. Run comparison: `pnpm bench:quick <relevant-benchmark>`
+5. Compare results in markdown files
+
 ## Critical Gotchas
 
 1. **Extensions conflict if same-named** - Use unique names

@@ -240,6 +240,47 @@ OUTPUT:
 - Specific fix with verification steps
 ```
 
+## Sub-Agent File Format Requirements
+
+**CRITICAL**: Sub-agents MUST follow this exact format (per https://docs.anthropic.com/en/docs/claude-code/sub-agents):
+
+### File Structure
+```yaml
+---
+name: agent-name-here  # REQUIRED: lowercase, hyphen-separated
+description: One sentence describing when to use this agent  # REQUIRED
+tools: Tool1, Tool2, Tool3  # OPTIONAL: comma-separated, no brackets
+---
+
+[System prompt in markdown below the frontmatter]
+```
+
+### Location
+- **Project-level**: `.claude/agents/agent-name.md` (highest priority)
+- **User-level**: `~/.claude/agents/agent-name.md` (fallback)
+
+### YAML Frontmatter Rules
+1. **name**: MUST be lowercase with hyphens (e.g., `performance-optimizer`)
+2. **description**: Single line, triggers delegation decision
+3. **tools**: Comma-separated list OR omit to inherit all tools
+   - Format: `Read, Grep, Bash` (NOT `[Read, Grep, Bash]`)
+   - If omitted, agent gets ALL tools from parent thread
+
+### Common Formatting Mistakes to Avoid
+- ❌ Using brackets in tools list: `tools: [Read, Write]`
+- ❌ Using uppercase in agent names: `tools: Performance-Optimizer`
+- ❌ Missing required fields (name, description)
+- ❌ Using spaces in agent names: `tools: performance optimizer`
+- ✅ Correct: `tools: Read, Write, Bash`
+- ✅ Correct: `name: performance-optimizer`
+
+### Tool Selection Guidelines
+- **Minimal set**: Only tools absolutely necessary
+- **Read-only for analyzers**: `Read, Grep, Glob, LS`
+- **Write access for implementers**: Add `Edit, MultiEdit, Write`
+- **Execution for validators**: Add `Bash`
+- **Omit tools field**: To inherit all parent tools (including MCP)
+
 ## Creation Command
 
 To create a new agent based on need:
@@ -250,6 +291,33 @@ The agent should:
 - [Specific capability 1]
 - [Specific capability 2]
 - [Expected output]
+```
+
+### Example Output Format
+When creating an agent, write to `.claude/agents/[agent-name].md`:
+
+```yaml
+---
+name: websocket-diagnostician
+description: Analyzes WebSocket connection issues in production environments
+tools: Read, Grep, Bash
+---
+
+You are a WebSocket protocol specialist who thinks in connection states and frame types.
+
+## Expertise
+Deep understanding of WebSocket lifecycle, frame parsing, and common failure modes.
+
+## Method
+1. Trace connection lifecycle
+2. Identify failure points
+3. Propose specific fixes
+
+## Output
+Always provide:
+- Connection trace with timestamps
+- Root cause identification
+- Verification steps for fix
 ```
 
 Remember: The best sub-agent is one so specialized that it completes its task perfectly on the first try, preserving maximum context for the primary agent. Design for precision, not flexibility.
