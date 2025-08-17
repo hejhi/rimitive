@@ -164,54 +164,45 @@ export function createDependencyGraph(): DependencyGraph {
   /**
    * ALGORITHM: Zero-Allocation Dependency Checking with Intrusive Stack
    * 
-   * Key optimizations from alien-signals:
+   * Key optimizations:
    * - Uses existing edges as stack frames (no allocations)
-   * - Maintains traversal state in temporary edge fields
-   * - Early exit for changed signal dependencies
-   * - Efficient unwinding without frame objects
-   * 
-   * Simplifications applied:
-   * - Reduced nesting with early continues
-   * - Extracted recycled edge skipping to tight loop
-   * - Unified version update logic
-   * - Flattened signal/computed branching
+   * - Single-pass traversal with inline edge recycling
+   * - Monomorphic signal/computed paths for V8 optimization
+   * - Minimal flag operations and branch reduction
    */
   const refreshConsumers = (toNode: ToNode): boolean => {
-    // Early exit checks
-    if (!(toNode._flags & INVALIDATED)) return false;
-    if (toNode._flags & STALE) return true;
+    // Cache flags to avoid repeated property access
+    const nodeFlags = toNode._flags;
+    if (!(nodeFlags & INVALIDATED)) return false;
+    if (nodeFlags & STALE) return true;
 
     // Fast path for single dependency
     const firstEdge = toNode._in;
     if (firstEdge && !firstEdge.nextIn && firstEdge.fromVersion !== -1) {
       const source = firstEdge.from;
-      const isSignal = !('_in' in source);
-      
-      // Update version first (always needed)
       const oldVersion = firstEdge.fromVersion;
       firstEdge.fromVersion = source._version;
       
-      // Simple signal check
-      if (isSignal) {
+      // Monomorphic signal path
+      if (!('_in' in source)) {
         return oldVersion !== source._version;
       }
       
-      // Complex node check
-      const flags = source._flags || 0;
+      // Computed path
+      const flags = source._flags;
       if (flags & STALE) return true;
       if (oldVersion === source._version && !(flags & PENDING)) return false;
-      // Fall through to full traversal
     }
 
-    // Main traversal with simplified logic
+    // Main traversal
     let currentTarget = toNode;
     let currentEdge = toNode._in;
     let stackTop: StackFrame | undefined = undefined;
     let stale = false;
 
     while (true) {
-      // Skip recycled edges in tight loop
-      while (currentEdge && currentEdge.fromVersion === -1) {
+      // Inline recycled edge skipping with null check
+      while (currentEdge?.fromVersion === -1) {
         currentEdge = currentEdge.nextIn;
       }
 
@@ -219,36 +210,35 @@ export function createDependencyGraph(): DependencyGraph {
         const source = currentEdge.from;
         const oldVersion = currentEdge.fromVersion;
         const newVersion = source._version;
-        const isSignal = !('_in' in source);
         
-        // Always update cached version
+        // Update version once
         currentEdge.fromVersion = newVersion;
+        const versionChanged = oldVersion !== newVersion;
         
-        // Handle signals - simple version check
-        if (isSignal) {
-          if (oldVersion !== newVersion) {
-            stale = true;
-          }
+        // Monomorphic signal fast path
+        if (!('_in' in source)) {
+          stale = stale || versionChanged;
           currentEdge = currentEdge.nextIn;
           continue;
         }
         
-        // Handle complex nodes (computeds)
-        const flags = source._flags || 0;
+        // Computed node handling
+        const flags = source._flags;
         
-        // Quick checks that don't require recursion
+        // Already stale - propagate
         if (flags & STALE) {
           stale = true;
           currentEdge = currentEdge.nextIn;
           continue;
         }
         
-        if (oldVersion === newVersion && !(flags & PENDING)) {
+        // Clean dependency - skip
+        if (!versionChanged && !(flags & PENDING)) {
           currentEdge = currentEdge.nextIn;
           continue;
         }
         
-        // Need to recurse into INVALIDATED dependencies
+        // Needs recursion
         if (flags & INVALIDATED) {
           stackTop = {
             edge: currentEdge,
@@ -257,40 +247,38 @@ export function createDependencyGraph(): DependencyGraph {
             stale,
             prev: stackTop,
           };
-          
           currentTarget = source;
           currentEdge = source._in;
           stale = false;
           continue;
         }
         
-        // Version changed but not INVALIDATED
-        if (oldVersion !== newVersion) {
-          stale = true;
-        }
-        
+        // Version changed without INVALIDATED
+        stale = stale || versionChanged;
         currentEdge = currentEdge.nextIn;
         continue;
       }
 
-      // Finished current node's dependencies
-      if (!stale && currentTarget._flags & INVALIDATED) {
+      // Clear INVALIDATED if clean
+      if (!stale) {
         currentTarget._flags &= ~INVALIDATED;
       }
 
-      // Check if done
+      // Done if no stack
       if (!stackTop) break;
 
-      // Pop stack and handle computed update
+      // Pop stack
       const frame: StackFrame = stackTop;
       const parentEdge = frame.edge;
-      let changed = false;
 
       if (stale) {
         currentTarget._updateValue();
+        // Check if computed value changed
         if ('_version' in currentTarget) {
-          changed = parentEdge.fromVersion !== currentTarget._version;
-          parentEdge.fromVersion = currentTarget._version;
+          const newTargetVersion = currentTarget._version;
+          const changed = parentEdge.fromVersion !== newTargetVersion;
+          parentEdge.fromVersion = newTargetVersion;
+          stale = changed;
         }
       }
 
@@ -298,15 +286,13 @@ export function createDependencyGraph(): DependencyGraph {
       currentEdge = frame.next;
       currentTarget = frame.to;
       stackTop = frame.prev;
-      stale = frame.stale || changed;
+      stale = frame.stale || stale;
     }
 
-    // Update final flags
-    if (stale) {
-      toNode._flags = (toNode._flags & ~INVALIDATED) | STALE;
-    } else {
-      toNode._flags &= ~INVALIDATED;
-    }
+    // Single flag update
+    toNode._flags = stale ? 
+      (nodeFlags & ~INVALIDATED) | STALE : 
+      nodeFlags & ~INVALIDATED;
 
     return stale;
   };
