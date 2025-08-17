@@ -46,41 +46,37 @@ export function createDependencyGraph(): DependencyGraph {
      consumer: ConsumerNode,
      producerVersion: number
    ): Edge => {
-     // Get current heads and tails
-     const nextIn = consumer._in; // Consumer's current first dependency
-     const prevOut = producer._outTail; // Producer's current last dependent
+     const nextIn = consumer._in;
+     const prevOut = producer._outTail;
      
-     // ALGORITHM: Doubly-Linked List Node Creation
-     // Create new edge that will be head of sources, tail of targets
+     // Create new edge - head of sources, tail of targets
      const newNode: Edge = {
        from: producer,
        to: consumer,
-       fromVersion: producerVersion, // Store producer's version at time of edge creation
-       toGen: consumer._gen, // Tag with current generation
-       prevIn: undefined, // Will be head of sources, so no previous
-       prevOut, // Link to current tail of producer's targets
-       nextIn, // Link to old head of consumer's sources
-       nextOut: undefined, // Will be new tail of targets, so no next
+       fromVersion: producerVersion,
+       toGen: consumer._gen,
+       prevIn: undefined,
+       prevOut,
+       nextIn,
+       nextOut: undefined,
      };
 
-     // Update source list (prepend to consumer's sources)
+     // Update source list (prepend)
      if (nextIn) nextIn.prevIn = newNode;
-     consumer._in = newNode; // Consumer now depends on this edge first
+     consumer._in = newNode;
      
-     // FLAG: Computed nodes can be both producers AND consumers
-     // When a computed has consumers, we set the TRACKING flag to indicate
-     // it's part of an active dependency chain and should update when read
+     // Set TRACKING flag if producer is a computed node
      if ('_flags' in producer) producer._flags |= TRACKING;
      
-     // Append to target list (preserve execution order)
+     // Append to target list
      if (prevOut) {
        prevOut.nextOut = newNode;
      } else {
-       producer._out = newNode; // First target
+       producer._out = newNode;
      }
-     producer._outTail = newNode; // Update tail pointer
+     producer._outTail = newNode;
      
-     // OPTIMIZATION: Update tail pointer for O(1) access to recent dependencies
+     // Update tail pointer for O(1) access
      if (!consumer._inTail) {
        consumer._inTail = newNode;
      }
@@ -96,23 +92,22 @@ export function createDependencyGraph(): DependencyGraph {
     consumer: ConsumerNode,
     producerVersion: number
   ): void => {
-    // OPTIMIZATION: Check consumer's tail pointer (last accessed dependency)
-    // This handles sequential access patterns efficiently
+    // OPTIMIZATION: Check tail (most recently accessed dependency)
     const tail = consumer._inTail;
-    if (tail && tail.from === producer) {
-      // Found at tail - update and cache
+    if (tail !== undefined && tail.from === producer) {
+      // Found at tail - just update version
       tail.fromVersion = producerVersion;
       tail.toGen = consumer._gen;
-      // Tail is already correct, no need to update
       return;
     }
     
-    // Check the second-to-last edge (common for alternating patterns)
-    if (tail?.prevIn && tail.prevIn.from === producer) {
-      const edge = tail.prevIn;
-      edge.fromVersion = producerVersion;
-      edge.toGen = consumer._gen;
-      consumer._inTail = edge; // Move to tail for next access
+    // Check next from tail (common for alternating patterns)
+    // Alien-signals optimization: check from tail, not predecessor
+    const nextFromTail = tail !== undefined ? tail.nextIn : consumer._in;
+    if (nextFromTail !== undefined && nextFromTail.from === producer) {
+      nextFromTail.fromVersion = producerVersion;
+      nextFromTail.toGen = consumer._gen;
+      consumer._inTail = nextFromTail;
       return;
     }
     
@@ -121,11 +116,9 @@ export function createDependencyGraph(): DependencyGraph {
     let node = consumer._in;
     while (node) {
       if (node.from === producer) {
-        // Found edge - either active (version >= 0) or recyclable (version = -1)
-        // Reactivate/update it
+        // Found edge - update and move to tail
         node.fromVersion = producerVersion;
         node.toGen = consumer._gen;
-        // Move to tail for better locality
         consumer._inTail = node;
         return;
       }
@@ -140,23 +133,20 @@ export function createDependencyGraph(): DependencyGraph {
   // Removes an edge from the producer's linked list of consumers
   // This is O(1) because we have direct pointers to neighbors
   const unlinkFromProducer = ({ from, prevOut, nextOut }: Edge): void => {
-    // Remove from doubly-linked list
+    // Update neighbor pointers
     if (prevOut) {
-      // Middle or end of list - update previous node
       prevOut.nextOut = nextOut;
     } else {
-      // Head of list - update producer's head pointer
       from._out = nextOut;
-
-      // OPTIMIZATION: Only check TRACKING flag if this was the last consumer
-      // Combine the checks to reduce branches
-      if (!nextOut && '_flags' in from) from._flags &= ~TRACKING;
+      // Clear TRACKING flag if this was the last consumer
+      if (!nextOut && '_flags' in from) {
+        from._flags &= ~TRACKING;
+      }
     }
     
     if (nextOut) {
       nextOut.prevOut = prevOut;
     } else {
-      // This was the tail - update tail pointer
       from._outTail = prevOut;
     }
   };
@@ -176,12 +166,14 @@ export function createDependencyGraph(): DependencyGraph {
     let stale = false;
 
     while (true) {
-      // Skip recycled edges
-      while (edge && edge.fromVersion === -1) {
-        edge = edge.nextIn;
-      }
+      // Process edges for current node
+      while (edge) {
+        // Skip recycled edges
+        if (edge.fromVersion === -1) {
+          edge = edge.nextIn;
+          continue;
+        }
 
-      if (edge) {
         const source = edge.from;
         const oldVersion = edge.fromVersion;
         const newVersion = source._version;
@@ -197,7 +189,7 @@ export function createDependencyGraph(): DependencyGraph {
             stale = true;
           } else if (changed || (sourceFlags & PENDING)) {
             if (sourceFlags & INVALIDATED) {
-              // Push to stack
+              // Push to stack and recurse
               stack = { edge, next: edge.nextIn, to: node, stale, prev: stack };
               node = source;
               edge = source._in;
@@ -212,15 +204,18 @@ export function createDependencyGraph(): DependencyGraph {
         }
         
         edge = edge.nextIn;
-        continue;
       }
 
-      // Clear INVALIDATED if clean
-      if (!stale) node._flags &= ~INVALIDATED;
+      // Process current node
+      if (!stale) {
+        node._flags &= ~INVALIDATED;
+      }
+      
+      // Check if we need to unwind stack
       if (!stack) break;
 
       // Stack unwind
-      const frame: StackFrame = stack;
+      const frame = stack;
       if (stale) {
         node._updateValue();
         if ('_version' in node) {
@@ -235,11 +230,11 @@ export function createDependencyGraph(): DependencyGraph {
       stale = frame.stale || stale;
     }
 
-    // Single flag operation
-    toNode._flags = stale
+    // Update final flags
+    toNode._flags = stale 
       ? (flags | STALE) & ~INVALIDATED
       : flags & ~INVALIDATED;
-
+    
     return stale;
   };
 
