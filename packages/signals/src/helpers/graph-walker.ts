@@ -54,7 +54,7 @@ export function createGraphWalker(): GraphWalker {
 
         to._flags |= INVALIDATED;
         visit(to);
-        edge = (to as unknown as { _targets?: Edge })._targets;
+        edge = (to as unknown as { _to?: Edge })._to;
       }
 
       // If we broke out with multiple targets, fall through to normal DFS
@@ -80,7 +80,7 @@ export function createGraphWalker(): GraphWalker {
 
       // Optimized traversal with reduced branching
       const nextSibling = currentEdge.nextTarget;
-      const childTargets = (target as unknown as { _targets?: Edge })._targets;
+      const childTargets = (target as unknown as { _to?: Edge })._to;
 
       // Determine next edge to process using intrusive stack
       if (childTargets) {
@@ -142,7 +142,7 @@ export function createGraphWalker(): GraphWalker {
       visit(target);
 
       const nextSibling = currentEdge.nextTarget;
-      const childTargets = (target as unknown as { _targets?: Edge })._targets;
+      const childTargets = (target as unknown as { _to?: Edge })._to;
 
       if (childTargets) {
         if (nextSibling) {

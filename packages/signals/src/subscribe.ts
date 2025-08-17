@@ -182,16 +182,16 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
 
       // ALGORITHM: Insert at Head of Target List
       // Add to the beginning of source's target list
-      node.nextTarget = source._targets;
+      node.nextTarget = source._to;
       node.prevTarget = undefined;
 
       // Update old head's back pointer
-      if (source._targets) {
-        source._targets.prevTarget = node;
+      if (source._to) {
+        source._to.prevTarget = node;
       }
 
       // Update source's head pointer
-      source._targets = node;
+      source._to = node;
 
       // Store as our single source
       this._sources = node;

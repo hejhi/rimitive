@@ -76,8 +76,8 @@ describe('signal', () => {
     expect(sum.value).toBe(15);
     
     // Should have created dependency nodes
-    expect(a._targets).toBeDefined();
-    expect(b._targets).toBeDefined();
+    expect(a._to).toBeDefined();
+    expect(b._to).toBeDefined();
   });
 
   it('should notify dependents on change', () => {
@@ -202,7 +202,7 @@ describe('signal', () => {
       
       a.value = 5;
       // For now, just verify the computed tracks its dependencies
-      expect(a._targets).toBeDefined();
+      expect(a._to).toBeDefined();
     });
   });
 });

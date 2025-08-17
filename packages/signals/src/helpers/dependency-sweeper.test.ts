@@ -14,7 +14,7 @@ describe('Dependency Sweeper', () => {
 
   const makeProducer = (version = 1): ProducerNode => ({
     __type: 'test',
-    _targets: undefined,
+    _to: undefined,
     _version: version,
   });
 
@@ -40,9 +40,9 @@ describe('Dependency Sweeper', () => {
     sweeper.detachAll(target);
 
     expect(target._sources).toBeUndefined();
-    expect(a._targets).toBeUndefined();
-    expect(b._targets).toBeUndefined();
-    expect(c._targets).toBeUndefined();
+    expect(a._to).toBeUndefined();
+    expect(b._to).toBeUndefined();
+    expect(c._to).toBeUndefined();
   });
 
   it('prunes only stale edges', () => {
@@ -86,7 +86,7 @@ describe('Dependency Sweeper', () => {
     expect(active.has(c)).toBe(true);
     expect(recycled.has(b)).toBe(true);
     // With recycling, b's edge stays in producer's list
-    expect(b._targets).toBeDefined();
+    expect(b._to).toBeDefined();
   });
 
   it('marks all as recyclable when none accessed in current run', () => {
@@ -110,7 +110,7 @@ describe('Dependency Sweeper', () => {
     }
     expect(recycledCount).toBe(2);
     // Edges stay in producer's list for recycling
-    expect(a._targets).toBeDefined();
-    expect(b._targets).toBeDefined();
+    expect(a._to).toBeDefined();
+    expect(b._to).toBeDefined();
   });
 });

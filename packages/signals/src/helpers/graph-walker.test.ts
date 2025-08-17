@@ -157,8 +157,8 @@ describe('GraphWalker', () => {
     const edge2 = createEdge(computed1, computed2);
     const edge3 = createEdge(computed2, effect);
 
-    computed1._targets = edge2;
-    computed2._targets = edge3;
+    computed1._to = edge2;
+    computed2._to = edge3;
 
     walk(edge1, visit);
 
@@ -181,8 +181,8 @@ describe('GraphWalker', () => {
     const edge4 = createEdge(computed2, computed3);
 
     linkEdges([edge1, edge2]);
-    computed1._targets = edge3;
-    computed2._targets = edge4;
+    computed1._to = edge3;
+    computed2._to = edge4;
 
     walk(edge1, visit);
 
@@ -218,16 +218,16 @@ describe('GraphWalker', () => {
     const comp1ToComp3 = createEdge(comp1, comp3);
     const comp1ToEff1 = createEdge(comp1, eff1);
     linkEdges([comp1ToComp3, comp1ToEff1]);
-    comp1._targets = comp1ToComp3;
+    comp1._to = comp1ToComp3;
 
     const comp2ToComp4 = createEdge(comp2, comp4);
-    comp2._targets = comp2ToComp4;
+    comp2._to = comp2ToComp4;
 
     const comp3ToEff2 = createEdge(comp3, eff2);
-    comp3._targets = comp3ToEff2;
+    comp3._to = comp3ToEff2;
 
     const comp4ToEff3 = createEdge(comp4, eff3);
-    comp4._targets = comp4ToEff3;
+    comp4._to = comp4ToEff3;
 
     walk(sourceToComp1, visit);
 
@@ -281,7 +281,7 @@ describe('GraphWalker', () => {
     for (let i = 0; i < 99; i++) {
       const edge = createEdge(nodes[i]!, nodes[i + 1]!);
       edges.push(edge);
-      nodes[i]!._targets = edge;
+      nodes[i]!._to = edge;
     }
 
     walk(edges[0], visit);

@@ -104,7 +104,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     _runVersion = 0;
 
     // Linked list of edges pointing to our dependents (computeds/effects that read us)
-    _targets: Edge | undefined = undefined;
+    _to: Edge | undefined = undefined;
 
     // OPTIMIZATION: Edge Cache
     // Same optimization as signals - cache last edge for repeated access
@@ -182,11 +182,11 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
       // ALGORITHM: Delegated Propagation via GraphWalker
       // Use the centralized graph traversal system
-      if (!this._targets) return;
+      if (!this._to) return;
 
       // Use GraphWalker's optimized DFS traversal
       // This handles fast paths, stack management, and flag checking
-      dfs(this._targets, notifyNode);
+      dfs(this._to, notifyNode);
     }
 
     _update(): void {
@@ -270,7 +270,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Clear cached value to free memory
       this._value = undefined;
 
-      // TODO: Should we also clear _targets to help dependents?
+      // TODO: Should we also clear _to to help dependents?
       // Currently dependents will discover this node is disposed when they update
     }
   }

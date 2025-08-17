@@ -77,9 +77,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     
     // ALGORITHM: Producer's Target List
     // Linked list of consumers (computeds/effects) that depend on this signal.
-    // When this signal changes, we traverse _targets to notify dependents.
+    // When this signal changes, we traverse _to to notify dependents.
     // Using undefined instead of null for slightly better performance.
-    _targets: Edge | undefined = undefined;
+    _to: Edge | undefined = undefined;
     
     // OPTIMIZATION: Edge Cache for Hot Path
     // Caches the last edge to optimize repeated access from the same consumer.
@@ -137,7 +137,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // Avoids invalidating unrelated computeds' global fast path when this
       // signal has no consumers. Only bump global version if we actually
       // have targets to notify.
-      if (!this._targets) return;
+      if (!this._to) return;
       
       // Increment global version as we are about to notify dependents
       ctx.version++;
@@ -154,7 +154,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // - Immediate traversal for unbatched updates
       // - Small batch optimization (threshold = 2)
       // - Multi-root aggregation for large batches
-      invalidate(this._targets, !isNewBatch, dfs, notifyNode);
+      invalidate(this._to, !isNewBatch, dfs, notifyNode);
       
       // Flush effects if we're ending a batch and effects were queued
       if (isNewBatch && --ctx.batchDepth === 0 && state.size !== prevSize) {

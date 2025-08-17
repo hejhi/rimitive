@@ -11,7 +11,7 @@
  * - Database query planners (dependency analysis)
  */
 import { CONSTANTS } from '../constants';
-import type { ProducerNode, ConsumerNode, Edge, TargetNode } from '../types';
+import type { ProducerNode, ConsumerNode, Edge, ToNode } from '../types';
 
 // OPTIMIZATION: Edge Caching
 // Producers cache their last accessed edge to avoid linked list traversal
@@ -31,8 +31,8 @@ export interface DependencyGraph {
 // Stack frame type - follows Alien's pattern, never mutates Edge
 interface StackFrame {
   edge: Edge;
-  nextLink: Edge | undefined;
-  target: TargetNode;
+  next: Edge | undefined;
+  to: ToNode;
   stale: boolean;
   prev: StackFrame | undefined;
 }
@@ -76,7 +76,7 @@ export function createDependencyGraph(): DependencyGraph {
      if (prevTarget) {
        prevTarget.nextTarget = newNode;
      } else {
-       producer._targets = newNode; // First target
+       producer._to = newNode; // First target
      }
      producer._targetsTail = newNode; // Update tail pointer
      
@@ -146,7 +146,7 @@ export function createDependencyGraph(): DependencyGraph {
       prevTarget.nextTarget = nextTarget;
     } else {
       // Head of list - update producer's head pointer
-      from._targets = nextTarget;
+      from._to = nextTarget;
 
       // OPTIMIZATION: Only check TRACKING flag if this was the last consumer
       // Combine the checks to reduce branches
@@ -170,17 +170,17 @@ export function createDependencyGraph(): DependencyGraph {
    * - Early exit for changed signal dependencies
    * - Efficient unwinding without frame objects
    */
-  const refreshConsumers = (targetNode: TargetNode): boolean => {
+  const refreshConsumers = (toNode: ToNode): boolean => {
     // OPTIMIZATION: Only called for INVALIDATED case now
     // STALE is handled inline in hot paths
-    if (!(targetNode._flags & INVALIDATED)) return false;
+    if (!(toNode._flags & INVALIDATED)) return false;
 
     // Already explicitly marked STALE - no need to check dependencies
-    if (targetNode._flags & STALE) return true;
+    if (toNode._flags & STALE) return true;
 
     // OPTIMIZATION: Fast path for linear chains (single dependency)
     // Common pattern: computed(() => signal.value * 2)
-    const firstEdge = targetNode._sources;
+    const firstEdge = toNode._sources;
 
     if (firstEdge && !firstEdge.nextSource) {
       // Skip recycled edges
@@ -198,10 +198,10 @@ export function createDependencyGraph(): DependencyGraph {
 
       // Complex dependency: check flags and version
       const sourceFlags = source._flags || 0;
-      
+
       // Already marked stale
       if (sourceFlags & STALE) return true;
-      
+
       // Clean fast path - both version and flags match
       if (edgeVersion === source._version && !(sourceFlags & PENDING)) {
         return false;
@@ -211,8 +211,8 @@ export function createDependencyGraph(): DependencyGraph {
     }
 
     // Full dependency tree traversal
-    let currentTarget = targetNode;
-    let currentEdge = targetNode._sources;
+    let currentTarget = toNode;
+    let currentEdge = toNode._sources;
     let stackTop: StackFrame | undefined = undefined;
     let stale = false;
 
@@ -261,8 +261,8 @@ export function createDependencyGraph(): DependencyGraph {
           // Push current state onto stack
           stackTop = {
             edge: currentEdge,
-            nextLink: currentEdge.nextSource,
-            target: currentTarget,
+            next: currentEdge.nextSource,
+            to: currentTarget,
             stale,
             prev: stackTop,
           };
@@ -313,8 +313,8 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Restore state from stack frame
-      currentEdge = frame.nextLink;
-      currentTarget = frame.target;
+      currentEdge = frame.next;
+      currentTarget = frame.to;
       stackTop = frame.prev;
 
       // Propagate dirtiness if value changed
@@ -324,10 +324,10 @@ export function createDependencyGraph(): DependencyGraph {
     // Update final flags
     if (stale) {
       // Dependencies changed - mark as STALE and clear INVALIDATED
-      targetNode._flags = (targetNode._flags & ~INVALIDATED) | STALE;
+      toNode._flags = (toNode._flags & ~INVALIDATED) | STALE;
     } else {
       // False alarm - clear INVALIDATED
-      targetNode._flags &= ~INVALIDATED;
+      toNode._flags &= ~INVALIDATED;
     }
 
     return stale;

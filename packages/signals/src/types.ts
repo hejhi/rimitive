@@ -45,7 +45,7 @@ export interface Disposable {
 // PRODUCERS: Nodes that other nodes depend on (signals, computed values)
 // They maintain a list of consumers (targets) that depend on them
 export interface ProducerNode extends ReactiveNode {
-  _targets: Edge | undefined;  // Head of intrusive linked list of dependents
+  _to: Edge | undefined;  // Head of intrusive linked list of dependents
   _targetsTail?: Edge;  // Tail pointer for O(1) append and insertion order preservation
   
   // LOCAL VERSION COUNTER (VALUE CHANGE TRACKING)
@@ -84,8 +84,8 @@ export interface ScheduledNode extends ConsumerNode, Disposable {
   _flush(): void;                  // Execute the deferred work
 }
 
-export type SourceNode = ProducerNode | (ProducerNode & ConsumerNode);
-export type TargetNode = ConsumerNode | (ProducerNode & ConsumerNode);
+export type FromNode = ProducerNode | (ProducerNode & ConsumerNode);
+export type ToNode = ConsumerNode | (ProducerNode & ConsumerNode);
 
 // ALGORITHM: Intrusive Doubly-Linked Graph Edges
 // Edge represents a dependency relationship in the graph.
@@ -102,8 +102,8 @@ export type TargetNode = ConsumerNode | (ProducerNode & ConsumerNode);
 // - Forward: "What depends on this producer?"
 // - Backward: "What does this consumer depend on?"
 export interface Edge {
-  from: SourceNode; // The dependency
-  to: TargetNode | (TargetNode & Disposable) | (TargetNode & ScheduledNode); // The dependent
+  from: FromNode; // The dependency
+  to: ToNode | (ToNode & Disposable) | (ToNode & ScheduledNode); // The dependent
 
   // Intrusive list pointers for source's edge list
   prevSource?: Edge; // Previous edge from same source
