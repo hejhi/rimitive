@@ -13,24 +13,24 @@ describe('Dependency Graph Helpers', () => {
     it('should reuse edge when same producer accessed again', () => {
       const source: ProducerNode = {
         __type: 'test',
-        _to: undefined,
+        _out: undefined,
         _version: 1,
-        _toTail: undefined
+        _outTail: undefined
       };
       
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _from: undefined,
+        _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _gen: 0,
-        _fromTail: undefined,
+        _inTail: undefined,
       };
       
       // First call creates the dependency
       helpers.ensureLink(source, target, 1);
-      const firstEdge = target._from;
+      const firstEdge = target._in;
       
       // Update version
       source._version = 2;
@@ -38,26 +38,26 @@ describe('Dependency Graph Helpers', () => {
       // Second call should reuse the same edge
       helpers.ensureLink(source, target, 2);
       
-      expect(target._from).toBe(firstEdge);
-      expect(target._from?.version).toBe(2);
+      expect(target._in).toBe(firstEdge);
+      expect(target._in?.version).toBe(2);
     });
 
     it('should find existing dependency in sources list', () => {
       const source: ProducerNode = {
         __type: 'test',
-        _to: undefined,
+        _out: undefined,
         _version: 1,
-        _toTail: undefined,
+        _outTail: undefined,
       };
       
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _from: undefined,
+        _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _gen: 0,
-        _fromTail: undefined,
+        _inTail: undefined,
       };
       
       // Create dependency manually
@@ -70,48 +70,48 @@ describe('Dependency Graph Helpers', () => {
       helpers.ensureLink(source, target, 2);
       
       expect(existingNode.version).toBe(2);
-      expect(target._from).toBe(existingNode);
+      expect(target._in).toBe(existingNode);
     });
 
     it('should create new dependency when none exists', () => {
       const source: ProducerNode = {
         __type: 'test',
-        _to: undefined,
+        _out: undefined,
         _version: 1,
-        _toTail: undefined,
+        _outTail: undefined,
       };
       
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _from: undefined,
+        _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _gen: 0,
-        _fromTail: undefined,
+        _inTail: undefined,
       };
       
       helpers.ensureLink(source, target, 1);
       
-      expect(source._to).toBeDefined();
-      expect(target._from).toBeDefined();
+      expect(source._out).toBeDefined();
+      expect(target._in).toBeDefined();
     });
 
     it('should handle multiple sources for the same target', () => {
       const sources = Array.from({ length: 3 }, (_, i) => ({
         __type: 'test',
-        _to: undefined,
+        _out: undefined,
         _version: i + 1,
       }));
       
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _from: undefined,
+        _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _gen: 0,
-        _fromTail: undefined,
+        _inTail: undefined,
       };
       
       // Add dependencies from multiple sources
@@ -121,7 +121,7 @@ describe('Dependency Graph Helpers', () => {
       
       // Count sources
       let count = 0;
-      let node = target._from;
+      let node = target._in;
       while (node) {
         count++;
         node = node.nextIn;
@@ -133,19 +133,19 @@ describe('Dependency Graph Helpers', () => {
     it('should update version when dependency already exists', () => {
       const source: ProducerNode = {
         __type: 'test',
-        _to: undefined,
+        _out: undefined,
         _version: 1,
-        _toTail: undefined,
+        _outTail: undefined,
       };
       
       const target: ConsumerNode = {
         __type: 'test',
         _flags: 0,
-        _from: undefined,
+        _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
         _gen: 0,
-        _fromTail: undefined,
+        _inTail: undefined,
       };
       
       // Create initial dependency
@@ -158,7 +158,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.ensureLink(source, target, 5);
       
       // Check that version was updated
-      const node = target._from;
+      const node = target._in;
       expect(node?.version).toBe(5);
     });
   });
@@ -167,19 +167,19 @@ describe('Dependency Graph Helpers', () => {
       it('should create bidirectional links between source and target', () => {
         const source: ProducerNode = {
           __type: 'test',
-          _to: undefined,
+          _out: undefined,
           _version: 1,
-          _toTail: undefined,
+          _outTail: undefined,
         };
         
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _from: undefined,
+          _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _gen: 0,
-          _fromTail: undefined,
+          _inTail: undefined,
         };
         
         const node = helpers.connect(source, target, 1);
@@ -187,68 +187,68 @@ describe('Dependency Graph Helpers', () => {
         expect(node.from).toBe(source);
         expect(node.to).toBe(target);
         expect(node.version).toBe(1);
-        expect(source._to).toBe(node);
-        expect(target._from).toBe(node);
+        expect(source._out).toBe(node);
+        expect(target._in).toBe(node);
       });
   
       it('should maintain linked lists when multiple dependencies exist', () => {
         const source: ProducerNode = {
           __type: 'test',
-          _to: undefined,
+          _out: undefined,
           _version: 1,
-          _toTail: undefined,
+          _outTail: undefined,
         };
         
         const target1: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _from: undefined,
+          _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _gen: 0,
-          _fromTail: undefined,
+          _inTail: undefined,
         };
         
         const target2: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _from: undefined,
+          _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _gen: 0,
-          _fromTail: undefined,
+          _inTail: undefined,
         };
         
         const node1 = helpers.connect(source, target1, 1);
         const node2 = helpers.connect(source, target2, 1);
         
         // Source should point to first target (head of list)
-        expect(source._to).toBe(node1);
+        expect(source._out).toBe(node1);
         // node1 should point to node2 (insertion order)
         expect(node1.nextOut).toBe(node2);
         expect(node2.prevOut).toBe(node1);
         // node2 should be the tail
-        expect(source._toTail).toBe(node2);
+        expect(source._outTail).toBe(node2);
       });
   
       it('should set TRACKING flag for computed sources', () => {
         const source = {
           __type: 'test',
-          _to: undefined,
+          _out: undefined,
           _lastEdge: undefined,
           _version: 1,
           _flags: 0,
-          _toTail: undefined
+          _outTail: undefined
         };
         
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _from: undefined,
+          _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _gen: 0,
-          _fromTail: undefined,
+          _inTail: undefined,
         };
         
         helpers.connect(source, target, 1);
@@ -262,39 +262,39 @@ describe('Dependency Graph Helpers', () => {
       it('should remove node from targets list', () => {
         const source: ProducerNode = {
           __type: 'test',
-          _to: undefined,
+          _out: undefined,
           _version: 1,
-          _toTail: undefined,
+          _outTail: undefined,
         };
         
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _from: undefined,
+          _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _gen: 0,
-          _fromTail: undefined,
+          _inTail: undefined,
         };
         
         const node = helpers.connect(source, target, 1);
         
         helpers.unlinkFromProducer(node);
         
-        expect(source._to).toBeUndefined();
+        expect(source._out).toBeUndefined();
       });
   
       it('should maintain linked list integrity when removing middle node', () => {
         const source: ProducerNode = {
           __type: 'test',
-          _to: undefined,
+          _out: undefined,
           _version: 1,
-          _toTail: undefined,
+          _outTail: undefined,
         };
         
         const targets = Array.from({ length: 3 }, () => ({
           __type: 'test',
-          _from: undefined,
+          _in: undefined,
           _invalidate: () => {},
         }) as ConsumerNode);
         
@@ -313,20 +313,20 @@ describe('Dependency Graph Helpers', () => {
       it('should clear TRACKING flag when last target is removed', () => {
         const source = {
           __type: 'test',
-          _to: undefined,
+          _out: undefined,
           _version: 1,
           _flags: 16, // TRACKING flag set
-          _toTail: undefined,
+          _outTail: undefined,
         };
         
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-          _from: undefined,
+          _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _gen: 0,
-          _fromTail: undefined
+          _inTail: undefined
         };
         
         const node = helpers.connect(source, target, 1);

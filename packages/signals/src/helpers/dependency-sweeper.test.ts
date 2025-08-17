@@ -14,19 +14,19 @@ describe('Dependency Sweeper', () => {
 
   const makeProducer = (version = 1): ProducerNode => ({
     __type: 'test',
-    _to: undefined,
+    _out: undefined,
     _version: version,
-    _toTail: undefined
+    _outTail: undefined
   });
 
   const makeConsumer = (): ConsumerNode => ({
     __type: 'test',
-    _from: undefined,
+    _in: undefined,
     _flags: 0,
     _invalidate: () => {},
     _updateValue: () => true,
     _gen: 0,
-    _fromTail: undefined
+    _inTail: undefined
   });
 
   it('detaches all edges on dispose', () => {
@@ -41,10 +41,10 @@ describe('Dependency Sweeper', () => {
 
     sweeper.detachAll(target);
 
-    expect(target._from).toBeUndefined();
-    expect(a._to).toBeUndefined();
-    expect(b._to).toBeUndefined();
-    expect(c._to).toBeUndefined();
+    expect(target._in).toBeUndefined();
+    expect(a._out).toBeUndefined();
+    expect(b._out).toBeUndefined();
+    expect(c._out).toBeUndefined();
   });
 
   it('prunes only stale edges', () => {
@@ -71,7 +71,7 @@ describe('Dependency Sweeper', () => {
     sweeper.pruneStale(target);
 
     // With edge recycling, all edges remain but b is marked as recyclable
-    let list = target._from;
+    let list = target._in;
     const active = new Set<unknown>();
     const recycled = new Set<unknown>();
     while (list) {
@@ -88,7 +88,7 @@ describe('Dependency Sweeper', () => {
     expect(active.has(c)).toBe(true);
     expect(recycled.has(b)).toBe(true);
     // With recycling, b's edge stays in producer's list
-    expect(b._to).toBeDefined();
+    expect(b._out).toBeDefined();
   });
 
   it('marks all as recyclable when none accessed in current run', () => {
@@ -103,7 +103,7 @@ describe('Dependency Sweeper', () => {
     sweeper.pruneStale(target);
 
     // With edge recycling, edges remain but are marked as recyclable
-    let list = target._from;
+    let list = target._in;
     let recycledCount = 0;
     while (list) {
       expect(list.version).toBe(-1); // All should be marked as recyclable
@@ -112,7 +112,7 @@ describe('Dependency Sweeper', () => {
     }
     expect(recycledCount).toBe(2);
     // Edges stay in producer's list for recycling
-    expect(a._to).toBeDefined();
-    expect(b._to).toBeDefined();
+    expect(a._out).toBeDefined();
+    expect(b._out).toBeDefined();
   });
 });

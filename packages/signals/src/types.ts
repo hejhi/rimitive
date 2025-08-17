@@ -43,10 +43,10 @@ export interface Disposable {
 // The core of the reactivity system uses a bipartite graph with two node types:
 
 // PRODUCERS: Nodes that other nodes depend on (signals, computed values)
-// They maintain a list of consumers (targets) that depend on them
+// They maintain a list of consumers that depend on them
 export interface ProducerNode extends ReactiveNode {
-  _to: Edge | undefined;  // Head of intrusive linked list of dependents
-  _toTail: Edge | undefined;  // Tail pointer for O(1) append and insertion order preservation
+  _out: Edge | undefined;  // Head of output edges (to consumers)
+  _outTail: Edge | undefined;  // Tail pointer for O(1) append
   
   // LOCAL VERSION COUNTER (VALUE CHANGE TRACKING)
   // Incremented when THIS node's value changes.
@@ -62,10 +62,10 @@ export interface ProducerNode extends ReactiveNode {
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
-// They maintain a list of producers (sources) they depend on
+// They maintain a list of producers they depend on
 export interface ConsumerNode extends ReactiveNode {
-  _from: Edge | undefined; // Head of intrusive linked list of dependencies
-  _fromTail: Edge | undefined; // OPTIMIZATION: Tail pointer for O(1) access to recent dependencies
+  _in: Edge | undefined; // Head of input edges (from producers)
+  _inTail: Edge | undefined; // Tail pointer for O(1) access to recent dependencies
 
   _invalidate(): void; // Called when dependencies change
   _updateValue(): boolean; // Update this node's value (if it produces one)
@@ -84,6 +84,7 @@ export interface ScheduledNode extends ConsumerNode, Disposable {
   _flush(): void;                  // Execute the deferred work
 }
 
+// Node types for edges - representing what can be sources and targets
 export type FromNode = ProducerNode | (ProducerNode & ConsumerNode);
 export type ToNode = ConsumerNode | (ProducerNode & ConsumerNode);
 
@@ -102,16 +103,16 @@ export type ToNode = ConsumerNode | (ProducerNode & ConsumerNode);
 // - Forward: "What depends on this producer?"
 // - Backward: "What does this consumer depend on?"
 export interface Edge {
-  from: FromNode; // The dependency
-  to: ToNode | (ToNode & Disposable) | (ToNode & ScheduledNode); // The dependent
+  from: FromNode; // The producer (source of data)
+  to: ToNode; // The consumer (depends on the producer)
 
-  // Edges sharing the same source (producer) - "out" from producer
-  prevOut: Edge | undefined; // Previous edge from same source
-  nextOut: Edge | undefined; // Next edge from same source
+  // Producer's output list navigation - edges "out" from same producer
+  prevOut: Edge | undefined; // Previous edge in producer's output list
+  nextOut: Edge | undefined; // Next edge in producer's output list
 
-  // Edges sharing the same target (consumer) - "in" to consumer
-  prevIn: Edge | undefined; // Previous edge to same target
-  nextIn: Edge | undefined; // Next edge to same target
+  // Consumer's input list navigation - edges "in" to same consumer
+  prevIn: Edge | undefined; // Previous edge in consumer's input list
+  nextIn: Edge | undefined; // Next edge in consumer's input list
 
   // CACHED PRODUCER VERSION (STALENESS DETECTION)
   // Stores the producer's _version at the time this edge was created/validated.

@@ -54,7 +54,7 @@ export function createDependencySweeper(
   // ALGORITHM: Complete Edge Removal
   // Used during disposal to remove all dependency edges at once
   const detachAll = (consumer: ConsumerNode): void => {
-    let node = consumer._from;
+    let node = consumer._in;
     
     // Walk the linked list of sources
     while (node) {
@@ -75,7 +75,7 @@ export function createDependencySweeper(
     }
     
     // Clear the consumer's source list head
-    consumer._from = undefined;
+    consumer._in = undefined;
   };
 
   // ALGORITHM: Edge Recycling via Version Marking
@@ -83,7 +83,7 @@ export function createDependencySweeper(
   // match the consumer's current generation as recyclable (version = -1).
   // This avoids constant allocation/deallocation of Edge objects.
   const pruneStale = (consumer: ConsumerNode): void => {
-    let node = consumer._from;
+    let node = consumer._in;
 
     const currentGen = consumer._gen;
     // Walk the linked list, marking stale nodes as recyclable

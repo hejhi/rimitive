@@ -95,9 +95,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // ALGORITHM: Dynamic Dependency List
     // Linked list of edges pointing to our dependencies (signals/computeds we read).
     // This list is rebuilt on each computation to handle conditional dependencies.
-    _from: Edge | undefined = undefined;
-    _fromTail: Edge | undefined;
-    _toTail: Edge | undefined;
+    _in: Edge | undefined = undefined;
+    _inTail: Edge | undefined;
+    _outTail: Edge | undefined;
 
     // OPTIMIZATION: Initial State Flags
     // Start as STALE to force computation on first access.
@@ -106,7 +106,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     _gen = 0;
 
     // Linked list of edges pointing to our dependents (computeds/effects that read us)
-    _to: Edge | undefined = undefined;
+    _out: Edge | undefined = undefined;
 
     // OPTIMIZATION: Edge Cache
     // Same optimization as signals - cache last edge for repeated access
@@ -184,11 +184,11 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
       // ALGORITHM: Delegated Propagation via GraphWalker
       // Use the centralized graph traversal system
-      if (!this._to) return;
+      if (!this._out) return;
 
       // Use GraphWalker's optimized DFS traversal
       // This handles fast paths, stack management, and flag checking
-      dfs(this._to, notifyNode);
+      dfs(this._out, notifyNode);
     }
 
     _update(): void {
@@ -272,7 +272,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Clear cached value to free memory
       this._value = undefined;
 
-      // TODO: Should we also clear _to to help dependents?
+      // TODO: Should we also clear _out to help dependents?
       // Currently dependents will discover this node is disposed when they update
     }
   }

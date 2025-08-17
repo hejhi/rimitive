@@ -63,9 +63,9 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     _callback: (value: T) => void; // User's callback function
     _flags = 0; // State flags (INVALIDATED, DISPOSED, SKIP_EQUALITY)
     _lastValue: T; // Cached value for equality check
-    _from: Edge | undefined = undefined; // Single edge to source signal/computed
+    _in: Edge | undefined = undefined; // Single edge to source signal/computed
     _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
-    _fromTail: Edge | undefined = undefined; // Link in scheduling queue
+    _inTail: Edge | undefined = undefined; // Link in scheduling queue
     _gen = 0; // Generation counter for dynamic dependency tracking
 
     constructor(
@@ -130,8 +130,8 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
 
       // ALGORITHM: Source Resolution
       // Get the source from our single dependency edge
-      if (!this._from) return;
-      const source = this._from.from as Readable<T> & ProducerNode;
+      if (!this._in) return;
+      const source = this._in.from as Readable<T> & ProducerNode;
 
       // Read current value (this doesn't track dependency since we're not RUNNING)
       const currentValue = source.value;
@@ -183,19 +183,19 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
 
       // ALGORITHM: Insert at Head of Target List
       // Add to the beginning of source's target list
-      node.nextOut = source._to;
+      node.nextOut = source._out;
       node.prevOut = undefined;
 
       // Update old head's back pointer
-      if (source._to) {
-        source._to.prevOut = node;
+      if (source._out) {
+        source._out.prevOut = node;
       }
 
       // Update source's head pointer
-      source._to = node;
+      source._out = node;
 
       // Store as our single source
-      this._from = node;
+      this._in = node;
     }
   }
 
