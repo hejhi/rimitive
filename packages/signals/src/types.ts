@@ -70,10 +70,7 @@ export interface ConsumerNode extends ReactiveNode {
   _invalidate(): void; // Called when dependencies change
   _updateValue(): boolean; // Update this node's value (if it produces one)
   _flags: number; // Bit field containing STALE, RUNNING, DISPOSED, etc.
-  // GENERATION COUNTER (DYNAMIC DEPENDENCY SWEEPING)
-  // Incremented at the start of each run to tag edges created/validated
-  // during that run. Edges not matching the current generation are pruned.
-  _gen: number;
+  // REMOVED: _gen field - using alien-signals' simpler tail-marking approach
 }
 
 // PATTERN: Deferred Execution Queue
@@ -126,10 +123,9 @@ export interface Edge {
   // NOT REDUNDANT: This is a cache of producer._version for performance
   fromVersion: number;
 
-  // GENERATION TAG FOR DYNAMIC DEPENDENCY TRACKING
-  // Set to the consumer's _gen during the run that touched this edge.
-  // After the run, edges whose toGen !== consumer._gen are pruned.
-  toGen: number;
+  // REMOVED: toGen field - using alien-signals' simpler tail-marking approach
+  // Instead of tracking generation per edge, we'll mark tail at start of run
+  // and prune everything after the tail at the end
 }
 
 // Ensure module is not tree-shaken

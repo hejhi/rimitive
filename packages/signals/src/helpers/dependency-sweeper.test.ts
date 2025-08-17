@@ -25,7 +25,6 @@ describe('Dependency Sweeper', () => {
     _flags: 0,
     _invalidate: () => {},
     _updateValue: () => true,
-    _gen: 0,
     _inTail: undefined
   });
 
@@ -53,45 +52,38 @@ describe('Dependency Sweeper', () => {
     const c = makeProducer(1);
     const target = makeConsumer();
 
-    // Initial run (gen 0): link a, b, c
+    // Initial run: link a, b, c
     graph.link(a, target, a._version);
     graph.link(b, target, b._version);
     graph.link(c, target, c._version);
 
-    // Next run (gen 1): only access a and c
-    target._gen = 1;
-    // Access a via cached fast path
+    // Simulate start of new run - reset tail
+    target._inTail = undefined;
+    
+    // Next run: only access a and c
     a._version = 2;
     graph.link(a, target, a._version);
-    // Access c via cached fast path
     c._version = 2;
     graph.link(c, target, c._version);
 
-    // Now prune stale (b)
+    // Now prune stale (b should be removed)
     sweeper.pruneStale(target);
 
-    // With edge recycling, all edges remain but b is marked as recyclable
+    // With tail-based pruning, only accessed edges remain
     let list = target._in;
     const active = new Set<unknown>();
-    const recycled = new Set<unknown>();
     while (list) {
-      if (list.fromVersion === -1) {
-        recycled.add(list.from);
-      } else {
-        active.add(list.from);
-        // Active edgesgrshould have current gen
-        expect(list.toGen).toBe(1);
-      }
+      active.add(list.from);
       list = list.nextIn;
     }
     expect(active.has(a)).toBe(true);
     expect(active.has(c)).toBe(true);
-    expect(recycled.has(b)).toBe(true);
-    // With recycling, b's edge stays in producer's list
-    expect(b._out).toBeDefined();
+    expect(active.has(b)).toBe(false);
+    // b's edge should be removed from producer's list
+    expect(b._out).toBeUndefined();
   });
 
-  it('marks all as recyclable when none accessed in current run', () => {
+  it('removes all edges when none accessed in current run', () => {
     const a = makeProducer(1);
     const b = makeProducer(1);
     const target = makeConsumer();
@@ -99,20 +91,16 @@ describe('Dependency Sweeper', () => {
     graph.link(a, target, a._version);
     graph.link(b, target, b._version);
 
-    target._gen = 2; // new run, but we do not access any producer
+    // Simulate start of new run - reset tail
+    target._inTail = undefined;
+    // Don't access any producer
+    
     sweeper.pruneStale(target);
 
-    // With edge recycling, edges remain but are marked as recyclable
-    let list = target._in;
-    let recycledCount = 0;
-    while (list) {
-      expect(list.fromVersion).toBe(-1); // All should be marked as recyclable
-      recycledCount++;
-      list = list.nextIn;
-    }
-    expect(recycledCount).toBe(2);
-    // Edges stay in producer's list for recycling
-    expect(a._out).toBeDefined();
-    expect(b._out).toBeDefined();
+    // With tail-based pruning, all edges should be removed
+    expect(target._in).toBeUndefined();
+    // Edges removed from producer's lists
+    expect(a._out).toBeUndefined();
+    expect(b._out).toBeUndefined();
   });
 });

@@ -99,8 +99,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     _in: Edge | undefined = undefined; // Dependencies this effect reads
     _inTail: Edge | undefined;
     _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
-    // Generation counter for dynamic dependency pruning
-    _gen = 0;
 
     // Cold fields (accessed less frequently)
     __type = 'effect' as const; // Type discriminator
@@ -189,8 +187,9 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // Clear all flags since we're handling them now
       this._flags = (this._flags | RUNNING) & ~PENDING;
 
-      // Bump generation for this run; dependencies touched will be tagged
-      this._gen = (this._gen + 1) | 0;
+      // ALGORITHM: Tail-based Dependency Tracking (alien-signals approach)
+      // Reset tail to undefined at start - all edges after this will be removed
+      this._inTail = undefined;
 
       // ALGORITHM: Context Management for Dependency Tracking
       // Set ourselves as current consumer so signal/computed reads register with us

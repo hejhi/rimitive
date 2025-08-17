@@ -21,7 +21,6 @@ describe('WorkQueue', () => {
       _inTail: undefined,
       dispose: () => {},
       _updateValue: () => true,
-      _gen: 0,
     };
     
     helpers.enqueue(node);
@@ -43,7 +42,6 @@ describe('WorkQueue', () => {
       _inTail: undefined,
       dispose: () => {},
       _updateValue: () => true,
-      _gen: 0,
     };
     
     // Enqueue once
@@ -70,7 +68,6 @@ describe('WorkQueue', () => {
       _inTail: undefined,
       dispose: () => {},
       _updateValue: () => true,
-      _gen: 0,
     };
     
     helpers.dispose(node, cleanupFn);
@@ -101,7 +98,6 @@ describe('WorkQueue', () => {
       _inTail: undefined,
       dispose: () => {},
       _updateValue: () => true,
-      _gen: 0,
     };
     
     const node2: ScheduledNode = {
@@ -114,7 +110,6 @@ describe('WorkQueue', () => {
       _inTail: undefined,
       dispose: () => {},
       _updateValue: () => true,
-      _gen: 0,
     };
     
     const node3: ScheduledNode = {
@@ -127,7 +122,6 @@ describe('WorkQueue', () => {
       _inTail: undefined,
       dispose: () => {},
       _updateValue: () => true,
-      _gen: 0,
     };
     
     // Schedule nodes in order
@@ -173,7 +167,6 @@ describe('WorkQueue', () => {
       _inTail: undefined,
       dispose: () => {},
       _updateValue: () => true,
-      _gen: 0,
     };
     
     helpers.enqueue(node);

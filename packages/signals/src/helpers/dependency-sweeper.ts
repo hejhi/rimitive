@@ -78,32 +78,44 @@ export function createDependencySweeper(
     consumer._in = undefined;
   };
 
-  // ALGORITHM: Edge Recycling via Version Marking
-  // After a computed/effect runs, mark edges whose generation tag does not
-  // match the consumer's current generation as recyclable (version = -1).
-  // This avoids constant allocation/deallocation of Edge objects.
+  // ALGORITHM: Tail-based Edge Removal (alien-signals approach)
+  // After a computed/effect runs, remove all edges after the tail marker.
+  // The tail was set at the start of the run, and all valid dependencies
+  // were moved to/before the tail during the run.
   const pruneStale = (consumer: ConsumerNode): void => {
-    let node = consumer._in;
-
-    const currentGen = consumer._gen;
-    // Walk the linked list, marking stale nodes as recyclable
-    while (node !== undefined) {
-      if (node.toGen !== currentGen) {
-        // Mark edge as recyclable instead of removing it
-        // fromVersion = -1 indicates a stale edge that can be reused
-        node.fromVersion = -1;
-
-        // Clear producer's cache if it points to this recycled edge
-        // This prevents stale cache hits when the dependency is re-established
-        if ('_lastEdge' in node.from && node.from._lastEdge === node) {
-          node.from._lastEdge = undefined;
-        }
-
-        // DON'T remove from producer's target list - keep for recycling
-        // The edge stays in both lists but is marked as inactive
+    const tail = consumer._inTail;
+    
+    // If no tail, all edges should be removed
+    let toRemove = tail ? tail.nextIn : consumer._in;
+    
+    // Remove all edges after the tail
+    while (toRemove) {
+      const next = toRemove.nextIn;
+      
+      // Clear producer's cache if it points to this edge
+      if ('_lastEdge' in toRemove.from && toRemove.from._lastEdge === toRemove) {
+        toRemove.from._lastEdge = undefined;
       }
       
-      node = node.nextIn;
+      // Remove from producer's target list
+      unlinkFromProducer(toRemove);
+      
+      // Remove from consumer's source list
+      if (toRemove.prevIn) {
+        toRemove.prevIn.nextIn = toRemove.nextIn;
+      } else {
+        consumer._in = toRemove.nextIn;
+      }
+      if (toRemove.nextIn) {
+        toRemove.nextIn.prevIn = toRemove.prevIn;
+      }
+      
+      toRemove = next;
+    }
+    
+    // Update tail to point to the last valid edge
+    if (tail) {
+      tail.nextIn = undefined;
     }
   };
 

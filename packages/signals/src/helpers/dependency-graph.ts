@@ -48,30 +48,45 @@ export function createDependencyGraph(): DependencyGraph {
     // OPTIMIZATION: Check tail (most recently accessed dependency)
     const tail = consumer._inTail;
     if (tail !== undefined && tail.from === producer) {
-      // Found at tail - just update version
+      // Found at tail - update version
       tail.fromVersion = producerVersion;
-      tail.toGen = consumer._gen;
       return;
     }
     
-    // OPTIMIZATION: Check previous edge for alternating patterns
-    // This creates a 2-element LRU cache for common access patterns
-    if (tail?.prevIn !== undefined && tail.prevIn.from === producer) {
-      const edge = tail.prevIn;
-      edge.fromVersion = producerVersion;
-      edge.toGen = consumer._gen;
-      // Move to tail for LRU behavior
-      consumer._inTail = edge;
+    // Check next after tail (or head if no tail)
+    const nextAfterTail = tail !== undefined ? tail.nextIn : consumer._in;
+    if (nextAfterTail !== undefined && nextAfterTail.from === producer) {
+      // Found right after tail - update version and move tail forward
+      nextAfterTail.fromVersion = producerVersion;
+      consumer._inTail = nextAfterTail;
       return;
     }
     
-    // FALLBACK: Linear search from head
-    let node = consumer._in;
+    // Linear search through the rest
+    let node = nextAfterTail;
     while (node) {
       if (node.from === producer) {
-        // Found edge - update and move to tail
+        // Found edge - update version and move it after current tail
         node.fromVersion = producerVersion;
-        node.toGen = consumer._gen;
+        
+        // If not immediately after tail, move it there
+        if (node !== nextAfterTail) {
+          // Remove from current position
+          if (node.prevIn) node.prevIn.nextIn = node.nextIn;
+          if (node.nextIn) node.nextIn.prevIn = node.prevIn;
+          
+          // Insert after tail
+          node.prevIn = tail;
+          node.nextIn = nextAfterTail;
+          if (nextAfterTail) nextAfterTail.prevIn = node;
+          if (tail) {
+            tail.nextIn = node;
+          } else {
+            consumer._in = node;
+          }
+        }
+        
+        // Update tail to this edge
         consumer._inTail = node;
         return;
       }
@@ -79,40 +94,44 @@ export function createDependencyGraph(): DependencyGraph {
     }
 
     // No existing edge - create new one
-    const nextIn = consumer._in;
+    const prevDep = tail;
+    const nextDep = tail !== undefined ? tail.nextIn : consumer._in;
     const prevOut = producer._outTail;
     
-    // Create new edge - head of sources, tail of targets
+    // Create new edge - insert after tail
     const newNode: Edge = {
       from: producer,
       to: consumer,
       fromVersion: producerVersion,
-      toGen: consumer._gen,
-      prevIn: undefined,
+      prevIn: prevDep,
       prevOut,
-      nextIn,
+      nextIn: nextDep,
       nextOut: undefined,
     };
 
-    // Update source list (prepend)
-    if (nextIn) nextIn.prevIn = newNode;
-    consumer._in = newNode;
+    // Update consumer's dependency list
+    if (nextDep !== undefined) {
+      nextDep.prevIn = newNode;
+    }
+    if (prevDep !== undefined) {
+      prevDep.nextIn = newNode;
+    } else {
+      consumer._in = newNode;
+    }
+    
+    // Move tail forward to the new edge
+    consumer._inTail = newNode;
     
     // Set TRACKING flag if producer is a computed node
     if ('_flags' in producer) (producer as TrackedProducer & ConsumerNode)._flags |= TRACKING;
     
-    // Append to target list
+    // Append to producer's target list
     if (prevOut) {
       prevOut.nextOut = newNode;
     } else {
       producer._out = newNode;
     }
     producer._outTail = newNode;
-    
-    // Update tail pointer for O(1) access
-    if (!consumer._inTail) {
-      consumer._inTail = newNode;
-    }
   };
 
   // ALGORITHM: Edge Removal from Producer's Target List  

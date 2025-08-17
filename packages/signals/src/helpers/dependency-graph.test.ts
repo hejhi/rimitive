@@ -24,7 +24,6 @@ describe('Dependency Graph Helpers', () => {
         _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _gen: 0,
         _inTail: undefined,
       };
       
@@ -56,7 +55,6 @@ describe('Dependency Graph Helpers', () => {
         _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _gen: 0,
         _inTail: undefined,
       };
       
@@ -88,7 +86,6 @@ describe('Dependency Graph Helpers', () => {
         _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _gen: 0,
         _inTail: undefined,
       };
       
@@ -111,7 +108,6 @@ describe('Dependency Graph Helpers', () => {
         _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _gen: 0,
         _inTail: undefined,
       };
       
@@ -145,7 +141,6 @@ describe('Dependency Graph Helpers', () => {
         _in: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _gen: 0,
         _inTail: undefined,
       };
       
@@ -179,8 +174,7 @@ describe('Dependency Graph Helpers', () => {
           _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _gen: 0,
-          _inTail: undefined,
+            _inTail: undefined,
         };
         
         helpers.link(source, target, 1);
@@ -207,8 +201,7 @@ describe('Dependency Graph Helpers', () => {
           _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _gen: 0,
-          _inTail: undefined,
+            _inTail: undefined,
         };
         
         const target2: ConsumerNode = {
@@ -217,8 +210,7 @@ describe('Dependency Graph Helpers', () => {
           _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _gen: 0,
-          _inTail: undefined,
+            _inTail: undefined,
         };
         
         helpers.link(source, target1, 1);
@@ -251,8 +243,7 @@ describe('Dependency Graph Helpers', () => {
           _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _gen: 0,
-          _inTail: undefined,
+            _inTail: undefined,
         };
         
         helpers.link(source, target, 1);
@@ -277,8 +268,7 @@ describe('Dependency Graph Helpers', () => {
           _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _gen: 0,
-          _inTail: undefined,
+            _inTail: undefined,
         };
         
         helpers.link(source, target, 1);
@@ -329,8 +319,7 @@ describe('Dependency Graph Helpers', () => {
           _in: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _gen: 0,
-          _inTail: undefined
+            _inTail: undefined
         };
         
         helpers.link(source, target, 1);
