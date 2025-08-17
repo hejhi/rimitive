@@ -84,8 +84,8 @@ export interface ScheduledNode extends ConsumerNode, Disposable {
   _flush(): void;                  // Execute the deferred work
 }
 
-type EdgeSourceNode = ProducerNode | (ProducerNode & ConsumerNode);
-type EdgeTargetNode = ConsumerNode | (ProducerNode & ConsumerNode);
+export type SourceNode = ProducerNode | (ProducerNode & ConsumerNode);
+export type TargetNode = ConsumerNode | (ProducerNode & ConsumerNode);
 
 // ALGORITHM: Intrusive Doubly-Linked Graph Edges
 // Edge represents a dependency relationship in the graph.
@@ -102,8 +102,8 @@ type EdgeTargetNode = ConsumerNode | (ProducerNode & ConsumerNode);
 // - Forward: "What depends on this producer?"
 // - Backward: "What does this consumer depend on?"
 export interface Edge {
-  source: EdgeSourceNode; // The dependency
-  target: EdgeTargetNode | (EdgeTargetNode & Disposable) | (EdgeTargetNode & ScheduledNode); // The dependent
+  source: SourceNode; // The dependency
+  target: TargetNode | (TargetNode & Disposable) | (TargetNode & ScheduledNode); // The dependent
 
   // Intrusive list pointers for source's edge list
   prevSource?: Edge; // Previous edge from same source
@@ -127,7 +127,7 @@ export interface Edge {
   // GENERATION TAG FOR DYNAMIC DEPENDENCY TRACKING
   // Set to the consumer's _runVersion during the run that touched this edge.
   // After the run, edges whose gen !== consumer._runVersion are pruned.
-  gen?: number;
+  runVersion: number;
 }
 
 // Ensure module is not tree-shaken

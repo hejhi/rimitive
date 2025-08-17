@@ -78,7 +78,7 @@ describe('Dependency Sweeper', () => {
       } else {
         active.add(list.source);
         // Active edges should have current gen
-        expect(list.gen).toBe(1);
+        expect(list.runVersion).toBe(1);
       }
       list = list.nextSource;
     }

@@ -209,7 +209,7 @@ ${cleanOutput}
 
   private cleanAnsiCodes(text: string): string {
     // Remove ANSI escape sequences
-    return text.replace(/\x1b\[[0-9;]*m/g, '');
+    return text.replace(/\\x1b\[[0-9;]*m/g, '');
   }
 
   private async saveSummary(results: BenchmarkResult[]): Promise<void> {

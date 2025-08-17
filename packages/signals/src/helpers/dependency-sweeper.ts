@@ -88,17 +88,17 @@ export function createDependencySweeper(
     const currentGen = consumer._runVersion;
     // Walk the linked list, marking stale nodes as recyclable
     while (node !== undefined) {
-      if (node.gen !== currentGen) {
+      if (node.runVersion !== currentGen) {
         // Mark edge as recyclable instead of removing it
         // version = -1 indicates a stale edge that can be reused
         node.version = -1;
-        
+
         // Clear producer's cache if it points to this recycled edge
         // This prevents stale cache hits when the dependency is re-established
         if ('_lastEdge' in node.source && node.source._lastEdge === node) {
           node.source._lastEdge = undefined;
         }
-        
+
         // DON'T remove from producer's target list - keep for recycling
         // The edge stays in both lists but is marked as inactive
       }

@@ -59,6 +59,7 @@ describe('GraphWalker', () => {
       nextSource: undefined,
       prevTarget: undefined,
       nextTarget: undefined,
+      runVersion: 0
     };
   }
 

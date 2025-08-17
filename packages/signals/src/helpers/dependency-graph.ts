@@ -4,32 +4,6 @@
  * This module implements the core graph algorithms that power the reactive system.
  * The key insight is using a bidirectional graph with intrusive linked lists:
  * 
- * 1. INTRUSIVE LINKED LISTS:
- *    - Edges ARE the list nodes (no separate allocation)
- *    - Each edge belongs to TWO lists simultaneously:
- *      a) Producer's target list (forward edges)
- *      b) Consumer's source list (backward edges)
- *    - Enables O(1) insertion and removal
- *    - Better cache locality than pointer-based graphs
- * 
- * 2. EDGE CACHING OPTIMIZATION:
- *    - Producers cache their last accessed edge
- *    - Exploits temporal locality - same consumer often reads repeatedly
- *    - Turns O(n) search into O(1) in common case
- *    - Inspired by CPU inline caches
- * 
- * 3. VERSION-BASED STALENESS DETECTION:
- *    - Each edge stores the producer's version when created
- *    - Comparing edge.version to producer._version detects changes
- *    - More efficient than stale flags or timestamps
- *    - Handles the "diamond problem" correctly
- * 
- * 4. DYNAMIC DEPENDENCY DISCOVERY:
- *    - Dependencies detected at runtime, not declared
- *    - Supports conditional logic naturally
- *    - Dependencies can change between computations
- *    - Similar to mobx/vue but without proxies
- * 
  * INSPIRATION:
  * - Glimmer's reference system (version tracking)
  * - Linux kernel's intrusive lists (memory efficiency)  
@@ -37,7 +11,7 @@
  * - Database query planners (dependency analysis)
  */
 import { CONSTANTS } from '../constants';
-import type { ProducerNode, ConsumerNode, Edge } from '../types';
+import type { ProducerNode, ConsumerNode, Edge, TargetNode } from '../types';
 
 // OPTIMIZATION: Edge Caching
 // Producers cache their last accessed edge to avoid linked list traversal
@@ -58,7 +32,7 @@ export interface DependencyGraph {
 interface StackFrame {
   edge: Edge;
   nextLink: Edge | undefined;
-  consumer: ConsumerNode;
+  target: TargetNode;
   stale: boolean;
   prev: StackFrame | undefined;
 }
@@ -82,7 +56,7 @@ export function createDependencyGraph(): DependencyGraph {
        source: producer,
        target: consumer,
        version: producerVersion, // Store producer's version at time of edge creation
-       gen: consumer._runVersion, // Tag with current run version
+       runVersion: consumer._runVersion, // Tag with current run version
        prevSource: undefined, // Will be head of sources, so no previous
        prevTarget, // Link to current tail of producer's targets  
        nextSource, // Link to old head of consumer's sources
@@ -128,7 +102,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (tail && tail.source === producer) {
       // Found at tail - update and cache
       tail.version = producerVersion;
-      tail.gen = consumer._runVersion;
+      tail.runVersion = consumer._runVersion;
       // Tail is already correct, no need to update
       return;
     }
@@ -137,7 +111,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (tail?.prevSource && tail.prevSource.source === producer) {
       const edge = tail.prevSource;
       edge.version = producerVersion;
-      edge.gen = consumer._runVersion;
+      edge.runVersion = consumer._runVersion;
       consumer._sourcesTail = edge; // Move to tail for next access
       return;
     }
@@ -150,7 +124,7 @@ export function createDependencyGraph(): DependencyGraph {
         // Found edge - either active (version >= 0) or recyclable (version = -1)
         // Reactivate/update it
         node.version = producerVersion;
-        node.gen = consumer._runVersion;
+        node.runVersion = consumer._runVersion;
         // Move to tail for better locality
         consumer._sourcesTail = node;
         return;
@@ -196,86 +170,51 @@ export function createDependencyGraph(): DependencyGraph {
    * - Early exit for changed signal dependencies
    * - Efficient unwinding without frame objects
    */
-  const refreshConsumers = (consumer: ConsumerNode): boolean => {
+  const refreshConsumers = (targetNode: TargetNode): boolean => {
     // OPTIMIZATION: Only called for INVALIDATED case now
     // STALE is handled inline in hot paths
-    if (!(consumer._flags & INVALIDATED)) return false;
+    if (!(targetNode._flags & INVALIDATED)) return false;
 
-    // If all direct sources have matching versions and are not themselves
-    // stale, we can clear INVALIDATED and skip expensive checks.
-    let edge = consumer._sources;
-    let stale = false;
-
-    while (edge) {
-      const { source, version } = edge;
-      // Skip recycled edges (version = -1)
-      if (version !== -1) {
-        if (version !== source._version) {
-          stale = true;
-          break;
-        }
-
-        // Use compound PENDING check
-        if ('_flags' in source && source._flags & PENDING) {
-          stale = true;
-          break;
-        }
-      }
-
-      edge = edge.nextSource;
-    }
-
-    if (!stale) {
-      consumer._flags &= ~INVALIDATED;
-      return false;
-    }
-
-    // If we got here, we have something stale so we should continue.
-    // TODO: is the above redundant?
-    stale = false;
-
-    if (consumer._flags & STALE) return true;
+    // Already explicitly marked STALE - no need to check dependencies
+    if (targetNode._flags & STALE) return true;
 
     // OPTIMIZATION: Fast path for linear chains (single dependency)
     // Common pattern: computed(() => signal.value * 2)
-    // Skip complex traversal when there's only one active dependency
-    const firstEdge = consumer._sources;
-    if (firstEdge && !firstEdge.nextSource) {
-      const firstEdgeVersion = firstEdge.version;
-      // Single dependency - check directly
-      if (firstEdgeVersion === -1) return false; // Recycled edge
+    const firstEdge = targetNode._sources;
 
-      const firstEdgeSource = firstEdge.source;
+    if (firstEdge && !firstEdge.nextSource) {
+      // Skip recycled edges
+      if (firstEdge.version === -1) return false;
+
+      const source = firstEdge.source;
+      const edgeVersion = firstEdge.version;
 
       // Signals: simple version check
-      if (!('_sources' in firstEdgeSource)) {
-        const stale = firstEdgeVersion !== firstEdgeSource._version;
-        firstEdge.version = firstEdgeSource._version;
-        return stale;
+      if (!('_sources' in source)) {
+        const isStale = edgeVersion !== source._version;
+        firstEdge.version = source._version;
+        return isStale;
       }
 
-      // If we're here, the firstEdgeSource is both a producer and a consumer node, with its own sources
-      // Check flags and version
-      const firstEdgeSourceFlags = firstEdgeSource._flags || 0;
-      if (firstEdgeSourceFlags & STALE) return true;
-
-      // Clean fast path
-      // Check if the edge version matches the source version and isn't stale. If so, we can return.
-      // NOTE: what's the difference between PENDING, a version check, and INVALIDATED?
-      if (
-        firstEdgeVersion === firstEdgeSource._version &&
-        !(firstEdgeSourceFlags & PENDING)
-      ) {
+      // Complex dependency: check flags and version
+      const sourceFlags = source._flags || 0;
+      
+      // Already marked stale
+      if (sourceFlags & STALE) return true;
+      
+      // Clean fast path - both version and flags match
+      if (edgeVersion === source._version && !(sourceFlags & PENDING)) {
         return false;
       }
 
-      // Need to check nested - fall through to full algorithm
+      // Need recursive check - fall through to full algorithm
     }
 
-    // Use separate stack frames for traversal state
-    let currentConsumer = consumer;
-    let currentEdge = consumer._sources;
-    let stackTop: StackFrame | undefined = undefined; // Stack of parent frames
+    // Full dependency tree traversal
+    let currentTarget = targetNode;
+    let currentEdge = targetNode._sources;
+    let stackTop: StackFrame | undefined = undefined;
+    let stale = false;
 
     while (true) {
       // Process current dependency
@@ -286,74 +225,69 @@ export function createDependencyGraph(): DependencyGraph {
           continue;
         }
 
-        const consumerSource = currentEdge.source;
-        const currentEdgeVersion = currentEdge.version;
+        const source = currentEdge.source;
+        const edgeVersion = currentEdge.version;
 
         // Signals: compare versions
-        if (!('_sources' in consumerSource)) {
-          const v = consumerSource._version;
-          if (currentEdgeVersion !== v) {
+        if (!('_sources' in source)) {
+          const sourceVersion = source._version;
+          if (edgeVersion !== sourceVersion) {
             stale = true;
             // No early exit - check all siblings for proper batching
           }
-          currentEdge.version = v;
+          currentEdge.version = sourceVersion;
           currentEdge = currentEdge.nextSource;
           continue;
         }
 
-        const sourceFlags = consumerSource._flags || 0;
-        const currentVersion = consumerSource._version;
+        const sourceFlags = source._flags || 0;
+        const sourceVersion = source._version;
 
-        // Explicitly outdated dependency
+        // Already marked stale
         if (sourceFlags & STALE) {
           stale = true;
-          // Continue checking siblings - no early exit
           currentEdge = currentEdge.nextSource;
           continue;
         }
 
-        // Clean dependency fast path - check both version and no stale flags
-        if (
-          currentEdgeVersion === currentVersion &&
-          !(sourceFlags & PENDING)
-        ) {
+        // Clean dependency - version and flags both clean
+        if (edgeVersion === sourceVersion && !(sourceFlags & PENDING)) {
           currentEdge = currentEdge.nextSource;
           continue;
         }
 
         // Need to dive into this dependency
         if (sourceFlags & INVALIDATED) {
-          // Push current state onto stack with new frame
+          // Push current state onto stack
           stackTop = {
             edge: currentEdge,
             nextLink: currentEdge.nextSource,
-            consumer: currentConsumer,
+            target: currentTarget,
             stale,
             prev: stackTop,
           };
 
           // Descend into dependency
-          currentConsumer = consumerSource;
-          currentEdge = consumerSource._sources;
+          currentTarget = source;
+          currentEdge = source._sources;
           stale = false;
           continue;
         }
 
         // Version mismatch without INVALIDATED
-        if (currentEdgeVersion !== currentVersion) {
+        if (edgeVersion !== sourceVersion) {
           stale = true;
-          currentEdge.version = currentVersion;
-          // No early exit - continue checking siblings
+          currentEdge.version = sourceVersion;
         }
 
         currentEdge = currentEdge.nextSource;
         continue;
       }
 
-      // Finished processing current sub's dependencies
+      // Finished processing current targetNode's dependencies
       // Clear INVALIDATED on clean nodes
-      if (!stale && currentConsumer._flags & INVALIDATED) {
-        currentConsumer._flags &= ~INVALIDATED;
+      if (!stale && currentTarget._flags & INVALIDATED) {
+        currentTarget._flags &= ~INVALIDATED;
       }
 
       // Check if we're done
@@ -361,45 +295,41 @@ export function createDependencyGraph(): DependencyGraph {
 
       // Pop from stack
       const frame: StackFrame = stackTop;
-      const parentEdge: Edge = frame.edge;
-      const prevVersion: number = parentEdge.version;
+      const parentEdge = frame.edge;
+      const prevVersion = parentEdge.version;
       let changed = false;
 
       // If subtree was stale and this is a computed, update its value now
       if (stale) {
-        currentConsumer._updateValue();
-        if ('_version' in currentConsumer) {
-          changed = prevVersion !== currentConsumer._version;
+        currentTarget._updateValue();
+        if ('_version' in currentTarget) {
+          changed = prevVersion !== currentTarget._version;
         }
       }
 
       // Sync parent edge cached version
-      if (
-        '_version' in currentConsumer &&
-        typeof currentConsumer._version === 'number'
-      ) {
-        parentEdge.version = currentConsumer._version;
+      if ('_version' in currentTarget) {
+        parentEdge.version = currentTarget._version;
       }
 
       // Restore state from stack frame
       currentEdge = frame.nextLink;
-      currentConsumer = frame.consumer;
+      currentTarget = frame.target;
       stackTop = frame.prev;
-
-      // No cleanup needed - frame will be GC'd
 
       // Propagate dirtiness if value changed
       stale = frame.stale || changed;
     }
 
+    // Update final flags
     if (stale) {
       // Dependencies changed - mark as STALE and clear INVALIDATED
-      consumer._flags = (consumer._flags & ~INVALIDATED) | STALE;
+      targetNode._flags = (targetNode._flags & ~INVALIDATED) | STALE;
     } else {
-      // False alarm - clear INVALIDATED and cache global version
-      consumer._flags &= ~INVALIDATED;
+      // False alarm - clear INVALIDATED
+      targetNode._flags &= ~INVALIDATED;
     }
-    
+
     return stale;
   };
 
