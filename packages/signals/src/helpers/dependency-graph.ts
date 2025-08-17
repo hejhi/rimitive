@@ -54,15 +54,6 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
     
-    // Check the second-to-last edge (common for alternating patterns)
-    if (tail?.prevIn && tail.prevIn.from === producer) {
-      const edge = tail.prevIn;
-      edge.fromVersion = producerVersion;
-      edge.toGen = consumer._gen;
-      consumer._inTail = edge; // Move to tail for next access
-      return;
-    }
-    
     // FALLBACK: Linear search from head
     let node = consumer._in;
     while (node) {
