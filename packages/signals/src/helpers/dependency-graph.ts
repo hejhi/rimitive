@@ -162,139 +162,83 @@ export function createDependencyGraph(): DependencyGraph {
   };
 
   /**
-   * ALGORITHM: Zero-Allocation Dependency Checking with Intrusive Stack
-   * 
-   * Key optimizations:
-   * - Uses existing edges as stack frames (no allocations)
-   * - Single-pass traversal with inline edge recycling
-   * - Monomorphic signal/computed paths for V8 optimization
-   * - Minimal flag operations and branch reduction
+   * ALGORITHM: Zero-Allocation Dependency Checking
+   * Streamlined single-pass traversal with intrusive stack
    */
   const refreshConsumers = (toNode: ToNode): boolean => {
-    // Cache flags to avoid repeated property access
-    const nodeFlags = toNode._flags;
-    if (!(nodeFlags & INVALIDATED)) return false;
-    if (nodeFlags & STALE) return true;
+    const flags = toNode._flags;
+    if (!(flags & INVALIDATED)) return false;
+    if (flags & STALE) return true;
 
-    // Fast path for single dependency
-    const firstEdge = toNode._in;
-    if (firstEdge && !firstEdge.nextIn && firstEdge.fromVersion !== -1) {
-      const source = firstEdge.from;
-      const oldVersion = firstEdge.fromVersion;
-      firstEdge.fromVersion = source._version;
-      
-      // Monomorphic signal path
-      if (!('_in' in source)) {
-        return oldVersion !== source._version;
-      }
-      
-      // Computed path
-      const flags = source._flags;
-      if (flags & STALE) return true;
-      if (oldVersion === source._version && !(flags & PENDING)) return false;
-    }
-
-    // Main traversal
-    let currentTarget = toNode;
-    let currentEdge = toNode._in;
-    let stackTop: StackFrame | undefined = undefined;
-    let stale = false;
+    let node = toNode;
+    let edge = toNode._in;
+    let stack: StackFrame | undefined;
+    let dirty = false;
 
     while (true) {
-      // Inline recycled edge skipping with null check
-      while (currentEdge?.fromVersion === -1) {
-        currentEdge = currentEdge.nextIn;
+      // Skip recycled edges
+      while (edge && edge.fromVersion === -1) {
+        edge = edge.nextIn;
       }
 
-      if (currentEdge) {
-        const source = currentEdge.from;
-        const oldVersion = currentEdge.fromVersion;
+      if (edge) {
+        const source = edge.from;
+        const oldVersion = edge.fromVersion;
         const newVersion = source._version;
+        edge.fromVersion = newVersion;
+        const changed = oldVersion !== newVersion;
         
-        // Update version once
-        currentEdge.fromVersion = newVersion;
-        const versionChanged = oldVersion !== newVersion;
-        
-        // Monomorphic signal fast path
-        if (!('_in' in source)) {
-          stale = stale || versionChanged;
-          currentEdge = currentEdge.nextIn;
-          continue;
+        // Branch on node type for better prediction
+        if ('_in' in source) {
+          // Computed node
+          const sourceFlags = source._flags;
+          
+          if (sourceFlags & STALE) {
+            dirty = true;
+          } else if (changed || (sourceFlags & PENDING)) {
+            if (sourceFlags & INVALIDATED) {
+              // Push to stack
+              stack = { edge, next: edge.nextIn, to: node, stale: dirty, prev: stack };
+              node = source;
+              edge = source._in;
+              dirty = false;
+              continue;
+            }
+            dirty = true;
+          }
+        } else {
+          // Signal node - just version check
+          dirty = dirty || changed;
         }
         
-        // Computed node handling
-        const flags = source._flags;
-        
-        // Already stale - propagate
-        if (flags & STALE) {
-          stale = true;
-          currentEdge = currentEdge.nextIn;
-          continue;
-        }
-        
-        // Clean dependency - skip
-        if (!versionChanged && !(flags & PENDING)) {
-          currentEdge = currentEdge.nextIn;
-          continue;
-        }
-        
-        // Needs recursion
-        if (flags & INVALIDATED) {
-          stackTop = {
-            edge: currentEdge,
-            next: currentEdge.nextIn,
-            to: currentTarget,
-            stale,
-            prev: stackTop,
-          };
-          currentTarget = source;
-          currentEdge = source._in;
-          stale = false;
-          continue;
-        }
-        
-        // Version changed without INVALIDATED
-        stale = stale || versionChanged;
-        currentEdge = currentEdge.nextIn;
+        edge = edge.nextIn;
         continue;
       }
 
       // Clear INVALIDATED if clean
-      if (!stale) {
-        currentTarget._flags &= ~INVALIDATED;
-      }
+      if (!dirty) node._flags &= ~INVALIDATED;
+      
+      if (!stack) break;
 
-      // Done if no stack
-      if (!stackTop) break;
-
-      // Pop stack
-      const frame: StackFrame = stackTop;
-      const parentEdge = frame.edge;
-
-      if (stale) {
-        currentTarget._updateValue();
-        // Check if computed value changed
-        if ('_version' in currentTarget) {
-          const newTargetVersion = currentTarget._version;
-          const changed = parentEdge.fromVersion !== newTargetVersion;
-          parentEdge.fromVersion = newTargetVersion;
-          stale = changed;
+      // Stack unwind
+      const frame: StackFrame = stack;
+      if (dirty) {
+        node._updateValue();
+        if ('_version' in node) {
+          dirty = frame.edge.fromVersion !== node._version;
+          frame.edge.fromVersion = node._version;
         }
       }
 
-      // Restore state
-      currentEdge = frame.next;
-      currentTarget = frame.to;
-      stackTop = frame.prev;
-      stale = frame.stale || stale;
+      edge = frame.next;
+      node = frame.to;
+      stack = frame.prev;
+      dirty = frame.stale || dirty;
     }
 
-    // Single flag update
-    toNode._flags = stale ? 
-      (nodeFlags & ~INVALIDATED) | STALE : 
-      nodeFlags & ~INVALIDATED;
-
-    return stale;
+    // Single flag operation
+    toNode._flags = dirty ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
+    return dirty;
   };
 
   return {
