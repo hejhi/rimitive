@@ -96,6 +96,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // Linked list of edges pointing to our dependencies (signals/computeds we read).
     // This list is rebuilt on each computation to handle conditional dependencies.
     _from: Edge | undefined = undefined;
+    _fromTail: Edge | undefined;
+    _toTail: Edge | undefined;
 
     // OPTIMIZATION: Initial State Flags
     // Start as STALE to force computation on first access.

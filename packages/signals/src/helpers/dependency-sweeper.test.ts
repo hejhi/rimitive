@@ -16,6 +16,7 @@ describe('Dependency Sweeper', () => {
     __type: 'test',
     _to: undefined,
     _version: version,
+    _toTail: undefined
   });
 
   const makeConsumer = (): ConsumerNode => ({
@@ -25,6 +26,7 @@ describe('Dependency Sweeper', () => {
     _invalidate: () => {},
     _updateValue: () => true,
     _runVersion: 0,
+    _fromTail: undefined
   });
 
   it('detaches all edges on dispose', () => {

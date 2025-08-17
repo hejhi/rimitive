@@ -46,7 +46,7 @@ export interface Disposable {
 // They maintain a list of consumers (targets) that depend on them
 export interface ProducerNode extends ReactiveNode {
   _to: Edge | undefined;  // Head of intrusive linked list of dependents
-  _toTail?: Edge;  // Tail pointer for O(1) append and insertion order preservation
+  _toTail: Edge | undefined;  // Tail pointer for O(1) append and insertion order preservation
   
   // LOCAL VERSION COUNTER (VALUE CHANGE TRACKING)
   // Incremented when THIS node's value changes.
@@ -65,7 +65,7 @@ export interface ProducerNode extends ReactiveNode {
 // They maintain a list of producers (sources) they depend on
 export interface ConsumerNode extends ReactiveNode {
   _from: Edge | undefined; // Head of intrusive linked list of dependencies
-  _fromTail?: Edge; // OPTIMIZATION: Tail pointer for O(1) access to recent dependencies
+  _fromTail: Edge | undefined; // OPTIMIZATION: Tail pointer for O(1) access to recent dependencies
 
   _invalidate(): void; // Called when dependencies change
   _updateValue(): boolean; // Update this node's value (if it produces one)
@@ -80,7 +80,7 @@ export interface ConsumerNode extends ReactiveNode {
 // ScheduledNode represents consumers that batch their updates.
 // Uses intrusive linked list for zero-allocation scheduling queue.
 export interface ScheduledNode extends ConsumerNode, Disposable {
-  _nextScheduled?: ScheduledNode;  // Next node in scheduling queue (intrusive list)
+  _nextScheduled: ScheduledNode | undefined;  // Next node in scheduling queue (intrusive list)
   _flush(): void;                  // Execute the deferred work
 }
 
@@ -106,12 +106,12 @@ export interface Edge {
   to: ToNode | (ToNode & Disposable) | (ToNode & ScheduledNode); // The dependent
 
   // Intrusive list pointers for source's edge list
-  prevFrom?: Edge; // Previous edge from same source
-  nextFrom?: Edge; // Next edge from same source
+  prevFrom: Edge | undefined; // Previous edge from same source
+  nextFrom: Edge | undefined; // Next edge from same source
 
   // Intrusive list pointers for target's edge list
-  prevTo?: Edge; // Previous edge to same target
-  nextTo?: Edge; // Next edge to same target
+  prevTo: Edge | undefined; // Previous edge to same target
+  nextTo: Edge | undefined; // Next edge to same target
 
   // CACHED PRODUCER VERSION (STALENESS DETECTION)
   // Stores the producer's _version at the time this edge was created/validated.

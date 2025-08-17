@@ -35,6 +35,7 @@ describe('GraphWalker', () => {
     const node: ConsumerNode & Partial<ProducerNode & ScheduledNode> = {
       __type: type,
       _from: undefined,
+      _fromTail: undefined,
       _flags: flags,
       _invalidate: () => {},
       _updateValue: () => true,

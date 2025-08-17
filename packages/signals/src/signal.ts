@@ -80,6 +80,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     // When this signal changes, we traverse _to to notify dependents.
     // Using undefined instead of null for slightly better performance.
     _to: Edge | undefined = undefined;
+    _toTail: Edge | undefined;
     
     // OPTIMIZATION: Edge Cache for Hot Path
     // Caches the last edge to optimize repeated access from the same consumer.

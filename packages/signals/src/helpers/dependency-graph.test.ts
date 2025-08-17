@@ -15,6 +15,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _to: undefined,
         _version: 1,
+        _toTail: undefined
       };
       
       const target: ConsumerNode = {
@@ -24,6 +25,7 @@ describe('Dependency Graph Helpers', () => {
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
+        _fromTail: undefined,
       };
       
       // First call creates the dependency
@@ -45,6 +47,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _to: undefined,
         _version: 1,
+        _toTail: undefined,
       };
       
       const target: ConsumerNode = {
@@ -54,6 +57,7 @@ describe('Dependency Graph Helpers', () => {
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
+        _fromTail: undefined,
       };
       
       // Create dependency manually
@@ -74,6 +78,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _to: undefined,
         _version: 1,
+        _toTail: undefined,
       };
       
       const target: ConsumerNode = {
@@ -83,6 +88,7 @@ describe('Dependency Graph Helpers', () => {
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
+        _fromTail: undefined,
       };
       
       helpers.ensureLink(source, target, 1);
@@ -105,6 +111,7 @@ describe('Dependency Graph Helpers', () => {
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
+        _fromTail: undefined,
       };
       
       // Add dependencies from multiple sources
@@ -128,6 +135,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _to: undefined,
         _version: 1,
+        _toTail: undefined,
       };
       
       const target: ConsumerNode = {
@@ -137,6 +145,7 @@ describe('Dependency Graph Helpers', () => {
         _invalidate: () => {},
         _updateValue: () => true,
         _runVersion: 0,
+        _fromTail: undefined,
       };
       
       // Create initial dependency
@@ -160,15 +169,17 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _to: undefined,
           _version: 1,
+          _toTail: undefined,
         };
         
         const target: ConsumerNode = {
           __type: 'test',
           _flags: 0,
-        _from: undefined,
+          _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
+          _fromTail: undefined,
         };
         
         const node = helpers.connect(source, target, 1);
@@ -185,6 +196,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _to: undefined,
           _version: 1,
+          _toTail: undefined,
         };
         
         const target1: ConsumerNode = {
@@ -194,6 +206,7 @@ describe('Dependency Graph Helpers', () => {
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
+          _fromTail: undefined,
         };
         
         const target2: ConsumerNode = {
@@ -203,6 +216,7 @@ describe('Dependency Graph Helpers', () => {
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
+          _fromTail: undefined,
         };
         
         const node1 = helpers.connect(source, target1, 1);
@@ -224,6 +238,7 @@ describe('Dependency Graph Helpers', () => {
           _lastEdge: undefined,
           _version: 1,
           _flags: 0,
+          _toTail: undefined
         };
         
         const target: ConsumerNode = {
@@ -233,6 +248,7 @@ describe('Dependency Graph Helpers', () => {
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
+          _fromTail: undefined,
         };
         
         helpers.connect(source, target, 1);
@@ -248,6 +264,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _to: undefined,
           _version: 1,
+          _toTail: undefined,
         };
         
         const target: ConsumerNode = {
@@ -257,6 +274,7 @@ describe('Dependency Graph Helpers', () => {
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
+          _fromTail: undefined,
         };
         
         const node = helpers.connect(source, target, 1);
@@ -271,6 +289,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _to: undefined,
           _version: 1,
+          _toTail: undefined,
         };
         
         const targets = Array.from({ length: 3 }, () => ({
@@ -297,6 +316,7 @@ describe('Dependency Graph Helpers', () => {
           _to: undefined,
           _version: 1,
           _flags: 16, // TRACKING flag set
+          _toTail: undefined,
         };
         
         const target: ConsumerNode = {
@@ -306,6 +326,7 @@ describe('Dependency Graph Helpers', () => {
           _invalidate: () => {},
           _updateValue: () => true,
           _runVersion: 0,
+          _fromTail: undefined
         };
         
         const node = helpers.connect(source, target, 1);
