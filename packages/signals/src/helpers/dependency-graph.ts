@@ -22,8 +22,7 @@ export type TrackedProducer = ProducerNode;
 const { TRACKING, INVALIDATED, STALE, PENDING } = CONSTANTS;
 
 export interface DependencyGraph {
-  connect: (producer: TrackedProducer | (TrackedProducer & ConsumerNode), consumer: ConsumerNode, producerVersion: number) => Edge;
-  ensureLink: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
+  link: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
   unlinkFromProducer: (edge: Edge) => void;
   refreshConsumers: (consumer: ConsumerNode) => boolean;
 }
@@ -38,56 +37,10 @@ interface StackFrame {
 }
 
 export function createDependencyGraph(): DependencyGraph {
-   // ALGORITHM: Edge Creation and Insertion
-   // Creates a new edge between producer and consumer, inserting at head of sources
-   // and appending to tail of targets for correct effect execution order
-   const connect = (
-     producer: TrackedProducer | (TrackedProducer & ConsumerNode),
-     consumer: ConsumerNode,
-     producerVersion: number
-   ): Edge => {
-     const nextIn = consumer._in;
-     const prevOut = producer._outTail;
-     
-     // Create new edge - head of sources, tail of targets
-     const newNode: Edge = {
-       from: producer,
-       to: consumer,
-       fromVersion: producerVersion,
-       toGen: consumer._gen,
-       prevIn: undefined,
-       prevOut,
-       nextIn,
-       nextOut: undefined,
-     };
-
-     // Update source list (prepend)
-     if (nextIn) nextIn.prevIn = newNode;
-     consumer._in = newNode;
-     
-     // Set TRACKING flag if producer is a computed node
-     if ('_flags' in producer) producer._flags |= TRACKING;
-     
-     // Append to target list
-     if (prevOut) {
-       prevOut.nextOut = newNode;
-     } else {
-       producer._out = newNode;
-     }
-     producer._outTail = newNode;
-     
-     // Update tail pointer for O(1) access
-     if (!consumer._inTail) {
-       consumer._inTail = newNode;
-     }
-
-     return newNode;
-   };
-  
-  // ALGORITHM: Dependency Registration with Deduplication
-  // This is called during signal/computed reads to establish dependencies
-  // It either updates an existing edge or creates a new one
-  const ensureLink = (
+  // ALGORITHM: Unified Edge Management (inspired by alien-signals)
+  // Combines edge creation and update into single function
+  // Checks tail first for O(1) common case, then creates if needed
+  const link = (
     producer: TrackedProducer,
     consumer: ConsumerNode,
     producerVersion: number
@@ -102,7 +55,6 @@ export function createDependencyGraph(): DependencyGraph {
     }
     
     // Check next from tail (common for alternating patterns)
-    // Alien-signals optimization: check from tail, not predecessor
     const nextFromTail = tail !== undefined ? tail.nextIn : consumer._in;
     if (nextFromTail !== undefined && nextFromTail.from === producer) {
       nextFromTail.fromVersion = producerVersion;
@@ -112,7 +64,6 @@ export function createDependencyGraph(): DependencyGraph {
     }
     
     // FALLBACK: Linear search from head
-    // Look for existing edge (active or recyclable)
     let node = consumer._in;
     while (node) {
       if (node.from === producer) {
@@ -125,8 +76,41 @@ export function createDependencyGraph(): DependencyGraph {
       node = node.nextIn;
     }
 
-    // No existing edge found - create new one
-    connect(producer, consumer, producerVersion);
+    // No existing edge - create new one
+    const nextIn = consumer._in;
+    const prevOut = producer._outTail;
+    
+    // Create new edge - head of sources, tail of targets
+    const newNode: Edge = {
+      from: producer,
+      to: consumer,
+      fromVersion: producerVersion,
+      toGen: consumer._gen,
+      prevIn: undefined,
+      prevOut,
+      nextIn,
+      nextOut: undefined,
+    };
+
+    // Update source list (prepend)
+    if (nextIn) nextIn.prevIn = newNode;
+    consumer._in = newNode;
+    
+    // Set TRACKING flag if producer is a computed node
+    if ('_flags' in producer) (producer as TrackedProducer & ConsumerNode)._flags |= TRACKING;
+    
+    // Append to target list
+    if (prevOut) {
+      prevOut.nextOut = newNode;
+    } else {
+      producer._out = newNode;
+    }
+    producer._outTail = newNode;
+    
+    // Update tail pointer for O(1) access
+    if (!consumer._inTail) {
+      consumer._inTail = newNode;
+    }
   };
 
   // ALGORITHM: Edge Removal from Producer's Target List  
@@ -239,9 +223,8 @@ export function createDependencyGraph(): DependencyGraph {
   };
 
   return {
-    ensureLink,
+    link,
     unlinkFromProducer,
-    connect,
     refreshConsumers,
   };
 }

@@ -55,7 +55,7 @@ interface SignalFactoryContext extends SignalContext {
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const {
-    dependencies: { ensureLink },
+    dependencies: { link },
     graphWalker: { dfs },
     propagator: { invalidate },
     workQueue: { enqueue, state, flush }
@@ -116,7 +116,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // ALGORITHM: Edge Registration
       // Create a bidirectional edge between this signal (producer) and the consumer
       // The edge includes the current version for later staleness checks
-      ensureLink(this, current, this._version);
+      link(this, current, this._version);
       return this._value;
     }
 

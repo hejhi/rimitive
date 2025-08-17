@@ -70,7 +70,7 @@ interface ComputedFactoryContext extends SignalContext {
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
   const {
-    dependencies: { ensureLink, refreshConsumers },
+    dependencies: { link, refreshConsumers },
     sourceCleanup: { detachAll, pruneStale },
     graphWalker: { dfs },
     workQueue: { enqueue },
@@ -158,7 +158,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Post-Update Edge Synchronization
       // If we have a consumer, (now) register/update the dependency edge
       // Doing this once avoids redundant edge work on the hot path.
-      if (isTracking) ensureLink(this, consumer, this._version);
+      if (isTracking) link(this, consumer, this._version);
 
       // Value is guaranteed to be defined after _update
       return this._value!;
@@ -221,7 +221,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
       // Increment generation for this run; edges touched will carry this tag
       this._gen = (this._gen + 1) | 0;
-      // Edges will be tagged via ensureLink; stale edges pruned after run
+      // Edges will be tagged via link; stale edges pruned after run
 
       // ALGORITHM: Context Switching for Dependency Tracking
       // Set ourselves as the current consumer so signal reads register with us

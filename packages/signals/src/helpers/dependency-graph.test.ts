@@ -9,7 +9,7 @@ describe('Dependency Graph Helpers', () => {
     helpers = createDependencyGraph();
   });
 
-  describe('ensureLink', () => {
+  describe('link', () => {
     it('should reuse edge when same producer accessed again', () => {
       const source: ProducerNode = {
         __type: 'test',
@@ -29,14 +29,14 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // First call creates the dependency
-      helpers.ensureLink(source, target, 1);
+      helpers.link(source, target, 1);
       const firstEdge = target._in;
       
       // Update version
       source._version = 2;
       
       // Second call should reuse the same edge
-      helpers.ensureLink(source, target, 2);
+      helpers.link(source, target, 2);
       
       expect(target._in).toBe(firstEdge);
       expect(target._in?.fromVersion).toBe(2);
@@ -61,13 +61,14 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // Create dependency manually
-      const existingNode = helpers.connect(source, target, 1);
+      helpers.link(source, target, 1);
+      const existingNode = target._in!;
       
       // Update version
       source._version = 2;
       
       // Should find the existing dependency
-      helpers.ensureLink(source, target, 2);
+      helpers.link(source, target, 2);
       
       expect(existingNode.fromVersion).toBe(2);
       expect(target._in).toBe(existingNode);
@@ -91,7 +92,7 @@ describe('Dependency Graph Helpers', () => {
         _inTail: undefined,
       };
       
-      helpers.ensureLink(source, target, 1);
+      helpers.link(source, target, 1);
       
       expect(source._out).toBeDefined();
       expect(target._in).toBeDefined();
@@ -116,7 +117,7 @@ describe('Dependency Graph Helpers', () => {
       
       // Add dependencies from multiple sources
       sources.forEach(source => {
-        helpers.ensureLink(source as ProducerNode, target, (source as ProducerNode)._version);
+        helpers.link(source as ProducerNode, target, (source as ProducerNode)._version);
       });
       
       // Count sources
@@ -149,13 +150,13 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // Create initial dependency
-      helpers.ensureLink(source, target, 1);
+      helpers.link(source, target, 1);
       
       // Update version
       source._version = 5;
       
       // Update dependency
-      helpers.ensureLink(source, target, 5);
+      helpers.link(source, target, 5);
       
       // Check that version was updated
       const node = target._in;
@@ -163,7 +164,7 @@ describe('Dependency Graph Helpers', () => {
     });
   });
 
-  describe('connect', () => {
+  describe('link edge creation', () => {
       it('should create bidirectional links between source and target', () => {
         const source: ProducerNode = {
           __type: 'test',
@@ -182,7 +183,8 @@ describe('Dependency Graph Helpers', () => {
           _inTail: undefined,
         };
         
-        const node = helpers.connect(source, target, 1);
+        helpers.link(source, target, 1);
+        const node = target._in!;
         
         expect(node.from).toBe(source);
         expect(node.to).toBe(target);
@@ -219,8 +221,10 @@ describe('Dependency Graph Helpers', () => {
           _inTail: undefined,
         };
         
-        const node1 = helpers.connect(source, target1, 1);
-        const node2 = helpers.connect(source, target2, 1);
+        helpers.link(source, target1, 1);
+        const node1 = target1._in!;
+        helpers.link(source, target2, 1);
+        const node2 = target2._in!;
         
         // Source should point to first target (head of list)
         expect(source._out).toBe(node1);
@@ -251,7 +255,7 @@ describe('Dependency Graph Helpers', () => {
           _inTail: undefined,
         };
         
-        helpers.connect(source, target, 1);
+        helpers.link(source, target, 1);
         
         // TRACKING flag is 1 << 4 = 16
         expect(source._flags & 16).toBe(16);
@@ -277,7 +281,8 @@ describe('Dependency Graph Helpers', () => {
           _inTail: undefined,
         };
         
-        const node = helpers.connect(source, target, 1);
+        helpers.link(source, target, 1);
+        const node = target._in!;
         
         helpers.unlinkFromProducer(node);
         
@@ -298,9 +303,8 @@ describe('Dependency Graph Helpers', () => {
           _invalidate: () => {},
         }) as ConsumerNode);
         
-        const nodes = targets.map(target => 
-          helpers.connect(source, target, 1)
-        );
+        targets.forEach(target => helpers.link(source, target, 1));
+        const nodes = targets.map(target => target._in!);
         
         // Remove middle node
         helpers.unlinkFromProducer(nodes[1]!);
@@ -329,7 +333,8 @@ describe('Dependency Graph Helpers', () => {
           _inTail: undefined
         };
         
-        const node = helpers.connect(source, target, 1);
+        helpers.link(source, target, 1);
+        const node = target._in!;
         
         helpers.unlinkFromProducer(node);
         

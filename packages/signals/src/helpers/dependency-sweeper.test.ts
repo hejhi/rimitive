@@ -35,9 +35,9 @@ describe('Dependency Sweeper', () => {
     const c = makeProducer();
     const target = makeConsumer();
 
-    graph.ensureLink(a, target, a._version);
-    graph.ensureLink(b, target, b._version);
-    graph.ensureLink(c, target, c._version);
+    graph.link(a, target, a._version);
+    graph.link(b, target, b._version);
+    graph.link(c, target, c._version);
 
     sweeper.detachAll(target);
 
@@ -54,18 +54,18 @@ describe('Dependency Sweeper', () => {
     const target = makeConsumer();
 
     // Initial run (gen 0): link a, b, c
-    graph.ensureLink(a, target, a._version);
-    graph.ensureLink(b, target, b._version);
-    graph.ensureLink(c, target, c._version);
+    graph.link(a, target, a._version);
+    graph.link(b, target, b._version);
+    graph.link(c, target, c._version);
 
     // Next run (gen 1): only access a and c
     target._gen = 1;
     // Access a via cached fast path
     a._version = 2;
-    graph.ensureLink(a, target, a._version);
+    graph.link(a, target, a._version);
     // Access c via cached fast path
     c._version = 2;
-    graph.ensureLink(c, target, c._version);
+    graph.link(c, target, c._version);
 
     // Now prune stale (b)
     sweeper.pruneStale(target);
@@ -96,8 +96,8 @@ describe('Dependency Sweeper', () => {
     const b = makeProducer(1);
     const target = makeConsumer();
 
-    graph.ensureLink(a, target, a._version);
-    graph.ensureLink(b, target, b._version);
+    graph.link(a, target, a._version);
+    graph.link(b, target, b._version);
 
     target._gen = 2; // new run, but we do not access any producer
     sweeper.pruneStale(target);
