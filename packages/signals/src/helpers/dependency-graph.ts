@@ -54,12 +54,12 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
     
-    // Check next from tail (common for alternating patterns)
-    const nextFromTail = tail !== undefined ? tail.nextIn : consumer._in;
-    if (nextFromTail !== undefined && nextFromTail.from === producer) {
-      nextFromTail.fromVersion = producerVersion;
-      nextFromTail.toGen = consumer._gen;
-      consumer._inTail = nextFromTail;
+    // Check the second-to-last edge (common for alternating patterns)
+    if (tail?.prevIn && tail.prevIn.from === producer) {
+      const edge = tail.prevIn;
+      edge.fromVersion = producerVersion;
+      edge.toGen = consumer._gen;
+      consumer._inTail = edge; // Move to tail for next access
       return;
     }
     
