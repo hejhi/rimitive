@@ -55,7 +55,7 @@ export function createDependencyGraph(): DependencyGraph {
      const newNode: Edge = {
        from: producer,
        to: consumer,
-       version: producerVersion, // Store producer's version at time of edge creation
+       fromVersion: producerVersion, // Store producer's version at time of edge creation
        toGen: consumer._gen, // Tag with current generation
        prevIn: undefined, // Will be head of sources, so no previous
        prevOut, // Link to current tail of producer's targets
@@ -101,7 +101,7 @@ export function createDependencyGraph(): DependencyGraph {
     const tail = consumer._inTail;
     if (tail && tail.from === producer) {
       // Found at tail - update and cache
-      tail.version = producerVersion;
+      tail.fromVersion = producerVersion;
       tail.toGen = consumer._gen;
       // Tail is already correct, no need to update
       return;
@@ -110,7 +110,7 @@ export function createDependencyGraph(): DependencyGraph {
     // Check the second-to-last edge (common for alternating patterns)
     if (tail?.prevIn && tail.prevIn.from === producer) {
       const edge = tail.prevIn;
-      edge.version = producerVersion;
+      edge.fromVersion = producerVersion;
       edge.toGen = consumer._gen;
       consumer._inTail = edge; // Move to tail for next access
       return;
@@ -123,7 +123,7 @@ export function createDependencyGraph(): DependencyGraph {
       if (node.from === producer) {
         // Found edge - either active (version >= 0) or recyclable (version = -1)
         // Reactivate/update it
-        node.version = producerVersion;
+        node.fromVersion = producerVersion;
         node.toGen = consumer._gen;
         // Move to tail for better locality
         consumer._inTail = node;
@@ -184,15 +184,15 @@ export function createDependencyGraph(): DependencyGraph {
 
     if (firstEdge && !firstEdge.nextIn) {
       // Skip recycled edges
-      if (firstEdge.version === -1) return false;
+      if (firstEdge.fromVersion === -1) return false;
 
       const source = firstEdge.from;
-      const edgeVersion = firstEdge.version;
+      const edgeVersion = firstEdge.fromVersion;
 
       // Signals: simple version check
       if (!('_in' in source)) {
         const isStale = edgeVersion !== source._version;
-        firstEdge.version = source._version;
+        firstEdge.fromVersion = source._version;
         return isStale;
       }
 
@@ -220,13 +220,13 @@ export function createDependencyGraph(): DependencyGraph {
       // Process current dependency
       if (currentEdge) {
         // Skip recycled edges
-        if (currentEdge.version === -1) {
+        if (currentEdge.fromVersion === -1) {
           currentEdge = currentEdge.nextIn;
           continue;
         }
 
         const source = currentEdge.from;
-        const edgeVersion = currentEdge.version;
+        const edgeVersion = currentEdge.fromVersion;
 
         // Signals: compare versions
         if (!('_in' in source)) {
@@ -235,7 +235,7 @@ export function createDependencyGraph(): DependencyGraph {
             stale = true;
             // No early exit - check all siblings for proper batching
           }
-          currentEdge.version = sourceVersion;
+          currentEdge.fromVersion = sourceVersion;
           currentEdge = currentEdge.nextIn;
           continue;
         }
@@ -277,7 +277,7 @@ export function createDependencyGraph(): DependencyGraph {
         // Version mismatch without INVALIDATED
         if (edgeVersion !== sourceVersion) {
           stale = true;
-          currentEdge.version = sourceVersion;
+          currentEdge.fromVersion = sourceVersion;
         }
 
         currentEdge = currentEdge.nextIn;
@@ -296,7 +296,7 @@ export function createDependencyGraph(): DependencyGraph {
       // Pop from stack
       const frame: StackFrame = stackTop;
       const parentEdge = frame.edge;
-      const prevVersion = parentEdge.version;
+      const prevVersion = parentEdge.fromVersion;
       let changed = false;
 
       // If subtree was stale and this is a computed, update its value now
@@ -309,7 +309,7 @@ export function createDependencyGraph(): DependencyGraph {
 
       // Sync parent edge cached version
       if ('_version' in currentTarget) {
-        parentEdge.version = currentTarget._version;
+        parentEdge.fromVersion = currentTarget._version;
       }
 
       // Restore state from stack frame

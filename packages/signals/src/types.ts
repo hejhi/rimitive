@@ -45,16 +45,16 @@ export interface Disposable {
 // PRODUCERS: Nodes that other nodes depend on (signals, computed values)
 // They maintain a list of consumers that depend on them
 export interface ProducerNode extends ReactiveNode {
-  _out: Edge | undefined;  // Head of output edges (to consumers)
-  _outTail: Edge | undefined;  // Tail pointer for O(1) append
+  _out: Edge | undefined;  // Head of output list
+  _outTail: Edge | undefined;  // Tail of output list
   
   // LOCAL VERSION COUNTER (VALUE CHANGE TRACKING)
   // Incremented when THIS node's value changes.
   // Used to detect if specific dependencies have new values.
   // 
   // PURPOSE: Fine-grained change detection
-  // - Stored in edge.version when dependencies are registered
-  // - Compared against edge.version to detect if this dependency changed
+  // - Stored in edge.fromVersion when dependencies are registered
+  // - Compared against edge.fromVersion to detect if this dependency changed
   // 
   // NOT REDUNDANT WITH GENERATION: This tracks value changes,
   // while generation tracks which edges to keep/remove.
@@ -64,8 +64,8 @@ export interface ProducerNode extends ReactiveNode {
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
 // They maintain a list of producers they depend on
 export interface ConsumerNode extends ReactiveNode {
-  _in: Edge | undefined; // Head of input edges (from producers)
-  _inTail: Edge | undefined; // Tail pointer for O(1) access to recent dependencies
+  _in: Edge | undefined; // Head of input list
+  _inTail: Edge | undefined; // Tail of input list
 
   _invalidate(): void; // Called when dependencies change
   _updateValue(): boolean; // Update this node's value (if it produces one)
@@ -84,7 +84,8 @@ export interface ScheduledNode extends ConsumerNode, Disposable {
   _flush(): void;                  // Execute the deferred work
 }
 
-// Node types for edges - representing what can be sources and targets
+// Node types for edges
+// Note: Computed nodes are both ProducerNode AND ConsumerNode
 export type FromNode = ProducerNode | (ProducerNode & ConsumerNode);
 export type ToNode = ConsumerNode | (ProducerNode & ConsumerNode);
 
@@ -106,24 +107,24 @@ export interface Edge {
   from: FromNode; // The producer (source of data)
   to: ToNode; // The consumer (depends on the producer)
 
-  // Producer's output list navigation - edges "out" from same producer
-  prevOut: Edge | undefined; // Previous edge in producer's output list
-  nextOut: Edge | undefined; // Next edge in producer's output list
+  // Producer's output list navigation
+  prevOut: Edge | undefined; // Previous in output list
+  nextOut: Edge | undefined; // Next in output list
 
-  // Consumer's input list navigation - edges "in" to same consumer
-  prevIn: Edge | undefined; // Previous edge in consumer's input list
-  nextIn: Edge | undefined; // Next edge in consumer's input list
+  // Consumer's input list navigation
+  prevIn: Edge | undefined; // Previous in input list
+  nextIn: Edge | undefined; // Next in input list
 
   // CACHED PRODUCER VERSION (STALENESS DETECTION)
   // Stores the producer's _version at the time this edge was created/validated.
   // Updated whenever the consumer reads from the producer.
   //
   // PURPOSE: O(1) staleness detection without pointer chasing
-  // - If edge.version !== source._version, the producer has changed
+  // - If edge.fromVersion !== source._version, the producer has changed
   // - Avoids dereferencing source just to check if it changed
   //
   // NOT REDUNDANT: This is a cache of producer._version for performance
-  version: number;
+  fromVersion: number;
 
   // GENERATION TAG FOR DYNAMIC DEPENDENCY TRACKING
   // Set to the consumer's _gen during the run that touched this edge.

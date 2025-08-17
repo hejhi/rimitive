@@ -90,8 +90,8 @@ export function createDependencySweeper(
     while (node !== undefined) {
       if (node.toGen !== currentGen) {
         // Mark edge as recyclable instead of removing it
-        // version = -1 indicates a stale edge that can be reused
-        node.version = -1;
+        // fromVersion = -1 indicates a stale edge that can be reused
+        node.fromVersion = -1;
 
         // Clear producer's cache if it points to this recycled edge
         // This prevents stale cache hits when the dependency is re-established

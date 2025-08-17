@@ -39,7 +39,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.ensureLink(source, target, 2);
       
       expect(target._in).toBe(firstEdge);
-      expect(target._in?.version).toBe(2);
+      expect(target._in?.fromVersion).toBe(2);
     });
 
     it('should find existing dependency in sources list', () => {
@@ -69,7 +69,7 @@ describe('Dependency Graph Helpers', () => {
       // Should find the existing dependency
       helpers.ensureLink(source, target, 2);
       
-      expect(existingNode.version).toBe(2);
+      expect(existingNode.fromVersion).toBe(2);
       expect(target._in).toBe(existingNode);
     });
 
@@ -159,7 +159,7 @@ describe('Dependency Graph Helpers', () => {
       
       // Check that version was updated
       const node = target._in;
-      expect(node?.version).toBe(5);
+      expect(node?.fromVersion).toBe(5);
     });
   });
 
@@ -186,7 +186,7 @@ describe('Dependency Graph Helpers', () => {
         
         expect(node.from).toBe(source);
         expect(node.to).toBe(target);
-        expect(node.version).toBe(1);
+        expect(node.fromVersion).toBe(1);
         expect(source._out).toBe(node);
         expect(target._in).toBe(node);
       });

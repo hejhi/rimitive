@@ -131,7 +131,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       this._value = value;
       
       // ALGORITHM: Version Tracking for Cache Invalidation
-      // Increment local version: Used to detect if specific dependencies are stale
+      // Increment local fromVersion: Used to detect if specific dependencies are stale
       this._version++;
       
       // OPTIMIZATION: Skip global version bump if no dependents

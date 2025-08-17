@@ -75,7 +75,7 @@ describe('Dependency Sweeper', () => {
     const active = new Set<unknown>();
     const recycled = new Set<unknown>();
     while (list) {
-      if (list.version === -1) {
+      if (list.fromVersion === -1) {
         recycled.add(list.from);
       } else {
         active.add(list.from);
@@ -106,7 +106,7 @@ describe('Dependency Sweeper', () => {
     let list = target._in;
     let recycledCount = 0;
     while (list) {
-      expect(list.version).toBe(-1); // All should be marked as recyclable
+      expect(list.fromVersion).toBe(-1); // All should be marked as recyclable
       recycledCount++;
       list = list.nextIn;
     }

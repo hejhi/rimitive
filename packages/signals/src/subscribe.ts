@@ -175,7 +175,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // Setup bidirectional pointers
       node.from = source;
       node.to = this;
-      node.version = source._version; // Current version for staleness checks
+      node.fromVersion = source._version; // Current version for staleness checks
 
       // This subscribe only has one source, so no source list needed
       node.nextIn = undefined;
