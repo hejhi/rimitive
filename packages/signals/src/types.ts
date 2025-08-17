@@ -70,10 +70,10 @@ export interface ConsumerNode extends ReactiveNode {
   _invalidate(): void; // Called when dependencies change
   _updateValue(): boolean; // Update this node's value (if it produces one)
   _flags: number; // Bit field containing STALE, RUNNING, DISPOSED, etc.
-  // RUN VERSION COUNTER (DYNAMIC DEPENDENCY SWEEPING)
+  // GENERATION COUNTER (DYNAMIC DEPENDENCY SWEEPING)
   // Incremented at the start of each run to tag edges created/validated
-  // during that run. Edges not matching the current run version are pruned.
-  _runVersion: number;
+  // during that run. Edges not matching the current generation are pruned.
+  _gen: number;
 }
 
 // PATTERN: Deferred Execution Queue
@@ -125,9 +125,9 @@ export interface Edge {
   version: number;
 
   // GENERATION TAG FOR DYNAMIC DEPENDENCY TRACKING
-  // Set to the consumer's _runVersion during the run that touched this edge.
-  // After the run, edges whose gen !== consumer._runVersion are pruned.
-  runVersion: number;
+  // Set to the consumer's _gen during the run that touched this edge.
+  // After the run, edges whose toGen !== consumer._gen are pruned.
+  toGen: number;
 }
 
 // Ensure module is not tree-shaken

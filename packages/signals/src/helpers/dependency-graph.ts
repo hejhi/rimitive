@@ -56,7 +56,7 @@ export function createDependencyGraph(): DependencyGraph {
        from: producer,
        to: consumer,
        version: producerVersion, // Store producer's version at time of edge creation
-       runVersion: consumer._runVersion, // Tag with current run version
+       toGen: consumer._gen, // Tag with current generation
        prevFrom: undefined, // Will be head of sources, so no previous
        prevTo, // Link to current tail of producer's targets
        nextFrom, // Link to old head of consumer's sources
@@ -102,7 +102,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (tail && tail.from === producer) {
       // Found at tail - update and cache
       tail.version = producerVersion;
-      tail.runVersion = consumer._runVersion;
+      tail.toGen = consumer._gen;
       // Tail is already correct, no need to update
       return;
     }
@@ -111,7 +111,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (tail?.prevFrom && tail.prevFrom.from === producer) {
       const edge = tail.prevFrom;
       edge.version = producerVersion;
-      edge.runVersion = consumer._runVersion;
+      edge.toGen = consumer._gen;
       consumer._fromTail = edge; // Move to tail for next access
       return;
     }
@@ -124,7 +124,7 @@ export function createDependencyGraph(): DependencyGraph {
         // Found edge - either active (version >= 0) or recyclable (version = -1)
         // Reactivate/update it
         node.version = producerVersion;
-        node.runVersion = consumer._runVersion;
+        node.toGen = consumer._gen;
         // Move to tail for better locality
         consumer._fromTail = node;
         return;

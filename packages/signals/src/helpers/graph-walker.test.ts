@@ -39,7 +39,7 @@ describe('GraphWalker', () => {
       _flags: flags,
       _invalidate: () => {},
       _updateValue: () => true,
-      _runVersion: 0,
+      _gen: 0,
     };
 
     if (isScheduled) {
@@ -60,7 +60,7 @@ describe('GraphWalker', () => {
       nextFrom: undefined,
       prevTo: undefined,
       nextTo: undefined,
-      runVersion: 0
+      toGen: 0
     };
   }
 

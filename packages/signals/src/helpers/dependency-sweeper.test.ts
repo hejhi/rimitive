@@ -25,7 +25,7 @@ describe('Dependency Sweeper', () => {
     _flags: 0,
     _invalidate: () => {},
     _updateValue: () => true,
-    _runVersion: 0,
+    _gen: 0,
     _fromTail: undefined
   });
 
@@ -59,7 +59,7 @@ describe('Dependency Sweeper', () => {
     graph.ensureLink(c, target, c._version);
 
     // Next run (gen 1): only access a and c
-    target._runVersion = 1;
+    target._gen = 1;
     // Access a via cached fast path
     a._version = 2;
     graph.ensureLink(a, target, a._version);
@@ -80,7 +80,7 @@ describe('Dependency Sweeper', () => {
       } else {
         active.add(list.from);
         // Active edgesgrshould have current gen
-        expect(list.runVersion).toBe(1);
+        expect(list.toGen).toBe(1);
       }
       list = list.nextFrom;
     }
@@ -99,7 +99,7 @@ describe('Dependency Sweeper', () => {
     graph.ensureLink(a, target, a._version);
     graph.ensureLink(b, target, b._version);
 
-    target._runVersion = 2; // new run, but we do not access any producer
+    target._gen = 2; // new run, but we do not access any producer
     sweeper.pruneStale(target);
 
     // With edge recycling, edges remain but are marked as recyclable

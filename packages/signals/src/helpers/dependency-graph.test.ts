@@ -24,7 +24,7 @@ describe('Dependency Graph Helpers', () => {
         _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _runVersion: 0,
+        _gen: 0,
         _fromTail: undefined,
       };
       
@@ -56,7 +56,7 @@ describe('Dependency Graph Helpers', () => {
         _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _runVersion: 0,
+        _gen: 0,
         _fromTail: undefined,
       };
       
@@ -87,7 +87,7 @@ describe('Dependency Graph Helpers', () => {
         _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _runVersion: 0,
+        _gen: 0,
         _fromTail: undefined,
       };
       
@@ -110,7 +110,7 @@ describe('Dependency Graph Helpers', () => {
         _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _runVersion: 0,
+        _gen: 0,
         _fromTail: undefined,
       };
       
@@ -144,7 +144,7 @@ describe('Dependency Graph Helpers', () => {
         _from: undefined,
         _invalidate: () => {},
         _updateValue: () => true,
-        _runVersion: 0,
+        _gen: 0,
         _fromTail: undefined,
       };
       
@@ -178,7 +178,7 @@ describe('Dependency Graph Helpers', () => {
           _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _runVersion: 0,
+          _gen: 0,
           _fromTail: undefined,
         };
         
@@ -205,7 +205,7 @@ describe('Dependency Graph Helpers', () => {
           _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _runVersion: 0,
+          _gen: 0,
           _fromTail: undefined,
         };
         
@@ -215,7 +215,7 @@ describe('Dependency Graph Helpers', () => {
           _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _runVersion: 0,
+          _gen: 0,
           _fromTail: undefined,
         };
         
@@ -247,7 +247,7 @@ describe('Dependency Graph Helpers', () => {
           _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _runVersion: 0,
+          _gen: 0,
           _fromTail: undefined,
         };
         
@@ -273,7 +273,7 @@ describe('Dependency Graph Helpers', () => {
           _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _runVersion: 0,
+          _gen: 0,
           _fromTail: undefined,
         };
         
@@ -325,7 +325,7 @@ describe('Dependency Graph Helpers', () => {
           _from: undefined,
           _invalidate: () => {},
           _updateValue: () => true,
-          _runVersion: 0,
+          _gen: 0,
           _fromTail: undefined
         };
         

@@ -66,7 +66,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     _from: Edge | undefined = undefined; // Single edge to source signal/computed
     _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
     _fromTail: Edge | undefined = undefined; // Link in scheduling queue
-    _runVersion = 0; // Run version counter for dynamic dependency tracking
+    _gen = 0; // Generation counter for dynamic dependency tracking
 
     constructor(
       source: Readable<T> & ProducerNode,

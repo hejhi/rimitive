@@ -85,10 +85,10 @@ export function createDependencySweeper(
   const pruneStale = (consumer: ConsumerNode): void => {
     let node = consumer._from;
 
-    const currentGen = consumer._runVersion;
+    const currentGen = consumer._gen;
     // Walk the linked list, marking stale nodes as recyclable
     while (node !== undefined) {
-      if (node.runVersion !== currentGen) {
+      if (node.toGen !== currentGen) {
         // Mark edge as recyclable instead of removing it
         // version = -1 indicates a stale edge that can be reused
         node.version = -1;
