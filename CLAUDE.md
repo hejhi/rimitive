@@ -217,7 +217,7 @@ export type SignalValue<S> = S extends Readable<infer T> ? T : never;
 interface Edge {
   source: ProducerNode;
   target: ConsumerNode;
-  nextTarget?: Edge;  // List node IS the edge
+  nextTo?: Edge;  // List node IS the edge
 }
 ```
 

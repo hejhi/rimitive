@@ -59,7 +59,7 @@ export function createDependencySweeper(
     // Walk the linked list of sources
     while (node) {
       // Save next pointer before removal (removal might clear it)
-      const next = node.nextSource;
+      const next = node.nextFrom;
       
       // Remove this edge from the producer's target list
       // This is the bidirectional edge removal - we remove from both sides
@@ -103,7 +103,7 @@ export function createDependencySweeper(
         // The edge stays in both lists but is marked as inactive
       }
       
-      node = node.nextSource;
+      node = node.nextFrom;
     }
   };
 

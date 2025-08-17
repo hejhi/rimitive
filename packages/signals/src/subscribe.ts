@@ -177,17 +177,17 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       node.version = source._version; // Current version for staleness checks
 
       // This subscribe only has one source, so no source list needed
-      node.nextSource = undefined;
-      node.prevSource = undefined;
+      node.nextFrom = undefined;
+      node.prevFrom = undefined;
 
       // ALGORITHM: Insert at Head of Target List
       // Add to the beginning of source's target list
-      node.nextTarget = source._to;
-      node.prevTarget = undefined;
+      node.nextTo = source._to;
+      node.prevTo = undefined;
 
       // Update old head's back pointer
       if (source._to) {
-        source._to.prevTarget = node;
+        source._to.prevTo = node;
       }
 
       // Update source's head pointer

@@ -86,7 +86,7 @@ console.log(`Op time: ${(performance.now() - start) / ops}µs per op`);
 **Dependency Graph Structure**:
 - Intrusive linked lists (no allocations)
 - Producer → Consumer edges
-- Bidirectional traversal via nextTarget/nextSource
+- Bidirectional traversal via nextTo/nextFrom
 
 **Critical Invariants**:
 1. No cycles in dependency graph

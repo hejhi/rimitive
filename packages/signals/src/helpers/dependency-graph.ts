@@ -47,8 +47,8 @@ export function createDependencyGraph(): DependencyGraph {
      producerVersion: number
    ): Edge => {
      // Get current heads and tails
-     const nextSource = consumer._from; // Consumer's current first dependency
-     const prevTarget = producer._toTail; // Producer's current last dependent
+     const nextFrom = consumer._from; // Consumer's current first dependency
+     const prevTo = producer._toTail; // Producer's current last dependent
      
      // ALGORITHM: Doubly-Linked List Node Creation
      // Create new edge that will be head of sources, tail of targets
@@ -57,14 +57,14 @@ export function createDependencyGraph(): DependencyGraph {
        to: consumer,
        version: producerVersion, // Store producer's version at time of edge creation
        runVersion: consumer._runVersion, // Tag with current run version
-       prevSource: undefined, // Will be head of sources, so no previous
-       prevTarget, // Link to current tail of producer's targets
-       nextSource, // Link to old head of consumer's sources
-       nextTarget: undefined, // Will be new tail of targets, so no next
+       prevFrom: undefined, // Will be head of sources, so no previous
+       prevTo, // Link to current tail of producer's targets
+       nextFrom, // Link to old head of consumer's sources
+       nextTo: undefined, // Will be new tail of targets, so no next
      };
 
      // Update source list (prepend to consumer's sources)
-     if (nextSource) nextSource.prevSource = newNode;
+     if (nextFrom) nextFrom.prevFrom = newNode;
      consumer._from = newNode; // Consumer now depends on this edge first
      
      // FLAG: Computed nodes can be both producers AND consumers
@@ -73,8 +73,8 @@ export function createDependencyGraph(): DependencyGraph {
      if ('_flags' in producer) producer._flags |= TRACKING;
      
      // Append to target list (preserve execution order)
-     if (prevTarget) {
-       prevTarget.nextTarget = newNode;
+     if (prevTo) {
+       prevTo.nextTo = newNode;
      } else {
        producer._to = newNode; // First target
      }
@@ -108,8 +108,8 @@ export function createDependencyGraph(): DependencyGraph {
     }
     
     // Check the second-to-last edge (common for alternating patterns)
-    if (tail?.prevSource && tail.prevSource.from === producer) {
-      const edge = tail.prevSource;
+    if (tail?.prevFrom && tail.prevFrom.from === producer) {
+      const edge = tail.prevFrom;
       edge.version = producerVersion;
       edge.runVersion = consumer._runVersion;
       consumer._fromTail = edge; // Move to tail for next access
@@ -129,7 +129,7 @@ export function createDependencyGraph(): DependencyGraph {
         consumer._fromTail = node;
         return;
       }
-      node = node.nextSource;
+      node = node.nextFrom;
     }
 
     // No existing edge found - create new one
@@ -139,25 +139,25 @@ export function createDependencyGraph(): DependencyGraph {
   // ALGORITHM: Edge Removal from Producer's Target List  
   // Removes an edge from the producer's linked list of consumers
   // This is O(1) because we have direct pointers to neighbors
-  const unlinkFromProducer = ({ from, prevTarget, nextTarget }: Edge): void => {
+  const unlinkFromProducer = ({ from, prevTo, nextTo }: Edge): void => {
     // Remove from doubly-linked list
-    if (prevTarget) {
+    if (prevTo) {
       // Middle or end of list - update previous node
-      prevTarget.nextTarget = nextTarget;
+      prevTo.nextTo = nextTo;
     } else {
       // Head of list - update producer's head pointer
-      from._to = nextTarget;
+      from._to = nextTo;
 
       // OPTIMIZATION: Only check TRACKING flag if this was the last consumer
       // Combine the checks to reduce branches
-      if (!nextTarget && '_flags' in from) from._flags &= ~TRACKING;
+      if (!nextTo && '_flags' in from) from._flags &= ~TRACKING;
     }
     
-    if (nextTarget) {
-      nextTarget.prevTarget = prevTarget;
+    if (nextTo) {
+      nextTo.prevTo = prevTo;
     } else {
       // This was the tail - update tail pointer
-      from._toTail = prevTarget;
+      from._toTail = prevTo;
     }
   };
 
@@ -182,7 +182,7 @@ export function createDependencyGraph(): DependencyGraph {
     // Common pattern: computed(() => signal.value * 2)
     const firstEdge = toNode._from;
 
-    if (firstEdge && !firstEdge.nextSource) {
+    if (firstEdge && !firstEdge.nextFrom) {
       // Skip recycled edges
       if (firstEdge.version === -1) return false;
 
@@ -221,7 +221,7 @@ export function createDependencyGraph(): DependencyGraph {
       if (currentEdge) {
         // Skip recycled edges
         if (currentEdge.version === -1) {
-          currentEdge = currentEdge.nextSource;
+          currentEdge = currentEdge.nextFrom;
           continue;
         }
 
@@ -236,7 +236,7 @@ export function createDependencyGraph(): DependencyGraph {
             // No early exit - check all siblings for proper batching
           }
           currentEdge.version = sourceVersion;
-          currentEdge = currentEdge.nextSource;
+          currentEdge = currentEdge.nextFrom;
           continue;
         }
 
@@ -246,13 +246,13 @@ export function createDependencyGraph(): DependencyGraph {
         // Already marked stale
         if (sourceFlags & STALE) {
           stale = true;
-          currentEdge = currentEdge.nextSource;
+          currentEdge = currentEdge.nextFrom;
           continue;
         }
 
         // Clean dependency - version and flags both clean
         if (edgeVersion === sourceVersion && !(sourceFlags & PENDING)) {
-          currentEdge = currentEdge.nextSource;
+          currentEdge = currentEdge.nextFrom;
           continue;
         }
 
@@ -261,7 +261,7 @@ export function createDependencyGraph(): DependencyGraph {
           // Push current state onto stack
           stackTop = {
             edge: currentEdge,
-            next: currentEdge.nextSource,
+            next: currentEdge.nextFrom,
             to: currentTarget,
             stale,
             prev: stackTop,
@@ -280,7 +280,7 @@ export function createDependencyGraph(): DependencyGraph {
           currentEdge.version = sourceVersion;
         }
 
-        currentEdge = currentEdge.nextSource;
+        currentEdge = currentEdge.nextFrom;
         continue;
       }
 

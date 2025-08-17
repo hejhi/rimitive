@@ -27,7 +27,7 @@ Preact Signals:
 // Intrusive linked list for effects
 let batchedEffect: Effect | undefined = undefined;
 // Direct traversal (no stack needed)
-for (let node = this._targets; node !== undefined; node = node._nextTarget)
+for (let node = this._targets; node !== undefined; node = node._nextTo)
 
 3. Key Algorithmic Differences
 
@@ -84,7 +84,7 @@ if (flags & 60 as ReactiveFlags.RecursedCheck | ReactiveFlags.Recursed | Reactiv
 }
 
 // Preact - Simple and direct
-for (let node = this._targets; node !== undefined; node = node._nextTarget) {
+for (let node = this._targets; node !== undefined; node = node._nextTo) {
   node._target._notify();
 }
 
