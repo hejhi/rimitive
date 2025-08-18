@@ -7,6 +7,7 @@ import { spawn, execSync } from 'child_process';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { parseArgs } from 'util';
 
 interface BenchmarkResult {
   name: string;
@@ -284,7 +285,37 @@ ${results.filter(r => r.error).map(r =>
 }
 
 // Run if executed directly
-const runner = new BenchmarkRunner();
-// Get filters from command line arguments (all args after script name)
-const filters = process.argv.slice(2).filter(arg => arg && !arg.startsWith('-'));
-runner.run(filters.length > 0 ? filters : undefined).catch(console.error);
+async function main() {
+  // Parse command line arguments
+  const { values, positionals } = parseArgs({
+    options: {
+      'skip-build': {
+        type: 'boolean',
+        default: false,
+      },
+    },
+    allowPositionals: true,
+    args: process.argv.slice(2),
+  });
+
+  // Build if not skipping
+  if (!values['skip-build']) {
+    console.log('Building packages...');
+    try {
+      execSync('pnpm build:all', { 
+        stdio: 'inherit',
+        cwd: path.resolve('./'),
+      });
+      console.log('Build complete.\n');
+    } catch (error) {
+      console.error('Build failed:', error);
+      process.exit(1);
+    }
+  }
+
+  const runner = new BenchmarkRunner();
+  // Use positionals as filters (benchmark names)
+  await runner.run(positionals.length > 0 ? positionals : undefined);
+}
+
+main().catch(console.error);

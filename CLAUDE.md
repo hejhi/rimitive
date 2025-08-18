@@ -139,10 +139,10 @@ pushd packages/benchmarks
 pnpm bench
 
 # Run specific benchmarks (no build)
-pnpm bench:quick signal              # Runs signal-updates benchmark
-pnpm bench:quick signal batch        # Runs multiple benchmarks
-pnpm bench:quick computed            # Partial match (runs computed-chains)
-pnpm bench:quick                     # Runs all benchmarks
+pnpm bench --skip-build signal        # Runs signal-updates benchmark
+pnpm bench --skip-build signal batch  # Runs multiple benchmarks
+pnpm bench --skip-build computed      # Partial match (runs computed-chains)
+pnpm bench --skip-build               # Runs all benchmarks
 
 # Available benchmarks:
 # - batch-operations     - Test batched updates
@@ -164,10 +164,10 @@ pnpm bench:quick                     # Runs all benchmarks
 - Latest symlinks: `latest-<benchmark>.md`, `latest-summary.md`
 
 **Before Performance Changes:**
-1. Run baseline benchmark: `pnpm bench:quick <relevant-benchmark>`
+1. Run baseline benchmark: `pnpm bench --skip-build <relevant-benchmark>`
 2. Save baseline: `cp dist/latest-*.md dist/baseline/`
 3. Make changes
-4. Run comparison: `pnpm bench:quick <relevant-benchmark>`
+4. Run comparison: `pnpm bench --skip-build <relevant-benchmark>`
 5. Compare results in markdown files
 
 ## Critical Gotchas

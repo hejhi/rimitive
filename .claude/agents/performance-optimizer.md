@@ -77,10 +77,10 @@ function bad2(val) {
    node --trace-opt --trace-deopt script.js
    
    # Lattice benchmarks (from packages/benchmarks/)
-   pnpm bench:quick signal              # Test signal read/write
-   pnpm bench:quick computed            # Test computed chains
-   pnpm bench:quick dense sparse        # Test graph updates
-   pnpm bench:quick                     # Run all benchmarks
+   pnpm bench --skip-build signal        # Test signal read/write
+   pnpm bench --skip-build computed      # Test computed chains
+   pnpm bench --skip-build dense sparse  # Test graph updates
+   pnpm bench --skip-build               # Run all benchmarks
    ```
 
 2. **Identify Hot Paths**: Focus on code that runs millions of times
@@ -182,12 +182,12 @@ BOTTLENECK: myMethod() - 47% of runtime
 ROOT CAUSE: O(n) scan of all dependencies on every read
 FIX: Add _maxDependencyVersion field, compare single integer
 MEASUREMENT: 1.2ms → 0.03ms per 10K reads (40x improvement)
-BENCHMARK: Run 'pnpm bench:quick signal' to verify improvement
+BENCHMARK: Run 'pnpm bench --skip-build signal' to verify improvement
 ```
 
 **When Analyzing Performance:**
 1. Check existing benchmark results in `packages/benchmarks/dist/latest-*.md`
-2. Run relevant benchmarks before changes: `pnpm bench:quick <name>`
+2. Run relevant benchmarks before changes: `pnpm bench --skip-build <name>`
 3. Make optimization
 4. Run benchmarks after changes
 5. Compare markdown results to prove improvement

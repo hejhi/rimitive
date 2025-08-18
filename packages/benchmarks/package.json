@@ -8,8 +8,7 @@
   "private": true,
   "scripts": {
     "build:all": "cd ../ && pnpm build && cd benchmarks",
-    "bench": "pnpm build:all && tsx --expose-gc src/runner.ts",
-    "bench:quick": "tsx --expose-gc src/runner.ts",
+    "bench": "tsx --expose-gc src/runner.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx",
     "check": "pnpm typecheck && pnpm lint"
