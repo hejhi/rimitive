@@ -317,8 +317,8 @@ describe('Dependency Graph Helpers', () => {
         const next = helpers.unlink(middleEdge!);
         
         // Check producer's output list integrity
-        let firstEdge = source._out!;
-        let thirdEdge = firstEdge.nextOut!;
+        const firstEdge = source._out!;
+        const thirdEdge = firstEdge.nextOut!;
         
         // After removal, first edge should point to third edge
         expect(firstEdge.to).toBe(targets[0]);

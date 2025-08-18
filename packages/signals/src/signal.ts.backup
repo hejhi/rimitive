@@ -56,8 +56,8 @@ interface SignalFactoryContext extends SignalContext {
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const {
     dependencies: { link },
-    graphWalker: { dfs, dfsMany },
-    propagator: { invalidate, propagate },
+    graphWalker: { dfs },
+    propagator: { invalidate },
     workQueue: { enqueue, state, flush }
   } = ctx;
   
@@ -159,9 +159,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       
       // Flush effects if we're ending a batch and effects were queued
       if (isNewBatch && --ctx.batchDepth === 0 && state.size !== prevSize) {
-        // Process any accumulated roots from large batch before flushing effects
-      propagate(dfsMany, notifyNode);
-      flush();
+        flush();
       }
     }
 
