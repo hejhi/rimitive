@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyGraph } from './dependency-graph';
-import type { ConsumerNode, ProducerNode } from '../types';
+import type { ConsumerNode, ProducerNode, Edge } from '../types';
 
 describe('Dependency Graph Helpers', () => {
   let helpers: ReturnType<typeof createDependencyGraph>;
@@ -99,6 +99,7 @@ describe('Dependency Graph Helpers', () => {
       const sources = Array.from({ length: 3 }, (_, i) => ({
         __type: 'test',
         _out: undefined,
+        _outTail: undefined,
         _version: i + 1,
       }));
       
@@ -253,8 +254,8 @@ describe('Dependency Graph Helpers', () => {
       });
     });
   
-    describe('unlinkFromProducer', () => {
-      it('should remove node from targets list', () => {
+    describe('unlink', () => {
+      it('should remove edge from both producer and consumer lists', () => {
         const source: ProducerNode = {
           __type: 'test',
           _out: undefined,
@@ -274,9 +275,12 @@ describe('Dependency Graph Helpers', () => {
         helpers.link(source, target, 1);
         const node = target._in!;
         
-        helpers.unlinkFromProducer(node);
+        const next = helpers.unlink(node);
         
         expect(source._out).toBeUndefined();
+        expect(target._in).toBeUndefined();
+        expect(target._inTail).toBeUndefined();
+        expect(next).toBeUndefined();
       });
   
       it('should maintain linked list integrity when removing middle node', () => {
@@ -287,21 +291,44 @@ describe('Dependency Graph Helpers', () => {
           _outTail: undefined,
         };
         
-        const targets = Array.from({ length: 3 }, () => ({
+        const targets = Array.from({ length: 3 }, (_, i) => ({
           __type: 'test',
           _in: undefined,
           _invalidate: () => {},
-        }) as ConsumerNode);
+          _inTail: undefined,
+          id: i,  // Add id for debugging
+        }) as ConsumerNode & { id: number });
         
+        // Link all targets
         targets.forEach(target => helpers.link(source, target, 1));
-        const nodes = targets.map(target => target._in!);
         
-        // Remove middle node
-        helpers.unlinkFromProducer(nodes[1]!);
+        // Get the edge pointing to the second target (middle one)
+        let edge = source._out;
+        let middleEdge: Edge | undefined;
+        while (edge) {
+          if (edge.to === targets[1]) {
+            middleEdge = edge;
+            break;
+          }
+          edge = edge.nextOut;
+        }
         
-        // Check that nodes[0] and nodes[2] are still linked in correct order
-        expect(nodes[0]!.nextOut).toBe(nodes[2]);
-        expect(nodes[2]!.prevOut).toBe(nodes[0]);
+        // Remove middle edge
+        const next = helpers.unlink(middleEdge!);
+        
+        // Check producer's output list integrity
+        let firstEdge = source._out!;
+        let thirdEdge = firstEdge.nextOut!;
+        
+        // After removal, first edge should point to third edge
+        expect(firstEdge.to).toBe(targets[0]);
+        expect(thirdEdge.to).toBe(targets[2]);
+        expect(firstEdge.nextOut).toBe(thirdEdge);
+        expect(thirdEdge.prevOut).toBe(firstEdge);
+        
+        // The returned next should be undefined since we removed from middle of consumer's list
+        // (middleEdge was in targets[1]._in, which only had one edge)
+        expect(next).toBeUndefined();
       });
   
       it('should clear TRACKING flag when last target is removed', () => {
@@ -325,9 +352,44 @@ describe('Dependency Graph Helpers', () => {
         helpers.link(source, target, 1);
         const node = target._in!;
         
-        helpers.unlinkFromProducer(node);
+        helpers.unlink(node);
         
         expect(source._flags & 16).toBe(0);
+      });
+      
+      it('should return next edge for efficient iteration', () => {
+        const source1: ProducerNode = {
+          __type: 'test',
+          _out: undefined,
+          _version: 1,
+          _outTail: undefined,
+        };
+        const source2: ProducerNode = {
+          __type: 'test',
+          _out: undefined,
+          _version: 2,
+          _outTail: undefined,
+        };
+        
+        const target: ConsumerNode = {
+          __type: 'test',
+          _flags: 0,
+          _in: undefined,
+          _invalidate: () => {},
+          _updateValue: () => true,
+          _inTail: undefined,
+        };
+        
+        helpers.link(source1, target, 1);
+        helpers.link(source2, target, 2);
+        
+        const firstEdge = target._in!;
+        const secondEdge = firstEdge.nextIn!;
+        
+        const next = helpers.unlink(firstEdge);
+        
+        expect(next).toBe(secondEdge);
+        expect(target._in).toBe(secondEdge);
       });
     });
 });

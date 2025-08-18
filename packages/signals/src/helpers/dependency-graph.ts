@@ -23,7 +23,7 @@ const { TRACKING, INVALIDATED, STALE, PENDING } = CONSTANTS;
 
 export interface DependencyGraph {
   link: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
-  unlinkFromProducer: (edge: Edge) => void;
+  unlink: (edge: Edge) => Edge | undefined;
   refreshConsumers: (consumer: ConsumerNode) => boolean;
 }
 
@@ -37,9 +37,8 @@ interface StackFrame {
 }
 
 export function createDependencyGraph(): DependencyGraph {
-  // ALGORITHM: Unified Edge Management (inspired by alien-signals)
-  // Combines edge creation and update into single function
-  // Uses 2-element cache for O(1) access to recently used edges
+  // ALGORITHM: Simplified Edge Management with Pruning Support
+  // Uses tail-based caching with minimal reordering for pruning correctness
   const link = (
     producer: TrackedProducer,
     consumer: ConsumerNode,
@@ -48,58 +47,54 @@ export function createDependencyGraph(): DependencyGraph {
     // OPTIMIZATION: Check tail (most recently accessed dependency)
     const tail = consumer._inTail;
     if (tail !== undefined && tail.from === producer) {
-      // Found at tail - update version
       tail.fromVersion = producerVersion;
       return;
     }
     
-    // Check next after tail (or head if no tail)
+    // Check next after tail (2-element cache)
     const nextAfterTail = tail !== undefined ? tail.nextIn : consumer._in;
     if (nextAfterTail !== undefined && nextAfterTail.from === producer) {
-      // Found right after tail - update version and move tail forward
       nextAfterTail.fromVersion = producerVersion;
       consumer._inTail = nextAfterTail;
       return;
     }
     
-    // Linear search through the rest
-    let node = nextAfterTail;
-    while (node) {
-      if (node.from === producer) {
-        // Found edge - update version and move it after current tail
-        node.fromVersion = producerVersion;
+    // Linear search for existing edge
+    let edge = nextAfterTail;
+    while (edge) {
+      if (edge.from === producer) {
+        edge.fromVersion = producerVersion;
         
-        // If not immediately after tail, move it there
-        if (node !== nextAfterTail) {
+        // Move edge to tail position for pruning correctness
+        // Only move if not already adjacent to tail
+        if (edge !== nextAfterTail) {
           // Remove from current position
-          if (node.prevIn) node.prevIn.nextIn = node.nextIn;
-          if (node.nextIn) node.nextIn.prevIn = node.prevIn;
+          if (edge.prevIn) edge.prevIn.nextIn = edge.nextIn;
+          if (edge.nextIn) edge.nextIn.prevIn = edge.prevIn;
           
           // Insert after tail
-          node.prevIn = tail;
-          node.nextIn = nextAfterTail;
-          if (nextAfterTail) nextAfterTail.prevIn = node;
+          edge.prevIn = tail;
+          edge.nextIn = nextAfterTail;
+          if (nextAfterTail) nextAfterTail.prevIn = edge;
           if (tail) {
-            tail.nextIn = node;
+            tail.nextIn = edge;
           } else {
-            consumer._in = node;
+            consumer._in = edge;
           }
         }
         
-        // Update tail to this edge
-        consumer._inTail = node;
+        consumer._inTail = edge;
         return;
       }
-      node = node.nextIn;
+      edge = edge.nextIn;
     }
 
-    // No existing edge - create new one
+    // No existing edge - create new one at tail position
     const prevDep = tail;
     const nextDep = tail !== undefined ? tail.nextIn : consumer._in;
     const prevOut = producer._outTail;
     
-    // Create new edge - insert after tail
-    const newNode: Edge = {
+    const newEdge: Edge = {
       from: producer,
       to: consumer,
       fromVersion: producerVersion,
@@ -109,36 +104,44 @@ export function createDependencyGraph(): DependencyGraph {
       nextOut: undefined,
     };
 
-    // Update consumer's dependency list
-    if (nextDep !== undefined) {
-      nextDep.prevIn = newNode;
-    }
-    if (prevDep !== undefined) {
-      prevDep.nextIn = newNode;
+    // Update consumer's input list
+    if (nextDep) nextDep.prevIn = newEdge;
+    if (prevDep) {
+      prevDep.nextIn = newEdge;
     } else {
-      consumer._in = newNode;
+      consumer._in = newEdge;
     }
-    
-    // Move tail forward to the new edge
-    consumer._inTail = newNode;
+    consumer._inTail = newEdge;
     
     // Set TRACKING flag if producer is a computed node
     if ('_flags' in producer) (producer as TrackedProducer & ConsumerNode)._flags |= TRACKING;
     
-    // Append to producer's target list
+    // Update producer's output list
     if (prevOut) {
-      prevOut.nextOut = newNode;
+      prevOut.nextOut = newEdge;
     } else {
-      producer._out = newNode;
+      producer._out = newEdge;
     }
-    producer._outTail = newNode;
+    producer._outTail = newEdge;
   };
 
-  // ALGORITHM: Edge Removal from Producer's Target List  
-  // Removes an edge from the producer's linked list of consumers
-  // This is O(1) because we have direct pointers to neighbors
-  const unlinkFromProducer = ({ from, prevOut, nextOut }: Edge): void => {
-    // Update neighbor pointers
+  // ALGORITHM: Full Bidirectional Edge Removal (alien-signals pattern)
+  // Removes an edge from both producer and consumer lists in O(1)
+  // Returns the next edge in consumer's list for easy iteration
+  const unlink = (edge: Edge): Edge | undefined => {
+    const { from, to, prevIn, nextIn, prevOut, nextOut } = edge;
+    
+    // Remove from consumer's input list
+    if (nextIn) nextIn.prevIn = prevIn;
+    else to._inTail = prevIn;
+    
+    if (prevIn) prevIn.nextIn = nextIn;
+    else to._in = nextIn;
+    
+    // Remove from producer's output list
+    if (nextOut) nextOut.prevOut = prevOut;
+    else from._outTail = prevOut;
+    
     if (prevOut) {
       prevOut.nextOut = nextOut;
     } else {
@@ -149,11 +152,7 @@ export function createDependencyGraph(): DependencyGraph {
       }
     }
     
-    if (nextOut) {
-      nextOut.prevOut = prevOut;
-    } else {
-      from._outTail = prevOut;
-    }
+    return nextIn;
   };
 
   /**
@@ -245,7 +244,7 @@ export function createDependencyGraph(): DependencyGraph {
 
   return {
     link,
-    unlinkFromProducer,
+    unlink,
     refreshConsumers,
   };
 }

@@ -12,7 +12,7 @@ import { createPropagator } from './helpers/propagator';
 export function createDefaultContext() {
   const baseCtx = createContext();
   const dependencies = createDependencyGraph();
-  const sourceCleanup = createDependencySweeper(dependencies.unlinkFromProducer);
+  const sourceCleanup = createDependencySweeper(dependencies.unlink);
   const workQueue = createWorkQueue(baseCtx);
   const graphWalker = createGraphWalker();
   const propagator = createPropagator();

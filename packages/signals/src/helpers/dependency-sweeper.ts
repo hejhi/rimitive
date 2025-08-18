@@ -49,7 +49,7 @@ export interface DependencySweeper {
 }
 
 export function createDependencySweeper(
-  unlinkFromProducer: (edge: Edge) => void,
+  unlink: (edge: Edge) => Edge | undefined,
 ): DependencySweeper {
   // ALGORITHM: Complete Edge Removal
   // Used during disposal to remove all dependency edges at once
@@ -58,24 +58,13 @@ export function createDependencySweeper(
     
     // Walk the linked list of sources
     while (node) {
-      // Save next pointer before removal (removal might clear it)
-      const next = node.nextIn;
-      
-      // Remove this edge from the producer's target list
-      // This is the bidirectional edge removal - we remove from both sides
-      unlinkFromProducer(node);
-      
-      // No need to clear producer cache or WeakMap here:
-      // - Consumer is being disposed and will be GC'd
-      // - WeakMap entries disappear automatically with GC
-      // - No future ensureLink calls will happen for this consumer
-      
-      // Move to next source
-      node = next;
+      // unlink returns the next edge, so we can iterate efficiently
+      node = unlink(node);
     }
     
-    // Clear the consumer's source list head
+    // Clear the consumer's source list head and tail
     consumer._in = undefined;
+    consumer._inTail = undefined;
   };
 
   // ALGORITHM: Tail-based Edge Removal (alien-signals approach)
@@ -90,27 +79,13 @@ export function createDependencySweeper(
     
     // Remove all edges after the tail
     while (toRemove) {
-      const next = toRemove.nextIn;
-      
       // Clear producer's cache if it points to this edge
       if ('_lastEdge' in toRemove.from && toRemove.from._lastEdge === toRemove) {
         toRemove.from._lastEdge = undefined;
       }
       
-      // Remove from producer's target list
-      unlinkFromProducer(toRemove);
-      
-      // Remove from consumer's source list
-      if (toRemove.prevIn) {
-        toRemove.prevIn.nextIn = toRemove.nextIn;
-      } else {
-        consumer._in = toRemove.nextIn;
-      }
-      if (toRemove.nextIn) {
-        toRemove.nextIn.prevIn = toRemove.prevIn;
-      }
-      
-      toRemove = next;
+      // unlink handles both sides and returns next edge
+      toRemove = unlink(toRemove);
     }
     
     // Update tail to point to the last valid edge
