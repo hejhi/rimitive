@@ -14,7 +14,7 @@
     "@lattice/signals": "workspace:*"
   },
   "devDependencies": {
-    "vite": "^6.0.5",
+    "vite": "^7.1.2",
     "typescript": "^5.8.3"
   }
 }
