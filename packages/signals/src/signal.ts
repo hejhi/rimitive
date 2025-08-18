@@ -158,10 +158,12 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       invalidate(this._out, !isNewBatch, dfs, notifyNode);
       
       // Flush effects if we're ending a batch and effects were queued
-      if (isNewBatch && --ctx.batchDepth === 0 && state.size !== prevSize) {
+      if (isNewBatch && --ctx.batchDepth === 0) {
         // Process any accumulated roots from large batch before flushing effects
-      propagate(dfsMany, notifyNode);
-      flush();
+        propagate(dfsMany, notifyNode);
+        if (state.size !== prevSize) {
+          flush();
+        }
       }
     }
 
