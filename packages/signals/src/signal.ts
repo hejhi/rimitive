@@ -134,20 +134,15 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // Update global version
       ctx.version++;
       
-      // OPTIMIZATION: Simplified batch handling
-      // If we're in a batch, just queue for batch-end processing
+      // OPTIMIZATION: Remove double batch wrapper
+      // Batching is already handled by the batch() function
       if (ctx.batchDepth > 0) {
         // During batch: accumulate roots for batch-end traversal
         invalidate(this._out, true, dfs, notifyNode);
       } else {
-        // Outside batch: immediate traversal and flush
-        ctx.batchDepth++;
-        try {
-          dfs(this._out, notifyNode);
-          flush();
-        } finally {
-          ctx.batchDepth--;
-        }
+        // Outside batch: direct traversal without creating a batch
+        dfs(this._out, notifyNode);
+        flush();
       }
     }
 

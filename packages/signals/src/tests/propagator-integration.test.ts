@@ -249,7 +249,7 @@ describe('Propagator Integration with Signal and Batch', () => {
       api.batch(() => {
         dummy1.value = 10;  // immediate DFS
         dummy2.value = 20;  // immediate DFS
-        root.value = 100;   // accumulate - BUG: doesn't propagate to all leaves
+        root.value = 100;   // accumulate
       });
       
       expect(effectRuns).toBe(2);
