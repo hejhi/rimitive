@@ -41,16 +41,8 @@ import type { Propagator } from './helpers/propagator';
 import type { GraphWalker } from './helpers/graph-walker';
 import type { ConsumerNode, ScheduledNode } from './types';
 
-// PATTERN: Error Wrapper for Non-Error Values
-// When user code throws non-Error values (strings, numbers, etc.),
-// we need to wrap them to satisfy ESLint's only-throw-error rule
-// while preserving the original value for error handling.
-class BatchError extends Error {
-  constructor(message: string, public originalError: unknown) {
-    super(message);
-    this.name = 'BatchError';
-  }
-}
+// Removed: Error wrapping adds unnecessary overhead
+// Let non-Error values throw naturally
 
 // BatchFactoryContext needs WorkQueue and Propagator for flushing
 interface BatchFactoryContext extends SignalContext {
@@ -71,85 +63,25 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
   };
 
-  // ALGORITHM: Nested Batch Support
-  // The batch function is reentrant - batches can be nested safely.
-  // Only the outermost batch triggers the flush.
+  // OPTIMIZATION: Simplified batch matching Preact's efficiency
   const batch = function batch<T>(fn: () => T): T {
-    // OPTIMIZATION: Fast Path for Nested Batches
-    // If we're already in a batch, just run the function
-    // The outer batch will handle the flush
-    if (ctx.batchDepth) return fn();
-
-    // ALGORITHM: Batch Depth Tracking
-    // Increment depth to signal we're in a batch
-    // This causes signal.value setters to schedule effects instead of running them
+    // Fast path: if already batching, just run the function
+    if (ctx.batchDepth > 0) return fn();
+    
+    // Start batch
     ctx.batchDepth++;
     
-    // ALGORITHM: Error-Safe Batch Execution
-    // We need to ensure batchDepth is properly managed even if errors occur.
-    // Track all errors that occur during execution.
-    let userError: unknown;
-    let flushError: unknown;
-    let result: T;
-    
+    // Execute user function with simple error handling
     try {
-      // Execute the user's function
-      // Any signal changes inside will be batched
-      result = fn();
-    } catch (error) {
-      // Capture user code error
-      userError = error;
-    }
-    
-    // ALGORITHM: Guaranteed Batch Depth Management  
-    // Always decrement depth, even if user code threw
-    const shouldFlush = --ctx.batchDepth === 0;
-    
-    if (shouldFlush) {
-      try {
-        // ALGORITHM: Process accumulated roots then flush queued effects
-        // Process any roots accumulated during large batch operations
+      return fn();
+    } finally {
+      // Always decrement and flush if outermost batch
+      if (--ctx.batchDepth === 0) {
+        // Single unified flush operation
         propagate(dfsMany, notifyNode);
-        // Flush queued effects via WorkQueue
         flush();
-      } catch (error) {
-        // CRITICAL: Reset batchDepth on flush error
-        // This prevents the system from getting stuck in a batched state
-        ctx.batchDepth = 0;
-        flushError = error;
       }
     }
-    
-    // ALGORITHM: Error Priority Handling
-    // Handle errors after all cleanup is complete
-    if (userError && flushError) {
-      // Both errors occurred - log the flush error and throw user error
-      // User error takes priority as it happened first and is likely the root cause
-      console.error('Batch flush error:', flushError);
-      // Wrap non-Error values to satisfy ESLint
-      if (userError instanceof Error) {
-        throw userError;
-      } else {
-        throw new BatchError('Non-Error value', userError);
-      }
-    } else if (userError) {
-      // Only user error
-      if (userError instanceof Error) {
-        throw userError;
-      } else {
-        throw new BatchError('Non-Error value', userError);
-      }
-    } else if (flushError) {
-      // Only flush error
-      if (flushError instanceof Error) {
-        throw flushError;
-      } else {
-        throw new BatchError('Non-Error value', flushError);
-      }
-    }
-    
-    // No errors - return the result
-    return result!;
   };
 
   return {

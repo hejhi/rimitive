@@ -78,18 +78,11 @@ export function createPropagator(): Propagator {
     // Pass intrusive queue directly to walker - zero allocations!
     dfsMany(rootsHead, visit);
     clear();
-    
-    // Reset batch counter for next batch
-    batchInvalidateCount = 0;
   };
 
-  // Track how many signals have been invalidated in this batch
-  let batchInvalidateCount = 0;
-
-  // OPTIMIZATION: Centralized invalidation strategy
+  // OPTIMIZATION: Simplified invalidation strategy
   // - Outside batches: traverse immediately
-  // - First 2 signals in batch: traverse immediately (fast path)
-  // - 3rd+ signals in batch: accumulate for single traversal at batch end
+  // - Inside batches: always accumulate for batch-end processing
   const invalidate = (
     from: Edge | undefined,
     isBatched: boolean,
@@ -99,23 +92,12 @@ export function createPropagator(): Propagator {
     if (!from) return;
 
     if (!isBatched) {
-      // Reset counter when not batched
-      batchInvalidateCount = 0;
+      // Outside batch: immediate traversal
       dfs(from, visit);
-      return;
+    } else {
+      // Inside batch: always accumulate for batch-end processing
+      add(from);
     }
-
-    // Track invalidations in this batch
-    batchInvalidateCount++;
-
-    // Small-batch fast path: first 2 signals get immediate traversal
-    if (batchInvalidateCount <= 2) {
-      dfs(from, visit);
-      return;
-    }
-
-    // Large batch: accumulate 3rd+ signals for batch-end processing
-    add(from);
   };
 
   return { add, clear, size, propagate, invalidate };

@@ -72,7 +72,7 @@ describe('Propagator Unit Tests', () => {
       expect(propagator.size()).toBe(0); // Should clear after propagate
     });
     
-    it('should handle invalidate with threshold-based strategy', () => {
+    it('should handle invalidate with simple strategy', () => {
       const propagator = createPropagator();
       const mockEdge1 = { _queued: false, _queueNext: undefined } as QueuedEdge;
       const mockEdge2 = { _queued: false, _queueNext: undefined } as QueuedEdge;
@@ -87,17 +87,14 @@ describe('Propagator Unit Tests', () => {
       
       dfsSpy.mockClear();
       
-      // Batched, first 2 signals: immediate dfs
+      // Batched: always accumulate for batch-end processing
       propagator.invalidate(mockEdge1, true, dfsSpy, visitSpy);
-      expect(dfsSpy).toHaveBeenCalledWith(mockEdge1, visitSpy);
+      expect(dfsSpy).not.toHaveBeenCalled();
+      expect(propagator.size()).toBe(1);
+      
+      propagator.clear(); // Reset for next test
       
       propagator.invalidate(mockEdge2, true, dfsSpy, visitSpy);
-      expect(dfsSpy).toHaveBeenCalledTimes(2);
-      
-      dfsSpy.mockClear();
-      
-      // Batched, 3rd+ signals: accumulate
-      propagator.invalidate(mockEdge1, true, dfsSpy, visitSpy);
       expect(dfsSpy).not.toHaveBeenCalled();
       expect(propagator.size()).toBe(1);
     });
@@ -128,24 +125,25 @@ describe('Propagator Unit Tests', () => {
       expect(propagator.size()).toBe(0);
     });
     
-    it('should reset batch counter after propagate', () => {
+    it('should clear accumulated roots after propagate', () => {
       const propagator = createPropagator();
       const mockEdge1 = { _queued: false, _queueNext: undefined } as QueuedEdge;
+      const mockEdge2 = { _queued: false, _queueNext: undefined } as QueuedEdge;
       const dfsSpy = vi.fn();
       const visitSpy = vi.fn();
       
-      // First batch: immediate for first 2
+      // Accumulate edges in batch
       propagator.invalidate(mockEdge1, true, dfsSpy, visitSpy);
-      expect(dfsSpy).toHaveBeenCalledTimes(1);
+      propagator.invalidate(mockEdge2, true, dfsSpy, visitSpy);
+      expect(propagator.size()).toBe(2);
       
-      // Propagate should reset counter
+      // Propagate should clear accumulated roots
       propagator.propagate(vi.fn(), vi.fn());
-      
-      dfsSpy.mockClear();
+      expect(propagator.size()).toBe(0);
       
       // Next batch should start fresh
       propagator.invalidate(mockEdge1, true, dfsSpy, visitSpy);
-      expect(dfsSpy).toHaveBeenCalledTimes(1); // Should be immediate again
+      expect(propagator.size()).toBe(1);
     });
   });
 });

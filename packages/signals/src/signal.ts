@@ -56,9 +56,9 @@ interface SignalFactoryContext extends SignalContext {
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
   const {
     dependencies: { link },
-    graphWalker: { dfs, dfsMany },
-    propagator: { invalidate, propagate },
-    workQueue: { enqueue, state, flush }
+    graphWalker: { dfs },
+    propagator: { invalidate },
+    workQueue: { enqueue, flush }
   } = ctx;
   
   // Pre-bind notification handler for hot path
@@ -121,48 +121,32 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     }
 
     set value(value: T) {
-      // ALGORITHM: Early Exit Optimization
-      // Use JavaScript's === equality to detect changes
-      // This is a deliberate choice: signals only update on reference changes
-      // For objects/arrays, this means immutable updates are required
+      // OPTIMIZATION: Early exit on unchanged value
       if (this._value === value) return;
 
-      // Update the internal value
+      // Update value and version
       this._value = value;
-      
-      // ALGORITHM: Version Tracking for Cache Invalidation
-      // Increment local fromVersion: Used to detect if specific dependencies are stale
       this._version++;
       
-      // OPTIMIZATION: Skip global version bump if no dependents
-      // Avoids invalidating unrelated computeds' global fast path when this
-      // signal has no consumers. Only bump global version if we actually
-      // have targets to notify.
+      // Skip if no dependents
       if (!this._out) return;
       
-      // Increment global version as we are about to notify dependents
+      // Update global version
       ctx.version++;
       
-      // ALGORITHM: Delegated Propagation via GraphWalker and Propagator
-      // Uses modular components for optimal traversal strategy
-      const isNewBatch = ctx.batchDepth === 0;
-      if (isNewBatch) ctx.batchDepth++;
-      
-      // Track queue size to detect if effects were scheduled
-      const prevSize = state.size;
-      
-      // Use propagator's intelligent invalidation strategy
-      // - Immediate traversal for unbatched updates
-      // - Small batch optimization (threshold = 2)
-      // - Multi-root aggregation for large batches
-      invalidate(this._out, !isNewBatch, dfs, notifyNode);
-      
-      // Flush effects if we're ending a batch and effects were queued
-      if (isNewBatch && --ctx.batchDepth === 0) {
-        // Process any accumulated roots from large batch before flushing effects
-        propagate(dfsMany, notifyNode);
-        if (state.size !== prevSize) {
+      // OPTIMIZATION: Simplified batch handling
+      // If we're in a batch, just queue for batch-end processing
+      if (ctx.batchDepth > 0) {
+        // During batch: accumulate roots for batch-end traversal
+        invalidate(this._out, true, dfs, notifyNode);
+      } else {
+        // Outside batch: immediate traversal and flush
+        ctx.batchDepth++;
+        try {
+          dfs(this._out, notifyNode);
           flush();
+        } finally {
+          ctx.batchDepth--;
         }
       }
     }

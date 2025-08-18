@@ -226,11 +226,8 @@ describe('Propagator Integration with Signal and Batch', () => {
   
   describe('Performance Characteristics', () => {
     it('should correctly propagate accumulated updates to dependencies', () => {
-      // KNOWN BUG: This test reveals that accumulated signal updates don't 
-      // properly propagate to all their dependents. Only the first 2 computed 
-      // values (which were invalidated by immediate DFS) get updated.
-      // The remaining computeds that should be invalidated by propagate() 
-      // retain their stale cached values.
+      // This test verifies that our simplified propagator correctly propagates
+      // all accumulated signal updates to their dependents at batch end.
       
       const root = api.signal(0);
       const leaves = Array.from({ length: 5 }, (_, i) => 
@@ -258,15 +255,12 @@ describe('Propagator Integration with Signal and Batch', () => {
       expect(effectRuns).toBe(2);
       expect(root.value).toBe(100);
       
-      // BUG: This assertion fails - shows [100, 101, 2, 3, 4] instead of [100, 101, 102, 103, 104]
-      // Only first 2 leaves updated (from immediate DFS), leaves 2-4 keep stale values
+      // With our simplified propagator, all accumulated updates now properly
+      // propagate to their dependents at batch end
       const actualValues = leaves.map(l => l.value);
       
-      // Document the current buggy behavior for now
-      expect(actualValues).toEqual([100, 101, 2, 3, 4]); // BUG: should be [100, 101, 102, 103, 104]
-      
-      // TODO: Fix propagator so accumulated updates invalidate all dependents
-      // expect(actualValues).toEqual([100, 101, 102, 103, 104]);
+      // All leaves should be correctly updated
+      expect(actualValues).toEqual([100, 101, 102, 103, 104]);
     });
     
     it('should handle deep dependency chains efficiently', () => {
