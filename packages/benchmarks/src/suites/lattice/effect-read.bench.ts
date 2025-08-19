@@ -63,17 +63,17 @@ group('Effect Reads', () => {
         const signal = latticeSignal(42);
         let sum = 0;
         const dispose = latticeEffect(() => {
-          sum += signal.value;
+          sum += signal();
         });
         
         // Initial read to establish dependency
-        void signal.value;
+        void signal();
         
         yield () => {
           sum = 0;
           for (let i = 0; i < ITERATIONS; i++) {
             // Trigger effect re-run by incrementing signal
-            signal.value = i;
+            signal(i);
           }
           return sum;
         };

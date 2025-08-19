@@ -45,16 +45,16 @@ group('Batch 3 Signal Updates', () => {
         const s1 = latticeSignal(0);
         const s2 = latticeSignal(0);
         const s3 = latticeSignal(0);
-        const sum = latticeComputed(() => s1.value + s2.value + s3.value);
+        const sum = latticeComputed(() => s1() + s2() + s3());
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             latticeBatch(() => {
-              s1.value = i;
-              s2.value = i * 2;
-              s3.value = i * 3;
+              s1(i);
+              s2(i * 2);
+              s3(i * 3);
             });
-            void sum.value;
+            void sum();
           }
         };
       });

@@ -35,7 +35,7 @@ group('Signal Writes', () => {
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            signal.value = i;
+            signal(i);
           }
         };
       });

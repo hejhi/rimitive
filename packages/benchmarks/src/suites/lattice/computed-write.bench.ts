@@ -37,13 +37,13 @@ group('Computed Writes (underlying signals)', () => {
     barplot(() => {
       bench('Lattice - writes to signal with computed', function* () {
         const signal = latticeSignal(0);
-        const computed = latticeComputed(() => signal.value * 2);
+        const computed = latticeComputed(() => signal() * 2);
         // Touch computed to establish dependency
-        void computed.value;
+        void computed();
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            signal.value = i;
+            signal(i);
           }
         };
       });

@@ -37,13 +37,13 @@ group('Computed Chain - Short (3 levels)', () => {
     barplot(() => {
       bench('Lattice', function* () {
         const a = latticeSignal(0);
-        const b = latticeComputed(() => a.value * 2);
-        const c = latticeComputed(() => b.value * 2);
+        const b = latticeComputed(() => a() * 2);
+        const c = latticeComputed(() => b() * 2);
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            a.value = i;
-            void c.value;
+            a(i);
+            void c();
           }
         };
       });

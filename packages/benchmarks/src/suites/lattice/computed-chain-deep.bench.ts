@@ -37,17 +37,17 @@ group('Computed Chain - Deep (10 levels)', () => {
     barplot(() => {
       bench('Lattice', function* () {
         const source = latticeSignal(0);
-        let last: { value: number } = source;
+        let last: (() => number) = source;
         for (let i = 0; i < 10; i++) {
           const prev = last;
-          last = latticeComputed(() => prev.value + 1);
+          last = latticeComputed(() => prev() + 1);
         }
         const final = last;
         
         yield () => {
           for (let i = 0; i < ITERATIONS / 10; i++) {
-            source.value = i;
-            void final.value;
+            source(i);
+            void final();
           }
         };
       });

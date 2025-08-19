@@ -61,16 +61,16 @@ group('Fan-out 10 Computeds', () => {
       bench('Lattice', function* () {
         const source = latticeSignal(0);
         const computeds = Array.from({ length: 10 }, (_, i) => 
-          latticeComputed(() => source.value * (i + 1))
+          latticeComputed(() => source() * (i + 1))
         );
         const sum = latticeComputed(() => 
-          computeds.reduce((acc, c) => acc + c.value, 0)
+          computeds.reduce((acc, c) => acc + c(), 0)
         );
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            source.value = i;
-            void sum.value;
+            source(i);
+            void sum();
           }
         };
       });
@@ -119,15 +119,15 @@ group('Fan-out 100 Computeds', () => {
       bench('Lattice', function* () {
         const source = latticeSignal(0);
         const computeds = Array.from({ length: 100 }, (_, i) => 
-          latticeComputed(() => source.value * (i + 1))
+          latticeComputed(() => source() * (i + 1))
         );
         const dispose = latticeEffect(() => {
-          computeds.reduce((acc, c) => acc + c.value, 0);
+          computeds.reduce((acc, c) => acc + c(), 0);
         });
         
         yield () => {
           for (let i = 0; i < ITERATIONS / 10; i++) {
-            source.value = i;
+            source(i);
           }
         };
         
@@ -184,20 +184,20 @@ group('Mixed Fan-out', () => {
         const source = latticeSignal(0);
         // 50 direct computeds
         const direct = Array.from({ length: 50 }, (_, i) => 
-          latticeComputed(() => source.value + i)
+          latticeComputed(() => source() + i)
         );
         // 50 indirect computeds (depend on direct)
         const indirect = direct.map((d) => 
-          latticeComputed(() => d.value * 2)
+          latticeComputed(() => d() * 2)
         );
         const sum = latticeComputed(() => 
-          indirect.reduce((acc, c) => acc + c.value, 0)
+          indirect.reduce((acc, c) => acc + c(), 0)
         );
         
         yield () => {
           for (let i = 0; i < ITERATIONS / 10; i++) {
-            source.value = i;
-            void sum.value;
+            source(i);
+            void sum();
           }
         };
       });

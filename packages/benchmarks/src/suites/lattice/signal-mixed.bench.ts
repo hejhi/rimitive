@@ -35,8 +35,8 @@ group('Signal Mixed', () => {
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            signal.value = i;
-            void signal.value;
+            signal(i);
+            void signal();
           }
         };
       });

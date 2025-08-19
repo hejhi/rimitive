@@ -47,19 +47,19 @@ group('Nested Diamond', () => {
       bench('Lattice', function* () {
         // First diamond
         const source = latticeSignal(0);
-        const left1 = latticeComputed(() => source.value * 2);
-        const right1 = latticeComputed(() => source.value * 3);
-        const middle = latticeComputed(() => left1.value + right1.value);
+        const left1 = latticeComputed(() => source() * 2);
+        const right1 = latticeComputed(() => source() * 3);
+        const middle = latticeComputed(() => left1() + right1());
         
         // Second diamond
-        const left2 = latticeComputed(() => middle.value * 2);
-        const right2 = latticeComputed(() => middle.value * 3);
-        const bottom = latticeComputed(() => left2.value + right2.value);
+        const left2 = latticeComputed(() => middle() * 2);
+        const right2 = latticeComputed(() => middle() * 3);
+        const bottom = latticeComputed(() => left2() + right2());
         
         yield () => {
           for (let i = 0; i < ITERATIONS / 2; i++) {
-            source.value = i;
-            void bottom.value;
+            source(i);
+            void bottom();
           }
         };
       });

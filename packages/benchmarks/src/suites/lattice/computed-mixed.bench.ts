@@ -37,12 +37,12 @@ group('Computed Mixed', () => {
     barplot(() => {
       bench('Lattice - mixed computed operations', function* () {
         const signal = latticeSignal(0);
-        const computed = latticeComputed(() => signal.value * 2);
+        const computed = latticeComputed(() => signal() * 2);
 
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            signal.value = i;
-            void computed.value;
+            signal(i);
+            void computed();
           }
         };
       });

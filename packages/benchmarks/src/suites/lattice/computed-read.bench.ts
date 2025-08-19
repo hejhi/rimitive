@@ -37,12 +37,12 @@ group('Computed Reads', () => {
     barplot(() => {
       bench('Lattice - computed reads', function* () {
         const signal = latticeSignal(42);
-        const computed = latticeComputed(() => signal.value * 2);
+        const computed = latticeComputed(() => signal() * 2);
         
         yield () => {
           let sum = 0;
           for (let i = 0; i < ITERATIONS; i++) {
-            sum += computed.value;
+            sum += computed();
           }
           return sum;
         };

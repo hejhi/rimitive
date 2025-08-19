@@ -34,7 +34,7 @@ describe('Link Function Overhead Analysis', () => {
   bench('signal read: no consumers (untracked)', () => {
     let sum = 0;
     for (let i = 0; i < 1000; i++) {
-      sum += signals[i % 100]!.value;
+      sum += signals[i % 100]!();
     }
   });
 
@@ -43,13 +43,13 @@ describe('Link Function Overhead Analysis', () => {
     const comp = computed(() => {
       let sum = 0;
       for (let i = 0; i < 1000; i++) {
-        sum += signals[i % 100]!.value;
+        sum += signals[i % 100]!();
       }
       return sum;
     });
     
     // Force evaluation
-    comp.value;
+    comp();
   });
 
   // Test signal read with multiple consumers (more linking overhead)
@@ -59,7 +59,7 @@ describe('Link Function Overhead Analysis', () => {
       computed(() => {
         let sum = 0;
         for (let i = 0; i < 200; i++) {
-          sum += signals[i % 100]!.value;
+          sum += signals[i % 100]!();
         }
         return sum;
       })
@@ -68,7 +68,7 @@ describe('Link Function Overhead Analysis', () => {
     // Force evaluation of all computeds
     let total = 0;
     for (const c of computeds) {
-      total += c.value;
+      total += c();
     }
   });
 
@@ -79,12 +79,12 @@ describe('Link Function Overhead Analysis', () => {
       let sum = 0;
       // Read same signal 1000 times
       for (let i = 0; i < 1000; i++) {
-        sum += sig!.value;
+        sum += sig!();
       }
       return sum;
     });
     
-    comp.value;
+    comp();
   });
 
   // Test reads of different signals (cache misses)
@@ -93,12 +93,12 @@ describe('Link Function Overhead Analysis', () => {
       let sum = 0;
       // Read different signals in sequence
       for (let i = 0; i < 1000; i++) {
-        sum += signals[i % 100]!.value;
+        sum += signals[i % 100]!();
       }
       return sum;
     });
     
-    comp.value;
+    comp();
   });
 
   // Test with pre-existing dependencies (should hit fast path)
@@ -107,16 +107,16 @@ describe('Link Function Overhead Analysis', () => {
     const comp = computed(() => {
       let sum = 0;
       for (let i = 0; i < 100; i++) {
-        sum += signals[i]!.value;
+        sum += signals[i]!();
       }
       return sum;
     });
     
     // Prime the dependencies
-    comp.value;
+    comp();
     
     // Now measure reads with established links
-    comp.value;
+    comp();
   });
 
   // Test first-time linking (worst case)
@@ -125,11 +125,11 @@ describe('Link Function Overhead Analysis', () => {
     const comp = computed(() => {
       let sum = 0;
       for (let i = 0; i < 100; i++) {
-        sum += signals[i]!.value;
+        sum += signals[i]!();
       }
       return sum;
     });
     
-    comp.value;
+    comp();
   });
 });

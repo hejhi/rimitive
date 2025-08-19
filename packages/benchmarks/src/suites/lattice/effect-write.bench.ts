@@ -55,12 +55,12 @@ group('Effect Writes', () => {
         const source = latticeSignal(0);
         const target = latticeSignal(0);
         const dispose = latticeEffect(() => {
-          target.value = source.value * 2;
+          target(source() * 2);
         });
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            source.value = i;
+            source(i);
           }
         };
         

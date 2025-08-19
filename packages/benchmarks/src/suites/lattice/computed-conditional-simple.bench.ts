@@ -41,20 +41,20 @@ group('Simple Conditional', () => {
         const whenTrue = latticeSignal(1);
         const whenFalse = latticeSignal(2);
         const result = latticeComputed(() => 
-          condition.value ? whenTrue.value : whenFalse.value
+          condition() ? whenTrue() : whenFalse()
         );
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             // Toggle condition
-            condition.value = i % 2 === 0;
+            condition(i % 2 === 0);
             // Update the inactive branch
-            if (condition.value) {
-              whenFalse.value = i;
+            if (condition()) {
+              whenFalse(i);
             } else {
-              whenTrue.value = i;
+              whenTrue(i);
             }
-            void result.value;
+            void result();
           }
         };
       });

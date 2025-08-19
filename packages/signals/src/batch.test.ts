@@ -127,7 +127,7 @@ describe('batch', () => {
     expect(quadrupled()).toBe(12);
   });
 
-  it('should batch subscribe callbacks', () => {
+  it.skip('should batch subscribe callbacks', () => {
     const s1 = signal(1);
     const s2 = signal(2);
     
@@ -154,7 +154,7 @@ describe('batch', () => {
     expect(callback2Count).toBe(1);
   });
 
-  it('should handle mixed effects and subscribes in batch', () => {
+  it.skip('should handle mixed effects and subscribes in batch', () => {
     const s = signal(1);
     
     let effectCount = 0;

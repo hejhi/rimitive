@@ -63,15 +63,15 @@ group('Effect Mixed', () => {
         const output = latticeSignal(0);
         const dispose = latticeEffect(() => {
           // Read from multiple sources and write to output
-          output.value = source1.value + source2.value;
+          output(source1() + source2());
         });
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
             if (i % 2 === 0) {
-              source1.value = i;
+              source1(i);
             } else {
-              source2.value = i;
+              source2(i);
             }
           }
         };

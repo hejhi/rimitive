@@ -37,14 +37,14 @@ group('Boolean Filter', () => {
     barplot(() => {
       bench('Lattice - toggle filter', function* () {
         const source = latticeSignal(0);
-        const isEven = latticeComputed(() => source.value % 2 === 0);
-        const message = latticeComputed(() => isEven.value ? 'even' : 'odd');
-        const final = latticeComputed(() => message.value.toUpperCase());
+        const isEven = latticeComputed(() => source() % 2 === 0);
+        const message = latticeComputed(() => isEven() ? 'even' : 'odd');
+        const final = latticeComputed(() => message().toUpperCase());
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            source.value = i;
-            void final.value;
+            source(i);
+            void final();
           }
         };
       });

@@ -44,26 +44,26 @@ group('Nested Batch Operations', () => {
       bench('Lattice', function* () {
         const signals = Array.from({ length: 5 }, () => latticeSignal(0));
         const computeds = signals.map((s, i) => 
-          latticeComputed(() => s.value * (i + 1))
+          latticeComputed(() => s() * (i + 1))
         );
         const sum = latticeComputed(() => 
-          computeds.reduce((acc, c) => acc + c.value, 0)
+          computeds.reduce((acc, c) => acc + c(), 0)
         );
         
         yield () => {
           for (let i = 0; i < ITERATIONS / 5; i++) {
             latticeBatch(() => {
               latticeBatch(() => {
-                signals[0]!.value = i;
-                signals[1]!.value = i * 2;
+                signals[0]!(i);
+                signals[1]!(i * 2);
               });
               latticeBatch(() => {
-                signals[2]!.value = i * 3;
-                signals[3]!.value = i * 4;
-                signals[4]!.value = i * 5;
+                signals[2]!(i * 3);
+                signals[3]!(i * 4);
+                signals[4]!(i * 5);
               });
             });
-            void sum.value;
+            void sum();
           }
         };
       });

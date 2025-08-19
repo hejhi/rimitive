@@ -58,13 +58,13 @@ group('Multiple Effects (10 effects)', () => {
         const counters = Array(10).fill(0);
         const disposers = counters.map((_, i) => 
           latticeEffect(() => {
-            counters[i] += signal.value;
+            counters[i] += signal();
           })
         );
         
         yield () => {
           for (let i = 0; i < ITERATIONS / 10; i++) {
-            signal.value = i;
+            signal(i);
           }
         };
         

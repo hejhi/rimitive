@@ -32,13 +32,11 @@
  */
 
 import { CONSTANTS } from './constants';
-import { Edge, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
+import { Edge, ProducerNode, Disposable, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { SignalContext } from './context';
-import type { GraphWalker } from './helpers/graph-walker';
-import type { WorkQueue } from './helpers/work-queue';
 // no-op import removed: dev-only cycle detection eliminated
 
 // ALIEN-SIGNALS PATTERN: Single function interface for both read and peek
@@ -71,8 +69,6 @@ const {
 interface ComputedFactoryContext extends SignalContext {
   dependencies: DependencyGraph;
   sourceCleanup: DependencySweeper;
-  graphWalker: GraphWalker;
-  workQueue: WorkQueue;
 }
 
 // BACKWARDS COMPATIBILITY: Export interface alias
@@ -82,14 +78,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
   const {
     dependencies: { link, refreshConsumers },
     sourceCleanup: { detachAll, pruneStale },
-    graphWalker: { dfs },
-    workQueue: { enqueue },
   } = ctx;
-  
-  // Pre-bind notification handler for hot path
-  const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
-  };
   
   // PATTERN: Closure-based Factory with Bound Methods (Alien Signals approach)
   // Using factory functions with bound methods attached to plain objects:
@@ -166,13 +155,12 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Mark as invalidated
       this._flags |= INVALIDATED;
 
-      // ALGORITHM: Delegated Propagation via GraphWalker
-      // Use the centralized graph traversal system
-      if (!this._out) return;
-
-      // Use GraphWalker's optimized DFS traversal
-      // This handles fast paths, stack management, and flag checking
-      dfs(this._out, notifyNode);
+      // ALGORITHM: Lazy Invalidation (alien-signals pattern)
+      // Computed values do NOT propagate invalidation to their dependents.
+      // This is a key performance optimization - dependents will check
+      // this computed when they need it, not eagerly.
+      // Only effects need immediate notification, and they're handled
+      // by the signal that changed, not intermediate computeds.
     }
 
     // ALGORITHM: Bound Update Method
@@ -188,62 +176,17 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Check STALE flag first (common case) or check dependencies if INVALIDATED
       // Skip refreshing all consumers.
       if (state._flags & STALE) {
-        updateValue();
+        state._updateValue();
         return;
       }
 
       // TODO: Why do we need to call updateValue() after calling refreshConsumers, which...
       // already calls updateValue() internally? Why can't we just call refreshConsumers(state) and be done?
       // Removing this duplicate call causes tests to fail.
-      if (refreshConsumers(state)) updateValue();
+      if (refreshConsumers(state)) state._updateValue();
     }
 
-    // ALGORITHM: Bound UpdateValue Method (will be rebound to actual computed function)
-    function updateValue(): boolean {
-      // ALGORITHM: Atomic Flag Update
-      // Use single assignment with bitwise operations for atomicity
-      // Set RUNNING, clear flags in one operation
-      state._flags = (state._flags | RUNNING) & ~PENDING;
-
-      // ALGORITHM: Tail-based Dependency Tracking (alien-signals approach)
-      // Reset tail to undefined at start - all edges after this will be removed
-      state._inTail = undefined;
-
-      // ALGORITHM: Context Switching for Dependency Tracking
-      // Set the computed function as the current consumer so signal reads register with us
-      const prevConsumer = ctx.currentConsumer;
-      // Note: computed will be set after function creation
-      ctx.currentConsumer = computedFunction as any;
-
-      try {
-        // ALGORITHM: Execute User Computation
-        // This may read signals/computeds, which will call addDependency
-        const newValue = state._callback();
-
-        // ALGORITHM: Change Detection and Version Update
-        // Only increment version if value actually changed
-        // Exception: always update on first run (version 0) to establish initial state
-        if (newValue !== state._value || state._version === 0) {
-          state._value = newValue;
-          state._version++;
-        }
-
-        // Cache the global version to skip future checks if nothing changes
-        state._verifiedVersion = ctx.version;
-      } finally {
-        // ALGORITHM: Cleanup Phase (Critical for correctness)
-        // 1. Restore previous consumer context
-        ctx.currentConsumer = prevConsumer;
-
-        // 2. Clear RUNNING flag to allow future computations
-        state._flags &= ~RUNNING;
-
-        // 3. Remove stale dependencies (dynamic dependency tracking)
-        pruneStale(state);
-      }
-
-      return true;
-    }
+    // Removed duplicate updateValue - using updateValueImpl instead
 
     // ALGORITHM: Bound Dispose Method
     function dispose(this: ComputedState<T>): void {
@@ -283,9 +226,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       state._inTail = undefined;
 
       // ALGORITHM: Context Switching for Dependency Tracking
-      // Set the computed function as the current consumer so signal reads register with us
+      // Set the computed state as the current consumer so signal reads register with us
       const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = computedFunction as ConsumerNode;
+      ctx.currentConsumer = state;
 
       try {
         // ALGORITHM: Execute User Computation
@@ -325,45 +268,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // Add the dispose method to the function
     computedFunction.dispose = dispose.bind(state);
     
-    // ALIEN-SIGNALS PATTERN: Expose ProducerNode and ConsumerNode properties on the function
-    // This allows other modules to treat the function as both ProducerNode and ConsumerNode
-    Object.defineProperty(computedFunction, '__type', { value: 'computed', writable: false });
-    
-    // ProducerNode properties
-    Object.defineProperty(computedFunction, '_out', {
-      get: () => state._out,
-      set: (value) => { state._out = value; }
-    });
-    Object.defineProperty(computedFunction, '_outTail', {
-      get: () => state._outTail,
-      set: (value) => { state._outTail = value; }
-    });
-    Object.defineProperty(computedFunction, '_version', {
-      get: () => state._version,
-      set: (value) => { state._version = value; }
-    });
-    
-    // ConsumerNode properties
-    Object.defineProperty(computedFunction, '_in', {
-      get: () => state._in,
-      set: (value) => { state._in = value; }
-    });
-    Object.defineProperty(computedFunction, '_inTail', {
-      get: () => state._inTail,
-      set: (value) => { state._inTail = value; }
-    });
-    Object.defineProperty(computedFunction, '_flags', {
-      get: () => state._flags,
-      set: (value) => { state._flags = value; }
-    });
-    Object.defineProperty(computedFunction, '_invalidate', {
-      value: invalidateComputed.bind(state),
-      writable: false
-    });
-    Object.defineProperty(computedFunction, '_updateValue', {
-      value: updateValueImpl,
-      writable: false
-    });
+    // ALIEN-SIGNALS PATTERN: No properties on the function!
+    // The state object is used directly by the dependency graph.
+    // The function is just the public API.
 
     return computedFunction;
   }

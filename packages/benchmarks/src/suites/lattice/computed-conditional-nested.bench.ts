@@ -45,23 +45,23 @@ group('Nested Conditional', () => {
         const d = latticeSignal(4);
         
         const result = latticeComputed(() => {
-          if (level1.value) {
-            return level2.value ? a.value : b.value;
+          if (level1()) {
+            return level2() ? a() : b();
           } else {
-            return level2.value ? c.value : d.value;
+            return level2() ? c() : d();
           }
         });
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            level1.value = i % 4 < 2;
-            level2.value = i % 2 === 0;
+            level1(i % 4 < 2);
+            level2(i % 2 === 0);
             // Update all branches
-            a.value = i;
-            b.value = i * 2;
-            c.value = i * 3;
-            d.value = i * 4;
-            void result.value;
+            a(i);
+            b(i * 2);
+            c(i * 3);
+            d(i * 4);
+            void result();
           }
         };
       });

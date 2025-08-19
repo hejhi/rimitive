@@ -127,7 +127,6 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
   // ALIEN-SIGNALS PATTERN: Create signal with bound functions
   function createSignal<T>(initialValue: T): SignalFunction<T> {
     // ALIEN-SIGNALS PATTERN: State object that will become 'this' in bound functions
-    // This object IS the signal - no property definitions needed
     const state: SignalState<T> = {
       __type: 'signal',
       value: initialValue,
@@ -138,27 +137,10 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     };
     
     // ALIEN-SIGNALS CORE: Bind the operation function to the state object
-    // The bound function IS the signal - clean and simple
     const signal = signalOper.bind(state) as SignalFunction<T>;
     
-    // Add the peek method with proper typing
+    // Add peek method - the only property we need on the function
     signal.peek = peekOper.bind(state) as () => T;
-    
-    // ALIEN-SIGNALS PATTERN: Expose ProducerNode properties on the function
-    // This allows other modules to treat the function as a ProducerNode
-    Object.defineProperty(signal, '__type', { value: 'signal', writable: false });
-    Object.defineProperty(signal, '_out', {
-      get: () => state._out,
-      set: (value) => { state._out = value; }
-    });
-    Object.defineProperty(signal, '_outTail', {
-      get: () => state._outTail,
-      set: (value) => { state._outTail = value; }
-    });
-    Object.defineProperty(signal, '_version', {
-      get: () => state._version,
-      set: (value) => { state._version = value; }
-    });
     
     return signal;
   }

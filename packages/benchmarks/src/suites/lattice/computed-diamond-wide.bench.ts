@@ -45,16 +45,16 @@ group('Wide Diamond (10 paths)', () => {
       bench('Lattice', function* () {
         const source = latticeSignal(0);
         const branches = Array.from({ length: 10 }, (_, i) => 
-          latticeComputed(() => source.value * (i + 1))
+          latticeComputed(() => source() * (i + 1))
         );
         const bottom = latticeComputed(() => 
-          branches.reduce((sum, b) => sum + b.value, 0)
+          branches.reduce((sum, b) => sum + b(), 0)
         );
         
         yield () => {
           for (let i = 0; i < ITERATIONS / 10; i++) {
-            source.value = i;
-            void bottom.value;
+            source(i);
+            void bottom();
           }
         };
       });

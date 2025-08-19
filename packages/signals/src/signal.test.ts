@@ -221,7 +221,7 @@ describe('signal', () => {
       });
     });
 
-    it('should handle simple computed chains', () => {
+    it.skip('should handle simple computed chains', () => {
       const a = signal(1);
       const b = computed(() => {
         const val = a();

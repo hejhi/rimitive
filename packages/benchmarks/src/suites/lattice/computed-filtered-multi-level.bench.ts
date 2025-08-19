@@ -37,14 +37,14 @@ group('Multi-Level Filter', () => {
     barplot(() => {
       bench('Lattice', function* () {
         const source = latticeSignal(0);
-        const level1 = latticeComputed(() => Math.floor(source.value / 5));
-        const level2 = latticeComputed(() => Math.floor(level1.value / 2));
-        const level3 = latticeComputed(() => level2.value * 1000);
+        const level1 = latticeComputed(() => Math.floor(source() / 5));
+        const level2 = latticeComputed(() => Math.floor(level1() / 2));
+        const level3 = latticeComputed(() => level2() * 1000);
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            source.value = i;
-            void level3.value;
+            source(i);
+            void level3();
           }
         };
       });

@@ -38,17 +38,17 @@ group('Threshold Filter', () => {
     barplot(() => {
       bench('Lattice - 90% filtered', function* () {
         const source = latticeSignal(0);
-        const filtered = latticeComputed(() => Math.floor(source.value / 10));
-        const final = latticeComputed(() => filtered.value * 100);
+        const filtered = latticeComputed(() => Math.floor(source() / 10));
+        const final = latticeComputed(() => filtered() * 100);
         
         // Warm up
-        source.value = 1;
-        void final.value;
+        source(1);
+        void final();
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            source.value = i;
-            void final.value;
+            source(i);
+            void final();
           }
         };
       });

@@ -55,9 +55,9 @@ group('Effect Cleanup', () => {
         yield () => {
           for (let i = 0; i < ITERATIONS / 100; i++) {
             const dispose = latticeEffect(() => {
-              void signal.value;
+              void signal();
             });
-            signal.value = i;
+            signal(i);
             dispose();
           }
         };

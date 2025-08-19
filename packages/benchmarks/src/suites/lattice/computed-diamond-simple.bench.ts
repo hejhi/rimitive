@@ -42,14 +42,14 @@ group('Simple Diamond', () => {
     barplot(() => {
       bench('Lattice', function* () {
         const source = latticeSignal(0);
-        const left = latticeComputed(() => source.value * 2);
-        const right = latticeComputed(() => source.value * 3);
-        const bottom = latticeComputed(() => left.value + right.value);
+        const left = latticeComputed(() => source() * 2);
+        const right = latticeComputed(() => source() * 3);
+        const bottom = latticeComputed(() => left() + right());
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
-            source.value = i;
-            void bottom.value;
+            source(i);
+            void bottom();
           }
         };
       });

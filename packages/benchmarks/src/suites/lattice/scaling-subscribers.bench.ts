@@ -102,11 +102,11 @@ group('Scaling with Subscriber Count', () => {
         const indices = makeIndices(sourceCount);
         
         const sources = Array.from({ length: sourceCount }, (_, i) => latticeSignal(i));
-        const computeds = sources.map(s => latticeComputed(() => s.value * 2));
-        const disposers = computeds.map(c => latticeEffect(() => void c.value));
+        const computeds = sources.map(s => latticeComputed(() => s() * 2));
+        const disposers = computeds.map(c => latticeEffect(() => void c()));
         
         // Warm up
-        sources[0]!.value = 1;
+        sources[0]!(1);
         
         yield {
           [0]() { return randomIntArray(TICKS * indices.length, 0, 100000); },

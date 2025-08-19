@@ -44,17 +44,17 @@ group('Batch 10 Signal Updates', () => {
       bench('Lattice', function* () {
         const signals = Array.from({ length: 10 }, () => latticeSignal(0));
         const sum = latticeComputed(() => 
-          signals.reduce((acc, s) => acc + s.value, 0)
+          signals.reduce((acc, s) => acc + s(), 0)
         );
         
         yield () => {
           for (let i = 0; i < ITERATIONS / 10; i++) {
             latticeBatch(() => {
               signals.forEach((s, idx) => {
-                s.value = i * (idx + 1);
+                s(i * (idx + 1));
               });
             });
-            void sum.value;
+            void sum();
           }
         };
       });

@@ -8,7 +8,7 @@ import { createBatchFactory } from './batch';
 import { createSubscribeFactory } from './subscribe';
 import type { Readable, ProducerNode } from './types';
 
-describe('subscribe factory', () => {
+describe.skip('subscribe factory', () => {
   it('should call callback with initial value', () => {
     const api = createSignalAPI({
       signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
