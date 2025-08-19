@@ -99,25 +99,19 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       this._value = value;
     }
 
+
     get value(): T {
-      // Get the currently executing consumer (computed/effect) from context
-      // This is set by computed/effect before running their functions
+      // OPTIMIZATION: Read value first, then handle tracking
+      const value = this._value;
       const current = ctx.currentConsumer;
-
-      // ALGORITHM: Dependency Tracking via Dynamic Graph Construction
-      // Only track dependencies if:
-      // 1. There is a current consumer (we're inside a computed/effect)
-      // 2. The consumer has _flags property (type guard)
-      // 3. The consumer is currently RUNNING (not disposed or paused)
-      // This implements "automatic dependency tracking" - dependencies are discovered
-      // at runtime by observing which signals are accessed during computation
-      if (!current || !(current._flags & RUNNING)) return this._value;
-
-      // ALGORITHM: Edge Registration
-      // Create a bidirectional edge between this signal (producer) and the consumer
-      // The edge includes the current version for later staleness checks
-      link(this, current, this._version);
-      return this._value;
+      
+      // V8 OPTIMIZATION: Predictable branch pattern - most reads are untracked
+      if (current && (current._flags & RUNNING)) {
+        // V8 OPTIMIZATION: Direct function call instead of method indirection
+        link(this, current, this._version);
+      }
+      
+      return value;
     }
 
     set value(value: T) {

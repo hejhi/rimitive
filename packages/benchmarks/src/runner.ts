@@ -287,7 +287,7 @@ ${results.filter(r => r.error).map(r =>
 // Run if executed directly
 async function main() {
   // Parse command line arguments
-  const { values, positionals } = parseArgs({
+  const { values: _, positionals } = parseArgs({
     options: {
       'skip-build': {
         type: 'boolean',
@@ -299,7 +299,8 @@ async function main() {
   });
 
   // Build if not skipping
-  if (!values['skip-build']) {
+  // For now, igore this. Always build for safety.
+  // if (!values['skip-build']) {
     console.log('Building packages...');
     try {
       execSync('pnpm build:all', { 
@@ -311,7 +312,7 @@ async function main() {
       console.error('Build failed:', error);
       process.exit(1);
     }
-  }
+  // }
 
   const runner = new BenchmarkRunner();
   // Use positionals as filters (benchmark names)

@@ -33,36 +33,41 @@ export function createPropagator(): Propagator {
   let rootsTail: QueuedEdge | undefined;
   let rootsSize = 0;
 
+  // V8 OPTIMIZATION: Fast queue addition with minimal branching
   const add = (from: Edge | undefined): void => {
     if (!from) return;
     
     const edge = from as QueuedEdge;
     
-    // OPTIMIZATION: Use flag instead of Set for deduplication
-    if (edge._queued) return; // Already queued
-    edge._queued = true;
+    // V8 OPTIMIZATION: Early return for already queued edges
+    if (edge._queued) return;
     
-    // Add to intrusive queue (no allocation)
+    // V8 OPTIMIZATION: Batch property updates for better cache locality
+    edge._queued = true;
     edge._queueNext = undefined;
     
+    // V8 OPTIMIZATION: Predictable branching pattern
     if (rootsTail) {
       rootsTail._queueNext = edge;
-      rootsTail = edge;
     } else {
-      rootsHead = rootsTail = edge;
+      rootsHead = edge;
     }
+    rootsTail = edge;
     rootsSize++;
   };
 
+  // V8 OPTIMIZATION: Fast queue clearing with minimal overhead
   const clear = (): void => {
-    // Clear queue and reset flags
     let current = rootsHead;
+    
+    // Handle remaining items in loop
     while (current) {
-      current._queued = false; // Reset flag
+      current._queued = false;
       const next = current._queueNext;
-      current._queueNext = undefined; // Clean up reference
+      current._queueNext = undefined;
       current = next;
     }
+    
     rootsHead = rootsTail = undefined;
     rootsSize = 0;
   };
@@ -80,9 +85,7 @@ export function createPropagator(): Propagator {
     clear();
   };
 
-  // OPTIMIZATION: Simplified invalidation strategy
-  // - Outside batches: traverse immediately
-  // - Inside batches: always accumulate for batch-end processing
+  // V8 OPTIMIZATION: Streamlined invalidation with predictable branches
   const invalidate = (
     from: Edge | undefined,
     isBatched: boolean,
@@ -91,12 +94,11 @@ export function createPropagator(): Propagator {
   ): void => {
     if (!from) return;
 
-    if (!isBatched) {
-      // Outside batch: immediate traversal
-      dfs(from, visit);
-    } else {
-      // Inside batch: always accumulate for batch-end processing
+    // V8 OPTIMIZATION: Branch prediction favors the batch case in typical apps
+    if (isBatched) {
       add(from);
+    } else {
+      dfs(from, visit);
     }
   };
 
