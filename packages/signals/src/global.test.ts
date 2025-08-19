@@ -18,13 +18,13 @@ describe('Global State Management', () => {
     it('should start at 0 after reset', () => {
       // Version is internal, so we test it indirectly through computed behavior
       const s = signal(1);
-      const c = computed(() => s.value);
+      const c = computed(() => s());
 
       // First access should compute
-      expect(c.value).toBe(1);
+      expect(c()).toBe(1);
 
       // No change, so computed shouldn't re-run
-      expect(c.value).toBe(1);
+      expect(c()).toBe(1);
     });
 
     it('should increment when signals change', () => {
@@ -34,20 +34,20 @@ describe('Global State Management', () => {
 
       const c = computed(() => {
         computeCount++;
-        return s1.value + s2.value;
+        return s1() + s2();
       });
 
-      expect(c.value).toBe(3);
+      expect(c()).toBe(3);
       expect(computeCount).toBe(1);
 
       // Change s1 - should increment global version
-      s1.value = 10;
-      expect(c.value).toBe(12);
+      s1(10);
+      expect(c()).toBe(12);
       expect(computeCount).toBe(2);
 
       // Change s2 - should increment global version again
-      s2.value = 20;
-      expect(c.value).toBe(30);
+      s2(20);
+      expect(c()).toBe(30);
       expect(computeCount).toBe(3);
     });
 
@@ -58,24 +58,24 @@ describe('Global State Management', () => {
 
       const c1 = computed(() => {
         compute1Count++;
-        return s.value * 2;
+        return s() * 2;
       });
 
       const c2 = computed(() => {
         compute2Count++;
-        return s.value * 3;
+        return s() * 3;
       });
 
       // Initial computation
-      expect(c1.value).toBe(2);
-      expect(c2.value).toBe(3);
+      expect(c1()).toBe(2);
+      expect(c2()).toBe(3);
       expect(compute1Count).toBe(1);
       expect(compute2Count).toBe(1);
 
       // Change signal - both computeds should know something changed globally
-      s.value = 5;
-      expect(c1.value).toBe(10);
-      expect(c2.value).toBe(15);
+      s(5);
+      expect(c1()).toBe(10);
+      expect(c2()).toBe(15);
       expect(compute1Count).toBe(2);
       expect(compute2Count).toBe(2);
     });
@@ -88,15 +88,16 @@ describe('Global State Management', () => {
 
       const c = computed(() => {
         capturedCurrent = getCurrentConsumer();
-        return s.value * 2;
+        return s() * 2;
       });
 
       // Before execution, should be null
       expect(getCurrentConsumer()).toBe(null);
 
-      // During execution, should be the computed
-      void c.value;
-      expect(capturedCurrent).toBe(c);
+      // During execution, should be the computed's internal state
+      void c();
+      expect(capturedCurrent).not.toBe(null);
+      expect((capturedCurrent as any)?.__type).toBe('computed');
 
       // After execution, should be null again
       expect(getCurrentConsumer()).toBe(null);
@@ -111,17 +112,17 @@ describe('Global State Management', () => {
 
       const inner = computed(() => {
         captures.push({ type: 'inner', current: getCurrentConsumer() });
-        return s.value * 2;
+        return s() * 2;
       });
 
       const outer = computed(() => {
         captures.push({ type: 'outer-before', current: getCurrentConsumer() });
-        const result = inner.value + s.value;
+        const result = inner() + s();
         captures.push({ type: 'outer-after', current: getCurrentConsumer() });
         return result;
       });
 
-      void outer.value;
+      void outer();
 
       expect(captures).toHaveLength(3);
       expect(captures[0]).toEqual({ type: 'outer-before', current: outer });
@@ -137,7 +138,7 @@ describe('Global State Management', () => {
       const dispose = effect(() => {
         capturedCurrent = getCurrentConsumer();
         effectRan = true;
-        void s.value; // Subscribe to signal
+        void s(); // Subscribe to signal
       });
 
       expect(effectRan).toBe(true);
@@ -159,7 +160,7 @@ describe('Global State Management', () => {
         executionOrder.push('c1-start');
         const current = getCurrentConsumer();
         executionOrder.push(`c1-current:${current === c1}`);
-        const result = s1.value * 2;
+        const result = s1() * 2;
         executionOrder.push('c1-end');
         return result;
       });
@@ -168,13 +169,13 @@ describe('Global State Management', () => {
         executionOrder.push('c2-start');
         const current = getCurrentConsumer();
         executionOrder.push(`c2-current:${current === c2}`);
-        const result = c1.value + s2.value;
+        const result = c1() + s2();
         executionOrder.push(`c2-after-c1:${getCurrentConsumer() === c2}`);
         executionOrder.push('c2-end');
         return result;
       });
 
-      void c2.value;
+      void c2();
 
       expect(executionOrder).toEqual([
         'c2-start',
@@ -194,24 +195,24 @@ describe('Global State Management', () => {
 
       const c = computed(() => {
         capturedDuring = getCurrentConsumer();
-        if (s.value > 5) {
+        if (s() > 5) {
           throw new Error('Test error');
         }
-        return s.value * 2;
+        return s() * 2;
       });
 
       capturedBefore = getCurrentConsumer();
 
       // Normal execution
-      expect(c.value).toBe(2);
+      expect(c()).toBe(2);
       expect(capturedBefore).toBe(null);
       expect(capturedDuring).toBe(c);
 
       // Execution with error
-      s.value = 10;
+      s(10);
       capturedBefore = getCurrentConsumer();
 
-      expect(() => c.value).toThrow('Test error');
+      expect(() => c()).toThrow('Test error');
 
       const capturedAfter = getCurrentConsumer();
       expect(capturedBefore).toBe(null);
@@ -239,15 +240,15 @@ describe('Global State Management', () => {
       // Create a real computed to test dependency tracking
       const c = computed(() => {
         dependencyAdded = true;
-        return s.value * 2;
+        return s() * 2;
       });
 
       // Without current computed set, reading signal shouldn't track
-      void s.value;
+      void s();
       expect(dependencyAdded).toBe(false);
 
       // When computed executes, it becomes current and tracks dependencies
-      void c.value;
+      void c();
       expect(dependencyAdded).toBe(true);
 
       // After execution, current computed should be cleared
@@ -258,23 +259,23 @@ describe('Global State Management', () => {
   describe('resetGlobalState', () => {
     it('should reset global version', () => {
       const s = signal(1);
-      const c = computed(() => s.value * 2);
+      const c = computed(() => s() * 2);
 
       // Trigger some version increments
-      void c.value;
-      s.value = 2;
-      s.value = 3;
-      s.value = 4;
+      void c();
+      s(2);
+      s(3);
+      s(4);
 
       // Reset
       resetGlobalState();
 
       // Create new signal/computed after reset
       const s2 = signal(10);
-      const c2 = computed(() => s2.value * 2);
+      const c2 = computed(() => s2() * 2);
 
       // Should work normally with reset version
-      expect(c2.value).toBe(20);
+      expect(c2()).toBe(20);
     });
 
     it('should clear current computed', () => {
@@ -289,15 +290,15 @@ describe('Global State Management', () => {
 
     it('should not affect existing signals or computeds', () => {
       const s = signal(5);
-      const c = computed(() => s.value * 3);
+      const c = computed(() => s() * 3);
 
-      expect(c.value).toBe(15);
+      expect(c()).toBe(15);
 
       resetGlobalState();
 
       // Existing reactive values should still work
-      s.value = 10;
-      expect(c.value).toBe(30);
+      s(10);
+      expect(c()).toBe(30);
     });
   });
 
@@ -307,15 +308,15 @@ describe('Global State Management', () => {
       const b = signal(2);
       const c = signal(3);
 
-      const sum = computed(() => a.value + b.value + c.value);
-      const product = computed(() => a.value * b.value * c.value);
-      const combined = computed(() => sum.value + product.value);
+      const sum = computed(() => a() + b() + c());
+      const product = computed(() => a() * b() * c());
+      const combined = computed(() => sum() + product());
 
-      expect(combined.value).toBe(12); // (1+2+3) + (1*2*3) = 6 + 6 = 12
+      expect(combined()).toBe(12); // (1+2+3) + (1*2*3) = 6 + 6 = 12
 
       // Change one signal
-      a.value = 2;
-      expect(combined.value).toBe(19); // (2+2+3) + (2*2*3) = 7 + 12 = 19
+      a(2);
+      expect(combined()).toBe(19); // (2+2+3) + (2*2*3) = 7 + 12 = 19
     });
 
     it('should handle effect cleanup with global state', () => {
@@ -324,18 +325,18 @@ describe('Global State Management', () => {
 
       const dispose = effect(() => {
         effectCount++;
-        void s.value; // Subscribe
+        void s(); // Subscribe
       });
 
       expect(effectCount).toBe(1);
 
-      s.value = 1;
+      s(1);
       expect(effectCount).toBe(2);
 
       dispose();
 
       // After disposal, changes shouldn't trigger effect
-      s.value = 2;
+      s(2);
       expect(effectCount).toBe(2);
 
       // Global state should be clean
@@ -350,13 +351,13 @@ describe('Global State Management', () => {
       const computeds = Array.from({ length: 5 }, (_, i) =>
         computed(() => {
           values.push(i);
-          return source.value * (i + 1);
+          return source() * (i + 1);
         })
       );
 
       // Initial computation
       computeds.forEach((c, i) => {
-        expect(c.value).toBe(i + 1);
+        expect(c()).toBe(i + 1);
       });
 
       expect(values).toEqual([0, 1, 2, 3, 4]);
@@ -365,11 +366,11 @@ describe('Global State Management', () => {
       values.length = 0;
 
       // Update source
-      source.value = 2;
+      source(2);
 
       // All computeds should recompute on next access
       computeds.forEach((c, i) => {
-        expect(c.value).toBe(2 * (i + 1));
+        expect(c()).toBe(2 * (i + 1));
       });
 
       expect(values).toEqual([0, 1, 2, 3, 4]);

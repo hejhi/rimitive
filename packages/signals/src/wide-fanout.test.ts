@@ -35,7 +35,7 @@ describe('Wide Fanout Pattern Verification', () => {
     for (let i = 0; i < 100; i++) {
       effectRunCounts[i] = 0;
       effect(() => {
-        effectResults[i] = source.value * (i + 1);
+        effectResults[i] = source() * (i + 1);
         effectRunCounts[i]!++;
       });
     }
@@ -47,7 +47,7 @@ describe('Wide Fanout Pattern Verification', () => {
     expect(effectResults[99]).toBe(0);
 
     // Update the source
-    source.value = 10;
+    source(10);
 
     // All effects should have run exactly once more
     expect(effectRunCounts.every(count => count === 2)).toBe(true);
@@ -58,7 +58,7 @@ describe('Wide Fanout Pattern Verification', () => {
     expect(effectResults[99]).toBe(1000);
 
     // Another update
-    source.value = 5;
+    source(5);
     
     expect(effectRunCounts.every(count => count === 3)).toBe(true);
     expect(effectResults[0]).toBe(5);
@@ -76,35 +76,35 @@ describe('Wide Fanout Pattern Verification', () => {
       computeRunCounts[i] = 0;
       computeds[i] = computed(() => {
         computeRunCounts[i]!++;
-        return source.value * (i + 1);
+        return source() * (i + 1);
       });
     }
 
     // Read all computed values initially
     for (let i = 0; i < 100; i++) {
-      expect(computeds[i].value).toBe(i + 1);
+      expect(computeds[i]()).toBe(i + 1);
     }
     expect(computeRunCounts.every(count => count === 1)).toBe(true);
 
     // Update the source
-    source.value = 2;
+    source(2);
 
     // Computed values should be lazy - not computed until read
     expect(computeRunCounts.every(count => count === 1)).toBe(true);
 
     // Read them all - should trigger recomputation
     for (let i = 0; i < 100; i++) {
-      expect(computeds[i].value).toBe(2 * (i + 1));
+      expect(computeds[i]()).toBe(2 * (i + 1));
     }
     expect(computeRunCounts.every(count => count === 2)).toBe(true);
 
     // Update again
-    source.value = 10;
+    source(10);
 
     // Selective reading - only some should recompute
-    expect(computeds[0].value).toBe(10);
-    expect(computeds[50].value).toBe(510);
-    expect(computeds[99].value).toBe(1000);
+    expect(computeds[0]()).toBe(10);
+    expect(computeds[50]()).toBe(510);
+    expect(computeds[99]()).toBe(1000);
     
     expect(computeRunCounts[0]).toBe(3);
     expect(computeRunCounts[50]).toBe(3);
@@ -122,13 +122,13 @@ describe('Wide Fanout Pattern Verification', () => {
     
     // Create 50 computed values
     for (let i = 0; i < 50; i++) {
-      computeds[i] = computed(() => source.value * (i + 1));
+      computeds[i] = computed(() => source() * (i + 1));
     }
     
     // Create 50 effects that depend on the computeds
     for (let i = 0; i < 50; i++) {
       effect(() => {
-        effectResults[i] = computeds[i].value + 100;
+        effectResults[i] = computeds[i]() + 100;
         totalEffectRuns++;
       });
     }
@@ -139,7 +139,7 @@ describe('Wide Fanout Pattern Verification', () => {
     expect(effectResults[49]).toBe(150);
 
     // Update source
-    source.value = 2;
+    source(2);
 
     // All effects should update
     expect(totalEffectRuns).toBe(100);
@@ -155,7 +155,7 @@ describe('Wide Fanout Pattern Verification', () => {
     // Create effects with conditions that filter updates
     for (let i = 0; i < 100; i++) {
       effect(() => {
-        const value = source.value;
+        const value = source();
         if (value > 0) {
           effectResults[i] = value * i;
           effectRunCount++;
@@ -166,11 +166,11 @@ describe('Wide Fanout Pattern Verification', () => {
     expect(effectRunCount).toBe(100);
 
     // Set to same value - should not trigger effects
-    source.value = 10;
+    source(10);
     expect(effectRunCount).toBe(100); // No additional runs
 
     // Set to different value
-    source.value = 20;
+    source(20);
     expect(effectRunCount).toBe(200); // All run again
   });
 
@@ -183,7 +183,7 @@ describe('Wide Fanout Pattern Verification', () => {
     // Create 100 effects that depend on both signals
     for (let i = 0; i < 100; i++) {
       effect(() => {
-        effectResults[i] = source1.value + source2.value + i;
+        effectResults[i] = source1() + source2() + i;
         totalRuns++;
       });
     }
@@ -192,8 +192,8 @@ describe('Wide Fanout Pattern Verification', () => {
 
     // Update both in a batch
     api.batch(() => {
-      source1.value = 10;
-      source2.value = 20;
+      source1(10);
+      source2(20);
     });
 
     // Each effect should run exactly once despite two signal changes
@@ -212,7 +212,7 @@ describe('Wide Fanout Pattern Verification', () => {
     
     // Create first layer - 50 computeds
     for (let i = 0; i < 50; i++) {
-      layer1[i] = computed(() => root.value * (i + 1));
+      layer1[i] = computed(() => root() * (i + 1));
     }
     
     // Create second layer - each depends on multiple from layer1
@@ -221,14 +221,14 @@ describe('Wide Fanout Pattern Verification', () => {
         // Each layer2 computed depends on 2 layer1 computeds
         const idx1 = i;
         const idx2 = (i + 1) % 50;
-        return layer1[idx1].value + layer1[idx2].value;
+        return layer1[idx1]() + layer1[idx2]();
       });
     }
     
     // Create effects on layer2
     for (let i = 0; i < 50; i++) {
       effect(() => {
-        effectResults[i] = layer2[i].value;
+        effectResults[i] = layer2[i]();
         effectRunCount++;
       });
     }
@@ -238,7 +238,7 @@ describe('Wide Fanout Pattern Verification', () => {
     expect(effectResults[49]).toBe(51); // (1*50) + (1*1) = 51
 
     // Update root
-    root.value = 2;
+    root(2);
 
     expect(effectRunCount).toBe(100);
     expect(effectResults[0]).toBe(6); // (2*1) + (2*2) = 6
@@ -253,7 +253,7 @@ describe('Wide Fanout Pattern Verification', () => {
     // Create 100 effects
     for (let i = 0; i < 100; i++) {
       disposers[i] = effect(() => {
-        source.value; // Create dependency
+        source(); // Create dependency
         activeEffectCount++;
       });
     }
@@ -266,7 +266,7 @@ describe('Wide Fanout Pattern Verification', () => {
     }
 
     activeEffectCount = 0;
-    source.value = 1;
+    source(1);
 
     // Only 50 should run
     expect(activeEffectCount).toBe(50);
@@ -277,7 +277,7 @@ describe('Wide Fanout Pattern Verification', () => {
     }
 
     activeEffectCount = 0;
-    source.value = 2;
+    source(2);
 
     // None should run
     expect(activeEffectCount).toBe(0);
@@ -293,7 +293,7 @@ describe('Wide Fanout Pattern Verification', () => {
     for (let i = 0; i < 100; i++) {
       effect(() => {
         try {
-          const value = source.value;
+          const value = source();
           if (i % 10 === 0) {
             throw new Error(`Effect ${i} error`);
           }
@@ -313,7 +313,7 @@ describe('Wide Fanout Pattern Verification', () => {
     // Update - all effects should still run despite some throwing
     successCount = 0;
     errorCount = 0;
-    source.value = 2;
+    source(2);
 
     expect(errorCount).toBe(10);
     expect(successCount).toBe(90);
@@ -336,7 +336,7 @@ describe('Wide Fanout Pattern Verification', () => {
       computeds[i] = computed(() => {
         totalComputeRuns++;
         // All return the same value regardless of input when > 0
-        return source.value > 0 ? 1 : 0;
+        return source() > 0 ? 1 : 0;
       });
     }
     
@@ -344,14 +344,14 @@ describe('Wide Fanout Pattern Verification', () => {
     effect(() => {
       effectRuns++;
       // Sum all computed values - this forces all computeds to be evaluated
-      computeds.reduce((sum, c) => sum + c.value, 0);
+      computeds.reduce((sum, c) => sum + c(), 0);
     });
 
     expect(totalComputeRuns).toBe(100);
     expect(effectRuns).toBe(1);
 
     // Change source but computed outputs remain the same
-    source.value = 10;
+    source(10);
 
     // EXCELLENT OPTIMIZATION: The effect does NOT run because computeds'
     // values didn't change! Lattice correctly optimizes this case.
@@ -362,7 +362,7 @@ describe('Wide Fanout Pattern Verification', () => {
     // This is a GREAT optimization - Lattice avoids unnecessary effect runs
 
     // Change to trigger actual change
-    source.value = -1;
+    source(-1);
     
     // Now all computeds change from 1 to 0, so effect runs
     expect(effectRuns).toBe(2); // Effect runs now

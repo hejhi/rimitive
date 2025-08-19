@@ -84,14 +84,14 @@ describe('createSignalAPI', () => {
     }, customCtx);
     
     const count = api.signal(0);
-    const double = api.computed(() => count.value * 2);
+    const double = api.computed(() => count() * 2);
     
     let effectValue = 0;
     api.effect(() => {
-      effectValue = double.value;
+      effectValue = double();
     });
 
-    count.value = 5;
+    count(5);
     
     expect(effectValue).toBe(10);
     expect(flushCalled).toBe(true);
@@ -129,10 +129,10 @@ describe('createSignalAPI', () => {
     
     const count = api.signal(0);
     api.effect(() => {
-      void count.value; // Subscribe to count
+      void count(); // Subscribe to count
     });
     
-    count.value = 1; // Should enqueue the effect
+    count(1); // Should enqueue the effect
     
     expect(enqueueCount).toBe(1);
   });
@@ -181,20 +181,20 @@ describe('createSignalAPI', () => {
     const count = api.signal(0);
     
     const dispose = api.effect(() => {
-      void count.value; // Subscribe to count
+      void count(); // Subscribe to count
       effectRuns++;
     });
 
     expect(effectRuns).toBe(1);
 
-    count.value = 1;
+    count(1);
     expect(effectRuns).toBe(2);
 
     // Dispose the effect itself
     dispose();
     
     // After dispose, effects should not run
-    count.value = 2;
+    count(2);
     expect(effectRuns).toBe(2); // Should still be 2
     
     // api.dispose() disposes the context, not individual effects
@@ -224,20 +224,20 @@ describe('createSignalAPI', () => {
     let effect2Runs = 0;
 
     api1.effect(() => {
-      void signal1.value;
+      void signal1();
       effect1Runs++;
     });
 
     api2.effect(() => {
-      void signal2.value;
+      void signal2();
       effect2Runs++;
     });
 
-    signal1.value = 1;
+    signal1(1);
     expect(effect1Runs).toBe(2);
     expect(effect2Runs).toBe(1); // Should not be affected
 
-    signal2.value = 1;
+    signal2(1);
     expect(effect1Runs).toBe(2); // Should not be affected
     expect(effect2Runs).toBe(2);
   });
@@ -270,11 +270,11 @@ describe('createSignalAPI', () => {
 
     // TypeScript should know these methods exist
     const count = api.signal(0);
-    const double = api.computed(() => count.value * 2);
+    const double = api.computed(() => count() * 2);
 
     // TypeScript should properly type values
-    const value: number = count.value;
-    const computedValue: number = double.value;
+    const value: number = count();
+    const computedValue: number = double();
 
     expect(value).toBe(0);
     expect(computedValue).toBe(0);

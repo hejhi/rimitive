@@ -23,9 +23,9 @@ describe('batch', () => {
     let effectCount = 0;
     effect(() => {
       // Access all signals
-      void s1.value;
-      void s2.value;
-      void s3.value;
+      void s1();
+      void s2();
+      void s3();
       effectCount++;
     });
     
@@ -33,9 +33,9 @@ describe('batch', () => {
     effectCount = 0;
     
     // Without batch: each update triggers effect
-    s1.value = 10;
-    s2.value = 20;
-    s3.value = 30;
+    s1(10);
+    s2(20);
+    s3(30);
     
     expect(effectCount).toBe(3);
     
@@ -44,9 +44,9 @@ describe('batch', () => {
     
     // With batch: only one effect run
     batch(() => {
-      s1.value = 100;
-      s2.value = 200;
-      s3.value = 300;
+      s1(100);
+      s2(200);
+      s3(300);
     });
     
     expect(effectCount).toBe(1);
@@ -58,17 +58,17 @@ describe('batch', () => {
     
     let effectCount = 0;
     effect(() => {
-      void s1.value;
-      void s2.value;
+      void s1();
+      void s2();
       effectCount++;
     });
     
     effectCount = 0;
     
     batch(() => {
-      s1.value = 10;
+      s1(10);
       batch(() => {
-        s2.value = 20;
+        s2(20);
         // Effect should not run yet
         expect(effectCount).toBe(0);
       });
@@ -85,7 +85,7 @@ describe('batch', () => {
     let effectRan = false;
     
     effect(() => {
-      void s.value;
+      void s();
       effectRan = true;
     });
     
@@ -93,7 +93,7 @@ describe('batch', () => {
     
     expect(() => {
       batch(() => {
-        s.value = 2;
+        s(2);
         throw new Error('Test error');
       });
     }).toThrow('Test error');
@@ -104,12 +104,12 @@ describe('batch', () => {
 
   it('should work with computed values', () => {
     const count = signal(0);
-    const doubled = computed(() => count.value * 2);
-    const quadrupled = computed(() => doubled.value * 2);
+    const doubled = computed(() => count() * 2);
+    const quadrupled = computed(() => doubled() * 2);
     
     let effectCount = 0;
     effect(() => {
-      void quadrupled.value;
+      void quadrupled();
       effectCount++;
     });
     
@@ -117,14 +117,14 @@ describe('batch', () => {
     
     // Multiple updates in batch
     batch(() => {
-      count.value = 1;
-      count.value = 2;
-      count.value = 3;
+      count(1);
+      count(2);
+      count(3);
     });
     
     // Effect only runs once
     expect(effectCount).toBe(1);
-    expect(quadrupled.value).toBe(12);
+    expect(quadrupled()).toBe(12);
   });
 
   it('should batch subscribe callbacks', () => {
@@ -142,8 +142,8 @@ describe('batch', () => {
     callback2Count = 0;
     
     batch(() => {
-      s1.value = 10;
-      s2.value = 20;
+      s1(10);
+      s2(20);
       // Callbacks should not have run yet
       expect(callback1Count).toBe(0);
       expect(callback2Count).toBe(0);
@@ -161,7 +161,7 @@ describe('batch', () => {
     let subscribeCount = 0;
     
     effect(() => {
-      void s.value;
+      void s();
       effectCount++;
     });
     
@@ -172,9 +172,9 @@ describe('batch', () => {
     subscribeCount = 0;
     
     batch(() => {
-      s.value = 2;
-      s.value = 3;
-      s.value = 4;
+      s(2);
+      s(3);
+      s(4);
     });
     
     // Both should run exactly once
@@ -196,13 +196,13 @@ describe('batch', () => {
     const s2 = signal(20);
     
     const result = batch(() => {
-      const sum = s1.value + s2.value;
-      s1.value = sum;
-      return s1.value;
+      const sum = s1() + s2();
+      s1(sum);
+      return s1();
     });
     
     expect(result).toBe(30);
-    expect(s1.value).toBe(30);
+    expect(s1()).toBe(30);
   });
 
   it('should process effects in correct order', () => {
@@ -210,24 +210,24 @@ describe('batch', () => {
     const order: number[] = [];
     
     effect(() => {
-      void s.value;
+      void s();
       order.push(1);
     });
     
     effect(() => {
-      void s.value;
+      void s();
       order.push(2);
     });
     
     effect(() => {
-      void s.value;
+      void s();
       order.push(3);
     });
     
     order.length = 0;
     
     batch(() => {
-      s.value = 1;
+      s(1);
     });
     
     // Effects should run in order they were notified
@@ -242,18 +242,18 @@ describe('batch', () => {
     let innerEffectCount = 0;
     
     effect(() => {
-      void s1.value;
+      void s1();
       outerEffectCount++;
       
-      if (s1.value === 10) {
+      if (s1() === 10) {
         batch(() => {
-          s2.value = 20;
+          s2(20);
         });
       }
     });
     
     effect(() => {
-      void s2.value;
+      void s2();
       innerEffectCount++;
     });
     
@@ -261,23 +261,23 @@ describe('batch', () => {
     innerEffectCount = 0;
     
     batch(() => {
-      s1.value = 10;
+      s1(10);
     });
     
     expect(outerEffectCount).toBe(1);
     expect(innerEffectCount).toBe(1);
-    expect(s2.value).toBe(20);
+    expect(s2()).toBe(20);
   });
 
   it('should return values from batch function', () => {
     const s = signal(1);
     
     const result = batch(() => {
-      s.value = 10;
-      return s.value * 2;
+      s(10);
+      return s() * 2;
     });
     
     expect(result).toBe(20);
-    expect(s.value).toBe(10);
+    expect(s()).toBe(10);
   });
 });

@@ -4,12 +4,12 @@ import { signal, computed, effect } from './test-setup';
 describe('Computed peek()', () => {
   it('should read computed value without establishing dependencies', () => {
     const count = signal(0);
-    const double = computed(() => count.value * 2);
+    const double = computed(() => count() * 2);
     
     let effectRuns = 0;
     effect(() => {
       // This effect should NOT run when we peek
-      void double.value;
+      void double();
       effectRuns++;
     });
     
@@ -20,7 +20,7 @@ describe('Computed peek()', () => {
     expect(peekedValue).toBe(0);
     
     // Change the source signal
-    count.value = 5;
+    count(5);
     expect(effectRuns).toBe(2); // Effect runs due to dependency
     
     // Peek again - should get updated value without triggering effect
@@ -32,23 +32,23 @@ describe('Computed peek()', () => {
   it('should return the same value as .value', () => {
     const a = signal(10);
     const b = signal(20);
-    const sum = computed(() => a.value + b.value);
+    const sum = computed(() => a() + b());
     
-    expect(sum.peek()).toBe(sum.value);
+    expect(sum.peek()).toBe(sum());
     
-    a.value = 15;
-    expect(sum.peek()).toBe(sum.value);
+    a(15);
+    expect(sum.peek()).toBe(sum());
     expect(sum.peek()).toBe(35);
   });
 
   it('should work with nested computeds', () => {
     const base = signal(5);
-    const double = computed(() => base.value * 2);
-    const quad = computed(() => double.value * 2);
+    const double = computed(() => base() * 2);
+    const quad = computed(() => double() * 2);
     
     expect(quad.peek()).toBe(20);
     
-    base.value = 10;
+    base(10);
     expect(quad.peek()).toBe(40);
     
     // Peek doesn't establish dependencies
@@ -61,7 +61,7 @@ describe('Computed peek()', () => {
     expect(tracked).toBe(true);
     tracked = false;
     
-    base.value = 15;
+    base(15);
     expect(tracked).toBe(false); // Effect didn't re-run
     expect(quad.peek()).toBe(60);
   });

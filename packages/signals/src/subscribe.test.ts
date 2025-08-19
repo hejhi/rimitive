@@ -43,7 +43,7 @@ describe('subscribe factory', () => {
     expect(callback).toHaveBeenCalledTimes(1);
     expect(callback).toHaveBeenCalledWith(10);
     
-    s.value = 20;
+    s(20);
     
     expect(callback).toHaveBeenCalledTimes(2);
     expect(callback).toHaveBeenCalledWith(20);
@@ -61,7 +61,7 @@ describe('subscribe factory', () => {
     }, createDefaultContext());
 
     const count = api.signal(1);
-    const double = api.computed(() => count.value * 2);
+    const double = api.computed(() => count() * 2);
     const callback = vi.fn();
     
     api.subscribe(double, callback);
@@ -69,7 +69,7 @@ describe('subscribe factory', () => {
     expect(callback).toHaveBeenCalledTimes(1);
     expect(callback).toHaveBeenCalledWith(2);
     
-    count.value = 3;
+    count(3);
     
     expect(callback).toHaveBeenCalledTimes(2);
     expect(callback).toHaveBeenCalledWith(6);
@@ -88,8 +88,8 @@ describe('subscribe factory', () => {
     const b = api.signal(2);
     const sum = api.computed(() => {
       // Always returns 10, regardless of inputs
-      void a.value;
-      void b.value;
+      void a();
+      void b();
       return 10;
     });
     
@@ -101,8 +101,8 @@ describe('subscribe factory', () => {
     
     // Change signals but computed still returns 10
     api.batch(() => {
-      a.value = 5;
-      b.value = 5;
+      a(5);
+      b(5);
     });
     
     // Callback should not be called again
@@ -125,9 +125,9 @@ describe('subscribe factory', () => {
     callback.mockClear();
     
     api.batch(() => {
-      count.value = 1;
-      count.value = 2;
-      count.value = 3;
+      count(1);
+      count(2);
+      count(3);
     });
     
     // Should only be called once with final value
@@ -153,7 +153,7 @@ describe('subscribe factory', () => {
     
     unsubscribe();
     
-    count.value = 1;
+    count(1);
     
     // Callback should not be called after dispose
     expect(callback).toHaveBeenCalledTimes(1);
@@ -178,14 +178,14 @@ describe('subscribe factory', () => {
     expect(callback1).toHaveBeenCalledTimes(1);
     expect(callback2).toHaveBeenCalledTimes(1);
     
-    count.value = 1;
+    count(1);
     
     expect(callback1).toHaveBeenCalledTimes(2);
     expect(callback2).toHaveBeenCalledTimes(2);
     
     unsub1();
     
-    count.value = 2;
+    count(2);
     
     // Only callback2 should be called
     expect(callback1).toHaveBeenCalledTimes(2);

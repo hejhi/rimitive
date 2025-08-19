@@ -77,7 +77,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       // ALGORITHM: Initial Value Caching
       // Store the initial value for comparison in _flush
       // This read doesn't establish dependency (we do that manually)
-      this._lastValue = source.value;
+      this._lastValue = source.peek();
 
       // Dependency is established later via _setupDependency
     }
@@ -134,7 +134,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
       const source = this._in.from as Readable<T> & ProducerNode;
 
       // Read current value (this doesn't track dependency since we're not RUNNING)
-      const currentValue = source.value;
+      const currentValue = source.peek();
 
       // ALGORITHM: Conditional Callback Execution
       // Only call callback if:
@@ -212,7 +212,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     // ALGORITHM: Immediate Initial Callback
     // Call callback with current value to establish initial state
     // This matches effect behavior of running immediately
-    callback(source.value);
+    callback(source.peek());
     
     // Return unsubscribe function for cleanup
     return () => sub.dispose();

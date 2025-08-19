@@ -26,7 +26,7 @@
  * - alien-signals (optimized graph traversal)
  */
 import { CONSTANTS } from './constants';
-import { Edge, ProducerNode, ConsumerNode, ScheduledNode } from './types';
+import { ProducerNode, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
@@ -37,8 +37,8 @@ import type { WorkQueue } from './helpers/work-queue';
 const { RUNNING } = CONSTANTS;
 
 // ALIEN-SIGNALS PATTERN: Single function interface for both read and write
-// No backward compatibility - pure functional approach
-export interface SignalFunction<T = unknown> {
+// The function also implements ProducerNode to expose graph properties
+export interface SignalFunction<T = unknown> extends ProducerNode {
   (): T;                    // Read operation
   (value: T): void;         // Write operation
   peek(): T;                // Non-tracking read
@@ -141,11 +141,25 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     // The bound function IS the signal - clean and simple
     const signal = signalOper.bind(state) as SignalFunction<T>;
     
-    // Add the peek method
-    signal.peek = peekOper.bind(state);
+    // Add the peek method with proper typing
+    signal.peek = peekOper.bind(state) as () => T;
     
-    // That's it! No property definitions, no compatibility layers
-    // The signal function has direct access to state via 'this'
+    // ALIEN-SIGNALS PATTERN: Expose ProducerNode properties on the function
+    // This allows other modules to treat the function as a ProducerNode
+    Object.defineProperty(signal, '__type', { value: 'signal', writable: false });
+    Object.defineProperty(signal, '_out', {
+      get: () => state._out,
+      set: (value) => { state._out = value; }
+    });
+    Object.defineProperty(signal, '_outTail', {
+      get: () => state._outTail,
+      set: (value) => { state._outTail = value; }
+    });
+    Object.defineProperty(signal, '_version', {
+      get: () => state._version,
+      set: (value) => { state._version = value; }
+    });
+    
     return signal;
   }
   
@@ -157,3 +171,6 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
 
 // ALIEN-SIGNALS PATTERN: Export the function-based Signal type
 export type Signal<T = unknown> = SignalFunction<T>;
+
+// BACKWARDS COMPATIBILITY: Export interface alias
+export type SignalInterface<T = unknown> = SignalFunction<T>;

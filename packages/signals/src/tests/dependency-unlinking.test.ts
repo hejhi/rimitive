@@ -27,22 +27,22 @@ describe('Dynamic dependency unlinking', () => {
     let expensiveBComputations = 0;
     const expensiveB = computed(() => {
       expensiveBComputations++;
-      return sourceB.value * 2;
+      return sourceB() * 2;
     });
 
     let resultComputations = 0;
     const result = computed(() => {
       resultComputations++;
-      return condition.value ? sourceA.value : expensiveB.value;
+      return condition() ? sourceA() : expensiveB();
     });
 
     // Initial state - establish all dependencies by toggling condition
-    condition.value = false;
-    expect(result.value).toBe(2); // Uses expensiveB
+    condition(false);
+    expect(result()).toBe(2); // Uses expensiveB
     expect(expensiveBComputations).toBe(1);
     
-    condition.value = true;
-    expect(result.value).toBe(1); // Uses sourceA
+    condition(true);
+    expect(result()).toBe(1); // Uses sourceA
     expect(resultComputations).toBe(2);
 
     // Reset counters
@@ -52,8 +52,8 @@ describe('Dynamic dependency unlinking', () => {
     // THE KEY TEST: Update sourceB multiple times while condition is true
     // If the summary's claim is correct, expensiveB would recompute each time
     for (let i = 0; i < 100; i++) {
-      sourceB.value = i;
-      void result.value;
+      sourceB(i);
+      void result();
     }
 
     // PROOF: expensiveB does NOT recompute when sourceB changes
@@ -61,8 +61,8 @@ describe('Dynamic dependency unlinking', () => {
     expect(resultComputations).toBe(0);
 
     // Additional verification: expensiveB only recomputes when actually needed
-    condition.value = false;
-    expect(result.value).toBe(198); // 99 * 2
+    condition(false);
+    expect(result()).toBe(198); // 99 * 2
     expect(expensiveBComputations).toBe(1); // Only now does it recompute
     expect(resultComputations).toBe(1);
   });
@@ -77,37 +77,37 @@ describe('Dynamic dependency unlinking', () => {
     
     const trackedFirst = computed(() => {
       firstAccesses++;
-      return first.value;
+      return first();
     });
     
     const trackedSecond = computed(() => {
       secondAccesses++;
-      return second.value;
+      return second();
     });
     
     const output = computed(() => {
-      return useFirst.value ? trackedFirst.value : trackedSecond.value;
+      return useFirst() ? trackedFirst() : trackedSecond();
     });
 
     // Initially uses first branch
-    expect(output.value).toBe('A');
+    expect(output()).toBe('A');
     expect(firstAccesses).toBe(1);
     expect(secondAccesses).toBe(0);
 
     // Update the unused branch - should not trigger computation
-    second.value = 'B2';
-    void output.value;
+    second('B2');
+    void output();
     expect(secondAccesses).toBe(0); // Still 0, not accessed
 
     // Switch branches
-    useFirst.value = false;
-    expect(output.value).toBe('B2');
+    useFirst(false);
+    expect(output()).toBe('B2');
     expect(secondAccesses).toBe(1); // Now it's accessed
 
     // Update the now-unused first branch
     firstAccesses = 0;
-    first.value = 'A2';
-    void output.value;
+    first('A2');
+    void output();
     expect(firstAccesses).toBe(0); // Not accessed anymore
   });
 
@@ -129,21 +129,21 @@ describe('Dynamic dependency unlinking', () => {
       bComputations++;
       let sum = 0;
       for (let i = 0; i < 100; i++) sum += i;
-      return b.value * sum;
+      return b() * sum;
     });
     
     const result = computed(() => {
-      return condition.value ? a.value : expensiveB.value;
+      return condition() ? a() : expensiveB();
     });
     
     // Establish initial dependencies
-    void result.value;
+    void result();
     
     // Update b many times - if traversal happened, expensiveB would compute
     bComputations = 0;
     for (let i = 0; i < iterations; i++) {
-      b.value = i;
-      void result.value;
+      b(i);
+      void result();
     }
     
     // No unnecessary computations occurred

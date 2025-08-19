@@ -32,7 +32,7 @@
  */
 
 import { CONSTANTS } from './constants';
-import { Edge, Readable, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
+import { Edge, ProducerNode, Disposable, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
@@ -41,14 +41,17 @@ import type { GraphWalker } from './helpers/graph-walker';
 import type { WorkQueue } from './helpers/work-queue';
 // no-op import removed: dev-only cycle detection eliminated
 
-export interface ComputedInterface<T = unknown>
-  extends Readable<T>,
-    ProducerNode,
-    ConsumerNode,
-    Disposable {
+// ALIEN-SIGNALS PATTERN: Single function interface for both read and peek
+// The function also implements ProducerNode and ConsumerNode to expose graph properties
+export interface ComputedFunction<T = unknown> extends ProducerNode, ConsumerNode {
+  (): T;                    // Read operation (tracks dependencies)
+  peek(): T;                // Non-tracking read
+  dispose(): void;          // Cleanup method
+}
+
+// Internal computed state that gets bound to the function
+interface ComputedState<T> extends ProducerNode, ConsumerNode, Disposable {
   __type: 'computed';
-  readonly value: T; // Getter triggers lazy evaluation
-  peek(): T; // Non-tracking read (still evaluates if needed)
   dispose(): void; // Cleanup method to break circular references
   _updateValue(): boolean; // Update the computed value when dependencies change
   _callback: () => T; // User's computation function
@@ -72,7 +75,10 @@ interface ComputedFactoryContext extends SignalContext {
   workQueue: WorkQueue;
 }
 
-export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>> {
+// BACKWARDS COMPATIBILITY: Export interface alias
+export type ComputedInterface<T = unknown> = ComputedFunction<T>;
+
+export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
     dependencies: { link, refreshConsumers },
     sourceCleanup: { detachAll, pruneStale },
@@ -90,9 +96,12 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
   // - No prototype chain, methods are directly on the object
   // - Closures capture context instead of using 'this'
   // - Plain objects instead of class instances
-  function createComputed<T>(compute: () => T): ComputedInterface<T> {
+  function createComputed<T>(compute: () => T): ComputedFunction<T> {
+    // Forward declare the computed function for closure capture
+    let computedFunction: ComputedFunction<T>;
+    
     // Create plain object to hold the computed data
-    const computed: ComputedInterface<T> = {
+    const state: ComputedState<T> = {
       __type: 'computed' as const,
       _callback: compute,
       _value: undefined as T | undefined,
@@ -105,21 +114,19 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _version: 0,
       _verifiedVersion: -1,
       // These will be added by bind methods below
-      value: null as unknown as T,
-      peek: null as unknown as (() => T),
       dispose: null as unknown as (() => void),
       _invalidate: null as unknown as (() => void),
       _updateValue: null as unknown as (() => boolean),
     };
 
-    // ALGORITHM: Bound Value Getter Method
-    function getValue(this: ComputedInterface<T>): T {
+    // ALIEN-SIGNALS PATTERN: Computed operation function that will be bound to state
+    function computedOper(this: ComputedState<T>): T {
       // OPTIMIZATION: Fast path for non-tracking reads
       // Most reads happen outside of computed/effect context
       const consumer = ctx.currentConsumer;
       if (!consumer) {
         updateComputed();
-        return computed._value!;
+        return this._value!;
       }
 
       // ALGORITHM: Dependency Registration (Pull Phase)
@@ -133,142 +140,232 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Post-Update Edge Synchronization
       // If we have a consumer, (now) register/update the dependency edge
       // Doing this once avoids redundant edge work on the hot path.
-      if (isTracking) link(computed, consumer, computed._version);
+      if (isTracking) link(this, consumer, this._version);
 
       // Value is guaranteed to be defined after _update
-      return computed._value!;
+      return this._value!;
     }
 
-    // ALGORITHM: Bound Peek Method
-    function peek(this: ComputedInterface<T>): T {
+    // ALIEN-SIGNALS PATTERN: Non-tracking peek function
+    function peekOper(this: ComputedState<T>): T {
       // ALGORITHM: Non-tracking Read
       // Same as value getter but doesn't register dependencies
       // Useful for conditional checks that shouldn't create dependencies
       updateComputed();
-      return computed._value!;
+      return this._value!;
     }
 
     // ALGORITHM: Bound Invalidate Method
-    function invalidateComputed(this: ComputedInterface<T>): void {
+    function invalidateComputed(this: ComputedState<T>): void {
       // ALGORITHM: Invalidation Guard
       // Skip if already notified (avoid redundant traversal)
       // Skip if disposed (node is dead)
       // Skip if running (will see changes when done)
-      if (computed._flags & (INVALIDATED | DISPOSED | RUNNING)) return;
+      if (this._flags & (INVALIDATED | DISPOSED | RUNNING)) return;
 
       // Mark as invalidated
-      computed._flags |= INVALIDATED;
+      this._flags |= INVALIDATED;
 
       // ALGORITHM: Delegated Propagation via GraphWalker
       // Use the centralized graph traversal system
-      if (!computed._out) return;
+      if (!this._out) return;
 
       // Use GraphWalker's optimized DFS traversal
       // This handles fast paths, stack management, and flag checking
-      dfs(computed._out, notifyNode);
+      dfs(this._out, notifyNode);
     }
 
     // ALGORITHM: Bound Update Method
     function updateComputed(): void {
       // OPTIMIZATION: Combined flag and version check
       // Most common case: already updated this global version
-      if (computed._verifiedVersion === ctx.version) return;
+      if (state._verifiedVersion === ctx.version) return;
 
       // RE-ENTRANCE GUARD: Check RUNNING after version check (less common)
-      if (computed._flags & RUNNING) return;
+      if (state._flags & RUNNING) return;
 
       // ALGORITHM: Conditional Recomputation
       // Check STALE flag first (common case) or check dependencies if INVALIDATED
       // Skip refreshing all consumers.
-      if (computed._flags & STALE) {
+      if (state._flags & STALE) {
         updateValue();
         return;
       }
 
       // TODO: Why do we need to call updateValue() after calling refreshConsumers, which...
-      // already calls updateValue() internally? Why can't we just call refreshConsumers(computed) and be done?
+      // already calls updateValue() internally? Why can't we just call refreshConsumers(state) and be done?
       // Removing this duplicate call causes tests to fail.
-      if (refreshConsumers(computed)) updateValue();
+      if (refreshConsumers(state)) updateValue();
     }
 
-    // ALGORITHM: Bound UpdateValue Method
+    // ALGORITHM: Bound UpdateValue Method (will be rebound to actual computed function)
     function updateValue(): boolean {
       // ALGORITHM: Atomic Flag Update
       // Use single assignment with bitwise operations for atomicity
       // Set RUNNING, clear flags in one operation
-      computed._flags = (computed._flags | RUNNING) & ~PENDING;
+      state._flags = (state._flags | RUNNING) & ~PENDING;
 
       // ALGORITHM: Tail-based Dependency Tracking (alien-signals approach)
       // Reset tail to undefined at start - all edges after this will be removed
-      computed._inTail = undefined;
+      state._inTail = undefined;
 
       // ALGORITHM: Context Switching for Dependency Tracking
-      // Set ourselves as the current consumer so signal reads register with us
+      // Set the computed function as the current consumer so signal reads register with us
       const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = computed;
+      // Note: computed will be set after function creation
+      ctx.currentConsumer = computedFunction as any;
 
       try {
         // ALGORITHM: Execute User Computation
         // This may read signals/computeds, which will call addDependency
-        const newValue = computed._callback();
+        const newValue = state._callback();
 
         // ALGORITHM: Change Detection and Version Update
         // Only increment version if value actually changed
         // Exception: always update on first run (version 0) to establish initial state
-        if (newValue !== computed._value || computed._version === 0) {
-          computed._value = newValue;
-          computed._version++;
+        if (newValue !== state._value || state._version === 0) {
+          state._value = newValue;
+          state._version++;
         }
 
         // Cache the global version to skip future checks if nothing changes
-        computed._verifiedVersion = ctx.version;
+        state._verifiedVersion = ctx.version;
       } finally {
         // ALGORITHM: Cleanup Phase (Critical for correctness)
         // 1. Restore previous consumer context
         ctx.currentConsumer = prevConsumer;
 
         // 2. Clear RUNNING flag to allow future computations
-        computed._flags &= ~RUNNING;
+        state._flags &= ~RUNNING;
 
         // 3. Remove stale dependencies (dynamic dependency tracking)
-        pruneStale(computed);
+        pruneStale(state);
       }
 
       return true;
     }
 
     // ALGORITHM: Bound Dispose Method
-    function dispose(): void {
+    function dispose(this: ComputedState<T>): void {
       // ALGORITHM: Safe Disposal
       // Ensure idempotent disposal - can be called multiple times safely
-      if (computed._flags & DISPOSED) return;
+      if (this._flags & DISPOSED) return;
 
       // Mark as disposed to prevent further updates
-      computed._flags |= DISPOSED;
+      this._flags |= DISPOSED;
 
       // Remove all edges to sources (break circular references for GC)
-      detachAll(computed);
+      detachAll(this);
 
       // Clear cached value to free memory
-      computed._value = undefined;
+      this._value = undefined;
 
       // TODO: Should we also clear _out to help dependents?
       // Currently dependents will discover this node is disposed when they update
     }
 
-    // PATTERN: Bind methods to the object (Alien Signals pattern)
-    Object.defineProperty(computed, 'value', {
-      get: getValue.bind(computed),
-      enumerable: true,
-      configurable: true
+    // ALIEN-SIGNALS CORE: Bind the operation function to the state object
+    // The bound function IS the computed - clean and simple
+    computedFunction = computedOper.bind(state) as ComputedFunction<T>;
+    
+    // Add the peek method with proper typing
+    computedFunction.peek = peekOper.bind(state);
+    
+    // Create updateValue that captures the function reference
+    const updateValueImpl = function(): boolean {
+      // ALGORITHM: Atomic Flag Update
+      // Use single assignment with bitwise operations for atomicity
+      // Set RUNNING, clear flags in one operation
+      state._flags = (state._flags | RUNNING) & ~PENDING;
+
+      // ALGORITHM: Tail-based Dependency Tracking (alien-signals approach)
+      // Reset tail to undefined at start - all edges after this will be removed
+      state._inTail = undefined;
+
+      // ALGORITHM: Context Switching for Dependency Tracking
+      // Set the computed function as the current consumer so signal reads register with us
+      const prevConsumer = ctx.currentConsumer;
+      ctx.currentConsumer = computedFunction as ConsumerNode;
+
+      try {
+        // ALGORITHM: Execute User Computation
+        // This may read signals/computeds, which will call addDependency
+        const newValue = state._callback();
+
+        // ALGORITHM: Change Detection and Version Update
+        // Only increment version if value actually changed
+        // Exception: always update on first run (version 0) to establish initial state
+        if (newValue !== state._value || state._version === 0) {
+          state._value = newValue;
+          state._version++;
+        }
+
+        // Cache the global version to skip future checks if nothing changes
+        state._verifiedVersion = ctx.version;
+      } finally {
+        // ALGORITHM: Cleanup Phase (Critical for correctness)
+        // 1. Restore previous consumer context
+        ctx.currentConsumer = prevConsumer;
+
+        // 2. Clear RUNNING flag to allow future computations
+        state._flags &= ~RUNNING;
+
+        // 3. Remove stale dependencies (dynamic dependency tracking)
+        pruneStale(state);
+      }
+
+      return true;
+    };
+    
+    // Bind internal methods to the state object
+    state._invalidate = invalidateComputed.bind(state);
+    state._updateValue = updateValueImpl;
+    state.dispose = dispose.bind(state);
+    
+    // Add the dispose method to the function
+    computedFunction.dispose = dispose.bind(state);
+    
+    // ALIEN-SIGNALS PATTERN: Expose ProducerNode and ConsumerNode properties on the function
+    // This allows other modules to treat the function as both ProducerNode and ConsumerNode
+    Object.defineProperty(computedFunction, '__type', { value: 'computed', writable: false });
+    
+    // ProducerNode properties
+    Object.defineProperty(computedFunction, '_out', {
+      get: () => state._out,
+      set: (value) => { state._out = value; }
+    });
+    Object.defineProperty(computedFunction, '_outTail', {
+      get: () => state._outTail,
+      set: (value) => { state._outTail = value; }
+    });
+    Object.defineProperty(computedFunction, '_version', {
+      get: () => state._version,
+      set: (value) => { state._version = value; }
     });
     
-    computed.peek = peek.bind(computed);
-    computed._invalidate = invalidateComputed.bind(computed);
-    computed._updateValue = updateValue.bind(computed);
-    computed.dispose = dispose.bind(computed);
+    // ConsumerNode properties
+    Object.defineProperty(computedFunction, '_in', {
+      get: () => state._in,
+      set: (value) => { state._in = value; }
+    });
+    Object.defineProperty(computedFunction, '_inTail', {
+      get: () => state._inTail,
+      set: (value) => { state._inTail = value; }
+    });
+    Object.defineProperty(computedFunction, '_flags', {
+      get: () => state._flags,
+      set: (value) => { state._flags = value; }
+    });
+    Object.defineProperty(computedFunction, '_invalidate', {
+      value: invalidateComputed.bind(state),
+      writable: false
+    });
+    Object.defineProperty(computedFunction, '_updateValue', {
+      value: updateValueImpl,
+      writable: false
+    });
 
-    return computed;
+    return computedFunction;
   }
 
   return {

@@ -9,75 +9,105 @@ describe('signal', () => {
 
   it('should create a signal with initial value', () => {
     const s = signal(10);
-    expect(s.value).toBe(10);
+    expect(s()).toBe(10);
   });
 
   it('should update signal value', () => {
     const s = signal(5);
-    s.value = 10;
-    expect(s.value).toBe(10);
+    s(10);
+    expect(s()).toBe(10);
   });
 
   it('should update signal value with direct assignment', () => {
     const s = signal(5);
-    s.value = 10;
-    expect(s.value).toBe(10);
+    s(10);
+    expect(s()).toBe(10);
   });
 
   it('should not trigger updates when value is same', () => {
     const s = signal(5);
-    const initialVersion = s._version;
-    s.value = 5;
-    expect(s._version).toBe(initialVersion);
+    let updateCount = 0;
+    const c = computed(() => {
+      updateCount++;
+      return s();
+    });
+    
+    c(); // Initial computation
+    expect(updateCount).toBe(1);
+    
+    s(5); // Same value
+    c(); // Should not recompute
+    expect(updateCount).toBe(1);
   });
 
   it('should increment version on value change', () => {
     const s = signal(5);
-    const initialVersion = s._version;
-    s.value = 10;
-    expect(s._version).toBe(initialVersion + 1);
+    let updateCount = 0;
+    const c = computed(() => {
+      updateCount++;
+      return s();
+    });
+    
+    c(); // Initial computation
+    expect(updateCount).toBe(1);
+    
+    s(10); // Different value
+    c(); // Should recompute
+    expect(updateCount).toBe(2);
   });
 
   it('should handle null and undefined values', () => {
     const s1 = signal<number | null>(null);
     const s2 = signal<string | undefined>(undefined);
     
-    expect(s1.value).toBe(null);
-    expect(s2.value).toBe(undefined);
+    expect(s1()).toBe(null);
+    expect(s2()).toBe(undefined);
     
-    s1.value = 42;
-    expect(s1.value).toBe(42);
+    s1(42);
+    expect(s1()).toBe(42);
     
-    s1.value = null;
-    expect(s1.value).toBe(null);
+    s1(null);
+    expect(s1()).toBe(null);
   });
 
   it('should handle object values with reference equality', () => {
     const obj1 = { name: 'Alice' };
     const obj2 = { name: 'Alice' };
     const s = signal(obj1);
+    let updateCount = 0;
     
-    const initialVersion = s._version;
+    const c = computed(() => {
+      updateCount++;
+      return s();
+    });
+    
+    c(); // Initial computation
+    expect(updateCount).toBe(1);
     
     // Same reference, no update
-    s.value = obj1;
-    expect(s._version).toBe(initialVersion);
+    s(obj1);
+    c();
+    expect(updateCount).toBe(1);
     
     // Different reference, triggers update
-    s.value = obj2;
-    expect(s._version).toBe(initialVersion + 1);
+    s(obj2);
+    c();
+    expect(updateCount).toBe(2);
   });
 
   it('should track dependencies when read inside computed', () => {
     const a = signal(5);
     const b = signal(10);
-    const sum = computed(() => a.value + b.value);
+    const sum = computed(() => a() + b());
     
-    expect(sum.value).toBe(15);
+    expect(sum()).toBe(15);
     
-    // Should have created dependency nodes
-    expect(a._out).toBeDefined();
-    expect(b._out).toBeDefined();
+    // Verify dependency tracking by checking if changes propagate
+    a(10);
+    expect(sum()).toBe(20);
+    
+    b(20);
+    expect(sum()).toBe(30);
   });
 
   it('should notify dependents on change', () => {
@@ -86,14 +116,14 @@ describe('signal', () => {
     
     const double = computed(() => {
       computeCount++;
-      return source.value * 2;
+      return source() * 2;
     });
     
-    expect(double.value).toBe(20);
+    expect(double()).toBe(20);
     expect(computeCount).toBe(1);
     
-    source.value = 5;
-    expect(double.value).toBe(10);
+    source(5);
+    expect(double()).toBe(10);
     expect(computeCount).toBe(2);
   });
 
@@ -105,20 +135,20 @@ describe('signal', () => {
       
       const result = computed(() => {
         computeCount++;
-        return a.value + b.peek();
+        return a() + b.peek();
       });
       
-      expect(result.value).toBe(15);
+      expect(result()).toBe(15);
       expect(computeCount).toBe(1);
       
       // Changing b should not trigger recompute
-      b.value = 20;
-      expect(result.value).toBe(15); // Still using old value
+      b(20);
+      expect(result()).toBe(15); // Still using old value
       expect(computeCount).toBe(1);
       
       // Changing a should trigger recompute
-      a.value = 10;
-      expect(result.value).toBe(30); // Now picks up new b value
+      a(10);
+      expect(result()).toBe(30); // Now picks up new b value
       expect(computeCount).toBe(2);
     });
   });
@@ -129,21 +159,21 @@ describe('signal', () => {
       let effectRuns = 0;
       
       effect(() => {
-        void s.value; // Track dependency
+        void s(); // Track dependency
         effectRuns++;
       });
       
       expect(effectRuns).toBe(1);
       
       batch(() => {
-        s.value = 1;
-        s.value = 2;
-        s.value = 3;
+        s(1);
+        s(2);
+        s(3);
         expect(effectRuns).toBe(1); // Not run yet
       });
       
       expect(effectRuns).toBe(2); // Run once after batch
-      expect(s.value).toBe(3);
+      expect(s()).toBe(3);
     });
   });
 
@@ -154,20 +184,20 @@ describe('signal', () => {
       
       const sum = computed(() => {
         computeCount++;
-        return arr.value.reduce((a: number, b: number) => a + b, 0);
+        return arr().reduce((a: number, b: number) => a + b, 0);
       });
       
-      expect(sum.value).toBe(6);
+      expect(sum()).toBe(6);
       expect(computeCount).toBe(1);
       
       // New array reference triggers update
-      arr.value = [1, 2, 3, 4];
-      expect(sum.value).toBe(10);
+      arr([1, 2, 3, 4]);
+      expect(sum()).toBe(10);
       expect(computeCount).toBe(2);
       
       // Same array reference doesn't trigger
-      const current = arr.value;
-      arr.value = current;
+      const current = arr();
+      arr(current);
       expect(computeCount).toBe(2);
     });
   });
@@ -176,33 +206,33 @@ describe('signal', () => {
     it('should handle many dependents efficiently', () => {
       const source = signal(1);
       const computeds = Array.from({ length: 100 }, (_, i) => 
-        computed(() => source.value * (i + 1))
+        computed(() => source() * (i + 1))
       );
       
       // All should compute correctly
       computeds.forEach((c, i) => {
-        expect(c.value).toBe(i + 1);
+        expect(c()).toBe(i + 1);
       });
       
       // Update should propagate to all
-      source.value = 2;
+      source(2);
       computeds.forEach((c, i) => {
-        expect(c.value).toBe(2 * (i + 1));
+        expect(c()).toBe(2 * (i + 1));
       });
     });
 
     it('should handle simple computed chains', () => {
       const a = signal(1);
       const b = computed(() => {
-        const val = a.value;
+        const val = a();
         return val + 1;
       });
       
-      expect(b.value).toBe(2);
+      expect(b()).toBe(2);
       
-      a.value = 5;
+      a(5);
       // For now, just verify the computed tracks its dependencies
-      expect(a._out).toBeDefined();
+      expect((a as any)._out).toBeDefined();
     });
   });
 });

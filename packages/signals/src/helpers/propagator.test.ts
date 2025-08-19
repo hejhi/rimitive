@@ -160,13 +160,13 @@ describe('Propagator Large Batch Behavior', () => {
     const s2 = api.signal(2);
     const s3 = api.signal(3);
     
-    const sum = api.computed(() => s1.value + s2.value + s3.value);
+    const sum = api.computed(() => s1() + s2() + s3());
     
     let effectCount = 0;
     let lastSum = 0;
     api.effect(() => {
       effectCount++;
-      lastSum = sum.value;
+      lastSum = sum();
     });
     
     // Initial effect run
@@ -175,29 +175,29 @@ describe('Propagator Large Batch Behavior', () => {
     
     // Large batch with 3 signals (should trigger propagator accumulation)
     api.batch(() => {
-      s1.value = 10;
-      s2.value = 20;
-      s3.value = 30;
+      s1(10);
+      s2(20);
+      s3(30);
     });
     
     // This might fail if propagate() is never called!
     expect(effectCount).toBe(2);
     expect(lastSum).toBe(60);
-    expect(sum.value).toBe(60);
+    expect(sum()).toBe(60);
   });
   
   it('should correctly propagate all signals in large batches', () => {
     // Create 5 signals that each connect to their own computed
     const signals = Array.from({ length: 5 }, (_, i) => api.signal(i));
     const computeds = signals.map((s) => 
-      api.computed(() => s.value * 2)
+      api.computed(() => s() * 2)
     );
     
     let effectRuns = 0;
     const allValues: number[][] = [];
     api.effect(() => {
       effectRuns++;
-      allValues.push(computeds.map(c => c.value));
+      allValues.push(computeds.map(c => c()));
     });
     
     // Initial run
@@ -208,19 +208,19 @@ describe('Propagator Large Batch Behavior', () => {
     // First 2 should trigger immediate dfs()
     // Signals 3-5 should be accumulated and processed via propagate()
     api.batch(() => {
-      signals[0]!.value = 10;  // immediate dfs
-      signals[1]!.value = 20;  // immediate dfs
-      signals[2]!.value = 30;  // accumulated
-      signals[3]!.value = 40;  // accumulated
-      signals[4]!.value = 50;  // accumulated
+      signals[0]!(10);  // immediate dfs
+      signals[1]!(20);  // immediate dfs
+      signals[2]!(30);  // accumulated
+      signals[3]!(40);  // accumulated
+      signals[4]!(50);  // accumulated
     });
     
     // Check if all computeds updated
-    expect(computeds[0]!.value).toBe(20);
-    expect(computeds[1]!.value).toBe(40);
-    expect(computeds[2]!.value).toBe(60);
-    expect(computeds[3]!.value).toBe(80);
-    expect(computeds[4]!.value).toBe(100);
+    expect(computeds[0]!()).toBe(20);
+    expect(computeds[1]!()).toBe(40);
+    expect(computeds[2]!()).toBe(60);
+    expect(computeds[3]!()).toBe(80);
+    expect(computeds[4]!()).toBe(100);
     
     expect(effectRuns).toBe(2);
     expect(allValues[1]).toEqual([20, 40, 60, 80, 100]);

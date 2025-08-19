@@ -24,13 +24,14 @@ export interface ReactiveNode {
 // DESIGN: User-facing API contracts
 // These interfaces define the public API without exposing internal graph mechanics.
 // This separation allows changing the implementation without breaking the API.
+// ALIEN-SIGNALS PATTERN: Function-based APIs for cleaner usage
 export interface Readable<T = unknown> {
-  readonly value: T;  // Triggers dependency tracking when accessed
-  peek(): T;          // Read without creating dependencies (optimization)
+  (): T;             // Triggers dependency tracking when called
+  peek(): T;         // Read without creating dependencies (optimization)
 }
 
 export interface Writable<T = unknown> extends Readable<T> {
-  value: T;  // Writable allows assignment, triggering invalidation
+  (value: T): void;  // Function call with argument for write
 }
 
 // PATTERN: Resource Management

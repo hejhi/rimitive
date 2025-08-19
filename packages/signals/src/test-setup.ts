@@ -1,9 +1,10 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { SignalInterface } from './signal';
-import type { EffectInterface, EffectDisposer } from './effect';
-import type { ComputedInterface } from './computed';
+import type { SignalFunction } from './signal';
+import type { EffectDisposer } from './effect';
+import type { ComputedFunction } from './computed';
+import type { ConsumerNode } from './types';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
@@ -72,7 +73,7 @@ export function createTestInstance() {
     },
 
     // Scope functions - use ctx
-    setCurrentConsumer: (consumer: ComputedInterface | EffectInterface | null) => {
+    setCurrentConsumer: (consumer: ConsumerNode | null) => {
       ctx.currentConsumer = consumer;
     },
     getCurrentConsumer: () => ctx.currentConsumer,
@@ -103,8 +104,8 @@ export function createTestInstance() {
 let defaultInstance = createTestInstance();
 
 // Export all functions from default instance - use getters to always get current instance
-export const signal = <T>(value: T): SignalInterface<T> => defaultInstance.signal(value);
-export const computed = <T>(fn: () => T): ComputedInterface<T> =>
+export const signal = <T>(value: T): SignalFunction<T> => defaultInstance.signal(value);
+export const computed = <T>(fn: () => T): ComputedFunction<T> =>
   defaultInstance.computed(fn);
 export const effect = (fn: () => void | (() => void)): EffectDisposer =>
   defaultInstance.effect(fn);

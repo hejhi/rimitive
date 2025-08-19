@@ -26,37 +26,37 @@ describe('Conditional Dependencies with WeakMap', () => {
     
     const display = computed(() => {
       computeCount++;
-      if (showDetails.value) {
-        return `${name.value}: ${description.value}`;
+      if (showDetails()) {
+        return `${name()}: ${description()}`;
       }
-      return name.value;
+      return name();
     });
     
     // Initial computation - depends on all three signals
-    expect(display.value).toBe('Alice: Engineer');
+    expect(display()).toBe('Alice: Engineer');
     expect(computeCount).toBe(1);
     
     // Change to false - prunes the edge to description
-    showDetails.value = false;
-    expect(display.value).toBe('Alice');
+    showDetails(false);
+    expect(display()).toBe('Alice');
     expect(computeCount).toBe(2);
     
     // Update description - should NOT trigger recomputation
     // since the edge was pruned
-    description.value = 'Senior Engineer';
-    expect(display.value).toBe('Alice');
+    description('Senior Engineer');
+    expect(display()).toBe('Alice');
     expect(computeCount).toBe(2); // Should still be 2
     
     // Re-enable details - should re-establish the edge
-    showDetails.value = true;
-    expect(display.value).toBe('Alice: Senior Engineer');
+    showDetails(true);
+    expect(display()).toBe('Alice: Senior Engineer');
     expect(computeCount).toBe(3);
     
     // NOW updating description should trigger recomputation
     // This is where the bug occurs: the old pruned edge is found
     // in the WeakMap but it's not in the linked list
-    description.value = 'Principal Engineer';
-    expect(display.value).toBe('Alice: Principal Engineer');
+    description('Principal Engineer');
+    expect(display()).toBe('Alice: Principal Engineer');
     expect(computeCount).toBe(4); // This might fail if the edge isn't properly re-linked
   });
 
@@ -69,51 +69,51 @@ describe('Conditional Dependencies with WeakMap', () => {
     
     const result = computed(() => {
       computeCount++;
-      return useA.value ? a.value : b.value;
+      return useA() ? a() : b();
     });
     
     effect(() => {
       effectCount++;
       // Access the computed to establish dependency
-      void result.value;
+      void result();
     });
     
     expect(effectCount).toBe(1);
     expect(computeCount).toBe(1);
     
     // Switch to B
-    useA.value = false;
-    expect(result.value).toBe('B');
+    useA(false);
+    expect(result()).toBe('B');
     expect(effectCount).toBe(2);
     expect(computeCount).toBe(2);
     
     // Update A - should not trigger since edge is pruned
-    a.value = 'A2';
-    expect(result.value).toBe('B');
+    a('A2');
+    expect(result()).toBe('B');
     expect(effectCount).toBe(2); // No change
     expect(computeCount).toBe(2); // No change
     
     // Switch back to A
-    useA.value = true;
-    expect(result.value).toBe('A2');
+    useA(true);
+    expect(result()).toBe('A2');
     expect(effectCount).toBe(3);
     expect(computeCount).toBe(3);
     
     // Update A again - should trigger
-    a.value = 'A3';
-    expect(result.value).toBe('A3');
+    a('A3');
+    expect(result()).toBe('A3');
     expect(effectCount).toBe(4);
     expect(computeCount).toBe(4);
     
     // One more cycle to ensure it works repeatedly
-    useA.value = false;
-    b.value = 'B2';
-    expect(result.value).toBe('B2');
+    useA(false);
+    b('B2');
+    expect(result()).toBe('B2');
     expect(effectCount).toBe(6); // Changed twice
     
-    useA.value = true;
-    a.value = 'A4';
-    expect(result.value).toBe('A4');
+    useA(true);
+    a('A4');
+    expect(result()).toBe('A4');
     expect(effectCount).toBe(8); // Changed twice more
   });
 });
