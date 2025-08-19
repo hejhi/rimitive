@@ -26,7 +26,7 @@
  * - alien-signals (optimized graph traversal)
  */
 import { CONSTANTS } from './constants';
-import { Edge, Writable, ProducerNode, ConsumerNode, ScheduledNode } from './types';
+import { Edge, ProducerNode, ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
@@ -36,14 +36,19 @@ import type { WorkQueue } from './helpers/work-queue';
 
 const { RUNNING } = CONSTANTS;
 
-// PATTERN: Interface Segregation
-// SignalInterface combines multiple concerns through interface composition:
-// - Writable<T>: Public API for reading/writing values
-// - ProducerNode: Internal graph node that can have dependents
-export interface SignalInterface<T = unknown> extends Writable<T>, ProducerNode {
-  __type: 'signal';
-  value: T;  // User-facing getter/setter for reactive access
-  _value: T; // Internal storage of the actual value
+// ALIEN-SIGNALS PATTERN: Single function interface for both read and write
+// No backward compatibility - pure functional approach
+export interface SignalFunction<T = unknown> {
+  (): T;                    // Read operation
+  (value: T): void;         // Write operation
+  peek(): T;                // Non-tracking read
+}
+
+// ALIEN-SIGNALS PATTERN: Signal state object that gets bound to the function
+// This IS the actual signal - no indirection through properties
+interface SignalState<T> extends ProducerNode {
+  value: T;                 // Current value (alien uses 'value' directly)
+  previousValue: T;         // For change detection
 }
 
 interface SignalFactoryContext extends SignalContext {
@@ -53,7 +58,8 @@ interface SignalFactoryContext extends SignalContext {
   workQueue: WorkQueue;
 }
 
-export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>> {
+export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
+  
   const {
     dependencies: { link },
     graphWalker: { dfs },
@@ -66,100 +72,88 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
   };
   
-  // PATTERN: Class-based Implementation
-  // Using a class instead of factory functions for better performance:
-  // - V8 optimizes class shapes better than object literals
-  // - Predictable memory layout improves cache locality
-  // - Methods on prototype save memory vs closures
-  class Signal<T> implements SignalInterface<T> {
-    __type = 'signal' as const;
-    _value: T; // The actual value stored in the signal
-    
-    // ALGORITHM: Producer's Target List
-    // Linked list of consumers (computeds/effects) that depend on this signal.
-    // When this signal changes, we traverse _out to notify dependents.
-    // Using undefined instead of null for slightly better performance.
-    _out: Edge | undefined = undefined;
-    _outTail: Edge | undefined;
-    
-    // OPTIMIZATION: Edge Cache for Hot Path
-    // Caches the last edge to optimize repeated access from the same consumer.
-    // In typical reactive patterns, the same computed often reads the same signal
-    // multiple times. This cache turns O(n) linked list search into O(1) lookup.
-    // Inspired by V8's inline caches and alien-signals' edge caching.
-    _lastEdge: Edge | undefined = undefined;
-    
-    // ALGORITHM: Version-based Cache Invalidation
-    // Monotonically increasing counter, incremented on each value change.
-    // Edges store the version when created, enabling O(1) staleness checks.
-    // This is more efficient than stale flags or timestamp comparisons.
-    _version = 0;
-
-    constructor(value: T) {
-      this._value = value;
-    }
-
-
-    get value(): T {
-      // OPTIMIZATION: Read value first, then handle tracking
-      const value = this._value;
+  // ALIEN-SIGNALS PATTERN: Signal operation function that will be bound to state
+  // Using rest parameters like alien-signals for cleaner argument handling
+  function signalOper<T>(this: SignalState<T>, ...args: [] | [T]): T | void {
+    if (args.length) {
+      // WRITE OPERATION
+      const newValue = args[0];
+      
+      // OPTIMIZATION: Early exit on unchanged value
+      if (this.value === newValue) return;
+      
+      // Update previous value for change tracking
+      this.previousValue = this.value;
+      this.value = newValue;
+      this._version++;
+      
+      // Skip propagation if no dependents
+      if (!this._out) return;
+      
+      // Update global version
+      ctx.version++;
+      
+      // Propagate changes
+      if (ctx.batchDepth > 0) {
+        // During batch: accumulate roots for batch-end traversal
+        invalidate(this._out, true, dfs, notifyNode);
+      } else {
+        // Outside batch: direct traversal
+        dfs(this._out, notifyNode);
+        flush();
+      }
+    } else {
+      // READ OPERATION - CRITICAL HOT PATH
+      const value = this.value;
+      
+      // ALIEN-SIGNALS PATTERN: Direct context access from closure
+      // No WeakMap lookup, no indirection - ctx is captured in closure
       const current = ctx.currentConsumer;
       
-      // V8 OPTIMIZATION: Predictable branch pattern - most reads are untracked
+      // V8 OPTIMIZATION: Predictable branch pattern
       if (current && (current._flags & RUNNING)) {
-        // V8 OPTIMIZATION: Direct function call instead of method indirection
         link(this, current, this._version);
       }
       
       return value;
     }
-
-    set value(value: T) {
-      // OPTIMIZATION: Early exit on unchanged value
-      if (this._value === value) return;
-
-      // Skip if no dependents
-      if (!this._out) {
-        // Update value and version only
-        this._value = value;
-        this._version++;
-        return;
-      }
-      
-      // Update value and version
-      this._value = value;
-      this._version++;
-      
-      // Update global version
-      ctx.version++;
-      
-      // OPTIMIZATION: Remove double batch wrapper
-      // Batching is already handled by the batch() function
-      if (ctx.batchDepth > 0) {
-        // During batch: accumulate roots for batch-end traversal
-        invalidate(this._out, true, dfs, notifyNode);
-      } else {
-        // Outside batch: direct traversal without creating a batch
-        dfs(this._out, notifyNode);
-        flush();
-      }
-    }
-
-
-    peek(): T {
-      // ALGORITHM: Non-Tracking Read
-      // Provides a way to read the signal's value without establishing a dependency
-      // This is crucial for conditional logic where you want to check a value
-      // without subscribing to changes
-      // Common use case: Checking a value to decide which dependencies to track
-      return this._value;
-    }
   }
-
+  
+  // ALIEN-SIGNALS PATTERN: Non-tracking peek function
+  function peekOper<T>(this: SignalState<T>): T {
+    return this.value;
+  }
+  
+  // ALIEN-SIGNALS PATTERN: Create signal with bound functions
+  function createSignal<T>(initialValue: T): SignalFunction<T> {
+    // ALIEN-SIGNALS PATTERN: State object that will become 'this' in bound functions
+    // This object IS the signal - no property definitions needed
+    const state: SignalState<T> = {
+      __type: 'signal',
+      value: initialValue,
+      previousValue: initialValue,
+      _out: undefined,
+      _outTail: undefined,
+      _version: 0,
+    };
+    
+    // ALIEN-SIGNALS CORE: Bind the operation function to the state object
+    // The bound function IS the signal - clean and simple
+    const signal = signalOper.bind(state) as SignalFunction<T>;
+    
+    // Add the peek method
+    signal.peek = peekOper.bind(state);
+    
+    // That's it! No property definitions, no compatibility layers
+    // The signal function has direct access to state via 'this'
+    return signal;
+  }
+  
   return {
     name: 'signal',
-    method: <T>(value: T): SignalInterface<T> => new Signal(value)
+    method: createSignal
   };
 }
-// Type alias for external usage
-export type Signal<T = unknown> = SignalInterface<T>;
+
+// ALIEN-SIGNALS PATTERN: Export the function-based Signal type
+export type Signal<T = unknown> = SignalFunction<T>;

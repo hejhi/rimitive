@@ -49,6 +49,8 @@ export interface EffectInterface extends ScheduledNode, Disposable {
   _callback(): void | (() => void);
   dispose(): void;
   subscribe?: (listener: () => void) => () => void;
+  _cleanup: (() => void) | undefined; // Cleanup from previous run
+  _verifiedVersion: number; // Cached global version for optimization
 }
 
 export type EffectCleanup = void | (() => void);
@@ -90,53 +92,53 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
   // Source cleanup for dynamic dependencies
   const { detachAll, pruneStale } = ctx.sourceCleanup;
-  class Effect implements EffectInterface {
-    // OPTIMIZATION: Hot/Cold Field Separation
-    // Group frequently accessed fields together for better CPU cache locality
+  
+  // PATTERN: Closure-based Factory with Bound Methods (Alien Signals approach)
+  // Using factory functions with bound methods attached to plain objects:
+  // - No prototype chain, methods are directly on the object
+  // - Closures capture context instead of using 'this'
+  // - Plain objects instead of class instances
+  function createEffect(fn: () => void | (() => void)): EffectInterface {
+    // Create plain object to hold the effect data
+    const effect: EffectInterface = {
+      __type: 'effect' as const,
+      _flags: STALE,
+      _in: undefined as Edge | undefined,
+      _inTail: undefined as Edge | undefined,
+      _nextScheduled: undefined as ScheduledNode | undefined,
+      _callback: fn,
+      _cleanup: undefined as (() => void) | undefined,
+      _verifiedVersion: -1,
+      // These will be added by bind methods below
+      dispose: null as unknown as (() => void),
+      _flush: null as unknown as (() => void),
+      _invalidate: null as unknown as (() => void),
+      _updateValue: null as unknown as (() => boolean),
+    };
 
-    // Hot fields (accessed on every schedule/flush cycle)
-    _flags = STALE; // Start STALE to run on creation
-    _in: Edge | undefined = undefined; // Dependencies this effect reads
-    _inTail: Edge | undefined;
-    _nextScheduled: ScheduledNode | undefined = undefined; // Link in scheduling queue
-
-    // Cold fields (accessed less frequently)
-    __type = 'effect' as const; // Type discriminator
-    _callback: () => void | (() => void); // User's effect function
-    _cleanup: (() => void) | undefined = undefined; // Cleanup from previous run
-
-    // OPTIMIZATION: Last Verified Global Version
-    // Cache the global ctx.version when we've verified that dependencies
-    // did NOT change. If another INVALIDATED arrives without a global version
-    // bump, we can skip dependency checks entirely and clear INVALIDATED.
-    _verifiedVersion = -1;
-
-    constructor(fn: () => void | (() => void)) {
-      this._callback = fn;
-    }
-
-    _invalidate(): void {
+    // ALGORITHM: Bound Invalidate Method
+    function invalidateEffect(this: EffectInterface): void {
       // ALGORITHM: Effect Invalidation with Linked List Queue
       // Effects are queued using intrusive linked list
       // The INVALIDATED flag prevents duplicate scheduling
 
       // Early exit if already processed
-      if (this._flags & INVALIDATED) return;
+      if (effect._flags & INVALIDATED) return;
 
       // Mark as INVALIDATED
-      this._flags |= INVALIDATED;
+      effect._flags |= INVALIDATED;
 
       // Queue the effect if not already queued
-      if (!(this._flags & SCHEDULED)) {
+      if (!(effect._flags & SCHEDULED)) {
         // Mark as scheduled
-        this._flags |= SCHEDULED;
+        effect._flags |= SCHEDULED;
         if (ctx.queueTail) {
-          ctx.queueTail._nextScheduled = this;
-          ctx.queueTail = this;
+          ctx.queueTail._nextScheduled = effect;
+          ctx.queueTail = effect;
         } else {
-          ctx.queueHead = ctx.queueTail = this;
+          ctx.queueHead = ctx.queueTail = effect;
         }
-        this._nextScheduled = undefined; // Tail has no next
+        effect._nextScheduled = undefined; // Tail has no next
       }
 
       // If not in a batch, flush immediately
@@ -154,28 +156,29 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       }
     }
 
-    _flush(): void {
+    // ALGORITHM: Bound Flush Method
+    function flushEffect(this: EffectInterface): void {
       // OPTIMIZATION: Early Exit Checks
       // Skip if disposed (dead node) or already running (prevent re-entrance)
-      if (this._flags & (DISPOSED | RUNNING)) return;
+      if (effect._flags & (DISPOSED | RUNNING)) return;
 
       // OPTIMIZATION: Check if effect needs to run
       // Skip if not marked as PENDING (a compound flag)
-      if (!(this._flags & PENDING)) return;
+      if (!(effect._flags & PENDING)) return;
 
       // If only INVALIDATED (not STALE), check if dependencies actually changed
-      if (!(this._flags & STALE)) {
+      if (!(effect._flags & STALE)) {
         // FAST PATH: If we've already verified no change at this global version,
         // clear INVALIDATED and bail without rechecking dependencies.
-        if (this._verifiedVersion === ctx.version) {
-          this._flags &= ~INVALIDATED;
+        if (effect._verifiedVersion === ctx.version) {
+          effect._flags &= ~INVALIDATED;
           return;
         }
 
         // Slow path: perform dependency check
-        if (!refreshConsumers(this)) {
+        if (!refreshConsumers(effect)) {
           // Cache the verified clean global version to skip future checks
-          this._verifiedVersion = ctx.version;
+          effect._verifiedVersion = ctx.version;
           return;
         }
 
@@ -185,33 +188,33 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // ALGORITHM: Atomic State Transition
       // Set RUNNING to prevent re-entrance
       // Clear all flags since we're handling them now
-      this._flags = (this._flags | RUNNING) & ~PENDING;
+      effect._flags = (effect._flags | RUNNING) & ~PENDING;
 
       // ALGORITHM: Tail-based Dependency Tracking (alien-signals approach)
       // Reset tail to undefined at start - all edges after this will be removed
-      this._inTail = undefined;
+      effect._inTail = undefined;
 
       // ALGORITHM: Context Management for Dependency Tracking
       // Set ourselves as current consumer so signal/computed reads register with us
       const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = this;
+      ctx.currentConsumer = effect;
 
       try {
         // ALGORITHM: Cleanup Before Re-execution
         // If the effect returned a cleanup function last time, run it first
         // This ensures proper resource cleanup (event listeners, timers, etc)
-        if (this._cleanup) {
-          this._cleanup();
-          this._cleanup = undefined;
+        if (effect._cleanup) {
+          effect._cleanup();
+          effect._cleanup = undefined;
         }
 
         // ALGORITHM: Execute Effect with Optional Cleanup Return
         // The effect can return a cleanup function that will be called:
         // 1. Before the next execution
         // 2. When the effect is disposed
-        const result = this._callback();
+        const result = effect._callback();
         if (result) {
-          this._cleanup = result;
+          effect._cleanup = result;
         }
       } finally {
         // ALGORITHM: Cleanup Phase (must run even if effect throws)
@@ -219,42 +222,52 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         ctx.currentConsumer = prevConsumer;
 
         // 2. Clear RUNNING flag to allow future executions
-        this._flags &= ~RUNNING;
+        effect._flags &= ~RUNNING;
 
         // 3. Remove stale dependencies (dynamic dependency tracking)
-        pruneStale(this);
+        pruneStale(effect);
       }
     }
 
-    _updateValue(): boolean {
+    // ALGORITHM: Bound UpdateValue Method
+    function updateValue(): boolean {
       // Effects don't produce values - nothing to update
       // This method exists to satisfy the ConsumerNode interface
       // Effects are scheduled for execution through _invalidate/_flush instead
       return true;
     }
 
-    dispose(): void {
+    // ALGORITHM: Bound Dispose Method
+    function dispose(): void {
       // ALGORITHM: Effect Disposal
       // 1. Mark as disposed and run any pending cleanup
-      if (this._flags & DISPOSED) return;
-      this._flags |= DISPOSED;
+      if (effect._flags & DISPOSED) return;
+      effect._flags |= DISPOSED;
 
-      if (this._cleanup) {
-        this._cleanup();
-        this._cleanup = undefined;
+      if (effect._cleanup) {
+        effect._cleanup();
+        effect._cleanup = undefined;
       }
 
       // 2. Remove all dependency edges for garbage collection
-      detachAll(this);
+      detachAll(effect);
 
       // TODO: Should we also clear _callback to free closure memory?
     }
+
+    // PATTERN: Bind methods to the object (Alien Signals pattern)
+    effect._invalidate = invalidateEffect.bind(effect);
+    effect._flush = flushEffect.bind(effect);
+    effect._updateValue = updateValue.bind(effect);
+    effect.dispose = dispose.bind(effect);
+
+    return effect;
   }
 
   return {
     name: 'effect',
     method: function effect(effectFn: () => void | (() => void)): EffectDisposer {
-      const e = new Effect(effectFn);
+      const e = createEffect(effectFn);
       
       // ALGORITHM: Immediate Execution
       // Effects run immediately when created to establish initial state

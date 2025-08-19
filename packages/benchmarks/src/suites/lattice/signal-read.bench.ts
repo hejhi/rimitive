@@ -11,7 +11,7 @@ import {
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
 import { createDefaultContext } from '@lattice/signals/default-context';
-import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
+import { createSignalFactory, type SignalFunction } from '@lattice/signals/signal';
 import {
   signal as alienSignal,
 } from 'alien-signals';
@@ -20,10 +20,10 @@ type LatticeExtension<N extends string, M> = { name: N; method: M };
 
 // Create Lattice API instance
 const latticeAPI = createSignalAPI({
-  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>,
 }, createDefaultContext());
 
-const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
+const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalFunction<T>;
 
 const ITERATIONS = 100000;
 
@@ -36,7 +36,7 @@ group('Signal Reads', () => {
         yield () => {
           let sum = 0;
           for (let i = 0; i < ITERATIONS; i++) {
-            sum += signal.value;
+            sum += signal();  // ALIEN-SIGNALS PATTERN: Function call for reads
           }
           return sum;
         };
