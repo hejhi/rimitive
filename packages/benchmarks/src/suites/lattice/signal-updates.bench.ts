@@ -35,7 +35,7 @@ const ITERATIONS = 100000;
 group('Signal Updates', () => {
   summary(() => {
     barplot(() => {
-      bench('Preact - write only', function* () {
+      bench('Preact - writes (no subscribers)', function* () {
         const signal = preactSignal(0);
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
@@ -44,7 +44,7 @@ group('Signal Updates', () => {
         };
       });
     
-      bench('Lattice - write only', function* () {
+      bench('Lattice - writes (no subscribers)', function* () {
         const signal = latticeSignal(0);
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
@@ -53,7 +53,7 @@ group('Signal Updates', () => {
         };
       });
     
-      bench('Alien - write only', function* () {
+      bench('Alien - writes (no subscribers)', function* () {
         const signal = alienSignal(0);
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
@@ -62,7 +62,7 @@ group('Signal Updates', () => {
         };
       });
     
-      bench('Preact - read only', function* () {
+      bench('Preact - reads only', function* () {
         const signal = preactSignal(42);
         // Warm up
         void signal.value;
@@ -76,7 +76,7 @@ group('Signal Updates', () => {
         };
       });
     
-      bench('Lattice - read only', function* () {
+      bench('Lattice - reads only', function* () {
         const signal = latticeSignal(42);
         // Warm up
         void signal.value;
@@ -90,7 +90,7 @@ group('Signal Updates', () => {
         };
       });
     
-      bench('Alien - read only', function* () {
+      bench('Alien - reads only', function* () {
         const signal = alienSignal(42);
         // Warm up
         void signal();
@@ -104,7 +104,7 @@ group('Signal Updates', () => {
         };
       });
     
-      bench('Preact - read/write mixed', function* () {
+      bench('Preact - reads/writes mixed', function* () {
         const signal = preactSignal(0);
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
@@ -114,7 +114,7 @@ group('Signal Updates', () => {
         };
       });
     
-      bench('Lattice - read/write mixed', function* () {
+      bench('Lattice - reads/writes mixed', function* () {
         const signal = latticeSignal(0);
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
@@ -124,7 +124,7 @@ group('Signal Updates', () => {
         };
       });
     
-      bench('Alien - read/write mixed', function* () {
+      bench('Alien - reads/writes mixed', function* () {
         const signal = alienSignal(0);
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {

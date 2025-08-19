@@ -124,12 +124,17 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // OPTIMIZATION: Early exit on unchanged value
       if (this._value === value) return;
 
+      // Skip if no dependents
+      if (!this._out) {
+        // Update value and version only
+        this._value = value;
+        this._version++;
+        return;
+      }
+      
       // Update value and version
       this._value = value;
       this._version++;
-      
-      // Skip if no dependents
-      if (!this._out) return;
       
       // Update global version
       ctx.version++;
