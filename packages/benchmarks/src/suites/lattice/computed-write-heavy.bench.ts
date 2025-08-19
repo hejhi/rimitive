@@ -15,8 +15,7 @@ import { createSignalAPI } from '@lattice/signals/api';
 import { createDefaultContext } from '@lattice/signals/default-context';
 import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
-import { createBatchFactory } from '@lattice/signals/batch';
-import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
+
 type LatticeExtension<N extends string, M> = { name: N; method: M };
 import {
   signal as alienSignal,
@@ -27,8 +26,6 @@ import {
 const latticeAPI = createSignalAPI({
   signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
   computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
-  batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
-  effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
 }, createDefaultContext());
 
 const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;

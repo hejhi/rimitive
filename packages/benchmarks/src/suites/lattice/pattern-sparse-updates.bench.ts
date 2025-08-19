@@ -26,8 +26,9 @@ import { createDefaultContext } from '@lattice/signals/default-context';
 import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
 import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
-type LatticeExtension<N extends string, M> = { name: N; method: M };
 import { signal as alienSignal, computed as alienComputed, effect as alienEffect } from 'alien-signals';
+
+type LatticeExtension<N extends string, M> = { name: N; method: M };
 
 // Lattice API instance
 const latticeAPI = createSignalAPI(

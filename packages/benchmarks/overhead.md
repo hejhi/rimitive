@@ -44,6 +44,17 @@ Small batches underperform, indicating batch accumulation strategy needs refinem
 **Result**: No improvement - overhead is in the architecture, not function calls
 **Learning**: The flush() function call overhead is negligible
 
+### ❌ Alien-style Function API Refactor (ATTEMPTED - 2025-01-19)
+**Implementation**: Changed from `.value` getter/setter to alien-style function calls
+**Approach**: `signal()` to read, `signal(value)` to write - matching alien-signals API
+**Result**: FAILED - Created huge performance regressions (10x slower for nested batches)
+**Root Causes**: 
+- Object.defineProperty overhead when trying to maintain backward compatibility
+- Increased indirection from function binding patterns
+- Loss of V8 optimization from class-based implementation
+**Learning**: API surface doesn't affect performance - implementation patterns do
+**Rollback**: Reverted to class-based implementation with `.value` getters/setters
+
 ## Key Findings
 
 ### Architecture Trade-offs
@@ -83,6 +94,8 @@ Through testing, we can definitively rule out these theories:
 2. **"Function call overhead"** - FALSE: Inlining checks provided no measurable improvement  
 3. **"Missing early return optimization"** - FALSE: Already implemented in lines 128-133
 4. **"Double work in flush"** - FALSE: flush() already has early return for empty queue
+5. **"Alien-style API would improve performance"** - FALSE: API style doesn't affect performance, implementation patterns do
+6. **"Function.bind() is faster than classes"** - FALSE: V8 optimizes classes better than bound functions for this use case
 
 ## Remaining Optimization Opportunities
 
@@ -93,8 +106,25 @@ Based on our analysis, potential improvements remain in:
 3. **Computed staleness checks** - Optimize version comparison strategy
 4. **Batch accumulation** - Improve strategy for small batch sizes
 
+## Implementation Insights from Alien-style Refactor
+
+The attempted alien-style refactor revealed critical insights about JavaScript performance:
+
+1. **Class-based implementations outperform function binding** for reactive state management
+2. **Property getters/setters are well-optimized by V8** when implemented as class properties
+3. **Object.defineProperty creates significant overhead** when used in hot paths
+4. **API surface (function vs property) matters less than implementation pattern**
+
+The refactor attempt showed that alien-signals achieves its performance not through its function API, but through:
+- Minimal object allocation
+- Direct property access on bound objects
+- No compatibility layers or property exposure
+- Simpler dependency tracking algorithm
+
 ## Conclusion
 
 The performance characteristics are **fundamental to the architecture**. Lattice's composable extension system and correctness guarantees create overhead on simple operations but deliver exceptional performance on complex reactive patterns. 
 
 **Key Insight**: The 3.29x slower write performance is acceptable given the 3.56x faster wide fanout performance. This trade-off aligns with Lattice's design goal of handling complex reactive applications efficiently.
+
+**Lesson Learned**: Performance optimizations should focus on implementation patterns (data structures, algorithms, memory layout) rather than API surface changes. The class-based implementation with `.value` getters/setters is already near-optimal for V8.
