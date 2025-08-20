@@ -19,19 +19,6 @@ export interface SignalContext {
   // Similar to React's Fiber tracking or Vue's targetStack.
   currentConsumer: ConsumerNode | null;
   
-  // ALGORITHM: Global Version Clock (TEMPORAL CHANGE TRACKING)
-  // Monotonically increasing counter that tracks ANY change in the system.
-  // Incremented whenever ANY signal's value changes.
-  // 
-  // PURPOSE: Enables O(1) "has anything changed?" checks
-  // - Avoids traversing entire dependency graph when system is stable
-  // 
-  // NOT REDUNDANT WITH GENERATION: This tracks WHEN changes occur,
-  // while generation tracks WHICH dependencies are active.
-  // 
-  // OPTIMIZATION: Could use BigInt if overflow is a concern (unlikely in practice)
-  version: number;
-  
   // ALGORITHM: Transaction Batching
   // Tracks nesting depth of batch() calls for nested transactions.
   // Effects only run when batchDepth returns to 0.
@@ -51,7 +38,6 @@ export interface SignalContext {
 export function createContext(): SignalContext {
   return {
     currentConsumer: null,
-    version: 0,
     batchDepth: 0,
     queueHead: undefined,
     queueTail: undefined,

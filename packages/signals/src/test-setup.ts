@@ -90,10 +90,8 @@ export function createTestInstance() {
 
       // Reset context
       ctx.currentConsumer = null;
-      ctx.version = 0;
       ctx.batchDepth = 0;
     },
-    getGlobalVersion: () => ctx.version,
     activeContext: ctx,
     // Export work queue for test access
     workQueue: ctx.workQueue,
@@ -122,12 +120,10 @@ export const setCurrentConsumer = (
   ...args: Parameters<typeof defaultInstance.setCurrentConsumer>
 ) => defaultInstance.setCurrentConsumer(...args);
 export const getCurrentConsumer = () => defaultInstance.getCurrentConsumer();
-export const getGlobalVersion = () => defaultInstance.getGlobalVersion();
 // Use getter to always get current context
 export const activeContext = (() => {
   // Return getter that always gets current context
   const getter = {
-    get version() { return defaultInstance.activeContext.version; },
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
     get scheduledCount() { 
       return defaultInstance.workQueue.state.size;
@@ -143,7 +139,6 @@ export const activeContext = (() => {
       return out;
     },
     get currentConsumer() { return defaultInstance.activeContext.currentConsumer; },
-    set version(v) { defaultInstance.activeContext.version = v; },
     set batchDepth(v) { defaultInstance.activeContext.batchDepth = v; },
     set scheduledCount(_v) { 
       // No-op in intrusive queue; kept for backward compat with tests (unused)

@@ -50,7 +50,6 @@ export interface EffectInterface extends ScheduledNode, Disposable {
   dispose(): void;
   subscribe?: (listener: () => void) => () => void;
   _cleanup: (() => void) | undefined; // Cleanup from previous run
-  _verifiedVersion: number; // Cached global version for optimization
 }
 
 export type EffectCleanup = void | (() => void);
@@ -96,7 +95,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       _nextScheduled: undefined as ScheduledNode | undefined,
       _callback: fn,
       _cleanup: undefined as (() => void) | undefined,
-      _verifiedVersion: -1,
       // These will be set below
       dispose: null as unknown as () => void,
       _flush: null as unknown as () => void,
@@ -115,17 +113,15 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
       // If only INVALIDATED (not STALE), check if dependencies actually changed
       if (!(effect._flags & STALE)) {
-        // FAST PATH: If we've already verified no change at this global version,
-        // clear INVALIDATED and bail without rechecking dependencies.
-        if (effect._verifiedVersion === ctx.version) {
-          effect._flags &= ~INVALIDATED;
+        // FAST PATH: If not invalidated, we're clean
+        if (!(effect._flags & INVALIDATED)) {
           return;
         }
 
         // Slow path: perform dependency check
         if (!refreshConsumers(effect)) {
-          // Cache the verified clean global version to skip future checks
-          effect._verifiedVersion = ctx.version;
+          // Dependencies haven't changed, clear invalidated flag
+          effect._flags &= ~INVALIDATED;
           return;
         }
 

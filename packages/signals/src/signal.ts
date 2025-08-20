@@ -89,10 +89,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         
         if (state.value === newValue) return;
         
-        // Update value, local, and context versions
+        // Update value and increment local version for edge staleness
         state.value = newValue;
         state._version++;
-        ctx.version++;
 
         // Skip propagation if no dependents
         if (!state._out) return;

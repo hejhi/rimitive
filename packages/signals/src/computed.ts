@@ -54,7 +54,6 @@ interface ComputedState<T> extends ProducerNode, ConsumerNode, Disposable {
   _updateValue(): boolean; // Update the computed value when dependencies change
   _callback: () => T; // User's computation function
   _value: T | undefined; // Cached computed value
-  _verifiedVersion: number; // Cached global version for fast path
 }
 
 const {
@@ -62,6 +61,7 @@ const {
   DISPOSED,
   STALE,
   PENDING,
+  INVALIDATED,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -91,7 +91,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _outTail: undefined as Edge | undefined,
       _flags: STALE,
       _version: 0,
-      _verifiedVersion: -1,
       // These will be set below
       dispose: null as unknown as (() => void),
       _updateValue: null as unknown as (() => boolean),
@@ -130,9 +129,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     };
 
     const updateComputed = (): void => {
-      // OPTIMIZATION: Combined flag and version check
-      // Most common case: already updated this global version
-      if (state._verifiedVersion === ctx.version) return;
+      // OPTIMIZATION: Fast path - if not stale or invalidated, we're clean
+      if (!(state._flags & (STALE | INVALIDATED))) return;
 
       // RE-ENTRANCE GUARD: Check RUNNING after version check (less common)
       if (state._flags & RUNNING) return;
@@ -200,8 +198,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
           state._version++;
         }
 
-        // Cache the global version to skip future checks if nothing changes
-        state._verifiedVersion = ctx.version;
+        // After successful update, we're no longer stale/invalidated
+        // (flags already cleared by refreshConsumers if not stale)
       } finally {
         // ALGORITHM: Cleanup Phase (Critical for correctness)
         // 1. Restore previous consumer context
