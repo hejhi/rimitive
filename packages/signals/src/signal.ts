@@ -58,7 +58,6 @@ interface SignalFactoryContext extends SignalContext {
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
-  
   const {
     dependencies: { link },
     graphWalker: { dfs },
@@ -71,60 +70,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
   };
   
-  // ALIEN-SIGNALS PATTERN: Signal operation function that will be bound to state
-  // Using rest parameters like alien-signals for cleaner argument handling
-  function signalOper<T>(this: SignalState<T>, ...args: [] | [T]): T | void {
-    if (args.length) {
-      // WRITE OPERATION
-      const newValue = args[0];
-      
-      // OPTIMIZATION: Early exit on unchanged value
-      if (this.value === newValue) return;
-      
-      // Update previous value for change tracking
-      this.value = newValue;
-      this._version++;
-      
-      // Skip propagation if no dependents
-      if (!this._out) return;
-      
-      // Update global version
-      ctx.version++;
-      
-      // Propagate changes
-      if (ctx.batchDepth > 0) {
-        // During batch: accumulate roots for batch-end traversal
-        invalidate(this._out, true, dfs, notifyNode);
-      } else {
-        // Outside batch: direct traversal
-        dfs(this._out, notifyNode);
-        flush();
-      }
-    } else {
-      // READ OPERATION - CRITICAL HOT PATH
-      const value = this.value;
-      
-      // ALIEN-SIGNALS PATTERN: Direct context access from closure
-      // No WeakMap lookup, no indirection - ctx is captured in closure
-      const current = ctx.currentConsumer;
-      
-      // V8 OPTIMIZATION: Predictable branch pattern
-      if (current && (current._flags & RUNNING)) {
-        link(this, current, this._version);
-      }
-      
-      return value;
-    }
-  }
-  
-  // ALIEN-SIGNALS PATTERN: Non-tracking peek function
-  function peekOper<T>(this: SignalState<T>): T {
-    return this.value;
-  }
-  
-  // ALIEN-SIGNALS PATTERN: Create signal with bound functions
+  // CLOSURE PATTERN: Create signal with closure-captured state for better V8 optimization
   function createSignal<T>(initialValue: T): SignalFunction<T> {
-    // ALIEN-SIGNALS PATTERN: State object that will become 'this' in bound functions
+    // State object captured in closure - no binding needed
     const state: SignalState<T> = {
       __type: 'signal',
       value: initialValue,
@@ -133,11 +81,56 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       _version: 0,
     };
     
-    // ALIEN-SIGNALS CORE: Bind the operation function to the state object
-    const signal = signalOper.bind(state) as SignalFunction<T>;
+    // Signal function using closure instead of bound this
+    const signal = ((...args: [] | [T]): T | void => {
+      if (args.length) {
+        // WRITE OPERATION
+        const newValue = args[0];
+        
+        // OPTIMIZATION: Early exit on unchanged value
+        if (state.value === newValue) return;
+        
+        // Update value and version
+        state.value = newValue;
+        state._version++;
+        
+        // Skip propagation if no dependents
+        if (!state._out) return;
+        
+        // Update global version
+        ctx.version++;
+        
+        // Propagate changes
+        if (ctx.batchDepth > 0) {
+          // During batch: accumulate roots for batch-end traversal
+          invalidate(state._out, true, dfs, notifyNode);
+        } else {
+          // Outside batch: direct traversal
+          dfs(state._out, notifyNode);
+          flush();
+        }
+      } else {
+        // READ OPERATION - CRITICAL HOT PATH
+        const value = state.value;
+        
+        // Direct context access from closure
+        // No WeakMap lookup, no indirection - ctx is captured in closure
+        const current = ctx.currentConsumer;
+        
+        // V8 OPTIMIZATION: Predictable branch pattern
+        if (current && (current._flags & RUNNING)) {
+          link(state, current, state._version);
+        }
+        
+        return value;
+      }
+    }) as SignalFunction<T>;
     
-    // Add peek method - the only property we need on the function
-    signal.peek = peekOper.bind(state) as () => T;
+    // Copy ProducerNode properties to the function
+    Object.assign(signal, state);
+    
+    // Add peek method using closure
+    signal.peek = () => state.value;
     
     return signal;
   }
