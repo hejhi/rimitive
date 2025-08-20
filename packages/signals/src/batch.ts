@@ -77,9 +77,14 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     } finally {
       // Always decrement and flush if outermost batch
       if (--ctx.batchDepth === 0) {
-        // Single unified flush operation
-        propagate(dfsMany, notifyNode);
-        flush();
+        // OPTIMIZATION: Only propagate if signals actually changed
+        if (ctx.propagator.size() > 0) {
+          propagate(dfsMany, notifyNode);
+        }
+        // OPTIMIZATION: Only flush if effects were actually enqueued
+        if (ctx.workQueue.size() > 0) {
+          flush();
+        }
       }
     }
   };

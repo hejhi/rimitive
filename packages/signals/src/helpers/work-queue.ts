@@ -17,6 +17,7 @@ export interface WorkQueue {
     cleanup: (node: T) => void
   ) => void;
   flush: () => void;
+  size: () => number;
 }
 
 /**
@@ -83,5 +84,7 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     }
   };
 
-  return { state, enqueue, dispose, flush };
+  const size = (): number => state.size;
+
+  return { state, enqueue, dispose, flush, size };
 }

@@ -45,7 +45,6 @@ const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => Ef
 
 // Signal types for each library
 type PreactSignal = { value: number };
-type LatticeSignal = { value: number };
 type AlienSignal = (value?: number) => number;
 
 group('Dense Updates (50-100% change rate)', () => {
@@ -113,12 +112,12 @@ group('Dense Updates (50-100% change rate)', () => {
           [1]() { return sources; },
           [2]() { return indices; },
           
-          bench(values: number[], sources: LatticeSignal[], indices: number[]) {
+          bench(values: number[], sources: SignalInterface<number>[], indices: number[]) {
             let changeCount = 0;
             let valueIndex = 0;
             for (let t = 0; t < TICKS; t++) {
               for (const i of indices) {
-                sources[i]!.value = values[valueIndex++ % values.length]!;
+                sources[i]!(values[valueIndex++ % values.length]!);
                 changeCount++;
               }
             }
