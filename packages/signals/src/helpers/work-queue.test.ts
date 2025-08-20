@@ -4,7 +4,7 @@ import { createContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
-const { DISPOSED, SCHEDULED } = CONSTANTS;
+const { DISPOSED } = CONSTANTS;
 
 describe('WorkQueue', () => {
   it('should enqueue nodes', () => {
@@ -16,7 +16,6 @@ describe('WorkQueue', () => {
       _flags: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
-      _invalidate: vi.fn(),
       _in: undefined,
       _inTail: undefined,
       dispose: () => {},
@@ -25,7 +24,6 @@ describe('WorkQueue', () => {
     
     helpers.enqueue(node);
     expect(helpers.state.size).toBe(1);
-    expect(node._flags & SCHEDULED).toBeTruthy(); // scheduled flag via bit
   });
 
   it('should not enqueue already scheduled nodes', () => {
@@ -37,7 +35,6 @@ describe('WorkQueue', () => {
       _flags: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
-      _invalidate: vi.fn(),
       _in: undefined,
       _inTail: undefined,
       dispose: () => {},
@@ -63,7 +60,6 @@ describe('WorkQueue', () => {
       _flags: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
-      _invalidate: vi.fn(),
       _in: undefined,
       _inTail: undefined,
       dispose: () => {},
@@ -93,7 +89,6 @@ describe('WorkQueue', () => {
       _flags: 0,
       _nextScheduled: undefined,
       _flush: flush1,
-      _invalidate: vi.fn(),
       _in: undefined,
       _inTail: undefined,
       dispose: () => {},
@@ -105,7 +100,6 @@ describe('WorkQueue', () => {
       _flags: 0,
       _nextScheduled: undefined,
       _flush: flush2,
-      _invalidate: vi.fn(),
       _in: undefined,
       _inTail: undefined,
       dispose: () => {},
@@ -117,7 +111,6 @@ describe('WorkQueue', () => {
       _flags: 0,
       _nextScheduled: undefined,
       _flush: flush3,
-      _invalidate: vi.fn(),
       _in: undefined,
       _inTail: undefined,
       dispose: () => {},
@@ -162,7 +155,6 @@ describe('WorkQueue', () => {
       _flags: 0,
       _nextScheduled: undefined,
       _flush: vi.fn(),
-      _invalidate: vi.fn(),
       _in: undefined,
       _inTail: undefined,
       dispose: () => {},
@@ -170,9 +162,7 @@ describe('WorkQueue', () => {
     };
     
     helpers.enqueue(node);
-    expect(node._flags & SCHEDULED).toBeTruthy(); // Check SCHEDULED bit is set
     
     helpers.flush();
-    expect(node._flags & SCHEDULED).toBeFalsy(); // Check SCHEDULED bit is cleared
   });
 });

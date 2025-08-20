@@ -202,7 +202,6 @@ describe('Effect', () => {
   it('should have __effect property on dispose function', () => {
     const dispose = effect(() => {});
     expect(dispose).toHaveProperty('__effect');
-    expect(dispose.__effect).toHaveProperty('_invalidate');
     expect(dispose.__effect).toHaveProperty('_flush');
     expect(dispose.__effect).toHaveProperty('dispose');
   });

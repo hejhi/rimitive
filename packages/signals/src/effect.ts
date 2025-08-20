@@ -69,7 +69,6 @@ const {
   STALE,
   INVALIDATED,
   PENDING,
-  SCHEDULED,
 } = CONSTANTS;
 
 // OPTIMIZATION: Shared Dispose Function
@@ -112,49 +111,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // These will be added by bind methods below
       dispose: null as unknown as (() => void),
       _flush: null as unknown as (() => void),
-      _invalidate: null as unknown as (() => void),
       _updateValue: null as unknown as (() => boolean),
     };
-
-    // ALGORITHM: Bound Invalidate Method
-    function invalidateEffect(this: EffectInterface): void {
-      // ALGORITHM: Effect Invalidation with Linked List Queue
-      // Effects are queued using intrusive linked list
-      // The INVALIDATED flag prevents duplicate scheduling
-
-      // Early exit if already processed
-      if (effect._flags & INVALIDATED) return;
-
-      // Mark as INVALIDATED
-      effect._flags |= INVALIDATED;
-
-      // Queue the effect if not already queued
-      if (!(effect._flags & SCHEDULED)) {
-        // Mark as scheduled
-        effect._flags |= SCHEDULED;
-        if (ctx.queueTail) {
-          ctx.queueTail._nextScheduled = effect;
-          ctx.queueTail = effect;
-        } else {
-          ctx.queueHead = ctx.queueTail = effect;
-        }
-        effect._nextScheduled = undefined; // Tail has no next
-      }
-
-      // If not in a batch, flush immediately
-      if (ctx.batchDepth === 0) {
-        let current = ctx.queueHead;
-        ctx.queueHead = ctx.queueTail = undefined;
-
-        while (current) {
-          const next = current._nextScheduled;
-          current._nextScheduled = undefined;
-          current._flags &= ~SCHEDULED; // Clear scheduled flag
-          current._flush();
-          current = next;
-        }
-      }
-    }
 
     // ALGORITHM: Bound Flush Method
     function flushEffect(this: EffectInterface): void {
@@ -233,7 +191,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     function updateValue(): boolean {
       // Effects don't produce values - nothing to update
       // This method exists to satisfy the ConsumerNode interface
-      // Effects are scheduled for execution through _invalidate/_flush instead
       return true;
     }
 
@@ -255,8 +212,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // TODO: Should we also clear _callback to free closure memory?
     }
 
-    // PATTERN: Bind methods to the object (Alien Signals pattern)
-    effect._invalidate = invalidateEffect.bind(effect);
     effect._flush = flushEffect.bind(effect);
     effect._updateValue = updateValue.bind(effect);
     effect.dispose = dispose.bind(effect);

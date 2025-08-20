@@ -62,7 +62,6 @@ const {
   RUNNING,
   DISPOSED,
   STALE,
-  INVALIDATED,
   PENDING,
 } = CONSTANTS;
 
@@ -80,16 +79,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     sourceCleanup: { detachAll, pruneStale },
   } = ctx;
   
-  // PATTERN: Closure-based Factory with Bound Methods (Alien Signals approach)
-  // Using factory functions with bound methods attached to plain objects:
-  // - No prototype chain, methods are directly on the object
-  // - Closures capture context instead of using 'this'
-  // - Plain objects instead of class instances
+  // CLOSURE PATTERN: Create computed with closure-captured state for better V8 optimization
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
-    // Forward declare the computed function for closure capture
-    let computedFunction: ComputedFunction<T>;
-    
-    // Create plain object to hold the computed data
+    // State object captured in closure - no binding needed
     const state: ComputedState<T> = {
       __type: 'computed' as const,
       _callback: compute,
@@ -102,20 +94,19 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _lastEdge: undefined as Edge | undefined,
       _version: 0,
       _verifiedVersion: -1,
-      // These will be added by bind methods below
+      // These will be set below
       dispose: null as unknown as (() => void),
-      _invalidate: null as unknown as (() => void),
       _updateValue: null as unknown as (() => boolean),
     };
 
-    // ALIEN-SIGNALS PATTERN: Computed operation function that will be bound to state
-    function computedOper(this: ComputedState<T>): T {
+    // Computed function using closure instead of bound this
+    const computedFunction = (() => {
       // OPTIMIZATION: Fast path for non-tracking reads
       // Most reads happen outside of computed/effect context
       const consumer = ctx.currentConsumer;
       if (!consumer) {
         updateComputed();
-        return this._value!;
+        return state._value!;
       }
 
       // ALGORITHM: Dependency Registration (Pull Phase)
@@ -129,39 +120,20 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Post-Update Edge Synchronization
       // If we have a consumer, (now) register/update the dependency edge
       // Doing this once avoids redundant edge work on the hot path.
-      if (isTracking) link(this, consumer, this._version);
+      if (isTracking) link(state, consumer, state._version);
 
       // Value is guaranteed to be defined after _update
-      return this._value!;
-    }
+      return state._value!;
+    }) as ComputedFunction<T>;
 
-    // ALIEN-SIGNALS PATTERN: Non-tracking peek function
-    function peekOper(this: ComputedState<T>): T {
+    // Add peek method using closure
+    computedFunction.peek = () => {
       // ALGORITHM: Non-tracking Read
       // Same as value getter but doesn't register dependencies
       // Useful for conditional checks that shouldn't create dependencies
       updateComputed();
-      return this._value!;
-    }
-
-    // ALGORITHM: Bound Invalidate Method
-    function invalidateComputed(this: ComputedState<T>): void {
-      // ALGORITHM: Invalidation Guard
-      // Skip if already notified (avoid redundant traversal)
-      // Skip if disposed (node is dead)
-      // Skip if running (will see changes when done)
-      if (this._flags & (INVALIDATED | DISPOSED | RUNNING)) return;
-
-      // Mark as invalidated
-      this._flags |= INVALIDATED;
-
-      // ALGORITHM: Lazy Invalidation (alien-signals pattern)
-      // Computed values do NOT propagate invalidation to their dependents.
-      // This is a key performance optimization - dependents will check
-      // this computed when they need it, not eagerly.
-      // Only effects need immediate notification, and they're handled
-      // by the signal that changed, not intermediate computeds.
-    }
+      return state._value!;
+    };
 
     // ALGORITHM: Bound Update Method
     function updateComputed(): void {
@@ -180,42 +152,34 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         return;
       }
 
-      // TODO: Why do we need to call updateValue() after calling refreshConsumers, which...
-      // already calls updateValue() internally? Why can't we just call refreshConsumers(state) and be done?
-      // Removing this duplicate call causes tests to fail.
+      // Refreshes all consumers of this computed and returns true if consumers were updated.
+      // Does NOT update the computed itself, only its consumers.
       if (refreshConsumers(state)) state._updateValue();
     }
 
     // Removed duplicate updateValue - using updateValueImpl instead
 
-    // ALGORITHM: Bound Dispose Method
-    function dispose(this: ComputedState<T>): void {
+    // Dispose method using closure
+    const dispose = (): void => {
       // ALGORITHM: Safe Disposal
       // Ensure idempotent disposal - can be called multiple times safely
-      if (this._flags & DISPOSED) return;
+      if (state._flags & DISPOSED) return;
 
       // Mark as disposed to prevent further updates
-      this._flags |= DISPOSED;
+      state._flags |= DISPOSED;
 
       // Remove all edges to sources (break circular references for GC)
-      detachAll(this);
+      detachAll(state);
 
       // Clear cached value to free memory
-      this._value = undefined;
+      state._value = undefined;
 
       // TODO: Should we also clear _out to help dependents?
       // Currently dependents will discover this node is disposed when they update
-    }
+    };
 
-    // ALIEN-SIGNALS CORE: Bind the operation function to the state object
-    // The bound function IS the computed - clean and simple
-    computedFunction = computedOper.bind(state) as ComputedFunction<T>;
-    
-    // Add the peek method with proper typing
-    computedFunction.peek = peekOper.bind(state);
-    
-    // Create updateValue that captures the function reference
-    const updateValueImpl = function(): boolean {
+    // Create updateValue that captures state in closure
+    const updateValueImpl = (): boolean => {
       // ALGORITHM: Atomic Flag Update
       // Use single assignment with bitwise operations for atomicity
       // Set RUNNING, clear flags in one operation
@@ -260,17 +224,12 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       return true;
     };
     
-    // Bind internal methods to the state object
-    state._invalidate = invalidateComputed.bind(state);
+    // Set internal methods
     state._updateValue = updateValueImpl;
-    state.dispose = dispose.bind(state);
-    
+    state.dispose = dispose;
+
     // Add the dispose method to the function
-    computedFunction.dispose = dispose.bind(state);
-    
-    // ALIEN-SIGNALS PATTERN: No properties on the function!
-    // The state object is used directly by the dependency graph.
-    // The function is just the public API.
+    computedFunction.dispose = dispose;
 
     return computedFunction;
   }

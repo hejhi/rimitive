@@ -68,7 +68,6 @@ export interface ConsumerNode extends ReactiveNode {
   _in: Edge | undefined; // Head of input list
   _inTail: Edge | undefined; // Tail of input list
 
-  _invalidate(): void; // Called when dependencies change
   _updateValue(): boolean; // Update this node's value (if it produces one)
   _flags: number; // Bit field containing STALE, RUNNING, DISPOSED, etc.
   // REMOVED: _gen field - using alien-signals' simpler tail-marking approach

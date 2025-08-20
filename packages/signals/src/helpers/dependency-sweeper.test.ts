@@ -23,7 +23,6 @@ describe('Dependency Sweeper', () => {
     __type: 'test',
     _in: undefined,
     _flags: 0,
-    _invalidate: () => {},
     _updateValue: () => true,
     _inTail: undefined
   });

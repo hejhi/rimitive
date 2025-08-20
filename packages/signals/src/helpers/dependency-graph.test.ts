@@ -22,7 +22,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _invalidate: () => {},
         _updateValue: () => true,
         _inTail: undefined,
       };
@@ -53,7 +52,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _invalidate: () => {},
         _updateValue: () => true,
         _inTail: undefined,
       };
@@ -84,7 +82,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _invalidate: () => {},
         _updateValue: () => true,
         _inTail: undefined,
       };
@@ -107,7 +104,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _invalidate: () => {},
         _updateValue: () => true,
         _inTail: undefined,
       };
@@ -140,7 +136,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _invalidate: () => {},
         _updateValue: () => true,
         _inTail: undefined,
       };
@@ -173,7 +168,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _invalidate: () => {},
           _updateValue: () => true,
             _inTail: undefined,
         };
@@ -200,7 +194,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _invalidate: () => {},
           _updateValue: () => true,
             _inTail: undefined,
         };
@@ -209,7 +202,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _invalidate: () => {},
           _updateValue: () => true,
             _inTail: undefined,
         };
@@ -242,7 +234,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _invalidate: () => {},
           _updateValue: () => true,
             _inTail: undefined,
         };
@@ -267,7 +258,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _invalidate: () => {},
           _updateValue: () => true,
             _inTail: undefined,
         };
@@ -294,7 +284,6 @@ describe('Dependency Graph Helpers', () => {
         const targets = Array.from({ length: 3 }, (_, i) => ({
           __type: 'test',
           _in: undefined,
-          _invalidate: () => {},
           _inTail: undefined,
           id: i,  // Add id for debugging
         }) as ConsumerNode & { id: number });
@@ -344,7 +333,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _invalidate: () => {},
           _updateValue: () => true,
             _inTail: undefined
         };
@@ -375,7 +363,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _invalidate: () => {},
           _updateValue: () => true,
           _inTail: undefined,
         };
