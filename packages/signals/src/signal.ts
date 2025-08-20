@@ -48,7 +48,6 @@ export interface SignalFunction<T = unknown> extends ProducerNode {
 // This IS the actual signal - no indirection through properties
 interface SignalState<T> extends ProducerNode {
   value: T;                 // Current value (alien uses 'value' directly)
-  previousValue: T;         // For change detection
 }
 
 interface SignalFactoryContext extends SignalContext {
@@ -83,7 +82,6 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       if (this.value === newValue) return;
       
       // Update previous value for change tracking
-      this.previousValue = this.value;
       this.value = newValue;
       this._version++;
       
@@ -130,7 +128,6 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     const state: SignalState<T> = {
       __type: 'signal',
       value: initialValue,
-      previousValue: initialValue,
       _out: undefined,
       _outTail: undefined,
       _version: 0,
