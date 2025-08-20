@@ -350,13 +350,16 @@ describe('Wide Fanout Pattern Verification', () => {
     // Create effect that depends on all computeds
     effect(() => {
       effectRuns++;
+      console.log('DEBUG: Effect running, effectRuns =', effectRuns);
       // Sum all computed values - this forces all computeds to be evaluated
-      computeds.reduce((sum, c) => sum + c(), 0);
+      const sum = computeds.reduce((sum, c) => sum + c(), 0);
+      console.log('DEBUG: Effect sum =', sum);
     });
 
     expect(totalComputeRuns).toBe(100);
     expect(effectRuns).toBe(1);
 
+    console.log('DEBUG: About to change source from 5 to 10');
     // Change source but computed outputs remain the same
     source(10);
 

@@ -203,8 +203,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         if (valueChanged) {
           state._value = newValue;
           state._dirty = true;  // Mark as dirty for our consumers
+          console.log('DEBUG: Computed value changed from', oldValue, 'to', newValue, '- setting _dirty = true');
         } else {
           state._dirty = false; // Clear dirty if value didn't change
+          console.log('DEBUG: Computed value unchanged (', oldValue, ') - setting _dirty = false');
         }
 
         // After successful update, we're no longer stale/invalidated
