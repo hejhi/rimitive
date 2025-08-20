@@ -131,8 +131,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       return state._value!;
     };
 
-    // ALGORITHM: Bound Update Method
-    function updateComputed(): void {
+    const updateComputed = (): void => {
       // OPTIMIZATION: Combined flag and version check
       // Most common case: already updated this global version
       if (state._verifiedVersion === ctx.version) return;

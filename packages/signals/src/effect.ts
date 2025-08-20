@@ -86,7 +86,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
   const { detachAll, pruneStale } = ctx.sourceCleanup;
   
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
-  function createEffect(fn: () => void | (() => void)): EffectInterface {
+  function createEffect(fn: () => void | (() => void)): EffectDisposer {
     // State object captured in closure - no binding needed
     const effect: EffectInterface = {
       __type: 'effect' as const,
@@ -98,9 +98,9 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       _cleanup: undefined as (() => void) | undefined,
       _verifiedVersion: -1,
       // These will be set below
-      dispose: null as unknown as (() => void),
-      _flush: null as unknown as (() => void),
-      _updateValue: null as unknown as (() => boolean),
+      dispose: null as unknown as () => void,
+      _flush: null as unknown as () => void,
+      _updateValue: null as unknown as () => boolean,
     };
 
     // Flush method using closure
@@ -206,21 +206,15 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     effect._updateValue = updateValue;
     effect.dispose = dispose;
 
-    return effect;
+    // Effects run immediately when created to establish initial state
+    // and dependencies.
+    flushEffect();
+
+    return dispose;
   }
 
   return {
     name: 'effect',
-    method: function effect(effectFn: () => void | (() => void)): EffectDisposer {
-      const e = createEffect(effectFn);
-      
-      // ALGORITHM: Immediate Execution
-      // Effects run immediately when created to establish initial state
-      // and dependencies. This matches user expectations from React useEffect.
-      e._flush();
-
-      // Return a wrapper function to avoid unbound method linting error
-      return (): void => e.dispose();
-    }
-  };
+    method: createEffect
+  }
 }
