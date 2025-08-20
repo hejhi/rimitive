@@ -79,11 +79,6 @@ export function createDependencySweeper(
     
     // Remove all edges after the tail
     while (toRemove) {
-      // Clear producer's cache if it points to this edge
-      if ('_lastEdge' in toRemove.from && toRemove.from._lastEdge === toRemove) {
-        toRemove.from._lastEdge = undefined;
-      }
-      
       // unlink handles both sides and returns next edge
       toRemove = unlink(toRemove);
     }

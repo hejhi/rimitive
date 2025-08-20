@@ -54,7 +54,6 @@ interface ComputedState<T> extends ProducerNode, ConsumerNode, Disposable {
   _updateValue(): boolean; // Update the computed value when dependencies change
   _callback: () => T; // User's computation function
   _value: T | undefined; // Cached computed value
-  _lastEdge: Edge | undefined; // Edge cache optimization  
   _verifiedVersion: number; // Cached global version for fast path
 }
 
@@ -88,10 +87,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _value: undefined as T | undefined,
       _in: undefined as Edge | undefined,
       _inTail: undefined as Edge | undefined,
+      _out: undefined as Edge | undefined,
       _outTail: undefined as Edge | undefined,
       _flags: STALE,
-      _out: undefined as Edge | undefined,
-      _lastEdge: undefined as Edge | undefined,
       _version: 0,
       _verifiedVersion: -1,
       // These will be set below

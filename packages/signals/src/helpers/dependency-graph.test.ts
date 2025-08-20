@@ -224,7 +224,6 @@ describe('Dependency Graph Helpers', () => {
         const source = {
           __type: 'test',
           _out: undefined,
-          _lastEdge: undefined,
           _version: 1,
           _flags: 0,
           _outTail: undefined
