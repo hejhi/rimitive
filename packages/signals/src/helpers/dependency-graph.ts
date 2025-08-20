@@ -133,7 +133,7 @@ export function createDependencyGraph(): DependencyGraph {
     const flags = toNode._flags;
     
     // V8 OPTIMIZATION: Early exits with predictable branches
-    if (!(flags & INVALIDATED)) return false;
+    // Remove the INVALIDATED check - we're only called when INVALIDATED
     if (flags & STALE) return true;
 
     let node = toNode;
