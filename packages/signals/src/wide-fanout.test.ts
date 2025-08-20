@@ -1,24 +1,31 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSignalAPI } from './api';
+import { createSignalAPI, type FactoriesToAPI } from './api';
 import { createDefaultContext } from './default-context';
-import { createSignalFactory } from './signal';
-import { createComputedFactory } from './computed';
-import { createEffectFactory } from './effect';
+import { createSignalFactory, type SignalFunction } from './signal';
+import { createComputedFactory, type ComputedFunction } from './computed';
+import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import type { LatticeExtension } from '@lattice/lattice';
 
+type TestAPI = FactoriesToAPI<{
+  signal: (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>;
+  computed: (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>;
+  effect: (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>;
+  batch: (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>;
+}>;
+
 describe('Wide Fanout Pattern Verification', () => {
-  let api: any;
-  let signal: any;
-  let computed: any;
-  let effect: any;
+  let api: TestAPI;
+  let signal: <T>(value: T) => SignalFunction<T>;
+  let computed: <T>(compute: () => T) => ComputedFunction<T>;
+  let effect: (fn: () => void | (() => void)) => EffectDisposer;
 
   beforeEach(() => {
     api = createSignalAPI({
-      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', any>,
-      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', any>,
-      effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', any>,
-      batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', any>,
+      signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>,
+      computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>,
+      effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+      batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
     }, createDefaultContext());
     
     signal = api.signal;
@@ -68,7 +75,7 @@ describe('Wide Fanout Pattern Verification', () => {
 
   it('should correctly update all computeds in wide fanout (100 computed values)', () => {
     const source = signal(1);
-    const computeds: ReturnType<typeof computed>[] = [];
+    const computeds: ComputedFunction<number>[] = [];
     const computeRunCounts: number[] = [];
     
     // Create 100 computed values that depend on the signal
@@ -82,7 +89,7 @@ describe('Wide Fanout Pattern Verification', () => {
 
     // Read all computed values initially
     for (let i = 0; i < 100; i++) {
-      expect(computeds[i]()).toBe(i + 1);
+      expect(computeds[i]!()).toBe(i + 1);
     }
     expect(computeRunCounts.every(count => count === 1)).toBe(true);
 
@@ -94,7 +101,7 @@ describe('Wide Fanout Pattern Verification', () => {
 
     // Read them all - should trigger recomputation
     for (let i = 0; i < 100; i++) {
-      expect(computeds[i]()).toBe(2 * (i + 1));
+      expect(computeds[i]!()).toBe(2 * (i + 1));
     }
     expect(computeRunCounts.every(count => count === 2)).toBe(true);
 
@@ -102,9 +109,9 @@ describe('Wide Fanout Pattern Verification', () => {
     source(10);
 
     // Selective reading - only some should recompute
-    expect(computeds[0]()).toBe(10);
-    expect(computeds[50]()).toBe(510);
-    expect(computeds[99]()).toBe(1000);
+    expect(computeds[0]!()).toBe(10);
+    expect(computeds[50]!()).toBe(510);
+    expect(computeds[99]!()).toBe(1000);
     
     expect(computeRunCounts[0]).toBe(3);
     expect(computeRunCounts[50]).toBe(3);
@@ -116,7 +123,7 @@ describe('Wide Fanout Pattern Verification', () => {
 
   it('should handle mixed wide fanout (effects + computeds)', () => {
     const source = signal(1);
-    const computeds: ReturnType<typeof computed>[] = [];
+    const computeds: ComputedFunction<number>[] = [];
     const effectResults: number[] = [];
     let totalEffectRuns = 0;
     
@@ -128,7 +135,7 @@ describe('Wide Fanout Pattern Verification', () => {
     // Create 50 effects that depend on the computeds
     for (let i = 0; i < 50; i++) {
       effect(() => {
-        effectResults[i] = computeds[i]() + 100;
+        effectResults[i] = computeds[i]!() + 100;
         totalEffectRuns++;
       });
     }
@@ -205,8 +212,8 @@ describe('Wide Fanout Pattern Verification', () => {
 
   it('should correctly propagate through deep wide fanout', () => {
     const root = signal(1);
-    const layer1: ReturnType<typeof computed>[] = [];
-    const layer2: ReturnType<typeof computed>[] = [];
+    const layer1: ComputedFunction<number>[] = [];
+    const layer2: ComputedFunction<number>[] = [];
     let effectRunCount = 0;
     const effectResults: number[] = [];
     
@@ -221,14 +228,14 @@ describe('Wide Fanout Pattern Verification', () => {
         // Each layer2 computed depends on 2 layer1 computeds
         const idx1 = i;
         const idx2 = (i + 1) % 50;
-        return layer1[idx1]() + layer1[idx2]();
+        return layer1[idx1]!() + layer1[idx2]!();
       });
     }
     
     // Create effects on layer2
     for (let i = 0; i < 50; i++) {
       effect(() => {
-        effectResults[i] = layer2[i]();
+        effectResults[i] = layer2[i]!();
         effectRunCount++;
       });
     }
@@ -327,7 +334,7 @@ describe('Wide Fanout Pattern Verification', () => {
 
   it('should efficiently handle wide fanout with no actual changes', () => {
     const source = signal(5);
-    const computeds: ReturnType<typeof computed>[] = [];
+    const computeds: ComputedFunction<number>[] = [];
     let totalComputeRuns = 0;
     let effectRuns = 0;
     

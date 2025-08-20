@@ -43,9 +43,8 @@ import { Readable } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
 
-interface SubscribeFactoryContext extends SignalContext {
-  // Effect will be added to context later by Lattice composition
-}
+// Effect will be added to context later by Lattice composition
+type SubscribeFactoryContext = SignalContext;
 
 export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExtension<'subscribe', <T>(source: Readable<T>, callback: (value: T) => void, options?: { skipEqualityCheck?: boolean }) => (() => void)> {
   
@@ -64,7 +63,7 @@ export function createSubscribeFactory(ctx: SubscribeFactoryContext): LatticeExt
     if (!effectFn) {
       // Access the composed API through the special Lattice binding
       // The 'this' context in Lattice extensions is the composed API
-      effectFn = (subscribe as any).__lattice?.effect || (ctx as any).effect;
+      effectFn = (subscribe as unknown as {__lattice?: {effect?: typeof effectFn}}).__lattice?.effect || (ctx as unknown as {effect?: typeof effectFn}).effect;
       if (!effectFn) {
         throw new Error('Subscribe requires effect to be available. Make sure effect factory is included in createSignalAPI.');
       }

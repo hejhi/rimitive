@@ -219,9 +219,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // and dependencies. This matches user expectations from React useEffect.
       e._flush();
 
-      // Return dispose directly - it's already a closure with no 'this' dependency
-      // eslint-disable-next-line @typescript-eslint/unbound-method
-      return e.dispose;
+      // Return a wrapper function to avoid unbound method linting error
+      return (): void => e.dispose();
     }
   };
 }

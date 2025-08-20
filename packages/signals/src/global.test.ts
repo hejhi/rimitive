@@ -97,7 +97,7 @@ describe('Global State Management', () => {
       // During execution, should be the computed's internal state
       void c();
       expect(capturedCurrent).not.toBe(null);
-      expect((capturedCurrent as any)?.__type).toBe('computed');
+      expect((capturedCurrent as unknown as {__type: string})?.__type).toBe('computed');
 
       // After execution, should be null again
       expect(getCurrentConsumer()).toBe(null);
@@ -127,9 +127,9 @@ describe('Global State Management', () => {
       expect(captures).toHaveLength(3);
       // Check that currentConsumer is being tracked (now state objects, not functions)
       expect(captures[0]!.type).toBe('outer-before');
-      expect((captures[0]!.current as any)?.__type).toBe('computed');
+      expect((captures[0]!.current as unknown as {__type: string})?.__type).toBe('computed');
       expect(captures[1]!.type).toBe('inner');
-      expect((captures[1]!.current as any)?.__type).toBe('computed');
+      expect((captures[1]!.current as unknown as {__type: string})?.__type).toBe('computed');
       expect(captures[2]!.type).toBe('outer-after');
       expect(captures[2]!.current).toBe(captures[0]!.current); // Same outer computed state
     });
@@ -161,8 +161,8 @@ describe('Global State Management', () => {
       const executionOrder: string[] = [];
 
       // Store initial consumer states for comparison
-      let c1State: any;
-      let c2State: any;
+      let c1State: unknown;
+      let c2State: unknown;
       
       const c1 = computed(() => {
         executionOrder.push('c1-start');
@@ -216,7 +216,7 @@ describe('Global State Management', () => {
       // Normal execution
       expect(c()).toBe(2);
       expect(capturedBefore).toBe(null);
-      expect((capturedDuring as any)?.__type).toBe('computed');
+      expect((capturedDuring as unknown as {__type: string})?.__type).toBe('computed');
 
       // Execution with error
       s(10);
