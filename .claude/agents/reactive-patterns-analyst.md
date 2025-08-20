@@ -91,48 +91,6 @@ function propagate() {
 
 ## Propagation Algorithms
 
-**Algorithm Comparison**:
-
-| Algorithm | Glitch-Free | Complexity | Memory | Use Case |
-|-----------|-------------|------------|---------|----------|
-| Eager | ✗ | O(changes) | Low | Simple updates |
-| Lazy | ✓ | O(reads) | Low | Sparse reads |
-| Push-Pull | ✓ | O(changes + reads) | Medium | Balanced |
-| Incremental | ✓ | O(changes) | High | Complex computations |
-| FRP | ✓ | O(n) | High | Continuous time |
-
-**Lattice's Push-Pull Implementation**:
-```javascript
-// Push phase: Mark stale
-function markStale(node: ConsumerNode) {
-  if (node._flags & STALE) return; // Already marked
-  node._flags |= STALE;
-  node._dependents.forEach(markStale);
-}
-
-// Pull phase: Recompute if needed  
-function ensureFresh(node: ComputedNode) {
-  if (!(node._flags & STALE)) return node._value;
-  
-  // Check dependencies first (pull)
-  let needsUpdate = false;
-  for (const dep of node._dependencies) {
-    ensureFresh(dep);
-    if (dep._version > node._lastSeenVersion[dep.id]) {
-      needsUpdate = true;
-    }
-  }
-  
-  if (needsUpdate) {
-    node._value = node._compute();
-    node._version++;
-  }
-  
-  node._flags &= ~STALE;
-  return node._value;
-}
-```
-
 ## Advanced Reactive Patterns
 
 **Time-Traveling Debugging**:
@@ -165,31 +123,6 @@ class DifferentialSignal<T> {
     this._dependents.forEach(dep => 
       dep.processDelta(delta)
     );
-  }
-}
-```
-
-**Glitch-Free Transactions**:
-```javascript
-class Transaction {
-  private updates = new Map<Signal, any>();
-  private affected = new Set<ConsumerNode>();
-  
-  set<T>(signal: Signal<T>, value: T) {
-    this.updates.set(signal, value);
-    this.affected.add(...signal._dependents);
-  }
-  
-  commit() {
-    // Apply all updates
-    this.updates.forEach((value, signal) => {
-      signal._value = value;
-      signal._version++;
-    });
-    
-    // Propagate in topological order
-    const sorted = topologicalSort(this.affected);
-    sorted.forEach(node => node.recompute());
   }
 }
 ```

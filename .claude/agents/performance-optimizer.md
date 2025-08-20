@@ -103,7 +103,6 @@ function bad2(val) {
 class Signal {
   _value;      // 8 bytes
   _flags;      // 4 bytes  
-  _version;    // 4 bytes
   // ^ Fits in single cache line
 }
 
