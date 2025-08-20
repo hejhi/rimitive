@@ -13,16 +13,14 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode } from '../types';
 
-// OPTIMIZATION: Edge Caching
-// Producers cache their last accessed edge to avoid linked list traversal
-// This optimization is based on the observation that the same consumer
-// often accesses the same producer multiple times in succession
-export type TrackedProducer = ProducerNode;
-
 const { TRACKING, INVALIDATED, STALE, PENDING } = CONSTANTS;
 
 export interface DependencyGraph {
-  link: (producer: TrackedProducer, consumer: ConsumerNode, producerVersion: number) => void;
+  link: (
+    producer: ProducerNode,
+    consumer: ConsumerNode,
+    producerVersion: number
+  ) => void;
   unlink: (edge: Edge) => Edge | undefined;
   refreshConsumers: (consumer: ConsumerNode) => boolean;
 }
@@ -39,7 +37,7 @@ interface StackFrame {
 export function createDependencyGraph(): DependencyGraph {
   // ALIEN-STYLE OPTIMIZATION: O(1) link without linear search
   const link = (
-    producer: TrackedProducer,
+    producer: ProducerNode,
     consumer: ConsumerNode,
     producerVersion: number
   ): void => {
@@ -49,7 +47,7 @@ export function createDependencyGraph(): DependencyGraph {
       tail.fromVersion = producerVersion;
       return;
     }
-    
+
     // FAST PATH: Check second most recent (2-element cache)
     const nextAfterTail = tail !== undefined ? tail.nextIn : consumer._in;
     if (nextAfterTail !== undefined && nextAfterTail.from === producer) {
@@ -57,17 +55,17 @@ export function createDependencyGraph(): DependencyGraph {
       consumer._inTail = nextAfterTail;
       return;
     }
-    
+
     // ALIEN OPTIMIZATION: NO LINEAR SEARCH!
     // Instead of searching through all edges, we just create a new one.
     // This trades potential duplicate edges for guaranteed O(1) performance.
     // The duplicate edges will be cleaned up during unlinking.
-    
+
     // Create new edge immediately - no searching
     const prevDep = tail;
     const nextDep = tail !== undefined ? tail.nextIn : consumer._in;
     const prevOut = producer._outTail;
-    
+
     const newEdge: Edge = {
       from: producer,
       to: consumer,
@@ -86,10 +84,11 @@ export function createDependencyGraph(): DependencyGraph {
       consumer._in = newEdge;
     }
     consumer._inTail = newEdge;
-    
+
     // Set TRACKING flag if producer is a computed node
-    if ('_flags' in producer) (producer as TrackedProducer & ConsumerNode)._flags |= TRACKING;
-    
+    if ('_flags' in producer)
+      (producer as ProducerNode & ConsumerNode)._flags |= TRACKING;
+
     // Update producer's output list
     if (prevOut) {
       prevOut.nextOut = newEdge;

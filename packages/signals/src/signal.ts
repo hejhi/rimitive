@@ -61,7 +61,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
   const {
     dependencies: { link },
     graphWalker: { dfs },
-    propagator: { invalidate },
+    propagator: { add },
     workQueue: { enqueue, flush }
   } = ctx;
   
@@ -87,23 +87,20 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         // WRITE OPERATION
         const newValue = args[0];
         
-        // OPTIMIZATION: Early exit on unchanged value
         if (state.value === newValue) return;
         
-        // Update value and version
+        // Update value, local, and context versions
         state.value = newValue;
         state._version++;
-        
+        ctx.version++;
+
         // Skip propagation if no dependents
         if (!state._out) return;
-        
-        // Update global version
-        ctx.version++;
         
         // Propagate changes
         if (ctx.batchDepth > 0) {
           // During batch: accumulate roots for batch-end traversal
-          invalidate(state._out, true, dfs, notifyNode);
+          add(state._out);
         } else {
           // Outside batch: direct traversal
           dfs(state._out, notifyNode);
@@ -113,11 +110,10 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         // READ OPERATION - CRITICAL HOT PATH
         const value = state.value;
         
-        // Direct context access from closure
-        // No WeakMap lookup, no indirection - ctx is captured in closure
+        // Direct context access from closure for currently executing consumer
         const current = ctx.currentConsumer;
         
-        // V8 OPTIMIZATION: Predictable branch pattern
+        // If there's a consumer accessing the signal, we need to create a link between them (dynamic dep discovery)
         if (current && (current._flags & RUNNING)) {
           link(state, current, state._version);
         }
