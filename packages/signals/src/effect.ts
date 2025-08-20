@@ -227,9 +227,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
       // OPTIMIZATION: Reuse Generic Dispose Function
       // Bind the shared dispose function to this effect instance
-      const dispose = genericDispose.bind(e) as EffectDisposer;
-
-      return dispose;
+      return genericDispose.bind(e) as EffectDisposer;
     }
   };
 }
