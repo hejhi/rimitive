@@ -114,7 +114,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // If we have a consumer, (now) register/update the dependency edge
       // Doing this once avoids redundant edge work on the hot path.
       if (consumer._flags & RUNNING) link(state, consumer, ctx.trackingVersion);
-
+      
       // Value is guaranteed to be defined after _update
       return state._value!;
     }) as ComputedFunction<T>;
@@ -202,11 +202,13 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         
         if (valueChanged) {
           state._value = newValue;
-          state._dirty = true;  // Mark as dirty for our consumers
-          console.log('DEBUG: Computed value changed from', oldValue, 'to', newValue, '- setting _dirty = true');
+          // Only mark dirty if this is not the initial evaluation
+          // Initial evaluation (undefined -> value) shouldn't mark as dirty
+          if (oldValue !== undefined) {
+            state._dirty = true;  // Mark as dirty for our consumers
+          }
         } else {
           state._dirty = false; // Clear dirty if value didn't change
-          console.log('DEBUG: Computed value unchanged (', oldValue, ') - setting _dirty = false');
         }
 
         // After successful update, we're no longer stale/invalidated

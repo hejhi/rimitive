@@ -160,15 +160,12 @@ export function createDependencyGraph(): DependencyGraph {
         if ('_in' in source) {
           // Computed node
           const sourceFlags = source._flags;
-          console.log('DEBUG: Checking computed source, wasDirty =', wasDirty, 'flags =', sourceFlags);
           
           if (sourceFlags & STALE) {
             stale = true;
-            console.log('DEBUG: Computed source is STALE');
           } else if (wasDirty || (sourceFlags & PENDING)) {
             if (sourceFlags & INVALIDATED) {
               // Push to stack and recurse
-              console.log('DEBUG: Computed source INVALIDATED, recursing');
               stack = { edge, next: edge.nextIn, to: node, stale, prev: stack };
               node = source;
               edge = source._in;
@@ -176,11 +173,9 @@ export function createDependencyGraph(): DependencyGraph {
               continue;
             }
             stale = true;
-            console.log('DEBUG: Computed source dirty/pending, marking stale');
           }
         } else {
           // Signal node - check dirty flag
-          console.log('DEBUG: Checking signal source, wasDirty =', wasDirty);
           stale = stale || wasDirty;
         }
         
