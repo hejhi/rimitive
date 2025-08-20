@@ -126,9 +126,6 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       }
     }) as SignalFunction<T>;
     
-    // Copy ProducerNode properties to the function
-    Object.assign(signal, state);
-    
     // Add peek method using closure
     signal.peek = () => state.value;
     
