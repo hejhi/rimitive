@@ -199,13 +199,6 @@ describe('Effect', () => {
     expect(fn).toHaveBeenCalledTimes(4);
   });
 
-  it('should have __effect property on dispose function', () => {
-    const dispose = effect(() => {});
-    expect(dispose).toHaveProperty('__effect');
-    expect(dispose.__effect).toHaveProperty('_flush');
-    expect(dispose.__effect).toHaveProperty('dispose');
-  });
-
   it('should handle multiple effects on same signal', () => {
     const sig = signal(0);
     const fn1 = vi.fn(() => { void sig(); });

@@ -220,19 +220,5 @@ describe('signal', () => {
         expect(c()).toBe(2 * (i + 1));
       });
     });
-
-    it.skip('should handle simple computed chains', () => {
-      const a = signal(1);
-      const b = computed(() => {
-        const val = a();
-        return val + 1;
-      });
-      
-      expect(b()).toBe(2);
-      
-      a(5);
-      // For now, just verify the computed tracks its dependencies
-      expect((a as any)._out).toBeDefined();
-    });
   });
 });

@@ -109,10 +109,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         return state._value!;
       }
 
-      // ALGORITHM: Dependency Registration (Pull Phase)
-      // If we're being read from within another computed/effect, register the dependency
-      const isTracking = !!(consumer._flags & RUNNING);
-
       // ALGORITHM: Lazy Evaluation
       // Only recompute if our dependencies have changed
       updateComputed();
@@ -120,7 +116,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Post-Update Edge Synchronization
       // If we have a consumer, (now) register/update the dependency edge
       // Doing this once avoids redundant edge work on the hot path.
-      if (isTracking) link(state, consumer, state._version);
+      if (consumer._flags & RUNNING) link(state, consumer, state._version);
 
       // Value is guaranteed to be defined after _update
       return state._value!;

@@ -181,7 +181,6 @@ type MergeExtensions<Exts extends Extension<any, any>[]> =
 // Prevent primitive confusion
 type SignalId = string & { readonly __signalId: unique symbol };
 type ComputedId = string & { readonly __computedId: unique symbol };
-type EffectId = string & { readonly __effectId: unique symbol };
 
 // Can't mix IDs
 function getSignal(id: SignalId): Signal<unknown>;

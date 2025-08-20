@@ -59,7 +59,6 @@ export type Unsubscribe = () => void;
 // Dispose function with attached effect instance
 export interface EffectDisposer {
   (): void;
-  __effect: EffectInterface;
 }
 
 
@@ -92,13 +91,9 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
   // Source cleanup for dynamic dependencies
   const { detachAll, pruneStale } = ctx.sourceCleanup;
   
-  // PATTERN: Closure-based Factory with Bound Methods (Alien Signals approach)
-  // Using factory functions with bound methods attached to plain objects:
-  // - No prototype chain, methods are directly on the object
-  // - Closures capture context instead of using 'this'
-  // - Plain objects instead of class instances
+  // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
   function createEffect(fn: () => void | (() => void)): EffectInterface {
-    // Create plain object to hold the effect data
+    // State object captured in closure - no binding needed
     const effect: EffectInterface = {
       __type: 'effect' as const,
       _flags: STALE,
@@ -108,14 +103,14 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       _callback: fn,
       _cleanup: undefined as (() => void) | undefined,
       _verifiedVersion: -1,
-      // These will be added by bind methods below
+      // These will be set below
       dispose: null as unknown as (() => void),
       _flush: null as unknown as (() => void),
       _updateValue: null as unknown as (() => boolean),
     };
 
-    // ALGORITHM: Bound Flush Method
-    function flushEffect(this: EffectInterface): void {
+    // Flush method using closure
+    const flushEffect = (): void => {
       // OPTIMIZATION: Early Exit Checks
       // Skip if disposed (dead node) or already running (prevent re-entrance)
       if (effect._flags & (DISPOSED | RUNNING)) return;
@@ -185,17 +180,17 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         // 3. Remove stale dependencies (dynamic dependency tracking)
         pruneStale(effect);
       }
-    }
+    };
 
-    // ALGORITHM: Bound UpdateValue Method
-    function updateValue(): boolean {
+    // UpdateValue method using closure
+    const updateValue = (): boolean => {
       // Effects don't produce values - nothing to update
       // This method exists to satisfy the ConsumerNode interface
       return true;
-    }
+    };
 
-    // ALGORITHM: Bound Dispose Method
-    function dispose(): void {
+    // Dispose method using closure
+    const dispose = (): void => {
       // ALGORITHM: Effect Disposal
       // 1. Mark as disposed and run any pending cleanup
       if (effect._flags & DISPOSED) return;
@@ -210,11 +205,12 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       detachAll(effect);
 
       // TODO: Should we also clear _callback to free closure memory?
-    }
+    };
 
-    effect._flush = flushEffect.bind(effect);
-    effect._updateValue = updateValue.bind(effect);
-    effect.dispose = dispose.bind(effect);
+    // Set methods
+    effect._flush = flushEffect;
+    effect._updateValue = updateValue;
+    effect.dispose = dispose;
 
     return effect;
   }
@@ -232,9 +228,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // OPTIMIZATION: Reuse Generic Dispose Function
       // Bind the shared dispose function to this effect instance
       const dispose = genericDispose.bind(e) as EffectDisposer;
-      
-      // Attach effect instance for debugging/testing
-      dispose.__effect = e;
 
       return dispose;
     }
