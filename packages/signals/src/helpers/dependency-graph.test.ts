@@ -14,7 +14,7 @@ describe('Dependency Graph Helpers', () => {
       const source: ProducerNode = {
         __type: 'test',
         _out: undefined,
-        _version: 1,
+        _dirty: false,
         _outTail: undefined
       };
       
@@ -31,20 +31,20 @@ describe('Dependency Graph Helpers', () => {
       const firstEdge = target._in;
       
       // Update version
-      source._version = 2;
+      source._dirty = true;
       
       // Second call should reuse the same edge
       helpers.link(source, target, 2);
       
       expect(target._in).toBe(firstEdge);
-      expect(target._in?.fromVersion).toBe(2);
+      expect(target._in?.trackingVersion).toBe(2);
     });
 
     it('should find existing dependency in sources list', () => {
       const source: ProducerNode = {
         __type: 'test',
         _out: undefined,
-        _version: 1,
+        _dirty: false,
         _outTail: undefined,
       };
       
@@ -61,12 +61,12 @@ describe('Dependency Graph Helpers', () => {
       const existingNode = target._in!;
       
       // Update version
-      source._version = 2;
+      source._dirty = true;
       
       // Should find the existing dependency
       helpers.link(source, target, 2);
       
-      expect(existingNode.fromVersion).toBe(2);
+      expect(existingNode.trackingVersion).toBe(2);
       expect(target._in).toBe(existingNode);
     });
 
@@ -74,7 +74,7 @@ describe('Dependency Graph Helpers', () => {
       const source: ProducerNode = {
         __type: 'test',
         _out: undefined,
-        _version: 1,
+        _dirty: false,
         _outTail: undefined,
       };
       
@@ -93,11 +93,11 @@ describe('Dependency Graph Helpers', () => {
     });
 
     it('should handle multiple sources for the same target', () => {
-      const sources = Array.from({ length: 3 }, (_, i) => ({
+      const sources = Array.from({ length: 3 }, () => ({
         __type: 'test',
         _out: undefined,
         _outTail: undefined,
-        _version: i + 1,
+        _dirty: false,
       }));
       
       const target: ConsumerNode = {
@@ -109,8 +109,8 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // Add dependencies from multiple sources
-      sources.forEach(source => {
-        helpers.link(source as ProducerNode, target, (source as ProducerNode)._version);
+      sources.forEach((source, i) => {
+        helpers.link(source as ProducerNode, target, i + 1);
       });
       
       // Count sources
@@ -128,7 +128,7 @@ describe('Dependency Graph Helpers', () => {
       const source: ProducerNode = {
         __type: 'test',
         _out: undefined,
-        _version: 1,
+        _dirty: false,
         _outTail: undefined,
       };
       
@@ -144,14 +144,14 @@ describe('Dependency Graph Helpers', () => {
       helpers.link(source, target, 1);
       
       // Update version
-      source._version = 5;
+      source._dirty = true;
       
       // Update dependency
       helpers.link(source, target, 5);
       
       // Check that version was updated
       const node = target._in;
-      expect(node?.fromVersion).toBe(5);
+      expect(node?.trackingVersion).toBe(5);
     });
   });
 
@@ -160,7 +160,7 @@ describe('Dependency Graph Helpers', () => {
         const source: ProducerNode = {
           __type: 'test',
           _out: undefined,
-          _version: 1,
+          _dirty: false,
           _outTail: undefined,
         };
         
@@ -177,7 +177,7 @@ describe('Dependency Graph Helpers', () => {
         
         expect(node.from).toBe(source);
         expect(node.to).toBe(target);
-        expect(node.fromVersion).toBe(1);
+        expect(node.trackingVersion).toBe(1);
         expect(source._out).toBe(node);
         expect(target._in).toBe(node);
       });
@@ -186,7 +186,7 @@ describe('Dependency Graph Helpers', () => {
         const source: ProducerNode = {
           __type: 'test',
           _out: undefined,
-          _version: 1,
+          _dirty: false,
           _outTail: undefined,
         };
         
@@ -224,7 +224,7 @@ describe('Dependency Graph Helpers', () => {
         const source = {
           __type: 'test',
           _out: undefined,
-          _version: 1,
+          _dirty: false,
           _flags: 0,
           _outTail: undefined
         };
@@ -249,7 +249,7 @@ describe('Dependency Graph Helpers', () => {
         const source: ProducerNode = {
           __type: 'test',
           _out: undefined,
-          _version: 1,
+          _dirty: false,
           _outTail: undefined,
         };
         
@@ -276,7 +276,7 @@ describe('Dependency Graph Helpers', () => {
         const source: ProducerNode = {
           __type: 'test',
           _out: undefined,
-          _version: 1,
+          _dirty: false,
           _outTail: undefined,
         };
         
@@ -323,7 +323,7 @@ describe('Dependency Graph Helpers', () => {
         const source = {
           __type: 'test',
           _out: undefined,
-          _version: 1,
+          _dirty: false,
           _flags: 16, // TRACKING flag set
           _outTail: undefined,
         };
@@ -348,13 +348,13 @@ describe('Dependency Graph Helpers', () => {
         const source1: ProducerNode = {
           __type: 'test',
           _out: undefined,
-          _version: 1,
+          _dirty: false,
           _outTail: undefined,
         };
         const source2: ProducerNode = {
           __type: 'test',
           _out: undefined,
-          _version: 2,
+          _dirty: false,
           _outTail: undefined,
         };
         

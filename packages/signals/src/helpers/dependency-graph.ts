@@ -19,7 +19,7 @@ export interface DependencyGraph {
   link: (
     producer: ProducerNode,
     consumer: ConsumerNode,
-    producerVersion: number
+    trackingVersion: number
   ) => void;
   unlink: (edge: Edge) => Edge | undefined;
   refreshConsumers: (consumer: ConsumerNode) => boolean;
@@ -39,19 +39,19 @@ export function createDependencyGraph(): DependencyGraph {
   const link = (
     producer: ProducerNode,
     consumer: ConsumerNode,
-    producerVersion: number
+    trackingVersion: number
   ): void => {
     // FAST PATH: Check tail (most recently accessed dependency)
     const tail = consumer._inTail;
     if (tail !== undefined && tail.from === producer) {
-      tail.fromVersion = producerVersion;
+      tail.trackingVersion = trackingVersion;
       return;
     }
 
     // FAST PATH: Check second most recent (2-element cache)
     const nextAfterTail = tail !== undefined ? tail.nextIn : consumer._in;
     if (nextAfterTail !== undefined && nextAfterTail.from === producer) {
-      nextAfterTail.fromVersion = producerVersion;
+      nextAfterTail.trackingVersion = trackingVersion;
       consumer._inTail = nextAfterTail;
       return;
     }
@@ -69,7 +69,7 @@ export function createDependencyGraph(): DependencyGraph {
     const newEdge: Edge = {
       from: producer,
       to: consumer,
-      fromVersion: producerVersion,
+      trackingVersion: trackingVersion,
       prevIn: prevDep,
       prevOut,
       nextIn: nextDep,
@@ -145,17 +145,16 @@ export function createDependencyGraph(): DependencyGraph {
     while (true) {
       // Process all edges for current node
       while (edge) {
-        // Skip recycled edges (same as original)
-        if (edge.fromVersion === -1) {
+        // Skip recycled edges (using -1 as sentinel in trackingVersion)
+        if (edge.trackingVersion === -1) {
           edge = edge.nextIn;
           continue;
         }
 
         const source = edge.from;
-        const oldVersion = edge.fromVersion;
-        const newVersion = source._version;
-        edge.fromVersion = newVersion;
-        const changed = oldVersion !== newVersion;
+        const wasDirty = source._dirty;
+        
+        // DON'T clear dirty flag here - multiple consumers may need to see it
         
         // Branch on node type for better prediction (preserved original logic)
         if ('_in' in source) {
@@ -164,7 +163,7 @@ export function createDependencyGraph(): DependencyGraph {
           
           if (sourceFlags & STALE) {
             stale = true;
-          } else if (changed || (sourceFlags & PENDING)) {
+          } else if (wasDirty || (sourceFlags & PENDING)) {
             if (sourceFlags & INVALIDATED) {
               // Push to stack and recurse
               stack = { edge, next: edge.nextIn, to: node, stale, prev: stack };
@@ -176,8 +175,8 @@ export function createDependencyGraph(): DependencyGraph {
             stale = true;
           }
         } else {
-          // Signal node - just version check
-          stale = stale || changed;
+          // Signal node - check dirty flag
+          stale = stale || wasDirty;
         }
         
         edge = edge.nextIn;
@@ -194,10 +193,8 @@ export function createDependencyGraph(): DependencyGraph {
       const frame = stack;
       if (stale) {
         node._updateValue();
-        if ('_version' in node) {
-          stale = frame.edge.fromVersion !== node._version;
-          frame.edge.fromVersion = node._version;
-        }
+        // After updating, check if node is still dirty (for producer nodes)
+        stale = '_dirty' in node ? node._dirty : false;
       }
 
       edge = frame.next;

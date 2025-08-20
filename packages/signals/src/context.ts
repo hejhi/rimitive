@@ -19,6 +19,12 @@ export interface SignalContext {
   // Similar to React's Fiber tracking or Vue's targetStack.
   currentConsumer: ConsumerNode | null;
   
+  // ALGORITHM: Tracking Version (Alien-Signals Pattern)
+  // Global counter that increments when starting dependency tracking.
+  // Edges store this version to know which "tracking epoch" created them.
+  // This separates "when edge was created" from "when value changed".
+  trackingVersion: number;
+  
   // ALGORITHM: Transaction Batching
   // Tracks nesting depth of batch() calls for nested transactions.
   // Effects only run when batchDepth returns to 0.
@@ -38,6 +44,7 @@ export interface SignalContext {
 export function createContext(): SignalContext {
   return {
     currentConsumer: null,
+    trackingVersion: 0,
     batchDepth: 0,
     queueHead: undefined,
     queueTail: undefined,

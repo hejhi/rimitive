@@ -78,7 +78,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       value: initialValue,
       _out: undefined,
       _outTail: undefined,
-      _version: 0,
+      _dirty: false,
     };
     
     // Signal function using closure instead of bound this
@@ -89,9 +89,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         
         if (state.value === newValue) return;
         
-        // Update value and increment local version for edge staleness
+        // Update value and set dirty flag (no arithmetic in hot path!)
         state.value = newValue;
-        state._version++;
+        state._dirty = true;
 
         // Skip propagation if no dependents
         if (!state._out) return;
@@ -114,7 +114,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         
         // If there's a consumer accessing the signal, we need to create a link between them (dynamic dep discovery)
         if (current && (current._flags & RUNNING)) {
-          link(state, current, state._version);
+          link(state, current, ctx.trackingVersion);
         }
         
         return value;

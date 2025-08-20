@@ -49,17 +49,11 @@ export interface ProducerNode extends ReactiveNode {
   _out: Edge | undefined;  // Head of output list
   _outTail: Edge | undefined;  // Tail of output list
   
-  // LOCAL VERSION COUNTER (VALUE CHANGE TRACKING)
-  // Incremented when THIS node's value changes.
-  // Used to detect if specific dependencies have new values.
-  // 
-  // PURPOSE: Fine-grained change detection
-  // - Stored in edge.fromVersion when dependencies are registered
-  // - Compared against edge.fromVersion to detect if this dependency changed
-  // 
-  // NOT REDUNDANT WITH GENERATION: This tracks value changes,
-  // while generation tracks which edges to keep/remove.
-  _version: number;
+  // DIRTY FLAG (Alien-Signals Pattern)
+  // Set to true when THIS node's value changes.
+  // Checked during refreshConsumers to detect if dependency changed.
+  // Cleared after value is propagated/consumed.
+  _dirty: boolean;
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
@@ -112,16 +106,14 @@ export interface Edge {
   prevIn: Edge | undefined; // Previous in input list
   nextIn: Edge | undefined; // Next in input list
 
-  // CACHED PRODUCER VERSION (STALENESS DETECTION)
-  // Stores the producer's _version at the time this edge was created/validated.
-  // Updated whenever the consumer reads from the producer.
+  // TRACKING VERSION (Alien-Signals Pattern)
+  // Stores the context's trackingVersion when this edge was created.
+  // Used to determine if this edge is from the current tracking context.
   //
-  // PURPOSE: O(1) staleness detection without pointer chasing
-  // - If edge.fromVersion !== source._version, the producer has changed
-  // - Avoids dereferencing source just to check if it changed
-  //
-  // NOT REDUNDANT: This is a cache of producer._version for performance
-  fromVersion: number;
+  // PURPOSE: Edge lifecycle management
+  // - Edges with trackingVersion !== ctx.trackingVersion are stale
+  // - Stale edges are removed at the end of tracking
+  trackingVersion: number;
 
   // REMOVED: toGen field - using alien-signals' simpler tail-marking approach
   // Instead of tracking generation per edge, we'll mark tail at start of run

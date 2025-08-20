@@ -133,6 +133,10 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // Clear all flags since we're handling them now
       effect._flags = (effect._flags | RUNNING) & ~PENDING;
 
+      // ALGORITHM: Increment tracking version for this effect run
+      // This marks the start of a new tracking context
+      ctx.trackingVersion++;
+
       // ALGORITHM: Tail-based Dependency Tracking (alien-signals approach)
       // Reset tail to undefined at start - all edges after this will be removed
       effect._inTail = undefined;

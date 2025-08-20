@@ -90,7 +90,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _out: undefined as Edge | undefined,
       _outTail: undefined as Edge | undefined,
       _flags: STALE,
-      _version: 0,
+      _dirty: false,
       // These will be set below
       dispose: null as unknown as (() => void),
       _updateValue: null as unknown as (() => boolean),
@@ -113,7 +113,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Post-Update Edge Synchronization
       // If we have a consumer, (now) register/update the dependency edge
       // Doing this once avoids redundant edge work on the hot path.
-      if (consumer._flags & RUNNING) link(state, consumer, state._version);
+      if (consumer._flags & RUNNING) link(state, consumer, ctx.trackingVersion);
 
       // Value is guaranteed to be defined after _update
       return state._value!;
@@ -176,6 +176,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Set RUNNING, clear flags in one operation
       state._flags = (state._flags | RUNNING) & ~PENDING;
 
+      // ALGORITHM: Increment tracking version for this evaluation
+      // This marks the start of a new tracking context
+      ctx.trackingVersion++;
+
       // ALGORITHM: Tail-based Dependency Tracking (alien-signals approach)
       // Reset tail to undefined at start - all edges after this will be removed
       state._inTail = undefined;
@@ -185,17 +189,22 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = state;
 
+      let valueChanged = false;
       try {
         // ALGORITHM: Execute User Computation
         // This may read signals/computeds, which will call addDependency
         const newValue = state._callback();
 
-        // ALGORITHM: Change Detection and Version Update
-        // Only increment version if value actually changed
-        // Exception: always update on first run (version 0) to establish initial state
-        if (newValue !== state._value || state._version === 0) {
+        // ALGORITHM: Change Detection
+        // Check if value actually changed
+        const oldValue = state._value;
+        valueChanged = newValue !== oldValue;
+        
+        if (valueChanged) {
           state._value = newValue;
-          state._version++;
+          state._dirty = true;  // Mark as dirty for our consumers
+        } else {
+          state._dirty = false; // Clear dirty if value didn't change
         }
 
         // After successful update, we're no longer stale/invalidated
@@ -212,7 +221,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         pruneStale(state);
       }
 
-      return true;
+      return valueChanged;
     };
     
     // Set internal methods

@@ -53,7 +53,7 @@ describe('GraphWalker', () => {
     return {
       from,
       to,
-      fromVersion: 0,
+      trackingVersion: 0,
       prevIn: undefined,
       nextIn: undefined,
       prevOut: undefined,

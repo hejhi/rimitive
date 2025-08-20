@@ -12,10 +12,10 @@ describe('Dependency Sweeper', () => {
     sweeper = createDependencySweeper(graph.unlink);
   });
 
-  const makeProducer = (version = 1): ProducerNode => ({
+  const makeProducer = (): ProducerNode => ({
     __type: 'test',
     _out: undefined,
-    _version: version,
+    _dirty: false,
     _outTail: undefined
   });
 
@@ -33,9 +33,9 @@ describe('Dependency Sweeper', () => {
     const c = makeProducer();
     const target = makeConsumer();
 
-    graph.link(a, target, a._version);
-    graph.link(b, target, b._version);
-    graph.link(c, target, c._version);
+    graph.link(a, target, 1);
+    graph.link(b, target, 1);
+    graph.link(c, target, 1);
 
     sweeper.detachAll(target);
 
@@ -46,24 +46,24 @@ describe('Dependency Sweeper', () => {
   });
 
   it('prunes only stale edges', () => {
-    const a = makeProducer(1);
-    const b = makeProducer(1);
-    const c = makeProducer(1);
+    const a = makeProducer();
+    const b = makeProducer();
+    const c = makeProducer();
     const target = makeConsumer();
 
     // Initial run: link a, b, c
-    graph.link(a, target, a._version);
-    graph.link(b, target, b._version);
-    graph.link(c, target, c._version);
+    graph.link(a, target, 1);
+    graph.link(b, target, 1);
+    graph.link(c, target, 1);
 
     // Simulate start of new run - reset tail
     target._inTail = undefined;
     
     // Next run: only access a and c
-    a._version = 2;
-    graph.link(a, target, a._version);
-    c._version = 2;
-    graph.link(c, target, c._version);
+    a._dirty = true;
+    graph.link(a, target, 1);
+    c._dirty = true;
+    graph.link(c, target, 1);
 
     // Now prune stale (b should be removed)
     sweeper.pruneStale(target);
@@ -83,12 +83,12 @@ describe('Dependency Sweeper', () => {
   });
 
   it('removes all edges when none accessed in current run', () => {
-    const a = makeProducer(1);
-    const b = makeProducer(1);
+    const a = makeProducer();
+    const b = makeProducer();
     const target = makeConsumer();
 
-    graph.link(a, target, a._version);
-    graph.link(b, target, b._version);
+    graph.link(a, target, 1);
+    graph.link(b, target, 1);
 
     // Simulate start of new run - reset tail
     target._inTail = undefined;
