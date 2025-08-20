@@ -77,14 +77,9 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     } finally {
       // Always decrement and flush if outermost batch
       if (--ctx.batchDepth === 0) {
-        // OPTIMIZATION: Only propagate if signals actually changed
-        if (ctx.propagator.size() > 0) {
-          propagate(dfsMany, notifyNode);
-        }
-        // OPTIMIZATION: Only flush if effects were actually enqueued
-        if (ctx.workQueue.size() > 0) {
-          flush();
-        }
+        // Always try to propagate and flush - the functions handle empty case efficiently
+        propagate(dfsMany, notifyNode);
+        flush();
       }
     }
   };
