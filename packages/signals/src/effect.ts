@@ -70,13 +70,7 @@ const {
   PENDING,
 } = CONSTANTS;
 
-// OPTIMIZATION: Shared Dispose Function
-// Instead of creating a new bound function for each effect, we share one
-// function and bind it to different effect instances. This reduces memory
-// allocation and GC pressure in applications with many effects.
-const genericDispose = function(this: EffectInterface) { 
-  this.dispose(); 
-};
+// Note: genericDispose removed - we now use closures instead of bind
 
 interface EffectFactoryContext extends SignalContext {
   dependencies: DependencyGraph;
@@ -225,9 +219,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // and dependencies. This matches user expectations from React useEffect.
       e._flush();
 
-      // OPTIMIZATION: Reuse Generic Dispose Function
-      // Bind the shared dispose function to this effect instance
-      return genericDispose.bind(e) as EffectDisposer;
+      // Return dispose directly - it's already a closure with no 'this' dependency
+      return e.dispose;
     }
   };
 }
