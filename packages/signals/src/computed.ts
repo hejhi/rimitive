@@ -32,7 +32,7 @@
  */
 
 import { CONSTANTS } from './constants';
-import { Edge, ProducerNode, Disposable, ConsumerNode } from './types';
+import { Edge, ProducerNode, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
@@ -44,13 +44,11 @@ import type { SignalContext } from './context';
 export interface ComputedFunction<T = unknown> extends ProducerNode, ConsumerNode {
   (): T;                    // Read operation (tracks dependencies)
   peek(): T;                // Non-tracking read
-  dispose(): void;          // Cleanup method
 }
 
 // Internal computed state that gets bound to the function
-interface ComputedState<T> extends ProducerNode, ConsumerNode, Disposable {
+interface ComputedState<T> extends ProducerNode, ConsumerNode {
   __type: 'computed';
-  dispose(): void; // Cleanup method to break circular references
   _updateValue(): boolean; // Update the computed value when dependencies change
   _callback: () => T; // User's computation function
   _value: T | undefined; // Cached computed value
@@ -58,7 +56,6 @@ interface ComputedState<T> extends ProducerNode, ConsumerNode, Disposable {
 
 const {
   RUNNING,
-  DISPOSED,
   STALE,
   PENDING,
   INVALIDATED,
@@ -75,7 +72,7 @@ export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
     dependencies: { link, refreshConsumers },
-    sourceCleanup: { detachAll, pruneStale },
+    sourceCleanup: { pruneStale },
   } = ctx;
   
   // CLOSURE PATTERN: Create computed with closure-captured state for better V8 optimization
@@ -91,8 +88,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _outTail: undefined as Edge | undefined,
       _flags: STALE,
       _dirty: false,
-      // These will be set below
-      dispose: null as unknown as (() => void),
+      // This will be set below
       _updateValue: null as unknown as (() => boolean),
     };
 
@@ -139,27 +135,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       }
     }
 
-    // Removed duplicate updateValue - using updateValueImpl instead
-
-    // Dispose method using closure
-    const dispose = (): void => {
-      // ALGORITHM: Safe Disposal
-      // Ensure idempotent disposal - can be called multiple times safely
-      if (state._flags & DISPOSED) return;
-
-      // Mark as disposed to prevent further updates
-      state._flags |= DISPOSED;
-
-      // Remove all edges to sources (break circular references for GC)
-      detachAll(state);
-
-      // Clear cached value to free memory
-      state._value = undefined;
-
-      // TODO: Should we also clear _out to help dependents?
-      // Currently dependents will discover this node is disposed when they update
-    };
-
     // Create updateValue that captures state in closure
     const updateValueImpl = (): boolean => {
       // Check if this is the first evaluation (STALE flag is set initially)
@@ -192,11 +167,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
           state._value = newValue;
           valueChanged = true;
           
-          // Only mark dirty if not the first evaluation
-          // (first eval shouldn't trigger dependents)
-          if (!isFirstEvaluation) {
-            state._dirty = true;
-          }
+          // Only mark dirty if not the first evaluation (first eval shouldn't trigger dependents)
+          if (!isFirstEvaluation) state._dirty = true;
           
           // NOTE: We can't propagate immediately like signals because
           // computeds are lazy - our dependents will check us when they need to
@@ -220,12 +192,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       return valueChanged;
     };
     
-    // Set internal methods
+    // Set internal method
     state._updateValue = updateValueImpl;
-    state.dispose = dispose;
-
-    // Add the dispose method to the function
-    computed.dispose = dispose;
 
     return computed;
   }
