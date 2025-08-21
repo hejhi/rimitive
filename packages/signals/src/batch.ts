@@ -65,10 +65,8 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
       return fn();
     } finally {
       // Always decrement and flush effects if outermost batch
-      if (--ctx.batchDepth === 0) {
-        // Only flush queued effects - propagation already happened
-        flush();
-      }
+      // Only flush queued effects - propagation already happened
+      if (--ctx.batchDepth === 0) flush();
     }
   };
 
