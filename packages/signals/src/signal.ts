@@ -33,7 +33,7 @@ import type { SignalContext } from './context';
 import type { GraphWalker } from './helpers/graph-walker';
 import type { WorkQueue } from './helpers/work-queue';
 
-const { RUNNING, INVALIDATED } = CONSTANTS;
+const { RUNNING } = CONSTANTS;
 
 // ALIEN-SIGNALS PATTERN: Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
@@ -62,16 +62,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     workQueue: { enqueue, flush }
   } = ctx;
   
-  // Pre-bind notification handlers for hot path
   const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
-  };
-  
-  // Handler for batch mode: mark as invalidated AND queue effects
-  const invalidateNode = (node: ConsumerNode): void => {
-    // Mark computed/effect as invalidated so it knows to recompute
-    if ('_flags' in node) node._flags |= INVALIDATED;
-    // Also queue effects for execution at batch end
     if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
   };
   
@@ -103,27 +94,17 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         
         // IMMEDIATE PROPAGATION: Always traverse graph immediately
         // This eliminates double traversal overhead
-        if (ctx.batchDepth > 0) {
-          // During batch: mark as invalidated AND queue effects
-          dfs(state._out, invalidateNode);
-        } else {
-          // Outside batch: just queue effects and flush immediately
-          dfs(state._out, notifyNode);
-          flush();
-        }
+        dfs(state._out, notifyNode);
+
+        if (!ctx.batchDepth) flush();
       } else {
-        // READ OPERATION - CRITICAL HOT PATH
-        const value = state.value;
-        
         // Direct context access from closure for currently executing consumer
         const current = ctx.currentConsumer;
         
         // If there's a consumer accessing the signal, we need to create a link between them (dynamic dep discovery)
-        if (current && (current._flags & RUNNING)) {
-          link(state, current, ctx.trackingVersion);
-        }
+        if (current && (current._flags & RUNNING)) link(state, current, ctx.trackingVersion);
         
-        return value;
+        return state.value;
       }
     }) as SignalFunction<T>;
     
