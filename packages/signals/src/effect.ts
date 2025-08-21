@@ -103,25 +103,16 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
     // Flush method using closure
     const flushEffect = (): void => {
-      // Skip if disposed (dead node) or already running (prevent re-entrance)
-      if (effect._flags & (DISPOSED | RUNNING)) return;
-
-      // Skip if not marked as PENDING (a compound flag)
-      if (!(effect._flags & PENDING)) return;
+      const flags = effect._flags;
+      
+      // Early exit: disposed, running, or not pending
+      if (flags & (DISPOSED | RUNNING) || !(flags & PENDING)) return;
 
       // If only INVALIDATED (not STALE), check if dependencies actually changed
-      if (!(effect._flags & STALE)) {
-        // FAST PATH: If not invalidated, we're clean
-        if (!(effect._flags & INVALIDATED)) return;
-
-        // Slow path: perform dependency check
-        if (!refreshConsumers(effect)) {
-          // Dependencies haven't changed, clear invalidated flag
-          effect._flags &= ~INVALIDATED;
-          return;
-        }
-
-        // If stale, refreshConsumers marked STALE; fall through to run
+      if (!(flags & STALE) && !refreshConsumers(effect)) {
+        // Dependencies haven't changed, clear invalidated flag
+        effect._flags &= ~INVALIDATED;
+        return;
       }
 
       // ALGORITHM: Atomic State Transition
