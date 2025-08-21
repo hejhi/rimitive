@@ -89,10 +89,10 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       } else {
         // READ
         // The currently executing consumer in the context, if there is one
-        const current = ctx.currentConsumer;
+        const consumer = ctx.currentConsumer;
         
         // If an executing consumer is reading a signal, we need to establish a link to it here
-        if (current && (current._flags & RUNNING)) link(state, current, ctx.trackingVersion);
+        if (consumer && consumer._flags & RUNNING) link(state, consumer, ctx.trackingVersion);
 
         return state.value;
       }

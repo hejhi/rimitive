@@ -98,54 +98,43 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     // Computed function using closure instead of bound this
     const computedFunction = (() => {
-      // OPTIMIZATION: Fast path for non-tracking reads
-      // Most reads happen outside of computed/effect context
+      // Treat computed exactly like a signal for dependency tracking
+      // Register with current consumer FIRST (like signals do)
       const consumer = ctx.currentConsumer;
-      if (!consumer) {
-        updateComputed();
-        return state._value!;
-      }
+      if (consumer && (consumer._flags & RUNNING)) link(state, consumer, ctx.trackingVersion);
 
-      // ALGORITHM: Lazy Evaluation
-      // Only recompute if our dependencies have changed
-      updateComputed();
-
-      // ALGORITHM: Post-Update Edge Synchronization
-      // If we have a consumer, (now) register/update the dependency edge
-      // Doing this once avoids redundant edge work on the hot path.
-      if (consumer._flags & RUNNING) link(state, consumer, ctx.trackingVersion);
+      // Lazy Evaluation - only recompute if stale
+      if (state._flags & (STALE | INVALIDATED)) updateComputed();
       
-      // Value is guaranteed to be defined after _update
-      return state._value!;
+      return state._value;
     }) as ComputedFunction<T>;
 
     // Add peek method using closure
     computedFunction.peek = () => {
       // ALGORITHM: Non-tracking Read
       // Same as value getter but doesn't register dependencies
-      // Useful for conditional checks that shouldn't create dependencies
-      updateComputed();
+      if (state._flags & (STALE | INVALIDATED)) updateComputed();
       return state._value!;
     };
 
     const updateComputed = (): void => {
-      // OPTIMIZATION: Fast path - if not stale or invalidated, we're clean
-      if (!(state._flags & (STALE | INVALIDATED))) return;
-
-      // RE-ENTRANCE GUARD: Check RUNNING after version check (less common)
+      // RE-ENTRANCE GUARD: Prevent infinite recursion
       if (state._flags & RUNNING) return;
 
-      // ALGORITHM: Conditional Recomputation
-      // Check STALE flag first (common case) or check dependencies if INVALIDATED
-      // Skip refreshing all consumers.
+      // SIMPLIFIED: Just check if we need to recompute
+      // STALE means definitely need to recompute
+      // INVALIDATED means maybe - check dependencies
       if (state._flags & STALE) {
         state._updateValue();
-        return;
+      } else if (state._flags & INVALIDATED) {
+        // Check if any dependencies actually changed
+        if (refreshConsumers(state)) {
+          state._updateValue();
+        } else {
+          // Dependencies haven't changed, just clear invalidated flag
+          state._flags &= ~INVALIDATED;
+        }
       }
-
-      // Refreshes all consumers of this computed and returns true if consumers were updated.
-      // Does NOT update the computed itself, only its consumers.
-      if (refreshConsumers(state)) state._updateValue();
     }
 
     // Removed duplicate updateValue - using updateValueImpl instead
