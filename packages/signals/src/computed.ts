@@ -122,12 +122,13 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // RE-ENTRANCE GUARD: Prevent infinite recursion
       if (state._flags & RUNNING) return;
 
-      // SIMPLIFIED: Just check if we need to recompute
+      // Just check if we need to recompute
       // STALE means definitely need to recompute
       // INVALIDATED means maybe - check dependencies
       if (state._flags & STALE) {
         state._updateValue();
       } else if (state._flags & INVALIDATED) {
+        // PULL
         // Check if any dependencies actually changed
         if (refreshConsumers(state)) {
           state._updateValue();
@@ -161,27 +162,27 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     // Create updateValue that captures state in closure
     const updateValueImpl = (): boolean => {
-      // ALGORITHM: Atomic Flag Update
-      // Use single assignment with bitwise operations for atomicity
-      // Set RUNNING, clear flags in one operation
+      // Check if this is the first evaluation (STALE flag is set initially)
+      const isFirstEvaluation = (state._flags & STALE) !== 0;
+      
+      // SETUP: Prepare for recomputation
+      // 1. Set RUNNING flag (prevent circular dependencies)
+      // 2. Clear stale/invalidated flags
       state._flags = (state._flags | RUNNING) & ~PENDING;
 
-      // ALGORITHM: Increment tracking version for this evaluation
-      // This marks the start of a new tracking context
+      // DEPENDENCY TRACKING SETUP:
+      // Each computation gets a unique version to identify its dependencies
       ctx.trackingVersion++;
-
-      // ALGORITHM: Tail-based Dependency Tracking (alien-signals approach)
-      // Reset tail to undefined at start - all edges after this will be removed
+      
+      // Mark where current dependencies end (everything after will be removed)
       state._inTail = undefined;
 
-      // ALGORITHM: Context Switching for Dependency Tracking
-      // Set the computed state as the current consumer so signal reads register with us
+      // Make this computed the "current consumer" so signals know to link to us
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = state;
 
       let valueChanged = false;
       try {
-        // SIMPLIFIED: More like signal's pattern
         const oldValue = state._value;
         const newValue = state._callback();
         
@@ -191,26 +192,28 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
           state._value = newValue;
           valueChanged = true;
           
-          // Mark dirty only if not initial evaluation
-          if (oldValue !== undefined) {
+          // Only mark dirty if not the first evaluation
+          // (first eval shouldn't trigger dependents)
+          if (!isFirstEvaluation) {
             state._dirty = true;
-            
-            // NOTE: We can't propagate immediately like signals because
-            // computeds are lazy - our dependents will check us when they need to
           }
+          
+          // NOTE: We can't propagate immediately like signals because
+          // computeds are lazy - our dependents will check us when they need to
         } else {
           // Value unchanged - clear dirty flag
           state._dirty = false;
         }
       } finally {
-        // ALGORITHM: Cleanup Phase (Critical for correctness)
-        // 1. Restore previous consumer context
+        // CLEANUP: Must run even if computation throws
+        // 1. Restore the previous consumer (unwinding the context stack)
         ctx.currentConsumer = prevConsumer;
 
-        // 2. Clear RUNNING flag to allow future computations
+        // 2. Clear RUNNING flag so this computed can run again
         state._flags &= ~RUNNING;
 
-        // 3. Remove stale dependencies (dynamic dependency tracking)
+        // 3. Remove dependencies we no longer need (dynamic dependency cleanup)
+        // Any dependency NOT accessed during this run gets removed
         pruneStale(state);
       }
 
