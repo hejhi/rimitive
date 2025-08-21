@@ -68,7 +68,7 @@ export function createGraphWalker(): GraphWalker {
     while (currentEdge) {
       const target = currentEdge.to;
 
-      // Skip nodes already notified/disposed/running
+      // Skip nodes already notified/disposed/running  
       if (target._flags & SKIP_FLAGS) {
         currentEdge = currentEdge.nextOut;
         continue;

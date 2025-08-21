@@ -37,33 +37,22 @@
 import type { LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
-import type { Propagator } from './helpers/propagator';
-import type { GraphWalker } from './helpers/graph-walker';
-import type { ConsumerNode, ScheduledNode } from './types';
 
 // Removed: Error wrapping adds unnecessary overhead
 // Let non-Error values throw naturally
 
-// BatchFactoryContext needs WorkQueue and Propagator for flushing
+// BatchFactoryContext only needs WorkQueue for effect flushing
+// Propagation now happens immediately in signal.ts
 interface BatchFactoryContext extends SignalContext {
   workQueue: WorkQueue;
-  propagator: Propagator;
-  graphWalker: GraphWalker;
 }
 
 export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const {
-    workQueue: { flush, enqueue },
-    propagator: { propagate },
-    graphWalker: { dfsMany },
-  } = ctx;
-  
-  // Pre-bind notification handler for consistency with signal.ts
-  const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
-  };
+  const { flush } = ctx.workQueue;
 
-  // OPTIMIZATION: Simplified batch matching Preact's efficiency
+  // OPTIMIZATION: Immediate propagation strategy like Alien Signals
+  // Signal writes now propagate immediately during batch
+  // We only defer effect execution to batch end
   const batch = function batch<T>(fn: () => T): T {
     // Fast path: if already batching, just run the function
     if (ctx.batchDepth > 0) return fn();
@@ -75,10 +64,9 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     try {
       return fn();
     } finally {
-      // Always decrement and flush if outermost batch
+      // Always decrement and flush effects if outermost batch
       if (--ctx.batchDepth === 0) {
-        // Always try to propagate and flush - the functions handle empty case efficiently
-        propagate(dfsMany, notifyNode);
+        // Only flush queued effects - propagation already happened
         flush();
       }
     }

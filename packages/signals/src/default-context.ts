@@ -3,7 +3,6 @@ import { createDependencySweeper } from './helpers/dependency-sweeper';
 import { createDependencyGraph } from './helpers/dependency-graph';
 import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
-import { createPropagator } from './helpers/propagator';
 
 /**
  * Creates the default extended context with all required services.
@@ -15,7 +14,6 @@ export function createDefaultContext() {
   const sourceCleanup = createDependencySweeper(dependencies.unlink);
   const workQueue = createWorkQueue(baseCtx);
   const graphWalker = createGraphWalker();
-  const propagator = createPropagator();
   
   return {
     ...baseCtx,
@@ -23,6 +21,5 @@ export function createDefaultContext() {
     sourceCleanup,
     workQueue,
     graphWalker,
-    propagator,
   };
 }

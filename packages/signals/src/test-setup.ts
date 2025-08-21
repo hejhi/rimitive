@@ -10,7 +10,6 @@ import { createWorkQueue } from './helpers/work-queue';
 import { createGraphWalker } from './helpers/graph-walker';
 import { createDependencyGraph } from './helpers/dependency-graph';
 import { createDependencySweeper } from './helpers/dependency-sweeper';
-import { createPropagator } from './helpers/propagator';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -24,14 +23,12 @@ export function createTestInstance() {
   const base = createContext();
   const workQueue = createWorkQueue(base);
   const graphWalker = createGraphWalker();
-  const propagator = createPropagator();
   const dependencies = createDependencyGraph();
   const sourceCleanup = createDependencySweeper(dependencies.unlink);
   const ctx = {
     ...base,
     workQueue,
     graphWalker,
-    propagator,
     dependencies,
     sourceCleanup,
   };

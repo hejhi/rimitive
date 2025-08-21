@@ -31,10 +31,9 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 import type { GraphWalker } from './helpers/graph-walker';
-import type { Propagator } from './helpers/propagator';
 import type { WorkQueue } from './helpers/work-queue';
 
-const { RUNNING } = CONSTANTS;
+const { RUNNING, INVALIDATED } = CONSTANTS;
 
 // ALIEN-SIGNALS PATTERN: Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
@@ -53,7 +52,6 @@ interface SignalState<T> extends ProducerNode {
 interface SignalFactoryContext extends SignalContext {
   dependencies: DependencyGraph;
   graphWalker: GraphWalker;
-  propagator: Propagator;
   workQueue: WorkQueue;
 }
 
@@ -61,12 +59,19 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
   const {
     dependencies: { link },
     graphWalker: { dfs },
-    propagator: { add },
     workQueue: { enqueue, flush }
   } = ctx;
   
-  // Pre-bind notification handler for hot path
+  // Pre-bind notification handlers for hot path
   const notifyNode = (node: ConsumerNode): void => {
+    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
+  };
+  
+  // Handler for batch mode: mark as invalidated AND queue effects
+  const invalidateNode = (node: ConsumerNode): void => {
+    // Mark computed/effect as invalidated so it knows to recompute
+    if ('_flags' in node) node._flags |= INVALIDATED;
+    // Also queue effects for execution at batch end
     if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
   };
   
@@ -96,12 +101,13 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         // Skip propagation if no dependents
         if (!state._out) return;
         
-        // Propagate changes
+        // IMMEDIATE PROPAGATION: Always traverse graph immediately
+        // This eliminates double traversal overhead
         if (ctx.batchDepth > 0) {
-          // During batch: accumulate roots for batch-end traversal
-          add(state._out);
+          // During batch: mark as invalidated AND queue effects
+          dfs(state._out, invalidateNode);
         } else {
-          // Outside batch: direct traversal
+          // Outside batch: just queue effects and flush immediately
           dfs(state._out, notifyNode);
           flush();
         }
