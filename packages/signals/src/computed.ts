@@ -1,34 +1,7 @@
 /**
  * ALGORITHM: Lazy Computed Values with Push-Pull Reactivity
  * 
- * Computed values are the heart of the reactive system, implementing several key algorithms:
- * 
- * 1. LAZY EVALUATION (Pull Algorithm):
- *    - Only recompute when accessed AND dependencies have changed
- *    - Cache results between computations for efficiency
- *    - Inspired by Haskell's lazy evaluation and spreadsheet formulas
- * 
- * 2. AUTOMATIC DEPENDENCY TRACKING (Dynamic Discovery):
- *    - Dependencies detected at runtime by intercepting signal reads
- *    - No need to declare dependencies upfront (unlike React's useEffect)
- *    - Dependencies can change between computations (conditional logic)
- * 
- * 3. PUSH-PULL HYBRID:
- *    - PUSH: Receive invalidation notifications from dependencies
- *    - PULL: Only recompute when actually accessed
- *    - Best of both worlds: eager notification, lazy computation
- * 
- * 4. DIAMOND DEPENDENCY OPTIMIZATION:
- *    - Handles diamond patterns efficiently (A -> B,C -> D)
- *    - Version tracking prevents redundant recomputation
- *    - Global version clock enables O(1) staleness checks
- * 
- * This creates a directed acyclic graph (DAG) that updates with optimal efficiency.
- * The implementation draws inspiration from:
- * - MobX computed values
- * - Vue 3's computed refs
- * - SolidJS memos
- * - Incremental computation literature
+ * Computed values are the heart of the reactive system.
  */
 
 import { CONSTANTS } from './constants';
@@ -37,9 +10,8 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { SignalContext } from './context';
-// no-op import removed: dev-only cycle detection eliminated
 
-// ALIEN-SIGNALS PATTERN: Single function interface for both read and peek
+// Single function interface for both read and peek
 // The function also implements ProducerNode and ConsumerNode to expose graph properties
 export interface ComputedFunction<T = unknown> extends ProducerNode, ConsumerNode {
   (): T;                    // Read operation (tracks dependencies)
@@ -75,7 +47,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     sourceCleanup: { pruneStale },
   } = ctx;
   
-  // CLOSURE PATTERN: Create computed with closure-captured state for better V8 optimization
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
     // State object captured in closure - no binding needed
     const state: ComputedState<T> = {
@@ -92,7 +63,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _updateValue: null as unknown as (() => boolean),
     };
 
-    // Computed function using closure instead of bound this
     const computed = (() => {
       // Treat computed exactly like a signal for dependency tracking
       // Register with current consumer FIRST (like signals do)

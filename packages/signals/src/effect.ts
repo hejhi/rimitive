@@ -103,11 +103,9 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
     // Flush method using closure
     const flushEffect = (): void => {
-      // OPTIMIZATION: Early Exit Checks
       // Skip if disposed (dead node) or already running (prevent re-entrance)
       if (effect._flags & (DISPOSED | RUNNING)) return;
 
-      // OPTIMIZATION: Check if effect needs to run
       // Skip if not marked as PENDING (a compound flag)
       if (!(effect._flags & PENDING)) return;
 
