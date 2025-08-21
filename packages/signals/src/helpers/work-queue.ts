@@ -32,17 +32,17 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
   const enqueue = (node: ScheduledNode): void => {
     if (node._flags & SCHEDULED) return; // already scheduled
     
-    // Mark as scheduled using bit flag
+    // Mark as scheduled and clear next pointer
     node._flags |= SCHEDULED;
-    
+    node._nextScheduled = undefined;
+
     // Add to queue
     if (ctx.queueTail) {
       ctx.queueTail._nextScheduled = node;
-      ctx.queueTail = node;
     } else {
-      ctx.queueHead = ctx.queueTail = node;
+      ctx.queueHead = node;
     }
-    node._nextScheduled = undefined; // Tail has no next
+    ctx.queueTail = node;
   };
 
   // Idempotent disposal helper shared across node types
