@@ -1,5 +1,5 @@
 import { CONSTANTS } from '../constants';
-import type { Edge, ConsumerNode } from '../types';
+import type { Edge, ConsumerNode, ScheduledNode } from '../types';
 
 const { INVALIDATED, DISPOSED, RUNNING } = CONSTANTS;
 
@@ -21,10 +21,8 @@ export interface QueuedEdge extends Edge {
 }
 
 export interface GraphWalker {
-  // Default traversal (DFS) used by signals/computeds
-  walk: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
   // Depth-first traversal exposed explicitly
-  dfs: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
+  dfs: (from: Edge | undefined, visit: (node: ScheduledNode) => void) => void;
   // Multi-root traversal using intrusive queue
   dfsMany: (rootsHead: QueuedEdge | undefined, visit: (node: ConsumerNode) => void) => void;
 }
@@ -40,26 +38,12 @@ export function createGraphWalker(): GraphWalker {
   // Depth-first traversal with intrusive stack (zero allocations)
   const dfs = (
     from: Edge | undefined,
-    visit: (node: ConsumerNode) => void
+    visit: (node: ScheduledNode) => void
   ): void => {
-    if (!from) return;
+    const SKIP_FLAGS = CONSTANTS.INVALIDATED | CONSTANTS.DISPOSED | CONSTANTS.RUNNING;
 
-    // OPTIMIZATION: Fast path for single-edge linear chains
-    // Avoid stack operations for simple cases
-    if (!from.nextOut) {
-      let edge: Edge | undefined = from;
-      while (edge && !edge.nextOut) {
-        const to = edge.to as ConsumerNode;
-        if (to._flags & SKIP_FLAGS) break;
-
-        to._flags |= INVALIDATED;
-        visit(to);
-        edge = (to as unknown as { _out?: Edge })._out;
-      }
-
-      // If we broke out with multiple targets, fall through to normal DFS
-      if (!edge) return;
-      from = edge;
+    interface StackedEdge extends Edge {
+      _stackNext?: StackedEdge;
     }
 
     let stackHead: StackedEdge | undefined;
@@ -68,23 +52,21 @@ export function createGraphWalker(): GraphWalker {
     while (currentEdge) {
       const target = currentEdge.to;
 
-      // Skip nodes already notified/disposed/running  
       if (target._flags & SKIP_FLAGS) {
         currentEdge = currentEdge.nextOut;
         continue;
       }
 
-      // Mark as INVALIDATED (lazy invalidation) and invoke visitor
-      target._flags |= INVALIDATED;
-      visit(target);
+      // Inline both invalidation and enqueue
+      target._flags |= CONSTANTS.INVALIDATED;
+      if ('_nextScheduled' in target) {
+        visit(target as ScheduledNode);
+      }
 
-      // Optimized traversal with reduced branching
       const nextSibling = currentEdge.nextOut;
       const childTargets = (target as unknown as { _out?: Edge })._out;
 
-      // Determine next edge to process using intrusive stack
       if (childTargets) {
-        // Push sibling to stack if exists, then go to children
         if (nextSibling) {
           const sibling = nextSibling as StackedEdge;
           sibling._stackNext = stackHead;
@@ -92,10 +74,8 @@ export function createGraphWalker(): GraphWalker {
         }
         currentEdge = childTargets;
       } else if (nextSibling) {
-        // No children, process sibling
         currentEdge = nextSibling;
       } else if (stackHead) {
-        // No children or siblings, pop from stack
         currentEdge = stackHead;
         stackHead = stackHead._stackNext;
       } else {
@@ -163,9 +143,5 @@ export function createGraphWalker(): GraphWalker {
     }
   };
 
-
-
-  // Keep DFS as the default walk to preserve existing behavior
-  const walk = dfs;
-  return { walk, dfs, dfsMany };
+  return { dfs, dfsMany };
 }

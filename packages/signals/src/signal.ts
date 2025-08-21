@@ -14,7 +14,7 @@
  * - This enables automatic dependency discovery during execution
  */
 import { CONSTANTS } from './constants';
-import { ProducerNode, ConsumerNode, ScheduledNode } from './types';
+import type { ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
@@ -50,10 +50,6 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     workQueue: { enqueue, flush }
   } = ctx;
   
-  const notifyNode = (node: ConsumerNode): void => {
-    if ('_nextScheduled' in node) enqueue(node as ScheduledNode);
-  };
-  
   // CLOSURE PATTERN: Create signal with closure-captured state for better V8 optimization
   function createSignal<T>(initialValue: T): SignalFunction<T> {
     // State object captured in closure - no binding needed
@@ -82,7 +78,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         
         // IMMEDIATE PROPAGATION: Traverse graph immediately
         // This eliminates double traversal overhead
-        dfs(state._out, notifyNode);
+        dfs(state._out, enqueue);
 
         // If no batch, flush
         if (!ctx.batchDepth) flush();
