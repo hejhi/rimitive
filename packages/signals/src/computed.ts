@@ -97,10 +97,11 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     };
 
     // Computed function using closure instead of bound this
-    const computedFunction = (() => {
+    const computed = (() => {
       // Treat computed exactly like a signal for dependency tracking
       // Register with current consumer FIRST (like signals do)
       const consumer = ctx.currentConsumer;
+
       if (consumer && (consumer._flags & RUNNING)) link(state, consumer, ctx.trackingVersion);
 
       // Lazy Evaluation - only recompute if stale
@@ -110,7 +111,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     }) as ComputedFunction<T>;
 
     // Add peek method using closure
-    computedFunction.peek = () => {
+    computed.peek = () => {
       // ALGORITHM: Non-tracking Read
       // Same as value getter but doesn't register dependencies
       if (state._flags & (STALE | INVALIDATED)) updateComputed();
@@ -180,28 +181,27 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
       let valueChanged = false;
       try {
-        // ALGORITHM: Execute User Computation
-        // This may read signals/computeds, which will call addDependency
-        const newValue = state._callback();
-
-        // ALGORITHM: Change Detection
-        // Check if value actually changed
+        // SIMPLIFIED: More like signal's pattern
         const oldValue = state._value;
-        valueChanged = newValue !== oldValue;
+        const newValue = state._callback();
         
-        if (valueChanged) {
+        // Check if value changed (like signals do)
+        if (newValue !== oldValue) {
+          // Value changed - update and mark dirty
           state._value = newValue;
-          // Only mark dirty if this is not the initial evaluation
-          // Initial evaluation (undefined -> value) shouldn't mark as dirty
+          valueChanged = true;
+          
+          // Mark dirty only if not initial evaluation
           if (oldValue !== undefined) {
-            state._dirty = true;  // Mark as dirty for our consumers
+            state._dirty = true;
+            
+            // NOTE: We can't propagate immediately like signals because
+            // computeds are lazy - our dependents will check us when they need to
           }
         } else {
-          state._dirty = false; // Clear dirty if value didn't change
+          // Value unchanged - clear dirty flag
+          state._dirty = false;
         }
-
-        // After successful update, we're no longer stale/invalidated
-        // (flags already cleared by refreshConsumers if not stale)
       } finally {
         // ALGORITHM: Cleanup Phase (Critical for correctness)
         // 1. Restore previous consumer context
@@ -222,9 +222,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     state.dispose = dispose;
 
     // Add the dispose method to the function
-    computedFunction.dispose = dispose;
+    computed.dispose = dispose;
 
-    return computedFunction;
+    return computed;
   }
 
   return {
