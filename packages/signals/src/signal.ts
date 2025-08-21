@@ -1,7 +1,7 @@
 /**
  * ALGORITHM: Push-Pull Reactive Signal Implementation
  * 
- * This module implements the core Signal primitive using a hybrid push-pull algorithm:
+ * This module implements the core Signal primitive using a push-pull algorithm:
  * 
  * PUSH PHASE (Write):
  * - When a signal's value changes, it traverses its dependency graph
@@ -11,19 +11,7 @@
  * PULL PHASE (Read):
  * - When a computed/effect reads a signal, it establishes a dependency edge
  * - The edge tracks version numbers for efficient cache invalidation
- * - Uses automatic dependency discovery during execution
- * 
- * KEY ALGORITHMS:
- * 1. Automatic Dependency Tracking: Dependencies discovered at runtime
- * 2. Version-based Invalidation: O(1) staleness checks via version numbers
- * 3. Automatic Batching: All sync updates batched to prevent redundant work
- * 4. Intrusive Linked Lists: Memory-efficient bidirectional graph edges
- * 
- * INSPIRATION: This design combines ideas from:
- * - MobX (automatic tracking)
- * - Vue 3 (proxy-free signals)
- * - SolidJS (fine-grained reactivity)
- * - alien-signals (optimized graph traversal)
+ * - This enables automatic dependency discovery during execution
  */
 import { CONSTANTS } from './constants';
 import { ProducerNode, ConsumerNode, ScheduledNode } from './types';
@@ -35,7 +23,7 @@ import type { WorkQueue } from './helpers/work-queue';
 
 const { RUNNING } = CONSTANTS;
 
-// ALIEN-SIGNALS PATTERN: Single function interface for both read and write
+// Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
 export interface SignalFunction<T = unknown> extends ProducerNode {
   (): T;                    // Read operation
@@ -43,10 +31,10 @@ export interface SignalFunction<T = unknown> extends ProducerNode {
   peek(): T;                // Non-tracking read
 }
 
-// ALIEN-SIGNALS PATTERN: Signal state object that gets bound to the function
+// Signal state object that gets bound to the function
 // This IS the actual signal - no indirection through properties
 interface SignalState<T> extends ProducerNode {
-  value: T;                 // Current value (alien uses 'value' directly)
+  value: T;
 }
 
 interface SignalFactoryContext extends SignalContext {
@@ -79,8 +67,8 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     
     // Signal function using closure instead of bound this
     const signal = ((...args: [] | [T]): T | void => {
+      // WRITE
       if (args.length) {
-        // WRITE OPERATION
         const newValue = args[0];
         
         if (state.value === newValue) return;
@@ -92,18 +80,20 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         // Skip propagation if no dependents
         if (!state._out) return;
         
-        // IMMEDIATE PROPAGATION: Always traverse graph immediately
+        // IMMEDIATE PROPAGATION: Traverse graph immediately
         // This eliminates double traversal overhead
         dfs(state._out, notifyNode);
 
+        // If no batch, flush
         if (!ctx.batchDepth) flush();
       } else {
-        // Direct context access from closure for currently executing consumer
+        // READ
+        // The currently executing consumer in the context, if there is one
         const current = ctx.currentConsumer;
         
-        // If there's a consumer accessing the signal, we need to create a link between them (dynamic dep discovery)
+        // If an executing consumer is reading a signal, we need to establish a link to it here
         if (current && (current._flags & RUNNING)) link(state, current, ctx.trackingVersion);
-        
+
         return state.value;
       }
     }) as SignalFunction<T>;
