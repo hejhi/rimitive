@@ -11,7 +11,7 @@
  * - Database query planners (dependency analysis)
  */
 import { CONSTANTS } from '../constants';
-import type { ProducerNode, ConsumerNode, Edge, ToNode } from '../types';
+import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode } from '../types';
 
 const { TRACKING, INVALIDATED, STALE, PENDING } = CONSTANTS;
 
@@ -37,12 +37,13 @@ interface StackFrame {
 export function createDependencyGraph(): DependencyGraph {
   // ALIEN-STYLE OPTIMIZATION: O(1) link without linear search
   const link = (
-    producer: ProducerNode,
-    consumer: ConsumerNode,
+    producer: FromNode,
+    consumer: ToNode,
     trackingVersion: number
   ): void => {
     // FAST PATH: Check tail (most recently accessed dependency)
     const tail = consumer._inTail;
+
     if (tail !== undefined && tail.from === producer) {
       tail.trackingVersion = trackingVersion;
       return;
@@ -50,6 +51,7 @@ export function createDependencyGraph(): DependencyGraph {
 
     // FAST PATH: Check second most recent (2-element cache)
     const nextAfterTail = tail !== undefined ? tail.nextIn : consumer._in;
+
     if (nextAfterTail !== undefined && nextAfterTail.from === producer) {
       nextAfterTail.trackingVersion = trackingVersion;
       consumer._inTail = nextAfterTail;
@@ -62,7 +64,6 @@ export function createDependencyGraph(): DependencyGraph {
     // The duplicate edges will be cleaned up during unlinking.
 
     // Create new edge immediately - no searching
-    const prevDep = tail;
     const nextDep = tail !== undefined ? tail.nextIn : consumer._in;
     const prevOut = producer._outTail;
 
@@ -70,7 +71,7 @@ export function createDependencyGraph(): DependencyGraph {
       from: producer,
       to: consumer,
       trackingVersion: trackingVersion,
-      prevIn: prevDep,
+      prevIn: tail,
       prevOut,
       nextIn: nextDep,
       nextOut: undefined,
@@ -78,16 +79,17 @@ export function createDependencyGraph(): DependencyGraph {
 
     // Update consumer's input list
     if (nextDep) nextDep.prevIn = newEdge;
-    if (prevDep) {
-      prevDep.nextIn = newEdge;
+
+    if (tail) {
+      tail.nextIn = newEdge;
     } else {
       consumer._in = newEdge;
     }
+
     consumer._inTail = newEdge;
 
     // Set TRACKING flag if producer is a computed node
-    if ('_flags' in producer)
-      (producer as ProducerNode & ConsumerNode)._flags |= TRACKING;
+    if ('_flags' in producer) producer._flags |= TRACKING;
 
     // Update producer's output list
     if (prevOut) {
@@ -95,6 +97,7 @@ export function createDependencyGraph(): DependencyGraph {
     } else {
       producer._out = newEdge;
     }
+
     producer._outTail = newEdge;
   };
 
@@ -120,9 +123,7 @@ export function createDependencyGraph(): DependencyGraph {
     } else {
       from._out = nextOut;
       // Clear TRACKING flag if this was the last consumer
-      if (!nextOut && '_flags' in from) {
-        from._flags &= ~TRACKING;
-      }
+      if (!nextOut && '_flags' in from) (from._flags &= ~TRACKING);
     }
     
     return nextIn;
@@ -154,21 +155,19 @@ export function createDependencyGraph(): DependencyGraph {
         const source = edge.from;
         const wasDirty = source._dirty;
         
-        // DON'T clear dirty flag here - multiple consumers may need to see it
-        
         // Branch on node type for better prediction (preserved original logic)
         if ('_in' in source) {
           // Computed node
-          const sourceFlags = source._flags;
+          const { _flags, _in } = source;
           
-          if (sourceFlags & STALE) {
+          if (_flags & STALE) {
             stale = true;
-          } else if (wasDirty || (sourceFlags & PENDING)) {
-            if (sourceFlags & INVALIDATED) {
+          } else if (wasDirty || _flags & PENDING) {
+            if (_flags & INVALIDATED) {
               // Push to stack and recurse
               stack = { edge, next: edge.nextIn, to: node, stale, prev: stack };
               node = source;
-              edge = source._in;
+              edge = _in;
               stale = false;
               continue;
             }
@@ -183,19 +182,17 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Process current node
-      if (!stale) {
-        node._flags &= ~INVALIDATED;
-      }
-      
+      if (!stale) node._flags &= ~INVALIDATED;
       if (!stack) break;
 
-      // Stack unwind (preserved original logic)
-      const frame = stack;
       if (stale) {
         node._updateValue();
         // After updating, check if node is still dirty (for producer nodes)
         stale = '_dirty' in node ? node._dirty : false;
       }
+
+      // Stack unwind (preserved original logic)
+      const frame = stack;
 
       edge = frame.next;
       node = frame.to;
@@ -208,9 +205,5 @@ export function createDependencyGraph(): DependencyGraph {
     return stale;
   };
 
-  return {
-    link,
-    unlink,
-    refreshConsumers,
-  };
+  return { link, unlink, refreshConsumers };
 }

@@ -114,9 +114,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // If only INVALIDATED (not STALE), check if dependencies actually changed
       if (!(effect._flags & STALE)) {
         // FAST PATH: If not invalidated, we're clean
-        if (!(effect._flags & INVALIDATED)) {
-          return;
-        }
+        if (!(effect._flags & INVALIDATED)) return;
 
         // Slow path: perform dependency check
         if (!refreshConsumers(effect)) {
