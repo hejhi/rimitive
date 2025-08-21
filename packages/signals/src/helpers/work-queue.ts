@@ -4,20 +4,13 @@ import type { SignalContext } from '../context';
 
 const { DISPOSED, SCHEDULED } = CONSTANTS;
 
-export interface QueueState {
-  // Number of scheduled nodes (for quick checks and observability)
-  size: number;
-}
-
 export interface WorkQueue {
-  state: QueueState;
   enqueue: (node: ScheduledNode) => void;
   dispose: <T extends ScheduledNode>(
     node: T,
     cleanup: (node: T) => void
   ) => void;
   flush: () => void;
-  size: () => number;
 }
 
 /**
@@ -34,9 +27,6 @@ export interface WorkQueue {
  * - Preserves effect ordering for predictable behavior
  */
 export function createWorkQueue(ctx: SignalContext): WorkQueue {
-  const state: QueueState = {
-    size: 0,
-  };
 
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
@@ -53,7 +43,6 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
       ctx.queueHead = ctx.queueTail = node;
     }
     node._nextScheduled = undefined; // Tail has no next
-    state.size++;
   };
 
   // Idempotent disposal helper shared across node types
@@ -73,7 +62,6 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
 
     // Clear the queue first to allow re-entrance scheduling
     ctx.queueHead = ctx.queueTail = undefined;
-    state.size = 0;
     
     while (current) {
       const next: ScheduledNode | undefined = current._nextScheduled;
@@ -84,7 +72,5 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     }
   };
 
-  const size = (): number => state.size;
-
-  return { state, enqueue, dispose, flush, size };
+  return { enqueue, dispose, flush };
 }

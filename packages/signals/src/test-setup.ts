@@ -62,9 +62,10 @@ export function createTestInstance() {
       if (ctx.batchDepth > 0) ctx.batchDepth--;
     },
     getBatchDepth: () => ctx.batchDepth,
-    hasPendingEffects: () => ctx.workQueue.state.size > 0,
+    hasPendingEffects: () => ctx.queueHead !== undefined,
     clearBatch: () => {
-      ctx.workQueue.state.size = 0;
+      // Clear queue
+      ctx.queueHead = ctx.queueTail = undefined;
       // Reset batch depth safely
       ctx.batchDepth = 0;
     },
@@ -83,7 +84,6 @@ export function createTestInstance() {
         node = next;
       }
       ctx.queueHead = ctx.queueTail = undefined;
-      ctx.workQueue.state.size = 0;
 
       // Reset context
       ctx.currentConsumer = null;
@@ -123,7 +123,14 @@ export const activeContext = (() => {
   const getter = {
     get batchDepth() { return defaultInstance.activeContext.batchDepth; },
     get scheduledCount() { 
-      return defaultInstance.workQueue.state.size;
+      // Count nodes in queue
+      let count = 0;
+      let node = defaultInstance.activeContext.queueHead;
+      while (node) {
+        count++;
+        node = node._nextScheduled;
+      }
+      return count;
     },
     get scheduledQueue() { 
       // Materialize the current intrusive queue as an array snapshot

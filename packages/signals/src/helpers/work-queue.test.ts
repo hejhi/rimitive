@@ -1,12 +1,22 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createWorkQueue } from './work-queue';
-import { createContext } from '../context';
+import { createContext, type SignalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
 const { DISPOSED } = CONSTANTS;
 
 describe('WorkQueue', () => {
+  // Helper to count nodes in queue
+  const getQueueSize = (ctx: SignalContext): number => {
+    let count = 0;
+    let node = ctx.queueHead;
+    while (node) {
+      count++;
+      node = node._nextScheduled;
+    }
+    return count;
+  };
   it('should enqueue nodes', () => {
     const ctx = createContext();
     const helpers = createWorkQueue(ctx);
@@ -23,7 +33,7 @@ describe('WorkQueue', () => {
     };
     
     helpers.enqueue(node);
-    expect(helpers.state.size).toBe(1);
+    expect(getQueueSize(ctx)).toBe(1);
   });
 
   it('should not enqueue already scheduled nodes', () => {
@@ -43,11 +53,11 @@ describe('WorkQueue', () => {
     
     // Enqueue once
     helpers.enqueue(node);
-    expect(helpers.state.size).toBe(1);
+    expect(getQueueSize(ctx)).toBe(1);
     
     // Try to enqueue again - should be skipped
     helpers.enqueue(node);
-    expect(helpers.state.size).toBe(1);
+    expect(getQueueSize(ctx)).toBe(1);
   });
 
   it('should dispose node only once', () => {
@@ -124,7 +134,7 @@ describe('WorkQueue', () => {
     
     helpers.flush();
     
-    expect(helpers.state.size).toBe(0);
+    expect(getQueueSize(ctx)).toBe(0);
     expect(flush1).toHaveBeenCalledTimes(1);
     expect(flush2).toHaveBeenCalledTimes(1);
     expect(flush3).toHaveBeenCalledTimes(1);
@@ -142,7 +152,7 @@ describe('WorkQueue', () => {
     expect(() => helpers.flush()).not.toThrow();
     
     // State should remain unchanged
-    expect(helpers.state.size).toBe(0);
+    expect(getQueueSize(ctx)).toBe(0);
     expect(ctx.queueHead).toBeUndefined();
   });
 
