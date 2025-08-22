@@ -63,53 +63,11 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _callback: compute,
     };
 
-    const computed = (() => {
-      // Treat computed exactly like a signal for dependency tracking
-      // Register with current consumer FIRST (like signals do)
-      const consumer = ctx.currentConsumer;
-
-      if (consumer && (consumer._flags & RUNNING)) link(state, consumer, ctx.trackingVersion);
-
-      // Lazy Evaluation - only recompute if stale
-      if (state._flags & (STALE | INVALIDATED)) updateComputed();
-      
-      return state.value;
-    }) as ComputedFunction<T>;
-
-    // Add peek method using closure
-    computed.peek = () => {
-      // ALGORITHM: Non-tracking Read
-      // Same as value getter but doesn't register dependencies
-      if (state._flags & (STALE | INVALIDATED)) updateComputed();
-      return state.value!;
-    };
-
-    const updateComputed = (): void => {
-      // RE-ENTRANCE GUARD: Prevent infinite recursion
-      if (state._flags & RUNNING) return;
-
-      // Just check if we need to recompute
-      // STALE means definitely need to recompute
-      // INVALIDATED means maybe - check dependencies
-      if (state._flags & STALE) {
-        state._updateValue();
-      } else if (state._flags & INVALIDATED) {
-        // PULL
-        // Check if any dependencies actually changed
-        if (refreshConsumers(state)) {
-          state._updateValue();
-        } else {
-          // Dependencies haven't changed, just clear invalidated flag
-          state._flags &= ~INVALIDATED;
-        }
-      }
-    }
-
     // Create updateValue that captures state in closure
-    const updateValueImpl = (): boolean => {
+    const updateValue = (): boolean => {
       // Check if this is the first evaluation (STALE flag is set initially)
       const isFirstEvaluation = (state._flags & STALE) !== 0;
-      
+
       // SETUP: Prepare for recomputation
       // 1. Set RUNNING flag (prevent circular dependencies)
       // 2. Clear stale/invalidated flags
@@ -118,7 +76,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // DEPENDENCY TRACKING SETUP:
       // Each computation gets a unique version to identify its dependencies
       ctx.trackingVersion++;
-      
+
       // Mark where current dependencies end (everything after will be removed)
       state._inTail = undefined;
 
@@ -129,17 +87,17 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       let valueChanged = false;
       try {
         const oldValue = state.value;
-        const newValue = state._callback();
-        
+        const newValue = compute();
+
         // Check if value changed (like signals do)
         if (newValue !== oldValue) {
           // Value changed - update and mark dirty
           state.value = newValue;
           valueChanged = true;
-          
+
           // Only mark dirty if not the first evaluation (first eval shouldn't trigger dependents)
           if (!isFirstEvaluation) state._dirty = true;
-          
+
           // NOTE: We can't propagate immediately like signals because
           // computeds are lazy - our dependents will check us when they need to
         } else {
@@ -161,9 +119,52 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
       return valueChanged;
     };
-    
+
+    const updateComputed = (): void => {
+      // RE-ENTRANCE GUARD: Prevent infinite recursion
+      if (state._flags & RUNNING) return;
+
+      // Just check if we need to recompute
+      // STALE means definitely need to recompute
+      // INVALIDATED means maybe - check dependencies
+      if (state._flags & STALE) {
+        updateValue();
+      } else if (state._flags & INVALIDATED) {
+        // PULL
+        // Check if any dependencies actually changed
+        if (refreshConsumers(state)) {
+          updateValue();
+        } else {
+          // Dependencies haven't changed, just clear invalidated flag
+          state._flags &= ~INVALIDATED;
+        }
+      }
+    };
+
+    const computed = (() => {
+      // Treat computed exactly like a signal for dependency tracking
+      // Register with current consumer FIRST (like signals do)
+      const consumer = ctx.currentConsumer;
+
+      if (consumer && consumer._flags & RUNNING)
+        link(state, consumer, ctx.trackingVersion);
+
+      // Lazy Evaluation - only recompute if stale
+      if (state._flags & (STALE | INVALIDATED)) updateComputed();
+
+      return state.value;
+    }) as ComputedFunction<T>;
+
+    // Add peek method using closure
+    computed.peek = () => {
+      // ALGORITHM: Non-tracking Read
+      // Same as value getter but doesn't register dependencies
+      if (state._flags & (STALE | INVALIDATED)) updateComputed();
+      return state.value!;
+    };
+
     // Set internal method
-    state._updateValue = updateValueImpl;
+    state._updateValue = updateValue;
 
     return computed;
   }
