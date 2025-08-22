@@ -36,8 +36,9 @@ group('Computed Reads', () => {
   summary(() => {
     barplot(() => {
       bench('Lattice - computed reads', function* () {
-        const signal = latticeSignal(42);
-        const computed = latticeComputed(() => signal() * 2);
+        const one = latticeSignal(10);
+        const two = latticeSignal(10);
+        const computed = latticeComputed(() => one() * two() * 10);
         
         yield () => {
           let sum = 0;
@@ -49,9 +50,10 @@ group('Computed Reads', () => {
       });
     
       bench('Preact - computed reads', function* () {
-        const signal = preactSignal(42);
-        const computed = preactComputed(() => signal.value * 2);
-        
+        const one = preactSignal(10);
+        const two = preactSignal(10);
+        const computed = preactComputed(() => one.value * two.value * 10);
+
         yield () => {
           let sum = 0;
           for (let i = 0; i < ITERATIONS; i++) {
@@ -62,8 +64,9 @@ group('Computed Reads', () => {
       });
     
       bench('Alien - computed reads', function* () {
-        const signal = alienSignal(42);
-        const computed = alienComputed(() => signal() * 2);
+        const one = alienSignal(10);
+        const two = alienSignal(10);
+        const computed = alienComputed(() => one() * two() * 10);
         
         yield () => {
           let sum = 0;
