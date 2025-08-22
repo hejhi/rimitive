@@ -40,12 +40,6 @@ export function createGraphWalker(): GraphWalker {
     from: Edge | undefined,
     visit: (node: ScheduledNode) => void
   ): void => {
-    const SKIP_FLAGS = CONSTANTS.INVALIDATED | CONSTANTS.DISPOSED | CONSTANTS.RUNNING;
-
-    interface StackedEdge extends Edge {
-      _stackNext?: StackedEdge;
-    }
-
     let stackHead: StackedEdge | undefined;
     let currentEdge: Edge | undefined = from;
 
