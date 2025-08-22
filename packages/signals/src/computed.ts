@@ -5,7 +5,7 @@
  */
 
 import { CONSTANTS } from './constants';
-import { Edge, ProducerNode, ConsumerNode } from './types';
+import { ProducerNode, ConsumerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
@@ -23,7 +23,7 @@ interface ComputedState<T> extends ProducerNode, ConsumerNode {
   __type: 'computed';
   _updateValue(): boolean; // Update the computed value when dependencies change
   _callback: () => T; // User's computation function
-  _value: T | undefined; // Cached computed value
+  value: T | undefined; // Cached computed value
 }
 
 const {
@@ -51,16 +51,16 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // State object captured in closure - no binding needed
     const state: ComputedState<T> = {
       __type: 'computed' as const,
-      _callback: compute,
-      _value: undefined as T | undefined,
-      _in: undefined as Edge | undefined,
-      _inTail: undefined as Edge | undefined,
-      _out: undefined as Edge | undefined,
-      _outTail: undefined as Edge | undefined,
-      _flags: STALE,
+      value: undefined,
+      _out: undefined,
+      _outTail: undefined,
       _dirty: false,
+      _in: undefined,
+      _inTail: undefined,
+      _flags: STALE,
       // This will be set below
-      _updateValue: null as unknown as (() => boolean),
+      _updateValue: null as unknown as () => boolean,
+      _callback: compute,
     };
 
     const computed = (() => {
@@ -73,7 +73,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Lazy Evaluation - only recompute if stale
       if (state._flags & (STALE | INVALIDATED)) updateComputed();
       
-      return state._value;
+      return state.value;
     }) as ComputedFunction<T>;
 
     // Add peek method using closure
@@ -81,7 +81,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // ALGORITHM: Non-tracking Read
       // Same as value getter but doesn't register dependencies
       if (state._flags & (STALE | INVALIDATED)) updateComputed();
-      return state._value!;
+      return state.value!;
     };
 
     const updateComputed = (): void => {
@@ -128,13 +128,13 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
       let valueChanged = false;
       try {
-        const oldValue = state._value;
+        const oldValue = state.value;
         const newValue = state._callback();
         
         // Check if value changed (like signals do)
         if (newValue !== oldValue) {
           // Value changed - update and mark dirty
-          state._value = newValue;
+          state.value = newValue;
           valueChanged = true;
           
           // Only mark dirty if not the first evaluation (first eval shouldn't trigger dependents)

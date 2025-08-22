@@ -48,6 +48,7 @@ export interface Disposable {
 export interface ProducerNode extends ReactiveNode {
   _out: Edge | undefined;  // Head of output list
   _outTail: Edge | undefined;  // Tail of output list
+  value: unknown;
   
   // DIRTY FLAG (Alien-Signals Pattern)
   // Set to true when THIS node's value changes.

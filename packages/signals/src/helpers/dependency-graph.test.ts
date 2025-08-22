@@ -15,7 +15,8 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _out: undefined,
         _dirty: false,
-        _outTail: undefined
+        _outTail: undefined,
+        value: 0,
       };
       
       const target: ConsumerNode = {
@@ -46,6 +47,7 @@ describe('Dependency Graph Helpers', () => {
         _out: undefined,
         _dirty: false,
         _outTail: undefined,
+        value: 0
       };
       
       const target: ConsumerNode = {
@@ -76,6 +78,7 @@ describe('Dependency Graph Helpers', () => {
         _out: undefined,
         _dirty: false,
         _outTail: undefined,
+        value: 0,
       };
       
       const target: ConsumerNode = {
@@ -130,6 +133,7 @@ describe('Dependency Graph Helpers', () => {
         _out: undefined,
         _dirty: false,
         _outTail: undefined,
+        value: 0,
       };
       
       const target: ConsumerNode = {
@@ -162,6 +166,7 @@ describe('Dependency Graph Helpers', () => {
           _out: undefined,
           _dirty: false,
           _outTail: undefined,
+          value: 0,
         };
         
         const target: ConsumerNode = {
@@ -188,6 +193,7 @@ describe('Dependency Graph Helpers', () => {
           _out: undefined,
           _dirty: false,
           _outTail: undefined,
+          value: 0,
         };
         
         const target1: ConsumerNode = {
@@ -226,7 +232,8 @@ describe('Dependency Graph Helpers', () => {
           _out: undefined,
           _dirty: false,
           _flags: 0,
-          _outTail: undefined
+          _outTail: undefined,
+          value: 0,
         };
         
         const target: ConsumerNode = {
@@ -251,6 +258,7 @@ describe('Dependency Graph Helpers', () => {
           _out: undefined,
           _dirty: false,
           _outTail: undefined,
+          value: 0,
         };
         
         const target: ConsumerNode = {
@@ -278,6 +286,7 @@ describe('Dependency Graph Helpers', () => {
           _out: undefined,
           _dirty: false,
           _outTail: undefined,
+          value: 0,
         };
         
         const targets = Array.from({ length: 3 }, (_, i) => ({
@@ -326,6 +335,7 @@ describe('Dependency Graph Helpers', () => {
           _dirty: false,
           _flags: 16, // TRACKING flag set
           _outTail: undefined,
+          value: 0,
         };
         
         const target: ConsumerNode = {
@@ -350,12 +360,14 @@ describe('Dependency Graph Helpers', () => {
           _out: undefined,
           _dirty: false,
           _outTail: undefined,
+          value: 0,
         };
         const source2: ProducerNode = {
           __type: 'test',
           _out: undefined,
           _dirty: false,
           _outTail: undefined,
+          value: 0,
         };
         
         const target: ConsumerNode = {

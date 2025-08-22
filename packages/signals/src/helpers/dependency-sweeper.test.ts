@@ -16,7 +16,8 @@ describe('Dependency Sweeper', () => {
     __type: 'test',
     _out: undefined,
     _dirty: false,
-    _outTail: undefined
+    _outTail: undefined,
+    value: 0
   });
 
   const makeConsumer = (): ConsumerNode => ({
