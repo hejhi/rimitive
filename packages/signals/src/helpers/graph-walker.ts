@@ -1,5 +1,5 @@
 import { CONSTANTS } from '../constants';
-import type { Edge, ConsumerNode, ScheduledNode } from '../types';
+import type { Edge, ConsumerNode, ScheduledNode, ToNode } from '../types';
 
 const { INVALIDATED, DISPOSED, RUNNING } = CONSTANTS;
 
@@ -35,7 +35,8 @@ export interface GraphWalker {
  * - Relies on INVALIDATED as a per-walk dedup marker (set on first visit)
  */
 export function createGraphWalker(): GraphWalker {
-  // Depth-first traversal with intrusive stack (zero allocations)
+  // Depth-first traversal with intrusive stack (hybrid approach)
+  // Keeps alien-style do-while but with on-demand sibling computation
   const dfs = (
     from: Edge | undefined,
     visit: (node: ScheduledNode) => void
@@ -43,39 +44,57 @@ export function createGraphWalker(): GraphWalker {
     let stackHead: StackedEdge | undefined;
     let currentEdge: Edge | undefined = from;
 
-    while (currentEdge) {
-      const target = currentEdge.to;
+    // Use do-while like alien-signals for better optimization
+    if (!currentEdge) return;
+    
+    top: do {
+      const target: ToNode = currentEdge!.to;
+      let flags = target._flags;
 
-      if (target._flags & SKIP_FLAGS) {
-        currentEdge = currentEdge.nextOut;
+      // ALIEN-STYLE: Combined flag checking for efficiency
+      // Skip if: INVALIDATED | DISPOSED | RUNNING (our equivalent of their check)
+      if (!(flags & SKIP_FLAGS)) {
+        // Not yet invalidated - mark it
+        target._flags = flags | INVALIDATED;
+
+        if ('_out' in target) {
+          const childTargets: Edge | undefined = target._out;
+
+          if (!childTargets) continue;
+
+          const nextSibling = currentEdge.nextOut as StackedEdge;
+
+          if (nextSibling) {
+            nextSibling._stackNext = stackHead;
+            stackHead = nextSibling;
+          }
+
+          currentEdge = childTargets;
+          continue;
+        }
+        
+        // Schedule if it's a scheduledNode (which does not have _out)
+        if ('_nextScheduled' in target) visit(target as ScheduledNode);
+      }
+
+      // Move to next sibling (on-demand computation)
+      const nextSibling: Edge | undefined = currentEdge.nextOut;
+
+      if (nextSibling) {
+        currentEdge = nextSibling;
         continue;
       }
 
-      // Inline both invalidation and enqueue
-      target._flags |= CONSTANTS.INVALIDATED;
-      if ('_nextScheduled' in target) {
-        visit(target as ScheduledNode);
-      }
-
-      const nextSibling = currentEdge.nextOut;
-      const childTargets = (target as unknown as { _out?: Edge })._out;
-
-      if (childTargets) {
-        if (nextSibling) {
-          const sibling = nextSibling as StackedEdge;
-          sibling._stackNext = stackHead;
-          stackHead = sibling;
-        }
-        currentEdge = childTargets;
-      } else if (nextSibling) {
-        currentEdge = nextSibling;
-      } else if (stackHead) {
+      // Pop from stack
+      while (stackHead) {
         currentEdge = stackHead;
         stackHead = stackHead._stackNext;
-      } else {
-        currentEdge = undefined;
+
+        if (currentEdge) continue top;
       }
-    }
+
+      break;
+    } while (true);
   };
 
   // Depth-first traversal for multiple roots using intrusive queue and stack
