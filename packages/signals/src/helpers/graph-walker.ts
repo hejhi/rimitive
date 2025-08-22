@@ -1,5 +1,5 @@
 import { CONSTANTS } from '../constants';
-import type { Edge, ConsumerNode, ScheduledNode, ToNode } from '../types';
+import type { Edge, ConsumerNode, ScheduledNode } from '../types';
 
 const { INVALIDATED, DISPOSED, RUNNING } = CONSTANTS;
 
@@ -47,54 +47,41 @@ export function createGraphWalker(): GraphWalker {
     // Use do-while like alien-signals for better optimization
     if (!currentEdge) return;
     
-    top: do {
-      const target: ToNode = currentEdge!.to;
-      let flags = target._flags;
-
-      // ALIEN-STYLE: Combined flag checking for efficiency
-      // Skip if: INVALIDATED | DISPOSED | RUNNING (our equivalent of their check)
-      if (!(flags & SKIP_FLAGS)) {
-        // Not yet invalidated - mark it
-        target._flags = flags | INVALIDATED;
-
-        if ('_out' in target) {
-          const childTargets: Edge | undefined = target._out;
-
-          if (!childTargets) continue;
-
-          const nextSibling = currentEdge.nextOut as StackedEdge;
-
-          if (nextSibling) {
-            nextSibling._stackNext = stackHead;
-            stackHead = nextSibling;
-          }
-
-          currentEdge = childTargets;
-          continue;
-        }
-        
-        // Schedule if it's a scheduledNode (which does not have _out)
-        if ('_nextScheduled' in target) visit(target as ScheduledNode);
-      }
-
-      // Move to next sibling (on-demand computation)
-      const nextSibling: Edge | undefined = currentEdge.nextOut;
-
-      if (nextSibling) {
-        currentEdge = nextSibling;
+    do {
+      const target = currentEdge.to;
+      
+      // SHORT-CIRCUIT: Skip already processed nodes
+      if (target._flags & SKIP_FLAGS) {
+        currentEdge = currentEdge.nextOut;
         continue;
       }
 
-      // Pop from stack
-      while (stackHead) {
-        currentEdge = stackHead;
-        stackHead = stackHead._stackNext;
+      // Mark as invalidated and schedule if needed
+      target._flags |= INVALIDATED;
+      
+      // Navigate to next node using original's else-if chain logic
+      const nextSibling = currentEdge.nextOut;
+      
+      currentEdge = nextSibling || stackHead;
+      
+      if ('_out' in target) {
+        const childTargets = target._out;
 
-        if (currentEdge) continue top;
+        if (!childTargets) continue;
+
+        currentEdge = childTargets;
+
+        if (nextSibling) {
+          (nextSibling as StackedEdge)._stackNext = stackHead;
+          stackHead = nextSibling;
+        }
+        continue;
       }
+      
+      if (stackHead) stackHead = stackHead._stackNext;
 
-      break;
-    } while (true);
+      if ('_nextScheduled' in target) visit(target as ScheduledNode);
+    } while (currentEdge);
   };
 
   // Depth-first traversal for multiple roots using intrusive queue and stack
