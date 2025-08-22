@@ -41,6 +41,8 @@ interface ComputedFactoryContext extends SignalContext {
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
+const INVALID_STALE = STALE | INVALIDATED
+
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
     dependencies: { link, refreshConsumers },
@@ -97,9 +99,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
           // Only mark dirty if not the first evaluation (first eval shouldn't trigger dependents)
           if (!isFirstEvaluation) state._dirty = true;
-
-          // NOTE: We can't propagate immediately like signals because
-          // computeds are lazy - our dependents will check us when they need to
         } else {
           // Value unchanged - clear dirty flag
           state._dirty = false;
@@ -150,7 +149,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         link(state, consumer, ctx.trackingVersion);
 
       // Lazy Evaluation - only recompute if stale
-      if (state._flags & (STALE | INVALIDATED)) updateComputed();
+      if (state._flags & INVALID_STALE) updateComputed();
 
       return state.value;
     }) as ComputedFunction<T>;
@@ -159,7 +158,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     computed.peek = () => {
       // ALGORITHM: Non-tracking Read
       // Same as value getter but doesn't register dependencies
-      if (state._flags & (STALE | INVALIDATED)) updateComputed();
+      if (state._flags & INVALID_STALE) updateComputed();
       return state.value!;
     };
 
