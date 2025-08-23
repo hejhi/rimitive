@@ -219,23 +219,20 @@ export function createDependencyGraph(): DependencyGraph {
     
     while (edge) {
       const source = edge.from;
-      
-      // Clear touched flag
       edge.touched = false;
       
-      // Check if source changed
+      // Check if source changed - optimize for common case (signals)
       if (source._dirty) {
-        // Signal is dirty
         needsRun = true;
       } else if ('_recompute' in source) {
-        if (!(source._flags & INVALIDATED)) {
-          // Already evaluated this cycle - just check if it ended up stale
-          needsRun = needsRun || (source._flags & DIRTY) !== 0;
-        } else if (source._flags & DIRTY) {
-          // Marked as stale but not evaluated yet
+        const sourceFlags = source._flags;
+        // Consolidate flag checks for better branch prediction
+        if (sourceFlags & DIRTY) {
           needsRun = true;
+        } else if (!(sourceFlags & INVALIDATED)) {
+          // Already evaluated and clean - no change
         } else {
-          // Needs evaluation - let it handle its own recursive checking
+          // Needs evaluation
           if (source._recompute()) needsRun = true;
         }
       }
@@ -243,7 +240,7 @@ export function createDependencyGraph(): DependencyGraph {
       edge = edge.nextIn;
     }
     
-    // Update flags
+    // Update flags once at the end
     node._flags = needsRun ? (flags | DIRTY) & ~INVALIDATED : flags & ~INVALIDATED;
     return needsRun;
   };
