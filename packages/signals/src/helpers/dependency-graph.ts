@@ -194,9 +194,10 @@ export function createDependencyGraph(): DependencyGraph {
         
         // Update node if stale (but not the root node yet)
         if (stale && currentNode !== toNode) {
-          currentNode._updateValue();
-          // After updating, check if node is still dirty
-          stale = '_dirty' in currentNode ? currentNode._dirty : false;
+          // Update the node and check if its value actually changed
+          const valueChanged = currentNode._updateValue();
+          // Only propagate staleness if the value actually changed
+          stale = valueChanged;
         }
         
         // Clear INVALIDATED flag if not stale
