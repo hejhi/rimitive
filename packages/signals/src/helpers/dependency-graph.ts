@@ -57,7 +57,6 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
 
-    // ALIEN OPTIMIZATION: NO LINEAR SEARCH!
     // Instead of searching through all edges, we just create a new one.
     // This trades potential duplicate edges for guaranteed O(1) performance.
     // The duplicate edges will be cleaned up during unlinking.
@@ -69,7 +68,7 @@ export function createDependencyGraph(): DependencyGraph {
     const newEdge: Edge = {
       from: producer,
       to: consumer,
-      trackingVersion: trackingVersion,
+      trackingVersion,
       prevIn: tail,
       prevOut,
       nextIn: nextDep,
@@ -79,11 +78,8 @@ export function createDependencyGraph(): DependencyGraph {
     // Update consumer's input list
     if (nextDep) nextDep.prevIn = newEdge;
 
-    if (tail) {
-      tail.nextIn = newEdge;
-    } else {
-      consumer._in = newEdge;
-    }
+    if (tail) tail.nextIn = newEdge;
+    else consumer._in = newEdge;
 
     consumer._inTail = newEdge;
 
@@ -91,11 +87,8 @@ export function createDependencyGraph(): DependencyGraph {
     if ('_flags' in producer) producer._flags |= TRACKING;
 
     // Update producer's output list
-    if (prevOut) {
-      prevOut.nextOut = newEdge;
-    } else {
-      producer._out = newEdge;
-    }
+    if (prevOut) prevOut.nextOut = newEdge;
+    else producer._out = newEdge;
 
     producer._outTail = newEdge;
   };
@@ -117,12 +110,11 @@ export function createDependencyGraph(): DependencyGraph {
     if (nextOut) nextOut.prevOut = prevOut;
     else from._outTail = prevOut;
     
-    if (prevOut) {
-      prevOut.nextOut = nextOut;
-    } else {
+    if (prevOut) prevOut.nextOut = nextOut;
+    else {
       from._out = nextOut;
       // Clear TRACKING flag if this was the last consumer
-      if (!nextOut && '_flags' in from) (from._flags &= ~TRACKING);
+      if (!nextOut && '_flags' in from) from._flags &= ~TRACKING;
     }
     
     return nextIn;
@@ -196,15 +188,11 @@ export function createDependencyGraph(): DependencyGraph {
       // No more edges for current node - time to process and unwind
       
       // Update node if stale (but not the root node yet)
-      if (stale && currentNode !== toNode) {
-        // Only propagate staleness if the value actually changed
-        stale = currentNode._updateValue();
-      }
+      // Only propagate staleness if the value actually changed
+      if (stale && currentNode !== toNode) stale = currentNode._updateValue();
       
       // Clear INVALIDATED flag if not stale
-      if (!stale) {
-        currentNode._flags &= ~INVALIDATED;
-      }
+      if (!stale) currentNode._flags &= ~INVALIDATED;
 
       // Pop from stack
       if (!stack) break;
