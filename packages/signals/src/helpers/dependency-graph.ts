@@ -11,7 +11,7 @@
  * - Database query planners (dependency analysis)
  */
 import { CONSTANTS } from '../constants';
-import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode } from '../types';
+import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode, ScheduledNode } from '../types';
 
 const { TRACKING, INVALIDATED, STALE } = CONSTANTS;
 
@@ -22,7 +22,8 @@ export interface DependencyGraph {
     trackingVersion: number
   ) => void;
   removeEdge: (edge: Edge) => Edge | undefined;
-  nodeIsStale: (consumer: ConsumerNode) => boolean;
+  isStale: (node: DerivedNode) => boolean;  // For computed nodes
+  needsFlush: (node: ScheduledNode) => boolean;  // For effect nodes
 }
 
 export function createDependencyGraph(): DependencyGraph {
@@ -113,20 +114,21 @@ export function createDependencyGraph(): DependencyGraph {
     return nextIn;
   };
 
-  const nodeIsStale = (toNode: ToNode): boolean => {
-    const flags = toNode._flags;
+  // For computed nodes: check if dependencies changed and recompute if needed
+  const isStale = (node: DerivedNode): boolean => {
+    const flags = node._flags;
 
     if (flags & STALE) return true;
 
     let stack;
-    let currentNode = toNode;
-    let currentEdge = toNode._in;
+    let currentNode: DerivedNode | ConsumerNode = node;
+    let currentEdge = node._in;
     let stale = false;
 
     for (;;) {
       while (currentEdge) {
         const source = currentEdge.from;
-        // Use direct property access, not 'in'
+        // Check if source is also a derived node (computed)
         if ('_in' in source) {
           const sFlags = source._flags;
 
@@ -155,6 +157,7 @@ export function createDependencyGraph(): DependencyGraph {
           currentEdge = currentEdge.nextIn;
           continue;
         } else {
+          // Signal node - check if touched
           if (currentEdge.touched) stale = true;
           currentEdge.touched = false;
           currentEdge = currentEdge.nextIn;
@@ -162,10 +165,9 @@ export function createDependencyGraph(): DependencyGraph {
         }
       }
 
-      if (currentNode !== toNode) {
-        if ('_recompute' in currentNode) {
-          stale = stale ? currentNode._recompute() : ((currentNode._flags &= ~INVALIDATED), false);
-        };
+      // Process computed nodes in the traversal
+      if (currentNode !== node && '_recompute' in currentNode) {
+        stale = stale ? currentNode._recompute() : ((currentNode._flags &= ~INVALIDATED), false);
       }
 
       if (!stack) break;
@@ -175,10 +177,83 @@ export function createDependencyGraph(): DependencyGraph {
       currentEdge = stack.edge;
       stack = stack.prev;
     }
-    // Only touch _flags once
-    toNode._flags = stale ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
+    
+    // Update flags
+    node._flags = stale ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
     return stale;
   };
 
-  return { addEdge, removeEdge, nodeIsStale };
+  // For effect nodes: check if any dependencies changed
+  // Note: This uses the same complex logic as isStale for now, even though
+  // effects might not need all this complexity. But it ensures correctness.
+  const needsFlush = (node: ScheduledNode): boolean => {
+    const flags = node._flags;
+
+    if (flags & STALE) return true;
+
+    let stack;
+    let currentNode: ScheduledNode | ConsumerNode = node;
+    let currentEdge = node._in;
+    let stale = false;
+
+    for (;;) {
+      while (currentEdge) {
+        const source = currentEdge.from;
+        // Check if source is also a consumer node (computed)
+        if ('_in' in source) {
+          const sFlags = source._flags;
+
+          if (sFlags & STALE) {
+            stale = true;
+            currentEdge = currentEdge.nextIn;
+            continue;
+          }
+
+          if (sFlags & INVALIDATED) {
+            stack = {
+              edge: currentEdge.nextIn,
+              node: currentNode,
+              stale,
+              prev: stack,
+            };
+            currentNode = source;
+            currentEdge = source._in;
+            stale = false;
+            continue;
+          }
+
+          if (currentEdge.touched) stale = true;
+
+          currentEdge.touched = false;
+          currentEdge = currentEdge.nextIn;
+          continue;
+        } else {
+          // Signal node - check if touched
+          if (currentEdge.touched) stale = true;
+          currentEdge.touched = false;
+          currentEdge = currentEdge.nextIn;
+          continue;
+        }
+      }
+
+      // Process computed nodes in the traversal
+      // Effects DO need this to check if computed dependencies changed!
+      if (currentNode !== node && '_recompute' in currentNode) {
+        stale = stale ? (currentNode as any)._recompute() : ((currentNode._flags &= ~INVALIDATED), false);
+      }
+
+      if (!stack) break;
+
+      stale = stale || stack.stale;
+      currentNode = stack.node;
+      currentEdge = stack.edge;
+      stack = stack.prev;
+    }
+    
+    // Update flags
+    node._flags = stale ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
+    return stale;
+  };
+
+  return { addEdge, removeEdge, isStale, needsFlush };
 }

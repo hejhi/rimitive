@@ -78,7 +78,7 @@ interface EffectFactoryContext extends SignalContext {
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    graph: { nodeIsStale },
+    graph: { needsFlush },
   } = ctx;
 
   // Source cleanup for dynamic dependencies
@@ -108,7 +108,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       if (flags & (DISPOSED | RUNNING) || !(flags & PENDING)) return;
 
       // Check dependencies only if needed
-      if (!(flags & STALE) && !nodeIsStale(effect)) {
+      if (!(flags & STALE) && !needsFlush(effect)) {
         effect._flags &= ~INVALIDATED;
         return;
       }

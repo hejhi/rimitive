@@ -44,7 +44,7 @@ const INVALID_STALE = STALE | INVALIDATED
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, nodeIsStale },
+    graph: { addEdge, isStale },
     sourceCleanup: { pruneStale },
   } = ctx;
   
@@ -112,7 +112,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       if (state._flags & INVALIDATED) {
         // PULL
         // Check if any dependencies actually changed
-        if (nodeIsStale(state)) recompute();
+        if (isStale(state)) recompute();
         // Dependencies haven't changed, just clear invalidated flag
         else state._flags &= ~INVALIDATED;
       }
