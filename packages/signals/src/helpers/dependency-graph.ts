@@ -13,17 +13,34 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode, ScheduledNode } from '../types';
 
-const { TRACKING, INVALIDATED, DIRTY } = CONSTANTS;
+const { TRACKING, INVALIDATED, DIRTY, DISPOSED, RUNNING } = CONSTANTS;
+const SKIP_FLAGS = INVALIDATED | DISPOSED | RUNNING;
+
+interface Stack<T> {
+  value: T;
+  prev: Stack<T> | undefined;
+}
 
 export interface DependencyGraph {
+  // Edge management
   addEdge: (
     producer: ProducerNode,
     consumer: ConsumerNode,
     trackingVersion: number
   ) => void;
   removeEdge: (edge: Edge) => Edge | undefined;
-  isStale: (node: DerivedNode) => boolean;  // For computed nodes
-  needsFlush: (node: ScheduledNode) => boolean;  // For effect nodes
+
+  // Cleanup operations
+  detachAll: (consumer: ConsumerNode) => void;
+  pruneStale: (consumer: ConsumerNode) => void;
+
+  // Staleness checks
+  isStale: (node: DerivedNode) => boolean; // For derived nodes
+  needsFlush: (node: ScheduledNode) => boolean; // For scheduled nodes
+  invalidate: (
+    from: Edge | undefined,
+    visit: (node: ScheduledNode) => void
+  ) => void;
 }
 
 export function createDependencyGraph(): DependencyGraph {
@@ -108,7 +125,17 @@ export function createDependencyGraph(): DependencyGraph {
       from._out = nextOut;
       // Clear TRACKING flag if this was the last consumer
       // Use direct property access instead of 'in' operator for speed
-      if (!nextOut && '_flags' in from) from._flags &= ~TRACKING;
+      if (!nextOut && '_flags' in from) {
+        from._flags &= ~TRACKING;
+        // When a computed becomes unobserved, clear its dependencies
+        // This is the "unobserved computed" optimization from alien-signals
+        if ('_recompute' in from) {
+          // Clear all dependency edges to free memory
+          detachAll(from);
+          // Mark as DIRTY so it recomputes fresh when re-observed
+          from._flags |= DIRTY;
+        }
+      }
     }
 
     return nextIn;
@@ -226,5 +253,89 @@ export function createDependencyGraph(): DependencyGraph {
     return needsRun;
   };
 
-  return { addEdge, removeEdge, isStale, needsFlush };
+  // ALGORITHM: Complete Edge Removal
+  // Used during disposal to remove all dependency edges at once
+  const detachAll = (consumer: ConsumerNode): void => {
+    let node = consumer._in;
+    
+    // Walk the linked list of sources
+    while (node) {
+      // removeEdge returns the next edge, so we can iterate efficiently
+      node = removeEdge(node);
+    }
+    
+    // Clear the consumer's source list head and tail
+    consumer._in = undefined;
+    consumer._inTail = undefined;
+  };
+
+  // ALGORITHM: Tail-based Edge Removal (alien-signals approach)
+  // After a computed/effect runs, remove all edges after the tail marker.
+  // The tail was set at the start of the run, and all valid dependencies
+  // were moved to/before the tail during the run.
+  const pruneStale = (consumer: ConsumerNode): void => {
+    const tail = consumer._inTail;
+    
+    // If no tail, all edges should be removed
+    let toRemove = tail ? tail.nextIn : consumer._in;
+    
+    // Remove all edges after the tail
+    while (toRemove) {
+      // removeEdge handles both sides and returns next edge
+      toRemove = removeEdge(toRemove);
+    }
+    
+    // Update tail to point to the last valid edge
+    if (tail) tail.nextIn = undefined;
+  };
+
+  const invalidate = (
+      from: Edge | undefined,
+      visit: (node: ScheduledNode) => void
+  ): void => {
+    let stack: Stack<Edge> | undefined;
+    let currentEdge: Edge | undefined = from;
+
+    if (!currentEdge) return;
+    
+    do {
+      const target = currentEdge.to;
+      // Mark this edge as the cause of invalidation for this traversal
+      currentEdge.touched = true;
+
+      const targetFlags = target._flags;
+
+      // Skip already processed nodes
+      if (targetFlags & SKIP_FLAGS) {
+        currentEdge = currentEdge.nextOut;
+        continue;
+      }
+
+      // Mark as invalidated and schedule if needed
+      target._flags = targetFlags | INVALIDATED;
+
+      if ('_out' in target) {
+        const nextSibling = currentEdge.nextOut;
+
+        if (nextSibling) stack = { value: nextSibling, prev: stack };
+
+        currentEdge = target._out;
+
+        if (currentEdge) continue;
+        if (!stack) break;
+
+        currentEdge = stack.value;
+        stack = stack.prev;
+        continue;
+      }
+
+      if ('_nextScheduled' in target) visit(target);
+      if (!stack) continue;
+      
+      currentEdge = stack.value;
+      stack = stack.prev;
+    } while (currentEdge);
+  };
+
+  return { addEdge, removeEdge, detachAll, pruneStale, isStale, needsFlush, invalidate };
 }

@@ -7,9 +7,7 @@ import type { ComputedFunction } from './computed';
 import type { ConsumerNode } from './types';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
-import { createGraphWalker } from './helpers/graph-walker';
 import { createDependencyGraph } from './helpers/dependency-graph';
-import { createDependencySweeper } from './helpers/dependency-sweeper';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -22,15 +20,11 @@ export function createTestInstance() {
   // Create extended context for testing
   const base = createContext();
   const workQueue = createWorkQueue(base);
-  const graphWalker = createGraphWalker();
   const graph = createDependencyGraph();
-  const sourceCleanup = createDependencySweeper(graph.removeEdge);
   const ctx = {
     ...base,
     workQueue,
-    graphWalker,
     graph,
-    sourceCleanup,
   };
   
   // Create API with all core factories

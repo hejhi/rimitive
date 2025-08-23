@@ -40,7 +40,6 @@
 import { CONSTANTS } from './constants';
 import { Disposable, Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { DependencySweeper } from './helpers/dependency-sweeper';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 
@@ -72,16 +71,12 @@ const {
 
 interface EffectFactoryContext extends SignalContext {
   graph: DependencyGraph;
-  sourceCleanup: DependencySweeper;
 }
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    graph: { needsFlush },
+    graph: { needsFlush, detachAll, pruneStale },
   } = ctx;
-
-  // Source cleanup for dynamic dependencies
-  const { detachAll, pruneStale } = ctx.sourceCleanup;
   
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
   function createEffect(fn: () => void | (() => void)): EffectDisposer {

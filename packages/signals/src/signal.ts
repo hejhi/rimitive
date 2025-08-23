@@ -18,7 +18,6 @@ import type { ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
-import type { GraphWalker } from './helpers/graph-walker';
 import type { WorkQueue } from './helpers/work-queue';
 
 const { RUNNING } = CONSTANTS;
@@ -39,14 +38,12 @@ interface SignalState<T> extends ProducerNode {
 
 interface SignalFactoryContext extends SignalContext {
   graph: DependencyGraph;
-  graphWalker: GraphWalker;
   workQueue: WorkQueue;
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
-    graph: { addEdge },
-    graphWalker: { invalidate },
+    graph: { addEdge, invalidate },
     workQueue: { enqueue, flush },
   } = ctx;
   

@@ -1,15 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyGraph } from './dependency-graph';
-import { createDependencySweeper } from './dependency-sweeper';
 import type { ConsumerNode, ProducerNode } from '../types';
 
-describe('Dependency Sweeper', () => {
+describe('Dependency Graph Cleanup Operations', () => {
   let graph: ReturnType<typeof createDependencyGraph>;
-  let sweeper: ReturnType<typeof createDependencySweeper>;
 
   beforeEach(() => {
     graph = createDependencyGraph();
-    sweeper = createDependencySweeper(graph.removeEdge);
   });
 
   const makeProducer = (): ProducerNode => ({
@@ -37,7 +34,7 @@ describe('Dependency Sweeper', () => {
     graph.addEdge(b, target, 1);
     graph.addEdge(c, target, 1);
 
-    sweeper.detachAll(target);
+    graph.detachAll(target);
 
     expect(target._in).toBeUndefined();
     expect(a._out).toBeUndefined();
@@ -66,7 +63,7 @@ describe('Dependency Sweeper', () => {
     graph.addEdge(c, target, 1);
 
     // Now prune stale (b should be removed)
-    sweeper.pruneStale(target);
+    graph.pruneStale(target);
 
     // With tail-based pruning, only accessed edges remain
     let list = target._in;
@@ -94,7 +91,7 @@ describe('Dependency Sweeper', () => {
     target._inTail = undefined;
     // Don't access any producer
     
-    sweeper.pruneStale(target);
+    graph.pruneStale(target);
 
     // With tail-based pruning, all edges should be removed
     expect(target._in).toBeUndefined();
