@@ -29,7 +29,6 @@ interface ComputedState<T> extends ProducerNode, ConsumerNode {
 const {
   RUNNING,
   STALE,
-  PENDING,
   INVALIDATED,
 } = CONSTANTS;
 
@@ -67,19 +66,14 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     // Create updateValue that captures state in closure
     const updateValue = (): boolean => {
-      // Check if this is the first evaluation (STALE flag is set initially)
-      const isFirstEvaluation = (state._flags & STALE) !== 0;
-
       // SETUP: Prepare for recomputation
-      // 1. Set RUNNING flag (prevent circular dependencies)
-      // 2. Clear stale/invalidated flags
-      state._flags = (state._flags | RUNNING) & ~PENDING;
+      const flags = state._flags;
+      
+      // Set RUNNING, clear INVALIDATED, keep STALE for first-eval check
+      state._flags = (flags | RUNNING) & ~INVALIDATED;
 
       // DEPENDENCY TRACKING SETUP:
-      // Each computation gets a unique version to identify its dependencies
       ctx.trackingVersion++;
-
-      // Mark where current dependencies end (everything after will be removed)
       state._inTail = undefined;
 
       // Make this computed the "current consumer" so signals know to link to us
@@ -91,31 +85,27 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const oldValue = state.value;
         const newValue = compute();
 
-        // Check if value changed (like signals do)
+        // Check if value changed and update accordingly
         if (newValue !== oldValue) {
-          // Value changed - update and mark dirty
           state.value = newValue;
+          // Mark dirty unless this is first evaluation (STALE flag indicates first eval)
+          state._dirty = (flags & STALE) === 0;
           valueChanged = true;
-
-          // Only mark dirty if not the first evaluation (first eval shouldn't trigger dependents)
-          if (!isFirstEvaluation) state._dirty = true;
         } else {
           // Value unchanged - clear dirty flag
           state._dirty = false;
         }
       } finally {
         // CLEANUP: Must run even if computation throws
-        // 1. Restore the previous consumer (unwinding the context stack)
         ctx.currentConsumer = prevConsumer;
+        
+        // Clear RUNNING and STALE flags
+        state._flags &= ~(RUNNING | STALE);
 
-        // 2. Clear RUNNING flag so this computed can run again
-        state._flags &= ~RUNNING;
-
-        // 3. Remove dependencies we no longer need (dynamic dependency cleanup)
-        // Any dependency NOT accessed during this run gets removed
+        // Remove stale dependencies
         pruneStale(state);
       }
-
+      
       return valueChanged;
     };
 
@@ -128,7 +118,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // INVALIDATED means maybe - check dependencies
       if (state._flags & STALE) {
         updateValue();
-      } else if (state._flags & INVALIDATED) {
+        return;
+      }
+      
+      if (state._flags & INVALIDATED) {
         // PULL
         // Check if any dependencies actually changed
         if (refreshConsumers(state)) {
@@ -145,8 +138,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Register with current consumer FIRST (like signals do)
       const consumer = ctx.currentConsumer;
 
-      if (consumer && consumer._flags & RUNNING)
-        link(state, consumer, ctx.trackingVersion);
+      if (consumer && consumer._flags & RUNNING) link(state, consumer, ctx.trackingVersion);
 
       // Lazy Evaluation - only recompute if stale
       if (state._flags & INVALID_STALE) updateComputed();
