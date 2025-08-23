@@ -183,11 +183,8 @@ export function createDependencyGraph(): DependencyGraph {
         // Check touched flag after other checks for better branch prediction
         if (currentEdge.touched) {
           stale = true;
-          currentEdge.touched = false;
-        } else {
-          currentEdge.touched = false;
         }
-        
+        currentEdge.touched = false;
         currentEdge = currentEdge.nextIn;
       }
 
