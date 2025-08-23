@@ -145,6 +145,7 @@ export function createDependencyGraph(): DependencyGraph {
   const isStale = (node: DerivedNode): boolean => {
     const flags = node._flags;
 
+    // Fast path: already marked dirty
     if (flags & DIRTY) return true;
 
     let stack;
@@ -207,7 +208,7 @@ export function createDependencyGraph(): DependencyGraph {
       stack = stack.prev;
     }
     
-    // Update flags
+    // Update flags - use STALE_FLAGS for consistency
     node._flags = stale ? (flags | DIRTY) & ~INVALIDATED : flags & ~INVALIDATED;
     return stale;
   };
@@ -315,11 +316,18 @@ export function createDependencyGraph(): DependencyGraph {
       target._flags = targetFlags | INVALIDATED;
 
       if ('_out' in target) {
+        const firstChild = target._out;
         const nextSibling = currentEdge.nextOut;
+
+        // Optimization: single path doesn't need stack
+        if (firstChild && !nextSibling && !stack) {
+          currentEdge = firstChild;
+          continue;
+        }
 
         if (nextSibling) stack = { value: nextSibling, prev: stack };
 
-        currentEdge = target._out;
+        currentEdge = firstChild;
 
         if (currentEdge) continue;
         if (!stack) break;
@@ -330,10 +338,12 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       if ('_nextScheduled' in target) visit(target);
-      if (!stack) continue;
       
-      currentEdge = stack.value;
-      stack = stack.prev;
+      currentEdge = currentEdge.nextOut;
+      if (!currentEdge && stack) {
+        currentEdge = stack.value;
+        stack = stack.prev;
+      }
     } while (currentEdge);
   };
 

@@ -70,7 +70,6 @@ export default defineConfig({
         context: resolve(__dirname, 'src/context.ts'),
         constants: resolve(__dirname, 'src/constants.ts'),
         'default-context': resolve(__dirname, 'src/default-context.ts'),
-        'helpers/graph-walker': resolve(__dirname, 'src/helpers/graph-walker.ts'),
         'helpers/work-queue': resolve(__dirname, 'src/helpers/work-queue.ts'),
         'helpers/dependency-graph': resolve(__dirname, 'src/helpers/dependency-graph.ts'),
       },

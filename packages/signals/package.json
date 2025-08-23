@@ -47,10 +47,6 @@
       "import": "./dist/default-context.js",
       "types": "./dist/default-context.d.ts"
     },
-    "./helpers/graph-walker": {
-      "import": "./dist/helpers/graph-walker.js",
-      "types": "./dist/helpers/graph-walker.d.ts"
-    },
     "./helpers/work-queue": {
       "import": "./dist/helpers/work-queue.js",
       "types": "./dist/helpers/work-queue.d.ts"
