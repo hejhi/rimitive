@@ -165,7 +165,7 @@ export function createDependencyGraph(): DependencyGraph {
       if (currentNode !== toNode) {
         if ('_recompute' in currentNode) {
           stale = stale ? currentNode._recompute!() : ((currentNode._flags &= ~INVALIDATED), false);
-        } else stale = stale || ((currentNode._flags &= ~INVALIDATED), false);
+        } else stale = true;
       }
 
       if (!stack) break;
