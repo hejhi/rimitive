@@ -65,7 +65,6 @@ const {
   RUNNING,
   DISPOSED,
   STALE,
-  INVALIDATED,
   PENDING,
 } = CONSTANTS;
 
@@ -107,11 +106,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // Single bitwise check for fast exit
       if (flags & (DISPOSED | RUNNING) || !(flags & PENDING)) return;
 
-      // Check dependencies only if needed
-      if (!(flags & STALE) && !needsFlush(effect)) {
-        effect._flags &= ~INVALIDATED;
-        return;
-      }
+      // Check if dependencies changed
+      if (!needsFlush(effect)) return;
 
       // Combine bitwise mutations in a single assignment
       effect._flags = (flags | RUNNING) & ~PENDING;
