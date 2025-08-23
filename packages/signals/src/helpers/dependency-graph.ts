@@ -285,14 +285,13 @@ export function createDependencyGraph(): DependencyGraph {
       from: Edge | undefined,
       visit: (node: ScheduledNode) => void
   ): void => {
+    if (!from) return;
+    
     let stack: Stack<Edge> | undefined;
     let currentEdge: Edge | undefined = from;
-
-    if (!currentEdge) return;
     
     do {
       const target = currentEdge.to;
-      // Mark this edge as the cause of invalidation for this traversal
       currentEdge.touched = true;
 
       const targetFlags = target._flags;
@@ -303,35 +302,33 @@ export function createDependencyGraph(): DependencyGraph {
         continue;
       }
 
-      // Mark as invalidated and schedule if needed
+      // Mark as invalidated
       target._flags = targetFlags | INVALIDATED;
 
+      // Handle producer nodes (have outputs)
       if ('_out' in target) {
         const firstChild = target._out;
-        const nextSibling = currentEdge.nextOut;
-
-        // Optimization: single path doesn't need stack
-        if (firstChild && !nextSibling && !stack) {
+        
+        if (firstChild) {
+          const nextSibling = currentEdge.nextOut;
+          
+          // Push sibling to stack if exists
+          if (nextSibling) {
+            stack = { value: nextSibling, prev: stack };
+          }
+          
+          // Continue with first child
           currentEdge = firstChild;
           continue;
         }
-
-        if (nextSibling) stack = { value: nextSibling, prev: stack };
-
-        currentEdge = firstChild;
-
-        if (currentEdge) continue;
-        if (!stack) break;
-
-        currentEdge = stack.value;
-        stack = stack.prev;
-        continue;
+      } else if ('_nextScheduled' in target) {
+        // Effect node - schedule it
+        visit(target);
       }
-
-      if ('_nextScheduled' in target) visit(target);
       
+      // Move to next sibling or pop from stack
       currentEdge = currentEdge.nextOut;
-      if (!currentEdge && stack) {
+      while (!currentEdge && stack) {
         currentEdge = stack.value;
         stack = stack.prev;
       }
