@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode } from '../types';
 
-const { TRACKING, INVALIDATED, STALE, PENDING } = CONSTANTS;
+const { TRACKING, INVALIDATED, STALE } = CONSTANTS;
 
 export interface DependencyGraph {
   link: (
@@ -122,91 +122,79 @@ export function createDependencyGraph(): DependencyGraph {
 
   const refreshConsumers = (toNode: ToNode): boolean => {
     const flags = toNode._flags;
-    
-    // Remove the INVALIDATED check - we're only called when INVALIDATED
+
+    // Fast path: already known-stale nodes remain stale
     if (flags & STALE) return true;
 
     let stack: DepStack | undefined;
-    let currentEdge: Edge | undefined = toNode._in;
-    let currentNode = toNode;
+    let currentNode: ToNode = toNode;
+    let currentEdge: Edge | undefined = currentNode._in;
     let stale = false;
 
-    // Single do-while loop following DFS pattern
-    do {
+    // Iterative DFS over incoming edges; unwind to update computed nodes
+    for (;;) {
       if (currentEdge) {
-        // Skip recycled edges
-        if (currentEdge.trackingVersion === -1) {
-          currentEdge = currentEdge.nextIn;
-          continue;
-        }
-
         const source = currentEdge.from;
-        const wasDirty = source._dirty;
-        
-        // Check if we need to recurse into this dependency
+        const dirty = source._dirty;
+
         if ('_in' in source) {
-          // Computed node
-          const sourceFlags = source._flags;
-          
-          if (sourceFlags & STALE) {
+          const sFlags = source._flags;
+
+          // Child computed already stale: mark and continue
+          if (sFlags & STALE) {
             stale = true;
             currentEdge = currentEdge.nextIn;
             continue;
           }
-          
-          if (wasDirty || sourceFlags & PENDING) {
-            if (sourceFlags & INVALIDATED) {
-              // Save current position and descend into dependency
-              stack = { 
-                edge: currentEdge.nextIn, 
-                node: currentNode, 
-                stale, 
-                prev: stack 
-              };
-              
-              // Descend into the dependency
-              currentNode = source;
-              currentEdge = source._in;
-              stale = false;
-              continue;
-            }
 
-            stale = true;
+          // Child computed invalidated: descend to verify and potentially update
+          if (sFlags & INVALIDATED) {
+            stack = {
+              edge: currentEdge.nextIn,
+              node: currentNode,
+              stale,
+              prev: stack,
+            };
+            currentNode = source;
+            currentEdge = source._in;
+            stale = false;
+            continue;
           }
 
+          // Otherwise, propagate if child already changed
+          if (dirty) stale = true;
           currentEdge = currentEdge.nextIn;
           continue;
         }
 
-        // Signal node - just check dirty flag
-        stale = stale || wasDirty;
+        // Source is a signal: propagate change if written since last check
+        if (dirty) stale = true;
         currentEdge = currentEdge.nextIn;
-
         continue;
       }
-      
-      // No more edges for current node - time to process and unwind
-      
-      // Update node if stale (but not the root node yet)
-      // Only propagate staleness if the value actually changed
-      if (stale && currentNode !== toNode) stale = currentNode._updateValue();
-      
-      // Clear INVALIDATED flag if not stale
-      if (!stale) currentNode._flags &= ~INVALIDATED;
 
-      // Pop from stack
+      // Finished this node's inputs: if not the root, update on demand
+      if (currentNode !== toNode) {
+        if (stale) {
+          // Only propagate if the value actually changed
+          stale = currentNode._updateValue();
+        } else {
+          // Clear INVALIDATED since dependencies didn’t cause a change
+          currentNode._flags &= ~INVALIDATED;
+        }
+      }
+
+      // Unwind
       if (!stack) break;
-      
       const frame = stack;
-      currentEdge = frame.edge;
-      currentNode = frame.node;
-
-      // Combine staleness: current stale OR parent was already stale
-      stale = stale || frame.stale;
       stack = frame.prev;
-    } while (true);
+      // Merge staleness with parent frame’s pending state
+      stale = stale || frame.stale;
+      currentNode = frame.node;
+      currentEdge = frame.edge;
+    }
 
-    // Update final flags for the original node
+    // Update and return final state for the root
     toNode._flags = stale ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
     return stale;
   };
