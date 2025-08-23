@@ -49,11 +49,6 @@ export interface ProducerNode extends ReactiveNode {
   _out: Edge | undefined; // Head of output list
   _outTail: Edge | undefined; // Tail of output list
   value: unknown;
-
-  // DIRTY FLAG (Alien-Signals Pattern)
-  // Set to true when THIS node's value changes.
-  // Checked during nodeIsStale to detect if dependency changed.
-  // Cleared after value is propagated/consumed.
   _dirty: boolean;
 }
 
@@ -62,10 +57,11 @@ export interface ProducerNode extends ReactiveNode {
 export interface ConsumerNode extends ReactiveNode {
   _in: Edge | undefined; // Head of input list
   _inTail: Edge | undefined; // Tail of input list
-
-  _recompute?(): boolean; // Update this node's value (if it produces one)
   _flags: number; // Bit field containing STALE, RUNNING, DISPOSED, etc.
-  // REMOVED: _gen field - using alien-signals' simpler tail-marking approach
+}
+
+export interface DerivedNode extends ProducerNode, ConsumerNode {
+  _recompute(): boolean; // Execute the deferred work
 }
 
 // PATTERN: Deferred Execution Queue
@@ -78,8 +74,8 @@ export interface ScheduledNode extends ConsumerNode, Disposable {
 
 // Node types for edges
 // Note: Computed nodes are both ProducerNode AND ConsumerNode
-export type FromNode = ProducerNode | (ProducerNode & ConsumerNode);
-export type ToNode = ConsumerNode | (ProducerNode & ConsumerNode);
+export type FromNode = ProducerNode | DerivedNode;
+export type ToNode = ConsumerNode | DerivedNode | ScheduledNode;
 
 // ALGORITHM: Intrusive Doubly-Linked Graph Edges
 // Edge represents a dependency relationship in the graph.

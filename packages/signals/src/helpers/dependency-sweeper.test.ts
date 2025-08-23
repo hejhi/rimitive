@@ -24,7 +24,6 @@ describe('Dependency Sweeper', () => {
     __type: 'test',
     _in: undefined,
     _flags: 0,
-    _recompute: () => true,
     _inTail: undefined
   });
 

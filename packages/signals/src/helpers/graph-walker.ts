@@ -64,7 +64,7 @@ export function createGraphWalker(): GraphWalker {
         continue;
       }
 
-      if ('_nextScheduled' in target) visit(target as ScheduledNode);
+      if ('_nextScheduled' in target) visit(target);
       if (!stack) continue;
       
       currentEdge = stack.value;

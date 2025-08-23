@@ -37,7 +37,6 @@ describe('GraphWalker', () => {
       _in: undefined,
       _inTail: undefined,
       _flags: flags,
-      _recompute: () => true,
     };
 
     if (isScheduled) {

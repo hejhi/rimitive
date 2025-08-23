@@ -98,7 +98,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // These will be set below
       dispose: null as unknown as () => void,
       _flush: null as unknown as () => void,
-      _recompute: undefined,
     };
 
     // Flush method using closure

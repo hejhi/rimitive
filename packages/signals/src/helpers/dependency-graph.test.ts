@@ -23,7 +23,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -54,7 +53,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -85,7 +83,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -107,7 +104,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -140,7 +136,6 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -173,8 +168,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _recompute: () => true,
-            _inTail: undefined,
+              _inTail: undefined,
         };
         
         helpers.addEdge(source, target, 1);
@@ -200,16 +194,14 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _recompute: () => true,
-            _inTail: undefined,
+              _inTail: undefined,
         };
         
         const target2: ConsumerNode = {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _recompute: () => true,
-            _inTail: undefined,
+              _inTail: undefined,
         };
         
         helpers.addEdge(source, target1, 1);
@@ -240,8 +232,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _recompute: () => true,
-            _inTail: undefined,
+              _inTail: undefined,
         };
         
         helpers.addEdge(source, target, 1);
@@ -265,8 +256,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _recompute: () => true,
-            _inTail: undefined,
+              _inTail: undefined,
         };
         
         helpers.addEdge(source, target, 1);
@@ -342,8 +332,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _recompute: () => true,
-            _inTail: undefined
+              _inTail: undefined
         };
         
         helpers.addEdge(source, target, 1);
@@ -374,7 +363,6 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _recompute: () => true,
           _inTail: undefined,
         };
         

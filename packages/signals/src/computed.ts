@@ -5,7 +5,7 @@
  */
 
 import { CONSTANTS } from './constants';
-import { ProducerNode, ConsumerNode } from './types';
+import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { DependencySweeper } from './helpers/dependency-sweeper';
@@ -13,13 +13,13 @@ import type { SignalContext } from './context';
 
 // Single function interface for both read and peek
 // The function also implements ProducerNode and ConsumerNode to expose graph properties
-export interface ComputedFunction<T = unknown> extends ProducerNode, ConsumerNode {
+export interface ComputedFunction<T = unknown> extends DerivedNode {
   (): T;                    // Read operation (tracks dependencies)
   peek(): T;                // Non-tracking read
 }
 
 // Internal computed state that gets bound to the function
-interface ComputedState<T> extends ProducerNode, ConsumerNode {
+interface ComputedState<T> extends DerivedNode {
   __type: 'computed';
   _recompute(): boolean; // Update the computed value when dependencies change
   _callback: () => T; // User's computation function
