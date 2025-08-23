@@ -50,25 +50,25 @@ export function createDependencyGraph(): DependencyGraph {
     trackingVersion: number
   ): void => {
     const tail = consumer._inTail;
-    const inVal = consumer._in;
-
+    
+    // Fast path: check if tail is the producer we want
     if (tail && tail.from === producer) {
       tail.trackingVersion = trackingVersion;
       return;
     }
 
-    const candidate = tail ? tail.nextIn : inVal;
-
+    // Check the next candidate (either after tail or first edge)
+    const candidate = tail ? tail.nextIn : consumer._in;
+    
     if (candidate && candidate.from === producer) {
       candidate.trackingVersion = trackingVersion;
       consumer._inTail = candidate;
       return;
     }
 
-    // At this point, no reusable edge found; prepare new edge.
-    const nextDep = candidate; // already determined
+    // No reusable edge found - create new edge
     const prevOut = producer._outTail;
-
+    
     const newEdge = {
       from: producer,
       to: consumer,
@@ -76,26 +76,23 @@ export function createDependencyGraph(): DependencyGraph {
       touched: false,
       prevIn: tail,
       prevOut,
-      nextIn: nextDep,
+      nextIn: candidate,
       nextOut: undefined,
     };
 
-    // Update consumer's input list
-    if (nextDep) nextDep.prevIn = newEdge;
-
+    // Wire up consumer's input list
+    if (candidate) candidate.prevIn = newEdge;
     if (tail) tail.nextIn = newEdge;
     else consumer._in = newEdge;
-
     consumer._inTail = newEdge;
 
-    // Set TRACKING flag if producer is also consumer
-    if ('_flags' in producer) producer._flags |= TRACKING;
-
-    // Update producer's output list
+    // Wire up producer's output list
     if (prevOut) prevOut.nextOut = newEdge;
     else producer._out = newEdge;
-
     producer._outTail = newEdge;
+    
+    // Set TRACKING flag if producer is also a consumer
+    if ('_flags' in producer) producer._flags |= TRACKING;
   };
 
   // ALGORITHM: Full Bidirectional Edge Removal (alien-signals pattern)
@@ -149,7 +146,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (flags & DIRTY) return true;
 
     let stack;
-    let currentNode = node;  // Only DerivedNodes in this traversal
+    let currentNode = node;
     let currentEdge = node._in;
     let stale = false;
 
@@ -157,16 +154,18 @@ export function createDependencyGraph(): DependencyGraph {
       while (currentEdge) {
         const source = currentEdge.from;
         
-        // Check if source is also a derived node (computed)
+        // Check if source is a derived node (computed)
         if ('_recompute' in source) {
           const sFlags = source._flags;
 
+          // Early exit if source is dirty
           if (sFlags & DIRTY) {
             stale = true;
             currentEdge = currentEdge.nextIn;
             continue;
           }
 
+          // Recurse into invalidated sources
           if (sFlags & INVALIDATED) {
             stack = {
               edge: currentEdge.nextIn,
@@ -179,27 +178,25 @@ export function createDependencyGraph(): DependencyGraph {
             stale = false;
             continue;
           }
-
-          if (currentEdge.touched) stale = true;
-
-          currentEdge.touched = false;
-          currentEdge = currentEdge.nextIn;
-          continue;
-        } else {
-          // Signal node - check if touched
-          if (currentEdge.touched) stale = true;
-          currentEdge.touched = false;
-          currentEdge = currentEdge.nextIn;
-          continue;
         }
+        
+        // Check touched flag after other checks for better branch prediction
+        if (currentEdge.touched) {
+          stale = true;
+          currentEdge.touched = false;
+        } else {
+          currentEdge.touched = false;
+        }
+        
+        currentEdge = currentEdge.nextIn;
       }
 
       // Process computed nodes in the traversal
-      // currentNode is always a DerivedNode here
       if (currentNode !== node) {
         stale = stale ? currentNode._recompute() : ((currentNode._flags &= ~INVALIDATED), false);
       }
 
+      // Pop from stack or exit
       if (!stack) break;
 
       stale = stale || stack.stale;
@@ -208,7 +205,7 @@ export function createDependencyGraph(): DependencyGraph {
       stack = stack.prev;
     }
     
-    // Update flags - use STALE_FLAGS for consistency
+    // Update flags
     node._flags = stale ? (flags | DIRTY) & ~INVALIDATED : flags & ~INVALIDATED;
     return stale;
   };
