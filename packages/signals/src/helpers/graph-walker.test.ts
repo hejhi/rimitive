@@ -24,7 +24,7 @@ describe('GraphWalker', () => {
       }
     };
 
-    walk = createGraphWalker().dfs;
+    walk = createGraphWalker().invalidate;
   });
 
   function createMockNode(

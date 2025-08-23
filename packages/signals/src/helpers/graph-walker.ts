@@ -14,19 +14,17 @@ interface Stack<T> {
 }
 
 export interface GraphWalker {
-  // Depth-first traversal exposed explicitly
-  dfs: (from: Edge | undefined, visit: (node: ScheduledNode) => void) => void;
+  invalidate: (
+    from: Edge | undefined,
+    visit: (node: ScheduledNode) => void
+  ) => void;
 }
 
 /**
  * Creates a graph walker for efficient dependency graph traversal.
- *
- * ALGORITHM: Iterative DFS with flag-based short-circuiting
- * - Uses INVALIDATED/DISPOSED/RUNNING flags to avoid redundant work
- * - Relies on INVALIDATED as a per-walk dedup marker (set on first visit)
  */
 export function createGraphWalker(): GraphWalker {
-  const dfs = (
+  const invalidate = (
     from: Edge | undefined,
     visit: (node: ScheduledNode) => void
   ): void => {
@@ -39,15 +37,17 @@ export function createGraphWalker(): GraphWalker {
       const target = currentEdge.to;
       // Mark this edge as the cause of invalidation for this traversal
       currentEdge.touched = true;
-      
+
+      const targetFlags = target._flags;
+
       // Skip already processed nodes
-      if (target._flags & SKIP_FLAGS) {
+      if (targetFlags & SKIP_FLAGS) {
         currentEdge = currentEdge.nextOut;
         continue;
       }
 
       // Mark as invalidated and schedule if needed
-      target._flags |= INVALIDATED;
+      target._flags = targetFlags | INVALIDATED;
 
       if ('_out' in target) {
         const nextSibling = currentEdge.nextOut;
@@ -56,7 +56,8 @@ export function createGraphWalker(): GraphWalker {
 
         currentEdge = target._out;
 
-        if (currentEdge || !stack) continue;
+        if (currentEdge) continue;
+        if (!stack) break;
 
         currentEdge = stack.value;
         stack = stack.prev;
@@ -64,7 +65,6 @@ export function createGraphWalker(): GraphWalker {
       }
 
       if ('_nextScheduled' in target) visit(target as ScheduledNode);
-
       if (!stack) continue;
       
       currentEdge = stack.value;
@@ -72,5 +72,5 @@ export function createGraphWalker(): GraphWalker {
     } while (currentEdge);
   };
 
-  return { dfs };
+  return { invalidate };
 }

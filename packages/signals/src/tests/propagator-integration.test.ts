@@ -26,11 +26,11 @@ describe('Propagator Integration with Signal and Batch', () => {
       
       // Large batch to trigger accumulation
       api.batch(() => {
-        signals[0]!(10);  // immediate dfs
-        signals[1]!(20);  // immediate dfs
-        signals[2]!(30);  // accumulate
-        signals[3]!(40);  // accumulate
-        signals[4]!(50);  // accumulate
+        signals[0]!(10);
+        signals[1]!(20);
+        signals[2]!(30);
+        signals[3]!(40);
+        signals[4]!(50);
       });
       
       // Verify propagate() was called and processed accumulated roots
@@ -57,8 +57,8 @@ describe('Propagator Integration with Signal and Batch', () => {
       
       // Small batch (only 2 signals) - should use immediate DFS
       api.batch(() => {
-        s1(10);  // immediate dfs
-        s2(20);  // immediate dfs
+        s1(10);
+        s2(20);
       });
       
       expect(effectRuns).toBe(2);

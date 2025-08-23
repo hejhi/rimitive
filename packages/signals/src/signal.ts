@@ -46,7 +46,7 @@ interface SignalFactoryContext extends SignalContext {
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
     graph: { addEdge },
-    graphWalker: { dfs },
+    graphWalker: { invalidate },
     workQueue: { enqueue, flush },
   } = ctx;
   
@@ -78,7 +78,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         
         // IMMEDIATE PROPAGATION: Traverse graph immediately
         // This eliminates double traversal overhead
-        dfs(state._out, enqueue);
+        invalidate(state._out, enqueue);
 
         // If no batch, flush
         if (!ctx.batchDepth) flush();
