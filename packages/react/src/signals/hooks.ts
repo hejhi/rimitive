@@ -24,7 +24,9 @@ import type { SignalSetter } from './types';
  * }
  * ```
  */
-export function useSubscribe<T>(signal: Readable<T> & ProducerNode): T {
+type TypedProducer<T> = ProducerNode & { value: T };
+
+export function useSubscribe<T>(signal: Readable<T> & TypedProducer<T>): T {
   const api = useSignalAPI();
 
   // Memoize the subscribe function to avoid creating new functions on each render
@@ -74,7 +76,7 @@ export function useSignal<T>(
     signalRef.current = api.signal(value);
   }
 
-  const sig = signalRef.current; // Created on first render
+  const sig = signalRef.current as unknown as TypedProducer<T>; // Created on first render
 
   // Stable setter function
   const setter = useCallback<SignalSetter<T>>(
@@ -88,7 +90,7 @@ export function useSignal<T>(
     [sig]
   );
 
-  const value = useSubscribe(sig);
+  const value = useSubscribe(sig as unknown as Readable<T> & TypedProducer<T>);
   return [value, setter];
 }
 
@@ -106,7 +108,7 @@ export function useSignal<T>(
  * ```
  */
 export function useSelector<T, R>(
-  signal: Signal<T>,
+  signal: Signal<T> & { value: T },
   selector: (value: T) => R
 ): R {
   const api = useSignalAPI();
@@ -126,5 +128,5 @@ export function useSelector<T, R>(
     computedRef.current = api.computed(() => selectorRef.current(signal.value));
   }
 
-  return useSubscribe(computedRef.current);
+  return useSubscribe(computedRef.current as unknown as Readable<R> & TypedProducer<R>);
 }

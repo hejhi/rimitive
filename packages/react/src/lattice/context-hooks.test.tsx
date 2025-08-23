@@ -28,7 +28,7 @@ describe('Lattice Context Hooks', () => {
       expect(typeof result.current.dispose).toBe('function');
 
       // Create a signal to verify it works
-      const count = result.current.signal(0);
+      const count = result.current.signal(0) as any;
       expect(count.value).toBe(0);
 
       // Spy on dispose to verify cleanup
@@ -83,8 +83,8 @@ describe('Lattice Context Hooks', () => {
         useLatticeContext(...mockExtensions)
       );
 
-      const count = result.current.signal(0);
-      const doubled = result.current.computed(() => count.value * 2);
+      const count = result.current.signal(0) as any;
+      const doubled = result.current.computed(() => count.value * 2) as any;
 
       expect(count.value).toBe(0);
       expect(doubled.value).toBe(0);
@@ -112,9 +112,9 @@ describe('Lattice Context Hooks', () => {
         useLatticeContext(...mockExtensions)
       );
 
-      const a = result.current.signal(1);
-      const b = result.current.signal(2);
-      const sum = result.current.computed(() => a.value + b.value);
+      const a = result.current.signal(1) as any;
+      const b = result.current.signal(2) as any;
+      const sum = result.current.computed(() => a.value + b.value) as any;
 
       let computeCount = 0;
       result.current.effect(() => {

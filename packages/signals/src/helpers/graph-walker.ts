@@ -37,6 +37,8 @@ export function createGraphWalker(): GraphWalker {
     
     do {
       const target = currentEdge.to;
+      // Mark this edge as the cause of invalidation for this traversal
+      currentEdge.touched = true;
       
       // Skip already processed nodes
       if (target._flags & SKIP_FLAGS) {

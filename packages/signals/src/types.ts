@@ -116,6 +116,10 @@ export interface Edge {
   // - Stale edges are removed at the end of tracking
   trackingVersion: number;
 
+  // TOUCH MARKER: set during push to mark which edge triggered invalidation
+  // Cleared during refresh to prevent sticky causes across runs
+  touched: boolean;
+
   // REMOVED: toGen field - using alien-signals' simpler tail-marking approach
   // Instead of tracking generation per edge, we'll mark tail at start of run
   // and prune everything after the tail at the end

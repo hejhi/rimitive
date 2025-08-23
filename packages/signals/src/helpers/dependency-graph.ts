@@ -69,6 +69,7 @@ export function createDependencyGraph(): DependencyGraph {
       from: producer,
       to: consumer,
       trackingVersion,
+      touched: false,
       prevIn: tail,
       prevOut,
       nextIn: nextDep,
@@ -135,7 +136,6 @@ export function createDependencyGraph(): DependencyGraph {
     for (;;) {
       if (currentEdge) {
         const source = currentEdge.from;
-        const dirty = source._dirty;
 
         if ('_in' in source) {
           const sFlags = source._flags;
@@ -161,14 +161,18 @@ export function createDependencyGraph(): DependencyGraph {
             continue;
           }
 
-          // Otherwise, propagate if child already changed
-          if (dirty) stale = true;
+          // Otherwise, no need to propagate unless explicitly touched
+          if (currentEdge.touched) stale = true;
+          // Clear touch marker after considering
+          currentEdge.touched = false;
           currentEdge = currentEdge.nextIn;
           continue;
         }
 
-        // Source is a signal: propagate change if written since last check
-        if (dirty) stale = true;
+        // Source is a signal: propagate only if this edge was touched in push
+        if (currentEdge.touched) stale = true;
+        // Clear touch marker after considering
+        currentEdge.touched = false;
         currentEdge = currentEdge.nextIn;
         continue;
       }
