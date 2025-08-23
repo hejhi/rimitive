@@ -64,7 +64,7 @@ export interface EffectDisposer {
 const {
   RUNNING,
   DISPOSED,
-  STALE,
+  DIRTY,
   PENDING,
 } = CONSTANTS;
 
@@ -88,7 +88,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     // State object captured in closure - no binding needed
     const effect: EffectInterface = {
       __type: 'effect' as const,
-      _flags: STALE,
+      _flags: DIRTY,
       _in: undefined as Edge | undefined,
       _inTail: undefined as Edge | undefined,
       _nextScheduled: undefined as ScheduledNode | undefined,

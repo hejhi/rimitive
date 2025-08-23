@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode, ScheduledNode } from '../types';
 
-const { TRACKING, INVALIDATED, STALE } = CONSTANTS;
+const { TRACKING, INVALIDATED, DIRTY } = CONSTANTS;
 
 export interface DependencyGraph {
   addEdge: (
@@ -118,7 +118,7 @@ export function createDependencyGraph(): DependencyGraph {
   const isStale = (node: DerivedNode): boolean => {
     const flags = node._flags;
 
-    if (flags & STALE) return true;
+    if (flags & DIRTY) return true;
 
     let stack;
     let currentNode = node;  // Only DerivedNodes in this traversal
@@ -133,7 +133,7 @@ export function createDependencyGraph(): DependencyGraph {
         if ('_recompute' in source) {
           const sFlags = source._flags;
 
-          if (sFlags & STALE) {
+          if (sFlags & DIRTY) {
             stale = true;
             currentEdge = currentEdge.nextIn;
             continue;
@@ -181,7 +181,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
     
     // Update flags
-    node._flags = stale ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
+    node._flags = stale ? (flags | DIRTY) & ~INVALIDATED : flags & ~INVALIDATED;
     return stale;
   };
 
@@ -190,7 +190,7 @@ export function createDependencyGraph(): DependencyGraph {
   const needsFlush = (node: ScheduledNode): boolean => {
     const flags = node._flags;
 
-    if (flags & STALE) return true;
+    if (flags & DIRTY) return true;
 
     let needsRun = false;
     let edge = node._in;
@@ -208,8 +208,8 @@ export function createDependencyGraph(): DependencyGraph {
       } else if ('_recompute' in source) {
         if (!(source._flags & INVALIDATED)) {
           // Already evaluated this cycle - just check if it ended up stale
-          needsRun = needsRun || (source._flags & STALE) !== 0;
-        } else if (source._flags & STALE) {
+          needsRun = needsRun || (source._flags & DIRTY) !== 0;
+        } else if (source._flags & DIRTY) {
           // Marked as stale but not evaluated yet
           needsRun = true;
         } else {
@@ -222,7 +222,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
     
     // Update flags
-    node._flags = needsRun ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
+    node._flags = needsRun ? (flags | DIRTY) & ~INVALIDATED : flags & ~INVALIDATED;
     return needsRun;
   };
 

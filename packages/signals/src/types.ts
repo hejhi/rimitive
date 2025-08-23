@@ -57,7 +57,7 @@ export interface ProducerNode extends ReactiveNode {
 export interface ConsumerNode extends ReactiveNode {
   _in: Edge | undefined; // Head of input list
   _inTail: Edge | undefined; // Tail of input list
-  _flags: number; // Bit field containing STALE, RUNNING, DISPOSED, etc.
+  _flags: number; // Bit field containing DIRTY, RUNNING, DISPOSED, etc.
 }
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {

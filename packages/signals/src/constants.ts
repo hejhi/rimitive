@@ -13,10 +13,10 @@
  * bitwise OR (|) and checked with bitwise AND (&).
  * 
  * PATTERN: Bit Manipulation
- * - Set flag: node._flags |= CONSTANTS.STALE
- * - Clear flag: node._flags &= ~CONSTANTS.STALE  
- * - Check flag: node._flags & CONSTANTS.STALE
- * - Check multiple: node._flags & (CONSTANTS.STALE | CONSTANTS.INVALIDATED)
+ * - Set flag: node._flags |= CONSTANTS.DIRTY
+ * - Clear flag: node._flags &= ~CONSTANTS.DIRTY  
+ * - Check flag: node._flags & CONSTANTS.DIRTY
+ * - Check multiple: node._flags & (CONSTANTS.DIRTY | CONSTANTS.INVALIDATED)
  */
 export const CONSTANTS = {
   // ALGORITHM: Push-Pull State Flags
@@ -27,10 +27,10 @@ export const CONSTANTS = {
   // This enables lazy evaluation - we don't recompute until needed.
   INVALIDATED: 1 << 0,     // 1 (binary: 0000001)
   
-  // STALE (bit 1): Set during "pull" phase when we confirm the node IS stale.
+  // DIRTY (bit 1): Set during "pull" phase when we confirm the node IS stale.
   // Means "this node's cached value is stale and MUST be recomputed"
   // Stronger guarantee than INVALIDATED.
-  STALE: 1 << 1,     // 2 (binary: 0000010)
+  DIRTY: 1 << 1,     // 2 (binary: 0000010)
   
   // RUNNING (bit 2): Prevents infinite loops during computation.
   // Set while a computed/effect is executing to detect circular dependencies.
@@ -60,7 +60,7 @@ export const CONSTANTS = {
   SKIP_EQUALITY: 1 << 6, // 64 (binary: 1000000)
   
   // OPTIMIZATION NOTE: Bits are ordered by frequency of checking:
-  // - INVALIDATED/STALE are checked most often (every read)
+  // - INVALIDATED/DIRTY are checked most often (every read)
   // - RUNNING/DISPOSED are checked during updates
   // - Others are checked less frequently
   // Lower bits = more frequent checks = better CPU branch prediction
@@ -68,8 +68,8 @@ export const CONSTANTS = {
   // COMPOUND FLAGS: Pre-computed combinations for efficient checks
   // These avoid multiple bitwise operations in hot paths
   
-  // PENDING: Either INVALIDATED or STALE means the node needs attention
-  PENDING: (1 << 0) | (1 << 1), // 3 (INVALIDATED | STALE)
+  // PENDING: Either INVALIDATED or DIRTY means the node needs attention
+  PENDING: (1 << 0) | (1 << 1), // 3 (INVALIDATED | DIRTY)
   
   // SKIP_FLAGS: Flags that indicate we should skip processing  
   SKIP_FLAGS: (1 << 2) | (1 << 3), // 12 (RUNNING | DISPOSED)
