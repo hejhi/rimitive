@@ -25,14 +25,6 @@ export interface DependencyGraph {
   refreshConsumers: (consumer: ConsumerNode) => boolean;
 }
 
-// Stack frame type - follows Alien's pattern, never mutates Edge
-interface StackFrame {
-  edge: Edge;
-  next: Edge | undefined;
-  to: ToNode;
-  stale: boolean;
-  prev: StackFrame | undefined;
-}
 
 export function createDependencyGraph(): DependencyGraph {
   // ALIEN-STYLE OPTIMIZATION: O(1) link without linear search
@@ -129,6 +121,7 @@ export function createDependencyGraph(): DependencyGraph {
     return nextIn;
   };
 
+
   // V8 OPTIMIZATION: Streamlined dependency checking with corrected logic
   const refreshConsumers = (toNode: ToNode): boolean => {
     const flags = toNode._flags;
@@ -137,70 +130,93 @@ export function createDependencyGraph(): DependencyGraph {
     // Remove the INVALIDATED check - we're only called when INVALIDATED
     if (flags & STALE) return true;
 
-    let node = toNode;
-    let edge = toNode._in;
-    let stack: StackFrame | undefined;
+    // Stack frame for backward DFS - similar to graph-walker but for dependencies
+    interface DepStack {
+      edge: Edge | undefined;
+      node: ToNode;
+      stale: boolean;
+      prev: DepStack | undefined;
+    }
+
+    let stack: DepStack | undefined;
+    let currentEdge: Edge | undefined = toNode._in;
+    let currentNode = toNode;
     let stale = false;
 
-    // V8 OPTIMIZATION: Reduce loop overhead with while(true) pattern
-    while (true) {
-      // Process all edges for current node
-      while (edge) {
-        // Skip recycled edges (using -1 as sentinel in trackingVersion)
-        if (edge.trackingVersion === -1) {
-          edge = edge.nextIn;
+    // Single do-while loop following DFS pattern
+    do {
+      if (currentEdge) {
+        // Skip recycled edges
+        if (currentEdge.trackingVersion === -1) {
+          currentEdge = currentEdge.nextIn;
           continue;
         }
 
-        const source = edge.from;
+        const source = currentEdge.from;
         const wasDirty = source._dirty;
         
-        // Branch on node type for better prediction (preserved original logic)
+        // Check if we need to recurse into this dependency
         if ('_in' in source) {
           // Computed node
-          const { _flags, _in } = source;
+          const sourceFlags = source._flags;
           
-          if (_flags & STALE) {
+          if (sourceFlags & STALE) {
             stale = true;
-          } else if (wasDirty || _flags & PENDING) {
-            if (_flags & INVALIDATED) {
-              // Push to stack and recurse
-              stack = { edge, next: edge.nextIn, to: node, stale, prev: stack };
-              node = source;
-              edge = _in;
+            currentEdge = currentEdge.nextIn;
+          } else if (wasDirty || sourceFlags & PENDING) {
+            if (sourceFlags & INVALIDATED) {
+              // Save current position and descend into dependency
+              stack = { 
+                edge: currentEdge.nextIn, 
+                node: currentNode, 
+                stale, 
+                prev: stack 
+              };
+              
+              // Descend into the dependency
+              currentNode = source;
+              currentEdge = source._in;
               stale = false;
               continue;
             }
             stale = true;
+            currentEdge = currentEdge.nextIn;
+          } else {
+            currentEdge = currentEdge.nextIn;
           }
         } else {
-          // Signal node - check dirty flag
+          // Signal node - just check dirty flag
           stale = stale || wasDirty;
+          currentEdge = currentEdge.nextIn;
+        }
+      } else {
+        // No more edges for current node - time to process and unwind
+        
+        // Update node if stale (but not the root node yet)
+        if (stale && currentNode !== toNode) {
+          currentNode._updateValue();
+          // After updating, check if node is still dirty
+          stale = '_dirty' in currentNode ? currentNode._dirty : false;
         }
         
-        edge = edge.nextIn;
+        // Clear INVALIDATED flag if not stale
+        if (!stale) {
+          currentNode._flags &= ~INVALIDATED;
+        }
+
+        // Pop from stack
+        if (!stack) break;
+        
+        const frame = stack;
+        currentEdge = frame.edge;
+        currentNode = frame.node;
+        // Combine staleness: current stale OR parent was already stale
+        stale = stale || frame.stale;
+        stack = frame.prev;
       }
+    } while (true);
 
-      // Process current node
-      if (!stale) node._flags &= ~INVALIDATED;
-      if (!stack) break;
-
-      if (stale) {
-        node._updateValue();
-        // After updating, check if node is still dirty (for producer nodes)
-        stale = '_dirty' in node ? node._dirty : false;
-      }
-
-      // Stack unwind (preserved original logic)
-      const frame = stack;
-
-      edge = frame.next;
-      node = frame.to;
-      stack = frame.prev;
-      stale = frame.stale || stale;
-    }
-
-    // Update final flags
+    // Update final flags for the original node
     toNode._flags = stale ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
     return stale;
   };
