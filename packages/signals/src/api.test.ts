@@ -67,10 +67,10 @@ describe('createSignalAPI', () => {
         };
       })(),
       graphWalker: createGraphWalker(),
-      dependencies: createDependencyGraph(),
+      graph: createDependencyGraph(),
       sourceCleanup: (() => {
         const d = createDependencyGraph();
-        return createDependencySweeper(d.unlink);
+        return createDependencySweeper(d.removeEdge);
       })(),
     };
     
@@ -112,10 +112,10 @@ describe('createSignalAPI', () => {
         return queue;
       })(),
       graphWalker: createGraphWalker(),
-      dependencies: createDependencyGraph(),
+      graph: createDependencyGraph(),
       sourceCleanup: (() => {
         const d = createDependencyGraph();
-        return createDependencySweeper(d.unlink);
+        return createDependencySweeper(d.removeEdge);
       })(),
     };
     

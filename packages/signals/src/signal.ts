@@ -38,16 +38,16 @@ interface SignalState<T> extends ProducerNode {
 }
 
 interface SignalFactoryContext extends SignalContext {
-  dependencies: DependencyGraph;
+  graph: DependencyGraph;
   graphWalker: GraphWalker;
   workQueue: WorkQueue;
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
-    dependencies: { link },
+    graph: { addEdge },
     graphWalker: { dfs },
-    workQueue: { enqueue, flush }
+    workQueue: { enqueue, flush },
   } = ctx;
   
   // CLOSURE PATTERN: Create signal with closure-captured state for better V8 optimization
@@ -88,7 +88,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         const consumer = ctx.currentConsumer;
         
         // If an executing consumer is reading a signal, we need to establish a link to it here
-        if (consumer && consumer._flags & RUNNING) link(state, consumer, ctx.trackingVersion);
+        if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
 
         return state.value;
       }

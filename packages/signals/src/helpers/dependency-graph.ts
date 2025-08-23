@@ -16,56 +16,42 @@ import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode } from '../type
 const { TRACKING, INVALIDATED, STALE } = CONSTANTS;
 
 export interface DependencyGraph {
-  link: (
+  addEdge: (
     producer: ProducerNode,
     consumer: ConsumerNode,
     trackingVersion: number
   ) => void;
-  unlink: (edge: Edge) => Edge | undefined;
-  refreshConsumers: (consumer: ConsumerNode) => boolean;
-}
-
-// Stack frame for backward DFS - similar to graph-walker but for dependencies
-interface DepStack {
-  edge: Edge | undefined;
-  node: ToNode;
-  stale: boolean;
-  prev: DepStack | undefined;
+  removeEdge: (edge: Edge) => Edge | undefined;
+  nodeIsStale: (consumer: ConsumerNode) => boolean;
 }
 
 export function createDependencyGraph(): DependencyGraph {
-  // ALIEN-STYLE OPTIMIZATION: O(1) link without linear search
-  const link = (
+  const addEdge = (
     producer: FromNode,
     consumer: ToNode,
     trackingVersion: number
   ): void => {
-    // FAST PATH: Check tail (most recently accessed dependency)
     const tail = consumer._inTail;
+    const inVal = consumer._in;
 
-    if (tail !== undefined && tail.from === producer) {
+    if (tail && tail.from === producer) {
       tail.trackingVersion = trackingVersion;
       return;
     }
 
-    // FAST PATH: Check second most recent (2-element cache)
-    const nextAfterTail = tail !== undefined ? tail.nextIn : consumer._in;
+    const candidate = tail ? tail.nextIn : inVal;
 
-    if (nextAfterTail !== undefined && nextAfterTail.from === producer) {
-      nextAfterTail.trackingVersion = trackingVersion;
-      consumer._inTail = nextAfterTail;
+    if (candidate && candidate.from === producer) {
+      candidate.trackingVersion = trackingVersion;
+      consumer._inTail = candidate;
       return;
     }
 
-    // Instead of searching through all edges, we just create a new one.
-    // This trades potential duplicate edges for guaranteed O(1) performance.
-    // The duplicate edges will be cleaned up during unlinking.
-
-    // Create new edge immediately - no searching
-    const nextDep = tail !== undefined ? tail.nextIn : consumer._in;
+    // At this point, no reusable edge found; prepare new edge.
+    const nextDep = candidate; // already determined
     const prevOut = producer._outTail;
 
-    const newEdge: Edge = {
+    const newEdge = {
       from: producer,
       to: consumer,
       trackingVersion,
@@ -84,7 +70,7 @@ export function createDependencyGraph(): DependencyGraph {
 
     consumer._inTail = newEdge;
 
-    // Set TRACKING flag if producer is a computed node
+    // Set TRACKING flag if producer is also consumer
     if ('_flags' in producer) producer._flags |= TRACKING;
 
     // Update producer's output list
@@ -97,57 +83,59 @@ export function createDependencyGraph(): DependencyGraph {
   // ALGORITHM: Full Bidirectional Edge Removal (alien-signals pattern)
   // Removes an edge from both producer and consumer lists in O(1)
   // Returns the next edge in consumer's list for easy iteration
-  const unlink = (edge: Edge): Edge | undefined => {
-    const { from, to, prevIn, nextIn, prevOut, nextOut } = edge;
-    
-    // Remove from consumer's input list
+  const removeEdge = (edge: Edge): Edge | undefined => {
+    const from = edge.from;
+    const to = edge.to;
+    const prevIn = edge.prevIn;
+    const nextIn = edge.nextIn;
+    const prevOut = edge.prevOut;
+    const nextOut = edge.nextOut;
+
+    // Update consumer's input list
     if (nextIn) nextIn.prevIn = prevIn;
     else to._inTail = prevIn;
-    
+
     if (prevIn) prevIn.nextIn = nextIn;
     else to._in = nextIn;
-    
-    // Remove from producer's output list
+
+    // Update producer's output list
     if (nextOut) nextOut.prevOut = prevOut;
     else from._outTail = prevOut;
-    
+
     if (prevOut) prevOut.nextOut = nextOut;
     else {
       from._out = nextOut;
       // Clear TRACKING flag if this was the last consumer
+      // Use direct property access instead of 'in' operator for speed
       if (!nextOut && '_flags' in from) from._flags &= ~TRACKING;
     }
-    
+
     return nextIn;
   };
 
-  const refreshConsumers = (toNode: ToNode): boolean => {
+  const nodeIsStale = (toNode: ToNode): boolean => {
     const flags = toNode._flags;
 
-    // Fast path: already known-stale nodes remain stale
     if (flags & STALE) return true;
 
-    let stack: DepStack | undefined;
-    let currentNode: ToNode = toNode;
-    let currentEdge: Edge | undefined = currentNode._in;
+    let stack;
+    let currentNode = toNode;
+    let currentEdge = toNode._in;
     let stale = false;
 
-    // Iterative DFS over incoming edges; unwind to update computed nodes
     for (;;) {
-      if (currentEdge) {
+      while (currentEdge) {
         const source = currentEdge.from;
-
+        // Use direct property access, not 'in'
         if ('_in' in source) {
           const sFlags = source._flags;
 
-          // Child computed already stale: mark and continue
           if (sFlags & STALE) {
             stale = true;
             currentEdge = currentEdge.nextIn;
             continue;
           }
 
-          // Child computed invalidated: descend to verify and potentially update
           if (sFlags & INVALIDATED) {
             stack = {
               edge: currentEdge.nextIn,
@@ -161,47 +149,36 @@ export function createDependencyGraph(): DependencyGraph {
             continue;
           }
 
-          // Otherwise, no need to propagate unless explicitly touched
           if (currentEdge.touched) stale = true;
-          // Clear touch marker after considering
+
+          currentEdge.touched = false;
+          currentEdge = currentEdge.nextIn;
+          continue;
+        } else {
+          if (currentEdge.touched) stale = true;
           currentEdge.touched = false;
           currentEdge = currentEdge.nextIn;
           continue;
         }
-
-        // Source is a signal: propagate only if this edge was touched in push
-        if (currentEdge.touched) stale = true;
-        // Clear touch marker after considering
-        currentEdge.touched = false;
-        currentEdge = currentEdge.nextIn;
-        continue;
       }
 
-      // Finished this node's inputs: if not the root, update on demand
       if (currentNode !== toNode) {
-        if (stale) {
-          // Only propagate if the value actually changed
-          stale = currentNode._updateValue();
-        } else {
-          // Clear INVALIDATED since dependencies didn’t cause a change
-          currentNode._flags &= ~INVALIDATED;
-        }
+        stale = stale
+          ? currentNode._updateValue()
+          : ((currentNode._flags &= ~INVALIDATED), false);
       }
 
-      // Unwind
       if (!stack) break;
-      const frame = stack;
-      stack = frame.prev;
-      // Merge staleness with parent frame’s pending state
-      stale = stale || frame.stale;
-      currentNode = frame.node;
-      currentEdge = frame.edge;
-    }
 
-    // Update and return final state for the root
+      stale = stale || stack.stale;
+      currentNode = stack.node;
+      currentEdge = stack.edge;
+      stack = stack.prev;
+    }
+    // Only touch _flags once
     toNode._flags = stale ? (flags | STALE) & ~INVALIDATED : flags & ~INVALIDATED;
     return stale;
   };
 
-  return { link, unlink, refreshConsumers };
+  return { addEdge, removeEdge, nodeIsStale };
 }

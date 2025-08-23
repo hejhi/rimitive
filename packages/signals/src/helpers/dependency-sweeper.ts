@@ -49,7 +49,7 @@ export interface DependencySweeper {
 }
 
 export function createDependencySweeper(
-  unlink: (edge: Edge) => Edge | undefined,
+  removeEdge: (edge: Edge) => Edge | undefined,
 ): DependencySweeper {
   // ALGORITHM: Complete Edge Removal
   // Used during disposal to remove all dependency edges at once
@@ -59,7 +59,7 @@ export function createDependencySweeper(
     // Walk the linked list of sources
     while (node) {
       // unlink returns the next edge, so we can iterate efficiently
-      node = unlink(node);
+      node = removeEdge(node);
     }
     
     // Clear the consumer's source list head and tail
@@ -80,7 +80,7 @@ export function createDependencySweeper(
     // Remove all edges after the tail
     while (toRemove) {
       // unlink handles both sides and returns next edge
-      toRemove = unlink(toRemove);
+      toRemove = removeEdge(toRemove);
     }
     
     // Update tail to point to the last valid edge

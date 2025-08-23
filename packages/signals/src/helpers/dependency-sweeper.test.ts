@@ -9,7 +9,7 @@ describe('Dependency Sweeper', () => {
 
   beforeEach(() => {
     graph = createDependencyGraph();
-    sweeper = createDependencySweeper(graph.unlink);
+    sweeper = createDependencySweeper(graph.removeEdge);
   });
 
   const makeProducer = (): ProducerNode => ({
@@ -34,9 +34,9 @@ describe('Dependency Sweeper', () => {
     const c = makeProducer();
     const target = makeConsumer();
 
-    graph.link(a, target, 1);
-    graph.link(b, target, 1);
-    graph.link(c, target, 1);
+    graph.addEdge(a, target, 1);
+    graph.addEdge(b, target, 1);
+    graph.addEdge(c, target, 1);
 
     sweeper.detachAll(target);
 
@@ -53,18 +53,18 @@ describe('Dependency Sweeper', () => {
     const target = makeConsumer();
 
     // Initial run: link a, b, c
-    graph.link(a, target, 1);
-    graph.link(b, target, 1);
-    graph.link(c, target, 1);
+    graph.addEdge(a, target, 1);
+    graph.addEdge(b, target, 1);
+    graph.addEdge(c, target, 1);
 
     // Simulate start of new run - reset tail
     target._inTail = undefined;
     
     // Next run: only access a and c
     a._dirty = true;
-    graph.link(a, target, 1);
+    graph.addEdge(a, target, 1);
     c._dirty = true;
-    graph.link(c, target, 1);
+    graph.addEdge(c, target, 1);
 
     // Now prune stale (b should be removed)
     sweeper.pruneStale(target);
@@ -88,8 +88,8 @@ describe('Dependency Sweeper', () => {
     const b = makeProducer();
     const target = makeConsumer();
 
-    graph.link(a, target, 1);
-    graph.link(b, target, 1);
+    graph.addEdge(a, target, 1);
+    graph.addEdge(b, target, 1);
 
     // Simulate start of new run - reset tail
     target._inTail = undefined;

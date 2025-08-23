@@ -46,13 +46,13 @@ export interface Disposable {
 // PRODUCERS: Nodes that other nodes depend on (signals, computed values)
 // They maintain a list of consumers that depend on them
 export interface ProducerNode extends ReactiveNode {
-  _out: Edge | undefined;  // Head of output list
-  _outTail: Edge | undefined;  // Tail of output list
+  _out: Edge | undefined; // Head of output list
+  _outTail: Edge | undefined; // Tail of output list
   value: unknown;
-  
+
   // DIRTY FLAG (Alien-Signals Pattern)
   // Set to true when THIS node's value changes.
-  // Checked during refreshConsumers to detect if dependency changed.
+  // Checked during nodeIsStale to detect if dependency changed.
   // Cleared after value is propagated/consumed.
   _dirty: boolean;
 }

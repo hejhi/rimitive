@@ -23,13 +23,13 @@ export function createTestInstance() {
   const base = createContext();
   const workQueue = createWorkQueue(base);
   const graphWalker = createGraphWalker();
-  const dependencies = createDependencyGraph();
-  const sourceCleanup = createDependencySweeper(dependencies.unlink);
+  const graph = createDependencyGraph();
+  const sourceCleanup = createDependencySweeper(graph.removeEdge);
   const ctx = {
     ...base,
     workQueue,
     graphWalker,
-    dependencies,
+    graph,
     sourceCleanup,
   };
   

@@ -33,7 +33,7 @@ const {
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
-  dependencies: DependencyGraph;
+  graph: DependencyGraph;
   sourceCleanup: DependencySweeper;
 }
 
@@ -44,7 +44,7 @@ const INVALID_STALE = STALE | INVALIDATED
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    dependencies: { link, refreshConsumers },
+    graph: { addEdge, nodeIsStale },
     sourceCleanup: { pruneStale },
   } = ctx;
   
@@ -124,7 +124,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       if (state._flags & INVALIDATED) {
         // PULL
         // Check if any dependencies actually changed
-        if (refreshConsumers(state)) {
+        if (nodeIsStale(state)) {
           updateValue();
         } else {
           // Dependencies haven't changed, just clear invalidated flag
@@ -138,7 +138,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Register with current consumer FIRST (like signals do)
       const consumer = ctx.currentConsumer;
 
-      if (consumer && consumer._flags & RUNNING) link(state, consumer, ctx.trackingVersion);
+      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
 
       // Lazy Evaluation - only recompute if stale
       if (state._flags & INVALID_STALE) updateComputed();

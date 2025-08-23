@@ -10,14 +10,14 @@ import { createGraphWalker } from './helpers/graph-walker';
  */
 export function createDefaultContext() {
   const baseCtx = createContext();
-  const dependencies = createDependencyGraph();
-  const sourceCleanup = createDependencySweeper(dependencies.unlink);
+  const graph = createDependencyGraph();
+  const sourceCleanup = createDependencySweeper(graph.removeEdge);
   const workQueue = createWorkQueue(baseCtx);
   const graphWalker = createGraphWalker();
   
   return {
     ...baseCtx,
-    dependencies,
+    graph,
     sourceCleanup,
     workQueue,
     graphWalker,

@@ -111,7 +111,7 @@ const api = createSignalAPI({
   ...createContext(),
   workQueue: createWorkQueue(),
   graphWalker: createGraphWalker(),
-  dependencies: createDependencyGraph(),
+  graph: createDependencyGraph(),
   sourceCleanup: createDependencySweeper(createDependencyGraph().unlinkFromProducer),
 });
 ```
