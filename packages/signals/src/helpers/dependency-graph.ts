@@ -25,6 +25,13 @@ export interface DependencyGraph {
   refreshConsumers: (consumer: ConsumerNode) => boolean;
 }
 
+// Stack frame for backward DFS - similar to graph-walker but for dependencies
+interface DepStack {
+  edge: Edge | undefined;
+  node: ToNode;
+  stale: boolean;
+  prev: DepStack | undefined;
+}
 
 export function createDependencyGraph(): DependencyGraph {
   // ALIEN-STYLE OPTIMIZATION: O(1) link without linear search
@@ -121,22 +128,11 @@ export function createDependencyGraph(): DependencyGraph {
     return nextIn;
   };
 
-
-  // V8 OPTIMIZATION: Streamlined dependency checking with corrected logic
   const refreshConsumers = (toNode: ToNode): boolean => {
     const flags = toNode._flags;
     
-    // V8 OPTIMIZATION: Early exits with predictable branches
     // Remove the INVALIDATED check - we're only called when INVALIDATED
     if (flags & STALE) return true;
-
-    // Stack frame for backward DFS - similar to graph-walker but for dependencies
-    interface DepStack {
-      edge: Edge | undefined;
-      node: ToNode;
-      stale: boolean;
-      prev: DepStack | undefined;
-    }
 
     let stack: DepStack | undefined;
     let currentEdge: Edge | undefined = toNode._in;
@@ -163,7 +159,10 @@ export function createDependencyGraph(): DependencyGraph {
           if (sourceFlags & STALE) {
             stale = true;
             currentEdge = currentEdge.nextIn;
-          } else if (wasDirty || sourceFlags & PENDING) {
+            continue;
+          }
+          
+          if (wasDirty || sourceFlags & PENDING) {
             if (sourceFlags & INVALIDATED) {
               // Save current position and descend into dependency
               stack = { 
@@ -179,42 +178,44 @@ export function createDependencyGraph(): DependencyGraph {
               stale = false;
               continue;
             }
+
             stale = true;
-            currentEdge = currentEdge.nextIn;
-          } else {
-            currentEdge = currentEdge.nextIn;
           }
-        } else {
-          // Signal node - just check dirty flag
-          stale = stale || wasDirty;
+
           currentEdge = currentEdge.nextIn;
-        }
-      } else {
-        // No more edges for current node - time to process and unwind
-        
-        // Update node if stale (but not the root node yet)
-        if (stale && currentNode !== toNode) {
-          // Update the node and check if its value actually changed
-          const valueChanged = currentNode._updateValue();
-          // Only propagate staleness if the value actually changed
-          stale = valueChanged;
-        }
-        
-        // Clear INVALIDATED flag if not stale
-        if (!stale) {
-          currentNode._flags &= ~INVALIDATED;
+          continue;
         }
 
-        // Pop from stack
-        if (!stack) break;
-        
-        const frame = stack;
-        currentEdge = frame.edge;
-        currentNode = frame.node;
-        // Combine staleness: current stale OR parent was already stale
-        stale = stale || frame.stale;
-        stack = frame.prev;
+        // Signal node - just check dirty flag
+        stale = stale || wasDirty;
+        currentEdge = currentEdge.nextIn;
+
+        continue;
       }
+      
+      // No more edges for current node - time to process and unwind
+      
+      // Update node if stale (but not the root node yet)
+      if (stale && currentNode !== toNode) {
+        // Only propagate staleness if the value actually changed
+        stale = currentNode._updateValue();
+      }
+      
+      // Clear INVALIDATED flag if not stale
+      if (!stale) {
+        currentNode._flags &= ~INVALIDATED;
+      }
+
+      // Pop from stack
+      if (!stack) break;
+      
+      const frame = stack;
+      currentEdge = frame.edge;
+      currentNode = frame.node;
+
+      // Combine staleness: current stale OR parent was already stale
+      stale = stale || frame.stale;
+      stack = frame.prev;
     } while (true);
 
     // Update final flags for the original node
