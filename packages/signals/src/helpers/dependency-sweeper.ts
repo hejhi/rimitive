@@ -84,9 +84,7 @@ export function createDependencySweeper(
     }
     
     // Update tail to point to the last valid edge
-    if (tail) {
-      tail.nextIn = undefined;
-    }
+    if (tail) tail.nextIn = undefined;
   };
 
   return { detachAll, pruneStale };

@@ -37,11 +37,9 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     node._nextScheduled = undefined;
 
     // Add to queue
-    if (ctx.queueTail) {
-      ctx.queueTail._nextScheduled = node;
-    } else {
-      ctx.queueHead = node;
-    }
+    if (ctx.queueTail) ctx.queueTail._nextScheduled = node;
+    else ctx.queueHead = node;
+
     ctx.queueTail = node;
   };
 
