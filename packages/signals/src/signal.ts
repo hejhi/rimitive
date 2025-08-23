@@ -63,35 +63,36 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
     
     // Signal function using closure instead of bound this
     const signal = ((...args: [] | [T]): T | void => {
-      // WRITE
       if (args.length) {
+        // WRITE PATH
         const newValue = args[0];
-        
-        if (state.value === newValue) return;
-        
-        // Update value and set dirty flag (no arithmetic in hot path!)
+        // Cache current value
+        const currValue = state.value;
+
+        if (currValue === newValue) return;
+
         state.value = newValue;
         state._dirty = true;
 
-        // Skip propagation if no dependents
-        if (!state._out) return;
-        
-        // IMMEDIATE PROPAGATION: Traverse graph immediately
-        // This eliminates double traversal overhead
-        invalidate(state._out, enqueue);
+        // Cache _out for repeat access
+        const outEdge = state._out;
+        if (!outEdge) return;
 
-        // If no batch, flush
+        // Invalidate and propagate
+        invalidate(outEdge, enqueue);
+
+        // Batch check and flush
         if (!ctx.batchDepth) flush();
-      } else {
-        // READ
-        // The currently executing consumer in the context, if there is one
-        const consumer = ctx.currentConsumer;
-        
-        // If an executing consumer is reading a signal, we need to establish a link to it here
-        if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
-
-        return state.value;
+        return;
       }
+
+      // READ PATH
+      const consumer = ctx.currentConsumer;
+
+      // Only link signal if consumer is actively RUNNING
+      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
+
+      return state.value;
     }) as SignalFunction<T>;
     
     // Add peek method using closure
