@@ -23,7 +23,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _updateValue: () => true,
+        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -54,7 +54,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _updateValue: () => true,
+        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -85,7 +85,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _updateValue: () => true,
+        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -107,7 +107,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _updateValue: () => true,
+        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -140,7 +140,7 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         _flags: 0,
         _in: undefined,
-        _updateValue: () => true,
+        _recompute: () => true,
         _inTail: undefined,
       };
       
@@ -173,7 +173,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _updateValue: () => true,
+          _recompute: () => true,
             _inTail: undefined,
         };
         
@@ -200,7 +200,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _updateValue: () => true,
+          _recompute: () => true,
             _inTail: undefined,
         };
         
@@ -208,7 +208,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _updateValue: () => true,
+          _recompute: () => true,
             _inTail: undefined,
         };
         
@@ -240,7 +240,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _updateValue: () => true,
+          _recompute: () => true,
             _inTail: undefined,
         };
         
@@ -265,7 +265,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _updateValue: () => true,
+          _recompute: () => true,
             _inTail: undefined,
         };
         
@@ -342,7 +342,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _updateValue: () => true,
+          _recompute: () => true,
             _inTail: undefined
         };
         
@@ -374,7 +374,7 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-          _updateValue: () => true,
+          _recompute: () => true,
           _inTail: undefined,
         };
         

@@ -21,7 +21,7 @@ export interface ComputedFunction<T = unknown> extends ProducerNode, ConsumerNod
 // Internal computed state that gets bound to the function
 interface ComputedState<T> extends ProducerNode, ConsumerNode {
   __type: 'computed';
-  _updateValue(): boolean; // Update the computed value when dependencies change
+  _recompute(): boolean; // Update the computed value when dependencies change
   _callback: () => T; // User's computation function
   value: T | undefined; // Cached computed value
 }
@@ -60,23 +60,20 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _inTail: undefined,
       _flags: STALE,
       // This will be set below
-      _updateValue: null as unknown as () => boolean,
+      _recompute: null as unknown as () => boolean,
       _callback: compute,
     };
 
-    // Create updateValue that captures state in closure
-    const updateValue = (): boolean => {
-      // SETUP: Prepare for recomputation
+    // Create recompute that captures state in closure
+    const recompute = (): boolean => {
       const flags = state._flags;
-      
-      // Set RUNNING, clear INVALIDATED, keep STALE for first-eval check
+
+      // Bitwise logic in one line for clarity and optimization
       state._flags = (flags | RUNNING) & ~INVALIDATED;
 
-      // DEPENDENCY TRACKING SETUP:
       ctx.trackingVersion++;
       state._inTail = undefined;
 
-      // Make this computed the "current consumer" so signals know to link to us
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = state;
 
@@ -85,27 +82,18 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const oldValue = state.value;
         const newValue = compute();
 
-        // Check if value changed and update accordingly
+        // Avoid multiple flag checks; assign only once
         if (newValue !== oldValue) {
           state.value = newValue;
-          // Mark dirty unless this is first evaluation (STALE flag indicates first eval)
           state._dirty = (flags & STALE) === 0;
           valueChanged = true;
-        } else {
-          // Value unchanged - clear dirty flag
-          state._dirty = false;
-        }
+        } else state._dirty = false;
       } finally {
-        // CLEANUP: Must run even if computation throws
         ctx.currentConsumer = prevConsumer;
-        
-        // Clear RUNNING and STALE flags
+        // Bitwise clean up in one shot
         state._flags &= ~(RUNNING | STALE);
-
-        // Remove stale dependencies
-        pruneStale(state);
+        pruneStale(state); // Ensure pruneStale is consistently shaped and inlinable
       }
-      
       return valueChanged;
     };
 
@@ -117,19 +105,16 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // STALE means definitely need to recompute
       // INVALIDATED means maybe - check dependencies
       if (state._flags & STALE) {
-        updateValue();
+        recompute();
         return;
       }
       
       if (state._flags & INVALIDATED) {
         // PULL
         // Check if any dependencies actually changed
-        if (nodeIsStale(state)) {
-          updateValue();
-        } else {
-          // Dependencies haven't changed, just clear invalidated flag
-          state._flags &= ~INVALIDATED;
-        }
+        if (nodeIsStale(state)) recompute();
+        // Dependencies haven't changed, just clear invalidated flag
+        else state._flags &= ~INVALIDATED;
       }
     };
 
@@ -155,7 +140,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     };
 
     // Set internal method
-    state._updateValue = updateValue;
+    state._recompute = recompute;
 
     return computed;
   }

@@ -98,7 +98,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // These will be set below
       dispose: null as unknown as () => void,
       _flush: null as unknown as () => void,
-      _updateValue: null as unknown as () => boolean,
+      _recompute: null as unknown as () => boolean,
     };
 
     // Flush method using closure
@@ -164,7 +164,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     };
 
     // UpdateValue method using closure
-    const updateValue = (): boolean => {
+    const recompute = (): boolean => {
       // Effects don't produce values - nothing to update
       // This method exists to satisfy the ConsumerNode interface
       return true;
@@ -190,7 +190,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
     // Set methods
     effect._flush = flushEffect;
-    effect._updateValue = updateValue;
+    effect._recompute = recompute;
     effect.dispose = dispose;
 
     // Effects run immediately when created to establish initial state

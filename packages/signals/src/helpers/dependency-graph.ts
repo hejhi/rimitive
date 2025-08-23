@@ -164,7 +164,7 @@ export function createDependencyGraph(): DependencyGraph {
 
       if (currentNode !== toNode) {
         stale = stale
-          ? currentNode._updateValue()
+          ? currentNode._recompute()
           : ((currentNode._flags &= ~INVALIDATED), false);
       }
 
