@@ -121,15 +121,16 @@ export function createDependencyGraph(): DependencyGraph {
     if (flags & STALE) return true;
 
     let stack;
-    let currentNode: DerivedNode | ConsumerNode = node;
+    let currentNode = node;  // Only DerivedNodes in this traversal
     let currentEdge = node._in;
     let stale = false;
 
     for (;;) {
       while (currentEdge) {
         const source = currentEdge.from;
+        
         // Check if source is also a derived node (computed)
-        if ('_in' in source) {
+        if ('_recompute' in source) {
           const sFlags = source._flags;
 
           if (sFlags & STALE) {
@@ -166,7 +167,8 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Process computed nodes in the traversal
-      if (currentNode !== node && '_recompute' in currentNode) {
+      // currentNode is always a DerivedNode here
+      if (currentNode !== node) {
         stale = stale ? currentNode._recompute() : ((currentNode._flags &= ~INVALIDATED), false);
       }
 
@@ -203,21 +205,16 @@ export function createDependencyGraph(): DependencyGraph {
       if (source._dirty) {
         // Signal is dirty
         needsRun = true;
-      } else if ('_recompute' in source && '_flags' in source) {
-        // It's a DerivedNode (computed)
-        const derivedSource = source as DerivedNode;
-        
-        if (!(derivedSource._flags & INVALIDATED)) {
+      } else if ('_recompute' in source) {
+        if (!(source._flags & INVALIDATED)) {
           // Already evaluated this cycle - just check if it ended up stale
-          needsRun = needsRun || (derivedSource._flags & STALE) !== 0;
-        } else if (derivedSource._flags & STALE) {
+          needsRun = needsRun || (source._flags & STALE) !== 0;
+        } else if (source._flags & STALE) {
           // Marked as stale but not evaluated yet
           needsRun = true;
         } else {
           // Needs evaluation - let it handle its own recursive checking
-          if (derivedSource._recompute()) {
-            needsRun = true;
-          }
+          if (source._recompute()) needsRun = true;
         }
       }
       
