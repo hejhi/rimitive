@@ -111,7 +111,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Register with current consumer FIRST (like signals do)
       const consumer = ctx.currentConsumer;
 
-      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
+      // Always link if there's a consumer (alien-signals approach)
+      if (consumer) addEdge(state, consumer, ctx.trackingVersion);
 
       // Lazy Evaluation - only recompute if stale
       if (state._flags & DIRTY) updateComputed();

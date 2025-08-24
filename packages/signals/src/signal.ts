@@ -13,14 +13,11 @@
  * - The edge tracks version numbers for efficient cache invalidation
  * - This enables automatic dependency discovery during execution
  */
-import { CONSTANTS } from './constants';
 import type { ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
-
-const { RUNNING } = CONSTANTS;
 
 // Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
@@ -86,8 +83,8 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       // READ PATH
       const consumer = ctx.currentConsumer;
 
-      // Only link signal if consumer is actively RUNNING
-      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
+      // Always link if there's a consumer (alien-signals approach)
+      if (consumer) addEdge(state, consumer, ctx.trackingVersion);
 
       return state.value;
     }) as SignalFunction<T>;

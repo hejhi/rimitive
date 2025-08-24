@@ -62,6 +62,16 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
 
+    // Third check (alien-signals optimization): Check producer's tail subscriber
+    // If the producer already has this consumer as its tail with current version, skip
+    // This happens when the same consumer reads the same producer multiple times in one run
+    const producerTail = producer._outTail;
+    if (producerTail && producerTail.to === consumer && producerTail.trackingVersion === trackingVersion) {
+      // Edge already exists with current version - it was created earlier in this run
+      // No need to update anything, it's already properly positioned
+      return;
+    }
+
     // No reusable edge found - create new edge
     const prevOut = producer._outTail;
     

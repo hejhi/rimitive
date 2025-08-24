@@ -56,11 +56,11 @@ describe('Dependency Graph Cleanup Operations', () => {
     // Simulate start of new run - reset tail
     target._inTail = undefined;
     
-    // Next run: only access a and c
+    // Next run: only access a and c (with NEW version like real usage)
     a._dirty = true;
-    graph.addEdge(a, target, 1);
+    graph.addEdge(a, target, 2);  // Version 2 for second run
     c._dirty = true;
-    graph.addEdge(c, target, 1);
+    graph.addEdge(c, target, 2);  // Version 2 for second run
 
     // Now prune stale (b should be removed)
     graph.pruneStale(target);
