@@ -18,6 +18,9 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
+import { CONSTANTS } from './constants';
+
+const { RUNNING } = CONSTANTS
 
 // Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
@@ -84,7 +87,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       const consumer = ctx.currentConsumer;
 
       // Always link if there's a consumer (alien-signals approach)
-      if (consumer) addEdge(state, consumer, ctx.trackingVersion);
+      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
 
       return state.value;
     }) as SignalFunction<T>;

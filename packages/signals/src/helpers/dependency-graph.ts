@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode, ScheduledNode } from '../types';
 
-const { TRACKING, DIRTY, DISPOSED, RUNNING } = CONSTANTS;
+const { DIRTY, DISPOSED, RUNNING } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
 
 
@@ -95,9 +95,6 @@ export function createDependencyGraph(): DependencyGraph {
     if (prevOut) prevOut.nextOut = newEdge;
     else producer._out = newEdge;
     producer._outTail = newEdge;
-    
-    // Set TRACKING flag if producer is also a consumer
-    if ('_flags' in producer) producer._flags |= TRACKING;
   };
 
   // ALGORITHM: Full Bidirectional Edge Removal (alien-signals pattern)
@@ -125,10 +122,8 @@ export function createDependencyGraph(): DependencyGraph {
     if (prevOut) prevOut.nextOut = nextOut;
     else {
       from._out = nextOut;
-      // Clear TRACKING flag if this was the last consumer
       // Use direct property access instead of 'in' operator for speed
       if (!nextOut && '_flags' in from) {
-        from._flags &= ~TRACKING;
         // When a computed becomes unobserved, clear its dependencies
         // This is the "unobserved computed" optimization from alien-signals
         if ('_recompute' in from) {

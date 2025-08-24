@@ -220,29 +220,6 @@ describe('Dependency Graph Helpers', () => {
         // node2 should be the tail
         expect(source._outTail).toBe(node2);
       });
-  
-      it('should set TRACKING flag for computed sources', () => {
-        const source = {
-          __type: 'test',
-          _out: undefined,
-          _dirty: false,
-          _flags: 0,
-          _outTail: undefined,
-          value: 0,
-        };
-        
-        const target: ConsumerNode = {
-          __type: 'test',
-          _flags: 0,
-          _in: undefined,
-              _inTail: undefined,
-        };
-        
-        helpers.addEdge(source, target, 1);
-        
-        // TRACKING flag is 1 << 3 = 8
-        expect(source._flags & 8).toBe(8);
-      });
     });
   
     describe('unlink', () => {
@@ -319,31 +296,6 @@ describe('Dependency Graph Helpers', () => {
         // The returned next should be undefined since we removed from middle of consumer's list
         // (middleEdge was in targets[1]._in, which only had one edge)
         expect(next).toBeUndefined();
-      });
-  
-      it('should clear TRACKING flag when last target is removed', () => {
-        const source = {
-          __type: 'test',
-          _out: undefined,
-          _dirty: false,
-          _flags: 16, // TRACKING flag set
-          _outTail: undefined,
-          value: 0,
-        };
-        
-        const target: ConsumerNode = {
-          __type: 'test',
-          _flags: 0,
-          _in: undefined,
-              _inTail: undefined
-        };
-        
-        helpers.addEdge(source, target, 1);
-        const node = target._in!;
-        
-        helpers.removeEdge(node);
-        
-        expect(source._flags & 8).toBe(0);
       });
       
       it('should return next edge for efficient iteration', () => {

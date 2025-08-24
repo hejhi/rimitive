@@ -103,7 +103,7 @@ export interface Edge {
   prevIn: Edge | undefined; // Previous in input list
   nextIn: Edge | undefined; // Next in input list
 
-  // TRACKING VERSION (Alien-Signals Pattern)
+  // TRACKING VERSION
   // Stores the context's trackingVersion when this edge was created.
   // Used to determine if this edge is from the current tracking context.
   //
@@ -111,9 +111,6 @@ export interface Edge {
   // - Edges with trackingVersion !== ctx.trackingVersion are stale
   // - Stale edges are removed at the end of tracking
   trackingVersion: number;
-
-  // REMOVED: touched field - moved dirty tracking to nodes for early exit capability
-  // Node-based dirty flags allow O(1) staleness checks instead of O(n) edge traversal
 }
 
 // Ensure module is not tree-shaken
