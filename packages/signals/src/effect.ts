@@ -74,7 +74,7 @@ interface EffectFactoryContext extends SignalContext {
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    graph: { needsFlush, detachAll, pruneStale },
+    graph: { detachAll, pruneStale },
   } = ctx;
   
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
@@ -100,9 +100,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       // Single bitwise check for fast exit
       if (flags & (DISPOSED | RUNNING) || !(flags & DIRTY)) return;
 
-      // Check if dependencies changed
-      if (!needsFlush(effect)) return;
-
+      // Always flush when dirty (alien-signals approach)
       // Combine bitwise mutations in a single assignment
       effect._flags = (flags | RUNNING) & ~DIRTY;
 

@@ -40,7 +40,7 @@ export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, pruneStale, isStale },
+    graph: { addEdge, pruneStale },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -100,15 +100,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // RE-ENTRANCE GUARD: Prevent infinite recursion
       if (state._flags & RUNNING) return;
 
-      // If marked dirty, check if we actually need to recompute
+      // If marked dirty, always recompute (alien-signals approach)
       if (state._flags & DIRTY) {
-        // Check if dependencies actually changed
-        if (isStale(state)) {
-          recompute();
-        } else {
-          // Dependencies didn't actually change, clear dirty flag
-          state._flags &= ~DIRTY;
-        }
+        recompute();
       }
     };
 
