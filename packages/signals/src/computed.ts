@@ -28,7 +28,6 @@ interface ComputedState<T> extends DerivedNode {
 const {
   RUNNING,
   DIRTY,
-  INVALIDATED,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -38,11 +37,10 @@ interface ComputedFactoryContext extends SignalContext {
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
-const INVALID_DIRTY = DIRTY | INVALIDATED
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, isStale, pruneStale },
+    graph: { addEdge, pruneStale, isStale },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -65,8 +63,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     const recompute = (): boolean => {
       const flags = state._flags;
 
-      // Bitwise logic in one line for clarity and optimization
-      state._flags = (flags | RUNNING) & ~INVALIDATED;
+      // Set RUNNING flag and clear DIRTY
+      state._flags = (flags | RUNNING) & ~DIRTY;
 
       ctx.trackingVersion++;
       state._inTail = undefined;
@@ -79,16 +77,20 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const oldValue = state.value;
         const newValue = compute();
 
-        // Avoid multiple flag checks; assign only once
+        // Update value and dirty flag based on whether value changed
         if (newValue !== oldValue) {
           state.value = newValue;
-          state._dirty = (flags & DIRTY) === 0;
+          state._dirty = true;
           valueChanged = true;
-        } else state._dirty = false;
+        } else {
+          // Value didn't change - clear dirty flag but don't propagate
+          state._dirty = false;
+          valueChanged = false;
+        }
       } finally {
         ctx.currentConsumer = prevConsumer;
-        // Bitwise clean up in one shot
-        state._flags &= ~(RUNNING | DIRTY);
+        // Clear RUNNING flag  
+        state._flags &= ~RUNNING;
         pruneStale(state); // Ensure pruneStale is consistently shaped and inlinable
       }
       return valueChanged;
@@ -98,20 +100,15 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // RE-ENTRANCE GUARD: Prevent infinite recursion
       if (state._flags & RUNNING) return;
 
-      // Just check if we need to recompute
-      // DIRTY means definitely need to recompute
-      // INVALIDATED means maybe - check dependencies
+      // If marked dirty, check if we actually need to recompute
       if (state._flags & DIRTY) {
-        recompute();
-        return;
-      }
-      
-      if (state._flags & INVALIDATED) {
-        // PULL
-        // Check if any dependencies actually changed
-        if (isStale(state)) recompute();
-        // Dependencies haven't changed, just clear invalidated flag
-        else state._flags &= ~INVALIDATED;
+        // Check if dependencies actually changed
+        if (isStale(state)) {
+          recompute();
+        } else {
+          // Dependencies didn't actually change, clear dirty flag
+          state._flags &= ~DIRTY;
+        }
       }
     };
 
@@ -123,7 +120,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
 
       // Lazy Evaluation - only recompute if stale
-      if (state._flags & INVALID_DIRTY) updateComputed();
+      if (state._flags & DIRTY) updateComputed();
 
       return state.value;
     }) as ComputedFunction<T>;
@@ -132,7 +129,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     computed.peek = () => {
       // ALGORITHM: Non-tracking Read
       // Same as value getter but doesn't register dependencies
-      if (state._flags & INVALID_DIRTY) updateComputed();
+      if (state._flags & DIRTY) updateComputed();
       return state.value!;
     };
 

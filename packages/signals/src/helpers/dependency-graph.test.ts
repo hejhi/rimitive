@@ -3,7 +3,7 @@ import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { INVALIDATED, DIRTY, DISPOSED, RUNNING } = CONSTANTS;
+const { DIRTY, DISPOSED, RUNNING } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: ReturnType<typeof createDependencyGraph>;
@@ -240,8 +240,8 @@ describe('Dependency Graph Helpers', () => {
         
         helpers.addEdge(source, target, 1);
         
-        // TRACKING flag is 1 << 4 = 16
-        expect(source._flags & 16).toBe(16);
+        // TRACKING flag is 1 << 3 = 8
+        expect(source._flags & 8).toBe(8);
       });
     });
   
@@ -343,7 +343,7 @@ describe('Dependency Graph Helpers', () => {
         
         helpers.removeEdge(node);
         
-        expect(source._flags & 16).toBe(0);
+        expect(source._flags & 8).toBe(0);
       });
       
       it('should return next edge for efficient iteration', () => {
@@ -452,26 +452,24 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge, visit);
   
-      // With push-pull optimization, computeds only get INVALIDATED, not DIRTY
-      expect(target._flags & INVALIDATED).toBeTruthy();
-      expect(target._flags & DIRTY).toBeFalsy();
+      // With simplified flag system, computeds get DIRTY 
+      expect(target._flags & DIRTY).toBeTruthy();
     });
   
-    it('should mark effects as INVALIDATED only (lazy evaluation for all)', () => {
+    it('should mark effects as DIRTY (simplified flag system)', () => {
       const source = createMockNode('signal') as ProducerNode;
       const effect = createMockNode('effect', 0, true); // isScheduled = true
       const edge = createEdge(source, effect);
   
       walk(edge, visit);
   
-      // Effects now also use lazy evaluation - only INVALIDATED, not DIRTY
-      expect(effect._flags & INVALIDATED).toBeTruthy();
-      expect(effect._flags & DIRTY).toBeFalsy();
+      // With simplified flag system, effects get DIRTY
+      expect(effect._flags & DIRTY).toBeTruthy();
     });
   
     it('should skip already notified nodes', () => {
       const source = createMockNode('signal') as ProducerNode;
-      const target = createMockNode('computed', INVALIDATED);
+      const target = createMockNode('computed', DIRTY);
       const edge = createEdge(source, target);
   
       const initialFlags = target._flags;
@@ -516,9 +514,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1, visit);
   
-      expect(target1._flags & INVALIDATED).toBeTruthy();
-      expect(target2._flags & INVALIDATED).toBeTruthy();
-      expect(target3._flags & INVALIDATED).toBeTruthy();
+      expect(target1._flags & DIRTY).toBeTruthy();
+      expect(target2._flags & DIRTY).toBeTruthy();
+      expect(target3._flags & DIRTY).toBeTruthy();
     });
   
     it('should traverse depth-first through dependency chains', () => {
@@ -537,9 +535,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1, visit);
   
-      expect(computed1._flags & INVALIDATED).toBeTruthy();
-      expect(computed2._flags & INVALIDATED).toBeTruthy();
-      expect(effect._flags & INVALIDATED).toBeTruthy();
+      expect(computed1._flags & DIRTY).toBeTruthy();
+      expect(computed2._flags & DIRTY).toBeTruthy();
+      expect(effect._flags & DIRTY).toBeTruthy();
       expect(scheduledNodes).toContain(effect);
     });
   
@@ -561,9 +559,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1, visit);
   
-      expect(computed1._flags & INVALIDATED).toBeTruthy();
-      expect(computed2._flags & INVALIDATED).toBeTruthy();
-      expect(computed3._flags & INVALIDATED).toBeTruthy();
+      expect(computed1._flags & DIRTY).toBeTruthy();
+      expect(computed2._flags & DIRTY).toBeTruthy();
+      expect(computed3._flags & DIRTY).toBeTruthy();
     });
   
     it('should handle complex graphs with multiple branches', () => {
@@ -607,13 +605,13 @@ describe('Dependency Graph Helpers', () => {
       walk(sourceToComp1, visit);
   
       // All nodes should be invalidated
-      expect(comp1._flags & INVALIDATED).toBeTruthy();
-      expect(comp2._flags & INVALIDATED).toBeTruthy();
-      expect(comp3._flags & INVALIDATED).toBeTruthy();
-      expect(comp4._flags & INVALIDATED).toBeTruthy();
-      expect(eff1._flags & INVALIDATED).toBeTruthy();
-      expect(eff2._flags & INVALIDATED).toBeTruthy();
-      expect(eff3._flags & INVALIDATED).toBeTruthy();
+      expect(comp1._flags & DIRTY).toBeTruthy();
+      expect(comp2._flags & DIRTY).toBeTruthy();
+      expect(comp3._flags & DIRTY).toBeTruthy();
+      expect(comp4._flags & DIRTY).toBeTruthy();
+      expect(eff1._flags & DIRTY).toBeTruthy();
+      expect(eff2._flags & DIRTY).toBeTruthy();
+      expect(eff3._flags & DIRTY).toBeTruthy();
   
       // All effects should be scheduled
       expect(scheduledNodes).toContain(eff1);
@@ -661,10 +659,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edges[0], visit);
   
-      // All nodes should be notified (but not outdated - that's determined lazily)
+      // All nodes should be notified as DIRTY with simplified flag system
       for (let i = 1; i < 100; i++) {
-        expect(nodes[i]!._flags & INVALIDATED).toBeTruthy();
-        expect(nodes[i]!._flags & DIRTY).toBeFalsy();
+        expect(nodes[i]!._flags & DIRTY).toBeTruthy();
       }
     });
   });

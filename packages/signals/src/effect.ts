@@ -64,7 +64,6 @@ const {
   RUNNING,
   DISPOSED,
   DIRTY,
-  PENDING,
 } = CONSTANTS;
 
 // Note: genericDispose removed - we now use closures instead of bind
@@ -99,13 +98,13 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       const flags = effect._flags;
 
       // Single bitwise check for fast exit
-      if (flags & (DISPOSED | RUNNING) || !(flags & PENDING)) return;
+      if (flags & (DISPOSED | RUNNING) || !(flags & DIRTY)) return;
 
       // Check if dependencies changed
       if (!needsFlush(effect)) return;
 
       // Combine bitwise mutations in a single assignment
-      effect._flags = (flags | RUNNING) & ~PENDING;
+      effect._flags = (flags | RUNNING) & ~DIRTY;
 
       ctx.trackingVersion++;
       effect._inTail = undefined;

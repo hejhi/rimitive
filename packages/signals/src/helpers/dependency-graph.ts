@@ -13,13 +13,9 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode, ScheduledNode } from '../types';
 
-const { TRACKING, INVALIDATED, DIRTY, DISPOSED, RUNNING } = CONSTANTS;
-const SKIP_FLAGS = INVALIDATED | DISPOSED | RUNNING;
+const { TRACKING, DIRTY, DISPOSED, RUNNING } = CONSTANTS;
+const SKIP_FLAGS = DISPOSED | RUNNING;
 
-interface Stack<T> {
-  value: T;
-  prev: Stack<T> | undefined;
-}
 
 export interface DependencyGraph {
   // Edge management
@@ -139,120 +135,57 @@ export function createDependencyGraph(): DependencyGraph {
 
   // For computed nodes: check if dependencies changed and recompute if needed
   const isStale = (node: DerivedNode): boolean => {
-    const flags = node._flags;
-
     // Fast path: already marked dirty
-    if (flags & DIRTY) return true;
+    if (node._flags & DIRTY) return true;
 
-    let stack;
-    let currentNode = node;
-    let currentEdge = node._in;
-    let stale = false;
-
-    for (;;) {
-      while (currentEdge) {
-        const source = currentEdge.from;
-        
-        // Check if source is dirty - this is the key optimization
-        // We can now early exit as soon as we find a dirty source
-        if (source._dirty) {
-          stale = true;
-          // Early exit - no need to check remaining edges
-          currentEdge = undefined;
-          break;
-        }
-        
-        // Check if source is a derived node (computed)
-        if ('_recompute' in source) {
-          const sFlags = source._flags;
-
-          // Early exit if source is dirty
-          if (sFlags & DIRTY) {
-            stale = true;
-            currentEdge = undefined;
-            break;
-          }
-
-          // Recurse into invalidated sources
-          if (sFlags & INVALIDATED) {
-            stack = {
-              edge: currentEdge.nextIn,
-              node: currentNode,
-              stale,
-              prev: stack,
-            };
-            currentNode = source;
-            currentEdge = source._in;
-            stale = false;
-            continue;
-          }
-        }
-        
-        currentEdge = currentEdge.nextIn;
-      }
-
-      // Process computed nodes in the traversal
-      if (currentNode !== node) {
-        stale = stale ? currentNode._recompute() : ((currentNode._flags &= ~INVALIDATED), false);
-      }
-
-      // Pop from stack or exit
-      if (!stack) break;
-
-      stale = stale || stack.stale;
-      currentNode = stack.node;
-      currentEdge = stack.edge;
-      stack = stack.prev;
-    }
-    
-    // Update flags
-    node._flags = stale ? (flags | DIRTY) & ~INVALIDATED : flags & ~INVALIDATED;
-    return stale;
-  };
-
-  // For effect nodes: check if any direct dependencies changed
-  // Only checks immediate dependencies, not recursive traversal
-  const needsFlush = (node: ScheduledNode): boolean => {
-    const flags = node._flags;
-
-    if (flags & DIRTY) return true;
-
-    let needsRun = false;
+    // Check all direct dependencies
     let edge = node._in;
-    
     while (edge) {
       const source = edge.from;
       
-      // Check if source changed - optimize for common case (signals)
+      // Check if source is dirty
       if (source._dirty) {
-        needsRun = true;
-        // Early exit - no need to check remaining edges
-        break;
-      } else if ('_recompute' in source) {
-        const sourceFlags = source._flags;
-        // Consolidate flag checks for better branch prediction
-        if (sourceFlags & DIRTY) {
-          needsRun = true;
-          // Early exit
-          break;
-        } else if (!(sourceFlags & INVALIDATED)) {
-          // Already evaluated and clean - no change
-        } else {
-          // Needs evaluation
-          if (source._recompute()) {
-            needsRun = true;
-            // Early exit
-            break;
-          }
-        }
+        node._flags |= DIRTY;
+        return true;
+      }
+      
+      // Check if source is a derived node (computed) that's dirty
+      if ('_recompute' in source && source._flags & DIRTY) {
+        node._flags |= DIRTY;
+        return true;
       }
       
       edge = edge.nextIn;
     }
     
-    // Update flags once at the end
-    node._flags = needsRun ? (flags | DIRTY) & ~INVALIDATED : flags & ~INVALIDATED;
-    return needsRun;
+    return false;
+  };
+
+  // For effect nodes: check if any direct dependencies changed
+  // Only checks immediate dependencies, not recursive traversal
+  const needsFlush = (node: ScheduledNode): boolean => {
+    if (node._flags & DIRTY) return true;
+
+    let edge = node._in;
+    while (edge) {
+      const source = edge.from;
+      
+      // Check if source changed - optimize for common case (signals)
+      if (source._dirty) {
+        node._flags |= DIRTY;
+        return true;
+      } 
+      
+      // Check if source is a derived node (computed) that's dirty
+      if ('_recompute' in source && source._flags & DIRTY) {
+        node._flags |= DIRTY;
+        return true;
+      }
+      
+      edge = edge.nextIn;
+    }
+    
+    return false;
   };
 
   // ALGORITHM: Complete Edge Removal
@@ -291,6 +224,11 @@ export function createDependencyGraph(): DependencyGraph {
     if (tail) tail.nextIn = undefined;
   };
 
+  interface Stack<T> {
+    value: T;
+    prev: Stack<T> | undefined;
+  }
+
   const invalidate = (
       from: Edge | undefined,
       visit: (node: ScheduledNode) => void
@@ -305,14 +243,14 @@ export function createDependencyGraph(): DependencyGraph {
 
       const targetFlags = target._flags;
 
-      // Skip already processed nodes
-      if (targetFlags & SKIP_FLAGS) {
+      // Skip already processed nodes or already dirty nodes
+      if (targetFlags & (SKIP_FLAGS | DIRTY)) {
         currentEdge = currentEdge.nextOut;
         continue;
       }
 
-      // Mark as invalidated
-      target._flags = targetFlags | INVALIDATED;
+      // Mark as dirty (using DIRTY instead of INVALIDATED)
+      target._flags = targetFlags | DIRTY;
 
       // Handle producer nodes (have outputs)
       if ('_out' in target) {
