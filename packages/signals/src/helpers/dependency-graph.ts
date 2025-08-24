@@ -73,7 +73,6 @@ export function createDependencyGraph(): DependencyGraph {
       from: producer,
       to: consumer,
       trackingVersion,
-      touched: false,
       prevIn: tail,
       prevOut,
       nextIn: candidate,
@@ -154,6 +153,15 @@ export function createDependencyGraph(): DependencyGraph {
       while (currentEdge) {
         const source = currentEdge.from;
         
+        // Check if source is dirty - this is the key optimization
+        // We can now early exit as soon as we find a dirty source
+        if (source._dirty) {
+          stale = true;
+          // Early exit - no need to check remaining edges
+          currentEdge = undefined;
+          break;
+        }
+        
         // Check if source is a derived node (computed)
         if ('_recompute' in source) {
           const sFlags = source._flags;
@@ -161,8 +169,8 @@ export function createDependencyGraph(): DependencyGraph {
           // Early exit if source is dirty
           if (sFlags & DIRTY) {
             stale = true;
-            currentEdge = currentEdge.nextIn;
-            continue;
+            currentEdge = undefined;
+            break;
           }
 
           // Recurse into invalidated sources
@@ -180,11 +188,6 @@ export function createDependencyGraph(): DependencyGraph {
           }
         }
         
-        // Check touched flag after other checks for better branch prediction
-        if (currentEdge.touched) {
-          stale = true;
-        }
-        currentEdge.touched = false;
         currentEdge = currentEdge.nextIn;
       }
 
@@ -219,21 +222,28 @@ export function createDependencyGraph(): DependencyGraph {
     
     while (edge) {
       const source = edge.from;
-      edge.touched = false;
       
       // Check if source changed - optimize for common case (signals)
       if (source._dirty) {
         needsRun = true;
+        // Early exit - no need to check remaining edges
+        break;
       } else if ('_recompute' in source) {
         const sourceFlags = source._flags;
         // Consolidate flag checks for better branch prediction
         if (sourceFlags & DIRTY) {
           needsRun = true;
+          // Early exit
+          break;
         } else if (!(sourceFlags & INVALIDATED)) {
           // Already evaluated and clean - no change
         } else {
           // Needs evaluation
-          if (source._recompute()) needsRun = true;
+          if (source._recompute()) {
+            needsRun = true;
+            // Early exit
+            break;
+          }
         }
       }
       
@@ -292,7 +302,6 @@ export function createDependencyGraph(): DependencyGraph {
     
     do {
       const target = currentEdge.to;
-      currentEdge.touched = true;
 
       const targetFlags = target._flags;
 

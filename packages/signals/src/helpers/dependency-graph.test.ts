@@ -430,7 +430,7 @@ describe('Dependency Graph Helpers', () => {
         from,
         to,
         trackingVersion: 0,
-        touched: false,
+        // touched: false,
         prevIn: undefined,
         nextIn: undefined,
         prevOut: undefined,
