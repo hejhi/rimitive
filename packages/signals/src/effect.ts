@@ -64,9 +64,8 @@ const {
   RUNNING,
   DISPOSED,
   DIRTY,
+  INVALIDATED,
 } = CONSTANTS;
-
-// Note: genericDispose removed - we now use closures instead of bind
 
 interface EffectFactoryContext extends SignalContext {
   graph: DependencyGraph;
@@ -74,7 +73,7 @@ interface EffectFactoryContext extends SignalContext {
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    graph: { detachAll, pruneStale },
+    graph: { detachAll, pruneStale, needsFlush },
   } = ctx;
   
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
@@ -98,11 +97,27 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       const flags = effect._flags;
 
       // Single bitwise check for fast exit
-      if (flags & (DISPOSED | RUNNING) || !(flags & DIRTY)) return;
+      if (flags & (DISPOSED | RUNNING)) return;
+      
+      // Hybrid push-pull: Check if effect needs to run
+      // DIRTY: definitely needs to run
+      // INVALIDATED: might need to run, use pull-based check
+      if (flags & DIRTY) {
+        // Definitely dirty, will run
+      } else if (flags & INVALIDATED) {
+        // Maybe dirty, check dependencies
+        if (!needsFlush(effect)) {
+          // Not actually dirty, clear flag and skip
+          effect._flags &= ~INVALIDATED;
+          return;
+        }
+      } else {
+        // Not marked for update at all
+        return;
+      }
 
-      // Always flush when dirty (alien-signals approach)
       // Combine bitwise mutations in a single assignment
-      effect._flags = (flags | RUNNING) & ~DIRTY;
+      effect._flags = (flags | RUNNING) & ~(DIRTY | INVALIDATED);
 
       ctx.trackingVersion++;
       effect._inTail = undefined;

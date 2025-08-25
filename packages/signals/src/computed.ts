@@ -28,6 +28,7 @@ interface ComputedState<T> extends DerivedNode {
 const {
   RUNNING,
   DIRTY,
+  INVALIDATED,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -40,7 +41,7 @@ export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, pruneStale },
+    graph: { addEdge, pruneStale, isStale },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -63,8 +64,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     const recompute = (): boolean => {
       const flags = state._flags;
 
-      // Set RUNNING flag and clear DIRTY
-      state._flags = (flags | RUNNING) & ~DIRTY;
+      // Set RUNNING flag and clear DIRTY and INVALIDATED
+      state._flags = (flags | RUNNING) & ~(DIRTY | INVALIDATED);
 
       ctx.trackingVersion++;
       state._inTail = undefined;
@@ -100,10 +101,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // RE-ENTRANCE GUARD: Prevent infinite recursion
       if (state._flags & RUNNING) return;
 
-      // If marked dirty, always recompute (alien-signals approach)
-      if (state._flags & DIRTY) {
-        recompute();
-      }
+      // Always recompute when called - staleness check happens before calling this
+      recompute();
     };
 
     const computed = (() => {
@@ -112,10 +111,24 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       const consumer = ctx.currentConsumer;
 
       // Always link if there's a consumer (alien-signals approach)
-      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
+      if (consumer && consumer._flags & RUNNING) {
+        addEdge(state, consumer, ctx.trackingVersion);
+      }
 
-      // Lazy Evaluation - only recompute if stale
-      if (state._flags & DIRTY) updateComputed();
+      // Lazy Evaluation with push-pull hybrid
+      // DIRTY: definitely needs recomputation
+      // INVALIDATED: might need recomputation, use pull-based check
+      if (state._flags & DIRTY) {
+        updateComputed();
+      } else if (state._flags & INVALIDATED) {
+        // Pull-based check for invalidated nodes
+        if (isStale(state)) {
+          updateComputed();
+        } else {
+          // Not actually stale, clear invalidated flag
+          state._flags &= ~INVALIDATED;
+        }
+      }
 
       return state.value;
     }) as ComputedFunction<T>;
@@ -124,7 +137,37 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     computed.peek = () => {
       // ALGORITHM: Non-tracking Read
       // Same as value getter but doesn't register dependencies
-      if (state._flags & DIRTY) updateComputed();
+      // If unobserved, we may need to recompute to get current value
+      if (!state._out) {
+        // Unobserved computed - force recomputation to get fresh value
+        // But don't establish dependency edges since this is peek()
+        const prevConsumer = ctx.currentConsumer;
+        ctx.currentConsumer = null;
+        try {
+          if (state._flags & DIRTY) {
+            updateComputed();
+          } else if (state._flags & INVALIDATED) {
+            if (isStale(state)) {
+              updateComputed();
+            } else {
+              state._flags &= ~INVALIDATED;
+            }
+          }
+        } finally {
+          ctx.currentConsumer = prevConsumer;
+        }
+      } else {
+        // Observed computed - normal peek behavior
+        if (state._flags & DIRTY) {
+          updateComputed();
+        } else if (state._flags & INVALIDATED) {
+          if (isStale(state)) {
+            updateComputed();
+          } else {
+            state._flags &= ~INVALIDATED;
+          }
+        }
+      }
       return state.value!;
     };
 

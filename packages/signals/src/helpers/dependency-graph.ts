@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode, ScheduledNode } from '../types';
 
-const { DIRTY, DISPOSED, RUNNING } = CONSTANTS;
+const { INVALIDATED, DIRTY, DISPOSED, RUNNING } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
 
 
@@ -33,7 +33,13 @@ export interface DependencyGraph {
   // Staleness checks
   isStale: (node: DerivedNode) => boolean; // For derived nodes
   needsFlush: (node: ScheduledNode) => boolean; // For scheduled nodes
+  
+  // Invalidation strategies
   invalidate: (
+    from: Edge | undefined,
+    visit: (node: ScheduledNode) => void
+  ) => void;
+  shallowInvalidate: (
     from: Edge | undefined,
     visit: (node: ScheduledNode) => void
   ) => void;
@@ -92,8 +98,11 @@ export function createDependencyGraph(): DependencyGraph {
     consumer._inTail = newEdge;
 
     // Wire up producer's output list
-    if (prevOut) prevOut.nextOut = newEdge;
-    else producer._out = newEdge;
+    if (prevOut) {
+      prevOut.nextOut = newEdge;
+    } else {
+      producer._out = newEdge;
+    }
     producer._outTail = newEdge;
   };
 
@@ -122,14 +131,16 @@ export function createDependencyGraph(): DependencyGraph {
     if (prevOut) prevOut.nextOut = nextOut;
     else {
       from._out = nextOut;
-      // Use direct property access instead of 'in' operator for speed
       if (!nextOut && '_flags' in from) {
-        // When a computed becomes unobserved, clear its dependencies
+        // When a computed becomes completely unobserved (no outgoing edges at all)
         // This is the "unobserved computed" optimization from alien-signals
         if ('_recompute' in from) {
-          // Clear all dependency edges to free memory
+          // LAZY UNSUBSCRIPTION: Clear all incoming dependency edges to free memory
+          // This recursively calls removeEdge on each dependency, potentially 
+          // making them unobserved too (cascading unsubscription)
           detachAll(from);
           // Mark as DIRTY so it recomputes fresh when re-observed
+          // This ensures it will re-establish dependencies on next observation
           from._flags |= DIRTY;
         }
       }
@@ -138,59 +149,239 @@ export function createDependencyGraph(): DependencyGraph {
     return nextIn;
   };
 
-  // For computed nodes: check if dependencies changed and recompute if needed
+  // For computed nodes: iteratively check if any dependencies changed
+  // Uses manual stack to avoid function call overhead (like Alien Signals)
+  // This combines checking and updating in one pass for efficiency
   const isStale = (node: DerivedNode): boolean => {
-    // Fast path: already marked dirty
-    if (node._flags & DIRTY) return true;
+    const flags = node._flags;
 
-    // Check all direct dependencies
-    let edge = node._in;
-    while (edge) {
-      const source = edge.from;
-      
-      // Check if source is dirty
-      if (source._dirty) {
-        node._flags |= DIRTY;
-        return true;
+    // Fast path: already marked dirty
+    if (flags & DIRTY) return true;
+    
+    // Prevent cycles
+    if (flags & RUNNING) return false;
+
+    // If no tail marker, the computed hasn't run yet or all edges are stale
+    // In this case, we need to recompute
+    if (!node._inTail && node._in) return true;
+
+    interface StackFrame {
+      edge: Edge | undefined;
+      node: DerivedNode;
+      stale: boolean;
+      prev: StackFrame | undefined;
+    }
+
+    let stack: StackFrame | undefined;
+    let currentNode = node;
+    let currentEdge = node._in;
+    let stale = false;
+    
+    // Mark as running to prevent cycles
+    node._flags |= RUNNING;
+
+    for (;;) {
+      while (currentEdge) {
+        // Stop at tail marker - don't check stale edges beyond tail
+        if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) {
+          currentEdge = undefined;
+          break;
+        }
+
+        const source = currentEdge.from;
+
+        // Check if source is a dirty signal
+        if (source._dirty) {
+          stale = true;
+          // Early exit - no need to check remaining edges
+          currentEdge = undefined;
+          break;
+        }
+
+        // Check if source is a derived node (computed)
+        if ('_recompute' in source) {
+          const sFlags = source._flags;
+
+          // Early exit if source is already marked dirty
+          if (sFlags & DIRTY) {
+            stale = true;
+            currentEdge = undefined;
+            break;
+          }
+
+          // If source has no tail, it needs recomputation
+          if (!source._inTail && source._in) {
+            stale = true;
+            currentEdge = undefined;
+            break;
+          }
+
+          // Recurse into computeds that haven't been checked yet
+          // Skip if already running (cycle detection)
+          if (!(sFlags & RUNNING)) {
+            source._flags |= RUNNING;
+            stack = {
+              edge: currentEdge.nextIn,
+              node: currentNode,
+              stale,
+              prev: stack,
+            };
+            currentNode = source;
+            currentEdge = source._in;
+            stale = false;
+            continue;
+          }
+        }
+
+        currentEdge = currentEdge.nextIn;
       }
-      
-      // Check if source is a derived node (computed) that's dirty
-      if ('_recompute' in source && source._flags & DIRTY) {
-        node._flags |= DIRTY;
-        return true;
+
+      // Process computed nodes in the traversal
+      // If we found staleness, mark the computed as dirty
+      if (currentNode !== node && stale) {
+        currentNode._flags |= DIRTY;
       }
-      
-      edge = edge.nextIn;
+
+      // Clear RUNNING flag as we pop back up
+      if (currentNode !== node) {
+        currentNode._flags &= ~RUNNING;
+      }
+
+      // Pop from stack or exit
+      if (!stack) break;
+
+      stale = stale || stack.stale;
+      currentNode = stack.node;
+      currentEdge = stack.edge;
+      stack = stack.prev;
+    }
+
+    // Clear RUNNING flag from root node
+    node._flags &= ~RUNNING;
+
+    // Update flags based on result
+    if (stale) {
+      node._flags |= DIRTY;
     }
     
-    return false;
+    return stale;
   };
 
-  // For effect nodes: check if any direct dependencies changed
-  // Only checks immediate dependencies, not recursive traversal
+  // For effect nodes: check if any dependencies changed (recursively)
+  // Uses the same iterative approach as isStale for consistency
   const needsFlush = (node: ScheduledNode): boolean => {
-    if (node._flags & DIRTY) return true;
+    const flags = node._flags;
 
-    let edge = node._in;
-    while (edge) {
-      const source = edge.from;
-      
-      // Check if source changed - optimize for common case (signals)
-      if (source._dirty) {
-        node._flags |= DIRTY;
-        return true;
-      } 
-      
-      // Check if source is a derived node (computed) that's dirty
-      if ('_recompute' in source && source._flags & DIRTY) {
-        node._flags |= DIRTY;
-        return true;
+    // Fast path: already marked dirty
+    if (flags & DIRTY) return true;
+    
+    // Prevent cycles
+    if (flags & RUNNING) return false;
+
+    // If no tail marker, the effect hasn't run yet or all edges are stale
+    // In this case, we need to run it
+    if (!node._inTail && node._in) return true;
+
+    interface StackFrame {
+      edge: Edge | undefined;
+      node: ConsumerNode;
+      stale: boolean;
+      prev: StackFrame | undefined;
+    }
+
+    let stack: StackFrame | undefined;
+    let currentNode: ConsumerNode = node;
+    let currentEdge = node._in;
+    let stale = false;
+    
+    // Mark as running to prevent cycles
+    node._flags |= RUNNING;
+
+    for (;;) {
+      while (currentEdge) {
+        // Stop at tail marker - don't check stale edges beyond tail
+        if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) {
+          currentEdge = undefined;
+          break;
+        }
+
+        const source = currentEdge.from;
+
+        // Check if source is a dirty signal
+        if (source._dirty) {
+          stale = true;
+          // Early exit - no need to check remaining edges
+          currentEdge = undefined;
+          break;
+        }
+
+        // Check if source is a derived node (computed)
+        if ('_recompute' in source) {
+          const sFlags = source._flags;
+
+          // Early exit if source is already marked dirty
+          if (sFlags & DIRTY) {
+            stale = true;
+            currentEdge = undefined;
+            break;
+          }
+
+          // If source has no tail, it needs recomputation
+          if (!source._inTail && source._in) {
+            stale = true;
+            currentEdge = undefined;
+            break;
+          }
+
+          // Recurse into computeds that haven't been checked yet
+          // Skip if already running (cycle detection)
+          if (!(sFlags & RUNNING)) {
+            source._flags |= RUNNING;
+            stack = {
+              edge: currentEdge.nextIn,
+              node: currentNode,
+              stale,
+              prev: stack,
+            };
+            currentNode = source;
+            currentEdge = source._in;
+            stale = false;
+            continue;
+          }
+        }
+
+        currentEdge = currentEdge.nextIn;
       }
-      
-      edge = edge.nextIn;
+
+      // Process computed nodes in the traversal
+      // If we found staleness and this is a computed, recompute on the way back up
+      if (currentNode !== node && stale && '_recompute' in currentNode) {
+        stale = (currentNode as DerivedNode)._recompute();
+      }
+
+      // Clear RUNNING flag as we pop back up
+      if (currentNode !== node) {
+        currentNode._flags &= ~RUNNING;
+      }
+
+      // Pop from stack or exit
+      if (!stack) break;
+
+      stale = stale || stack.stale;
+      currentNode = stack.node;
+      currentEdge = stack.edge;
+      stack = stack.prev;
+    }
+
+    // Clear RUNNING flag from root node
+    node._flags &= ~RUNNING;
+
+    // Update flags based on result
+    if (stale) {
+      node._flags |= DIRTY;
     }
     
-    return false;
+    return stale;
   };
 
   // ALGORITHM: Complete Edge Removal
@@ -209,19 +400,22 @@ export function createDependencyGraph(): DependencyGraph {
     consumer._inTail = undefined;
   };
 
-  // ALGORITHM: Tail-based Edge Removal (alien-signals approach)
+  // ALGORITHM: Bidirectional Stale Edge Removal (alien-signals approach)
   // After a computed/effect runs, remove all edges after the tail marker.
   // The tail was set at the start of the run, and all valid dependencies
   // were moved to/before the tail during the run.
+  // Unlike the previous implementation, this completely removes stale edges
+  // from BOTH the consumer's input list AND the producer's output list.
   const pruneStale = (consumer: ConsumerNode): void => {
     const tail = consumer._inTail;
     
     // If no tail, all edges should be removed
     let toRemove = tail ? tail.nextIn : consumer._in;
     
-    // Remove all edges after the tail
+    // Remove all stale edges from both consumer and producer sides
+    // This eliminates the need for edge validity checks during propagation
     while (toRemove) {
-      // removeEdge handles both sides and returns next edge
+      // removeEdge handles bidirectional removal and returns next edge
       toRemove = removeEdge(toRemove);
     }
     
@@ -234,6 +428,7 @@ export function createDependencyGraph(): DependencyGraph {
     prev: Stack<T> | undefined;
   }
 
+
   const invalidate = (
       from: Edge | undefined,
       visit: (node: ScheduledNode) => void
@@ -245,22 +440,24 @@ export function createDependencyGraph(): DependencyGraph {
     
     do {
       const target = currentEdge.to;
-
       const targetFlags = target._flags;
 
-      // Skip already processed nodes or already dirty nodes
-      if (targetFlags & (SKIP_FLAGS | DIRTY)) {
+      // Skip already processed nodes or already invalidated nodes
+      if (targetFlags & (SKIP_FLAGS | INVALIDATED)) {
         currentEdge = currentEdge.nextOut;
         continue;
       }
 
-      // Mark as dirty (using DIRTY instead of INVALIDATED)
-      target._flags = targetFlags | DIRTY;
+
+      // Mark as invalidated (push phase - might be stale)
+      target._flags = targetFlags | INVALIDATED;
 
       // Handle producer nodes (have outputs)
       if ('_out' in target) {
         const firstChild = target._out;
         
+        // LAZY SUBSCRIPTION: Only propagate to computeds that have observers
+        // Unobserved computeds have no _out edges, so firstChild would be undefined
         if (firstChild) {
           const nextSibling = currentEdge.nextOut;
           
@@ -273,6 +470,8 @@ export function createDependencyGraph(): DependencyGraph {
           currentEdge = firstChild;
           continue;
         }
+        // If firstChild is undefined, this computed is unobserved
+        // Don't propagate to it - it will recompute when re-observed
       } else if ('_nextScheduled' in target) {
         // Effect node - schedule it
         visit(target);
@@ -287,5 +486,42 @@ export function createDependencyGraph(): DependencyGraph {
     } while (currentEdge);
   };
 
-  return { addEdge, removeEdge, detachAll, pruneStale, isStale, needsFlush, invalidate };
+  // Shallow invalidation for hybrid push-pull system
+  // Only marks immediate consumers, not transitive dependents
+  const shallowInvalidate = (
+      from: Edge | undefined,
+      visit: (node: ScheduledNode) => void
+  ): void => {
+    if (!from) return;
+    
+    let currentEdge: Edge | undefined = from;
+    
+    // Only process immediate consumers (one level deep)
+    while (currentEdge) {
+      const target = currentEdge.to;
+      const targetFlags = target._flags;
+
+      // Skip already processed nodes
+      if (!(targetFlags & SKIP_FLAGS)) {
+        // LAZY SUBSCRIPTION: Only mark observed computeds as dirty
+        // Unobserved computeds will be recomputed when re-observed
+        const isUnobservedComputed = '_recompute' in target && !target._out;
+        
+        if (!isUnobservedComputed) {
+          // Mark as dirty
+          target._flags = targetFlags | DIRTY;
+          
+          // Schedule effects (computeds don't get scheduled directly)
+          if ('_nextScheduled' in target) {
+            visit(target);
+          }
+        }
+        // Unobserved computeds are skipped entirely - they'll recompute when needed
+      }
+
+      currentEdge = currentEdge.nextOut;
+    }
+  };
+
+  return { addEdge, removeEdge, detachAll, pruneStale, isStale, needsFlush, invalidate, shallowInvalidate };
 }

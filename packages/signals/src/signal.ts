@@ -34,6 +34,7 @@ export interface SignalFunction<T = unknown> extends ProducerNode {
 // This IS the actual signal - no indirection through properties
 interface SignalState<T> extends ProducerNode {
   value: T;
+  _flags: number;  // Bit field for OBSERVED flag
 }
 
 interface SignalFactoryContext extends SignalContext {
@@ -56,6 +57,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       _out: undefined,
       _outTail: undefined,
       _dirty: false,
+      _flags: 0,  // Start with no flags set
     };
     
     // Signal function using closure instead of bound this
@@ -76,6 +78,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         if (!outEdge) return;
 
         // Invalidate and propagate
+        // The invalidate function will skip stale edges automatically
         invalidate(outEdge, enqueue);
 
         // Batch check and flush
