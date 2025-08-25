@@ -31,7 +31,8 @@ export interface DependencyGraph {
   pruneStale: (consumer: ConsumerNode) => void;
 
   // Staleness checks
-  isStale: (node: DerivedNode) => boolean; // For derived nodes
+  isStale: (node: DerivedNode) => boolean; // For derived nodes (deprecated, use checkAndUpdate)
+  checkAndUpdate: (node: DerivedNode) => boolean; // Check staleness AND update computeds in one pass
   needsFlush: (node: ScheduledNode) => boolean; // For scheduled nodes
   
   // Invalidation strategies
@@ -522,5 +523,119 @@ export function createDependencyGraph(): DependencyGraph {
     }
   };
 
-  return { addEdge, removeEdge, detachAll, pruneStale, isStale, needsFlush, invalidate, shallowInvalidate };
+  // Check staleness AND update computeds during traversal (alien-signals approach)
+  // This combines checking and updating in one pass for better performance
+  const checkAndUpdate = (node: DerivedNode): boolean => {
+    const flags = node._flags;
+
+    // Fast path: already marked dirty
+    if (flags & DIRTY) return true;
+    
+    // Prevent cycles
+    if (flags & RUNNING) return false;
+
+    // If no tail marker, the computed hasn't run yet or all edges are stale
+    if (!node._inTail && node._in) return true;
+
+    interface StackFrame {
+      edge: Edge | undefined;
+      node: DerivedNode;
+      stale: boolean;
+      prev: StackFrame | undefined;
+    }
+
+    let stack: StackFrame | undefined;
+    let currentNode = node;
+    let currentEdge = node._in;
+    let stale = false;
+    
+    // Mark as running to prevent cycles
+    node._flags |= RUNNING;
+
+    for (;;) {
+      while (currentEdge) {
+        // Stop at tail marker - don't check stale edges beyond tail
+        if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) {
+          currentEdge = undefined;
+          break;
+        }
+
+        const source = currentEdge.from;
+
+        // Check if source is a dirty signal
+        if (source._dirty) {
+          stale = true;
+          currentEdge = undefined;
+          break;
+        }
+
+        // Check if source is a derived node (computed)
+        if ('_recompute' in source) {
+          const sFlags = source._flags;
+
+          // Early exit if source is already marked dirty
+          if (sFlags & DIRTY) {
+            stale = true;
+            currentEdge = undefined;
+            break;
+          }
+
+          // If source has no tail, it needs recomputation
+          if (!source._inTail && source._in) {
+            stale = true;
+            currentEdge = undefined;
+            break;
+          }
+
+          // Recurse into computeds that haven't been checked yet
+          // Skip if already running (cycle detection)
+          if (!(sFlags & RUNNING)) {
+            source._flags |= RUNNING;
+            stack = {
+              edge: currentEdge.nextIn,
+              node: currentNode,
+              stale,
+              prev: stack,
+            };
+            currentNode = source;
+            currentEdge = source._in;
+            stale = false;
+            continue;
+          }
+        }
+
+        currentEdge = currentEdge.nextIn;
+      }
+
+      // KEY DIFFERENCE: Update computeds during traversal (like alien-signals)
+      // This avoids the need for a separate recomputation pass
+      if (currentNode !== node && stale) {
+        // Recompute the intermediate computed immediately
+        const changed = currentNode._recompute();
+        // Propagate the change status up
+        stale = changed;
+      }
+
+      // Clear RUNNING flag as we pop back up
+      if (currentNode !== node) {
+        currentNode._flags &= ~RUNNING;
+      }
+
+      // Pop from stack or exit
+      if (!stack) break;
+
+      stale = stale || stack.stale;
+      currentNode = stack.node;
+      currentEdge = stack.edge;
+      stack = stack.prev;
+    }
+
+    // Clear RUNNING flag from root node
+    node._flags &= ~RUNNING;
+
+    // The root node's staleness is determined by whether any dependencies changed
+    return stale;
+  };
+
+  return { addEdge, removeEdge, detachAll, pruneStale, isStale, checkAndUpdate, needsFlush, invalidate, shallowInvalidate };
 }

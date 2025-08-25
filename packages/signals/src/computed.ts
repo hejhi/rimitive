@@ -41,7 +41,7 @@ export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, pruneStale, isStale },
+    graph: { addEdge, pruneStale, checkAndUpdate },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -125,8 +125,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       if (state._flags & DIRTY) {
         updateComputed();
       } else if (state._flags & INVALIDATED) {
-        // Pull-based check for invalidated nodes
-        if (isStale(state)) {
+        // Pull-based check AND update in one pass (alien-signals approach)
+        // This updates intermediate computeds during traversal
+        if (checkAndUpdate(state)) {
+          // Dependencies changed, need to recompute this node too
           updateComputed();
         } else {
           // Not actually stale, clear invalidated flag
@@ -151,7 +153,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
           if (state._flags & DIRTY) {
             updateComputed();
           } else if (state._flags & INVALIDATED) {
-            if (isStale(state)) {
+            if (checkAndUpdate(state)) {
               updateComputed();
             } else {
               state._flags &= ~INVALIDATED;
@@ -165,7 +167,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         if (state._flags & DIRTY) {
           updateComputed();
         } else if (state._flags & INVALIDATED) {
-          if (isStale(state)) {
+          if (checkAndUpdate(state)) {
             updateComputed();
           } else {
             state._flags &= ~INVALIDATED;
