@@ -133,15 +133,14 @@ export function createDependencyGraph(): DependencyGraph {
       from._out = nextOut;
       if (!nextOut && '_flags' in from) {
         // When a computed becomes completely unobserved (no outgoing edges at all)
-        // This is the "unobserved computed" optimization from alien-signals
+        // PRESERVE EDGES: Don't destroy dependency edges, keep them for reuse
         if ('_recompute' in from) {
-          // LAZY UNSUBSCRIPTION: Clear all incoming dependency edges to free memory
-          // This recursively calls removeEdge on each dependency, potentially 
-          // making them unobserved too (cascading unsubscription)
-          detachAll(from);
-          // Mark as DIRTY so it recomputes fresh when re-observed
-          // This ensures it will re-establish dependencies on next observation
+          // Mark as DIRTY so it recomputes when re-observed
+          // But DON'T call detachAll - preserve the edges for faster re-observation
+          // This is the key to "preserved edges benefit"
           from._flags |= DIRTY;
+          // Note: We're keeping edges intact. This uses more memory but provides
+          // much better performance when computeds are repeatedly observed/unobserved
         }
       }
     }
