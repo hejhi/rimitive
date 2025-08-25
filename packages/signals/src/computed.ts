@@ -92,7 +92,11 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         ctx.currentConsumer = prevConsumer;
         // Clear RUNNING flag  
         state._flags &= ~RUNNING;
-        pruneStale(state); // Ensure pruneStale is consistently shaped and inlinable
+        // Only prune if we have edges to prune
+        // Unobserved computeds have no edges, so skip the pruning
+        if (state._in) {
+          pruneStale(state);
+        }
       }
       return valueChanged;
     };
