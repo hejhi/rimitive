@@ -20,7 +20,7 @@ import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 import { CONSTANTS } from './constants';
 
-const { RUNNING } = CONSTANTS
+const { RUNNING, OBSERVED } = CONSTANTS
 
 // Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
@@ -72,6 +72,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
 
         state.value = newValue;
         state._dirty = true;
+
+        // Only propagate if signal is observed
+        if (!(state._flags & OBSERVED)) return;
 
         // Cache _out for repeat access
         const outEdge = state._out;

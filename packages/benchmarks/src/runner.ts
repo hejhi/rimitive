@@ -287,7 +287,7 @@ ${results.filter(r => r.error).map(r =>
 // Run if executed directly
 async function main() {
   // Parse command line arguments
-  const { values: _, positionals } = parseArgs({
+  const { positionals } = parseArgs({
     options: {
       'skip-build': {
         type: 'boolean',

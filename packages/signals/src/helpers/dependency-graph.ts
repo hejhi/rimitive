@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode, ScheduledNode } from '../types';
 
-const { INVALIDATED, DIRTY, DISPOSED, RUNNING } = CONSTANTS;
+const { INVALIDATED, DIRTY, DISPOSED, RUNNING, OBSERVED } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
 
 
@@ -29,6 +29,7 @@ export interface DependencyGraph {
   // Cleanup operations
   detachAll: (consumer: ConsumerNode) => void;
   pruneStale: (consumer: ConsumerNode) => void;
+
 
   // Staleness checks
   isStale: (node: DerivedNode) => boolean; // For derived nodes (deprecated, use checkAndUpdate)
@@ -103,6 +104,10 @@ export function createDependencyGraph(): DependencyGraph {
       prevOut.nextOut = newEdge;
     } else {
       producer._out = newEdge;
+      // When adding first outgoing edge, mark producer as OBSERVED
+      if ('_flags' in producer) {
+        producer._flags |= OBSERVED;
+      }
     }
     producer._outTail = newEdge;
   };
@@ -133,6 +138,9 @@ export function createDependencyGraph(): DependencyGraph {
     else {
       from._out = nextOut;
       if (!nextOut && '_flags' in from) {
+        // When removing last outgoing edge, clear OBSERVED flag
+        from._flags &= ~OBSERVED;
+        
         // When a computed becomes completely unobserved (no outgoing edges at all)
         // PRESERVE EDGES: Don't destroy dependency edges, keep them for reuse
         if ('_recompute' in from) {
@@ -442,7 +450,7 @@ export function createDependencyGraph(): DependencyGraph {
       const target = currentEdge.to;
       const targetFlags = target._flags;
 
-      // Skip already processed nodes or already invalidated nodes
+      // Skip already processed nodes, already invalidated nodes, or unobserved nodes
       if (targetFlags & (SKIP_FLAGS | INVALIDATED)) {
         currentEdge = currentEdge.nextOut;
         continue;
@@ -456,8 +464,7 @@ export function createDependencyGraph(): DependencyGraph {
       if ('_out' in target) {
         const firstChild = target._out;
         
-        // LAZY SUBSCRIPTION: Only propagate to computeds that have observers
-        // Unobserved computeds have no _out edges, so firstChild would be undefined
+        // Traverse through computeds that have consumers
         if (firstChild) {
           const nextSibling = currentEdge.nextOut;
           
@@ -470,8 +477,6 @@ export function createDependencyGraph(): DependencyGraph {
           currentEdge = firstChild;
           continue;
         }
-        // If firstChild is undefined, this computed is unobserved
-        // Don't propagate to it - it will recompute when re-observed
       } else if ('_nextScheduled' in target) {
         // Effect node - schedule it
         visit(target);
@@ -522,6 +527,7 @@ export function createDependencyGraph(): DependencyGraph {
       currentEdge = currentEdge.nextOut;
     }
   };
+
 
   // Check staleness AND update computeds during traversal (alien-signals approach)
   // This combines checking and updating in one pass for better performance
