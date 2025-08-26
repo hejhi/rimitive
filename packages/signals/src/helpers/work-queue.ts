@@ -33,7 +33,7 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     if (node._flags & SCHEDULED) return; // already scheduled
     
     // Mark as scheduled and clear next pointer
-    node._flags |= SCHEDULED;
+    node._flags = node._flags | SCHEDULED;
     node._nextScheduled = undefined;
 
     // Add to queue
@@ -49,7 +49,7 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     cleanup: (node: T) => void
   ): void => {
     if (node._flags & DISPOSED) return;
-    node._flags |= DISPOSED;
+    node._flags = node._flags | DISPOSED;
     cleanup(node);
   };
 
@@ -64,7 +64,7 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     while (current) {
       const next: ScheduledNode | undefined = current._nextScheduled;
       current._nextScheduled = undefined;
-      current._flags &= ~SCHEDULED; // Clear scheduled flag
+      current._flags = current._flags & ~SCHEDULED; // Clear scheduled flag
       current._flush();
       current = next;
     }

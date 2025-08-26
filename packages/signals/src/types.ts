@@ -49,7 +49,7 @@ export interface ProducerNode extends ReactiveNode {
   _out: Edge | undefined; // Head of output list
   _outTail: Edge | undefined; // Tail of output list
   value: unknown;
-  _dirty: boolean;
+  _flags: number; // Bit field containing DIRTY flag and others
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)

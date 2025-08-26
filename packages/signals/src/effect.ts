@@ -108,7 +108,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         // Maybe dirty, check dependencies
         if (!isStale(effect)) {
           // Not actually dirty, clear flag and skip
-          effect._flags &= ~INVALIDATED;
+          effect._flags = effect._flags & ~INVALIDATED;
           return;
         }
       } else {
@@ -138,7 +138,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         if (res) effect._cleanup = res;
       } finally {
         ctx.currentConsumer = prevConsumer;
-        effect._flags &= ~RUNNING;
+        effect._flags = effect._flags & ~RUNNING;
         pruneStale(effect);
       }
     };
@@ -146,7 +146,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     // Dispose method using closure
     const dispose = (): void => {
       if (effect._flags & DISPOSED) return;
-      effect._flags |= DISPOSED;
+      effect._flags = effect._flags | DISPOSED;
 
       if (effect._cleanup) {
         effect._cleanup();

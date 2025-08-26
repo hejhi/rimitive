@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode } from '../types';
+import { CONSTANTS } from '../constants';
+
+const { PRODUCER_DIRTY } = CONSTANTS;
 
 describe('Dependency Graph Cleanup Operations', () => {
   let graph: ReturnType<typeof createDependencyGraph>;
@@ -12,9 +15,9 @@ describe('Dependency Graph Cleanup Operations', () => {
   const makeProducer = (): ProducerNode => ({
     __type: 'test',
     _out: undefined,
-    _dirty: false,
     _outTail: undefined,
-    value: 0
+    value: 0,
+    _flags: 0
   });
 
   const makeConsumer = (): ConsumerNode => ({
@@ -57,9 +60,9 @@ describe('Dependency Graph Cleanup Operations', () => {
     target._inTail = undefined;
     
     // Next run: only access a and c (with NEW version like real usage)
-    a._dirty = true;
+    a._flags |= PRODUCER_DIRTY;
     graph.addEdge(a, target, 2);  // Version 2 for second run
-    c._dirty = true;
+    c._flags |= PRODUCER_DIRTY;
     graph.addEdge(c, target, 2);  // Version 2 for second run
 
     // Now prune stale (b should be removed)

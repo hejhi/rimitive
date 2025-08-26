@@ -27,4 +27,9 @@ export const CONSTANTS = {
   // Prevents duplicate scheduling and replaces sentinel value pattern.
   // Set when enqueued, cleared when flushed.
   SCHEDULED: 1 << 5,     // 32 (binary: 0100000)
+
+  // PRODUCER_DIRTY (bit 6): Producer's value has changed since creation.
+  // Similar to the old _dirty boolean on producers (signals).
+  // Set when signal value changes, never cleared (permanent change flag).
+  PRODUCER_DIRTY: 1 << 6, // 64 (binary: 1000000)
 }

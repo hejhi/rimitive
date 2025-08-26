@@ -29,6 +29,7 @@ const {
   RUNNING,
   DIRTY,
   INVALIDATED,
+  PRODUCER_DIRTY,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -51,10 +52,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       value: undefined,
       _out: undefined,
       _outTail: undefined,
-      _dirty: false,
       _in: undefined,
       _inTail: undefined,
-      _flags: DIRTY,
+      _flags: DIRTY,  // Start with DIRTY flag so first access triggers computation
       // This will be set below
       _recompute: null as unknown as () => boolean,
       _callback: compute,
@@ -78,20 +78,20 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const oldValue = state.value;
         const newValue = compute();
 
-        // Update value and dirty flag based on whether value changed
+        // Update value and producer dirty flag based on whether value changed
         if (newValue !== oldValue) {
           state.value = newValue;
-          state._dirty = true;
+          state._flags = state._flags | PRODUCER_DIRTY;
           valueChanged = true;
         } else {
-          // Value didn't change - clear dirty flag but don't propagate
-          state._dirty = false;
+          // Value didn't change - clear producer dirty flag but don't propagate
+          state._flags = state._flags & ~PRODUCER_DIRTY;
           valueChanged = false;
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
         // Clear RUNNING flag  
-        state._flags &= ~RUNNING;
+        state._flags = state._flags & ~RUNNING;
         // Only prune if we have edges to prune
         // Unobserved computeds have no edges, so skip the pruning
         if (state._in) {
@@ -129,7 +129,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         // This updates intermediate computeds during traversal
         // Dependencies changed, need to recompute this node too
         if (isStale(state)) updateComputed();
-        else state._flags &= ~INVALIDATED;
+        else state._flags = state._flags & ~INVALIDATED;
       }
 
       return state.value;
@@ -150,7 +150,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
             updateComputed();
           } else if (state._flags & INVALIDATED) {
             if (isStale(state)) updateComputed();
-            else state._flags &= ~INVALIDATED;
+            else state._flags = state._flags & ~INVALIDATED;
           }
         } finally {
           ctx.currentConsumer = prevConsumer;
@@ -161,7 +161,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
           updateComputed();
         } else if (state._flags & INVALIDATED) {
           if (isStale(state)) updateComputed();
-          else state._flags &= ~INVALIDATED;
+          else state._flags = state._flags & ~INVALIDATED;
         }
       }
       return state.value!;
