@@ -184,7 +184,7 @@ export function createDependencyGraph(): DependencyGraph {
     // Mark as running to prevent cycles
     node._flags |= RUNNING;
 
-    for (;;) {
+    do {
       while (currentEdge) {
         // Stop at tail marker - don't check stale edges beyond tail
         if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) break;
@@ -241,7 +241,7 @@ export function createDependencyGraph(): DependencyGraph {
       currentNode = stack.node;
       currentEdge = stack.edge;
       stack = stack.prev;
-    }
+    } while (stack);
 
     // Clear RUNNING flag from root node
     node._flags &= ~RUNNING;
@@ -328,13 +328,12 @@ export function createDependencyGraph(): DependencyGraph {
           currentEdge = firstChild;
           continue;
         }
-      } else if ('_nextScheduled' in target) {
         // Effect node - schedule it
-        visit(target);
-      }
+      } else if ('_nextScheduled' in target) visit(target);
       
       // Move to next sibling or pop from stack
       currentEdge = currentEdge.nextOut;
+
       while (!currentEdge && stack) {
         currentEdge = stack.value;
         stack = stack.prev;
