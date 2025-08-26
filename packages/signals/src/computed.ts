@@ -39,6 +39,7 @@ interface ComputedFactoryContext extends SignalContext {
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
+const DIRTY_OR_INVALIDATED = DIRTY | INVALIDATED;
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
@@ -62,11 +63,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     // Create recompute that captures state in closure
     const recompute = (): boolean => {
-      const flags = state._flags;
-
       // Set RUNNING flag and clear DIRTY and INVALIDATED
-      state._flags = (flags | RUNNING) & ~(DIRTY | INVALIDATED);
-
+      state._flags = (state._flags | RUNNING) & ~DIRTY_OR_INVALIDATED;
       ctx.trackingVersion++;
       state._inTail = undefined;
 
@@ -79,25 +77,26 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const newValue = compute();
 
         // Update value and producer dirty flag based on whether value changed
-        const currentFlags = state._flags;
         if (newValue !== oldValue) {
           state.value = newValue;
-          state._flags = currentFlags | PRODUCER_DIRTY;
+          state._flags |= PRODUCER_DIRTY;
           valueChanged = true;
         } else {
           // Value didn't change - clear producer dirty flag but don't propagate
-          state._flags = currentFlags & ~PRODUCER_DIRTY;
+          state._flags &= ~PRODUCER_DIRTY;
           valueChanged = false;
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
-        // Clear RUNNING flag  
+        // Clear RUNNING flag - after recompute we know:
+        // - RUNNING needs to be cleared
+        // - DIRTY and INVALIDATED were already cleared at start of recompute
+        // - PRODUCER_DIRTY was set/cleared based on value change
+        // So we just need to clear RUNNING from the current flags
         state._flags &= ~RUNNING;
         // Only prune if we have edges to prune
         // Unobserved computeds have no edges, so skip the pruning
-        if (state._in) {
-          pruneStale(state);
-        }
+        if (state._in) pruneStale(state);
       }
       return valueChanged;
     };
@@ -115,54 +114,46 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Register with current consumer FIRST (like signals do)
       const consumer = ctx.currentConsumer;
 
-      // Always link if there's a consumer (alien-signals approach)
-      if (consumer && consumer._flags & RUNNING) {
-        addEdge(state, consumer, ctx.trackingVersion);
-      }
+      // Always link if there's a consumer
+      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
 
       // Lazy Evaluation with push-pull hybrid
       // DIRTY: definitely needs recomputation
+      if (state._flags & DIRTY) updateComputed();
       // INVALIDATED: might need recomputation, use pull-based check
-      if (state._flags & DIRTY) {
-        updateComputed();
-      } else if (state._flags & INVALIDATED) {
-        // Pull-based check AND update in one pass (alien-signals approach)
+      else if (state._flags & INVALIDATED) {
+        // Pull-based depedency check AND refresh in one pass
         // This updates intermediate computeds during traversal
-        // Dependencies changed, need to recompute this node too
+        // If dependencies changed, need to recompute this node too
         if (isStale(state)) updateComputed();
-        else state._flags &= ~INVALIDATED;
+        else state._flags = state._flags & ~INVALIDATED;  // Just clear INVALIDATED
       }
 
       return state.value;
     }) as ComputedFunction<T>;
 
-    // Add peek method using closure
     computed.peek = () => {
-      // ALGORITHM: Non-tracking Read
-      // Same as value getter but doesn't register dependencies
-      // If unobserved, we may need to recompute to get current value
+      // Non-tracking Read
+      // Same as read but doesn't register dependencies
       if (!state._out) {
-        // Unobserved computed - force recomputation to get fresh value
-        // But don't establish dependency edges since this is peek()
         const prevConsumer = ctx.currentConsumer;
-        ctx.currentConsumer = null;
+        ctx.currentConsumer = null; // Prevent ALL other dependency tracking
+
         try {
-          if (state._flags & DIRTY) {
-            updateComputed();
-          } else if (state._flags & INVALIDATED) {
+          if (state._flags & DIRTY) updateComputed();
+          else if (state._flags & INVALIDATED) {
             if (isStale(state)) updateComputed();
-            else state._flags &= ~INVALIDATED;
+            else state._flags = state._flags & ~INVALIDATED;
           }
         } finally {
-          ctx.currentConsumer = prevConsumer;
+          ctx.currentConsumer = prevConsumer; // Restore back to previous state
         }
       } else {
         // Observed computed - normal peek behavior
-        if (state._flags & DIRTY) {
-          updateComputed();
-        } else if (state._flags & INVALIDATED) {
+        if (state._flags & DIRTY) updateComputed();
+        else if (state._flags & INVALIDATED) {
           if (isStale(state)) updateComputed();
-          else state._flags &= ~INVALIDATED;
+          else state._flags = state._flags & ~INVALIDATED;  // Just clear INVALIDATED
         }
       }
       return state.value!;

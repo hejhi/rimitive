@@ -146,7 +146,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     // Dispose method using closure
     const dispose = (): void => {
       if (effect._flags & DISPOSED) return;
-      effect._flags |= DISPOSED;
+      // Once disposed, only DISPOSED flag matters - direct assignment
+      effect._flags = DISPOSED;
 
       if (effect._cleanup) {
         effect._cleanup();
