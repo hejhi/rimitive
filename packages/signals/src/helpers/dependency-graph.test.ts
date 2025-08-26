@@ -3,7 +3,7 @@ import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { DISPOSED, RUNNING, INVALIDATED } = CONSTANTS;
+const { DISPOSED, RUNNING, INVALIDATED, OBSERVED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: ReturnType<typeof createDependencyGraph>;
@@ -483,7 +483,9 @@ describe('Dependency Graph Helpers', () => {
       const edge3 = createEdge(computed2, effect);
   
       computed1._out = edge2;
+      computed1._flags |= OBSERVED; // Mark as observed since it has outgoing edges
       computed2._out = edge3;
+      computed2._flags |= OBSERVED; // Mark as observed since it has outgoing edges
   
       walk(edge1, visit);
   
@@ -507,7 +509,9 @@ describe('Dependency Graph Helpers', () => {
   
       linkEdges([edge1, edge2]);
       computed1._out = edge3;
+      computed1._flags |= OBSERVED; // Mark as observed since it has outgoing edges
       computed2._out = edge4;
+      computed2._flags |= OBSERVED; // Mark as observed since it has outgoing edges
   
       walk(edge1, visit);
   
@@ -544,15 +548,19 @@ describe('Dependency Graph Helpers', () => {
       const comp1ToEff1 = createEdge(comp1, eff1);
       linkEdges([comp1ToComp3, comp1ToEff1]);
       comp1._out = comp1ToComp3;
+      comp1._flags |= OBSERVED; // Mark as observed since it has outgoing edges
   
       const comp2ToComp4 = createEdge(comp2, comp4);
       comp2._out = comp2ToComp4;
+      comp2._flags |= OBSERVED; // Mark as observed since it has outgoing edges
   
       const comp3ToEff2 = createEdge(comp3, eff2);
       comp3._out = comp3ToEff2;
+      comp3._flags |= OBSERVED; // Mark as observed since it has outgoing edges
   
       const comp4ToEff3 = createEdge(comp4, eff3);
       comp4._out = comp4ToEff3;
+      comp4._flags |= OBSERVED; // Mark as observed since it has outgoing edges
   
       walk(sourceToComp1, visit);
   
@@ -607,6 +615,7 @@ describe('Dependency Graph Helpers', () => {
         const edge = createEdge(nodes[i]!, nodes[i + 1]!);
         edges.push(edge);
         nodes[i]!._out = edge;
+        nodes[i]!._flags |= OBSERVED; // Mark as observed since it has outgoing edges
       }
   
       walk(edges[0], visit);

@@ -70,14 +70,16 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
 
-    // Third check (alien-signals optimization): Check producer's tail subscriber
-    // If the producer already has this consumer as its tail with current version, skip
-    // This happens when the same consumer reads the same producer multiple times in one run
-    const producerTail = producer._outTail;
-    if (producerTail && producerTail.to === consumer && producerTail.trackingVersion === trackingVersion) {
-      // Edge already exists with current version - it was created earlier in this run
-      // No need to update anything, it's already properly positioned
-      return;
+    // ADAPTIVE: Only check for duplicates if producer is shared (has 2+ outputs)
+    // For simple patterns with no sharing, skip the third check entirely
+    if (producer._out && producer._out.nextOut) {
+      // Producer has multiple outputs - check for duplicate
+      const producerTail = producer._outTail;
+      if (producerTail && producerTail.to === consumer && producerTail.trackingVersion === trackingVersion) {
+        // Edge already exists with current version - it was created earlier in this run
+        // No need to update anything, it's already properly positioned
+        return;
+      }
     }
 
     // No reusable edge found - create new edge
@@ -450,7 +452,7 @@ export function createDependencyGraph(): DependencyGraph {
       const target = currentEdge.to;
       const targetFlags = target._flags;
 
-      // Skip already processed nodes, already invalidated nodes, or unobserved nodes
+      // Skip already processed nodes or already invalidated nodes
       if (targetFlags & (SKIP_FLAGS | INVALIDATED)) {
         currentEdge = currentEdge.nextOut;
         continue;
@@ -464,8 +466,9 @@ export function createDependencyGraph(): DependencyGraph {
       if ('_out' in target) {
         const firstChild = target._out;
         
-        // Traverse through computeds that have consumers
-        if (firstChild) {
+        // Only traverse into observed computeds to avoid invalidating unneeded subgraphs  
+        // Skip unobserved computeds but still invalidate them
+        if (firstChild && (target._flags & OBSERVED)) {
           const nextSibling = currentEdge.nextOut;
           
           // Push sibling to stack if exists
