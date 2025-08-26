@@ -79,19 +79,20 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const newValue = compute();
 
         // Update value and producer dirty flag based on whether value changed
+        const currentFlags = state._flags;
         if (newValue !== oldValue) {
           state.value = newValue;
-          state._flags = state._flags | PRODUCER_DIRTY;
+          state._flags = currentFlags | PRODUCER_DIRTY;
           valueChanged = true;
         } else {
           // Value didn't change - clear producer dirty flag but don't propagate
-          state._flags = state._flags & ~PRODUCER_DIRTY;
+          state._flags = currentFlags & ~PRODUCER_DIRTY;
           valueChanged = false;
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
         // Clear RUNNING flag  
-        state._flags = state._flags & ~RUNNING;
+        state._flags &= ~RUNNING;
         // Only prune if we have edges to prune
         // Unobserved computeds have no edges, so skip the pruning
         if (state._in) {
@@ -129,7 +130,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         // This updates intermediate computeds during traversal
         // Dependencies changed, need to recompute this node too
         if (isStale(state)) updateComputed();
-        else state._flags = state._flags & ~INVALIDATED;
+        else state._flags &= ~INVALIDATED;
       }
 
       return state.value;
@@ -150,7 +151,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
             updateComputed();
           } else if (state._flags & INVALIDATED) {
             if (isStale(state)) updateComputed();
-            else state._flags = state._flags & ~INVALIDATED;
+            else state._flags &= ~INVALIDATED;
           }
         } finally {
           ctx.currentConsumer = prevConsumer;
@@ -161,7 +162,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
           updateComputed();
         } else if (state._flags & INVALIDATED) {
           if (isStale(state)) updateComputed();
-          else state._flags = state._flags & ~INVALIDATED;
+          else state._flags &= ~INVALIDATED;
         }
       }
       return state.value!;

@@ -113,7 +113,7 @@ export function createDependencyGraph(): DependencyGraph {
     else {
       producer._out = newEdge;
       // When adding first outgoing edge, mark producer as OBSERVED
-      if ('_flags' in producer) producer._flags = producer._flags | OBSERVED;
+      if ('_flags' in producer) producer._flags |= OBSERVED;
     }
 
     producer._outTail = newEdge;
@@ -146,14 +146,14 @@ export function createDependencyGraph(): DependencyGraph {
       from._out = nextOut;
       if (!nextOut && '_flags' in from) {
         // When removing last outgoing edge, clear OBSERVED flag
-        from._flags = from._flags & ~OBSERVED;
+        from._flags &= ~OBSERVED;
         
         // When a computed becomes completely unobserved (no outgoing edges at all)
         // PRESERVE EDGES: Don't destroy dependency edges, keep them for reuse
         if ('_recompute' in from) {
           // Mark as DIRTY so it recomputes when re-observed
           // But DON'T call detachAll - preserve the edges for faster re-observation
-          from._flags = from._flags | DIRTY;
+          from._flags |= DIRTY;
           // Note: We're keeping edges intact. This uses more memory but provides
           // much better performance when computeds are repeatedly observed/unobserved
         }
@@ -182,7 +182,7 @@ export function createDependencyGraph(): DependencyGraph {
     let stale = false;
     
     // Mark as running to prevent cycles
-    node._flags = node._flags | RUNNING;
+    node._flags |= RUNNING;
 
     for (;;) {
       while (currentEdge) {
@@ -209,7 +209,7 @@ export function createDependencyGraph(): DependencyGraph {
           // Recurse into computeds that haven't been checked yet
           // Skip if already running (cycle detection)
           if (!(sFlags & RUNNING)) {
-            source._flags = source._flags | RUNNING;
+            source._flags |= RUNNING;
             stack = {
               edge: currentEdge.nextIn,
               node: currentNode,
@@ -230,7 +230,7 @@ export function createDependencyGraph(): DependencyGraph {
       // This avoids the need for a separate recomputation pass
       if (currentNode !== node) {
         if (stale && '_recompute' in currentNode) stale = currentNode._recompute();
-        currentNode._flags = currentNode._flags & ~RUNNING;
+        currentNode._flags &= ~RUNNING;
       }
 
       // Pop from stack or exit
@@ -243,7 +243,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
 
     // Clear RUNNING flag from root node
-    node._flags = node._flags & ~RUNNING;
+    node._flags &= ~RUNNING;
     return stale;
   };
 
@@ -307,6 +307,7 @@ export function createDependencyGraph(): DependencyGraph {
 
 
       // Mark as invalidated (push phase - might be stale)
+      // Pre-compute: we already have targetFlags, so avoid double read
       target._flags = targetFlags | INVALIDATED;
 
       // Handle producer nodes (have outputs)

@@ -70,7 +70,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         if (currValue === newValue) return;
 
         state.value = newValue;
-        state._flags = state._flags | PRODUCER_DIRTY;
+        // Eliminate double read: cache current flags and set producer dirty
+        const currentFlags = state._flags;
+        state._flags = currentFlags | PRODUCER_DIRTY;
 
         // Cache _out for repeat access
         const outEdge = state._out;
