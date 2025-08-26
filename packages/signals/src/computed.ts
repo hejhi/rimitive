@@ -127,13 +127,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       } else if (state._flags & INVALIDATED) {
         // Pull-based check AND update in one pass (alien-signals approach)
         // This updates intermediate computeds during traversal
-        if (isStale(state)) {
-          // Dependencies changed, need to recompute this node too
-          updateComputed();
-        } else {
-          // Not actually stale, clear invalidated flag
-          state._flags &= ~INVALIDATED;
-        }
+        // Dependencies changed, need to recompute this node too
+        if (isStale(state)) updateComputed();
+        else state._flags &= ~INVALIDATED;
       }
 
       return state.value;
@@ -153,11 +149,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
           if (state._flags & DIRTY) {
             updateComputed();
           } else if (state._flags & INVALIDATED) {
-            if (isStale(state)) {
-              updateComputed();
-            } else {
-              state._flags &= ~INVALIDATED;
-            }
+            if (isStale(state)) updateComputed();
+            else state._flags &= ~INVALIDATED;
           }
         } finally {
           ctx.currentConsumer = prevConsumer;
@@ -167,11 +160,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         if (state._flags & DIRTY) {
           updateComputed();
         } else if (state._flags & INVALIDATED) {
-          if (isStale(state)) {
-            updateComputed();
-          } else {
-            state._flags &= ~INVALIDATED;
-          }
+          if (isStale(state)) updateComputed();
+          else state._flags &= ~INVALIDATED;
         }
       }
       return state.value!;

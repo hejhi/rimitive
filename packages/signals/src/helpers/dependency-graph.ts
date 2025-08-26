@@ -202,7 +202,7 @@ export function createDependencyGraph(): DependencyGraph {
           break;
         }
 
-        // Check if source is a derived node (computed)
+        // Check if source is a derived node
         if ('_recompute' in source) {
           const sFlags = source._flags;
 
