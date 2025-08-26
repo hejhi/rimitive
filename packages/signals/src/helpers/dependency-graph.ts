@@ -187,18 +187,13 @@ export function createDependencyGraph(): DependencyGraph {
     for (;;) {
       while (currentEdge) {
         // Stop at tail marker - don't check stale edges beyond tail
-        if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) {
-          currentEdge = undefined;
-          break;
-        }
+        if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) break;
 
         const source = currentEdge.from;
 
         // Check if source is a dirty signal
         if (source._dirty) {
           stale = true;
-          // Early exit - no need to check remaining edges
-          currentEdge = undefined;
           break;
         }
 
@@ -206,17 +201,9 @@ export function createDependencyGraph(): DependencyGraph {
         if ('_recompute' in source) {
           const sFlags = source._flags;
 
-          // Early exit if source is already marked dirty
-          if (sFlags & DIRTY) {
+          // Early exit if source is already marked dirty or needs recomputation
+          if ((sFlags & DIRTY) || (!source._inTail && source._in)) {
             stale = true;
-            currentEdge = undefined;
-            break;
-          }
-
-          // If source has no tail, it needs recomputation
-          if (!source._inTail && source._in) {
-            stale = true;
-            currentEdge = undefined;
             break;
           }
 
@@ -242,12 +229,8 @@ export function createDependencyGraph(): DependencyGraph {
 
       // Update computeds during traversal
       // This avoids the need for a separate recomputation pass
-      // Recompute the intermediate computed immediately
-      // Propagate the change status up
       if (currentNode !== node) {
         if (stale && '_recompute' in currentNode) stale = currentNode._recompute();
-
-        // Clear RUNNING flag as we pop back up
         currentNode._flags &= ~RUNNING;
       }
 
@@ -262,8 +245,6 @@ export function createDependencyGraph(): DependencyGraph {
 
     // Clear RUNNING flag from root node
     node._flags &= ~RUNNING;
-
-    // The root node's staleness is determined by whether any dependencies changed
     return stale;
   };
 
