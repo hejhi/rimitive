@@ -46,9 +46,9 @@ export interface Disposable {
 // PRODUCERS: Nodes that other nodes depend on (signals, computed values)
 // They maintain a list of consumers that depend on them
 export interface ProducerNode extends ReactiveNode {
+  value: unknown;
   _out: Edge | undefined; // Head of output list
   _outTail: Edge | undefined; // Tail of output list
-  value: unknown;
   _flags: number; // Bit field containing DIRTY flag and others
 }
 
