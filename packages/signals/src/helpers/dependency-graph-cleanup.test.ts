@@ -33,9 +33,9 @@ describe('Dependency Graph Cleanup Operations', () => {
     const c = makeProducer();
     const target = makeConsumer();
 
-    graph.addEdge(a, target, 1);
-    graph.addEdge(b, target, 1);
-    graph.addEdge(c, target, 1);
+    graph.addEdge(a, target);
+    graph.addEdge(b, target);
+    graph.addEdge(c, target);
 
     graph.detachAll(target);
 
@@ -52,18 +52,18 @@ describe('Dependency Graph Cleanup Operations', () => {
     const target = makeConsumer();
 
     // Initial run: link a, b, c
-    graph.addEdge(a, target, 1);
-    graph.addEdge(b, target, 1);
-    graph.addEdge(c, target, 1);
+    graph.addEdge(a, target);
+    graph.addEdge(b, target);
+    graph.addEdge(c, target);
 
     // Simulate start of new run - reset tail
     target._inTail = undefined;
     
     // Next run: only access a and c (with NEW version like real usage)
     a._flags |= VALUE_CHANGED;
-    graph.addEdge(a, target, 2);  // Version 2 for second run
+    graph.addEdge(a, target);
     c._flags |= VALUE_CHANGED;
-    graph.addEdge(c, target, 2);  // Version 2 for second run
+    graph.addEdge(c, target);
 
     // Now prune stale (b should be removed)
     graph.pruneStale(target);
@@ -87,8 +87,8 @@ describe('Dependency Graph Cleanup Operations', () => {
     const b = makeProducer();
     const target = makeConsumer();
 
-    graph.addEdge(a, target, 1);
-    graph.addEdge(b, target, 1);
+    graph.addEdge(a, target);
+    graph.addEdge(b, target);
 
     // Simulate start of new run - reset tail
     target._inTail = undefined;

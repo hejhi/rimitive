@@ -118,8 +118,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
       // Combine bitwise mutations in a single assignment
       effect._flags = (flags | RUNNING) & ~(DIRTY | INVALIDATED);
-
-      ctx.trackingVersion++;
       effect._inTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;

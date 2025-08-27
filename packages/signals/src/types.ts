@@ -102,15 +102,6 @@ export interface Edge {
   // Consumer's input list navigation
   prevIn: Edge | undefined; // Previous in input list
   nextIn: Edge | undefined; // Next in input list
-
-  // TRACKING VERSION
-  // Stores the context's trackingVersion when this edge was created.
-  // Used to determine if this edge is from the current tracking context.
-  //
-  // PURPOSE: Edge lifecycle management
-  // - Edges with trackingVersion !== ctx.trackingVersion are stale
-  // - Stale edges are removed at the end of tracking
-  trackingVersion: number;
 }
 
 // Ensure module is not tree-shaken

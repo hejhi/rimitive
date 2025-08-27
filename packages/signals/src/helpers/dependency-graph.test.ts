@@ -30,17 +30,16 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // First call creates the dependency
-      helpers.addEdge(source, target, 1);
+      helpers.addEdge(source, target);
       const firstEdge = target._in;
       
       // Update version
       source._flags |= VALUE_CHANGED;
       
       // Second call should reuse the same edge
-      helpers.addEdge(source, target, 2);
+      helpers.addEdge(source, target);
       
       expect(target._in).toBe(firstEdge);
-      expect(target._in?.trackingVersion).toBe(2);
     });
 
     it('should find existing dependency in sources list', () => {
@@ -60,16 +59,15 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // Create dependency manually
-      helpers.addEdge(source, target, 1);
+      helpers.addEdge(source, target);
       const existingNode = target._in!;
       
       // Update version
       source._flags |= VALUE_CHANGED;
       
       // Should find the existing dependency
-      helpers.addEdge(source, target, 2);
+      helpers.addEdge(source, target);
       
-      expect(existingNode.trackingVersion).toBe(2);
       expect(target._in).toBe(existingNode);
     });
 
@@ -89,7 +87,7 @@ describe('Dependency Graph Helpers', () => {
         _inTail: undefined,
       };
       
-      helpers.addEdge(source, target, 1);
+      helpers.addEdge(source, target);
       
       expect(source._out).toBeDefined();
       expect(target._in).toBeDefined();
@@ -111,8 +109,8 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // Add dependencies from multiple sources
-      sources.forEach((source, i) => {
-        helpers.addEdge(source as ProducerNode, target, i + 1);
+      sources.forEach((source) => {
+        helpers.addEdge(source as ProducerNode, target);
       });
       
       // Count sources
@@ -143,17 +141,17 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // Create initial dependency
-      helpers.addEdge(source, target, 1);
+      helpers.addEdge(source, target);
       
       // Update version
       source._flags |= VALUE_CHANGED;
       
       // Update dependency
-      helpers.addEdge(source, target, 5);
+      helpers.addEdge(source, target);
       
-      // Check that version was updated
+      // Check that tail was updated correctly
       const node = target._in;
-      expect(node?.trackingVersion).toBe(5);
+      expect(node).toBeDefined();
     });
   });
 
@@ -174,12 +172,11 @@ describe('Dependency Graph Helpers', () => {
               _inTail: undefined,
         };
         
-        helpers.addEdge(source, target, 1);
+        helpers.addEdge(source, target);
         const node = target._in!;
         
         expect(node.from).toBe(source);
         expect(node.to).toBe(target);
-        expect(node.trackingVersion).toBe(1);
         expect(source._out).toBe(node);
         expect(target._in).toBe(node);
       });
@@ -207,9 +204,9 @@ describe('Dependency Graph Helpers', () => {
               _inTail: undefined,
         };
         
-        helpers.addEdge(source, target1, 1);
+        helpers.addEdge(source, target1);
         const node1 = target1._in!;
-        helpers.addEdge(source, target2, 1);
+        helpers.addEdge(source, target2);
         const node2 = target2._in!;
         
         // Source should point to first target (head of list)
@@ -239,7 +236,7 @@ describe('Dependency Graph Helpers', () => {
               _inTail: undefined,
         };
         
-        helpers.addEdge(source, target, 1);
+        helpers.addEdge(source, target);
         const node = target._in!;
         
         const next = helpers.removeEdge(node);
@@ -267,7 +264,7 @@ describe('Dependency Graph Helpers', () => {
         }) as ConsumerNode & { id: number });
         
         // Link all targets
-        targets.forEach(target => helpers.addEdge(source, target, 1));
+        targets.forEach(target => helpers.addEdge(source, target));
         
         // Get the edge pointing to the second target (middle one)
         let edge = source._out;
@@ -321,8 +318,8 @@ describe('Dependency Graph Helpers', () => {
           _inTail: undefined,
         };
         
-        helpers.addEdge(source1, target, 1);
-        helpers.addEdge(source2, target, 2);
+        helpers.addEdge(source1, target);
+        helpers.addEdge(source2, target);
         
         const firstEdge = target._in!;
         const secondEdge = firstEdge.nextIn!;
@@ -381,8 +378,6 @@ describe('Dependency Graph Helpers', () => {
       return {
         from,
         to,
-        trackingVersion: 0,
-        // touched: false,
         prevIn: undefined,
         nextIn: undefined,
         prevOut: undefined,

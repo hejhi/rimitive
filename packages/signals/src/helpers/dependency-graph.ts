@@ -33,8 +33,7 @@ export interface DependencyGraph {
   // Edge management
   addEdge: (
     producer: ProducerNode,
-    consumer: ConsumerNode,
-    trackingVersion: number
+    consumer: ConsumerNode
   ) => void;
   removeEdge: (edge: Edge) => Edge | undefined;
 
@@ -55,22 +54,17 @@ export interface DependencyGraph {
 export function createDependencyGraph(): DependencyGraph {
   const addEdge = (
     producer: FromNode,
-    consumer: ToNode,
-    trackingVersion: number
+    consumer: ToNode
   ): void => {
     const tail = consumer._inTail;
 
     // Fast path: check if tail is the producer we want
-    if (tail && tail.from === producer) {
-      tail.trackingVersion = trackingVersion;
-      return;
-    }
+    if (tail && tail.from === producer) return;
 
     // Check the next candidate (either after tail or first edge)
     const candidate = tail ? tail.nextIn : consumer._in;
 
     if (candidate && candidate.from === producer) {
-      candidate.trackingVersion = trackingVersion;
       consumer._inTail = candidate;
       return;
     }
@@ -82,12 +76,11 @@ export function createDependencyGraph(): DependencyGraph {
     // For simple patterns with no sharing, skip the third check entirely
     if (
       prevOut &&
-      prevOut.trackingVersion === trackingVersion &&
       prevOut.to === consumer &&
       producer._out &&
       producer._out.nextOut
     ) {
-      // Edge already exists with current version - it was created earlier in this run
+      // Edge already exists - it was created earlier in this run
       // No need to update anything, it's already properly positioned
       return;
     }
@@ -95,7 +88,6 @@ export function createDependencyGraph(): DependencyGraph {
     const newEdge = {
       from: producer,
       to: consumer,
-      trackingVersion,
       prevIn: tail,
       prevOut,
       nextIn: candidate,

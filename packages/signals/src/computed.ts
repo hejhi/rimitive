@@ -67,7 +67,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       const initialFlags = state._flags;
       // Set RUNNING, clear DIRTY and INVALIDATED in single assignment
       state._flags = (initialFlags | RUNNING) & ~DIRTY_OR_INVALIDATED;
-      ctx.trackingVersion++;
       state._inTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;
@@ -126,7 +125,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       const consumer = ctx.currentConsumer;
 
       // Always link if there's a consumer
-      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
+      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer);
 
       update();
 
