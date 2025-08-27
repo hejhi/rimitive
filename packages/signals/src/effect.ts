@@ -93,21 +93,23 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     const flushEffect = (): void => {
       const flags = effect._flags;
 
-      // Single bitwise check for fast exit
+      // Fast exit: disposed or already running
       if (flags & (DISPOSED | RUNNING)) return;
       
-      // Fast exit if not marked for update
-      const updateFlags = flags & UPDATE;
-      if (!updateFlags) return;
+      // Fast exit: not marked for update
+      if (!(flags & UPDATE)) return;
 
       // Check if actually needs to run
-      // Only INVALIDATED, need to check if actually stale
-      if (!(flags & DIRTY) && !isStale(effect)) {
-        effect._flags &= ~INVALIDATED;
-        return;
+      // DIRTY means definitely stale, INVALIDATED means maybe stale
+      if (!(flags & DIRTY)) {
+        // Only INVALIDATED, check if actually stale
+        if (!isStale(effect)) {
+          effect._flags &= ~INVALIDATED;
+          return;
+        }
       }
 
-      // Combine bitwise mutations in a single assignment
+      // Set RUNNING and clear update flags in single operation
       effect._flags = (flags | RUNNING) & ~UPDATE;
       effect._inTail = undefined;
 
@@ -115,14 +117,16 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       ctx.currentConsumer = effect;
 
       try {
-        // Run cleanup if exists
-        if (effect._cleanup) {
-          effect._cleanup();
+        // Run cleanup if exists (optimized to avoid double read)
+        const cleanup = effect._cleanup;
+        if (cleanup) {
           effect._cleanup = undefined;
+          cleanup();
         }
 
         // Main effect execution and store new cleanup
-        effect._cleanup = effect._callback() || undefined;
+        const newCleanup = effect._callback();
+        if (newCleanup) effect._cleanup = newCleanup;
       } finally {
         ctx.currentConsumer = prevConsumer;
         effect._flags &= ~RUNNING;
@@ -132,14 +136,19 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
     // Dispose method using closure
     const dispose = (): void => {
+      // Fast exit if already disposed
       if (effect._flags & DISPOSED) return;
       
       // Mark as disposed first to prevent re-entrance
       effect._flags = DISPOSED;
 
-      // Run cleanup and detach in one go
+      // Run cleanup if exists
       const cleanup = effect._cleanup;
-      if (cleanup) cleanup();
+
+      if (cleanup) {
+        effect._cleanup = undefined;  // Clear to prevent double cleanup
+        cleanup();
+      }
       
       detachAll(effect);
     };
