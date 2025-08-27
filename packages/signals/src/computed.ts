@@ -109,14 +109,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       recompute();
     };
 
-    const computed = (() => {
-      // Treat computed exactly like a signal for dependency tracking
-      // Register with current consumer FIRST (like signals do)
-      const consumer = ctx.currentConsumer;
-
-      // Always link if there's a consumer
-      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
-
+    const update = () => {
       // Lazy Evaluation with push-pull hybrid
       // DIRTY: definitely needs recomputation
       if (state._flags & DIRTY) updateComputed();
@@ -126,8 +119,19 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         // This updates intermediate computeds during traversal
         // If dependencies changed, need to recompute this node too
         if (isStale(state)) updateComputed();
-        else state._flags = state._flags & ~INVALIDATED;  // Just clear INVALIDATED
+        else state._flags = state._flags & ~INVALIDATED; // Just clear INVALIDATED
       }
+    }
+
+    const computed = (() => {
+      // Treat computed exactly like a signal for dependency tracking
+      // Register with current consumer FIRST (like signals do)
+      const consumer = ctx.currentConsumer;
+
+      // Always link if there's a consumer
+      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer, ctx.trackingVersion);
+
+      update();
 
       return state.value;
     }) as ComputedFunction<T>;
@@ -140,22 +144,12 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         ctx.currentConsumer = null; // Prevent ALL other dependency tracking
 
         try {
-          if (state._flags & DIRTY) updateComputed();
-          else if (state._flags & INVALIDATED) {
-            if (isStale(state)) updateComputed();
-            else state._flags = state._flags & ~INVALIDATED;
-          }
+          update();
         } finally {
           ctx.currentConsumer = prevConsumer; // Restore back to previous state
         }
-      } else {
-        // Observed computed - normal peek behavior
-        if (state._flags & DIRTY) updateComputed();
-        else if (state._flags & INVALIDATED) {
-          if (isStale(state)) updateComputed();
-          else state._flags = state._flags & ~INVALIDATED;  // Just clear INVALIDATED
-        }
-      }
+      } else update(); // Observed computed - normal peek behavior
+
       return state.value!;
     };
 
