@@ -34,7 +34,7 @@ export interface SignalFunction<T = unknown> extends ProducerNode {
 // This IS the actual signal - no indirection through properties
 interface SignalState<T> extends ProducerNode {
   value: T;
-  _flags: number;  // Bit field for OBSERVED flag
+  _flags: number;  // Bit field for various node flags
 }
 
 interface SignalFactoryContext extends SignalContext {

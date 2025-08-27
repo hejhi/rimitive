@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode } from '../types';
 
-const { INVALIDATED, DIRTY, DISPOSED, RUNNING, OBSERVED, VALUE_CHANGED } = CONSTANTS;
+const { INVALIDATED, DIRTY, DISPOSED, RUNNING, VALUE_CHANGED } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
 const ALREADY_HANDLED = SKIP_FLAGS | INVALIDATED;
 
@@ -103,11 +103,7 @@ export function createDependencyGraph(): DependencyGraph {
 
     // Wire up producer's output list
     if (prevOut) prevOut.nextOut = newEdge;
-    else {
-      producer._out = newEdge;
-      // When adding first outgoing edge, mark producer as OBSERVED
-      producer._flags |= OBSERVED;
-    }
+    else producer._out = newEdge;
 
     producer._outTail = newEdge;
   };
@@ -137,9 +133,6 @@ export function createDependencyGraph(): DependencyGraph {
     from._out = nextOut;
 
     if (!nextOut) {
-      // When removing last outgoing edge, clear OBSERVED flag
-      from._flags &= ~OBSERVED;
-      
       // When a consumer becomes completely unobserved (no outgoing edges at all)
       // PRESERVE EDGES: Don't destroy dependency edges, keep them for reuse
       // Mark as DIRTY so it recomputes when re-observed
@@ -302,7 +295,7 @@ export function createDependencyGraph(): DependencyGraph {
 
         // Only traverse into observed computeds to avoid invalidating unneeded subgraphs
         // Skip unobserved computeds but still invalidate them
-        if (firstChild && target._flags & OBSERVED) {
+        if (firstChild && target._out) {
           const nextSibling = currentEdge.nextOut;
 
           // Push sibling to stack if exists

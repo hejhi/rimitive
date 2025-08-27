@@ -20,10 +20,6 @@ export const CONSTANTS = {
   // Set when signal value changes, never cleared (permanent change flag).
   VALUE_CHANGED: 1 << 2,
 
-  // OBSERVED: Node has active observers/subscribers.
-  // When clear, we can skip propagation since no one is listening.
-  // Part of the hybrid push-pull optimization.
-  OBSERVED: 1 << 3,
 
   // RUNNING: Prevents infinite loops during computation.
   // Set while a computed/effect is executing to detect circular dependencies.
