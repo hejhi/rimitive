@@ -58,7 +58,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
       _outTail: undefined,
       _flags: 0,  // Start with no flags set
     };
-    
+
     // Signal function using closure instead of bound this
     const signal = ((...args: [] | [T]): T | void => {
       if (args.length) {
@@ -70,13 +70,14 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         if (currValue === newValue) return;
 
         state.value = newValue;
-        // Eliminate double read: cache current flags and set producer dirty
-        const currentFlags = state._flags;
-        state._flags = currentFlags | VALUE_CHANGED;
 
-        // Cache _out for repeat access
         const outEdge = state._out;
+
         if (!outEdge) return;
+
+        // Only set VALUE_CHANGED if not already set (first change only)
+        // No need to set if unobserved since it's only used during propagation
+        if (!(state._flags & VALUE_CHANGED)) state._flags |= VALUE_CHANGED;
 
         // Invalidate and propagate
         // The invalidate function will skip stale edges automatically
