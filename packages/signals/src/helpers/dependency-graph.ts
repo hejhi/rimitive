@@ -15,6 +15,7 @@ import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode 
 
 const { INVALIDATED, DIRTY, DISPOSED, RUNNING, OBSERVED, PRODUCER_DIRTY } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
+const ALREADY_HANDLED = SKIP_FLAGS | INVALIDATED;
 
 interface Stack<T> {
   value: T;
@@ -58,7 +59,7 @@ export function createDependencyGraph(): DependencyGraph {
     trackingVersion: number
   ): void => {
     const tail = consumer._inTail;
-    
+
     // Fast path: check if tail is the producer we want
     if (tail && tail.from === producer) {
       tail.trackingVersion = trackingVersion;
@@ -67,30 +68,30 @@ export function createDependencyGraph(): DependencyGraph {
 
     // Check the next candidate (either after tail or first edge)
     const candidate = tail ? tail.nextIn : consumer._in;
-    
+
     if (candidate && candidate.from === producer) {
       candidate.trackingVersion = trackingVersion;
       consumer._inTail = candidate;
       return;
     }
 
+    // Cache previous out tail
+    const prevOut = producer._outTail;
+
     // ADAPTIVE: Only check for duplicates if producer is shared (has 2+ outputs)
     // For simple patterns with no sharing, skip the third check entirely
-    if (producer._out && producer._out.nextOut) {
-      // Producer has multiple outputs - check for duplicate
-      const producerTail = producer._outTail;
-
+    if (
+      prevOut &&
+      prevOut.trackingVersion === trackingVersion &&
+      prevOut.to === consumer &&
+      producer._out &&
+      producer._out.nextOut
+    ) {
       // Edge already exists with current version - it was created earlier in this run
       // No need to update anything, it's already properly positioned
-      if (
-        producerTail && producerTail.to === consumer
-        && producerTail.trackingVersion === trackingVersion
-      ) return;
+      return;
     }
 
-    // No reusable edge found - create new edge
-    const prevOut = producer._outTail;
-    
     const newEdge = {
       from: producer,
       to: consumer,
@@ -123,12 +124,7 @@ export function createDependencyGraph(): DependencyGraph {
   // Removes an edge from both producer and consumer lists in O(1)
   // Returns the next edge in consumer's list for easy iteration
   const removeEdge = (edge: Edge): Edge | undefined => {
-    const from = edge.from;
-    const to = edge.to;
-    const prevIn = edge.prevIn;
-    const nextIn = edge.nextIn;
-    const prevOut = edge.prevOut;
-    const nextOut = edge.nextOut;
+    const { from, to, prevIn, nextIn, prevOut, nextOut } = edge;
 
     // Update consumer's input list
     if (nextIn) nextIn.prevIn = prevIn;
@@ -144,19 +140,16 @@ export function createDependencyGraph(): DependencyGraph {
     if (prevOut) prevOut.nextOut = nextOut;
     else {
       from._out = nextOut;
+
       if (!nextOut && '_flags' in from) {
         // When removing last outgoing edge, clear OBSERVED flag
         from._flags &= ~OBSERVED;
         
         // When a computed becomes completely unobserved (no outgoing edges at all)
         // PRESERVE EDGES: Don't destroy dependency edges, keep them for reuse
-        if ('_recompute' in from) {
-          // Mark as DIRTY so it recomputes when re-observed
-          // But DON'T call detachAll - preserve the edges for faster re-observation
-          from._flags |= DIRTY;
-          // Note: We're keeping edges intact. This uses more memory but provides
-          // much better performance when computeds are repeatedly observed/unobserved
-        }
+        // Mark as DIRTY so it recomputes when re-observed
+        // This uses more memory but provides better performance when computeds are repeatedly observed/unobserved
+        if ('_recompute' in from) from._flags |= DIRTY;
       }
     }
 
@@ -206,24 +199,24 @@ export function createDependencyGraph(): DependencyGraph {
             break;
           }
 
-          // Recurse into computeds that haven't been checked yet
-          // Skip if already running (cycle detection)
-          if (!(sFlags & RUNNING)) {
-            source._flags |= RUNNING;
-            stack = {
-              edge: currentEdge.nextIn,
-              node: currentNode,
-              stale,
-              prev: stack,
-            };
-            currentNode = source;
-            currentEdge = source._in;
-            stale = false;
+          if (sFlags & RUNNING) {
+            currentEdge = currentEdge.nextIn;
             continue;
           }
-        }
 
-        currentEdge = currentEdge.nextIn;
+          // Recurse into computeds that haven't been checked yet
+          // Skip if already running (cycle detection)
+          source._flags |= RUNNING;
+          stack = {
+            edge: currentEdge.nextIn,
+            node: currentNode,
+            stale,
+            prev: stack,
+          };
+          currentNode = source;
+          currentEdge = source._in;
+          stale = false;
+        } else currentEdge = currentEdge.nextIn;
       }
 
       // Update computeds during traversal
@@ -253,10 +246,8 @@ export function createDependencyGraph(): DependencyGraph {
     let node = consumer._in;
     
     // Walk the linked list of sources
-    while (node) {
-      // removeEdge returns the next edge, so we can iterate efficiently
-      node = removeEdge(node);
-    }
+    // RemoveEdge returns the next edge, so we can iterate efficiently
+    while (node) node = removeEdge(node);
     
     // Clear the consumer's source list head and tail
     consumer._in = undefined;
@@ -277,11 +268,9 @@ export function createDependencyGraph(): DependencyGraph {
     
     // Remove all stale edges from both consumer and producer sides
     // This eliminates the need for edge validity checks during propagation
-    while (toRemove) {
-      // removeEdge handles bidirectional removal and returns next edge
-      toRemove = removeEdge(toRemove);
-    }
-    
+    // RemoveEdge handles bidirectional removal and returns next edge
+    while (toRemove) toRemove = removeEdge(toRemove);
+
     // Update tail to point to the last valid edge
     if (tail) tail.nextIn = undefined;
   };
@@ -300,7 +289,7 @@ export function createDependencyGraph(): DependencyGraph {
       const targetFlags = target._flags;
 
       // Skip already processed nodes or already invalidated nodes
-      if (targetFlags & (SKIP_FLAGS | INVALIDATED)) {
+      if (targetFlags & ALREADY_HANDLED) {
         currentEdge = currentEdge.nextOut;
         continue;
       }
@@ -320,9 +309,7 @@ export function createDependencyGraph(): DependencyGraph {
           const nextSibling = currentEdge.nextOut;
           
           // Push sibling to stack if exists
-          if (nextSibling) {
-            stack = { value: nextSibling, prev: stack };
-          }
+          if (nextSibling) stack = { value: nextSibling, prev: stack };
           
           // Continue with first child
           currentEdge = firstChild;
@@ -334,11 +321,11 @@ export function createDependencyGraph(): DependencyGraph {
       // Move to next sibling or pop from stack
       currentEdge = currentEdge.nextOut;
 
-      if (!currentEdge && stack) {
-        do {
-          currentEdge = stack.value;
-          stack = stack.prev;
-        } while (!currentEdge && stack);
+      if (currentEdge || !stack) continue
+
+      while (!currentEdge && stack) {
+        currentEdge = stack.value;
+        stack = stack.prev;
       }
     } while (currentEdge);
   };
