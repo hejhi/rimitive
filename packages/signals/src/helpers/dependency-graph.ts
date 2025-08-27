@@ -191,32 +191,35 @@ export function createDependencyGraph(): DependencyGraph {
           break;
         }
 
+        if (!('_recompute' in source)) {
+          currentEdge = currentEdge.nextIn;
+          continue;
+        }
+
         // Check if source is a derived node
-        if ('_recompute' in source) {
-          // Early exit if source is already marked dirty or needs recomputation
-          if ((sFlags & DIRTY) || (!source._inTail && source._in)) {
-            stale = true;
-            break;
-          }
+        // Early exit if source is already marked dirty or needs recomputation
+        if ((sFlags & DIRTY) || (!source._inTail && source._in)) {
+          stale = true;
+          break;
+        }
 
-          if (sFlags & RUNNING) {
-            currentEdge = currentEdge.nextIn;
-            continue;
-          }
+        if (sFlags & RUNNING) {
+          currentEdge = currentEdge.nextIn;
+          continue;
+        }
 
-          // Recurse into computeds that haven't been checked yet
-          // Skip if already running (cycle detection)
-          source._flags |= RUNNING;
-          stack = {
-            edge: currentEdge.nextIn,
-            node: currentNode,
-            stale,
-            prev: stack,
-          };
-          currentNode = source;
-          currentEdge = source._in;
-          stale = false;
-        } else currentEdge = currentEdge.nextIn;
+        // Recurse into computeds that haven't been checked yet
+        // Skip if already running (cycle detection)
+        source._flags |= RUNNING;
+        stack = {
+          edge: currentEdge.nextIn,
+          node: currentNode,
+          stale,
+          prev: stack,
+        };
+        currentNode = source;
+        currentEdge = source._in;
+        stale = false;
       }
 
       // Update computeds during traversal
@@ -237,6 +240,7 @@ export function createDependencyGraph(): DependencyGraph {
 
     // Clear RUNNING flag from root node
     node._flags &= ~RUNNING;
+
     return stale;
   };
 
