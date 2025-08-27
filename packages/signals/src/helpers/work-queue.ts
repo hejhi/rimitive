@@ -30,10 +30,12 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
 
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
-    if (node._flags & SCHEDULED) return; // already scheduled
+    // Cache flags for better branch prediction
+    const flags = node._flags;
+    if (flags & SCHEDULED) return; // Cold path - already scheduled
     
-    // Mark as scheduled and clear next pointer
-    node._flags |= SCHEDULED;
+    // Hot path - mark as scheduled with cached flags
+    node._flags = flags | SCHEDULED;
     node._nextScheduled = undefined;
 
     // Add to queue

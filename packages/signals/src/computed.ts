@@ -63,8 +63,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     // Create recompute that captures state in closure
     const recompute = (): boolean => {
-      // Set RUNNING flag and clear DIRTY and INVALIDATED
-      state._flags = (state._flags | RUNNING) & ~DIRTY_OR_INVALIDATED;
+      // Cache initial flags and compute new flags in one operation
+      const initialFlags = state._flags;
+      // Set RUNNING, clear DIRTY and INVALIDATED in single assignment
+      state._flags = (initialFlags | RUNNING) & ~DIRTY_OR_INVALIDATED;
       ctx.trackingVersion++;
       state._inTail = undefined;
 
@@ -76,24 +78,19 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const oldValue = state.value;
         const newValue = compute();
 
-        // Update value and producer dirty flag based on whether value changed
+        // Update value and determine final flag state
         if (newValue !== oldValue) {
           state.value = newValue;
-          state._flags |= VALUE_CHANGED;
           valueChanged = true;
+          // Set final flags: clear RUNNING, set VALUE_CHANGED
+          state._flags = (state._flags & ~RUNNING) | VALUE_CHANGED;
         } else {
-          // Value didn't change - clear producer dirty flag but don't propagate
-          state._flags &= ~VALUE_CHANGED;
+          // Value didn't change - clear RUNNING and VALUE_CHANGED in one operation
           valueChanged = false;
+          state._flags &= ~(RUNNING | VALUE_CHANGED);
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
-        // Clear RUNNING flag - after recompute we know:
-        // - RUNNING needs to be cleared
-        // - DIRTY and INVALIDATED were already cleared at start of recompute
-        // - VALUE_CHANGED was set/cleared based on value change
-        // So we just need to clear RUNNING from the current flags
-        state._flags &= ~RUNNING;
         // Only prune if we have edges to prune
         // Unobserved computeds have no edges, so skip the pruning
         if (state._in) pruneStale(state);
