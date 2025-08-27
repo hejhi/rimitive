@@ -94,19 +94,15 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       const flags = effect._flags;
 
       // Fast exit: disposed or already running
-      if (flags & (DISPOSED | RUNNING)) return;
-      
       // Fast exit: not marked for update
-      if (!(flags & UPDATE)) return;
+      if (flags & (DISPOSED | RUNNING) || !(flags & UPDATE)) return;
 
       // Check if actually needs to run
       // DIRTY means definitely stale, INVALIDATED means maybe stale
-      if (!(flags & DIRTY)) {
-        // Only INVALIDATED, check if actually stale
-        if (!isStale(effect)) {
-          effect._flags &= ~INVALIDATED;
-          return;
-        }
+      // Only INVALIDATED, check if actually stale
+      if (!(flags & DIRTY) &&!isStale(effect)) {
+        effect._flags &= ~INVALIDATED;
+        return;
       }
 
       // Set RUNNING and clear update flags in single operation
