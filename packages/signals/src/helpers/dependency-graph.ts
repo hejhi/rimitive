@@ -286,8 +286,8 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Mark as invalidated (push phase - might be stale)
-      // Pre-compute: we already have targetFlags, so avoid double read
-      target._flags |= INVALIDATED;
+      // Use cached flags to avoid double read in hot path
+      target._flags = targetFlags | INVALIDATED;
 
       // Handle producer nodes (have outputs)
       if ('_out' in target) {

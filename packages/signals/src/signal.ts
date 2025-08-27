@@ -77,7 +77,9 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
 
         // Only set VALUE_CHANGED if not already set (first change only)
         // No need to set if unobserved since it's only used during propagation
-        if (!(state._flags & VALUE_CHANGED)) state._flags |= VALUE_CHANGED;
+        // Cache flags to avoid double read in hot path
+        const flags = state._flags;
+        if (!(flags & VALUE_CHANGED)) state._flags = flags | VALUE_CHANGED;
 
         // Invalidate and propagate
         // The invalidate function will skip stale edges automatically

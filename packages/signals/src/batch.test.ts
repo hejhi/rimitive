@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { signal, effect, batch, computed, subscribe, resetGlobalState } from './test-setup';
+import { signal, effect, batch, computed, resetGlobalState } from './test-setup';
 
 describe('batch', () => {
   beforeEach(() => {
@@ -125,61 +125,6 @@ describe('batch', () => {
     // Effect only runs once
     expect(effectCount).toBe(1);
     expect(quadrupled()).toBe(12);
-  });
-
-  it.skip('should batch subscribe callbacks', () => {
-    const s1 = signal(1);
-    const s2 = signal(2);
-    
-    let callback1Count = 0;
-    let callback2Count = 0;
-    
-    subscribe(s1, () => callback1Count++);
-    subscribe(s2, () => callback2Count++);
-    
-    // Reset after initial subscription callbacks
-    callback1Count = 0;
-    callback2Count = 0;
-    
-    batch(() => {
-      s1(10);
-      s2(20);
-      // Callbacks should not have run yet
-      expect(callback1Count).toBe(0);
-      expect(callback2Count).toBe(0);
-    });
-    
-    // Callbacks run after batch
-    expect(callback1Count).toBe(1);
-    expect(callback2Count).toBe(1);
-  });
-
-  it.skip('should handle mixed effects and subscribes in batch', () => {
-    const s = signal(1);
-    
-    let effectCount = 0;
-    let subscribeCount = 0;
-    
-    effect(() => {
-      void s();
-      effectCount++;
-    });
-    
-    subscribe(s, () => subscribeCount++);
-    
-    // Reset counters
-    effectCount = 0;
-    subscribeCount = 0;
-    
-    batch(() => {
-      s(2);
-      s(3);
-      s(4);
-    });
-    
-    // Both should run exactly once
-    expect(effectCount).toBe(1);
-    expect(subscribeCount).toBe(1);
   });
 
   it('should handle empty batch', () => {

@@ -5,7 +5,6 @@ import { createSignalFactory, type SignalInterface } from './signal';
 import { createComputedFactory, type ComputedInterface } from './computed';
 import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
-import { createSubscribeFactory } from './subscribe';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createContext } from './context';
 import { createWorkQueue } from './helpers/work-queue';
@@ -19,15 +18,12 @@ describe('createSignalAPI', () => {
       computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
       effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
       batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
-      // We only check presence, not call signature, so keep unknown
-      subscribe: createSubscribeFactory as (ctx: unknown) => LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
 
     expect(api.signal).toBeDefined();
     expect(api.computed).toBeDefined();
     expect(api.effect).toBeDefined();
     expect(api.batch).toBeDefined();
-    expect(api.subscribe).toBeDefined();
     expect(api.dispose).toBeDefined();
   });
 
@@ -159,7 +155,6 @@ describe('createSignalAPI', () => {
       computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
       effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
       batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
-      subscribe: createSubscribeFactory as (ctx: unknown) => LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
 
     let effectRuns = 0;
@@ -192,14 +187,12 @@ describe('createSignalAPI', () => {
       computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
       effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
       batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
-      subscribe: createSubscribeFactory as (ctx: unknown) => LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
     const api2 = createSignalAPI({
       signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
       computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
       effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
       batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
-      subscribe: createSubscribeFactory as (ctx: unknown) => LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
 
     const signal1 = api1.signal(0);

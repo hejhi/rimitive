@@ -5,7 +5,6 @@ import { createSignalFactory, type SignalFunction } from './signal';
 import { createComputedFactory, type ComputedFunction } from './computed';
 import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
-import { createSubscribeFactory } from './subscribe';
 
 describe('Computed - Push-Pull Optimization', () => {
   let signal: <T>(value: T) => SignalFunction<T>;
@@ -19,7 +18,6 @@ describe('Computed - Push-Pull Optimization', () => {
       computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>,
       effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
       batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
-      subscribe: createSubscribeFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'subscribe', unknown>,
     }, createDefaultContext());
     signal = api.signal;
     computed = api.computed;

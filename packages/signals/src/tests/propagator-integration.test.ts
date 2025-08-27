@@ -179,92 +179,9 @@ describe('Propagator Integration with Signal and Batch', () => {
       // Should not have excessive recomputation
       expect(computeRuns).toBeLessThanOrEqual(2);
     });
-    
-    it.skip('should handle batch errors without breaking propagation', () => {
-      const signals = Array.from({ length: 4 }, (_, i) => api.signal(i));
-      
-      const errorComputed = api.computed(() => {
-        if (signals[1]!() === 999) {
-          throw new Error('Test batch error');
-        }
-        return signals.reduce((acc, s) => acc + s(), 0);
-      });
-      
-      let effectRuns = 0;
-      api.effect(() => {
-        effectRuns++;
-        try {
-          void errorComputed();
-        } catch {
-          // Ignore errors in effect
-        }
-      });
-      
-      expect(effectRuns).toBe(1);
-      
-      // Batch that will cause error during propagation
-      expect(() => {
-        api.batch(() => {
-          signals[0]!(100);  // immediate
-          signals[1]!(999);  // immediate - will cause error
-          signals[2]!(300);  // should accumulate
-          signals[3]!(400);  // should accumulate
-        });
-      }).toThrow('Test batch error');
-      
-      // Verify system is still functional after error
-      api.batch(() => {
-        signals[0]!(10);
-        signals[1]!(20);  // Safe value
-        signals[2]!(30);
-        signals[3]!(40);
-      });
-      
-      expect(errorComputed()).toBe(100); // 10+20+30+40
-    });
   });
   
   describe('Performance Characteristics', () => {
-    it.skip('should correctly propagate accumulated updates to dependencies', () => {
-      // SKIPPED: This test expects deferred propagation behavior.
-      // With immediate propagation, DFS deduplication prevents visiting
-      // all computeds when they share a common child (the effect).
-      // This test verifies immediate propagation correctly updates all dependencies
-      
-      const root = api.signal(0);
-      const leaves = Array.from({ length: 5 }, (_, i) => 
-        api.computed(() => root() + i)
-      );
-      
-      let effectRuns = 0;
-      api.effect(() => {
-        effectRuns++;
-        leaves.forEach(leaf => void leaf());
-      });
-      
-      expect(effectRuns).toBe(1);
-      expect(leaves.map(l => l())).toEqual([0, 1, 2, 3, 4]);
-      
-      const dummy1 = api.signal(1);
-      const dummy2 = api.signal(2);
-      
-      api.batch(() => {
-        dummy1(10);  // immediate DFS (no dependents)
-        dummy2(20);  // immediate DFS (no dependents)
-        root(100);   // immediate DFS to all dependents
-      });
-      
-      expect(effectRuns).toBe(2);
-      expect(root()).toBe(100);
-      
-      // With immediate propagation, computeds are invalidated during batch
-      // They will recompute when read
-      const actualValues = leaves.map(l => l());
-      
-      // All leaves should be correctly updated
-      expect(actualValues).toEqual([100, 101, 102, 103, 104]);
-    });
-    
     it('should handle deep dependency chains efficiently', () => {
       // Create a chain: s1 -> c1 -> c2 -> c3 -> effect
       const signals = [api.signal(1)];

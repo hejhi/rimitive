@@ -12,7 +12,6 @@ import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
-import { createSubscribeFactory } from './subscribe';
 import { createContext as createLattice } from '@lattice/lattice';
 
 // Create a test instance
@@ -33,7 +32,6 @@ export function createTestInstance() {
     createComputedFactory(ctx),
     createEffectFactory(ctx),
     createBatchFactory(ctx),
-    createSubscribeFactory(ctx)
   );
   
   return {
@@ -45,9 +43,6 @@ export function createTestInstance() {
 
     // Effect functions
     effect: api.effect,
-
-    // Subscribe function
-    subscribe: api.subscribe,
 
     // Batch functions - now use ctx
     batch: api.batch,
@@ -98,8 +93,6 @@ export const computed = <T>(fn: () => T): ComputedFunction<T> =>
   defaultInstance.computed(fn);
 export const effect = (fn: () => void | (() => void)): EffectDisposer =>
   defaultInstance.effect(fn);
-export const subscribe = (...args: Parameters<typeof defaultInstance.subscribe>) =>
-  defaultInstance.subscribe(...args);
 export const batch = (...args: Parameters<typeof defaultInstance.batch>) =>
   defaultInstance.batch(...args);
 export const startBatch = () => defaultInstance.startBatch();
