@@ -114,13 +114,13 @@ export function createDependencyGraph(): DependencyGraph {
     else {
       producer._out = newEdge;
       // When adding first outgoing edge, mark producer as OBSERVED
-      if ('_flags' in producer) producer._flags |= OBSERVED;
+      producer._flags |= OBSERVED;
     }
 
     producer._outTail = newEdge;
   };
 
-  // ALGORITHM: Full Bidirectional Edge Removal (alien-signals pattern)
+  // Full Bidirectional Edge Removal
   // Removes an edge from both producer and consumer lists in O(1)
   // Returns the next edge in consumer's list for easy iteration
   const removeEdge = (edge: Edge): Edge | undefined => {
@@ -137,20 +137,22 @@ export function createDependencyGraph(): DependencyGraph {
     if (nextOut) nextOut.prevOut = prevOut;
     else from._outTail = prevOut;
 
-    if (prevOut) prevOut.nextOut = nextOut;
-    else {
-      from._out = nextOut;
+    if (prevOut) {
+      prevOut.nextOut = nextOut;
+      return nextIn
+    }
 
-      if (!nextOut && '_flags' in from) {
-        // When removing last outgoing edge, clear OBSERVED flag
-        from._flags &= ~OBSERVED;
-        
-        // When a computed becomes completely unobserved (no outgoing edges at all)
-        // PRESERVE EDGES: Don't destroy dependency edges, keep them for reuse
-        // Mark as DIRTY so it recomputes when re-observed
-        // This uses more memory but provides better performance when computeds are repeatedly observed/unobserved
-        if ('_recompute' in from) from._flags |= DIRTY;
-      }
+    from._out = nextOut;
+
+    if (!nextOut) {
+      // When removing last outgoing edge, clear OBSERVED flag
+      from._flags &= ~OBSERVED;
+      
+      // When a consumer becomes completely unobserved (no outgoing edges at all)
+      // PRESERVE EDGES: Don't destroy dependency edges, keep them for reuse
+      // Mark as DIRTY so it recomputes when re-observed
+      // This uses more memory but provides better performance when computeds are repeatedly observed/unobserved
+      from._flags |= DIRTY;
     }
 
     return nextIn;
@@ -298,35 +300,35 @@ export function createDependencyGraph(): DependencyGraph {
         continue;
       }
 
-
       // Mark as invalidated (push phase - might be stale)
       // Pre-compute: we already have targetFlags, so avoid double read
-      target._flags = targetFlags | INVALIDATED;
+      target._flags |= INVALIDATED;
 
       // Handle producer nodes (have outputs)
       if ('_out' in target) {
         const firstChild = target._out;
-        
-        // Only traverse into observed computeds to avoid invalidating unneeded subgraphs  
+
+        // Only traverse into observed computeds to avoid invalidating unneeded subgraphs
         // Skip unobserved computeds but still invalidate them
-        if (firstChild && (target._flags & OBSERVED)) {
+        if (firstChild && target._flags & OBSERVED) {
           const nextSibling = currentEdge.nextOut;
-          
+
           // Push sibling to stack if exists
           if (nextSibling) stack = { value: nextSibling, prev: stack };
-          
+
           // Continue with first child
           currentEdge = firstChild;
           continue;
         }
         // Effect node - schedule it
       } else if ('_nextScheduled' in target) visit(target);
-      
+
       // Move to next sibling or pop from stack
       currentEdge = currentEdge.nextOut;
 
-      if (currentEdge || !stack) continue
+      if (currentEdge || !stack) continue;
 
+      // Backtrack through multiple completed levels when unwinding the stack
       while (!currentEdge && stack) {
         currentEdge = stack.value;
         stack = stack.prev;
