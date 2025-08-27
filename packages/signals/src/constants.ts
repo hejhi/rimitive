@@ -28,8 +28,8 @@ export const CONSTANTS = {
   // Set when enqueued, cleared when flushed.
   SCHEDULED: 1 << 5,     // 32 (binary: 0100000)
 
-  // PRODUCER_DIRTY (bit 6): Producer's value has changed since creation.
-  // Similar to the old _dirty boolean on producers (signals).
+  // VALUE_CHANGED (bit 6): Producer's value has changed since creation.
+  // Similar to the _dirty boolean, but for Producers.
   // Set when signal value changes, never cleared (permanent change flag).
-  PRODUCER_DIRTY: 1 << 6, // 64 (binary: 1000000)
+  VALUE_CHANGED: 1 << 6, // 64 (binary: 1000000)
 }

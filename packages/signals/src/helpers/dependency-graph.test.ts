@@ -3,7 +3,7 @@ import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { DISPOSED, RUNNING, INVALIDATED, OBSERVED, PRODUCER_DIRTY } = CONSTANTS;
+const { DISPOSED, RUNNING, INVALIDATED, OBSERVED, VALUE_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: ReturnType<typeof createDependencyGraph>;
@@ -34,7 +34,7 @@ describe('Dependency Graph Helpers', () => {
       const firstEdge = target._in;
       
       // Update version
-      source._flags |= PRODUCER_DIRTY;
+      source._flags |= VALUE_CHANGED;
       
       // Second call should reuse the same edge
       helpers.addEdge(source, target, 2);
@@ -64,7 +64,7 @@ describe('Dependency Graph Helpers', () => {
       const existingNode = target._in!;
       
       // Update version
-      source._flags |= PRODUCER_DIRTY;
+      source._flags |= VALUE_CHANGED;
       
       // Should find the existing dependency
       helpers.addEdge(source, target, 2);
@@ -146,7 +146,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.addEdge(source, target, 1);
       
       // Update version
-      source._flags |= PRODUCER_DIRTY;
+      source._flags |= VALUE_CHANGED;
       
       // Update dependency
       helpers.addEdge(source, target, 5);

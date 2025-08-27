@@ -29,7 +29,7 @@ const {
   RUNNING,
   DIRTY,
   INVALIDATED,
-  PRODUCER_DIRTY,
+  VALUE_CHANGED,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -79,11 +79,11 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         // Update value and producer dirty flag based on whether value changed
         if (newValue !== oldValue) {
           state.value = newValue;
-          state._flags |= PRODUCER_DIRTY;
+          state._flags |= VALUE_CHANGED;
           valueChanged = true;
         } else {
           // Value didn't change - clear producer dirty flag but don't propagate
-          state._flags &= ~PRODUCER_DIRTY;
+          state._flags &= ~VALUE_CHANGED;
           valueChanged = false;
         }
       } finally {
@@ -91,7 +91,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         // Clear RUNNING flag - after recompute we know:
         // - RUNNING needs to be cleared
         // - DIRTY and INVALIDATED were already cleared at start of recompute
-        // - PRODUCER_DIRTY was set/cleared based on value change
+        // - VALUE_CHANGED was set/cleared based on value change
         // So we just need to clear RUNNING from the current flags
         state._flags &= ~RUNNING;
         // Only prune if we have edges to prune

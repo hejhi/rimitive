@@ -3,7 +3,7 @@ import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { PRODUCER_DIRTY } = CONSTANTS;
+const { VALUE_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Cleanup Operations', () => {
   let graph: ReturnType<typeof createDependencyGraph>;
@@ -60,9 +60,9 @@ describe('Dependency Graph Cleanup Operations', () => {
     target._inTail = undefined;
     
     // Next run: only access a and c (with NEW version like real usage)
-    a._flags |= PRODUCER_DIRTY;
+    a._flags |= VALUE_CHANGED;
     graph.addEdge(a, target, 2);  // Version 2 for second run
-    c._flags |= PRODUCER_DIRTY;
+    c._flags |= VALUE_CHANGED;
     graph.addEdge(c, target, 2);  // Version 2 for second run
 
     // Now prune stale (b should be removed)

@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode } from '../types';
 
-const { INVALIDATED, DIRTY, DISPOSED, RUNNING, OBSERVED, PRODUCER_DIRTY } = CONSTANTS;
+const { INVALIDATED, DIRTY, DISPOSED, RUNNING, OBSERVED, VALUE_CHANGED } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
 const ALREADY_HANDLED = SKIP_FLAGS | INVALIDATED;
 
@@ -188,7 +188,7 @@ export function createDependencyGraph(): DependencyGraph {
         const sFlags = source._flags;
 
         // Check if source is a dirty signal
-        if (sFlags & PRODUCER_DIRTY) {
+        if (sFlags & VALUE_CHANGED) {
           stale = true;
           break;
         }
