@@ -280,7 +280,7 @@ export function createDependencyGraph(): DependencyGraph {
     // Mark root as running to prevent cycles
     node._flags |= RUNNING;
 
-    // Traverse dependency tree iteratively (depth-first like alien-signals)
+    // Traverse dependency tree iteratively
     for (;;) {
       while (currentEdge) {
         // Stop at tail marker - don't check stale edges beyond tail
@@ -294,12 +294,16 @@ export function createDependencyGraph(): DependencyGraph {
           // Mark as running to prevent cycles
           source._flags |= RUNNING;
           
+          // OPTIMIZATION: Check if this is a chained computed (computed -> computed)
+          const sourceFirst = source._in;
+          const isChained = sourceFirst && isDerived(sourceFirst.from);
+          
           // Push current state to stack
           stack = pushStack(stack, currentEdge.nextIn, currentNode, false);
           
-          // Traverse into DIRTY dependency
+          // Traverse into DIRTY dependency (depth-first for chains)
           currentNode = source;
-          currentEdge = source._in;
+          currentEdge = isChained ? sourceFirst : source._in;
           continue;
         }
 
@@ -326,9 +330,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
 
     // Now update the root node if it's still DIRTY
-    if ((node._flags & DIRTY) && isDerived(node)) {
-      node._recompute();
-    }
+    if ((node._flags & DIRTY) && isDerived(node)) node._recompute();
     
     // Clear RUNNING flag from root node
     node._flags &= ~RUNNING;
