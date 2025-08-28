@@ -148,6 +148,9 @@ export function createDependencyGraph(): DependencyGraph {
   // This combines checking and updating in one pass for efficiency
   const isStale = (node: ToNode): boolean => {
     const flags = node._flags;
+    
+    // Check if already clean
+    if ((flags & (INVALIDATED | DIRTY)) === 0) return false;
 
     // Prevent cycles
     if (flags & RUNNING) return false;
@@ -187,7 +190,7 @@ export function createDependencyGraph(): DependencyGraph {
           currentEdge = currentEdge.nextIn;
           continue;
         }
-
+        
         // Check if source is a derived node
         // Early exit if source is already marked dirty or needs recomputation
         if ((sFlags & DIRTY) || (!source._inTail && source._in)) {
@@ -209,7 +212,7 @@ export function createDependencyGraph(): DependencyGraph {
         
         if (isChained) {
           // Depth-first: immediately follow the chain of computeds
-          // Save current position including siblings to check later
+          // This helps with deep chains by reducing stack depth
           stack = {
             edge: currentEdge.nextIn,  // Save siblings for later
             node: currentNode,
