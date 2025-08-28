@@ -11,7 +11,7 @@
  * - Database query planners (dependency analysis)
  */
 import { CONSTANTS } from '../constants';
-import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode } from '../types';
+import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode, DerivedNode } from '../types';
 
 const { INVALIDATED, DIRTY, DISPOSED, RUNNING, VALUE_CHANGED } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
@@ -43,7 +43,7 @@ export interface DependencyGraph {
 
   // Staleness checks
   isStale: (node: ToNode) => boolean; // Check staleness and update computeds in one pass
-  updateDirty: (node: ToNode) => void; // Update DIRTY computeds iteratively to avoid recursion
+  updateDirty: (node: DerivedNode) => void; // Update DIRTY computeds iteratively to avoid recursion
 
   // Invalidation strategies
   invalidate: (
@@ -144,6 +144,30 @@ export function createDependencyGraph(): DependencyGraph {
     return nextIn;
   };
 
+  // Helper: Check if we should stop at tail marker
+  const isAtTail = (node: ToNode, edge: Edge): boolean => !!(node._inTail && edge === node._inTail.nextIn);
+
+  // Helper: Check if source is a computed
+  const isDerived = (source: FromNode | ToNode): source is DerivedNode => '_recompute' in source;
+
+  // Helper: Check if computed needs recomputation
+  const needsRecompute = (node: ToNode): boolean => ((node._flags & DIRTY) || (!node._inTail && node._in)) !== 0;
+
+  // Helper: Push current state to stack and move to new node
+  const pushStack = (
+    stack: StackFrame | undefined,
+    edge: Edge | undefined,
+    node: ToNode,
+    stale: boolean
+  ): StackFrame => {
+    return {
+      edge,
+      node,
+      stale,
+      prev: stack,
+    };
+  };
+
   // For computed nodes: iteratively check if any dependencies changed
   // Uses manual stack to avoid function call overhead (like Alien Signals)
   // This combines checking and updating in one pass for efficiency
@@ -174,7 +198,7 @@ export function createDependencyGraph(): DependencyGraph {
     for (;;) {
       while (currentEdge) {
         // Stop at tail marker - don't check stale edges beyond tail
-        if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) break;
+        if (isAtTail(currentNode, currentEdge)) break;
 
         const source = currentEdge.from;
         const sFlags = source._flags;
@@ -184,17 +208,14 @@ export function createDependencyGraph(): DependencyGraph {
           stale = true;
           break;
         }
-
-        const isComputed = '_recompute' in source;
         
-        if (!isComputed) {
+        if (!isDerived(source)) {
           currentEdge = currentEdge.nextIn;
           continue;
         }
         
-        // Check if source is a derived node
-        // Early exit if source is already marked dirty or needs recomputation
-        if ((sFlags & DIRTY) || (!source._inTail && source._in)) {
+        // Check if source needs recomputation
+        if (needsRecompute(source)) {
           stale = true;
           break;
         }
@@ -207,41 +228,21 @@ export function createDependencyGraph(): DependencyGraph {
         // OPTIMIZATION: For chained computeds, prioritize depth-first traversal
         // Check if this computed's first dependency is also a computed
         const sourceFirst = source._in;
-        const isChained = sourceFirst && '_recompute' in sourceFirst.from;
+        const isChained = sourceFirst && isDerived(sourceFirst.from);
         
         source._flags |= RUNNING;
         
-        if (isChained) {
-          // Depth-first: immediately follow the chain of computeds
-          // This helps with deep chains by reducing stack depth
-          stack = {
-            edge: currentEdge.nextIn,  // Save siblings for later
-            node: currentNode,
-            stale,
-            prev: stack,
-          };
-          currentNode = source;
-          currentEdge = sourceFirst;  // Start with first dep only
-          stale = false;
-        } else {
-          // Breadth-first: check all dependencies before recursing
-          // This is better for signal dependencies and wide patterns
-          stack = {
-            edge: currentEdge.nextIn,
-            node: currentNode,
-            stale,
-            prev: stack,
-          };
-          currentNode = source;
-          currentEdge = source._in;  // Check all dependencies
-          stale = false;
-        }
+        // Push current state and traverse into computed
+        stack = pushStack(stack, currentEdge.nextIn, currentNode, stale);
+        currentNode = source;
+        currentEdge = isChained ? sourceFirst : source._in;
+        stale = false;
       }
 
       // Update computeds during traversal
       // This avoids the need for a separate recomputation pass
       if (currentNode !== node) {
-        if (stale && '_recompute' in currentNode) stale = currentNode._recompute();
+        if (stale && isDerived(currentNode)) stale = currentNode._recompute();
         currentNode._flags &= ~RUNNING;
       }
 
@@ -263,11 +264,11 @@ export function createDependencyGraph(): DependencyGraph {
   // Iteratively update DIRTY computeds to avoid call stack recursion
   // This prevents deep computed chains from creating 50-deep JavaScript call stacks
   // Based on alien-signals checkDirty algorithm
-  const updateDirty = (node: ToNode): void => {
+  const updateDirty = (node: DerivedNode): void => {
     const flags = node._flags;
     
     // Only handle DIRTY computeds
-    if (!(flags & DIRTY) || !('_recompute' in node)) return;
+    if (!(flags & DIRTY) || !isDerived(node)) return;
 
     // Prevent cycles 
     if (flags & RUNNING) return;
@@ -283,23 +284,18 @@ export function createDependencyGraph(): DependencyGraph {
     for (;;) {
       while (currentEdge) {
         // Stop at tail marker - don't check stale edges beyond tail
-        if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) break;
+        if (isAtTail(currentNode, currentEdge)) break;
 
         const source = currentEdge.from;
         const sFlags = source._flags;
 
         // If dependency is a DIRTY computed, we need to update it first
-        if ((sFlags & DIRTY) && '_recompute' in source && !(sFlags & RUNNING)) {
+        if ((sFlags & DIRTY) && isDerived(source) && !(sFlags & RUNNING)) {
           // Mark as running to prevent cycles
           source._flags |= RUNNING;
           
           // Push current state to stack
-          stack = {
-            edge: currentEdge.nextIn, // Continue with siblings after processing this dependency
-            node: currentNode,
-            stale: false, // Not used for updateDirty
-            prev: stack,
-          };
+          stack = pushStack(stack, currentEdge.nextIn, currentNode, false);
           
           // Traverse into DIRTY dependency
           currentNode = source;
@@ -311,8 +307,8 @@ export function createDependencyGraph(): DependencyGraph {
         currentEdge = currentEdge.nextIn;
       }
 
-      // Update current computed if it's DIRTY and has _recompute
-      if (currentNode !== node && (currentNode._flags & DIRTY) && '_recompute' in currentNode) {
+      // Update current computed if it's DIRTY
+      if (currentNode !== node && (currentNode._flags & DIRTY) && isDerived(currentNode)) {
         currentNode._recompute();
       }
       
@@ -330,7 +326,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
 
     // Now update the root node if it's still DIRTY
-    if ((node._flags & DIRTY) && '_recompute' in node) {
+    if ((node._flags & DIRTY) && isDerived(node)) {
       node._recompute();
     }
     
