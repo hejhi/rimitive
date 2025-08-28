@@ -156,13 +156,6 @@ export function createDependencyGraph(): DependencyGraph {
     // In this case, we need to recompute
     if ((!node._inTail && node._in) || flags & DIRTY) return true;
 
-    const firstIn = node._in;
-
-    // Detect computed chaining, as we may want to handle these differently.
-    const hasComputedDep = firstIn && '_recompute' in firstIn.from;
-
-    console.log(hasComputedDep);
-
     // For now, we don't use the pattern - just detect it
     // This measures minimal detection overhead
 
@@ -188,7 +181,9 @@ export function createDependencyGraph(): DependencyGraph {
           break;
         }
 
-        if (!('_recompute' in source)) {
+        const isComputed = '_recompute' in source;
+        
+        if (!isComputed) {
           currentEdge = currentEdge.nextIn;
           continue;
         }
@@ -205,18 +200,38 @@ export function createDependencyGraph(): DependencyGraph {
           continue;
         }
 
-        // Recurse into computeds that haven't been checked yet
-        // Skip if already running (cycle detection)
+        // OPTIMIZATION: For chained computeds, prioritize depth-first traversal
+        // Check if this computed's first dependency is also a computed
+        const sourceFirst = source._in;
+        const isChained = sourceFirst && '_recompute' in sourceFirst.from;
+        
         source._flags |= RUNNING;
-        stack = {
-          edge: currentEdge.nextIn,
-          node: currentNode,
-          stale,
-          prev: stack,
-        };
-        currentNode = source;
-        currentEdge = source._in;
-        stale = false;
+        
+        if (isChained) {
+          // Depth-first: immediately follow the chain of computeds
+          // Save current position including siblings to check later
+          stack = {
+            edge: currentEdge.nextIn,  // Save siblings for later
+            node: currentNode,
+            stale,
+            prev: stack,
+          };
+          currentNode = source;
+          currentEdge = sourceFirst;  // Start with first dep only
+          stale = false;
+        } else {
+          // Breadth-first: check all dependencies before recursing
+          // This is better for signal dependencies and wide patterns
+          stack = {
+            edge: currentEdge.nextIn,
+            node: currentNode,
+            stale,
+            prev: stack,
+          };
+          currentNode = source;
+          currentEdge = source._in;  // Check all dependencies
+          stale = false;
+        }
       }
 
       // Update computeds during traversal
