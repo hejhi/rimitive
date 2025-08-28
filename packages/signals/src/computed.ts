@@ -43,7 +43,7 @@ const DIRTY_OR_INVALIDATED = DIRTY | INVALIDATED;
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, pruneStale, isStale, updateDirty },
+    graph: { addEdge, pruneStale, isStale },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -99,24 +99,16 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       return valueChanged;
     };
 
-    const updateComputed = (): void => {
-      // RE-ENTRANCE GUARD: Prevent infinite recursion
-      if (state._flags & RUNNING) return;
-
-      // Always recompute when called - staleness check happens before calling this
-      recompute();
-    };
-
     const update = () => {
       // Lazy Evaluation with push-pull hybrid
-      // DIRTY: definitely needs recomputation - use iterative traversal to avoid recursion
-      if (state._flags & DIRTY) updateDirty(state);
+      // DIRTY: definitely needs recomputation
+      if (state._flags & DIRTY) recompute();
       // INVALIDATED: might need recomputation, use pull-based check
       else if (state._flags & INVALIDATED) {
         // Pull-based depedency check AND refresh in one pass
         // This updates intermediate computeds during traversal
         // If dependencies changed, need to recompute this node too
-        if (isStale(state)) updateComputed();
+        if (isStale(state)) recompute();
         else state._flags = state._flags & ~INVALIDATED; // Just clear INVALIDATED
       }
     }

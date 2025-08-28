@@ -43,7 +43,6 @@ export interface DependencyGraph {
 
   // Staleness checks
   isStale: (node: ToNode) => boolean; // Check staleness and update computeds in one pass
-  updateDirty: (node: DerivedNode) => void; // Update DIRTY computeds iteratively to avoid recursion
 
   // Invalidation strategies
   invalidate: (
@@ -259,118 +258,12 @@ export function createDependencyGraph(): DependencyGraph {
     return stale;
   };
 
-  // Iteratively update DIRTY computeds to avoid call stack recursion
-  // This prevents deep computed chains from creating 50-deep JavaScript call stacks
-  // Based on alien-signals checkDirty algorithm
-  const updateDirty = (node: DerivedNode): void => {
-    const flags = node._flags;
-    
-    // Only handle DIRTY computeds
-    if (!(flags & DIRTY) || !isDerived(node)) {
-      return;
-    }
-
-    // Prevent cycles 
-    if (flags & RUNNING) {
-      return;
-    }
-
-    let stack: StackFrame | undefined;
-    let currentNode: ToNode = node;
-    let currentEdge = node._in;
-    
-    // Mark root as running to prevent cycles
-    node._flags |= RUNNING;
-
-    // Traverse dependency tree iteratively
-    for (;;) {
-      while (currentEdge) {
-        // Stop at tail marker - don't check stale edges beyond tail
-        if (isAtTail(currentNode, currentEdge)) break;
-
-        const source = currentEdge.from;
-        const sFlags = source._flags;
-
-        // If dependency is a DIRTY computed, we need to update it first
-        if ((sFlags & DIRTY) && isDerived(source) && !(sFlags & RUNNING)) {
-          // Mark as running to prevent cycles
-          source._flags |= RUNNING;
-          
-          // OPTIMIZATION: Check if this is a chained computed (computed -> computed)
-          const sourceFirst = source._in;
-          const isChained = sourceFirst && isDerived(sourceFirst.from);
-          
-          // Push current state to stack
-          stack = pushStack(stack, currentEdge.nextIn, currentNode, false);
-          
-          // Traverse into DIRTY dependency (depth-first for chains)
-          currentNode = source;
-          currentEdge = isChained ? sourceFirst : source._in;
-          continue;
-        }
-
-        // Move to next dependency
-        currentEdge = currentEdge.nextIn;
-      }
-
-      // Update current computed if it's DIRTY
-      if (currentNode !== node && (currentNode._flags & DIRTY) && isDerived(currentNode)) {
-        currentNode._recompute();
-      }
-      
-      // Clear RUNNING flag
-      if (currentNode !== node) {
-        currentNode._flags &= ~RUNNING;
-      }
-
-      // Pop from stack or exit
-      if (!stack) break;
-      
-      currentNode = stack.node;
-      currentEdge = stack.edge;
-      stack = stack.prev;
-    }
-
-    // Now update the root node if it's still DIRTY
-    if ((node._flags & DIRTY) && isDerived(node)) node._recompute();
-    
-    // Clear RUNNING flag from root node
-    node._flags &= ~RUNNING;
-  };
-
   // ALGORITHM: Complete Edge Removal  
   // Used during disposal to remove all dependency edges at once
-  // For DIRTY computeds: preserves edge structure for traversal (alien-signals approach)
   const detachAll = (consumer: ConsumerNode): void => {
     let node = consumer._in;
     
-    // For DIRTY computeds that become unobserved, unlink from producers but preserve consumer structure
-    if (isDerived(consumer) && (consumer._flags & DIRTY) && !(consumer._flags & DISPOSED)) {
-      // Unlink from all producers (remove from their _out lists)
-      // but keep the _in structure for updateDirty traversal
-      while (node) {
-        const from = node.from;
-        const { prevOut, nextOut } = node;
-        
-        // Remove from producer's output list
-        if (nextOut) nextOut.prevOut = prevOut;
-        else from._outTail = prevOut;
-        
-        if (prevOut) prevOut.nextOut = nextOut;
-        else from._out = nextOut;
-        
-        // Mark producer as DIRTY if it becomes unobserved
-        if (!from._out && isDerived(from)) {
-          from._flags |= DIRTY;
-        }
-        
-        node = node.nextIn;
-      }
-      // Keep _in and _inTail intact for updateDirty traversal
-      return;
-    }
-    
-    // For effects and disposed computeds: complete removal
+    // Complete removal - remove all edges
     while (node) node = removeEdge(node);
     
     consumer._in = undefined;
@@ -453,5 +346,5 @@ export function createDependencyGraph(): DependencyGraph {
     } while (currentEdge);
   };
 
-  return { addEdge, removeEdge, detachAll, pruneStale, isStale, updateDirty, invalidate };
+  return { addEdge, removeEdge, detachAll, pruneStale, isStale, invalidate };
 }
