@@ -156,35 +156,13 @@ export function createDependencyGraph(): DependencyGraph {
     // In this case, we need to recompute
     if ((!node._inTail && node._in) || flags & DIRTY) return true;
 
-    // PATTERN DETECTION (ultra-lightweight, minimal branching)
-    // We only check what we need to distinguish patterns
-    // @ts-expect-error - pattern is detected but not used yet (measuring overhead)
-    let pattern: 'linear' | 'wide' | 'unknown' = 'unknown';
-    
-    // Single branch check on firstIn which we already load
     const firstIn = node._in;
-    if (firstIn) {
-      const secondIn = firstIn.nextIn;
-      if (!secondIn) {
-        // Single dependency = linear pattern
-        pattern = 'linear';
-      } else {
-        // Multiple deps - check if wide (5+ edges)
-        // We unroll the first few checks to avoid loop overhead
-        const thirdIn = secondIn.nextIn;
-        if (thirdIn) {
-          const fourthIn = thirdIn.nextIn;
-          if (fourthIn) {
-            const fifthIn = fourthIn.nextIn;
-            if (fifthIn) {
-              // 5+ dependencies = wide pattern
-              pattern = 'wide';
-            }
-          }
-        }
-      }
-    }
-    
+
+    // Detect computed chaining, as we may want to handle these differently.
+    const hasComputedDep = firstIn && '_recompute' in firstIn.from;
+
+    console.log(hasComputedDep);
+
     // For now, we don't use the pattern - just detect it
     // This measures minimal detection overhead
 
