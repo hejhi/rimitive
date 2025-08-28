@@ -53,8 +53,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       value: undefined,
       _out: undefined,
       _outTail: undefined,
-      _in: undefined,
-      _inTail: undefined,
+      _in: undefined,  // Will be set to old edges when they exist
+      _inTail: undefined,  // Don't clear during recompute - preserve for traversal
       _flags: DIRTY,  // Start with DIRTY flag so first access triggers computation
       // This will be set below
       _recompute: null as unknown as () => boolean,
@@ -67,6 +67,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       const initialFlags = state._flags;
       // Set RUNNING, clear DIRTY and INVALIDATED in single assignment
       state._flags = (initialFlags | RUNNING) & ~DIRTY_OR_INVALIDATED;
+      // Reset tail marker to start fresh tracking (like alien-signals startTracking)
+      // This allows new dependencies to be established while keeping old edges for cleanup
       state._inTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;

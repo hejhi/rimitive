@@ -133,11 +133,9 @@ export function createDependencyGraph(): DependencyGraph {
 
     from._out = nextOut;
 
-    if (!nextOut) {
-      // When a consumer becomes completely unobserved (no outgoing edges at all)
-      // PRESERVE EDGES: Don't destroy dependency edges, keep them for reuse
-      // Mark as DIRTY so it recomputes when re-observed
-      // This uses more memory but provides better performance when computeds are repeatedly observed/unobserved
+    if (!nextOut && isDerived(from)) {
+      // When a computed becomes completely unobserved, mark as DIRTY
+      // The actual edge preservation is handled in detachAll
       from._flags |= DIRTY;
     }
 
@@ -268,10 +266,14 @@ export function createDependencyGraph(): DependencyGraph {
     const flags = node._flags;
     
     // Only handle DIRTY computeds
-    if (!(flags & DIRTY) || !isDerived(node)) return;
+    if (!(flags & DIRTY) || !isDerived(node)) {
+      return;
+    }
 
     // Prevent cycles 
-    if (flags & RUNNING) return;
+    if (flags & RUNNING) {
+      return;
+    }
 
     let stack: StackFrame | undefined;
     let currentNode: ToNode = node;
@@ -336,16 +338,41 @@ export function createDependencyGraph(): DependencyGraph {
     node._flags &= ~RUNNING;
   };
 
-  // ALGORITHM: Complete Edge Removal
+  // ALGORITHM: Complete Edge Removal  
   // Used during disposal to remove all dependency edges at once
+  // For DIRTY computeds: preserves edge structure for traversal (alien-signals approach)
   const detachAll = (consumer: ConsumerNode): void => {
     let node = consumer._in;
     
-    // Walk the linked list of sources
-    // RemoveEdge returns the next edge, so we can iterate efficiently
+    // For DIRTY computeds that become unobserved, unlink from producers but preserve consumer structure
+    if (isDerived(consumer) && (consumer._flags & DIRTY) && !(consumer._flags & DISPOSED)) {
+      // Unlink from all producers (remove from their _out lists)
+      // but keep the _in structure for updateDirty traversal
+      while (node) {
+        const from = node.from;
+        const { prevOut, nextOut } = node;
+        
+        // Remove from producer's output list
+        if (nextOut) nextOut.prevOut = prevOut;
+        else from._outTail = prevOut;
+        
+        if (prevOut) prevOut.nextOut = nextOut;
+        else from._out = nextOut;
+        
+        // Mark producer as DIRTY if it becomes unobserved
+        if (!from._out && isDerived(from)) {
+          from._flags |= DIRTY;
+        }
+        
+        node = node.nextIn;
+      }
+      // Keep _in and _inTail intact for updateDirty traversal
+      return;
+    }
+    
+    // For effects and disposed computeds: complete removal
     while (node) node = removeEdge(node);
     
-    // Clear the consumer's source list head and tail
     consumer._in = undefined;
     consumer._inTail = undefined;
   };
