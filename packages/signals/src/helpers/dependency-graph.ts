@@ -43,6 +43,7 @@ export interface DependencyGraph {
 
   // Staleness checks
   isStale: (node: ToNode) => boolean; // Check staleness and update computeds in one pass
+  updateDirty: (node: ToNode) => void; // Update DIRTY computeds iteratively to avoid recursion
 
   // Invalidation strategies
   invalidate: (
@@ -259,6 +260,84 @@ export function createDependencyGraph(): DependencyGraph {
     return stale;
   };
 
+  // Iteratively update DIRTY computeds to avoid call stack recursion
+  // This prevents deep computed chains from creating 50-deep JavaScript call stacks
+  // Based on alien-signals checkDirty algorithm
+  const updateDirty = (node: ToNode): void => {
+    const flags = node._flags;
+    
+    // Only handle DIRTY computeds
+    if (!(flags & DIRTY) || !('_recompute' in node)) return;
+
+    // Prevent cycles 
+    if (flags & RUNNING) return;
+
+    let stack: StackFrame | undefined;
+    let currentNode: ToNode = node;
+    let currentEdge = node._in;
+    
+    // Mark root as running to prevent cycles
+    node._flags |= RUNNING;
+
+    // Traverse dependency tree iteratively (depth-first like alien-signals)
+    for (;;) {
+      while (currentEdge) {
+        // Stop at tail marker - don't check stale edges beyond tail
+        if (currentNode._inTail && currentEdge === currentNode._inTail.nextIn) break;
+
+        const source = currentEdge.from;
+        const sFlags = source._flags;
+
+        // If dependency is a DIRTY computed, we need to update it first
+        if ((sFlags & DIRTY) && '_recompute' in source && !(sFlags & RUNNING)) {
+          // Mark as running to prevent cycles
+          source._flags |= RUNNING;
+          
+          // Push current state to stack
+          stack = {
+            edge: currentEdge.nextIn, // Continue with siblings after processing this dependency
+            node: currentNode,
+            stale: false, // Not used for updateDirty
+            prev: stack,
+          };
+          
+          // Traverse into DIRTY dependency
+          currentNode = source;
+          currentEdge = source._in;
+          continue;
+        }
+
+        // Move to next dependency
+        currentEdge = currentEdge.nextIn;
+      }
+
+      // Update current computed if it's DIRTY and has _recompute
+      if (currentNode !== node && (currentNode._flags & DIRTY) && '_recompute' in currentNode) {
+        currentNode._recompute();
+      }
+      
+      // Clear RUNNING flag
+      if (currentNode !== node) {
+        currentNode._flags &= ~RUNNING;
+      }
+
+      // Pop from stack or exit
+      if (!stack) break;
+      
+      currentNode = stack.node;
+      currentEdge = stack.edge;
+      stack = stack.prev;
+    }
+
+    // Now update the root node if it's still DIRTY
+    if ((node._flags & DIRTY) && '_recompute' in node) {
+      node._recompute();
+    }
+    
+    // Clear RUNNING flag from root node
+    node._flags &= ~RUNNING;
+  };
+
   // ALGORITHM: Complete Edge Removal
   // Used during disposal to remove all dependency edges at once
   const detachAll = (consumer: ConsumerNode): void => {
@@ -349,5 +428,5 @@ export function createDependencyGraph(): DependencyGraph {
     } while (currentEdge);
   };
 
-  return { addEdge, removeEdge, detachAll, pruneStale, isStale, invalidate };
+  return { addEdge, removeEdge, detachAll, pruneStale, isStale, updateDirty, invalidate };
 }

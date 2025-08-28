@@ -43,7 +43,7 @@ const DIRTY_OR_INVALIDATED = DIRTY | INVALIDATED;
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, pruneStale, isStale },
+    graph: { addEdge, pruneStale, isStale, updateDirty },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -107,8 +107,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     const update = () => {
       // Lazy Evaluation with push-pull hybrid
-      // DIRTY: definitely needs recomputation
-      if (state._flags & DIRTY) updateComputed();
+      // DIRTY: definitely needs recomputation - use iterative traversal to avoid recursion
+      if (state._flags & DIRTY) updateDirty(state);
       // INVALIDATED: might need recomputation, use pull-based check
       else if (state._flags & INVALIDATED) {
         // Pull-based depedency check AND refresh in one pass
