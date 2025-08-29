@@ -244,7 +244,11 @@ export function createDependencyGraph(): DependencyGraph {
     let edge = consumer._in;
     
     // Complete removal - remove all edges
-    while (edge) edge = removeEdge(edge);
+    if (edge) {
+      do {
+        edge = removeEdge(edge);
+      } while (edge);
+    }
     
     consumer._in = undefined;
     consumer._inTail = undefined;
@@ -263,7 +267,11 @@ export function createDependencyGraph(): DependencyGraph {
     let toRemove = tail ? tail.nextIn : consumer._in;
     
     // Remove all stale edges from both consumer and producer sides
-    while (toRemove) toRemove = removeEdge(toRemove);
+    if (toRemove) {
+      do {
+        toRemove = removeEdge(toRemove);
+      } while (toRemove);
+    }
 
     // Update tail to point to the last valid edge
     if (tail) tail.nextIn = undefined;
