@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode, DerivedNode } from '../types';
 
-const { INVALIDATED, DIRTY, DISPOSED, RUNNING, VALUE_CHANGED, CONSUMED } = CONSTANTS;
+const { INVALIDATED, DIRTY, DISPOSED, RUNNING, VALUE_CHANGED } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
 const ALREADY_HANDLED = SKIP_FLAGS | INVALIDATED;
 
@@ -71,12 +71,6 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
     
-    // PATTERN DETECTION: Mark producer as CONSUMED if consumer is a computed
-    // This indicates the producer is part of a computed chain
-    if (isDerived(consumer) && isDerived(producer)) {
-      producer._flags |= CONSUMED;
-    }
-
     // Cache previous out tail
     const prevOut = producer._outTail;
 
@@ -210,11 +204,6 @@ export function createDependencyGraph(): DependencyGraph {
           currentEdge = currentEdge.nextIn;
           continue;
         }
-
-        // OPTIMIZATION: For CONSUMED computeds (part of chains), prioritize depth-first
-        // CONSUMED flag was set during addEdge when we detected computed->computed pattern
-        const sourceFirst = source._in;
-        const isConsumedChain = (source._flags & CONSUMED) && sourceFirst;
         
         source._flags |= RUNNING;
         
@@ -223,7 +212,7 @@ export function createDependencyGraph(): DependencyGraph {
         currentNode = source;
         // For consumed chains, start with first dep only (depth-first)
         // For non-consumed, check all deps (breadth-first)
-        currentEdge = isConsumedChain ? sourceFirst : source._in;
+        currentEdge = source._in;
         stale = false;
       }
 
@@ -274,10 +263,6 @@ export function createDependencyGraph(): DependencyGraph {
     let toRemove = tail ? tail.nextIn : consumer._in;
     
     // Remove all stale edges from both consumer and producer sides
-    // This eliminates the need for edge validity checks during propagation
-    // RemoveEdge handles bidirectional removal and returns next edge
-    // Check for stale edges
-    // Removing stale edge
     while (toRemove) toRemove = removeEdge(toRemove);
 
     // Update tail to point to the last valid edge
