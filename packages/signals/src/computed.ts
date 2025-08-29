@@ -43,7 +43,7 @@ const DIRTY_OR_INVALIDATED = DIRTY | INVALIDATED;
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, pruneStale, isStale, markConsumed },
+    graph: { addEdge, pruneStale, isStale },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -126,11 +126,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       if (consumer && consumer._flags & RUNNING) addEdge(state, consumer);
 
       update();
-
-      // Mark this computed as consumed and propagate up the chain
-      // This enables eager invalidation for the entire dependency chain
-      // Do this AFTER update so dependencies are established
-      markConsumed(state);
 
       return state.value;
     }) as ComputedFunction<T>;

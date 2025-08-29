@@ -83,19 +83,6 @@ export function createDependencyGraph(): DependencyGraph {
     // Cache previous out tail
     const prevOut = producer._outTail;
 
-    // ADAPTIVE: Only check for duplicates if producer is shared (has 2+ outputs)
-    // For simple patterns with no sharing, skip the third check entirely
-    if (
-      prevOut &&
-      prevOut.to === consumer &&
-      producer._out &&
-      producer._out.nextOut
-    ) {
-      // Edge already exists - it was created earlier in this run
-      // No need to update anything, it's already properly positioned
-      return;
-    }
-
     const newEdge = {
       from: producer,
       to: consumer,
