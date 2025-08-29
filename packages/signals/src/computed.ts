@@ -63,10 +63,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     // Create recompute that captures state in closure
     const recompute = (): boolean => {
-      // Cache initial flags and compute new flags in one operation
-      const initialFlags = state._flags;
-      // Set RUNNING, clear DIRTY and INVALIDATED in single assignment
-      state._flags = (initialFlags | RUNNING) & ~DIRTY_OR_INVALIDATED;
+      // Set RUNNING flag for cycle detection (must be before compute())
+      state._flags |= RUNNING;
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
       state._inTail = undefined;
@@ -79,16 +77,15 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const oldValue = state.value;
         const newValue = compute();
 
-        // Update value and determine final flag state
-        if (newValue !== oldValue) {
+        // Update value and flags
+        valueChanged = newValue !== oldValue;
+        if (valueChanged) {
           state.value = newValue;
-          valueChanged = true;
-          // Set final flags: clear RUNNING, set VALUE_CHANGED
-          state._flags = (state._flags & ~RUNNING) | VALUE_CHANGED;
+          // Clear RUNNING, DIRTY, INVALIDATED; set VALUE_CHANGED
+          state._flags = (state._flags & ~(RUNNING | DIRTY_OR_INVALIDATED)) | VALUE_CHANGED;
         } else {
-          // Value didn't change - clear RUNNING and VALUE_CHANGED in one operation
-          valueChanged = false;
-          state._flags &= ~(RUNNING | VALUE_CHANGED);
+          // Value didn't change - clear all update flags
+          state._flags &= ~(RUNNING | DIRTY_OR_INVALIDATED | VALUE_CHANGED);
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
