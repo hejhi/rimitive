@@ -82,12 +82,19 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         if (newValue !== oldValue) {
           state.value = newValue;
           valueChanged = true;
-          // Set final flags: clear RUNNING, set VALUE_CHANGED
-          state._flags = (state._flags & ~RUNNING) | VALUE_CHANGED;
+          // Clear RUNNING
+          const flags = state._flags & ~RUNNING;
+
+          // Only set VALUE_CHANGED if not already set (tracks if ever changed from initial undefined)
+          if (!(flags & VALUE_CHANGED)) {
+            state._flags = flags | VALUE_CHANGED;
+          } else {
+            state._flags = flags;
+          }
         } else {
-          // Value didn't change - clear RUNNING and VALUE_CHANGED in one operation
+          // Value didn't change - only clear RUNNING (keep VALUE_CHANGED if it was set)
           valueChanged = false;
-          state._flags &= ~(RUNNING | VALUE_CHANGED);
+          state._flags &= ~RUNNING;
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
