@@ -173,7 +173,7 @@ export function createDependencyGraph(): DependencyGraph {
     let stale = false;
     
     // Optimization: Just count linear chain depth - no allocations
-    let linearChainDepth = 0;
+    let chained = false;
     
     // Mark as running to prevent cycles
     node._flags |= RUNNING;
@@ -212,14 +212,12 @@ export function createDependencyGraph(): DependencyGraph {
         
         // Optimization: Only push to stack if there are multiple edges to explore
         // For linear chains, we can avoid stack allocations
-        const hasMoreEdges = currentEdge.nextIn !== undefined;
-        
-        if (hasMoreEdges) {
+        if (currentEdge.nextIn) {
           // Multiple dependencies - need stack to remember position
           stack = pushStack(stack, currentEdge.nextIn, currentNode, stale);
         } else {
           // Linear chain - just increment depth counter
-          linearChainDepth++;
+          chained = true;
         }
         
         currentNode = source;
@@ -242,17 +240,17 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Pop from stack or unwind linear chain
-      if (!stack && linearChainDepth === 0) break;
+      if (!stack && chained === false) break;
       
       if (stack) {
         stale = stale || stack.stale;
         currentNode = stack.node;
         currentEdge = stack.edge;
         stack = stack.prev;
-      } else if (linearChainDepth > 0) {
+      } else if (chained) {
         // For linear chain unwinding: we need to get back to the parent
         // The parent has an edge TO the currentNode (it depends on currentNode)
-        linearChainDepth--;
+        chained = false;
         
         // In a linear chain, currentNode should have exactly one outgoing edge
         // That edge's 'to' field points to the parent (the node that depends on us)
