@@ -172,8 +172,7 @@ export function createDependencyGraph(): DependencyGraph {
     let currentEdge = node._in;
     let stale = false;
     
-    // Optimization: Track linear chain nodes to avoid stack allocations
-    const linearChainNodes: ToNode[] = [];
+    // Optimization: Just count linear chain depth - no allocations
     let linearChainDepth = 0;
     
     // Mark as running to prevent cycles
@@ -219,8 +218,8 @@ export function createDependencyGraph(): DependencyGraph {
           // Multiple dependencies - need stack to remember position
           stack = pushStack(stack, currentEdge.nextIn, currentNode, stale);
         } else {
-          // Linear chain - just track the node for unwinding
-          linearChainNodes[linearChainDepth++] = currentNode;
+          // Linear chain - just increment depth counter
+          linearChainDepth++;
         }
         
         currentNode = source;
@@ -242,7 +241,7 @@ export function createDependencyGraph(): DependencyGraph {
         }
       }
 
-      // Pop from stack or linear chain nodes
+      // Pop from stack or unwind linear chain
       if (!stack && linearChainDepth === 0) break;
       
       if (stack) {
@@ -251,9 +250,20 @@ export function createDependencyGraph(): DependencyGraph {
         currentEdge = stack.edge;
         stack = stack.prev;
       } else if (linearChainDepth > 0) {
-        // Pop from linear chain nodes
-        currentNode = linearChainNodes[--linearChainDepth]!;
-        currentEdge = undefined; // No more edges to check in linear chain
+        // For linear chain unwinding: we need to get back to the parent
+        // The parent has an edge TO the currentNode (it depends on currentNode)
+        linearChainDepth--;
+        
+        // In a linear chain, currentNode should have exactly one outgoing edge
+        // That edge's 'to' field points to the parent (the node that depends on us)
+        if ('_out' in currentNode) {
+          const outEdge = currentNode._out;
+          if (outEdge) {
+            currentNode = outEdge.to;
+          }
+        }
+        // No more edges to check in linear chain unwinding
+        currentEdge = undefined;
       }
     }
 
