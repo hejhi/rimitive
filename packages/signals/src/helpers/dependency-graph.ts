@@ -13,7 +13,7 @@
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode, DerivedNode } from '../types';
 
-const { INVALIDATED, DIRTY, DISPOSED, RUNNING, VALUE_CHANGED } = CONSTANTS;
+const { INVALIDATED, DIRTY, DISPOSED, RUNNING, VALUE_CHANGED, CONSUMED } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
 const ALREADY_HANDLED = SKIP_FLAGS | INVALIDATED;
 
@@ -49,6 +49,9 @@ export interface DependencyGraph {
     from: Edge | undefined,
     visit: (node: ScheduledNode) => void
   ) => void;
+
+  // Consumption tracking
+  markConsumed: (node: ToNode) => void;
 }
 
 export function createDependencyGraph(): DependencyGraph {
@@ -59,12 +62,14 @@ export function createDependencyGraph(): DependencyGraph {
     const tail = consumer._inTail;
 
     // Fast path: check if tail is the producer we want
+    // Edge already at tail, skipping
     if (tail && tail.from === producer) return;
 
     // Check the next candidate (either after tail or first edge)
     const candidate = tail ? tail.nextIn : consumer._in;
 
     if (candidate && candidate.from === producer) {
+      // Edge found as candidate, moving to tail
       consumer._inTail = candidate;
       return;
     }
@@ -105,7 +110,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (prevOut) prevOut.nextOut = newEdge;
     else producer._out = newEdge;
 
-    producer._outTail = newEdge;
+    producer._outTail = newEdge;    
   };
 
   // Full Bidirectional Edge Removal
@@ -134,8 +139,8 @@ export function createDependencyGraph(): DependencyGraph {
 
     if (!nextOut && isDerived(from)) {
       // When a computed becomes completely unobserved, mark as DIRTY
-      // The actual edge preservation is handled in detachAll
-      from._flags |= DIRTY;
+      // UNLESS it's CONSUMED (part of an actively consumed chain)
+      if (!(from._flags & CONSUMED)) from._flags |= DIRTY;
     }
 
     return nextIn;
@@ -285,6 +290,8 @@ export function createDependencyGraph(): DependencyGraph {
     // Remove all stale edges from both consumer and producer sides
     // This eliminates the need for edge validity checks during propagation
     // RemoveEdge handles bidirectional removal and returns next edge
+    // Check for stale edges
+    // Removing stale edge
     while (toRemove) toRemove = removeEdge(toRemove);
 
     // Update tail to point to the last valid edge
@@ -317,6 +324,7 @@ export function createDependencyGraph(): DependencyGraph {
       // Handle producer nodes (have outputs)
       if ('_out' in target) {
         const firstChild = target._out;
+        // Check if producer has outputs
 
         // Only traverse into observed computeds to avoid invalidating unneeded subgraphs
         // Skip unobserved computeds but still invalidate them
@@ -346,5 +354,26 @@ export function createDependencyGraph(): DependencyGraph {
     } while (currentEdge);
   };
 
-  return { addEdge, removeEdge, detachAll, pruneStale, isStale, invalidate };
+  // Mark a node as consumed and propagate the flag up its dependency chain
+  // This enables eager invalidation for the entire consumed chain
+  const markConsumed = (node: ToNode): void => {
+    // If already marked, no need to propagate
+    if (node._flags & CONSUMED) return;
+    
+    // Mark this node as consumed
+    node._flags |= CONSUMED;
+    
+    // Propagate to dependencies
+    let edge = node._in;
+    while (edge) {
+      const source = edge.from;
+      // Recursively mark producers as consumed
+      if ('_in' in source) {
+        markConsumed(source as ToNode);
+      }
+      edge = edge.nextIn;
+    }
+  };
+
+  return { addEdge, removeEdge, detachAll, pruneStale, isStale, invalidate, markConsumed };
 }

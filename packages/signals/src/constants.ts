@@ -35,4 +35,10 @@ export const CONSTANTS = {
   // Prevents duplicate scheduling and replaces sentinel value pattern.
   // Set when enqueued, cleared when flushed.
   SCHEDULED: 1 << 6,
+
+  // CONSUMED: Computed is part of an actively consumed dependency chain.
+  // Similar to alien-signals' WATCHING flag.
+  // Set when a computed is read, propagates to its dependencies.
+  // Enables eager invalidation through the entire consumed chain.
+  CONSUMED: 1 << 7,
 };
