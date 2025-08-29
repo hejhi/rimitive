@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyGraph } from './dependency-graph';
-import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
+import type { ConsumerNode, ProducerNode, Edge, ScheduledNode, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { DISPOSED, RUNNING, INVALIDATED, VALUE_CHANGED } = CONSTANTS;
@@ -610,6 +610,197 @@ describe('Dependency Graph Helpers', () => {
       for (let i = 1; i < 100; i++) {
         expect(nodes[i]!._flags & INVALIDATED).toBeTruthy();
       }
+    });
+  });
+  
+  describe('Performance: Deep Chain Efficiency', () => {
+    describe('isStale call efficiency', () => {
+      it('should NOT call isStale multiple times for a linear chain', () => {
+        // This test demonstrates the performance issue:
+        // Each computed in a chain calls isStale independently
+        
+        const helpers = createDependencyGraph();
+        
+        // Track how many times isStale is called
+        let isStaleCallCount = 0;
+        const originalIsStale = helpers.isStale;
+        helpers.isStale = (node: ToNode) => {
+          isStaleCallCount++;
+          return originalIsStale(node);
+        };
+        
+        // Create a linear chain: signal -> c1 -> c2 -> c3
+        const signal: ProducerNode = {
+          __type: 'signal',
+          value: 0,
+          _out: undefined,
+          _outTail: undefined,
+          _flags: VALUE_CHANGED, // Signal has changed
+        };
+        
+        // Track recompute calls for each computed
+        const recomputeCounts = { c1: 0, c2: 0, c3: 0 };
+        
+        const c1: ConsumerNode & ProducerNode & { _recompute: () => boolean } = {
+          __type: 'computed',
+          value: 1,
+          _out: undefined,
+          _outTail: undefined,
+          _in: undefined,
+          _inTail: undefined,  // Set after edges are added to simulate previous run
+          _flags: INVALIDATED,
+          _recompute: () => {
+            recomputeCounts.c1++;
+            // Simulate what happens in real computed: when c1 recomputes,
+            // it reads signal, but signal is not a computed so no isStale
+            return true; // value changed
+          },
+        };
+        
+        const c2: ConsumerNode & ProducerNode & { _recompute: () => boolean } = {
+          __type: 'computed',
+          value: 2,
+          _out: undefined,
+          _outTail: undefined,
+          _in: undefined,
+          _inTail: undefined,
+          _flags: INVALIDATED,
+          _recompute: () => {
+            recomputeCounts.c2++;
+            // Simulate what happens when c2 reads c1:
+            // In real code, reading c1 would trigger c1's update() which calls isStale
+            // We simulate this by calling isStale on c1
+            if (c1._flags & INVALIDATED) {
+              helpers.isStale(c1);
+            }
+            return true;
+          },
+        };
+        
+        const c3: ConsumerNode & ProducerNode & { _recompute: () => boolean } = {
+          __type: 'computed',
+          value: 3,
+          _out: undefined,
+          _outTail: undefined,
+          _in: undefined,
+          _inTail: undefined,
+          _flags: INVALIDATED,
+          _recompute: () => {
+            recomputeCounts.c3++;
+            // Simulate what happens when c3 reads c2:
+            // In real code, reading c2 would trigger c2's update() which calls isStale
+            if (c2._flags & INVALIDATED) {
+              helpers.isStale(c2);
+            }
+            return true;
+          },
+        };
+        
+        // Establish the dependency chain
+        helpers.addEdge(signal, c1);
+        helpers.addEdge(c1, c2);
+        helpers.addEdge(c2, c3);
+        
+        // Set tail markers to simulate that computeds have run before
+        // (otherwise isStale returns true immediately without traversing)
+        c1._inTail = c1._in;
+        c2._inTail = c2._in;
+        c3._inTail = c3._in;
+        
+        // Reset counter
+        isStaleCallCount = 0;
+        
+        // Simulate reading c3 (what happens when user reads the final computed)
+        const isC3Stale = helpers.isStale(c3);
+        
+        expect(isC3Stale).toBe(true);
+        
+        // The problem: isStale is called multiple times due to nested reads
+        // - c3's isStale is called by the user (1)
+        // - During c3's recompute, it reads c2, which calls isStale on c2 (2)  
+        // - During c2's recompute, it reads c1, which calls isStale on c1 (3)
+        
+        console.log('isStale call count:', isStaleCallCount);
+        console.log('Recompute counts:', recomputeCounts);
+        
+        // With the fix, isStale is called only once for the entire chain
+        expect(isStaleCallCount).toBe(1); // PASSES with fix
+        
+        // c1 and c2 are recomputed during the traversal
+        // c3 is NOT recomputed by isStale (it's the node being checked)
+        // In real usage, c3 would be recomputed by its caller after isStale returns true
+        expect(recomputeCounts.c1).toBe(1);
+        expect(recomputeCounts.c2).toBe(1);
+        expect(recomputeCounts.c3).toBe(0); // isStale doesn't recompute the node being checked
+      });
+      
+      it('demonstrates the fix scales well with deeper chains', () => {
+        const helpers = createDependencyGraph();
+        
+        let isStaleCallCount = 0;
+        const originalIsStale = helpers.isStale;
+        helpers.isStale = (node: ToNode) => {
+          isStaleCallCount++;
+          return originalIsStale(node);
+        };
+        
+        // Create a deeper chain
+        const chainLength = 10;
+        const nodes: (ProducerNode | (ConsumerNode & ProducerNode & { _recompute: () => boolean }))[] = [];
+        
+        // Create signal
+        nodes[0] = {
+          __type: 'signal',
+          _out: undefined,
+          _outTail: undefined,
+          _flags: VALUE_CHANGED,
+        } as ProducerNode;
+        
+        // Create computed chain
+        for (let i = 1; i <= chainLength; i++) {
+          const nodeIndex = i;
+          nodes[i] = {
+            __type: 'computed',
+            value: i,
+            _out: undefined,
+            _outTail: undefined,
+            _in: undefined,
+            _inTail: undefined,
+            _flags: INVALIDATED,
+            _recompute: function() {
+              // Simulate reading the previous node
+              // In real code, this would be a computed reading its dependency
+              if (nodeIndex > 1) {
+                const prevNode = nodes[nodeIndex - 1]!;
+                if ('_flags' in prevNode && prevNode._flags & INVALIDATED && '_in' in prevNode) {
+                  helpers.isStale(prevNode as ToNode);
+                }
+              }
+              return true;
+            },
+          };
+          
+          // Add edge from previous to current
+          helpers.addEdge(nodes[i - 1]!, nodes[i] as ConsumerNode);
+        }
+        
+        // Set tail markers to simulate that computeds have run before
+        for (let i = 1; i <= chainLength; i++) {
+          const node = nodes[i] as ConsumerNode;
+          node._inTail = node._in;
+        }
+        
+        // Read the final computed
+        isStaleCallCount = 0;
+        helpers.isStale(nodes[chainLength] as ConsumerNode);
+        
+        console.log(`Chain length: ${chainLength}, isStale calls: ${isStaleCallCount}`);
+        
+        // This demonstrates the problem scales linearly with chain depth
+        // For a chain of length N, isStale is called N times
+        // THIS FAILS - we want it to be 1, but it's actually equal to chainLength
+        expect(isStaleCallCount).toBe(1); // FAILS: actual is 10
+      });
     });
   });
 });

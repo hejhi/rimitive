@@ -131,7 +131,7 @@ export function createDependencyGraph(): DependencyGraph {
   const isDerived = (source: FromNode | ToNode): source is DerivedNode => '_recompute' in source;
 
   // Helper: Check if computed needs recomputation
-  const needsRecompute = (node: ToNode): boolean => ((node._flags & DIRTY) || (!node._inTail && node._in)) !== 0;
+  const needsRecompute = (node: ToNode): boolean => (node._flags & DIRTY) !== 0 || (!node._inTail && !!node._in);
 
   // Helper: Push current state to stack and move to new node
   const pushStack = (
@@ -172,6 +172,10 @@ export function createDependencyGraph(): DependencyGraph {
     let currentEdge = node._in;
     let stale = false;
     
+    // Optimization: Track linear chain nodes to avoid stack allocations
+    const linearChainNodes: ToNode[] = [];
+    let linearChainDepth = 0;
+    
     // Mark as running to prevent cycles
     node._flags |= RUNNING;
 
@@ -207,8 +211,18 @@ export function createDependencyGraph(): DependencyGraph {
         
         source._flags |= RUNNING;
         
-        // Push current state and traverse into computed
-        stack = pushStack(stack, currentEdge.nextIn, currentNode, stale);
+        // Optimization: Only push to stack if there are multiple edges to explore
+        // For linear chains, we can avoid stack allocations
+        const hasMoreEdges = currentEdge.nextIn !== undefined;
+        
+        if (hasMoreEdges) {
+          // Multiple dependencies - need stack to remember position
+          stack = pushStack(stack, currentEdge.nextIn, currentNode, stale);
+        } else {
+          // Linear chain - just track the node for unwinding
+          linearChainNodes[linearChainDepth++] = currentNode;
+        }
+        
         currentNode = source;
         // For consumed chains, start with first dep only (depth-first)
         // For non-consumed, check all deps (breadth-first)
@@ -219,17 +233,28 @@ export function createDependencyGraph(): DependencyGraph {
       // Update computeds during traversal
       // This avoids the need for a separate recomputation pass
       if (currentNode !== node) {
-        if (stale && isDerived(currentNode)) stale = currentNode._recompute();
         currentNode._flags &= ~RUNNING;
+        if (stale && isDerived(currentNode)) {
+          stale = currentNode._recompute();
+          // Clear INVALIDATED flag after recomputation to prevent redundant staleness checks
+          // when this computed is read by its parent during the parent's recomputation
+          currentNode._flags &= ~INVALIDATED;
+        }
       }
 
-      // Pop from stack or exit
-      if (!stack) break;
-
-      stale = stale || stack.stale;
-      currentNode = stack.node;
-      currentEdge = stack.edge;
-      stack = stack.prev;
+      // Pop from stack or linear chain nodes
+      if (!stack && linearChainDepth === 0) break;
+      
+      if (stack) {
+        stale = stale || stack.stale;
+        currentNode = stack.node;
+        currentEdge = stack.edge;
+        stack = stack.prev;
+      } else if (linearChainDepth > 0) {
+        // Pop from linear chain nodes
+        currentNode = linearChainNodes[--linearChainDepth]!;
+        currentEdge = undefined; // No more edges to check in linear chain
+      }
     }
 
     // Clear RUNNING flag from root node
