@@ -49,9 +49,6 @@ export interface DependencyGraph {
     from: Edge | undefined,
     visit: (node: ScheduledNode) => void
   ) => void;
-
-  // Consumption tracking
-  markConsumed: (node: ToNode) => void;
 }
 
 export function createDependencyGraph(): DependencyGraph {
@@ -350,26 +347,5 @@ export function createDependencyGraph(): DependencyGraph {
     } while (currentEdge);
   };
 
-  // Mark a node as consumed and propagate the flag up its dependency chain
-  // This enables eager invalidation for the entire consumed chain
-  const markConsumed = (node: ToNode): void => {
-    // If already marked, no need to propagate
-    if (node._flags & CONSUMED) return;
-    
-    // Mark this node as consumed
-    node._flags |= CONSUMED;
-    
-    // Propagate to dependencies
-    let edge = node._in;
-    while (edge) {
-      const source = edge.from;
-      // Recursively mark producers as consumed
-      if ('_in' in source) {
-        markConsumed(source as ToNode);
-      }
-      edge = edge.nextIn;
-    }
-  };
-
-  return { addEdge, removeEdge, detachAll, pruneStale, isStale, invalidate, markConsumed };
+  return { addEdge, removeEdge, detachAll, pruneStale, isStale, invalidate };
 }
