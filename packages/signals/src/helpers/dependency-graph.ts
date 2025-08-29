@@ -120,18 +120,11 @@ export function createDependencyGraph(): DependencyGraph {
     if (nextOut) nextOut.prevOut = prevOut;
     else from._outTail = prevOut;
 
-    if (prevOut) {
-      prevOut.nextOut = nextOut;
-      return nextIn
-    }
-
-    from._out = nextOut;
-
-    if (!nextOut && isDerived(from)) {
+    if (prevOut) prevOut.nextOut = nextOut;
+    else {
+      from._out = nextOut;
       // When a computed becomes completely unobserved, mark as DIRTY
-      // UNLESS it's CONSUMED (part of an actively consumed chain)
-      // CONSUMED computeds stay clean to benefit from our depth-first optimization
-      if (!(from._flags & CONSUMED)) from._flags |= DIRTY;
+      if (!nextOut && isDerived(from)) from._flags |= DIRTY;
     }
 
     return nextIn;
