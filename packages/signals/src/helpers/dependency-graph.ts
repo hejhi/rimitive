@@ -73,6 +73,12 @@ export function createDependencyGraph(): DependencyGraph {
       consumer._inTail = candidate;
       return;
     }
+    
+    // PATTERN DETECTION: Mark producer as CONSUMED if consumer is a computed
+    // This indicates the producer is part of a computed chain
+    if (isDerived(consumer) && isDerived(producer)) {
+      producer._flags |= CONSUMED;
+    }
 
     // Cache previous out tail
     const prevOut = producer._outTail;
@@ -140,6 +146,7 @@ export function createDependencyGraph(): DependencyGraph {
     if (!nextOut && isDerived(from)) {
       // When a computed becomes completely unobserved, mark as DIRTY
       // UNLESS it's CONSUMED (part of an actively consumed chain)
+      // CONSUMED computeds stay clean to benefit from our depth-first optimization
       if (!(from._flags & CONSUMED)) from._flags |= DIRTY;
     }
 
@@ -227,17 +234,19 @@ export function createDependencyGraph(): DependencyGraph {
           continue;
         }
 
-        // OPTIMIZATION: For chained computeds, prioritize depth-first traversal
-        // Check if this computed's first dependency is also a computed
+        // OPTIMIZATION: For CONSUMED computeds (part of chains), prioritize depth-first
+        // CONSUMED flag was set during addEdge when we detected computed->computed pattern
         const sourceFirst = source._in;
-        const isChained = sourceFirst && isDerived(sourceFirst.from);
+        const isConsumedChain = (source._flags & CONSUMED) && sourceFirst;
         
         source._flags |= RUNNING;
         
         // Push current state and traverse into computed
         stack = pushStack(stack, currentEdge.nextIn, currentNode, stale);
         currentNode = source;
-        currentEdge = isChained ? sourceFirst : source._in;
+        // For consumed chains, start with first dep only (depth-first)
+        // For non-consumed, check all deps (breadth-first)
+        currentEdge = isConsumedChain ? sourceFirst : source._in;
         stale = false;
       }
 
