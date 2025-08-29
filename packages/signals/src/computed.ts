@@ -39,8 +39,6 @@ interface ComputedFactoryContext extends SignalContext {
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
-const DIRTY_OR_INVALIDATED = DIRTY | INVALIDATED;
-
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
     graph: { addEdge, pruneStale, isStale },
@@ -66,7 +64,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Cache initial flags and compute new flags in one operation
       const initialFlags = state._flags;
       // Set RUNNING, clear DIRTY and INVALIDATED in single assignment
-      state._flags = (initialFlags | RUNNING) & ~DIRTY_OR_INVALIDATED;
+      state._flags = (initialFlags | RUNNING) & ~(DIRTY | INVALIDATED);
 
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
