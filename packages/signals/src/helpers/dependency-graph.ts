@@ -22,13 +22,6 @@ interface Stack<T> {
   prev: Stack<T> | undefined;
 }
 
-interface StackFrame {
-  edge: Edge | undefined;
-  node: ToNode;
-  stale: boolean;
-  prev: StackFrame | undefined;
-}
-
 export interface DependencyGraph {
   // Edge management
   addEdge: (
@@ -133,20 +126,6 @@ export function createDependencyGraph(): DependencyGraph {
   // Helper: Check if computed needs recomputation
   const needsRecompute = (node: ToNode): boolean => (node._flags & DIRTY) !== 0 || (!node._inTail && !!node._in);
 
-  // Helper: Push current state to stack and move to new node
-  const pushStack = (
-    stack: StackFrame | undefined,
-    edge: Edge | undefined,
-    node: ToNode,
-    stale: boolean
-  ): StackFrame => {
-    return {
-      edge,
-      node,
-      stale,
-      prev: stack,
-    };
-  };
 
   // For computed nodes: iteratively check if any dependencies changed
   // Uses manual stack to avoid function call overhead (like Alien Signals)
@@ -167,7 +146,7 @@ export function createDependencyGraph(): DependencyGraph {
     // For now, we don't use the pattern - just detect it
     // This measures minimal detection overhead
 
-    let stack: StackFrame | undefined;
+    let stack: Stack<Edge> | undefined;
     let currentNode = node;
     let currentEdge = node._in;
     let stale = false;
@@ -212,9 +191,11 @@ export function createDependencyGraph(): DependencyGraph {
         
         // Optimization: Only push to stack if there are multiple edges to explore
         // For linear chains, we can avoid stack allocations
-        if (currentEdge.nextIn) {
+        const nextEdge = currentEdge.nextIn;
+        if (nextEdge) {
           // Multiple dependencies - need stack to remember position
-          stack = pushStack(stack, currentEdge.nextIn, currentNode, stale);
+          // Store just the edge - we can derive the node from edge.to
+          stack = { value: nextEdge, prev: stack };
         } else {
           // Linear chain - just increment depth counter
           chained = true;
@@ -243,10 +224,13 @@ export function createDependencyGraph(): DependencyGraph {
       if (!stack && chained === false) break;
       
       if (stack) {
-        stale = stale || stack.stale;
-        currentNode = stack.node;
-        currentEdge = stack.edge;
+        // Restore from stack
+        currentEdge = stack.value;
+        // When we pushed this edge, it was the "nextIn" of the previous edge
+        // So they share the same consumer (to)
+        currentNode = currentEdge.to;
         stack = stack.prev;
+        // Stale is already tracked in the main variable
       } else if (chained) {
         // For linear chain unwinding: we need to get back to the parent
         // The parent has an edge TO the currentNode (it depends on currentNode)
