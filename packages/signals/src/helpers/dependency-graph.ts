@@ -252,10 +252,10 @@ export function createDependencyGraph(): DependencyGraph {
   // ALGORITHM: Complete Edge Removal  
   // Used during disposal to remove all dependency edges at once
   const detachAll = (consumer: ConsumerNode): void => {
-    let node = consumer._in;
+    let edge = consumer._in;
     
     // Complete removal - remove all edges
-    while (node) node = removeEdge(node);
+    while (edge) edge = removeEdge(edge);
     
     consumer._in = undefined;
     consumer._inTail = undefined;
