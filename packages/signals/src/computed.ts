@@ -67,6 +67,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       const initialFlags = state._flags;
       // Set RUNNING, clear DIRTY and INVALIDATED in single assignment
       state._flags = (initialFlags | RUNNING) & ~DIRTY_OR_INVALIDATED;
+
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
       state._inTail = undefined;
@@ -102,13 +103,11 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     const update = () => {
       // Lazy Evaluation with push-pull hybrid
-      // DIRTY: definitely needs recomputation
       // DIRTY: needs recomputation
       if (state._flags & DIRTY) recompute();
       // INVALIDATED: might need recomputation, use pull-based check
       else if (state._flags & INVALIDATED) {
-        // INVALIDATED: check staleness
-        // Pull-based depedency check AND refresh in one pass
+        // Pull-based depedency check staleness AND refresh
         // This updates intermediate computeds during traversal
         // If dependencies changed, need to recompute this node too
         if (isStale(state)) recompute();
@@ -123,7 +122,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
       // Always link if there's a consumer
       // Create edge to consumer
-      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer);
+      if (consumer) addEdge(state, consumer);
 
       update();
 

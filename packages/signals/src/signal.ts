@@ -20,7 +20,7 @@ import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 import { CONSTANTS } from './constants';
 
-const { RUNNING, VALUE_CHANGED } = CONSTANTS
+const { VALUE_CHANGED } = CONSTANTS
 
 // Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
@@ -95,7 +95,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
 
       // Always link if there's a consumer (alien-signals approach)
       // Create edge to consumer
-      if (consumer && consumer._flags & RUNNING) addEdge(state, consumer);
+      if (consumer) addEdge(state, consumer);
 
       return state.value;
     }) as SignalFunction<T>;
