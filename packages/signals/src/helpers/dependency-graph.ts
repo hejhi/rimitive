@@ -118,14 +118,8 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
     return nextIn;
   };
 
-  // Helper: Check if we should stop at tail marker
-  const isAtTail = (node: ToNode, edge: Edge): boolean => !!(node._inTail && edge === node._inTail.nextIn);
-
   // Helper: Check if source is a computed
   const isDerived = (source: FromNode | ToNode): source is DerivedNode => '_recompute' in source;
-
-
-
 
   // ALGORITHM: Complete Edge Removal  
   // Used during disposal to remove all dependency edges at once
@@ -255,8 +249,10 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
 
       for (;;) {
         while (currentEdge) {
+          const tail = currentNode._inTail;
+
           // Stop at tail marker
-          if (isAtTail(currentNode, currentEdge)) break;
+          if (!!(tail && currentEdge === tail.nextIn)) break;
 
           const source = currentEdge.from;
           const sFlags = source._flags;
@@ -266,31 +262,30 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
             stale = true;
             break;
           }
+
+          const nextEdge = currentEdge.nextIn;
           
           if (!isDerived(source)) {
-            currentEdge = currentEdge.nextIn;
+            currentEdge = nextEdge;
             continue;
           }
           
           // If source is DIRTY or INVALIDATED, traverse into it
           if (sFlags & (DIRTY | INVALIDATED)) {
             // Prevent cycles
-            if (!(sFlags & RUNNING)) {
-              source._flags |= RUNNING;
-              
-              // Store current position if we have siblings to process
-              const nextEdge = currentEdge.nextIn;
-              if (nextEdge) {
-                stack = { value: nextEdge, prev: stack };
-              }
-              
-              // Traverse into the source to check its dependencies
-              currentNode = source;
-              currentEdge = source._in;
+            if (sFlags & RUNNING) {
+              currentEdge = nextEdge;
               continue;
             }
+
+            source._flags |= RUNNING;
             
-            currentEdge = currentEdge.nextIn;
+            // Store current position if we have siblings to process
+            if (nextEdge) stack = { value: nextEdge, prev: stack };
+            
+            // Traverse into the source to check its dependencies
+            currentNode = source;
+            currentEdge = source._in;
             continue;
           }
 
@@ -300,7 +295,7 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
             break;
           }
           
-          currentEdge = currentEdge.nextIn;
+          currentEdge = nextEdge;
         }
 
         // Done with current node's dependencies
@@ -312,7 +307,7 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
           if ((currentFlags & DIRTY) || stale) {
             currentNode._recompute();
             // Check if value changed
-            stale = (currentNode._flags & VALUE_CHANGED) !== 0;
+            stale = !!(currentNode._flags & VALUE_CHANGED);
           }
           
           // Clear flags after recomputation
@@ -320,9 +315,7 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
         }
         
         // Pop from stack or break
-        if (!stack) break;
-        
-        if (stale) break;
+        if (!stack || stale) break;
         
         currentEdge = stack.value;
         currentNode = currentEdge.to;
@@ -333,9 +326,7 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
       node._flags &= ~(RUNNING | INVALIDATED);
 
       // If stale, recompute the root node
-      if (stale && isDerived(node)) {
-        node._recompute();
-      }
+      if (stale && isDerived(node)) node._recompute();
     }
   };
 
