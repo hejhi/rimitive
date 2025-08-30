@@ -2,17 +2,14 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
-import { createContext } from '../context';
 
 const { DISPOSED, RUNNING, INVALIDATED, VALUE_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: ReturnType<typeof createDependencyGraph>;
-  let ctx: ReturnType<typeof createContext>;
 
   beforeEach(() => {
-    ctx = createContext();
-    helpers = createDependencyGraph(ctx);
+    helpers = createDependencyGraph();
   });
 
   describe('link', () => {

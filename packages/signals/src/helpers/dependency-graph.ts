@@ -12,7 +12,6 @@
  */
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode, DerivedNode } from '../types';
-import type { SignalContext } from '../context';
 
 const { INVALIDATED, DIRTY, DISPOSED, RUNNING, VALUE_CHANGED } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
@@ -45,7 +44,7 @@ export interface DependencyGraph {
   ) => void;
 }
 
-export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
+export function createDependencyGraph(): DependencyGraph {
   const addEdge = (
     producer: FromNode,
     consumer: ToNode
@@ -287,12 +286,6 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
             currentNode = source;
             currentEdge = source._in;
             continue;
-          }
-
-          // Source is clean, check if it has a changed value
-          if (sFlags & VALUE_CHANGED) {
-            stale = true;
-            break;
           }
           
           currentEdge = nextEdge;

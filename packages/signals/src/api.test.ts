@@ -60,7 +60,7 @@ describe('createSignalAPI', () => {
           }
         };
       })(),
-      graph: createDependencyGraph(baseCtx),
+      graph: createDependencyGraph(),
     };
     
     const api = createSignalAPI({
@@ -100,7 +100,7 @@ describe('createSignalAPI', () => {
         };
         return queue;
       })(),
-      graph: createDependencyGraph(baseCtx),
+      graph: createDependencyGraph(),
     };
     
     const api = createSignalAPI({
