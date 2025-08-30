@@ -36,7 +36,6 @@ export interface DependencyGraph {
   pruneStale: (consumer: ConsumerNode) => void;
 
   // Staleness checks
-  isStale: (node: ToNode) => boolean; // Check staleness and update computeds in one pass
   checkStale: (node: ToNode) => void; // Single-pass update of entire dependency chain
 
   // Invalidation strategies
@@ -125,137 +124,8 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
   // Helper: Check if source is a computed
   const isDerived = (source: FromNode | ToNode): source is DerivedNode => '_recompute' in source;
 
-  // Helper: Check if computed needs recomputation
-  const needsRecompute = (node: ToNode): boolean => (node._flags & DIRTY) !== 0 || (!node._inTail && !!node._in);
 
 
-  // For computed nodes: iteratively check if any dependencies changed
-  // Uses manual stack to avoid function call overhead (like Alien Signals)
-  // This combines checking and updating in one pass for efficiency
-  const isStale = (node: ToNode): boolean => {
-    const flags = node._flags;
-    
-    // Check if already clean
-    if ((flags & (INVALIDATED | DIRTY)) === 0) return false;
-
-    // Prevent cycles
-    if (flags & RUNNING) return false;
-
-    // If no tail marker, the computed hasn't run yet or all edges are stale
-    // In this case, we need to recompute
-    if ((!node._inTail && node._in) || flags & DIRTY) return true;
-
-    // For now, we don't use the pattern - just detect it
-    // This measures minimal detection overhead
-
-    let stack: Stack<Edge> | undefined;
-    let currentNode = node;
-    let currentEdge = node._in;
-    let stale = false;
-    
-    // Optimization: Just count linear chain depth - no allocations
-    let chained = false;
-    
-    // Mark as running to prevent cycles
-    node._flags |= RUNNING;
-
-    for (;;) {
-      while (currentEdge) {
-        // Stop at tail marker - don't check stale edges beyond tail
-        if (isAtTail(currentNode, currentEdge)) break;
-
-        const source = currentEdge.from;
-        const sFlags = source._flags;
-
-        // Check if source is a dirty signal
-        if (sFlags & VALUE_CHANGED) {
-          stale = true;
-          break;
-        }
-        
-        if (!isDerived(source)) {
-          currentEdge = currentEdge.nextIn;
-          continue;
-        }
-        
-        // Check if source needs recomputation
-        if (needsRecompute(source)) {
-          stale = true;
-          break;
-        }
-
-        if (sFlags & RUNNING) {
-          currentEdge = currentEdge.nextIn;
-          continue;
-        }
-        
-        source._flags |= RUNNING;
-        
-        // Optimization: Only push to stack if there are multiple edges to explore
-        // For linear chains, we can avoid stack allocations
-        const nextEdge = currentEdge.nextIn;
-        if (nextEdge) {
-          // Multiple dependencies - need stack to remember position
-          // Store just the edge - we can derive the node from edge.to
-          stack = { value: nextEdge, prev: stack };
-        } else {
-          // Linear chain - just increment depth counter
-          chained = true;
-        }
-        
-        currentNode = source;
-        // For consumed chains, start with first dep only (depth-first)
-        // For non-consumed, check all deps (breadth-first)
-        currentEdge = source._in;
-        stale = false;
-      }
-
-      // Update computeds during traversal
-      // This avoids the need for a separate recomputation pass
-      if (currentNode !== node) {
-        currentNode._flags &= ~RUNNING;
-        if (stale && isDerived(currentNode)) {
-          stale = currentNode._recompute();
-          // Clear INVALIDATED flag after recomputation to prevent redundant staleness checks
-          // when this computed is read by its parent during the parent's recomputation
-          currentNode._flags &= ~INVALIDATED;
-        }
-      }
-
-      // Pop from stack or unwind linear chain
-      if (!stack && chained === false) break;
-      
-      if (stack) {
-        // Restore from stack
-        currentEdge = stack.value;
-        // When we pushed this edge, it was the "nextIn" of the previous edge
-        // So they share the same consumer (to)
-        currentNode = currentEdge.to;
-        stack = stack.prev;
-        // Stale is already tracked in the main variable
-      } else if (chained) {
-        // For linear chain unwinding: we need to get back to the parent
-        // The parent has an edge TO the currentNode (it depends on currentNode)
-        chained = false;
-        
-        // In a linear chain, currentNode should have exactly one outgoing edge
-        // That edge's 'to' field points to the parent (the node that depends on us)
-        if ('_out' in currentNode) {
-          const outEdge = currentNode._out;
-          if (outEdge) {
-            currentNode = outEdge.to;
-          }
-        }
-        // No more edges to check in linear chain unwinding
-        currentEdge = undefined;
-      }
-    }
-
-    // Clear RUNNING flag from root node
-    node._flags &= ~RUNNING;
-
-    return stale;
-  };
 
   // ALGORITHM: Complete Edge Removal  
   // Used during disposal to remove all dependency edges at once
@@ -482,5 +352,5 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
     }
   };
 
-  return { addEdge, removeEdge, detachAll, pruneStale, isStale, checkStale, invalidate };
+  return { addEdge, removeEdge, detachAll, pruneStale, checkStale, invalidate };
 }

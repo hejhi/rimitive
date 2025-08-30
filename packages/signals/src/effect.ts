@@ -70,7 +70,7 @@ interface EffectFactoryContext extends SignalContext {
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    graph: { detachAll, pruneStale, isStale },
+    graph: { detachAll, pruneStale, checkStale },
   } = ctx;
   
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
@@ -99,10 +99,14 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
 
       // Check if actually needs to run
       // DIRTY means definitely stale, INVALIDATED means maybe stale
-      // Only INVALIDATED, check if actually stale
-      if (!(flags & DIRTY) && !isStale(effect)) {
-        effect._flags &= ~INVALIDATED;
-        return;
+      if (!(flags & DIRTY)) {
+        // Use checkStale to update dependencies and determine if effect should run
+        checkStale(effect);
+        // If still INVALIDATED after checkStale, dependencies didn't change
+        if (effect._flags & INVALIDATED) {
+          effect._flags &= ~INVALIDATED;
+          return;
+        }
       }
 
       // Set RUNNING and clear update flags in single operation
