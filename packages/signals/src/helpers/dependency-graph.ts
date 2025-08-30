@@ -249,6 +249,7 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
       let currentEdge = node._in;
       let stale = false;
       
+      
       // Mark as running to prevent cycles
       node._flags |= RUNNING;
 
@@ -271,48 +272,22 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
             continue;
           }
           
-          // If source is DIRTY or INVALIDATED, update it first
+          // If source is DIRTY or INVALIDATED, traverse into it
           if (sFlags & (DIRTY | INVALIDATED)) {
-            // Recursively update the source
+            // Prevent cycles
             if (!(sFlags & RUNNING)) {
               source._flags |= RUNNING;
               
-              // Store current position
+              // Store current position if we have siblings to process
               const nextEdge = currentEdge.nextIn;
               if (nextEdge) {
                 stack = { value: nextEdge, prev: stack };
               }
               
-              // Check if source is stale and update if needed
-              let sourceStale = false;
-              if (sFlags & DIRTY) {
-                sourceStale = true;
-              } else if (sFlags & INVALIDATED) {
-                // Quick check - if source has no deps or all are clean, not stale
-                let sourceEdge = source._in;
-                while (sourceEdge && !isAtTail(source, sourceEdge)) {
-                  const dep = sourceEdge.from;
-                  if (dep._flags & VALUE_CHANGED) {
-                    sourceStale = true;
-                    break;
-                  }
-                  sourceEdge = sourceEdge.nextIn;
-                }
-              }
-              
-              if (sourceStale) {
-                source._recompute();
-                // After recompute, check if value changed
-                if (source._flags & VALUE_CHANGED) {
-                  stale = true;
-                  // Clear flags
-                  source._flags &= ~(RUNNING | DIRTY | INVALIDATED);
-                  break;
-                }
-              }
-              
-              // Clear flags
-              source._flags &= ~(RUNNING | DIRTY | INVALIDATED);
+              // Traverse into the source to check its dependencies
+              currentNode = source;
+              currentEdge = source._in;
+              continue;
             }
             
             currentEdge = currentEdge.nextIn;
@@ -328,6 +303,22 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
           currentEdge = currentEdge.nextIn;
         }
 
+        // Done with current node's dependencies
+        // If this isn't the root node and it needs update, recompute it
+        if (currentNode !== node && isDerived(currentNode)) {
+          const currentFlags = currentNode._flags;
+          
+          // If node was DIRTY or dependencies changed (stale), recompute it
+          if ((currentFlags & DIRTY) || stale) {
+            currentNode._recompute();
+            // Check if value changed
+            stale = (currentNode._flags & VALUE_CHANGED) !== 0;
+          }
+          
+          // Clear flags after recomputation
+          currentNode._flags &= ~(RUNNING | DIRTY | INVALIDATED);
+        }
+        
         // Pop from stack or break
         if (!stack) break;
         
