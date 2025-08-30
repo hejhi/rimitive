@@ -60,9 +60,10 @@ export interface EffectDisposer {
 }
 
 
-const { RUNNING, DISPOSED, DIRTY, INVALIDATED } = CONSTANTS;
-
-const UPDATE = DIRTY | INVALIDATED;
+const { 
+  CLEAN, DIRTY, INVALIDATED, RECOMPUTING, DISPOSED,
+  UPDATE_NEEDED, IN_PROGRESS, STATE_MASK, PROPERTY_MASK
+} = CONSTANTS;
 
 interface EffectFactoryContext extends SignalContext {
   graph: DependencyGraph;
@@ -78,7 +79,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     // State object captured in closure - no binding needed
     const effect: EffectInterface = {
       __type: 'effect' as const,
-      _flags: DIRTY,
+      _flags: DIRTY,  // Start in DIRTY state to trigger initial execution
       _in: undefined as Edge | undefined,
       _inTail: undefined as Edge | undefined,
       _nextScheduled: undefined as ScheduledNode | undefined,
@@ -93,24 +94,24 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     const flushEffect = (): void => {
       const flags = effect._flags;
 
-      // Fast exit: disposed or already running
+      // Fast exit: disposed or already in progress
       // Fast exit: not marked for update
-      if (flags & (DISPOSED | RUNNING) || !(flags & UPDATE)) return;
+      if ((flags & STATE_MASK) === DISPOSED || (flags & IN_PROGRESS) || !(flags & UPDATE_NEEDED)) return;
 
       // Check if actually needs to run
       // DIRTY means definitely stale, INVALIDATED means maybe stale
-      if (!(flags & DIRTY)) {
+      if ((flags & STATE_MASK) !== DIRTY) {
         // Use checkStale to update dependencies and determine if effect should run
         checkStale(effect);
         // If still INVALIDATED after checkStale, dependencies didn't change
-        if (effect._flags & INVALIDATED) {
-          effect._flags &= ~INVALIDATED;
+        if ((effect._flags & STATE_MASK) === INVALIDATED) {
+          effect._flags = (effect._flags & PROPERTY_MASK) | CLEAN;
           return;
         }
       }
 
-      // Set RUNNING and clear update flags in single operation
-      effect._flags = (flags | RUNNING) & ~UPDATE;
+      // Transition to recomputing state
+      effect._flags = (flags & PROPERTY_MASK) | RECOMPUTING;
       effect._inTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;
@@ -129,7 +130,8 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         if (newCleanup) effect._cleanup = newCleanup;
       } finally {
         ctx.currentConsumer = prevConsumer;
-        effect._flags &= ~RUNNING;
+        // Transition back to clean state after execution
+        effect._flags = (effect._flags & PROPERTY_MASK) | CLEAN;
         pruneStale(effect);
       }
     };
@@ -137,10 +139,10 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     // Dispose method using closure
     const dispose = (): void => {
       // Fast exit if already disposed
-      if (effect._flags & DISPOSED) return;
+      if ((effect._flags & STATE_MASK) === DISPOSED) return;
       
-      // Mark as disposed first to prevent re-entrance
-      effect._flags = DISPOSED;
+      // Transition to disposed state to prevent re-entrance
+      effect._flags = (effect._flags & PROPERTY_MASK) | DISPOSED;
 
       // Run cleanup if exists
       const cleanup = effect._cleanup;

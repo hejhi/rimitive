@@ -1,38 +1,53 @@
+/**
+ * Optimized State Machine Flag System
+ * 
+ * Direct bit operations for maximum performance while maintaining
+ * mutually exclusive states and combinable properties.
+ */
+
+// Node States (mutually exclusive - a node can only be in one state)
+const enum NodeState {
+  Clean         = 0,      // No state flags - up to date and ready
+  Invalidated   = 1 << 0, // Dependencies might have changed, needs checking
+  Dirty         = 1 << 1, // Definitely needs recomputation
+  Checking      = 1 << 2, // Currently checking staleness (replaces RUNNING for stale checks)
+  Recomputing   = 1 << 3, // Currently recomputing value (replaces RUNNING for computations)
+  Disposed      = 1 << 4, // Node is dead and should be ignored
+}
+
+// Node Properties (can combine with states)
+const enum NodeProps {
+  ValueChanged  = 1 << 5, // Value changed on last recomputation
+  Scheduled     = 1 << 6, // Node is in the work queue
+}
+
+// State masks for efficient checking
+const STATE_MASK = NodeState.Invalidated | NodeState.Dirty | NodeState.Checking | NodeState.Recomputing | NodeState.Disposed;
+const PROPERTY_MASK = NodeProps.ValueChanged | NodeProps.Scheduled;
+const UPDATE_NEEDED = NodeState.Invalidated | NodeState.Dirty;
+const IN_PROGRESS = NodeState.Checking | NodeState.Recomputing;
+const SKIP_NODE = NodeState.Disposed | IN_PROGRESS;
+
 export const CONSTANTS = {
-  // DIRTY and INVALIDATED are mutually exclusive approaches to staleness:
-  // - one for lazy (unobserved)
-  // - one for eager (observed) tracking
-
-  // INVALIDATED: Set during "push" phase when a dependency changes.
-  // Triggers checking.
-  // Means "this node MIGHT be stale, needs checking when accessed"
-  // This enables lazy evaluation - we don't recompute until needed.
-  INVALIDATED: 1 << 0,
-
-  // DIRTY: Set during "pull" phase when we confirm the node IS stale.
-  // Forces recompute.
-  // Means "this node's cached value is definitely stale and MUST be recomputed"
-  DIRTY: 1 << 1,
-
-  // VALUE_CHANGED: Producer's value has changed since creation.
-  // Stops propagation.
-  // Similar to the _dirty boolean, but for Producers.
-  // Set when signal value changes, never cleared (permanent change flag).
-  VALUE_CHANGED: 1 << 2,
-
-
-  // RUNNING: Prevents infinite loops during computation.
-  // Set while a computed/effect is executing to detect circular dependencies.
-  // If we try to read a node with RUNNING set, we have a cycle.
-  RUNNING: 1 << 4,
-
-  // DISPOSED: Node has been cleaned up and should be ignored.
-  // Once set, the node is effectively dead and will be removed from the graph.
-  // Used for resource cleanup and preventing memory leaks.
-  DISPOSED: 1 << 5,
-
-  // SCHEDULED: Node is already in the work queue.
-  // Prevents duplicate scheduling and replaces sentinel value pattern.
-  // Set when enqueued, cleared when flushed.
-  SCHEDULED: 1 << 6,
+  // States
+  CLEAN: NodeState.Clean,
+  INVALIDATED: NodeState.Invalidated,
+  DIRTY: NodeState.Dirty,
+  CHECKING: NodeState.Checking,
+  RECOMPUTING: NodeState.Recomputing,
+  DISPOSED: NodeState.Disposed,
+  
+  // Properties
+  VALUE_CHANGED: NodeProps.ValueChanged,
+  SCHEDULED: NodeProps.Scheduled,
+  
+  // Masks for efficient operations
+  STATE_MASK,
+  PROPERTY_MASK,
+  UPDATE_NEEDED,
+  IN_PROGRESS,
+  SKIP_NODE,
+  
+  // Backwards compatibility - map old names to new states
+  RUNNING: NodeState.Recomputing, // Will be deprecated - use CHECKING or RECOMPUTING
 };

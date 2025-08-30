@@ -2,7 +2,7 @@ import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 import type { SignalContext } from '../context';
 
-const { DISPOSED, SCHEDULED } = CONSTANTS;
+const { DISPOSED, SCHEDULED, STATE_MASK, PROPERTY_MASK } = CONSTANTS;
 
 export interface WorkQueue {
   enqueue: (node: ScheduledNode) => void;
@@ -34,7 +34,7 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     const flags = node._flags;
     if (flags & SCHEDULED) return; // Cold path - already scheduled
     
-    // Hot path - mark as scheduled with cached flags
+    // Hot path - add scheduled property with cached flags
     node._flags = flags | SCHEDULED;
     node._nextScheduled = undefined;
 
@@ -50,8 +50,8 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     node: T,
     cleanup: (node: T) => void
   ): void => {
-    if (node._flags & DISPOSED) return;
-    node._flags |= DISPOSED;
+    if ((node._flags & STATE_MASK) === DISPOSED) return;
+    node._flags = (node._flags & PROPERTY_MASK) | DISPOSED;
     cleanup(node);
   };
 
@@ -66,7 +66,7 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     while (current) {
       const next: ScheduledNode | undefined = current._nextScheduled;
       current._nextScheduled = undefined;
-      current._flags &= ~SCHEDULED; // Clear scheduled flag
+      current._flags = current._flags & ~SCHEDULED; // Clear scheduled property
       current._flush();
       current = next;
     }

@@ -26,10 +26,13 @@ interface ComputedState<T> extends DerivedNode {
 }
 
 const {
-  RUNNING,
+  CLEAN,
   DIRTY,
-  INVALIDATED,
+  RECOMPUTING,
   VALUE_CHANGED,
+  UPDATE_NEEDED,
+  IN_PROGRESS,
+  PROPERTY_MASK,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -53,7 +56,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _outTail: undefined,
       _in: undefined,  // Will be set to old edges when they exist
       _inTail: undefined,  // Don't clear during recompute - preserve for traversal
-      _flags: DIRTY,  // Start with DIRTY flag so first access triggers computation
+      _flags: DIRTY,  // Start in DIRTY state so first access triggers computation
       // This will be set below
       _recompute: null as unknown as () => boolean,
       _callback: compute,
@@ -61,10 +64,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     // Create recompute that captures state in closure
     const recompute = (): boolean => {
-      // Cache initial flags and compute new flags in one operation
+      // Cache initial flags and transition to recomputing state
       const initialFlags = state._flags;
-      // Set RUNNING, clear DIRTY and INVALIDATED in single assignment
-      state._flags = (initialFlags | RUNNING) & ~(DIRTY | INVALIDATED);
+      state._flags = (initialFlags & PROPERTY_MASK) | RECOMPUTING;
 
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
@@ -78,17 +80,16 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const oldValue = state.value;
         const newValue = compute();
 
-        // Update value and determine final flag state
+        // Update value and determine final state
         if (newValue !== oldValue) {
           state.value = newValue;
           valueChanged = true;
-          // Clear RUNNING and set VALUE_CHANGED in one operation
-          // VALUE_CHANGED only needs to be set on the first change, but it's never cleared
-          state._flags = (state._flags & ~RUNNING) | VALUE_CHANGED;
+          // Transition to clean state and add VALUE_CHANGED property
+          state._flags = CLEAN | VALUE_CHANGED;
         } else {
-          // Value didn't change - only clear RUNNING (keep VALUE_CHANGED if it was set)
+          // Value didn't change - just transition back to clean state
           valueChanged = false;
-          state._flags &= ~RUNNING;
+          state._flags = (state._flags & PROPERTY_MASK) | CLEAN;
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
@@ -104,8 +105,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Single-pass update using checkStale
       // Check flags inline to avoid function call overhead
       const flags = state._flags;
-      // Skip if already clean or currently running
-      if ((flags & (DIRTY | INVALIDATED)) && !(flags & RUNNING)) {
+      // Skip if already clean or currently in progress
+      if ((flags & UPDATE_NEEDED) && !(flags & IN_PROGRESS)) {
         checkStale(state);
       }
     }
