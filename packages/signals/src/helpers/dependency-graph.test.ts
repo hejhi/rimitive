@@ -3,7 +3,7 @@ import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { DISPOSED, RUNNING, INVALIDATED, VALUE_CHANGED } = CONSTANTS;
+const { DISPOSED, CHECKING, INVALIDATED, VALUE_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: ReturnType<typeof createDependencyGraph>;
@@ -438,7 +438,7 @@ describe('Dependency Graph Helpers', () => {
   
     it('should skip running nodes', () => {
       const source = createMockNode('signal') as ProducerNode;
-      const target = createMockNode('computed', RUNNING);
+      const target = createMockNode('computed', CHECKING);
       const edge = createEdge(source, target);
   
       const initialFlags = target._flags;

@@ -47,7 +47,4 @@ export const CONSTANTS = {
   UPDATE_NEEDED,
   IN_PROGRESS,
   SKIP_NODE,
-  
-  // Backwards compatibility - map old names to new states
-  RUNNING: NodeState.Recomputing, // Will be deprecated - use CHECKING or RECOMPUTING
 };

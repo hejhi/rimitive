@@ -49,7 +49,7 @@ export interface ProducerNode extends ReactiveNode {
   value: unknown;
   _out: Edge | undefined; // Head of output list
   _outTail: Edge | undefined; // Tail of output list
-  _flags: number; // Bit field containing DIRTY flag and others
+  _flags: number; // Bit field containing state and properties
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
@@ -57,7 +57,7 @@ export interface ProducerNode extends ReactiveNode {
 export interface ConsumerNode extends ReactiveNode {
   _in: Edge | undefined; // Head of input list
   _inTail: Edge | undefined; // Tail of input list
-  _flags: number; // Bit field containing DIRTY, RUNNING, DISPOSED, etc.
+  _flags: number; // Bit field containing state (Clean, Dirty, Checking, etc.) and properties
 }
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {
