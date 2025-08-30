@@ -14,9 +14,17 @@ import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode, DerivedNode } from '../types';
 
 const { 
-  CLEAN, INVALIDATED, DIRTY, CHECKING, RECOMPUTING, 
-  VALUE_CHANGED, UPDATE_NEEDED, IN_PROGRESS, SKIP_NODE,
-  STATE_MASK, PROPERTY_MASK
+  CLEAN,
+  INVALIDATED,
+  DIRTY,
+  CHECKING,
+  RECOMPUTING, 
+  VALUE_CHANGED,
+  UPDATE_NEEDED,
+  IN_PROGRESS,
+  SKIP_NODE,
+  STATE_MASK,
+  PROPERTY_MASK,
 } = CONSTANTS;
 
 // Nodes that should be skipped during traversal (disposed or currently processing)
@@ -321,7 +329,7 @@ export function createDependencyGraph(): DependencyGraph {
     // If stale, transition to recomputing and recompute the root node
     if (stale && ('_recompute' in node)) {
       node._flags = (node._flags & PROPERTY_MASK) | RECOMPUTING;
-      (node as DerivedNode)._recompute();
+      node._recompute();
     }
     
     // Transition root node back to clean state
