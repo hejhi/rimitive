@@ -226,14 +226,9 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
   // Similar to Alien's checkDirty, this traverses the dependency graph once
   // and updates ALL computeds in the chain, including the root node.
   // This prevents redundant isStale() calls during recomputation.
+  // ASSUMES: Caller has already checked that node has DIRTY or INVALIDATED flags
   const checkStale = (node: ToNode): void => {
     const flags = node._flags;
-    
-    // Already clean - nothing to do
-    if ((flags & (INVALIDATED | DIRTY)) === 0) return;
-    
-    // Prevent cycles
-    if (flags & RUNNING) return;
     
     // For DIRTY nodes, just recompute directly
     if (flags & DIRTY) {
@@ -245,8 +240,9 @@ export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
       return;
     }
     
-    // For INVALIDATED nodes, do a modified isStale that updates the chain
-    if (flags & INVALIDATED) {
+    // At this point, we know the node is INVALIDATED (not DIRTY)
+    // Do a modified isStale that updates the chain
+    {
       // Modified isStale logic that updates dependencies during traversal
       let stack: Stack<Edge> | undefined;
       let currentNode = node;
