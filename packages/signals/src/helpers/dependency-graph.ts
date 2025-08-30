@@ -225,102 +225,96 @@ export function createDependencyGraph(): DependencyGraph {
     
     // For DIRTY nodes, just recompute directly
     if (flags & DIRTY) {
-      if (isDerived(node)) {
-        node._flags |= RUNNING;
-        node._recompute();
-        node._flags &= ~(RUNNING | DIRTY);
-      }
+      node._flags |= RUNNING;
+      if (isDerived(node)) node._recompute();
+      node._flags &= ~(RUNNING | DIRTY);
       return;
     }
     
+    node._flags |= RUNNING;
+
     // At this point, we know the node is INVALIDATED (not DIRTY)
     // Do a modified isStale that updates the chain
-    {
-      // Modified isStale logic that updates dependencies during traversal
-      let stack: Stack<Edge> | undefined;
-      let currentNode = node;
-      let currentEdge = node._in;
-      let stale = false;
-      
-      
-      // Mark as running to prevent cycles
-      node._flags |= RUNNING;
+    // Modified isStale logic that updates dependencies during traversal
+    let stack: Stack<Edge> | undefined;
+    let currentNode = node;
+    let currentEdge = node._in;
+    let stale = false;
 
-      for (;;) {
-        while (currentEdge) {
-          const tail = currentNode._inTail;
+    for (;;) {
+      while (currentEdge) {
+        const tail = currentNode._inTail;
 
-          // Stop at tail marker
-          if (!!(tail && currentEdge === tail.nextIn)) break;
+        // Stop at tail marker
+        if (!!(tail && currentEdge === tail.nextIn)) break;
 
-          const source = currentEdge.from;
-          const sFlags = source._flags;
+        const source = currentEdge.from;
+        const sFlags = source._flags;
 
-          // Check if source is a dirty signal
-          if (sFlags & VALUE_CHANGED) {
-            stale = true;
-            break;
-          }
+        // Check if source is a dirty signal
+        if (sFlags & VALUE_CHANGED) {
+          stale = true;
+          break;
+        }
 
-          const nextEdge = currentEdge.nextIn;
-          
-          if (!isDerived(source)) {
+        const nextEdge = currentEdge.nextIn;
+
+        if (!isDerived(source)) {
+          currentEdge = nextEdge;
+          continue;
+        }
+        
+        // If source is DIRTY or INVALIDATED, traverse into it
+        if (sFlags & (DIRTY | INVALIDATED)) {
+          // Prevent cycles
+          if (sFlags & RUNNING) {
             currentEdge = nextEdge;
             continue;
           }
-          
-          // If source is DIRTY or INVALIDATED, traverse into it
-          if (sFlags & (DIRTY | INVALIDATED)) {
-            // Prevent cycles
-            if (sFlags & RUNNING) {
-              currentEdge = nextEdge;
-              continue;
-            }
 
-            source._flags |= RUNNING;
-            
-            // Store current position if we have siblings to process
-            if (nextEdge) stack = { value: nextEdge, prev: stack };
-            
-            // Traverse into the source to check its dependencies
-            currentNode = source;
-            currentEdge = source._in;
-            continue;
-          }
+          source._flags |= RUNNING;
           
-          currentEdge = nextEdge;
-        }
-
-        // Done with current node's dependencies
-        // If this isn't the root node and it needs update, recompute it
-        if (currentNode !== node && isDerived(currentNode)) {
-          const currentFlags = currentNode._flags;
+          // Store current position if we have siblings to process
+          if (nextEdge) stack = { value: nextEdge, prev: stack };
           
-          // If node was DIRTY or dependencies changed (stale), recompute it
-          if ((currentFlags & DIRTY) || stale) {
-            currentNode._recompute();
-            // Check if value changed
-            stale = !!(currentNode._flags & VALUE_CHANGED);
-          }
-          
-          // Clear flags after recomputation
-          currentNode._flags &= ~(RUNNING | DIRTY | INVALIDATED);
+          // Traverse into the source to check its dependencies
+          currentNode = source;
+          currentEdge = source._in;
+          continue;
         }
         
-        // Pop from stack or break
-        if (!stack || stale) break;
-        
-        currentEdge = stack.value;
-        currentNode = currentEdge.to;
-        stack = stack.prev;
+        currentEdge = nextEdge;
       }
 
-      // Clear RUNNING flag from root node
-      node._flags &= ~(RUNNING | INVALIDATED);
-
-      // If stale, recompute the root node
-      if (stale && isDerived(node)) node._recompute();
+      // Done with current node's dependencies
+      // If this isn't the root node and it needs update, recompute it
+      if (currentNode !== node && isDerived(currentNode)) {
+        const currentFlags = currentNode._flags;
+        
+        // If node was DIRTY or dependencies changed (stale), recompute it
+        if ((currentFlags & DIRTY) || stale) {
+          currentNode._recompute();
+          // Check if value changed
+          stale = !!(currentNode._flags & VALUE_CHANGED);
+        }
+        
+        // Clear flags after recomputation
+        currentNode._flags &= ~(RUNNING | DIRTY | INVALIDATED);
+      }
+      
+      // Pop from stack or break
+      if (!stack || stale) break;
+      
+      currentEdge = stack.value;
+      currentNode = currentEdge.to;
+      stack = stack.prev;
     }
+
+    // Clear RUNNING flag from root node
+    node._flags &= ~(RUNNING | INVALIDATED);
+
+    // If stale, recompute the root node
+    if (stale && isDerived(node)) node._recompute();
   };
 
   return { addEdge, removeEdge, detachAll, pruneStale, checkStale, invalidate };
