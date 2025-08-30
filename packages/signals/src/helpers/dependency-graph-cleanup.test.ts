@@ -2,14 +2,17 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { createContext } from '../context';
 
 const { VALUE_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Cleanup Operations', () => {
   let graph: ReturnType<typeof createDependencyGraph>;
+  let ctx: ReturnType<typeof createContext>;
 
   beforeEach(() => {
-    graph = createDependencyGraph();
+    ctx = createContext();
+    graph = createDependencyGraph(ctx);
   });
 
   const makeProducer = (): ProducerNode => ({

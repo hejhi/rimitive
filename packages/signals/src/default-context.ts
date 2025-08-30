@@ -8,7 +8,7 @@ import { createWorkQueue } from './helpers/work-queue';
  */
 export function createDefaultContext() {
   const baseCtx = createContext();
-  const graph = createDependencyGraph();
+  const graph = createDependencyGraph(baseCtx);
   const workQueue = createWorkQueue(baseCtx);
   
   return {

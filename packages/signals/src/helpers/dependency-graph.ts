@@ -12,6 +12,7 @@
  */
 import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode, DerivedNode } from '../types';
+import type { SignalContext } from '../context';
 
 const { INVALIDATED, DIRTY, DISPOSED, RUNNING, VALUE_CHANGED } = CONSTANTS;
 const SKIP_FLAGS = DISPOSED | RUNNING;
@@ -45,7 +46,7 @@ export interface DependencyGraph {
   ) => void;
 }
 
-export function createDependencyGraph(): DependencyGraph {
+export function createDependencyGraph(_ctx: SignalContext): DependencyGraph {
   const addEdge = (
     producer: FromNode,
     consumer: ToNode
@@ -361,14 +362,12 @@ export function createDependencyGraph(): DependencyGraph {
     // Already clean - nothing to do
     if ((flags & (INVALIDATED | DIRTY)) === 0) return;
     
-    // Prevent redundant nested checkStale calls
-    // If RUNNING flag is set, we're already being processed
+    // Prevent cycles
     if (flags & RUNNING) return;
     
     // For DIRTY nodes, just recompute directly
     if (flags & DIRTY) {
       if (isDerived(node)) {
-        // Mark as RUNNING during recompute to prevent nested calls
         node._flags |= RUNNING;
         node._recompute();
         node._flags &= ~(RUNNING | DIRTY);
@@ -376,19 +375,110 @@ export function createDependencyGraph(): DependencyGraph {
       return;
     }
     
-    // For INVALIDATED nodes, check staleness and update
+    // For INVALIDATED nodes, do a modified isStale that updates the chain
     if (flags & INVALIDATED) {
-      // Check if actually stale using existing isStale logic
-      const stale = isStale(node);
+      // Modified isStale logic that updates dependencies during traversal
+      let stack: Stack<Edge> | undefined;
+      let currentNode = node;
+      let currentEdge = node._in;
+      let stale = false;
       
-      // If stale, the node needs to be recomputed
-      // isStale already updated dependencies, now update this node too
+      // Mark as running to prevent cycles
+      node._flags |= RUNNING;
+
+      for (;;) {
+        while (currentEdge) {
+          // Stop at tail marker
+          if (isAtTail(currentNode, currentEdge)) break;
+
+          const source = currentEdge.from;
+          const sFlags = source._flags;
+
+          // Check if source is a dirty signal
+          if (sFlags & VALUE_CHANGED) {
+            stale = true;
+            break;
+          }
+          
+          if (!isDerived(source)) {
+            currentEdge = currentEdge.nextIn;
+            continue;
+          }
+          
+          // If source is DIRTY or INVALIDATED, update it first
+          if (sFlags & (DIRTY | INVALIDATED)) {
+            // Recursively update the source
+            if (!(sFlags & RUNNING)) {
+              source._flags |= RUNNING;
+              
+              // Store current position
+              const nextEdge = currentEdge.nextIn;
+              if (nextEdge) {
+                stack = { value: nextEdge, prev: stack };
+              }
+              
+              // Check if source is stale and update if needed
+              let sourceStale = false;
+              if (sFlags & DIRTY) {
+                sourceStale = true;
+              } else if (sFlags & INVALIDATED) {
+                // Quick check - if source has no deps or all are clean, not stale
+                let sourceEdge = source._in;
+                while (sourceEdge && !isAtTail(source, sourceEdge)) {
+                  const dep = sourceEdge.from;
+                  if (dep._flags & VALUE_CHANGED) {
+                    sourceStale = true;
+                    break;
+                  }
+                  sourceEdge = sourceEdge.nextIn;
+                }
+              }
+              
+              if (sourceStale) {
+                source._recompute();
+                // After recompute, check if value changed
+                if (source._flags & VALUE_CHANGED) {
+                  stale = true;
+                  // Clear flags
+                  source._flags &= ~(RUNNING | DIRTY | INVALIDATED);
+                  break;
+                }
+              }
+              
+              // Clear flags
+              source._flags &= ~(RUNNING | DIRTY | INVALIDATED);
+            }
+            
+            currentEdge = currentEdge.nextIn;
+            continue;
+          }
+
+          // Source is clean, check if it has a changed value
+          if (sFlags & VALUE_CHANGED) {
+            stale = true;
+            break;
+          }
+          
+          currentEdge = currentEdge.nextIn;
+        }
+
+        // Pop from stack or break
+        if (!stack) break;
+        
+        if (stale) break;
+        
+        currentEdge = stack.value;
+        currentNode = currentEdge.to;
+        stack = stack.prev;
+      }
+
+      // Clear RUNNING flag from root node
+      node._flags &= ~(RUNNING | INVALIDATED);
+
+      // If stale, recompute the root node
       if (stale && isDerived(node)) {
         node._recompute();
       }
-      
-      // Clear INVALIDATED flag regardless
-      node._flags &= ~INVALIDATED;
     }
   };
 

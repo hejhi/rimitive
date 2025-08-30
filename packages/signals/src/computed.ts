@@ -103,9 +103,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     const update = () => {
       // Single-pass update using checkStale
       // This handles DIRTY and INVALIDATED flags and updates the entire chain
-      if (state._flags & (DIRTY | INVALIDATED)) {
-        checkStale(state);
-      }
+      // checkStale will clear the flags after processing, preventing redundant work
+      if (state._flags & (DIRTY | INVALIDATED)) checkStale(state);
     }
 
     const computed = (() => {

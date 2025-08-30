@@ -2,14 +2,17 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createDependencyGraph } from './dependency-graph';
 import type { ConsumerNode, ProducerNode, Edge, ScheduledNode, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { createContext } from '../context';
 
 const { DISPOSED, RUNNING, INVALIDATED, VALUE_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: ReturnType<typeof createDependencyGraph>;
+  let ctx: ReturnType<typeof createContext>;
 
   beforeEach(() => {
-    helpers = createDependencyGraph();
+    ctx = createContext();
+    helpers = createDependencyGraph(ctx);
   });
 
   describe('link', () => {
@@ -619,7 +622,8 @@ describe('Dependency Graph Helpers', () => {
         // This test demonstrates the performance issue:
         // Each computed in a chain calls isStale independently
         
-        const helpers = createDependencyGraph();
+        const testCtx = createContext();
+        const helpers = createDependencyGraph(testCtx);
         
         // Track how many times isStale is called
         let isStaleCallCount = 0;
@@ -735,7 +739,8 @@ describe('Dependency Graph Helpers', () => {
       });
       
       it('demonstrates the fix scales well with deeper chains', () => {
-        const helpers = createDependencyGraph();
+        const testCtx = createContext();
+        const helpers = createDependencyGraph(testCtx);
         
         let isStaleCallCount = 0;
         const originalIsStale = helpers.isStale;

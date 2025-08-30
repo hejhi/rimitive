@@ -18,8 +18,8 @@ import { createContext as createLattice } from '@lattice/lattice';
 export function createTestInstance() {
   // Create extended context for testing
   const base = createContext();
+  const graph = createDependencyGraph(base);
   const workQueue = createWorkQueue(base);
-  const graph = createDependencyGraph();
   const ctx = {
     ...base,
     workQueue,
