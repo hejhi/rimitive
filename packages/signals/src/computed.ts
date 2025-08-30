@@ -41,7 +41,7 @@ export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
 export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, pruneStale, isStale },
+    graph: { addEdge, pruneStale, checkStale },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -101,16 +101,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     };
 
     const update = () => {
-      // Lazy Evaluation with push-pull hybrid
-      // DIRTY: needs recomputation
-      if (state._flags & DIRTY) recompute();
-      // INVALIDATED: might need recomputation, use pull-based check
-      else if (state._flags & INVALIDATED) {
-        // Pull-based depedency check staleness AND refresh
-        // This updates intermediate computeds during traversal
-        // If dependencies changed, need to recompute this node too
-        if (isStale(state)) recompute();
-        else state._flags = state._flags & ~INVALIDATED; // Just clear INVALIDATED
+      // Single-pass update using checkStale
+      // This handles DIRTY and INVALIDATED flags and updates the entire chain
+      if (state._flags & (DIRTY | INVALIDATED)) {
+        checkStale(state);
       }
     }
 

@@ -36,6 +36,7 @@ export interface DependencyGraph {
 
   // Staleness checks
   isStale: (node: ToNode) => boolean; // Check staleness and update computeds in one pass
+  checkStale: (node: ToNode) => void; // Single-pass update of entire dependency chain
 
   // Invalidation strategies
   invalidate: (
@@ -350,5 +351,46 @@ export function createDependencyGraph(): DependencyGraph {
     } while (currentEdge);
   };
 
-  return { addEdge, removeEdge, detachAll, pruneStale, isStale, invalidate };
+  // ALGORITHM: Single-Pass Staleness Check and Update
+  // Similar to Alien's checkDirty, this traverses the dependency graph once
+  // and updates ALL computeds in the chain, including the root node.
+  // This prevents redundant isStale() calls during recomputation.
+  const checkStale = (node: ToNode): void => {
+    const flags = node._flags;
+    
+    // Already clean - nothing to do
+    if ((flags & (INVALIDATED | DIRTY)) === 0) return;
+    
+    // Prevent redundant nested checkStale calls
+    // If RUNNING flag is set, we're already being processed
+    if (flags & RUNNING) return;
+    
+    // For DIRTY nodes, just recompute directly
+    if (flags & DIRTY) {
+      if (isDerived(node)) {
+        // Mark as RUNNING during recompute to prevent nested calls
+        node._flags |= RUNNING;
+        node._recompute();
+        node._flags &= ~(RUNNING | DIRTY);
+      }
+      return;
+    }
+    
+    // For INVALIDATED nodes, check staleness and update
+    if (flags & INVALIDATED) {
+      // Check if actually stale using existing isStale logic
+      const stale = isStale(node);
+      
+      // If stale, the node needs to be recomputed
+      // isStale already updated dependencies, now update this node too
+      if (stale && isDerived(node)) {
+        node._recompute();
+      }
+      
+      // Clear INVALIDATED flag regardless
+      node._flags &= ~INVALIDATED;
+    }
+  };
+
+  return { addEdge, removeEdge, detachAll, pruneStale, isStale, checkStale, invalidate };
 }
