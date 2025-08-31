@@ -26,13 +26,13 @@ interface ComputedState<T> extends DerivedNode {
 }
 
 const {
-  CLEAN,
-  DIRTY,
-  RECOMPUTING,
-  VALUE_CHANGED,
-  UPDATE_NEEDED,
-  IN_PROGRESS,
-  STATE_MASK,
+  STATUS_CLEAN,
+  STATUS_DIRTY,
+  STATUS_RECOMPUTING,
+  HAS_CHANGED,
+  NEEDS_UPDATE,
+  IS_PROCESSING,
+  STATUS_MASK,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -54,9 +54,9 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       value: undefined,
       _out: undefined,
       _outTail: undefined,
-      _in: undefined,  // Will be set to old edges when they exist
-      _inTail: undefined,  // Don't clear during recompute - preserve for traversal
-      _flags: DIRTY,  // Start in DIRTY state so first access triggers computation
+      _in: undefined, // Will be set to old edges when they exist
+      _inTail: undefined, // Don't clear during recompute - preserve for traversal
+      _flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
       _recompute: null as unknown as () => boolean,
       _callback: compute,
@@ -66,7 +66,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     const recompute = (): boolean => {
       // Cache initial flags and transition to recomputing state
       const initialFlags = state._flags;
-      state._flags = (initialFlags & ~STATE_MASK) | RECOMPUTING;
+      state._flags = (initialFlags & ~STATUS_MASK) | STATUS_RECOMPUTING;
 
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
@@ -84,12 +84,12 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         if (newValue !== oldValue) {
           state.value = newValue;
           valueChanged = true;
-          // Transition to clean state and add VALUE_CHANGED property
-          state._flags = CLEAN | VALUE_CHANGED;
+          // Transition to clean state and add HAS_CHANGED property
+          state._flags = STATUS_CLEAN | HAS_CHANGED;
         } else {
           // Value didn't change - just transition back to clean state
           valueChanged = false;
-          state._flags = (state._flags & ~STATE_MASK) | CLEAN;
+          state._flags = (state._flags & ~STATUS_MASK) | STATUS_CLEAN;
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
@@ -106,7 +106,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Check flags inline to avoid function call overhead
       const flags = state._flags;
       // Skip if already clean or currently in progress
-      if ((flags & UPDATE_NEEDED) && !(flags & IN_PROGRESS)) {
+      if ((flags & NEEDS_UPDATE) && !(flags & IS_PROCESSING)) {
         checkStale(state);
       }
     }

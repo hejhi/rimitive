@@ -14,20 +14,20 @@ import { CONSTANTS } from '../constants';
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode, DerivedNode } from '../types';
 
 const { 
-  CLEAN,
-  INVALIDATED,
-  DIRTY,
-  CHECKING,
-  RECOMPUTING, 
-  VALUE_CHANGED,
-  UPDATE_NEEDED,
-  IN_PROGRESS,
+  STATUS_CLEAN,
+  STATUS_INVALIDATED,
+  STATUS_DIRTY,
+  STATUS_CHECKING,
+  STATUS_RECOMPUTING, 
+  HAS_CHANGED,
+  NEEDS_UPDATE,
+  IS_PROCESSING,
   SKIP_NODE,
-  STATE_MASK,
+  STATUS_MASK,
 } = CONSTANTS;
 
 // Nodes that should be skipped during traversal (disposed or currently processing)
-const ALREADY_HANDLED = SKIP_NODE | INVALIDATED;
+const ALREADY_HANDLED = SKIP_NODE | STATUS_INVALIDATED;
 
 // Since states are mutually exclusive, we need to check if state is one of these
 // Note: CLEAN is 0, so we need special handling
@@ -126,7 +126,7 @@ export function createDependencyGraph(): DependencyGraph {
     else {
       from._out = nextOut;
       // When a computed becomes completely unobserved, transition to DIRTY state
-      if (!nextOut && isDerived(from)) from._flags = (from._flags & ~STATE_MASK) | DIRTY;
+      if (!nextOut && isDerived(from)) from._flags = (from._flags & ~STATUS_MASK) | STATUS_DIRTY;
     }
 
     return nextIn;
@@ -194,7 +194,7 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Transition to invalidated state (preserve properties)
-      target._flags = (targetFlags & ~STATE_MASK) | INVALIDATED;
+      target._flags = (targetFlags & ~STATUS_MASK) | STATUS_INVALIDATED;
 
       // Handle producer nodes (have outputs)
       if ('_out' in target) {
@@ -236,24 +236,24 @@ export function createDependencyGraph(): DependencyGraph {
   // ASSUMES: Caller has already checked that node has DIRTY or INVALIDATED flags
   const checkStale = (node: ToNode): void => {
     const flags = node._flags;
-    const state = flags & STATE_MASK;
+    const state = flags & STATUS_MASK;
     
     // Early exit if already clean or in progress
     // Since CLEAN is 0, check it separately, then check if in progress
-    if (state === CLEAN || (state & IN_PROGRESS)) return;
+    if (state === STATUS_CLEAN || state & IS_PROCESSING) return;
     
     // For DIRTY nodes, update directly without intermediate state
-    if (state === DIRTY) {
+    if (state === STATUS_DIRTY) {
       if ('_recompute' in node) {
-        node._flags = (flags & ~STATE_MASK) | RECOMPUTING;
+        node._flags = (flags & ~STATUS_MASK) | STATUS_RECOMPUTING;
         node._recompute();
       }
-      node._flags = (node._flags & ~STATE_MASK) | CLEAN;
+      node._flags = (node._flags & ~STATUS_MASK) | STATUS_CLEAN;
       return;
     }
     
     // For INVALIDATED nodes, transition to checking state
-    node._flags = (flags & ~STATE_MASK) | CHECKING;
+    node._flags = (flags & ~STATUS_MASK) | STATUS_CHECKING;
 
     // At this point, we know the node is INVALIDATED (not DIRTY)
     // Do a modified isStale that updates the chain
@@ -268,8 +268,8 @@ export function createDependencyGraph(): DependencyGraph {
         const source = currentEdge.from;
         const sFlags = source._flags;
 
-        // Check if source is a dirty signal (has VALUE_CHANGED property)
-        if (sFlags & VALUE_CHANGED) {
+        // Check if source is a dirty signal (has HAS_CHANGED property)
+        if (sFlags & HAS_CHANGED) {
           stale = true;
           break;
         }
@@ -281,30 +281,30 @@ export function createDependencyGraph(): DependencyGraph {
           currentEdge = nextEdge;
           continue;
         }
-        
+
         // If source needs update (DIRTY or INVALIDATED), traverse into it
-        if (sFlags & UPDATE_NEEDED) {
+        if (sFlags & NEEDS_UPDATE) {
           // Prevent cycles - skip if already checking or recomputing
-          if (sFlags & IN_PROGRESS) {
+          if (sFlags & IS_PROCESSING) {
             currentEdge = nextEdge;
             continue;
           }
 
           // Transition source to checking state (preserve properties)
-          source._flags = (sFlags & ~STATE_MASK) | CHECKING;
-          
+          source._flags = (sFlags & ~STATUS_MASK) | STATUS_CHECKING;
+
           // Store current position if we have siblings to process
           if (nextEdge) {
             if (!stack) stack = { value: nextEdge, prev: undefined };
             else stack = { value: nextEdge, prev: stack };
           }
-          
+
           // Traverse into the source to check its dependencies
           currentNode = source;
           currentEdge = source._in;
           continue;
         }
-        
+
         currentEdge = nextEdge;
       }
 
@@ -312,20 +312,21 @@ export function createDependencyGraph(): DependencyGraph {
       // If this isn't the root node and it needs update, recompute it
       if (currentNode !== node && ('_recompute' in currentNode)) {
         const currentFlags = currentNode._flags;
-        const currentState = currentFlags & STATE_MASK;
+        const currentState = currentFlags & STATUS_MASK;
         
         // If node was DIRTY or dependencies changed (stale), recompute it
-        if (currentState === DIRTY || stale) {
+        if (currentState === STATUS_DIRTY || stale) {
           // Single state transition to RECOMPUTING
-          currentNode._flags = (currentFlags & ~STATE_MASK) | RECOMPUTING;
+          currentNode._flags =
+            (currentFlags & ~STATUS_MASK) | STATUS_RECOMPUTING;
           currentNode._recompute();
           // After recompute, check if value changed and transition to CLEAN
           const newFlags = currentNode._flags;
-          stale = !!(newFlags & VALUE_CHANGED);
-          currentNode._flags = (newFlags & ~STATE_MASK) | CLEAN;
+          stale = !!(newFlags & HAS_CHANGED);
+          currentNode._flags = (newFlags & ~STATUS_MASK) | STATUS_CLEAN;
         } else {
           // Node wasn't stale, just transition to CLEAN
-          currentNode._flags = (currentFlags & ~STATE_MASK) | CLEAN;
+          currentNode._flags = (currentFlags & ~STATUS_MASK) | STATUS_CLEAN;
         }
       }
       
@@ -339,12 +340,12 @@ export function createDependencyGraph(): DependencyGraph {
 
     // If stale, recompute the root node
     if (stale && ('_recompute' in node)) {
-      node._flags = (node._flags & ~STATE_MASK) | RECOMPUTING;
+      node._flags = (node._flags & ~STATUS_MASK) | STATUS_RECOMPUTING;
       node._recompute();
     }
     
     // Transition root node to clean state (single operation)
-    node._flags = (node._flags & ~STATE_MASK) | CLEAN;
+    node._flags = (node._flags & ~STATUS_MASK) | STATUS_CLEAN;
   };
 
   return { addEdge, removeEdge, detachAll, pruneStale, checkStale, invalidate };

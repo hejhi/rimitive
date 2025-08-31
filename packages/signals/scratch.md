@@ -136,7 +136,7 @@ if (currentEdge.flags & HOT_PATH && !currentEdge.nextIn) {
   let chain = currentEdge;
   while (chain && (chain.flags & HOT_PATH) && !chain.nextIn) {
     const source = chain.from;
-    if (source._flags & VALUE_CHANGED) return true;
+    if (source._flags & HAS_CHANGED) return true;
     if (!('_recompute' in source)) break;
     
     // Move to source's single dependency

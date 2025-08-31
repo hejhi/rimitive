@@ -2,7 +2,7 @@ import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 import type { SignalContext } from '../context';
 
-const { DISPOSED, SCHEDULED, STATE_MASK } = CONSTANTS;
+const { STATUS_DISPOSED, IS_SCHEDULED, STATUS_MASK } = CONSTANTS;
 
 export interface WorkQueue {
   enqueue: (node: ScheduledNode) => void;
@@ -32,10 +32,10 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
   const enqueue = (node: ScheduledNode): void => {
     // Cache flags for better branch prediction
     const flags = node._flags;
-    if (flags & SCHEDULED) return; // Cold path - already scheduled
+    if (flags & IS_SCHEDULED) return; // Cold path - already scheduled
     
     // Hot path - add scheduled property with cached flags
-    node._flags = flags | SCHEDULED;
+    node._flags = flags | IS_SCHEDULED;
     node._nextScheduled = undefined;
 
     // Add to queue
@@ -50,8 +50,8 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     node: T,
     cleanup: (node: T) => void
   ): void => {
-    if ((node._flags & STATE_MASK) === DISPOSED) return;
-    node._flags = (node._flags & ~STATE_MASK) | DISPOSED;
+    if ((node._flags & STATUS_MASK) === STATUS_DISPOSED) return;
+    node._flags = (node._flags & ~STATUS_MASK) | STATUS_DISPOSED;
     cleanup(node);
   };
 
@@ -66,7 +66,7 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     while (current) {
       const next: ScheduledNode | undefined = current._nextScheduled;
       current._nextScheduled = undefined;
-      current._flags = current._flags & ~SCHEDULED; // Clear scheduled property
+      current._flags = current._flags & ~IS_SCHEDULED; // Clear scheduled property
       current._flush();
       current = next;
     }

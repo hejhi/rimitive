@@ -4,7 +4,7 @@ import { createContext, type SignalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
-const { DISPOSED } = CONSTANTS;
+const { STATUS_DISPOSED } = CONSTANTS;
 
 describe('WorkQueue', () => {
   // Helper to count nodes in queue
@@ -75,7 +75,7 @@ describe('WorkQueue', () => {
     
     helpers.dispose(node, cleanupFn);
     
-    expect(node._flags & DISPOSED).toBe(DISPOSED);
+    expect(node._flags & STATUS_DISPOSED).toBe(STATUS_DISPOSED);
     expect(cleanupFn).toHaveBeenCalledWith(node);
     
     // Try disposing again

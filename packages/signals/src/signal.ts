@@ -20,7 +20,7 @@ import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
 import { CONSTANTS } from './constants';
 
-const { VALUE_CHANGED } = CONSTANTS;
+const { HAS_CHANGED } = CONSTANTS;
 
 // Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
@@ -75,12 +75,12 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
 
         if (!outEdge) return;
 
-        // Only add VALUE_CHANGED property if not already set (first change only)
+        // Only add HAS_CHANGED property if not already set (first change only)
         // No need to set if unobserved since it's only used during propagation
         // Cache flags to avoid double read in hot path
         const flags = state._flags;
-        if (!(flags & VALUE_CHANGED)) {
-          state._flags = flags | VALUE_CHANGED;
+        if (!(flags & HAS_CHANGED)) {
+          state._flags = flags | HAS_CHANGED;
         }
 
         // Invalidate and propagate
