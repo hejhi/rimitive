@@ -4,7 +4,7 @@
  * Computed values are the heart of the reactive system.
  */
 
-import { CONSTANTS } from './constants';
+import { CONSTANTS, createFlagManager } from './constants';
 import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
@@ -30,10 +30,11 @@ const {
   STATUS_DIRTY,
   STATUS_RECOMPUTING,
   HAS_CHANGED,
-  NEEDS_UPDATE,
-  IS_PROCESSING,
-  STATUS_MASK,
+  MASK_STATUS_AWAITING,
+  MASK_STATUS_PROCESSING,
 } = CONSTANTS;
+
+const { setStatus, hasAnyOf } = createFlagManager();
 
 interface ComputedFactoryContext extends SignalContext {
   graph: DependencyGraph;
@@ -66,7 +67,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     const recompute = (): boolean => {
       // Cache initial flags and transition to recomputing state
       const initialFlags = state._flags;
-      state._flags = (initialFlags & ~STATUS_MASK) | STATUS_RECOMPUTING;
+      state._flags = setStatus(initialFlags, STATUS_RECOMPUTING);
 
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
@@ -89,7 +90,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         } else {
           // Value didn't change - just transition back to clean state
           valueChanged = false;
-          state._flags = (state._flags & ~STATUS_MASK) | STATUS_CLEAN;
+          state._flags = setStatus(state._flags, STATUS_CLEAN);
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
@@ -106,7 +107,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       // Check flags inline to avoid function call overhead
       const flags = state._flags;
       // Skip if already clean or currently in progress
-      if ((flags & NEEDS_UPDATE) && !(flags & IS_PROCESSING)) {
+      if (hasAnyOf(flags, MASK_STATUS_AWAITING) && !hasAnyOf(flags, MASK_STATUS_PROCESSING)) {
         checkStale(state);
       }
     }

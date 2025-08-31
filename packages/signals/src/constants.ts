@@ -20,10 +20,10 @@ export const HAS_CHANGED    = 1 << 5; // Value changed on last recomputation
 export const IS_SCHEDULED   = 1 << 6; // Node is in the work queue
 
 // Status masks for efficient checking
-export const STATUS_MASK = STATUS_INVALIDATED | STATUS_DIRTY | STATUS_CHECKING | STATUS_RECOMPUTING | STATUS_DISPOSED;
-export const NEEDS_UPDATE = STATUS_INVALIDATED | STATUS_DIRTY;
-export const IS_PROCESSING = STATUS_CHECKING | STATUS_RECOMPUTING;
-export const SKIP_NODE = STATUS_DISPOSED | IS_PROCESSING;
+export const MASK_STATUS = STATUS_INVALIDATED | STATUS_DIRTY | STATUS_CHECKING | STATUS_RECOMPUTING | STATUS_DISPOSED;
+export const MASK_STATUS_AWAITING = STATUS_INVALIDATED | STATUS_DIRTY;
+export const MASK_STATUS_PROCESSING = STATUS_CHECKING | STATUS_RECOMPUTING;
+export const MASK_STATUS_SKIP_NODE = STATUS_DISPOSED | MASK_STATUS_PROCESSING;
 
 // Re-export as CONSTANTS for backward compatibility
 export const CONSTANTS = {
@@ -35,8 +35,20 @@ export const CONSTANTS = {
   STATUS_DISPOSED,
   HAS_CHANGED,
   IS_SCHEDULED,
-  STATUS_MASK,
-  NEEDS_UPDATE,
-  IS_PROCESSING,
-  SKIP_NODE,
+  MASK_STATUS,
+  MASK_STATUS_AWAITING,
+  MASK_STATUS_PROCESSING,
+  MASK_STATUS_SKIP_NODE,
 };
+
+export function createFlagManager() {
+  const getStatus = (flags: number) => flags & MASK_STATUS;
+  const setStatus = (flags: number, status: number) =>
+    (flags & ~MASK_STATUS) | status;
+  const addProperty = (flags: number, prop: number) => flags | prop;
+  const removeProperty = (flags: number, prop: number) => flags & ~prop;
+
+  const hasAnyOf = (flags: number, flag: number) => !!(flags & flag);
+
+  return { getStatus, setStatus, hasAnyOf, addProperty, removeProperty };
+}
