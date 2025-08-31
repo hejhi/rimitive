@@ -232,10 +232,10 @@ export function createDependencyGraph(): DependencyGraph {
     } while (currentEdge);
   };
 
-  // ALGORITHM: Single-Pass Staleness Check and Update
-  // Similar to Alien's checkDirty, this traverses the dependency graph once
-  // and updates ALL computeds in the chain, including the root node.
-  // This prevents redundant isStale() calls during recomputation.
+  // ALGORITHM: Lazy Staleness Check (like alien-signals checkDirty)
+  // This traverses the dependency graph to determine if the node is stale,
+  // but ONLY updates nodes when necessary to determine staleness.
+  // The target node is always updated if stale.
   // ASSUMES: Caller has already checked that node has DIRTY or INVALIDATED flags
   const checkStale = (node: ToNode): void => {
     const flags = node._flags;
@@ -264,8 +264,7 @@ export function createDependencyGraph(): DependencyGraph {
     node._flags = setStatus(flags, STATUS_CHECKING);
 
     // At this point, we know the node is INVALIDATED (not DIRTY)
-    // Do a modified isStale that updates the chain
-    // Modified isStale logic that updates dependencies during traversal
+    // Check staleness with minimal updates (like alien-signals)
     let stack: Stack<Edge> | undefined;
     let currentNode = node;
     let currentEdge = node._in;
@@ -290,7 +289,7 @@ export function createDependencyGraph(): DependencyGraph {
           continue;
         }
 
-        // If source needs update (DIRTY or INVALIDATED), traverse into it
+        // If source needs update (DIRTY or INVALIDATED), handle it
         if (hasAnyOf(sFlags, MASK_STATUS_AWAITING)) {
           // Prevent cycles - skip if already checking or recomputing
           if (hasAnyOf(sFlags, MASK_STATUS_PROCESSING)) {
@@ -298,6 +297,25 @@ export function createDependencyGraph(): DependencyGraph {
             continue;
           }
 
+          const sourceStatus = getStatus(sFlags);
+          
+          // DIRTY nodes must be updated immediately to determine staleness
+          if (sourceStatus === STATUS_DIRTY) {
+            source._flags = setStatus(sFlags, STATUS_RECOMPUTING);
+            source._recompute();
+            const newFlags = source._flags;
+            source._flags = resetStatus(newFlags);
+            
+            // Check if the update made it stale
+            if (hasAnyOf(newFlags, HAS_CHANGED)) {
+              stale = true;
+              break;
+            }
+            currentEdge = nextEdge;
+            continue;
+          }
+
+          // INVALIDATED nodes - traverse into them to check
           // Transition source to checking state (preserve properties)
           source._flags = setStatus(sFlags, STATUS_CHECKING);
 
@@ -317,28 +335,28 @@ export function createDependencyGraph(): DependencyGraph {
       }
 
       // Done with current node's dependencies
-      // If this isn't the root node and it needs update, recompute it
+      // Only update intermediate nodes if they were DIRTY or found to be stale
       if (currentNode !== node && ('_recompute' in currentNode)) {
         const currentFlags = currentNode._flags;
         const currentState = getStatus(currentFlags);
         
-        // If node was DIRTY or dependencies changed (stale), recompute it
+        // Only recompute if DIRTY or stale dependencies found
         if (currentState === STATUS_DIRTY || stale) {
-          // Single state transition to RECOMPUTING
           currentNode._flags = setStatus(currentFlags, STATUS_RECOMPUTING);
           currentNode._recompute();
-          // After recompute, check if value changed and transition to CLEAN
           const newFlags = currentNode._flags;
           stale = hasAnyOf(newFlags, HAS_CHANGED);
           currentNode._flags = resetStatus(newFlags);
         } else {
-          // Node wasn't stale, just transition to CLEAN
+          // Not stale - just clear the CHECKING state
           currentNode._flags = resetStatus(currentFlags);
+          // Important: don't propagate staleness if this node didn't change
+          stale = false;
         }
       }
       
       // Pop from stack or break
-      if (!stack || stale) break;
+      if (!stack) break;
       
       currentEdge = stack.value;
       currentNode = currentEdge.to;
