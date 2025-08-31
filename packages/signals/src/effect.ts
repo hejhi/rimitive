@@ -62,7 +62,7 @@ export interface EffectDisposer {
 
 const { 
   CLEAN, DIRTY, INVALIDATED, RECOMPUTING, DISPOSED,
-  UPDATE_NEEDED, IN_PROGRESS, STATE_MASK, PROPERTY_MASK
+  UPDATE_NEEDED, IN_PROGRESS, STATE_MASK
 } = CONSTANTS;
 
 interface EffectFactoryContext extends SignalContext {
@@ -105,13 +105,13 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         checkStale(effect);
         // If still INVALIDATED after checkStale, dependencies didn't change
         if ((effect._flags & STATE_MASK) === INVALIDATED) {
-          effect._flags = (effect._flags & PROPERTY_MASK) | CLEAN;
+          effect._flags = (effect._flags & ~STATE_MASK) | CLEAN;
           return;
         }
       }
 
       // Transition to recomputing state
-      effect._flags = (flags & PROPERTY_MASK) | RECOMPUTING;
+      effect._flags = (flags & ~STATE_MASK) | RECOMPUTING;
       effect._inTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;
@@ -131,7 +131,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       } finally {
         ctx.currentConsumer = prevConsumer;
         // Transition back to clean state after execution
-        effect._flags = (effect._flags & PROPERTY_MASK) | CLEAN;
+        effect._flags = (effect._flags & ~STATE_MASK) | CLEAN;
         pruneStale(effect);
       }
     };
@@ -142,7 +142,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       if ((effect._flags & STATE_MASK) === DISPOSED) return;
       
       // Transition to disposed state to prevent re-entrance
-      effect._flags = (effect._flags & PROPERTY_MASK) | DISPOSED;
+      effect._flags = (effect._flags & ~STATE_MASK) | DISPOSED;
 
       // Run cleanup if exists
       const cleanup = effect._cleanup;

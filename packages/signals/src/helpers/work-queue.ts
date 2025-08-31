@@ -2,7 +2,7 @@ import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 import type { SignalContext } from '../context';
 
-const { DISPOSED, SCHEDULED, STATE_MASK, PROPERTY_MASK } = CONSTANTS;
+const { DISPOSED, SCHEDULED, STATE_MASK } = CONSTANTS;
 
 export interface WorkQueue {
   enqueue: (node: ScheduledNode) => void;
@@ -51,7 +51,7 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
     cleanup: (node: T) => void
   ): void => {
     if ((node._flags & STATE_MASK) === DISPOSED) return;
-    node._flags = (node._flags & PROPERTY_MASK) | DISPOSED;
+    node._flags = (node._flags & ~STATE_MASK) | DISPOSED;
     cleanup(node);
   };
 

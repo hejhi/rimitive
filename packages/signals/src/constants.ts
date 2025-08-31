@@ -23,7 +23,6 @@ const enum NodeProps {
 
 // State masks for efficient checking
 const STATE_MASK = NodeState.Invalidated | NodeState.Dirty | NodeState.Checking | NodeState.Recomputing | NodeState.Disposed;
-const PROPERTY_MASK = NodeProps.ValueChanged | NodeProps.Scheduled;
 const UPDATE_NEEDED = NodeState.Invalidated | NodeState.Dirty;
 const IN_PROGRESS = NodeState.Checking | NodeState.Recomputing;
 const SKIP_NODE = NodeState.Disposed | IN_PROGRESS;
@@ -43,7 +42,6 @@ export const CONSTANTS = {
   
   // Masks for efficient operations
   STATE_MASK,
-  PROPERTY_MASK,
   UPDATE_NEEDED,
   IN_PROGRESS,
   SKIP_NODE,

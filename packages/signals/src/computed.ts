@@ -32,7 +32,7 @@ const {
   VALUE_CHANGED,
   UPDATE_NEEDED,
   IN_PROGRESS,
-  PROPERTY_MASK,
+  STATE_MASK,
 } = CONSTANTS;
 
 interface ComputedFactoryContext extends SignalContext {
@@ -66,7 +66,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     const recompute = (): boolean => {
       // Cache initial flags and transition to recomputing state
       const initialFlags = state._flags;
-      state._flags = (initialFlags & PROPERTY_MASK) | RECOMPUTING;
+      state._flags = (initialFlags & ~STATE_MASK) | RECOMPUTING;
 
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
@@ -89,7 +89,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         } else {
           // Value didn't change - just transition back to clean state
           valueChanged = false;
-          state._flags = (state._flags & PROPERTY_MASK) | CLEAN;
+          state._flags = (state._flags & ~STATE_MASK) | CLEAN;
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
