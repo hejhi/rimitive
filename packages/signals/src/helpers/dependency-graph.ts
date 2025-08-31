@@ -25,9 +25,6 @@ const {
   MASK_STATUS_SKIP_NODE,
 } = CONSTANTS;
 
-// Nodes that should be skipped during traversal (disposed or currently processing)
-const ALREADY_HANDLED = MASK_STATUS_SKIP_NODE | STATUS_INVALIDATED;
-
 // Since states are mutually exclusive, we need to check if state is one of these
 // Note: CLEAN is 0, so we need special handling
 
@@ -36,7 +33,12 @@ interface Stack<T> {
   prev: Stack<T> | undefined;
 }
 
-const { getStatus, setStatus, hasAnyOf } = createFlagManager();
+const {
+  getStatus,
+  hasAnyOf,
+  resetStatus,
+  setStatus
+} = createFlagManager();
 
 export interface DependencyGraph {
   // Edge management
@@ -189,7 +191,7 @@ export function createDependencyGraph(): DependencyGraph {
       const targetFlags = target._flags;
 
       // Skip nodes that are disposed, in progress, or already invalidated
-      if (hasAnyOf(targetFlags, ALREADY_HANDLED)) {
+      if (hasAnyOf(targetFlags, MASK_STATUS_SKIP_NODE | STATUS_INVALIDATED)) {
         currentEdge = currentEdge.nextOut;
         continue;
       }
@@ -254,7 +256,7 @@ export function createDependencyGraph(): DependencyGraph {
         node._flags = setStatus(flags, STATUS_RECOMPUTING);
         node._recompute();
       }
-      node._flags = setStatus(node._flags, STATUS_CLEAN);
+      node._flags = resetStatus(node._flags);
       return;
     }
     
@@ -328,10 +330,10 @@ export function createDependencyGraph(): DependencyGraph {
           // After recompute, check if value changed and transition to CLEAN
           const newFlags = currentNode._flags;
           stale = hasAnyOf(newFlags, HAS_CHANGED);
-          currentNode._flags = setStatus(newFlags, STATUS_CLEAN);
+          currentNode._flags = resetStatus(newFlags);
         } else {
           // Node wasn't stale, just transition to CLEAN
-          currentNode._flags = setStatus(currentFlags, STATUS_CLEAN);
+          currentNode._flags = resetStatus(currentFlags);
         }
       }
       
@@ -350,7 +352,7 @@ export function createDependencyGraph(): DependencyGraph {
     }
     
     // Transition root node to clean state (single operation)
-    node._flags = setStatus(node._flags, STATUS_CLEAN);
+    node._flags = resetStatus(node._flags);
   };
 
   return { addEdge, removeEdge, detachAll, pruneStale, checkStale, invalidate };

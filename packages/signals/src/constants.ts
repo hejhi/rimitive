@@ -43,12 +43,19 @@ export const CONSTANTS = {
 
 export function createFlagManager() {
   const getStatus = (flags: number) => flags & MASK_STATUS;
-  const setStatus = (flags: number, status: number) =>
-    (flags & ~MASK_STATUS) | status;
   const addProperty = (flags: number, prop: number) => flags | prop;
   const removeProperty = (flags: number, prop: number) => flags & ~prop;
-
   const hasAnyOf = (flags: number, flag: number) => !!(flags & flag);
 
-  return { getStatus, setStatus, hasAnyOf, addProperty, removeProperty };
+  const resetStatus = (flags: number) => removeProperty(flags, MASK_STATUS); // STATUS_CLEAN is 0, so just clear status bits
+  const setStatus = (flags: number, status: number) => addProperty(resetStatus(flags), status);
+
+  return {
+    getStatus,
+    setStatus,
+    hasAnyOf,
+    addProperty,
+    removeProperty,
+    resetStatus,
+  };
 }
