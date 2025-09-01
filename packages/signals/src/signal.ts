@@ -17,7 +17,7 @@ import type { ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
-import type { WorkQueue } from './helpers/work-queue';
+import type { NodeScheduler } from './helpers/node-scheduler';
 import { CONSTANTS } from './constants';
 
 const { HAS_CHANGED } = CONSTANTS;
@@ -39,13 +39,13 @@ interface SignalState<T> extends ProducerNode {
 
 interface SignalFactoryContext extends SignalContext {
   graph: DependencyGraph;
-  workQueue: WorkQueue;
+  nodeScheduler: NodeScheduler;
 }
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
     graph: { addEdge, invalidate, checkStale },
-    workQueue: { enqueue, flush },
+    nodeScheduler: { enqueue, flush },
   } = ctx;
   
   // CLOSURE PATTERN: Create signal with closure-captured state for better V8 optimization

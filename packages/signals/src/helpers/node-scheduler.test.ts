@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createWorkQueue } from './work-queue';
+import { createNodeScheduler } from './node-scheduler';
 import { createContext, type SignalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
 const { STATUS_DISPOSED } = CONSTANTS;
 
-describe('WorkQueue', () => {
+describe('NodeScheduler', () => {
   // Helper to count nodes in queue
   const getQueueSize = (ctx: SignalContext): number => {
     let count = 0;
@@ -19,7 +19,7 @@ describe('WorkQueue', () => {
   };
   it('should enqueue nodes', () => {
     const ctx = createContext();
-    const helpers = createWorkQueue(ctx);
+    const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -37,7 +37,7 @@ describe('WorkQueue', () => {
 
   it('should not enqueue already scheduled nodes', () => {
     const ctx = createContext();
-    const helpers = createWorkQueue(ctx);
+    const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -60,7 +60,7 @@ describe('WorkQueue', () => {
 
   it('should dispose node only once', () => {
     const ctx = createContext();
-    const helpers = createWorkQueue(ctx);
+    const helpers = createNodeScheduler(ctx);
     
     const cleanupFn = vi.fn();
     const node: ScheduledNode = {
@@ -85,7 +85,7 @@ describe('WorkQueue', () => {
 
   it('should flush all scheduled nodes in FIFO order', () => {
     const ctx = createContext();
-    const helpers = createWorkQueue(ctx);
+    const helpers = createNodeScheduler(ctx);
     
     const flush1 = vi.fn();
     const flush2 = vi.fn();
@@ -140,7 +140,7 @@ describe('WorkQueue', () => {
 
   it('should handle empty flush', () => {
     const ctx = createContext();
-    const helpers = createWorkQueue(ctx);
+    const helpers = createNodeScheduler(ctx);
     
     // Flush with no nodes queued - should not throw
     expect(() => helpers.flush(() => true)).not.toThrow();
@@ -152,7 +152,7 @@ describe('WorkQueue', () => {
 
   it('should clear _nextScheduled flag during flush', () => {
     const ctx = createContext();
-    const helpers = createWorkQueue(ctx);
+    const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',

@@ -6,7 +6,7 @@ import type { EffectDisposer } from './effect';
 import type { ComputedFunction } from './computed';
 import type { ConsumerNode } from './types';
 import { createContext } from './context';
-import { createWorkQueue } from './helpers/work-queue';
+import { createNodeScheduler } from './helpers/node-scheduler';
 import { createDependencyGraph } from './helpers/dependency-graph';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
@@ -19,10 +19,10 @@ export function createTestInstance() {
   // Create extended context for testing
   const base = createContext();
   const graph = createDependencyGraph();
-  const workQueue = createWorkQueue(base);
+  const nodeScheduler = createNodeScheduler(base);
   const ctx = {
     ...base,
-    workQueue,
+    nodeScheduler,
     graph,
   };
   
@@ -79,8 +79,8 @@ export function createTestInstance() {
       ctx.batchDepth = 0;
     },
     activeContext: ctx,
-    // Export work queue for test access
-    workQueue: ctx.workQueue,
+    // Export node scheduler for test access
+    nodeScheduler: ctx.nodeScheduler,
   };
 }
 

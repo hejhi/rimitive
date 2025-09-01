@@ -1,6 +1,6 @@
 import { createContext } from './context';
 import { createDependencyGraph } from './helpers/dependency-graph';
-import { createWorkQueue } from './helpers/work-queue';
+import { createNodeScheduler } from './helpers/node-scheduler';
 
 /**
  * Creates the default extended context with all required services.
@@ -9,11 +9,11 @@ import { createWorkQueue } from './helpers/work-queue';
 export function createDefaultContext() {
   const baseCtx = createContext();
   const graph = createDependencyGraph();
-  const workQueue = createWorkQueue(baseCtx);
+  const nodeScheduler = createNodeScheduler(baseCtx);
   
   return {
     ...baseCtx,
     graph,
-    workQueue,
+    nodeScheduler,
   };
 }

@@ -13,7 +13,7 @@ const {
   STATUS_RECOMPUTING,
 } = CONSTANTS;
 
-export interface WorkQueue {
+export interface NodeScheduler {
   enqueue: (node: ScheduledNode) => void;
   dispose: <T extends ScheduledNode>(
     node: T,
@@ -37,7 +37,7 @@ const { hasAnyOf, setStatus, getStatus, addProperty, removeProperty } = createFl
  * - Lower memory and fewer branches
  * - Preserves effect ordering for predictable behavior
  */
-export function createWorkQueue(ctx: SignalContext): WorkQueue {
+export function createNodeScheduler(ctx: SignalContext): NodeScheduler {
 
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {

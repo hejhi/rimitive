@@ -7,7 +7,7 @@ import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createContext } from './context';
-import { createWorkQueue } from './helpers/work-queue';
+import { createNodeScheduler } from './helpers/node-scheduler';
 import { createDependencyGraph } from './helpers/dependency-graph';
 
 describe('createSignalAPI', () => {
@@ -51,13 +51,13 @@ describe('createSignalAPI', () => {
     const graph = createDependencyGraph();
     const customCtx = {
       ...baseCtx,
-      workQueue: (() => {
-        const queue = createWorkQueue(baseCtx);
+      nodeScheduler: (() => {
+        const scheduler = createNodeScheduler(baseCtx);
         return {
-          ...queue,
+          ...scheduler,
           flush: () => {
             flushCalled = true;
-            queue.flush(graph.checkStale);
+            scheduler.flush(graph.checkStale);
           }
         };
       })(),
@@ -92,8 +92,8 @@ describe('createSignalAPI', () => {
     const baseCtx = createContext();
     const customCtx = {
       ...baseCtx,
-      workQueue: (() => {
-        const queue = createWorkQueue(baseCtx);
+      nodeScheduler: (() => {
+        const queue = createNodeScheduler(baseCtx);
         const originalEnqueue = queue.enqueue;
         queue.enqueue = (node) => {
           enqueueCount++;
