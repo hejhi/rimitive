@@ -66,8 +66,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     // Create recompute that captures state in closure
     const recompute = (): boolean => {
       // Cache initial flags and transition to recomputing state
-      const initialFlags = state._flags;
-      state._flags = setStatus(initialFlags, STATUS_RECOMPUTING);
+      state._flags = setStatus(state._flags, STATUS_RECOMPUTING);
 
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup

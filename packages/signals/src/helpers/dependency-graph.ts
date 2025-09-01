@@ -283,7 +283,8 @@ export function createDependencyGraph(): DependencyGraph {
         const source = currentEdge.from;
         const sFlags = source._flags;
 
-        // Check if source is a dirty signal (has HAS_CHANGED property)
+        // Check if source is a dirty signal (has HAS_CHANGED property).
+        // This could be either a signal or another kind of producer.
         if (hasAnyOf(sFlags, HAS_CHANGED)) {
           stale = true;
           break;
@@ -291,7 +292,7 @@ export function createDependencyGraph(): DependencyGraph {
 
         const nextEdge = currentEdge.nextIn;
 
-        // Inline isDerived check - check if source has _recompute method
+        // If no recompute, the dependency is a signal, so we can move on to the next dependency.
         if (!('_recompute' in source)) {
           currentEdge = nextEdge;
           continue;
