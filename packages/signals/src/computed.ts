@@ -64,6 +64,7 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       ctx.currentConsumer = state;
 
       let valueChanged = false;
+
       try {
         const oldValue = state.value;
         const newValue = compute();
@@ -83,7 +84,6 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
     };
 
     // Single-pass update using checkStale
-    // checkStale handles all flag checking internally
     const update = () => checkStale(state);
 
     const computed = (() => {
