@@ -33,7 +33,7 @@ export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
     graphEdges: { addEdge, pruneStale },
-    pullPropagator: { checkStale },
+    pullPropagator: { pullUpdates },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -79,8 +79,8 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
       return valueChanged;
     };
 
-    // Single-pass update using checkStale
-    const update = () => checkStale(state);
+    // Single-pass update using pullUpdates
+    const update = () => pullUpdates(state);
 
     const computed = (() => {
       // Treat computed exactly like a signal for dependency tracking

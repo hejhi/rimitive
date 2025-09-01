@@ -10,7 +10,7 @@ interface Stack<T> {
 }
 
 export interface PushPropagator {
-  invalidate: (
+  pushUpdates: (
     from: Edge | undefined,
     visit: (node: ScheduledNode) => void
   ) => void;
@@ -21,7 +21,7 @@ export function createPushPropagator(
 ): PushPropagator {
   const { hasAnyOf, setStatus } = nodeState;
 
-  const invalidate = (
+  const pushUpdates = (
     from: Edge | undefined,
     visit: (node: ScheduledNode) => void
   ): void => {
@@ -65,5 +65,5 @@ export function createPushPropagator(
     } while (currentEdge);
   };
 
-  return { invalidate };
+  return { pushUpdates };
 }

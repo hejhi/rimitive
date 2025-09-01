@@ -43,7 +43,7 @@ import type { SignalContext } from './context';
 // BatchFactory uses SignalContext which includes all helpers
 export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
   const { flush } = ctx.nodeScheduler;
-  const { checkStale } = ctx.pullPropagator;
+  const { pullUpdates } = ctx.pullPropagator;
 
   // OPTIMIZATION: Immediate propagation strategy like Alien Signals
   // Signal writes now propagate immediately during batch
@@ -61,7 +61,7 @@ export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch'
     } finally {
       // Always decrement and flush effects if outermost batch
       // Only flush queued effects - propagation already happened
-      if (--ctx.batchDepth === 0) flush(checkStale);
+      if (--ctx.batchDepth === 0) flush(pullUpdates);
     }
   };
 

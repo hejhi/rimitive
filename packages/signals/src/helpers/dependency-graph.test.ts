@@ -14,8 +14,8 @@ describe('Dependency Graph Helpers', () => {
     removeEdge: ReturnType<typeof createGraphEdges>['removeEdge'];
     detachAll: ReturnType<typeof createGraphEdges>['detachAll'];
     pruneStale: ReturnType<typeof createGraphEdges>['pruneStale'];
-    invalidate: ReturnType<typeof createPushPropagator>['invalidate'];
-    checkStale: ReturnType<typeof createPullPropagator>['checkStale'];
+    pushUpdates: ReturnType<typeof createPushPropagator>['pushUpdates'];
+    pullUpdates: ReturnType<typeof createPullPropagator>['pullUpdates'];
   };
 
   beforeEach(() => {
@@ -29,8 +29,8 @@ describe('Dependency Graph Helpers', () => {
       removeEdge: graphEdges.removeEdge,
       detachAll: graphEdges.detachAll,
       pruneStale: graphEdges.pruneStale,
-      invalidate: pushPropagator.invalidate,
-      checkStale: pullPropagator.checkStale,
+      pushUpdates: pushPropagator.pushUpdates,
+      pullUpdates: pullPropagator.pullUpdates,
     };
   });
 
@@ -372,7 +372,7 @@ describe('Dependency Graph Helpers', () => {
         }
       };
   
-      walk = helpers.invalidate;
+      walk = helpers.pushUpdates;
     });
   
     function createMockNode(

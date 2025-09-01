@@ -38,8 +38,8 @@ interface SignalState<T> extends ProducerNode {
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
     graphEdges: { addEdge },
-    pushPropagator: { invalidate },
-    pullPropagator: { checkStale },
+    pushPropagator: { pushUpdates },
+    pullPropagator: { pullUpdates },
     nodeScheduler: { enqueue, flush },
   } = ctx;
   
@@ -79,11 +79,11 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         }
 
         // Invalidate and propagate
-        // The invalidate function will skip stale edges automatically
-        invalidate(outEdge, enqueue);
+        // The pushUpdates function will skip stale edges automatically
+        pushUpdates(outEdge, enqueue);
 
         // Batch check and flush
-        if (!ctx.batchDepth) flush(checkStale);
+        if (!ctx.batchDepth) flush(pullUpdates);
         return;
       }
 

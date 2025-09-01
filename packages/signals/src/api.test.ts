@@ -67,7 +67,7 @@ describe('createSignalAPI', () => {
           ...scheduler,
           flush: () => {
             flushCalled = true;
-            scheduler.flush(pullPropagator.checkStale);
+            scheduler.flush(pullPropagator.pullUpdates);
           }
         };
       })(),

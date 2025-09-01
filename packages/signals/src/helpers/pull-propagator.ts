@@ -18,7 +18,7 @@ interface Stack<T> {
 }
 
 export interface PullPropagator {
-  checkStale: (node: ToNode) => void;
+  pullUpdates: (node: ToNode) => void;
 }
 
 export function createPullPropagator(
@@ -26,7 +26,7 @@ export function createPullPropagator(
 ): PullPropagator {
   const { getStatus, hasAnyOf, resetStatus, setStatus, recomputeNode } = nodeState;
 
-  const checkStale = (node: ToNode): void => {
+  const pullUpdates = (node: ToNode): void => {
     const flags = node._flags;
     const status = getStatus(flags);
     const isDerivedNode = '_recompute' in node;
@@ -125,5 +125,5 @@ export function createPullPropagator(
     else node._flags = resetStatus(newFlags);
   };
 
-  return { checkStale };
+  return { pullUpdates };
 }
