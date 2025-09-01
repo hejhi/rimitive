@@ -108,10 +108,6 @@ Lattice is a **composable extension system** for reactive libraries.
 ### @lattice/signals - Performance-Critical State Management
 - Core: `src/signal.ts`, `src/computed.ts`, `src/effect.ts`
 - Algorithms: `src/helpers/` - **O(1) complexity required**
-- **CRITICAL FILES** (benchmark before changing):
-  - `packages/signals/src/helpers/dependency-graph.ts`
-  - `packages/signals/src/helpers/graph-walker.ts`
-  - `packages/signals/src/helpers/work-queue.ts`
 
 ### @lattice/react - React Bindings
 - Lattice hooks: `src/lattice/` (use `useLatticeContext()`)

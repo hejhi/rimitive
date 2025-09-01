@@ -15,9 +15,7 @@
  */
 import type { ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
-import type { NodeScheduler } from './helpers/node-scheduler';
 import { CONSTANTS } from './constants';
 
 const { HAS_CHANGED } = CONSTANTS;
@@ -37,14 +35,11 @@ interface SignalState<T> extends ProducerNode {
   _flags: number;  // Bit field for various node flags
 }
 
-interface SignalFactoryContext extends SignalContext {
-  graph: DependencyGraph;
-  nodeScheduler: NodeScheduler;
-}
-
-export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
+export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
-    graph: { addEdge, invalidate, checkStale },
+    graphEdges: { addEdge },
+    pushPropagator: { invalidate },
+    pullPropagator: { checkStale },
     nodeScheduler: { enqueue, flush },
   } = ctx;
   

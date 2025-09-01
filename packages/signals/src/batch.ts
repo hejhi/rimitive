@@ -36,22 +36,14 @@
  */
 import type { LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
-import type { NodeScheduler } from './helpers/node-scheduler';
-import { DependencyGraph } from './helpers/dependency-graph';
 
 // Removed: Error wrapping adds unnecessary overhead
 // Let non-Error values throw naturally
 
-// BatchFactoryContext only needs NodeScheduler for effect flushing
-// Propagation now happens immediately in signal.ts
-interface BatchFactoryContext extends SignalContext {
-  nodeScheduler: NodeScheduler;
-  graph: DependencyGraph;
-}
-
-export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
+// BatchFactory uses SignalContext which includes all helpers
+export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
   const { flush } = ctx.nodeScheduler;
-  const { checkStale } = ctx.graph;
+  const { checkStale } = ctx.pullPropagator;
 
   // OPTIMIZATION: Immediate propagation strategy like Alien Signals
   // Signal writes now propagate immediately during batch

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createNodeScheduler } from './node-scheduler';
-import { createContext, type SignalContext } from '../context';
+import { createBaseContext, type SignalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
@@ -18,7 +18,7 @@ describe('NodeScheduler', () => {
     return count;
   };
   it('should enqueue nodes', () => {
-    const ctx = createContext();
+    const ctx = createBaseContext();
     const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {
@@ -36,7 +36,7 @@ describe('NodeScheduler', () => {
   });
 
   it('should not enqueue already scheduled nodes', () => {
-    const ctx = createContext();
+    const ctx = createBaseContext();
     const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {
@@ -59,7 +59,7 @@ describe('NodeScheduler', () => {
   });
 
   it('should dispose node only once', () => {
-    const ctx = createContext();
+    const ctx = createBaseContext();
     const helpers = createNodeScheduler(ctx);
     
     const cleanupFn = vi.fn();
@@ -84,7 +84,7 @@ describe('NodeScheduler', () => {
   });
 
   it('should flush all scheduled nodes in FIFO order', () => {
-    const ctx = createContext();
+    const ctx = createBaseContext();
     const helpers = createNodeScheduler(ctx);
     
     const flush1 = vi.fn();
@@ -139,7 +139,7 @@ describe('NodeScheduler', () => {
   });
 
   it('should handle empty flush', () => {
-    const ctx = createContext();
+    const ctx = createBaseContext();
     const helpers = createNodeScheduler(ctx);
     
     // Flush with no nodes queued - should not throw
@@ -151,7 +151,7 @@ describe('NodeScheduler', () => {
   });
 
   it('should clear _nextScheduled flag during flush', () => {
-    const ctx = createContext();
+    const ctx = createBaseContext();
     const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {

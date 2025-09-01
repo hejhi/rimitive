@@ -40,7 +40,6 @@
 import { CONSTANTS, createFlagManager } from './constants';
 import { Disposable, Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 
 export interface EffectInterface extends ScheduledNode, Disposable {
@@ -66,13 +65,9 @@ const {
 
 const { getStatus, setStatus } = createFlagManager();
 
-interface EffectFactoryContext extends SignalContext {
-  graph: DependencyGraph;
-}
-
-export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
+export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    graph: { detachAll, pruneStale },
+    graphEdges: { detachAll, pruneStale },
   } = ctx;
   
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization

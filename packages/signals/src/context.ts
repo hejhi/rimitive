@@ -1,4 +1,9 @@
 import { ConsumerNode, ScheduledNode } from "./types";
+import type { GraphEdges } from "./helpers/graph-edges";
+import type { NodeState } from "./helpers/node-state";
+import type { PushPropagator } from "./helpers/push-propagator";
+import type { PullPropagator } from "./helpers/pull-propagator";
+import type { NodeScheduler } from "./helpers/node-scheduler";
 
 /**
  * ALGORITHM: Context-Based State Isolation
@@ -31,16 +36,24 @@ export interface SignalContext {
   // Uses _nextScheduled field on nodes to form the list (no allocations)
   queueHead: ScheduledNode | undefined;
   queueTail: ScheduledNode | undefined;
+  
+  // Composable helpers for graph operations
+  nodeState: NodeState;
+  graphEdges: GraphEdges;
+  pushPropagator: PushPropagator;
+  pullPropagator: PullPropagator;
+  nodeScheduler: NodeScheduler;
 }
 
 // PATTERN: Factory Function
 // Creates a new isolated context with default values.
 // Using a factory instead of a class avoids prototype overhead.
-export function createContext(): SignalContext {
+// This is the base context without helpers - use createDefaultContext for a complete context
+export function createBaseContext(): SignalContext {
   return {
     currentConsumer: null,
     batchDepth: 0,
     queueHead: undefined,
     queueTail: undefined,
-  };
+  } as SignalContext; // Cast since helpers will be added by createDefaultContext
 }

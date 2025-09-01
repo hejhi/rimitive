@@ -5,9 +5,7 @@ import type { SignalFunction } from './signal';
 import type { EffectDisposer } from './effect';
 import type { ComputedFunction } from './computed';
 import type { ConsumerNode } from './types';
-import { createContext } from './context';
-import { createNodeScheduler } from './helpers/node-scheduler';
-import { createDependencyGraph } from './helpers/dependency-graph';
+import { createDefaultContext } from './default-context';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
@@ -17,14 +15,7 @@ import { createContext as createLattice } from '@lattice/lattice';
 // Create a test instance
 export function createTestInstance() {
   // Create extended context for testing
-  const base = createContext();
-  const graph = createDependencyGraph();
-  const nodeScheduler = createNodeScheduler(base);
-  const ctx = {
-    ...base,
-    nodeScheduler,
-    graph,
-  };
+  const ctx = createDefaultContext();
   
   // Create API with all core factories
   const api = createLattice(

@@ -6,9 +6,12 @@ import { createComputedFactory, type ComputedInterface } from './computed';
 import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createContext } from './context';
+import { createBaseContext } from './context';
 import { createNodeScheduler } from './helpers/node-scheduler';
-import { createDependencyGraph } from './helpers/dependency-graph';
+import { createGraphEdges } from './helpers/graph-edges';
+import { createNodeState } from './helpers/node-state';
+import { createPushPropagator } from './helpers/push-propagator';
+import { createPullPropagator } from './helpers/pull-propagator';
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
@@ -47,21 +50,27 @@ describe('createSignalAPI', () => {
     let flushCalled = false;
     
     // Create custom context with custom work queue
-    const baseCtx = createContext();
-    const graph = createDependencyGraph();
+    const baseCtx = createBaseContext();
+    const nodeState = createNodeState();
+    const graphEdges = createGraphEdges(nodeState.setStatus);
+    const pushPropagator = createPushPropagator(nodeState);
+    const pullPropagator = createPullPropagator(nodeState);
     const customCtx = {
       ...baseCtx,
+      nodeState,
+      graphEdges,
+      pushPropagator,
+      pullPropagator,
       nodeScheduler: (() => {
         const scheduler = createNodeScheduler(baseCtx);
         return {
           ...scheduler,
           flush: () => {
             flushCalled = true;
-            scheduler.flush(graph.checkStale);
+            scheduler.flush(pullPropagator.checkStale);
           }
         };
       })(),
-      graph,
     };
     
     const api = createSignalAPI({
@@ -89,9 +98,17 @@ describe('createSignalAPI', () => {
     let enqueueCount = 0;
     
     // Create custom context with instrumented work queue
-    const baseCtx = createContext();
+    const baseCtx = createBaseContext();
+    const nodeState = createNodeState();
+    const graphEdges = createGraphEdges(nodeState.setStatus);
+    const pushPropagator = createPushPropagator(nodeState);
+    const pullPropagator = createPullPropagator(nodeState);
     const customCtx = {
       ...baseCtx,
+      nodeState,
+      graphEdges,
+      pushPropagator,
+      pullPropagator,
       nodeScheduler: (() => {
         const queue = createNodeScheduler(baseCtx);
         const originalEnqueue = queue.enqueue;
@@ -101,7 +118,6 @@ describe('createSignalAPI', () => {
         };
         return queue;
       })(),
-      graph: createDependencyGraph(),
     };
     
     const api = createSignalAPI({

@@ -1,15 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createDependencyGraph } from './dependency-graph';
+import { createGraphEdges } from './graph-edges';
+import { createNodeState } from './node-state';
 import type { ConsumerNode, ProducerNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { HAS_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Cleanup Operations', () => {
-  let graph: ReturnType<typeof createDependencyGraph>;
+  let graph: ReturnType<typeof createGraphEdges>;
 
   beforeEach(() => {
-    graph = createDependencyGraph();
+    const nodeState = createNodeState();
+    graph = createGraphEdges(nodeState.setStatus);
   });
 
   const makeProducer = (): ProducerNode => ({

@@ -1,15 +1,37 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createDependencyGraph } from './dependency-graph';
+import { createGraphEdges } from './graph-edges';
+import { createNodeState } from './node-state';
+import { createPushPropagator } from './push-propagator';
+import { createPullPropagator } from './pull-propagator';
 import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { STATUS_DISPOSED, STATUS_CHECKING, STATUS_INVALIDATED, HAS_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
-  let helpers: ReturnType<typeof createDependencyGraph>;
+  let helpers: {
+    addEdge: ReturnType<typeof createGraphEdges>['addEdge'];
+    removeEdge: ReturnType<typeof createGraphEdges>['removeEdge'];
+    detachAll: ReturnType<typeof createGraphEdges>['detachAll'];
+    pruneStale: ReturnType<typeof createGraphEdges>['pruneStale'];
+    invalidate: ReturnType<typeof createPushPropagator>['invalidate'];
+    checkStale: ReturnType<typeof createPullPropagator>['checkStale'];
+  };
 
   beforeEach(() => {
-    helpers = createDependencyGraph();
+    const nodeState = createNodeState();
+    const graphEdges = createGraphEdges(nodeState.setStatus);
+    const pushPropagator = createPushPropagator(nodeState);
+    const pullPropagator = createPullPropagator(nodeState);
+    
+    helpers = {
+      addEdge: graphEdges.addEdge,
+      removeEdge: graphEdges.removeEdge,
+      detachAll: graphEdges.detachAll,
+      pruneStale: graphEdges.pruneStale,
+      invalidate: pushPropagator.invalidate,
+      checkStale: pullPropagator.checkStale,
+    };
   });
 
   describe('link', () => {

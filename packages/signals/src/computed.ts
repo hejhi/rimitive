@@ -7,7 +7,6 @@
 import { CONSTANTS } from './constants';
 import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { DependencyGraph } from './helpers/dependency-graph';
 import type { SignalContext } from './context';
 
 // Single function interface for both read and peek
@@ -28,16 +27,13 @@ const {
   STATUS_DIRTY,
 } = CONSTANTS;
 
-interface ComputedFactoryContext extends SignalContext {
-  graph: DependencyGraph;
-}
-
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
-export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
+export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graph: { addEdge, pruneStale, checkStale },
+    graphEdges: { addEdge, pruneStale },
+    pullPropagator: { checkStale },
   } = ctx;
   
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
