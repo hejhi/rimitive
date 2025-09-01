@@ -235,10 +235,13 @@ export function createDependencyGraph(): DependencyGraph {
   // Helper to recompute a node and return whether it changed
   const recomputeNode = (node: DerivedNode, flags: number): boolean => {
     node._flags = setStatus(flags, STATUS_RECOMPUTING);
-    node._recompute();
-    const newFlags = node._flags;
-    const changed = hasAnyOf(newFlags, HAS_CHANGED);
-    node._flags = resetStatus(newFlags);
+    const changed = node._recompute();
+    // Set HAS_CHANGED flag if the value changed, then reset to CLEAN
+    if (changed) {
+      node._flags = resetStatus(flags) | HAS_CHANGED;
+    } else {
+      node._flags = resetStatus(flags);
+    }
     return changed;
   };
 

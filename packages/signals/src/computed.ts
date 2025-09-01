@@ -26,15 +26,12 @@ interface ComputedState<T> extends DerivedNode {
 }
 
 const {
-  STATUS_CLEAN,
   STATUS_DIRTY,
-  STATUS_RECOMPUTING,
-  HAS_CHANGED,
   MASK_STATUS_AWAITING,
   MASK_STATUS_PROCESSING,
 } = CONSTANTS;
 
-const { setStatus, hasAnyOf } = createFlagManager();
+const { hasAnyOf } = createFlagManager();
 
 interface ComputedFactoryContext extends SignalContext {
   graph: DependencyGraph;
@@ -65,9 +62,8 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     // Create recompute that captures state in closure
     const recompute = (): boolean => {
-      // Cache initial flags and transition to recomputing state
-      state._flags = setStatus(state._flags, STATUS_RECOMPUTING);
-
+      // Note: Flag management is handled by recomputeNode helper
+      
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
       state._inTail = undefined;
@@ -80,16 +76,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         const oldValue = state.value;
         const newValue = compute();
 
-        // Update value and determine final state
+        // Update value and return whether it changed
         if (newValue !== oldValue) {
           state.value = newValue;
           valueChanged = true;
-          // Transition to clean state and add HAS_CHANGED property
-          state._flags = STATUS_CLEAN | HAS_CHANGED;
-        } else {
-          // Value didn't change - just transition back to clean state
-          valueChanged = false;
-          state._flags = setStatus(state._flags, STATUS_CLEAN);
         }
       } finally {
         ctx.currentConsumer = prevConsumer;
