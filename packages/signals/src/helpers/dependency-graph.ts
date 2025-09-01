@@ -232,6 +232,17 @@ export function createDependencyGraph(): DependencyGraph {
     } while (currentEdge);
   };
 
+  // Helper to recompute a node and return whether it changed
+  const recomputeNode = (node: DerivedNode): boolean => {
+    const flags = node._flags;
+    node._flags = setStatus(flags, STATUS_RECOMPUTING);
+    node._recompute();
+    const newFlags = node._flags;
+    const changed = hasAnyOf(newFlags, HAS_CHANGED);
+    node._flags = resetStatus(newFlags);
+    return changed;
+  };
+
   // ALGORITHM: Lazy Staleness Check (like alien-signals checkDirty)
   // This traverses the dependency graph to determine if the node is stale,
   // but ONLY updates nodes when necessary to determine staleness.
@@ -253,10 +264,10 @@ export function createDependencyGraph(): DependencyGraph {
     // For DIRTY nodes, update directly without intermediate state
     if (status === STATUS_DIRTY) {
       if ('_recompute' in node) {
-        node._flags = setStatus(flags, STATUS_RECOMPUTING);
-        node._recompute();
+        recomputeNode(node);
+      } else {
+        node._flags = resetStatus(flags);
       }
-      node._flags = resetStatus(node._flags);
       return;
     }
     
@@ -301,16 +312,10 @@ export function createDependencyGraph(): DependencyGraph {
           
           // DIRTY nodes must be updated immediately to determine staleness
           if (sourceStatus === STATUS_DIRTY) {
-            source._flags = setStatus(sFlags, STATUS_RECOMPUTING);
-            source._recompute();
-            const newFlags = source._flags;
-            source._flags = resetStatus(newFlags);
-            
-            // Check if the update made it stale
-            if (hasAnyOf(newFlags, HAS_CHANGED)) {
-              stale = true;
-              break;
-            }
+            stale = recomputeNode(source);
+
+            if (stale) break;
+
             currentEdge = nextEdge;
             continue;
           }
@@ -342,11 +347,7 @@ export function createDependencyGraph(): DependencyGraph {
         
         // Only recompute if DIRTY or stale dependencies found
         if (currentState === STATUS_DIRTY || stale) {
-          currentNode._flags = setStatus(currentFlags, STATUS_RECOMPUTING);
-          currentNode._recompute();
-          const newFlags = currentNode._flags;
-          stale = hasAnyOf(newFlags, HAS_CHANGED);
-          currentNode._flags = resetStatus(newFlags);
+          stale = recomputeNode(currentNode);
         } else {
           // Not stale - just clear the CHECKING state
           currentNode._flags = resetStatus(currentFlags);
@@ -365,12 +366,11 @@ export function createDependencyGraph(): DependencyGraph {
 
     // If stale, recompute the root node
     if (stale && ('_recompute' in node)) {
-      node._flags = setStatus(node._flags, STATUS_RECOMPUTING);
-      node._recompute();
+      recomputeNode(node);
+    } else {
+      // Transition root node to clean state (single operation)
+      node._flags = resetStatus(node._flags);
     }
-    
-    // Transition root node to clean state (single operation)
-    node._flags = resetStatus(node._flags);
   };
 
   return { addEdge, removeEdge, detachAll, pruneStale, checkStale, invalidate };
