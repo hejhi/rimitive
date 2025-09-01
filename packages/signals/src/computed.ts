@@ -4,7 +4,7 @@
  * Computed values are the heart of the reactive system.
  */
 
-import { CONSTANTS, createFlagManager } from './constants';
+import { CONSTANTS } from './constants';
 import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { DependencyGraph } from './helpers/dependency-graph';
@@ -21,17 +21,12 @@ export interface ComputedFunction<T = unknown> extends DerivedNode {
 interface ComputedState<T> extends DerivedNode {
   __type: 'computed';
   _recompute(): boolean; // Update the computed value when dependencies change
-  _callback: () => T; // User's computation function
   value: T | undefined; // Cached computed value
 }
 
 const {
   STATUS_DIRTY,
-  MASK_STATUS_AWAITING,
-  MASK_STATUS_PROCESSING,
 } = CONSTANTS;
-
-const { hasAnyOf } = createFlagManager();
 
 interface ComputedFactoryContext extends SignalContext {
   graph: DependencyGraph;
@@ -57,13 +52,10 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
       _flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
       _recompute: null as unknown as () => boolean,
-      _callback: compute,
     };
 
     // Create recompute that captures state in closure
     const recompute = (): boolean => {
-      // Note: Flag management is handled by recomputeNode helper
-      
       // Reset tail marker to start fresh tracking (like alien-signals startTracking)
       // This allows new dependencies to be established while keeping old edges for cleanup
       state._inTail = undefined;
@@ -85,21 +77,14 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
         ctx.currentConsumer = prevConsumer;
         // Only prune if we have edges to prune
         // Unobserved computeds have no edges, so skip the pruning
-        // Call pruneStale to remove stale edges
         if (state._in) pruneStale(state);
       }
       return valueChanged;
     };
 
-    const update = () => {
-      // Single-pass update using checkStale
-      // Check flags inline to avoid function call overhead
-      const flags = state._flags;
-      // Skip if already clean or currently in progress
-      if (hasAnyOf(flags, MASK_STATUS_AWAITING) && !hasAnyOf(flags, MASK_STATUS_PROCESSING)) {
-        checkStale(state);
-      }
-    }
+    // Single-pass update using checkStale
+    // checkStale handles all flag checking internally
+    const update = () => checkStale(state);
 
     const computed = (() => {
       // Treat computed exactly like a signal for dependency tracking
@@ -117,17 +102,15 @@ export function createComputedFactory(ctx: ComputedFactoryContext): LatticeExten
 
     computed.peek = () => {
       // Non-tracking Read
-      // Same as read but doesn't register dependencies
-      if (!state._out) {
-        const prevConsumer = ctx.currentConsumer;
-        ctx.currentConsumer = null; // Prevent ALL other dependency tracking
+      // Always prevent dependency tracking for peek
+      const prevConsumer = ctx.currentConsumer;
+      ctx.currentConsumer = null; // Prevent ALL dependency tracking
 
-        try {
-          update();
-        } finally {
-          ctx.currentConsumer = prevConsumer; // Restore back to previous state
-        }
-      } else update(); // Observed computed - normal peek behavior
+      try {
+        update();
+      } finally {
+        ctx.currentConsumer = prevConsumer; // Restore back to previous state
+      }
 
       return state.value!;
     };

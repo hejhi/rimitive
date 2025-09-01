@@ -45,7 +45,6 @@ import type { SignalContext } from './context';
 
 export interface EffectInterface extends ScheduledNode, Disposable {
   __type: 'effect';
-  _callback(): void | (() => void);
   dispose(): void;
   subscribe?: (listener: () => void) => () => void;
   _cleanup: (() => void) | undefined; // Cleanup from previous run
@@ -89,7 +88,6 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
       _in: undefined as Edge | undefined,
       _inTail: undefined as Edge | undefined,
       _nextScheduled: undefined as ScheduledNode | undefined,
-      _callback: fn,
       _cleanup: undefined as (() => void) | undefined,
       // These will be set below
       dispose: null as unknown as () => void,
@@ -138,7 +136,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
         }
 
         // Main effect execution and store new cleanup
-        const newCleanup = effect._callback();
+        const newCleanup = fn();
         if (newCleanup) effect._cleanup = newCleanup;
       } finally {
         ctx.currentConsumer = prevConsumer;
