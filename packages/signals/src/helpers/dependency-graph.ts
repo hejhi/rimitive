@@ -1,7 +1,7 @@
 /**
  * ALGORITHM: Bidirectional Dependency Graph Management
  * 
- * This module implements the core graph algorithms that power the reactive system.
+ * This module composes the core graph algorithms that power the reactive system.
  * The key insight is using a bidirectional graph with intrusive linked lists:
  * 
  * INSPIRATION:
@@ -10,35 +10,11 @@
  * - V8's inline caches (edge caching)
  * - Database query planners (dependency analysis)
  */
-import { CONSTANTS, createFlagManager } from '../constants';
-import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, ScheduledNode, DerivedNode } from '../types';
-
-const {
-  STATUS_CLEAN,
-  STATUS_INVALIDATED,
-  STATUS_DIRTY,
-  STATUS_CHECKING,
-  STATUS_RECOMPUTING,
-  HAS_CHANGED,
-  MASK_STATUS_AWAITING,
-  MASK_STATUS_PROCESSING,
-  MASK_STATUS_SKIP_NODE,
-} = CONSTANTS;
-
-// Since states are mutually exclusive, we need to check if state is one of these
-// Note: CLEAN is 0, so we need special handling
-
-interface Stack<T> {
-  value: T;
-  prev: Stack<T> | undefined;
-}
-
-const {
-  getStatus,
-  hasAnyOf,
-  resetStatus,
-  setStatus
-} = createFlagManager();
+import type { ProducerNode, ConsumerNode, Edge, ToNode, ScheduledNode } from '../types';
+import { createGraphEdges, type GraphEdges } from './graph-edges';
+import { createNodeState, type NodeState } from './node-state';
+import { createPushPropagator, type PushPropagator } from './push-propagator';
+import { createPullPropagator, type PullPropagator } from './pull-propagator';
 
 export interface DependencyGraph {
   // Edge management
@@ -63,315 +39,23 @@ export interface DependencyGraph {
 }
 
 export function createDependencyGraph(): DependencyGraph {
-  const addEdge = (
-    producer: FromNode,
-    consumer: ToNode
-  ): void => {
-    const tail = consumer._inTail;
+  // Create node state manager
+  const nodeState: NodeState = createNodeState();
+  
+  // Create graph edges with node state dependency
+  const graphEdges: GraphEdges = createGraphEdges(nodeState.setStatus);
+  
+  // Create propagators with their dependencies
+  const pushPropagator: PushPropagator = createPushPropagator(nodeState);
+  const pullPropagator: PullPropagator = createPullPropagator(nodeState);
 
-    // Fast path: check if tail is the producer we want
-    // Edge already at tail, skipping
-    if (tail && tail.from === producer) return;
-
-    // Check the next candidate (either after tail or first edge)
-    const candidate = tail ? tail.nextIn : consumer._in;
-
-    if (candidate && candidate.from === producer) {
-      // Edge found as candidate, moving to tail
-      consumer._inTail = candidate;
-      return;
-    }
-    
-    // Cache previous out tail
-    const prevOut = producer._outTail;
-
-    const newEdge = {
-      from: producer,
-      to: consumer,
-      prevIn: tail,
-      prevOut,
-      nextIn: candidate,
-      nextOut: undefined,
-    };
-
-    // Wire up consumer's input list
-    if (candidate) candidate.prevIn = newEdge;
-    if (tail) tail.nextIn = newEdge;
-    else consumer._in = newEdge;
-
-    consumer._inTail = newEdge;
-
-    // Wire up producer's output list
-    if (prevOut) prevOut.nextOut = newEdge;
-    else producer._out = newEdge;
-
-    producer._outTail = newEdge;    
+  return {
+    // Delegate to composed helpers
+    addEdge: graphEdges.addEdge,
+    removeEdge: graphEdges.removeEdge,
+    detachAll: graphEdges.detachAll,
+    pruneStale: graphEdges.pruneStale,
+    checkStale: pullPropagator.checkStale,
+    invalidate: pushPropagator.invalidate,
   };
-
-  // Full Bidirectional Edge Removal
-  // Removes an edge from both producer and consumer lists in O(1)
-  // Returns the next edge in consumer's list for easy iteration
-  const removeEdge = (edge: Edge): Edge | undefined => {
-    const { from, to, prevIn, nextIn, prevOut, nextOut } = edge;
-
-    // Update consumer's input list
-    if (nextIn) nextIn.prevIn = prevIn;
-    else to._inTail = prevIn;
-
-    if (prevIn) prevIn.nextIn = nextIn;
-    else to._in = nextIn;
-
-    // Update producer's output list
-    if (nextOut) nextOut.prevOut = prevOut;
-    else from._outTail = prevOut;
-
-    if (prevOut) prevOut.nextOut = nextOut;
-    else {
-      from._out = nextOut;
-      // When a computed becomes completely unobserved, transition to DIRTY state
-      if (!nextOut && isDerived(from)) from._flags = setStatus(from._flags, STATUS_DIRTY);
-    }
-
-    return nextIn;
-  };
-
-  // Helper: Check if source is a computed
-  const isDerived = (source: FromNode | ToNode): source is DerivedNode => '_recompute' in source;
-
-  // ALGORITHM: Complete Edge Removal  
-  // Used during disposal to remove all dependency edges at once
-  const detachAll = (consumer: ConsumerNode): void => {
-    let edge = consumer._in;
-    
-    // Complete removal - remove all edges
-    if (edge) {
-      do {
-        edge = removeEdge(edge);
-      } while (edge);
-    }
-    
-    consumer._in = undefined;
-    consumer._inTail = undefined;
-  };
-
-  // ALGORITHM: Bidirectional Stale Edge Removal (alien-signals approach)
-  // After a computed/effect runs, remove all edges after the tail marker.
-  // The tail was set at the start of the run, and all valid dependencies
-  // were moved to/before the tail during the run.
-  // Unlike the previous implementation, this completely removes stale edges
-  // from BOTH the consumer's input list AND the producer's output list.
-  const pruneStale = (consumer: ConsumerNode): void => {
-    const tail = consumer._inTail;
-    
-    // If no tail, all edges should be removed
-    let toRemove = tail ? tail.nextIn : consumer._in;
-    
-    // Remove all stale edges from both consumer and producer sides
-    if (toRemove) {
-      do {
-        toRemove = removeEdge(toRemove);
-      } while (toRemove);
-    }
-
-    // Update tail to point to the last valid edge
-    if (tail) tail.nextIn = undefined;
-  };
-
-  const invalidate = (
-      from: Edge | undefined,
-      visit: (node: ScheduledNode) => void
-  ): void => {
-    if (!from) return;
-    
-    let stack: Stack<Edge> | undefined;
-    let currentEdge: Edge | undefined = from;
-    
-    do {
-      const target = currentEdge.to;
-      const targetFlags = target._flags;
-
-      // Skip nodes that are disposed, in progress, or already invalidated
-      if (hasAnyOf(targetFlags, MASK_STATUS_SKIP_NODE | STATUS_INVALIDATED)) {
-        currentEdge = currentEdge.nextOut;
-        continue;
-      }
-
-      // Transition to invalidated state (preserve properties)
-      target._flags = setStatus(targetFlags, STATUS_INVALIDATED);
-
-      // Handle producer nodes (have outputs)
-      if ('_out' in target) {
-        const firstChild = target._out;
-        // Check if producer has outputs
-
-        // Only traverse into observed computeds to avoid invalidating unneeded subgraphs
-        // Skip unobserved computeds but still invalidate them
-        if (firstChild && target._out) {
-          const nextSibling = currentEdge.nextOut;
-
-          // Push sibling to stack if exists
-          if (nextSibling) stack = { value: nextSibling, prev: stack };
-
-          // Continue with first child
-          currentEdge = firstChild;
-          continue;
-        }
-        // Effect node - schedule it
-      } else if ('_nextScheduled' in target) visit(target);
-
-      // Move to next sibling or pop from stack
-      currentEdge = currentEdge.nextOut;
-
-      if (currentEdge || !stack) continue;
-
-      // Backtrack through multiple completed levels when unwinding the stack
-      while (!currentEdge && stack) {
-        currentEdge = stack.value;
-        stack = stack.prev;
-      }
-    } while (currentEdge);
-  };
-
-  // Helper to recompute a node and return whether it changed
-  const recomputeNode = (node: DerivedNode, flags: number): boolean => {
-    node._flags = setStatus(flags, STATUS_RECOMPUTING);
-    const changed = node._recompute();
-    // Set HAS_CHANGED flag if the value changed, then reset to CLEAN
-    if (changed) {
-      node._flags = resetStatus(flags) | HAS_CHANGED;
-    } else {
-      node._flags = resetStatus(flags);
-    }
-    return changed;
-  };
-
-  // ALGORITHM: Lazy Staleness Check (like alien-signals checkDirty)
-  // This traverses the dependency graph to determine if the node is stale,
-  // but ONLY updates nodes when necessary to determine staleness.
-  // The target node is always updated if stale.
-  // ASSUMES: Caller has already checked that node has DIRTY or INVALIDATED flags
-  const checkStale = (node: ToNode): void => {
-    const flags = node._flags;
-    const status = getStatus(flags);
-    const isDerivedNode = '_recompute' in node;
-    
-    // Early exit if already clean or in progress
-    // Since CLEAN is 0, check it separately, then check if in progress
-    if (
-      status === STATUS_CLEAN ||
-      status === STATUS_CHECKING ||
-      status === STATUS_RECOMPUTING
-    )
-      return;
-    
-    // For DIRTY nodes, update directly without intermediate state
-    if (status === STATUS_DIRTY) {
-      if (isDerivedNode) recomputeNode(node, flags);
-      else node._flags = resetStatus(flags);
-      return;
-    }
-    
-    // For INVALIDATED nodes, transition to checking state
-    node._flags = setStatus(flags, STATUS_CHECKING);
-
-    // At this point, we know the node is INVALIDATED (not DIRTY)
-    // Check staleness with minimal updates (like alien-signals)
-    let stack: Stack<Edge> | undefined;
-    let currentNode = node;
-    let currentEdge = node._in;
-    let stale = false;
-
-    for (;;) {
-      while (currentEdge) {
-        const source = currentEdge.from;
-        const sFlags = source._flags;
-
-        // Check if source is a dirty signal (has HAS_CHANGED property).
-        // This could be either a signal or another kind of producer.
-        if (hasAnyOf(sFlags, HAS_CHANGED)) {
-          stale = true;
-          break;
-        }
-
-        const nextEdge = currentEdge.nextIn;
-
-        // If no recompute, the dependency is a signal, so we can move on to the next dependency.
-        if (!('_recompute' in source)) {
-          currentEdge = nextEdge;
-          continue;
-        }
-
-        // If source needs update (DIRTY or INVALIDATED), handle it
-        if (hasAnyOf(sFlags, MASK_STATUS_AWAITING)) {
-          // Prevent cycles - skip if already checking or recomputing
-          if (hasAnyOf(sFlags, MASK_STATUS_PROCESSING)) {
-            currentEdge = nextEdge;
-            continue;
-          }
-
-          const sourceStatus = getStatus(sFlags);
-          
-          // DIRTY nodes must be updated immediately to determine staleness
-          if (sourceStatus === STATUS_DIRTY) {
-            stale = recomputeNode(source, sFlags);
-
-            if (stale) break;
-
-            currentEdge = nextEdge;
-            continue;
-          }
-
-          // INVALIDATED nodes - traverse into them to check
-          // Transition source to checking state (preserve properties)
-          source._flags = setStatus(sFlags, STATUS_CHECKING);
-
-          // Store current position if we have siblings to process
-          if (nextEdge) {
-            if (!stack) stack = { value: nextEdge, prev: undefined };
-            else stack = { value: nextEdge, prev: stack };
-          }
-
-          // Traverse into the source to check its dependencies
-          currentNode = source;
-          currentEdge = source._in;
-          continue;
-        }
-
-        currentEdge = nextEdge;
-      }
-
-      // Done with current node's dependencies
-      // Only update intermediate nodes if they were DIRTY or found to be stale
-      if (currentNode !== node && ('_recompute' in currentNode)) {
-        const currentFlags = currentNode._flags;
-        const currentState = getStatus(currentFlags);
-        
-        // Only recompute if DIRTY or stale dependencies found
-        if (currentState === STATUS_DIRTY || stale) {
-          stale = recomputeNode(currentNode, currentFlags);
-        } else {
-          // Not stale - just clear the CHECKING state
-          currentNode._flags = resetStatus(currentFlags);
-          // Important: don't propagate staleness if this node didn't change
-          stale = false;
-        }
-      }
-      
-      // Pop from stack or break
-      if (!stack) break;
-      
-      currentEdge = stack.value;
-      currentNode = currentEdge.to;
-      stack = stack.prev;
-    }
-
-    // Read them again
-    const newFlags = node._flags;
-
-    // If stale, recompute the root node
-    if (stale && isDerivedNode) recomputeNode(node, newFlags);
-    else node._flags = resetStatus(newFlags);
-  };
-
-  return { addEdge, removeEdge, detachAll, pruneStale, checkStale, invalidate };
 }

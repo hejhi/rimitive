@@ -38,7 +38,6 @@ const { hasAnyOf, setStatus, getStatus, addProperty, removeProperty } = createFl
  * - Preserves effect ordering for predictable behavior
  */
 export function createNodeScheduler(ctx: SignalContext): NodeScheduler {
-
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
     // Cache flags for better branch prediction
