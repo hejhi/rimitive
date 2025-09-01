@@ -61,14 +61,10 @@ export interface EffectDisposer {
 const {
   STATUS_CLEAN,
   STATUS_DIRTY,
-  STATUS_INVALIDATED,
-  STATUS_RECOMPUTING,
   STATUS_DISPOSED,
-  MASK_STATUS_AWAITING,
-  MASK_STATUS_PROCESSING,
 } = CONSTANTS;
 
-const { getStatus, hasAnyOf, setStatus } = createFlagManager();
+const { getStatus, setStatus } = createFlagManager();
 
 interface EffectFactoryContext extends SignalContext {
   graph: DependencyGraph;
@@ -76,7 +72,7 @@ interface EffectFactoryContext extends SignalContext {
 
 export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
-    graph: { detachAll, pruneStale, checkStale },
+    graph: { detachAll, pruneStale },
   } = ctx;
   
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
@@ -95,33 +91,7 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     };
 
     // Flush method using closure
-    const flushEffect = (): void => {
-      const flags = effect._flags;
-      const status = getStatus(flags);
-
-      // Fast exit: disposed or already in progress
-      // Fast exit: not marked for update
-      if (
-        status === STATUS_DISPOSED ||
-        hasAnyOf(flags, MASK_STATUS_PROCESSING) ||
-        !hasAnyOf(flags, MASK_STATUS_AWAITING)
-      )
-        return;
-
-      // Check if actually needs to run
-      // DIRTY means definitely stale, INVALIDATED means maybe stale
-      if (status !== STATUS_DIRTY) {
-        // Use checkStale to update dependencies and determine if effect should run
-        checkStale(effect);
-        // If still INVALIDATED after checkStale, dependencies didn't change
-        if (getStatus(effect._flags) === STATUS_INVALIDATED) {
-          effect._flags = setStatus(effect._flags, STATUS_CLEAN);
-          return;
-        }
-      }
-
-      // Transition to recomputing state
-      effect._flags = setStatus(flags, STATUS_RECOMPUTING);
+    const flush = (): void => {
       effect._inTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;
@@ -166,11 +136,11 @@ export function createEffectFactory(ctx: EffectFactoryContext): LatticeExtension
     };
 
     // Set methods
-    effect._flush = flushEffect;
+    effect._flush = flush;
     effect.dispose = dispose;
 
     // Effects run immediately when created to establish initial state and dependencies.
-    flushEffect();
+    flush();
 
     return dispose;
   }

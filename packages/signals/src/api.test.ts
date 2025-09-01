@@ -48,6 +48,7 @@ describe('createSignalAPI', () => {
     
     // Create custom context with custom work queue
     const baseCtx = createContext();
+    const graph = createDependencyGraph();
     const customCtx = {
       ...baseCtx,
       workQueue: (() => {
@@ -56,11 +57,11 @@ describe('createSignalAPI', () => {
           ...queue,
           flush: () => {
             flushCalled = true;
-            queue.flush();
+            queue.flush(graph.checkStale);
           }
         };
       })(),
-      graph: createDependencyGraph(),
+      graph,
     };
     
     const api = createSignalAPI({

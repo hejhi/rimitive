@@ -37,6 +37,7 @@
 import type { LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
 import type { WorkQueue } from './helpers/work-queue';
+import { DependencyGraph } from './helpers/dependency-graph';
 
 // Removed: Error wrapping adds unnecessary overhead
 // Let non-Error values throw naturally
@@ -45,10 +46,12 @@ import type { WorkQueue } from './helpers/work-queue';
 // Propagation now happens immediately in signal.ts
 interface BatchFactoryContext extends SignalContext {
   workQueue: WorkQueue;
+  graph: DependencyGraph;
 }
 
 export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
   const { flush } = ctx.workQueue;
+  const { checkStale } = ctx.graph;
 
   // OPTIMIZATION: Immediate propagation strategy like Alien Signals
   // Signal writes now propagate immediately during batch
@@ -66,7 +69,7 @@ export function createBatchFactory(ctx: BatchFactoryContext): LatticeExtension<'
     } finally {
       // Always decrement and flush effects if outermost batch
       // Only flush queued effects - propagation already happened
-      if (--ctx.batchDepth === 0) flush();
+      if (--ctx.batchDepth === 0) flush(checkStale);
     }
   };
 

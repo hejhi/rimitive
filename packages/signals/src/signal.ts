@@ -44,7 +44,7 @@ interface SignalFactoryContext extends SignalContext {
 
 export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
-    graph: { addEdge, invalidate },
+    graph: { addEdge, invalidate, checkStale },
     workQueue: { enqueue, flush },
   } = ctx;
   
@@ -88,7 +88,7 @@ export function createSignalFactory(ctx: SignalFactoryContext): LatticeExtension
         invalidate(outEdge, enqueue);
 
         // Batch check and flush
-        if (!ctx.batchDepth) flush();
+        if (!ctx.batchDepth) flush(checkStale);
         return;
       }
 

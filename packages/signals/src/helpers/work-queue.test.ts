@@ -93,7 +93,7 @@ describe('WorkQueue', () => {
     
     const node1: ScheduledNode = {
       __type: 'test',
-      _flags: 0,
+      _flags: 2, // STATUS_DIRTY
       _nextScheduled: undefined,
       _flush: flush1,
       _in: undefined,
@@ -103,7 +103,7 @@ describe('WorkQueue', () => {
     
     const node2: ScheduledNode = {
       __type: 'test',
-      _flags: 0,
+      _flags: 2, // STATUS_DIRTY
       _nextScheduled: undefined,
       _flush: flush2,
       _in: undefined,
@@ -113,7 +113,7 @@ describe('WorkQueue', () => {
     
     const node3: ScheduledNode = {
       __type: 'test',
-      _flags: 0,
+      _flags: 2, // STATUS_DIRTY
       _nextScheduled: undefined,
       _flush: flush3,
       _in: undefined,
@@ -126,7 +126,7 @@ describe('WorkQueue', () => {
     helpers.enqueue(node2);
     helpers.enqueue(node3);
     
-    helpers.flush();
+    helpers.flush(() => true);
     
     expect(getQueueSize(ctx)).toBe(0);
     expect(flush1).toHaveBeenCalledTimes(1);
@@ -143,7 +143,7 @@ describe('WorkQueue', () => {
     const helpers = createWorkQueue(ctx);
     
     // Flush with no nodes queued - should not throw
-    expect(() => helpers.flush()).not.toThrow();
+    expect(() => helpers.flush(() => true)).not.toThrow();
     
     // State should remain unchanged
     expect(getQueueSize(ctx)).toBe(0);
@@ -166,6 +166,6 @@ describe('WorkQueue', () => {
     
     helpers.enqueue(node);
     
-    helpers.flush();
+    helpers.flush(() => true);
   });
 });

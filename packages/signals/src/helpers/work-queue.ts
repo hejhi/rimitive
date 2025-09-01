@@ -1,8 +1,17 @@
 import { CONSTANTS, createFlagManager } from '../constants';
-import type { ScheduledNode } from '../types';
+import type { ScheduledNode, ToNode } from '../types';
 import type { SignalContext } from '../context';
 
-const { STATUS_DISPOSED, IS_SCHEDULED } = CONSTANTS;
+const {
+  STATUS_DISPOSED,
+  IS_SCHEDULED,
+  MASK_STATUS_PROCESSING,
+  MASK_STATUS_AWAITING,
+  STATUS_DIRTY,
+  STATUS_INVALIDATED,
+  STATUS_CLEAN,
+  STATUS_RECOMPUTING,
+} = CONSTANTS;
 
 export interface WorkQueue {
   enqueue: (node: ScheduledNode) => void;
@@ -10,7 +19,7 @@ export interface WorkQueue {
     node: T,
     cleanup: (node: T) => void
   ) => void;
-  flush: () => void;
+  flush: (checkStale: (node: ToNode) => void) => void;
 }
 
 const { hasAnyOf, setStatus, getStatus, addProperty, removeProperty } = createFlagManager();
@@ -58,18 +67,43 @@ export function createWorkQueue(ctx: SignalContext): WorkQueue {
   };
 
   // Dequeue all scheduled nodes in FIFO order and execute
-  const flush = (): void => {
+  const flush = (checkStale: (node: ToNode) => void): void => {
     let current = ctx.queueHead;
     if (!current) return;
 
     // Clear the queue first to allow re-entrance scheduling
     ctx.queueHead = ctx.queueTail = undefined;
-    
+
     while (current) {
       const next: ScheduledNode | undefined = current._nextScheduled;
       current._nextScheduled = undefined;
-      current._flags = removeProperty(current._flags, IS_SCHEDULED); // Clear scheduled property
-      current._flush();
+      const nextFlags = removeProperty(current._flags, IS_SCHEDULED);
+      current._flags = nextFlags; // Clear scheduled property
+      const status = getStatus(nextFlags);
+
+      if (
+        status !== STATUS_DISPOSED &&
+        !hasAnyOf(nextFlags, MASK_STATUS_PROCESSING) &&
+        hasAnyOf(nextFlags, MASK_STATUS_AWAITING)
+      ) {
+        if (status !== STATUS_DIRTY) {
+          // Use checkStale to update dependencies and determine if a scheduled node should run
+          checkStale(current);
+
+          const newFlags = current._flags;
+
+          // If still INVALIDATED after checkStale, dependencies didn't change
+          if (getStatus(newFlags) === STATUS_INVALIDATED) {
+            current._flags = setStatus(newFlags, STATUS_CLEAN);
+            continue;
+          }
+        }
+
+        // Transition to recomputing state
+        current._flags = setStatus(nextFlags, STATUS_RECOMPUTING);
+        current._flush();
+      }
+
       current = next;
     }
   };
