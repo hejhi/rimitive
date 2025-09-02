@@ -3,7 +3,6 @@ import { CONSTANTS } from '../constants';
 import { createNodeState } from './node-state';
 
 const { STATUS_DIRTY } = CONSTANTS;
-
 const { setStatus } = createNodeState()
 
 export interface GraphEdges {

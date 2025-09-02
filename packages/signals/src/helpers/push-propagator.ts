@@ -13,19 +13,17 @@ export interface PushPropagator {
   pushUpdates: (from: Edge | undefined) => void;
 }
 
-const nodeState = createNodeState();
+const { hasAnyOf, setStatus } = createNodeState();
 
 export function createPushPropagator(
-  enqueue: (node: ScheduledNode) => void
+  schedule: (node: ScheduledNode) => void
 ): PushPropagator {
-  const { hasAnyOf, setStatus } = nodeState;
-
   const pushUpdates = (from: Edge | undefined): void => {
     if (!from) return;
-    
+
     let stack: Stack<Edge> | undefined;
     let currentEdge: Edge | undefined = from;
-    
+
     do {
       const target = currentEdge.to;
       const targetFlags = target._flags;
@@ -48,7 +46,7 @@ export function createPushPropagator(
           currentEdge = firstChild;
           continue;
         }
-      } else if ('_nextScheduled' in target) enqueue(target);
+      } else if ('_nextScheduled' in target) schedule(target);
 
       currentEdge = currentEdge.nextOut;
 
