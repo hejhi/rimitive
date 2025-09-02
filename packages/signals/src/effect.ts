@@ -38,13 +38,12 @@
  */
 
 import { CONSTANTS, createFlagManager } from './constants';
-import { Disposable, Edge, ScheduledNode } from './types';
+import { Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { SignalContext } from './context';
 
-export interface EffectInterface extends ScheduledNode, Disposable {
+export interface EffectInterface extends ScheduledNode {
   __type: 'effect';
-  dispose(): void;
   subscribe?: (listener: () => void) => () => void;
   _cleanup: (() => void) | undefined; // Cleanup from previous run
 }
@@ -80,8 +79,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       _inTail: undefined as Edge | undefined,
       _nextScheduled: undefined as ScheduledNode | undefined,
       _cleanup: undefined as (() => void) | undefined,
-      // These will be set below
-      dispose: null as unknown as () => void,
+      // This will be set below
       _flush: null as unknown as () => void,
     };
 
@@ -124,9 +122,8 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       });
     };
 
-    // Set methods
+    // Set flush method
     effect._flush = flush;
-    effect.dispose = dispose;
 
     // Effects run immediately when created to establish initial state and dependencies.
     flush();

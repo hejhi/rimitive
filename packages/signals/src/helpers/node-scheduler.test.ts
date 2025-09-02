@@ -29,7 +29,6 @@ describe('NodeScheduler', () => {
       _flush: vi.fn(),
       _in: undefined,
       _inTail: undefined,
-      dispose: () => {},
     };
     
     helpers.enqueue(node);
@@ -48,7 +47,6 @@ describe('NodeScheduler', () => {
       _flush: vi.fn(),
       _in: undefined,
       _inTail: undefined,
-      dispose: () => {},
     };
     
     // Enqueue once
@@ -73,7 +71,6 @@ describe('NodeScheduler', () => {
       _flush: vi.fn(),
       _in: undefined,
       _inTail: undefined,
-      dispose: () => {},
     };
     
     helpers.dispose(node, cleanupFn);
@@ -102,7 +99,6 @@ describe('NodeScheduler', () => {
       _flush: flush1,
       _in: undefined,
       _inTail: undefined,
-      dispose: () => {},
     };
     
     const node2: ScheduledNode = {
@@ -112,7 +108,6 @@ describe('NodeScheduler', () => {
       _flush: flush2,
       _in: undefined,
       _inTail: undefined,
-      dispose: () => {},
     };
     
     const node3: ScheduledNode = {
@@ -122,7 +117,6 @@ describe('NodeScheduler', () => {
       _flush: flush3,
       _in: undefined,
       _inTail: undefined,
-      dispose: () => {},
     };
     
     // Schedule nodes in order
@@ -167,7 +161,6 @@ describe('NodeScheduler', () => {
       _flush: vi.fn(),
       _in: undefined,
       _inTail: undefined,
-      dispose: () => {},
     };
     
     helpers.enqueue(node);

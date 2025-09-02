@@ -34,12 +34,6 @@ export interface Writable<T = unknown> extends Readable<T> {
   (value: T): void;  // Function call with argument for write
 }
 
-// PATTERN: Resource Management
-// Disposable pattern for explicit cleanup of subscriptions/effects
-export interface Disposable {
-  dispose(): void;
-}
-
 // ALGORITHM: Producer-Consumer Pattern
 // The core of the reactivity system uses a bipartite graph with two node types:
 
@@ -67,7 +61,7 @@ export interface DerivedNode extends ProducerNode, ConsumerNode {
 // PATTERN: Deferred Execution Queue
 // ScheduledNode represents consumers that batch their updates.
 // Uses intrusive linked list for zero-allocation scheduling queue.
-export interface ScheduledNode extends ConsumerNode, Disposable {
+export interface ScheduledNode extends ConsumerNode {
   _nextScheduled: ScheduledNode | undefined;  // Next node in scheduling queue (intrusive list)
   _flush(): void;                  // Execute the deferred work
 }

@@ -388,7 +388,6 @@ describe('Dependency Graph Helpers', () => {
       if (isScheduled) {
         node._flush = () => {};
         node._nextScheduled = undefined;
-        node.dispose = () => {};
       }
   
       return node;
