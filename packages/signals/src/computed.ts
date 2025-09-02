@@ -56,37 +56,34 @@ export function createComputedFactory(
       _inTail: undefined, // Don't clear during recompute - preserve for traversal
       _flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
-      _recompute: null as unknown as () => boolean,
-      _notify: () => undefined
-    };
+      _recompute(): boolean {
+        // Reset tail marker to start fresh tracking (like alien-signals startTracking)
+        // This allows new dependencies to be established while keeping old edges for cleanup
+        state._inTail = undefined;
 
-    // Create recompute that captures state in closure
-    const recompute = (): boolean => {
-      // Reset tail marker to start fresh tracking (like alien-signals startTracking)
-      // This allows new dependencies to be established while keeping old edges for cleanup
-      state._inTail = undefined;
+        const prevConsumer = ctx.currentConsumer;
+        ctx.currentConsumer = state;
 
-      const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = state;
+        let valueChanged = false;
 
-      let valueChanged = false;
+        try {
+          const oldValue = state.value;
+          const newValue = compute();
 
-      try {
-        const oldValue = state.value;
-        const newValue = compute();
-
-        // Update value and return whether it changed
-        if (newValue !== oldValue) {
-          state.value = newValue;
-          valueChanged = true;
+          // Update value and return whether it changed
+          if (newValue !== oldValue) {
+            state.value = newValue;
+            valueChanged = true;
+          }
+        } finally {
+          ctx.currentConsumer = prevConsumer;
+          // Only prune if we have edges to prune
+          // Unobserved computeds have no edges, so skip the pruning
+          if (state._in) pruneStale(state);
         }
-      } finally {
-        ctx.currentConsumer = prevConsumer;
-        // Only prune if we have edges to prune
-        // Unobserved computeds have no edges, so skip the pruning
-        if (state._in) pruneStale(state);
-      }
-      return valueChanged;
+        return valueChanged;
+      },
+      _notify: () => undefined
     };
 
     // Single-pass update using pullUpdates
@@ -120,9 +117,6 @@ export function createComputedFactory(
 
       return state.value!;
     };
-
-    // Set internal method
-    state._recompute = recompute;
 
     return computed;
   }
