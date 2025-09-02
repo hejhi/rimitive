@@ -53,7 +53,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   
   // CLOSURE PATTERN: Create signal with closure-captured state for better V8 optimization
   function createSignal<T>(initialValue: T): SignalFunction<T> {
-    // State object captured in closure - no binding needed
+    // State object captured in closure
     const state: SignalState<T> = {
       __type: 'signal',
       value: initialValue,
@@ -82,9 +82,8 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         // No need to set if unobserved since it's only used during propagation
         // Cache flags to avoid double read in hot path
         const flags = state._flags;
-        if (!(flags & HAS_CHANGED)) {
-          state._flags = flags | HAS_CHANGED;
-        }
+
+        if (!(flags & HAS_CHANGED)) state._flags = flags | HAS_CHANGED;
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale edges automatically
