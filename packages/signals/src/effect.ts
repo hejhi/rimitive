@@ -60,14 +60,14 @@ export interface EffectDisposer {
 const {
   STATUS_CLEAN,
   STATUS_DIRTY,
-  STATUS_DISPOSED,
 } = CONSTANTS;
 
-const { getStatus, setStatus } = createFlagManager();
+const { setStatus } = createFlagManager();
 
 export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
   const {
     graphEdges: { detachAll, pruneStale },
+    nodeScheduler: { dispose: disposeNode },
   } = ctx;
   
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
@@ -111,23 +111,17 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
       }
     };
 
-    // Dispose method using closure
+    // Dispose method using closure - delegates flag management to nodeScheduler
     const dispose = (): void => {
-      // Fast exit if already disposed
-      if (getStatus(effect._flags) === STATUS_DISPOSED) return;
-      
-      // Transition to disposed state to prevent re-entrance
-      effect._flags = setStatus(effect._flags, STATUS_DISPOSED);
-
-      // Run cleanup if exists
-      const cleanup = effect._cleanup;
-
-      if (cleanup) {
-        effect._cleanup = undefined;  // Clear to prevent double cleanup
-        cleanup();
-      }
-      
-      detachAll(effect);
+      disposeNode(effect, (node) => {
+        // Effect-specific cleanup
+        const cleanup = node._cleanup;
+        if (cleanup) {
+          node._cleanup = undefined;  // Clear to prevent double cleanup
+          cleanup();
+        }
+        detachAll(node);
+      });
     };
 
     // Set methods
