@@ -7,13 +7,20 @@
 import { CONSTANTS } from './constants';
 import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { SignalContext } from './context';
+import type { GlobalContext } from './context';
+import { GraphEdges } from './helpers/graph-edges';
+import { PullPropagator } from './helpers/pull-propagator';
 
 // Single function interface for both read and peek
 // The function also implements ProducerNode and ConsumerNode to expose graph properties
 export interface ComputedFunction<T = unknown> extends DerivedNode {
   (): T;                    // Read operation (tracks dependencies)
   peek(): T;                // Non-tracking read
+}
+
+export type ComputedContext = GlobalContext & {
+  graphEdges: GraphEdges;
+  pullPropagator: PullPropagator;
 }
 
 // Internal computed state that gets bound to the function
@@ -30,12 +37,14 @@ const {
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
-export function createComputedFactory(ctx: SignalContext): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
+export function createComputedFactory(
+  ctx: ComputedContext
+): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
     graphEdges: { addEdge, pruneStale },
     pullPropagator: { pullUpdates },
   } = ctx;
-  
+
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
     // State object captured in closure - no binding needed
     const state: ComputedState<T> = {
@@ -119,6 +128,6 @@ export function createComputedFactory(ctx: SignalContext): LatticeExtension<'com
 
   return {
     name: 'computed',
-    method: createComputed
+    method: createComputed,
   };
 }

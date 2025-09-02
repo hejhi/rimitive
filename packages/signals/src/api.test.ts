@@ -1,16 +1,36 @@
 import { describe, it, expect } from 'vitest';
 import { createSignalAPI } from './api';
-import { createDefaultContext } from './default-context';
-import { createSignalFactory, type SignalInterface } from './signal';
-import { createComputedFactory, type ComputedInterface } from './computed';
-import { createEffectFactory, type EffectDisposer } from './effect';
+import { createSignalFactory, SignalContext, type SignalInterface } from './signal';
+import { ComputedContext, createComputedFactory, type ComputedInterface } from './computed';
+import { createEffectFactory, EffectContext, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import type { LatticeExtension } from '@lattice/lattice';
-import { createBaseContext } from './context';
+import { createBaseContext, GlobalContext } from './context';
 import { createNodeScheduler } from './helpers/node-scheduler';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPushPropagator } from './helpers/push-propagator';
 import { createPullPropagator } from './helpers/pull-propagator';
+
+export function createDefaultContext(): GlobalContext & SignalContext & EffectContext & ComputedContext {
+  const baseCtx = createBaseContext();
+
+  // Create helpers with their dependencies
+  const graphEdges = createGraphEdges();
+  const pullPropagator = createPullPropagator();
+  const nodeScheduler = createNodeScheduler(
+    baseCtx,
+    pullPropagator.pullUpdates
+  );
+  const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+
+  return {
+    ...baseCtx,
+    graphEdges,
+    pushPropagator,
+    pullPropagator,
+    nodeScheduler,
+  };
+}
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {

@@ -1,11 +1,36 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSignalAPI, type FactoriesToAPI } from './api';
-import { createDefaultContext } from './default-context';
-import { createSignalFactory, type SignalFunction } from './signal';
-import { createComputedFactory, type ComputedFunction } from './computed';
-import { createEffectFactory, type EffectDisposer } from './effect';
+import { createSignalAPI, GlobalContext, type FactoriesToAPI } from './api';
+import { createSignalFactory, SignalContext, type SignalFunction } from './signal';
+import { ComputedContext, createComputedFactory, type ComputedFunction } from './computed';
+import { createEffectFactory, EffectContext, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import type { LatticeExtension } from '@lattice/lattice';
+import { createBaseContext } from './context';
+import { createGraphEdges } from './helpers/graph-edges';
+import { createPullPropagator } from './helpers/pull-propagator';
+import { createNodeScheduler } from './helpers/node-scheduler';
+import { createPushPropagator } from './helpers/push-propagator';
+
+export function createDefaultContext(): GlobalContext & SignalContext & EffectContext & ComputedContext {
+  const baseCtx = createBaseContext();
+
+  // Create helpers with their dependencies
+  const graphEdges = createGraphEdges();
+  const pullPropagator = createPullPropagator();
+  const nodeScheduler = createNodeScheduler(
+    baseCtx,
+    pullPropagator.pullUpdates
+  );
+  const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+
+  return {
+    ...baseCtx,
+    graphEdges,
+    pushPropagator,
+    pullPropagator,
+    nodeScheduler,
+  };
+}
 
 type TestAPI = FactoriesToAPI<{
   signal: (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>;

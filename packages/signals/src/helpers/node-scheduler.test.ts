@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createNodeScheduler } from './node-scheduler';
-import { createBaseContext, type SignalContext } from '../context';
+import { createBaseContext, type GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
@@ -8,7 +8,7 @@ const { STATUS_DISPOSED } = CONSTANTS;
 
 describe('NodeScheduler', () => {
   // Helper to count nodes in queue
-  const getQueueSize = (ctx: SignalContext): number => {
+  const getQueueSize = (ctx: GlobalContext): number => {
     let count = 0;
     let node = ctx.queueHead;
     while (node) {

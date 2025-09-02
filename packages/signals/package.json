@@ -43,10 +43,6 @@
       "import": "./dist/constants.js",
       "types": "./dist/constants.d.ts"
     },
-    "./default-context": {
-      "import": "./dist/default-context.js",
-      "types": "./dist/default-context.d.ts"
-    },
     "./helpers/node-scheduler": {
       "import": "./dist/helpers/node-scheduler.js",
       "types": "./dist/helpers/node-scheduler.d.ts"

@@ -1,6 +1,6 @@
 import { CONSTANTS, createFlagManager } from '../constants';
 import type { ScheduledNode, ToNode } from '../types';
-import type { SignalContext } from '../context';
+import type { GlobalContext } from '../context';
 
 const {
   STATUS_DISPOSED,
@@ -38,7 +38,7 @@ const { hasAnyOf, setStatus, getStatus, addProperty, removeProperty } = createFl
  * - Preserves effect ordering for predictable behavior
  */
 export function createNodeScheduler(
-  ctx: SignalContext,
+  ctx: GlobalContext,
   pullUpdates: (node: ToNode) => void
 ): NodeScheduler {
   // Enqueue node at tail for FIFO ordering if not already scheduled
@@ -46,7 +46,7 @@ export function createNodeScheduler(
     // Cache flags for better branch prediction
     const flags = node._flags;
     if (hasAnyOf(flags, IS_SCHEDULED)) return; // Cold path - already scheduled
-    
+
     // Hot path - add scheduled property with cached flags
     node._flags = addProperty(flags, IS_SCHEDULED);
     node._nextScheduled = undefined;

@@ -10,7 +10,7 @@
  *    - Similar to React's hooks philosophy - composable primitives
  * 
  * 2. SHARED CONTEXT PATTERN:
- *    - All primitives share a single SignalContext instance
+ *    - All primitives share a single GlobalContext instance
  *    - Enables coordination between different primitive types
  *    - Context isolation for SSR/concurrent rendering
  *    - Inspired by React Context and Zone.js
@@ -34,7 +34,7 @@
  * - Pay only for what you use
  */
 import { createContext as createLattice, type LatticeExtension } from '@lattice/lattice';
-import type { SignalContext } from './context';
+import type { GlobalContext } from './context';
 // Note: We intentionally avoid a single "extended" context type.
 // Each factory declares exactly what it needs via its own context type.
 
@@ -43,7 +43,7 @@ import type { SignalContext } from './context';
 export type ExtensionFactory<
   TName extends string,
   TMethod,
-  TCtx extends SignalContext = SignalContext
+  TCtx extends GlobalContext = GlobalContext
 > = (
   ctx: TCtx
 ) => LatticeExtension<TName, TMethod>;
@@ -63,14 +63,14 @@ export type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never
 // Combined required context across all factories
 export type CombinedCtx<T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>> =
   UnionToIntersection<FactoryCtx<T[keyof T]>> extends infer I
-    ? I extends SignalContext
+    ? I extends GlobalContext
       ? I
-      : SignalContext
-    : SignalContext;
+      : GlobalContext
+    : GlobalContext;
 
 export type FactoriesToAPI<
   T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>,
-  TCtx extends SignalContext = CombinedCtx<T>
+  TCtx extends GlobalContext = CombinedCtx<T>
 > = {
   [K in keyof T]: T[K] extends (ctx: unknown) => LatticeExtension<string, infer M> ? M : never;
 } & { 
@@ -84,7 +84,7 @@ export type FactoriesToAPI<
 // enabling optimal tree-shaking and extensibility
 export function createSignalAPI<
   T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>,
-  TCtx extends SignalContext = CombinedCtx<T>
+  TCtx extends GlobalContext = CombinedCtx<T>
 >(
   factories: T,
   ctx: TCtx & CombinedCtx<T>
@@ -120,4 +120,4 @@ export function createSignalAPI<
 }
 
 // Type exports for users who want to create custom primitives
-export type { SignalContext } from './context';
+export type { GlobalContext } from './context';

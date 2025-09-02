@@ -1,16 +1,41 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { SignalFunction } from './signal';
-import type { EffectDisposer } from './effect';
-import type { ComputedFunction } from './computed';
+import type { SignalContext, SignalFunction } from './signal';
+import type { EffectContext, EffectDisposer } from './effect';
+import type { ComputedContext, ComputedFunction } from './computed';
 import type { ConsumerNode } from './types';
-import { createDefaultContext } from './default-context';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createContext as createLattice } from '@lattice/lattice';
+import { createBaseContext, GlobalContext } from './context';
+import { createGraphEdges } from './helpers/graph-edges';
+import { createPullPropagator } from './helpers/pull-propagator';
+import { createNodeScheduler } from './helpers/node-scheduler';
+import { createPushPropagator } from './helpers/push-propagator';
+
+export function createDefaultContext(): GlobalContext & SignalContext & EffectContext & ComputedContext {
+  const baseCtx = createBaseContext();
+
+  // Create helpers with their dependencies
+  const graphEdges = createGraphEdges();
+  const pullPropagator = createPullPropagator();
+  const nodeScheduler = createNodeScheduler(
+    baseCtx,
+    pullPropagator.pullUpdates
+  );
+  const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+
+  return {
+    ...baseCtx,
+    graphEdges,
+    pushPropagator,
+    pullPropagator,
+    nodeScheduler,
+  };
+}
 
 // Create a test instance
 export function createTestInstance() {

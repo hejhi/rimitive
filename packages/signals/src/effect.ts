@@ -40,7 +40,14 @@
 import { CONSTANTS, createFlagManager } from './constants';
 import { Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { SignalContext } from './context';
+import type { GlobalContext } from './context';
+import { GraphEdges } from './helpers/graph-edges';
+import { NodeScheduler } from './helpers/node-scheduler';
+
+export type EffectContext = GlobalContext & {
+  graphEdges: GraphEdges;
+  nodeScheduler: NodeScheduler;
+};
 
 export interface EffectInterface extends ScheduledNode {
   __type: 'effect';
@@ -63,18 +70,23 @@ const {
 
 const { setStatus } = createFlagManager();
 
-export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer> {
+export function createEffectFactory(
+  ctx: GlobalContext & EffectContext
+): LatticeExtension<
+  'effect',
+  (fn: () => void | (() => void)) => EffectDisposer
+> {
   const {
     graphEdges: { detachAll, pruneStale },
     nodeScheduler: { dispose: disposeNode },
   } = ctx;
-  
+
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
   function createEffect(fn: () => void | (() => void)): EffectDisposer {
     // State object captured in closure - no binding needed
     const effect: EffectInterface = {
       __type: 'effect' as const,
-      _flags: STATUS_DIRTY,  // Start in DIRTY state to trigger initial execution
+      _flags: STATUS_DIRTY, // Start in DIRTY state to trigger initial execution
       _in: undefined as Edge | undefined,
       _inTail: undefined as Edge | undefined,
       _nextScheduled: undefined as ScheduledNode | undefined,
@@ -115,7 +127,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
         // Effect-specific cleanup
         const cleanup = node._cleanup;
         if (cleanup) {
-          node._cleanup = undefined;  // Clear to prevent double cleanup
+          node._cleanup = undefined; // Clear to prevent double cleanup
           cleanup();
         }
         detachAll(node);
@@ -134,6 +146,6 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
 
   return {
     name: 'effect',
-    method: createEffect
-  }
+    method: createEffect,
+  };
 }

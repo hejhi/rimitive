@@ -35,13 +35,17 @@
  * - Inspired by database transactions and React's batching
  */
 import type { LatticeExtension } from '@lattice/lattice';
-import type { SignalContext } from './context';
+import { NodeScheduler } from './helpers/node-scheduler';
+import { GlobalContext } from './context';
 
-// Removed: Error wrapping adds unnecessary overhead
-// Let non-Error values throw naturally
+export type BatchContext = GlobalContext & {
+  nodeScheduler: NodeScheduler;
+}
 
 // BatchFactory uses SignalContext which includes all helpers
-export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch', <T>(fn: () => T) => T> {
+export function createBatchFactory(
+  ctx: BatchContext
+): LatticeExtension<'batch', <T>(fn: () => T) => T> {
   const { flush } = ctx.nodeScheduler;
 
   // OPTIMIZATION: Immediate propagation strategy like Alien Signals
@@ -50,10 +54,10 @@ export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch'
   const batch = function batch<T>(fn: () => T): T {
     // Fast path: if already batching, just run the function
     if (ctx.batchDepth > 0) return fn();
-    
+
     // Start batch
     ctx.batchDepth++;
-    
+
     // Execute user function with simple error handling
     try {
       return fn();
@@ -66,6 +70,6 @@ export function createBatchFactory(ctx: SignalContext): LatticeExtension<'batch'
 
   return {
     name: 'batch',
-    method: batch
+    method: batch,
   };
 }

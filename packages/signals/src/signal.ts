@@ -15,8 +15,11 @@
  */
 import type { ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
-import type { SignalContext } from './context';
+import type { GlobalContext } from './context';
 import { CONSTANTS } from './constants';
+import { GraphEdges } from './helpers/graph-edges';
+import { PushPropagator } from './helpers/push-propagator';
+import { NodeScheduler } from './helpers/node-scheduler';
 
 const { HAS_CHANGED } = CONSTANTS;
 
@@ -27,6 +30,12 @@ export interface SignalFunction<T = unknown> extends ProducerNode {
   (value: T): void;         // Write operation
   peek(): T;                // Non-tracking read
 }
+
+export type SignalContext = GlobalContext & {
+  graphEdges: GraphEdges;
+  pushPropagator: PushPropagator;
+  nodeScheduler: NodeScheduler;
+};
 
 // Signal state object that gets bound to the function
 // This IS the actual signal - no indirection through properties
