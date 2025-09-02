@@ -57,6 +57,7 @@ export function createComputedFactory(
       _flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
       _recompute: null as unknown as () => boolean,
+      _notify: () => undefined
     };
 
     // Create recompute that captures state in closure

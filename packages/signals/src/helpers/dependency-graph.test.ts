@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createGraphEdges } from './graph-edges';
 import { createPushPropagator } from './push-propagator';
 import { createPullPropagator } from './pull-propagator';
@@ -19,11 +19,7 @@ describe('Dependency Graph Helpers', () => {
 
   beforeEach(() => {
     const graphEdges = createGraphEdges();
-    // Mock enqueue function for testing
-    const mockEnqueue = () => {
-      // For testing, we don't need actual scheduling
-    };
-    const pushPropagator = createPushPropagator(mockEnqueue);
+    const pushPropagator = createPushPropagator();
     const pullPropagator = createPullPropagator();
     
     helpers = {
@@ -51,6 +47,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _in: undefined,
         _inTail: undefined,
+        _notify: vi.fn(),
       };
       
       // First call creates the dependency
@@ -80,6 +77,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _in: undefined,
         _inTail: undefined,
+        _notify: vi.fn(),
       };
       
       // Create dependency manually
@@ -109,6 +107,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _in: undefined,
         _inTail: undefined,
+        _notify: vi.fn(),
       };
       
       helpers.addEdge(source, target);
@@ -130,6 +129,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _in: undefined,
         _inTail: undefined,
+        _notify: vi.fn(),
       };
       
       // Add dependencies from multiple sources
@@ -162,6 +162,7 @@ describe('Dependency Graph Helpers', () => {
         _flags: 0,
         _in: undefined,
         _inTail: undefined,
+        _notify: vi.fn(),
       };
       
       // Create initial dependency
@@ -193,7 +194,8 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-              _inTail: undefined,
+          _inTail: undefined,
+          _notify: vi.fn(),
         };
         
         helpers.addEdge(source, target);
@@ -218,14 +220,16 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-              _inTail: undefined,
+          _inTail: undefined,
+          _notify: vi.fn(),
         };
         
         const target2: ConsumerNode = {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-              _inTail: undefined,
+          _inTail: undefined,
+          _notify: vi.fn(),
         };
         
         helpers.addEdge(source, target1);
@@ -257,7 +261,8 @@ describe('Dependency Graph Helpers', () => {
           __type: 'test',
           _flags: 0,
           _in: undefined,
-              _inTail: undefined,
+          _inTail: undefined,
+          _notify: vi.fn(),
         };
         
         helpers.addEdge(source, target);
@@ -340,6 +345,7 @@ describe('Dependency Graph Helpers', () => {
           _flags: 0,
           _in: undefined,
           _inTail: undefined,
+          _notify: vi.fn(),
         };
         
         helpers.addEdge(source1, target);
@@ -362,13 +368,8 @@ describe('Dependency Graph Helpers', () => {
     beforeEach(() => {
       scheduledNodes = [];
   
-      // Create a custom push propagator with our test enqueue function
-      const testEnqueue = (node: ScheduledNode) => {
-        if (node._nextScheduled !== undefined) return;
-        scheduledNodes.push(node);
-        node._nextScheduled = node; // Use self as flag
-      };
-      const testPushPropagator = createPushPropagator(testEnqueue);
+      // Create a custom push propagator
+      const testPushPropagator = createPushPropagator();
   
       walk = testPushPropagator.pushUpdates;
     });
@@ -383,11 +384,20 @@ describe('Dependency Graph Helpers', () => {
         _in: undefined,
         _inTail: undefined,
         _flags: flags,
+        _notify: vi.fn(),
       };
   
       if (isScheduled) {
         node._flush = () => {};
         node._nextScheduled = undefined;
+        // Add _notify method that tracks scheduled nodes for testing
+        const nodeWithNotify = node as ScheduledNode & { _notify: () => void };
+        nodeWithNotify._notify = () => {
+          if (node._nextScheduled === undefined) {
+            scheduledNodes.push(node as ScheduledNode);
+            node._nextScheduled = node as ScheduledNode; // Use self as flag
+          }
+        };
       }
   
       return node;

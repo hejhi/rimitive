@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createGraphEdges } from './graph-edges';
 import type { ConsumerNode, ProducerNode } from '../types';
 import { CONSTANTS } from '../constants';
@@ -24,7 +24,8 @@ describe('Dependency Graph Cleanup Operations', () => {
     __type: 'test',
     _in: undefined,
     _flags: 0,
-    _inTail: undefined
+    _inTail: undefined,
+    _notify: vi.fn(),
   });
 
   it('detaches all edges on dispose', () => {

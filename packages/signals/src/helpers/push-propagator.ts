@@ -1,4 +1,4 @@
-import type { Edge, ScheduledNode } from '../types';
+import type { Edge } from '../types';
 import { CONSTANTS } from '../constants';
 import { createNodeState } from './node-state';
 
@@ -15,7 +15,7 @@ export interface PushPropagator {
 
 const { hasAnyOf, setStatus } = createNodeState();
 
-export function createPushPropagator(schedule: (node: ScheduledNode) => void): PushPropagator {
+export function createPushPropagator(): PushPropagator {
   const pushUpdates = (from: Edge | undefined): void => {
     if (!from) return;
 
@@ -33,10 +33,14 @@ export function createPushPropagator(schedule: (node: ScheduledNode) => void): P
 
       target._flags = setStatus(targetFlags, STATUS_INVALIDATED);
 
+      // Fast path: if node has _notify, it's an effect - schedule it directly
+      // This avoids method calls and property lookups
+      if ('_notify' in target) target._notify(target);
+
       if ('_out' in target) {
         const firstChild = target._out;
 
-        if (firstChild && target._out) {
+        if (firstChild) {
           const nextSibling = currentEdge.nextOut;
 
           if (nextSibling) stack = { value: nextSibling, prev: stack };
@@ -44,7 +48,7 @@ export function createPushPropagator(schedule: (node: ScheduledNode) => void): P
           currentEdge = firstChild;
           continue;
         }
-      } else if ('_nextScheduled' in target) schedule(target);
+      }
 
       currentEdge = currentEdge.nextOut;
 

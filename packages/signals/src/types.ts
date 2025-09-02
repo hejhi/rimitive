@@ -52,6 +52,7 @@ export interface ConsumerNode extends ReactiveNode {
   _in: Edge | undefined; // Head of input list
   _inTail: Edge | undefined; // Tail of input list
   _flags: number; // Bit field containing state (Clean, Dirty, Checking, etc.) and properties
+  _notify: (node: ConsumerNode) => void;
 }
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {

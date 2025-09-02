@@ -128,7 +128,9 @@ describe('Effect', () => {
 
     sig(1);
     expect(outerFn).toHaveBeenCalledTimes(2);
-    expect(innerFn).toBeCalledTimes(3); // 1 initial + 1 from outer re-run + 1 from signal change
+    // Nested effects aren't fully supported - the inner effect created on re-run
+    // won't execute immediately since notify() doesn't auto-flush
+    expect(innerFn).toBeCalledTimes(3); // 1 initial + 1 from outer re-run + 1 from first inner
   });
 
   it('should not run if already running (avoid infinite loops)', () => {

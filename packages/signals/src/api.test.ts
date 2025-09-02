@@ -21,7 +21,7 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
     baseCtx,
     pullPropagator.pullUpdates
   );
-  const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+  const pushPropagator = createPushPropagator();
 
   return {
     ...baseCtx,
@@ -82,7 +82,7 @@ describe('createSignalAPI', () => {
         }
       };
     })();
-    const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+    const pushPropagator = createPushPropagator();
     const customCtx = {
       ...baseCtx,
       graphEdges,
@@ -128,7 +128,7 @@ describe('createSignalAPI', () => {
       };
       return queue;
     })();
-    const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+    const pushPropagator = createPushPropagator();
     const customCtx = {
       ...baseCtx,
       graphEdges,

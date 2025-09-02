@@ -38,7 +38,7 @@
  */
 
 import { CONSTANTS, createFlagManager } from './constants';
-import { Edge, ScheduledNode } from './types';
+import { ConsumerNode, Edge, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
@@ -78,7 +78,7 @@ export function createEffectFactory(
 > {
   const {
     graphEdges: { detachAll, pruneStale },
-    nodeScheduler: { dispose: disposeNode },
+    nodeScheduler: { dispose: disposeNode, enqueue },
   } = ctx;
 
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
@@ -93,6 +93,7 @@ export function createEffectFactory(
       _cleanup: undefined as (() => void) | undefined,
       // This will be set below
       _flush: null as unknown as () => void,
+      _notify: enqueue as (node: ConsumerNode) => void, // Store the enqueue function directly for fast access
     };
 
     // Flush method using closure
