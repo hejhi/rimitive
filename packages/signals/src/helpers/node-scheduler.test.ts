@@ -19,7 +19,8 @@ describe('NodeScheduler', () => {
   };
   it('should enqueue nodes', () => {
     const ctx = createBaseContext();
-    const helpers = createNodeScheduler(ctx);
+    const mockPullUpdates = () => {};
+    const helpers = createNodeScheduler(ctx, mockPullUpdates);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -37,7 +38,8 @@ describe('NodeScheduler', () => {
 
   it('should not enqueue already scheduled nodes', () => {
     const ctx = createBaseContext();
-    const helpers = createNodeScheduler(ctx);
+    const mockPullUpdates = () => {};
+    const helpers = createNodeScheduler(ctx, mockPullUpdates);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -60,7 +62,8 @@ describe('NodeScheduler', () => {
 
   it('should dispose node only once', () => {
     const ctx = createBaseContext();
-    const helpers = createNodeScheduler(ctx);
+    const mockPullUpdates = () => {};
+    const helpers = createNodeScheduler(ctx, mockPullUpdates);
     
     const cleanupFn = vi.fn();
     const node: ScheduledNode = {
@@ -85,7 +88,8 @@ describe('NodeScheduler', () => {
 
   it('should flush all scheduled nodes in FIFO order', () => {
     const ctx = createBaseContext();
-    const helpers = createNodeScheduler(ctx);
+    const mockPullUpdates = () => {};
+    const helpers = createNodeScheduler(ctx, mockPullUpdates);
     
     const flush1 = vi.fn();
     const flush2 = vi.fn();
@@ -126,7 +130,7 @@ describe('NodeScheduler', () => {
     helpers.enqueue(node2);
     helpers.enqueue(node3);
     
-    helpers.flush(() => true);
+    helpers.flush();
     
     expect(getQueueSize(ctx)).toBe(0);
     expect(flush1).toHaveBeenCalledTimes(1);
@@ -140,10 +144,11 @@ describe('NodeScheduler', () => {
 
   it('should handle empty flush', () => {
     const ctx = createBaseContext();
-    const helpers = createNodeScheduler(ctx);
+    const mockPullUpdates = () => {};
+    const helpers = createNodeScheduler(ctx, mockPullUpdates);
     
     // Flush with no nodes queued - should not throw
-    expect(() => helpers.flush(() => true)).not.toThrow();
+    expect(() => helpers.flush()).not.toThrow();
     
     // State should remain unchanged
     expect(getQueueSize(ctx)).toBe(0);
@@ -152,7 +157,8 @@ describe('NodeScheduler', () => {
 
   it('should clear _nextScheduled flag during flush', () => {
     const ctx = createBaseContext();
-    const helpers = createNodeScheduler(ctx);
+    const mockPullUpdates = () => {};
+    const helpers = createNodeScheduler(ctx, mockPullUpdates);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -166,6 +172,6 @@ describe('NodeScheduler', () => {
     
     helpers.enqueue(node);
     
-    helpers.flush(() => true);
+    helpers.flush();
   });
 });

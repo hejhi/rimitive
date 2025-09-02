@@ -19,7 +19,7 @@ export interface NodeScheduler {
     node: T,
     cleanup: (node: T) => void
   ) => void;
-  flush: (checkStale: (node: ToNode) => void) => void;
+  flush: () => void;
 }
 
 const { hasAnyOf, setStatus, getStatus, addProperty, removeProperty } = createFlagManager();
@@ -37,7 +37,10 @@ const { hasAnyOf, setStatus, getStatus, addProperty, removeProperty } = createFl
  * - Lower memory and fewer branches
  * - Preserves effect ordering for predictable behavior
  */
-export function createNodeScheduler(ctx: SignalContext): NodeScheduler {
+export function createNodeScheduler(
+  ctx: SignalContext,
+  pullUpdates: (node: ToNode) => void
+): NodeScheduler {
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
     // Cache flags for better branch prediction
@@ -66,7 +69,7 @@ export function createNodeScheduler(ctx: SignalContext): NodeScheduler {
   };
 
   // Dequeue all scheduled nodes in FIFO order and execute
-  const flush = (checkStale: (node: ToNode) => void): void => {
+  const flush = (): void => {
     let current = ctx.queueHead;
     if (!current) return;
 
@@ -77,7 +80,7 @@ export function createNodeScheduler(ctx: SignalContext): NodeScheduler {
       const next: ScheduledNode | undefined = current._nextScheduled;
       current._nextScheduled = undefined;
       const nextFlags = removeProperty(current._flags, IS_SCHEDULED);
-      current._flags = nextFlags; // Clear scheduled property
+      current._flags = nextFlags;
       const status = getStatus(nextFlags);
 
       if (
@@ -87,7 +90,7 @@ export function createNodeScheduler(ctx: SignalContext): NodeScheduler {
       ) {
         if (status !== STATUS_DIRTY) {
           // Use checkStale to update dependencies and determine if a scheduled node should run
-          checkStale(current);
+          pullUpdates(current);
 
           const newFlags = current._flags;
 

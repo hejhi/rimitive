@@ -15,9 +15,7 @@ export interface PushPropagator {
 
 const { hasAnyOf, setStatus } = createNodeState();
 
-export function createPushPropagator(
-  schedule: (node: ScheduledNode) => void
-): PushPropagator {
+export function createPushPropagator(schedule: (node: ScheduledNode) => void): PushPropagator {
   const pushUpdates = (from: Edge | undefined): void => {
     if (!from) return;
 

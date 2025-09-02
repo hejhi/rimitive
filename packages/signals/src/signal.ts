@@ -39,7 +39,6 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   const {
     graphEdges: { addEdge },
     pushPropagator: { pushUpdates },
-    pullPropagator: { pullUpdates },
     nodeScheduler: { flush },
   } = ctx;
   
@@ -83,7 +82,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         pushUpdates(outEdge);
 
         // Batch check and flush
-        if (!ctx.batchDepth) flush(pullUpdates);
+        if (!ctx.batchDepth) flush();
         return;
       }
 

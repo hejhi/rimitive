@@ -51,18 +51,18 @@ describe('createSignalAPI', () => {
     // Create custom context with custom work queue
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
+    const pullPropagator = createPullPropagator();
     const nodeScheduler = (() => {
-      const scheduler = createNodeScheduler(baseCtx);
+      const scheduler = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
       return {
         ...scheduler,
         flush: () => {
           flushCalled = true;
-          scheduler.flush(pullPropagator.pullUpdates);
+          scheduler.flush();
         }
       };
     })();
     const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
-    const pullPropagator = createPullPropagator();
     const customCtx = {
       ...baseCtx,
       graphEdges,
@@ -98,8 +98,9 @@ describe('createSignalAPI', () => {
     // Create custom context with instrumented work queue
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
+    const pullPropagator = createPullPropagator();
     const nodeScheduler = (() => {
-      const queue = createNodeScheduler(baseCtx);
+      const queue = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
       const originalEnqueue = queue.enqueue;
       queue.enqueue = (node) => {
         enqueueCount++;
@@ -108,7 +109,6 @@ describe('createSignalAPI', () => {
       return queue;
     })();
     const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
-    const pullPropagator = createPullPropagator();
     const customCtx = {
       ...baseCtx,
       graphEdges,

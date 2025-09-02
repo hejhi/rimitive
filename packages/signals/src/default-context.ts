@@ -14,9 +14,9 @@ export function createDefaultContext(): SignalContext {
   
   // Create helpers with their dependencies
   const graphEdges = createGraphEdges();
-  const nodeScheduler = createNodeScheduler(baseCtx);
-  const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
   const pullPropagator = createPullPropagator();
+  const nodeScheduler = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
+  const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
   
   return {
     ...baseCtx,

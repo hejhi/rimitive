@@ -23,8 +23,7 @@ export interface PullPropagator {
 
 const { getStatus, hasAnyOf, resetStatus, setStatus, recomputeNode } = createNodeState();
 
-export function createPullPropagator(
-): PullPropagator {
+export function createPullPropagator(): PullPropagator {
   const pullUpdates = (node: ToNode): void => {
     const flags = node._flags;
     const status = getStatus(flags);
