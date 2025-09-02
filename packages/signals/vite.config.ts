@@ -48,7 +48,9 @@ export default defineConfig({
         'src/**/test-*.ts',
         'src/**/*.example.ts',
       ],
-      rollupTypes: true,
+      // Don't use rollupTypes with subdirectory entries - it doesn't work well
+      rollupTypes: false,
+      staticImport: true,
     }),
     terserMangleInternals(),
   ],

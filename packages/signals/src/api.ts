@@ -52,6 +52,12 @@ export type ExtensionFactory<
 // This complex type transforms a record of factories into the final API shape
 // For each factory, it extracts the method type and maps it to the same key
 // Also adds internal context and dispose method
+// Bivariant factory type to work around contravariance issues
+// This allows factories to accept specific context subtypes
+export type Factory<C extends GlobalContext = GlobalContext> = {
+  bivarianceHack(ctx: C): LatticeExtension<string, unknown>;
+}['bivarianceHack'];
+
 // Extract the required context type from a factory
 export type FactoryCtx<F> = F extends (ctx: infer C) => LatticeExtension<string, unknown> ? C : never;
 // Convert a union to an intersection
@@ -61,7 +67,7 @@ export type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never
   ? I
   : never;
 // Combined required context across all factories
-export type CombinedCtx<T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>> =
+export type CombinedCtx<T extends Record<string, Factory>> =
   UnionToIntersection<FactoryCtx<T[keyof T]>> extends infer I
     ? I extends GlobalContext
       ? I
@@ -69,10 +75,10 @@ export type CombinedCtx<T extends Record<string, (ctx: unknown) => LatticeExtens
     : GlobalContext;
 
 export type FactoriesToAPI<
-  T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>,
+  T extends Record<string, Factory>,
   TCtx extends GlobalContext = CombinedCtx<T>
 > = {
-  [K in keyof T]: T[K] extends (ctx: unknown) => LatticeExtension<string, infer M> ? M : never;
+  [K in keyof T]: T[K] extends (ctx: infer _C) => LatticeExtension<string, infer M> ? M : never;
 } & { 
   _ctx: TCtx;  // Exposed for advanced use cases
   dispose: () => void;  // Cleanup method from Lattice
@@ -83,7 +89,7 @@ export type FactoriesToAPI<
 // It allows users to pick exactly which primitives they need,
 // enabling optimal tree-shaking and extensibility
 export function createSignalAPI<
-  T extends Record<string, (ctx: unknown) => LatticeExtension<string, unknown>>,
+  T extends Record<string, Factory>,
   TCtx extends GlobalContext = CombinedCtx<T>
 >(
   factories: T,

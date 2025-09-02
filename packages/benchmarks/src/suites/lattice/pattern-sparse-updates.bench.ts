@@ -22,22 +22,38 @@ import {
   effect as preactEffect,
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
-import { createDefaultContext } from '@lattice/signals/default-context';
 import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
 import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
 import { signal as alienSignal, computed as alienComputed, effect as alienEffect } from 'alien-signals';
 
-type LatticeExtension<N extends string, M> = { name: N; method: M };
+import { createBaseContext } from '@lattice/signals/context';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createNodeScheduler } from '@lattice/signals/helpers/node-scheduler';
+import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
 
-// Lattice API instance
+// Create Lattice API instance
+const baseCtx = createBaseContext();
+const pullPropagator = createPullPropagator();
+const graphEdges = createGraphEdges();
+const nodeScheduler = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
+const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+
+// Create Lattice API instance
 const latticeAPI = createSignalAPI(
   {
-    signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
-    computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
-    effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
+    signal: createSignalFactory,
+    computed: createComputedFactory,
+    effect: createEffectFactory,
   },
-  createDefaultContext()
+  {
+    ...createBaseContext(),
+    nodeScheduler,
+    graphEdges,
+    pushPropagator,
+    pullPropagator,
+  }
 );
 
 const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
