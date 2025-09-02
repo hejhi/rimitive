@@ -126,6 +126,7 @@ export function createEffectFactory(ctx: SignalContext): LatticeExtension<'effec
     effect._flush = flush;
 
     // Effects run immediately when created to establish initial state and dependencies.
+    // This flushes outside of the scheduling mechanism.
     flush();
 
     return dispose;
