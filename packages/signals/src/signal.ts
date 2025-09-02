@@ -52,13 +52,12 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   
   // CLOSURE PATTERN: Create signal with closure-captured state for better V8 optimization
   function createSignal<T>(initialValue: T): SignalFunction<T> {
-    // State object captured in closure
-    const state: SignalState<T> = {
+    const node: SignalState<T> = {
       __type: 'signal',
       value: initialValue,
       out: undefined,
       outTail: undefined,
-      flags: 0,  // Start in clean state with no properties
+      flags: 0,
     };
 
     // Signal function using closure instead of bound this
@@ -67,22 +66,22 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         // WRITE PATH
         const newValue = args[0];
         // Cache current value
-        const currValue = state.value;
+        const currValue = node.value;
 
         if (currValue === newValue) return;
 
-        state.value = newValue;
+        node.value = newValue;
 
-        const outEdge = state.out;
+        const outEdge = node.out;
 
         if (!outEdge) return;
 
         // Only add HAS_CHANGED property if not already set (first change only)
         // No need to set if unobserved since it's only used during propagation
         // Cache flags to avoid double read in hot path
-        const flags = state.flags;
+        const flags = node.flags;
 
-        if (!(flags & HAS_CHANGED)) state.flags = flags | HAS_CHANGED;
+        if (!(flags & HAS_CHANGED)) node.flags = flags | HAS_CHANGED;
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale edges automatically
@@ -98,13 +97,13 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
       // Always link if there's a consumer (alien-signals approach)
       // Create edge to consumer
-      if (consumer) addEdge(state, consumer);
+      if (consumer) addEdge(node, consumer);
 
-      return state.value;
+      return node.value;
     }) as SignalFunction<T>;
     
     // Add peek method using closure
-    signal.peek = () => state.value;
+    signal.peek = () => node.value;
     
     return signal;
   }

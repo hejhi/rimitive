@@ -45,8 +45,7 @@ export function createComputedFactory(
   } = ctx;
 
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
-    // State object captured in closure - no binding needed
-    const state: ComputedState<T> = {
+    const node: ComputedState<T> = {
       __type: 'computed' as const,
       value: undefined as T,
       out: undefined,
@@ -58,35 +57,35 @@ export function createComputedFactory(
       recompute(): boolean {
         // Reset tail marker to start fresh tracking (like alien-signals startTracking)
         // This allows new dependencies to be established while keeping old edges for cleanup
-        state.inTail = undefined;
+        node.inTail = undefined;
 
         const prevConsumer = ctx.currentConsumer;
-        ctx.currentConsumer = state;
+        ctx.currentConsumer = node;
 
         let valueChanged = false;
 
         try {
-          const oldValue = state.value;
+          const oldValue = node.value;
           const newValue = compute();
 
           // Update value and return whether it changed
           if (newValue !== oldValue) {
-            state.value = newValue;
+            node.value = newValue;
             valueChanged = true;
           }
         } finally {
           ctx.currentConsumer = prevConsumer;
           // Only prune if we have edges to prune
           // Unobserved computeds have no edges, so skip the pruning
-          if (state.in) pruneStale(state);
+          if (node.in) pruneStale(node);
         }
         return valueChanged;
       },
-      notify: () => undefined
+      notify: () => undefined,
     };
 
     // Single-pass update using pullUpdates
-    const update = () => pullUpdates(state);
+    const update = () => pullUpdates(node);
 
     const computed = (() => {
       // Treat computed exactly like a signal for dependency tracking
@@ -95,11 +94,11 @@ export function createComputedFactory(
 
       // Always link if there's a consumer
       // Create edge to consumer
-      if (consumer) addEdge(state, consumer);
+      if (consumer) addEdge(node, consumer);
 
       update();
 
-      return state.value;
+      return node.value;
     }) as ComputedFunction<T>;
 
     computed.peek = () => {
@@ -114,7 +113,7 @@ export function createComputedFactory(
         ctx.currentConsumer = prevConsumer; // Restore back to previous state
       }
 
-      return state.value;
+      return node.value;
     };
 
     return computed;

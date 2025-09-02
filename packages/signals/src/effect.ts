@@ -84,7 +84,7 @@ export function createEffectFactory(
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
   function createEffect(fn: () => void | (() => void)): EffectDisposer {
     // State object captured in closure - no binding needed
-    const effect: EffectInterface = {
+    const node: EffectInterface = {
       __type: 'effect' as const,
       _cleanup: undefined as (() => void) | undefined,
       flags: STATUS_DIRTY, // Start in DIRTY state to trigger initial execution
@@ -98,33 +98,33 @@ export function createEffectFactory(
 
     // Flush method using closure
     const flush = (): void => {
-      effect.inTail = undefined;
+      node.inTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = effect;
+      ctx.currentConsumer = node;
 
       try {
         // Run cleanup if exists (optimized to avoid double read)
-        const cleanup = effect._cleanup;
+        const cleanup = node._cleanup;
         if (cleanup) {
-          effect._cleanup = undefined;
+          node._cleanup = undefined;
           cleanup();
         }
 
-        // Main effect execution and store new cleanup
+        // Main state execution and store new cleanup
         const newCleanup = fn();
-        if (newCleanup) effect._cleanup = newCleanup;
+        if (newCleanup) node._cleanup = newCleanup;
       } finally {
         ctx.currentConsumer = prevConsumer;
         // Transition back to clean state after execution
-        effect.flags = setStatus(effect.flags, STATUS_CLEAN);
-        pruneStale(effect);
+        node.flags = setStatus(node.flags, STATUS_CLEAN);
+        pruneStale(node);
       }
     };
 
     // Dispose method using closure - delegates flag management to nodeScheduler
     const dispose = (): void => {
-      disposeNode(effect, (node) => {
+      disposeNode(node, (node) => {
         // Effect-specific cleanup
         const cleanup = node._cleanup;
         if (cleanup) {
@@ -136,7 +136,7 @@ export function createEffectFactory(
     };
 
     // Set flush method
-    effect.flush = flush;
+    node.flush = flush;
 
     // Effects run immediately when created to establish initial state and dependencies.
     // This flushes outside of the scheduling mechanism.
