@@ -55,9 +55,6 @@ export function createComputedFactory(
       flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
       recompute(): boolean {
-        // Track if this is the first computation (no edges yet)
-        const isFirstCompute = !node.in;
-        
         // Reset tail marker to start fresh tracking (like alien-signals startTracking)
         // This allows new dependencies to be established while keeping old edges for cleanup
         const oldTail = node.inTail;
@@ -79,11 +76,12 @@ export function createComputedFactory(
           }
         } finally {
           ctx.currentConsumer = prevConsumer;
+
           // Only prune if dependencies might have changed
           // Skip pruning if:
           // 1. No edges to prune (first compute or unobserved)
           // 2. Tail hasn't moved (same dependencies accessed in same order)
-          if (node.in && (isFirstCompute || node.inTail !== oldTail)) pruneStale(node);
+          if (!oldTail || node.inTail !== oldTail) pruneStale(node);
         }
         return valueChanged;
       },
