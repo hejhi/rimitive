@@ -84,8 +84,8 @@ export function createTestInstance() {
       // Clear any pending scheduled effects by walking the intrusive queue
       let node = ctx.queueHead;
       while (node) {
-        const next = node._nextScheduled === node ? undefined : node._nextScheduled;
-        node._nextScheduled = undefined;
+        const next = node.nextScheduled === node ? undefined : node.nextScheduled;
+        node.nextScheduled = undefined;
         node = next;
       }
       ctx.queueHead = ctx.queueTail = undefined;
@@ -131,7 +131,7 @@ export const activeContext = (() => {
       let node = defaultInstance.activeContext.queueHead;
       while (node) {
         count++;
-        node = node._nextScheduled;
+        node = node.nextScheduled;
       }
       return count;
     },
@@ -141,7 +141,7 @@ export const activeContext = (() => {
       let node = defaultInstance.activeContext.queueHead;
       while (node) { 
         out.push(node); 
-        node = node._nextScheduled;
+        node = node.nextScheduled;
       }
       return out;
     },

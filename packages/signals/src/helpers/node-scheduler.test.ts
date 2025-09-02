@@ -13,7 +13,7 @@ describe('NodeScheduler', () => {
     let node = ctx.queueHead;
     while (node) {
       count++;
-      node = node._nextScheduled;
+      node = node.nextScheduled;
     }
     return count;
   };
@@ -24,12 +24,12 @@ describe('NodeScheduler', () => {
     
     const node: ScheduledNode = {
       __type: 'test',
-      _flags: 0,
-      _nextScheduled: undefined,
-      _flush: vi.fn(),
-      _in: undefined,
-      _inTail: undefined,
-      _notify: vi.fn(),
+      flags: 0,
+      nextScheduled: undefined,
+      flush: vi.fn(),
+      in: undefined,
+      inTail: undefined,
+      notify: vi.fn(),
     };
     
     helpers.enqueue(node);
@@ -43,12 +43,12 @@ describe('NodeScheduler', () => {
     
     const node: ScheduledNode = {
       __type: 'test',
-      _flags: 0,
-      _nextScheduled: undefined,
-      _flush: vi.fn(),
-      _in: undefined,
-      _inTail: undefined,
-      _notify: vi.fn(),
+      flags: 0,
+      nextScheduled: undefined,
+      flush: vi.fn(),
+      in: undefined,
+      inTail: undefined,
+      notify: vi.fn(),
     };
     
     // Enqueue once
@@ -68,17 +68,17 @@ describe('NodeScheduler', () => {
     const cleanupFn = vi.fn();
     const node: ScheduledNode = {
       __type: 'test',
-      _flags: 0,
-      _nextScheduled: undefined,
-      _flush: vi.fn(),
-      _in: undefined,
-      _inTail: undefined,
-      _notify: vi.fn(),
+      flags: 0,
+      nextScheduled: undefined,
+      flush: vi.fn(),
+      in: undefined,
+      inTail: undefined,
+      notify: vi.fn(),
     };
     
     helpers.dispose(node, cleanupFn);
     
-    expect(node._flags & STATUS_DISPOSED).toBe(STATUS_DISPOSED);
+    expect(node.flags & STATUS_DISPOSED).toBe(STATUS_DISPOSED);
     expect(cleanupFn).toHaveBeenCalledWith(node);
     
     // Try disposing again
@@ -97,32 +97,32 @@ describe('NodeScheduler', () => {
     
     const node1: ScheduledNode = {
       __type: 'test',
-      _flags: 2, // STATUS_DIRTY
-      _nextScheduled: undefined,
-      _flush: flush1,
-      _in: undefined,
-      _inTail: undefined,
-      _notify: vi.fn(),
+      flags: 2, // STATUS_DIRTY
+      nextScheduled: undefined,
+      flush: flush1,
+      in: undefined,
+      inTail: undefined,
+      notify: vi.fn(),
     };
     
     const node2: ScheduledNode = {
       __type: 'test',
-      _flags: 2, // STATUS_DIRTY
-      _nextScheduled: undefined,
-      _flush: flush2,
-      _in: undefined,
-      _inTail: undefined,
-      _notify: vi.fn(),
+      flags: 2, // STATUS_DIRTY
+      nextScheduled: undefined,
+      flush: flush2,
+      in: undefined,
+      inTail: undefined,
+      notify: vi.fn(),
     };
     
     const node3: ScheduledNode = {
       __type: 'test',
-      _flags: 2, // STATUS_DIRTY
-      _nextScheduled: undefined,
-      _flush: flush3,
-      _in: undefined,
-      _inTail: undefined,
-      _notify: vi.fn(),
+      flags: 2, // STATUS_DIRTY
+      nextScheduled: undefined,
+      flush: flush3,
+      in: undefined,
+      inTail: undefined,
+      notify: vi.fn(),
     };
     
     // Schedule nodes in order
@@ -155,19 +155,19 @@ describe('NodeScheduler', () => {
     expect(ctx.queueHead).toBeUndefined();
   });
 
-  it('should clear _nextScheduled flag during flush', () => {
+  it('should clear nextScheduled flag during flush', () => {
     const ctx = createBaseContext();
     const mockPullUpdates = () => {};
     const helpers = createNodeScheduler(ctx, mockPullUpdates);
     
     const node: ScheduledNode = {
       __type: 'test',
-      _flags: 0,
-      _nextScheduled: undefined,
-      _flush: vi.fn(),
-      _in: undefined,
-      _inTail: undefined,
-      _notify: vi.fn(),
+      flags: 0,
+      nextScheduled: undefined,
+      flush: vi.fn(),
+      in: undefined,
+      inTail: undefined,
+      notify: vi.fn(),
     };
     
     helpers.enqueue(node);

@@ -17,18 +17,18 @@ export function createGraphEdges(): GraphEdges {
     producer: FromNode,
     consumer: ToNode
   ): void => {
-    const tail = consumer._inTail;
+    const tail = consumer.inTail;
 
     if (tail && tail.from === producer) return;
 
-    const candidate = tail ? tail.nextIn : consumer._in;
+    const candidate = tail ? tail.nextIn : consumer.in;
 
     if (candidate && candidate.from === producer) {
-      consumer._inTail = candidate;
+      consumer.inTail = candidate;
       return;
     }
     
-    const prevOut = producer._outTail;
+    const prevOut = producer.outTail;
 
     const newEdge = {
       from: producer,
@@ -41,32 +41,32 @@ export function createGraphEdges(): GraphEdges {
 
     if (candidate) candidate.prevIn = newEdge;
     if (tail) tail.nextIn = newEdge;
-    else consumer._in = newEdge;
+    else consumer.in = newEdge;
 
-    consumer._inTail = newEdge;
+    consumer.inTail = newEdge;
 
     if (prevOut) prevOut.nextOut = newEdge;
-    else producer._out = newEdge;
+    else producer.out = newEdge;
 
-    producer._outTail = newEdge;    
+    producer.outTail = newEdge;    
   };
 
   const removeEdge = (edge: Edge): Edge | undefined => {
     const { from, to, prevIn, nextIn, prevOut, nextOut } = edge;
 
     if (nextIn) nextIn.prevIn = prevIn;
-    else to._inTail = prevIn;
+    else to.inTail = prevIn;
 
     if (prevIn) prevIn.nextIn = nextIn;
-    else to._in = nextIn;
+    else to.in = nextIn;
 
     if (nextOut) nextOut.prevOut = prevOut;
-    else from._outTail = prevOut;
+    else from.outTail = prevOut;
 
     if (prevOut) prevOut.nextOut = nextOut;
     else {
-      from._out = nextOut;
-      if (!nextOut && isDerived(from)) from._flags = setStatus(from._flags, STATUS_DIRTY);
+      from.out = nextOut;
+      if (!nextOut && isDerived(from)) from.flags = setStatus(from.flags, STATUS_DIRTY);
     }
 
     return nextIn;
@@ -75,7 +75,7 @@ export function createGraphEdges(): GraphEdges {
   const isDerived = (source: FromNode | ToNode): source is DerivedNode => '_recompute' in source;
 
   const detachAll = (consumer: ConsumerNode): void => {
-    let edge = consumer._in;
+    let edge = consumer.in;
     
     if (edge) {
       do {
@@ -83,14 +83,14 @@ export function createGraphEdges(): GraphEdges {
       } while (edge);
     }
     
-    consumer._in = undefined;
-    consumer._inTail = undefined;
+    consumer.in = undefined;
+    consumer.inTail = undefined;
   };
 
   const pruneStale = (consumer: ConsumerNode): void => {
-    const tail = consumer._inTail;
+    const tail = consumer.inTail;
     
-    let toRemove = tail ? tail.nextIn : consumer._in;
+    let toRemove = tail ? tail.nextIn : consumer.in;
     
     if (toRemove) {
       do {

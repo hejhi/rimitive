@@ -41,7 +41,6 @@ export type SignalContext = GlobalContext & {
 // This IS the actual signal - no indirection through properties
 interface SignalState<T> extends ProducerNode {
   value: T;
-  _flags: number;  // Bit field for various node flags
 }
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
@@ -57,9 +56,9 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     const state: SignalState<T> = {
       __type: 'signal',
       value: initialValue,
-      _out: undefined,
-      _outTail: undefined,
-      _flags: 0,  // Start in clean state with no properties
+      out: undefined,
+      outTail: undefined,
+      flags: 0,  // Start in clean state with no properties
     };
 
     // Signal function using closure instead of bound this
@@ -74,16 +73,16 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
         state.value = newValue;
 
-        const outEdge = state._out;
+        const outEdge = state.out;
 
         if (!outEdge) return;
 
         // Only add HAS_CHANGED property if not already set (first change only)
         // No need to set if unobserved since it's only used during propagation
         // Cache flags to avoid double read in hot path
-        const flags = state._flags;
+        const flags = state.flags;
 
-        if (!(flags & HAS_CHANGED)) state._flags = flags | HAS_CHANGED;
+        if (!(flags & HAS_CHANGED)) state.flags = flags | HAS_CHANGED;
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale edges automatically

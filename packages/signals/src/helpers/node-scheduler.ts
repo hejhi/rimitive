@@ -27,10 +27,10 @@ const { hasAnyOf, setStatus, getStatus, addProperty, removeProperty } = createFl
 /**
  * ALGORITHM: Intrusive FIFO Scheduling Queue
  *
- * Uses each node's `_nextScheduled` field as the linked-list pointer.
+ * Uses each node's `nextScheduled` field as the linked-list pointer.
  * - Enqueue: append to tail of queue in O(1)
- * - Flush: dequeue from head (FIFO) clearing `_nextScheduled` before executing
- * - Dedup: any non-undefined `_nextScheduled` means "already scheduled"
+ * - Flush: dequeue from head (FIFO) clearing `nextScheduled` before executing
+ * - Dedup: any non-undefined `nextScheduled` means "already scheduled"
  *
  * Benefits vs circular buffer:
  * - No fixed capacity or overflow checks
@@ -44,15 +44,15 @@ export function createNodeScheduler(
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
     // Cache flags for better branch prediction
-    const flags = node._flags;
+    const flags = node.flags;
     if (hasAnyOf(flags, IS_SCHEDULED)) return; // Cold path - already scheduled
 
     // Hot path - add scheduled property with cached flags
-    node._flags = addProperty(flags, IS_SCHEDULED);
-    node._nextScheduled = undefined;
+    node.flags = addProperty(flags, IS_SCHEDULED);
+    node.nextScheduled = undefined;
 
     // Add to queue
-    if (ctx.queueTail) ctx.queueTail._nextScheduled = node;
+    if (ctx.queueTail) ctx.queueTail.nextScheduled = node;
     else ctx.queueHead = node;
 
     ctx.queueTail = node;
@@ -63,8 +63,8 @@ export function createNodeScheduler(
     node: T,
     cleanup: (node: T) => void
   ): void => {
-    if (getStatus(node._flags) === STATUS_DISPOSED) return;
-    node._flags = setStatus(node._flags, STATUS_DISPOSED);
+    if (getStatus(node.flags) === STATUS_DISPOSED) return;
+    node.flags = setStatus(node.flags, STATUS_DISPOSED);
     cleanup(node);
   };
 
@@ -77,10 +77,10 @@ export function createNodeScheduler(
     ctx.queueHead = ctx.queueTail = undefined;
 
     while (current) {
-      const next: ScheduledNode | undefined = current._nextScheduled;
-      current._nextScheduled = undefined;
-      const nextFlags = removeProperty(current._flags, IS_SCHEDULED);
-      current._flags = nextFlags;
+      const next: ScheduledNode | undefined = current.nextScheduled;
+      current.nextScheduled = undefined;
+      const nextFlags = removeProperty(current.flags, IS_SCHEDULED);
+      current.flags = nextFlags;
       const status = getStatus(nextFlags);
 
       if (
@@ -92,18 +92,18 @@ export function createNodeScheduler(
           // Use checkStale to update dependencies and determine if a scheduled node should run
           pullUpdates(current);
 
-          const newFlags = current._flags;
+          const newFlags = current.flags;
 
           // If still INVALIDATED after checkStale, dependencies didn't change
           if (getStatus(newFlags) === STATUS_INVALIDATED) {
-            current._flags = setStatus(newFlags, STATUS_CLEAN);
+            current.flags = setStatus(newFlags, STATUS_CLEAN);
             continue;
           }
         }
 
         // Transition to recomputing state
-        current._flags = setStatus(nextFlags, STATUS_RECOMPUTING);
-        current._flush();
+        current.flags = setStatus(nextFlags, STATUS_RECOMPUTING);
+        current.flush();
       }
 
       current = next;

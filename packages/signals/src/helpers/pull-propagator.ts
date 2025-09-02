@@ -25,9 +25,9 @@ const { getStatus, hasAnyOf, resetStatus, setStatus, recomputeNode } = createNod
 
 export function createPullPropagator(): PullPropagator {
   const pullUpdates = (node: ToNode): void => {
-    const flags = node._flags;
+    const flags = node.flags;
     const status = getStatus(flags);
-    const isDerivedNode = '_recompute' in node;
+    const isDerivedNode = 'recompute' in node;
     
     if (
       status === STATUS_CLEAN ||
@@ -38,21 +38,21 @@ export function createPullPropagator(): PullPropagator {
     
     if (status === STATUS_DIRTY) {
       if (isDerivedNode) recomputeNode(node, flags);
-      else node._flags = resetStatus(flags);
+      else node.flags = resetStatus(flags);
       return;
     }
     
-    node._flags = setStatus(flags, STATUS_CHECKING);
+    node.flags = setStatus(flags, STATUS_CHECKING);
 
     let stack: Stack<Edge> | undefined;
     let currentNode = node;
-    let currentEdge = node._in;
+    let currentEdge = node.in;
     let stale = false;
 
     for (;;) {
       while (currentEdge) {
         const source = currentEdge.from;
-        const sFlags = source._flags;
+        const sFlags = source.flags;
 
         if (hasAnyOf(sFlags, HAS_CHANGED)) {
           stale = true;
@@ -61,7 +61,7 @@ export function createPullPropagator(): PullPropagator {
 
         const nextEdge = currentEdge.nextIn;
 
-        if (!('_recompute' in source)) {
+        if (!('recompute' in source)) {
           currentEdge = nextEdge;
           continue;
         }
@@ -83,7 +83,7 @@ export function createPullPropagator(): PullPropagator {
             continue;
           }
 
-          source._flags = setStatus(sFlags, STATUS_CHECKING);
+          source.flags = setStatus(sFlags, STATUS_CHECKING);
 
           if (nextEdge) {
             if (!stack) stack = { value: nextEdge, prev: undefined };
@@ -91,21 +91,21 @@ export function createPullPropagator(): PullPropagator {
           }
 
           currentNode = source;
-          currentEdge = source._in;
+          currentEdge = source.in;
           continue;
         }
 
         currentEdge = nextEdge;
       }
 
-      if (currentNode !== node && ('_recompute' in currentNode)) {
-        const currentFlags = currentNode._flags;
+      if (currentNode !== node && ('recompute' in currentNode)) {
+        const currentFlags = currentNode.flags;
         const currentState = getStatus(currentFlags);
         
         if (currentState === STATUS_DIRTY || stale) {
           stale = recomputeNode(currentNode, currentFlags);
         } else {
-          currentNode._flags = resetStatus(currentFlags);
+          currentNode.flags = resetStatus(currentFlags);
           stale = false;
         }
       }
@@ -117,10 +117,10 @@ export function createPullPropagator(): PullPropagator {
       stack = stack.prev;
     }
 
-    const newFlags = node._flags;
+    const newFlags = node.flags;
 
     if (stale && isDerivedNode) recomputeNode(node, newFlags);
-    else node._flags = resetStatus(newFlags);
+    else node.flags = resetStatus(newFlags);
   };
 
   return { pullUpdates };

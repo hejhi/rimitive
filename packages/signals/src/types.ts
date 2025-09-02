@@ -19,6 +19,7 @@
 // creating nominal types in a structural type system.
 export interface ReactiveNode {
   readonly __type: string;
+  flags: number; // Bit field containing state and properties
 }
 
 // DESIGN: User-facing API contracts
@@ -41,30 +42,28 @@ export interface Writable<T = unknown> extends Readable<T> {
 // They maintain a list of consumers that depend on them
 export interface ProducerNode extends ReactiveNode {
   value: unknown;
-  _out: Edge | undefined; // Head of output list
-  _outTail: Edge | undefined; // Tail of output list
-  _flags: number; // Bit field containing state and properties
+  out: Edge | undefined; // Head of output list
+  outTail: Edge | undefined; // Tail of output list
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
 // They maintain a list of producers they depend on
 export interface ConsumerNode extends ReactiveNode {
-  _in: Edge | undefined; // Head of input list
-  _inTail: Edge | undefined; // Tail of input list
-  _flags: number; // Bit field containing state (Clean, Dirty, Checking, etc.) and properties
-  _notify: (node: ConsumerNode) => void;
+  in: Edge | undefined; // Head of input list
+  inTail: Edge | undefined; // Tail of input list
+  notify: (node: ConsumerNode) => void;
 }
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {
-  _recompute(): boolean; // Execute the deferred work
+  recompute(): boolean; // Execute the deferred work
 }
 
 // PATTERN: Deferred Execution Queue
 // ScheduledNode represents consumers that batch their updates.
 // Uses intrusive linked list for zero-allocation scheduling queue.
 export interface ScheduledNode extends ConsumerNode {
-  _nextScheduled: ScheduledNode | undefined;  // Next node in scheduling queue (intrusive list)
-  _flush(): void;                  // Execute the deferred work
+  nextScheduled: ScheduledNode | undefined;  // Next node in scheduling queue (intrusive list)
+  flush(): void;                  // Execute the deferred work
 }
 
 // Node types for edges

@@ -26,8 +26,7 @@ export type ComputedContext = GlobalContext & {
 // Internal computed state that gets bound to the function
 interface ComputedState<T> extends DerivedNode {
   __type: 'computed';
-  _recompute(): boolean; // Update the computed value when dependencies change
-  value: T | undefined; // Cached computed value
+  value: T; // Cached computed value
 }
 
 const {
@@ -49,17 +48,17 @@ export function createComputedFactory(
     // State object captured in closure - no binding needed
     const state: ComputedState<T> = {
       __type: 'computed' as const,
-      value: undefined,
-      _out: undefined,
-      _outTail: undefined,
-      _in: undefined, // Will be set to old edges when they exist
-      _inTail: undefined, // Don't clear during recompute - preserve for traversal
-      _flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
+      value: undefined as T,
+      out: undefined,
+      outTail: undefined,
+      in: undefined, // Will be set to old edges when they exist
+      inTail: undefined, // Don't clear during recompute - preserve for traversal
+      flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
-      _recompute(): boolean {
+      recompute(): boolean {
         // Reset tail marker to start fresh tracking (like alien-signals startTracking)
         // This allows new dependencies to be established while keeping old edges for cleanup
-        state._inTail = undefined;
+        state.inTail = undefined;
 
         const prevConsumer = ctx.currentConsumer;
         ctx.currentConsumer = state;
@@ -79,11 +78,11 @@ export function createComputedFactory(
           ctx.currentConsumer = prevConsumer;
           // Only prune if we have edges to prune
           // Unobserved computeds have no edges, so skip the pruning
-          if (state._in) pruneStale(state);
+          if (state.in) pruneStale(state);
         }
         return valueChanged;
       },
-      _notify: () => undefined
+      notify: () => undefined
     };
 
     // Single-pass update using pullUpdates
@@ -115,7 +114,7 @@ export function createComputedFactory(
         ctx.currentConsumer = prevConsumer; // Restore back to previous state
       }
 
-      return state.value!;
+      return state.value;
     };
 
     return computed;

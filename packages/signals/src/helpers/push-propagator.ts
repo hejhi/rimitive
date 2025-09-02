@@ -24,21 +24,21 @@ export function createPushPropagator(): PushPropagator {
 
     do {
       const target = currentEdge.to;
-      const targetFlags = target._flags;
+      const targetFlags = target.flags;
 
       if (hasAnyOf(targetFlags, MASK_STATUS_SKIP_NODE | STATUS_INVALIDATED)) {
         currentEdge = currentEdge.nextOut;
         continue;
       }
 
-      target._flags = setStatus(targetFlags, STATUS_INVALIDATED);
+      target.flags = setStatus(targetFlags, STATUS_INVALIDATED);
 
       // Fast path: if node has _notify, it's an effect - schedule it directly
       // This avoids method calls and property lookups
-      if ('_notify' in target) target._notify(target);
+      if ('notify' in target) target.notify(target);
 
-      if ('_out' in target) {
-        const firstChild = target._out;
+      if ('out' in target) {
+        const firstChild = target.out;
 
         if (firstChild) {
           const nextSibling = currentEdge.nextOut;

@@ -86,19 +86,19 @@ export function createEffectFactory(
     // State object captured in closure - no binding needed
     const effect: EffectInterface = {
       __type: 'effect' as const,
-      _flags: STATUS_DIRTY, // Start in DIRTY state to trigger initial execution
-      _in: undefined as Edge | undefined,
-      _inTail: undefined as Edge | undefined,
-      _nextScheduled: undefined as ScheduledNode | undefined,
       _cleanup: undefined as (() => void) | undefined,
+      flags: STATUS_DIRTY, // Start in DIRTY state to trigger initial execution
+      in: undefined as Edge | undefined,
+      inTail: undefined as Edge | undefined,
+      nextScheduled: undefined as ScheduledNode | undefined,
+      notify: enqueue as (node: ConsumerNode) => void, // Store the enqueue function directly for fast access
       // This will be set below
-      _flush: null as unknown as () => void,
-      _notify: enqueue as (node: ConsumerNode) => void, // Store the enqueue function directly for fast access
+      flush: null as unknown as () => void,
     };
 
     // Flush method using closure
     const flush = (): void => {
-      effect._inTail = undefined;
+      effect.inTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = effect;
@@ -117,7 +117,7 @@ export function createEffectFactory(
       } finally {
         ctx.currentConsumer = prevConsumer;
         // Transition back to clean state after execution
-        effect._flags = setStatus(effect._flags, STATUS_CLEAN);
+        effect.flags = setStatus(effect.flags, STATUS_CLEAN);
         pruneStale(effect);
       }
     };
@@ -136,7 +136,7 @@ export function createEffectFactory(
     };
 
     // Set flush method
-    effect._flush = flush;
+    effect.flush = flush;
 
     // Effects run immediately when created to establish initial state and dependencies.
     // This flushes outside of the scheduling mechanism.

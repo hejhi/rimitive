@@ -14,12 +14,12 @@ export interface NodeState {
 
 export function createNodeState(): NodeState {
   const recomputeNode = (node: DerivedNode, flags: number): boolean => {
-    node._flags = setStatus(flags, STATUS_RECOMPUTING);
-    const changed = node._recompute();
+    node.flags = setStatus(flags, STATUS_RECOMPUTING);
+    const changed = node.recompute();
     if (changed) {
-      node._flags = resetStatus(flags) | HAS_CHANGED;
+      node.flags = resetStatus(flags) | HAS_CHANGED;
     } else {
-      node._flags = resetStatus(flags);
+      node.flags = resetStatus(flags);
     }
     return changed;
   };
