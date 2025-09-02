@@ -64,10 +64,7 @@ export function createGraphEdges(): GraphEdges {
     else from.outTail = prevOut;
 
     if (prevOut) prevOut.nextOut = nextOut;
-    else {
-      from.out = nextOut;
-      if (!nextOut && isDerived(from)) from.flags = setStatus(from.flags, STATUS_DIRTY);
-    }
+    else from.out = nextOut;
 
     return nextIn;
   };
@@ -79,7 +76,15 @@ export function createGraphEdges(): GraphEdges {
     
     if (edge) {
       do {
-        edge = removeEdge(edge);
+        const from = edge.from;
+        const nextEdge = removeEdge(edge);
+        
+        // Set DIRTY if we removed the last subscriber from a derived node
+        if (!from.out && isDerived(from)) {
+          from.flags = setStatus(from.flags, STATUS_DIRTY);
+        }
+        
+        edge = nextEdge;
       } while (edge);
     }
     
@@ -94,6 +99,7 @@ export function createGraphEdges(): GraphEdges {
     
     if (toRemove) {
       do {
+        // No DIRTY setting during pruning - we're in mid-computation
         toRemove = removeEdge(toRemove);
       } while (toRemove);
     }
