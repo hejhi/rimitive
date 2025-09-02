@@ -1,6 +1,5 @@
 import { ConsumerNode, ScheduledNode } from "./types";
 import type { GraphEdges } from "./helpers/graph-edges";
-import type { NodeState } from "./helpers/node-state";
 import type { PushPropagator } from "./helpers/push-propagator";
 import type { PullPropagator } from "./helpers/pull-propagator";
 import type { NodeScheduler } from "./helpers/node-scheduler";
@@ -38,7 +37,6 @@ export interface SignalContext {
   queueTail: ScheduledNode | undefined;
   
   // Composable helpers for graph operations
-  nodeState: NodeState;
   graphEdges: GraphEdges;
   pushPropagator: PushPropagator;
   pullPropagator: PullPropagator;

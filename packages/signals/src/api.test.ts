@@ -9,7 +9,6 @@ import type { LatticeExtension } from '@lattice/lattice';
 import { createBaseContext } from './context';
 import { createNodeScheduler } from './helpers/node-scheduler';
 import { createGraphEdges } from './helpers/graph-edges';
-import { createNodeState } from './helpers/node-state';
 import { createPushPropagator } from './helpers/push-propagator';
 import { createPullPropagator } from './helpers/pull-propagator';
 
@@ -51,26 +50,25 @@ describe('createSignalAPI', () => {
     
     // Create custom context with custom work queue
     const baseCtx = createBaseContext();
-    const nodeState = createNodeState();
-    const graphEdges = createGraphEdges(nodeState.setStatus);
-    const pushPropagator = createPushPropagator(nodeState);
-    const pullPropagator = createPullPropagator(nodeState);
+    const graphEdges = createGraphEdges();
+    const nodeScheduler = (() => {
+      const scheduler = createNodeScheduler(baseCtx);
+      return {
+        ...scheduler,
+        flush: () => {
+          flushCalled = true;
+          scheduler.flush(pullPropagator.pullUpdates);
+        }
+      };
+    })();
+    const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+    const pullPropagator = createPullPropagator();
     const customCtx = {
       ...baseCtx,
-      nodeState,
       graphEdges,
       pushPropagator,
       pullPropagator,
-      nodeScheduler: (() => {
-        const scheduler = createNodeScheduler(baseCtx);
-        return {
-          ...scheduler,
-          flush: () => {
-            flushCalled = true;
-            scheduler.flush(pullPropagator.pullUpdates);
-          }
-        };
-      })(),
+      nodeScheduler,
     };
     
     const api = createSignalAPI({
@@ -99,25 +97,24 @@ describe('createSignalAPI', () => {
     
     // Create custom context with instrumented work queue
     const baseCtx = createBaseContext();
-    const nodeState = createNodeState();
-    const graphEdges = createGraphEdges(nodeState.setStatus);
-    const pushPropagator = createPushPropagator(nodeState);
-    const pullPropagator = createPullPropagator(nodeState);
+    const graphEdges = createGraphEdges();
+    const nodeScheduler = (() => {
+      const queue = createNodeScheduler(baseCtx);
+      const originalEnqueue = queue.enqueue;
+      queue.enqueue = (node) => {
+        enqueueCount++;
+        return originalEnqueue(node);
+      };
+      return queue;
+    })();
+    const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+    const pullPropagator = createPullPropagator();
     const customCtx = {
       ...baseCtx,
-      nodeState,
       graphEdges,
       pushPropagator,
       pullPropagator,
-      nodeScheduler: (() => {
-        const queue = createNodeScheduler(baseCtx);
-        const originalEnqueue = queue.enqueue;
-        queue.enqueue = (node) => {
-          enqueueCount++;
-          return originalEnqueue(node);
-        };
-        return queue;
-      })(),
+      nodeScheduler,
     };
     
     const api = createSignalAPI({

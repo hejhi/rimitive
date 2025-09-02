@@ -1,6 +1,6 @@
 import type { Edge, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
-import type { NodeState } from './node-state';
+import { createNodeState } from './node-state';
 
 const { STATUS_INVALIDATED, MASK_STATUS_SKIP_NODE } = CONSTANTS;
 
@@ -10,21 +10,17 @@ interface Stack<T> {
 }
 
 export interface PushPropagator {
-  pushUpdates: (
-    from: Edge | undefined,
-    visit: (node: ScheduledNode) => void
-  ) => void;
+  pushUpdates: (from: Edge | undefined) => void;
 }
 
+const nodeState = createNodeState();
+
 export function createPushPropagator(
-  nodeState: NodeState
+  enqueue: (node: ScheduledNode) => void
 ): PushPropagator {
   const { hasAnyOf, setStatus } = nodeState;
 
-  const pushUpdates = (
-    from: Edge | undefined,
-    visit: (node: ScheduledNode) => void
-  ): void => {
+  const pushUpdates = (from: Edge | undefined): void => {
     if (!from) return;
     
     let stack: Stack<Edge> | undefined;
@@ -52,7 +48,7 @@ export function createPushPropagator(
           currentEdge = firstChild;
           continue;
         }
-      } else if ('_nextScheduled' in target) visit(target);
+      } else if ('_nextScheduled' in target) enqueue(target);
 
       currentEdge = currentEdge.nextOut;
 

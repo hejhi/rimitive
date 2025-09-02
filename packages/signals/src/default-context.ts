@@ -1,6 +1,5 @@
 import { createBaseContext, SignalContext } from './context';
 import { createGraphEdges } from './helpers/graph-edges';
-import { createNodeState } from './helpers/node-state';
 import { createPushPropagator } from './helpers/push-propagator';
 import { createPullPropagator } from './helpers/pull-propagator';
 import { createNodeScheduler } from './helpers/node-scheduler';
@@ -14,15 +13,13 @@ export function createDefaultContext(): SignalContext {
   const baseCtx = createBaseContext();
   
   // Create helpers with their dependencies
-  const nodeState = createNodeState();
-  const graphEdges = createGraphEdges(nodeState.setStatus);
-  const pushPropagator = createPushPropagator(nodeState);
-  const pullPropagator = createPullPropagator(nodeState);
+  const graphEdges = createGraphEdges();
   const nodeScheduler = createNodeScheduler(baseCtx);
+  const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+  const pullPropagator = createPullPropagator();
   
   return {
     ...baseCtx,
-    nodeState,
     graphEdges,
     pushPropagator,
     pullPropagator,

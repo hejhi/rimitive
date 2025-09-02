@@ -1,6 +1,6 @@
 import type { ToNode, Edge } from '../types';
 import { CONSTANTS } from '../constants';
-import type { NodeState } from './node-state';
+import { createNodeState } from './node-state';
 
 const {
   STATUS_CLEAN,
@@ -21,11 +21,10 @@ export interface PullPropagator {
   pullUpdates: (node: ToNode) => void;
 }
 
-export function createPullPropagator(
-  nodeState: NodeState
-): PullPropagator {
-  const { getStatus, hasAnyOf, resetStatus, setStatus, recomputeNode } = nodeState;
+const { getStatus, hasAnyOf, resetStatus, setStatus, recomputeNode } = createNodeState();
 
+export function createPullPropagator(
+): PullPropagator {
   const pullUpdates = (node: ToNode): void => {
     const flags = node._flags;
     const status = getStatus(flags);

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createGraphEdges } from './graph-edges';
-import { createNodeState } from './node-state';
 import { createPushPropagator } from './push-propagator';
 import { createPullPropagator } from './pull-propagator';
 import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
@@ -19,10 +18,13 @@ describe('Dependency Graph Helpers', () => {
   };
 
   beforeEach(() => {
-    const nodeState = createNodeState();
-    const graphEdges = createGraphEdges(nodeState.setStatus);
-    const pushPropagator = createPushPropagator(nodeState);
-    const pullPropagator = createPullPropagator(nodeState);
+    const graphEdges = createGraphEdges();
+    // Mock enqueue function for testing
+    const mockEnqueue = () => {
+      // For testing, we don't need actual scheduling
+    };
+    const pushPropagator = createPushPropagator(mockEnqueue);
+    const pullPropagator = createPullPropagator();
     
     helpers = {
       addEdge: graphEdges.addEdge,
@@ -355,24 +357,20 @@ describe('Dependency Graph Helpers', () => {
   
   describe('GraphWalker', () => {
     let scheduledNodes: ScheduledNode[];
-    let walk: (from: Edge | undefined, visit: (node: ConsumerNode) => void) => void;
-    let visit: (node: ConsumerNode) => void;
+    let walk: (from: Edge | undefined) => void;
   
     beforeEach(() => {
       scheduledNodes = [];
   
-      visit = (node: ConsumerNode) => {
-        // Check if this node is schedulable (has effect properties)
-        if ('_nextScheduled' in node) {
-          const schedulableNode = node as ConsumerNode & ScheduledNode;
-          if (schedulableNode._nextScheduled !== undefined) return;
-          
-          scheduledNodes.push(schedulableNode);
-          schedulableNode._nextScheduled = schedulableNode; // Use self as flag
-        }
+      // Create a custom push propagator with our test enqueue function
+      const testEnqueue = (node: ScheduledNode) => {
+        if (node._nextScheduled !== undefined) return;
+        scheduledNodes.push(node);
+        node._nextScheduled = node; // Use self as flag
       };
+      const testPushPropagator = createPushPropagator(testEnqueue);
   
-      walk = helpers.pushUpdates;
+      walk = testPushPropagator.pushUpdates;
     });
   
     function createMockNode(
@@ -419,7 +417,7 @@ describe('Dependency Graph Helpers', () => {
       const target = createMockNode('computed');
       const edge = createEdge(source, target);
   
-      walk(edge, visit);
+      walk(edge);
   
       // With push-pull system, computeds get STATUS_INVALIDATED during push phase
       expect(target._flags & STATUS_INVALIDATED).toBeTruthy();
@@ -430,7 +428,7 @@ describe('Dependency Graph Helpers', () => {
       const effect = createMockNode('effect', 0, true); // isScheduled = true
       const edge = createEdge(source, effect);
   
-      walk(edge, visit);
+      walk(edge);
   
       // With push-pull system, effects get STATUS_INVALIDATED during push phase
       expect(effect._flags & STATUS_INVALIDATED).toBeTruthy();
@@ -442,7 +440,7 @@ describe('Dependency Graph Helpers', () => {
       const edge = createEdge(source, target);
   
       const initialFlags = target._flags;
-      walk(edge, visit);
+      walk(edge);
   
       expect(target._flags).toBe(initialFlags);
     });
@@ -453,7 +451,7 @@ describe('Dependency Graph Helpers', () => {
       const edge = createEdge(source, target);
   
       const initialFlags = target._flags;
-      walk(edge, visit);
+      walk(edge);
   
       expect(target._flags).toBe(initialFlags);
     });
@@ -464,7 +462,7 @@ describe('Dependency Graph Helpers', () => {
       const edge = createEdge(source, target);
   
       const initialFlags = target._flags;
-      walk(edge, visit);
+      walk(edge);
   
       expect(target._flags).toBe(initialFlags);
     });
@@ -481,7 +479,7 @@ describe('Dependency Graph Helpers', () => {
   
       linkEdges([edge1, edge2, edge3]);
   
-      walk(edge1, visit);
+      walk(edge1);
   
       expect(target1._flags & STATUS_INVALIDATED).toBeTruthy();
       expect(target2._flags & STATUS_INVALIDATED).toBeTruthy();
@@ -502,7 +500,7 @@ describe('Dependency Graph Helpers', () => {
       computed1._out = edge2;
       computed2._out = edge3;
   
-      walk(edge1, visit);
+      walk(edge1);
   
       expect(computed1._flags & STATUS_INVALIDATED).toBeTruthy();
       expect(computed2._flags & STATUS_INVALIDATED).toBeTruthy();
@@ -526,7 +524,7 @@ describe('Dependency Graph Helpers', () => {
       computed1._out = edge3;
       computed2._out = edge4;
   
-      walk(edge1, visit);
+      walk(edge1);
   
       expect(computed1._flags & STATUS_INVALIDATED).toBeTruthy();
       expect(computed2._flags & STATUS_INVALIDATED).toBeTruthy();
@@ -571,7 +569,7 @@ describe('Dependency Graph Helpers', () => {
       const comp4ToEff3 = createEdge(comp4, eff3);
       comp4._out = comp4ToEff3;
   
-      walk(sourceToComp1, visit);
+      walk(sourceToComp1);
   
       // All nodes should be invalidated
       expect(comp1._flags & STATUS_INVALIDATED).toBeTruthy();
@@ -589,7 +587,7 @@ describe('Dependency Graph Helpers', () => {
     });
   
     it('should handle empty edge', () => {
-      walk(undefined, visit);
+      walk(undefined);
       // Should not throw
       expect(scheduledNodes).toHaveLength(0);
     });
@@ -605,7 +603,7 @@ describe('Dependency Graph Helpers', () => {
       // Manually set _nextScheduled to simulate already scheduled
       effect._nextScheduled = {} as ScheduledNode;
   
-      walk(edge1, visit);
+      walk(edge1);
   
       // Effect should only be scheduled once
       expect(scheduledNodes).toHaveLength(0); // Because it was already scheduled
@@ -626,7 +624,7 @@ describe('Dependency Graph Helpers', () => {
         nodes[i]!._out = edge;
       }
   
-      walk(edges[0], visit);
+      walk(edges[0]);
   
       // All nodes should be notified as DIRTY with simplified flag system
       for (let i = 1; i < 100; i++) {

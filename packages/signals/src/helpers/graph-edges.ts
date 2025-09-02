@@ -1,7 +1,10 @@
 import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode } from '../types';
 import { CONSTANTS } from '../constants';
+import { createNodeState } from './node-state';
 
 const { STATUS_DIRTY } = CONSTANTS;
+
+const { setStatus } = createNodeState()
 
 export interface GraphEdges {
   addEdge: (producer: ProducerNode, consumer: ConsumerNode) => void;
@@ -10,9 +13,7 @@ export interface GraphEdges {
   pruneStale: (consumer: ConsumerNode) => void;
 }
 
-export function createGraphEdges(
-  setStatus: (flags: number, status: number) => number
-): GraphEdges {
+export function createGraphEdges(): GraphEdges {
   const addEdge = (
     producer: FromNode,
     consumer: ToNode

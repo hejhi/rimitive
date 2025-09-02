@@ -40,7 +40,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     graphEdges: { addEdge },
     pushPropagator: { pushUpdates },
     pullPropagator: { pullUpdates },
-    nodeScheduler: { enqueue, flush },
+    nodeScheduler: { flush },
   } = ctx;
   
   // CLOSURE PATTERN: Create signal with closure-captured state for better V8 optimization
@@ -80,7 +80,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale edges automatically
-        pushUpdates(outEdge, enqueue);
+        pushUpdates(outEdge);
 
         // Batch check and flush
         if (!ctx.batchDepth) flush(pullUpdates);
