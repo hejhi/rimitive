@@ -25,7 +25,7 @@ const { HAS_CHANGED } = CONSTANTS;
 
 // Single function interface for both read and write
 // The function also implements ProducerNode to expose graph properties
-export interface SignalFunction<T = unknown> extends ProducerNode {
+export interface SignalFunction<T = unknown> {
   (): T;                    // Read operation
   (value: T): void;         // Write operation
   peek(): T;                // Non-tracking read

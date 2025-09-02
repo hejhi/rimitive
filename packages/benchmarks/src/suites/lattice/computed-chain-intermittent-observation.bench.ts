@@ -40,7 +40,7 @@ const baseCtx = createBaseContext();
 const pullPropagator = createPullPropagator();
 const graphEdges = createGraphEdges();
 const nodeScheduler = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
-const pushPropagator = createPushPropagator(nodeScheduler.enqueue);
+const pushPropagator = createPushPropagator();
 
 // Create Lattice API instance
 const latticeAPI = createSignalAPI(
