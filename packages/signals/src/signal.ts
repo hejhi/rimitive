@@ -48,7 +48,7 @@ const { removeProperty, hasAnyOf, addProperty } = createFlagManager();
 
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
-    graphEdges: { addEdge },
+    graphEdges: { trackDependency },
     pushPropagator: { pushUpdates },
     nodeScheduler: { flush },
   } = ctx;
@@ -58,8 +58,8 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     const node: SignalState<T> = {
       __type: 'signal',
       value: initialValue,
-      out: undefined,
-      outTail: undefined,
+      dependents: undefined,
+      dependentsTail: undefined,
       flags: 0,
     };
 
@@ -70,7 +70,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         const newValue = args[0];
         const flags = node.flags;
         const hasChanged = hasAnyOf(flags, HAS_CHANGED);
-        const outEdge = node.out;
+        const dependents = node.dependents;
 
         if (node.value === newValue) {
           if (hasChanged) node.flags = removeProperty(flags, HAS_CHANGED);
@@ -79,15 +79,15 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
         node.value = newValue;
 
-        if (!outEdge) return;
+        if (!dependents) return;
 
-        // Only mark if value changed and there's an `out`.
+        // Only mark if value changed and there are dependents.
         // Otherwise, it's not connected and this flag doesn't matter.
         if (!hasChanged) node.flags = addProperty(flags, HAS_CHANGED);
 
         // Invalidate and propagate
-        // The pushUpdates function will skip stale edges automatically
-        pushUpdates(outEdge);
+        // The pushUpdates function will skip stale dependencies automatically
+        pushUpdates(dependents);
 
         // Batch check and flush
         if (!ctx.batchDepth) flush();
@@ -99,7 +99,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
       // Always link if there's a consumer (alien-signals approach)
       // Create edge to consumer
-      if (consumer) addEdge(node, consumer);
+      if (consumer) trackDependency(node, consumer);
 
       return node.value;
     }) as SignalFunction<T>;

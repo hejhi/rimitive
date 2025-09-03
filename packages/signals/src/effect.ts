@@ -38,7 +38,7 @@
  */
 
 import { CONSTANTS, createFlagManager } from './constants';
-import { ConsumerNode, Edge, ScheduledNode } from './types';
+import { ConsumerNode, Dependency, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
@@ -88,8 +88,8 @@ export function createEffectFactory(
       __type: 'effect' as const,
       _cleanup: undefined as (() => void) | undefined,
       flags: STATUS_DIRTY, // Start in DIRTY state to trigger initial execution
-      in: undefined as Edge | undefined,
-      inTail: undefined as Edge | undefined,
+      dependencies: undefined as Dependency | undefined,
+      dependencyTail: undefined as Dependency | undefined,
       nextScheduled: undefined as ScheduledNode | undefined,
       notify: enqueue as (node: ConsumerNode) => void, // Store the enqueue function directly for fast access
       // This will be set below
@@ -98,7 +98,7 @@ export function createEffectFactory(
 
     // Flush method using closure
     const flush = (): void => {
-      node.inTail = undefined;
+      node.dependencyTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = node;

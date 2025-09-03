@@ -1,4 +1,4 @@
-import type { ProducerNode, ConsumerNode, Edge, ToNode, FromNode, DerivedNode } from '../types';
+import type { ProducerNode, ConsumerNode, Dependency, ToNode, FromNode, DerivedNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createNodeState } from './node-state';
 
@@ -6,108 +6,108 @@ const { STATUS_DIRTY } = CONSTANTS;
 const { setStatus } = createNodeState()
 
 export interface GraphEdges {
-  addEdge: (producer: ProducerNode, consumer: ConsumerNode) => void;
-  removeEdge: (edge: Edge) => Edge | undefined;
+  trackDependency: (producer: ProducerNode, consumer: ConsumerNode) => void;
+  removeDependency: (dependency: Dependency) => Dependency | undefined;
   detachAll: (consumer: ConsumerNode) => void;
   pruneStale: (consumer: ConsumerNode) => void;
 }
 
 export function createGraphEdges(): GraphEdges {
-  const addEdge = (
+  const trackDependency = (
     producer: FromNode,
     consumer: ToNode
   ): void => {
-    const tail = consumer.inTail;
+    const tail = consumer.dependencyTail;
     
-    if (tail && tail.from === producer) return;
+    if (tail && tail.producer === producer) return;
     
     // Tail will be undefined until after the first dependency in the executing consumer is read.
-    // In that case, we should go with the first Edge in the existing list.
-    const candidate = tail ? tail.nextIn : consumer.in;
+    // In that case, we should go with the first Dependency in the existing list.
+    const candidate = tail ? tail.nextDependency : consumer.dependencies;
 
-    if (candidate && candidate.from === producer) {
-      consumer.inTail = candidate;
+    if (candidate && candidate.producer === producer) {
+      consumer.dependencyTail = candidate;
       return;
     }
     
-    const prevOut = producer.outTail;
+    const prevDependent = producer.dependentsTail;
 
-    const newEdge = {
-      from: producer,
-      to: consumer,
-      prevIn: tail,
-      prevOut,
-      nextIn: candidate,
-      nextOut: undefined,
+    const newDependency = {
+      producer: producer,
+      consumer: consumer,
+      prevDependency: tail,
+      prevDependent,
+      nextDependency: candidate,
+      nextDependent: undefined,
     };
 
-    if (candidate) candidate.prevIn = newEdge;
-    if (tail) tail.nextIn = newEdge;
-    else consumer.in = newEdge;
+    if (candidate) candidate.prevDependency = newDependency;
+    if (tail) tail.nextDependency = newDependency;
+    else consumer.dependencies = newDependency;
 
-    consumer.inTail = newEdge;
+    consumer.dependencyTail = newDependency;
 
-    if (prevOut) prevOut.nextOut = newEdge;
-    else producer.out = newEdge;
+    if (prevDependent) prevDependent.nextDependent = newDependency;
+    else producer.dependents = newDependency;
 
-    producer.outTail = newEdge;    
+    producer.dependentsTail = newDependency;    
   };
 
-  const removeEdge = (edge: Edge): Edge | undefined => {
-    const { from, to, prevIn, nextIn, prevOut, nextOut } = edge;
+  const removeDependency = (dependency: Dependency): Dependency | undefined => {
+    const { producer, consumer, prevDependency, nextDependency, prevDependent, nextDependent } = dependency;
 
-    if (nextIn) nextIn.prevIn = prevIn;
-    else to.inTail = prevIn;
+    if (nextDependency) nextDependency.prevDependency = prevDependency;
+    else consumer.dependencyTail = prevDependency;
 
-    if (prevIn) prevIn.nextIn = nextIn;
-    else to.in = nextIn;
+    if (prevDependency) prevDependency.nextDependency = nextDependency;
+    else consumer.dependencies = nextDependency;
 
-    if (nextOut) nextOut.prevOut = prevOut;
-    else from.outTail = prevOut;
+    if (nextDependent) nextDependent.prevDependent = prevDependent;
+    else producer.dependentsTail = prevDependent;
 
-    if (prevOut) prevOut.nextOut = nextOut;
-    else from.out = nextOut;
+    if (prevDependent) prevDependent.nextDependent = nextDependent;
+    else producer.dependents = nextDependent;
 
-    return nextIn;
+    return nextDependency;
   };
 
   const isDerived = (source: FromNode | ToNode): source is DerivedNode => '_recompute' in source;
 
   const detachAll = (consumer: ConsumerNode): void => {
-    let edge = consumer.in;
+    let dependency = consumer.dependencies;
     
-    if (edge) {
+    if (dependency) {
       do {
-        const from = edge.from;
-        const nextEdge = removeEdge(edge);
+        const producer = dependency.producer;
+        const nextDependency = removeDependency(dependency);
         
         // Set DIRTY if we removed the last subscriber from a derived node
-        if (!from.out && isDerived(from)) {
-          from.flags = setStatus(from.flags, STATUS_DIRTY);
+        if (!producer.dependents && isDerived(producer)) {
+          producer.flags = setStatus(producer.flags, STATUS_DIRTY);
         }
         
-        edge = nextEdge;
-      } while (edge);
+        dependency = nextDependency;
+      } while (dependency);
     }
     
-    consumer.in = undefined;
-    consumer.inTail = undefined;
+    consumer.dependencies = undefined;
+    consumer.dependencyTail = undefined;
   };
 
   const pruneStale = (consumer: ConsumerNode): void => {
-    const tail = consumer.inTail;
+    const tail = consumer.dependencyTail;
     
-    let toRemove = tail ? tail.nextIn : consumer.in;
+    let toRemove = tail ? tail.nextDependency : consumer.dependencies;
     
     if (toRemove) {
       do {
         // No DIRTY setting during pruning - we're in mid-computation
-        toRemove = removeEdge(toRemove);
+        toRemove = removeDependency(toRemove);
       } while (toRemove);
     }
 
-    if (tail) tail.nextIn = undefined;
+    if (tail) tail.nextDependency = undefined;
   };
 
-  return { addEdge, removeEdge, detachAll, pruneStale };
+  return { trackDependency, removeDependency, detachAll, pruneStale };
 }

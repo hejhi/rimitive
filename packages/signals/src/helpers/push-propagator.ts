@@ -1,4 +1,4 @@
-import type { Edge } from '../types';
+import type { Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 import { createNodeState } from './node-state';
 
@@ -10,25 +10,25 @@ interface Stack<T> {
 }
 
 export interface PushPropagator {
-  pushUpdates: (from: Edge) => void;
+  pushUpdates: (from: Dependency) => void;
 }
 
 const { hasAnyOf, setStatus } = createNodeState();
 
 export function createPushPropagator(): PushPropagator {
-  // Iterative DFS on push with an explicit stack, but optimized with intrusive linked lists
-  const pushUpdates = (out: Edge): void => {
-    let edgeStack: Stack<Edge> | undefined;
-    let currentEdge: Edge | undefined = out;
+  // Iterative DFS on push with an explicit stack, optimized with intrusive linked lists
+  const pushUpdates = (dependents: Dependency): void => {
+    let dependencyStack: Stack<Dependency> | undefined;
+    let currentDependency: Dependency | undefined = dependents;
 
     do {
-      const consumerNode = currentEdge.to;
+      const consumerNode = currentDependency.consumer;
       const consumerNodeFlags = consumerNode.flags;
 
       if (
         hasAnyOf(consumerNodeFlags, MASK_STATUS_SKIP_NODE | STATUS_INVALIDATED)
       ) {
-        currentEdge = currentEdge.nextOut;
+        currentDependency = currentDependency.nextDependent;
         continue;
       }
 
@@ -38,33 +38,33 @@ export function createPushPropagator(): PushPropagator {
       // This avoids method calls and property lookups
       if ('notify' in consumerNode) consumerNode.notify(consumerNode);
 
-      // `out` is a different direction than an Edge's `to`
-      if ('out' in consumerNode) {
-        const consumerOutEdge = consumerNode.out;
+      if ('dependents' in consumerNode) {
+        const consumerDependents = consumerNode.dependents;
 
-        // If a consumer has an out, we'll keep traversing it
-        if (consumerOutEdge) {
-          // Before we do though, we need to save our progress on the stack to revisit later
-          // (ie, our current signal's next dependency to propagate to, or this consumers sibling)
-          const nextSibling = currentEdge.nextOut;
-          if (nextSibling) edgeStack = { value: nextSibling, prev: edgeStack };
+        // If a consumer has dependents, continue depth-first traversal
+        if (consumerDependents) {
+          // Save sibling dependents (other children of the same consumer-producer) on the stack
+          // to process after completing the current path
+          const siblingDep = currentDependency.nextDependent;
 
-          currentEdge = consumerOutEdge;
+          if (siblingDep) dependencyStack = { value: siblingDep, prev: dependencyStack };
+
+          currentDependency = consumerDependents;
           continue;
         }
       }
 
-      // No further outs, shift to sibling consumer and go deep
-      currentEdge = currentEdge.nextOut;
+      // No further dependents, shift to sibling consumer and go deep
+      currentDependency = currentDependency.nextDependent;
 
-      if (currentEdge || !edgeStack) continue;
+      if (currentDependency || !dependencyStack) continue;
 
-      // No more siblings or dependencies, rinse and repeat with the stack
-      while (!currentEdge && edgeStack) {
-        currentEdge = edgeStack.value;
-        edgeStack = edgeStack.prev; // "Pop" off the stack, working backwards via `prev`
+      // No deeper dependencies, rinse and repeat with sibling dependencies on the stack
+      while (!currentDependency && dependencyStack) {
+        currentDependency = dependencyStack.value;
+        dependencyStack = dependencyStack.prev; // "Pop" off the stack, working backwards via `prev`
       }
-    } while (currentEdge);
+    } while (currentDependency);
   };
 
   return { pushUpdates };

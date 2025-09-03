@@ -1,4 +1,4 @@
-import type { ToNode, Edge } from '../types';
+import type { ToNode, Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 import { createNodeState } from './node-state';
 
@@ -44,14 +44,14 @@ export function createPullPropagator(): PullPropagator {
     
     node.flags = setStatus(flags, STATUS_CHECKING);
 
-    let stack: Stack<Edge> | undefined;
+    let stack: Stack<Dependency> | undefined;
     let currentNode = node;
-    let currentEdge = node.in;
+    let currentDependency = node.dependencies;
     let stale = false;
 
     for (;;) {
-      while (currentEdge) {
-        const source = currentEdge.from;
+      while (currentDependency) {
+        const source = currentDependency.producer;
         const sFlags = source.flags;
 
         // Check HAS_CHANGED (set when value changes during recomputation)
@@ -62,16 +62,16 @@ export function createPullPropagator(): PullPropagator {
           break;
         }
 
-        const nextEdge = currentEdge.nextIn;
+        const nextDependency = currentDependency.nextDependency;
 
         if (!isComputed) {
-          currentEdge = nextEdge;
+          currentDependency = nextDependency;
           continue;
         }
 
         if (hasAnyOf(sFlags, MASK_STATUS_AWAITING)) {
           if (hasAnyOf(sFlags, MASK_STATUS_PROCESSING)) {
-            currentEdge = nextEdge;
+            currentDependency = nextDependency;
             continue;
           }
 
@@ -82,23 +82,23 @@ export function createPullPropagator(): PullPropagator {
 
             if (stale) break;
 
-            currentEdge = nextEdge;
+            currentDependency = nextDependency;
             continue;
           }
 
           source.flags = setStatus(sFlags, STATUS_CHECKING);
 
-          if (nextEdge) {
-            if (!stack) stack = { value: nextEdge, prev: undefined };
-            else stack = { value: nextEdge, prev: stack };
+          if (nextDependency) {
+            if (!stack) stack = { value: nextDependency, prev: undefined };
+            else stack = { value: nextDependency, prev: stack };
           }
 
           currentNode = source;
-          currentEdge = source.in;
+          currentDependency = source.dependencies;
           continue;
         }
 
-        currentEdge = nextEdge;
+        currentDependency = nextDependency;
       }
 
       if (currentNode !== node && ('recompute' in currentNode)) {
@@ -115,8 +115,8 @@ export function createPullPropagator(): PullPropagator {
       
       if (!stack) break;
       
-      currentEdge = stack.value;
-      currentNode = currentEdge.to;
+      currentDependency = stack.value;
+      currentNode = currentDependency.consumer;
       stack = stack.prev;
     }
 

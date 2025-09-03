@@ -2,15 +2,15 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createGraphEdges } from './graph-edges';
 import { createPushPropagator } from './push-propagator';
 import { createPullPropagator } from './pull-propagator';
-import type { ConsumerNode, ProducerNode, Edge, ScheduledNode } from '../types';
+import type { ConsumerNode, ProducerNode, Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
 const { STATUS_DISPOSED, STATUS_CHECKING, STATUS_INVALIDATED, HAS_CHANGED } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: {
-    addEdge: ReturnType<typeof createGraphEdges>['addEdge'];
-    removeEdge: ReturnType<typeof createGraphEdges>['removeEdge'];
+    trackDependency: ReturnType<typeof createGraphEdges>['trackDependency'];
+    removeDependency: ReturnType<typeof createGraphEdges>['removeDependency'];
     detachAll: ReturnType<typeof createGraphEdges>['detachAll'];
     pruneStale: ReturnType<typeof createGraphEdges>['pruneStale'];
     pushUpdates: ReturnType<typeof createPushPropagator>['pushUpdates'];
@@ -23,8 +23,8 @@ describe('Dependency Graph Helpers', () => {
     const pullPropagator = createPullPropagator();
     
     helpers = {
-      addEdge: graphEdges.addEdge,
-      removeEdge: graphEdges.removeEdge,
+      trackDependency: graphEdges.trackDependency,
+      removeDependency: graphEdges.removeDependency,
       detachAll: graphEdges.detachAll,
       pruneStale: graphEdges.pruneStale,
       pushUpdates: pushPropagator.pushUpdates,
@@ -36,113 +36,113 @@ describe('Dependency Graph Helpers', () => {
     it('should reuse edge when same producer accessed again', () => {
       const source: ProducerNode = {
         __type: 'test',
-        out: undefined,
+        dependents: undefined,
         flags: 0,
-        outTail: undefined,
+        dependentsTail: undefined,
         value: 0,
       };
       
       const target: ConsumerNode = {
         __type: 'test',
         flags: 0,
-        in: undefined,
-        inTail: undefined,
+        dependencies: undefined,
+        dependencyTail: undefined,
         notify: vi.fn(),
       };
       
       // First call creates the dependency
-      helpers.addEdge(source, target);
-      const firstEdge = target.in;
+      helpers.trackDependency(source, target);
+      const firstEdge = target.dependencies;
       
       // Update version
       source.flags |= HAS_CHANGED;
       
       // Second call should reuse the same edge
-      helpers.addEdge(source, target);
+      helpers.trackDependency(source, target);
       
-      expect(target.in).toBe(firstEdge);
+      expect(target.dependencies).toBe(firstEdge);
     });
 
     it('should find existing dependency in sources list', () => {
       const source: ProducerNode = {
         __type: 'test',
-        out: undefined,
+        dependents: undefined,
         flags: 0,
-        outTail: undefined,
+        dependentsTail: undefined,
         value: 0
       };
       
       const target: ConsumerNode = {
         __type: 'test',
         flags: 0,
-        in: undefined,
-        inTail: undefined,
+        dependencies: undefined,
+        dependencyTail: undefined,
         notify: vi.fn(),
       };
       
       // Create dependency manually
-      helpers.addEdge(source, target);
-      const existingNode = target.in;
+      helpers.trackDependency(source, target);
+      const existingNode = target.dependencies;
       
       // Update version
       source.flags |= HAS_CHANGED;
       
       // Should find the existing dependency
-      helpers.addEdge(source, target);
+      helpers.trackDependency(source, target);
       
-      expect(target.in).toBe(existingNode);
+      expect(target.dependencies).toBe(existingNode);
     });
 
     it('should create new dependency when none exists', () => {
       const source: ProducerNode = {
         __type: 'test',
-        out: undefined,
+        dependents: undefined,
         flags: 0,
-        outTail: undefined,
+        dependentsTail: undefined,
         value: 0,
       };
       
       const target: ConsumerNode = {
         __type: 'test',
         flags: 0,
-        in: undefined,
-        inTail: undefined,
+        dependencies: undefined,
+        dependencyTail: undefined,
         notify: vi.fn(),
       };
       
-      helpers.addEdge(source, target);
+      helpers.trackDependency(source, target);
       
-      expect(source.out).toBeDefined();
-      expect(target.in).toBeDefined();
+      expect(source.dependents).toBeDefined();
+      expect(target.dependencies).toBeDefined();
     });
 
     it('should handle multiple sources for the same target', () => {
       const sources = Array.from({ length: 3 }, () => ({
         __type: 'test',
-        out: undefined,
-        outTail: undefined,
+        dependents: undefined,
+        dependentsTail: undefined,
         flags: 0,
       }));
       
       const target: ConsumerNode = {
         __type: 'test',
         flags: 0,
-        in: undefined,
-        inTail: undefined,
+        dependencies: undefined,
+        dependencyTail: undefined,
         notify: vi.fn(),
       };
       
       // Add dependencies from multiple sources
       sources.forEach((source) => {
-        helpers.addEdge(source as ProducerNode, target);
+        helpers.trackDependency(source as ProducerNode, target);
       });
       
       // Count sources
       let count = 0;
-      let node = target.in;
+      let node = target.dependencies;
       while (node) {
         count++;
-        node = node.nextIn;
+        node = node.nextDependency;
       }
       
       expect(count).toBe(3);
@@ -151,31 +151,31 @@ describe('Dependency Graph Helpers', () => {
     it('should update version when dependency already exists', () => {
       const source: ProducerNode = {
         __type: 'test',
-        out: undefined,
+        dependents: undefined,
         flags: 0,
-        outTail: undefined,
+        dependentsTail: undefined,
         value: 0,
       };
       
       const target: ConsumerNode = {
         __type: 'test',
         flags: 0,
-        in: undefined,
-        inTail: undefined,
+        dependencies: undefined,
+        dependencyTail: undefined,
         notify: vi.fn(),
       };
       
       // Create initial dependency
-      helpers.addEdge(source, target);
+      helpers.trackDependency(source, target);
       
       // Update version
       source.flags |= HAS_CHANGED;
       
       // Update dependency
-      helpers.addEdge(source, target);
+      helpers.trackDependency(source, target);
       
       // Check that tail was updated correctly
-      const node = target.in;
+      const node = target.dependencies;
       expect(node).toBeDefined();
     });
   });
@@ -184,66 +184,66 @@ describe('Dependency Graph Helpers', () => {
       it('should create bidirectional links between source and target', () => {
         const source: ProducerNode = {
           __type: 'test',
-          out: undefined,
+          dependents: undefined,
           flags: 0,
-          outTail: undefined,
+          dependentsTail: undefined,
           value: 0,
         };
         
         const target: ConsumerNode = {
           __type: 'test',
           flags: 0,
-          in: undefined,
-          inTail: undefined,
+          dependencies: undefined,
+          dependencyTail: undefined,
           notify: vi.fn(),
         };
         
-        helpers.addEdge(source, target);
-        const node = target.in!;
+        helpers.trackDependency(source, target);
+        const node = target.dependencies!;
         
-        expect(node.from).toBe(source);
-        expect(node.to).toBe(target);
-        expect(source.out).toBe(node);
-        expect(target.in).toBe(node);
+        expect(node.producer).toBe(source);
+        expect(node.consumer).toBe(target);
+        expect(source.dependents).toBe(node);
+        expect(target.dependencies).toBe(node);
       });
   
       it('should maintain linked lists when multiple dependencies exist', () => {
         const source: ProducerNode = {
           __type: 'test',
-          out: undefined,
+          dependents: undefined,
           flags: 0,
-          outTail: undefined,
+          dependentsTail: undefined,
           value: 0,
         };
         
         const target1: ConsumerNode = {
           __type: 'test',
           flags: 0,
-          in: undefined,
-          inTail: undefined,
+          dependencies: undefined,
+          dependencyTail: undefined,
           notify: vi.fn(),
         };
         
         const target2: ConsumerNode = {
           __type: 'test',
           flags: 0,
-          in: undefined,
-          inTail: undefined,
+          dependencies: undefined,
+          dependencyTail: undefined,
           notify: vi.fn(),
         };
         
-        helpers.addEdge(source, target1);
-        const node1 = target1.in!;
-        helpers.addEdge(source, target2);
-        const node2 = target2.in!;
+        helpers.trackDependency(source, target1);
+        const node1 = target1.dependencies!;
+        helpers.trackDependency(source, target2);
+        const node2 = target2.dependencies!;
         
         // Source should point to first target (head of list)
-        expect(source.out).toBe(node1);
+        expect(source.dependents).toBe(node1);
         // node1 should point to node2 (insertion order)
-        expect(node1.nextOut).toBe(node2);
-        expect(node2.prevOut).toBe(node1);
+        expect(node1.nextDependent).toBe(node2);
+        expect(node2.prevDependent).toBe(node1);
         // node2 should be the tail
-        expect(source.outTail).toBe(node2);
+        expect(source.dependentsTail).toBe(node2);
       });
     });
   
@@ -251,73 +251,73 @@ describe('Dependency Graph Helpers', () => {
       it('should remove edge from both producer and consumer lists', () => {
         const source: ProducerNode = {
           __type: 'test',
-          out: undefined,
+          dependents: undefined,
           flags: 0,
-          outTail: undefined,
+          dependentsTail: undefined,
           value: 0,
         };
         
         const target: ConsumerNode = {
           __type: 'test',
           flags: 0,
-          in: undefined,
-          inTail: undefined,
+          dependencies: undefined,
+          dependencyTail: undefined,
           notify: vi.fn(),
         };
         
-        helpers.addEdge(source, target);
-        const node = target.in!;
+        helpers.trackDependency(source, target);
+        const node = target.dependencies!;
         
-        const next = helpers.removeEdge(node);
+        const next = helpers.removeDependency(node);
         
-        expect(source.out).toBeUndefined();
-        expect(target.in).toBeUndefined();
-        expect(target.inTail).toBeUndefined();
+        expect(source.dependents).toBeUndefined();
+        expect(target.dependencies).toBeUndefined();
+        expect(target.dependencyTail).toBeUndefined();
         expect(next).toBeUndefined();
       });
   
       it('should maintain linked list integrity when removing middle node', () => {
         const source: ProducerNode = {
           __type: 'test',
-          out: undefined,
+          dependents: undefined,
           flags: 0,
-          outTail: undefined,
+          dependentsTail: undefined,
           value: 0,
         };
         
         const targets = Array.from({ length: 3 }, (_, i) => ({
           __type: 'test',
-          in: undefined,
-          inTail: undefined,
+          dependencies: undefined,
+          dependencyTail: undefined,
           id: i,  // Add id for debugging
         }) as ConsumerNode & { id: number });
         
         // Link all targets
-        targets.forEach(target => helpers.addEdge(source, target));
+        targets.forEach(target => helpers.trackDependency(source, target));
         
         // Get the edge pointing to the second target (middle one)
-        let edge = source.out;
-        let middleEdge: Edge | undefined;
+        let edge = source.dependents;
+        let middleEdge: Dependency | undefined;
         while (edge) {
-          if (edge.to === targets[1]) {
+          if (edge.consumer === targets[1]) {
             middleEdge = edge;
             break;
           }
-          edge = edge.nextOut;
+          edge = edge.nextDependent;
         }
         
         // Remove middle edge
-        const next = helpers.removeEdge(middleEdge!);
+        const next = helpers.removeDependency(middleEdge!);
         
         // Check producer's output list integrity
-        const firstEdge = source.out!;
-        const thirdEdge = firstEdge.nextOut!;
+        const firstEdge = source.dependents!;
+        const thirdEdge = firstEdge.nextDependent!;
         
         // After removal, first edge should point to third edge
-        expect(firstEdge.to).toBe(targets[0]);
-        expect(thirdEdge.to).toBe(targets[2]);
-        expect(firstEdge.nextOut).toBe(thirdEdge);
-        expect(thirdEdge.prevOut).toBe(firstEdge);
+        expect(firstEdge.consumer).toBe(targets[0]);
+        expect(thirdEdge.consumer).toBe(targets[2]);
+        expect(firstEdge.nextDependent).toBe(thirdEdge);
+        expect(thirdEdge.prevDependent).toBe(firstEdge);
         
         // The returned next should be undefined since we removed from middle of consumer's list
         // (middleEdge was in targets[1].in, which only had one edge)
@@ -327,43 +327,43 @@ describe('Dependency Graph Helpers', () => {
       it('should return next edge for efficient iteration', () => {
         const source1: ProducerNode = {
           __type: 'test',
-          out: undefined,
+          dependents: undefined,
           flags: 0,
-          outTail: undefined,
+          dependentsTail: undefined,
           value: 0,
         };
         const source2: ProducerNode = {
           __type: 'test',
-          out: undefined,
+          dependents: undefined,
           flags: 0,
-          outTail: undefined,
+          dependentsTail: undefined,
           value: 0,
         };
         
         const target: ConsumerNode = {
           __type: 'test',
           flags: 0,
-          in: undefined,
-          inTail: undefined,
+          dependencies: undefined,
+          dependencyTail: undefined,
           notify: vi.fn(),
         };
         
-        helpers.addEdge(source1, target);
-        helpers.addEdge(source2, target);
+        helpers.trackDependency(source1, target);
+        helpers.trackDependency(source2, target);
         
-        const firstEdge = target.in!;
-        const secondEdge = firstEdge.nextIn!;
+        const firstEdge = target.dependencies!;
+        const secondEdge = firstEdge.nextDependency!;
         
-        const next = helpers.removeEdge(firstEdge);
+        const next = helpers.removeDependency(firstEdge);
         
         expect(next).toBe(secondEdge);
-        expect(target.in).toBe(secondEdge);
+        expect(target.dependencies).toBe(secondEdge);
       });
     });
   
   describe('GraphWalker', () => {
     let scheduledNodes: ScheduledNode[];
-    let walk: (from: Edge) => void;
+    let walk: (from: Dependency) => void;
   
     beforeEach(() => {
       scheduledNodes = [];
@@ -381,8 +381,8 @@ describe('Dependency Graph Helpers', () => {
     ): ConsumerNode & Partial<ProducerNode & ScheduledNode> {
       const node: ConsumerNode & Partial<ProducerNode & ScheduledNode> = {
         __type: type,
-        in: undefined,
-        inTail: undefined,
+        dependencies: undefined,
+        dependencyTail: undefined,
         flags: flags,
         notify: vi.fn(),
       };
@@ -403,21 +403,21 @@ describe('Dependency Graph Helpers', () => {
       return node;
     }
   
-    function createEdge(from: ProducerNode, to: ConsumerNode): Edge {
+    function createEdge(from: ProducerNode, to: ConsumerNode): Dependency {
       return {
-        from,
-        to,
-        prevIn: undefined,
-        nextIn: undefined,
-        prevOut: undefined,
-        nextOut: undefined
+        producer: from,
+        consumer: to,
+        prevDependency: undefined,
+        nextDependency: undefined,
+        prevDependent: undefined,
+        nextDependent: undefined
       };
     }
   
-    function linkEdges(edges: Edge[]): void {
+    function linkEdges(edges: Dependency[]): void {
       for (let i = 0; i < edges.length - 1; i++) {
-        edges[i]!.nextOut = edges[i + 1];
-        edges[i + 1]!.prevOut = edges[i];
+        edges[i]!.nextDependent = edges[i + 1];
+        edges[i + 1]!.prevDependent = edges[i];
       }
     }
   
@@ -506,8 +506,8 @@ describe('Dependency Graph Helpers', () => {
       const edge2 = createEdge(computed1, computed2);
       const edge3 = createEdge(computed2, effect);
   
-      computed1.out = edge2;
-      computed2.out = edge3;
+      computed1.dependents = edge2;
+      computed2.dependents = edge3;
   
       walk(edge1);
   
@@ -530,8 +530,8 @@ describe('Dependency Graph Helpers', () => {
       const edge4 = createEdge(computed2, computed3);
   
       linkEdges([edge1, edge2]);
-      computed1.out = edge3;
-      computed2.out = edge4;
+      computed1.dependents = edge3;
+      computed2.dependents = edge4;
   
       walk(edge1);
   
@@ -567,16 +567,16 @@ describe('Dependency Graph Helpers', () => {
       const comp1ToComp3 = createEdge(comp1, comp3);
       const comp1ToEff1 = createEdge(comp1, eff1);
       linkEdges([comp1ToComp3, comp1ToEff1]);
-      comp1.out = comp1ToComp3;
+      comp1.dependents = comp1ToComp3;
   
       const comp2ToComp4 = createEdge(comp2, comp4);
-      comp2.out = comp2ToComp4;
+      comp2.dependents = comp2ToComp4;
   
       const comp3ToEff2 = createEdge(comp3, eff2);
-      comp3.out = comp3ToEff2;
+      comp3.dependents = comp3ToEff2;
   
       const comp4ToEff3 = createEdge(comp4, eff3);
-      comp4.out = comp4ToEff3;
+      comp4.dependents = comp4ToEff3;
   
       walk(sourceToComp1);
   
@@ -615,7 +615,7 @@ describe('Dependency Graph Helpers', () => {
     it('should handle very deep chains efficiently', () => {
       // Create a chain of 100 nodes
       const nodes: (ConsumerNode & ProducerNode)[] = [];
-      const edges: Edge[] = [];
+      const edges: Dependency[] = [];
   
       for (let i = 0; i < 100; i++) {
         nodes[i] = createMockNode(`computed${i}`) as ConsumerNode & ProducerNode;
@@ -624,7 +624,7 @@ describe('Dependency Graph Helpers', () => {
       for (let i = 0; i < 99; i++) {
         const edge = createEdge(nodes[i]!, nodes[i + 1]!);
         edges.push(edge);
-        nodes[i]!.out = edge;
+        nodes[i]!.dependents = edge;
       }
   
       walk(edges[0]!);

@@ -14,17 +14,17 @@ describe('Dependency Graph Cleanup Operations', () => {
 
   const makeProducer = (): ProducerNode => ({
     __type: 'test',
-    out: undefined,
-    outTail: undefined,
+    dependents: undefined,
+    dependentsTail: undefined,
     value: 0,
     flags: 0
   });
 
   const makeConsumer = (): ConsumerNode => ({
     __type: 'test',
-    in: undefined,
+    dependencies: undefined,
     flags: 0,
-    inTail: undefined,
+    dependencyTail: undefined,
     notify: vi.fn(),
   });
 
@@ -34,16 +34,16 @@ describe('Dependency Graph Cleanup Operations', () => {
     const c = makeProducer();
     const target = makeConsumer();
 
-    graph.addEdge(a, target);
-    graph.addEdge(b, target);
-    graph.addEdge(c, target);
+    graph.trackDependency(a, target);
+    graph.trackDependency(b, target);
+    graph.trackDependency(c, target);
 
     graph.detachAll(target);
 
-    expect(target.in).toBeUndefined();
-    expect(a.out).toBeUndefined();
-    expect(b.out).toBeUndefined();
-    expect(c.out).toBeUndefined();
+    expect(target.dependencies).toBeUndefined();
+    expect(a.dependents).toBeUndefined();
+    expect(b.dependents).toBeUndefined();
+    expect(c.dependents).toBeUndefined();
   });
 
   it('prunes only stale edges', () => {
@@ -53,34 +53,34 @@ describe('Dependency Graph Cleanup Operations', () => {
     const target = makeConsumer();
 
     // Initial run: link a, b, c
-    graph.addEdge(a, target);
-    graph.addEdge(b, target);
-    graph.addEdge(c, target);
+    graph.trackDependency(a, target);
+    graph.trackDependency(b, target);
+    graph.trackDependency(c, target);
 
     // Simulate start of new run - reset tail
-    target.inTail = undefined;
+    target.dependencyTail = undefined;
     
     // Next run: only access a and c (with NEW version like real usage)
     a.flags |= HAS_CHANGED;
-    graph.addEdge(a, target);
+    graph.trackDependency(a, target);
     c.flags |= HAS_CHANGED;
-    graph.addEdge(c, target);
+    graph.trackDependency(c, target);
 
     // Now prune stale (b should be removed)
     graph.pruneStale(target);
 
     // With tail-based pruning, only accessed edges remain
-    let list = target.in;
+    let list = target.dependencies;
     const active = new Set<unknown>();
     while (list) {
-      active.add(list.from);
-      list = list.nextIn;
+      active.add(list.producer);
+      list = list.nextDependency;
     }
     expect(active.has(a)).toBe(true);
     expect(active.has(c)).toBe(true);
     expect(active.has(b)).toBe(false);
     // b's edge should be removed from producer's list
-    expect(b.out).toBeUndefined();
+    expect(b.dependents).toBeUndefined();
   });
 
   it('removes all edges when none accessed in current run', () => {
@@ -88,19 +88,19 @@ describe('Dependency Graph Cleanup Operations', () => {
     const b = makeProducer();
     const target = makeConsumer();
 
-    graph.addEdge(a, target);
-    graph.addEdge(b, target);
+    graph.trackDependency(a, target);
+    graph.trackDependency(b, target);
 
     // Simulate start of new run - reset tail
-    target.inTail = undefined;
+    target.dependencyTail = undefined;
     // Don't access any producer
     
     graph.pruneStale(target);
 
     // With tail-based pruning, all edges should be removed
-    expect(target.in).toBeUndefined();
+    expect(target.dependencies).toBeUndefined();
     // Edges removed from producer's lists
-    expect(a.out).toBeUndefined();
-    expect(b.out).toBeUndefined();
+    expect(a.dependents).toBeUndefined();
+    expect(b.dependents).toBeUndefined();
   });
 });

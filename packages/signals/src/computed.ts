@@ -40,7 +40,7 @@ export function createComputedFactory(
   ctx: ComputedContext
 ): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graphEdges: { addEdge, pruneStale },
+    graphEdges: { trackDependency, pruneStale },
     pullPropagator: { pullUpdates },
   } = ctx;
 
@@ -48,17 +48,17 @@ export function createComputedFactory(
     const node: ComputedState<T> = {
       __type: 'computed' as const,
       value: undefined as T,
-      out: undefined,
-      outTail: undefined,
-      in: undefined, // Will be set to old edges when they exist
-      inTail: undefined, // Don't clear during recompute - preserve for traversal
+      dependents: undefined,
+      dependentsTail: undefined,
+      dependencies: undefined, // Will be set to old dependencies when they exist
+      dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
       flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
       recompute(): boolean {
         // Reset tail marker to start fresh tracking (like alien-signals startTracking)
-        // This allows new dependencies to be established while keeping old edges for cleanup
-        const oldTail = node.inTail;
-        node.inTail = undefined;
+        // This allows new dependencies to be established while keeping old dependencies for cleanup
+        const oldTail = node.dependencyTail;
+        node.dependencyTail = undefined;
 
         const prevConsumer = ctx.currentConsumer;
         ctx.currentConsumer = node;
@@ -79,9 +79,9 @@ export function createComputedFactory(
 
           // Only prune if dependencies might have changed
           // Skip pruning if:
-          // 1. No edges to prune (first compute or unobserved)
+          // 1. No dependencies to prune (first compute or unobserved)
           // 2. Tail hasn't moved (same dependencies accessed in same order)
-          if (!oldTail || node.inTail !== oldTail) pruneStale(node);
+          if (!oldTail || node.dependencyTail !== oldTail) pruneStale(node);
         }
         return valueChanged;
       },
@@ -98,7 +98,7 @@ export function createComputedFactory(
 
       // Always link if there's a consumer
       // Create edge to consumer
-      if (consumer) addEdge(node, consumer);
+      if (consumer) trackDependency(node, consumer);
 
       update();
 

@@ -85,7 +85,7 @@ describe('createSignalAPI', () => {
       graphEdges,
       pushPropagator,
       pullPropagator,
-      nodeScheduler: null as any, // Will be set below
+      nodeScheduler: null as unknown as typeof nodeScheduler, // Will be set below
     });
     
     const nodeScheduler = (() => {

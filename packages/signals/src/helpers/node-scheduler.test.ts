@@ -27,8 +27,8 @@ describe('NodeScheduler', () => {
       flags: 0,
       nextScheduled: undefined,
       flush: vi.fn(),
-      in: undefined,
-      inTail: undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
       notify: vi.fn(),
     };
     
@@ -46,8 +46,8 @@ describe('NodeScheduler', () => {
       flags: 0,
       nextScheduled: undefined,
       flush: vi.fn(),
-      in: undefined,
-      inTail: undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
       notify: vi.fn(),
     };
     
@@ -71,8 +71,8 @@ describe('NodeScheduler', () => {
       flags: 0,
       nextScheduled: undefined,
       flush: vi.fn(),
-      in: undefined,
-      inTail: undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
       notify: vi.fn(),
     };
     
@@ -100,8 +100,8 @@ describe('NodeScheduler', () => {
       flags: 2, // STATUS_DIRTY
       nextScheduled: undefined,
       flush: flush1,
-      in: undefined,
-      inTail: undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
       notify: vi.fn(),
     };
     
@@ -110,8 +110,8 @@ describe('NodeScheduler', () => {
       flags: 2, // STATUS_DIRTY
       nextScheduled: undefined,
       flush: flush2,
-      in: undefined,
-      inTail: undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
       notify: vi.fn(),
     };
     
@@ -120,8 +120,8 @@ describe('NodeScheduler', () => {
       flags: 2, // STATUS_DIRTY
       nextScheduled: undefined,
       flush: flush3,
-      in: undefined,
-      inTail: undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
       notify: vi.fn(),
     };
     
@@ -165,8 +165,8 @@ describe('NodeScheduler', () => {
       flags: 0,
       nextScheduled: undefined,
       flush: vi.fn(),
-      in: undefined,
-      inTail: undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
       notify: vi.fn(),
     };
     

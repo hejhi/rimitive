@@ -26,9 +26,9 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
   // Extend the base context in place instead of creating a new object
   const ctx = Object.assign(baseCtx, {
     graphEdges,
-    pushPropagator: null as any, // Will be set below
+    pushPropagator: null as unknown as typeof pushPropagator, // Will be set below
     pullPropagator,
-    nodeScheduler: null as any, // Will be set below
+    nodeScheduler: null as unknown as typeof nodeScheduler, // Will be set below
   });
   
   // Now create nodeScheduler with the same ctx object
@@ -112,7 +112,7 @@ export function createTestInstance() {
 }
 
 // Create default test instance for backward compatibility
-let defaultInstance = createTestInstance();
+const defaultInstance = createTestInstance();
 
 // Export all functions from default instance - use getters to always get current instance
 export const signal = <T>(value: T): SignalFunction<T> => defaultInstance.signal(value);
