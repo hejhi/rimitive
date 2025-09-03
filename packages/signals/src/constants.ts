@@ -16,8 +16,8 @@ export const STATUS_DISPOSED      = 1 << 4; // Node is dead and should be ignore
 
 // Node Properties (can combine with states)
 // Properties (IS_/HAS_ prefixes for clarity)
-export const HAS_CHANGED    = 1 << 5; // Value changed on last recomputation
-export const IS_SCHEDULED   = 1 << 6; // Node is in the work queue
+export const HAS_CHANGED  = 1 << 5; // Value changed on last recomputation
+export const IS_SCHEDULED = 1 << 6; // Node is in the work queue
 
 // Status masks for efficient checking
 export const MASK_STATUS = STATUS_INVALIDATED | STATUS_DIRTY | STATUS_CHECKING | STATUS_RECOMPUTING | STATUS_DISPOSED;

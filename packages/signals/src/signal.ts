@@ -16,7 +16,7 @@
 import type { ProducerNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
-import { CONSTANTS } from './constants';
+import { CONSTANTS, createFlagManager } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
 import { PushPropagator } from './helpers/push-propagator';
 import { NodeScheduler } from './helpers/node-scheduler';
@@ -43,6 +43,9 @@ interface SignalState<T> extends ProducerNode {
   value: T;
 }
 
+const { removeProperty, hasAnyOf, addProperty } = createFlagManager();
+
+
 export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
     graphEdges: { addEdge },
@@ -65,10 +68,13 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       if (args.length) {
         // WRITE PATH
         const newValue = args[0];
-        // Cache current value
-        const currValue = node.value;
+        const flags = node.flags;
+        const hasChanged = hasAnyOf(flags, HAS_CHANGED);
 
-        if (currValue === newValue) return;
+        if (node.value === newValue) {
+          if (hasChanged) node.flags = removeProperty(flags, HAS_CHANGED);
+          return;
+        }
 
         node.value = newValue;
 
@@ -79,9 +85,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         // Only add HAS_CHANGED property if not already set (first change only)
         // No need to set if unobserved since it's only used during propagation
         // Cache flags to avoid double read in hot path
-        const flags = node.flags;
-
-        if (!(flags & HAS_CHANGED)) node.flags = flags | HAS_CHANGED;
+        if (!hasChanged) node.flags = addProperty(flags, HAS_CHANGED);
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale edges automatically

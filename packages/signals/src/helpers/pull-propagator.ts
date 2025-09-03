@@ -54,6 +54,9 @@ export function createPullPropagator(): PullPropagator {
         const source = currentEdge.from;
         const sFlags = source.flags;
 
+        // Check HAS_CHANGED (set when value changes during recomputation)
+        const isComputed = 'recompute' in source;
+        
         if (hasAnyOf(sFlags, HAS_CHANGED)) {
           stale = true;
           break;
@@ -61,7 +64,7 @@ export function createPullPropagator(): PullPropagator {
 
         const nextEdge = currentEdge.nextIn;
 
-        if (!('recompute' in source)) {
+        if (!isComputed) {
           currentEdge = nextEdge;
           continue;
         }

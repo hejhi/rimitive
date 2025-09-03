@@ -363,7 +363,7 @@ describe('Dependency Graph Helpers', () => {
   
   describe('GraphWalker', () => {
     let scheduledNodes: ScheduledNode[];
-    let walk: (from: Edge | undefined) => void;
+    let walk: (from: Edge) => void;
   
     beforeEach(() => {
       scheduledNodes = [];
@@ -595,12 +595,6 @@ describe('Dependency Graph Helpers', () => {
       expect(scheduledNodes).toContain(eff3);
     });
   
-    it('should handle empty edge', () => {
-      walk(undefined);
-      // Should not throw
-      expect(scheduledNodes).toHaveLength(0);
-    });
-  
     it('should avoid scheduling the same effect multiple times', () => {
       const source = createMockNode('signal') as ProducerNode;
       const effect = createMockNode('effect', 0, true);
@@ -633,7 +627,7 @@ describe('Dependency Graph Helpers', () => {
         nodes[i]!.out = edge;
       }
   
-      walk(edges[0]);
+      walk(edges[0]!);
   
       // All nodes should be notified as DIRTY with simplified flag system
       for (let i = 1; i < 100; i++) {
