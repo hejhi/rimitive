@@ -18,9 +18,11 @@ export function createGraphEdges(): GraphEdges {
     consumer: ToNode
   ): void => {
     const tail = consumer.inTail;
-
+    
     if (tail && tail.from === producer) return;
-
+    
+    // Tail will be undefined until after the first dependency in the executing consumer is read.
+    // In that case, we should go with the first Edge in the existing list.
     const candidate = tail ? tail.nextIn : consumer.in;
 
     if (candidate && candidate.from === producer) {
