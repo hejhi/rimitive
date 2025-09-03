@@ -50,24 +50,28 @@ const latticeAPI = createSignalAPI(
 const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
 const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
 
-group('Computed Chain - Very Deep (50 levels)', () => {
+const ITERATIONS = 10000;
+
+group('Computed Chain - Very Deep (50 levels, amortized)', () => {
   summary(() => {
     barplot(() => {
       bench('Lattice', function* () {
         const source = latticeSignal(0);
-        let last: (() => number) = source;
+        let last: () => number = source;
         for (let i = 0; i < 50; i++) {
           const prev = last;
           last = latticeComputed(() => prev() + 1);
         }
         const final = last;
 
-        source(1);
         yield () => {
-          void final();
+          for (let i = 0; i < ITERATIONS / 100; i++) {
+            source(i);
+            void final();
+          }
         };
       });
-    
+
       bench('Preact', function* () {
         const source = preactSignal(0);
         let last = source;
@@ -77,12 +81,14 @@ group('Computed Chain - Very Deep (50 levels)', () => {
         }
         const final = last;
 
-        source.value = 1;
         yield () => {
-          void final.value;
+          for (let i = 0; i < ITERATIONS / 100; i++) {
+            source.value = i;
+            void final.value;
+          }
         };
       });
-    
+
       bench('Alien', function* () {
         const source = alienSignal(0);
         let last = source;
@@ -92,14 +98,17 @@ group('Computed Chain - Very Deep (50 levels)', () => {
         }
         const final = last;
 
-        source(1);
         yield () => {
-          void final();
+          for (let i = 0; i < ITERATIONS / 100; i++) {
+            source(i);
+            void final();
+          }
         };
       });
     });
   });
 });
+
 
 // Run benchmarks with unified output handling
 await runBenchmark();
