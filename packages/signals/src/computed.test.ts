@@ -7,7 +7,7 @@ import { createBatchFactory } from './batch';
 import { createBaseContext } from './context';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPullPropagator } from './helpers/pull-propagator';
-import { createNodeScheduler } from './helpers/node-scheduler';
+import { createNodeScheduler, type NodeScheduler } from './helpers/node-scheduler';
 import { createPushPropagator } from './helpers/push-propagator';
 
 export function createDefaultContext(): GlobalContext & SignalContext & EffectContext & ComputedContext {
@@ -16,19 +16,25 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
   // Create helpers with their dependencies
   const graphEdges = createGraphEdges();
   const pullPropagator = createPullPropagator();
-  const nodeScheduler = createNodeScheduler(
-    baseCtx,
-    pullPropagator.pullUpdates
-  );
   const pushPropagator = createPushPropagator();
-
-  return {
-    ...baseCtx,
+  
+  // Extend baseCtx in place to ensure nodeScheduler uses the same context object
+  const ctx = Object.assign(baseCtx, {
     graphEdges,
     pushPropagator,
     pullPropagator,
-    nodeScheduler,
-  };
+    nodeScheduler: null as unknown as NodeScheduler, // Will be set below
+  });
+  
+  // Now create nodeScheduler with the same ctx object
+  const nodeScheduler = createNodeScheduler(
+    ctx,
+    pullPropagator.pullUpdates
+  );
+  
+  ctx.nodeScheduler = nodeScheduler;
+  
+  return ctx;
 }
 
 describe('Computed - Push-Pull Optimization', () => {

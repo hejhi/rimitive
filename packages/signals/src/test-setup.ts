@@ -22,27 +22,51 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
   // Create helpers with their dependencies
   const graphEdges = createGraphEdges();
   const pullPropagator = createPullPropagator();
+  
+  // Extend the base context in place instead of creating a new object
+  const ctx = Object.assign(baseCtx, {
+    graphEdges,
+    pushPropagator: null as any, // Will be set below
+    pullPropagator,
+    nodeScheduler: null as any, // Will be set below
+  });
+  
+  // Now create nodeScheduler with the same ctx object
   const nodeScheduler = createNodeScheduler(
-    baseCtx,
+    ctx,
     pullPropagator.pullUpdates
   );
   const pushPropagator = createPushPropagator();
+  
+  // Set the properties
+  ctx.nodeScheduler = nodeScheduler;
+  ctx.pushPropagator = pushPropagator;
 
-  return {
-    ...baseCtx,
-    graphEdges,
-    pushPropagator,
-    pullPropagator,
-    nodeScheduler,
-  };
+  return ctx;
 }
 
-// Create a test instance
+// Create a test instance with a stable context
 export function createTestInstance() {
-  // Create extended context for testing
+  // Create extended context for testing - this will be reused
   const ctx = createDefaultContext();
   
-  // Create API with all core factories
+  // Store original reset function
+  const resetContext = () => {
+    // Clear any pending scheduled effects by walking the intrusive queue
+    let node = ctx.queueHead;
+    while (node) {
+      const next = node.nextScheduled === node ? undefined : node.nextScheduled;
+      node.nextScheduled = undefined;
+      node = next;
+    }
+    ctx.queueHead = ctx.queueTail = undefined;
+
+    // Reset context state
+    ctx.currentConsumer = null;
+    ctx.batchDepth = 0;
+  };
+  
+  // Create API with all core factories - these capture the ctx in their closures
   const api = createLattice(
     createSignalFactory(ctx),
     createComputedFactory(ctx),
@@ -80,20 +104,7 @@ export function createTestInstance() {
       ctx.currentConsumer = consumer;
     },
     getCurrentConsumer: () => ctx.currentConsumer,
-    resetGlobalState: () => {
-      // Clear any pending scheduled effects by walking the intrusive queue
-      let node = ctx.queueHead;
-      while (node) {
-        const next = node.nextScheduled === node ? undefined : node.nextScheduled;
-        node.nextScheduled = undefined;
-        node = next;
-      }
-      ctx.queueHead = ctx.queueTail = undefined;
-
-      // Reset context
-      ctx.currentConsumer = null;
-      ctx.batchDepth = 0;
-    },
+    resetGlobalState: resetContext,
     activeContext: ctx,
     // Export node scheduler for test access
     nodeScheduler: ctx.nodeScheduler,
@@ -155,9 +166,9 @@ export const activeContext = (() => {
   return getter;
 })();
 
-// Reset function that recreates the default instance
+// Reset function that resets the context without recreating the instance
 export function resetGlobalState() {
-  defaultInstance = createTestInstance();
-  // CRITICAL: Also reset the actual context
+  // Just reset the context state, don't create a new instance
+  // This preserves the context that the factories are bound to
   defaultInstance.resetGlobalState();
 }

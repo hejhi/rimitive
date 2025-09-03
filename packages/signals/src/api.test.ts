@@ -6,7 +6,7 @@ import { createEffectFactory, EffectContext } from './effect';
 import { createBatchFactory } from './batch';
 import type { LatticeExtension } from '@lattice/lattice';
 import { createBaseContext, GlobalContext } from './context';
-import { createNodeScheduler } from './helpers/node-scheduler';
+import { createNodeScheduler, type NodeScheduler } from './helpers/node-scheduler';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPushPropagator } from './helpers/push-propagator';
 import { createPullPropagator } from './helpers/pull-propagator';
@@ -17,19 +17,25 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
   // Create helpers with their dependencies
   const graphEdges = createGraphEdges();
   const pullPropagator = createPullPropagator();
-  const nodeScheduler = createNodeScheduler(
-    baseCtx,
-    pullPropagator.pullUpdates
-  );
   const pushPropagator = createPushPropagator();
-
-  return {
-    ...baseCtx,
+  
+  // Extend baseCtx in place to ensure nodeScheduler uses the same context object
+  const ctx = Object.assign(baseCtx, {
     graphEdges,
     pushPropagator,
     pullPropagator,
-    nodeScheduler,
-  };
+    nodeScheduler: null as unknown as NodeScheduler, // Will be set below
+  });
+  
+  // Now create nodeScheduler with the same ctx object
+  const nodeScheduler = createNodeScheduler(
+    ctx,
+    pullPropagator.pullUpdates
+  );
+  
+  ctx.nodeScheduler = nodeScheduler;
+  
+  return ctx;
 }
 
 describe('createSignalAPI', () => {
@@ -72,8 +78,18 @@ describe('createSignalAPI', () => {
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
     const pullPropagator = createPullPropagator();
+    const pushPropagator = createPushPropagator();
+    
+    // Extend baseCtx in place to ensure all components share the same context
+    const customCtx = Object.assign(baseCtx, {
+      graphEdges,
+      pushPropagator,
+      pullPropagator,
+      nodeScheduler: null as any, // Will be set below
+    });
+    
     const nodeScheduler = (() => {
-      const scheduler = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
+      const scheduler = createNodeScheduler(customCtx, pullPropagator.pullUpdates);
       return {
         ...scheduler,
         flush: () => {
@@ -82,14 +98,8 @@ describe('createSignalAPI', () => {
         }
       };
     })();
-    const pushPropagator = createPushPropagator();
-    const customCtx = {
-      ...baseCtx,
-      graphEdges,
-      pushPropagator,
-      pullPropagator,
-      nodeScheduler,
-    };
+    
+    customCtx.nodeScheduler = nodeScheduler;
     
     const api = createSignalAPI({
       signal: createSignalFactory,
