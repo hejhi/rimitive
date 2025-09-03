@@ -70,6 +70,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         const newValue = args[0];
         const flags = node.flags;
         const hasChanged = hasAnyOf(flags, HAS_CHANGED);
+        const outEdge = node.out;
 
         if (node.value === newValue) {
           if (hasChanged) node.flags = removeProperty(flags, HAS_CHANGED);
@@ -78,13 +79,10 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
         node.value = newValue;
 
-        const outEdge = node.out;
-
         if (!outEdge) return;
 
-        // Only add HAS_CHANGED property if not already set (first change only)
-        // No need to set if unobserved since it's only used during propagation
-        // Cache flags to avoid double read in hot path
+        // Only mark if value changed and there's an `out`.
+        // Otherwise, it's not connected and this flag doesn't matter.
         if (!hasChanged) node.flags = addProperty(flags, HAS_CHANGED);
 
         // Invalidate and propagate
