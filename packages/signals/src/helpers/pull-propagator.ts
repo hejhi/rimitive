@@ -36,11 +36,15 @@ export function createPullPropagator(): PullPropagator {
       if ('recompute' in producer && (producerFlags & MASK_STATUS_AWAITING)) {
         // KEY: Pass producer.dependencies directly (edge-based)
         if (checkDirty(producer.dependencies)) {
-          // If producer changed during check, consumer is dirty
+          // Bottom-up optimization: recompute producer immediately after its dependencies are resolved
+          recomputeNode(producer);
           return true;
         }
         
-        // Re-check after recursive call
+        // Producer's dependencies weren't dirty, mark it clean
+        producer.flags &= ~MASK_STATUS;
+        
+        // Re-check after recursive call and potential recomputation
         if (producer.flags & HAS_CHANGED) {
           return true;
         }
