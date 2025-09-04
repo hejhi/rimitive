@@ -16,21 +16,21 @@ export interface PullPropagator {
 
 const { recomputeNode } = createNodeState();
 
+// Optimized frame structure:
+// - dep can be undefined to support sentinel frames (depth markers)
+// - When dep is undefined, this is a linear chain marker (no siblings to track)
+interface Frame {
+  dep: NonNullable<ToNode['dependencies']> | undefined; // undefined = sentinel frame for linear chains
+  producer: NonNullable<ToNode['dependencies']>['producer'];
+  prev: Frame | undefined;
+}
+
 export function createPullPropagator(): PullPropagator {
   const checkDirty = (dep: ToNode['dependencies']): boolean => {
     if (!dep) return false;
     
-    // Optimized frame structure:
-    // - dep is nullable to support sentinel frames (depth markers)
-    // - When dep is null, this is a linear chain marker (no siblings to track)
-    interface Frame { 
-      dep: NonNullable<typeof dep> | null;  // null = sentinel frame for linear chains
-      producer: NonNullable<typeof dep>['producer']; 
-      prev: Frame | undefined; 
-    }
-    
     let stack: Frame | undefined;
-    let current: typeof dep | null = dep;
+    let current: typeof dep | undefined = dep;
     
     // Hot path optimizations:
     // - Only push full frames when branching (multiple paths)
@@ -47,9 +47,7 @@ export function createPullPropagator(): PullPropagator {
             // Found dirty - recompute stack and exit
             for (let s = stack; s; s = s.prev) {
               const p = s.producer;
-              if ('recompute' in p && (p.flags & MASK_STATUS_AWAITING)) {
-                recomputeNode(p);
-              }
+              if ('recompute' in p && (p.flags & MASK_STATUS_AWAITING)) recomputeNode(p);
             }
             return true;
           }
@@ -60,13 +58,10 @@ export function createPullPropagator(): PullPropagator {
             if (subDeps) {
               // Key optimization: only push full frame if there are siblings
               const nextDep = current.nextDependency;
-              if (nextDep) {
-                // Multiple paths - need full bookmark
-                stack = { dep: current, producer, prev: stack };
-              } else {
-                // Linear chain - just mark depth with sentinel
-                stack = { dep: null, producer, prev: stack };
-              }
+              // Multiple paths - need full bookmark
+              if (nextDep) stack = { dep: current, producer, prev: stack };
+              // Linear chain - just mark depth with sentinel
+              else stack = { dep: undefined, producer, prev: stack };
               current = subDeps;
               continue;
             }
@@ -75,25 +70,21 @@ export function createPullPropagator(): PullPropagator {
           }
         }
         
-        current = current.nextDependency as typeof dep | null;
+        current = current.nextDependency;
       }
       
       if (!stack) return false;
       
       // Process frame based on type
       const frame = stack;
-      if ('recompute' in frame.producer) {
-        frame.producer.flags &= ~MASK_STATUS;
-      }
+
+      if ('recompute' in frame.producer) frame.producer.flags &= ~MASK_STATUS;
       
       // Resume based on frame type
-      if (frame.dep) {
-        // Full frame - resume from saved position
-        current = frame.dep.nextDependency as typeof dep | null;
-      } else {
-        // Sentinel frame - no siblings to resume, will exit on next iteration
-        current = null;
-      }
+      // Full frame - resume from saved position
+      if (frame.dep) current = frame.dep.nextDependency;
+      // Sentinel frame - no siblings to resume, will exit on next iteration
+      else current = undefined;
       stack = frame.prev;
     }
   };
