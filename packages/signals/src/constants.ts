@@ -11,11 +11,6 @@ export const STATUS_PENDING  = 1 << 0; // Dependencies might have changed, needs
 export const STATUS_DIRTY    = 1 << 1; // Definitely needs recomputation
 export const STATUS_DISPOSED = 1 << 2; // Node is dead and should be ignored
 
-// Backward compatibility aliases (map to core states)
-export const STATUS_INVALIDATED = STATUS_PENDING;   // Was separate state, now maps to PENDING
-export const STATUS_CHECKING    = STATUS_PENDING;   // Was separate state, now maps to PENDING
-export const STATUS_RECOMPUTING = STATUS_DIRTY;     // Was separate state, now maps to DIRTY
-
 // Node Properties (can combine with states)
 export const HAS_CHANGED  = 1 << 3; // Value changed on last recomputation  
 export const IS_SCHEDULED = 1 << 4; // Node is in the work queue
@@ -29,10 +24,7 @@ export const MASK_STATUS_SKIP_NODE = STATUS_DISPOSED;
 export const CONSTANTS = {
   STATUS_CLEAN,
   STATUS_PENDING,
-  STATUS_INVALIDATED,
   STATUS_DIRTY,
-  STATUS_CHECKING,
-  STATUS_RECOMPUTING, 
   STATUS_DISPOSED,
   HAS_CHANGED,
   IS_SCHEDULED,
