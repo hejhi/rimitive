@@ -10,7 +10,6 @@ const {
   MASK_STATUS_AWAITING,
 } = CONSTANTS;
 
-
 export interface PullPropagator {
   pullUpdates: (node: ToNode) => void;
 }
@@ -18,7 +17,7 @@ export interface PullPropagator {
 const { recomputeNode } = createNodeState();
 
 export function createPullPropagator(): PullPropagator {
-  // Edge-based traversal function for better performance on deep chains
+  // Edge-based traversal function matching alien-signals approach
   const checkDirty = (dep: ToNode['dependencies']): boolean => {
     // Return false if no dependencies
     if (!dep) return false;
@@ -34,19 +33,15 @@ export function createPullPropagator(): PullPropagator {
       
       // Recursively check computed producers
       if ('recompute' in producer && (producerFlags & MASK_STATUS_AWAITING)) {
-        // KEY: Pass producer.dependencies directly (edge-based)
+        // Recursively check producer's dependencies
         if (checkDirty(producer.dependencies)) {
-          // Bottom-up optimization: recompute producer immediately after its dependencies are resolved
+          // Producer's dependencies are dirty, recompute it
           recomputeNode(producer);
+          // We found dirty, return true
           return true;
-        }
-        
-        // Producer's dependencies weren't dirty, mark it clean
-        producer.flags &= ~MASK_STATUS;
-        
-        // Re-check after recursive call and potential recomputation
-        if (producer.flags & HAS_CHANGED) {
-          return true;
+        } else {
+          // Producer's dependencies are clean, mark it clean
+          producer.flags &= ~MASK_STATUS;
         }
       }
       
