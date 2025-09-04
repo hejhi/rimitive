@@ -98,8 +98,11 @@ export function createEffectFactory(
 
     // Flush method using closure
     const flush = (): void => {
-      // Start new tracking cycle (like alien-signals startTracking)
-      ctx.trackingVersion++;
+      // Only increment tracking version if we're starting a new top-level tracking cycle
+      // If currentConsumer is not null, we're already inside a tracking cycle
+      if (!ctx.currentConsumer) {
+        ctx.trackingVersion++;
+      }
       
       node.dependencyTail = undefined;
 
@@ -121,7 +124,7 @@ export function createEffectFactory(
         ctx.currentConsumer = prevConsumer;
         // Transition back to clean state after execution
         node.flags = setStatus(node.flags, STATUS_CLEAN);
-        pruneStale(node);
+        pruneStale(node, ctx.trackingVersion);
       }
     };
 

@@ -52,22 +52,22 @@ describe('Dependency Graph Cleanup Operations', () => {
     const c = makeProducer();
     const target = makeConsumer();
 
-    // Initial run: link a, b, c
-    graph.trackDependency(a, target, 0);
-    graph.trackDependency(b, target, 0);
-    graph.trackDependency(c, target, 0);
+    // Initial run: link a, b, c with version 1
+    graph.trackDependency(a, target, 1);
+    graph.trackDependency(b, target, 1);
+    graph.trackDependency(c, target, 1);
 
     // Simulate start of new run - reset tail
     target.dependencyTail = undefined;
     
-    // Next run: only access a and c (with NEW version like real usage)
+    // Next run: only access a and c with version 2 (b stays at version 1)
     a.flags |= HAS_CHANGED;
-    graph.trackDependency(a, target, 0);
+    graph.trackDependency(a, target, 2);
     c.flags |= HAS_CHANGED;
-    graph.trackDependency(c, target, 0);
+    graph.trackDependency(c, target, 2);
 
-    // Now prune stale (b should be removed)
-    graph.pruneStale(target);
+    // Now prune stale with current version 2 (b should be removed since it has version 1)
+    graph.pruneStale(target, 2);
 
     // With tail-based pruning, only accessed edges remain
     let list = target.dependencies;
@@ -88,14 +88,15 @@ describe('Dependency Graph Cleanup Operations', () => {
     const b = makeProducer();
     const target = makeConsumer();
 
-    graph.trackDependency(a, target, 0);
-    graph.trackDependency(b, target, 0);
+    graph.trackDependency(a, target, 1);
+    graph.trackDependency(b, target, 1);
 
     // Simulate start of new run - reset tail
     target.dependencyTail = undefined;
-    // Don't access any producer
+    // Don't access any producer (so all dependencies stay at version 1)
     
-    graph.pruneStale(target);
+    // Prune with version 2 - all dependencies with version 1 should be removed
+    graph.pruneStale(target, 2);
 
     // With tail-based pruning, all edges should be removed
     expect(target.dependencies).toBeUndefined();

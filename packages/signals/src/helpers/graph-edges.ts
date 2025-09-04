@@ -8,7 +8,7 @@ export interface GraphEdges {
   trackDependency: (producer: ProducerNode, consumer: ConsumerNode, version: number) => void;
   removeDependency: (dependency: Dependency) => Dependency | undefined;
   detachAll: (consumer: ConsumerNode) => void;
-  pruneStale: (consumer: ConsumerNode) => void;
+  pruneStale: (consumer: ConsumerNode, currentVersion: number) => void;
 }
 
 export function createGraphEdges(): GraphEdges {
@@ -94,14 +94,21 @@ export function createGraphEdges(): GraphEdges {
     consumer.dependencyTail = undefined;
   };
 
-  const pruneStale = (consumer: ConsumerNode): void => {
-    const tail = consumer.dependencyTail;
-    let toRemove = tail ? tail.nextDependency : consumer.dependencies;
+  const pruneStale = (consumer: ConsumerNode, currentVersion: number): void => {
+    // Version-based approach: Remove all dependencies with old versions
+    // Walk through ALL dependencies and remove any that weren't touched this cycle
+    let dep = consumer.dependencies;
     
-    // No DIRTY setting during pruning - we're in mid-computation
-    while (toRemove) toRemove = removeDependency(toRemove);
-
-    if (tail) tail.nextDependency = undefined;
+    while (dep) {
+      const next = dep.nextDependency;
+      
+      if (dep.version !== currentVersion) {
+        // This dependency is stale (wasn't accessed in current cycle)
+        removeDependency(dep);
+      }
+      
+      dep = next;
+    }
   };
 
   return { trackDependency, removeDependency, detachAll, pruneStale };

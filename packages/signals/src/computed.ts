@@ -55,8 +55,11 @@ export function createComputedFactory(
       flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
       recompute(): boolean {
-        // Start new tracking cycle (like alien-signals startTracking)
-        ctx.trackingVersion++;
+        // Only increment tracking version if we're starting a new top-level tracking cycle
+        // If currentConsumer is not null, we're already inside a tracking cycle
+        if (!ctx.currentConsumer) {
+          ctx.trackingVersion++;
+        }
         
         // Reset tail marker to start fresh tracking
         // This allows new dependencies to be established while keeping old dependencies for cleanup
@@ -84,7 +87,7 @@ export function createComputedFactory(
           // Skip pruning if:
           // 1. No dependencies to prune (first compute or unobserved)
           // 2. Tail hasn't moved (same dependencies accessed in same order)
-          if (!oldTail || node.dependencyTail !== oldTail) pruneStale(node);
+          if (!oldTail || node.dependencyTail !== oldTail) pruneStale(node, ctx.trackingVersion);
         }
         return valueChanged;
       },
