@@ -20,18 +20,21 @@ export function createPullPropagator(): PullPropagator {
   const checkDirty = (dep: ToNode['dependencies']): boolean => {
     if (!dep) return false;
     
+    // Optimized frame structure:
+    // - dep is nullable to support sentinel frames (depth markers)
+    // - When dep is null, this is a linear chain marker (no siblings to track)
     interface Frame { 
-      dep: NonNullable<typeof dep>; 
+      dep: NonNullable<typeof dep> | null;  // null = sentinel frame for linear chains
       producer: NonNullable<typeof dep>['producer']; 
       prev: Frame | undefined; 
     }
     
     let stack: Frame | undefined;
-    let current = dep;
+    let current: typeof dep | null = dep;
     
     // Hot path optimizations:
-    // - Minimize branches by combining conditions
-    // - Use direct property access where safe
+    // - Only push full frames when branching (multiple paths)
+    // - Use sentinel frames for linear chains (saves memory)
     // - Inline common operations
     while (true) {
       while (current) {
@@ -55,7 +58,15 @@ export function createPullPropagator(): PullPropagator {
           if ('recompute' in producer) {
             const subDeps = producer.dependencies;
             if (subDeps) {
-              stack = { dep: current, producer, prev: stack };
+              // Key optimization: only push full frame if there are siblings
+              const nextDep = current.nextDependency;
+              if (nextDep) {
+                // Multiple paths - need full bookmark
+                stack = { dep: current, producer, prev: stack };
+              } else {
+                // Linear chain - just mark depth with sentinel
+                stack = { dep: null, producer, prev: stack };
+              }
               current = subDeps;
               continue;
             }
@@ -64,18 +75,25 @@ export function createPullPropagator(): PullPropagator {
           }
         }
         
-        current = current.nextDependency as typeof dep;
+        current = current.nextDependency as typeof dep | null;
       }
       
       if (!stack) return false;
       
-      // Mark producer clean and continue
+      // Process frame based on type
       const frame = stack;
       if ('recompute' in frame.producer) {
         frame.producer.flags &= ~MASK_STATUS;
       }
       
-      current = frame.dep.nextDependency as typeof dep;
+      // Resume based on frame type
+      if (frame.dep) {
+        // Full frame - resume from saved position
+        current = frame.dep.nextDependency as typeof dep | null;
+      } else {
+        // Sentinel frame - no siblings to resume, will exit on next iteration
+        current = null;
+      }
       stack = frame.prev;
     }
   };
