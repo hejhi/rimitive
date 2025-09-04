@@ -53,12 +53,19 @@ export function createComputedFactory(
       dependencies: undefined, // Will be set to old dependencies when they exist
       dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
       flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
+      lastComputedVersion: -1, // Never computed yet
       // This will be set below
       recompute(): boolean {
         // Only increment tracking version if we're starting a new top-level tracking cycle
         // If currentConsumer is not null, we're already inside a tracking cycle
         if (!ctx.currentConsumer) {
           ctx.trackingVersion++;
+        }
+        
+        // Diamond dependency optimization: Skip if already computed in this tracking cycle
+        // This prevents redundant recomputations in diamond dependency patterns
+        if (node.lastComputedVersion === ctx.trackingVersion) {
+          return false; // Already computed in this cycle, no change
         }
         
         // Reset tail marker to start fresh tracking
@@ -82,6 +89,9 @@ export function createComputedFactory(
           }
         } finally {
           ctx.currentConsumer = prevConsumer;
+
+          // Mark as computed in this tracking cycle (diamond dependency optimization)
+          node.lastComputedVersion = ctx.trackingVersion;
 
           // Only prune if dependencies might have changed
           // Skip pruning if:

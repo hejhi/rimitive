@@ -25,6 +25,7 @@ export function createPullPropagator(): PullPropagator {
     
     // Fast path: definitely dirty - no dependency check needed    
     if ('recompute' in node) {
+      
       if (flags & STATUS_DIRTY) {
         recomputeNode(node);
         return;

@@ -56,6 +56,7 @@ export interface ConsumerNode extends ReactiveNode {
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {
   recompute(): boolean; // Execute the deferred work
+  lastComputedVersion: number; // Tracking cycle version when node was last computed
 }
 
 // PATTERN: Deferred Execution Queue
