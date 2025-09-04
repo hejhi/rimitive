@@ -26,12 +26,15 @@ export function createPullPropagator(): PullPropagator {
       return;
     }
     
+    const isComputed = 'recompute' in node;
+    const cleanFlags = flags & ~MASK_STATUS;
+    
     // Fast path: definitely dirty - no dependency check needed
     if (flags & STATUS_DIRTY) {
-      if ('recompute' in node) {
+      if (isComputed) {
         recomputeNode(node);
       } else {
-        node.flags = flags & ~MASK_STATUS; // Clear to CLEAN
+        node.flags = cleanFlags; // Clear to CLEAN
       }
       return;
     }
@@ -46,30 +49,27 @@ export function createPullPropagator(): PullPropagator {
       
       // Quick check: producer already marked as changed
       if (producerFlags & HAS_CHANGED) {
-        // Found change - update current node if it's computed
-        if ('recompute' in node) {
+        // Found change - update current node
+        if (isComputed) {
           recomputeNode(node);
         } else {
-          node.flags = node.flags & ~MASK_STATUS;
+          node.flags = cleanFlags;
         }
         return;
       }
       
       // Skip non-computed producers (signals don't need recursion)
-      if ('recompute' in producer) {
-        // Only recurse if producer needs checking
-        if (producerFlags & MASK_STATUS_AWAITING) {
-          pullUpdates(producer);
-          
-          // Check again after recursion - producer might have changed
-          if (producer.flags & HAS_CHANGED) {
-            if ('recompute' in node) {
-              recomputeNode(node);
-            } else {
-              node.flags = node.flags & ~MASK_STATUS;
-            }
-            return;
+      if ('recompute' in producer && (producerFlags & MASK_STATUS_AWAITING)) {
+        pullUpdates(producer);
+        
+        // Check again after recursion - producer might have changed
+        if (producer.flags & HAS_CHANGED) {
+          if (isComputed) {
+            recomputeNode(node);
+          } else {
+            node.flags = cleanFlags;
           }
+          return;
         }
       }
       
@@ -77,7 +77,7 @@ export function createPullPropagator(): PullPropagator {
     }
     
     // No dependencies changed - just mark as clean
-    node.flags = node.flags & ~MASK_STATUS;
+    node.flags = cleanFlags;
   };
 
   return { pullUpdates };
