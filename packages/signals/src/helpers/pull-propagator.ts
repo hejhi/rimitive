@@ -53,16 +53,14 @@ export function createPullPropagator(): PullPropagator {
       while (currentDependency) {
         const source = currentDependency.producer;
         const sFlags = source.flags;
-
-        // Check HAS_CHANGED (set when value changes during recomputation)
-        const isComputed = 'recompute' in source;
         
         if (hasAnyOf(sFlags, HAS_CHANGED)) {
           stale = true;
           break;
         }
-
+        
         const nextDependency = currentDependency.nextDependency;
+        const isComputed = 'recompute' in source;
 
         if (!isComputed) {
           currentDependency = nextDependency;
@@ -94,8 +92,6 @@ export function createPullPropagator(): PullPropagator {
           }
 
           currentNode = source;
-          currentDependency = source.dependencies;
-          continue;
         }
 
         currentDependency = nextDependency;
