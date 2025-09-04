@@ -75,16 +75,14 @@ export function createPullPropagator(): PullPropagator {
       
       if (!stack) return false;
       
-      // Process frame based on type
+      // Process frame and mark producer clean
       const frame = stack;
-
-      if ('recompute' in frame.producer) frame.producer.flags &= ~MASK_STATUS;
+      frame.producer.flags &= ~MASK_STATUS; // Always clear - we only push frames for computed nodes
       
       // Resume based on frame type
       // Full frame - resume from saved position
-      if (frame.dep) current = frame.dep.nextDependency;
-      // Sentinel frame - no siblings to resume, will exit on next iteration
-      else current = undefined;
+      // Sentinel frame - no siblings to resume
+      current = frame.dep?.nextDependency;
       stack = frame.prev;
     }
   };
