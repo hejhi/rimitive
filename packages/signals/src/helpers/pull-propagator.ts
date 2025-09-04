@@ -18,6 +18,40 @@ export interface PullPropagator {
 const { recomputeNode } = createNodeState();
 
 export function createPullPropagator(): PullPropagator {
+  // Edge-based traversal function for better performance on deep chains
+  const checkDirty = (dep: ToNode['dependencies']): boolean => {
+    // Return false if no dependencies
+    if (!dep) return false;
+    
+    while (dep) {
+      const producer = dep.producer;
+      const producerFlags = producer.flags;
+      
+      // Check if producer already changed
+      if (producerFlags & HAS_CHANGED) {
+        return true;
+      }
+      
+      // Recursively check computed producers
+      if ('recompute' in producer && (producerFlags & MASK_STATUS_AWAITING)) {
+        // KEY: Pass producer.dependencies directly (edge-based)
+        if (checkDirty(producer.dependencies)) {
+          // If producer changed during check, consumer is dirty
+          return true;
+        }
+        
+        // Re-check after recursive call
+        if (producer.flags & HAS_CHANGED) {
+          return true;
+        }
+      }
+      
+      dep = dep.nextDependency;
+    }
+    
+    return false;
+  };
+
   const pullUpdates = (node: ToNode): void => {
     const flags = node.flags;
     
@@ -34,35 +68,12 @@ export function createPullPropagator(): PullPropagator {
       return;
     }
     
-    // Pending path: check dependencies for changes
-    let dep = node.dependencies;
-    
-    // Early termination loop - stop as soon as we find a change
-    while (dep) {
-      const producer = dep.producer;
-      const producerFlags = producer.flags;
-      
-      // Quick check: producer already marked as changed
-      if (producerFlags & HAS_CHANGED) {
-        // Found change - update current node
-        if (isComputed) recomputeNode(node);
-        else node.flags = cleanFlags;
-        return;
-      }
-      
-      // Skip non-computed producers (signals don't need recursion)
-      if ('recompute' in producer && (producerFlags & MASK_STATUS_AWAITING)) {
-        pullUpdates(producer);
-        
-        // Check again after recursion - producer might have changed
-        if (producer.flags & HAS_CHANGED) {
-          if (isComputed) recomputeNode(node);
-          else node.flags = cleanFlags;
-          return;
-        }
-      }
-      
-      dep = dep.nextDependency;
+    // Pending path: check dependencies for changes using edge-based traversal
+    if (checkDirty(node.dependencies)) {
+      // Found change - update current node
+      if (isComputed) recomputeNode(node);
+      else node.flags = cleanFlags;
+      return;
     }
     
     // No dependencies changed - just mark as clean
