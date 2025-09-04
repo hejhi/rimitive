@@ -78,10 +78,11 @@ export function createNodeScheduler(
 
     while (current) {
       const next: ScheduledNode | undefined = current.nextScheduled;
-      current.nextScheduled = undefined;
       const nextFlags = removeProperty(current.flags, IS_SCHEDULED);
-      current.flags = nextFlags;
       const status = getStatus(nextFlags);
+
+      current.nextScheduled = undefined;
+      current.flags = nextFlags;
 
       if (
         status !== STATUS_DISPOSED &&
