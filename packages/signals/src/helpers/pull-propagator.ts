@@ -22,20 +22,15 @@ export function createPullPropagator(): PullPropagator {
     const flags = node.flags;
     
     // Fast path: disposed or already clean
-    if ((flags & STATUS_DISPOSED) || !(flags & MASK_STATUS_AWAITING)) {
-      return;
-    }
+    if ((flags & STATUS_DISPOSED) || !(flags & MASK_STATUS_AWAITING)) return;
     
     const isComputed = 'recompute' in node;
     const cleanFlags = flags & ~MASK_STATUS;
     
     // Fast path: definitely dirty - no dependency check needed
     if (flags & STATUS_DIRTY) {
-      if (isComputed) {
-        recomputeNode(node);
-      } else {
-        node.flags = cleanFlags; // Clear to CLEAN
-      }
+      if (isComputed) recomputeNode(node);
+      else node.flags = cleanFlags; // Clear to CLEAN
       return;
     }
     
@@ -50,11 +45,8 @@ export function createPullPropagator(): PullPropagator {
       // Quick check: producer already marked as changed
       if (producerFlags & HAS_CHANGED) {
         // Found change - update current node
-        if (isComputed) {
-          recomputeNode(node);
-        } else {
-          node.flags = cleanFlags;
-        }
+        if (isComputed) recomputeNode(node);
+        else node.flags = cleanFlags;
         return;
       }
       
@@ -64,11 +56,8 @@ export function createPullPropagator(): PullPropagator {
         
         // Check again after recursion - producer might have changed
         if (producer.flags & HAS_CHANGED) {
-          if (isComputed) {
-            recomputeNode(node);
-          } else {
-            node.flags = cleanFlags;
-          }
+          if (isComputed) recomputeNode(node);
+          else node.flags = cleanFlags;
           return;
         }
       }
