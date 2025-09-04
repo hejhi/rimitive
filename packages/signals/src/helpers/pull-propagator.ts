@@ -1,6 +1,5 @@
-import type { ToNode, Dependency } from '../types';
+import type { ToNode, Dependency, DerivedNode } from '../types';
 import { CONSTANTS } from '../constants';
-import { createNodeState } from './node-state';
 
 const {
   STATUS_CLEAN,
@@ -8,6 +7,7 @@ const {
   STATUS_CHECKING,
   STATUS_RECOMPUTING,
   HAS_CHANGED,
+  MASK_STATUS,
   MASK_STATUS_AWAITING,
   MASK_STATUS_PROCESSING,
 } = CONSTANTS;
@@ -21,12 +21,22 @@ export interface PullPropagator {
   pullUpdates: (node: ToNode) => void;
 }
 
-const { getStatus, hasAnyOf, resetStatus, setStatus, recomputeNode } = createNodeState();
+// Inlined recomputeNode for maximum performance
+const recomputeNode = (node: DerivedNode, flags: number): boolean => {
+  node.flags = (flags & ~MASK_STATUS) | STATUS_RECOMPUTING;
+  const changed = node.recompute();
+  if (changed) {
+    node.flags = (node.flags & ~MASK_STATUS) | HAS_CHANGED;
+  } else {
+    node.flags = node.flags & ~MASK_STATUS;
+  }
+  return changed;
+};
 
 export function createPullPropagator(): PullPropagator {
   const pullUpdates = (node: ToNode): void => {
     const flags = node.flags;
-    const status = getStatus(flags);
+    const status = flags & MASK_STATUS;
     const isDerivedNode = 'recompute' in node;
     
     if (
@@ -38,11 +48,11 @@ export function createPullPropagator(): PullPropagator {
     
     if (status === STATUS_DIRTY) {
       if (isDerivedNode) recomputeNode(node, flags);
-      else node.flags = resetStatus(flags);
+      else node.flags = flags & ~MASK_STATUS;
       return;
     }
     
-    node.flags = setStatus(flags, STATUS_CHECKING);
+    node.flags = (flags & ~MASK_STATUS) | STATUS_CHECKING;
 
     let stack: Stack<Dependency> | undefined;
     let currentNode = node;
@@ -54,7 +64,8 @@ export function createPullPropagator(): PullPropagator {
         const source = currentDependency.producer;
         const sFlags = source.flags;
         
-        if (hasAnyOf(sFlags, HAS_CHANGED)) {
+        // Early exit on changed source - most common case
+        if (sFlags & HAS_CHANGED) {
           stale = true;
           break;
         }
@@ -67,31 +78,26 @@ export function createPullPropagator(): PullPropagator {
           continue;
         }
 
-        if (hasAnyOf(sFlags, MASK_STATUS_AWAITING)) {
-          if (hasAnyOf(sFlags, MASK_STATUS_PROCESSING)) {
-            currentDependency = nextDependency;
-            continue;
-          }
-
-          const sourceStatus = getStatus(sFlags);
-          
+        const sourceStatus = sFlags & MASK_STATUS;
+        
+        // Combined condition check to reduce branching
+        if ((sourceStatus & MASK_STATUS_AWAITING) && !(sourceStatus & MASK_STATUS_PROCESSING)) {
           if (sourceStatus === STATUS_DIRTY) {
             stale = recomputeNode(source, sFlags);
-
             if (stale) break;
-
             currentDependency = nextDependency;
             continue;
           }
 
-          source.flags = setStatus(sFlags, STATUS_CHECKING);
+          source.flags = (sFlags & ~MASK_STATUS) | STATUS_CHECKING;
 
           if (nextDependency) {
-            if (!stack) stack = { value: nextDependency, prev: undefined };
-            else stack = { value: nextDependency, prev: stack };
+            stack = { value: nextDependency, prev: stack };
           }
 
           currentNode = source;
+          currentDependency = source.dependencies;
+          continue;
         }
 
         currentDependency = nextDependency;
@@ -99,12 +105,12 @@ export function createPullPropagator(): PullPropagator {
 
       if (currentNode !== node && ('recompute' in currentNode)) {
         const currentFlags = currentNode.flags;
-        const currentState = getStatus(currentFlags);
+        const currentState = currentFlags & MASK_STATUS;
         
         if (currentState === STATUS_DIRTY || stale) {
           stale = recomputeNode(currentNode, currentFlags);
         } else {
-          currentNode.flags = resetStatus(currentFlags);
+          currentNode.flags = currentFlags & ~MASK_STATUS;
           stale = false;
         }
       }
@@ -119,7 +125,7 @@ export function createPullPropagator(): PullPropagator {
     const newFlags = node.flags;
 
     if (stale && isDerivedNode) recomputeNode(node, newFlags);
-    else node.flags = resetStatus(newFlags);
+    else node.flags = newFlags & ~MASK_STATUS;
   };
 
   return { pullUpdates };
