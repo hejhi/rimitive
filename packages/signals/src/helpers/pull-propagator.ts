@@ -33,10 +33,15 @@ export function createPullPropagator(): PullPropagator {
     let stack: Frame | undefined;
     let current: typeof dep | undefined = dep;
     
+    // Initial linear chain detection - check if we start with multiple dependencies
+    let isLinearChain = !dep.nextDependency;  // Linear if no siblings at start
+    let linearDepth = 0;  // Track depth when in linear chain
+    
     // Hot path optimizations:
     // - Only push full frames when branching (multiple paths)
     // - Use sentinel frames for linear chains (saves memory)
     // - Inline common operations
+    // - Detect linear chains for potential fast path
     while (true) {
       while (current) {
         const producer = current.producer;
@@ -46,17 +51,21 @@ export function createPullPropagator(): PullPropagator {
         if (flags & (HAS_CHANGED | MASK_STATUS_AWAITING)) {
           if (flags & HAS_CHANGED) {
             // Found dirty - recompute in correct order (bottom-up)
-            // First, find the bottom of the stack
-            let bottom = stack;
-            while (bottom?.prev) {
-              bottom = bottom.prev;
-            }
-            
-            // Process from bottom to top (dependencies before dependents)
-            for (let s = bottom; s; s = s.next) {
-              const p = s.producer;
-              if ('recompute' in p && (p.flags & MASK_STATUS_AWAITING)) {
-                recomputeNode(p);
+            // Linear chain detection enables future optimizations
+            // For now, we track but use the standard recomputation path
+            {
+              // Branching case - need to find bottom for correct order
+              let bottom = stack;
+              while (bottom?.prev) {
+                bottom = bottom.prev;
+              }
+              
+              // Process from bottom to top (dependencies before dependents)
+              for (let s = bottom; s; s = s.next) {
+                const p = s.producer;
+                if ('recompute' in p && (p.flags & MASK_STATUS_AWAITING)) {
+                  recomputeNode(p);
+                }
               }
             }
             return true;
@@ -68,6 +77,22 @@ export function createPullPropagator(): PullPropagator {
             if (subDeps) {
               // Key optimization: only push full frame if there are siblings
               const nextDep = current.nextDependency;
+              
+              // Detect if we're breaking linear chain pattern
+              if (nextDep) {
+                isLinearChain = false;  // We have siblings, not linear anymore
+              }
+              
+              // Also check if the subdeps have multiple paths
+              if (subDeps.nextDependency) {
+                isLinearChain = false;  // Multiple dependencies at next level
+              }
+              
+              // Track depth in linear chains
+              if (isLinearChain) {
+                linearDepth++;
+              }
+              
               // Create new frame with doubly-linked structure
               const newFrame: Frame = {
                 dep: nextDep ? current : undefined, // undefined for sentinel frames
