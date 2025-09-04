@@ -5,7 +5,7 @@ const { STATUS_DIRTY } = CONSTANTS;
 const { setStatus } = createFlagManager()
 
 export interface GraphEdges {
-  trackDependency: (producer: ProducerNode, consumer: ConsumerNode) => void;
+  trackDependency: (producer: ProducerNode, consumer: ConsumerNode, version: number) => void;
   removeDependency: (dependency: Dependency) => Dependency | undefined;
   detachAll: (consumer: ConsumerNode) => void;
   pruneStale: (consumer: ConsumerNode) => void;
@@ -14,7 +14,8 @@ export interface GraphEdges {
 export function createGraphEdges(): GraphEdges {
   const trackDependency = (
     producer: FromNode,
-    consumer: ToNode
+    consumer: ToNode,
+    version: number
   ): void => {
     const tail = consumer.dependencyTail;
     
@@ -25,6 +26,7 @@ export function createGraphEdges(): GraphEdges {
     const candidate = tail ? tail.nextDependency : consumer.dependencies;
 
     if (candidate && candidate.producer === producer) {
+      candidate.version = version;  // Update version when reusing dependency
       consumer.dependencyTail = candidate;
       return;
     }
@@ -34,7 +36,7 @@ export function createGraphEdges(): GraphEdges {
     const newDependency = {
       producer: producer,
       consumer: consumer,
-      version: 0, // Placeholder - will be set to ctx.trackingVersion in later phase
+      version: version,  // Use passed version instead of placeholder 0
       prevDependency: tail,
       prevDependent,
       nextDependency: candidate,

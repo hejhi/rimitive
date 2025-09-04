@@ -101,7 +101,7 @@ export function createComputedFactory(
 
       // Always link if there's a consumer
       // Create edge to consumer
-      if (consumer) trackDependency(node, consumer);
+      if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
 
       update();
 

@@ -99,7 +99,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
       // Always link if there's a consumer (alien-signals approach)
       // Create edge to consumer
-      if (consumer) trackDependency(node, consumer);
+      if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
 
       return node.value;
     }) as SignalFunction<T>;

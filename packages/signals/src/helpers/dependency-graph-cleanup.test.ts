@@ -34,9 +34,9 @@ describe('Dependency Graph Cleanup Operations', () => {
     const c = makeProducer();
     const target = makeConsumer();
 
-    graph.trackDependency(a, target);
-    graph.trackDependency(b, target);
-    graph.trackDependency(c, target);
+    graph.trackDependency(a, target, 0);
+    graph.trackDependency(b, target, 0);
+    graph.trackDependency(c, target, 0);
 
     graph.detachAll(target);
 
@@ -53,18 +53,18 @@ describe('Dependency Graph Cleanup Operations', () => {
     const target = makeConsumer();
 
     // Initial run: link a, b, c
-    graph.trackDependency(a, target);
-    graph.trackDependency(b, target);
-    graph.trackDependency(c, target);
+    graph.trackDependency(a, target, 0);
+    graph.trackDependency(b, target, 0);
+    graph.trackDependency(c, target, 0);
 
     // Simulate start of new run - reset tail
     target.dependencyTail = undefined;
     
     // Next run: only access a and c (with NEW version like real usage)
     a.flags |= HAS_CHANGED;
-    graph.trackDependency(a, target);
+    graph.trackDependency(a, target, 0);
     c.flags |= HAS_CHANGED;
-    graph.trackDependency(c, target);
+    graph.trackDependency(c, target, 0);
 
     // Now prune stale (b should be removed)
     graph.pruneStale(target);
@@ -88,8 +88,8 @@ describe('Dependency Graph Cleanup Operations', () => {
     const b = makeProducer();
     const target = makeConsumer();
 
-    graph.trackDependency(a, target);
-    graph.trackDependency(b, target);
+    graph.trackDependency(a, target, 0);
+    graph.trackDependency(b, target, 0);
 
     // Simulate start of new run - reset tail
     target.dependencyTail = undefined;
