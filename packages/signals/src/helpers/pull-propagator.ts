@@ -20,16 +20,16 @@ export function createPullPropagator(): PullPropagator {
   const checkDirty = (dep: ToNode['dependencies']): boolean => {
     let current: ToNode['dependencies'] = dep;
 
-    while (true) {
-      while (current) {
-        const producer = current.producer;
-        const flags = producer.flags;
-        
-        if (flags & HAS_CHANGED) return true;
-        
-        current = current.nextDependency;
-      }
+    while (current) {
+      const producer = current.producer;
+      const flags = producer.flags;
+      
+      if (flags & HAS_CHANGED) return true;
+      
+      current = current.nextDependency;
     }
+
+    return false;
   };
 
   const pullUpdates = (node: ToNode): void => {
