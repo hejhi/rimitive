@@ -86,6 +86,37 @@ describe('Computed - Push-Pull Optimization', () => {
       expect(computeCount).toBe(3);
     });
 
+    it('should catch upstream changes', () => {
+      const s1 = signal(0);
+      const c1 = computed(() => s1() + 1);
+      const c2 = computed(() => c1() + 1);
+      const c3 = computed(() => c2() + 1);
+
+      expect(c3()).toBe(3);
+      s1(1);
+      expect(c3()).toBe(4);
+    })
+
+    it('should run properly with diamond dependencies', () => {
+      let count = 0;
+      const s1 = signal(0);
+
+      // Insert a shared computed dependency just for added complexity
+      const c0 = computed(() => s1());
+      const c1 = computed(() => { return c0(); });
+      const c2 = computed(() => { return c0(); });
+      const c3 = computed(() => { count++; return c1() + c2(); });
+
+      expect(c3()).toBe(0);
+      expect(count).toBe(1);
+
+      s1(1);
+
+      // Both c1 and c2 changing should not cause c3 to recalculate more than a single time
+      expect(c3()).toBe(2);
+      expect(count).toBe(2);
+    });
+
     it('should skip downstream recomputation when upstream computed values do not change', () => {
       const source = signal(1);
       let level1Count = 0;
