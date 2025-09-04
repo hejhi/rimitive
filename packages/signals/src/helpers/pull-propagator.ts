@@ -1,4 +1,4 @@
-import type { ToNode } from '../types';
+import type { Dependency, ToNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createNodeState } from './node-state';
 
@@ -23,33 +23,29 @@ export function createPullPropagator(): PullPropagator {
     // Fast path: disposed or already clean
     if ((flags & STATUS_DISPOSED) || !(flags & MASK_STATUS_AWAITING)) return;
     
-    const isComputed = 'recompute' in node;
-    const cleanFlags = flags & ~MASK_STATUS;
-    
-    // Fast path: definitely dirty - no dependency check needed
-    if (flags & STATUS_DIRTY) {
-      if (isComputed) recomputeNode(node);
-      else node.flags = cleanFlags; // Clear to CLEAN
-      return;
-    }
-
-    const dep = node.dependencies;
-    let current: ToNode['dependencies'] = dep;
-
-    while (current) {
-      const producer = current.producer;
-      const flags = producer.flags;
-
-      if (flags & HAS_CHANGED && isComputed) {
+    // Fast path: definitely dirty - no dependency check needed    
+    if ('recompute' in node) {
+      if (flags & STATUS_DIRTY) {
         recomputeNode(node);
-        break;
+        return;
       }
 
-      current = current.nextDependency;
+      let current: Dependency | undefined = node.dependencies;
+
+      while (current) {
+        const producer = current.producer;
+        const flags = producer.flags;
+
+        if (flags & HAS_CHANGED) {
+          recomputeNode(node);
+          break;
+        }
+
+        current = current.nextDependency;
+      }
     }
     
-    // No dependencies changed - just mark as clean
-    node.flags = cleanFlags;
+    node.flags = flags & ~MASK_STATUS;
   };
 
   return { pullUpdates };
