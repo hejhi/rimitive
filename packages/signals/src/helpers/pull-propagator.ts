@@ -23,6 +23,7 @@ interface Frame {
   dep: NonNullable<ToNode['dependencies']> | undefined; // undefined = sentinel frame for linear chains
   producer: NonNullable<ToNode['dependencies']>['producer'];
   prev: Frame | undefined;
+  next: Frame | undefined; // For bottom-up traversal during recomputation
 }
 
 export function createPullPropagator(): PullPropagator {
@@ -44,10 +45,19 @@ export function createPullPropagator(): PullPropagator {
         // Combined check: dirty OR computed needing validation
         if (flags & (HAS_CHANGED | MASK_STATUS_AWAITING)) {
           if (flags & HAS_CHANGED) {
-            // Found dirty - recompute stack and exit
-            for (let s = stack; s; s = s.prev) {
+            // Found dirty - recompute in correct order (bottom-up)
+            // First, find the bottom of the stack
+            let bottom = stack;
+            while (bottom?.prev) {
+              bottom = bottom.prev;
+            }
+            
+            // Process from bottom to top (dependencies before dependents)
+            for (let s = bottom; s; s = s.next) {
               const p = s.producer;
-              if ('recompute' in p && (p.flags & MASK_STATUS_AWAITING)) recomputeNode(p);
+              if ('recompute' in p && (p.flags & MASK_STATUS_AWAITING)) {
+                recomputeNode(p);
+              }
             }
             return true;
           }
@@ -58,10 +68,16 @@ export function createPullPropagator(): PullPropagator {
             if (subDeps) {
               // Key optimization: only push full frame if there are siblings
               const nextDep = current.nextDependency;
-              // Multiple paths - need full bookmark
-              if (nextDep) stack = { dep: current, producer, prev: stack };
-              // Linear chain - just mark depth with sentinel
-              else stack = { dep: undefined, producer, prev: stack };
+              // Create new frame with doubly-linked structure
+              const newFrame: Frame = {
+                dep: nextDep ? current : undefined, // undefined for sentinel frames
+                producer,
+                prev: stack,
+                next: undefined
+              };
+              // Link the previous frame forward to this one
+              if (stack) stack.next = newFrame;
+              stack = newFrame;
               current = subDeps;
               continue;
             }
