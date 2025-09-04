@@ -27,9 +27,7 @@ export function createPullPropagator(): PullPropagator {
       const producerFlags = producer.flags;
       
       // Check if producer already changed
-      if (producerFlags & HAS_CHANGED) {
-        return true;
-      }
+      if (producerFlags & HAS_CHANGED) return true;
       
       // Recursively check computed producers
       if ('recompute' in producer && (producerFlags & MASK_STATUS_AWAITING)) {
@@ -39,10 +37,7 @@ export function createPullPropagator(): PullPropagator {
           recomputeNode(producer);
           // We found dirty, return true
           return true;
-        } else {
-          // Producer's dependencies are clean, mark it clean
-          producer.flags &= ~MASK_STATUS;
-        }
+        } else producer.flags &= ~MASK_STATUS; // Producer's dependencies are clean
       }
       
       dep = dep.nextDependency;
