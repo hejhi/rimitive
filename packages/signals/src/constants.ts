@@ -1,51 +1,43 @@
 /**
  * Streamlined State Machine Flag System
  * 
- * Simplified from 5 to 3 states plus disposed for better performance
- * on deep chain benchmarks. Reduces branch prediction complexity.
+ * Simplified from 5 to 3 core states for better performance on deep chains.
+ * Reduces branch prediction complexity and state transition overhead.
  */
 
-// Node Status (mutually exclusive - a node can only be in one status)
-// Status values (STATUS_ prefix for clarity)
-export const STATUS_CLEAN         = 0;      // No status flags - up to date and ready
-export const STATUS_PENDING       = 1 << 0; // Dependencies might have changed, needs checking (was INVALIDATED)
-export const STATUS_DIRTY         = 1 << 1; // Definitely needs recomputation
-export const STATUS_DISPOSED      = 1 << 2; // Node is dead and should be ignored
+// Node Status (mutually exclusive - 3 core states only)
+export const STATUS_CLEAN    = 0;      // Up to date and ready
+export const STATUS_PENDING  = 1 << 0; // Dependencies might have changed, needs checking
+export const STATUS_DIRTY    = 1 << 1; // Definitely needs recomputation
+export const STATUS_DISPOSED = 1 << 2; // Node is dead and should be ignored
 
-// Legacy aliases for backward compatibility during transition
-export const STATUS_INVALIDATED   = STATUS_PENDING;   // Alias for PENDING
-export const STATUS_CHECKING      = 1 << 3; // Deprecated - use simple recursion flag
-export const STATUS_RECOMPUTING   = 1 << 4; // Deprecated - use simple recursion flag
+// Backward compatibility aliases (map to core states)
+export const STATUS_INVALIDATED = STATUS_PENDING;   // Was separate state, now maps to PENDING
+export const STATUS_CHECKING    = STATUS_PENDING;   // Was separate state, now maps to PENDING
+export const STATUS_RECOMPUTING = STATUS_DIRTY;     // Was separate state, now maps to DIRTY
 
 // Node Properties (can combine with states)
-// Properties (IS_/HAS_ prefixes for clarity)
-export const HAS_CHANGED  = 1 << 5; // Value changed on last recomputation
-export const IS_SCHEDULED = 1 << 6; // Node is in the work queue
+export const HAS_CHANGED  = 1 << 3; // Value changed on last recomputation  
+export const IS_SCHEDULED = 1 << 4; // Node is in the work queue
 
-// Status masks for efficient checking - updated for simplified states
+// Optimized status masks for core states only
 export const MASK_STATUS = STATUS_PENDING | STATUS_DIRTY | STATUS_DISPOSED;
 export const MASK_STATUS_AWAITING = STATUS_PENDING | STATUS_DIRTY;
-export const MASK_STATUS_PROCESSING = 0; // Deprecated - no longer needed
-export const MASK_STATUS_SKIP_NODE = STATUS_DISPOSED | STATUS_CHECKING; // Include legacy checking for backward compatibility
-
-// Legacy masks for backward compatibility
-export const MASK_STATUS_LEGACY = STATUS_INVALIDATED | STATUS_DIRTY | STATUS_CHECKING | STATUS_RECOMPUTING | STATUS_DISPOSED;
-export const MASK_STATUS_PROCESSING_LEGACY = STATUS_CHECKING | STATUS_RECOMPUTING;
+export const MASK_STATUS_SKIP_NODE = STATUS_DISPOSED;
 
 // Re-export as CONSTANTS for backward compatibility
 export const CONSTANTS = {
   STATUS_CLEAN,
   STATUS_PENDING,
-  STATUS_INVALIDATED, // Alias for STATUS_PENDING
+  STATUS_INVALIDATED,
   STATUS_DIRTY,
-  STATUS_CHECKING, // Deprecated
-  STATUS_RECOMPUTING, // Deprecated
+  STATUS_CHECKING,
+  STATUS_RECOMPUTING, 
   STATUS_DISPOSED,
   HAS_CHANGED,
   IS_SCHEDULED,
   MASK_STATUS,
   MASK_STATUS_AWAITING,
-  MASK_STATUS_PROCESSING,
   MASK_STATUS_SKIP_NODE,
 };
 

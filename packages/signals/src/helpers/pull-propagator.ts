@@ -3,11 +3,11 @@ import { CONSTANTS } from '../constants';
 import { createNodeState } from './node-state';
 
 const {
-  STATUS_PENDING,
   STATUS_DIRTY,
   STATUS_DISPOSED,
   HAS_CHANGED,
   MASK_STATUS,
+  MASK_STATUS_AWAITING,
 } = CONSTANTS;
 
 
@@ -21,70 +21,63 @@ export function createPullPropagator(): PullPropagator {
   const pullUpdates = (node: ToNode): void => {
     const flags = node.flags;
     
-    // Quick exit for clean, disposed, or null nodes
-    if (!(flags & (STATUS_PENDING | STATUS_DIRTY)) || (flags & STATUS_DISPOSED)) {
+    // Fast path: disposed or already clean
+    if ((flags & STATUS_DISPOSED) || !(flags & MASK_STATUS_AWAITING)) {
       return;
     }
     
-    // Fast path: already dirty, just recompute directly
+    // Fast path: definitely dirty - no dependency check needed
     if (flags & STATUS_DIRTY) {
       if ('recompute' in node) {
-        recomputeNode(node, flags);
+        recomputeNode(node);
       } else {
-        node.flags = flags & ~MASK_STATUS; // Clear status (set to CLEAN)
+        node.flags = flags & ~MASK_STATUS; // Clear to CLEAN
       }
       return;
     }
     
-    // Pending state: need to check dependencies
-    const isDerivedNode = 'recompute' in node;
-    let needsUpdate = false;
+    // Pending path: check dependencies for changes
     let dep = node.dependencies;
     
-    // Walk dependency chain to check for changes
-    while (dep && !needsUpdate) {
+    // Early termination loop - stop as soon as we find a change
+    while (dep) {
       const producer = dep.producer;
       const producerFlags = producer.flags;
       
-      // Early exit if producer already changed
+      // Quick check: producer already marked as changed
       if (producerFlags & HAS_CHANGED) {
-        needsUpdate = true;
-        break;
-      }
-      
-      // Skip non-computed producers (signals)
-      if (!('recompute' in producer)) {
-        dep = dep.nextDependency;
-        continue;
-      }
-      
-      // Recursively check computed producers
-      if (producerFlags & STATUS_PENDING) {
-        pullUpdates(producer); // Recursive check
-        
-        // After recursive check, see if it changed
-        if (producer.flags & HAS_CHANGED) {
-          needsUpdate = true;
-          break;
+        // Found change - update current node if it's computed
+        if ('recompute' in node) {
+          recomputeNode(node);
+        } else {
+          node.flags = node.flags & ~MASK_STATUS;
         }
-      } else if (producerFlags & STATUS_DIRTY) {
-        // Producer is dirty, recompute it
-        const changed = recomputeNode(producer, producerFlags);
-        if (changed) {
-          needsUpdate = true;
-          break;
+        return;
+      }
+      
+      // Skip non-computed producers (signals don't need recursion)
+      if ('recompute' in producer) {
+        // Only recurse if producer needs checking
+        if (producerFlags & MASK_STATUS_AWAITING) {
+          pullUpdates(producer);
+          
+          // Check again after recursion - producer might have changed
+          if (producer.flags & HAS_CHANGED) {
+            if ('recompute' in node) {
+              recomputeNode(node);
+            } else {
+              node.flags = node.flags & ~MASK_STATUS;
+            }
+            return;
+          }
         }
       }
       
       dep = dep.nextDependency;
     }
     
-    // Update current node based on dependency check result
-    if (needsUpdate && isDerivedNode) {
-      recomputeNode(node, node.flags);
-    } else {
-      node.flags = node.flags & ~MASK_STATUS; // Clear status (set to CLEAN)
-    }
+    // No dependencies changed - just mark as clean
+    node.flags = node.flags & ~MASK_STATUS;
   };
 
   return { pullUpdates };

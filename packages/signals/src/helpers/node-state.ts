@@ -4,11 +4,11 @@ import { CONSTANTS } from '../constants';
 const { HAS_CHANGED, MASK_STATUS } = CONSTANTS;
 
 export interface NodeState {
-  recomputeNode: (node: DerivedNode, flags: number) => boolean;
+  recomputeNode: (node: DerivedNode, flags?: number) => boolean;
 }
 
 export function createNodeState(): NodeState {
-  const recomputeNode = (node: DerivedNode, _flags: number): boolean => {
+  const recomputeNode = (node: DerivedNode): boolean => {
     const changed = node.recompute();
     // Simplified: just set HAS_CHANGED if changed, otherwise clear status (CLEAN)
     if (changed) {
