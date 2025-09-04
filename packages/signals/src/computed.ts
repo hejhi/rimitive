@@ -58,15 +58,11 @@ export function createComputedFactory(
       recompute(): boolean {
         // Only increment tracking version if we're starting a new top-level tracking cycle
         // If currentConsumer is not null, we're already inside a tracking cycle
-        if (!ctx.currentConsumer) {
-          ctx.trackingVersion++;
-        }
+        if (!ctx.currentConsumer) ctx.trackingVersion++;
         
         // Diamond dependency optimization: Skip if already computed in this tracking cycle
         // This prevents redundant recomputations in diamond dependency patterns
-        if (node.lastComputedVersion === ctx.trackingVersion) {
-          return false; // Already computed in this cycle, no change
-        }
+        if (node.lastComputedVersion === ctx.trackingVersion) return false; // Already computed in this cycle, no change
         
         // Reset tail marker to start fresh tracking
         // This allows new dependencies to be established while keeping old dependencies for cleanup
