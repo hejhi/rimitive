@@ -17,21 +17,6 @@ export interface PullPropagator {
 const { recomputeNode } = createNodeState();
 
 export function createPullPropagator(): PullPropagator {
-  const checkDirty = (dep: ToNode['dependencies']): boolean => {
-    let current: ToNode['dependencies'] = dep;
-
-    while (current) {
-      const producer = current.producer;
-      const flags = producer.flags;
-      
-      if (flags & HAS_CHANGED) return true;
-      
-      current = current.nextDependency;
-    }
-
-    return false;
-  };
-
   const pullUpdates = (node: ToNode): void => {
     const flags = node.flags;
     
@@ -49,13 +34,18 @@ export function createPullPropagator(): PullPropagator {
     }
 
     const dep = node.dependencies;
-    
-    // Pending path: check dependencies for changes using edge-based traversal
-    if (dep && checkDirty(node.dependencies)) {
-      // Found change - update current node
-      if (isComputed) recomputeNode(node);
-      else node.flags = cleanFlags;
-      return;
+    let current: ToNode['dependencies'] = dep;
+
+    while (current) {
+      const producer = current.producer;
+      const flags = producer.flags;
+
+      if (flags & HAS_CHANGED && isComputed) {
+        recomputeNode(node);
+        break;
+      }
+
+      current = current.nextDependency;
     }
     
     // No dependencies changed - just mark as clean
