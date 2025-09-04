@@ -5,12 +5,10 @@ import type { GlobalContext } from '../context';
 const {
   STATUS_DISPOSED,
   IS_SCHEDULED,
-  MASK_STATUS_PROCESSING,
   MASK_STATUS_AWAITING,
   STATUS_DIRTY,
-  STATUS_INVALIDATED,
+  STATUS_PENDING,
   STATUS_CLEAN,
-  STATUS_RECOMPUTING,
 } = CONSTANTS;
 
 export interface NodeScheduler {
@@ -86,24 +84,22 @@ export function createNodeScheduler(
 
       if (
         status !== STATUS_DISPOSED &&
-        !hasAnyOf(nextFlags, MASK_STATUS_PROCESSING) &&
         hasAnyOf(nextFlags, MASK_STATUS_AWAITING)
       ) {
         if (status !== STATUS_DIRTY) {
-          // Use checkStale to update dependencies and determine if a scheduled node should run
+          // Use pullUpdates to check dependencies and determine if scheduled node should run
           pullUpdates(current);
 
           const newFlags = current.flags;
 
-          // If still INVALIDATED after checkStale, dependencies didn't change
-          if (getStatus(newFlags) === STATUS_INVALIDATED) {
+          // If still PENDING after pullUpdates, dependencies didn't change
+          if (getStatus(newFlags) === STATUS_PENDING) {
             current.flags = setStatus(newFlags, STATUS_CLEAN);
             continue;
           }
         }
 
-        // Transition to recomputing state
-        current.flags = setStatus(nextFlags, STATUS_RECOMPUTING);
+        // Execute the scheduled flush (no intermediate state needed)
         current.flush();
       }
 

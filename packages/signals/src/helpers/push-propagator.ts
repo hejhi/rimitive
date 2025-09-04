@@ -1,7 +1,7 @@
 import type { Dependency } from '../types';
 import { CONSTANTS, createFlagManager } from '../constants';
 
-const { STATUS_INVALIDATED, MASK_STATUS_SKIP_NODE } = CONSTANTS;
+const { STATUS_PENDING, MASK_STATUS_SKIP_NODE } = CONSTANTS;
 
 interface Stack<T> {
   value: T;
@@ -25,13 +25,13 @@ export function createPushPropagator(): PushPropagator {
       const consumerNodeFlags = consumerNode.flags;
 
       if (
-        hasAnyOf(consumerNodeFlags, MASK_STATUS_SKIP_NODE | STATUS_INVALIDATED)
+        hasAnyOf(consumerNodeFlags, MASK_STATUS_SKIP_NODE | STATUS_PENDING)
       ) {
         currentDependency = currentDependency.nextDependent;
         continue;
       }
 
-      consumerNode.flags = setStatus(consumerNodeFlags, STATUS_INVALIDATED);
+      consumerNode.flags = setStatus(consumerNodeFlags, STATUS_PENDING);
 
       // Fast path: if node has _notify, it's an effect - schedule it directly
       // This avoids method calls and property lookups
