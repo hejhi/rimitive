@@ -55,7 +55,10 @@ export function createComputedFactory(
       flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
       // This will be set below
       recompute(): boolean {
-        // Reset tail marker to start fresh tracking (like alien-signals startTracking)
+        // Start new tracking cycle (like alien-signals startTracking)
+        ctx.trackingVersion++;
+        
+        // Reset tail marker to start fresh tracking
         // This allows new dependencies to be established while keeping old dependencies for cleanup
         const oldTail = node.dependencyTail;
         node.dependencyTail = undefined;

@@ -89,6 +89,12 @@ export interface Dependency {
   producer: FromNode; // The producer (source of data)
   consumer: ToNode; // The consumer (depends on the producer)
 
+  // Version tracking for dependency staleness
+  // Each tracking cycle increments the global version, and dependencies
+  // touched during tracking get the current version. Dependencies with
+  // outdated versions are considered stale and can be pruned.
+  version: number; // Tracking cycle version when this dependency was last used
+
   // Producer's dependent list navigation
   prevDependent: Dependency | undefined; // Previous in dependent list
   nextDependent: Dependency | undefined; // Next in dependent list

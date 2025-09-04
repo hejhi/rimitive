@@ -407,6 +407,7 @@ describe('Dependency Graph Helpers', () => {
       return {
         producer: from,
         consumer: to,
+        version: 0,
         prevDependency: undefined,
         nextDependency: undefined,
         prevDependent: undefined,

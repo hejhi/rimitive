@@ -98,6 +98,9 @@ export function createEffectFactory(
 
     // Flush method using closure
     const flush = (): void => {
+      // Start new tracking cycle (like alien-signals startTracking)
+      ctx.trackingVersion++;
+      
       node.dependencyTail = undefined;
 
       const prevConsumer = ctx.currentConsumer;

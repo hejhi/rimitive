@@ -34,6 +34,7 @@ export function createGraphEdges(): GraphEdges {
     const newDependency = {
       producer: producer,
       consumer: consumer,
+      version: 0, // Placeholder - will be set to ctx.trackingVersion in later phase
       prevDependency: tail,
       prevDependent,
       nextDependency: candidate,
