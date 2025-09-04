@@ -17,85 +17,67 @@ export interface PullPropagator {
 const { recomputeNode } = createNodeState();
 
 export function createPullPropagator(): PullPropagator {
-  // Iterative edge-based traversal using linked-list stack (no arrays)
   const checkDirty = (dep: ToNode['dependencies']): boolean => {
-    // Return false if no dependencies
     if (!dep) return false;
     
-    // Stack frame for iterative traversal (linked list, not array)
-    interface StackFrame {
-      dep: NonNullable<typeof dep>;  // The dependency to process after returning
-      producer: NonNullable<typeof dep>['producer'];  // The producer we're checking
-      prev: StackFrame | undefined;
+    interface Frame { 
+      dep: NonNullable<typeof dep>; 
+      producer: NonNullable<typeof dep>['producer']; 
+      prev: Frame | undefined; 
     }
     
-    let stack: StackFrame | undefined = undefined;
-    let currentDep = dep;
-    let dirty = false;
+    let stack: Frame | undefined;
+    let current = dep;
     
-    outer: while (true) {
-      // Process current dependency chain
-      while (currentDep) {
-        const producer = currentDep.producer;
-        const producerFlags = producer.flags;
+    // Hot path optimizations:
+    // - Minimize branches by combining conditions
+    // - Use direct property access where safe
+    // - Inline common operations
+    while (true) {
+      while (current) {
+        const producer = current.producer;
+        const flags = producer.flags;
         
-        // Check if producer already changed
-        if (producerFlags & HAS_CHANGED) {
-          dirty = true;
-          break outer;
-        }
-        
-        // Check computed producers that need checking
-        if ('recompute' in producer && (producerFlags & MASK_STATUS_AWAITING)) {
-          // Need to check producer's dependencies
-          if (producer.dependencies) {
-            // Save our position (push to stack)
-            stack = {
-              dep: currentDep,
-              producer: producer,
-              prev: stack
-            };
-            // Descend into producer's dependencies
-            currentDep = producer.dependencies;
-            continue;
-          } else {
-            // No dependencies, mark as clean
-            producer.flags &= ~MASK_STATUS;
+        // Combined check: dirty OR computed needing validation
+        if (flags & (HAS_CHANGED | MASK_STATUS_AWAITING)) {
+          if (flags & HAS_CHANGED) {
+            // Found dirty - recompute stack and exit
+            for (let s = stack; s; s = s.prev) {
+              const p = s.producer;
+              if ('recompute' in p && (p.flags & MASK_STATUS_AWAITING)) {
+                recomputeNode(p);
+              }
+            }
+            return true;
+          }
+          
+          // Must be computed awaiting validation
+          if ('recompute' in producer) {
+            const subDeps = producer.dependencies;
+            if (subDeps) {
+              stack = { dep: current, producer, prev: stack };
+              current = subDeps;
+              continue;
+            }
+            // Leaf computed - mark clean
+            producer.flags = flags & ~MASK_STATUS;
           }
         }
         
-        currentDep = currentDep.nextDependency as typeof dep;
+        current = current.nextDependency as typeof dep;
       }
       
-      // Pop from stack and handle the result
-      if (!stack) break;  // Nothing left to process
+      if (!stack) return false;
       
-      const frame: StackFrame = stack;
-      stack = frame.prev;
-      
-      // We've finished checking this producer's dependencies
-      // If dirty was set, we would have broken out of outer loop
-      // So if we're here, dependencies were clean
+      // Mark producer clean and continue
+      const frame = stack;
       if ('recompute' in frame.producer) {
-        frame.producer.flags &= ~MASK_STATUS;  // Mark as clean
+        frame.producer.flags &= ~MASK_STATUS;
       }
       
-      // Continue with next dependency
-      currentDep = frame.dep.nextDependency as typeof dep;
+      current = frame.dep.nextDependency as typeof dep;
+      stack = frame.prev;
     }
-    
-    // If we found dirty, need to recompute producers on the way back up
-    if (dirty) {
-      while (stack) {
-        const frame = stack;
-        if ('recompute' in frame.producer && (frame.producer.flags & MASK_STATUS_AWAITING)) {
-          recomputeNode(frame.producer);
-        }
-        stack = frame.prev;
-      }
-    }
-    
-    return dirty;
   };
 
   const pullUpdates = (node: ToNode): void => {
