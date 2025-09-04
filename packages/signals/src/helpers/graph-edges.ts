@@ -75,18 +75,16 @@ export function createGraphEdges(): GraphEdges {
   const detachAll = (consumer: ConsumerNode): void => {
     let dependency = consumer.dependencies;
     
-    if (dependency) {
-      do {
-        const producer = dependency.producer;
-        const nextDependency = removeDependency(dependency);
-        
-        // Set DIRTY if we removed the last subscriber from a derived node
-        if (!producer.dependents && isDerived(producer)) {
-          producer.flags = setStatus(producer.flags, STATUS_DIRTY);
-        }
-        
-        dependency = nextDependency;
-      } while (dependency);
+    while (dependency) {
+      const producer = dependency.producer;
+      const nextDependency = removeDependency(dependency);
+      
+      // Set DIRTY if we removed the last subscriber from a derived node
+      if (!producer.dependents && isDerived(producer)) {
+        producer.flags = setStatus(producer.flags, STATUS_DIRTY);
+      }
+      
+      dependency = nextDependency;
     }
     
     consumer.dependencies = undefined;
@@ -95,15 +93,10 @@ export function createGraphEdges(): GraphEdges {
 
   const pruneStale = (consumer: ConsumerNode): void => {
     const tail = consumer.dependencyTail;
-    
     let toRemove = tail ? tail.nextDependency : consumer.dependencies;
     
-    if (toRemove) {
-      do {
-        // No DIRTY setting during pruning - we're in mid-computation
-        toRemove = removeDependency(toRemove);
-      } while (toRemove);
-    }
+    // No DIRTY setting during pruning - we're in mid-computation
+    while (toRemove) toRemove = removeDependency(toRemove);
 
     if (tail) tail.nextDependency = undefined;
   };
