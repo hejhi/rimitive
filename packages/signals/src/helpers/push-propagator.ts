@@ -1,6 +1,5 @@
 import type { Dependency } from '../types';
-import { CONSTANTS } from '../constants';
-import { createNodeState } from './node-state';
+import { CONSTANTS, createFlagManager } from '../constants';
 
 const { STATUS_INVALIDATED, MASK_STATUS_SKIP_NODE } = CONSTANTS;
 
@@ -13,7 +12,7 @@ export interface PushPropagator {
   pushUpdates: (from: Dependency) => void;
 }
 
-const { hasAnyOf, setStatus } = createNodeState();
+const { hasAnyOf, setStatus } = createFlagManager();
 
 export function createPushPropagator(): PushPropagator {
   // Iterative DFS on push with an explicit stack, optimized with intrusive linked lists

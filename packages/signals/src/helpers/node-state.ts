@@ -1,34 +1,20 @@
 import type { DerivedNode } from '../types';
-import { CONSTANTS, createFlagManager } from '../constants';
+import { CONSTANTS } from '../constants';
 
-const { STATUS_RECOMPUTING, HAS_CHANGED } = CONSTANTS;
-const { getStatus, hasAnyOf, resetStatus, setStatus } = createFlagManager();
+const { STATUS_RECOMPUTING, HAS_CHANGED, MASK_STATUS } = CONSTANTS;
 
 export interface NodeState {
-  getStatus: (flags: number) => number;
-  hasAnyOf: (flags: number, mask: number) => boolean;
-  resetStatus: (flags: number) => number;
-  setStatus: (flags: number, status: number) => number;
   recomputeNode: (node: DerivedNode, flags: number) => boolean;
 }
 
 export function createNodeState(): NodeState {
   const recomputeNode = (node: DerivedNode, flags: number): boolean => {
-    node.flags = setStatus(flags, STATUS_RECOMPUTING);
     const changed = node.recompute();
-    if (changed) {
-      node.flags = resetStatus(flags) | HAS_CHANGED;
-    } else {
-      node.flags = resetStatus(flags);
-    }
+    node.flags = (flags & ~MASK_STATUS) | STATUS_RECOMPUTING;
+    if (changed) node.flags = (node.flags & ~MASK_STATUS) | HAS_CHANGED;
+    else node.flags = node.flags & ~MASK_STATUS;
     return changed;
   };
 
-  return {
-    getStatus,
-    hasAnyOf,
-    resetStatus,
-    setStatus,
-    recomputeNode
-  };
+  return { recomputeNode };
 }

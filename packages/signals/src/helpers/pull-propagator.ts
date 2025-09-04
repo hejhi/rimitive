@@ -1,5 +1,6 @@
-import type { ToNode, Dependency, DerivedNode } from '../types';
+import type { ToNode, Dependency } from '../types';
 import { CONSTANTS } from '../constants';
+import { createNodeState } from './node-state';
 
 const {
   STATUS_CLEAN,
@@ -21,17 +22,7 @@ export interface PullPropagator {
   pullUpdates: (node: ToNode) => void;
 }
 
-// Inlined recomputeNode for maximum performance
-const recomputeNode = (node: DerivedNode, flags: number): boolean => {
-  node.flags = (flags & ~MASK_STATUS) | STATUS_RECOMPUTING;
-  const changed = node.recompute();
-  if (changed) {
-    node.flags = (node.flags & ~MASK_STATUS) | HAS_CHANGED;
-  } else {
-    node.flags = node.flags & ~MASK_STATUS;
-  }
-  return changed;
-};
+const { recomputeNode } = createNodeState();
 
 export function createPullPropagator(): PullPropagator {
   const pullUpdates = (node: ToNode): void => {

@@ -1,9 +1,8 @@
 import type { ProducerNode, ConsumerNode, Dependency, ToNode, FromNode, DerivedNode } from '../types';
-import { CONSTANTS } from '../constants';
-import { createNodeState } from './node-state';
+import { CONSTANTS, createFlagManager } from '../constants';
 
 const { STATUS_DIRTY } = CONSTANTS;
-const { setStatus } = createNodeState()
+const { setStatus } = createFlagManager()
 
 export interface GraphEdges {
   trackDependency: (producer: ProducerNode, consumer: ConsumerNode) => void;

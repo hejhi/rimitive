@@ -48,7 +48,7 @@ export function createFlagManager() {
   const hasAnyOf = (flags: number, flag: number) => !!(flags & flag);
 
   const resetStatus = (flags: number) => removeProperty(flags, MASK_STATUS); // STATUS_CLEAN is 0, so just clear status bits
-  const setStatus = (flags: number, status: number) => addProperty(resetStatus(flags), status);
+  const setStatus = (flags: number, status: number) => removeProperty(flags, MASK_STATUS) | status;
 
   return {
     getStatus,
