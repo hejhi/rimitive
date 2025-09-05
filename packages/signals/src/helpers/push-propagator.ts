@@ -1,7 +1,7 @@
 import type { Dependency } from '../types';
-import { CONSTANTS, createFlagManager } from '../constants';
+import { CONSTANTS } from '../constants';
 
-const { STATUS_PENDING, MASK_STATUS_SKIP_NODE } = CONSTANTS;
+const { STATUS_PENDING, MASK_STATUS_SKIP_NODE, MASK_STATUS } = CONSTANTS;
 
 interface Stack<T> {
   value: T;
@@ -12,7 +12,7 @@ export interface PushPropagator {
   pushUpdates: (from: Dependency) => void;
 }
 
-const { hasAnyOf, setStatus } = createFlagManager();
+// Flag operations are now done directly with bitwise operators for performance
 
 export function createPushPropagator(): PushPropagator {
   // Iterative DFS on push with an explicit stack, optimized with intrusive linked lists
@@ -24,14 +24,14 @@ export function createPushPropagator(): PushPropagator {
       const consumerNode = currentDependency.consumer;
       const consumerNodeFlags = consumerNode.flags;
 
-      if (
-        hasAnyOf(consumerNodeFlags, MASK_STATUS_SKIP_NODE | STATUS_PENDING)
-      ) {
+      // Batch check: combine skip conditions
+      if (consumerNodeFlags & (MASK_STATUS_SKIP_NODE | STATUS_PENDING)) {
         currentDependency = currentDependency.nextDependent;
         continue;
       }
 
-      consumerNode.flags = setStatus(consumerNodeFlags, STATUS_PENDING);
+      // Batch operation: directly set status without helper function
+      consumerNode.flags = (consumerNodeFlags & ~MASK_STATUS) | STATUS_PENDING;
 
       // Fast path: if node has _notify, it's an effect - schedule it directly
       // This avoids method calls and property lookups

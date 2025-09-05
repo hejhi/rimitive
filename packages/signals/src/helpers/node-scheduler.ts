@@ -9,6 +9,7 @@ const {
   STATUS_DIRTY,
   STATUS_PENDING,
   STATUS_CLEAN,
+  MASK_STATUS,
 } = CONSTANTS;
 
 export interface NodeScheduler {
@@ -20,7 +21,7 @@ export interface NodeScheduler {
   flush: () => void;
 }
 
-const { hasAnyOf, setStatus, getStatus, addProperty, removeProperty } = createFlagManager();
+const { hasAnyOf, setStatus, getStatus, addProperty } = createFlagManager();
 
 /**
  * ALGORITHM: Intrusive FIFO Scheduling Queue
@@ -76,25 +77,26 @@ export function createNodeScheduler(
 
     while (current) {
       const next: ScheduledNode | undefined = current.nextScheduled;
-      const nextFlags = removeProperty(current.flags, IS_SCHEDULED);
-      const status = getStatus(nextFlags);
+      // Batch operation: read once, compute final state
+      const flags = current.flags;
+      const cleanFlags = flags & ~IS_SCHEDULED;
+      const status = cleanFlags & MASK_STATUS;
 
       current.nextScheduled = undefined;
-      current.flags = nextFlags;
+      current.flags = cleanFlags;
 
       if (
         status !== STATUS_DISPOSED &&
-        hasAnyOf(nextFlags, MASK_STATUS_AWAITING)
+        (cleanFlags & MASK_STATUS_AWAITING)
       ) {
         if (status !== STATUS_DIRTY) {
           // Use pullUpdates to check dependencies and determine if scheduled node should run
           pullUpdates(current);
 
-          const newFlags = current.flags;
-
-          // If still PENDING after pullUpdates, dependencies didn't change
-          if (getStatus(newFlags) === STATUS_PENDING) {
-            current.flags = setStatus(newFlags, STATUS_CLEAN);
+          // Batch operation: compute final flags in one go
+          const updatedFlags = current.flags;
+          if ((updatedFlags & MASK_STATUS) === STATUS_PENDING) {
+            current.flags = (updatedFlags & ~MASK_STATUS) | STATUS_CLEAN;
             continue;
           }
         }

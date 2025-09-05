@@ -1,4 +1,4 @@
-import { CONSTANTS, createFlagManager } from '../constants';
+import { CONSTANTS } from '../constants';
 import { GlobalContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
 
@@ -21,8 +21,7 @@ export interface GraphEdges {
   detachAll: (node: ConsumerNode) => void;
 }
 
-const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING } = CONSTANTS;
-const { setStatus } = createFlagManager();
+const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING, MASK_STATUS } = CONSTANTS;
 
 export function createGraphEdges(): GraphEdges {
   const trackDependency = (
@@ -87,8 +86,8 @@ export function createGraphEdges(): GraphEdges {
     // Reset dependency tail to start fresh dependency tracking
     node.dependencyTail = undefined;
 
-    const flags = node.flags;
-    node.flags = flags & ~(STATUS_DIRTY | STATUS_PENDING);
+    // Batch operation: clear multiple status bits at once
+    node.flags = node.flags & ~(STATUS_DIRTY | STATUS_PENDING);
 
     ctx.currentConsumer = node;
     return prevConsumer;
@@ -146,9 +145,8 @@ export function createGraphEdges(): GraphEdges {
       toRemove = next;
     }
 
-    // Set the node back to a clean state after tracking
-    const flags = node.flags;
-    node.flags = setStatus(flags, STATUS_CLEAN);
+    // Batch operation: set clean status directly
+    node.flags = (node.flags & ~MASK_STATUS) | STATUS_CLEAN;
   };
 
   /**

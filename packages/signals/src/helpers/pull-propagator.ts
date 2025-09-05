@@ -35,9 +35,8 @@ export function createPullPropagator(): PullPropagator {
 
       while (current) {
         const producer = current.producer;
-        const flags = producer.flags;
-        
-        if (flags & HAS_CHANGED) {
+        // Direct flag check without intermediate variable
+        if (producer.flags & HAS_CHANGED) {
           recomputeNode(node);
           return;
         }
