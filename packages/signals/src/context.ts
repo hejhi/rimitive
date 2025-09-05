@@ -137,3 +137,22 @@ function removeDependency(dependency: Dependency): void {
   if (prevDependent) prevDependent.nextDependent = nextDependent;
   else producer.dependents = nextDependent;
 }
+
+/**
+ * Detach all dependencies from a consumer node.
+ * Used during disposal to completely disconnect a node from the graph.
+ * 
+ * @param node - The consumer node to detach
+ */
+export function detachAll(node: ConsumerNode): void {
+  let dependency = node.dependencies;
+  
+  while (dependency) {
+    const next = dependency.nextDependency;
+    removeDependency(dependency);
+    dependency = next;
+  }
+  
+  node.dependencies = undefined;
+  node.dependencyTail = undefined;
+}

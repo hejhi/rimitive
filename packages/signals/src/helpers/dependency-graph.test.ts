@@ -11,8 +11,6 @@ describe('Dependency Graph Helpers', () => {
   let helpers: {
     trackDependency: ReturnType<typeof createGraphEdges>['trackDependency'];
     removeDependency: ReturnType<typeof createGraphEdges>['removeDependency'];
-    detachAll: ReturnType<typeof createGraphEdges>['detachAll'];
-    pruneStale: ReturnType<typeof createGraphEdges>['pruneStale'];
     pushUpdates: ReturnType<typeof createPushPropagator>['pushUpdates'];
     pullUpdates: ReturnType<typeof createPullPropagator>['pullUpdates'];
   };
@@ -25,8 +23,6 @@ describe('Dependency Graph Helpers', () => {
     helpers = {
       trackDependency: graphEdges.trackDependency,
       removeDependency: graphEdges.removeDependency,
-      detachAll: graphEdges.detachAll,
-      pruneStale: graphEdges.pruneStale,
       pushUpdates: pushPropagator.pushUpdates,
       pullUpdates: pullPropagator.pullUpdates,
     };

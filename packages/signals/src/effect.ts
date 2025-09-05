@@ -1,52 +1,11 @@
-/**
- * ALGORITHM: Reactive Effects with Automatic Cleanup and Batching
- * 
- * Effects are the "output nodes" of the reactive graph - they consume reactive values
- * and perform side effects. Unlike computed values, effects:
- * - Always execute eagerly when dependencies change (no lazy evaluation)
- * - Don't produce values (they're sinks, not sources)
- * - Can have cleanup functions for resource management
- * 
- * KEY ALGORITHMS:
- * 
- * 1. AUTOMATIC CLEANUP PATTERN (React-inspired):
- *    - Effects can return a cleanup function
- *    - Cleanup runs before next execution and on disposal
- *    - Prevents resource leaks (event listeners, timers, subscriptions)
- * 
- * 2. BATCHED SCHEDULING:
- *    - Effects are queued, not executed immediately
- *    - Batch completes after all sync updates finish
- *    - Prevents seeing intermediate/inconsistent states
- *    - Similar to React's batching in event handlers
- * 
- * 3. CIRCULAR BUFFER QUEUE:
- *    - Effects scheduled in a power-of-2 sized circular buffer
- *    - O(1) enqueue/dequeue operations
- *    - No array resizing or memory allocation during scheduling
- * 
- * 4. DEDUPLICATION:
- *    - Each effect scheduled at most once per batch
- *    - INVALIDATED flag prevents duplicate scheduling
- *    - Improves performance with many dependency changes
- * 
- * INSPIRATION:
- * - React useEffect (cleanup pattern, dependency tracking)
- * - MobX autorun (automatic re-execution)
- * - Vue watchEffect (immediate execution)
- * - RxJS (cleanup/disposal pattern)
- */
-
 import { CONSTANTS } from './constants';
 import { ConsumerNode, Dependency, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
-import { startTracking, endTracking } from './context';
-import { GraphEdges } from './helpers/graph-edges';
+import { startTracking, endTracking, detachAll } from './context';
 import { NodeScheduler } from './helpers/node-scheduler';
 
 export type EffectContext = GlobalContext & {
-  graphEdges: GraphEdges;
   nodeScheduler: NodeScheduler;
 };
 
@@ -64,18 +23,15 @@ export interface EffectDisposer {
   (): void;
 }
 
-const {
-  STATUS_DIRTY,
-} = CONSTANTS;
+const { STATUS_DIRTY } = CONSTANTS;
 
 export function createEffectFactory(
-  ctx: GlobalContext & EffectContext
+  ctx: EffectContext
 ): LatticeExtension<
   'effect',
   (fn: () => void | (() => void)) => EffectDisposer
 > {
   const {
-    graphEdges: { detachAll },
     nodeScheduler: { dispose: disposeNode, enqueue },
   } = ctx;
 
@@ -96,7 +52,6 @@ export function createEffectFactory(
 
     // Flush method using closure
     const flush = (): void => {
-      // Start tracking immediately (like alien-signals)
       const prevConsumer = startTracking(ctx, node);
 
       try {
@@ -109,9 +64,9 @@ export function createEffectFactory(
 
         // Main state execution and store new cleanup
         const newCleanup = fn();
+
         if (newCleanup) node._cleanup = newCleanup;
       } finally {
-        // End tracking, restore context, and clean up
         endTracking(ctx, node, prevConsumer);
       }
     };

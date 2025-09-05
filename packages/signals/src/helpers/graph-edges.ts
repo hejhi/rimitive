@@ -1,14 +1,8 @@
-import type { ProducerNode, ConsumerNode, Dependency, ToNode, FromNode, DerivedNode } from '../types';
-import { CONSTANTS, createFlagManager } from '../constants';
-
-const { STATUS_DIRTY } = CONSTANTS;
-const { setStatus } = createFlagManager()
+import type { ProducerNode, ConsumerNode, Dependency, ToNode, FromNode } from '../types';
 
 export interface GraphEdges {
   trackDependency: (producer: ProducerNode, consumer: ConsumerNode, version: number) => void;
   removeDependency: (dependency: Dependency) => Dependency | undefined;
-  detachAll: (consumer: ConsumerNode) => void;
-  pruneStale: (consumer: ConsumerNode) => void;
 }
 
 export function createGraphEdges(): GraphEdges {
@@ -73,39 +67,5 @@ export function createGraphEdges(): GraphEdges {
     return nextDependency;
   };
 
-  const isDerived = (source: FromNode | ToNode): source is DerivedNode => '_recompute' in source;
-
-  const detachAll = (consumer: ConsumerNode): void => {
-    let dependency = consumer.dependencies;
-    
-    while (dependency) {
-      const producer = dependency.producer;
-      const nextDependency = removeDependency(dependency);
-      
-      // Set DIRTY if we removed the last subscriber from a derived node
-      if (!producer.dependents && isDerived(producer)) {
-        producer.flags = setStatus(producer.flags, STATUS_DIRTY);
-      }
-      
-      dependency = nextDependency;
-    }
-    
-    consumer.dependencies = undefined;
-    consumer.dependencyTail = undefined;
-  };
-
-  const pruneStale = (consumer: ConsumerNode): void => {
-    const tail = consumer.dependencyTail;
-    let dep = tail ? tail.nextDependency : consumer.dependencies;
-    
-    while (dep) {
-      const next = dep.nextDependency;
-      
-      removeDependency(dep);
-      
-      dep = next;
-    }
-  };
-
-  return { trackDependency, removeDependency, detachAll, pruneStale };
+  return { trackDependency, removeDependency };
 }
