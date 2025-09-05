@@ -5,7 +5,7 @@ import { createPullPropagator } from './pull-propagator';
 import type { ConsumerNode, ProducerNode, Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { STATUS_DISPOSED, STATUS_PENDING, HAS_CHANGED } = CONSTANTS;
+const { STATUS_DISPOSED, STATUS_PENDING, DIRTY } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: {
@@ -53,7 +53,7 @@ describe('Dependency Graph Helpers', () => {
       const firstEdge = target.dependencies;
       
       // Update version
-      source.flags |= HAS_CHANGED;
+      source.flags |= DIRTY;
       
       // Second call should reuse the same edge
       helpers.trackDependency(source, target, 0);
@@ -83,7 +83,7 @@ describe('Dependency Graph Helpers', () => {
       const existingNode = target.dependencies;
       
       // Update version
-      source.flags |= HAS_CHANGED;
+      source.flags |= DIRTY;
       
       // Should find the existing dependency
       helpers.trackDependency(source, target, 0);
@@ -167,7 +167,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.trackDependency(source, target, 0);
       
       // Update version
-      source.flags |= HAS_CHANGED;
+      source.flags |= DIRTY;
       
       // Update dependency
       helpers.trackDependency(source, target, 0);

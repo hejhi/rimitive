@@ -28,10 +28,7 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
   });
   
   // Now create nodeScheduler with the same ctx object
-  const nodeScheduler = createNodeScheduler(
-    ctx,
-    pullPropagator.pullUpdates
-  );
+  const nodeScheduler = createNodeScheduler(ctx);
   
   ctx.nodeScheduler = nodeScheduler;
   
@@ -89,7 +86,7 @@ describe('createSignalAPI', () => {
     });
     
     const nodeScheduler = (() => {
-      const scheduler = createNodeScheduler(customCtx, pullPropagator.pullUpdates);
+      const scheduler = createNodeScheduler(customCtx);
       return {
         ...scheduler,
         flush: () => {
@@ -130,7 +127,7 @@ describe('createSignalAPI', () => {
     const graphEdges = createGraphEdges();
     const pullPropagator = createPullPropagator();
     const nodeScheduler = (() => {
-      const queue = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
+      const queue = createNodeScheduler(baseCtx);
       const originalEnqueue = queue.enqueue;
       queue.enqueue = (node) => {
         enqueueCount++;

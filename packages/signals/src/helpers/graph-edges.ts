@@ -21,7 +21,7 @@ export interface GraphEdges {
   detachAll: (node: ConsumerNode) => void;
 }
 
-const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING, MASK_STATUS } = CONSTANTS;
+const { STATUS_CLEAN, STATUS_PENDING, MASK_STATUS } = CONSTANTS;
 
 export function createGraphEdges(): GraphEdges {
   const trackDependency = (
@@ -87,7 +87,7 @@ export function createGraphEdges(): GraphEdges {
     node.dependencyTail = undefined;
 
     // Batch operation: clear multiple status bits at once
-    node.flags = node.flags & ~(STATUS_DIRTY | STATUS_PENDING);
+    node.flags = node.flags & ~(STATUS_PENDING);
 
     ctx.currentConsumer = node;
     return prevConsumer;

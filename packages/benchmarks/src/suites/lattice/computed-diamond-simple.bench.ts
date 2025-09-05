@@ -35,7 +35,7 @@ import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
 const baseCtx = createBaseContext();
 const pullPropagator = createPullPropagator();
 const graphEdges = createGraphEdges();
-const nodeScheduler = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
+const nodeScheduler = createNodeScheduler(baseCtx);
 const pushPropagator = createPushPropagator();
 
 // Create Lattice API instance

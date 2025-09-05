@@ -7,10 +7,6 @@
 
 import { bench, group, summary, barplot } from 'mitata';
 import { runBenchmark } from '../../utils/benchmark-runner';
-import {
-  signal as preactSignal,
-  computed as preactComputed,
-} from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
 import { createSignalFactory } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
@@ -29,7 +25,7 @@ import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
 const baseCtx = createBaseContext();
 const pullPropagator = createPullPropagator();
 const graphEdges = createGraphEdges();
-const nodeScheduler = createNodeScheduler(baseCtx, pullPropagator.pullUpdates);
+const nodeScheduler = createNodeScheduler(baseCtx);
 const pushPropagator = createPushPropagator();
 
 const latticeAPI = createSignalAPI(

@@ -27,10 +27,7 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
   });
   
   // Now create nodeScheduler with the same ctx object
-  const nodeScheduler = createNodeScheduler(
-    ctx,
-    pullPropagator.pullUpdates
-  );
+  const nodeScheduler = createNodeScheduler(ctx);
   
   ctx.nodeScheduler = nodeScheduler;
   

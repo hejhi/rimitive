@@ -19,8 +19,7 @@ describe('NodeScheduler', () => {
   };
   it('should enqueue nodes', () => {
     const ctx = createBaseContext();
-    const mockPullUpdates = () => {};
-    const helpers = createNodeScheduler(ctx, mockPullUpdates);
+    const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -38,8 +37,7 @@ describe('NodeScheduler', () => {
 
   it('should not enqueue already scheduled nodes', () => {
     const ctx = createBaseContext();
-    const mockPullUpdates = () => {};
-    const helpers = createNodeScheduler(ctx, mockPullUpdates);
+    const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',
@@ -62,8 +60,7 @@ describe('NodeScheduler', () => {
 
   it('should dispose node only once', () => {
     const ctx = createBaseContext();
-    const mockPullUpdates = () => {};
-    const helpers = createNodeScheduler(ctx, mockPullUpdates);
+    const helpers = createNodeScheduler(ctx);
     
     const cleanupFn = vi.fn();
     const node: ScheduledNode = {
@@ -88,8 +85,7 @@ describe('NodeScheduler', () => {
 
   it('should flush all scheduled nodes in FIFO order', () => {
     const ctx = createBaseContext();
-    const mockPullUpdates = () => {};
-    const helpers = createNodeScheduler(ctx, mockPullUpdates);
+    const helpers = createNodeScheduler(ctx);
     
     const flush1 = vi.fn();
     const flush2 = vi.fn();
@@ -97,7 +93,7 @@ describe('NodeScheduler', () => {
     
     const node1: ScheduledNode = {
       __type: 'test',
-      flags: 2, // STATUS_DIRTY
+      flags: 1, // STATUS_PENDING
       nextScheduled: undefined,
       flush: flush1,
       dependencies: undefined,
@@ -107,7 +103,7 @@ describe('NodeScheduler', () => {
     
     const node2: ScheduledNode = {
       __type: 'test',
-      flags: 2, // STATUS_DIRTY
+      flags: 1, // STATUS_PENDING
       nextScheduled: undefined,
       flush: flush2,
       dependencies: undefined,
@@ -117,7 +113,7 @@ describe('NodeScheduler', () => {
     
     const node3: ScheduledNode = {
       __type: 'test',
-      flags: 2, // STATUS_DIRTY
+      flags: 1, // STATUS_PENDING
       nextScheduled: undefined,
       flush: flush3,
       dependencies: undefined,
@@ -144,8 +140,7 @@ describe('NodeScheduler', () => {
 
   it('should handle empty flush', () => {
     const ctx = createBaseContext();
-    const mockPullUpdates = () => {};
-    const helpers = createNodeScheduler(ctx, mockPullUpdates);
+    const helpers = createNodeScheduler(ctx);
     
     // Flush with no nodes queued - should not throw
     expect(() => helpers.flush()).not.toThrow();
@@ -157,8 +152,7 @@ describe('NodeScheduler', () => {
 
   it('should clear nextScheduled flag during flush', () => {
     const ctx = createBaseContext();
-    const mockPullUpdates = () => {};
-    const helpers = createNodeScheduler(ctx, mockPullUpdates);
+    const helpers = createNodeScheduler(ctx);
     
     const node: ScheduledNode = {
       __type: 'test',

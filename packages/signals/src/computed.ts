@@ -29,7 +29,7 @@ interface ComputedState<T> extends DerivedNode {
   value: T; // Cached computed value
 }
 
-const { STATUS_DIRTY } = CONSTANTS;
+const { STATUS_PENDING } = CONSTANTS;
 
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
@@ -50,7 +50,7 @@ export function createComputedFactory(
       dependentsTail: undefined,
       dependencies: undefined, // Will be set to old dependencies when they exist
       dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
-      flags: STATUS_DIRTY, // Start in DIRTY state so first access triggers computation
+      flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation
       lastComputedVersion: -1, // Never computed yet
       // This will be set below
       recompute(): boolean {

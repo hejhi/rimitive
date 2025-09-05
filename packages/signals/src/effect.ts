@@ -24,7 +24,7 @@ export interface EffectDisposer {
   (): void;
 }
 
-const { STATUS_DIRTY } = CONSTANTS;
+const { STATUS_PENDING } = CONSTANTS;
 
 export function createEffectFactory(
   ctx: EffectContext
@@ -43,7 +43,7 @@ export function createEffectFactory(
     const node: EffectInterface = {
       __type: 'effect' as const,
       _cleanup: undefined as (() => void) | undefined,
-      flags: STATUS_DIRTY, // Start in DIRTY state to trigger initial execution
+      flags: STATUS_PENDING, // Start in PENDING state to trigger initial execution
       dependencies: undefined as Dependency | undefined,
       dependencyTail: undefined as Dependency | undefined,
       nextScheduled: undefined as ScheduledNode | undefined,

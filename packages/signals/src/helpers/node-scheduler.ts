@@ -1,14 +1,11 @@
 import { CONSTANTS, createFlagManager } from '../constants';
-import type { ScheduledNode, ToNode } from '../types';
+import type { ScheduledNode } from '../types';
 import type { GlobalContext } from '../context';
 
 const {
   STATUS_DISPOSED,
   IS_SCHEDULED,
   MASK_STATUS_AWAITING,
-  STATUS_DIRTY,
-  STATUS_PENDING,
-  STATUS_CLEAN,
   MASK_STATUS,
 } = CONSTANTS;
 
@@ -38,7 +35,6 @@ const { hasAnyOf, setStatus, getStatus, addProperty } = createFlagManager();
  */
 export function createNodeScheduler(
   ctx: GlobalContext,
-  pullUpdates: (node: ToNode) => void
 ): NodeScheduler {
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
@@ -89,19 +85,7 @@ export function createNodeScheduler(
         status !== STATUS_DISPOSED &&
         (cleanFlags & MASK_STATUS_AWAITING)
       ) {
-        if (status !== STATUS_DIRTY) {
-          // Use pullUpdates to check dependencies and determine if scheduled node should run
-          pullUpdates(current);
-
-          // Batch operation: compute final flags in one go
-          const updatedFlags = current.flags;
-          if ((updatedFlags & MASK_STATUS) === STATUS_PENDING) {
-            current.flags = (updatedFlags & ~MASK_STATUS) | STATUS_CLEAN;
-            continue;
-          }
-        }
-
-        // Execute the scheduled flush (no intermediate state needed)
+        // Execute the scheduled flush
         current.flush();
       }
 
