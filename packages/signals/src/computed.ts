@@ -93,7 +93,7 @@ export function createComputedFactory(
           // Skip pruning if:
           // 1. No dependencies to prune (first compute or unobserved)
           // 2. Tail hasn't moved (same dependencies accessed in same order)
-          if (!oldTail || node.dependencyTail !== oldTail) pruneStale(node, ctx.trackingVersion);
+          if (!oldTail || node.dependencyTail !== oldTail) pruneStale(node);
         }
         return valueChanged;
       },

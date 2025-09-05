@@ -124,7 +124,7 @@ export function createEffectFactory(
         ctx.currentConsumer = prevConsumer;
         // Transition back to clean state after execution
         node.flags = setStatus(node.flags, STATUS_CLEAN);
-        pruneStale(node, ctx.trackingVersion);
+        pruneStale(node);
       }
     };
 

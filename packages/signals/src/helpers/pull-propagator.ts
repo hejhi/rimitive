@@ -36,10 +36,10 @@ export function createPullPropagator(): PullPropagator {
       while (current) {
         const producer = current.producer;
         const flags = producer.flags;
-
+        
         if (flags & HAS_CHANGED) {
           recomputeNode(node);
-          break;
+          return;
         }
 
         current = current.nextDependency;

@@ -67,7 +67,7 @@ describe('Dependency Graph Cleanup Operations', () => {
     graph.trackDependency(c, target, 2);
 
     // Now prune stale with current version 2 (b should be removed since it has version 1)
-    graph.pruneStale(target, 2);
+    graph.pruneStale(target);
 
     // With tail-based pruning, only accessed edges remain
     let list = target.dependencies;
@@ -96,7 +96,7 @@ describe('Dependency Graph Cleanup Operations', () => {
     // Don't access any producer (so all dependencies stay at version 1)
     
     // Prune with version 2 - all dependencies with version 1 should be removed
-    graph.pruneStale(target, 2);
+    graph.pruneStale(target);
 
     // With tail-based pruning, all edges should be removed
     expect(target.dependencies).toBeUndefined();
