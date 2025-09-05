@@ -1,8 +1,7 @@
-import type { ProducerNode, ConsumerNode, Dependency, ToNode, FromNode } from '../types';
+import type { ProducerNode, ConsumerNode, ToNode, FromNode } from '../types';
 
 export interface GraphEdges {
   trackDependency: (producer: ProducerNode, consumer: ConsumerNode, version: number) => void;
-  removeDependency: (dependency: Dependency) => Dependency | undefined;
 }
 
 export function createGraphEdges(): GraphEdges {
@@ -49,23 +48,5 @@ export function createGraphEdges(): GraphEdges {
     producer.dependentsTail = newDependency;    
   };
 
-  const removeDependency = (dependency: Dependency): Dependency | undefined => {
-    const { producer, consumer, prevDependency, nextDependency, prevDependent, nextDependent } = dependency;
-
-    if (nextDependency) nextDependency.prevDependency = prevDependency;
-    else consumer.dependencyTail = prevDependency;
-
-    if (prevDependency) prevDependency.nextDependency = nextDependency;
-    else consumer.dependencies = nextDependency;
-
-    if (nextDependent) nextDependent.prevDependent = prevDependent;
-    else producer.dependentsTail = prevDependent;
-
-    if (prevDependent) prevDependent.nextDependent = nextDependent;
-    else producer.dependents = nextDependent;
-
-    return nextDependency;
-  };
-
-  return { trackDependency, removeDependency };
+  return { trackDependency };
 }

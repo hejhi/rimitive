@@ -2,7 +2,6 @@ import { CONSTANTS } from './constants';
 import { ConsumerNode, Dependency, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
-import { startTracking, endTracking, detachAll } from './context';
 import { NodeScheduler } from './helpers/node-scheduler';
 
 export type EffectContext = GlobalContext & {
@@ -33,6 +32,9 @@ export function createEffectFactory(
 > {
   const {
     nodeScheduler: { dispose: disposeNode, enqueue },
+    startTracking,
+    endTracking,
+    detachAll
   } = ctx;
 
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization

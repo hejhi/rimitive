@@ -8,7 +8,6 @@ import { CONSTANTS } from './constants';
 import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
-import { startTracking, endTracking } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
 
@@ -41,6 +40,8 @@ export function createComputedFactory(
   const {
     graphEdges: { trackDependency },
     pullPropagator: { pullUpdates },
+    startTracking,
+    endTracking
   } = ctx;
 
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
@@ -90,7 +91,6 @@ export function createComputedFactory(
       // Always link if there's a consumer
       // Create edge to consumer
       if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
-
       update();
 
       return node.value;
