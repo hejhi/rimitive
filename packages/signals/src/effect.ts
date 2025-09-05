@@ -1,4 +1,3 @@
-import { CONSTANTS } from './constants';
 import { ConsumerNode, Dependency, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
@@ -24,8 +23,6 @@ export interface EffectDisposer {
   (): void;
 }
 
-const { STATUS_PENDING } = CONSTANTS;
-
 export function createEffectFactory(
   ctx: EffectContext
 ): LatticeExtension<
@@ -43,7 +40,7 @@ export function createEffectFactory(
     const node: EffectInterface = {
       __type: 'effect' as const,
       _cleanup: undefined as (() => void) | undefined,
-      flags: STATUS_PENDING, // Start in PENDING state to trigger initial execution
+      flags: 0, // Start in PENDING state to trigger initial execution
       dependencies: undefined as Dependency | undefined,
       dependencyTail: undefined as Dependency | undefined,
       nextScheduled: undefined as ScheduledNode | undefined,
