@@ -32,40 +32,38 @@ export function createGraphEdges(): GraphEdges {
   ): void => {
     const tail = consumer.dependencyTail;
 
+    // Fast path: already at this producer
     if (tail && tail.producer === producer) return;
 
-    // Tail will be undefined until after the first dependency in the executing consumer is read.
-    // In that case, we should go with the first Dependency in the existing list.
-    const candidate = tail ? tail.nextDependency : consumer.dependencies;
-
-    if (candidate && candidate.producer === producer) {
-      candidate.version = version; // Update version when reusing dependency
-      consumer.dependencyTail = candidate;
+    // Check next in sequence (common case during re-execution)
+    const next = tail ? tail.nextDependency : consumer.dependencies;
+    if (next && next.producer === producer) {
+      next.version = version;
+      consumer.dependencyTail = next;
       return;
     }
 
-    const prevDependent = producer.dependentsTail;
-
-    const newDependency = {
-      producer: producer,
-      consumer: consumer,
-      version: version, // Use passed version instead of placeholder 0
+    const producerTail = producer.dependentsTail;
+    const dependency: Dependency = {
+      producer,
+      consumer,
+      version,
       prevDependency: tail,
-      prevDependent,
-      nextDependency: candidate,
+      prevDependent: producerTail,
+      nextDependency: next,
       nextDependent: undefined,
     };
 
-    if (candidate) candidate.prevDependency = newDependency;
-    if (tail) tail.nextDependency = newDependency;
-    else consumer.dependencies = newDependency;
+    // Wire up consumer side
+    consumer.dependencyTail = dependency;
+    if (next) next.prevDependency = dependency;
+    if (tail) tail.nextDependency = dependency;
+    else consumer.dependencies = dependency;
 
-    consumer.dependencyTail = newDependency;
-
-    if (prevDependent) prevDependent.nextDependent = newDependency;
-    else producer.dependents = newDependency;
-
-    producer.dependentsTail = newDependency;
+    // Wire up producer side
+    producer.dependentsTail = dependency;
+    if (producerTail) producerTail.nextDependent = dependency;
+    else producer.dependents = dependency;
   };
 
   /**
@@ -96,6 +94,30 @@ export function createGraphEdges(): GraphEdges {
     return prevConsumer;
   };
 
+  // Helper to remove a dependency edge (inlined from graph-edges logic)
+  const removeDependency = ({
+    producer,
+    consumer,
+    prevDependency,
+    nextDependency,
+    prevDependent,
+    nextDependent,
+  }: Dependency): Dependency | undefined => {
+    if (nextDependency) nextDependency.prevDependency = prevDependency;
+    else consumer.dependencyTail = prevDependency;
+
+    if (prevDependency) prevDependency.nextDependency = nextDependency;
+    else consumer.dependencies = nextDependency;
+
+    if (nextDependent) nextDependent.prevDependent = prevDependent;
+    else producer.dependentsTail = prevDependent;
+
+    if (prevDependent) prevDependent.nextDependent = nextDependent;
+    else producer.dependents = nextDependent;
+
+    return nextDependency; // Return next for efficient iteration
+  };
+
   /**
    * End tracking dependencies for a consumer node.
    * This is where we clean up stale dependencies.
@@ -112,7 +134,7 @@ export function createGraphEdges(): GraphEdges {
     // Restore previous tracking context
     ctx.currentConsumer = prevConsumer;
 
-    // Prune stale dependencies (like alien-signals)
+    // Prune stale dependencies
     // Everything after the tail is stale and needs to be removed
     const tail = node.dependencyTail;
     let toRemove = tail ? tail.nextDependency : node.dependencies;
@@ -127,32 +149,6 @@ export function createGraphEdges(): GraphEdges {
     // Set the node back to a clean state after tracking
     const flags = node.flags;
     node.flags = setStatus(flags, STATUS_CLEAN);
-  };
-
-  // Helper to remove a dependency edge (inlined from graph-edges logic)
-  const removeDependency = (dependency: Dependency): Dependency | undefined => {
-    const {
-      producer,
-      consumer,
-      prevDependency,
-      nextDependency,
-      prevDependent,
-      nextDependent,
-    } = dependency;
-
-    if (nextDependency) nextDependency.prevDependency = prevDependency;
-    else consumer.dependencyTail = prevDependency;
-
-    if (prevDependency) prevDependency.nextDependency = nextDependency;
-    else consumer.dependencies = nextDependency;
-
-    if (nextDependent) nextDependent.prevDependent = prevDependent;
-    else producer.dependentsTail = prevDependent;
-
-    if (prevDependent) prevDependent.nextDependent = nextDependent;
-    else producer.dependents = nextDependent;
-    
-    return nextDependency;  // Return next for efficient iteration
   };
 
   /**
@@ -179,6 +175,6 @@ export function createGraphEdges(): GraphEdges {
     startTracking,
     endTracking,
     removeDependency,
-    detachAll
+    detachAll,
   };
 }
