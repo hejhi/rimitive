@@ -2,12 +2,7 @@ import type { Dependency, DerivedNode } from '../types';
 import { CONSTANTS } from '../constants';
 import { createNodeState } from './node-state';
 
-const {
-  DIRTY,
-  STATUS_DISPOSED,
-  MASK_STATUS,
-  MASK_STATUS_AWAITING,
-} = CONSTANTS;
+const { DIRTY, STATUS_DISPOSED, MASK_STATUS, STATUS_PENDING } = CONSTANTS;
 
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
@@ -20,7 +15,7 @@ export function createPullPropagator(): PullPropagator {
     const flags = node.flags;
     
     // Fast path: disposed or already clean
-    if ((flags & STATUS_DISPOSED) || !(flags & MASK_STATUS_AWAITING)) return;
+    if (flags & STATUS_DISPOSED || !(flags & STATUS_PENDING)) return;
     
     // Check if any dependencies have DIRTY flag   
       // If no dependencies yet (first run), must recompute

@@ -1,7 +1,7 @@
 import type { Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { STATUS_PENDING, MASK_STATUS_SKIP_NODE, MASK_STATUS } = CONSTANTS;
+const { STATUS_PENDING, STATUS_DISPOSED, MASK_STATUS } = CONSTANTS;
 
 interface Stack<T> {
   value: T;
@@ -25,7 +25,7 @@ export function createPushPropagator(): PushPropagator {
       const consumerNodeFlags = consumerNode.flags;
 
       // Batch check: combine skip conditions
-      if (consumerNodeFlags & (MASK_STATUS_SKIP_NODE | STATUS_PENDING)) {
+      if (consumerNodeFlags & (STATUS_DISPOSED | STATUS_PENDING)) {
         currentDependency = currentDependency.nextDependent;
         continue;
       }

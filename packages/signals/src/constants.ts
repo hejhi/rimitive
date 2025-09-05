@@ -16,8 +16,6 @@ export const IS_SCHEDULED = 1 << 4; // Node is in the work queue
 
 // Optimized status masks for core states only
 export const MASK_STATUS = STATUS_PENDING | STATUS_DISPOSED;
-export const MASK_STATUS_AWAITING = STATUS_PENDING;
-export const MASK_STATUS_SKIP_NODE = STATUS_DISPOSED;
 
 // Re-export as CONSTANTS for backward compatibility
 export const CONSTANTS = {
@@ -27,8 +25,6 @@ export const CONSTANTS = {
   DIRTY,
   IS_SCHEDULED,
   MASK_STATUS,
-  MASK_STATUS_AWAITING,
-  MASK_STATUS_SKIP_NODE,
 };
 
 export function createFlagManager() {
