@@ -75,7 +75,7 @@ export function createEffectFactory(
   (fn: () => void | (() => void)) => EffectDisposer
 > {
   const {
-    graphEdges: { detachAll, pruneStale },
+    graphEdges: { detachAll },
     nodeScheduler: { dispose: disposeNode, enqueue },
   } = ctx;
 
@@ -112,7 +112,7 @@ export function createEffectFactory(
         if (newCleanup) node._cleanup = newCleanup;
       } finally {
         // End tracking, restore context, and clean up
-        endTracking(ctx, node, prevConsumer, pruneStale);
+        endTracking(ctx, node, prevConsumer);
       }
     };
 

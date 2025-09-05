@@ -1,4 +1,4 @@
-import { ConsumerNode, ScheduledNode } from "./types";
+import { ConsumerNode, ScheduledNode, Dependency } from "./types";
 import { CONSTANTS, createFlagManager } from './constants';
 
 const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING } = CONSTANTS;
@@ -95,21 +95,45 @@ export function startTracking(ctx: GlobalContext, node: ConsumerNode): ConsumerN
  * @param ctx - The global context  
  * @param node - The consumer node ending tracking
  * @param prevConsumer - The previous consumer to restore
- * @param pruneCallback - Function to prune stale dependencies
  */
 export function endTracking(
   ctx: GlobalContext, 
   node: ConsumerNode,
-  prevConsumer: ConsumerNode | null,
-  pruneCallback: (node: ConsumerNode) => void
+  prevConsumer: ConsumerNode | null
 ): void {
   // Restore previous tracking context
   ctx.currentConsumer = prevConsumer;
   
-  // Prune stale dependencies that weren't accessed in this tracking cycle
-  pruneCallback(node);
+  // Prune stale dependencies (like alien-signals)
+  // Everything after the tail is stale and needs to be removed
+  const tail = node.dependencyTail;
+  let toRemove = tail ? tail.nextDependency : node.dependencies;
+  
+  // Remove all stale dependencies
+  while (toRemove) {
+    const next = toRemove.nextDependency;
+    removeDependency(toRemove);
+    toRemove = next;
+  }
   
   // Set the node back to a clean state after tracking
   const flags = node.flags;
   node.flags = setStatus(flags, STATUS_CLEAN);
+}
+
+// Helper to remove a dependency edge (inlined from graph-edges logic)
+function removeDependency(dependency: Dependency): void {
+  const { producer, consumer, prevDependency, nextDependency, prevDependent, nextDependent } = dependency;
+
+  if (nextDependency) nextDependency.prevDependency = prevDependency;
+  else consumer.dependencyTail = prevDependency;
+
+  if (prevDependency) prevDependency.nextDependency = nextDependency;
+  else consumer.dependencies = nextDependency;
+
+  if (nextDependent) nextDependent.prevDependent = prevDependent;
+  else producer.dependentsTail = prevDependent;
+
+  if (prevDependent) prevDependent.nextDependent = nextDependent;
+  else producer.dependents = nextDependent;
 }

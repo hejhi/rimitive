@@ -30,9 +30,7 @@ interface ComputedState<T> extends DerivedNode {
   value: T; // Cached computed value
 }
 
-const {
-  STATUS_DIRTY,
-} = CONSTANTS;
+const { STATUS_DIRTY } = CONSTANTS;
 
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
@@ -41,7 +39,7 @@ export function createComputedFactory(
   ctx: ComputedContext
 ): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graphEdges: { trackDependency, pruneStale },
+    graphEdges: { trackDependency },
     pullPropagator: { pullUpdates },
   } = ctx;
 
@@ -74,7 +72,7 @@ export function createComputedFactory(
           node.lastComputedVersion = ctx.trackingVersion;
           
           // End tracking, restore context, and prune stale dependencies
-          endTracking(ctx, node, prevConsumer, pruneStale);
+          endTracking(ctx, node, prevConsumer);
         }
         return valueChanged;
       },
