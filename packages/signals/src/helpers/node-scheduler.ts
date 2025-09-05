@@ -5,7 +5,6 @@ import type { GlobalContext } from '../context';
 const {
   STATUS_DISPOSED,
   IS_SCHEDULED,
-  STATUS_PENDING,
   MASK_STATUS,
 } = CONSTANTS;
 
@@ -81,7 +80,7 @@ export function createNodeScheduler(
       current.nextScheduled = undefined;
       current.flags = cleanFlags;
 
-      if (status !== STATUS_DISPOSED && cleanFlags & STATUS_PENDING) {
+      if (status !== STATUS_DISPOSED && cleanFlags) {
         // Execute the scheduled flush
         current.flush();
       }
