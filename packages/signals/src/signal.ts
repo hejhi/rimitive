@@ -60,15 +60,16 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       if (arguments.length) {
         const flags = node.flags;
         const isDirty = (flags & DIRTY) !== 0;
-        const dependents = node.dependents;
-
-        if (node.value === value!) {
+        
+        if (node.value === value) {
           // Batch flag operation: only write if needed
           if (isDirty) node.flags = flags & ~DIRTY;
           return;
         }
-
+        
         node.value = value!;
+        
+        const dependents = node.dependents;
 
         if (!dependents) return;
 
