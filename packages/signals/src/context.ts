@@ -69,27 +69,23 @@ export function createBaseContext(): GlobalContext {
  * 
  * @param ctx - The global context
  * @param node - The consumer node starting to track dependencies
- * @param incrementVersion - Whether to increment the global tracking version
+ * @returns The previous consumer (for restoration in endTracking)
  */
-export function startTracking(ctx: GlobalContext, node: ConsumerNode, incrementVersion = true): void {
-  // Increment tracking version if this is a top-level tracking operation
-  // Nested computeds/effects reuse the parent's tracking version
-  if (incrementVersion && !ctx.currentConsumer) {
-    ctx.trackingVersion++;
-  }
+export function startTracking(ctx: GlobalContext, node: ConsumerNode): ConsumerNode | null {
+  // Switch tracking context first
+  const prevConsumer = ctx.currentConsumer;
+  
+  // Only increment version for top-level tracking (no parent consumer)
+  ctx.trackingVersion++;
   
   // Reset dependency tail to start fresh dependency tracking
-  // This allows us to detect which dependencies are accessed in this cycle
   node.dependencyTail = undefined;
   
-  // Clear status flags that might interfere with tracking
-  // Similar to alien-signals clearing Recursed/Dirty/Pending and setting RecursedCheck
-  // We keep it simpler - just ensure we're not in a dirty state during tracking
-  if ('flags' in node) {
-    const flags = (node as any).flags;
-    // Clear DIRTY and PENDING, keep other flags
-    (node as any).flags = flags & ~(STATUS_DIRTY | STATUS_PENDING);
-  }
+  const flags = node.flags;
+  node.flags = flags & ~(STATUS_DIRTY | STATUS_PENDING);
+  
+  ctx.currentConsumer = node;
+  return prevConsumer;
 }
 
 /**
@@ -98,19 +94,22 @@ export function startTracking(ctx: GlobalContext, node: ConsumerNode, incrementV
  * 
  * @param ctx - The global context  
  * @param node - The consumer node ending tracking
+ * @param prevConsumer - The previous consumer to restore
  * @param pruneCallback - Function to prune stale dependencies
  */
 export function endTracking(
-  _ctx: GlobalContext, 
+  ctx: GlobalContext, 
   node: ConsumerNode,
+  prevConsumer: ConsumerNode | null,
   pruneCallback: (node: ConsumerNode) => void
 ): void {
+  // Restore previous tracking context
+  ctx.currentConsumer = prevConsumer;
+  
   // Prune stale dependencies that weren't accessed in this tracking cycle
   pruneCallback(node);
   
   // Set the node back to a clean state after tracking
-  if ('flags' in node) {
-    const flags = (node as any).flags;
-    (node as any).flags = setStatus(flags, STATUS_CLEAN);
-  }
+  const flags = node.flags;
+  node.flags = setStatus(flags, STATUS_CLEAN);
 }

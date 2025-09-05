@@ -96,17 +96,8 @@ export function createEffectFactory(
 
     // Flush method using closure
     const flush = (): void => {
-      // Check if we need to increment version (only for top-level tracking)
-      const isTopLevel = !ctx.currentConsumer;
-      if (isTopLevel) {
-        ctx.trackingVersion++;
-      }
-      
-      // Start tracking using centralized tracking management
-      startTracking(ctx, node, false); // false = don't increment version (already done above)
-
-      const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = node;
+      // Start tracking immediately (like alien-signals)
+      const prevConsumer = startTracking(ctx, node);
 
       try {
         // Run cleanup if exists (optimized to avoid double read)
@@ -120,9 +111,8 @@ export function createEffectFactory(
         const newCleanup = fn();
         if (newCleanup) node._cleanup = newCleanup;
       } finally {
-        ctx.currentConsumer = prevConsumer;
-        // End tracking and clean up
-        endTracking(ctx, node, pruneStale);
+        // End tracking, restore context, and clean up
+        endTracking(ctx, node, prevConsumer, pruneStale);
       }
     };
 

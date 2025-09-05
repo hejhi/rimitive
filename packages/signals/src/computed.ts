@@ -57,22 +57,7 @@ export function createComputedFactory(
       lastComputedVersion: -1, // Never computed yet
       // This will be set below
       recompute(): boolean {
-        // Check if we need to increment version (only for top-level tracking)
-        const isTopLevel = !ctx.currentConsumer;
-        if (isTopLevel) {
-          ctx.trackingVersion++;
-        }
-        
-        // Diamond dependency optimization: Skip if already computed in this tracking cycle
-        // This prevents redundant recomputations in diamond dependency patterns
-        if (node.lastComputedVersion === ctx.trackingVersion) return false; // Already computed in this cycle, no change
-        
-        // Start tracking using centralized tracking management
-        startTracking(ctx, node, false); // false = don't increment version (already done above)
-
-        const prevConsumer = ctx.currentConsumer;
-        ctx.currentConsumer = node;
-
+        const prevConsumer = startTracking(ctx, node);
         let valueChanged = false;
 
         try {
@@ -85,13 +70,11 @@ export function createComputedFactory(
             valueChanged = true;
           }
         } finally {
-          ctx.currentConsumer = prevConsumer;
-
           // Mark as computed in this tracking cycle (diamond dependency optimization)
           node.lastComputedVersion = ctx.trackingVersion;
           
-          // End tracking and prune stale dependencies
-          endTracking(ctx, node, pruneStale);
+          // End tracking, restore context, and prune stale dependencies
+          endTracking(ctx, node, prevConsumer, pruneStale);
         }
         return valueChanged;
       },
