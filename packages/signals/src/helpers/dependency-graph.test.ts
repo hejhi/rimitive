@@ -10,6 +10,8 @@ const { STATUS_DISPOSED, STATUS_PENDING, HAS_CHANGED } = CONSTANTS;
 describe('Dependency Graph Helpers', () => {
   let helpers: {
     trackDependency: ReturnType<typeof createGraphEdges>['trackDependency'];
+    removeDependency: ReturnType<typeof createGraphEdges>['removeDependency'];
+    detachAll: ReturnType<typeof createGraphEdges>['detachAll'];
     pushUpdates: ReturnType<typeof createPushPropagator>['pushUpdates'];
     pullUpdates: ReturnType<typeof createPullPropagator>['pullUpdates'];
   };
@@ -21,6 +23,8 @@ describe('Dependency Graph Helpers', () => {
     
     helpers = {
       trackDependency: graphEdges.trackDependency,
+      removeDependency: graphEdges.removeDependency,
+      detachAll: graphEdges.detachAll,
       pushUpdates: pushPropagator.pushUpdates,
       pullUpdates: pullPropagator.pullUpdates,
     };
@@ -241,119 +245,119 @@ describe('Dependency Graph Helpers', () => {
       });
     });
   
-    // describe('unlink', () => {
-    //   it('should remove edge from both producer and consumer lists', () => {
-    //     const source: ProducerNode = {
-    //       __type: 'test',
-    //       dependents: undefined,
-    //       flags: 0,
-    //       dependentsTail: undefined,
-    //       value: 0,
-    //     };
+    describe('unlink', () => {
+      it('should remove edge from both producer and consumer lists', () => {
+        const source: ProducerNode = {
+          __type: 'test',
+          dependents: undefined,
+          flags: 0,
+          dependentsTail: undefined,
+          value: 0,
+        };
         
-    //     const target: ConsumerNode = {
-    //       __type: 'test',
-    //       flags: 0,
-    //       dependencies: undefined,
-    //       dependencyTail: undefined,
-    //       notify: vi.fn(),
-    //     };
+        const target: ConsumerNode = {
+          __type: 'test',
+          flags: 0,
+          dependencies: undefined,
+          dependencyTail: undefined,
+          notify: vi.fn(),
+        };
         
-    //     helpers.trackDependency(source, target, 0);
-    //     const node = target.dependencies!;
+        helpers.trackDependency(source, target, 0);
+        const node = target.dependencies!;
         
-    //     const next = helpers.removeDependency(node);
+        const next = helpers.removeDependency(node);
         
-    //     expect(source.dependents).toBeUndefined();
-    //     expect(target.dependencies).toBeUndefined();
-    //     expect(target.dependencyTail).toBeUndefined();
-    //     expect(next).toBeUndefined();
-    //   });
+        expect(source.dependents).toBeUndefined();
+        expect(target.dependencies).toBeUndefined();
+        expect(target.dependencyTail).toBeUndefined();
+        expect(next).toBeUndefined();
+      });
   
-    //   it('should maintain linked list integrity when removing middle node', () => {
-    //     const source: ProducerNode = {
-    //       __type: 'test',
-    //       dependents: undefined,
-    //       flags: 0,
-    //       dependentsTail: undefined,
-    //       value: 0,
-    //     };
+      it('should maintain linked list integrity when removing middle node', () => {
+        const source: ProducerNode = {
+          __type: 'test',
+          dependents: undefined,
+          flags: 0,
+          dependentsTail: undefined,
+          value: 0,
+        };
         
-    //     const targets = Array.from({ length: 3 }, (_, i) => ({
-    //       __type: 'test',
-    //       dependencies: undefined,
-    //       dependencyTail: undefined,
-    //       id: i,  // Add id for debugging
-    //     }) as ConsumerNode & { id: number });
+        const targets = Array.from({ length: 3 }, (_, i) => ({
+          __type: 'test',
+          dependencies: undefined,
+          dependencyTail: undefined,
+          id: i,  // Add id for debugging
+        }) as ConsumerNode & { id: number });
         
-    //     // Link all targets
-    //     targets.forEach(target => helpers.trackDependency(source, target, 0));
+        // Link all targets
+        targets.forEach(target => helpers.trackDependency(source, target, 0));
         
-    //     // Get the edge pointing to the second target (middle one)
-    //     let edge = source.dependents;
-    //     let middleEdge: Dependency | undefined;
-    //     while (edge) {
-    //       if (edge.consumer === targets[1]) {
-    //         middleEdge = edge;
-    //         break;
-    //       }
-    //       edge = edge.nextDependent;
-    //     }
+        // Get the edge pointing to the second target (middle one)
+        let edge = source.dependents;
+        let middleEdge: Dependency | undefined;
+        while (edge) {
+          if (edge.consumer === targets[1]) {
+            middleEdge = edge;
+            break;
+          }
+          edge = edge.nextDependent;
+        }
         
-    //     // Remove middle edge
-    //     const next = helpers.removeDependency(middleEdge!);
+        // Remove middle edge
+        const next = helpers.removeDependency(middleEdge!);
         
-    //     // Check producer's output list integrity
-    //     const firstEdge = source.dependents!;
-    //     const thirdEdge = firstEdge.nextDependent!;
+        // Check producer's output list integrity
+        const firstEdge = source.dependents!;
+        const thirdEdge = firstEdge.nextDependent!;
         
-    //     // After removal, first edge should point to third edge
-    //     expect(firstEdge.consumer).toBe(targets[0]);
-    //     expect(thirdEdge.consumer).toBe(targets[2]);
-    //     expect(firstEdge.nextDependent).toBe(thirdEdge);
-    //     expect(thirdEdge.prevDependent).toBe(firstEdge);
+        // After removal, first edge should point to third edge
+        expect(firstEdge.consumer).toBe(targets[0]);
+        expect(thirdEdge.consumer).toBe(targets[2]);
+        expect(firstEdge.nextDependent).toBe(thirdEdge);
+        expect(thirdEdge.prevDependent).toBe(firstEdge);
         
-    //     // The returned next should be undefined since we removed from middle of consumer's list
-    //     // (middleEdge was in targets[1].in, which only had one edge)
-    //     expect(next).toBeUndefined();
-    //   });
+        // The returned next should be undefined since we removed from middle of consumer's list
+        // (middleEdge was in targets[1].in, which only had one edge)
+        expect(next).toBeUndefined();
+      });
       
-    //   it('should return next edge for efficient iteration', () => {
-    //     const source1: ProducerNode = {
-    //       __type: 'test',
-    //       dependents: undefined,
-    //       flags: 0,
-    //       dependentsTail: undefined,
-    //       value: 0,
-    //     };
-    //     const source2: ProducerNode = {
-    //       __type: 'test',
-    //       dependents: undefined,
-    //       flags: 0,
-    //       dependentsTail: undefined,
-    //       value: 0,
-    //     };
+      it('should return next edge for efficient iteration', () => {
+        const source1: ProducerNode = {
+          __type: 'test',
+          dependents: undefined,
+          flags: 0,
+          dependentsTail: undefined,
+          value: 0,
+        };
+        const source2: ProducerNode = {
+          __type: 'test',
+          dependents: undefined,
+          flags: 0,
+          dependentsTail: undefined,
+          value: 0,
+        };
         
-    //     const target: ConsumerNode = {
-    //       __type: 'test',
-    //       flags: 0,
-    //       dependencies: undefined,
-    //       dependencyTail: undefined,
-    //       notify: vi.fn(),
-    //     };
+        const target: ConsumerNode = {
+          __type: 'test',
+          flags: 0,
+          dependencies: undefined,
+          dependencyTail: undefined,
+          notify: vi.fn(),
+        };
         
-    //     helpers.trackDependency(source1, target, 0);
-    //     helpers.trackDependency(source2, target, 0);
+        helpers.trackDependency(source1, target, 0);
+        helpers.trackDependency(source2, target, 0);
         
-    //     const firstEdge = target.dependencies!;
-    //     const secondEdge = firstEdge.nextDependency!;
+        const firstEdge = target.dependencies!;
+        const secondEdge = firstEdge.nextDependency!;
         
-    //     const next = helpers.removeDependency(firstEdge);
+        const next = helpers.removeDependency(firstEdge);
         
-    //     expect(next).toBe(secondEdge);
-    //     expect(target.dependencies).toBe(secondEdge);
-    //   });
-    // });
+        expect(next).toBe(secondEdge);
+        expect(target.dependencies).toBe(secondEdge);
+      });
+    });
   
   describe('GraphWalker', () => {
     let scheduledNodes: ScheduledNode[];

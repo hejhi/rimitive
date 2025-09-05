@@ -38,10 +38,8 @@ export function createComputedFactory(
   ctx: ComputedContext
 ): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graphEdges: { trackDependency },
+    graphEdges: { trackDependency, startTracking, endTracking },
     pullPropagator: { pullUpdates },
-    startTracking,
-    endTracking
   } = ctx;
 
   function createComputed<T>(compute: () => T): ComputedFunction<T> {

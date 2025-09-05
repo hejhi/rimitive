@@ -3,9 +3,11 @@ import { ConsumerNode, Dependency, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { NodeScheduler } from './helpers/node-scheduler';
+import { GraphEdges } from './helpers/graph-edges';
 
 export type EffectContext = GlobalContext & {
   nodeScheduler: NodeScheduler;
+  graphEdges: GraphEdges;
 };
 
 export interface EffectInterface extends ScheduledNode {
@@ -32,9 +34,7 @@ export function createEffectFactory(
 > {
   const {
     nodeScheduler: { dispose: disposeNode, enqueue },
-    startTracking,
-    endTracking,
-    detachAll
+    graphEdges: { startTracking, endTracking, detachAll }
   } = ctx;
 
   // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization

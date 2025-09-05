@@ -1,8 +1,4 @@
-import { ConsumerNode, ScheduledNode, Dependency } from "./types";
-import { CONSTANTS, createFlagManager } from './constants';
-
-const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING } = CONSTANTS;
-const { setStatus } = createFlagManager();
+import { ConsumerNode, ScheduledNode } from "./types";
 
 /**
  * ALGORITHM: Context-Based State Isolation
@@ -40,18 +36,6 @@ export interface GlobalContext {
   // Uses _nextScheduled field on nodes to form the list (no allocations)
   queueHead: ScheduledNode | undefined;
   queueTail: ScheduledNode | undefined;
-
-  startTracking: (
-    ctx: GlobalContext,
-    node: ConsumerNode
-  ) => ConsumerNode | null;
-  endTracking: (
-    ctx: GlobalContext,
-    node: ConsumerNode,
-    prevConsumer: ConsumerNode | null
-  ) => void;
-  removeDependency: (dependency: Dependency) => void;
-  detachAll: (node: ConsumerNode) => void;
 }
 
 // PATTERN: Factory Function
@@ -59,130 +43,11 @@ export interface GlobalContext {
 // Using a factory instead of a class avoids prototype overhead.
 // This is the base context without helpers - use createDefaultContext for a complete context
 export function createBaseContext(): GlobalContext {
-  const ctx = {
+  return {
     currentConsumer: null,
     trackingVersion: 0,
     batchDepth: 0,
     queueHead: undefined,
     queueTail: undefined,
   } as GlobalContext; // Cast since helpers will be added by createDefaultContext
-
-  /**
-   * ALGORITHM: Centralized Tracking State Management
-   *
-   * Based on alien-signals' approach, we centralize the tracking lifecycle.
-   * This ensures consistent state management across all consumers.
-   */
-
-  /**
-   * Start tracking dependencies for a consumer node.
-   * This prepares the node to record new dependencies.
-   *
-   * @param ctx - The global context
-   * @param node - The consumer node starting to track dependencies
-   * @returns The previous consumer (for restoration in endTracking)
-   */
-  const startTracking = (
-    ctx: GlobalContext,
-    node: ConsumerNode
-  ): ConsumerNode | null => {
-    // Switch tracking context first
-    const prevConsumer = ctx.currentConsumer;
-
-    // Only increment version for top-level tracking (no parent consumer)
-    ctx.trackingVersion++;
-
-    // Reset dependency tail to start fresh dependency tracking
-    node.dependencyTail = undefined;
-
-    const flags = node.flags;
-    node.flags = flags & ~(STATUS_DIRTY | STATUS_PENDING);
-
-    ctx.currentConsumer = node;
-    return prevConsumer;
-  }
-
-  /**
-   * End tracking dependencies for a consumer node.
-   * This is where we clean up stale dependencies.
-   *
-   * @param ctx - The global context
-   * @param node - The consumer node ending tracking
-   * @param prevConsumer - The previous consumer to restore
-   */
-  const endTracking = (
-    ctx: GlobalContext,
-    node: ConsumerNode,
-    prevConsumer: ConsumerNode | null
-  ): void => {
-    // Restore previous tracking context
-    ctx.currentConsumer = prevConsumer;
-
-    // Prune stale dependencies (like alien-signals)
-    // Everything after the tail is stale and needs to be removed
-    const tail = node.dependencyTail;
-    let toRemove = tail ? tail.nextDependency : node.dependencies;
-
-    // Remove all stale dependencies
-    while (toRemove) {
-      const next = toRemove.nextDependency;
-      removeDependency(toRemove);
-      toRemove = next;
-    }
-
-    // Set the node back to a clean state after tracking
-    const flags = node.flags;
-    node.flags = setStatus(flags, STATUS_CLEAN);
-  }
-
-  // Helper to remove a dependency edge (inlined from graph-edges logic)
-  const removeDependency = (dependency: Dependency): void => {
-    const {
-      producer,
-      consumer,
-      prevDependency,
-      nextDependency,
-      prevDependent,
-      nextDependent,
-    } = dependency;
-
-    if (nextDependency) nextDependency.prevDependency = prevDependency;
-    else consumer.dependencyTail = prevDependency;
-
-    if (prevDependency) prevDependency.nextDependency = nextDependency;
-    else consumer.dependencies = nextDependency;
-
-    if (nextDependent) nextDependent.prevDependent = prevDependent;
-    else producer.dependentsTail = prevDependent;
-
-    if (prevDependent) prevDependent.nextDependent = nextDependent;
-    else producer.dependents = nextDependent;
-  }
-
-  /**
-   * Detach all dependencies from a consumer node.
-   * Used during disposal to completely disconnect a node from the graph.
-   *
-   * @param node - The consumer node to detach
-   */
-  const detachAll = (node: ConsumerNode): void => {
-    let dependency = node.dependencies;
-
-    while (dependency) {
-      const next = dependency.nextDependency;
-      removeDependency(dependency);
-      dependency = next;
-    }
-
-    node.dependencies = undefined;
-    node.dependencyTail = undefined;
-  }
-
-  return {
-    ...ctx,
-    startTracking,
-    endTracking,
-    removeDependency,
-    detachAll,
-  }
 }
