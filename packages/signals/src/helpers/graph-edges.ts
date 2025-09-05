@@ -17,7 +17,7 @@ export interface GraphEdges {
     node: ConsumerNode,
     prevConsumer: ConsumerNode | null
   ) => void;
-  removeDependency: (dependency: Dependency) => void;
+  removeDependency: (dependency: Dependency) => Dependency | undefined;
   detachAll: (node: ConsumerNode) => void;
 }
 
@@ -130,7 +130,7 @@ export function createGraphEdges(): GraphEdges {
   };
 
   // Helper to remove a dependency edge (inlined from graph-edges logic)
-  const removeDependency = (dependency: Dependency): void => {
+  const removeDependency = (dependency: Dependency): Dependency | undefined => {
     const {
       producer,
       consumer,
@@ -151,6 +151,8 @@ export function createGraphEdges(): GraphEdges {
 
     if (prevDependent) prevDependent.nextDependent = nextDependent;
     else producer.dependents = nextDependent;
+    
+    return nextDependency;  // Return next for efficient iteration
   };
 
   /**
