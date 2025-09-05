@@ -2,11 +2,7 @@ import { CONSTANTS, createFlagManager } from '../constants';
 import type { ScheduledNode } from '../types';
 import type { GlobalContext } from '../context';
 
-const {
-  STATUS_DISPOSED,
-  IS_SCHEDULED,
-  MASK_STATUS,
-} = CONSTANTS;
+const { STATUS_DISPOSED, IS_SCHEDULED, MASK_STATUS } = CONSTANTS;
 
 export interface NodeScheduler {
   enqueue: (node: ScheduledNode) => void;
@@ -19,19 +15,6 @@ export interface NodeScheduler {
 
 const { hasAnyOf, setStatus, getStatus, addProperty } = createFlagManager();
 
-/**
- * ALGORITHM: Intrusive FIFO Scheduling Queue
- *
- * Uses each node's `nextScheduled` field as the linked-list pointer.
- * - Enqueue: append to tail of queue in O(1)
- * - Flush: dequeue from head (FIFO) clearing `nextScheduled` before executing
- * - Dedup: any non-undefined `nextScheduled` means "already scheduled"
- *
- * Benefits vs circular buffer:
- * - No fixed capacity or overflow checks
- * - Lower memory and fewer branches
- * - Preserves effect ordering for predictable behavior
- */
 export function createNodeScheduler(
   ctx: GlobalContext,
 ): NodeScheduler {
@@ -72,18 +55,12 @@ export function createNodeScheduler(
 
     while (current) {
       const next: ScheduledNode | undefined = current.nextScheduled;
-      // Batch operation: read once, compute final state
-      const flags = current.flags;
-      const cleanFlags = flags & ~IS_SCHEDULED;
-      const status = cleanFlags & MASK_STATUS;
+      const status = current.flags & MASK_STATUS & ~IS_SCHEDULED;
 
       current.nextScheduled = undefined;
-      current.flags = cleanFlags;
+      current.flags = status;
 
-      if (status !== STATUS_DISPOSED && cleanFlags) {
-        // Execute the scheduled flush
-        current.flush();
-      }
+      if (status !== STATUS_DISPOSED && status) current.flush();
 
       current = next;
     }
