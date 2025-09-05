@@ -8,6 +8,7 @@ import { CONSTANTS } from './constants';
 import { DerivedNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
+import { startTracking, endTracking } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { PullPropagator } from './helpers/pull-propagator';
 
@@ -56,18 +57,18 @@ export function createComputedFactory(
       lastComputedVersion: -1, // Never computed yet
       // This will be set below
       recompute(): boolean {
-        // Only increment tracking version if we're starting a new top-level tracking cycle
-        // If currentConsumer is not null, we're already inside a tracking cycle
-        if (!ctx.currentConsumer) ctx.trackingVersion++;
+        // Check if we need to increment version (only for top-level tracking)
+        const isTopLevel = !ctx.currentConsumer;
+        if (isTopLevel) {
+          ctx.trackingVersion++;
+        }
         
         // Diamond dependency optimization: Skip if already computed in this tracking cycle
         // This prevents redundant recomputations in diamond dependency patterns
         if (node.lastComputedVersion === ctx.trackingVersion) return false; // Already computed in this cycle, no change
         
-        // Reset tail marker to start fresh tracking
-        // This allows new dependencies to be established while keeping old dependencies for cleanup
-        const oldTail = node.dependencyTail;
-        node.dependencyTail = undefined;
+        // Start tracking using centralized tracking management
+        startTracking(ctx, node, false); // false = don't increment version (already done above)
 
         const prevConsumer = ctx.currentConsumer;
         ctx.currentConsumer = node;
@@ -88,12 +89,9 @@ export function createComputedFactory(
 
           // Mark as computed in this tracking cycle (diamond dependency optimization)
           node.lastComputedVersion = ctx.trackingVersion;
-
-          // Only prune if dependencies might have changed
-          // Skip pruning if:
-          // 1. No dependencies to prune (first compute or unobserved)
-          // 2. Tail hasn't moved (same dependencies accessed in same order)
-          if (!oldTail || node.dependencyTail !== oldTail) pruneStale(node);
+          
+          // End tracking and prune stale dependencies
+          endTracking(ctx, node, pruneStale);
         }
         return valueChanged;
       },

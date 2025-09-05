@@ -37,10 +37,11 @@
  * - RxJS (cleanup/disposal pattern)
  */
 
-import { CONSTANTS, createFlagManager } from './constants';
+import { CONSTANTS } from './constants';
 import { ConsumerNode, Dependency, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
+import { startTracking, endTracking } from './context';
 import { GraphEdges } from './helpers/graph-edges';
 import { NodeScheduler } from './helpers/node-scheduler';
 
@@ -64,11 +65,8 @@ export interface EffectDisposer {
 }
 
 const {
-  STATUS_CLEAN,
   STATUS_DIRTY,
 } = CONSTANTS;
-
-const { setStatus } = createFlagManager();
 
 export function createEffectFactory(
   ctx: GlobalContext & EffectContext
@@ -98,13 +96,14 @@ export function createEffectFactory(
 
     // Flush method using closure
     const flush = (): void => {
-      // Only increment tracking version if we're starting a new top-level tracking cycle
-      // If currentConsumer is not null, we're already inside a tracking cycle
-      if (!ctx.currentConsumer) {
+      // Check if we need to increment version (only for top-level tracking)
+      const isTopLevel = !ctx.currentConsumer;
+      if (isTopLevel) {
         ctx.trackingVersion++;
       }
       
-      node.dependencyTail = undefined;
+      // Start tracking using centralized tracking management
+      startTracking(ctx, node, false); // false = don't increment version (already done above)
 
       const prevConsumer = ctx.currentConsumer;
       ctx.currentConsumer = node;
@@ -122,9 +121,8 @@ export function createEffectFactory(
         if (newCleanup) node._cleanup = newCleanup;
       } finally {
         ctx.currentConsumer = prevConsumer;
-        // Transition back to clean state after execution
-        node.flags = setStatus(node.flags, STATUS_CLEAN);
-        pruneStale(node);
+        // End tracking and clean up
+        endTracking(ctx, node, pruneStale);
       }
     };
 

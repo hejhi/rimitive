@@ -1,4 +1,8 @@
 import { ConsumerNode, ScheduledNode } from "./types";
+import { CONSTANTS, createFlagManager } from './constants';
+
+const { STATUS_CLEAN, STATUS_DIRTY, STATUS_PENDING } = CONSTANTS;
+const { setStatus } = createFlagManager();
 
 /**
  * ALGORITHM: Context-Based State Isolation
@@ -50,4 +54,63 @@ export function createBaseContext(): GlobalContext {
     queueHead: undefined,
     queueTail: undefined,
   } as GlobalContext; // Cast since helpers will be added by createDefaultContext
+}
+
+/**
+ * ALGORITHM: Centralized Tracking State Management
+ * 
+ * Based on alien-signals' approach, we centralize the tracking lifecycle.
+ * This ensures consistent state management across all consumers.
+ */
+
+/**
+ * Start tracking dependencies for a consumer node.
+ * This prepares the node to record new dependencies.
+ * 
+ * @param ctx - The global context
+ * @param node - The consumer node starting to track dependencies
+ * @param incrementVersion - Whether to increment the global tracking version
+ */
+export function startTracking(ctx: GlobalContext, node: ConsumerNode, incrementVersion = true): void {
+  // Increment tracking version if this is a top-level tracking operation
+  // Nested computeds/effects reuse the parent's tracking version
+  if (incrementVersion && !ctx.currentConsumer) {
+    ctx.trackingVersion++;
+  }
+  
+  // Reset dependency tail to start fresh dependency tracking
+  // This allows us to detect which dependencies are accessed in this cycle
+  node.dependencyTail = undefined;
+  
+  // Clear status flags that might interfere with tracking
+  // Similar to alien-signals clearing Recursed/Dirty/Pending and setting RecursedCheck
+  // We keep it simpler - just ensure we're not in a dirty state during tracking
+  if ('flags' in node) {
+    const flags = (node as any).flags;
+    // Clear DIRTY and PENDING, keep other flags
+    (node as any).flags = flags & ~(STATUS_DIRTY | STATUS_PENDING);
+  }
+}
+
+/**
+ * End tracking dependencies for a consumer node.
+ * This is where we clean up stale dependencies.
+ * 
+ * @param ctx - The global context  
+ * @param node - The consumer node ending tracking
+ * @param pruneCallback - Function to prune stale dependencies
+ */
+export function endTracking(
+  _ctx: GlobalContext, 
+  node: ConsumerNode,
+  pruneCallback: (node: ConsumerNode) => void
+): void {
+  // Prune stale dependencies that weren't accessed in this tracking cycle
+  pruneCallback(node);
+  
+  // Set the node back to a clean state after tracking
+  if ('flags' in node) {
+    const flags = (node as any).flags;
+    (node as any).flags = setStatus(flags, STATUS_CLEAN);
+  }
 }
