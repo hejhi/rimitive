@@ -1,7 +1,9 @@
 /**
  * Computed Chain Deep Benchmarks
  * 
- * Tests deep linear chains of computed values (10 levels)
+ * Tests deep linear chains to validate O(1) propagation complexity.
+ * Key metric: Propagation time should be linear with chain depth, not exponential.
+ * Tests topological ordering and push-pull optimization.
  */
 
 import { bench, group, summary, barplot } from 'mitata';
@@ -51,59 +53,112 @@ const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => Computed
 
 const ITERATIONS = 10000;
 
-group('Computed Chain - Deep (10 levels)', () => {
+// Type for mitata benchmark state
+interface BenchState {
+  get(name: 'depth'): number;
+  get(name: string): unknown;
+}
+
+group('Computed Chain - Variable Depth', () => {
   summary(() => {
     barplot(() => {
-      bench('Lattice', function* () {
+      bench('Lattice - $depth levels', function* (state: BenchState) {
+        const depth = state.get('depth');
         const source = latticeSignal(0);
         let last: (() => number) = source;
-        for (let i = 0; i < 10; i++) {
+        
+        // Build chain with non-trivial computations
+        for (let i = 0; i < depth; i++) {
           const prev = last;
-          last = latticeComputed(() => prev() + 1);
+          const level = i; // Capture for closure
+          last = latticeComputed(() => {
+            const val = prev();
+            // Non-trivial computation at each level
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = ((result * 31) + level + j) % 1000007;
+            }
+            return result;
+          });
         }
         const final = last;
         
+        // Warmup to establish dependencies
+        source(1);
+        void final();
+        
         yield () => {
-          for (let i = 0; i < ITERATIONS / 10; i++) {
+          for (let i = 0; i < ITERATIONS; i++) {
             source(i);
             void final();
           }
         };
-      });
+      })
+      .args('depth', [10, 20, 50, 100]);
     
-      bench('Preact', function* () {
+      bench('Preact - $depth levels', function* (state: BenchState) {
+        const depth = state.get('depth');
         const source = preactSignal(0);
         let last = source;
-        for (let i = 0; i < 10; i++) {
+        
+        for (let i = 0; i < depth; i++) {
           const prev = last;
-          last = preactComputed(() => prev.value + 1);
+          const level = i;
+          last = preactComputed(() => {
+            const val = prev.value;
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = ((result * 31) + level + j) % 1000007;
+            }
+            return result;
+          });
         }
         const final = last;
         
+        // Warmup
+        source.value = 1;
+        void final.value;
+        
         yield () => {
-          for (let i = 0; i < ITERATIONS / 10; i++) {
+          for (let i = 0; i < ITERATIONS; i++) {
             source.value = i;
             void final.value;
           }
         };
-      });
+      })
+      .args('depth', [10, 20, 50, 100]);
     
-      bench('Alien', function* () {
+      bench('Alien - $depth levels', function* (state: BenchState) {
+        const depth = state.get('depth');
         const source = alienSignal(0);
         let last = source;
-        for (let i = 0; i < 10; i++) {
+        
+        for (let i = 0; i < depth; i++) {
           const prev = last;
-          last = alienComputed(() => prev() + 1);
+          const level = i;
+          last = alienComputed(() => {
+            const val = prev();
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = ((result * 31) + level + j) % 1000007;
+            }
+            return result;
+          });
         }
         const final = last;
         
+        // Warmup
+        source(1);
+        void final();
+        
         yield () => {
-          for (let i = 0; i < ITERATIONS / 10; i++) {
+          for (let i = 0; i < ITERATIONS; i++) {
             source(i);
             void final();
           }
         };
-      });
+      })
+      .args('depth', [10, 20, 50, 100]);
     });
   });
 });

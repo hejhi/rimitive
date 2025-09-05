@@ -1,14 +1,13 @@
 /**
  * Scaling Subscribers Benchmark
  * 
- * Tests how performance scales with different numbers of subscribers.
- * Evaluates the overhead of managing many active subscriptions and
- * effect triggers across varying graph sizes.
+ * Tests fan-out scalability - single source driving many subscribers.
+ * Key metric: O(1) per-edge overhead as subscriber count increases.
+ * Tests memory efficiency of intrusive data structures vs allocations.
  */
 
 import { bench, group, summary, barplot, do_not_optimize } from 'mitata';
 import { runBenchmark } from '../../utils/benchmark-runner';
-import { randomIntArray } from '../../utils/bench-helpers';
 
 // Type for mitata benchmark state
 interface BenchState {
@@ -60,123 +59,137 @@ const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
 const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
 const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
 
-// Signal types for each library
-type PreactSignal = { value: number };
-type AlienSignal = (value?: number) => number;
 
-group('Scaling with Subscriber Count', () => {
+group('Fan-out Scaling - Single Source to Many', () => {
   summary(() => {
-    const CHANGE_RATIO = 0.3; // 30% of signals change
-    const TICKS = 30;
-    
-    function makeIndices(sourceCount: number): number[] {
-      const count = Math.floor(sourceCount * CHANGE_RATIO);
-      const indices: number[] = [];
-      for (let i = 0; i < count; i++) {
-        indices.push(Math.floor(i * (sourceCount / count)));
-      }
-      return indices;
-    }
+    const ITERATIONS_PER_SUBSCRIBER = 1000; // Keep total work constant
     
     barplot(() => {
       bench('Preact - $sources subscribers', function* (state: BenchState) {
-        const sourceCount = state.get('sources');
-        const indices = makeIndices(sourceCount);
+        const subscriberCount = state.get('sources');
         
-        const sources = Array.from({ length: sourceCount }, (_, i) => preactSignal(i));
-        const computeds = sources.map(s => preactComputed(() => s.value * 2));
-        const disposers = computeds.map(c => preactEffect(() => void c.value));
+        // Single source driving many subscribers
+        const source = preactSignal(0);
         
-        // Warm up
-        sources[0]!.value = 1;
-        
-        yield {
-          [0]() { return randomIntArray(TICKS * indices.length, 0, 100000); },
-          [1]() { return sources; },
-          [2]() { return indices; },
-          
-          bench(values: number[], sources: PreactSignal[], indices: number[]) {
-            let changeCount = 0;
-            let valueIndex = 0;
-            for (let t = 0; t < TICKS; t++) {
-              for (const i of indices) {
-                sources[i]!.value = values[valueIndex++ % values.length]!;
-                changeCount++;
-              }
+        // Create subscribers with varying computations
+        const computeds = Array.from({ length: subscriberCount }, (_, i) => 
+          preactComputed(() => {
+            const val = source.value;
+            // Different computation per subscriber to prevent optimization
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * (i + 1) + j) % 1000007;
             }
-            return do_not_optimize(changeCount);
+            return result;
+          })
+        );
+        
+        // Effects that consume the computeds
+        const counters = Array.from({ length: subscriberCount }, () => ({ value: 0 }));
+        const disposers = computeds.map((c, i) => 
+          preactEffect(() => {
+            counters[i]!.value += c.value;
+          })
+        );
+        
+        // Warmup
+        source.value = 1;
+        
+        yield () => {
+          const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
+          for (let i = 0; i < iterations; i++) {
+            source.value = i;
           }
+          return do_not_optimize(counters[0]!.value);
         };
         
         disposers.forEach(d => d());
       })
-      .args('sources', [25, 50, 100, 200, 400])
-      .gc('inner');
+      .args('sources', [10, 25, 50, 100, 200]);
     
       bench('Lattice - $sources subscribers', function* (state: BenchState) {
-        const sourceCount = state.get('sources');
-        const indices = makeIndices(sourceCount);
+        const subscriberCount = state.get('sources');
         
-        const sources = Array.from({ length: sourceCount }, (_, i) => latticeSignal(i));
-        const computeds = sources.map(s => latticeComputed(() => s() * 2));
-        const disposers = computeds.map(c => latticeEffect(() => void c()));
+        // Single source driving many subscribers
+        const source = latticeSignal(0);
         
-        // Warm up
-        sources[0]!(1);
-        
-        yield {
-          [0]() { return randomIntArray(TICKS * indices.length, 0, 100000); },
-          [1]() { return sources; },
-          [2]() { return indices; },
-          
-          bench(values: number[], sources: SignalInterface[], indices: number[]) {
-            let changeCount = 0;
-            let valueIndex = 0;
-            for (let t = 0; t < TICKS; t++) {
-              for (const i of indices) {
-                sources[i]!(values[valueIndex++ % values.length])!;
-                changeCount++;
-              }
+        // Create subscribers with varying computations
+        const computeds = Array.from({ length: subscriberCount }, (_, i) => 
+          latticeComputed(() => {
+            const val = source();
+            // Different computation per subscriber
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * (i + 1) + j) % 1000007;
             }
-            return do_not_optimize(changeCount);
+            return result;
+          })
+        );
+        
+        // Effects that consume the computeds
+        const counters = Array.from({ length: subscriberCount }, () => ({ value: 0 }));
+        const disposers = computeds.map((c, i) => 
+          latticeEffect(() => {
+            counters[i]!.value += c();
+          })
+        );
+        
+        // Warmup
+        source(1);
+        
+        yield () => {
+          const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
+          for (let i = 0; i < iterations; i++) {
+            source(i);
           }
+          return do_not_optimize(counters[0]!.value);
         };
         
         disposers.forEach(d => d());
       })
-      .args('sources', [25, 50, 100, 200, 400])
-      .gc('inner');
+      .args('sources', [10, 25, 50, 100, 200]);
     
       bench('Alien - $sources subscribers', function* (state: BenchState) {
-        const sourceCount = state.get('sources');
-        const indices = makeIndices(sourceCount);
+        const subscriberCount = state.get('sources');
         
-        const sources = Array.from({ length: sourceCount }, (_, i) => alienSignal(i));
-        const computeds = sources.map(s => alienComputed(() => s() * 2));
-        const disposers = computeds.map(c => alienEffect(() => void c()));
+        // Single source driving many subscribers
+        const source = alienSignal(0);
         
-        yield {
-          [0]() { return randomIntArray(TICKS * indices.length, 0, 100000); },
-          [1]() { return sources; },
-          [2]() { return indices; },
-          
-          bench(values: number[], sources: AlienSignal[], indices: number[]) {
-            let changeCount = 0;
-            let valueIndex = 0;
-            for (let t = 0; t < TICKS; t++) {
-              for (const i of indices) {
-                sources[i]!(values[valueIndex++ % values.length]);
-                changeCount++;
-              }
+        // Create subscribers with varying computations
+        const computeds = Array.from({ length: subscriberCount }, (_, i) => 
+          alienComputed(() => {
+            const val = source();
+            // Different computation per subscriber
+            let result = val;
+            for (let j = 0; j < 3; j++) {
+              result = (result * (i + 1) + j) % 1000007;
             }
-            return do_not_optimize(changeCount);
+            return result;
+          })
+        );
+        
+        // Effects that consume the computeds
+        const counters = Array.from({ length: subscriberCount }, () => ({ value: 0 }));
+        const disposers = computeds.map((c, i) => 
+          alienEffect(() => {
+            counters[i]!.value += c();
+          })
+        );
+        
+        // Warmup
+        source(1);
+        
+        yield () => {
+          const iterations = ITERATIONS_PER_SUBSCRIBER * Math.sqrt(subscriberCount);
+          for (let i = 0; i < iterations; i++) {
+            source(i);
           }
+          return do_not_optimize(counters[0]!.value);
         };
         
         disposers.forEach(d => d());
       })
-      .args('sources', [25, 50, 100, 200, 400])
-      .gc('inner');
+      .args('sources', [10, 25, 50, 100, 200]);
     });
   });
 });

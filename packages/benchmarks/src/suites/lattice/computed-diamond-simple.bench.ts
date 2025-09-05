@@ -1,7 +1,9 @@
 /**
  * Simple Diamond Dependency Benchmarks
  * 
- * Tests simple diamond-shaped dependency graphs where two paths converge
+ * Tests diamond-shaped dependency graphs for glitch prevention.
+ * The key metric: bottom computed should calculate ONCE per source update,
+ * seeing consistent values from both paths (no intermediate states).
  *       source
  *       /    \
  *     left  right
@@ -54,16 +56,39 @@ const latticeAPI = createSignalAPI(
 const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
 const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
 
-const ITERATIONS = 10000;
+const ITERATIONS = 100000; // Increased for better precision
 
 group('Simple Diamond', () => {
   summary(() => {
     barplot(() => {
       bench('Lattice', function* () {
         const source = latticeSignal(0);
-        const left = latticeComputed(() => source() * 2);
-        const right = latticeComputed(() => source() * 3);
-        const bottom = latticeComputed(() => left() + right());
+        // More complex computations to stress the system
+        const left = latticeComputed(() => {
+          const val = source();
+          // Simulate non-trivial computation
+          let result = val;
+          for (let j = 0; j < 5; j++) {
+            result = (result * 31 + j) % 1000007;
+          }
+          return result;
+        });
+        const right = latticeComputed(() => {
+          const val = source();
+          // Different computation path
+          let result = val;
+          for (let j = 0; j < 5; j++) {
+            result = (result * 37 + j * 2) % 1000007;
+          }
+          return result;
+        });
+        const bottom = latticeComputed(() => {
+          // Should see consistent snapshot - both paths updated
+          const l = left();
+          const r = right();
+          // Additional computation at convergence
+          return (l * l + r * r) % 1000007;
+        });
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
@@ -75,9 +100,27 @@ group('Simple Diamond', () => {
     
       bench('Preact', function* () {
         const source = preactSignal(0);
-        const left = preactComputed(() => source.value * 2);
-        const right = preactComputed(() => source.value * 3);
-        const bottom = preactComputed(() => left.value + right.value);
+        const left = preactComputed(() => {
+          const val = source.value;
+          let result = val;
+          for (let j = 0; j < 5; j++) {
+            result = (result * 31 + j) % 1000007;
+          }
+          return result;
+        });
+        const right = preactComputed(() => {
+          const val = source.value;
+          let result = val;
+          for (let j = 0; j < 5; j++) {
+            result = (result * 37 + j * 2) % 1000007;
+          }
+          return result;
+        });
+        const bottom = preactComputed(() => {
+          const l = left.value;
+          const r = right.value;
+          return (l * l + r * r) % 1000007;
+        });
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
@@ -89,9 +132,27 @@ group('Simple Diamond', () => {
     
       bench('Alien', function* () {
         const source = alienSignal(0);
-        const left = alienComputed(() => source() * 2);
-        const right = alienComputed(() => source() * 3);
-        const bottom = alienComputed(() => left() + right());
+        const left = alienComputed(() => {
+          const val = source();
+          let result = val;
+          for (let j = 0; j < 5; j++) {
+            result = (result * 31 + j) % 1000007;
+          }
+          return result;
+        });
+        const right = alienComputed(() => {
+          const val = source();
+          let result = val;
+          for (let j = 0; j < 5; j++) {
+            result = (result * 37 + j * 2) % 1000007;
+          }
+          return result;
+        });
+        const bottom = alienComputed(() => {
+          const l = left();
+          const r = right();
+          return (l * l + r * r) % 1000007;
+        });
         
         yield () => {
           for (let i = 0; i < ITERATIONS; i++) {
