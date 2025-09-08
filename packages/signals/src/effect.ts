@@ -40,7 +40,7 @@ export function createEffectFactory(
     const node: EffectInterface = {
       __type: 'effect' as const,
       _cleanup: undefined as (() => void) | undefined,
-      flags: 0, // Start in PENDING state to trigger initial execution
+      flags: 0,
       dependencies: undefined as Dependency | undefined,
       dependencyTail: undefined as Dependency | undefined,
       nextScheduled: undefined as ScheduledNode | undefined,

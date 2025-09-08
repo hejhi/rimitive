@@ -33,7 +33,7 @@ export function createPullPropagator(): PullPropagator {
       
       // If dependency is PENDING, recursively pull it first
       if ('recompute' in producer && (producerFlags & STATUS_PENDING)) {
-        pullUpdates(producer as DerivedNode);
+        pullUpdates(producer);
       }
       
       // After pulling, check if dependency is DIRTY (value changed)
