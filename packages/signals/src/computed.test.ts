@@ -83,78 +83,124 @@ describe('Computed - Push-Pull Optimization', () => {
       expect(computeCount).toBe(3);
     });
 
-    it('should catch upstream changes', () => {
-      const s1 = signal(0);
-      const c1 = computed(() => s1() + 1);
-      const c2 = computed(() => c1() + 1);
-      const c3 = computed(() => c2() + 1);
+    it('should propagate updates through deep computed chains', () => {
+      // Create a chain: signal -> computed1 -> computed2 -> computed3
+      const source = signal(1);
+      const computed1 = computed(() => source() * 2);
+      const computed2 = computed(() => computed1() + 1);
+      const computed3 = computed(() => computed2() * 3);
 
-      expect(c3()).toBe(3);
-      s1(1);
-      expect(c3()).toBe(4);
+      // Initial read to establish dependencies
+      expect(computed3()).toBe(9); // (1 * 2 + 1) * 3 = 9
+
+      // Change the source
+      source(2);
+
+      // This should trigger recomputation through the chain
+      // Expected: (2 * 2 + 1) * 3 = 15
+      expect(computed3()).toBe(15);
     })
 
-    it('should run properly with diamond dependencies', () => {
-      let count = 0;
-      const s1 = signal(0);
+    it('should handle very deep chains efficiently', () => {
+      const source = signal(1);
+      
+      // Create a chain of 10 computeds
+      let current = source as any;
+      const computeds: any[] = [];
+      
+      for (let i = 0; i < 10; i++) {
+        const prev = current;
+        current = computed(() => prev() + 1);
+        computeds.push(current);
+      }
 
-      // Insert a shared computed dependency just for added complexity
-      const c0 = computed(() => s1());
-      const c1 = computed(() => { return c0(); });
-      const c2 = computed(() => { return c0(); });
-      const c3 = computed(() => { count++; return c1() + c2(); });
+      // Initial read
+      expect(current()).toBe(11); // 1 + 10
 
-      expect(c3()).toBe(0);
-      expect(count).toBe(1);
+      // Update source
+      source(5);
 
-      s1(1);
+      // Should propagate through entire chain
+      expect(current()).toBe(15); // 5 + 10
+    })
 
-      // Both c1 and c2 changing should not cause c3 to recalculate more than a single time
-      expect(c3()).toBe(2);
-      expect(count).toBe(2);
+    it('should handle diamond dependencies correctly with detailed tracking', () => {
+      // Create a diamond: 
+      //       source
+      //      /      \
+      //   left     right
+      //      \      /
+      //       bottom
+      const source = signal(10);
+      let leftComputeCount = 0;
+      let rightComputeCount = 0;
+      let bottomComputeCount = 0;
+
+      const left = computed(() => {
+        leftComputeCount++;
+        return source() * 2;
+      });
+      
+      const right = computed(() => {
+        rightComputeCount++;
+        return source() + 5;
+      });
+      
+      const bottom = computed(() => {
+        bottomComputeCount++;
+        return left() + right();
+      });
+
+      // Initial computation
+      expect(bottom()).toBe(35); // (10 * 2) + (10 + 5) = 35
+      expect(leftComputeCount).toBe(1);
+      expect(rightComputeCount).toBe(1);
+      expect(bottomComputeCount).toBe(1);
+
+      // Update source
+      source(20);
+
+      // Should recompute all nodes exactly once
+      expect(bottom()).toBe(65); // (20 * 2) + (20 + 5) = 65
+      expect(leftComputeCount).toBe(2);
+      expect(rightComputeCount).toBe(2);
+      expect(bottomComputeCount).toBe(2);
     });
 
-    it('should skip downstream recomputation when upstream computed values do not change', () => {
-      const source = signal(1);
-      let level1Count = 0;
-      let level2Count = 0;
-      let level3Count = 0;
+    it('should skip downstream recomputation when intermediate value does not change', () => {
+      const source = signal(2);
+      let computed1Count = 0;
+      let computed2Count = 0;
 
-      const level1 = computed(() => {
-        level1Count++;
-        const value = source();
-        return value > 0 ? 'positive' : 'negative';
+      const computed1 = computed(() => {
+        computed1Count++;
+        return source() % 2; // Will be 0 for even numbers
       });
 
-      const level2 = computed(() => {
-        level2Count++;
-        const value = level1();
-        return value === 'positive' ? 1 : -1;
+      const computed2 = computed(() => {
+        computed2Count++;
+        return computed1() === 0 ? 'even' : 'odd';
       });
 
-      const level3 = computed(() => {
-        level3Count++;
-        return level2() * 2;
-      });
+      // Initial
+      expect(computed2()).toBe('even');
+      expect(computed1Count).toBe(1);
+      expect(computed2Count).toBe(1);
 
-      expect(level3()).toBe(2);
-      expect(level1Count).toBe(1);
-      expect(level2Count).toBe(1);
-      expect(level3Count).toBe(1);
+      // Change to another even number
+      source(4);
+      
+      // computed1 should recompute but return same value (0)
+      // computed2 should NOT recompute since computed1's value didn't change
+      expect(computed2()).toBe('even');
+      expect(computed1Count).toBe(2); // Did recompute
+      expect(computed2Count).toBe(1); // Should NOT recompute (CURRENTLY FAILS)
 
-      // Change source but level1 output stays 'positive'
-      source(2);
-      expect(level3()).toBe(2);
-      expect(level1Count).toBe(2); // Must recompute to check
-      expect(level2Count).toBe(2); // Recomputes due to simplified flag system
-      expect(level3Count).toBe(2); // Recomputes due to simplified flag system
-
-      // Change to negative should cascade
-      source(-1);
-      expect(level3()).toBe(-2);
-      expect(level1Count).toBe(3);
-      expect(level2Count).toBe(3); // Recomputes on every change due to simplified flag system
-      expect(level3Count).toBe(3); // Recomputes on every change due to simplified flag system
+      // Change to odd number
+      source(3);
+      expect(computed2()).toBe('odd');
+      expect(computed1Count).toBe(3);
+      expect(computed2Count).toBe(2);
     });
 
     it('should skip recomputation when multiple dependencies have unchanged values (diamond)', () => {
