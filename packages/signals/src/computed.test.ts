@@ -236,14 +236,14 @@ describe('Computed - Push-Pull Optimization', () => {
       expect(bottom()).toBe('odd-small');
       expect(leftCount).toBe(2); // Must recompute to check
       expect(rightCount).toBe(2); // Must recompute to check
-      expect(bottomCount).toBe(2); // Recomputes due to simplified flag system
+      expect(bottomCount).toBe(1); // Should NOT recompute since neither dependency changed value
 
       // Change to 12 - left changes to 'even', right changes to 'big'
       source(12);
       expect(bottom()).toBe('even-big');
       expect(leftCount).toBe(3);
       expect(rightCount).toBe(3);
-      expect(bottomCount).toBe(3); // Recomputes on every change due to simplified flag system
+      expect(bottomCount).toBe(2); // Should recompute since dependencies changed
     });
 
     it('should NOT run effects when dependent computed values do not change', () => {
