@@ -44,6 +44,7 @@ export interface ProducerNode extends ReactiveNode {
   value: unknown;
   dependents: Dependency | undefined; // Head of dependent list
   dependentsTail: Dependency | undefined; // Tail of dependent list
+  lastChangedVersion: number; // Version when this node's value last changed
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)

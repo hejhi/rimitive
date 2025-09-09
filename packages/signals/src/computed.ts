@@ -29,7 +29,7 @@ interface ComputedState<T> extends DerivedNode {
   value: T; // Cached computed value
 }
 
-const { STATUS_PENDING } = CONSTANTS;
+const { STATUS_PENDING, DIRTY } = CONSTANTS;
 
 // BACKWARDS COMPATIBILITY: Export interface alias
 export type ComputedInterface<T = unknown> = ComputedFunction<T>;
@@ -52,6 +52,7 @@ export function createComputedFactory(
       dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
       flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation
       lastComputedVersion: -1, // Never computed yet
+      lastChangedVersion: -1, // Never changed yet
       // This will be set below
       recompute(): boolean {
         const prevConsumer = startTracking(ctx, node);
@@ -64,6 +65,7 @@ export function createComputedFactory(
           // Update value and return whether it changed
           if (newValue !== oldValue) {
             node.value = newValue;
+            node.lastChangedVersion = ctx.trackingVersion; // Use current version (already incremented by startTracking)
             valueChanged = true;
           }
         } finally {
@@ -90,6 +92,10 @@ export function createComputedFactory(
       // Create edge to consumer
       if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
       update();
+      
+      // Clear DIRTY flag after reading (like signals do)
+      // This prevents downstream computeds from thinking we changed when we didn't
+      node.flags &= ~DIRTY;
 
       return node.value;
     }) as ComputedFunction<T>;
