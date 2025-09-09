@@ -105,8 +105,8 @@ describe('Computed - Push-Pull Optimization', () => {
       const source = signal(1);
       
       // Create a chain of 10 computeds
-      let current = source as any;
-      const computeds: any[] = [];
+      let current = source;
+      const computeds: SignalFunction<number>[] = [];
       
       for (let i = 0; i < 10; i++) {
         const prev = current;

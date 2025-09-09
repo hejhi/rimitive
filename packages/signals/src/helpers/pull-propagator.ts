@@ -21,7 +21,7 @@ export function createPullPropagator(): PullPropagator {
     const recompute = () => recomputeNode(node);
 
     // If no dependencies yet (first run), must recompute
-    if (!node.dependencies) return recomputeNode(node);
+    if (!node.dependencies) return recompute();
 
     let current: Dependency | undefined = node.dependencies;
 
