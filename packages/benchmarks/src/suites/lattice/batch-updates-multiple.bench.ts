@@ -14,11 +14,9 @@ import {
   batch as preactBatch,
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
+import { createSignalFactory } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
 import { createBatchFactory } from '@lattice/signals/batch';
-import { createBaseContext } from '@lattice/signals/context';
-import { createNodeScheduler } from '@lattice/signals/helpers/node-scheduler';
 
 import {
   signal as alienSignal,
@@ -26,35 +24,20 @@ import {
   startBatch as alienStartBatch,
   endBatch as alienEndBatch,
 } from 'alien-signals';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
+import { createComputedContext } from './helpers/createComputedCtx';
 
-const baseCtx = createBaseContext();
-const pullPropagator = createPullPropagator();
-const graphEdges = createGraphEdges();
-const nodeScheduler = createNodeScheduler(baseCtx);
-const pushPropagator = createPushPropagator();
-
-// Create Lattice API instance
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
-    batch: createBatchFactory,
+    batch: createBatchFactory
   },
-  {
-    ...createBaseContext(),
-    nodeScheduler,
-    graphEdges,
-    pushPropagator,
-    pullPropagator,
-  }
+  createComputedContext()
 );
 
-const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
-const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
-const latticeBatch = latticeAPI.batch as <T>(fn: () => T) => T;
+const latticeSignal = latticeAPI.signal;
+const latticeComputed = latticeAPI.computed;
+const latticeBatch = latticeAPI.batch;
 
 const ITERATIONS = 10000;
 

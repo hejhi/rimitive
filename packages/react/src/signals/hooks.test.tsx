@@ -41,7 +41,7 @@ describe('Signal Hooks', () => {
       expect(result.current).toBe(0);
 
       act(() => {
-        (count as any).value = 1;
+        count(1);
       });
 
       expect(result.current).toBe(1);
@@ -50,7 +50,7 @@ describe('Signal Hooks', () => {
     it('should work with computed values', () => {
       const api = createTestSignalAPI();
       const count = api.signal(5);
-      const doubled = api.computed(() => (count as any).value * 2);
+      const doubled = api.computed(() => count() * 2);
       
       const { result } = renderHook(
         () => useSubscribe(doubled),
@@ -60,7 +60,7 @@ describe('Signal Hooks', () => {
       expect(result.current).toBe(10);
 
       act(() => {
-        (count as any).value = 10;
+        count(10);
       });
 
       expect(result.current).toBe(20);
@@ -69,7 +69,7 @@ describe('Signal Hooks', () => {
     it('should work with computed values derived from signals', () => {
       const api = createTestSignalAPI();
       const user = api.signal({ name: 'John', age: 30 });
-      const name = api.computed(() => (user as any).value.name);
+      const name = api.computed(() => user().name);
       
       const { result } = renderHook(
         () => useSubscribe(name),
@@ -79,7 +79,7 @@ describe('Signal Hooks', () => {
       expect(result.current).toBe('John');
 
       act(() => {
-        (user as any).value = { name: 'Jane', age: 25 };
+        user({ name: 'Jane', age: 25 });
       });
 
       expect(result.current).toBe('Jane');
@@ -151,7 +151,7 @@ describe('Signal Hooks', () => {
       const user = api.signal({ name: 'John', age: 30, email: 'john@example.com' });
       
       const { result } = renderHook(
-        () => useSelector(user as any, (u: { name: string; age: number; email: string }) => u.name),
+        () => useSelector(user, (u: { name: string; age: number; email: string }) => u.name),
         { wrapper: createWrapper(api) }
       );
 
@@ -161,13 +161,13 @@ describe('Signal Hooks', () => {
     it('computed should update when signal changes', () => {
       const api = createTestSignalAPI();
       const user = api.signal({ name: 'John', age: 30 });
-      const nameComputed = api.computed(() => (user as any).value.name);
+      const nameComputed = api.computed(() => user().name);
       
-      expect((nameComputed as any).value).toBe('John');
+      expect(nameComputed()).toBe('John');
       
-      (user as any).value = { name: 'Jane', age: 30 };
+      user({ name: 'Jane', age: 30 });
       
-      expect((nameComputed as any).value).toBe('Jane');
+      expect(nameComputed()).toBe('Jane');
     });
 
     it('should only re-render when selected value changes', () => {
@@ -178,7 +178,7 @@ describe('Signal Hooks', () => {
       const { result } = renderHook(
         () => {
           renderCount.current++;
-          return useSelector(user as any, (u: { name: string; age: number }) => u.name);
+          return useSelector(user, (u: { name: string; age: number }) => u.name);
         },
         { wrapper: createWrapper(api) }
       );
@@ -188,14 +188,14 @@ describe('Signal Hooks', () => {
 
       // Update age - should not re-render
       act(() => {
-        (user as any).value = { name: 'John', age: 31 };
+        user({ name: 'John', age: 31 });
       });
 
       expect(renderCount.current).toBe(1);
 
       // Update name - should re-render
       act(() => {
-        (user as any).value = { name: 'Jane', age: 31 };
+        user({ name: 'Jane', age: 31 });
       });
 
       expect(result.current).toBe('Jane');

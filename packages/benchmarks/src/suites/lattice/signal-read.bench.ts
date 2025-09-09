@@ -10,39 +10,15 @@ import {
   signal as preactSignal,
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory, type SignalFunction } from '@lattice/signals/signal';
+import { createSignalFactory } from '@lattice/signals/signal';
 import {
   signal as alienSignal,
 } from 'alien-signals';
 
-import { createBaseContext } from '@lattice/signals/context';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createNodeScheduler } from '@lattice/signals/helpers/node-scheduler';
-import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
+import { createEffectContext } from './helpers/createEffectCtx';
 
-// Create Lattice API instance
-const baseCtx = createBaseContext();
-const pullPropagator = createPullPropagator();
-const graphEdges = createGraphEdges();
-const nodeScheduler = createNodeScheduler(baseCtx);
-const pushPropagator = createPushPropagator();
-
-// Create Lattice API instance
-const latticeAPI = createSignalAPI(
-  {
-    signal: createSignalFactory,
-  },
-  {
-    ...createBaseContext(),
-    nodeScheduler,
-    graphEdges,
-    pushPropagator,
-    pullPropagator,
-  }
-);
-
-const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalFunction<T>;
+const latticeAPI = createSignalAPI({ signal: createSignalFactory }, createEffectContext());
+const latticeSignal = latticeAPI.signal;
 
 const ITERATIONS = 100000;
 

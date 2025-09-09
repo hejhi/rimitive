@@ -16,16 +16,19 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
 
   // Create helpers with their dependencies
   const graphEdges = createGraphEdges();
-  const pullPropagator = createPullPropagator();
   const pushPropagator = createPushPropagator();
   
   // Extend baseCtx in place to ensure nodeScheduler uses the same context object
   const ctx = Object.assign(baseCtx, {
     graphEdges,
     pushPropagator,
-    pullPropagator,
+    pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>, // Will be set below
     nodeScheduler: null as unknown as NodeScheduler, // Will be set below
   });
+  
+  // Now create pullPropagator with context
+  const pullPropagator = createPullPropagator(ctx);
+  ctx.pullPropagator = pullPropagator;
   
   // Now create nodeScheduler with the same ctx object
   const nodeScheduler = createNodeScheduler(ctx);
@@ -74,16 +77,18 @@ describe('createSignalAPI', () => {
     // Create custom context with custom work queue
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
-    const pullPropagator = createPullPropagator();
     const pushPropagator = createPushPropagator();
     
     // Extend baseCtx in place to ensure all components share the same context
     const customCtx = Object.assign(baseCtx, {
       graphEdges,
       pushPropagator,
-      pullPropagator,
+      pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>, // Will be set below
       nodeScheduler: null as unknown as typeof nodeScheduler, // Will be set below
     });
+    
+    const pullPropagator = createPullPropagator(customCtx);
+    customCtx.pullPropagator = pullPropagator;
     
     const nodeScheduler = (() => {
       const scheduler = createNodeScheduler(customCtx);
@@ -125,7 +130,8 @@ describe('createSignalAPI', () => {
     // Create custom context with instrumented work queue
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
-    const pullPropagator = createPullPropagator();
+    const tempCtx = { ...baseCtx, graphEdges };
+    const pullPropagator = createPullPropagator(tempCtx);
     const nodeScheduler = (() => {
       const queue = createNodeScheduler(baseCtx);
       const originalEnqueue = queue.enqueue;

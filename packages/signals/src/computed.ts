@@ -38,7 +38,7 @@ export function createComputedFactory(
   ctx: ComputedContext
 ): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
-    graphEdges: { trackDependency, startTracking, endTracking },
+    graphEdges: { trackDependency },
     pullPropagator: { pullUpdates },
   } = ctx;
 
@@ -53,30 +53,7 @@ export function createComputedFactory(
       flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation
       lastComputedVersion: -1, // Never computed yet
       lastChangedVersion: -1, // Never changed yet
-      // This will be set below
-      recompute(): boolean {
-        const prevConsumer = startTracking(ctx, node);
-        let valueChanged = false;
-
-        try {
-          const oldValue = node.value;
-          const newValue = compute();
-
-          // Update value and return whether it changed
-          if (newValue !== oldValue) {
-            node.value = newValue;
-            node.lastChangedVersion = ctx.trackingVersion; // Use current version (already incremented by startTracking)
-            valueChanged = true;
-          }
-        } finally {
-          // Mark as computed in this tracking cycle (diamond dependency optimization)
-          node.lastComputedVersion = ctx.trackingVersion;
-          
-          // End tracking, restore context, and prune stale dependencies
-          endTracking(ctx, node, prevConsumer);
-        }
-        return valueChanged;
-      },
+      compute: compute as () => unknown, // Store the compute function directly
       notify: () => undefined,
     };
 

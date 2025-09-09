@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createGraphEdges } from './graph-edges';
 import { createPushPropagator } from './push-propagator';
 import { createPullPropagator } from './pull-propagator';
+import { createBaseContext } from '../context';
 import type { ConsumerNode, ProducerNode, Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
@@ -19,7 +20,8 @@ describe('Dependency Graph Helpers', () => {
   beforeEach(() => {
     const graphEdges = createGraphEdges();
     const pushPropagator = createPushPropagator();
-    const pullPropagator = createPullPropagator();
+    const tempCtx = { ...createBaseContext(), graphEdges };
+    const pullPropagator = createPullPropagator(tempCtx);
     
     helpers = {
       trackDependency: graphEdges.trackDependency,

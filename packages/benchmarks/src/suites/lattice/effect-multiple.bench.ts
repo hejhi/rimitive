@@ -11,42 +11,24 @@ import {
   effect as preactEffect,
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
-import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createEffectFactory } from '@lattice/signals/effect';
 import {
   signal as alienSignal,
   effect as alienEffect,
 } from 'alien-signals';
-import { createBaseContext } from '@lattice/signals/context';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createNodeScheduler } from '@lattice/signals/helpers/node-scheduler';
-import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
+import { createEffectContext } from './helpers/createEffectCtx';
 
-// Create Lattice API instance
-const baseCtx = createBaseContext();
-const pullPropagator = createPullPropagator();
-const graphEdges = createGraphEdges();
-const nodeScheduler = createNodeScheduler(baseCtx);
-const pushPropagator = createPushPropagator();
-
-// Create Lattice API instance
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     effect: createEffectFactory,
   },
-  {
-    ...createBaseContext(),
-    nodeScheduler,
-    graphEdges,
-    pushPropagator,
-    pullPropagator,
-  }
+  createEffectContext()
 );
 
-const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
-const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
+const latticeSignal = latticeAPI.signal;
+const latticeEffect = latticeAPI.effect;
 
 const ITERATIONS = 10000;
 

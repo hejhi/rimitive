@@ -21,42 +21,24 @@ import {
   computed as preactComputed,
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
-import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
+import { createSignalFactory } from '@lattice/signals/signal';
+import { createComputedFactory } from '@lattice/signals/computed';
 import {
   signal as alienSignal,
   computed as alienComputed,
 } from 'alien-signals';
-import { createBaseContext } from '@lattice/signals/context';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createNodeScheduler } from '@lattice/signals/helpers/node-scheduler';
-import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
+import { createComputedContext } from './helpers/createComputedCtx';
 
-// Create Lattice API instance
-const baseCtx = createBaseContext();
-const pullPropagator = createPullPropagator();
-const graphEdges = createGraphEdges();
-const nodeScheduler = createNodeScheduler(baseCtx);
-const pushPropagator = createPushPropagator();
-
-// Create Lattice API instance
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
   },
-  {
-    ...createBaseContext(),
-    nodeScheduler,
-    graphEdges,
-    pushPropagator,
-    pullPropagator,
-  }
+  createComputedContext()
 );
 
-const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
-const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
+const latticeSignal = latticeAPI.signal;
+const latticeComputed = latticeAPI.computed;
 
 const ITERATIONS = 1000;
 const WIDTH = 3; // Each node has 3 children
@@ -73,6 +55,7 @@ group('Computed Deep & Wide (3x4 tree)', () => {
         const allLevels = [currentLevel];
         
         for (let depth = 0; depth < DEPTH; depth++) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const nextLevel: any[] = [];
           
           for (const parent of currentLevel) {
@@ -85,6 +68,7 @@ group('Computed Deep & Wide (3x4 tree)', () => {
             }
           }
           
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           currentLevel = nextLevel;
           allLevels.push(currentLevel);
         }
@@ -109,6 +93,7 @@ group('Computed Deep & Wide (3x4 tree)', () => {
         const allLevels = [currentLevel];
         
         for (let depth = 0; depth < DEPTH; depth++) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const nextLevel: any[] = [];
           
           for (const parent of currentLevel) {
@@ -121,6 +106,7 @@ group('Computed Deep & Wide (3x4 tree)', () => {
             }
           }
           
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           currentLevel = nextLevel;
           allLevels.push(currentLevel);
         }
@@ -145,6 +131,7 @@ group('Computed Deep & Wide (3x4 tree)', () => {
         const allLevels = [currentLevel];
         
         for (let depth = 0; depth < DEPTH; depth++) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const nextLevel: any[] = [];
           
           for (const parent of currentLevel) {
@@ -157,6 +144,7 @@ group('Computed Deep & Wide (3x4 tree)', () => {
             }
           }
           
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           currentLevel = nextLevel;
           allLevels.push(currentLevel);
         }
@@ -176,4 +164,4 @@ group('Computed Deep & Wide (3x4 tree)', () => {
   });
 });
 
-runBenchmark();
+await runBenchmark();

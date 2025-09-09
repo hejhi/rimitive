@@ -5,9 +5,8 @@ import {
   useCallback,
 } from 'react';
 import { useSignalAPI } from './context';
-import type { Signal } from '@lattice/signals/signal';
-import type { Readable, ProducerNode } from '@lattice/signals/types';
-import type { ComputedInterface } from '@lattice/signals/computed';
+import type { SignalFunction } from '@lattice/signals/signal';
+import type { ComputedFunction } from '@lattice/signals/computed';
 import type { SignalSetter } from './types';
 
 /**
@@ -24,21 +23,31 @@ import type { SignalSetter } from './types';
  * }
  * ```
  */
-type TypedProducer<T> = ProducerNode & { value: T };
-
-export function useSubscribe<T>(signal: Readable<T> & TypedProducer<T>): T {
+export function useSubscribe<T>(signal: SignalFunction<T> | ComputedFunction<T>): T {
   const api = useSignalAPI();
 
-  // Memoize the subscribe function to avoid creating new functions on each render
+  // Create stable subscription using effect
   const subscribeCallback = useMemo(
-    () => (onStoreChange: () => void) => api.subscribe(signal, onStoreChange),
+    () => (onStoreChange: () => void) => {
+      let isFirstRun = true;
+      // Subscribe using an effect that reads the signal
+      const dispose = api.effect(() => {
+        signal(); // Read the signal to track it
+        // Don't notify on the initial effect run
+        if (!isFirstRun) {
+          onStoreChange(); // Notify React when it changes
+        }
+        isFirstRun = false;
+      });
+      return dispose;
+    },
     [signal, api]
   );
 
   return useSyncExternalStore(
     subscribeCallback,
-    () => signal.value,
-    () => signal.value // Server snapshot
+    () => signal(), // Read current value
+    () => signal() // Server snapshot
   );
 }
 
@@ -64,7 +73,7 @@ export function useSignal<T>(
   const api = useSignalAPI();
   
   // Use ref to store the signal instance - created only once
-  const signalRef = useRef<Signal<T> | null>(null);
+  const signalRef = useRef<SignalFunction<T> | null>(null);
 
   if (signalRef.current === null) {
     // Initialize on first render only
@@ -76,21 +85,21 @@ export function useSignal<T>(
     signalRef.current = api.signal(value);
   }
 
-  const sig = signalRef.current as unknown as TypedProducer<T>; // Created on first render
+  const sig = signalRef.current; // Created on first render
 
   // Stable setter function
   const setter = useCallback<SignalSetter<T>>(
     (value) => {
       if (typeof value === 'function') {
-        sig.value = (value as (prev: T) => T)(sig.value);
+        sig((value as (prev: T) => T)(sig()));
       } else {
-        sig.value = value;
+        sig(value);
       }
     },
     [sig]
   );
 
-  const value = useSubscribe(sig as unknown as Readable<T> & TypedProducer<T>);
+  const value = useSubscribe(sig);
   return [value, setter];
 }
 
@@ -108,7 +117,7 @@ export function useSignal<T>(
  * ```
  */
 export function useSelector<T, R>(
-  signal: Signal<T> & { value: T },
+  signal: SignalFunction<T>,
   selector: (value: T) => R
 ): R {
   const api = useSignalAPI();
@@ -120,13 +129,13 @@ export function useSelector<T, R>(
   
   // Create a computed value that applies the selector
   // We use a ref to maintain the same computed instance across renders
-  const computedRef = useRef<ComputedInterface<R> | null>(null);
+  const computedRef = useRef<ComputedFunction<R> | null>(null);
   
   // Only create the computed once, but use selectorRef.current
   // to ensure it always uses the latest selector
   if (computedRef.current === null) {
-    computedRef.current = api.computed(() => selectorRef.current(signal.value));
+    computedRef.current = api.computed(() => selectorRef.current(signal()));
   }
 
-  return useSubscribe(computedRef.current as unknown as Readable<R> & TypedProducer<R>);
+  return useSubscribe(computedRef.current);
 }

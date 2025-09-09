@@ -20,31 +20,14 @@ import {
   computed as alienComputed,
 } from 'alien-signals';
 
-import { createBaseContext } from '@lattice/signals/context';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createNodeScheduler } from '@lattice/signals/helpers/node-scheduler';
-import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
-
-// Create Lattice API instance
-const baseCtx = createBaseContext();
-const pullPropagator = createPullPropagator();
-const graphEdges = createGraphEdges();
-const nodeScheduler = createNodeScheduler(baseCtx);
-const pushPropagator = createPushPropagator();
+import { createComputedContext } from './helpers/createComputedCtx';
 
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
   },
-  {
-    ...createBaseContext(),
-    nodeScheduler,
-    graphEdges,
-    pushPropagator,
-    pullPropagator,
-  }
+  createComputedContext()
 );
 
 const latticeSignal = latticeAPI.signal;

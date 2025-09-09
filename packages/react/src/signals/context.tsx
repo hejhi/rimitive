@@ -2,7 +2,6 @@ import React, { createContext, useContext, ReactNode } from 'react';
 import type { SignalInterface } from '@lattice/signals/signal';
 import type { ComputedInterface } from '@lattice/signals/computed';
 import type { EffectDisposer } from '@lattice/signals/effect';
-import type { Readable, ProducerNode } from '@lattice/signals/types';
 
 // Minimal API shape used by React bindings
 export interface SignalAPI {
@@ -10,11 +9,6 @@ export interface SignalAPI {
   computed: <T>(compute: () => T) => ComputedInterface<T>;
   effect: (fn: () => void | (() => void)) => EffectDisposer;
   batch: <T>(fn: () => T) => T;
-  subscribe: <T>(
-    source: Readable<T> & ProducerNode,
-    callback: (value: T) => void,
-    options?: { skipEqualityCheck?: boolean }
-  ) => () => void;
   dispose: () => void;
 }
 

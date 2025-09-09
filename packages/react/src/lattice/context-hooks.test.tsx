@@ -13,7 +13,6 @@ describe('Lattice Context Hooks', () => {
         { name: 'computed' as const, method: testAPI.computed },
         { name: 'effect' as const, method: testAPI.effect },
         { name: 'batch' as const, method: testAPI.batch },
-        { name: 'subscribe' as const, method: testAPI.subscribe },
       ];
       
       const { result, unmount } = renderHook(() =>
@@ -28,8 +27,8 @@ describe('Lattice Context Hooks', () => {
       expect(typeof result.current.dispose).toBe('function');
 
       // Create a signal to verify it works
-      const count = result.current.signal(0) as any;
-      expect(count.value).toBe(0);
+      const count = result.current.signal(0);
+      expect(count()).toBe(0);
 
       // Spy on dispose to verify cleanup
       const disposeSpy = vi.fn();
@@ -52,7 +51,6 @@ describe('Lattice Context Hooks', () => {
         { name: 'computed' as const, method: testAPI.computed },
         { name: 'effect' as const, method: testAPI.effect },
         { name: 'batch' as const, method: testAPI.batch },
-        { name: 'subscribe' as const, method: testAPI.subscribe },
       ];
       
       const { result, rerender } = renderHook(() =>
@@ -76,25 +74,24 @@ describe('Lattice Context Hooks', () => {
         { name: 'computed' as const, method: testAPI.computed },
         { name: 'effect' as const, method: testAPI.effect },
         { name: 'batch' as const, method: testAPI.batch },
-        { name: 'subscribe' as const, method: testAPI.subscribe },
       ];
       
       const { result } = renderHook(() =>
         useLatticeContext(...mockExtensions)
       );
 
-      const count = result.current.signal(0) as any;
-      const doubled = result.current.computed(() => count.value * 2) as any;
+      const count = result.current.signal(0);
+      const doubled = result.current.computed(() => count() * 2);
 
-      expect(count.value).toBe(0);
-      expect(doubled.value).toBe(0);
+      expect(count()).toBe(0);
+      expect(doubled()).toBe(0);
 
       act(() => {
-        count.value = 10;
+        count(10);
       });
 
-      expect(count.value).toBe(10);
-      expect(doubled.value).toBe(20);
+      expect(count()).toBe(10);
+      expect(doubled()).toBe(20);
     });
 
     it('should support batch updates', () => {
@@ -105,20 +102,19 @@ describe('Lattice Context Hooks', () => {
         { name: 'computed' as const, method: testAPI.computed },
         { name: 'effect' as const, method: testAPI.effect },
         { name: 'batch' as const, method: testAPI.batch },
-        { name: 'subscribe' as const, method: testAPI.subscribe },
       ];
       
       const { result } = renderHook(() =>
         useLatticeContext(...mockExtensions)
       );
 
-      const a = result.current.signal(1) as any;
-      const b = result.current.signal(2) as any;
-      const sum = result.current.computed(() => a.value + b.value) as any;
+      const a = result.current.signal(1);
+      const b = result.current.signal(2);
+      const sum = result.current.computed(() => a() + b());
 
       let computeCount = 0;
       result.current.effect(() => {
-        void sum.value; // Track the sum
+        void sum(); // Track the sum
         computeCount++;
       });
 
@@ -126,14 +122,14 @@ describe('Lattice Context Hooks', () => {
 
       act(() => {
         result.current.batch(() => {
-          a.value = 10;
-          b.value = 20;
+          a(10);
+          b(20);
         });
       });
 
       // Should only compute once due to batching
       expect(computeCount).toBe(2);
-      expect(sum.value).toBe(30);
+      expect(sum()).toBe(30);
     });
 
     it('should work with custom extensions', () => {

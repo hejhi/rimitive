@@ -26,9 +26,9 @@
       "import": "./dist/batch.js",
       "types": "./dist/batch.d.ts"
     },
-    "./subscribe": {
-      "import": "./dist/subscribe.js",
-      "types": "./dist/subscribe.d.ts"
+    "./default-context": {
+      "import": "./dist/default-context.js",
+      "types": "./dist/default-context.d.ts"
     },
     
     "./types": {

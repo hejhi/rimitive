@@ -23,42 +23,24 @@ import {
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
 import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
-import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
-import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
+import { createComputedFactory } from '@lattice/signals/computed';
+import { createEffectFactory } from '@lattice/signals/effect';
 import { signal as alienSignal, computed as alienComputed, effect as alienEffect } from 'alien-signals';
 
-import { createBaseContext } from '@lattice/signals/context';
-import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
-import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
-import { createNodeScheduler } from '@lattice/signals/helpers/node-scheduler';
-import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
+import { createComputedContext } from './helpers/createComputedCtx';
 
-// Create Lattice API instance
-const baseCtx = createBaseContext();
-const pullPropagator = createPullPropagator();
-const graphEdges = createGraphEdges();
-const nodeScheduler = createNodeScheduler(baseCtx);
-const pushPropagator = createPushPropagator();
-
-// Create Lattice API instance
 const latticeAPI = createSignalAPI(
   {
     signal: createSignalFactory,
     computed: createComputedFactory,
-    effect: createEffectFactory,
+    effect: createEffectFactory
   },
-  {
-    ...createBaseContext(),
-    nodeScheduler,
-    graphEdges,
-    pushPropagator,
-    pullPropagator,
-  }
+  createComputedContext()
 );
 
-const latticeSignal = latticeAPI.signal as <T>(value: T) => SignalInterface<T>;
-const latticeComputed = latticeAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
-const latticeEffect = latticeAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
+const latticeSignal = latticeAPI.signal;
+const latticeComputed = latticeAPI.computed;
+const latticeEffect = latticeAPI.effect;
 
 // Signal types for each library
 type PreactSignal = { value: number };

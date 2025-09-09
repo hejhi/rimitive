@@ -23,11 +23,11 @@ const batch = signalAPI.batch as <T>(fn: () => T) => T;
 const count = signal(0);
 
 const doubled = computed(() => {
-  return count.value * 2;
+  return count() * 2;
 });
 
 const isEven = computed(() => {
-  return count.value % 2 === 0;
+  return count() % 2 === 0;
 });
 
 // Todo State
@@ -43,25 +43,25 @@ const todos = signal<Todo[]>([
 ]);
 
 const completedCount = computed(() => {
-  return todos.value.filter((todo: Todo) => todo.completed).length;
+  return todos().filter((todo: Todo) => todo.completed).length;
 });
 
 const allCompleted = computed(() => {
-  return todos.value.length > 0 && todos.value.every((todo: Todo) => todo.completed);
+  return todos().length > 0 && todos().every((todo: Todo) => todo.completed);
 });
 
 // Effects
 effect(() => {
-  console.log(`You have ${completedCount.value} completed todos out of ${todos.value.length}`);
+  console.log(`You have ${completedCount()} completed todos out of ${todos().length}`);
 });
 
 // Update functions
 function increment() {
-  count.value++;
+  count(count() + 1);
 }
 
 function decrement() {
-  count.value--;
+  count(count() - 1);
 }
 
 function addTodo(text: string) {
@@ -70,24 +70,24 @@ function addTodo(text: string) {
     text,
     completed: false
   };
-  todos.value = [...todos.value, newTodo];
+  todos([...todos(), newTodo]);
 }
 
 function toggleTodo(id: number) {
-  todos.value = todos.value.map((todo: Todo) =>
+  todos(todos().map((todo: Todo) =>
     todo.id === id ? { ...todo, completed: !todo.completed } : todo
-  );
+  ));
 }
 
 function toggleAll() {
-  const shouldComplete = !allCompleted.value;
-  todos.value = todos.value.map((todo: Todo) => ({ ...todo, completed: shouldComplete }));
+  const shouldComplete = !allCompleted();
+  todos(todos().map((todo: Todo) => ({ ...todo, completed: shouldComplete })));
 }
 
 // Test batching
 function batchedUpdates() {
   batch(() => {
-    count.value = 10;
+    count(10);
     addTodo('Batched todo 1');
     addTodo('Batched todo 2');
     toggleTodo(1);
@@ -102,13 +102,13 @@ function updateUI() {
   const todoListEl = document.getElementById('todo-list');
   const completedCountEl = document.getElementById('completed-count');
 
-  if (countEl) countEl.textContent = count.value.toString();
-  if (doubledEl) doubledEl.textContent = doubled.value.toString();
-  if (isEvenEl) isEvenEl.textContent = isEven.value ? 'Yes' : 'No';
-  if (completedCountEl) completedCountEl.textContent = `${completedCount.value} / ${todos.value.length}`;
+  if (countEl) countEl.textContent = count().toString();
+  if (doubledEl) doubledEl.textContent = doubled().toString();
+  if (isEvenEl) isEvenEl.textContent = isEven() ? 'Yes' : 'No';
+  if (completedCountEl) completedCountEl.textContent = `${completedCount()} / ${todos().length}`;
 
   if (todoListEl) {
-    todoListEl.innerHTML = todos.value
+    todoListEl.innerHTML = todos()
       .map((todo: Todo) => `
         <li class="${todo.completed ? 'completed' : ''}">
           <input type="checkbox" ${todo.completed ? 'checked' : ''} 

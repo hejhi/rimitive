@@ -21,15 +21,18 @@ export function createDefaultContext(): GlobalContext & SignalContext & EffectCo
 
   // Create helpers with their dependencies
   const graphEdges = createGraphEdges();
-  const pullPropagator = createPullPropagator();
   
   // Extend the base context in place instead of creating a new object
   const ctx = Object.assign(baseCtx, {
     graphEdges,
     pushPropagator: null as unknown as typeof pushPropagator, // Will be set below
-    pullPropagator,
+    pullPropagator: null as unknown as typeof pullPropagator, // Will be set below
     nodeScheduler: null as unknown as typeof nodeScheduler, // Will be set below
   });
+  
+  // Now create pullPropagator with context
+  const pullPropagator = createPullPropagator(ctx);
+  ctx.pullPropagator = pullPropagator;
   
   // Now create nodeScheduler with the same ctx object
   const nodeScheduler = createNodeScheduler(ctx);
