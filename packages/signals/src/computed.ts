@@ -62,10 +62,7 @@ export function createComputedFactory(
       if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
       
       // Fast-path: Only call pullUpdates if node needs updating
-      const flags = node.flags;
-      if (flags & STATUS_PENDING) {
-        pullUpdates(node);
-      }
+      if (node.flags & STATUS_PENDING) pullUpdates(node);
 
       return node.value;
     }) as ComputedFunction<T>;
@@ -78,10 +75,7 @@ export function createComputedFactory(
 
       try {
         // Fast-path: Only call pullUpdates if node needs updating
-        const flags = node.flags;
-        if (flags & STATUS_PENDING) {
-          pullUpdates(node);
-        }
+        if (node.flags & STATUS_PENDING) pullUpdates(node);
       } finally {
         ctx.currentConsumer = prevConsumer; // Restore back to previous state
       }
