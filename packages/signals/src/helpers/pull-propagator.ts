@@ -103,6 +103,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         stack = stack?.next;
       }
     }
+
+    rootNode.flags &= ~DIRTY;
   };
 
   return { pullUpdates };

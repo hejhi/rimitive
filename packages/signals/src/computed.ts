@@ -29,7 +29,7 @@ interface ComputedNode<T> extends DerivedNode {
   value: T;
 }
 
-const { STATUS_PENDING, DIRTY } = CONSTANTS;
+const { STATUS_PENDING } = CONSTANTS;
 
 export function createComputedFactory(
   ctx: ComputedContext
@@ -61,10 +61,6 @@ export function createComputedFactory(
       // Create edge to consumer
       if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
       pullUpdates(node);
-      
-      // Clear DIRTY flag after reading (like signals do)
-      // This prevents downstream computeds from thinking we changed when we didn't
-      node.flags &= ~DIRTY;
 
       return node.value;
     }) as ComputedFunction<T>;
