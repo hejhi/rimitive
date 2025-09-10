@@ -22,7 +22,7 @@ import {
   effect as preactEffect,
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
-import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
+import { createSignalFactory, type SignalFunction } from '@lattice/signals/signal';
 import { createComputedFactory } from '@lattice/signals/computed';
 import { createEffectFactory } from '@lattice/signals/effect';
 import { signal as alienSignal, computed as alienComputed, effect as alienEffect } from 'alien-signals';
@@ -111,7 +111,7 @@ group('Dense Updates (50-100% change rate)', () => {
           [1]() { return sources; },
           [2]() { return indices; },
           
-          bench(values: number[], sources: SignalInterface<number>[], indices: number[]) {
+          bench(values: number[], sources: SignalFunction<number>[], indices: number[]) {
             let changeCount = 0;
             let valueIndex = 0;
             for (let t = 0; t < TICKS; t++) {

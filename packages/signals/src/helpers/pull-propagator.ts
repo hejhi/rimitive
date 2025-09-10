@@ -11,13 +11,12 @@ export interface PullPropagator {
 
 interface StackFrame {
   node: DerivedNode;
-  dep: Dependency | undefined;
   next: StackFrame | undefined;
+  needsUpdate: boolean;
 }
 
 export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdges }): PullPropagator {
   const { startTracking, endTracking } = ctx.graphEdges;
-  
 
   // Inline recomputation logic here since we have access to context
   const recomputeNode = (node: DerivedNode): boolean => {
@@ -50,58 +49,65 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
   };
 
   const pullUpdates = (rootNode: DerivedNode): void => {
-    let stack: StackFrame | undefined = { node: rootNode, dep: undefined, next: undefined };
+    let stack: StackFrame | undefined = { node: rootNode, next: undefined, needsUpdate: false };
 
     while (stack) {
       const { node } = stack;
       const flags = node.flags;
       
+      // Skip disposed or non-pending nodes
       if (flags & STATUS_DISPOSED || !(flags & STATUS_PENDING)) {
         stack = stack.next;
         continue;
       }
       
+      // No dependencies - just recompute
       if (!node.dependencies) {
         recomputeNode(node);
         stack = stack.next;
         continue;
       }
 
-      // Start from saved position or beginning
-      let dep: Dependency | undefined = stack.dep || node.dependencies;
+      // Start checking dependencies
+      let dep: Dependency | undefined = node.dependencies;
       
-      // Check if returning from recursive pull
-      if (stack.dep && dep && dep.producer.flags & DIRTY) {
-        recomputeNode(node);
-        stack = stack.next;
-        continue;
-      }
-      
-      // Skip the already-processed dependency if returning
-      if (stack.dep && dep) dep = dep.nextDependency;
-      
+      // Check remaining dependencies
       while (dep) {
         const producer = dep.producer;
         const pFlags = producer.flags;
         
+        // If dependency is already dirty, we need to update
         if (pFlags & DIRTY) {
-          recomputeNode(node);
-          stack = stack.next;
-          break;
+          stack.needsUpdate = true;
+          // Continue checking other deps to potentially update them too
+          dep = dep.nextDependency;
+          continue;
         }
         
+        // If dependency is a pending computed, update it inline
         if ('compute' in producer && pFlags & STATUS_PENDING) {
-          stack.dep = dep;
-          stack = { node: producer, dep: undefined, next: stack };
-          break;
+          // Update the computed inline and check if it became dirty
+          const changed = recomputeNode(producer);
+          if (changed) {
+            stack.needsUpdate = true;
+          }
+          // Continue to next dependency
+          dep = dep.nextDependency;
+          continue;
         }
         
         dep = dep.nextDependency;
       }
       
+      // If we've checked all dependencies
       if (!dep) {
-        node.flags = flags & ~MASK_STATUS;
-        stack = stack?.next;
+        if (stack.needsUpdate) {
+          recomputeNode(node);
+        } else {
+          // Node is clean - clear flags immediately
+          node.flags = flags & ~(MASK_STATUS | DIRTY);
+        }
+        stack = stack.next;
       }
     }
 
