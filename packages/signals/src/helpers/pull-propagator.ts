@@ -9,6 +9,12 @@ export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
 
+interface StackFrame {
+  node: DerivedNode;
+  dep: Dependency | undefined;
+  next: StackFrame | undefined;
+}
+
 export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdges }): PullPropagator {
   const { startTracking, endTracking } = ctx.graphEdges;
 
@@ -46,12 +52,6 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
     return valueChanged;
   };
 
-  interface StackFrame {
-    node: DerivedNode;
-    dep: Dependency | undefined;
-    next: StackFrame | undefined;
-  }
-
   const pullUpdates = (rootNode: DerivedNode): void => {
     let stack: StackFrame | undefined = { node: rootNode, dep: undefined, next: undefined };
 
@@ -87,7 +87,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         const producer = dep.producer;
         const pFlags = producer.flags;
         
-        if (pFlags & DIRTY || ('compute' in producer && producer.lastChangedVersion > node.lastComputedVersion)) {
+        if (pFlags & DIRTY) {
           recomputeNode(node);
           stack = stack.next;
           break;
