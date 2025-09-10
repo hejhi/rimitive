@@ -46,11 +46,10 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
     return valueChanged;
   };
 
-  // Stack frame for iterative traversal
+  // Minimal stack frame with only 2 data properties
   interface StackFrame {
     node: DerivedNode;
-    dependency: Dependency | undefined;
-    afterPull: boolean;
+    checkDep: Dependency | undefined; // Dep to check after pull, or undefined to start fresh
     next: StackFrame | undefined;
   }
 
@@ -58,14 +57,12 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
     // Initialize stack with root node
     let stack: StackFrame | undefined = {
       node: rootNode,
-      dependency: undefined,
-      afterPull: false,
+      checkDep: undefined,
       next: undefined,
     };
 
     while (stack) {
-      const frame = stack;
-      const node = frame.node;
+      const node = stack.node;
       const flags = node.flags;
       
       // Fast path: disposed or already clean
@@ -81,71 +78,104 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         continue;
       }
 
-      // Initialize dependency traversal or continue from where we left off
-      if (!frame.dependency && !frame.afterPull) {
-        frame.dependency = node.dependencies;
-      }
-
-      // Process dependencies
-      while (frame.dependency) {
-        const current = frame.dependency;
-        const producer = current.producer;
-        const producerFlags = producer.flags;
-        
-        // If we're returning from a "recursive" call
-        if (frame.afterPull) {
-          frame.afterPull = false;
-          // Check if the pulled computed is now DIRTY
-          if (producer.flags & DIRTY) {
-            recomputeNode(node);
-            stack = stack.next;
-            break;
-          }
-          // Move to next dependency
-          frame.dependency = current.nextDependency;
-          continue;
-        }
-        
-        // For signals: check DIRTY flag (set on write, cleared on read)
-        if (producerFlags & DIRTY) {
+      // If returning from a pull, check if the dependency changed
+      if (stack.checkDep) {
+        const checkProducer = stack.checkDep.producer;
+        if (checkProducer.flags & DIRTY) {
           recomputeNode(node);
           stack = stack.next;
-          break;
+          continue;
         }
+        // Continue checking from next dependency
+        let current = stack.checkDep.nextDependency;
+        stack.checkDep = undefined; // Clear the check flag
         
-        // For computeds: check version (only computeds have meaningful versions)
-        if ('compute' in producer) {
-          // If already computed this cycle and changed after we last computed
-          if (producer.lastChangedVersion > node.lastComputedVersion) {
+        // Continue traversing remaining dependencies
+        while (current) {
+          const producer = current.producer;
+          const producerFlags = producer.flags;
+          
+          // For signals: check DIRTY flag
+          if (producerFlags & DIRTY) {
             recomputeNode(node);
             stack = stack.next;
             break;
           }
           
-          // If PENDING, we need to pull it to know if it changed
-          if (producerFlags & STATUS_PENDING) {
-            // Mark that we should check this dependency after pulling
-            frame.afterPull = true;
-            // Push new frame for the producer
-            stack = {
-              node: producer,
-              dependency: undefined,
-              afterPull: false,
-              next: stack,
-            };
+          // For computeds: check version
+          if ('compute' in producer) {
+            if (producer.lastChangedVersion > node.lastComputedVersion) {
+              recomputeNode(node);
+              stack = stack.next;
+              break;
+            }
+            
+            // If PENDING, push it for processing
+            if (producerFlags & STATUS_PENDING) {
+              // Store which dependency to check when we return
+              stack.checkDep = current;
+              // Push new frame for the producer
+              stack = {
+                node: producer,
+                checkDep: undefined,
+                next: stack,
+              };
+              break;
+            }
+          }
+          
+          current = current.nextDependency;
+        }
+        
+        // If we broke out of the loop, continue the outer while
+        if (current) continue;
+      } else {
+        // First time checking this node's dependencies
+        let current = node.dependencies;
+        
+        while (current) {
+          const producer = current.producer;
+          const producerFlags = producer.flags;
+          
+          // For signals: check DIRTY flag
+          if (producerFlags & DIRTY) {
+            recomputeNode(node);
+            stack = stack.next;
             break;
           }
+          
+          // For computeds: check version
+          if ('compute' in producer) {
+            if (producer.lastChangedVersion > node.lastComputedVersion) {
+              recomputeNode(node);
+              stack = stack.next;
+              break;
+            }
+            
+            // If PENDING, push it for processing
+            if (producerFlags & STATUS_PENDING) {
+              // Store which dependency to check when we return
+              stack.checkDep = current;
+              // Push new frame for the producer
+              stack = {
+                node: producer,
+                checkDep: undefined,
+                next: stack,
+              };
+              break;
+            }
+          }
+          
+          current = current.nextDependency;
         }
-
-        frame.dependency = current.nextDependency;
+        
+        // If we broke out of the loop, continue the outer while
+        if (current) continue;
       }
       
-      // If we've processed all dependencies without needing to recompute
-      if (stack && !frame.dependency && !frame.afterPull) {
-        // No dependencies changed, just clear PENDING status
-        node.flags = flags & ~MASK_STATUS;
-        stack = stack.next;
-      }
+      // No dependencies changed, just clear PENDING status
+      node.flags = flags & ~MASK_STATUS;
+      stack = stack.next;
     }
   };
 
