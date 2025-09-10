@@ -52,9 +52,6 @@ export function createComputedFactory(
       notify: () => undefined,
     };
 
-    // Single-pass update using pullUpdates
-    const update = () => pullUpdates(node);
-
     const computed = (() => {
       // Treat computed exactly like a signal for dependency tracking
       // Register with current consumer FIRST (like signals do)
@@ -63,7 +60,7 @@ export function createComputedFactory(
       // Always link if there's a consumer
       // Create edge to consumer
       if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
-      update();
+      pullUpdates(node);
       
       // Clear DIRTY flag after reading (like signals do)
       // This prevents downstream computeds from thinking we changed when we didn't
@@ -79,7 +76,7 @@ export function createComputedFactory(
       ctx.currentConsumer = null; // Prevent ALL dependency tracking
 
       try {
-        update();
+        pullUpdates(node);
       } finally {
         ctx.currentConsumer = prevConsumer; // Restore back to previous state
       }
