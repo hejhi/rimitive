@@ -22,12 +22,13 @@ export function createComputedContext(): GlobalContext &
   const pushPropagator = createPushPropagator();
 
   // Extend baseCtx in place to ensure nodeScheduler uses the same context object
-  const ctx = Object.assign(baseCtx, {
+  const ctx = {
+    ...baseCtx,
     graphEdges,
     pushPropagator,
     pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>, // Will be set below
     nodeScheduler: null as unknown as NodeScheduler, // Will be set below
-  });
+  };
 
   // Now create pullPropagator with context
   const pullPropagator = createPullPropagator(ctx);

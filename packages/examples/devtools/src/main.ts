@@ -1,10 +1,37 @@
 import { createSignalAPI } from '@lattice/signals/api';
-import { createDefaultContext } from '@lattice/signals/default-context';
 import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
 import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
 import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
 import { createBatchFactory } from '@lattice/signals/batch';
+import { createBaseContext } from '@lattice/signals/context';
+import { createGraphEdges } from '@lattice/signals/helpers/graph-edges';
+import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
+import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
+import { createNodeScheduler, NodeScheduler } from '@lattice/signals/helpers/node-scheduler';
 type LatticeExtension<N extends string, M> = { name: N; method: M };
+
+function createContext() {
+  const baseCtx = createBaseContext();
+  const graphEdges = createGraphEdges();
+  const pushPropagator = createPushPropagator();
+
+  // Extend baseCtx in place to ensure nodeScheduler uses the same context object
+  const ctx = {
+    ...baseCtx,
+    graphEdges,
+    pushPropagator,
+    pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>,
+    nodeScheduler: null as unknown as NodeScheduler,
+  };
+
+  const pullPropagator = createPullPropagator(ctx);
+  ctx.pullPropagator = pullPropagator;
+  const nodeScheduler = createNodeScheduler(ctx);
+
+  ctx.nodeScheduler = nodeScheduler;
+
+  return ctx;
+}
 
 // Create signal API instance
 const signalAPI = createSignalAPI({
@@ -12,7 +39,7 @@ const signalAPI = createSignalAPI({
   computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
   effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
   batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
-}, createDefaultContext());
+}, createContext());
 
 const signal = signalAPI.signal as <T>(value: T) => SignalInterface<T>;
 const computed = signalAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;

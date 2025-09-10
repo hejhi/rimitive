@@ -26,11 +26,6 @@
       "import": "./dist/batch.js",
       "types": "./dist/batch.d.ts"
     },
-    "./default-context": {
-      "import": "./dist/default-context.js",
-      "types": "./dist/default-context.d.ts"
-    },
-    
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"

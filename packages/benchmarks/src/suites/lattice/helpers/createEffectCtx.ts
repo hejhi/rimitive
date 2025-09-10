@@ -16,12 +16,12 @@ export function createEffectContext(): GlobalContext &
   const graphEdges = createGraphEdges();
   const pushPropagator = createPushPropagator();
 
-  // Extend baseCtx in place to ensure nodeScheduler uses the same context object
-  const ctx = Object.assign(baseCtx, {
+  const ctx = {
+    ...baseCtx,
     graphEdges,
     pushPropagator,
     nodeScheduler: null as unknown as NodeScheduler, // Will be set below
-  });
+  };
 
   // Now create nodeScheduler with the same ctx object
   const nodeScheduler = createNodeScheduler(ctx);
