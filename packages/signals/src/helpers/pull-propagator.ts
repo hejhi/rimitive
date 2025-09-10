@@ -131,7 +131,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         if (current) continue;
       } else {
         // First time checking this node's dependencies
-        let current = node.dependencies;
+        let current: Dependency | undefined = node.dependencies;
         
         while (current) {
           const producer = current.producer;
@@ -173,9 +173,9 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         if (current) continue;
       }
       
-      // No dependencies changed, just clear PENDING status
+      // No dependencies changed, just clear PENDING status  
       node.flags = flags & ~MASK_STATUS;
-      stack = stack.next;
+      stack = stack?.next;
     }
   };
 
