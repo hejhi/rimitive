@@ -31,6 +31,9 @@ interface ComputedNode<T> extends DerivedNode {
 
 const { STATUS_PENDING } = CONSTANTS;
 
+// Shared NOOP function to avoid allocating one per computed
+const NOOP = () => undefined;
+
 export function createComputedFactory(
   ctx: ComputedContext
 ): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
@@ -49,7 +52,7 @@ export function createComputedFactory(
       dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
       flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation
       compute,
-      notify: () => undefined,
+      notify: NOOP,
     };
 
     const computed = (() => {
