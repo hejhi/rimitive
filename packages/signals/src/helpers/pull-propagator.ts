@@ -30,13 +30,9 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       // Update value and return whether it changed
       if (newValue !== oldValue) {
         node.value = newValue;
-        node.lastChangedVersion = ctx.trackingVersion;
         valueChanged = true;
       }
     } finally {
-      // Mark as computed in this tracking cycle
-      node.lastComputedVersion = ctx.trackingVersion;
-      
       // End tracking, restore context, and prune stale dependencies
       endTracking(ctx, node, prevConsumer);
     }

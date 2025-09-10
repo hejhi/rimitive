@@ -48,8 +48,6 @@ export function createComputedFactory(
       dependencies: undefined, // Will be set to old dependencies when they exist
       dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
       flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation
-      lastComputedVersion: -1, // Never computed yet
-      lastChangedVersion: -1, // Never changed yet
       compute,
       notify: () => undefined,
     };

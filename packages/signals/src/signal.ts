@@ -54,7 +54,6 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       dependents: undefined,
       dependentsTail: undefined,
       flags: 0,
-      lastChangedVersion: 0, // Signals start at version 0
     };
 
     

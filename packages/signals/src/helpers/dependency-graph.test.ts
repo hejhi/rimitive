@@ -40,7 +40,7 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependentsTail: undefined,
         value: 0,
-        lastChangedVersion: 0,
+
       };
       
       const target: ConsumerNode = {
@@ -71,7 +71,7 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependentsTail: undefined,
         value: 0,
-        lastChangedVersion: 0,
+
       };
       
       const target: ConsumerNode = {
@@ -102,7 +102,7 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependentsTail: undefined,
         value: 0,
-        lastChangedVersion: 0,
+
       };
       
       const target: ConsumerNode = {
@@ -158,7 +158,7 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependentsTail: undefined,
         value: 0,
-        lastChangedVersion: 0,
+
       };
       
       const target: ConsumerNode = {
@@ -192,7 +192,7 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependentsTail: undefined,
           value: 0,
-          lastChangedVersion: 0,
+  
         };
         
         const target: ConsumerNode = {
@@ -219,7 +219,7 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependentsTail: undefined,
           value: 0,
-          lastChangedVersion: 0,
+  
         };
         
         const target1: ConsumerNode = {
@@ -261,7 +261,7 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependentsTail: undefined,
           value: 0,
-          lastChangedVersion: 0,
+  
         };
         
         const target: ConsumerNode = {
@@ -290,7 +290,7 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependentsTail: undefined,
           value: 0,
-          lastChangedVersion: 0,
+  
         };
         
         const targets = Array.from({ length: 3 }, (_, i) => ({
@@ -339,7 +339,7 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependentsTail: undefined,
           value: 0,
-          lastChangedVersion: 0,
+  
         };
         const source2: ProducerNode = {
           __type: 'test',
@@ -347,7 +347,7 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependentsTail: undefined,
           value: 0,
-          lastChangedVersion: 0,
+  
         };
         
         const target: ConsumerNode = {

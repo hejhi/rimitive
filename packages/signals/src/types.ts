@@ -44,7 +44,6 @@ export interface ProducerNode extends ReactiveNode {
   value: unknown;
   dependents: Dependency | undefined; // Head of dependent list
   dependentsTail: Dependency | undefined; // Tail of dependent list
-  lastChangedVersion: number; // Version when this node's value last changed
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)
@@ -57,7 +56,6 @@ export interface ConsumerNode extends ReactiveNode {
 
 export interface DerivedNode extends ProducerNode, ConsumerNode {
   compute: () => unknown; // The computation function
-  lastComputedVersion: number; // Tracking cycle version when node was last computed
 }
 
 // PATTERN: Deferred Execution Queue
