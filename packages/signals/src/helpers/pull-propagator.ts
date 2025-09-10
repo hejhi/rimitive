@@ -1,7 +1,7 @@
 import type { Dependency, DerivedNode } from '../types';
 import type { GlobalContext } from '../context';
-import type { GraphEdges } from './graph-edges';
 import { CONSTANTS } from '../constants';
+import { GraphEdges } from './graph-edges';
 
 const { STATUS_DISPOSED, MASK_STATUS, STATUS_PENDING, DIRTY } = CONSTANTS;
 
@@ -10,10 +10,10 @@ export interface PullPropagator {
 }
 
 export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdges }): PullPropagator {
+  const { startTracking, endTracking } = ctx.graphEdges;
+
   // Inline recomputation logic here since we have access to context
   const recomputeNode = (node: DerivedNode): boolean => {
-    const { startTracking, endTracking } = ctx.graphEdges;
-    
     const prevConsumer = startTracking(ctx, node);
     let valueChanged = false;
 
@@ -57,9 +57,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       recomputeNode(node);
       return;
     }
-    
-    // Check dependencies recursively
-    let shouldRecompute = false;
+
     let current: Dependency | undefined = node.dependencies;
 
     while (current) {
@@ -68,16 +66,16 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       
       // For signals: check DIRTY flag (set on write, cleared on read)
       if (producerFlags & DIRTY) {
-        shouldRecompute = true;
-        break;
+        recomputeNode(node);
+        return;
       }
       
       // For computeds: check version (only computeds have meaningful versions)
       if ('compute' in producer) {
         // If already computed this cycle and changed after we last computed
         if (producer.lastChangedVersion > node.lastComputedVersion) {
-          shouldRecompute = true;
-          break;
+          recomputeNode(node);
+          return;
         }
         
         // If PENDING, we need to pull it to know if it changed
@@ -87,8 +85,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
           // After pulling, check if value changed via DIRTY flag
           // DIRTY will be set if the computed's value changed during recomputation
           if (producer.flags & DIRTY) {
-            shouldRecompute = true;
-            break;
+            recomputeNode(node);
+            return;
           }
         }
       }
@@ -96,12 +94,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       current = current.nextDependency;
     }
     
-    if (shouldRecompute) {
-      recomputeNode(node);
-    } else {
-      // No dependencies changed, just clear PENDING status
-      node.flags = flags & ~MASK_STATUS;
-    }
+    // No dependencies changed, just clear PENDING status
+    node.flags = flags & ~MASK_STATUS;
   };
 
   return { pullUpdates };

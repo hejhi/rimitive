@@ -50,7 +50,7 @@ export function createComputedFactory(
       flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation
       lastComputedVersion: -1, // Never computed yet
       lastChangedVersion: -1, // Never changed yet
-      compute: compute as () => unknown, // Store the compute function directly
+      compute,
       notify: () => undefined,
     };
 
