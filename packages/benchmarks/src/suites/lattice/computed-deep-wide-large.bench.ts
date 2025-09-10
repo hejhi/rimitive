@@ -10,10 +10,11 @@ import { runBenchmark } from '../../utils/benchmark-runner';
 import {
   signal as preactSignal,
   computed as preactComputed,
+  ReadonlySignal,
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
 import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory } from '@lattice/signals/computed';
+import { ComputedFunction, createComputedFactory } from '@lattice/signals/computed';
 import {
   signal as alienSignal,
   computed as alienComputed,
@@ -47,8 +48,7 @@ group('Computed Deep & Wide (5x3 tree - wider)', () => {
         const allLevels = [currentLevel];
         
         for (let depth = 0; depth < DEPTH; depth++) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const nextLevel: any[] = [];
+          const nextLevel: ComputedFunction<number>[] = [];
           
           for (const parent of currentLevel) {
             for (let w = 0; w < WIDTH; w++) {
@@ -60,7 +60,6 @@ group('Computed Deep & Wide (5x3 tree - wider)', () => {
             }
           }
           
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           currentLevel = nextLevel;
           allLevels.push(currentLevel);
         }
@@ -85,8 +84,7 @@ group('Computed Deep & Wide (5x3 tree - wider)', () => {
         const allLevels = [currentLevel];
         
         for (let depth = 0; depth < DEPTH; depth++) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const nextLevel: any[] = [];
+          const nextLevel: ReadonlySignal<number>[] = [];
           
           for (const parent of currentLevel) {
             for (let w = 0; w < WIDTH; w++) {
@@ -97,8 +95,7 @@ group('Computed Deep & Wide (5x3 tree - wider)', () => {
               nextLevel.push(child);
             }
           }
-          
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+
           currentLevel = nextLevel;
           allLevels.push(currentLevel);
         }
@@ -123,8 +120,7 @@ group('Computed Deep & Wide (5x3 tree - wider)', () => {
         const allLevels = [currentLevel];
         
         for (let depth = 0; depth < DEPTH; depth++) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const nextLevel: any[] = [];
+          const nextLevel: (() => number)[] = [];
           
           for (const parent of currentLevel) {
             for (let w = 0; w < WIDTH; w++) {
@@ -136,7 +132,6 @@ group('Computed Deep & Wide (5x3 tree - wider)', () => {
             }
           }
           
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
           currentLevel = nextLevel;
           allLevels.push(currentLevel);
         }
