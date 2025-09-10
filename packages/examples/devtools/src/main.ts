@@ -1,6 +1,6 @@
 import { createSignalAPI } from '@lattice/signals/api';
 import { createSignalFactory, type SignalInterface } from '@lattice/signals/signal';
-import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
+import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
 import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
 import { createBatchFactory } from '@lattice/signals/batch';
 import { createBaseContext } from '@lattice/signals/context';
@@ -34,15 +34,34 @@ function createContext() {
 }
 
 // Create signal API instance
-const signalAPI = createSignalAPI({
-  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
-  computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
-  effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
-  batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
-}, createContext());
+const signalAPI = createSignalAPI(
+  {
+    signal: createSignalFactory as (
+      ctx: unknown
+    ) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
+    computed: createComputedFactory as (
+      ctx: unknown
+    ) => LatticeExtension<
+      'computed',
+      <T>(compute: () => T) => ComputedFunction<T>
+    >,
+    effect: createEffectFactory as (
+      ctx: unknown
+    ) => LatticeExtension<
+      'effect',
+      (fn: () => void | (() => void)) => EffectDisposer
+    >,
+    batch: createBatchFactory as (
+      ctx: unknown
+    ) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+  },
+  createContext()
+);
 
 const signal = signalAPI.signal as <T>(value: T) => SignalInterface<T>;
-const computed = signalAPI.computed as <T>(compute: () => T) => ComputedInterface<T>;
+const computed = signalAPI.computed as <T>(
+  compute: () => T
+) => ComputedFunction<T>;
 const effect = signalAPI.effect as (fn: () => void | (() => void)) => EffectDisposer;
 const batch = signalAPI.batch as <T>(fn: () => T) => T;
 

@@ -13,9 +13,9 @@ import { PullPropagator } from './helpers/pull-propagator';
 
 // Single function interface for both read and peek
 // The function also implements ProducerNode and ConsumerNode to expose graph properties
-export interface ComputedFunction<T = unknown> extends DerivedNode {
-  (): T;                    // Read operation (tracks dependencies)
-  peek(): T;                // Non-tracking read
+export interface ComputedFunction<T = unknown> {
+  (): T;
+  peek(): T;
 }
 
 export type ComputedContext = GlobalContext & {
@@ -24,15 +24,12 @@ export type ComputedContext = GlobalContext & {
 }
 
 // Internal computed state that gets bound to the function
-interface ComputedState<T> extends DerivedNode {
+interface ComputedNode<T> extends DerivedNode {
   __type: 'computed';
-  value: T; // Cached computed value
+  value: T;
 }
 
 const { STATUS_PENDING, DIRTY } = CONSTANTS;
-
-// BACKWARDS COMPATIBILITY: Export interface alias
-export type ComputedInterface<T = unknown> = ComputedFunction<T>;
 
 export function createComputedFactory(
   ctx: ComputedContext
@@ -43,7 +40,7 @@ export function createComputedFactory(
   } = ctx;
 
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
-    const node: ComputedState<T> = {
+    const node: ComputedNode<T> = {
       __type: 'computed' as const,
       value: undefined as T,
       dependents: undefined,

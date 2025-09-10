@@ -35,7 +35,8 @@ export type SignalContext = GlobalContext & {
   nodeScheduler: NodeScheduler;
 };
 
-interface SignalState<T> extends ProducerNode {
+interface SignalNode<T> extends ProducerNode {
+  __type: 'signal';
   value: T;
 }
 
@@ -47,7 +48,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
   } = ctx;
   
   function createSignal<T>(initialValue: T): SignalFunction<T> {
-    const node: SignalState<T> = {
+    const node: SignalNode<T> = {
       __type: 'signal',
       value: initialValue,
       dependents: undefined,
@@ -101,9 +102,3 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     method: createSignal
   };
 }
-
-// ALIEN-SIGNALS PATTERN: Export the function-based Signal type
-export type Signal<T = unknown> = SignalFunction<T>;
-
-// BACKWARDS COMPATIBILITY: Export interface alias
-export type SignalInterface<T = unknown> = SignalFunction<T>;

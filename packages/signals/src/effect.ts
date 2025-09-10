@@ -9,14 +9,11 @@ export type EffectContext = GlobalContext & {
   graphEdges: GraphEdges;
 };
 
-export interface EffectInterface extends ScheduledNode {
+interface EffectNode extends ScheduledNode {
   __type: 'effect';
   subscribe?: (listener: () => void) => () => void;
   _cleanup: (() => void) | undefined; // Cleanup from previous run
 }
-
-export type EffectCleanup = void | (() => void);
-export type Unsubscribe = () => void;
 
 // Dispose function with attached effect instance
 export interface EffectDisposer {
@@ -34,10 +31,9 @@ export function createEffectFactory(
     graphEdges: { startTracking, endTracking, detachAll }
   } = ctx;
 
-  // CLOSURE PATTERN: Create effect with closure-captured state for better V8 optimization
   function createEffect(fn: () => void | (() => void)): EffectDisposer {
     // State object captured in closure - no binding needed
-    const node: EffectInterface = {
+    const node: EffectNode = {
       __type: 'effect' as const,
       _cleanup: undefined as (() => void) | undefined,
       flags: 0,

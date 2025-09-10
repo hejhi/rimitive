@@ -15,7 +15,7 @@ import {
 } from '@preact/signals-core';
 import { createSignalAPI } from '@lattice/signals/api';
 import { createSignalFactory } from '@lattice/signals/signal';
-import { createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
+import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
 import { createBatchFactory } from '@lattice/signals/batch';
 
 import {
@@ -55,7 +55,7 @@ group('Batch Multiple Updates - Scaling', () => {
         const signals = Array.from({ length: signalCount }, () => latticeSignal(0));
         
         // Multiple layers of computeds to show cascade effects
-        const partialSums: ComputedInterface<number>[] = [];
+        const partialSums: ComputedFunction<number>[] = [];
         for (let i = 0; i < signalCount; i += 2) {
           const s1 = signals[i]!;
           const s2 = signals[i + 1] || signals[i]!;
@@ -85,7 +85,7 @@ group('Batch Multiple Updates - Scaling', () => {
         const signalCount = state.get('signals');
         const signals = Array.from({ length: signalCount }, () => latticeSignal(0));
         
-        const partialSums: ComputedInterface<number>[] = [];
+        const partialSums: ComputedFunction<number>[] = [];
         for (let i = 0; i < signalCount; i += 2) {
           const s1 = signals[i]!;
           const s2 = signals[i + 1] || signals[i]!;

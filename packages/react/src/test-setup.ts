@@ -4,8 +4,8 @@ import { afterEach } from 'vitest';
 import React, { ReactElement } from 'react';
 import { render } from '@testing-library/react';
 import { createSignalAPI, GlobalContext, type FactoriesToAPI } from '@lattice/signals/api';
-import { createSignalFactory, SignalContext, type SignalInterface } from '@lattice/signals/signal';
-import { ComputedContext, createComputedFactory, type ComputedInterface } from '@lattice/signals/computed';
+import { createSignalFactory, SignalContext, SignalFunction } from '@lattice/signals/signal';
+import { ComputedContext, createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
 import { createEffectFactory, EffectContext, type EffectDisposer } from '@lattice/signals/effect';
 import { BatchContext, createBatchFactory } from '@lattice/signals/batch';
 import type { LatticeExtension } from '@lattice/lattice';
@@ -45,10 +45,24 @@ export function createContext(): GlobalContext &
 
 // Define the factories type for consistent usage
 const testFactories = {
-  signal: createSignalFactory as (ctx: unknown) => LatticeExtension<'signal', <T>(value: T) => SignalInterface<T>>,
-  computed: createComputedFactory as (ctx: unknown) => LatticeExtension<'computed', <T>(compute: () => T) => ComputedInterface<T>>,
-  effect: createEffectFactory as (ctx: unknown) => LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
-  batch: createBatchFactory as (ctx: unknown) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
+  signal: createSignalFactory as (
+    ctx: unknown
+  ) => LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>,
+  computed: createComputedFactory as (
+    ctx: unknown
+  ) => LatticeExtension<
+    'computed',
+    <T>(compute: () => T) => ComputedFunction<T>
+  >,
+  effect: createEffectFactory as (
+    ctx: unknown
+  ) => LatticeExtension<
+    'effect',
+    (fn: () => void | (() => void)) => EffectDisposer
+  >,
+  batch: createBatchFactory as (
+    ctx: unknown
+  ) => LatticeExtension<'batch', <T>(fn: () => T) => T>,
 } as const;
 
 // Type alias for the API created with our standard factories

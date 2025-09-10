@@ -16,7 +16,4 @@ export type {
   SignalProviderProps,
 } from './signals';
 
-// Re-export commonly used types from @lattice packages
-export type { Signal } from '@lattice/signals/signal';
-export type { ComputedInterface } from '@lattice/signals/computed';
 export type { LatticeExtension, ExtensionsToContext } from '@lattice/lattice';
