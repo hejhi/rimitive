@@ -60,7 +60,12 @@ export function createComputedFactory(
       // Always link if there's a consumer
       // Create edge to consumer
       if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
-      pullUpdates(node);
+      
+      // Fast-path: Only call pullUpdates if node needs updating
+      const flags = node.flags;
+      if (flags & STATUS_PENDING) {
+        pullUpdates(node);
+      }
 
       return node.value;
     }) as ComputedFunction<T>;
@@ -72,7 +77,11 @@ export function createComputedFactory(
       ctx.currentConsumer = null; // Prevent ALL dependency tracking
 
       try {
-        pullUpdates(node);
+        // Fast-path: Only call pullUpdates if node needs updating
+        const flags = node.flags;
+        if (flags & STATUS_PENDING) {
+          pullUpdates(node);
+        }
       } finally {
         ctx.currentConsumer = prevConsumer; // Restore back to previous state
       }
