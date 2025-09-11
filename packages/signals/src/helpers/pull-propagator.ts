@@ -3,7 +3,7 @@ import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
 
-const { STATUS_DISPOSED, MASK_STATUS, STATUS_PENDING, DIRTY } = CONSTANTS;
+const { STATUS_PENDING, DIRTY, MASK_STATUS } = CONSTANTS;
 
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
@@ -35,12 +35,10 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       // End tracking, restore context, and prune stale dependencies
       endTracking(ctx, node, prevConsumer);
     }
-    
-    const flags = node.flags;
 
     // Set DIRTY property if changed, clear if not changed
-    if (valueChanged) node.flags = (flags & ~MASK_STATUS) | DIRTY;
-    else node.flags = flags & ~(MASK_STATUS | DIRTY); // Clear both status AND DIRTY flag when value doesn't change
+    if (valueChanged) node.flags = DIRTY;
+    else node.flags = 0; // Clear both status AND DIRTY flag when value doesn't change
 
     return valueChanged;
   };
@@ -55,7 +53,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       stack = stack.next;
 
       // Skip disposed or already-processed nodes
-      if (flags & STATUS_DISPOSED || !(flags & STATUS_PENDING)) continue;
+      // Continue only if PENDING and not DISPOSED
+      if ((flags & MASK_STATUS) !== STATUS_PENDING) continue;
 
       // No dependencies - just recompute
       if (!node.dependencies) {
@@ -87,7 +86,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       }
 
       // No dependencies were dirty, clear flags
-      node.flags = flags & ~(MASK_STATUS | DIRTY); // Node is clean - clear flags immediately
+      node.flags = 0; // Node is clean - clear flags immediately
     } while (stack)
   };
 
