@@ -64,19 +64,17 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
     let stack: StackFrame | undefined = { node: rootNode, next: undefined };
 
     while (stack) {
-      const { node } = stack;
+      const node = stack.node;
       const flags = node.flags;
 
+      stack = stack.next;
+
       // Skip disposed or non-pending nodes
-      if (flags & STATUS_DISPOSED || !(flags & STATUS_PENDING)) {
-        stack = stack.next;
-        continue;
-      }
+      if (flags & STATUS_DISPOSED || !(flags & STATUS_PENDING)) continue;
 
       // No dependencies - just recompute
       if (!node.dependencies) {
         recomputeNode(node);
-        stack = stack.next;
         continue;
       }
 
@@ -111,8 +109,6 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       if (needsUpdate) recomputeNode(node);
       else node.flags = flags & ~(MASK_STATUS | DIRTY); // Node is clean - clear flags immediately
-
-      stack = stack.next;
     }
 
     rootNode.flags &= ~DIRTY;
