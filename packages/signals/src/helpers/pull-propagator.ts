@@ -73,7 +73,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         stack = stack.next;
         continue;
       }
-      
+
       // No dependencies - just recompute
       if (!node.dependencies) {
         recomputeNode(node);
@@ -83,43 +83,33 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // Start checking dependencies
       let dep: Dependency | undefined = node.dependencies;
-      
+
       // Check remaining dependencies
       while (dep) {
         const producer = dep.producer;
         const pFlags = producer.flags;
-        
+
+        dep = dep.nextDependency;
+
         // If dependency is already dirty, we need to update
         if (pFlags & DIRTY) {
           stack.needsUpdate = true;
-          // Continue checking other deps to potentially update them too
-          dep = dep.nextDependency;
           continue;
         }
-        
+
         // If dependency is a pending computed, update it inline
         if ('compute' in producer && pFlags & STATUS_PENDING) {
           const needsUpdate = recomputeNode(producer);
 
           // Update the computed inline and check if it became dirty
           if (needsUpdate) stack.needsUpdate = needsUpdate;
-
-          // Continue to next dependency
-          dep = dep.nextDependency;
-          continue;
         }
-        
-        dep = dep.nextDependency;
       }
-      
-      // If we've checked all dependencies
-      if (!dep) {
-        if (stack.needsUpdate) recomputeNode(node);
-        // Node is clean - clear flags immediately
-        else node.flags = flags & ~(MASK_STATUS | DIRTY);
 
-        stack = stack.next;
-      }
+      if (stack.needsUpdate) recomputeNode(node);
+      else node.flags = flags & ~(MASK_STATUS | DIRTY); // Node is clean - clear flags immediately
+
+      stack = stack.next;
     }
 
     rootNode.flags &= ~DIRTY;
