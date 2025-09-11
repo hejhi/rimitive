@@ -1,4 +1,4 @@
-import type { Dependency, DerivedNode } from '../types';
+import type { DerivedNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
@@ -54,15 +54,15 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       // Continue only if PENDING and not DISPOSED
       if ((flags & MASK_STATUS) !== STATUS_PENDING) continue;
 
+      // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
+      let dep = node.dependencies;
+
       // No dependencies - just recompute
       if (!node.dependencies) {
         recomputeNode(node);
         continue;
       }
 
-      // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
-      let dep: Dependency | undefined = node.dependencies;
-      
       while (dep) {
         const producer = dep.producer;
         const pFlags = producer.flags;
