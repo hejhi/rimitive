@@ -31,14 +31,14 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         node.flags = DIRTY;
         return true;
       }
+      
+      // Value didn't change, clear flags
+      node.flags = 0;
+      return false;
     } finally {
       // End tracking, restore context, and prune stale dependencies
       endTracking(ctx, node, prevConsumer);
     }
-
-    // Value didn't change, clear flags
-    node.flags = 0;
-    return false;
   };
 
   const pullUpdates = (rootNode: DerivedNode): void => {
