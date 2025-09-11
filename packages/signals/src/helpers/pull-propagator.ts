@@ -82,7 +82,6 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       
       // All computed dependencies have been processed, now check if any are dirty
       dep = node.dependencies;
-      let needsUpdate = false;
       
       while (dep) {
         const producer = dep.producer;
@@ -90,15 +89,15 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
         // If dependency is dirty (signal or computed), we need to update
         if (pFlags & DIRTY) {
-          needsUpdate = true;
-          break; // No need to check further dependencies
+          recomputeNode(node);
+          continue traversal; // Done with this node
         }
 
         dep = dep.nextDependency;
       }
 
-      if (needsUpdate) recomputeNode(node);
-      else node.flags = flags & ~(MASK_STATUS | DIRTY); // Node is clean - clear flags immediately
+      // No dependencies were dirty, clear flags
+      node.flags = flags & ~(MASK_STATUS | DIRTY); // Node is clean - clear flags immediately
     }
 
     rootNode.flags &= ~DIRTY;
