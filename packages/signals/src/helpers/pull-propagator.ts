@@ -39,23 +39,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
     const flags = node.flags;
 
     // Set DIRTY property if changed, clear if not changed
-    if (valueChanged) {
-      node.flags = (flags & ~MASK_STATUS) | DIRTY;
-      
-      // Use shallow propagation on value change.
-      let dep: Dependency | undefined = node.dependents;
-
-      while (dep) {
-        const consumer = dep.consumer;
-        const flags = consumer.flags;
-
-        // Mark as DIRTY if it's PENDING
-        if (flags & STATUS_PENDING) consumer.flags = flags | DIRTY;
-
-        dep = dep.nextDependent;
-      }
-    // Clear both status AND DIRTY flag when value doesn't change
-    } else node.flags = flags & ~(MASK_STATUS | DIRTY);
+    if (valueChanged) node.flags = (flags & ~MASK_STATUS) | DIRTY;
+    else node.flags = flags & ~(MASK_STATUS | DIRTY); // Clear both status AND DIRTY flag when value doesn't change
 
     return valueChanged;
   };
