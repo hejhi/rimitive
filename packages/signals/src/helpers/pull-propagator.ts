@@ -58,7 +58,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       let dep = node.dependencies;
 
       // No dependencies - just recompute
-      if (!node.dependencies) {
+      if (!dep) {
         recomputeNode(node);
         continue;
       }
