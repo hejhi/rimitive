@@ -99,8 +99,10 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         
         // If dependency is a pending computed, update it inline
         if ('compute' in producer && pFlags & STATUS_PENDING) {
+          const needsUpdate = recomputeNode(producer);
+
           // Update the computed inline and check if it became dirty
-          stack.needsUpdate = recomputeNode(producer);
+          if (needsUpdate) stack.needsUpdate = needsUpdate;
 
           // Continue to next dependency
           dep = dep.nextDependency;
