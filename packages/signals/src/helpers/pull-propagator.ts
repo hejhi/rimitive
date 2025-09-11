@@ -57,10 +57,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
           dep = dep.nextDependent;
         }
       }
-    } else {
-      // Clear both status AND DIRTY flag when value doesn't change
-      node.flags = node.flags & ~(MASK_STATUS | DIRTY);
-    }
+    // Clear both status AND DIRTY flag when value doesn't change
+    } else node.flags = node.flags & ~(MASK_STATUS | DIRTY);
     
     return valueChanged;
   };
