@@ -37,29 +37,27 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       endTracking(ctx, node, prevConsumer);
     }
     
+    const flags = node.flags;
+
     // Set DIRTY property if changed, clear if not changed
     if (valueChanged) {
-      node.flags = (node.flags & ~MASK_STATUS) | DIRTY;
+      node.flags = (flags & ~MASK_STATUS) | DIRTY;
       
-      // If node has multiple dependents, use shallow propagation
-      // This avoids deep traversal for nodes with many subscribers
-      const firstDep = node.dependents;
+      // Use shallow propagation on value change.
+      let dep: Dependency | undefined = node.dependents;
 
-      if (firstDep && firstDep.nextDependent) {
-        let dep: Dependency | undefined = firstDep;
+      while (dep) {
+        const consumer = dep.consumer;
+        const flags = consumer.flags;
 
-        while (dep) {
-          const consumer = dep.consumer;
-          const flags = consumer.flags;
-          // Mark as DIRTY if it's PENDING
-          if (flags & STATUS_PENDING) consumer.flags = flags | DIRTY;
+        // Mark as DIRTY if it's PENDING
+        if (flags & STATUS_PENDING) consumer.flags = flags | DIRTY;
 
-          dep = dep.nextDependent;
-        }
+        dep = dep.nextDependent;
       }
     // Clear both status AND DIRTY flag when value doesn't change
-    } else node.flags = node.flags & ~(MASK_STATUS | DIRTY);
-    
+    } else node.flags = flags & ~(MASK_STATUS | DIRTY);
+
     return valueChanged;
   };
 
@@ -69,7 +67,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
     while (stack) {
       const { node } = stack;
       const flags = node.flags;
-      
+
       // Skip disposed or non-pending nodes
       if (flags & STATUS_DISPOSED || !(flags & STATUS_PENDING)) {
         stack = stack.next;
@@ -102,10 +100,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         // If dependency is a pending computed, update it inline
         if ('compute' in producer && pFlags & STATUS_PENDING) {
           // Update the computed inline and check if it became dirty
-          const changed = recomputeNode(producer);
-          if (changed) {
-            stack.needsUpdate = true;
-          }
+          stack.needsUpdate = recomputeNode(producer);
+
           // Continue to next dependency
           dep = dep.nextDependency;
           continue;
@@ -116,12 +112,10 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       
       // If we've checked all dependencies
       if (!dep) {
-        if (stack.needsUpdate) {
-          recomputeNode(node);
-        } else {
-          // Node is clean - clear flags immediately
-          node.flags = flags & ~(MASK_STATUS | DIRTY);
-        }
+        if (stack.needsUpdate) recomputeNode(node);
+        // Node is clean - clear flags immediately
+        else node.flags = flags & ~(MASK_STATUS | DIRTY);
+
         stack = stack.next;
       }
     }
