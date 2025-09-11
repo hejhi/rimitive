@@ -63,9 +63,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         continue;
       }
 
-      // Check all dependencies: defer PENDING computeds, track if any are DIRTY
+      // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
       let dep: Dependency | undefined = node.dependencies;
-      let hasDirty = false;
       
       while (dep) {
         const producer = dep.producer;
@@ -78,18 +77,13 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
           continue traversal; // Process the dependency first
         }
         
-        // Track if any dependency is dirty (we'll use this after checking all)
+        // If dependency is dirty, recompute immediately
         if (pFlags & DIRTY) {
-          hasDirty = true;
+          recomputeNode(node);
+          continue traversal; // Done with this node
         }
         
         dep = dep.nextDependency;
-      }
-      
-      // If we got here, all computed dependencies have been processed
-      if (hasDirty) {
-        recomputeNode(node);
-        continue traversal; // Done with this node
       }
 
       // No dependencies were dirty, clear flags
