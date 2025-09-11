@@ -62,7 +62,7 @@ export function createComputedFactory(
 
       // Always link if there's a consumer
       // Create edge to consumer
-      if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
+      if (consumer) trackDependency(node, consumer);
       
       // Fast-path: Only call pullUpdates if node needs updating
       if (node.flags & STATUS_PENDING) pullUpdates(node);

@@ -1,7 +1,7 @@
 import type { Dependency } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { STATUS_PENDING, STATUS_DISPOSED, MASK_STATUS } = CONSTANTS;
+const { STATUS_PENDING, STATUS_DISPOSED } = CONSTANTS;
 
 interface Stack<T> {
   value: T;
@@ -31,7 +31,7 @@ export function createPushPropagator(): PushPropagator {
       }
 
       // Batch operation: directly set status without helper function
-      consumerNode.flags = (consumerNodeFlags & ~MASK_STATUS) | STATUS_PENDING;
+      consumerNode.flags = STATUS_PENDING;
 
       // Fast path: if node has _notify, it's an effect - schedule it directly
       // This avoids method calls and property lookups

@@ -19,12 +19,6 @@ export interface GlobalContext {
   // Similar to React's Fiber tracking or Vue's targetStack.
   currentConsumer: ConsumerNode | null;
 
-  // ALGORITHM: Version-Based Dependency Tracking
-  // Each recomputation/flush cycle increments this version counter.
-  // Dependencies touched during tracking get marked with the current version.
-  // This enables simple staleness detection: version !== currentVersion means stale.
-  trackingVersion: number;
-
   // ALGORITHM: Transaction Batching
   // Tracks nesting depth of batch() calls for nested transactions.
   // Effects only run when batchDepth returns to 0.
@@ -45,7 +39,6 @@ export interface GlobalContext {
 export function createBaseContext(): GlobalContext {
   return {
     currentConsumer: null,
-    trackingVersion: 0,
     batchDepth: 0,
     queueHead: undefined,
     queueTail: undefined,

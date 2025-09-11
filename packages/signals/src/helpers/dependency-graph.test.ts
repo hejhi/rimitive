@@ -52,14 +52,14 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // First call creates the dependency
-      helpers.trackDependency(source, target, 0);
+      helpers.trackDependency(source, target);
       const firstEdge = target.dependencies;
       
       // Update version
       source.flags |= DIRTY;
       
       // Second call should reuse the same edge
-      helpers.trackDependency(source, target, 0);
+      helpers.trackDependency(source, target);
       
       expect(target.dependencies).toBe(firstEdge);
     });
@@ -83,14 +83,14 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // Create dependency manually
-      helpers.trackDependency(source, target, 0);
+      helpers.trackDependency(source, target);
       const existingNode = target.dependencies;
       
       // Update version
       source.flags |= DIRTY;
       
       // Should find the existing dependency
-      helpers.trackDependency(source, target, 0);
+      helpers.trackDependency(source, target);
       
       expect(target.dependencies).toBe(existingNode);
     });
@@ -113,7 +113,7 @@ describe('Dependency Graph Helpers', () => {
         notify: vi.fn(),
       };
       
-      helpers.trackDependency(source, target, 0);
+      helpers.trackDependency(source, target);
       
       expect(source.dependents).toBeDefined();
       expect(target.dependencies).toBeDefined();
@@ -137,7 +137,7 @@ describe('Dependency Graph Helpers', () => {
       
       // Add dependencies from multiple sources
       sources.forEach((source) => {
-        helpers.trackDependency(source as ProducerNode, target, 0);
+        helpers.trackDependency(source as ProducerNode, target);
       });
       
       // Count sources
@@ -170,13 +170,13 @@ describe('Dependency Graph Helpers', () => {
       };
       
       // Create initial dependency
-      helpers.trackDependency(source, target, 0);
+      helpers.trackDependency(source, target);
       
       // Update version
       source.flags |= DIRTY;
       
       // Update dependency
-      helpers.trackDependency(source, target, 0);
+      helpers.trackDependency(source, target);
       
       // Check that tail was updated correctly
       const node = target.dependencies;
@@ -203,7 +203,7 @@ describe('Dependency Graph Helpers', () => {
           notify: vi.fn(),
         };
         
-        helpers.trackDependency(source, target, 0);
+        helpers.trackDependency(source, target);
         const node = target.dependencies!;
         
         expect(node.producer).toBe(source);
@@ -238,9 +238,9 @@ describe('Dependency Graph Helpers', () => {
           notify: vi.fn(),
         };
         
-        helpers.trackDependency(source, target1, 0);
+        helpers.trackDependency(source, target1);
         const node1 = target1.dependencies!;
-        helpers.trackDependency(source, target2, 0);
+        helpers.trackDependency(source, target2);
         const node2 = target2.dependencies!;
         
         // Source should point to first target (head of list)
@@ -272,7 +272,7 @@ describe('Dependency Graph Helpers', () => {
           notify: vi.fn(),
         };
         
-        helpers.trackDependency(source, target, 0);
+        helpers.trackDependency(source, target);
         const node = target.dependencies!;
         
         const next = helpers.removeDependency(node);
@@ -301,7 +301,7 @@ describe('Dependency Graph Helpers', () => {
         }) as ConsumerNode & { id: number });
         
         // Link all targets
-        targets.forEach(target => helpers.trackDependency(source, target, 0));
+        targets.forEach(target => helpers.trackDependency(source, target));
         
         // Get the edge pointing to the second target (middle one)
         let edge = source.dependents;
@@ -358,8 +358,8 @@ describe('Dependency Graph Helpers', () => {
           notify: vi.fn(),
         };
         
-        helpers.trackDependency(source1, target, 0);
-        helpers.trackDependency(source2, target, 0);
+        helpers.trackDependency(source1, target);
+        helpers.trackDependency(source2, target);
         
         const firstEdge = target.dependencies!;
         const secondEdge = firstEdge.nextDependency!;
@@ -417,7 +417,6 @@ describe('Dependency Graph Helpers', () => {
       return {
         producer: from,
         consumer: to,
-        version: 0,
         prevDependency: undefined,
         nextDependency: undefined,
         prevDependent: undefined,

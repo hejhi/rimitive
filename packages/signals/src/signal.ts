@@ -87,7 +87,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       }
 
       const consumer = ctx.currentConsumer;
-      if (consumer) trackDependency(node, consumer, ctx.trackingVersion);
+      if (consumer) trackDependency(node, consumer);
       return node.value;
     } as SignalFunction<T>;
     

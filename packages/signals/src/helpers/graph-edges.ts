@@ -5,7 +5,6 @@ export interface GraphEdges {
   trackDependency: (
     producer: ProducerNode,
     consumer: ConsumerNode,
-    version: number
   ) => void;
   startTracking: (
     ctx: GlobalContext,
@@ -24,7 +23,6 @@ export function createGraphEdges(): GraphEdges {
   const trackDependency = (
     producer: FromNode,
     consumer: ToNode,
-    version: number
   ): void => {
     const tail = consumer.dependencyTail;
 
@@ -34,7 +32,6 @@ export function createGraphEdges(): GraphEdges {
     // Check next in sequence (common case during re-execution)
     const next = tail ? tail.nextDependency : consumer.dependencies;
     if (next && next.producer === producer) {
-      next.version = version;
       consumer.dependencyTail = next;
       return;
     }
@@ -44,7 +41,6 @@ export function createGraphEdges(): GraphEdges {
     const dependency: Dependency = {
       producer,
       consumer,
-      version,
       prevDependency: tail,
       prevDependent: producerTail,
       nextDependency: next,
@@ -78,9 +74,6 @@ export function createGraphEdges(): GraphEdges {
   ): ConsumerNode | null => {
     // Switch tracking context first
     const prevConsumer = ctx.currentConsumer;
-
-    // Only increment version for top-level tracking (no parent consumer)
-    if (!prevConsumer) ctx.trackingVersion++;
 
     // Reset dependency tail to start fresh dependency tracking
     node.dependencyTail = undefined;
