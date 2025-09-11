@@ -115,8 +115,8 @@ describe('Pull Update Efficiency', () => {
     expect(computeCountA).toBe(3); // A recomputed
     expect(computeCountB).toBe(2); // B should NOT recompute since A's value didn't change
     
-    // INEFFICIENCY: C shouldn't recompute since B didn't change
-    expect(computeCountC).toBe(2); // C should NOT recompute since B didn't change
+    // C should NOT recompute since B didn't change
+    expect(computeCountC).toBe(2); // C correctly doesn't recompute
   });
 
   it('should NOT recompute when all ancestors are unchanged', () => {
@@ -159,8 +159,8 @@ describe('Pull Update Efficiency', () => {
     expect(computeCountA).toBe(3); // A recomputes
     expect(computeCountB).toBe(2); // B doesn't recompute (A's value unchanged)
     
-    // INEFFICIENCY: C shouldn't recompute since B didn't change
-    expect(computeCountC).toBe(2); // Should NOT recompute - B never changed!
+    // C should NOT recompute since B didn't change
+    expect(computeCountC).toBe(2); // C correctly doesn't recompute - B never changed!
   });
 
   it('should only update PENDING nodes in the pull path', () => {
