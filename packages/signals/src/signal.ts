@@ -64,7 +64,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         
         if (node.value === value) {
           // Batch flag operation: only write if needed
-          if (isDirty) node.flags = flags & ~DIRTY;
+          if (isDirty) node.flags = 0;
           return;
         }
         
@@ -75,7 +75,7 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         if (!dependents) return;
 
         // Batch flag operation: single write combining all flag changes
-        if (!isDirty) node.flags = flags | DIRTY;
+        if (!isDirty) node.flags = DIRTY;
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale dependencies automatically

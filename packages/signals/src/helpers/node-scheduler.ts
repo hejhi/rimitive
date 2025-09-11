@@ -1,4 +1,4 @@
-import { CONSTANTS, createFlagManager } from '../constants';
+import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 import type { GlobalContext } from '../context';
 
@@ -13,19 +13,17 @@ export interface NodeScheduler {
   flush: () => void;
 }
 
-const { hasAnyOf, setStatus, getStatus, addProperty } = createFlagManager();
-
 export function createNodeScheduler(
   ctx: GlobalContext,
 ): NodeScheduler {
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
-    // Cache flags for better branch prediction
+    // Single flag read and conditional write
     const flags = node.flags;
-    if (hasAnyOf(flags, IS_SCHEDULED)) return; // Cold path - already scheduled
+    if (flags & IS_SCHEDULED) return; // Cold path - already scheduled
 
-    // Hot path - add scheduled property with cached flags
-    node.flags = addProperty(flags, IS_SCHEDULED);
+    // Hot path - add scheduled flag directly
+    node.flags = flags | IS_SCHEDULED;
     node.nextScheduled = undefined;
 
     // Add to queue
@@ -40,8 +38,9 @@ export function createNodeScheduler(
     node: T,
     cleanup: (node: T) => void
   ): void => {
-    if (getStatus(node.flags) === STATUS_DISPOSED) return;
-    node.flags = setStatus(node.flags, STATUS_DISPOSED);
+    // Single flag read and conditional write
+    if ((node.flags & MASK_STATUS) === STATUS_DISPOSED) return;
+    node.flags = STATUS_DISPOSED;
     cleanup(node);
   };
 
@@ -55,12 +54,16 @@ export function createNodeScheduler(
 
     while (current) {
       const next: ScheduledNode | undefined = current.nextScheduled;
-      const status = current.flags & MASK_STATUS & ~IS_SCHEDULED;
-
       current.nextScheduled = undefined;
-      current.flags = status;
-
-      if (status !== STATUS_DISPOSED && status) current.flush();
+      
+      // Single flag operation: clear IS_SCHEDULED and check if should flush
+      const flags = current.flags & ~IS_SCHEDULED;
+      current.flags = flags;
+      
+      // Only flush if not disposed and has a status
+      if ((flags & MASK_STATUS) !== STATUS_DISPOSED && (flags & MASK_STATUS)) {
+        current.flush();
+      }
 
       current = next;
     }
