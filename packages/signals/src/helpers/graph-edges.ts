@@ -1,4 +1,3 @@
-import { CONSTANTS } from '../constants';
 import { GlobalContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
 
@@ -20,8 +19,6 @@ export interface GraphEdges {
   removeDependency: (dependency: Dependency) => Dependency | undefined;
   detachAll: (node: ConsumerNode) => void;
 }
-
-const { STATUS_CLEAN, STATUS_PENDING, MASK_STATUS } = CONSTANTS;
 
 export function createGraphEdges(): GraphEdges {
   const trackDependency = (
@@ -86,28 +83,25 @@ export function createGraphEdges(): GraphEdges {
     // Reset dependency tail to start fresh dependency tracking
     node.dependencyTail = undefined;
 
-    // Batch operation: clear multiple status bits at once
-    node.flags = node.flags & ~(STATUS_PENDING);
+    // Clear STATUS_PENDING - node is being updated now
+    node.flags = 0;
 
     ctx.currentConsumer = node;
     return prevConsumer;
   };
 
-  // Helper to remove a dependency edge (inlined from graph-edges logic)
-  const removeDependency = ({
-    producer,
-    consumer,
-    prevDependency,
-    nextDependency,
-    prevDependent,
-    nextDependent,
-  }: Dependency): Dependency | undefined => {
+  // Helper to remove a dependency edge (optimized for hot path)
+  const removeDependency = (dep: Dependency): Dependency | undefined => {
+    const { producer, consumer, prevDependency, nextDependency, prevDependent, nextDependent } = dep;
+    
+    // Update consumer's dependency chain
     if (nextDependency) nextDependency.prevDependency = prevDependency;
     else consumer.dependencyTail = prevDependency;
 
     if (prevDependency) prevDependency.nextDependency = nextDependency;
     else consumer.dependencies = nextDependency;
 
+    // Update producer's dependent chain
     if (nextDependent) nextDependent.prevDependent = prevDependent;
     else producer.dependentsTail = prevDependent;
 
@@ -138,15 +132,10 @@ export function createGraphEdges(): GraphEdges {
     const tail = node.dependencyTail;
     let toRemove = tail ? tail.nextDependency : node.dependencies;
 
-    // Remove all stale dependencies
+    // Remove all stale dependencies efficiently using return value
     while (toRemove) {
-      const next = toRemove.nextDependency;
-      removeDependency(toRemove);
-      toRemove = next;
+      toRemove = removeDependency(toRemove);
     }
-
-    // Batch operation: set clean status directly
-    node.flags = (node.flags & ~MASK_STATUS) | STATUS_CLEAN;
   };
 
   /**
@@ -156,12 +145,10 @@ export function createGraphEdges(): GraphEdges {
    * @param node - The consumer node to detach
    */
   const detachAll = (node: ConsumerNode): void => {
-    let dependency = node.dependencies;
+    let toRemove = node.dependencies;
 
-    while (dependency) {
-      const next = dependency.nextDependency;
-      removeDependency(dependency);
-      dependency = next;
+    while (toRemove) {
+      toRemove = removeDependency(toRemove);
     }
 
     node.dependencies = undefined;

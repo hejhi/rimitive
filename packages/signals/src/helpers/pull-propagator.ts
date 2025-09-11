@@ -84,7 +84,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       }
 
       // No dependencies were dirty, clear flags
-      node.flags = 0; // Node is clean - clear flags immediately
+      node.flags = 0;
     } while (stack)
   };
 
