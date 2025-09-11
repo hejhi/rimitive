@@ -39,6 +39,7 @@ export function createGraphEdges(): GraphEdges {
       return;
     }
 
+    // Create new dependency edge
     const producerTail = producer.dependentsTail;
     const dependency: Dependency = {
       producer,
@@ -53,10 +54,11 @@ export function createGraphEdges(): GraphEdges {
     // Wire up consumer side
     consumer.dependencyTail = dependency;
     if (next) next.prevDependency = dependency;
+
     if (tail) tail.nextDependency = dependency;
     else consumer.dependencies = dependency;
 
-    // Wire up producer side
+    // Wire up producer side  
     producer.dependentsTail = dependency;
     if (producerTail) producerTail.nextDependent = dependency;
     else producer.dependents = dependency;
@@ -78,12 +80,12 @@ export function createGraphEdges(): GraphEdges {
     const prevConsumer = ctx.currentConsumer;
 
     // Only increment version for top-level tracking (no parent consumer)
-    ctx.trackingVersion++;
+    if (!prevConsumer) ctx.trackingVersion++;
 
     // Reset dependency tail to start fresh dependency tracking
     node.dependencyTail = undefined;
 
-    // Clear STATUS_PENDING - node is being updated now
+    // Clear all flags - node is being updated now
     node.flags = 0;
 
     ctx.currentConsumer = node;
