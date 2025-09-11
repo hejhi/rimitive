@@ -63,30 +63,44 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         continue;
       }
 
-      // Start checking dependencies
+      // First scan: look for PENDING computed dependencies that need processing
       let dep: Dependency | undefined = node.dependencies;
+      let foundPendingComputed: DerivedNode | undefined = undefined;
+      
+      while (dep) {
+        const producer = dep.producer;
+        const pFlags = producer.flags;
+        
+        // If dependency is a pending computed, we need to process it first
+        if ('compute' in producer && pFlags & STATUS_PENDING) {
+          foundPendingComputed = producer;
+          break;
+        }
+        
+        dep = dep.nextDependency;
+      }
+      
+      // If we found a PENDING computed, defer this node and process the dependency first
+      if (foundPendingComputed) {
+        // Re-add current node to stack for later processing
+        stack = { node, next: stack };
+        // Add the dependency to process immediately
+        stack = { node: foundPendingComputed, next: stack };
+        continue; // Process the dependency first
+      }
+      
+      // All computed dependencies have been processed, now check if any are dirty
+      dep = node.dependencies;
       let needsUpdate = false;
-
-      // Check remaining dependencies
+      
       while (dep) {
         const producer = dep.producer;
         const pFlags = producer.flags;
 
-        // If dependency is already dirty, we need to update
+        // If dependency is dirty (signal or computed), we need to update
         if (pFlags & DIRTY) {
           needsUpdate = true;
           break; // No need to check further dependencies
-        }
-
-        // If dependency is a pending computed, update it inline
-        if ('compute' in producer && pFlags & STATUS_PENDING) {
-          const changed = recomputeNode(producer);
-
-          // Update the computed inline and check if it became dirty
-          if (changed) {
-            needsUpdate = true;
-            break; // No need to check further dependencies
-          }
         }
 
         dep = dep.nextDependency;
