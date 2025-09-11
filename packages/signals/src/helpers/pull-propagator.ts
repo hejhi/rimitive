@@ -48,7 +48,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
   const pullUpdates = (rootNode: DerivedNode): void => {
     let stack: StackFrame | undefined = { node: rootNode, next: undefined };
 
-    traversal: while (stack) {
+    traversal: do {
       const node = stack.node;
       const flags = node.flags;
 
@@ -94,7 +94,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // No dependencies were dirty, clear flags
       node.flags = flags & ~(MASK_STATUS | DIRTY); // Node is clean - clear flags immediately
-    }
+    } while (stack)
 
     rootNode.flags &= ~DIRTY;
   };
