@@ -48,14 +48,14 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
   const pullUpdates = (rootNode: DerivedNode): void => {
     let stack: StackFrame | undefined = { node: rootNode, next: undefined };
 
-    while (stack) {
+    traversal: while (stack) {
       const node = stack.node;
       const flags = node.flags;
 
       stack = stack.next;
 
       // Skip disposed or non-pending nodes
-      if (flags & STATUS_DISPOSED || !(flags & STATUS_PENDING)) continue;
+      if (flags & STATUS_DISPOSED) continue;
 
       // No dependencies - just recompute
       if (!node.dependencies) {
@@ -65,7 +65,6 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // First scan: look for PENDING computed dependencies that need processing
       let dep: Dependency | undefined = node.dependencies;
-      let foundPendingComputed: DerivedNode | undefined = undefined;
       
       while (dep) {
         const producer = dep.producer;
@@ -73,20 +72,12 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         
         // If dependency is a pending computed, we need to process it first
         if ('compute' in producer && pFlags & STATUS_PENDING) {
-          foundPendingComputed = producer;
-          break;
+          // Add the dependency to process immediately, then the current node
+          stack = { node: producer, next: { node, next: stack } };
+          continue traversal; // Process the dependency first
         }
         
         dep = dep.nextDependency;
-      }
-      
-      // If we found a PENDING computed, defer this node and process the dependency first
-      if (foundPendingComputed) {
-        // Re-add current node to stack for later processing
-        stack = { node, next: stack };
-        // Add the dependency to process immediately
-        stack = { node: foundPendingComputed, next: stack };
-        continue; // Process the dependency first
       }
       
       // All computed dependencies have been processed, now check if any are dirty
