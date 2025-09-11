@@ -20,9 +20,9 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
   // Inline recomputation logic here since we have access to context
   const recomputeNode = (node: DerivedNode): boolean => {
     const prevConsumer = startTracking(ctx, node);
+    const oldValue = node.value;
 
     try {
-      const oldValue = node.value;
       const newValue = node.compute();
 
       // Update value and set flags based on whether it changed
