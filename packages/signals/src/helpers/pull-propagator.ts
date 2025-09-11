@@ -54,8 +54,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       stack = stack.next;
 
-      // Skip disposed or non-pending nodes
-      if (flags & STATUS_DISPOSED) continue;
+      // Skip disposed or already-processed nodes
+      if (flags & STATUS_DISPOSED || !(flags & STATUS_PENDING)) continue;
 
       // No dependencies - just recompute
       if (!node.dependencies) {
@@ -95,8 +95,6 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       // No dependencies were dirty, clear flags
       node.flags = flags & ~(MASK_STATUS | DIRTY); // Node is clean - clear flags immediately
     } while (stack)
-
-    rootNode.flags &= ~DIRTY;
   };
 
   return { pullUpdates };
