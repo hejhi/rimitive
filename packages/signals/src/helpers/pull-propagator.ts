@@ -12,7 +12,6 @@ export interface PullPropagator {
 interface StackFrame {
   node: DerivedNode;
   next: StackFrame | undefined;
-  needsUpdate: boolean;
 }
 
 export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdges }): PullPropagator {
@@ -62,7 +61,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
   };
 
   const pullUpdates = (rootNode: DerivedNode): void => {
-    let stack: StackFrame | undefined = { node: rootNode, next: undefined, needsUpdate: false };
+    let stack: StackFrame | undefined = { node: rootNode, next: undefined };
 
     while (stack) {
       const { node } = stack;
@@ -83,30 +82,34 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // Start checking dependencies
       let dep: Dependency | undefined = node.dependencies;
+      let needsUpdate = false;
 
       // Check remaining dependencies
       while (dep) {
         const producer = dep.producer;
         const pFlags = producer.flags;
 
-        dep = dep.nextDependency;
-
         // If dependency is already dirty, we need to update
         if (pFlags & DIRTY) {
-          stack.needsUpdate = true;
-          continue;
+          needsUpdate = true;
+          break; // No need to check further dependencies
         }
 
         // If dependency is a pending computed, update it inline
         if ('compute' in producer && pFlags & STATUS_PENDING) {
-          const needsUpdate = recomputeNode(producer);
+          const changed = recomputeNode(producer);
 
           // Update the computed inline and check if it became dirty
-          if (needsUpdate) stack.needsUpdate = needsUpdate;
+          if (changed) {
+            needsUpdate = true;
+            break; // No need to check further dependencies
+          }
         }
+
+        dep = dep.nextDependency;
       }
 
-      if (stack.needsUpdate) recomputeNode(node);
+      if (needsUpdate) recomputeNode(node);
       else node.flags = flags & ~(MASK_STATUS | DIRTY); // Node is clean - clear flags immediately
 
       stack = stack.next;
