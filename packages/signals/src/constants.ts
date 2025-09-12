@@ -9,20 +9,20 @@
 export const STATUS_CLEAN    = 0;      // Up to date and ready
 export const STATUS_PENDING  = 1 << 0; // Dependencies might have changed, needs checking
 export const STATUS_DISPOSED = 1 << 1; // Node is dead and should be ignored
+export const STATUS_DIRTY    = 1 << 2; // Value changed (persists until consumed)
 
 // Node Properties (can combine with states)
-export const DIRTY        = 1 << 2; // Value changed (persists until consumed)
-export const IS_SCHEDULED = 1 << 4; // Node is in the work queue
+export const IS_SCHEDULED    = 1 << 3; // Node is in the work queue
 
 // Optimized status masks for core states only
-export const MASK_STATUS = STATUS_PENDING | STATUS_DISPOSED;
+export const MASK_STATUS = STATUS_PENDING | STATUS_DISPOSED | STATUS_DIRTY;
 
 // Re-export as CONSTANTS for backward compatibility
 export const CONSTANTS = {
   STATUS_CLEAN,
   STATUS_PENDING,
   STATUS_DISPOSED,
-  DIRTY,
+  STATUS_DIRTY,
   IS_SCHEDULED,
   MASK_STATUS,
 };

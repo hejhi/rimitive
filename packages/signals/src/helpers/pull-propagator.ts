@@ -3,7 +3,7 @@ import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
 
-const { STATUS_PENDING, DIRTY, MASK_STATUS } = CONSTANTS;
+const { STATUS_PENDING, STATUS_DIRTY, MASK_STATUS } = CONSTANTS;
 
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
@@ -28,7 +28,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       // Update value and set flags based on whether it changed
       if (newValue !== oldValue) {
         node.value = newValue;
-        node.flags = DIRTY;
+        node.flags = STATUS_DIRTY;
         return true;
       }
       
@@ -49,10 +49,19 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       const flags = node.flags;
 
       stack = stack.next;
+      const status = flags & MASK_STATUS;
+
+      // If node is DIRTY (from a dependency that changed), recompute it
+      if (status === STATUS_DIRTY) {
+        recomputeNode(node);
+        // If this node's value changed, its parent (next on stack) will be marked DIRTY
+        // and will recompute when we unwind to it
+        continue;
+      }
 
       // Skip disposed or already-processed nodes
       // Continue only if PENDING and not DISPOSED
-      if ((flags & MASK_STATUS) !== STATUS_PENDING) continue;
+      if (status !== STATUS_PENDING) continue;
 
       // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
       let dep = node.dependencies;
@@ -66,10 +75,14 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       while (dep) {
         const producer = dep.producer;
         const pFlags = producer.flags;
-        
+
         // If dependency is dirty, recompute immediately
-        if (pFlags & DIRTY) {
-          recomputeNode(node);
+        if ((pFlags & MASK_STATUS) === STATUS_DIRTY) {
+          const changed = recomputeNode(node);
+          // If value changed and we have a parent on the stack, mark it dirty
+          if (changed && stack) {
+            stack.node.flags = STATUS_DIRTY;
+          }
           continue traversal; // Done with this node
         }
         

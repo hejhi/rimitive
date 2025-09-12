@@ -219,7 +219,7 @@ interface Edge {
 
 **Bit flags (pack booleans):**
 ```typescript
-this._flags = INVALIDATED | DIRTY;
+this._flags = INVALIDATED | STATUS_DIRTY;
 if (this._flags & RUNNING) return;
 ```
 

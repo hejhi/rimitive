@@ -166,15 +166,15 @@ pnpm bench pattern-wide-fanout signal computed-chain-observe-unobserve
 
 When a Producer is "written to" (for a computed, it's whether it's value actually changes when executed after running dependencies):
 - It checks if it's value has changed
-- If not, it clears any DIRTY flag and returns.
-- If it has, it marks itself as DIRTY and propagates STATUS_PENDING to all children
+- If not, it clears any STATUS_DIRTY flag and returns.
+- If it has, it marks itself as STATUS_DIRTY and propagates STATUS_PENDING to all children
 
 When a Consumer is executed:
 - It looks at its direct Producers
-- If any Producer is marked DIRTY, it recomputes
+- If any Producer is marked STATUS_DIRTY, it recomputes
 - That recomputation causes re-execution of any Producers in it, propagating "up"
 
 QUESTIONS:
 - For signals, do we need to mark all children as STATUS_PENDING?
 - Right now, computeds don't mark children at all. Should they?
-- Do we need STATUS_PENDING? Effects don't need it (they get scheduled). Computeds look for DIRTY on direct children and naturally propagate upwards. is DIRTY enough?
+- Do we need STATUS_PENDING? Effects don't need it (they get scheduled). Computeds look for STATUS_DIRTY on direct children and naturally propagate upwards. is STATUS_DIRTY enough?

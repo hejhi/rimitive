@@ -21,7 +21,7 @@ import { GraphEdges } from './helpers/graph-edges';
 import { PushPropagator } from './helpers/push-propagator';
 import { NodeScheduler } from './helpers/node-scheduler';
 
-const { DIRTY } = CONSTANTS;
+const { STATUS_DIRTY, MASK_STATUS } = CONSTANTS;
 
 export interface SignalFunction<T = unknown> {
   (): T;                    // Read operation (monomorphic)
@@ -60,11 +60,11 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     const signal = function(value?: T): T | undefined {
       if (arguments.length) {
         const flags = node.flags;
-        const isDirty = (flags & DIRTY) !== 0;
+        const status = flags & MASK_STATUS;
         
         if (node.value === value) {
-          // Batch flag operation: only write if needed
-          if (isDirty) node.flags = 0;
+          // Clear dirty status if value unchanged
+          if (status === STATUS_DIRTY) node.flags = 0;
           return;
         }
         
@@ -74,8 +74,8 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
 
         if (!dependents) return;
 
-        // Batch flag operation: single write combining all flag changes
-        if (!isDirty) node.flags = DIRTY;
+        // Mark as dirty - value has changed
+        node.flags = STATUS_DIRTY;
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale dependencies automatically

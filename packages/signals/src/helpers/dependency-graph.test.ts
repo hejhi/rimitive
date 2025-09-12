@@ -6,7 +6,7 @@ import { createBaseContext } from '../context';
 import type { ConsumerNode, ProducerNode, Dependency, ScheduledNode } from '../types';
 import { CONSTANTS } from '../constants';
 
-const { STATUS_DISPOSED, STATUS_PENDING, DIRTY } = CONSTANTS;
+const { STATUS_DISPOSED, STATUS_PENDING, STATUS_DIRTY } = CONSTANTS;
 
 describe('Dependency Graph Helpers', () => {
   let helpers: {
@@ -56,7 +56,7 @@ describe('Dependency Graph Helpers', () => {
       const firstEdge = target.dependencies;
       
       // Update version
-      source.flags |= DIRTY;
+      source.flags |= STATUS_DIRTY;
       
       // Second call should reuse the same edge
       helpers.trackDependency(source, target);
@@ -87,7 +87,7 @@ describe('Dependency Graph Helpers', () => {
       const existingNode = target.dependencies;
       
       // Update version
-      source.flags |= DIRTY;
+      source.flags |= STATUS_DIRTY;
       
       // Should find the existing dependency
       helpers.trackDependency(source, target);
@@ -173,7 +173,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.trackDependency(source, target);
       
       // Update version
-      source.flags |= DIRTY;
+      source.flags |= STATUS_DIRTY;
       
       // Update dependency
       helpers.trackDependency(source, target);
