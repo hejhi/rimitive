@@ -41,8 +41,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
     traversal: while (current) {
       const node: DerivedNode = current;
-      const flags = node.flags;
-      const status = flags & MASK_STATUS;
+      const status = node.flags & MASK_STATUS;
       
       // Read parent once (but don't clear yet - we might defer)
       const parent: DerivedNode | undefined = node.deferredParent;
