@@ -37,7 +37,7 @@ export function createGraphEdges(): GraphEdges {
     }
 
     // Create new dependency edge
-    const producerTail = producer.dependentsTail;
+    const producerTail = producer.subscribersTail;
     const dependency: Dependency = {
       producer,
       consumer,
@@ -55,9 +55,9 @@ export function createGraphEdges(): GraphEdges {
     else consumer.dependencies = dependency;
 
     // Wire up producer side  
-    producer.dependentsTail = dependency;
+    producer.subscribersTail = dependency;
     if (producerTail) producerTail.nextConsumer = dependency;
-    else producer.dependents = dependency;
+    else producer.subscribers = dependency;
   };
 
   /**
@@ -98,10 +98,10 @@ export function createGraphEdges(): GraphEdges {
 
     // Update producer's dependent chain
     if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
-    else producer.dependentsTail = prevConsumer;
+    else producer.subscribersTail = prevConsumer;
 
     if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
-    else producer.dependents = nextConsumer;
+    else producer.subscribers = nextConsumer;
 
     return nextDependency; // Return next for efficient iteration
   };

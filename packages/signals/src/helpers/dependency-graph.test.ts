@@ -36,9 +36,9 @@ describe('Dependency Graph Helpers', () => {
     it('should reuse edge when same producer accessed again', () => {
       const source: ProducerNode = {
         __type: 'test',
-        dependents: undefined,
+        subscribers: undefined,
         flags: 0,
-        dependentsTail: undefined,
+        subscribersTail: undefined,
         value: 0,
 
       };
@@ -67,9 +67,9 @@ describe('Dependency Graph Helpers', () => {
     it('should find existing dependency in sources list', () => {
       const source: ProducerNode = {
         __type: 'test',
-        dependents: undefined,
+        subscribers: undefined,
         flags: 0,
-        dependentsTail: undefined,
+        subscribersTail: undefined,
         value: 0,
 
       };
@@ -98,9 +98,9 @@ describe('Dependency Graph Helpers', () => {
     it('should create new dependency when none exists', () => {
       const source: ProducerNode = {
         __type: 'test',
-        dependents: undefined,
+        subscribers: undefined,
         flags: 0,
-        dependentsTail: undefined,
+        subscribersTail: undefined,
         value: 0,
 
       };
@@ -115,15 +115,15 @@ describe('Dependency Graph Helpers', () => {
       
       helpers.trackDependency(source, target);
       
-      expect(source.dependents).toBeDefined();
+      expect(source.subscribers).toBeDefined();
       expect(target.dependencies).toBeDefined();
     });
 
     it('should handle multiple sources for the same target', () => {
       const sources = Array.from({ length: 3 }, () => ({
         __type: 'test',
-        dependents: undefined,
-        dependentsTail: undefined,
+        subscribers: undefined,
+        subscribersTail: undefined,
         flags: 0,
       }));
       
@@ -154,9 +154,9 @@ describe('Dependency Graph Helpers', () => {
     it('should update version when dependency already exists', () => {
       const source: ProducerNode = {
         __type: 'test',
-        dependents: undefined,
+        subscribers: undefined,
         flags: 0,
-        dependentsTail: undefined,
+        subscribersTail: undefined,
         value: 0,
 
       };
@@ -188,9 +188,9 @@ describe('Dependency Graph Helpers', () => {
       it('should create bidirectional links between source and target', () => {
         const source: ProducerNode = {
           __type: 'test',
-          dependents: undefined,
+          subscribers: undefined,
           flags: 0,
-          dependentsTail: undefined,
+          subscribersTail: undefined,
           value: 0,
   
         };
@@ -208,16 +208,16 @@ describe('Dependency Graph Helpers', () => {
         
         expect(node.producer).toBe(source);
         expect(node.consumer).toBe(target);
-        expect(source.dependents).toBe(node);
+        expect(source.subscribers).toBe(node);
         expect(target.dependencies).toBe(node);
       });
   
       it('should maintain linked lists when multiple dependencies exist', () => {
         const source: ProducerNode = {
           __type: 'test',
-          dependents: undefined,
+          subscribers: undefined,
           flags: 0,
-          dependentsTail: undefined,
+          subscribersTail: undefined,
           value: 0,
   
         };
@@ -244,12 +244,12 @@ describe('Dependency Graph Helpers', () => {
         const node2 = target2.dependencies!;
         
         // Source should point to first target (head of list)
-        expect(source.dependents).toBe(node1);
+        expect(source.subscribers).toBe(node1);
         // node1 should point to node2 (insertion order)
         expect(node1.nextConsumer).toBe(node2);
         expect(node2.prevConsumer).toBe(node1);
         // node2 should be the tail
-        expect(source.dependentsTail).toBe(node2);
+        expect(source.subscribersTail).toBe(node2);
       });
     });
   
@@ -257,9 +257,9 @@ describe('Dependency Graph Helpers', () => {
       it('should remove edge from both producer and consumer lists', () => {
         const source: ProducerNode = {
           __type: 'test',
-          dependents: undefined,
+          subscribers: undefined,
           flags: 0,
-          dependentsTail: undefined,
+          subscribersTail: undefined,
           value: 0,
   
         };
@@ -277,7 +277,7 @@ describe('Dependency Graph Helpers', () => {
         
         const next = helpers.removeDependency(node);
         
-        expect(source.dependents).toBeUndefined();
+        expect(source.subscribers).toBeUndefined();
         expect(target.dependencies).toBeUndefined();
         expect(target.dependencyTail).toBeUndefined();
         expect(next).toBeUndefined();
@@ -286,9 +286,9 @@ describe('Dependency Graph Helpers', () => {
       it('should maintain linked list integrity when removing middle node', () => {
         const source: ProducerNode = {
           __type: 'test',
-          dependents: undefined,
+          subscribers: undefined,
           flags: 0,
-          dependentsTail: undefined,
+          subscribersTail: undefined,
           value: 0,
   
         };
@@ -304,7 +304,7 @@ describe('Dependency Graph Helpers', () => {
         targets.forEach(target => helpers.trackDependency(source, target));
         
         // Get the edge pointing to the second target (middle one)
-        let edge = source.dependents;
+        let edge = source.subscribers;
         let middleEdge: Dependency | undefined;
         while (edge) {
           if (edge.consumer === targets[1]) {
@@ -318,7 +318,7 @@ describe('Dependency Graph Helpers', () => {
         const next = helpers.removeDependency(middleEdge!);
         
         // Check producer's output list integrity
-        const firstEdge = source.dependents!;
+        const firstEdge = source.subscribers!;
         const thirdEdge = firstEdge.nextConsumer!;
         
         // After removal, first edge should point to third edge
@@ -335,17 +335,17 @@ describe('Dependency Graph Helpers', () => {
       it('should return next edge for efficient iteration', () => {
         const source1: ProducerNode = {
           __type: 'test',
-          dependents: undefined,
+          subscribers: undefined,
           flags: 0,
-          dependentsTail: undefined,
+          subscribersTail: undefined,
           value: 0,
   
         };
         const source2: ProducerNode = {
           __type: 'test',
-          dependents: undefined,
+          subscribers: undefined,
           flags: 0,
-          dependentsTail: undefined,
+          subscribersTail: undefined,
           value: 0,
   
         };
@@ -516,8 +516,8 @@ describe('Dependency Graph Helpers', () => {
       const edge2 = createEdge(computed1, computed2);
       const edge3 = createEdge(computed2, effect);
   
-      computed1.dependents = edge2;
-      computed2.dependents = edge3;
+      computed1.subscribers = edge2;
+      computed2.subscribers = edge3;
   
       walk(edge1);
   
@@ -540,8 +540,8 @@ describe('Dependency Graph Helpers', () => {
       const edge4 = createEdge(computed2, computed3);
   
       linkEdges([edge1, edge2]);
-      computed1.dependents = edge3;
-      computed2.dependents = edge4;
+      computed1.subscribers = edge3;
+      computed2.subscribers = edge4;
   
       walk(edge1);
   
@@ -577,16 +577,16 @@ describe('Dependency Graph Helpers', () => {
       const comp1ToComp3 = createEdge(comp1, comp3);
       const comp1ToEff1 = createEdge(comp1, eff1);
       linkEdges([comp1ToComp3, comp1ToEff1]);
-      comp1.dependents = comp1ToComp3;
+      comp1.subscribers = comp1ToComp3;
   
       const comp2ToComp4 = createEdge(comp2, comp4);
-      comp2.dependents = comp2ToComp4;
+      comp2.subscribers = comp2ToComp4;
   
       const comp3ToEff2 = createEdge(comp3, eff2);
-      comp3.dependents = comp3ToEff2;
+      comp3.subscribers = comp3ToEff2;
   
       const comp4ToEff3 = createEdge(comp4, eff3);
-      comp4.dependents = comp4ToEff3;
+      comp4.subscribers = comp4ToEff3;
   
       walk(sourceToComp1);
   
@@ -634,7 +634,7 @@ describe('Dependency Graph Helpers', () => {
       for (let i = 0; i < 99; i++) {
         const edge = createEdge(nodes[i]!, nodes[i + 1]!);
         edges.push(edge);
-        nodes[i]!.dependents = edge;
+        nodes[i]!.subscribers = edge;
       }
   
       walk(edges[0]!);

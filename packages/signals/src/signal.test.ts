@@ -110,7 +110,7 @@ describe('signal', () => {
     expect(sum()).toBe(30);
   });
 
-  it('should notify dependents on change', () => {
+  it('should notify subscribers on change', () => {
     const source = signal(10);
     let computeCount = 0;
     
@@ -203,7 +203,7 @@ describe('signal', () => {
   });
 
   describe('stress tests', () => {
-    it('should handle many dependents efficiently', () => {
+    it('should handle many subscribers efficiently', () => {
       const source = signal(1);
       const computeds = Array.from({ length: 100 }, (_, i) => 
         computed(() => source() * (i + 1))

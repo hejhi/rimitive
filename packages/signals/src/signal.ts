@@ -51,8 +51,8 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
     const node: SignalNode<T> = {
       __type: 'signal',
       value: initialValue,
-      dependents: undefined,
-      dependentsTail: undefined,
+      subscribers: undefined,
+      subscribersTail: undefined,
       flags: 0,
     };
 
@@ -70,16 +70,16 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
         
         node.value = value!;
 
-        const dependents = node.dependents;
+        const subscribers = node.subscribers;
 
-        if (!dependents) return;
+        if (!subscribers) return;
 
         // Mark as dirty - value has changed
         node.flags = STATUS_DIRTY;
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale dependencies automatically
-        pushUpdates(dependents);
+        pushUpdates(subscribers);
 
         // Batch check and flush
         if (!ctx.batchDepth) flush();

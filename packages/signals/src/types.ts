@@ -42,8 +42,8 @@ export interface Writable<T = unknown> extends Readable<T> {
 // They maintain a list of consumers that depend on them
 export interface ProducerNode extends ReactiveNode {
   value: unknown;
-  dependents: Dependency | undefined; // Head of dependent list
-  dependentsTail: Dependency | undefined; // Tail of dependent list
+  subscribers: Dependency | undefined; // Head of dependent list
+  subscribersTail: Dependency | undefined; // Tail of dependent list
 }
 
 // CONSUMERS: Nodes that depend on other nodes (computed values, effects)

@@ -84,7 +84,7 @@ updateQueue.sortBy(node => node.height);
 ```javascript
 // Push notifications, pull values
 function propagate() {
-  markStale(dependents);      // Push phase
+  markStale(subscribers);      // Push phase
   return lazyEvaluate(this);   // Pull phase
 }
 ```
@@ -120,7 +120,7 @@ interface Delta<T> {
 
 class DifferentialSignal<T> {
   propagateDelta(delta: Delta<T>) {
-    this._dependents.forEach(dep => 
+    this._subscribers.forEach(dep => 
       dep.processDelta(delta)
     );
   }
@@ -191,11 +191,11 @@ class EdgePool {
 
 **Operation Complexities**:
 - Signal read: O(1)
-- Signal write: O(dependents)
+- Signal write: O(subscribers)
 - Computed read (fresh): O(1)
 - Computed read (stale): O(dependencies)
 - Effect creation: O(1)
-- Disposal: O(dependencies + dependents)
+- Disposal: O(dependencies + subscribers)
 
 **Memory Footprint**:
 - Signal: 24 bytes + value

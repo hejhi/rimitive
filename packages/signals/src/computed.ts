@@ -46,8 +46,8 @@ export function createComputedFactory(
     const node: ComputedNode<T> = {
       __type: 'computed' as const,
       value: undefined as T,
-      dependents: undefined,
-      dependentsTail: undefined,
+      subscribers: undefined,
+      subscribersTail: undefined,
       dependencies: undefined, // Will be set to old dependencies when they exist
       dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
       flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation

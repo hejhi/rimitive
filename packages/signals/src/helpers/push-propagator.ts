@@ -16,9 +16,9 @@ export interface PushPropagator {
 
 export function createPushPropagator(): PushPropagator {
   // Iterative DFS on push with an explicit stack, optimized with intrusive linked lists
-  const pushUpdates = (dependents: Dependency): void => {
+  const pushUpdates = (subscribers: Dependency): void => {
     let dependencyStack: Stack<Dependency> | undefined;
-    let currentDependency: Dependency | undefined = dependents;
+    let currentDependency: Dependency | undefined = subscribers;
 
     do {
       const consumerNode = currentDependency.consumer;
@@ -37,23 +37,24 @@ export function createPushPropagator(): PushPropagator {
       // This avoids method calls and property lookups
       if ('notify' in consumerNode) consumerNode.notify(consumerNode);
 
-      if ('dependents' in consumerNode) {
-        const consumerDependents = consumerNode.dependents;
+      if ('subscribers' in consumerNode) {
+        const consumerSubscribers = consumerNode.subscribers;
 
-        // If a consumer has dependents, continue depth-first traversal
-        if (consumerDependents) {
-          // Save sibling dependents (other children of the same consumer-producer) on the stack
+        // If a consumer has subscribers, continue depth-first traversal
+        if (consumerSubscribers) {
+          // Save sibling subscribers (other children of the same consumer-producer) on the stack
           // to process after completing the current path
           const siblingDep = currentDependency.nextConsumer;
 
-          if (siblingDep) dependencyStack = { value: siblingDep, prev: dependencyStack };
+          if (siblingDep)
+            dependencyStack = { value: siblingDep, prev: dependencyStack };
 
-          currentDependency = consumerDependents;
+          currentDependency = consumerSubscribers;
           continue;
         }
       }
 
-      // No further dependents, shift to sibling consumer and go deep
+      // No further subscribers, shift to sibling consumer and go deep
       currentDependency = currentDependency.nextConsumer;
 
       if (currentDependency || !dependencyStack) continue;
