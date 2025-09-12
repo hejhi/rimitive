@@ -28,7 +28,6 @@ describe('NodeScheduler', () => {
       flush: vi.fn(),
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredDep: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
     };
@@ -48,7 +47,6 @@ describe('NodeScheduler', () => {
       flush: vi.fn(),
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredDep: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
     };
@@ -74,7 +72,6 @@ describe('NodeScheduler', () => {
       flush: vi.fn(),
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredDep: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
     };
@@ -104,7 +101,6 @@ describe('NodeScheduler', () => {
       flush: flush1,
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredDep: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
     };
@@ -116,7 +112,6 @@ describe('NodeScheduler', () => {
       flush: flush2,
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredDep: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
     };
@@ -128,7 +123,6 @@ describe('NodeScheduler', () => {
       flush: flush3,
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredDep: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
     };
@@ -173,7 +167,6 @@ describe('NodeScheduler', () => {
       flush: vi.fn(),
       dependencies: undefined,
       dependencyTail: undefined,
-      deferredDep: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
     };

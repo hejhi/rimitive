@@ -50,7 +50,6 @@ export function createComputedFactory(
       subscribersTail: undefined,
       dependencies: undefined, // Will be set to old dependencies when they exist
       dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
-      deferredDep: undefined,
       deferredParent: undefined,
       flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation
       compute,

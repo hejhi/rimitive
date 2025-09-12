@@ -48,7 +48,6 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredDep: undefined,
         deferredParent: undefined,
         notify: vi.fn(),
       };
@@ -81,7 +80,6 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredDep: undefined,
         deferredParent: undefined,
         notify: vi.fn(),
       };
@@ -114,7 +112,6 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredDep: undefined,
         deferredParent: undefined,
         notify: vi.fn(),
       };
@@ -138,7 +135,6 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredDep: undefined,
         deferredParent: undefined,
         notify: vi.fn(),
       };
@@ -174,7 +170,6 @@ describe('Dependency Graph Helpers', () => {
         flags: 0,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredDep: undefined,
         deferredParent: undefined,
         notify: vi.fn(),
       };
@@ -210,7 +205,6 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredDep: undefined,
           deferredParent: undefined,
           notify: vi.fn(),
         };
@@ -239,7 +233,6 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredDep: undefined,
           deferredParent: undefined,
           notify: vi.fn(),
         };
@@ -249,7 +242,6 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredDep: undefined,
           deferredParent: undefined,
           notify: vi.fn(),
         };
@@ -285,7 +277,6 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredDep: undefined,
           deferredParent: undefined,
           notify: vi.fn(),
         };
@@ -318,7 +309,6 @@ describe('Dependency Graph Helpers', () => {
               __type: 'test',
               dependencies: undefined,
               dependencyTail: undefined,
-              deferredDep: undefined,
               deferredParent: undefined,
               id: i, // Add id for debugging
             }) as ConsumerNode & { id: number }
@@ -379,7 +369,6 @@ describe('Dependency Graph Helpers', () => {
           flags: 0,
           dependencies: undefined,
           dependencyTail: undefined,
-          deferredDep: undefined,
           deferredParent: undefined,
           notify: vi.fn(),
         };
@@ -419,7 +408,6 @@ describe('Dependency Graph Helpers', () => {
         __type: type,
         dependencies: undefined,
         dependencyTail: undefined,
-        deferredDep: undefined,
         deferredParent: undefined,
         flags: flags,
         notify: vi.fn(),

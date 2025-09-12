@@ -43,22 +43,19 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       const node: DerivedNode = current;
       const status = node.flags & MASK_STATUS;
       
-      // Read parent (don't clear yet - might need it for deferral)
-      const parent: DerivedNode | undefined = node.deferredParent;
+      current = node.deferredParent;
 
       // Fast path: Skip if not PENDING or DIRTY (most common case)
       if (!status || (status & ~(STATUS_PENDING | STATUS_DIRTY))) {
         node.deferredParent = undefined;
-        current = parent;
         continue;
       }
 
       // If node is DIRTY (from a dependency that changed), recompute it
       if (status === STATUS_DIRTY) {
         // If value changed and we have a parent, mark it for direct recompute
-        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+        if (recomputeNode(node) && current) current.flags = STATUS_DIRTY;
         node.deferredParent = undefined;
-        current = parent;
         continue;
       }
 
@@ -68,9 +65,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // No dependencies - just recompute
       if (!dep) {
-        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+        if (recomputeNode(node) && current) current.flags = STATUS_DIRTY;
         node.deferredParent = undefined;
-        current = parent;
         continue;
       }
 
@@ -81,9 +77,8 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
         switch (pStatus) {
           case STATUS_DIRTY:{
-            if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+            if (recomputeNode(node) && current) current.flags = STATUS_DIRTY;
             node.deferredParent = undefined;
-            current = parent;
             continue traversal;
           }
           case STATUS_PENDING: {
@@ -96,7 +91,6 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
             } else {
               node.flags = 0;
               node.deferredParent = undefined;
-              current = parent;
             }
             continue traversal;
           }
@@ -108,7 +102,6 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       // No dependencies were dirty or pending, clear flags
       node.flags = 0;
       node.deferredParent = undefined;
-      current = parent;
     }
   };
 
