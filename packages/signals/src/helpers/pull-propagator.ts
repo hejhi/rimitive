@@ -1,4 +1,4 @@
-import type { DerivedNode } from '../types';
+import type { DerivedNode, Dependency } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
@@ -7,11 +7,6 @@ const { STATUS_PENDING, STATUS_DIRTY, MASK_STATUS } = CONSTANTS;
 
 export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
-}
-
-interface StackFrame {
-  node: DerivedNode;
-  prev: StackFrame | undefined;
 }
 
 export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdges }): PullPropagator {
@@ -42,33 +37,48 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
   };
 
   const pullUpdates = (rootNode: DerivedNode): void => {
-    let stack: StackFrame | undefined = { node: rootNode, prev: undefined };
+    let current: DerivedNode | undefined = rootNode;
 
-    traversal: do {
-      const node = stack.node;
+    traversal: while (current) {
+      const node: DerivedNode = current;
       const flags = node.flags;
       const status = flags & MASK_STATUS;
 
-      stack = stack.prev;
-
       // If node is DIRTY (from a dependency that changed), recompute it
       if (status === STATUS_DIRTY) {
-        // If value changed and we have a parent on the stack, mark it for direct recompute
-        // Check if parent is already marked for direct recompute
-        if (recomputeNode(node) && stack) stack.node.flags = STATUS_DIRTY;
+        // If value changed and we have a parent, mark it for direct recompute
+        const parent: DerivedNode | undefined = node.deferredParent;
+        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+        
+        // Clean up and continue with parent
+        node.deferredParent = undefined;
+        current = parent;
         continue;
       }
 
       // Skip disposed or already-processed nodes
       // Continue only if PENDING and not DISPOSED
-      if (status !== STATUS_PENDING) continue;
+      if (status !== STATUS_PENDING) {
+        // Continue with parent or finish
+        const parent: DerivedNode | undefined = node.deferredParent;
+        node.deferredParent = undefined;
+        current = parent;
+        continue;
+      }
 
       // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
-      let dep = node.dependencies;
+      // If we have a deferred dependency, resume from there
+      let dep: Dependency | undefined = node.deferredDep || node.dependencies;
+      node.deferredDep = undefined; // Clear the deferred marker
 
       // No dependencies - just recompute
       if (!dep) {
-        if (recomputeNode(node) && stack) stack.node.flags = STATUS_DIRTY;
+        const parent: DerivedNode | undefined = node.deferredParent;
+        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+        
+        // Clean up and continue with parent
+        node.deferredParent = undefined;
+        current = parent;
         continue;
       }
 
@@ -77,15 +87,24 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         const pStatus = producer.flags & MASK_STATUS;
 
         switch (pStatus) {
-          case STATUS_DIRTY:
-            // If value changed and we have a parent on the stack, mark it dirty
-            if (recomputeNode(node) && stack) stack.node.flags = STATUS_DIRTY;
+          case STATUS_DIRTY: {
+            // If value changed and we have a parent, mark it dirty
+            const parent: DerivedNode | undefined = node.deferredParent;
+            if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+            
+            // Clean up and continue with parent
+            node.deferredParent = undefined;
+            current = parent;
             continue traversal; // Done with this node
+          }
           case STATUS_PENDING:
             if ('compute' in producer) {
-              // Push current node first (to process after), then dependency (to process next)
-              stack = { node, prev: stack };  // Current node for later
-              stack = { node: producer, prev: stack };  // Dependency to process now
+              // Store where we are in the dependency list
+              node.deferredDep = dep.nextDependency;
+              // Link producer back to current node
+              producer.deferredParent = node;
+              // Process the dependency next
+              current = producer;
               continue traversal; // Process the dependency first
             }
         }
@@ -95,7 +114,12 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // No dependencies were dirty or pending, clear flags
       node.flags = 0;
-    } while (stack)
+      
+      // Continue with parent or finish
+      const parent: DerivedNode | undefined = node.deferredParent;
+      node.deferredParent = undefined;
+      current = parent;
+    }
   };
 
   return { pullUpdates };
