@@ -246,8 +246,8 @@ describe('Dependency Graph Helpers', () => {
         // Source should point to first target (head of list)
         expect(source.dependents).toBe(node1);
         // node1 should point to node2 (insertion order)
-        expect(node1.nextDependent).toBe(node2);
-        expect(node2.prevDependent).toBe(node1);
+        expect(node1.nextConsumer).toBe(node2);
+        expect(node2.prevConsumer).toBe(node1);
         // node2 should be the tail
         expect(source.dependentsTail).toBe(node2);
       });
@@ -311,7 +311,7 @@ describe('Dependency Graph Helpers', () => {
             middleEdge = edge;
             break;
           }
-          edge = edge.nextDependent;
+          edge = edge.nextConsumer;
         }
         
         // Remove middle edge
@@ -319,13 +319,13 @@ describe('Dependency Graph Helpers', () => {
         
         // Check producer's output list integrity
         const firstEdge = source.dependents!;
-        const thirdEdge = firstEdge.nextDependent!;
+        const thirdEdge = firstEdge.nextConsumer!;
         
         // After removal, first edge should point to third edge
         expect(firstEdge.consumer).toBe(targets[0]);
         expect(thirdEdge.consumer).toBe(targets[2]);
-        expect(firstEdge.nextDependent).toBe(thirdEdge);
-        expect(thirdEdge.prevDependent).toBe(firstEdge);
+        expect(firstEdge.nextConsumer).toBe(thirdEdge);
+        expect(thirdEdge.prevConsumer).toBe(firstEdge);
         
         // The returned next should be undefined since we removed from middle of consumer's list
         // (middleEdge was in targets[1].in, which only had one edge)
@@ -419,15 +419,15 @@ describe('Dependency Graph Helpers', () => {
         consumer: to,
         prevDependency: undefined,
         nextDependency: undefined,
-        prevDependent: undefined,
-        nextDependent: undefined
+        prevConsumer: undefined,
+        nextConsumer: undefined
       };
     }
   
     function linkEdges(edges: Dependency[]): void {
       for (let i = 0; i < edges.length - 1; i++) {
-        edges[i]!.nextDependent = edges[i + 1];
-        edges[i + 1]!.prevDependent = edges[i];
+        edges[i]!.nextConsumer = edges[i + 1];
+        edges[i + 1]!.prevConsumer = edges[i];
       }
     }
   

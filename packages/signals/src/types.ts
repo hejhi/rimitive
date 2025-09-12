@@ -79,7 +79,7 @@ export type ToNode = ConsumerNode | DerivedNode | ScheduledNode;
 // - O(1) insertion/removal
 //
 // The dependency is part of TWO doubly-linked lists simultaneously:
-// 1. Producer's dependent list: prevDependent <-> dependency <-> nextDependent (all dependencies FROM same producer)
+// 1. Producer's dependent list: prevConsumer <-> dependency <-> nextConsumer (all dependencies FROM same producer)
 // 2. Consumer's dependency list: prevDependency <-> dependency <-> nextDependency (all dependencies TO same consumer)
 //
 // This allows efficient traversal in both directions:
@@ -90,8 +90,8 @@ export interface Dependency {
   consumer: ToNode; // The consumer (depends on the producer)
 
   // Producer's dependent list navigation
-  prevDependent: Dependency | undefined; // Previous in dependent list
-  nextDependent: Dependency | undefined; // Next in dependent list
+  prevConsumer: Dependency | undefined; // Previous in dependent list
+  nextConsumer: Dependency | undefined; // Next in dependent list
 
   // Consumer's dependency list navigation
   prevDependency: Dependency | undefined; // Previous in dependency list

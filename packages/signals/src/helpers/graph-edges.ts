@@ -42,9 +42,9 @@ export function createGraphEdges(): GraphEdges {
       producer,
       consumer,
       prevDependency: tail,
-      prevDependent: producerTail,
+      prevConsumer: producerTail,
       nextDependency: next,
-      nextDependent: undefined,
+      nextConsumer: undefined,
     };
 
     // Wire up consumer side
@@ -56,7 +56,7 @@ export function createGraphEdges(): GraphEdges {
 
     // Wire up producer side  
     producer.dependentsTail = dependency;
-    if (producerTail) producerTail.nextDependent = dependency;
+    if (producerTail) producerTail.nextConsumer = dependency;
     else producer.dependents = dependency;
   };
 
@@ -87,7 +87,7 @@ export function createGraphEdges(): GraphEdges {
 
   // Helper to remove a dependency edge (optimized for hot path)
   const removeDependency = (dep: Dependency): Dependency | undefined => {
-    const { producer, consumer, prevDependency, nextDependency, prevDependent, nextDependent } = dep;
+    const { producer, consumer, prevDependency, nextDependency, prevConsumer, nextConsumer } = dep;
     
     // Update consumer's dependency chain
     if (nextDependency) nextDependency.prevDependency = prevDependency;
@@ -97,11 +97,11 @@ export function createGraphEdges(): GraphEdges {
     else consumer.dependencies = nextDependency;
 
     // Update producer's dependent chain
-    if (nextDependent) nextDependent.prevDependent = prevDependent;
-    else producer.dependentsTail = prevDependent;
+    if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
+    else producer.dependentsTail = prevConsumer;
 
-    if (prevDependent) prevDependent.nextDependent = nextDependent;
-    else producer.dependents = nextDependent;
+    if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
+    else producer.dependents = nextConsumer;
 
     return nextDependency; // Return next for efficient iteration
   };

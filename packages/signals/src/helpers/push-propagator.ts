@@ -26,7 +26,7 @@ export function createPushPropagator(): PushPropagator {
 
       // Batch check: combine skip conditions
       if (consumerNodeFlags & (STATUS_DISPOSED | STATUS_PENDING)) {
-        currentDependency = currentDependency.nextDependent;
+        currentDependency = currentDependency.nextConsumer;
         continue;
       }
 
@@ -44,7 +44,7 @@ export function createPushPropagator(): PushPropagator {
         if (consumerDependents) {
           // Save sibling dependents (other children of the same consumer-producer) on the stack
           // to process after completing the current path
-          const siblingDep = currentDependency.nextDependent;
+          const siblingDep = currentDependency.nextConsumer;
 
           if (siblingDep) dependencyStack = { value: siblingDep, prev: dependencyStack };
 
@@ -54,7 +54,7 @@ export function createPushPropagator(): PushPropagator {
       }
 
       // No further dependents, shift to sibling consumer and go deep
-      currentDependency = currentDependency.nextDependent;
+      currentDependency = currentDependency.nextConsumer;
 
       if (currentDependency || !dependencyStack) continue;
 
