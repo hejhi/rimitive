@@ -47,9 +47,9 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
     traversal: do {
       const node = stack.node;
       const flags = node.flags;
+      const status = flags & MASK_STATUS;
 
       stack = stack.prev;
-      const status = flags & MASK_STATUS;
 
       // If node is DIRTY (from a dependency that changed), recompute it
       if (status === STATUS_DIRTY) {
