@@ -11,7 +11,7 @@ export interface PullPropagator {
 
 interface StackFrame {
   node: DerivedNode;
-  next: StackFrame | undefined;
+  prev: StackFrame | undefined;
 }
 
 export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdges }): PullPropagator {
@@ -42,13 +42,13 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
   };
 
   const pullUpdates = (rootNode: DerivedNode): void => {
-    let stack: StackFrame | undefined = { node: rootNode, next: undefined };
+    let stack: StackFrame | undefined = { node: rootNode, prev: undefined };
 
     traversal: do {
       const node = stack.node;
       const flags = node.flags;
 
-      stack = stack.next;
+      stack = stack.prev;
       const status = flags & MASK_STATUS;
 
       // If node is DIRTY (from a dependency that changed), recompute it
@@ -83,8 +83,9 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
             continue traversal; // Done with this node
           case STATUS_PENDING:
             if ('compute' in producer) {
-              // Add the dependency to process immediately, then the current node
-              stack = { node: producer, next: { node, next: stack } };
+              // Push current node first (to process after), then dependency (to process next)
+              stack = { node, prev: stack };  // Current node for later
+              stack = { node: producer, prev: stack };  // Dependency to process now
               continue traversal; // Process the dependency first
             }
         }
