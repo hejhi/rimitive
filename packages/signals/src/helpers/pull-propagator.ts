@@ -53,9 +53,9 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // If node is DIRTY (from a dependency that changed), recompute it
       if (status === STATUS_DIRTY) {
-        recomputeNode(node);
-        // If this node's value changed, its parent (next on stack) will be marked DIRTY
-        // and will recompute when we unwind to it
+        // If value changed and we have a parent on the stack, mark it for direct recompute
+        // Check if parent is already marked for direct recompute
+        if (recomputeNode(node) && stack) stack.node.flags = STATUS_DIRTY;
         continue;
       }
 
@@ -68,29 +68,25 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // No dependencies - just recompute
       if (!dep) {
-        recomputeNode(node);
+        if (recomputeNode(node) && stack) stack.node.flags = STATUS_DIRTY;
         continue;
       }
 
       while (dep) {
         const producer = dep.producer;
-        const pFlags = producer.flags;
+        const pStatus = producer.flags & MASK_STATUS;
 
-        // If dependency is dirty, recompute immediately
-        if ((pFlags & MASK_STATUS) === STATUS_DIRTY) {
-          const changed = recomputeNode(node);
-          // If value changed and we have a parent on the stack, mark it dirty
-          if (changed && stack) {
-            stack.node.flags = STATUS_DIRTY;
-          }
-          continue traversal; // Done with this node
-        }
-        
-        // If dependency is a pending computed, we need to process it first
-        if ('compute' in producer && pFlags & STATUS_PENDING) {
-          // Add the dependency to process immediately, then the current node
-          stack = { node: producer, next: { node, next: stack } };
-          continue traversal; // Process the dependency first
+        switch (pStatus) {
+          case STATUS_DIRTY:
+            // If value changed and we have a parent on the stack, mark it dirty
+            if (recomputeNode(node) && stack) stack.node.flags = STATUS_DIRTY;
+            continue traversal; // Done with this node
+          case STATUS_PENDING:
+            if ('compute' in producer) {
+              // Add the dependency to process immediately, then the current node
+              stack = { node: producer, next: { node, next: stack } };
+              continue traversal; // Process the dependency first
+            }
         }
         
         dep = dep.nextDependency;
