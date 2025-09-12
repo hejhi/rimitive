@@ -1,4 +1,4 @@
-import type { DerivedNode, Dependency } from '../types';
+import type { DerivedNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
@@ -64,11 +64,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
       // If we have a deferred dependency, resume from there
-      let dep: Dependency | undefined;
-      if (node.deferredDep) {
-        dep = node.deferredDep;
-        node.deferredDep = undefined; // Clear only if it was set
-      } else dep = node.dependencies;
+      let dep = node.dependencies;
 
       // No dependencies - just recompute
       if (!dep) {
@@ -78,49 +74,32 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         continue;
       }
 
-      // Fast path: single dependency (most common case)
-      if (!dep.nextDependency && !node.deferredDep) {
-        const producer = dep.producer;
-        const pStatus = producer.flags & MASK_STATUS;
-        
-        if (pStatus === STATUS_DIRTY) {
-          if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
-          node.deferredParent = undefined;
-          current = parent;
-        } else if (pStatus === STATUS_PENDING && 'compute' in producer) {
-          // Single PENDING dependency - defer without saving position
-          producer.deferredParent = node;
-          current = producer;
-        } else {
-          // Single clean dependency
-          node.flags = 0;
-          node.deferredParent = undefined;
-          current = parent;
-        }
-        continue;
-      }
-
       // Multiple dependencies - need full loop
       while (dep) {
         const producer = dep.producer;
         const pStatus = producer.flags & MASK_STATUS;
 
-        if (pStatus === STATUS_DIRTY) {
-          // Found dirty dependency - recompute immediately and exit
-          if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
-          node.deferredParent = undefined;
-          current = parent;
-          continue traversal; // Done with this node
-        }
-        
-        if (pStatus === STATUS_PENDING && 'compute' in producer) {
-          // Store where we are in the dependency list
-          node.deferredDep = dep.nextDependency;
-          // Link producer back to current node
-          producer.deferredParent = node;
-          // Process the dependency next
-          current = producer;
-          continue traversal; // Process the dependency first
+        switch (pStatus) {
+          case STATUS_DIRTY:{
+            if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+            node.deferredParent = undefined;
+            current = parent;
+            continue traversal;
+          }
+          case STATUS_PENDING: {
+            // Checking compute here is redundant as STATUS_PENDING can't be on a signal anyway...
+            if ('compute' in producer) {
+              // Link producer back to current node
+              producer.deferredParent = node;
+              // Process the dependency next
+              current = producer;
+            } else {
+              node.flags = 0;
+              node.deferredParent = undefined;
+              current = parent;
+            }
+            continue traversal;
+          }
         }
         
         dep = dep.nextDependency;
