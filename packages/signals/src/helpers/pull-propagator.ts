@@ -43,11 +43,11 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       const node: DerivedNode = current;
       const status = node.flags & MASK_STATUS;
       
-      // Read parent once (but don't clear yet - we might defer)
+      // Read parent (don't clear yet - might need it for deferral)
       const parent: DerivedNode | undefined = node.deferredParent;
 
-      // Fast path: Skip disposed or already-processed nodes
-      if (status !== STATUS_PENDING && status !== STATUS_DIRTY) {
+      // Fast path: Skip if not PENDING or DIRTY (most common case)
+      if (!status || (status & ~(STATUS_PENDING | STATUS_DIRTY))) {
         node.deferredParent = undefined;
         current = parent;
         continue;
