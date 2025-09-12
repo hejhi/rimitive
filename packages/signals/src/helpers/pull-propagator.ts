@@ -46,18 +46,17 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
       // Read parent once (but don't clear yet - we might defer)
       const parent: DerivedNode | undefined = node.deferredParent;
 
-      // If node is DIRTY (from a dependency that changed), recompute it
-      if (status === STATUS_DIRTY) {
-        // If value changed and we have a parent, mark it for direct recompute
-        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+      // Fast path: Skip disposed or already-processed nodes
+      if (status !== STATUS_PENDING && status !== STATUS_DIRTY) {
         node.deferredParent = undefined;
         current = parent;
         continue;
       }
 
-      // Skip disposed or already-processed nodes
-      // Continue only if PENDING and not DISPOSED
-      if (status !== STATUS_PENDING) {
+      // If node is DIRTY (from a dependency that changed), recompute it
+      if (status === STATUS_DIRTY) {
+        // If value changed and we have a parent, mark it for direct recompute
+        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
         node.deferredParent = undefined;
         current = parent;
         continue;
@@ -84,7 +83,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         const pStatus = producer.flags & MASK_STATUS;
 
         if (pStatus === STATUS_DIRTY) {
-          // If value changed and we have a parent, mark it dirty
+          // Found dirty dependency - recompute immediately and exit
           if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
           node.deferredParent = undefined;
           current = parent;
