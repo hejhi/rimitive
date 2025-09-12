@@ -51,8 +51,8 @@ export interface ProducerNode extends ReactiveNode {
 export interface ConsumerNode extends ReactiveNode {
   dependencies: Dependency | undefined; // Head of dependency list
   dependencyTail: Dependency | undefined; // Current tracking position
-  deferredDep?: Dependency | undefined; // Temporary: tracks position during pull traversal
-  deferredParent?: DerivedNode | undefined; // Temporary: tracks parent during pull traversal
+  deferredDep: Dependency | undefined; // Temporary: tracks position during pull traversal
+  deferredParent: DerivedNode | undefined; // Temporary: tracks parent during pull traversal
   notify: (node: ConsumerNode) => void;
 }
 

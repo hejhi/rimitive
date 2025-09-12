@@ -39,6 +39,8 @@ export function createEffectFactory(
       flags: 0,
       dependencies: undefined as Dependency | undefined,
       dependencyTail: undefined as Dependency | undefined,
+      deferredDep: undefined,
+      deferredParent: undefined,
       nextScheduled: undefined as ScheduledNode | undefined,
       notify: enqueue as (node: ConsumerNode) => void, // Store the enqueue function directly for fast access
       // This will be set below
