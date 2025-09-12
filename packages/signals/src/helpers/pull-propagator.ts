@@ -85,17 +85,18 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         
         if (pStatus === STATUS_DIRTY) {
           if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
+          node.deferredParent = undefined;
+          current = parent;
         } else if (pStatus === STATUS_PENDING && 'compute' in producer) {
           // Single PENDING dependency - defer without saving position
           producer.deferredParent = node;
           current = producer;
-          continue;
         } else {
           // Single clean dependency
           node.flags = 0;
+          node.deferredParent = undefined;
+          current = parent;
         }
-        node.deferredParent = undefined;
-        current = parent;
         continue;
       }
 
