@@ -66,8 +66,11 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
       // If we have a deferred dependency, resume from there
-      let dep: Dependency | undefined = node.deferredDep || node.dependencies;
-      node.deferredDep = undefined; // Clear the deferred marker
+      let dep: Dependency | undefined;
+      if (node.deferredDep) {
+        dep = node.deferredDep;
+        node.deferredDep = undefined; // Clear only if it was set
+      } else dep = node.dependencies;
 
       // No dependencies - just recompute
       if (!dep) {
