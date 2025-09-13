@@ -9,7 +9,9 @@ export interface PullPropagator {
   pullUpdates: (node: DerivedNode) => void;
 }
 
-export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdges }): PullPropagator {
+export function createPullPropagator(
+  ctx: GlobalContext & { graphEdges: GraphEdges }
+): PullPropagator {
   const { startTracking, endTracking } = ctx.graphEdges;
 
   // Inline recomputation logic here since we have access to context
@@ -26,7 +28,7 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         node.flags = STATUS_DIRTY;
         return true;
       }
-      
+
       // Value didn't change, clear flags
       node.flags = 0;
       return false;
@@ -39,23 +41,26 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
   const pullUpdates = (rootNode: DerivedNode): void => {
     let current: DerivedNode | undefined = rootNode;
 
-    traversal: while (current) {
+    traversal: do {
       const node: DerivedNode = current;
       const status = node.flags & MASK_STATUS;
-      
-      current = node.deferredParent;
+
+      // Read parent (don't clear yet - might need it for deferral)
+      const parent: DerivedNode | undefined = node.deferredParent;
 
       // Fast path: Skip if not PENDING or DIRTY (most common case)
-      if (!status || (status & ~(STATUS_PENDING | STATUS_DIRTY))) {
+      if (!status || status & ~(STATUS_PENDING | STATUS_DIRTY)) {
         node.deferredParent = undefined;
+        current = parent;
         continue;
       }
 
       // If node is DIRTY (from a dependency that changed), recompute it
       if (status === STATUS_DIRTY) {
         // If value changed and we have a parent, mark it for direct recompute
-        if (recomputeNode(node) && current) current.flags = STATUS_DIRTY;
+        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
         node.deferredParent = undefined;
+        current = parent;
         continue;
       }
 
@@ -65,8 +70,9 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
 
       // No dependencies - just recompute
       if (!dep) {
-        if (recomputeNode(node) && current) current.flags = STATUS_DIRTY;
+        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
         node.deferredParent = undefined;
+        current = parent;
         continue;
       }
 
@@ -76,33 +82,34 @@ export function createPullPropagator(ctx: GlobalContext & { graphEdges: GraphEdg
         const pStatus = producer.flags & MASK_STATUS;
 
         switch (pStatus) {
-          case STATUS_DIRTY:{
-            if (recomputeNode(node) && current) current.flags = STATUS_DIRTY;
+          case STATUS_DIRTY: {
+            if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
             node.deferredParent = undefined;
+            current = parent;
             continue traversal;
           }
           case STATUS_PENDING: {
             // Checking compute here is redundant as STATUS_PENDING can't be on a signal anyway...
             if ('compute' in producer) {
-              // Link producer back to current node
-              producer.deferredParent = node;
-              // Process the dependency next
-              current = producer;
+              producer.deferredParent = node; // Link producer back to current node
+              current = producer; // Process the dependency next
             } else {
               node.flags = 0;
               node.deferredParent = undefined;
+              current = parent;
             }
             continue traversal;
           }
         }
-        
+
         dep = dep.nextDependency;
       }
 
       // No dependencies were dirty or pending, clear flags
       node.flags = 0;
       node.deferredParent = undefined;
-    }
+      current = parent;
+    } while (current);
   };
 
   return { pullUpdates };
