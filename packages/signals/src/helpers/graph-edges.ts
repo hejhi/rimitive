@@ -75,8 +75,8 @@ export function createGraphEdges(): GraphEdges {
     // Switch tracking context first
     const prevConsumer = ctx.currentConsumer;
 
-    // Reset dependency tail to start fresh dependency tracking
-    node.dependencyTail = undefined;
+    node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
+    node.deferredParent = undefined; // Clear deferredParent since we're recomputing
 
     // Clear all flags - node is being updated now
     node.flags = 0;

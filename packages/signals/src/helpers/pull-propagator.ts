@@ -49,7 +49,6 @@ export function createPullPropagator(
 
       // Fast path: Skip if not PENDING or DIRTY (most common case)
       if (!status || status & ~(STATUS_PENDING | STATUS_DIRTY)) {
-        current.deferredParent = undefined;
         current = parent;
         continue;
       }
@@ -58,7 +57,7 @@ export function createPullPropagator(
       if (status === STATUS_DIRTY) {
         // If value changed and we have a parent, mark it for direct recompute
         if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-        current.deferredParent = undefined;
+        // deferredParent cleared by endTracking in recomputeNode
         current = parent;
         continue;
       }
@@ -70,7 +69,7 @@ export function createPullPropagator(
       // No dependencies - just recompute
       if (!dep) {
         if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-        current.deferredParent = undefined;
+        // deferredParent cleared by endTracking in recomputeNode
         current = parent;
         continue;
       }
@@ -83,7 +82,7 @@ export function createPullPropagator(
         switch (pStatus) {
           case STATUS_DIRTY: {
             if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-            current.deferredParent = undefined;
+            // deferredParent cleared by endTracking in recomputeNode
             current = parent;
             continue traversal;
           }
@@ -94,7 +93,6 @@ export function createPullPropagator(
               current = producer; // Process the dependency next
             } else {
               current.flags = 0;
-              current.deferredParent = undefined;
               current = parent;
             }
             continue traversal;
@@ -106,7 +104,6 @@ export function createPullPropagator(
 
       // No dependencies were dirty or pending, clear flags
       current.flags = 0;
-      current.deferredParent = undefined;
       current = parent;
     } while (current);
   };
