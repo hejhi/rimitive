@@ -1,4 +1,4 @@
-import type { Dependency, DerivedNode } from '../types';
+import type { DerivedNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
@@ -41,94 +41,58 @@ export function createPullPropagator(
   const pullUpdates = (rootNode: DerivedNode): void => {
     let current: DerivedNode | undefined = rootNode;
 
-    traversal: do {
-      const flags = current.flags;
-      const parent = current.deferredParent;
+    traversal: while (current) {
+      const parent: DerivedNode | undefined = current.deferredParent;
+      const status = current.flags & MASK_STATUS;
 
-      // Ultra-fast path: if flags is 0 (clean), skip immediately
-      if (!flags) {
-        current = current.deferredParent;
-        continue;
-      }
-
-      const status = flags & MASK_STATUS;
-
-      // Fast path: Skip if not PENDING or DIRTY
-      if (status & ~(STATUS_PENDING | STATUS_DIRTY)) {
+      // Skip clean or invalid nodes
+      if (!status || status & ~(STATUS_PENDING | STATUS_DIRTY)) {
         current = parent;
         continue;
       }
 
-      // If node is DIRTY (from a dependency that changed), recompute it
+      // DIRTY = recompute immediately
       if (status === STATUS_DIRTY) {
-        // If value changed and we have a parent, mark it for direct recompute
         if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-
-        current = parent; // deferredParent cleared by endTracking in recomputeNode
+        current = parent;
         continue;
       }
 
-      // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
-      // If we have a deferred dependency, resume from there
+      // PENDING = check dependencies
       let dep = current.dependencies;
 
-      // No dependencies - just recompute
+      // No deps? Just recompute
       if (!dep) {
         if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
         current = parent;
         continue;
       }
 
-      // Optimization: Quick scan for any non-clean dependencies
-      // Most dependencies are clean in steady state
-      let hasWork = false;
-      let scanDep: Dependency | undefined = dep;
-      while (scanDep) {
-        if (scanDep.producer.flags) {
-          hasWork = true;
-          break;
-        }
-        scanDep = scanDep.nextDependency;
-      }
-
-      // Fast path: all dependencies are clean
-      if (!hasWork) {
-        current.flags = 0;
-        current = parent;
-        continue;
-      }
-
-      // Process dependencies that need work
+      // Scan dependencies for work
       while (dep) {
-        const producer = dep.producer;
-        const pFlags = producer.flags;
+        const pFlags = dep.producer.flags;
 
-        if (!pFlags) {
-          dep = dep.nextDependency;
-          continue;
-        }
-
-        // Direct STATUS_DIRTY check (triggers immediate recompute)
         if (pFlags === STATUS_DIRTY) {
+          // Dirty dep found - recompute
           if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
           current = parent;
           continue traversal;
         }
 
-        // PENDING computed nodes need traversal
-        if ((pFlags & MASK_STATUS) === STATUS_PENDING && 'compute' in producer) {
-          producer.deferredParent = current;
-          current = producer;
+        if (pFlags === STATUS_PENDING && 'compute' in dep.producer) {
+          // Pending computed - traverse it
+          dep.producer.deferredParent = current;
+          current = dep.producer as DerivedNode;
           continue traversal;
         }
 
         dep = dep.nextDependency;
       }
 
-      // No dependencies were dirty or pending, clear flags
+      // All deps clean
       current.flags = 0;
       current = parent;
-    } while (current);
+    }
   };
 
   return { pullUpdates };
