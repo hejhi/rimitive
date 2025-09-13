@@ -42,15 +42,14 @@ export function createPullPropagator(
     let current: DerivedNode | undefined = rootNode;
 
     traversal: do {
-      const node: DerivedNode = current;
-      const status = node.flags & MASK_STATUS;
+      const status = current.flags & MASK_STATUS;
 
       // Read parent (don't clear yet - might need it for deferral)
-      const parent: DerivedNode | undefined = node.deferredParent;
+      const parent: DerivedNode | undefined = current.deferredParent;
 
       // Fast path: Skip if not PENDING or DIRTY (most common case)
       if (!status || status & ~(STATUS_PENDING | STATUS_DIRTY)) {
-        node.deferredParent = undefined;
+        current.deferredParent = undefined;
         current = parent;
         continue;
       }
@@ -58,20 +57,20 @@ export function createPullPropagator(
       // If node is DIRTY (from a dependency that changed), recompute it
       if (status === STATUS_DIRTY) {
         // If value changed and we have a parent, mark it for direct recompute
-        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
-        node.deferredParent = undefined;
+        if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
+        current.deferredParent = undefined;
         current = parent;
         continue;
       }
 
       // Check all dependencies: defer PENDING computeds, recompute if any are DIRTY
       // If we have a deferred dependency, resume from there
-      let dep = node.dependencies;
+      let dep = current.dependencies;
 
       // No dependencies - just recompute
       if (!dep) {
-        if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
-        node.deferredParent = undefined;
+        if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
+        current.deferredParent = undefined;
         current = parent;
         continue;
       }
@@ -83,19 +82,19 @@ export function createPullPropagator(
 
         switch (pStatus) {
           case STATUS_DIRTY: {
-            if (recomputeNode(node) && parent) parent.flags = STATUS_DIRTY;
-            node.deferredParent = undefined;
+            if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
+            current.deferredParent = undefined;
             current = parent;
             continue traversal;
           }
           case STATUS_PENDING: {
             // Checking compute here is redundant as STATUS_PENDING can't be on a signal anyway...
             if ('compute' in producer) {
-              producer.deferredParent = node; // Link producer back to current node
+              producer.deferredParent = current; // Link producer back to current node
               current = producer; // Process the dependency next
             } else {
-              node.flags = 0;
-              node.deferredParent = undefined;
+              current.flags = 0;
+              current.deferredParent = undefined;
               current = parent;
             }
             continue traversal;
@@ -106,8 +105,8 @@ export function createPullPropagator(
       }
 
       // No dependencies were dirty or pending, clear flags
-      node.flags = 0;
-      node.deferredParent = undefined;
+      current.flags = 0;
+      current.deferredParent = undefined;
       current = parent;
     } while (current);
   };
