@@ -1,4 +1,4 @@
-import type { DerivedNode } from '../types';
+import type { Dependency, DerivedNode } from '../types';
 import type { GlobalContext } from '../context';
 import { CONSTANTS } from '../constants';
 import { GraphEdges } from './graph-edges';
@@ -75,36 +75,51 @@ export function createPullPropagator(
       // No dependencies - just recompute
       if (!dep) {
         if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-
-        current = parent; // deferredParent cleared by endTracking in recomputeNode
+        current = parent;
         continue;
       }
 
+      // Optimization: Quick scan for any non-clean dependencies
+      // Most dependencies are clean in steady state
+      let hasWork = false;
+      let scanDep: Dependency | undefined = dep;
+      while (scanDep) {
+        if (scanDep.producer.flags) {
+          hasWork = true;
+          break;
+        }
+        scanDep = scanDep.nextDependency;
+      }
+
+      // Fast path: all dependencies are clean
+      if (!hasWork) {
+        current.flags = 0;
+        current = parent;
+        continue;
+      }
+
+      // Process dependencies that need work
       while (dep) {
         const producer = dep.producer;
         const pFlags = producer.flags;
 
-        // Skip clean dependencies quickly
         if (!pFlags) {
           dep = dep.nextDependency;
           continue;
         }
 
-        const pStatus = pFlags & MASK_STATUS;
+        // Direct STATUS_DIRTY check (triggers immediate recompute)
+        if (pFlags === STATUS_DIRTY) {
+          if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
+          current = parent;
+          continue traversal;
+        }
 
-        switch (pStatus) {
-          case STATUS_DIRTY:
-            if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-            current = parent;
-            continue traversal;
-
-          case STATUS_PENDING:
-            // STATUS_PENDING only set on computed nodes, skip type check
-            if ('compute' in producer) {
-              producer.deferredParent = current;
-              current = producer;
-              continue traversal;
-            }
+        // PENDING computed nodes need traversal
+        if ((pFlags & MASK_STATUS) === STATUS_PENDING && 'compute' in producer) {
+          producer.deferredParent = current;
+          current = producer;
+          continue traversal;
         }
 
         dep = dep.nextDependency;
