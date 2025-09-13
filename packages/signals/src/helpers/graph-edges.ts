@@ -76,7 +76,6 @@ export function createGraphEdges(): GraphEdges {
     const prevConsumer = ctx.currentConsumer;
 
     node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
-    node.deferredParent = undefined; // Clear deferredParent since we're recomputing
 
     // Clear all flags - node is being updated now
     node.flags = 0;
@@ -131,6 +130,8 @@ export function createGraphEdges(): GraphEdges {
     while (toRemove) {
       toRemove = removeDependency(toRemove);
     }
+
+    node.deferredParent = undefined; // Clear deferredParent since we're recomputing
   };
 
   /**
