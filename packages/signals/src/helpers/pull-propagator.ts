@@ -42,13 +42,19 @@ export function createPullPropagator(
     let current: DerivedNode | undefined = rootNode;
 
     traversal: do {
-      const status = current.flags & MASK_STATUS;
+      const flags = current.flags;
+      const parent = current.deferredParent;
 
-      // Read parent (don't clear yet - might need it for deferral)
-      const parent: DerivedNode | undefined = current.deferredParent;
+      // Ultra-fast path: if flags is 0 (clean), skip immediately
+      if (!flags) {
+        current = current.deferredParent;
+        continue;
+      }
 
-      // Fast path: Skip if not PENDING or DIRTY (most common case)
-      if (!status || status & ~(STATUS_PENDING | STATUS_DIRTY)) {
+      const status = flags & MASK_STATUS;
+
+      // Fast path: Skip if not PENDING or DIRTY
+      if (status & ~(STATUS_PENDING | STATUS_DIRTY)) {
         current = parent;
         continue;
       }
@@ -57,8 +63,8 @@ export function createPullPropagator(
       if (status === STATUS_DIRTY) {
         // If value changed and we have a parent, mark it for direct recompute
         if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-        // deferredParent cleared by endTracking in recomputeNode
-        current = parent;
+
+        current = parent; // deferredParent cleared by endTracking in recomputeNode
         continue;
       }
 
@@ -69,34 +75,36 @@ export function createPullPropagator(
       // No dependencies - just recompute
       if (!dep) {
         if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-        // deferredParent cleared by endTracking in recomputeNode
-        current = parent;
+
+        current = parent; // deferredParent cleared by endTracking in recomputeNode
         continue;
       }
 
-      // Multiple dependencies - need full loop
       while (dep) {
         const producer = dep.producer;
-        const pStatus = producer.flags & MASK_STATUS;
+        const pFlags = producer.flags;
+
+        // Skip clean dependencies quickly
+        if (!pFlags) {
+          dep = dep.nextDependency;
+          continue;
+        }
+
+        const pStatus = pFlags & MASK_STATUS;
 
         switch (pStatus) {
-          case STATUS_DIRTY: {
+          case STATUS_DIRTY:
             if (recomputeNode(current) && parent) parent.flags = STATUS_DIRTY;
-            // deferredParent cleared by endTracking in recomputeNode
             current = parent;
             continue traversal;
-          }
-          case STATUS_PENDING: {
-            // Checking compute here is redundant as STATUS_PENDING can't be on a signal anyway...
+
+          case STATUS_PENDING:
+            // STATUS_PENDING only set on computed nodes, skip type check
             if ('compute' in producer) {
-              producer.deferredParent = current; // Link producer back to current node
-              current = producer; // Process the dependency next
-            } else {
-              current.flags = 0;
-              current = parent;
+              producer.deferredParent = current;
+              current = producer;
+              continue traversal;
             }
-            continue traversal;
-          }
         }
 
         dep = dep.nextDependency;
