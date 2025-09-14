@@ -67,6 +67,7 @@ export default defineConfig({
         computed: resolve(__dirname, 'src/computed.ts'),
         effect: resolve(__dirname, 'src/effect.ts'),
         batch: resolve(__dirname, 'src/batch.ts'),
+        subscribe: resolve(__dirname, 'src/subscribe.ts'),
         types: resolve(__dirname, 'src/types.ts'),
         context: resolve(__dirname, 'src/context.ts'),
         constants: resolve(__dirname, 'src/constants.ts'),

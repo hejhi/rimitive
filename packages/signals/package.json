@@ -26,6 +26,10 @@
       "import": "./dist/batch.js",
       "types": "./dist/batch.d.ts"
     },
+    "./subscribe": {
+      "import": "./dist/subscribe.js",
+      "types": "./dist/subscribe.d.ts"
+    },
     "./types": {
       "import": "./dist/types.js",
       "types": "./dist/types.d.ts"
