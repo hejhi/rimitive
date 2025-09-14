@@ -74,22 +74,12 @@ export function createSubscribeFactory(
         }
 
         // Check if value actually changed
-        const hasLastValue = 'lastValue' in node;
-        if (hasLastValue && Object.is(node.lastValue, value)) {
-          return; // Skip callback if value hasn't changed
-        }
+        if (Object.is(node.lastValue, value)) return; // Skip callback if value hasn't changed
 
         // Update stored value
         node.lastValue = value;
 
-        // Call callback WITHOUT tracking to avoid capturing unwanted dependencies
-        const prevConsumer2 = ctx.currentConsumer;
-        ctx.currentConsumer = null;
-        try {
-          callback(value);
-        } finally {
-          ctx.currentConsumer = prevConsumer2;
-        }
+        callback(value);
       },
     };
 
@@ -106,7 +96,7 @@ export function createSubscribeFactory(
     // Return unsubscribe function
     return () => {
       if (node.flags & STATUS_DISPOSED) return;
-      node.flags |= STATUS_DISPOSED;
+      node.flags = STATUS_DISPOSED;
       detachAll(node);
     };
   }
