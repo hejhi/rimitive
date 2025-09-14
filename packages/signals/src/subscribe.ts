@@ -33,7 +33,6 @@ interface SubscriptionNode<T> extends ConsumerNode {
   __type: 'subscription';
   callback: SubscribeCallback<T>;
   source: () => T;
-  lastValue?: T; // Track last value to detect changes
 }
 
 export function createSubscribeFactory(
@@ -51,6 +50,8 @@ export function createSubscribeFactory(
     source: () => T,
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
+    let value: T;
+
     // Create subscription node
     const node: SubscriptionNode<T> = {
       __type: 'subscription',
@@ -64,9 +65,10 @@ export function createSubscribeFactory(
       notify: () => {
         if (node.flags & STATUS_DISPOSED) return;
 
+        const prevValue = value;
+
         // Re-establish dependencies by reading source
         const prevConsumer = startTracking(ctx, node);
-        let value: T;
         try {
           value = source();
         } finally {
@@ -74,10 +76,7 @@ export function createSubscribeFactory(
         }
 
         // Check if value actually changed
-        if (Object.is(node.lastValue, value)) return; // Skip callback if value hasn't changed
-
-        // Update stored value
-        node.lastValue = value;
+        if (Object.is(prevValue, value)) return; // Skip callback if value hasn't changed
 
         callback(value);
       },
@@ -87,7 +86,7 @@ export function createSubscribeFactory(
     const prevConsumer = startTracking(ctx, node);
     try {
       const initialValue = source();
-      node.lastValue = initialValue; // Store initial value
+      value = initialValue; // Store initial value
       callback(initialValue);
     } finally {
       endTracking(ctx, node, prevConsumer);
