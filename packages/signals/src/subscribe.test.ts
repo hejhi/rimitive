@@ -82,6 +82,10 @@ describe('Subscribe - Eager Updates', () => {
     expect(callback).toHaveBeenCalledWith(4);
     expect(callback).toHaveBeenCalledTimes(2);
 
+    // Should update ONLY when dependency changes
+    count(2);
+    expect(callback).toHaveBeenCalledTimes(2);
+
     count(3);
     expect(callback).toHaveBeenCalledWith(6);
     expect(callback).toHaveBeenCalledTimes(3);

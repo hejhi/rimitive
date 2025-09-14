@@ -50,7 +50,15 @@ export function createSubscribeFactory(
     source: () => T,
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
-    let value: T;
+    const notify = (node: ConsumerNode) => {
+      if (node.flags & STATUS_DISPOSED) return;
+
+      const prevConsumer = startTracking(ctx, node);
+      const value = source();
+      endTracking(ctx, node, prevConsumer);
+
+      callback(value); // Call this OUTSIDE of tracking, don't track callback deps
+    }
 
     // Create subscription node
     const node: SubscriptionNode<T> = {
@@ -61,36 +69,11 @@ export function createSubscribeFactory(
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      // Eager notify - executes immediately, no scheduling
-      notify: () => {
-        if (node.flags & STATUS_DISPOSED) return;
-
-        const prevValue = value;
-
-        // Re-establish dependencies by reading source
-        const prevConsumer = startTracking(ctx, node);
-        try {
-          value = source();
-        } finally {
-          endTracking(ctx, node, prevConsumer);
-        }
-
-        // Check if value actually changed
-        if (Object.is(prevValue, value)) return; // Skip callback if value hasn't changed
-
-        callback(value);
-      },
+      notify,
     };
 
     // Establish initial dependencies and get initial value
-    const prevConsumer = startTracking(ctx, node);
-    try {
-      const initialValue = source();
-      value = initialValue; // Store initial value
-      callback(initialValue);
-    } finally {
-      endTracking(ctx, node, prevConsumer);
-    }
+    notify(node);
 
     // Return unsubscribe function
     return () => {
