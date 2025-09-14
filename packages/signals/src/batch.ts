@@ -49,18 +49,15 @@ export function createBatchFactory(
     nodeScheduler: NodeScheduler
   }
 ): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { ctx } = opts;
-  const { flush } = opts.nodeScheduler;
+  const { flush, startBatch, inBatch, endBatch } = opts.nodeScheduler;
 
   // OPTIMIZATION: Immediate propagation strategy like Alien Signals
   // Signal writes now propagate immediately during batch
   // We only defer effect execution to batch end
   const batch = function batch<T>(fn: () => T): T {
     // Fast path: if already batching, just run the function
-    if (ctx.batchDepth > 0) return fn();
-
-    // Start batch
-    ctx.batchDepth++;
+    if (inBatch()) return fn();
+    startBatch();
 
     // Execute user function with simple error handling
     try {
@@ -68,7 +65,7 @@ export function createBatchFactory(
     } finally {
       // Always decrement and flush effects if outermost batch
       // Only flush queued effects - propagation already happened
-      if (--ctx.batchDepth === 0) flush();
+      if (endBatch()) flush(); // endBatch returns true when depth reaches 0
     }
   };
 

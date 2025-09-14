@@ -20,7 +20,7 @@ export function createDefaultContext() {
     graphEdges,
     push: createPushPropagator(),
     pull: createPullPropagator(baseCtx, graphEdges),
-    nodeScheduler: createNodeScheduler(baseCtx),
+    nodeScheduler: createNodeScheduler(),
   };
 }
 
@@ -67,7 +67,7 @@ describe('createSignalAPI', () => {
     const pullPropagator = createPullPropagator(baseCtx, graphEdges);
     
     const nodeScheduler = (() => {
-      const scheduler = createNodeScheduler(baseCtx);
+      const scheduler = createNodeScheduler();
       return {
         ...scheduler,
         flush: () => {
@@ -115,7 +115,7 @@ describe('createSignalAPI', () => {
     const graphEdges = createGraphEdges();
     const pullPropagator = createPullPropagator(baseCtx, graphEdges);
     const nodeScheduler = (() => {
-      const queue = createNodeScheduler(baseCtx);
+      const queue = createNodeScheduler();
       const originalEnqueue = queue.enqueue;
       queue.enqueue = (node) => {
         enqueueCount++;

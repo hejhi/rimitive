@@ -47,7 +47,7 @@ export function createSignalFactory(
   const {
     graphEdges: { trackDependency },
     push: { pushUpdates },
-    nodeScheduler: { flush },
+    nodeScheduler: { flush, inBatch },
     ctx,
   } = opts;
 
@@ -85,7 +85,7 @@ export function createSignalFactory(
         pushUpdates(subscribers);
 
         // Batch check and flush
-        if (!ctx.batchDepth) flush();
+        if (!inBatch()) flush();
         return;
       }
 

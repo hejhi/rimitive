@@ -1,6 +1,5 @@
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
-import type { GlobalContext } from '../context';
 
 const { STATUS_DISPOSED, IS_SCHEDULED, MASK_STATUS } = CONSTANTS;
 
@@ -11,11 +10,20 @@ export interface NodeScheduler {
     cleanup: (node: T) => void
   ) => void;
   flush: () => void;
+  startBatch: () => void;
+  inBatch: () => boolean;
+  endBatch: () => boolean;
 }
 
-export function createNodeScheduler(
-  ctx: GlobalContext,
-): NodeScheduler {
+export function createNodeScheduler(): NodeScheduler {
+  let batchDepth = 0;
+  let queueHead: ScheduledNode | undefined;
+  let queueTail: ScheduledNode | undefined;
+
+  const startBatch = () => batchDepth++;
+  const inBatch = () => !!batchDepth;
+  const endBatch = () => --batchDepth === 0;
+
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
     // Single flag read and conditional write
@@ -27,10 +35,10 @@ export function createNodeScheduler(
     node.nextScheduled = undefined;
 
     // Add to queue
-    if (ctx.queueTail) ctx.queueTail.nextScheduled = node;
-    else ctx.queueHead = node;
+    if (queueTail) queueTail.nextScheduled = node;
+    else queueHead = node;
 
-    ctx.queueTail = node;
+    queueTail = node;
   };
 
   // Idempotent disposal helper shared across node types
@@ -46,11 +54,11 @@ export function createNodeScheduler(
 
   // Dequeue all scheduled nodes in FIFO order and execute
   const flush = (): void => {
-    let current = ctx.queueHead;
+    let current = queueHead;
     if (!current) return;
 
     // Clear the queue first to allow re-entrance scheduling
-    ctx.queueHead = ctx.queueTail = undefined;
+    queueHead = queueTail = undefined;
 
     while (current) {
       const next: ScheduledNode | undefined = current.nextScheduled;
@@ -69,5 +77,12 @@ export function createNodeScheduler(
     }
   };
 
-  return { enqueue, dispose, flush };
+  return {
+    enqueue,
+    dispose,
+    flush,
+    startBatch,
+    inBatch,
+    endBatch,
+  };
 }

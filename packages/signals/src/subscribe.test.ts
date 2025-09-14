@@ -19,7 +19,7 @@ function createTestContext() {
     graphEdges,
     push: createPushPropagator(),
     pull: createPullPropagator(baseCtx, graphEdges),
-    nodeScheduler: createNodeScheduler(baseCtx),
+    nodeScheduler: createNodeScheduler(),
   };
 }
 

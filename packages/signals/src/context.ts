@@ -1,4 +1,4 @@
-import { ConsumerNode, ScheduledNode } from "./types";
+import { ConsumerNode } from "./types";
 
 /**
  * ALGORITHM: Context-Based State Isolation
@@ -18,18 +18,6 @@ export interface GlobalContext {
   // This field acts as an implicit parameter threaded through all reads.
   // Similar to React's Fiber tracking or Vue's targetStack.
   currentConsumer: ConsumerNode | null;
-
-  // ALGORITHM: Transaction Batching
-  // Tracks nesting depth of batch() calls for nested transactions.
-  // Effects only run when batchDepth returns to 0.
-  // Similar to database transaction nesting.
-  batchDepth: number;
-
-  // ALGORITHM: Intrusive Linked List for Effect Queue
-  // Head and tail of queued effects list for O(1) enqueue and dequeue
-  // Uses _nextScheduled field on nodes to form the list (no allocations)
-  queueHead: ScheduledNode | undefined;
-  queueTail: ScheduledNode | undefined;
 }
 
 // PATTERN: Factory Function
@@ -39,7 +27,6 @@ export interface GlobalContext {
 export function createBaseContext(): GlobalContext {
   return {
     currentConsumer: null,
-    batchDepth: 0,
     queueHead: undefined,
     queueTail: undefined,
   } as GlobalContext; // Cast since helpers will be added by createDefaultContext
