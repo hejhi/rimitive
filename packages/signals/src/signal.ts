@@ -29,9 +29,10 @@ export interface SignalFunction<T = unknown> {
   peek(): T;                // Non-tracking read
 }
 
-export type SignalContext = GlobalContext & {
+export type SignalOpts = {
+  ctx: GlobalContext;
   graphEdges: GraphEdges;
-  pushPropagator: PushPropagator;
+  push: PushPropagator;
   nodeScheduler: NodeScheduler;
 };
 
@@ -40,13 +41,16 @@ interface SignalNode<T> extends ProducerNode {
   value: T;
 }
 
-export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
+export function createSignalFactory(
+  opts: SignalOpts
+): LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>> {
   const {
     graphEdges: { trackDependency },
-    pushPropagator: { pushUpdates },
+    push: { pushUpdates },
     nodeScheduler: { flush },
-  } = ctx;
-  
+    ctx,
+  } = opts;
+
   function createSignal<T>(initialValue: T): SignalFunction<T> {
     const node: SignalNode<T> = {
       __type: 'signal',
@@ -56,18 +60,17 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       flags: 0,
     };
 
-    
-    const signal = function(value?: T): T | undefined {
+    const signal = function (value?: T): T | undefined {
       if (arguments.length) {
         const flags = node.flags;
         const status = flags & MASK_STATUS;
-        
+
         if (node.value === value) {
           // Clear dirty status if value unchanged
           if (status === STATUS_DIRTY) node.flags = 0;
           return;
         }
-        
+
         node.value = value!;
 
         const subscribers = node.subscribers;
@@ -90,14 +93,14 @@ export function createSignalFactory(ctx: SignalContext): LatticeExtension<'signa
       if (consumer) trackDependency(node, consumer);
       return node.value;
     } as SignalFunction<T>;
-    
+
     signal.peek = () => node.value;
-    
+
     return signal;
   }
-  
+
   return {
     name: 'signal',
-    method: createSignal
+    method: createSignal,
   };
 }

@@ -44,9 +44,13 @@ export type BatchContext = GlobalContext & {
 
 // BatchFactory uses SignalContext which includes all helpers
 export function createBatchFactory(
-  ctx: BatchContext
+  opts: {
+    ctx: GlobalContext,
+    nodeScheduler: NodeScheduler
+  }
 ): LatticeExtension<'batch', <T>(fn: () => T) => T> {
-  const { flush } = ctx.nodeScheduler;
+  const { ctx } = opts;
+  const { flush } = opts.nodeScheduler;
 
   // OPTIMIZATION: Immediate propagation strategy like Alien Signals
   // Signal writes now propagate immediately during batch

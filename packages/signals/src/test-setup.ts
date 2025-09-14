@@ -1,9 +1,9 @@
 // Test setup for signal tests
 // Provides global-like exports for test compatibility while using scoped implementation
 
-import type { SignalContext, SignalFunction } from './signal';
-import type { EffectContext, EffectDisposer } from './effect';
-import type { ComputedContext, ComputedFunction } from './computed';
+import type { SignalFunction } from './signal';
+import type { EffectDisposer } from './effect';
+import type { ComputedFunction } from './computed';
 import type { ConsumerNode } from './types';
 import { createSignalFactory } from './signal';
 import { createComputedFactory } from './computed';
@@ -11,44 +11,45 @@ import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createContext as createLattice } from '@lattice/lattice';
 import { createBaseContext, GlobalContext } from './context';
-import { createGraphEdges } from './helpers/graph-edges';
-import { createPullPropagator } from './helpers/pull-propagator';
-import { createNodeScheduler } from './helpers/node-scheduler';
-import { createPushPropagator } from './helpers/push-propagator';
+import { createGraphEdges, GraphEdges } from './helpers/graph-edges';
+import { createPullPropagator, PullPropagator } from './helpers/pull-propagator';
+import { createNodeScheduler, NodeScheduler } from './helpers/node-scheduler';
+import { createPushPropagator, PushPropagator } from './helpers/push-propagator';
 
-export function createDefaultContext(): GlobalContext & SignalContext & EffectContext & ComputedContext {
-  const baseCtx = createBaseContext();
+export function createDefaultContext(): {
+  ctx: GlobalContext,
+  graphEdges: GraphEdges,
+  nodeScheduler: NodeScheduler,
+  push: PushPropagator,
+  pull: PullPropagator
+} {
+  const ctx = createBaseContext();
 
   // Create helpers with their dependencies
   const graphEdges = createGraphEdges();
   
-  // Extend the base context in place instead of creating a new object
-  const ctx = Object.assign(baseCtx, {
-    graphEdges,
-    pushPropagator: null as unknown as typeof pushPropagator, // Will be set below
-    pullPropagator: null as unknown as typeof pullPropagator, // Will be set below
-    nodeScheduler: null as unknown as typeof nodeScheduler, // Will be set below
-  });
-  
   // Now create pullPropagator with context
-  const pullPropagator = createPullPropagator(ctx);
-  ctx.pullPropagator = pullPropagator;
+  const pullPropagator = createPullPropagator(ctx, graphEdges);
   
   // Now create nodeScheduler with the same ctx object
   const nodeScheduler = createNodeScheduler(ctx);
   const pushPropagator = createPushPropagator();
   
-  // Set the properties
-  ctx.nodeScheduler = nodeScheduler;
-  ctx.pushPropagator = pushPropagator;
-
-  return ctx;
+  return {
+    ctx,
+    graphEdges,
+    nodeScheduler,
+    push: pushPropagator,
+    pull: pullPropagator
+  };
 }
 
 // Create a test instance with a stable context
 export function createTestInstance() {
   // Create extended context for testing - this will be reused
-  const ctx = createDefaultContext();
+  const opts = createDefaultContext();
+
+  const { ctx, nodeScheduler } = opts;
   
   // Store original reset function
   const resetContext = () => {
@@ -68,10 +69,10 @@ export function createTestInstance() {
   
   // Create API with all core factories - these capture the ctx in their closures
   const api = createLattice(
-    createSignalFactory(ctx),
-    createComputedFactory(ctx),
-    createEffectFactory(ctx),
-    createBatchFactory(ctx),
+    createSignalFactory(opts),
+    createComputedFactory(opts),
+    createEffectFactory(opts),
+    createBatchFactory(opts)
   );
   
   return {
@@ -107,7 +108,7 @@ export function createTestInstance() {
     resetGlobalState: resetContext,
     activeContext: ctx,
     // Export node scheduler for test access
-    nodeScheduler: ctx.nodeScheduler,
+    nodeScheduler,
   };
 }
 

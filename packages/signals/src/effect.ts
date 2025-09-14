@@ -4,7 +4,8 @@ import type { GlobalContext } from './context';
 import { NodeScheduler } from './helpers/node-scheduler';
 import { GraphEdges } from './helpers/graph-edges';
 
-export type EffectContext = GlobalContext & {
+export type EffectOpts = {
+  ctx: GlobalContext;
   nodeScheduler: NodeScheduler;
   graphEdges: GraphEdges;
 };
@@ -21,15 +22,16 @@ export interface EffectDisposer {
 }
 
 export function createEffectFactory(
-  ctx: EffectContext
+  opts: EffectOpts
 ): LatticeExtension<
   'effect',
   (fn: () => void | (() => void)) => EffectDisposer
 > {
   const {
+    ctx,
     nodeScheduler: { dispose: disposeNode, enqueue },
-    graphEdges: { startTracking, endTracking, detachAll }
-  } = ctx;
+    graphEdges: { startTracking, endTracking, detachAll },
+  } = opts;
 
   function createEffect(fn: () => void | (() => void)): EffectDisposer {
     // State object captured in closure - no binding needed

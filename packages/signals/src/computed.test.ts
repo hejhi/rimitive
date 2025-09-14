@@ -1,40 +1,25 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createSignalAPI, GlobalContext } from './api';
-import { createSignalFactory, SignalContext, type SignalFunction } from './signal';
-import { ComputedContext, createComputedFactory, type ComputedFunction } from './computed';
-import { createEffectFactory, EffectContext, type EffectDisposer } from './effect';
+import { createSignalAPI } from './api';
+import { createSignalFactory, type SignalFunction } from './signal';
+import { createComputedFactory, type ComputedFunction } from './computed';
+import { createEffectFactory, type EffectDisposer } from './effect';
 import { createBatchFactory } from './batch';
 import { createBaseContext } from './context';
 import { createGraphEdges } from './helpers/graph-edges';
 import { createPullPropagator } from './helpers/pull-propagator';
-import { createNodeScheduler, type NodeScheduler } from './helpers/node-scheduler';
+import { createNodeScheduler } from './helpers/node-scheduler';
 import { createPushPropagator } from './helpers/push-propagator';
 
-export function createDefaultContext(): GlobalContext & SignalContext & EffectContext & ComputedContext {
+export function createDefaultContext() {
   const baseCtx = createBaseContext();
-
-  // Create helpers with their dependencies
   const graphEdges = createGraphEdges();
-  const pushPropagator = createPushPropagator();
   
-  // Extend baseCtx in place to ensure nodeScheduler uses the same context object
-  const ctx = Object.assign(baseCtx, {
-    graphEdges,
-    pushPropagator,
-    pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>, // Will be set below
-    nodeScheduler: null as unknown as NodeScheduler, // Will be set below
-  });
-  
-  // Now create pullPropagator with context
-  const pullPropagator = createPullPropagator(ctx);
-  ctx.pullPropagator = pullPropagator;
-  
-  // Now create nodeScheduler with the same ctx object
-  const nodeScheduler = createNodeScheduler(ctx);
-  
-  ctx.nodeScheduler = nodeScheduler;
-  
-  return ctx;
+  return {
+    ctx: baseCtx,
+    push: createPushPropagator(),
+    pull: createPullPropagator(baseCtx, graphEdges),
+    nodeScheduler: createNodeScheduler(baseCtx),
+  };
 }
 
 describe('Computed - Push-Pull Optimization', () => {

@@ -18,9 +18,10 @@ export interface ComputedFunction<T = unknown> {
   peek(): T;
 }
 
-export type ComputedContext = GlobalContext & {
+export type ComputedOpts = {
+  ctx: GlobalContext,
   graphEdges: GraphEdges;
-  pullPropagator: PullPropagator;
+  pull: PullPropagator;
 }
 
 // Internal computed state that gets bound to the function
@@ -35,12 +36,13 @@ const { STATUS_PENDING } = CONSTANTS;
 const NOOP = () => undefined;
 
 export function createComputedFactory(
-  ctx: ComputedContext
+  opts: ComputedOpts
 ): LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>> {
   const {
+    ctx,
     graphEdges: { trackDependency },
-    pullPropagator: { pullUpdates },
-  } = ctx;
+    pull: { pullUpdates },
+  } = opts;
 
   function createComputed<T>(compute: () => T): ComputedFunction<T> {
     const node: ComputedNode<T> = {
@@ -64,7 +66,7 @@ export function createComputedFactory(
       // Always link if there's a consumer
       // Create edge to consumer
       if (consumer) trackDependency(node, consumer);
-      
+
       // Fast-path: Only call pullUpdates if node needs updating
       if (node.flags & STATUS_PENDING) pullUpdates(node);
 
