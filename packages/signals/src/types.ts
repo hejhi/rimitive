@@ -63,8 +63,8 @@ export interface DerivedNode extends ProducerNode, ConsumerNode {
 // ScheduledNode represents consumers that batch their updates.
 // Uses intrusive linked list for zero-allocation scheduling queue.
 export interface ScheduledNode extends ConsumerNode {
-  nextScheduled: ScheduledNode | undefined;  // Next node in scheduling queue (intrusive list)
-  flush(): void;                  // Execute the deferred work
+  nextScheduled: ScheduledNode | undefined; // Next node in scheduling queue (intrusive list)
+  flush(node: ScheduledNode): void; // Execute the deferred work
 }
 
 // Node types for edges

@@ -34,22 +34,7 @@ export function createEffectFactory(
   } = opts;
 
   function createEffect(fn: () => void | (() => void)): EffectDisposer {
-    // State object captured in closure - no binding needed
-    const node: EffectNode = {
-      __type: 'effect' as const,
-      _cleanup: undefined as (() => void) | undefined,
-      flags: 0,
-      dependencies: undefined as Dependency | undefined,
-      dependencyTail: undefined as Dependency | undefined,
-      deferredParent: undefined,
-      nextScheduled: undefined as ScheduledNode | undefined,
-      notify: enqueue as (node: ConsumerNode) => void, // Store the enqueue function directly for fast access
-      // This will be set below
-      flush: null as unknown as () => void,
-    };
-
-    // Flush method using closure
-    const flush = (): void => {
+    const flush = (node: EffectNode): void => {
       const prevConsumer = startTracking(ctx, node);
 
       try {
@@ -67,27 +52,36 @@ export function createEffectFactory(
       } finally {
         endTracking(ctx, node, prevConsumer);
       }
-    };
+    }
+
+    // State object captured in closure - no binding needed
+    const node: EffectNode = {
+      __type: 'effect' as const,
+      _cleanup: undefined as (() => void) | undefined,
+      flags: 0,
+      dependencies: undefined as Dependency | undefined,
+      dependencyTail: undefined as Dependency | undefined,
+      deferredParent: undefined,
+      nextScheduled: undefined as ScheduledNode | undefined,
+      notify: enqueue as (node: ConsumerNode) => void, // Store the enqueue function directly for fast access
+      flush
+    }
 
     // Dispose method using closure - delegates flag management to nodeScheduler
-    const dispose = (): void => {
-      disposeNode(node, (node) => {
-        // Effect-specific cleanup
-        const cleanup = node._cleanup;
-        if (cleanup) {
-          node._cleanup = undefined; // Clear to prevent double cleanup
-          cleanup();
-        }
-        detachAll(node);
-      });
-    };
+    const dispose = (): void => disposeNode(node, (node) => {
+      // Effect-specific cleanup
+      const cleanup = node._cleanup;
 
-    // Set flush method
-    node.flush = flush;
+      if (cleanup) {
+        node._cleanup = undefined; // Clear to prevent double cleanup
+        cleanup();
+      }
+      detachAll(node);
+    });
 
     // Effects run immediately when created to establish initial state and dependencies.
     // This flushes outside of the scheduling mechanism.
-    flush();
+    flush(node);
 
     return dispose;
   }

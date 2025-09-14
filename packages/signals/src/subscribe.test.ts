@@ -23,7 +23,7 @@ function createTestContext() {
   };
 }
 
-describe('Subscribe - Eager Updates', () => {
+describe('Subscribe - Scheduled Updates', () => {
   let signal: ReturnType<typeof createSignalFactory>['method'];
   let computed: ReturnType<typeof createComputedFactory>['method'];
   let subscribe: ReturnType<typeof createSubscribeFactory>['method'];
@@ -43,7 +43,7 @@ describe('Subscribe - Eager Updates', () => {
     batch = api.batch;
   });
 
-  it('should call callback immediately on signal change', () => {
+  it('should call callback on signal change via scheduling', () => {
     const count = signal(0);
     const callback = vi.fn();
 
@@ -53,7 +53,7 @@ describe('Subscribe - Eager Updates', () => {
     expect(callback).toHaveBeenCalledWith(0);
     expect(callback).toHaveBeenCalledTimes(1);
 
-    // Should be called immediately on change
+    // Should be called after flush
     count(1);
     expect(callback).toHaveBeenCalledWith(1);
     expect(callback).toHaveBeenCalledTimes(2);
@@ -93,7 +93,7 @@ describe('Subscribe - Eager Updates', () => {
     unsubscribe();
   });
 
-  it('should execute eagerly even during batch', () => {
+  it('should batch updates during batch()', () => {
     const count = signal(0);
     const callback = vi.fn();
 
@@ -102,21 +102,19 @@ describe('Subscribe - Eager Updates', () => {
 
     batch(() => {
       count(1);
-      // Subscribe callback should have been called immediately
-      expect(callback).toHaveBeenCalledWith(1);
-      expect(callback).toHaveBeenCalledTimes(1);
+      // Subscribe callback should NOT have been called yet (batched)
+      expect(callback).toHaveBeenCalledTimes(0);
 
       count(2);
-      expect(callback).toHaveBeenCalledWith(2);
-      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback).toHaveBeenCalledTimes(0);
 
       count(3);
-      expect(callback).toHaveBeenCalledWith(3);
-      expect(callback).toHaveBeenCalledTimes(3);
+      expect(callback).toHaveBeenCalledTimes(0);
     });
 
-    // No additional calls after batch
-    expect(callback).toHaveBeenCalledTimes(3);
+    // After batch, should be called once with final value
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith(3);
 
     unsubscribe();
   });
@@ -282,7 +280,118 @@ describe('Subscribe - Eager Updates', () => {
     unsubscribe();
   });
 
-  it('should fire eagerly even during batch with intermediate values', () => {
+  it('should track multiple dependencies in source function', () => {
+    const a = signal(1);
+    const b = signal(2);
+    const c = signal(3);
+    const callback = vi.fn();
+
+    // Source function reads multiple signals - all become dependencies
+    const unsubscribe = subscribe(() => a() + b() * c(), callback);
+
+    // Initial: 1 + 2 * 3 = 7
+    expect(callback).toHaveBeenCalledWith(7);
+    expect(callback).toHaveBeenCalledTimes(1);
+
+    // Change a - should trigger
+    a(2);
+    expect(callback).toHaveBeenCalledWith(8); // 2 + 2 * 3
+    expect(callback).toHaveBeenCalledTimes(2);
+
+    // Change b - should trigger
+    b(3);
+    expect(callback).toHaveBeenCalledWith(11); // 2 + 3 * 3
+    expect(callback).toHaveBeenCalledTimes(3);
+
+    // Change c - should trigger
+    c(4);
+    expect(callback).toHaveBeenCalledWith(14); // 2 + 3 * 4
+    expect(callback).toHaveBeenCalledTimes(4);
+
+    // Batch multiple changes
+    callback.mockClear();
+    batch(() => {
+      a(1);  // Back to 1
+      b(2);  // Back to 2
+      c(3);  // Back to 3
+    });
+
+    // Should fire once with final value
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith(7); // 1 + 2 * 3
+
+    unsubscribe();
+  });
+
+  it('should track mixed signals and computeds in source', () => {
+    const count = signal(10);
+    const multiplier = signal(2);
+    const doubled = computed(() => count() * 2);
+    const callback = vi.fn();
+
+    // Source reads both signals and computed
+    const unsubscribe = subscribe(
+      () => doubled() + multiplier() * count(),
+      callback
+    );
+
+    // Initial: (10 * 2) + 2 * 10 = 20 + 20 = 40
+    expect(callback).toHaveBeenCalledWith(40);
+
+    // Change count - affects both doubled and direct read
+    count(5);
+    // (5 * 2) + 2 * 5 = 10 + 10 = 20
+    expect(callback).toHaveBeenCalledWith(20);
+
+    // Change multiplier - only affects direct multiplication
+    multiplier(3);
+    // (5 * 2) + 3 * 5 = 10 + 15 = 25
+    expect(callback).toHaveBeenCalledWith(25);
+
+    unsubscribe();
+  });
+
+  it('should allow conditional dependencies in source', () => {
+    const useA = signal(true);
+    const a = signal(10);
+    const b = signal(20);
+    const callback = vi.fn();
+
+    // Conditional dependency tracking
+    const unsubscribe = subscribe(
+      () => useA() ? a() : b(),
+      callback
+    );
+
+    expect(callback).toHaveBeenCalledWith(10);
+    callback.mockClear();
+
+    // Change a - should trigger (currently tracked)
+    a(15);
+    expect(callback).toHaveBeenCalledWith(15);
+
+    // Change b - should NOT trigger (not currently tracked)
+    callback.mockClear();
+    b(25);
+    expect(callback).not.toHaveBeenCalled();
+
+    // Switch condition
+    useA(false);
+    expect(callback).toHaveBeenCalledWith(25); // Now returns b()
+
+    // Now b is tracked, a is not
+    callback.mockClear();
+    b(30);
+    expect(callback).toHaveBeenCalledWith(30);
+
+    callback.mockClear();
+    a(100);
+    expect(callback).not.toHaveBeenCalled(); // a no longer tracked
+
+    unsubscribe();
+  });
+
+  it('should batch properly and only fire once with final value', () => {
     const a = signal(2);
     const b = signal(3);
     const sum = computed(() => a() + b());
@@ -293,18 +402,17 @@ describe('Subscribe - Eager Updates', () => {
 
     callback.mockClear();
 
-    // Change a and b - subscribe fires eagerly with intermediate values
+    // Change a and b - subscribe fires once with final value due to batching
     batch(() => {
       a(3); // Sum becomes 6 (3 + 3)
       b(2); // Sum becomes 5 (3 + 2)
     });
 
-    // Subscribe fires eagerly for each change during batch
-    expect(callback).toHaveBeenCalledTimes(2); // Fires for 6, then back to 5
-    expect(callback).toHaveBeenNthCalledWith(1, 6); // Intermediate value
-    expect(callback).toHaveBeenNthCalledWith(2, 5); // Final value
+    // Subscribe fires once after batch with final value
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith(5); // Final value only
 
-    // Now change to produce same result - optimization should prevent callback
+    // Now change to produce different result
     callback.mockClear();
     a(4); // 4 + 2 = 6
     expect(callback).toHaveBeenCalledTimes(1);
@@ -316,10 +424,9 @@ describe('Subscribe - Eager Updates', () => {
       a(3); // 3 + 2 = 5, then...
       a(4); // 4 + 2 = 6
     });
-    // Should see 5 then 6
-    expect(callback).toHaveBeenCalledTimes(2);
-    expect(callback).toHaveBeenNthCalledWith(1, 5);
-    expect(callback).toHaveBeenNthCalledWith(2, 6);
+    // Should see only final value due to batching
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith(6); // Final value only
 
     unsubscribe();
   });

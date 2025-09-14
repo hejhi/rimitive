@@ -1,21 +1,22 @@
 /**
- * Subscribe Extension - Eager callback-based reactive updates
+ * Subscribe Extension - Scheduled callback-based reactive updates
  *
- * Unlike effects which are scheduled and batched, subscriptions execute
- * immediately and synchronously when their source changes. This provides
- * lower latency at the cost of potentially more computations.
+ * Like effects, subscriptions are scheduled and batched, but they only
+ * track dependencies from the source function, not from the callback.
+ * This provides efficient updates when you want to react to specific
+ * signals without tracking all dependencies used in the callback.
  *
  * Use cases:
- * - UI updates that need immediate feedback
- * - Debug logging
- * - External system integration
- * - Performance-critical hot paths where scheduling overhead matters
+ * - UI updates that depend on a specific signal
+ * - Derived computations that should only update on specific triggers
+ * - Selective dependency tracking for performance
  */
 
-import type { ConsumerNode } from './types';
+import type { ConsumerNode, ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { GraphEdges } from './helpers/graph-edges';
+import { NodeScheduler } from './helpers/node-scheduler';
 import { CONSTANTS } from './constants';
 
 const { STATUS_DISPOSED } = CONSTANTS;
@@ -23,13 +24,14 @@ const { STATUS_DISPOSED } = CONSTANTS;
 export type SubscribeOpts = {
   ctx: GlobalContext;
   graphEdges: GraphEdges;
+  nodeScheduler: NodeScheduler;
 };
 
 export type SubscribeCallback<T> = (value: T) => void;
 export type UnsubscribeFunction = () => void;
 
-// Subscription node that acts like an effect but executes eagerly
-interface SubscriptionNode<T> extends ConsumerNode {
+// Subscription node that acts like an effect but only tracks source dependencies
+interface SubscriptionNode<T> extends ScheduledNode {
   __type: 'subscription';
   callback: SubscribeCallback<T>;
   source: () => T;
@@ -44,20 +46,23 @@ export function createSubscribeFactory(
   const {
     ctx,
     graphEdges: { startTracking, endTracking, detachAll },
+    nodeScheduler: { enqueue, dispose: disposeNode },
   } = opts;
 
   function subscribe<T>(
     source: () => T,
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
-    const notify = (node: ConsumerNode) => {
+    const flush = (node: SubscriptionNode<T>) => {
       if (node.flags & STATUS_DISPOSED) return;
 
+      // Track dependencies ONLY for the source function
       const prevConsumer = startTracking(ctx, node);
       const value = source();
       endTracking(ctx, node, prevConsumer);
 
-      callback(value); // Call this OUTSIDE of tracking, don't track callback deps
+      // Execute callback without dependency tracking
+      callback(value);
     }
 
     // Create subscription node
@@ -69,17 +74,19 @@ export function createSubscribeFactory(
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      notify,
+      nextScheduled: undefined,
+      notify: enqueue as (node: ConsumerNode) => void,
+      flush
     };
 
-    // Establish initial dependencies and get initial value
-    notify(node);
+    // Initial execution to establish dependencies and get initial value
+    flush(node);
 
     // Return unsubscribe function
     return () => {
-      if (node.flags & STATUS_DISPOSED) return;
-      node.flags = STATUS_DISPOSED;
-      detachAll(node);
+      disposeNode(node, (node) => {
+        detachAll(node);
+      });
     };
   }
 

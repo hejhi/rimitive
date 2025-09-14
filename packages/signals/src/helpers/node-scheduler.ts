@@ -62,7 +62,7 @@ export function createNodeScheduler(
       
       // Only flush if not disposed and has a status
       if ((flags & MASK_STATUS) !== STATUS_DISPOSED && (flags & MASK_STATUS)) {
-        current.flush();
+        current.flush(current);
       }
 
       current = next;
