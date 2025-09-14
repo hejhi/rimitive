@@ -3,6 +3,9 @@ import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { NodeScheduler } from './helpers/node-scheduler';
 import { GraphEdges } from './helpers/graph-edges';
+import { CONSTANTS } from './constants';
+
+const { STATUS_CLEAN } = CONSTANTS;
 
 export type EffectOpts = {
   ctx: GlobalContext;
@@ -58,7 +61,7 @@ export function createEffectFactory(
     const node: EffectNode = {
       __type: 'effect' as const,
       _cleanup: undefined as (() => void) | undefined,
-      flags: 0,
+      status: STATUS_CLEAN,
       dependencies: undefined as Dependency | undefined,
       dependencyTail: undefined as Dependency | undefined,
       deferredParent: undefined,

@@ -22,16 +22,16 @@ export function createPushPropagator(): PushPropagator {
 
     do {
       const consumerNode = currentDependency.consumer;
-      const consumerNodeFlags = consumerNode.flags;
+      const consumerNodeStatus = consumerNode.status;
 
-      // Batch check: combine skip conditions
-      if (consumerNodeFlags & (STATUS_DISPOSED | STATUS_PENDING)) {
+      // Skip if already disposed or pending
+      if (consumerNodeStatus === STATUS_DISPOSED || consumerNodeStatus === STATUS_PENDING) {
         currentDependency = currentDependency.nextConsumer;
         continue;
       }
 
-      // Batch operation: directly set status without helper function
-      consumerNode.flags = STATUS_PENDING;
+      // Set status to pending
+      consumerNode.status = STATUS_PENDING;
 
       // Fast path: if node has _notify, it's an effect - schedule it directly
       // This avoids method calls and property lookups

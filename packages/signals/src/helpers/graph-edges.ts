@@ -1,5 +1,8 @@
 import { GlobalContext } from '../context';
 import type { ProducerNode, ConsumerNode, ToNode, FromNode, Dependency } from '../types';
+import { CONSTANTS } from '../constants';
+
+const { STATUS_CLEAN } = CONSTANTS;
 
 export interface GraphEdges {
   trackDependency: (
@@ -77,8 +80,8 @@ export function createGraphEdges(): GraphEdges {
 
     node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
 
-    // Clear all flags - node is being updated now
-    node.flags = 0;
+    // Clear status - node is being updated now
+    node.status = STATUS_CLEAN;
 
     ctx.currentConsumer = node;
     return prevConsumer;

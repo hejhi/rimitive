@@ -21,7 +21,7 @@ import { GraphEdges } from './helpers/graph-edges';
 import { PushPropagator } from './helpers/push-propagator';
 import { NodeScheduler } from './helpers/node-scheduler';
 
-const { STATUS_DIRTY, MASK_STATUS } = CONSTANTS;
+const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
 export interface SignalFunction<T = unknown> {
   (): T;                    // Read operation (monomorphic)
@@ -57,17 +57,14 @@ export function createSignalFactory(
       value: initialValue,
       subscribers: undefined,
       subscribersTail: undefined,
-      flags: 0,
+      status: STATUS_CLEAN,
     };
 
     const signal = function (value?: T): T | undefined {
       if (arguments.length) {
-        const flags = node.flags;
-        const status = flags & MASK_STATUS;
-
         if (node.value === value) {
           // Clear dirty status if value unchanged
-          if (status === STATUS_DIRTY) node.flags = 0;
+          if (node.status === STATUS_DIRTY) node.status = STATUS_CLEAN;
           return;
         }
 
@@ -78,7 +75,7 @@ export function createSignalFactory(
         if (!subscribers) return;
 
         // Mark as dirty - value has changed
-        node.flags = STATUS_DIRTY;
+        node.status = STATUS_DIRTY;
 
         // Invalidate and propagate
         // The pushUpdates function will skip stale dependencies automatically

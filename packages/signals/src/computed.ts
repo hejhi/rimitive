@@ -53,7 +53,7 @@ export function createComputedFactory(
       dependencies: undefined, // Will be set to old dependencies when they exist
       dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
       deferredParent: undefined,
-      flags: STATUS_PENDING, // Start in PENDING state so first access triggers computation
+      status: STATUS_PENDING, // Start in PENDING state so first access triggers computation
       compute,
       notify: NOOP,
     };
@@ -68,7 +68,7 @@ export function createComputedFactory(
       if (consumer) trackDependency(node, consumer);
 
       // Fast-path: Only call pullUpdates if node needs updating
-      if (node.flags & STATUS_PENDING) pullUpdates(node);
+      if (node.status === STATUS_PENDING) pullUpdates(node);
 
       return node.value;
     }) as ComputedFunction<T>;
@@ -81,7 +81,7 @@ export function createComputedFactory(
 
       try {
         // Fast-path: Only call pullUpdates if node needs updating
-        if (node.flags & STATUS_PENDING) pullUpdates(node);
+        if (node.status === STATUS_PENDING) pullUpdates(node);
       } finally {
         ctx.currentConsumer = prevConsumer; // Restore back to previous state
       }

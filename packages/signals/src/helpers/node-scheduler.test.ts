@@ -3,7 +3,7 @@ import { createNodeScheduler } from './node-scheduler';
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
-const { STATUS_DISPOSED, IS_SCHEDULED } = CONSTANTS;
+const { STATUS_DISPOSED, STATUS_PENDING } = CONSTANTS;
 
 describe('NodeScheduler', () => {
   it('should enqueue nodes', () => {
@@ -11,7 +11,7 @@ describe('NodeScheduler', () => {
 
     const node: ScheduledNode = {
       __type: 'test',
-      flags: 0,
+      status: 0,
       nextScheduled: undefined,
       flush: vi.fn(),
       dependencies: undefined,
@@ -21,7 +21,7 @@ describe('NodeScheduler', () => {
     };
 
     scheduler.enqueue(node);
-    expect(node.flags & IS_SCHEDULED).toBeTruthy();
+    expect(node.isScheduled).toBe(true);
   });
 
   it('should not enqueue already scheduled nodes', () => {
@@ -29,7 +29,7 @@ describe('NodeScheduler', () => {
 
     const node: ScheduledNode = {
       __type: 'test',
-      flags: 0,
+      status: 0,
       nextScheduled: undefined,
       flush: vi.fn(),
       dependencies: undefined,
@@ -40,11 +40,11 @@ describe('NodeScheduler', () => {
 
     // Enqueue once
     scheduler.enqueue(node);
-    const flagsAfterFirst = node.flags;
+    const scheduledAfterFirst = node.isScheduled;
 
     // Try to enqueue again - should be skipped
     scheduler.enqueue(node);
-    expect(node.flags).toBe(flagsAfterFirst); // Flags unchanged
+    expect(node.isScheduled).toBe(scheduledAfterFirst); // Scheduled flag unchanged
   });
 
   it('should dispose node only once', () => {
@@ -53,7 +53,7 @@ describe('NodeScheduler', () => {
     const cleanupFn = vi.fn();
     const node: ScheduledNode = {
       __type: 'test',
-      flags: 0,
+      status: 0,
       nextScheduled: undefined,
       flush: vi.fn(),
       dependencies: undefined,
@@ -65,7 +65,7 @@ describe('NodeScheduler', () => {
     // First disposal
     scheduler.dispose(node, cleanupFn);
     expect(cleanupFn).toHaveBeenCalledTimes(1);
-    expect(node.flags).toBe(STATUS_DISPOSED);
+    expect(node.status).toBe(STATUS_DISPOSED);
 
     // Second disposal - should be skipped
     scheduler.dispose(node, cleanupFn);
@@ -79,7 +79,7 @@ describe('NodeScheduler', () => {
 
     const createNode = (id: string): ScheduledNode => ({
       __type: 'test',
-      flags: 1, // STATUS_PENDING so it will flush
+      status: STATUS_PENDING, // STATUS_PENDING so it will flush
       nextScheduled: undefined,
       flush: vi.fn(() => flushOrder.push(id)),
       dependencies: undefined,
@@ -116,7 +116,7 @@ describe('NodeScheduler', () => {
 
     const node: ScheduledNode = {
       __type: 'test',
-      flags: 1, // STATUS_PENDING so it will flush
+      status: STATUS_PENDING, // STATUS_PENDING so it will flush
       nextScheduled: undefined,
       flush: vi.fn(),
       dependencies: undefined,
@@ -126,11 +126,11 @@ describe('NodeScheduler', () => {
     };
 
     scheduler.enqueue(node);
-    expect(node.flags & IS_SCHEDULED).toBeTruthy();
+    expect(node.isScheduled).toBe(true);
 
     scheduler.flush();
 
-    expect(node.flags & IS_SCHEDULED).toBeFalsy();
+    expect(node.isScheduled).toBe(false);
     expect(node.nextScheduled).toBeUndefined();
   });
 

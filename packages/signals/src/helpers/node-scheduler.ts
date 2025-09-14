@@ -1,7 +1,7 @@
 import { CONSTANTS } from '../constants';
 import type { ScheduledNode } from '../types';
 
-const { STATUS_DISPOSED, IS_SCHEDULED, MASK_STATUS } = CONSTANTS;
+const { STATUS_DISPOSED } = CONSTANTS;
 
 export interface NodeScheduler {
   enqueue: (node: ScheduledNode) => void;
@@ -26,12 +26,11 @@ export function createNodeScheduler(): NodeScheduler {
 
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
-    // Single flag read and conditional write
-    const flags = node.flags;
-    if (flags & IS_SCHEDULED) return; // Cold path - already scheduled
+    // Fast path - check if already scheduled
+    if (node.isScheduled) return; // Cold path - already scheduled
 
-    // Hot path - add scheduled flag directly
-    node.flags = flags | IS_SCHEDULED;
+    // Hot path - mark as scheduled
+    node.isScheduled = true;
     node.nextScheduled = undefined;
 
     // Add to queue
@@ -46,9 +45,9 @@ export function createNodeScheduler(): NodeScheduler {
     node: T,
     cleanup: (node: T) => void
   ): void => {
-    // Single flag read and conditional write
-    if ((node.flags & MASK_STATUS) === STATUS_DISPOSED) return;
-    node.flags = STATUS_DISPOSED;
+    // Fast disposal check
+    if (node.status === STATUS_DISPOSED) return;
+    node.status = STATUS_DISPOSED;
     cleanup(node);
   };
 
@@ -63,13 +62,12 @@ export function createNodeScheduler(): NodeScheduler {
     while (current) {
       const next: ScheduledNode | undefined = current.nextScheduled;
       current.nextScheduled = undefined;
-      
-      // Single flag operation: clear IS_SCHEDULED and check if should flush
-      const flags = current.flags & ~IS_SCHEDULED;
-      current.flags = flags;
-      
-      // Only flush if not disposed and has a status
-      if ((flags & MASK_STATUS) !== STATUS_DISPOSED && (flags & MASK_STATUS)) {
+
+      // Clear scheduled flag
+      current.isScheduled = false;
+
+      // Only flush if not disposed
+      if (current.status !== STATUS_DISPOSED) {
         current.flush(current);
       }
 

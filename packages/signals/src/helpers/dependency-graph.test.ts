@@ -37,7 +37,7 @@ describe('Dependency Graph Helpers', () => {
       const source: ProducerNode = {
         __type: 'test',
         subscribers: undefined,
-        flags: 0,
+        status: 0,
         subscribersTail: undefined,
         value: 0,
 
@@ -45,7 +45,7 @@ describe('Dependency Graph Helpers', () => {
       
       const target: ConsumerNode = {
         __type: 'test',
-        flags: 0,
+        status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
@@ -57,7 +57,7 @@ describe('Dependency Graph Helpers', () => {
       const firstEdge = target.dependencies;
       
       // Update version
-      source.flags |= STATUS_DIRTY;
+      source.status = STATUS_DIRTY;
       
       // Second call should reuse the same edge
       helpers.trackDependency(source, target);
@@ -69,7 +69,7 @@ describe('Dependency Graph Helpers', () => {
       const source: ProducerNode = {
         __type: 'test',
         subscribers: undefined,
-        flags: 0,
+        status: 0,
         subscribersTail: undefined,
         value: 0,
 
@@ -77,7 +77,7 @@ describe('Dependency Graph Helpers', () => {
       
       const target: ConsumerNode = {
         __type: 'test',
-        flags: 0,
+        status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
@@ -89,7 +89,7 @@ describe('Dependency Graph Helpers', () => {
       const existingNode = target.dependencies;
       
       // Update version
-      source.flags |= STATUS_DIRTY;
+      source.status = STATUS_DIRTY;
       
       // Should find the existing dependency
       helpers.trackDependency(source, target);
@@ -101,7 +101,7 @@ describe('Dependency Graph Helpers', () => {
       const source: ProducerNode = {
         __type: 'test',
         subscribers: undefined,
-        flags: 0,
+        status: 0,
         subscribersTail: undefined,
         value: 0,
 
@@ -109,7 +109,7 @@ describe('Dependency Graph Helpers', () => {
       
       const target: ConsumerNode = {
         __type: 'test',
-        flags: 0,
+        status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
@@ -127,12 +127,12 @@ describe('Dependency Graph Helpers', () => {
         __type: 'test',
         subscribers: undefined,
         subscribersTail: undefined,
-        flags: 0,
+        status: 0,
       }));
       
       const target: ConsumerNode = {
         __type: 'test',
-        flags: 0,
+        status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
@@ -159,7 +159,7 @@ describe('Dependency Graph Helpers', () => {
       const source: ProducerNode = {
         __type: 'test',
         subscribers: undefined,
-        flags: 0,
+        status: 0,
         subscribersTail: undefined,
         value: 0,
 
@@ -167,7 +167,7 @@ describe('Dependency Graph Helpers', () => {
       
       const target: ConsumerNode = {
         __type: 'test',
-        flags: 0,
+        status: 0,
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
@@ -178,7 +178,7 @@ describe('Dependency Graph Helpers', () => {
       helpers.trackDependency(source, target);
       
       // Update version
-      source.flags |= STATUS_DIRTY;
+      source.status = STATUS_DIRTY;
       
       // Update dependency
       helpers.trackDependency(source, target);
@@ -194,7 +194,7 @@ describe('Dependency Graph Helpers', () => {
         const source: ProducerNode = {
           __type: 'test',
           subscribers: undefined,
-          flags: 0,
+          status: 0,
           subscribersTail: undefined,
           value: 0,
   
@@ -202,7 +202,7 @@ describe('Dependency Graph Helpers', () => {
         
         const target: ConsumerNode = {
           __type: 'test',
-          flags: 0,
+          status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
@@ -222,7 +222,7 @@ describe('Dependency Graph Helpers', () => {
         const source: ProducerNode = {
           __type: 'test',
           subscribers: undefined,
-          flags: 0,
+          status: 0,
           subscribersTail: undefined,
           value: 0,
   
@@ -230,7 +230,7 @@ describe('Dependency Graph Helpers', () => {
         
         const target1: ConsumerNode = {
           __type: 'test',
-          flags: 0,
+          status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
@@ -239,7 +239,7 @@ describe('Dependency Graph Helpers', () => {
         
         const target2: ConsumerNode = {
           __type: 'test',
-          flags: 0,
+          status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
@@ -266,7 +266,7 @@ describe('Dependency Graph Helpers', () => {
         const source: ProducerNode = {
           __type: 'test',
           subscribers: undefined,
-          flags: 0,
+          status: 0,
           subscribersTail: undefined,
           value: 0,
   
@@ -274,7 +274,7 @@ describe('Dependency Graph Helpers', () => {
         
         const target: ConsumerNode = {
           __type: 'test',
-          flags: 0,
+          status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
@@ -296,7 +296,7 @@ describe('Dependency Graph Helpers', () => {
         const source: ProducerNode = {
           __type: 'test',
           subscribers: undefined,
-          flags: 0,
+          status: 0,
           subscribersTail: undefined,
           value: 0,
   
@@ -350,7 +350,7 @@ describe('Dependency Graph Helpers', () => {
         const source1: ProducerNode = {
           __type: 'test',
           subscribers: undefined,
-          flags: 0,
+          status: 0,
           subscribersTail: undefined,
           value: 0,
   
@@ -358,7 +358,7 @@ describe('Dependency Graph Helpers', () => {
         const source2: ProducerNode = {
           __type: 'test',
           subscribers: undefined,
-          flags: 0,
+          status: 0,
           subscribersTail: undefined,
           value: 0,
   
@@ -366,7 +366,7 @@ describe('Dependency Graph Helpers', () => {
         
         const target: ConsumerNode = {
           __type: 'test',
-          flags: 0,
+          status: 0,
           dependencies: undefined,
           dependencyTail: undefined,
           deferredParent: undefined,
@@ -409,7 +409,7 @@ describe('Dependency Graph Helpers', () => {
         dependencies: undefined,
         dependencyTail: undefined,
         deferredParent: undefined,
-        flags: flags,
+        status: flags,
         notify: vi.fn(),
       };
   
@@ -455,7 +455,7 @@ describe('Dependency Graph Helpers', () => {
       walk(edge);
   
       // With push-pull system, computeds get STATUS_PENDING during push phase
-      expect(target.flags & STATUS_PENDING).toBeTruthy();
+      expect(target.status).toBe(STATUS_PENDING);
     });
   
     it('should mark effects as DIRTY (simplified flag system)', () => {
@@ -466,7 +466,7 @@ describe('Dependency Graph Helpers', () => {
       walk(edge);
   
       // With push-pull system, effects get STATUS_PENDING during push phase
-      expect(effect.flags & STATUS_PENDING).toBeTruthy();
+      expect(effect.status).toBe(STATUS_PENDING);
     });
   
     it('should skip already notified nodes', () => {
@@ -474,10 +474,10 @@ describe('Dependency Graph Helpers', () => {
       const target = createMockNode('computed', STATUS_PENDING);
       const edge = createEdge(source, target);
   
-      const initialFlags = target.flags;
+      const initialStatus = target.status;
       walk(edge);
   
-      expect(target.flags).toBe(initialFlags);
+      expect(target.status).toBe(initialStatus);
     });
   
     it('should skip disposed nodes', () => {
@@ -485,10 +485,10 @@ describe('Dependency Graph Helpers', () => {
       const target = createMockNode('computed', STATUS_DISPOSED);
       const edge = createEdge(source, target);
   
-      const initialFlags = target.flags;
+      const initialStatus = target.status;
       walk(edge);
   
-      expect(target.flags).toBe(initialFlags);
+      expect(target.status).toBe(initialStatus);
     });
   
     it('should skip running nodes', () => {
@@ -496,10 +496,10 @@ describe('Dependency Graph Helpers', () => {
       const target = createMockNode('computed', STATUS_PENDING);
       const edge = createEdge(source, target);
   
-      const initialFlags = target.flags;
+      const initialStatus = target.status;
       walk(edge);
   
-      expect(target.flags).toBe(initialFlags);
+      expect(target.status).toBe(initialStatus);
     });
   
     it('should handle multiple siblings', () => {
@@ -516,9 +516,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1);
   
-      expect(target1.flags & STATUS_PENDING).toBeTruthy();
-      expect(target2.flags & STATUS_PENDING).toBeTruthy();
-      expect(target3.flags & STATUS_PENDING).toBeTruthy();
+      expect(target1.status).toBe(STATUS_PENDING);
+      expect(target2.status).toBe(STATUS_PENDING);
+      expect(target3.status).toBe(STATUS_PENDING);
     });
   
     it('should traverse depth-first through dependency chains', () => {
@@ -537,9 +537,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1);
   
-      expect(computed1.flags & STATUS_PENDING).toBeTruthy();
-      expect(computed2.flags & STATUS_PENDING).toBeTruthy();
-      expect(effect.flags & STATUS_PENDING).toBeTruthy();
+      expect(computed1.status).toBe(STATUS_PENDING);
+      expect(computed2.status).toBe(STATUS_PENDING);
+      expect(effect.status).toBe(STATUS_PENDING);
       expect(scheduledNodes).toContain(effect);
     });
   
@@ -561,9 +561,9 @@ describe('Dependency Graph Helpers', () => {
   
       walk(edge1);
   
-      expect(computed1.flags & STATUS_PENDING).toBeTruthy();
-      expect(computed2.flags & STATUS_PENDING).toBeTruthy();
-      expect(computed3.flags & STATUS_PENDING).toBeTruthy();
+      expect(computed1.status).toBe(STATUS_PENDING);
+      expect(computed2.status).toBe(STATUS_PENDING);
+      expect(computed3.status).toBe(STATUS_PENDING);
     });
   
     it('should handle complex graphs with multiple branches', () => {
@@ -607,13 +607,13 @@ describe('Dependency Graph Helpers', () => {
       walk(sourceToComp1);
   
       // All nodes should be invalidated
-      expect(comp1.flags & STATUS_PENDING).toBeTruthy();
-      expect(comp2.flags & STATUS_PENDING).toBeTruthy();
-      expect(comp3.flags & STATUS_PENDING).toBeTruthy();
-      expect(comp4.flags & STATUS_PENDING).toBeTruthy();
-      expect(eff1.flags & STATUS_PENDING).toBeTruthy();
-      expect(eff2.flags & STATUS_PENDING).toBeTruthy();
-      expect(eff3.flags & STATUS_PENDING).toBeTruthy();
+      expect(comp1.status).toBe(STATUS_PENDING);
+      expect(comp2.status).toBe(STATUS_PENDING);
+      expect(comp3.status).toBe(STATUS_PENDING);
+      expect(comp4.status).toBe(STATUS_PENDING);
+      expect(eff1.status).toBe(STATUS_PENDING);
+      expect(eff2.status).toBe(STATUS_PENDING);
+      expect(eff3.status).toBe(STATUS_PENDING);
   
       // All effects should be scheduled
       expect(scheduledNodes).toContain(eff1);
@@ -657,7 +657,7 @@ describe('Dependency Graph Helpers', () => {
   
       // All nodes should be notified as DIRTY with simplified flag system
       for (let i = 1; i < 100; i++) {
-        expect(nodes[i]!.flags & STATUS_PENDING).toBeTruthy();
+        expect(nodes[i]!.status).toBe(STATUS_PENDING);
       }
     });
   });

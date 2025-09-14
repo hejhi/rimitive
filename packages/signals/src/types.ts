@@ -19,7 +19,7 @@
 // creating nominal types in a structural type system.
 export interface ReactiveNode {
   readonly __type: string;
-  flags: number; // Bit field containing state and properties
+  status: number; // Current node status (STATUS_CLEAN, STATUS_PENDING, STATUS_DISPOSED, STATUS_DIRTY)
 }
 
 // DESIGN: User-facing API contracts
@@ -64,6 +64,7 @@ export interface DerivedNode extends ProducerNode, ConsumerNode {
 // Uses intrusive linked list for zero-allocation scheduling queue.
 export interface ScheduledNode extends ConsumerNode {
   nextScheduled: ScheduledNode | undefined; // Next node in scheduling queue (intrusive list)
+  isScheduled?: boolean; // Whether node is currently in scheduling queue
   flush(node: ScheduledNode): void; // Execute the deferred work
 }
 
