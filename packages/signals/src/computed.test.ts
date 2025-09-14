@@ -13,9 +13,10 @@ import { createPushPropagator } from './helpers/push-propagator';
 export function createDefaultContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
-  
+
   return {
     ctx: baseCtx,
+    graphEdges,
     push: createPushPropagator(),
     pull: createPullPropagator(baseCtx, graphEdges),
     nodeScheduler: createNodeScheduler(baseCtx),
@@ -30,10 +31,10 @@ describe('Computed - Push-Pull Optimization', () => {
 
   beforeEach(() => {
     const api = createSignalAPI({
-      signal: createSignalFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'signal', <T>(value: T) => SignalFunction<T>>,
-      computed: createComputedFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'computed', <T>(compute: () => T) => ComputedFunction<T>>,
-      effect: createEffectFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'effect', (fn: () => void | (() => void)) => EffectDisposer>,
-      batch: createBatchFactory as (ctx: unknown) => import('@lattice/lattice').LatticeExtension<'batch', <T>(fn: () => T) => T>,
+      signal: createSignalFactory,
+      computed: createComputedFactory,
+      effect: createEffectFactory,
+      batch: createBatchFactory,
     }, createDefaultContext());
     signal = api.signal;
     computed = api.computed;

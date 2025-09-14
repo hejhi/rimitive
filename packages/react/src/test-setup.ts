@@ -3,11 +3,11 @@ import '@testing-library/jest-dom';
 import { afterEach } from 'vitest';
 import React, { ReactElement } from 'react';
 import { render } from '@testing-library/react';
-import { createSignalAPI, GlobalContext, type FactoriesToAPI } from '@lattice/signals/api';
-import { createSignalFactory, SignalContext, SignalFunction } from '@lattice/signals/signal';
-import { ComputedContext, createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
-import { createEffectFactory, EffectContext, type EffectDisposer } from '@lattice/signals/effect';
-import { BatchContext, createBatchFactory } from '@lattice/signals/batch';
+import { createSignalAPI, type FactoriesToAPI } from '@lattice/signals/api';
+import { createSignalFactory, SignalFunction } from '@lattice/signals/signal';
+import { createComputedFactory, type ComputedFunction } from '@lattice/signals/computed';
+import { createEffectFactory, type EffectDisposer } from '@lattice/signals/effect';
+import { createBatchFactory } from '@lattice/signals/batch';
 import type { LatticeExtension } from '@lattice/lattice';
 import { SignalProvider } from './signals/context';
 import { createBaseContext } from '@lattice/signals/context';
@@ -16,27 +16,24 @@ import { createPushPropagator } from '@lattice/signals/helpers/push-propagator';
 import { createPullPropagator } from '@lattice/signals/helpers/pull-propagator';
 import { createNodeScheduler, NodeScheduler } from '@lattice/signals/helpers/node-scheduler';
 
-export function createContext(): GlobalContext &
-  SignalContext &
-  BatchContext &
-  EffectContext &
-  ComputedContext {
+export function createContext() {
   const baseCtx = createBaseContext();
   const graphEdges = createGraphEdges();
   const pushPropagator = createPushPropagator();
 
-  // Extend baseCtx in place to ensure nodeScheduler uses the same context object
+  // Build the context that matches what the factories expect
   const ctx = {
     ...baseCtx,
+    ctx: baseCtx,
     graphEdges,
-    pushPropagator,
-    pullPropagator: null as unknown as ReturnType<typeof createPullPropagator>,
+    push: pushPropagator,
+    pull: null as unknown as ReturnType<typeof createPullPropagator>,
     nodeScheduler: null as unknown as NodeScheduler,
   };
 
-  const pullPropagator = createPullPropagator(ctx);
-  ctx.pullPropagator = pullPropagator;
-  const nodeScheduler = createNodeScheduler(ctx);
+  const pullPropagator = createPullPropagator(baseCtx, graphEdges);
+  ctx.pull = pullPropagator;
+  const nodeScheduler = createNodeScheduler(baseCtx);
 
   ctx.nodeScheduler = nodeScheduler;
 
@@ -66,7 +63,7 @@ const testFactories = {
 } as const;
 
 // Type alias for the API created with our standard factories
-type TestSignalAPI = FactoriesToAPI<typeof testFactories>;
+type TestSignalAPI = FactoriesToAPI<typeof testFactories, ReturnType<typeof createContext>>;
 
 // Create a test helper that wraps components with SignalProvider
 export function renderWithSignals(ui: ReactElement): ReturnType<typeof render> {

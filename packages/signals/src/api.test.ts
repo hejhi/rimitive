@@ -26,7 +26,6 @@ export function createDefaultContext() {
 
 describe('createSignalAPI', () => {
   it('should create an API with all provided factories', () => {
-    // Cast factories to the contravariant-friendly shape expected by createSignalAPI
     const api = createSignalAPI({
       signal: createSignalFactory,
       computed: createComputedFactory,

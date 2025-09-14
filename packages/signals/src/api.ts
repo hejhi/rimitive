@@ -35,54 +35,37 @@
  */
 import { createContext as createLattice, type LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
-// Note: We intentionally avoid a single "extended" context type.
-// Each factory declares exactly what it needs via its own context type.
+// Note: Context is now passed directly to factories
+// Each factory can declare its own context requirements
 
-// Type for extension factory functions that accept a specific required context
-// Each factory can specify its own minimal context requirements
+// Type for extension factory functions
 export type ExtensionFactory<
   TName extends string,
   TMethod,
-  TCtx extends GlobalContext = GlobalContext
-> = (
-  ctx: TCtx
-) => LatticeExtension<TName, TMethod>;
+  TCtx = GlobalContext
+> = (ctx: TCtx) => LatticeExtension<TName, TMethod>;
+
+// Base factory type - we use never to bypass variance checking
+// while still extracting the return type correctly
+type Factory = (ctx: never) => LatticeExtension<string, unknown>;
 
 // ALGORITHM: Type-Level Factory to API Transformation
-// This complex type transforms a record of factories into the final API shape
+// Transforms a record of factories into the final API shape
 // For each factory, it extracts the method type and maps it to the same key
 // Also adds internal context and dispose method
-// Bivariant factory type to work around contravariance issues
-// This allows factories to accept specific context subtypes
-export type Factory<C extends GlobalContext = GlobalContext> = {
-  bivarianceHack(ctx: C): LatticeExtension<string, unknown>;
-}['bivarianceHack'];
-
-// Extract the required context type from a factory
-export type FactoryCtx<F> = F extends (ctx: infer C) => LatticeExtension<string, unknown> ? C : never;
-// Convert a union to an intersection
-export type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (
-  k: infer I
-) => void
-  ? I
-  : never;
-// Combined required context across all factories
-export type CombinedCtx<T extends Record<string, Factory>> =
-  UnionToIntersection<FactoryCtx<T[keyof T]>> extends infer I
-    ? I extends GlobalContext
-      ? I
-      : GlobalContext
-    : GlobalContext;
-
 export type FactoriesToAPI<
   T extends Record<string, Factory>,
-  TCtx extends GlobalContext = CombinedCtx<T>
+  TCtx
 > = {
-  [K in keyof T]: T[K] extends (ctx: infer _C) => LatticeExtension<string, infer M> ? M : never;
-} & { 
+  [K in keyof T]: T[K] extends (ctx: never) => LatticeExtension<string, infer M> ? M : never;
+} & {
   _ctx: TCtx;  // Exposed for advanced use cases
   dispose: () => void;  // Cleanup method from Lattice
 };
+
+// Helper to extract all required context properties from factories
+type ExtractContextRequirements<T extends Record<string, Factory>> =
+  T[keyof T] extends (ctx: infer C) => unknown ? (C extends never ? unknown : C) : never;
 
 // ALGORITHM: Modular API Construction
 // This function is the main entry point for creating a signals API
@@ -90,24 +73,25 @@ export type FactoriesToAPI<
 // enabling optimal tree-shaking and extensibility
 export function createSignalAPI<
   T extends Record<string, Factory>,
-  TCtx extends GlobalContext = CombinedCtx<T>
+  TCtx extends ExtractContextRequirements<T>
 >(
   factories: T,
-  ctx: TCtx & CombinedCtx<T>
-): FactoriesToAPI<T, TCtx & CombinedCtx<T>> {
+  ctx: TCtx
+): FactoriesToAPI<T, TCtx> {
   // STEP 1: Use provided context
   // Users must provide their own context for full control
   const signalCtx = ctx;
-  
+
   // STEP 2: Initialize Extensions
   // Call each factory with the context to create extensions
   // Each extension defines one method (signal, computed, effect, etc)
-  const extensions = Object.values(factories).map(factory => factory(signalCtx));
-  
+  // We cast to never to bypass TypeScript's variance checking while maintaining runtime safety
+  const extensions = Object.values(factories).map(factory => factory(signalCtx as never));
+
   // STEP 3: Compose with Lattice
   // Lattice handles the method composition and provides dispose functionality
   const latticeCtx = createLattice(...extensions);
-  
+
   // STEP 4: Build Final API
   // Combine Lattice methods with our signal context
   // The context is exposed as _ctx for advanced use cases
@@ -115,9 +99,9 @@ export function createSignalAPI<
   // composed methods from the dynamic extensions array. We assert the shape
   // here to align with FactoriesToAPI's contract.
   const api = {
-    ...(latticeCtx as unknown as Omit<FactoriesToAPI<T, TCtx & CombinedCtx<T>>, '_ctx'>),
+    ...(latticeCtx as unknown as Omit<FactoriesToAPI<T, TCtx>, '_ctx'>),
     _ctx: signalCtx,
-  } as FactoriesToAPI<T, TCtx & CombinedCtx<T>>;
+  } as FactoriesToAPI<T, TCtx>;
   
   return api;
   
