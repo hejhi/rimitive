@@ -82,7 +82,7 @@ export function createPullPropagator(
         if (pFlags === STATUS_PENDING && 'compute' in dep.producer) {
           // Pending computed - traverse it
           dep.producer.deferredParent = current;
-          current = dep.producer as DerivedNode;
+          current = dep.producer;
           continue traversal;
         }
 
