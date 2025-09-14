@@ -10,9 +10,9 @@ export interface NodeScheduler {
     cleanup: (node: T) => void
   ) => void;
   flush: () => void;
-  startBatch: () => void;
+  enterBatch: () => void;
   inBatch: () => boolean;
-  endBatch: () => boolean;
+  exitBatch: () => void;
 }
 
 export function createNodeScheduler(): NodeScheduler {
@@ -20,9 +20,9 @@ export function createNodeScheduler(): NodeScheduler {
   let queueHead: ScheduledNode | undefined;
   let queueTail: ScheduledNode | undefined;
 
-  const startBatch = () => batchDepth++;
+  const enterBatch = () => batchDepth++;
   const inBatch = () => !!batchDepth;
-  const endBatch = () => --batchDepth === 0;
+  const exitBatch = () => { batchDepth--; };
 
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): void => {
@@ -81,8 +81,8 @@ export function createNodeScheduler(): NodeScheduler {
     enqueue,
     dispose,
     flush,
-    startBatch,
+    enterBatch,
     inBatch,
-    endBatch,
+    exitBatch,
   };
 }

@@ -66,8 +66,8 @@ export function createTestInstance() {
     batch: api.batch,
 
     // Batch control
-    startBatch: nodeScheduler.startBatch,
-    endBatch: nodeScheduler.endBatch,
+    enterBatch: nodeScheduler.enterBatch,
+    exitBatch: nodeScheduler.exitBatch,
 
     // Context access for testing
     setCurrentConsumer: (consumer: ConsumerNode | null) => {
@@ -99,8 +99,8 @@ export const batch = <T>(fn: () => T): T =>
   defaultInstance.batch(fn);
 
 // Batch control exports
-export const startBatch = () => defaultInstance.startBatch();
-export const endBatch = () => defaultInstance.endBatch();
+export const enterBatch = () => defaultInstance.enterBatch();
+export const exitBatch = () => defaultInstance.exitBatch();
 
 // Context control exports
 export const setCurrentConsumer = (consumer: ConsumerNode | null) =>

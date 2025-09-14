@@ -139,16 +139,16 @@ describe('NodeScheduler', () => {
 
     expect(scheduler.inBatch()).toBe(false);
 
-    scheduler.startBatch();
+    scheduler.enterBatch();
     expect(scheduler.inBatch()).toBe(true);
 
-    scheduler.startBatch(); // Nested
+    scheduler.enterBatch(); // Nested
     expect(scheduler.inBatch()).toBe(true);
 
-    expect(scheduler.endBatch()).toBe(false); // Still in batch (returns true when exiting)
-    expect(scheduler.inBatch()).toBe(true);
+    scheduler.exitBatch(); // Exit one level of batching
+    expect(scheduler.inBatch()).toBe(true); // Still in batch (nested)
 
-    expect(scheduler.endBatch()).toBe(true); // Exited batch (returns true when depth reaches 0)
+    scheduler.exitBatch(); // Exit final batch level
     expect(scheduler.inBatch()).toBe(false);
   });
 });
