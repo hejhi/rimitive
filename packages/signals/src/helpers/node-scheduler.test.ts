@@ -17,9 +17,11 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
+      isScheduled: false,
       notify: vi.fn(),
     };
 
+    scheduler.startBatch();
     scheduler.enqueue(node);
     expect(node.isScheduled).toBe(true);
   });
@@ -92,6 +94,8 @@ describe('NodeScheduler', () => {
     const node2 = createNode('2');
     const node3 = createNode('3');
 
+    scheduler.startBatch();
+
     scheduler.enqueue(node1);
     scheduler.enqueue(node2);
     scheduler.enqueue(node3);
@@ -123,8 +127,10 @@ describe('NodeScheduler', () => {
       dependencyTail: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
+      isScheduled: false
     };
 
+    scheduler.startBatch();
     scheduler.enqueue(node);
     expect(node.isScheduled).toBe(true);
 
@@ -139,7 +145,7 @@ describe('NodeScheduler', () => {
 
     expect(scheduler.inBatch()).toBe(false);
 
-    scheduler.enterBatch();
+    scheduler.startBatch();
     expect(scheduler.inBatch()).toBe(true);
 
     scheduler.enterBatch(); // Nested

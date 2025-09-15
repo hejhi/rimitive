@@ -57,6 +57,11 @@ export function createEffectFactory(
       }
     }
 
+    const notify = (node: EffectNode) => {
+      if (enqueue(node)) return;
+      flush(node);
+    }
+
     // State object captured in closure - no binding needed
     const node: EffectNode = {
       __type: 'effect' as const,
@@ -66,9 +71,10 @@ export function createEffectFactory(
       dependencyTail: undefined as Dependency | undefined,
       deferredParent: undefined,
       nextScheduled: undefined as ScheduledNode | undefined,
-      notify: enqueue as (node: ConsumerNode) => void, // Store the enqueue function directly for fast access
-      flush
-    }
+      isScheduled: false,
+      notify: notify as (node: ConsumerNode) => void,
+      flush,
+    };
 
     // Dispose method using closure - delegates flag management to nodeScheduler
     const dispose = (): void => disposeNode(node, (node) => {

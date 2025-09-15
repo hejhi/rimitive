@@ -65,6 +65,11 @@ export function createSubscribeFactory(
       callback(value);
     }
 
+    const notify = (node: SubscriptionNode<T>) => {
+      if (enqueue(node)) return;
+      flush(node);
+    }
+
     // Create subscription node
     const node: SubscriptionNode<T> = {
       __type: 'subscription',
@@ -75,8 +80,9 @@ export function createSubscribeFactory(
       dependencyTail: undefined,
       deferredParent: undefined,
       nextScheduled: undefined,
-      notify: enqueue as (node: ConsumerNode) => void,
-      flush
+      isScheduled: false,
+      notify: notify as (node: ConsumerNode) => void,
+      flush,
     };
 
     // Initial execution to establish dependencies and get initial value

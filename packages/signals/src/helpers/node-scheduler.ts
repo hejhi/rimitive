@@ -4,15 +4,16 @@ import type { ScheduledNode } from '../types';
 const { STATUS_DISPOSED } = CONSTANTS;
 
 export interface NodeScheduler {
-  enqueue: (node: ScheduledNode) => void;
+  enqueue: (node: ScheduledNode) => boolean;
   dispose: <T extends ScheduledNode>(
     node: T,
     cleanup: (node: T) => void
   ) => void;
   flush: () => void;
-  enterBatch: () => void;
   inBatch: () => boolean;
-  exitBatch: () => void;
+  enterBatch: () => number;
+  exitBatch: () => number;
+  startBatch: () => boolean;
 }
 
 export function createNodeScheduler(): NodeScheduler {
@@ -20,14 +21,26 @@ export function createNodeScheduler(): NodeScheduler {
   let queueHead: ScheduledNode | undefined;
   let queueTail: ScheduledNode | undefined;
 
-  const enterBatch = () => batchDepth++;
+  const enterBatch = () => {
+    batchDepth++;
+    return batchDepth;
+  };
+
+  const startBatch = () => {
+    if (!!batchDepth) return false;
+    batchDepth++;
+    return true;
+  }
   const inBatch = () => !!batchDepth;
-  const exitBatch = () => { batchDepth--; };
+  const exitBatch = () => {
+    batchDepth--;
+    return batchDepth;
+  }
 
   // Enqueue node at tail for FIFO ordering if not already scheduled
-  const enqueue = (node: ScheduledNode): void => {
-    // Fast path - check if already scheduled
-    if (node.isScheduled) return; // Cold path - already scheduled
+  const enqueue = (node: ScheduledNode): boolean => {
+    // If already scheduled, disposed, or not in a batch, don't enqueue
+    if (node.isScheduled || node.status === STATUS_DISPOSED || !batchDepth) return false;
 
     // Hot path - mark as scheduled
     node.isScheduled = true;
@@ -38,6 +51,7 @@ export function createNodeScheduler(): NodeScheduler {
     else queueHead = node;
 
     queueTail = node;
+    return true;
   };
 
   // Idempotent disposal helper shared across node types
@@ -82,5 +96,6 @@ export function createNodeScheduler(): NodeScheduler {
     enterBatch,
     inBatch,
     exitBatch,
+    startBatch,
   };
 }
