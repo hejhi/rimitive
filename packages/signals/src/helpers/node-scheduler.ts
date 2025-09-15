@@ -1,7 +1,7 @@
-import { CONSTANTS } from '../constants';
+import { CONSTANTS, STATUS_CLEAN } from '../constants';
 import type { ScheduledNode } from '../types';
 
-const { STATUS_DISPOSED } = CONSTANTS;
+const { STATUS_DISPOSED, STATUS_SCHEDULED } = CONSTANTS;
 
 export interface NodeScheduler {
   enqueue: (node: ScheduledNode) => boolean;
@@ -40,10 +40,14 @@ export function createNodeScheduler(): NodeScheduler {
   // Enqueue node at tail for FIFO ordering if not already scheduled
   const enqueue = (node: ScheduledNode): boolean => {
     // If already scheduled, disposed, or not in a batch, don't enqueue
-    if (node.isScheduled || node.status === STATUS_DISPOSED || !batchDepth) return false;
+    if (
+      node.status >= STATUS_SCHEDULED ||
+      !batchDepth
+    )
+      return false;
 
     // Hot path - mark as scheduled
-    node.isScheduled = true;
+    node.status = STATUS_SCHEDULED;
     node.nextScheduled = undefined;
 
     // Add to queue
@@ -68,6 +72,7 @@ export function createNodeScheduler(): NodeScheduler {
   // Dequeue all scheduled nodes in FIFO order and execute
   const flush = (): void => {
     let current = queueHead;
+
     if (!current) return;
 
     // Clear the queue first to allow re-entrance scheduling
@@ -75,13 +80,11 @@ export function createNodeScheduler(): NodeScheduler {
 
     while (current) {
       const next: ScheduledNode | undefined = current.nextScheduled;
-      current.nextScheduled = undefined;
 
-      // Clear scheduled flag
-      current.isScheduled = false;
+      if (next) current.nextScheduled = undefined;
 
-      // Only flush if not disposed
-      if (current.status !== STATUS_DISPOSED) {
+      if (current.status === STATUS_SCHEDULED) {
+        current.status = STATUS_CLEAN;
         current.flush(current);
       }
 

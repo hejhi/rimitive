@@ -71,7 +71,6 @@ export function createEffectFactory(
       dependencyTail: undefined as Dependency | undefined,
       deferredParent: undefined,
       nextScheduled: undefined as ScheduledNode | undefined,
-      isScheduled: false,
       notify,
       flush,
     };

@@ -78,7 +78,6 @@ export function createSubscribeFactory(
       dependencyTail: undefined,
       deferredParent: undefined,
       nextScheduled: undefined,
-      isScheduled: false,
       notify,
       flush,
     };

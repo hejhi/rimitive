@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createNodeScheduler } from './node-scheduler';
-import { CONSTANTS } from '../constants';
+import { CONSTANTS, STATUS_SCHEDULED } from '../constants';
 import type { ScheduledNode } from '../types';
 
 const { STATUS_DISPOSED, STATUS_PENDING } = CONSTANTS;
@@ -17,13 +17,12 @@ describe('NodeScheduler', () => {
       dependencies: undefined,
       dependencyTail: undefined,
       deferredParent: undefined,
-      isScheduled: false,
       notify: vi.fn(),
     };
 
     scheduler.startBatch();
     scheduler.enqueue(node);
-    expect(node.isScheduled).toBe(true);
+    expect(node.status).toBe(STATUS_SCHEDULED);
   });
 
   it('should not enqueue already scheduled nodes', () => {
@@ -42,11 +41,11 @@ describe('NodeScheduler', () => {
 
     // Enqueue once
     scheduler.enqueue(node);
-    const scheduledAfterFirst = node.isScheduled;
+    const scheduledAfterFirst = node.status;
 
     // Try to enqueue again - should be skipped
     scheduler.enqueue(node);
-    expect(node.isScheduled).toBe(scheduledAfterFirst); // Scheduled flag unchanged
+    expect(node.status).toBe(scheduledAfterFirst); // Scheduled flag unchanged
   });
 
   it('should dispose node only once', () => {
@@ -127,16 +126,15 @@ describe('NodeScheduler', () => {
       dependencyTail: undefined,
       deferredParent: undefined,
       notify: vi.fn(),
-      isScheduled: false
     };
 
     scheduler.startBatch();
     scheduler.enqueue(node);
-    expect(node.isScheduled).toBe(true);
+    expect(node.status === STATUS_SCHEDULED).toBe(true);
 
     scheduler.flush();
 
-    expect(node.isScheduled).toBe(false);
+    expect(node.status === STATUS_SCHEDULED).toBe(false);
     expect(node.nextScheduled).toBeUndefined();
   });
 
