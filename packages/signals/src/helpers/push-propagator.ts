@@ -25,7 +25,12 @@ export function createPushPropagator(): PushPropagator {
       const consumerNodeStatus = consumerNode.status;
 
       // Skip if already disposed or pending
-      if (consumerNodeStatus === STATUS_DISPOSED || consumerNodeStatus === STATUS_PENDING) {
+      if (
+        consumerNodeStatus === STATUS_DISPOSED ||
+        consumerNodeStatus === STATUS_PENDING
+        // TODO: why does skipping DIRY nodes break tests?
+        // || consumerNodeStatus === STATUS_DIRTY
+      ) {
         currentDependency = currentDependency.nextConsumer;
         continue;
       }
