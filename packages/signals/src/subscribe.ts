@@ -19,7 +19,7 @@ import { GraphEdges } from './helpers/graph-edges';
 import { NodeScheduler } from './helpers/node-scheduler';
 import { CONSTANTS } from './constants';
 
-const { STATUS_DISPOSED, STATUS_CLEAN } = CONSTANTS;
+const { STATUS_CLEAN } = CONSTANTS;
 
 export type SubscribeOpts = {
   ctx: GlobalContext;
@@ -54,8 +54,6 @@ export function createSubscribeFactory(
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
     const flush = (node: SubscriptionNode<T>) => {
-      if (node.status === STATUS_DISPOSED) return;
-
       // Track dependencies ONLY for the source function
       const prevConsumer = startTracking(ctx, node);
       const value = source();
@@ -65,14 +63,14 @@ export function createSubscribeFactory(
       callback(value);
     }
 
-    const notify = (node: SubscriptionNode<T>) => {
+    const notify = ((node: SubscriptionNode<T>) => {
       if (enqueue(node)) return;
       flush(node);
-    }
+    }) as (node: ConsumerNode) => void;
 
     // Create subscription node
     const node: SubscriptionNode<T> = {
-      __type: 'subscription',
+      __type: 'subscription' as const,
       callback,
       source,
       status: STATUS_CLEAN,
@@ -81,7 +79,7 @@ export function createSubscribeFactory(
       deferredParent: undefined,
       nextScheduled: undefined,
       isScheduled: false,
-      notify: notify as (node: ConsumerNode) => void,
+      notify,
       flush,
     };
 

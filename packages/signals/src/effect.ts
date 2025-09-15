@@ -57,10 +57,10 @@ export function createEffectFactory(
       }
     }
 
-    const notify = (node: EffectNode) => {
+    const notify = ((node: EffectNode) => {
       if (enqueue(node)) return;
       flush(node);
-    }
+    }) as (node: ConsumerNode) => void
 
     // State object captured in closure - no binding needed
     const node: EffectNode = {
@@ -72,7 +72,7 @@ export function createEffectFactory(
       deferredParent: undefined,
       nextScheduled: undefined as ScheduledNode | undefined,
       isScheduled: false,
-      notify: notify as (node: ConsumerNode) => void,
+      notify,
       flush,
     };
 
