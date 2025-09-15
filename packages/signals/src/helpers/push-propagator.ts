@@ -28,8 +28,6 @@ export function createPushPropagator(): PushPropagator {
       if (
         consumerNodeStatus === STATUS_DISPOSED ||
         consumerNodeStatus === STATUS_PENDING
-        // TODO: why does skipping DIRY nodes break tests?
-        // || consumerNodeStatus === STATUS_DIRTY
       ) {
         currentDependency = currentDependency.nextConsumer;
         continue;
