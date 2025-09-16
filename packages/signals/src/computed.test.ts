@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { createSignalAPI } from './api';
 import { createSignalFactory, type SignalFunction } from './signal';
 import { createComputedFactory, type ComputedFunction } from './computed';
-import { createEffectFactory, type EffectDisposer } from './effect';
+import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import { createBaseContext } from './context';
 import { createGraphEdges } from './helpers/graph-edges';
@@ -26,7 +26,7 @@ export function createDefaultContext() {
 describe('Computed - Push-Pull Optimization', () => {
   let signal: <T>(value: T) => SignalFunction<T>;
   let computed: <T>(compute: () => T) => ComputedFunction<T>;
-  let effect: (fn: () => void | (() => void)) => EffectDisposer;
+  let effect: (fn: () => void | (() => void)) => () => void;
   let batch: <T>(fn: () => T) => T;
 
   beforeEach(() => {

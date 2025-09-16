@@ -2,7 +2,7 @@
 // Provides global-like exports for test compatibility while using scoped implementation
 
 import type { SignalFunction } from './signal';
-import type { EffectDisposer } from './effect';
+// Effect now returns () => void directly
 import type { ComputedFunction } from './computed';
 import type { ConsumerNode } from './types';
 import { createSignalFactory } from './signal';
@@ -92,7 +92,7 @@ export const signal = <T>(value: T): SignalFunction<T> =>
 export const computed = <T>(fn: () => T): ComputedFunction<T> =>
   defaultInstance.computed(fn);
 
-export const effect = (fn: () => void | (() => void)): EffectDisposer =>
+export const effect = (fn: () => void | (() => void)): (() => void) =>
   defaultInstance.effect(fn);
 
 export const batch = <T>(fn: () => T): T =>

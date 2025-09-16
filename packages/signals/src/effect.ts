@@ -1,4 +1,4 @@
-import { Dependency, ScheduledNode } from './types';
+import { ScheduledNode } from './types';
 import type { LatticeExtension } from '@lattice/lattice';
 import type { GlobalContext } from './context';
 import { NodeScheduler } from './helpers/node-scheduler';
@@ -15,20 +15,14 @@ export type EffectOpts = {
 
 interface EffectNode extends ScheduledNode {
   __type: 'effect';
-  subscribe?: (listener: () => void) => () => void;
   _cleanup: (() => void) | undefined; // Cleanup from previous run
-}
-
-// Dispose function with attached effect instance
-export interface EffectDisposer {
-  (): void;
 }
 
 export function createEffectFactory(
   opts: EffectOpts
 ): LatticeExtension<
   'effect',
-  (fn: () => void | (() => void)) => EffectDisposer
+  (fn: () => void | (() => void)) => () => void
 > {
   const {
     ctx,
@@ -36,53 +30,52 @@ export function createEffectFactory(
     graphEdges: { track, detachAll },
   } = opts;
 
-  function createEffect(fn: () => void | (() => void)): EffectDisposer {
-    const flush = (node: EffectNode): void => {
-      // Run cleanup if exists (optimized to avoid double read)
-      const cleanup = node._cleanup;
-
-      if (cleanup) {
-        node._cleanup = undefined;
-        cleanup();
-      }
-
-      const newCleanup = track(ctx, node, fn);
-
-      if (newCleanup) node._cleanup = newCleanup;
-    };
-
-    const schedule = (node: ScheduledNode) => {
-      if (enqueue(node)) return;
-      flush(node as EffectNode);
-    };
-
-    // State object captured in closure - no binding needed
+  function createEffect(fn: () => void | (() => void)): () => void {
     const node: EffectNode = {
       __type: 'effect' as const,
-      _cleanup: undefined as (() => void) | undefined,
+      _cleanup: undefined,
       status: STATUS_CLEAN,
-      dependencies: undefined as Dependency | undefined,
-      dependencyTail: undefined as Dependency | undefined,
+      dependencies: undefined,
+      dependencyTail: undefined,
       deferredParent: undefined,
-      nextScheduled: undefined as ScheduledNode | undefined,
-      schedule,
-      flush,
+      nextScheduled: undefined,
+      // Inline schedule - avoid separate function allocation
+      schedule: (self: ScheduledNode) => {
+        if (enqueue(self)) return;
+
+        // Flush inline if not batched
+        const n = self as EffectNode;
+
+        if (n._cleanup) {
+          n._cleanup();
+          n._cleanup = undefined;
+        }
+
+        const newCleanup = track(ctx, n, fn);
+
+        if (newCleanup) n._cleanup = newCleanup;
+      },
+      // Flush for batch processing
+      flush: (self: ScheduledNode) => {
+        const n = self as EffectNode;
+        if (n._cleanup) {
+          n._cleanup();
+          n._cleanup = undefined;
+        }
+        const newCleanup = track(ctx, n, fn);
+        if (newCleanup) n._cleanup = newCleanup;
+      },
     };
 
-    // Effects run immediately when created to establish initial state and dependencies.
-    // This flushes outside of the scheduling mechanism.
-    flush(node);
+    // Initial run - inline to avoid extra call
+    const newCleanup = track(ctx, node, fn);
+    if (newCleanup) node._cleanup = newCleanup;
 
-    // Dispose method using closure - delegates flag management to nodeScheduler
+    // Return dispose function
     return () => disposeNode(node, (node) => {
-      // Effect-specific cleanup
-      const cleanup = node._cleanup;
-
-      if (cleanup) {
-        node._cleanup = undefined; // Clear to prevent double cleanup
-        cleanup();
+      if (node._cleanup) {
+        node._cleanup();
       }
-
       detachAll(node);
     });
   }
