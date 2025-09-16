@@ -23,10 +23,7 @@ export interface GraphEdges {
 }
 
 export function createGraphEdges(): GraphEdges {
-  const trackDependency = (
-    producer: FromNode,
-    consumer: ToNode,
-  ): void => {
+  const trackDependency = (producer: FromNode, consumer: ToNode): void => {
     const tail = consumer.dependencyTail;
 
     // Fast path: already at this producer
@@ -57,10 +54,38 @@ export function createGraphEdges(): GraphEdges {
     if (tail) tail.nextDependency = dependency;
     else consumer.dependencies = dependency;
 
-    // Wire up producer side  
+    // Wire up producer side
     producer.subscribersTail = dependency;
     if (producerTail) producerTail.nextConsumer = dependency;
     else producer.subscribers = dependency;
+  };
+
+  // Helper to remove a dependency edge (optimized for hot path)
+  const removeDependency = (dep: Dependency): Dependency | undefined => {
+    const {
+      producer,
+      consumer,
+      prevDependency,
+      nextDependency,
+      prevConsumer,
+      nextConsumer,
+    } = dep;
+
+    // Update consumer's dependency chain
+    if (nextDependency) nextDependency.prevDependency = prevDependency;
+    else consumer.dependencyTail = prevDependency;
+
+    if (prevDependency) prevDependency.nextDependency = nextDependency;
+    else consumer.dependencies = nextDependency;
+
+    // Update producer's dependent chain
+    if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
+    else producer.subscribersTail = prevConsumer;
+
+    if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
+    else producer.subscribers = nextConsumer;
+
+    return nextDependency; // Return next for efficient iteration
   };
 
   /**
@@ -85,27 +110,6 @@ export function createGraphEdges(): GraphEdges {
 
     ctx.currentConsumer = node;
     return prevConsumer;
-  };
-
-  // Helper to remove a dependency edge (optimized for hot path)
-  const removeDependency = (dep: Dependency): Dependency | undefined => {
-    const { producer, consumer, prevDependency, nextDependency, prevConsumer, nextConsumer } = dep;
-    
-    // Update consumer's dependency chain
-    if (nextDependency) nextDependency.prevDependency = prevDependency;
-    else consumer.dependencyTail = prevDependency;
-
-    if (prevDependency) prevDependency.nextDependency = nextDependency;
-    else consumer.dependencies = nextDependency;
-
-    // Update producer's dependent chain
-    if (nextConsumer) nextConsumer.prevConsumer = prevConsumer;
-    else producer.subscribersTail = prevConsumer;
-
-    if (prevConsumer) prevConsumer.nextConsumer = nextConsumer;
-    else producer.subscribers = nextConsumer;
-
-    return nextDependency; // Return next for efficient iteration
   };
 
   /**

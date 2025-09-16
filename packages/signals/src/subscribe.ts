@@ -54,13 +54,10 @@ export function createSubscribeFactory(
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
     const flush = (node: SubscriptionNode<T>) => {
-      // Track dependencies ONLY for the source function
       const prevConsumer = startTracking(ctx, node);
-      const value = source();
+      const value = source(); // Track source dependencies
       endTracking(ctx, node, prevConsumer);
-
-      // Execute callback without dependency tracking
-      callback(value);
+      callback(value); // Don't track callback dependencies
     }
 
     const schedule = (node: ScheduledNode) => {
