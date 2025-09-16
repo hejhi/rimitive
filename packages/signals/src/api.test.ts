@@ -73,6 +73,10 @@ describe('createSignalAPI', () => {
         flush: () => {
           flushCalled = true;
           scheduler.flush();
+        },
+        notifyChange: () => {
+          flushCalled = true;
+          scheduler.notifyChange();
         }
       };
     })();

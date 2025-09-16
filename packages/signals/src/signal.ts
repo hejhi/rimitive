@@ -47,7 +47,7 @@ export function createSignalFactory(
   const {
     graphEdges: { trackDependency },
     push: { pushUpdates },
-    nodeScheduler: { flush, inBatch },
+    nodeScheduler: { notifyChange },
     ctx,
   } = opts;
 
@@ -85,9 +85,7 @@ export function createSignalFactory(
       node.status = STATUS_DIRTY;
       pushUpdates(subs);
 
-      // Auto-flush if not batched
-      if (inBatch()) return;
-      flush();
+      notifyChange();
     }
 
     // Direct property assignment
