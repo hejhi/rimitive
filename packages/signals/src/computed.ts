@@ -47,45 +47,39 @@ export function createComputedFactory(
       value: undefined as T,
       subscribers: undefined,
       subscribersTail: undefined,
-      dependencies: undefined, // Will be set to old dependencies when they exist
-      dependencyTail: undefined, // Don't clear during recompute - preserve for traversal
+      dependencies: undefined,
+      dependencyTail: undefined,
       deferredParent: undefined,
-      status: STATUS_PENDING, // Start in PENDING state so first access triggers computation
+      status: STATUS_PENDING,
       compute,
     };
 
-    const computed = (() => {
-      // Treat computed exactly like a signal for dependency tracking
-      // Register with current consumer FIRST (like signals do)
+    // Direct function declaration is more efficient than IIFE
+    function computed(): T {
+      // Track dependency if there's a consumer
       const consumer = ctx.currentConsumer;
-
-      // Always link if there's a consumer
-      // Create edge to consumer
       if (consumer) trackDependency(node, consumer);
 
-      // Fast-path: Only call pullUpdates if node needs updating
+      // Update if needed
       if (node.status === STATUS_PENDING) pullUpdates(node);
 
       return node.value;
-    }) as ComputedFunction<T>;
+    }
 
-    computed.peek = () => {
-      // Non-tracking Read
-      // Always prevent dependency tracking for peek
+    computed.peek = (): T => {
+      // Save and clear consumer to prevent tracking
       const prevConsumer = ctx.currentConsumer;
-      ctx.currentConsumer = null; // Prevent ALL dependency tracking
+      ctx.currentConsumer = null;
 
       try {
-        // Fast-path: Only call pullUpdates if node needs updating
         if (node.status === STATUS_PENDING) pullUpdates(node);
+        return node.value;
       } finally {
-        ctx.currentConsumer = prevConsumer; // Restore back to previous state
+        ctx.currentConsumer = prevConsumer;
       }
-
-      return node.value;
     };
 
-    return computed;
+    return computed as ComputedFunction<T>;
   }
 
   return {
