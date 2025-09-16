@@ -5,6 +5,7 @@ import { createComputedFactory } from './computed';
 import { createEffectFactory } from './effect';
 import { createBatchFactory } from './batch';
 import type { LatticeExtension } from '@lattice/lattice';
+import type { ScheduledNode } from './types';
 import { createBaseContext } from './context';
 import { createNodeScheduler } from './helpers/node-scheduler';
 import { createGraphEdges } from './helpers/graph-edges';
@@ -57,30 +58,26 @@ describe('createSignalAPI', () => {
   });
 
   it('should work with custom context and work queue', () => {
-    let flushCalled = false;
-    
+    let enqueueCalled = false;
+
     // Create custom context with custom work queue
     const baseCtx = createBaseContext();
     const graphEdges = createGraphEdges();
     const pushPropagator = createPushPropagator();
-    
+
     const pullPropagator = createPullPropagator(baseCtx, graphEdges);
-    
+
     const nodeScheduler = (() => {
       const scheduler = createNodeScheduler();
       return {
         ...scheduler,
-        flush: () => {
-          flushCalled = true;
-          scheduler.flush();
-        },
-        notifyChange: () => {
-          flushCalled = true;
-          scheduler.notifyChange();
+        enqueue: (node: ScheduledNode) => {
+          enqueueCalled = true;
+          return scheduler.enqueue(node);
         }
       };
     })();
-    
+
     const api = createSignalAPI(
       {
         signal: createSignalFactory,
@@ -96,19 +93,19 @@ describe('createSignalAPI', () => {
         nodeScheduler
       }
     );
-    
+
     const count = api.signal(0);
     const double = api.computed(() => count() * 2);
-    
+
     let effectValue = 0;
     api.effect(() => {
       effectValue = double();
     });
 
     count(5);
-    
+
     expect(effectValue).toBe(10);
-    expect(flushCalled).toBe(true);
+    expect(enqueueCalled).toBe(true); // Verify scheduler was consulted
   });
 
   it('should allow extending context with custom work queue', () => {

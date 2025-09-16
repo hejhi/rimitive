@@ -19,7 +19,6 @@ import type { GlobalContext } from './context';
 import { CONSTANTS } from './constants';
 import { GraphEdges } from './helpers/graph-edges';
 import { PushPropagator } from './helpers/push-propagator';
-import { NodeScheduler } from './helpers/node-scheduler';
 
 const { STATUS_DIRTY, STATUS_CLEAN } = CONSTANTS;
 
@@ -33,7 +32,6 @@ export type SignalOpts = {
   ctx: GlobalContext;
   graphEdges: GraphEdges;
   push: PushPropagator;
-  nodeScheduler: NodeScheduler;
 };
 
 interface SignalNode<T> extends ProducerNode {
@@ -47,7 +45,6 @@ export function createSignalFactory(
   const {
     graphEdges: { trackDependency },
     push: { pushUpdates },
-    nodeScheduler: { notifyChange },
     ctx,
   } = opts;
 
@@ -84,8 +81,6 @@ export function createSignalFactory(
       // Mark dirty and propagate
       node.status = STATUS_DIRTY;
       pushUpdates(subs);
-
-      notifyChange();
     }
 
     // Direct property assignment

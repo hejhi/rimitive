@@ -14,7 +14,6 @@ export interface NodeScheduler {
   enterBatch: () => number;
   exitBatch: () => number;
   startBatch: () => boolean;
-  notifyChange: () => void; // Called when a signal changes
 }
 
 export function createNodeScheduler(): NodeScheduler {
@@ -93,11 +92,6 @@ export function createNodeScheduler(): NodeScheduler {
     }
   };
 
-  // Called when a signal changes - auto-flush if not in batch
-  const notifyChange = (): void => {
-    if (!batchDepth) flush();
-  };
-
   return {
     enqueue,
     dispose,
@@ -106,6 +100,5 @@ export function createNodeScheduler(): NodeScheduler {
     inBatch,
     exitBatch,
     startBatch,
-    notifyChange,
   };
 }
