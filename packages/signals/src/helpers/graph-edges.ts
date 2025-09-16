@@ -9,17 +9,13 @@ export interface GraphEdges {
     producer: ProducerNode,
     consumer: ConsumerNode,
   ) => void;
-  startTracking: (
-    ctx: GlobalContext,
-    node: ConsumerNode
-  ) => ConsumerNode | null;
-  endTracking: (
-    ctx: GlobalContext,
-    node: ConsumerNode,
-    prevConsumer: ConsumerNode | null
-  ) => void;
   removeDependency: (dependency: Dependency) => Dependency | undefined;
   detachAll: (node: ConsumerNode) => void;
+  track: <T>(
+    ctx: GlobalContext,
+    node: ConsumerNode,
+    fn: () => T
+  ) => T;
 }
 
 export function createGraphEdges(): GraphEdges {
@@ -89,59 +85,6 @@ export function createGraphEdges(): GraphEdges {
   };
 
   /**
-   * Start tracking dependencies for a consumer node.
-   * This prepares the node to record new dependencies.
-   *
-   * @param ctx - The global context
-   * @param node - The consumer node starting to track dependencies
-   * @returns The previous consumer (for restoration in endTracking)
-   */
-  const startTracking = (
-    ctx: GlobalContext,
-    node: ConsumerNode
-  ): ConsumerNode | null => {
-    // Switch tracking context first
-    const prevConsumer = ctx.currentConsumer;
-
-    node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
-
-    // Clear status - node is being updated now
-    node.status = STATUS_CLEAN;
-
-    ctx.currentConsumer = node;
-    return prevConsumer;
-  };
-
-  /**
-   * End tracking dependencies for a consumer node.
-   * This is where we clean up stale dependencies.
-   *
-   * @param ctx - The global context
-   * @param node - The consumer node ending tracking
-   * @param prevConsumer - The previous consumer to restore
-   */
-  const endTracking = (
-    ctx: GlobalContext,
-    node: ConsumerNode,
-    prevConsumer: ConsumerNode | null
-  ): void => {
-    // Restore previous tracking context
-    ctx.currentConsumer = prevConsumer;
-
-    // Prune stale dependencies
-    // Everything after the tail is stale and needs to be removed
-    const tail = node.dependencyTail;
-    let toRemove = tail ? tail.nextDependency : node.dependencies;
-
-    // Remove all stale dependencies efficiently using return value
-    while (toRemove) {
-      toRemove = removeDependency(toRemove);
-    }
-
-    node.deferredParent = undefined; // Clear deferredParent since we're recomputing
-  };
-
-  /**
    * Detach all dependencies from a consumer node.
    * Used during disposal to completely disconnect a node from the graph.
    *
@@ -158,11 +101,56 @@ export function createGraphEdges(): GraphEdges {
     node.dependencyTail = undefined;
   };
 
+  /**
+   * Track dependencies while executing a function.
+   * This is the primary API for dependency tracking - it ensures proper
+   * setup and cleanup even if the function throws.
+   *
+   * @param ctx - The global context
+   * @param node - The consumer node that will track dependencies
+   * @param fn - The function to execute while tracking
+   * @returns The result of the function
+   */
+  const track = <T>(
+    ctx: GlobalContext,
+    node: ConsumerNode,
+    fn: () => T
+  ): T => {
+    // Switch tracking context first
+    const prevConsumer = ctx.currentConsumer;
+
+    node.dependencyTail = undefined; // Reset dependency tail to start fresh dependency tracking
+
+    // Clear status - node is being updated now
+    node.status = STATUS_CLEAN;
+
+    ctx.currentConsumer = node;
+
+    try {
+      return fn();
+    } finally {
+      // Restore previous tracking context
+      ctx.currentConsumer = prevConsumer;
+
+      // Prune stale dependencies. Although we set node.dependencyTail to undefined above, fn()
+      // may have set it again, and we should use it if so.
+      // Everything after the tail is stale and needs to be removed
+      const tail = node.dependencyTail as Dependency | undefined;
+      let toRemove = tail ? tail.nextDependency : node.dependencies;
+
+      // Remove all stale dependencies efficiently using return value
+      while (toRemove) {
+        toRemove = removeDependency(toRemove);
+      }
+
+      node.deferredParent = undefined; // Clear deferredParent since we're recomputing
+    }
+  };
+
   return {
     trackDependency,
-    startTracking,
-    endTracking,
     removeDependency,
     detachAll,
+    track,
   };
 }

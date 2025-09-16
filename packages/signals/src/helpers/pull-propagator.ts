@@ -10,30 +10,23 @@ export interface PullPropagator {
 }
 
 export function createPullPropagator(ctx: GlobalContext, graphEdges: GraphEdges): PullPropagator {
-  const { startTracking, endTracking } = graphEdges;
+  const { track } = graphEdges;
 
   // Inline recomputation logic here since we have access to context
   const recomputeNode = (node: DerivedNode): boolean => {
-    const prevConsumer = startTracking(ctx, node);
     const oldValue = node.value;
+    const newValue = track(ctx, node, node.compute);
 
-    try {
-      const newValue = node.compute();
-
-      // Update value and set status based on whether it changed
-      if (newValue !== oldValue) {
-        node.value = newValue;
-        node.status = STATUS_DIRTY;
-        return true;
-      }
-
-      // Value didn't change, clear status
-      node.status = STATUS_CLEAN;
-      return false;
-    } finally {
-      // End tracking, restore context, and prune stale dependencies
-      endTracking(ctx, node, prevConsumer);
+    // Update value and set status based on whether it changed
+    if (newValue !== oldValue) {
+      node.value = newValue;
+      node.status = STATUS_DIRTY;
+      return true;
     }
+
+    // Value didn't change, clear status
+    node.status = STATUS_CLEAN;
+    return false;
   };
 
   const pullUpdates = (rootNode: DerivedNode): void => {

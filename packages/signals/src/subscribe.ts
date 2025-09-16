@@ -45,7 +45,7 @@ export function createSubscribeFactory(
 > {
   const {
     ctx,
-    graphEdges: { startTracking, endTracking, detachAll },
+    graphEdges: { track, detachAll },
     nodeScheduler: { enqueue, dispose: disposeNode },
   } = opts;
 
@@ -54,9 +54,7 @@ export function createSubscribeFactory(
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
     const flush = (node: SubscriptionNode<T>) => {
-      const prevConsumer = startTracking(ctx, node);
-      const value = source(); // Track source dependencies
-      endTracking(ctx, node, prevConsumer);
+      const value = track(ctx, node, source); // Track source dependencies
       callback(value); // Don't track callback dependencies
     }
 

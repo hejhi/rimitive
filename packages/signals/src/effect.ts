@@ -33,34 +33,28 @@ export function createEffectFactory(
   const {
     ctx,
     nodeScheduler: { dispose: disposeNode, enqueue },
-    graphEdges: { startTracking, endTracking, detachAll },
+    graphEdges: { track, detachAll },
   } = opts;
 
   function createEffect(fn: () => void | (() => void)): EffectDisposer {
     const flush = (node: EffectNode): void => {
-      const prevConsumer = startTracking(ctx, node);
+      // Run cleanup if exists (optimized to avoid double read)
+      const cleanup = node._cleanup;
 
-      try {
-        // Run cleanup if exists (optimized to avoid double read)
-        const cleanup = node._cleanup;
-        if (cleanup) {
-          node._cleanup = undefined;
-          cleanup();
-        }
-
-        // Main state execution and store new cleanup
-        const newCleanup = fn();
-
-        if (newCleanup) node._cleanup = newCleanup;
-      } finally {
-        endTracking(ctx, node, prevConsumer);
+      if (cleanup) {
+        node._cleanup = undefined;
+        cleanup();
       }
-    }
+
+      const newCleanup = track(ctx, node, fn);
+
+      if (newCleanup) node._cleanup = newCleanup;
+    };
 
     const schedule = (node: ScheduledNode) => {
       if (enqueue(node)) return;
       flush(node as EffectNode);
-    }
+    };
 
     // State object captured in closure - no binding needed
     const node: EffectNode = {
@@ -75,8 +69,12 @@ export function createEffectFactory(
       flush,
     };
 
+    // Effects run immediately when created to establish initial state and dependencies.
+    // This flushes outside of the scheduling mechanism.
+    flush(node);
+
     // Dispose method using closure - delegates flag management to nodeScheduler
-    const dispose = (): void => disposeNode(node, (node) => {
+    return () => disposeNode(node, (node) => {
       // Effect-specific cleanup
       const cleanup = node._cleanup;
 
@@ -84,14 +82,9 @@ export function createEffectFactory(
         node._cleanup = undefined; // Clear to prevent double cleanup
         cleanup();
       }
+
       detachAll(node);
     });
-
-    // Effects run immediately when created to establish initial state and dependencies.
-    // This flushes outside of the scheduling mechanism.
-    flush(node);
-
-    return dispose;
   }
 
   return {
