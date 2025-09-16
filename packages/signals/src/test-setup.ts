@@ -65,8 +65,6 @@ export function createTestInstance() {
     effect: api.effect,
     batch: api.batch,
 
-    exitBatch: nodeScheduler.exitBatch,
-
     // Context access for testing
     setCurrentConsumer: (consumer: ConsumerNode | null) => {
       ctx.currentConsumer = consumer;
@@ -95,8 +93,6 @@ export const effect = (fn: () => void | (() => void)): (() => void) =>
 
 export const batch = <T>(fn: () => T): T =>
   defaultInstance.batch(fn);
-
-export const exitBatch = () => defaultInstance.exitBatch();
 
 // Context control exports
 export const setCurrentConsumer = (consumer: ConsumerNode | null) =>
