@@ -85,7 +85,7 @@ export function createNodeScheduler(): NodeScheduler {
 
       if (current.status === STATUS_SCHEDULED) {
         current.status = STATUS_CLEAN;
-        current.flush(current);
+        current.flush();
       }
 
       current = next;

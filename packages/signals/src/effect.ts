@@ -39,31 +39,24 @@ export function createEffectFactory(
       dependencyTail: undefined,
       deferredParent: undefined,
       nextScheduled: undefined,
-      // Inline schedule - avoid separate function allocation
-      schedule: (self: ScheduledNode) => {
-        if (enqueue(self)) return;
-
+      // Use closures - safer and cleaner than passing self
+      schedule: () => {
+        if (enqueue(node)) return;
         // Flush inline if not batched
-        const n = self as EffectNode;
-
-        if (n._cleanup) {
-          n._cleanup();
-          n._cleanup = undefined;
+        if (node._cleanup) {
+          node._cleanup();
+          node._cleanup = undefined;
         }
-
-        const newCleanup = track(ctx, n, fn);
-
-        if (newCleanup) n._cleanup = newCleanup;
+        const newCleanup = track(ctx, node, fn);
+        if (newCleanup) node._cleanup = newCleanup;
       },
-      // Flush for batch processing
-      flush: (self: ScheduledNode) => {
-        const n = self as EffectNode;
-        if (n._cleanup) {
-          n._cleanup();
-          n._cleanup = undefined;
+      flush: () => {
+        if (node._cleanup) {
+          node._cleanup();
+          node._cleanup = undefined;
         }
-        const newCleanup = track(ctx, n, fn);
-        if (newCleanup) n._cleanup = newCleanup;
+        const newCleanup = track(ctx, node, fn);
+        if (newCleanup) node._cleanup = newCleanup;
       },
     };
 
@@ -73,9 +66,7 @@ export function createEffectFactory(
 
     // Return dispose function
     return () => disposeNode(node, (node) => {
-      if (node._cleanup) {
-        node._cleanup();
-      }
+      if (node._cleanup) node._cleanup();
       detachAll(node);
     });
   }

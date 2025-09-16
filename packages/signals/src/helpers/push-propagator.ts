@@ -36,8 +36,8 @@ export function createPushPropagator(): PushPropagator {
       // Set status to pending
       consumerNode.status = STATUS_PENDING;
 
-      // This avoids method calls and property lookups
-      if ('schedule' in consumerNode) consumerNode.schedule(consumerNode);
+      // Schedule if it's a scheduled node (effect/subscription)
+      if ('schedule' in consumerNode) consumerNode.schedule();
 
       if ('subscribers' in consumerNode) {
         const consumerSubscribers = consumerNode.subscribers;

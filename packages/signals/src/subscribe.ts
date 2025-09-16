@@ -53,17 +53,7 @@ export function createSubscribeFactory(
     source: () => T,
     callback: SubscribeCallback<T>
   ): UnsubscribeFunction {
-    const flush = (node: SubscriptionNode<T>) => {
-      const value = track(ctx, node, source); // Track source dependencies
-      callback(value); // Don't track callback dependencies
-    }
-
-    const schedule = (node: ScheduledNode) => {
-      if (enqueue(node)) return;
-      flush(node as SubscriptionNode<T>);
-    };
-
-    // Create subscription node
+    // Create subscription node with closures for safety
     const node: SubscriptionNode<T> = {
       __type: 'subscription' as const,
       callback,
@@ -73,12 +63,21 @@ export function createSubscribeFactory(
       dependencyTail: undefined,
       deferredParent: undefined,
       nextScheduled: undefined,
-      schedule,
-      flush,
+      schedule: () => {
+        if (enqueue(node)) return;
+        // Flush inline if not batched
+        const value = track(ctx, node, source);
+        callback(value);
+      },
+      flush: () => {
+        const value = track(ctx, node, source);
+        callback(value);
+      },
     };
 
     // Initial execution to establish dependencies and get initial value
-    flush(node);
+    const value = track(ctx, node, source);
+    callback(value);
 
     // Return unsubscribe function
     return () => {
