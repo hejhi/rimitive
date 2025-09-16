@@ -79,7 +79,7 @@ export function createComputedFactory(
       }
     };
 
-    return computed as ComputedFunction<T>;
+    return computed;
   }
 
   return {
