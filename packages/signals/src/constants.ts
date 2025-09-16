@@ -8,7 +8,7 @@
 // Node Status (mutually exclusive states - use simple numbers)
 export const STATUS_CLEAN = 0;     // Up to date and ready
 export const STATUS_PENDING = 1;   // Dependencies might have changed, needs checking
-export const STATUS_DIRTY = 3;     // Value changed (persists until consumed)
+export const STATUS_DIRTY = 2;     // Value changed (persists until consumed)
 export const STATUS_SCHEDULED = 3; // Node is scheduled
 export const STATUS_DISPOSED = 4;  // Node is dead and should be ignored
 
